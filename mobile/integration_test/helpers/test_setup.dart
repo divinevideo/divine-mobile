@@ -30,7 +30,7 @@ bool _isNonCriticalAsyncError(String message) {
 /// - Relay rejected event errors surfaced by the app's error handler
 ///
 /// Returns the original error handler for restoration.
-FlutterExceptionHandler? suppressSetStateErrors() {
+FlutterExceptionHandler? _suppressNonCriticalErrors() {
   final originalOnError = FlutterError.onError;
   FlutterError.onError = (details) {
     final message = details.exceptionAsString();
@@ -56,7 +56,7 @@ FlutterExceptionHandler? suppressSetStateErrors() {
 /// ErrorWidget.builder is restored when [body] ends either way, because
 /// flutter_test checks it at the end of the test body, before teardown (#5839).
 Future<void> runWithAppErrorHandlers(Future<void> Function() body) async {
-  final originalOnError = suppressSetStateErrors();
+  final originalOnError = _suppressNonCriticalErrors();
   addTearDown(() => FlutterError.onError = originalOnError);
   final originalErrorBuilder = ErrorWidget.builder;
   addTearDown(() => ErrorWidget.builder = originalErrorBuilder);
@@ -99,24 +99,6 @@ void launchAppGuarded(void Function() appMain) {
       Zone.current.parent?.handleUncaughtError(error, stack);
     },
   );
-}
-
-/// Restore the original FlutterError.onError handler.
-void restoreErrorHandler(FlutterExceptionHandler? original) {
-  FlutterError.onError = original;
-}
-
-/// Save ErrorWidget.builder before app.main() sets a custom one.
-///
-/// Must be called before app.main() and restored before test body ends
-/// (the framework asserts it hasn't changed).
-ErrorWidgetBuilder saveErrorWidgetBuilder() {
-  return ErrorWidget.builder;
-}
-
-/// Restore ErrorWidget.builder to the saved value.
-void restoreErrorWidgetBuilder(ErrorWidgetBuilder original) {
-  ErrorWidget.builder = original;
 }
 
 /// Print a timestamped log message matching the app's `[HH:MM:SS.mmm]` format.

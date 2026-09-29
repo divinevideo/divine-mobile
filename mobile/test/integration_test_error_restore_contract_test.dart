@@ -1,11 +1,12 @@
 // ABOUTME: Pins the framework contract behind #5839's belt-and-suspenders
 // ABOUTME: pattern for ErrorWidget.builder / FlutterError.onError restores.
 //
-// The integration_test suites (mobile/integration_test) save ErrorWidget.builder
-// and FlutterError.onError at the start of each test and restore them so an
-// early `expect` failure cannot leak the override into a later test in the same
-// file. #5839 made those restores exception-safe. The correct shape is
-// ASYMMETRIC, and this test encodes why:
+// The integration_test suites (mobile/integration_test) run each scenario inside
+// runWithAppErrorHandlers, which saves ErrorWidget.builder and
+// FlutterError.onError and restores them so an early `expect` failure cannot
+// leak the override into a later test in the same file. #5839 made those
+// restores exception-safe. The correct shape is ASYMMETRIC, and this test
+// encodes why:
 //
 //   * ErrorWidget.builder MUST be restored INLINE before the body ends.
 //     flutter_test's `_verifyErrorWidgetBuilderUnset` runs at end-of-body,
@@ -16,6 +17,13 @@
 //     path is covered — addTearDown runs regardless of test outcome.
 //   * FlutterError.onError may be restored via addTearDown ONLY, because the
 //     binding resets it to its pre-test value in postTest() after every test.
+//     That holds while the test passes. A failed `expect` is reported through
+//     whichever handler is current, and app.main() installs one that does not
+//     chain to the binding's, so a suite that launches the app must put the
+//     original back before the failure propagates or the run hangs (#9659).
+//     runWithAppErrorHandlers (integration_test/helpers/test_setup.dart)
+//     handles both hooks this way, and
+//     test/integration_test_helpers/test_setup_test.dart pins it.
 //
 // It is impossible to demonstrate the *failing* case (addTearDown-only builder
 // restore) from a PASSING test: on the happy path the framework verify fails

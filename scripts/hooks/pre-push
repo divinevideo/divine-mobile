@@ -138,23 +138,22 @@ if [ -n "$CHANGED_SERVICE_FILES" ] || [ -n "$CHANGED_TEST_FILES" ]; then
     echo ""
 fi
 
-# Exception-safe error-handler restores in integration_test (mirrors CI's
-# check_integration_test_error_restore_safety.sh, #5839). Trigger on any
+# Safe error-hook handling in integration_test (mirrors CI's
+# check_integration_test_error_restore_safety.sh, #5839, #9659). Trigger on any
 # added/modified/deleted mobile/integration_test/*.dart so unrelated pushes are
 # not slowed.
 CHANGED_IT_FILES=$(git -C "$REPO_ROOT" diff --name-only "$BASE_BRANCH"...HEAD 2>/dev/null \
     | grep -E '^mobile/integration_test/.*\.dart$' || true)
 if [ -n "$CHANGED_IT_FILES" ]; then
-    echo "integration_test file(s) changed; checking error-handler restore safety..."
+    echo "integration_test file(s) changed; checking error-hook handling..."
     if ! bash "$REPO_ROOT/mobile/scripts/check_integration_test_error_restore_safety.sh"; then
         echo ""
-        echo "Exception-unsafe ErrorWidget.builder/FlutterError.onError restore in"
-        echo "integration_test (#5839). Restore onError via addTearDown; restore"
-        echo "ErrorWidget.builder BOTH inline (framework verify) AND via addTearDown"
-        echo "(throw path). See test/integration_test_error_restore_contract_test.dart."
+        echo "Unsafe ErrorWidget.builder/FlutterError.onError handling in"
+        echo "integration_test (#5839, #9659). Run a scenario that launches the app"
+        echo "inside runWithAppErrorHandlers() from integration_test/helpers/test_setup.dart."
         exit 1
     fi
-    echo "integration_test error-handler restore safety OK"
+    echo "integration_test error-hook handling OK"
     echo ""
 fi
 

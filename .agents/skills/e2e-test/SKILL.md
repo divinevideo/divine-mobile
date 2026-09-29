@@ -196,19 +196,19 @@ emulator_wipe` (`emulator.sh --wipe`) is usually the faster fix.
 `pumpAndSettle` hangs because of persistent polling timers — the app
 polls email verification every 3s, so the tree never reaches a
 quiescent frame and the call blocks until its 10-minute timeout. Use
-`launchAppGuarded` (from `test_setup.dart`) with error suppression and
-a bounded pump instead of `pumpAndSettle`:
+`launchAppGuarded` (from `test_setup.dart`) and a bounded pump instead
+of `pumpAndSettle`, and run the whole scenario inside
+`runWithAppErrorHandlers` (see below):
 
 ```dart
-final originalOnError = suppressSetStateErrors();
-final originalErrorBuilder = saveErrorWidgetBuilder();
-launchAppGuarded(app.main);
+await runWithAppErrorHandlers(() async {
+  launchAppGuarded(app.main);
 
-await pumpUntilSettled(tester, maxSeconds: 3);
+  await pumpUntilSettled(tester, maxSeconds: 3);
+  // ...the scenario...
 
-restoreErrorWidgetBuilder(originalErrorBuilder);
-restoreErrorHandler(originalOnError);
-drainAsyncErrors(tester);
+  drainAsyncErrors(tester);
+});
 ```
 
 When you need to stop as soon as something appears rather than pump a
@@ -219,6 +219,19 @@ The tell that a suite has this bug: patrol logs
 `PATROL_LOG {"type":"test",…,"status":"start"}` and then **no terminal
 status at all**, while the app keeps logging. It reads like a crash;
 it is a hang.
+
+`runWithAppErrorHandlers` is what lets a failed check fail the test.
+`app.main()` replaces `FlutterError.onError` with a handler that does
+not chain to flutter_test's, and flutter_test reports a failed `expect`
+through whichever handler is current. Outside the helper the failure
+never reaches the binding: the log shows the app's
+`Flutter Error: Expected: …` line, then `Failed assertion: …
+'_pendingExceptionDetails != null'`, and the run sits there until it is
+killed (#9659). The helper puts the original handler back before the
+failure propagates, suppresses known relay and teardown noise, and
+restores `ErrorWidget.builder`, which flutter_test checks at the end of
+the test body. `check_integration_test_error_restore_safety.sh` fails a
+suite that imports `main.dart` without it.
 
 ### Async publish → relay query
 

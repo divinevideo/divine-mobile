@@ -1,36 +1,34 @@
 #!/usr/bin/env bash
-# Fails CI if an integration_test suite restores ErrorWidget.builder or
-# FlutterError.onError in an exception-UNSAFE way (#5839).
+# Fails CI if an integration_test suite handles ErrorWidget.builder or
+# FlutterError.onError in a way that can leak an override into a later test
+# (#5839) or hang the run when a check fails (#9659).
 #
-# The integration_test files (mobile/integration_test) override ErrorWidget.builder
-# and FlutterError.onError per test and must restore them so an early `expect`
-# failure cannot leak the override into a later test in the same file. The
-# correct, exception-safe shape uses the test_setup helpers plus addTearDown:
+# app.main() replaces both hooks, and its FlutterError.onError does not chain
+# to the one flutter_test installed. flutter_test reports a failed `expect`
+# through whichever handler is current, so unless the original is put back
+# first the failure never reaches the test binding and the run hangs. A suite
+# that launches the app therefore runs its scenario inside the shared helper:
 #
-#   final originalOnError = suppressSetStateErrors();
-#   addTearDown(() => restoreErrorHandler(originalOnError));      // onError: teardown-only
-#   final originalErrorBuilder = saveErrorWidgetBuilder();
-#   addTearDown(() => restoreErrorWidgetBuilder(originalErrorBuilder));  // builder: suspenders
-#   ...
-#   restoreErrorWidgetBuilder(originalErrorBuilder);             // builder: inline belt
+#   await runWithAppErrorHandlers(() async {
+#     launchAppGuarded(app.main);
+#     ...
+#   });
 #
-# ErrorWidget.builder MUST also be restored inline: flutter_test's
-# _verifyErrorWidgetBuilderUnset runs at end-of-body BEFORE addTearDown, so an
-# addTearDown-only builder restore fails the happy path. See
-# test/integration_test_error_restore_contract_test.dart for the pinned contract.
+# runWithAppErrorHandlers (helpers/test_setup.dart) suppresses known noise,
+# restores FlutterError.onError before a failure propagates, restores
+# ErrorWidget.builder when the scenario ends (flutter_test checks it at the
+# end of the body, before any teardown), and registers teardown restores for
+# both. The old per-suite save/restore helpers are gone, so the compiler
+# already rejects that shape. See
+# test/integration_test_helpers/test_setup_test.dart for the pinned contract.
 #
 # Policy (presence-based, scoped to mobile/integration_test):
 #   Rule 1 — no raw `ErrorWidget.builder =` / `FlutterError.onError =`
-#            assignments outside helpers/ (use the test_setup helpers instead).
-#   Rule 2 — a file that calls saveErrorWidgetBuilder() must contain an
-#            addTearDown restoring the builder; a file that calls
-#            suppressSetStateErrors() must contain an addTearDown restoring
-#            onError. (This catches a save/suppress with no exception-safe
-#            teardown. The inline builder belt is required by the framework and
-#            enforced by the contract test above, not by this script.)
+#            assignments outside helpers/ (use runWithAppErrorHandlers).
+#   Rule 2 — a file that imports package:openvine/main*.dart, to launch the
+#            app, must call runWithAppErrorHandlers(.
 #
-# Allowlist: integration_test/helpers/** (defines the raw ops the helpers wrap).
-# The non-patrol contract test lives under mobile/test/ and is out of scope here.
+# Allowlist: integration_test/helpers/** (defines the raw ops the helper wraps).
 #
 # Usage:
 #   bash mobile/scripts/check_integration_test_error_restore_safety.sh
@@ -63,33 +61,27 @@ for f in $files; do
     echo "✗ $rel: raw ErrorWidget.builder / FlutterError.onError assignment."
     grep -nE '(ErrorWidget\.builder|FlutterError\.onError)[[:space:]]*=([^=]|$)' "$f" \
       | sed 's/^/    /'
-    echo "    → use saveErrorWidgetBuilder()/restoreErrorWidgetBuilder()/"
-    echo "      suppressSetStateErrors()/restoreErrorHandler() from helpers/test_setup.dart."
+    echo "    → run the scenario inside runWithAppErrorHandlers() from"
+    echo "      helpers/test_setup.dart instead."
     fail=1
   fi
 
-  # Rule 2a: saveErrorWidgetBuilder() requires an addTearDown restoring it.
-  if grep -q 'saveErrorWidgetBuilder(' "$f" \
-    && ! grep -Eq 'addTearDown\(.*restoreErrorWidgetBuilder' "$f"; then
-    echo "✗ $rel: calls saveErrorWidgetBuilder() but has no"
-    echo "    addTearDown(() => restoreErrorWidgetBuilder(...)) — restore leaks on a throw."
-    fail=1
-  fi
-
-  # Rule 2b: suppressSetStateErrors() requires an addTearDown restoring onError.
-  if grep -q 'suppressSetStateErrors(' "$f" \
-    && ! grep -Eq 'addTearDown\(.*restoreErrorHandler' "$f"; then
-    echo "✗ $rel: calls suppressSetStateErrors() but has no"
-    echo "    addTearDown(() => restoreErrorHandler(...)) — restore leaks on a throw."
+  # Rule 2: launching the app requires the shared helper.
+  if grep -Eq "package:openvine/main[A-Za-z0-9_]*\.dart" "$f" \
+    && ! grep -q 'runWithAppErrorHandlers(' "$f"; then
+    echo "✗ $rel: launches the app without runWithAppErrorHandlers()."
+    echo "    A failed check would be reported through the app's own"
+    echo "    FlutterError.onError and hang the run instead of failing it (#9659)."
     fail=1
   fi
 done
 
 if [[ "$fail" -ne 0 ]]; then
   echo ""
-  echo "Exception-unsafe error-handler restore(s) in integration_test (#5839)."
-  echo "See test/integration_test_error_restore_contract_test.dart for the pattern."
+  echo "Unsafe error-hook handling in integration_test (#5839, #9659)."
+  echo "Run app-launching scenarios inside runWithAppErrorHandlers(); see"
+  echo "test/integration_test_helpers/test_setup_test.dart for the contract."
   exit 1
 fi
 
-echo "✓ integration_test error-handler restores are exception-safe."
+echo "✓ integration_test error hooks are restored safely."
