@@ -160,7 +160,12 @@ class CaptionStyle {
       outlineColor: effects.outlineColor,
       colorMode: colorMode,
       color: color,
-      background: background,
+      // The layer paints its background whatever the mode, so a style
+      // without a pill must hand it no color; [background] stays on the
+      // style for when the pill is switched back on.
+      background: colorMode == LayerBackgroundMode.onlyColor
+          ? VineTheme.transparent
+          : background,
       align: TextAlign.center,
       fontScale: fontScale,
       offset: Offset(0, bodySize.shortestSide * _bottomOffsetFactor),

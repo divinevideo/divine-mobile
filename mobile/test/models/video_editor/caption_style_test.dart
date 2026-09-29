@@ -188,6 +188,27 @@ void main() {
       expect(TextEffects.of(layer), equals(effects));
     });
 
+    test('buildLayer draws no pill for a style without a background', () {
+      final layer = CaptionCustomStyle.initial()
+          .copyWith(colorMode: LayerBackgroundMode.onlyColor)
+          .resolve()
+          .buildLayer(cue, bodySize: const Size(200, 400));
+
+      expect(layer.background.a, 0);
+    });
+
+    test('buildLayer draws the pill of a style with a background', () {
+      final initial = CaptionCustomStyle.initial();
+
+      final layer = initial.resolve().buildLayer(
+        cue,
+        bodySize: const Size(200, 400),
+      );
+
+      expect(initial.hasBackground, isTrue);
+      expect(layer.background, initial.background);
+    });
+
     test('buildLayer draws neither without effects', () {
       final layer = style.buildLayer(cue, bodySize: const Size(200, 400));
 
