@@ -106,7 +106,7 @@ void main() {
 
     const debounceDuration = Duration(milliseconds: 400);
 
-    test('initial state is correct', () {
+    test('initial state is correct', () async {
       final bloc = createBloc();
       expect(bloc.state.status, UserSearchStatus.initial);
       expect(bloc.state.query, isEmpty);
@@ -115,7 +115,7 @@ void main() {
       expect(bloc.state.offset, 0);
       expect(bloc.state.hasMore, isFalse);
       expect(bloc.state.isLoadingMore, isFalse);
-      bloc.close();
+      await bloc.close();
     });
 
     test('superseding a running query cancels its repository token', () async {
