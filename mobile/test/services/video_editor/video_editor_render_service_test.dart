@@ -19,6 +19,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
+import 'package:openvine/services/video_editor/native_render_task_registry.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
@@ -926,6 +927,47 @@ void main() {
       expect(reported, isEmpty);
     });
   });
+
+  group('cancelTask', () {
+    late ProVideoEditor originalProVideoEditor;
+    late _RecordingCancelProVideoEditor editor;
+
+    setUp(() {
+      originalProVideoEditor = ProVideoEditor.instance;
+      editor = _RecordingCancelProVideoEditor();
+      ProVideoEditor.instance = editor;
+    });
+
+    tearDown(() {
+      ProVideoEditor.instance = originalProVideoEditor;
+      NativeRenderTaskRegistry.reset();
+      RenderCancellationRegistry.reset();
+    });
+
+    test('cancels the export and the loop-seam encodes it owns', () async {
+      final gate = Completer<void>();
+      final prefix = VideoEditorRenderService.loopSeamRenderIdPrefix('export');
+      final running = [
+        for (final id in [
+          'export',
+          '$prefix-head',
+          '$prefix-tail',
+          'other-export-loop-seam',
+        ])
+          NativeRenderTaskRegistry.track(id, () => gate.future),
+      ];
+
+      await VideoEditorRenderService.cancelTask('export');
+
+      expect(
+        editor.cancelled,
+        unorderedEquals(['export', '$prefix-head', '$prefix-tail']),
+      );
+
+      gate.complete();
+      await Future.wait(running);
+    });
+  });
 }
 
 /// Satisfies the composite-progress subscription that
@@ -947,4 +989,11 @@ class _StubProVideoEditor extends ProVideoEditor {
   @override
   Stream<ProgressModel> progressStreamById(String taskId) =>
       const Stream<ProgressModel>.empty();
+}
+
+class _RecordingCancelProVideoEditor extends _StubProVideoEditor {
+  final cancelled = <String>[];
+
+  @override
+  Future<void> cancel(String taskId) async => cancelled.add(taskId);
 }

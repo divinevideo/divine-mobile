@@ -176,7 +176,7 @@ class LoopSeamBakeService {
           info: firstInfo,
           side: LoopSeamSide.both,
           alignment: estimate.alignment,
-          renderId: '$taskId-loop-seam',
+          renderId: VideoEditorRenderService.loopSeamRenderIdPrefix(taskId),
           written: written,
         );
         if (baked == null) return LoopSeamBakeResult(clips: clips);
@@ -189,7 +189,8 @@ class LoopSeamBakeService {
           info: firstInfo,
           side: LoopSeamSide.head,
           alignment: estimate.alignment,
-          renderId: '$taskId-loop-seam-head',
+          renderId:
+              '${VideoEditorRenderService.loopSeamRenderIdPrefix(taskId)}-head',
           written: written,
         );
         // Without the head there is no seam to meet, so the tail is not worth
@@ -202,7 +203,8 @@ class LoopSeamBakeService {
           info: lastInfo,
           side: LoopSeamSide.tail,
           alignment: estimate.alignment,
-          renderId: '$taskId-loop-seam-tail',
+          renderId:
+              '${VideoEditorRenderService.loopSeamRenderIdPrefix(taskId)}-tail',
           written: written,
         );
         if (bakedLast == null) {

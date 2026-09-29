@@ -1176,7 +1176,17 @@ class VideoEditorRenderService {
   static Future<void> cancelTask(String id) async {
     RenderCancellationRegistry.cancel(id);
     await _cancelNativeTaskOnly(id);
+    // The loop-seam bake encodes under ids of its own, so cancelling the
+    // export id alone would leave that encode running to completion.
+    final seamPrefix = loopSeamRenderIdPrefix(id);
+    final seamTaskIds = NativeRenderTaskRegistry.activeTaskIds.where(
+      (taskId) => taskId.startsWith(seamPrefix),
+    );
+    await Future.wait<void>(seamTaskIds.map(_cancelNativeTaskOnly));
   }
+
+  /// Prefix of every render id the loop-seam bake uses for export [taskId].
+  static String loopSeamRenderIdPrefix(String taskId) => '$taskId-loop-seam';
 
   static Future<void> _cancelNativeTaskOnly(String id) async {
     try {
