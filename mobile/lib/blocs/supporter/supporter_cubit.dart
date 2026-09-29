@@ -309,13 +309,15 @@ class SupporterCubit extends Cubit<SupporterState> {
       return;
     }
     _finishPurchaseAnalytics(succeeded: false);
+    // The store already completed this purchase: report that Divine could not
+    // confirm it, not a generic failure that invites buying again.
     _emit(
       state.copyWith(
         awaitingPurchaseConfirmation: false,
         entitlement: entitlement,
         snapshot: _repository.snapshot,
         status: SupporterStatus.error,
-        failure: SupporterFailure.unknown,
+        failure: SupporterFailure.verificationUnavailable,
       ),
     );
   }

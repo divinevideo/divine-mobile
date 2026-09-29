@@ -605,7 +605,10 @@ void main() {
         await pumpEventQueue();
 
         expect(cubit.state.status, SupporterStatus.error);
-        expect(cubit.state.failure, SupporterFailure.unknown);
+        expect(
+          cubit.state.failure,
+          SupporterFailure.verificationUnavailable,
+        );
         expect(cubit.state.awaitingPurchaseConfirmation, isFalse);
         expect(cubit.state.isBusy, isFalse);
       },
