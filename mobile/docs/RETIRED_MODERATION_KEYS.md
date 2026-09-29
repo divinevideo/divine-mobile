@@ -100,8 +100,9 @@ role uses the shared support identity.
 | Pre-rotation threads excluded from pinned-support adoption | `DmRepository.extractPinnedSupport` |
 | Labeler subscription migrated to the current key | `ModerationLabelService._migrateLegacyPubkey` |
 | A protected minor may read (never send to) a retired-key thread while nobody can sign as it | `OfficialAccountsService.isReadableByProtectedMinor`, gated on `RetiredKeyCustody.canStillSign` |
-| Retired key refused as the moderation identity — from the persisted NIP-05 cache (at load and at each NIP-05 refresh) and from a live NIP-05 answer, before it is ever persisted | `ModerationPubkeyResolver._refuseRetired`, reached through `.cached()` and `.resolve()` |
+| Retired key refused as the moderation identity — from the persisted NIP-05 cache (at load and at each NIP-05 refresh) and from a live NIP-05 answer, before it is ever persisted. Refusing a live answer also clears the cache, so an older cached key cannot come back on the next cold start | `ModerationPubkeyResolver._refuseRetired`, reached through `.cached()` and `.resolve()` |
 | Report recipient read at filing time from the label service, not captured once when the reporting provider was built — covers a stale cached key NIP-05 corrects moments later | `ContentReportingService.currentModerationPubkey` → `ModerationLabelService.divineModerationPubkeyHex`, wired in `social_providers.dart` |
+| A report queued before an update, whose stored recipient this build lists as retired, sends its moderation DM to the pinned key instead, logged once per report | `_moderationDmRecipient` in `social_providers.dart`, via `isRetiredModerationAccount` and `kModerationPubkeyHex` |
 
 `isModerationAccount` answers *"is this the moderation team"* and is true for
 retired keys on purpose, so old threads still read correctly.
@@ -138,7 +139,8 @@ The client half is small and belongs in one PR:
 3. Update `kModerationPubkeyHex` to the incoming shared support key. This is a
    mandatory routing change: the constant is the report target's fallback
    (the live recipient is the label service's NIP-05-resolved key — see the
-   row above), the pinned support row destination, the protected-minor gate
+   row above), where a queued report addressed to the outgoing key is
+   re-sent, the pinned support row destination, the protected-minor gate
    anchor, the unread partition, the retired thread redirect target, and
    `ModerationLabelService`'s own NIP-05 fallback. A stale value silently
    routes support traffic to the retired account for every one of those
@@ -285,8 +287,9 @@ Settled, kept here because the register used to cite these as open:
   retired key is refused alike. What #7851 delivers is custody recorded per
   register entry, the custody-aware minor-read exception, the label service
   refusing retired keys from cache and live NIP-05, the report recipient
-  read at filing time, and the composer withheld while a thread's
-  participants cannot be resolved (#8664/#8677).
+  read at filing time, queued reports addressed to a retired key re-sent to
+  the pinned key, and the composer withheld while a thread's participants
+  cannot be resolved (#8664/#8677).
 - `divinevideo/divine-mobile#8355` decided on 2026-08-31 that shared access to
   the current moderation identity stays acceptable, and that the client should
   resolve that identity through NIP-05. It did not cover retirement.
