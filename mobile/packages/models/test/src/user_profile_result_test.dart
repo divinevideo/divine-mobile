@@ -178,6 +178,88 @@ void main() {
       expect(data.totalLoops, equals(50.5));
       expect(data.totalViews, equals(200));
     });
+
+    group('archivedLoops', () {
+      test('parses the archived Vine loop sum', () {
+        final data = ProfileEngagementData.fromJson(const {
+          'total_views': 292000,
+          'archived_loops': 8130000000,
+        });
+
+        expect(data.archivedLoops, equals(8130000000));
+      });
+
+      test('keeps a reported zero as zero', () {
+        final data = ProfileEngagementData.fromJson(const {
+          'archived_loops': 0,
+        });
+
+        expect(data.archivedLoops, equals(0));
+      });
+
+      test('parses numeric and string representations', () {
+        expect(
+          ProfileEngagementData.fromJson(const {
+            'archived_loops': 12.0,
+          }).archivedLoops,
+          equals(12),
+        );
+        expect(
+          ProfileEngagementData.fromJson(const {
+            'archived_loops': '34',
+          }).archivedLoops,
+          equals(34),
+        );
+      });
+
+      test('is null when the field is absent', () {
+        final data = ProfileEngagementData.fromJson(const {
+          'total_views': 5,
+        });
+
+        expect(data.archivedLoops, isNull);
+      });
+
+      test('is null when the server could not compute it', () {
+        final data = ProfileEngagementData.fromJson(const {
+          'archived_loops': null,
+        });
+
+        expect(data.archivedLoops, isNull);
+      });
+
+      test('is null for a negative or unparseable value', () {
+        expect(
+          ProfileEngagementData.fromJson(const {
+            'archived_loops': -1,
+          }).archivedLoops,
+          isNull,
+        );
+        expect(
+          ProfileEngagementData.fromJson(const {
+            'archived_loops': 'lots',
+          }).archivedLoops,
+          isNull,
+        );
+      });
+
+      test('participates in equality', () {
+        const withArchive = ProfileEngagementData(
+          totalReactions: 1,
+          totalLoops: 2,
+          totalViews: 3,
+          archivedLoops: 4,
+        );
+        const withoutArchive = ProfileEngagementData(
+          totalReactions: 1,
+          totalLoops: 2,
+          totalViews: 3,
+        );
+
+        expect(withArchive, isNot(equals(withoutArchive)));
+        expect(withArchive.toString(), contains('archivedLoops: 4'));
+      });
+    });
   });
 
   group('UserProfileFound', () {
