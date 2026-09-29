@@ -51,21 +51,10 @@ void main() {
     testWidgets(
       'opens login options only after the queued upload finishes',
       (tester) async {
-        final originalOnError = suppressSetStateErrors();
-        addTearDown(() => restoreErrorHandler(originalOnError));
-        final originalErrorBuilder = saveErrorWidgetBuilder();
-        addTearDown(() => restoreErrorWidgetBuilder(originalErrorBuilder));
-        try {
+        await runWithAppErrorHandlers(() async {
           await _postTwoVideosThenSignInAgain(tester);
           drainAsyncErrors(tester);
-        } finally {
-          // The teardowns above run too late for a failure: app.main installs
-          // its own FlutterError.onError, a failing expect is routed through
-          // it before any teardown, and the binding then hangs instead of
-          // reporting. So give the binding its handlers back here first.
-          restoreErrorHandler(originalOnError);
-          restoreErrorWidgetBuilder(originalErrorBuilder);
-        }
+        });
       },
       timeout: const Timeout(Duration(minutes: 10)),
     );
