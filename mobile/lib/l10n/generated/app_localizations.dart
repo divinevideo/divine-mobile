@@ -8392,7 +8392,7 @@ abstract class AppLocalizations {
   /// No description provided for @listNameLabel.
   ///
   /// In en, this message translates to:
-  /// **'List Name'**
+  /// **'List name'**
   String get listNameLabel;
 
   /// No description provided for @listDescriptionLabel.

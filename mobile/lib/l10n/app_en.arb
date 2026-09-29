@@ -3141,7 +3141,7 @@
   "listCollaboratorsNone": "None",
   "listAddCollaboratorTitle": "Add a collaborator",
   "listCollaboratorSearchHint": "Search Divine...",
-  "listNameLabel": "List Name",
+  "listNameLabel": "List name",
   "listDescriptionLabel": "Description (optional)",
   "listMakePublicLabel": "Make public",
   "@listMakePublicLabel": {

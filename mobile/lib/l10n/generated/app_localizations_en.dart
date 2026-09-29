@@ -5007,7 +5007,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listCollaboratorSearchHint => 'Search Divine...';
 
   @override
-  String get listNameLabel => 'List Name';
+  String get listNameLabel => 'List name';
 
   @override
   String get listDescriptionLabel => 'Description (optional)';
