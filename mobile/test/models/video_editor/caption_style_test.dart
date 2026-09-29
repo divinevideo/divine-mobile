@@ -1,6 +1,7 @@
 // ABOUTME: Tests for the caption render style, animation styles, and the
 // ABOUTME: serializable user-defined custom style.
 
+import 'package:caption_generator/caption_generator.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,7 +9,7 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/video_editor/caption_style.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
-    show LayerBackgroundMode;
+    show LayerBackgroundMode, TextHighlight;
 import 'package:pro_video_editor/pro_video_editor.dart' as pve;
 
 void main() {
@@ -25,9 +26,11 @@ void main() {
       expect(resolved.leave, isEmpty);
     });
 
-    test('every non-none style has correctly phased animations', () {
+    test('every animated style has correctly phased animations', () {
       for (final style in CaptionAnimationStyle.values) {
-        if (style == CaptionAnimationStyle.none) continue;
+        if (style == CaptionAnimationStyle.none || style.highlightsWords) {
+          continue;
+        }
         final resolved = style.resolve();
         expect(resolved.enter, isNotEmpty, reason: style.name);
         for (final animation in resolved.enter) {
@@ -52,6 +55,16 @@ void main() {
           );
         }
       }
+    });
+
+    test('only highlight lights up words, and it has no animations', () {
+      expect(
+        CaptionAnimationStyle.values.where((style) => style.highlightsWords),
+        [CaptionAnimationStyle.highlight],
+      );
+      final resolved = CaptionAnimationStyle.highlight.resolve();
+      expect(resolved.enter, isEmpty);
+      expect(resolved.leave, isEmpty);
     });
 
     test('fromName parses known names and falls back to fade', () {
@@ -119,6 +132,41 @@ void main() {
       );
     });
 
+    test('round-trips its highlight color', () {
+      final highlighted = style.copyWith(
+        animation: CaptionAnimationStyle.highlight,
+        highlightColor: const Color(0xFF27C58B),
+      );
+
+      expect(
+        CaptionCustomStyle.fromJson(highlighted.toJson()),
+        equals(highlighted),
+      );
+    });
+
+    test('fromJson falls back to the default highlight color', () {
+      final json = style.toJson()..remove('highlightColor');
+
+      expect(
+        CaptionCustomStyle.fromJson(json)!.highlightColor,
+        equals(CaptionCustomStyle.defaultHighlightColor),
+      );
+    });
+
+    test('resolve highlights words only for the highlight animation', () {
+      final highlighted = style.copyWith(
+        animation: CaptionAnimationStyle.highlight,
+        highlightColor: const Color(0xFF27C58B),
+      );
+
+      expect(
+        highlighted.resolve().highlightColor,
+        equals(const Color(0xFF27C58B)),
+      );
+      expect(highlighted.resolve().enter, isEmpty);
+      expect(style.resolve().highlightColor, isNull);
+    });
+
     test('initial is a sane default', () {
       final initial = CaptionCustomStyle.initial();
       expect(initial.fontIndex, equals(0));
@@ -155,6 +203,141 @@ void main() {
       );
       expect(layer.startTime, equals(cue.start));
       expect(layer.endTime, equals(cue.end));
+    });
+
+    test('buildLayer adds no highlights for a style without them', () {
+      final layer = style.buildLayer(cue, bodySize: const Size(200, 400));
+
+      expect(layer.highlights, isEmpty);
+    });
+
+    test('buildLayer lights up each word in the highlight color', () {
+      final highlighting = CaptionCustomStyle.initial()
+          .copyWith(
+            animation: CaptionAnimationStyle.highlight,
+            highlightColor: const Color(0xFF27C58B),
+          )
+          .resolve();
+
+      final layer = highlighting.buildLayer(
+        cue.copyWith(
+          words: const [
+            CaptionSegment(
+              text: 'Hello',
+              start: Duration(milliseconds: 400),
+              end: Duration(milliseconds: 800),
+            ),
+            CaptionSegment(
+              text: 'world.',
+              start: Duration(milliseconds: 1000),
+              end: Duration(milliseconds: 1500),
+            ),
+          ],
+        ),
+        bodySize: const Size(200, 400),
+      );
+
+      expect(layer.highlightColor, equals(const Color(0xFF27C58B)));
+      expect(layer.highlights, [
+        const TextHighlight(
+          start: 0,
+          end: 5,
+          startTime: Duration(milliseconds: 100),
+          endTime: Duration(milliseconds: 700),
+        ),
+        const TextHighlight(
+          start: 6,
+          end: 12,
+          startTime: Duration(milliseconds: 700),
+          endTime: Duration(milliseconds: 1600),
+        ),
+      ]);
+    });
+  });
+
+  group('captionWordHighlights', () {
+    test('holds each word until the next one and the last until the end', () {
+      const cue = CaptionCue(
+        id: 'cue',
+        text: 'one two three',
+        start: Duration(seconds: 1),
+        end: Duration(seconds: 3),
+        words: [
+          CaptionSegment(
+            text: 'one',
+            start: Duration(milliseconds: 1000),
+            end: Duration(milliseconds: 1200),
+          ),
+          CaptionSegment(
+            text: 'two',
+            start: Duration(milliseconds: 1500),
+            end: Duration(milliseconds: 1700),
+          ),
+          CaptionSegment(
+            text: 'three',
+            start: Duration(milliseconds: 2000),
+            end: Duration(milliseconds: 2400),
+          ),
+        ],
+      );
+
+      expect(
+        captionWordHighlights(cue).map(
+          (h) => (h.start, h.end, h.startTime, h.endTime),
+        ),
+        [
+          (0, 3, Duration.zero, const Duration(milliseconds: 500)),
+          (
+            4,
+            7,
+            const Duration(milliseconds: 500),
+            const Duration(seconds: 1),
+          ),
+          (8, 13, const Duration(seconds: 1), const Duration(seconds: 2)),
+        ],
+      );
+    });
+
+    test('drops words spoken outside the cue', () {
+      const cue = CaptionCue(
+        id: 'cue',
+        text: 'early late',
+        start: Duration(seconds: 1),
+        end: Duration(seconds: 2),
+        words: [
+          CaptionSegment(
+            text: 'early',
+            start: Duration(milliseconds: 500),
+            end: Duration(milliseconds: 900),
+          ),
+          CaptionSegment(
+            text: 'late',
+            start: Duration(milliseconds: 2500),
+            end: Duration(milliseconds: 2900),
+          ),
+        ],
+      );
+
+      // "early" starts before the cue and lasts until "late" would, which is
+      // past the cue end; "late" never starts inside the cue.
+      expect(captionWordHighlights(cue).map((h) => h.start), [0]);
+    });
+
+    test('spreads the words of a cue without word timings', () {
+      const cue = CaptionCue(
+        id: 'cue',
+        text: 'ab cd',
+        start: Duration(seconds: 1),
+        end: Duration(seconds: 2),
+      );
+
+      expect(
+        captionWordHighlights(cue).map((h) => (h.startTime, h.endTime)),
+        [
+          (Duration.zero, const Duration(milliseconds: 500)),
+          (const Duration(milliseconds: 500), const Duration(seconds: 1)),
+        ],
+      );
     });
   });
 }

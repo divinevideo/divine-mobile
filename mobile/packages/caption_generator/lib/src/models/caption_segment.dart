@@ -6,13 +6,15 @@ import 'package:equatable/equatable.dart';
 /// A piece of transcribed speech positioned on the audio timeline.
 ///
 /// The native recognizers return one segment per recognized word; use
-/// `groupCaptionSegments` to merge words into display-ready caption cues.
+/// `groupCaptionSegments` to merge words into display-ready caption cues,
+/// which keep their words in [words].
 class CaptionSegment extends Equatable {
   /// Creates a segment covering [start] to [end] with the given [text].
   const CaptionSegment({
     required this.text,
     required this.start,
     required this.end,
+    this.words = const [],
   });
 
   /// Decodes a segment from a platform channel map.
@@ -42,6 +44,13 @@ class CaptionSegment extends Equatable {
   /// Where this segment ends on the audio timeline.
   final Duration end;
 
+  /// The single words of a grouped cue, each with its own timing, in timeline
+  /// order. Empty for a segment that is itself one word or one recognizer
+  /// result.
+  ///
+  /// Not part of [toMap], which encodes one recognizer result.
+  final List<CaptionSegment> words;
+
   /// How long this segment lasts.
   Duration get duration => end - start;
 
@@ -53,7 +62,7 @@ class CaptionSegment extends Equatable {
   };
 
   @override
-  List<Object?> get props => [text, start, end];
+  List<Object?> get props => [text, start, end, words];
 
   @override
   String toString() =>

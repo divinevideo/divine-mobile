@@ -4566,11 +4566,13 @@
   "videoEditorCaptionsCustomTextColor": "文字颜色",
   "videoEditorCaptionsCustomBackground": "背景",
   "videoEditorCaptionsCustomBackgroundColor": "背景颜色",
+  "videoEditorCaptionsCustomHighlightColor": "高亮颜色",
   "videoEditorCaptionsCustomAnimation": "动画",
   "videoEditorCaptionsAnimationNone": "无",
   "videoEditorCaptionsAnimationFade": "淡入淡出",
   "videoEditorCaptionsAnimationPop": "弹出",
   "videoEditorCaptionsAnimationSpring": "弹跳",
+  "videoEditorCaptionsAnimationKaraoke": "卡拉OK",
   "@videoEditorCaptionsBurnInLabel": {
     "description": "Checkbox label in the captions sheet to additionally burn the captions into the exported video (closed captions are always published)."
   },
@@ -4613,6 +4615,7 @@
   "videoEditorTitleSavedStylesEmpty": "还没有保存任何样式。把文字调成你喜欢的样子，保存到这里，下个视频就能直接复用。",
   "videoEditorTitleSavedStyleDeleteConfirmMessage": "已经使用此样式的文字会保持原样。",
   "videoEditorCaptionsPresetClassic": "经典",
+  "videoEditorCaptionsPresetKaraoke": "卡拉OK",
   "videoEditorCaptionsPresetPop": "波普",
   "videoEditorCaptionsPresetZoom": "缩放",
   "videoEditorCaptionsPresetSpring": "弹跳",

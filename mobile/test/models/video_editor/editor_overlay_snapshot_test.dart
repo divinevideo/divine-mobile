@@ -208,6 +208,72 @@ void main() {
       });
     });
 
+    group('windowedTo word highlights', () {
+      // "one" is lit for the layer's first second, "two" for its second.
+      ExportedLayer karaoke() => ExportedLayer(
+        layer: TextLayer(
+          text: 'one two',
+          startTime: const Duration(seconds: 2),
+          endTime: const Duration(seconds: 5),
+          highlights: const [
+            TextHighlight(
+              start: 0,
+              end: 3,
+              startTime: Duration.zero,
+              endTime: Duration(seconds: 1),
+            ),
+            TextHighlight(
+              start: 4,
+              end: 7,
+              startTime: Duration(seconds: 1),
+              endTime: Duration(seconds: 2),
+            ),
+          ],
+        ),
+        bytes: Uint8List.fromList([0]),
+        logicalSize: const Size(10, 10),
+        highlightBytes: {
+          0: Uint8List.fromList([1]),
+          1: Uint8List.fromList([2]),
+        },
+      );
+
+      List<(int, Duration?, Duration?)> framesOf(ExportedLayer layer) => [
+        for (final frame in layer.frames)
+          (frame.bytes.single, frame.startTime, frame.endTime),
+      ];
+
+      test('keep the words lit at the same moments when the clip cuts into '
+          'the caption', () {
+        final result = EditorOverlaySnapshot(
+          capturedLayers: [karaoke()],
+        ).windowedTo(start: _s3, end: _s6);
+
+        // The clip starts at 3s, where "two" lights up; the caption ends at
+        // 5s, 2s into the clip.
+        expect(framesOf(result.capturedLayers.single), [
+          (2, Duration.zero, const Duration(seconds: 1)),
+          (0, const Duration(seconds: 1), const Duration(seconds: 2)),
+        ]);
+      });
+
+      test('are untouched for a caption the clip fully contains', () {
+        final result = EditorOverlaySnapshot(
+          capturedLayers: [karaoke()],
+        ).windowedTo(start: _s1, end: _s6);
+
+        expect(
+          (result.capturedLayers.single.layer as TextLayer).highlights,
+          (karaoke().layer as TextLayer).highlights,
+        );
+        expect(framesOf(result.capturedLayers.single), [
+          (1, _s1, const Duration(seconds: 2)),
+          (2, const Duration(seconds: 2), _s3),
+          (0, _s3, const Duration(seconds: 4)),
+        ]);
+      });
+    });
+
     group('windowedTo filters and tune', () {
       test('windows a filter like a layer', () {
         final result = EditorOverlaySnapshot(

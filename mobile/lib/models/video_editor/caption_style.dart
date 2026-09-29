@@ -26,12 +26,23 @@ enum CaptionAnimationStyle {
   pop,
 
   /// Scales up with an elastic spring.
-  spring;
+  spring,
+
+  /// Appears and disappears instantly, lighting up each word in the style's
+  /// highlight color while it is spoken ("karaoke").
+  highlight;
+
+  /// Whether this style lights up the words as they are spoken.
+  bool get highlightsWords => this == CaptionAnimationStyle.highlight;
 
   /// The enter/leave animations this style resolves to.
+  ///
+  /// [highlight] has none: every word gets its own exported frame, and an
+  /// enter or leave animation would restart on each of them.
   ({List<pve.LayerAnimation> enter, List<pve.LayerAnimation> leave})
   resolve() => switch (this) {
-    CaptionAnimationStyle.none => (enter: const [], leave: const []),
+    CaptionAnimationStyle.none ||
+    CaptionAnimationStyle.highlight => (enter: const [], leave: const []),
     CaptionAnimationStyle.fade => (
       enter: const [
         pve.LayerAnimation(
@@ -115,6 +126,7 @@ class CaptionStyle {
     required this.enter,
     required this.leave,
     this.fontScale = 1,
+    this.highlightColor,
   });
 
   /// The Google Font this style renders with.
@@ -138,6 +150,10 @@ class CaptionStyle {
   /// Multiplier on the editor's base font size.
   final double fontScale;
 
+  /// The color each word lights up in while it is spoken, or `null` when the
+  /// style does not highlight words.
+  final Color? highlightColor;
+
   /// Vertical placement of caption cues: fraction of the canvas height below
   /// center, keeping captions in the lower third without touching the edge.
   static const double _bottomOffsetFactor = 0.32;
@@ -147,6 +163,7 @@ class CaptionStyle {
     CaptionCue cue, {
     required Size bodySize,
   }) {
+    final highlightColor = this.highlightColor;
     return TextLayer(
       text: cue.text,
       textStyle: font(),
@@ -159,6 +176,8 @@ class CaptionStyle {
       startTime: cue.start,
       endTime: cue.end,
       animations: [...enter, ...leave].toLayerAnimations(),
+      highlights: highlightColor == null ? null : captionWordHighlights(cue),
+      highlightColor: highlightColor ?? kDefaultTextHighlightColor,
       meta: {
         VideoEditorConstants.captionCueMetaKey: true,
         VideoEditorConstants.captionCueIdMetaKey: cue.id,
@@ -166,6 +185,46 @@ class CaptionStyle {
     );
   }
 }
+
+/// The word highlights of [cue]'s burned-in layer: each word of the cue text
+/// lights up from when it is spoken until the next word starts, and the last
+/// one stays lit until the cue ends.
+///
+/// Holding a word through the short pause before the next one keeps the
+/// highlight from blinking off between words. Times are measured from the cue
+/// start, as [TextHighlight] expects of a layer that starts with its cue.
+List<TextHighlight> captionWordHighlights(CaptionCue cue) {
+  final words = cue.wordTimings;
+  // wordTimings splits the text at whitespace too, so word i is span i.
+  final spans = _wordPattern.allMatches(cue.text).toList();
+
+  final duration = cue.duration;
+  Duration offsetOf(Duration time) {
+    final offset = time - cue.start;
+    if (offset < Duration.zero) return Duration.zero;
+    return offset > duration ? duration : offset;
+  }
+
+  final highlights = <TextHighlight>[];
+  for (final (index, span) in spans.indexed) {
+    final from = offsetOf(words[index].start);
+    final to = offsetOf(
+      index + 1 < words.length ? words[index + 1].start : cue.end,
+    );
+    if (to <= from) continue;
+    highlights.add(
+      TextHighlight(
+        start: span.start,
+        end: span.end,
+        startTime: from,
+        endTime: to,
+      ),
+    );
+  }
+  return highlights;
+}
+
+final _wordPattern = RegExp(r'\S+');
 
 /// A user-configured caption style, serialized into the caption track.
 ///
@@ -180,6 +239,7 @@ class CaptionCustomStyle extends Equatable {
     required this.colorMode,
     required this.animation,
     this.fontScale = 1,
+    this.highlightColor = defaultHighlightColor,
   });
 
   /// The default custom style: the first font, white on a dark pill, fading.
@@ -190,6 +250,10 @@ class CaptionCustomStyle extends Equatable {
     colorMode: LayerBackgroundMode.backgroundAndColor,
     animation: CaptionAnimationStyle.fade,
   );
+
+  /// The highlight color a style starts with: the editor's yellow, the
+  /// classic karaoke look on white or black text.
+  static const Color defaultHighlightColor = VideoEditorConstants.primaryColor;
 
   /// Decodes a custom style from its [toJson] map, or `null` when the map is
   /// absent or malformed (an old draft still opens with a preset).
@@ -209,6 +273,10 @@ class CaptionCustomStyle extends Equatable {
       ),
       animation: CaptionAnimationStyle.fromName(json['animation'] as String?),
       fontScale: (json['fontScale'] as num?)?.toDouble() ?? 1,
+      highlightColor: switch (json['highlightColor']) {
+        final int argb => colorFromArgb32(argb),
+        _ => defaultHighlightColor,
+      },
     );
   }
 
@@ -229,6 +297,10 @@ class CaptionCustomStyle extends Equatable {
 
   /// Multiplier on the editor's base font size.
   final double fontScale;
+
+  /// The color each word lights up in while it is spoken. Only used when
+  /// [animation] highlights words.
+  final Color highlightColor;
 
   /// Whether the style draws a background pill.
   bool get hasBackground => colorMode != LayerBackgroundMode.onlyColor;
@@ -251,6 +323,7 @@ class CaptionCustomStyle extends Equatable {
       fontScale: fontScale,
       enter: animations.enter,
       leave: animations.leave,
+      highlightColor: animation.highlightsWords ? highlightColor : null,
     );
   }
 
@@ -262,6 +335,7 @@ class CaptionCustomStyle extends Equatable {
     'colorMode': colorMode.name,
     'animation': animation.name,
     'fontScale': fontScale,
+    'highlightColor': highlightColor.toARGB32(),
   };
 
   /// Copy with the given fields replaced.
@@ -272,6 +346,7 @@ class CaptionCustomStyle extends Equatable {
     LayerBackgroundMode? colorMode,
     CaptionAnimationStyle? animation,
     double? fontScale,
+    Color? highlightColor,
   }) => CaptionCustomStyle(
     fontIndex: fontIndex ?? this.fontIndex,
     color: color ?? this.color,
@@ -279,6 +354,7 @@ class CaptionCustomStyle extends Equatable {
     colorMode: colorMode ?? this.colorMode,
     animation: animation ?? this.animation,
     fontScale: fontScale ?? this.fontScale,
+    highlightColor: highlightColor ?? this.highlightColor,
   );
 
   @override
@@ -289,5 +365,6 @@ class CaptionCustomStyle extends Equatable {
     colorMode,
     animation,
     fontScale,
+    highlightColor,
   ];
 }

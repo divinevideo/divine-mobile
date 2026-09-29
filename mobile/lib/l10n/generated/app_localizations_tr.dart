@@ -8544,6 +8544,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorCaptionsCustomBackgroundColor => 'Arka plan rengi';
 
   @override
+  String get videoEditorCaptionsCustomHighlightColor => 'Vurgu rengi';
+
+  @override
   String get videoEditorCaptionsCustomAnimation => 'Animasyon';
 
   @override
@@ -8557,6 +8560,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorCaptionsAnimationSpring => 'Yay';
+
+  @override
+  String get videoEditorCaptionsAnimationKaraoke => 'Karaoke';
 
   @override
   String get videoEditorCaptionsEditTitle => 'Altyazılar';
@@ -8701,6 +8707,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorCaptionsPresetClassic => 'Klasik';
+
+  @override
+  String get videoEditorCaptionsPresetKaraoke => 'Karaoke';
 
   @override
   String get videoEditorCaptionsPresetPop => 'Pop';

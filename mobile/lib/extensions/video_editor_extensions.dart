@@ -3,6 +3,7 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/caption_layer_mapping.dart';
+import 'package:openvine/models/video_editor/caption_style.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:openvine/models/video_editor/composition_duration.dart';
 import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
@@ -184,8 +185,9 @@ extension VideoEditorExtensions on ProImageEditorState {
   /// created. The given range is stored verbatim — cues may freely overlap;
   /// the interaction layer owns the minimum-duration policy. When the track
   /// is burned in, the matching caption layer is retimed in the same step so
-  /// the canvas render and the exported video stay in sync. No-op when the
-  /// session has no caption track or [cueId] is unknown.
+  /// the canvas render and the exported video stay in sync, including its
+  /// word highlights (see [CaptionCue.withTiming]). No-op when the session
+  /// has no caption track or [cueId] is unknown.
   void setCaptionCueTimeline({
     required String cueId,
     Duration? startTime,
@@ -200,8 +202,9 @@ extension VideoEditorExtensions on ProImageEditorState {
     final cue = track.cues[index];
     final newStart = startTime ?? cue.start;
     final newEnd = endTime ?? cue.end;
+    final retimed = cue.withTiming(start: newStart, end: newEnd);
     final cues = List<CaptionCue>.from(track.cues);
-    cues[index] = cue.copyWith(start: newStart, end: newEnd);
+    cues[index] = retimed;
     final updated = track.copyWith(cues: cues).toJson();
 
     final layerIndex = activeLayers.indexWhere(
@@ -223,10 +226,14 @@ extension VideoEditorExtensions on ProImageEditorState {
         // entry's burn-in layer while leaving its caption meta stale, so undo
         // would drift the CC track and the burned-in text apart.
         final layers = [...activeLayers];
-        layers[layerIndex] = activeLayers[layerIndex].copyWith(
-          startTime: newStart,
-          endTime: newEnd,
-        );
+        final layer = activeLayers[layerIndex];
+        layers[layerIndex] = layer is TextLayer && layer.highlights.isNotEmpty
+            ? layer.copyWith(
+                startTime: newStart,
+                endTime: newEnd,
+                highlights: captionWordHighlights(retimed),
+              )
+            : layer.copyWith(startTime: newStart, endTime: newEnd);
         addHistory(layers: layers, meta: meta);
       } else {
         addHistory(meta: meta);
@@ -243,6 +250,12 @@ extension VideoEditorExtensions on ProImageEditorState {
           endTime: newEnd,
           skipUpdateHistory: true,
         );
+        // setLayerTimeline swapped in a copy of the layer, so updating it in
+        // place leaves the history entries alone.
+        final layer = activeLayers[layerIndex];
+        if (layer is TextLayer && layer.highlights.isNotEmpty) {
+          layer.highlights = captionWordHighlights(retimed);
+        }
       }
     }
     setState(() {});

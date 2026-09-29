@@ -31,11 +31,19 @@ void main() {
     // plain unit tests cannot filter.
     final classic = CaptionStylePreset.byId('classic');
 
-    test('every preset has a unique id and an enter animation', () {
+    test('every preset has a unique id and an enter animation or '
+        'word highlights', () {
       final ids = CaptionStylePreset.presets.map((p) => p.id).toSet();
 
       expect(ids, hasLength(CaptionStylePreset.presets.length));
       for (final preset in CaptionStylePreset.presets) {
+        if (preset.style.highlightColor != null) {
+          // Each lit word is its own exported frame, where an enter or leave
+          // animation would replay.
+          expect(preset.enter, isEmpty, reason: preset.id);
+          expect(preset.leave, isEmpty, reason: preset.id);
+          continue;
+        }
         expect(preset.enter, isNotEmpty, reason: preset.id);
         for (final animation in preset.enter) {
           expect(animation.phase, equals(pve.AnimationPhase.animateIn));

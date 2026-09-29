@@ -46,6 +46,7 @@ class CaptionCustomSelection extends CaptionStyleSelection {
 /// Resolves the localized display name of the preset with [presetId].
 String captionPresetDisplayName(AppLocalizations l10n, String presetId) =>
     switch (presetId) {
+      'karaoke' => l10n.videoEditorCaptionsPresetKaraoke,
       'pop' => l10n.videoEditorCaptionsPresetPop,
       'zoom' => l10n.videoEditorCaptionsPresetZoom,
       'spring' => l10n.videoEditorCaptionsPresetSpring,

@@ -28,6 +28,7 @@ class CaptionStylePreset {
     required List<pve.LayerAnimation> enter,
     required List<pve.LayerAnimation> leave,
     double fontScale = 1,
+    Color? highlightColor,
   }) : style = CaptionStyle(
          font: font,
          color: color,
@@ -36,6 +37,7 @@ class CaptionStylePreset {
          enter: enter,
          leave: leave,
          fontScale: fontScale,
+         highlightColor: highlightColor,
        );
 
   /// Stable identifier stored on the [CaptionTrack].
@@ -113,6 +115,19 @@ class CaptionStylePreset {
           curve: pve.AnimationCurve.easeIn,
         ),
       ],
+    ),
+    // Lights up each word as it is spoken, so no enter/leave animation (see
+    // CaptionAnimationStyle.highlight).
+    CaptionStylePreset(
+      id: 'karaoke',
+      font: GoogleFonts.bricolageGrotesque,
+      color: _white,
+      background: VineTheme.scrim65,
+      colorMode: LayerBackgroundMode.backgroundAndColor,
+      fontScale: 1.1,
+      highlightColor: _yellow,
+      enter: const [],
+      leave: const [],
     ),
     CaptionStylePreset(
       id: 'pop',

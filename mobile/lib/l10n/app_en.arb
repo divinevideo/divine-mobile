@@ -5696,11 +5696,19 @@
   "videoEditorCaptionsCustomTextColor": "Text color",
   "videoEditorCaptionsCustomBackground": "Background",
   "videoEditorCaptionsCustomBackgroundColor": "Background color",
+  "videoEditorCaptionsCustomHighlightColor": "Highlight color",
+  "@videoEditorCaptionsCustomHighlightColor": {
+    "description": "Section label in the custom caption style editor for the color each word lights up in while it is spoken. Shown only when the Karaoke animation is selected."
+  },
   "videoEditorCaptionsCustomAnimation": "Animation",
   "videoEditorCaptionsAnimationNone": "None",
   "videoEditorCaptionsAnimationFade": "Fade",
   "videoEditorCaptionsAnimationPop": "Pop",
   "videoEditorCaptionsAnimationSpring": "Spring",
+  "videoEditorCaptionsAnimationKaraoke": "Karaoke",
+  "@videoEditorCaptionsAnimationKaraoke": {
+    "description": "Caption animation chip: instead of animating in and out, each word lights up in the highlight color while it is spoken."
+  },
   "@videoEditorCaptionsBurnInLabel": {
     "description": "Checkbox label in the captions sheet to additionally burn the captions into the exported video (closed captions are always published)."
   },
@@ -5831,6 +5839,10 @@
     "description": "Body of the confirmation before deleting a saved title style, reassuring that text overlays already styled with it are unaffected."
   },
   "videoEditorCaptionsPresetClassic": "Classic",
+  "videoEditorCaptionsPresetKaraoke": "Karaoke",
+  "@videoEditorCaptionsPresetKaraoke": {
+    "description": "Name of the built-in caption style that lights up each word as it is spoken."
+  },
   "videoEditorCaptionsPresetPop": "Pop",
   "videoEditorCaptionsPresetZoom": "Zoom",
   "videoEditorCaptionsPresetSpring": "Spring",

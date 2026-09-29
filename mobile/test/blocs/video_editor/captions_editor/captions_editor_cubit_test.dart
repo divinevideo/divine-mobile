@@ -2,6 +2,7 @@
 // ABOUTME: Covers generation outcomes, cue editing, preset, and mode ops.
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:caption_generator/caption_generator.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -187,6 +188,69 @@ void main() {
         ),
       ],
     );
+
+    group('word timings', () {
+      const spoken = CaptionCue(
+        id: 'cue-0',
+        text: 'Helo world',
+        start: Duration.zero,
+        end: Duration(seconds: 2),
+        words: [
+          CaptionSegment(
+            text: 'Helo',
+            start: Duration(milliseconds: 200),
+            end: Duration(milliseconds: 600),
+          ),
+          CaptionSegment(
+            text: 'world',
+            start: Duration(milliseconds: 900),
+            end: Duration(milliseconds: 1400),
+          ),
+        ],
+      );
+
+      blocTest<CaptionsEditorCubit, CaptionsEditorState>(
+        'updateCueText keeps them through a spelling fix',
+        build: () => build(initialCues: const [spoken]),
+        act: (cubit) => cubit.updateCueText('cue-0', 'Hello world'),
+        expect: () => [
+          isA<CaptionsEditorState>().having(
+            (s) => s.cues.single.wordTimings.map(
+              (w) => (w.text, w.start, w.end),
+            ),
+            'word timings',
+            [
+              (
+                'Hello',
+                const Duration(milliseconds: 200),
+                const Duration(milliseconds: 600),
+              ),
+              (
+                'world',
+                const Duration(milliseconds: 900),
+                const Duration(milliseconds: 1400),
+              ),
+            ],
+          ),
+        ],
+      );
+
+      blocTest<CaptionsEditorCubit, CaptionsEditorState>(
+        'updateCueTiming leaves them where they are spoken',
+        build: () => build(initialCues: const [spoken]),
+        act: (cubit) =>
+            cubit.updateCueTiming('cue-0', end: const Duration(seconds: 4)),
+        expect: () => [
+          isA<CaptionsEditorState>()
+              .having(
+                (s) => s.cues.single.end,
+                'end',
+                const Duration(seconds: 4),
+              )
+              .having((s) => s.cues.single.words, 'words', spoken.words),
+        ],
+      );
+    });
 
     blocTest<CaptionsEditorCubit, CaptionsEditorState>(
       'removeCue drops the addressed cue',

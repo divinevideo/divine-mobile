@@ -8137,6 +8137,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorCaptionsCustomBackgroundColor => '背景颜色';
 
   @override
+  String get videoEditorCaptionsCustomHighlightColor => '高亮颜色';
+
+  @override
   String get videoEditorCaptionsCustomAnimation => '动画';
 
   @override
@@ -8150,6 +8153,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorCaptionsAnimationSpring => '弹跳';
+
+  @override
+  String get videoEditorCaptionsAnimationKaraoke => '卡拉OK';
 
   @override
   String get videoEditorCaptionsEditTitle => '字幕';
@@ -8282,6 +8288,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorCaptionsPresetClassic => '经典';
+
+  @override
+  String get videoEditorCaptionsPresetKaraoke => '卡拉OK';
 
   @override
   String get videoEditorCaptionsPresetPop => '波普';

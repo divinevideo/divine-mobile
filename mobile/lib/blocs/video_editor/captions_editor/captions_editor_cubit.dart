@@ -125,13 +125,14 @@ class CaptionsEditorCubit extends Cubit<CaptionsEditorState> {
     );
   }
 
-  /// Replaces the text of the cue with [cueId].
+  /// Replaces the text of the cue with [cueId], keeping its word timings
+  /// where the edit allows (see [CaptionCue.withText]).
   void updateCueText(String cueId, String text) {
     emit(
       state.copyWith(
         cues: [
           for (final cue in state.cues)
-            if (cue.id == cueId) cue.copyWith(text: text) else cue,
+            if (cue.id == cueId) cue.withText(text) else cue,
         ],
       ),
     );
@@ -166,7 +167,7 @@ class CaptionsEditorCubit extends Cubit<CaptionsEditorState> {
         cues: [
           for (final other in state.cues)
             if (other.id == cueId)
-              other.copyWith(start: newStart, end: newEnd)
+              other.withTiming(start: newStart, end: newEnd)
             else
               other,
         ],

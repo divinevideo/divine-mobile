@@ -8591,6 +8591,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorCaptionsCustomBackgroundColor => 'Màu nền';
 
   @override
+  String get videoEditorCaptionsCustomHighlightColor => 'Màu làm nổi bật';
+
+  @override
   String get videoEditorCaptionsCustomAnimation => 'Hiệu ứng';
 
   @override
@@ -8604,6 +8607,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorCaptionsAnimationSpring => 'Nảy';
+
+  @override
+  String get videoEditorCaptionsAnimationKaraoke => 'Karaoke';
 
   @override
   String get videoEditorCaptionsEditTitle => 'Phụ đề';
@@ -8744,6 +8750,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorCaptionsPresetClassic => 'Cổ điển';
+
+  @override
+  String get videoEditorCaptionsPresetKaraoke => 'Karaoke';
 
   @override
   String get videoEditorCaptionsPresetPop => 'Pop';

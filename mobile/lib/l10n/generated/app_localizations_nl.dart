@@ -8663,6 +8663,9 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorCaptionsCustomBackgroundColor => 'Achtergrondkleur';
 
   @override
+  String get videoEditorCaptionsCustomHighlightColor => 'Markeerkleur';
+
+  @override
   String get videoEditorCaptionsCustomAnimation => 'Animatie';
 
   @override
@@ -8676,6 +8679,9 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoEditorCaptionsAnimationSpring => 'Veer';
+
+  @override
+  String get videoEditorCaptionsAnimationKaraoke => 'Karaoke';
 
   @override
   String get videoEditorCaptionsEditTitle => 'Ondertitels';
@@ -8821,6 +8827,9 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoEditorCaptionsPresetClassic => 'Klassiek';
+
+  @override
+  String get videoEditorCaptionsPresetKaraoke => 'Karaoke';
 
   @override
   String get videoEditorCaptionsPresetPop => 'Pop';

@@ -1,6 +1,7 @@
 // ABOUTME: Groups word-level transcription segments into caption cues.
 // ABOUTME: Splits on silence gaps, character limits, and cue duration limits.
 
+import 'package:caption_generator/src/caption_word_timing.dart';
 import 'package:caption_generator/src/models/caption_segment.dart';
 
 /// Merges word-level [segments] into display-ready caption cues.
@@ -21,6 +22,10 @@ import 'package:caption_generator/src/models/caption_segment.dart';
 ///
 /// Input order does not matter; segments are sorted by start time first, with
 /// caller order preserved for words that share a start (the sort is stable).
+///
+/// Each cue keeps its words with their own timings in
+/// [CaptionSegment.words]. An input segment holding several words, such as a
+/// cue from a server transcript, is split with [captionWordsOf].
 ///
 /// Throws an [ArgumentError] when a limit is not positive.
 List<CaptionSegment> groupCaptionSegments(
@@ -66,6 +71,7 @@ List<CaptionSegment> groupCaptionSegments(
   final sorted = [for (final entry in indexed) entry.segment];
   final cues = <CaptionSegment>[];
   final text = StringBuffer(sorted.first.text);
+  final words = [...captionWordsOf(sorted.first)];
   var cueStart = sorted.first.start;
   var cueEnd = sorted.first.end;
   var previousEndsSentence = _endsSentence(sorted.first.text);
@@ -81,22 +87,38 @@ List<CaptionSegment> groupCaptionSegments(
         mergedDuration > maxCaptionDuration;
     if (startsNewCue) {
       cues.add(
-        CaptionSegment(text: text.toString(), start: cueStart, end: cueEnd),
+        CaptionSegment(
+          text: text.toString(),
+          start: cueStart,
+          end: cueEnd,
+          words: List.unmodifiable(words),
+        ),
       );
       text
         ..clear()
         ..write(segment.text);
+      words
+        ..clear()
+        ..addAll(captionWordsOf(segment));
       cueStart = segment.start;
       cueEnd = segment.end;
     } else {
       text
         ..write(' ')
         ..write(segment.text);
+      words.addAll(captionWordsOf(segment));
       cueEnd = segment.end > cueEnd ? segment.end : cueEnd;
     }
     previousEndsSentence = _endsSentence(segment.text);
   }
-  cues.add(CaptionSegment(text: text.toString(), start: cueStart, end: cueEnd));
+  cues.add(
+    CaptionSegment(
+      text: text.toString(),
+      start: cueStart,
+      end: cueEnd,
+      words: List.unmodifiable(words),
+    ),
+  );
   return cues;
 }
 

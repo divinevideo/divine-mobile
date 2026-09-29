@@ -8205,6 +8205,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorCaptionsCustomBackgroundColor => '背景色';
 
   @override
+  String get videoEditorCaptionsCustomHighlightColor => 'ハイライト色';
+
+  @override
   String get videoEditorCaptionsCustomAnimation => 'アニメーション';
 
   @override
@@ -8218,6 +8221,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorCaptionsAnimationSpring => 'スプリング';
+
+  @override
+  String get videoEditorCaptionsAnimationKaraoke => 'カラオケ';
 
   @override
   String get videoEditorCaptionsEditTitle => '字幕';
@@ -8354,6 +8360,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorCaptionsPresetClassic => 'クラシック';
+
+  @override
+  String get videoEditorCaptionsPresetKaraoke => 'カラオケ';
 
   @override
   String get videoEditorCaptionsPresetPop => 'ポップ';

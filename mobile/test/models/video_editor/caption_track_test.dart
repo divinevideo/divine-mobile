@@ -59,6 +59,110 @@ void main() {
       expect(moved.start, equals(Duration.zero));
       expect(moved.text, equals(cue.text));
     });
+
+    group('words', () {
+      CaptionSegment word(String text, int startMs, int endMs) =>
+          CaptionSegment(
+            text: text,
+            start: Duration(milliseconds: startMs),
+            end: Duration(milliseconds: endMs),
+          );
+
+      final spoken = cue.copyWith(
+        words: [word('Hello', 300, 700), word('world.', 900, 1500)],
+      );
+
+      test('round-trip through toJson/fromJson', () {
+        expect(CaptionCue.fromJson(spoken.toJson()), equals(spoken));
+      });
+
+      test('are left out of the JSON when there are none', () {
+        expect(cue.toJson().containsKey('words'), isFalse);
+      });
+
+      test('are dropped, not the cue, when stored malformed', () {
+        final json = spoken.toJson()
+          ..['words'] = [
+            {'text': 'Hello', 'startMs': 300},
+          ];
+
+        expect(CaptionCue.fromJson(json), equals(cue));
+        expect(
+          CaptionCue.fromJson(spoken.toJson()..['words'] = ['nope']),
+          equals(cue),
+        );
+      });
+
+      test('come along from a grouped recognizer segment', () {
+        final adapted = CaptionCue.fromSegment(
+          CaptionSegment(
+            text: 'Hello world.',
+            start: const Duration(milliseconds: 250),
+            end: const Duration(milliseconds: 1750),
+            words: spoken.words,
+          ),
+          id: 'cue-1',
+        );
+
+        expect(adapted, equals(spoken));
+      });
+
+      test('wordTimings are the words while they match the text', () {
+        expect(spoken.wordTimings, equals(spoken.words));
+      });
+
+      test('wordTimings spread the text without matching words', () {
+        expect(cue.wordTimings, [
+          word('Hello', 250, 932),
+          word('world.', 932, 1750),
+        ]);
+        expect(
+          spoken.copyWith(text: 'Hello there world.').wordTimings,
+          hasLength(3),
+        );
+      });
+
+      test('withText keeps the timings when the word count stays', () {
+        final corrected = spoken.withText('Yellow world!');
+
+        expect(corrected.text, equals('Yellow world!'));
+        expect(corrected.words, [
+          word('Yellow', 300, 700),
+          word('world!', 900, 1500),
+        ]);
+      });
+
+      test('withText drops the timings when the word count changes', () {
+        final rewritten = spoken.withText('Hello there, world.');
+
+        expect(rewritten.text, equals('Hello there, world.'));
+        expect(rewritten.words, isEmpty);
+        expect(rewritten.wordTimings, hasLength(3));
+      });
+
+      test('withTiming moves the words along with a moved cue', () {
+        final moved = spoken.withTiming(
+          start: const Duration(milliseconds: 1250),
+          end: const Duration(milliseconds: 2750),
+        );
+
+        expect(moved.start, equals(const Duration(milliseconds: 1250)));
+        expect(moved.end, equals(const Duration(milliseconds: 2750)));
+        expect(moved.words, [
+          word('Hello', 1300, 1700),
+          word('world.', 1900, 2500),
+        ]);
+      });
+
+      test('withTiming leaves the words in place when trimming', () {
+        final trimmed = spoken.withTiming(
+          end: const Duration(milliseconds: 1000),
+        );
+
+        expect(trimmed.end, equals(const Duration(milliseconds: 1000)));
+        expect(trimmed.words, equals(spoken.words));
+      });
+    });
   });
 
   group(CaptionTrack, () {

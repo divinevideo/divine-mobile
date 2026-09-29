@@ -378,6 +378,9 @@ class CaptionGenerationService {
     ];
   }
 
+  /// Turns grouped segments into cues that keep their word timings. The
+  /// server transcript only times whole cues, so its words arrive spread over
+  /// each cue by `groupCaptionSegments`.
   List<CaptionCue> _buildCues(
     List<CaptionSegment> grouped,
     Duration totalDuration,
@@ -388,6 +391,7 @@ class CaptionGenerationService {
         text: segment.text,
         start: segment.start,
         end: segment.end > totalDuration ? totalDuration : segment.end,
+        words: segment.words,
       ),
   ];
 

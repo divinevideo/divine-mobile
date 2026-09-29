@@ -4566,11 +4566,13 @@
   "videoEditorCaptionsCustomTextColor": "ٹیکسٹ کا رنگ",
   "videoEditorCaptionsCustomBackground": "پس منظر",
   "videoEditorCaptionsCustomBackgroundColor": "پس منظر کا رنگ",
+  "videoEditorCaptionsCustomHighlightColor": "نمایاں رنگ",
   "videoEditorCaptionsCustomAnimation": "اینیمیشن",
   "videoEditorCaptionsAnimationNone": "کوئی نہیں",
   "videoEditorCaptionsAnimationFade": "فیڈ",
   "videoEditorCaptionsAnimationPop": "پاپ",
   "videoEditorCaptionsAnimationSpring": "اسپرنگ",
+  "videoEditorCaptionsAnimationKaraoke": "کراؤکی",
   "@videoEditorCaptionsBurnInLabel": {
     "description": "Checkbox label in the captions sheet to additionally burn the captions into the exported video (closed captions are always published)."
   },
@@ -4613,6 +4615,7 @@
   "videoEditorTitleSavedStylesEmpty": "ابھی تک کچھ محفوظ نہیں۔ اپنے ٹیکسٹ کو اپنی پسند کا لُک دیں، یہاں محفوظ کریں اور اگلی ویڈیو میں وہی لُک دوبارہ استعمال کریں۔",
   "videoEditorTitleSavedStyleDeleteConfirmMessage": "جو ٹیکسٹ پہلے سے یہ اسٹائل استعمال کر رہا ہے اس کا لُک برقرار رہے گا۔",
   "videoEditorCaptionsPresetClassic": "کلاسک",
+  "videoEditorCaptionsPresetKaraoke": "کراؤکی",
   "videoEditorCaptionsPresetPop": "پاپ",
   "videoEditorCaptionsPresetZoom": "زوم",
   "videoEditorCaptionsPresetSpring": "اسپرنگ",

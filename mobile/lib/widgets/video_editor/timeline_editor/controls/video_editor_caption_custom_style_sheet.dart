@@ -261,6 +261,19 @@ class _CaptionCustomStyleViewState extends State<_CaptionCustomStyleView>
                 onSelected: (animation) =>
                     _update(_style.copyWith(animation: animation)),
               ),
+              if (_style.animation.highlightsWords) ...[
+                const SizedBox(height: 16),
+                _SectionLabel(l10n.videoEditorCaptionsCustomHighlightColor),
+                _ColorRow(
+                  selected: _style.highlightColor,
+                  onSelected: (color) =>
+                      _update(_style.copyWith(highlightColor: color)),
+                  onCustom: () => _pickColor(
+                    _style.highlightColor,
+                    (color) => _style.copyWith(highlightColor: color),
+                  ),
+                ),
+              ],
               const SizedBox(height: 24),
               DivineButton(
                 label: l10n.videoEditorCaptionsSavedStyleSaveTitle,
@@ -548,6 +561,8 @@ class _AnimationRow extends StatelessWidget {
         CaptionAnimationStyle.fade => l10n.videoEditorCaptionsAnimationFade,
         CaptionAnimationStyle.pop => l10n.videoEditorCaptionsAnimationPop,
         CaptionAnimationStyle.spring => l10n.videoEditorCaptionsAnimationSpring,
+        CaptionAnimationStyle.highlight =>
+          l10n.videoEditorCaptionsAnimationKaraoke,
       };
 
   @override

@@ -4566,11 +4566,13 @@
   "videoEditorCaptionsCustomTextColor": "Warna teks",
   "videoEditorCaptionsCustomBackground": "Latar belakang",
   "videoEditorCaptionsCustomBackgroundColor": "Warna latar belakang",
+  "videoEditorCaptionsCustomHighlightColor": "Warna serlahan",
   "videoEditorCaptionsCustomAnimation": "Animasi",
   "videoEditorCaptionsAnimationNone": "Tiada",
   "videoEditorCaptionsAnimationFade": "Pudar",
   "videoEditorCaptionsAnimationPop": "Pop",
   "videoEditorCaptionsAnimationSpring": "Spring",
+  "videoEditorCaptionsAnimationKaraoke": "Karaoke",
   "@videoEditorCaptionsBurnInLabel": {
     "description": "Checkbox label in the captions sheet to additionally burn the captions into the exported video (closed captions are always published)."
   },
@@ -4613,6 +4615,7 @@
   "videoEditorTitleSavedStylesEmpty": "Belum ada yang disimpan. Gayakan teks anda mengikut citarasa, simpan di sini, dan gunakan semula rupa itu dalam video seterusnya.",
   "videoEditorTitleSavedStyleDeleteConfirmMessage": "Teks yang sudah menggunakan gaya ini mengekalkan rupanya.",
   "videoEditorCaptionsPresetClassic": "Klasik",
+  "videoEditorCaptionsPresetKaraoke": "Karaoke",
   "videoEditorCaptionsPresetPop": "Pop",
   "videoEditorCaptionsPresetZoom": "Zum",
   "videoEditorCaptionsPresetSpring": "Spring",

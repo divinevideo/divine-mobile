@@ -15,6 +15,7 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 /// Loops two sample cues ([_cueA], then the app name) through [style]'s enter
 /// and leave animations, so the preview shows the whole transition — one word
 /// animates in, holds, animates out, the next takes over, then it restarts.
+/// A word-highlighting style lights up the words of each cue in turn instead.
 ///
 /// Composes fade (opacity) and scale the same way the export renderer and
 /// `LayerTimelineVisibility` combine per-layer animations, so the preview
@@ -65,6 +66,11 @@ class CaptionStylePreview extends StatelessWidget {
     final (:opacity, :scale) = _transform(local, windowMs);
 
     final hasPill = style.colorMode != LayerBackgroundMode.onlyColor;
+    final textStyle = style.font(
+      fontSize:
+          VideoEditorConstants.baseFontSize * style.fontScale * fontSizeFactor,
+      color: style.color,
+    );
     return ClipRRect(
       child: DecoratedBox(
         decoration: const BoxDecoration(
@@ -92,17 +98,11 @@ class CaptionStylePreview extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         )
                       : null,
-                  child: Text(
-                    text,
+                  child: Text.rich(
+                    _captionSpan(text, local, textStyle),
                     maxLines: 1,
                     textAlign: TextAlign.center,
-                    style: style.font(
-                      fontSize:
-                          VideoEditorConstants.baseFontSize *
-                          style.fontScale *
-                          fontSizeFactor,
-                      color: style.color,
-                    ),
+                    style: textStyle,
                   ),
                 ),
               ),
@@ -110,6 +110,29 @@ class CaptionStylePreview extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  /// [text] at [local] (0..1 within its cue window). A word-highlighting
+  /// style lights its words up one after another across the window, the way
+  /// evenly spoken words would.
+  TextSpan _captionSpan(String text, double local, TextStyle textStyle) {
+    final highlightColor = style.highlightColor;
+    if (highlightColor == null) return TextSpan(text: text);
+    final litStyle = textStyle.copyWith(color: highlightColor);
+
+    final words = text.split(' ');
+    final active = (local * words.length).floor().clamp(0, words.length - 1);
+    return TextSpan(
+      children: [
+        for (final (index, word) in words.indexed) ...[
+          if (index > 0) const TextSpan(text: ' '),
+          TextSpan(
+            text: word,
+            style: index == active ? litStyle : null,
+          ),
+        ],
+      ],
     );
   }
 
