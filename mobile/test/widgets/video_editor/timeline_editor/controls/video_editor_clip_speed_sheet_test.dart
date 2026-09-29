@@ -1,5 +1,7 @@
 // ABOUTME: Widget tests for VideoEditorClipSpeedSheet.
-// ABOUTME: Covers title rendering, speed clamping, and cancel/confirm navigation.
+// ABOUTME: Covers rendering, clamping, speed presets and cancel/confirm.
+
+import 'dart:ui' show Tristate;
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -41,6 +43,63 @@ Widget _buildSubject({double initialSpeed = 1.0}) {
     ),
   );
 }
+
+/// Opens the sheet from a home route with `push`, so the value the sheet pops
+/// reaches [onResult] the way it reaches the timeline clip controls.
+Widget _buildPushingSubject({required ValueChanged<double?> onResult}) {
+  return MaterialApp.router(
+    localizationsDelegates: appLocalizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    routerConfig: GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => Scaffold(
+            body: TextButton(
+              onPressed: () async =>
+                  onResult(await context.push<double>('/speed')),
+              child: const Text('open'),
+            ),
+          ),
+          routes: [
+            GoRoute(
+              path: 'speed',
+              builder: (context, state) =>
+                  const Scaffold(body: VideoEditorClipSpeedSheet()),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
+/// The current-speed readout beside the "Speed" label. Scoped to that row
+/// because a preset chip can show the same text (e.g. `0.25×`).
+Finder _speedValue(String text) => find.descendant(
+  of: find
+      .ancestor(
+        of: find.text(
+          lookupAppLocalizations(const Locale('en')).videoEditorSpeedLabel,
+        ),
+        matching: find.byType(Row),
+      )
+      .first,
+  matching: find.text(text),
+);
+
+/// The preset chip whose accessible name is the preset [label], e.g. `'0.5'`.
+Finder _preset(String label) => find.bySemanticsLabel(
+  lookupAppLocalizations(
+    const Locale('en'),
+  ).videoEditorSpeedPresetSemanticLabel(label),
+);
+
+/// Every semantics node currently announced as selected.
+SemanticsFinder _selectedNodes() => find.semantics.byPredicate(
+  (node) =>
+      node.getSemanticsData().flagsCollection.isSelected == Tristate.isTrue,
+);
 
 void main() {
   group(VideoEditorClipSpeedSheet, () {
@@ -112,7 +171,7 @@ void main() {
 
         final expected =
             '${VideoEditorConstants.clipSpeedMin.toStringAsFixed(2)}×';
-        expect(find.text(expected), findsOneWidget);
+        expect(_speedValue(expected), findsOneWidget);
       });
 
       testWidgets('clamps above clipSpeedMax to clipSpeedMax', (tester) async {
@@ -121,7 +180,7 @@ void main() {
 
         final expected =
             '${VideoEditorConstants.clipSpeedMax.toStringAsFixed(2)}×';
-        expect(find.text(expected), findsOneWidget);
+        expect(_speedValue(expected), findsOneWidget);
       });
 
       testWidgets('shows exact value at clipSpeedMin boundary', (tester) async {
@@ -132,7 +191,7 @@ void main() {
 
         final expected =
             '${VideoEditorConstants.clipSpeedMin.toStringAsFixed(2)}×';
-        expect(find.text(expected), findsOneWidget);
+        expect(_speedValue(expected), findsOneWidget);
       });
 
       testWidgets('shows exact value at clipSpeedMax boundary', (tester) async {
@@ -143,7 +202,106 @@ void main() {
 
         final expected =
             '${VideoEditorConstants.clipSpeedMax.toStringAsFixed(2)}×';
-        expect(find.text(expected), findsOneWidget);
+        expect(_speedValue(expected), findsOneWidget);
+      });
+    });
+
+    group('speed presets', () {
+      testWidgets('marks the preset matching the current speed as selected', (
+        tester,
+      ) async {
+        await tester.pumpWidget(_buildSubject(initialSpeed: 0.5));
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.getSemantics(_preset('0.5')),
+          isSemantics(isButton: true, isSelected: true),
+        );
+        expect(
+          tester.getSemantics(_preset('1')),
+          isSemantics(isSelected: false),
+        );
+        expect(_selectedNodes(), findsOne);
+      });
+
+      testWidgets('tapping a preset sets the speed and selects it', (
+        tester,
+      ) async {
+        await tester.pumpWidget(_buildSubject());
+        await tester.pumpAndSettle();
+        expect(
+          tester.getSemantics(_preset('1')),
+          isSemantics(isSelected: true),
+        );
+
+        await tester.tap(find.text('2×'));
+        await tester.pump();
+
+        expect(find.text('2.00×'), findsOneWidget);
+        expect(
+          tester.getSemantics(_preset('2')),
+          isSemantics(isSelected: true),
+        );
+        expect(
+          tester.getSemantics(_preset('1')),
+          isSemantics(isSelected: false),
+        );
+      });
+
+      testWidgets('moving the slider off a preset deselects it', (
+        tester,
+      ) async {
+        await tester.pumpWidget(_buildSubject());
+        await tester.pumpAndSettle();
+        expect(
+          tester.getSemantics(_preset('1')),
+          isSemantics(isSelected: true),
+        );
+
+        // Grabbing the track mid-way lands between presets (~1.6×–1.8×).
+        await tester.drag(find.byType(DivineSlider), const Offset(20, 0));
+        await tester.pumpAndSettle();
+
+        expect(find.text('1.00×'), findsNothing);
+        expect(_selectedNodes(), findsNothing);
+      });
+
+      testWidgets('keeps a 48dp tap target on a 320dp-wide phone', (
+        tester,
+      ) async {
+        await tester.binding.setSurfaceSize(const Size(320, 640));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        await tester.pumpWidget(_buildSubject());
+        await tester.pumpAndSettle();
+
+        for (final label in ['0.25', '0.5', '1', '1.5', '2', '3']) {
+          final size = tester.getSize(_preset(label));
+          expect(size.width, greaterThanOrEqualTo(48), reason: label);
+          expect(size.height, greaterThanOrEqualTo(48), reason: label);
+        }
+      });
+
+      testWidgets('confirming returns the tapped preset', (tester) async {
+        double? result;
+        await tester.pumpWidget(
+          _buildPushingSubject(onResult: (value) => result = value),
+        );
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('0.5×'));
+        await tester.pump();
+        await tester.tap(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineIconButton &&
+                widget.icon == DivineIconName.check,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(result, equals(0.5));
       });
     });
 

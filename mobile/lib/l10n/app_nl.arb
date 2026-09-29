@@ -2649,6 +2649,7 @@
     "videoEditorReverseNoLocalFile": "Kan niet omdraaien: clip is niet lokaal beschikbaar.",
     "videoEditorReverseFailed": "Kon clip niet omdraaien. Probeer het opnieuw.",
     "videoEditorSpeedSheetTitle": "Clipsnelheid",
+    "videoEditorSpeedPresetSemanticLabel": "Snelheid {speed}×",
     "videoEditorFadeLabel": "Faden",
     "videoEditorFadeSoundSemanticLabel": "In- en uitfaden voor geselecteerd geluid instellen",
     "videoEditorFadeSheetTitle": "In- en uitfaden",

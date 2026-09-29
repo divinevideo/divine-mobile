@@ -2649,6 +2649,7 @@
     "videoEditorReverseNoLocalFile": "Rückwärtsdrehen nicht möglich: Clip ist lokal nicht verfügbar.",
     "videoEditorReverseFailed": "Clip konnte nicht rückwärts gedreht werden. Bitte erneut versuchen.",
     "videoEditorSpeedSheetTitle": "Clip-Geschwindigkeit",
+    "videoEditorSpeedPresetSemanticLabel": "Geschwindigkeit {speed}×",
     "videoEditorFadeLabel": "Ein-/Ausblenden",
     "videoEditorFadeSoundSemanticLabel": "Ein- und Ausblenden für ausgewählten Sound festlegen",
     "videoEditorFadeSheetTitle": "Ein- & Ausblenden",

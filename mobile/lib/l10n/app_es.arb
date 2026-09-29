@@ -2657,6 +2657,7 @@
     "videoEditorReverseNoLocalFile": "No se puede invertir: el clip no está disponible localmente.",
     "videoEditorReverseFailed": "No se pudo invertir el clip. Por favor, inténtalo de nuevo.",
     "videoEditorSpeedSheetTitle": "Velocidad del clip",
+    "videoEditorSpeedPresetSemanticLabel": "Velocidad {speed}×",
     "videoEditorFadeLabel": "Fundido",
     "videoEditorFadeSoundSemanticLabel": "Establecer el fundido de entrada y salida del sonido seleccionado",
     "videoEditorFadeSheetTitle": "Fundido de entrada y salida",

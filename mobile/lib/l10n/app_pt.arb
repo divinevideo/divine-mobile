@@ -2649,6 +2649,7 @@
     "videoEditorReverseNoLocalFile": "Não é possível inverter: o clipe não está disponível localmente.",
     "videoEditorReverseFailed": "Não foi possível inverter o clipe. Por favor, tente novamente.",
     "videoEditorSpeedSheetTitle": "Velocidade do clipe",
+    "videoEditorSpeedPresetSemanticLabel": "Velocidade {speed}×",
     "videoEditorFadeLabel": "Fade",
     "videoEditorFadeSoundSemanticLabel": "Definir o fade in e o fade out do som selecionado",
     "videoEditorFadeSheetTitle": "Fade in e fade out",

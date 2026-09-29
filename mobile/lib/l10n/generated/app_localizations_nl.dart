@@ -9431,6 +9431,11 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'Clipsnelheid';
 
   @override
+  String videoEditorSpeedPresetSemanticLabel(String speed) {
+    return 'Snelheid $speed×';
+  }
+
+  @override
   String get videoEditorFadeLabel => 'Faden';
 
   @override

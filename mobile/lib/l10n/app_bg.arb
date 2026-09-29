@@ -2904,6 +2904,7 @@
     "videoEditorReverseNoLocalFile": "Не може да се обърне: клипът не е наличен локално.",
     "videoEditorReverseFailed": "Клипът не можа да се обърне. Моля, опитайте отново.",
     "videoEditorSpeedSheetTitle": "Скорост на клипа",
+    "videoEditorSpeedPresetSemanticLabel": "Скорост {speed}×",
     "videoEditorFadeLabel": "Избледняване",
     "videoEditorFadeSoundSemanticLabel": "Задаване на плавно усилване и заглушаване за избрания звук",
     "videoEditorFadeSheetTitle": "Плавно усилване и заглушаване",

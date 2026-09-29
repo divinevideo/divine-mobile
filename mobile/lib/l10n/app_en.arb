@@ -6190,6 +6190,15 @@
   "@videoEditorSpeedSheetTitle": {
     "description": "Title of the bottom sheet for adjusting clip playback speed."
   },
+  "videoEditorSpeedPresetSemanticLabel": "Speed {speed}×",
+  "@videoEditorSpeedPresetSemanticLabel": {
+    "description": "Accessibility label for a one-tap speed preset in the clip speed bottom sheet. {speed} is a speed multiplier like 0.5, 1, or 2.",
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
   "videoEditorFadeLabel": "Fade",
   "@videoEditorFadeLabel": {
     "description": "Caption of the button in the sound's timeline controls that opens the fade in / fade out sheet."

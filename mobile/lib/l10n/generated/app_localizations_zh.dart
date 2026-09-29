@@ -8841,6 +8841,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => '片段速度';
 
   @override
+  String videoEditorSpeedPresetSemanticLabel(String speed) {
+    return '速度 $speed×';
+  }
+
+  @override
   String get videoEditorFadeLabel => '淡入淡出';
 
   @override

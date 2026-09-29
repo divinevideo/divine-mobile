@@ -2597,6 +2597,7 @@
     "videoEditorReverseNoLocalFile": "Tidak dapat membalik: klip tidak tersedia secara lokal.",
     "videoEditorReverseFailed": "Tidak dapat membalik klip. Silakan coba lagi.",
     "videoEditorSpeedSheetTitle": "Kecepatan Klip",
+    "videoEditorSpeedPresetSemanticLabel": "Kecepatan {speed}×",
     "videoEditorFadeLabel": "Pudar",
     "videoEditorFadeSoundSemanticLabel": "Atur suara masuk dan keluar perlahan untuk suara yang dipilih",
     "videoEditorFadeSheetTitle": "Masuk & keluar perlahan",

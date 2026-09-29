@@ -2136,6 +2136,7 @@
     "videoEditorReverseNoLocalFile": "역재생할 수 없습니다: 클립이 로컬에서 사용할 수 없습니다.",
     "videoEditorReverseFailed": "클립을 역재생할 수 없었습니다. 다시 시도해 주세요.",
     "videoEditorSpeedSheetTitle": "클립 속도",
+    "videoEditorSpeedPresetSemanticLabel": "속도 {speed}×",
     "videoEditorFadeLabel": "페이드",
     "videoEditorFadeSoundSemanticLabel": "선택한 사운드의 페이드 인/아웃 설정",
     "videoEditorFadeSheetTitle": "페이드 인/아웃",

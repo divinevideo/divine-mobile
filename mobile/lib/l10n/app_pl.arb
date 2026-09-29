@@ -2649,6 +2649,7 @@
     "videoEditorReverseNoLocalFile": "Nie można odwrócić: klip nie jest dostępny lokalnie.",
     "videoEditorReverseFailed": "Nie udało się odwrócić klipu. Spróbuj ponownie.",
     "videoEditorSpeedSheetTitle": "Prędkość klipu",
+    "videoEditorSpeedPresetSemanticLabel": "Prędkość {speed}×",
     "videoEditorFadeLabel": "Zanikanie",
     "videoEditorFadeSoundSemanticLabel": "Ustaw zgłaśnianie i wyciszanie wybranego dźwięku",
     "videoEditorFadeSheetTitle": "Zgłaśnianie i wyciszanie",

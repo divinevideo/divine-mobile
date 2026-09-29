@@ -360,6 +360,12 @@ class VideoEditorConstants {
   /// Step size between discrete speed values on the clip speed slider.
   static const double clipSpeedStep = 0.05;
 
+  /// One-tap speeds offered next to the clip speed slider.
+  ///
+  /// Each value must lie within [clipSpeedMin]..[clipSpeedMax] and on the
+  /// [clipSpeedStep] grid, so the slider can land on it exactly.
+  static const List<double> clipSpeedPresets = [0.25, 0.5, 1, 1.5, 2, 3];
+
   /// Step size between discrete values on the sound fade sliders.
   static const Duration audioFadeStep = Duration(milliseconds: 100);
 

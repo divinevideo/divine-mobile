@@ -1921,6 +1921,7 @@
     "videoEditorReverseNoLocalFile": "Hindi ma-reverse: hindi available ang clip nang lokal.",
     "videoEditorReverseFailed": "Hindi na-reverse ang clip. Pakisubukang muli.",
     "videoEditorSpeedSheetTitle": "Bilis ng Clip",
+    "videoEditorSpeedPresetSemanticLabel": "Bilis {speed}×",
     "videoEditorFadeLabel": "Fade",
     "videoEditorFadeSoundSemanticLabel": "Itakda ang fade in at fade out ng napiling sound",
     "videoEditorFadeSheetTitle": "Fade in at fade out",

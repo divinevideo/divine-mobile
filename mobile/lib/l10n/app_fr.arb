@@ -2649,6 +2649,7 @@
     "videoEditorReverseNoLocalFile": "Impossible d'inverser : le clip n'est pas disponible localement.",
     "videoEditorReverseFailed": "Impossible d'inverser le clip. Veuillez réessayer.",
     "videoEditorSpeedSheetTitle": "Vitesse du clip",
+    "videoEditorSpeedPresetSemanticLabel": "Vitesse {speed}×",
     "videoEditorFadeLabel": "Fondu",
     "videoEditorFadeSoundSemanticLabel": "Définir le fondu d'entrée et de sortie du son sélectionné",
     "videoEditorFadeSheetTitle": "Fondu d'entrée et de sortie",

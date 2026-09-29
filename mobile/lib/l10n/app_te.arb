@@ -5801,6 +5801,15 @@
   "@videoEditorSpeedSheetTitle": {
     "description": "Title of the bottom sheet for adjusting clip playback speed."
   },
+  "videoEditorSpeedPresetSemanticLabel": "వేగం {speed}×",
+  "@videoEditorSpeedPresetSemanticLabel": {
+    "description": "Accessibility label for a one-tap speed preset in the clip speed bottom sheet. {speed} is a speed multiplier like 0.5, 1, or 2.",
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
   "videoEditorFadeLabel": "ఫేడ్",
   "videoEditorFadeSoundSemanticLabel": "ఎంచుకున్న ధ్వని కోసం ఫేడ్ ఇన్, ఫేడ్ అవుట్ సెట్ చేయండి",
   "videoEditorFadeSheetTitle": "ఫేడ్ ఇన్ & అవుట్",

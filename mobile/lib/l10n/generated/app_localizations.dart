@@ -16002,6 +16002,12 @@ abstract class AppLocalizations {
   /// **'Clip Speed'**
   String get videoEditorSpeedSheetTitle;
 
+  /// Accessibility label for a one-tap speed preset in the clip speed bottom sheet. {speed} is a speed multiplier like 0.5, 1, or 2.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed {speed}×'**
+  String videoEditorSpeedPresetSemanticLabel(String speed);
+
   /// Caption of the button in the sound's timeline controls that opens the fade in / fade out sheet.
   ///
   /// In en, this message translates to:

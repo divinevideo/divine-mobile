@@ -9165,6 +9165,11 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'የክሊፕ ፍጥነት';
 
   @override
+  String videoEditorSpeedPresetSemanticLabel(String speed) {
+    return 'ፍጥነት $speed×';
+  }
+
+  @override
   String get videoEditorFadeLabel => 'ፌድ';
 
   @override

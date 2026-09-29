@@ -2590,6 +2590,7 @@
     "videoEditorReverseNoLocalFile": "لا يمكن العكس: المقطع غير متاح محليًا.",
     "videoEditorReverseFailed": "تعذّر عكس المقطع. يرجى المحاولة مجددًا.",
     "videoEditorSpeedSheetTitle": "سرعة المقطع",
+    "videoEditorSpeedPresetSemanticLabel": "السرعة {speed}×",
     "videoEditorFadeLabel": "تلاشٍ",
     "videoEditorFadeSoundSemanticLabel": "تعيين الرفع والخفض التدريجي للصوت المحدد",
     "videoEditorFadeSheetTitle": "رفع وخفض تدريجي",

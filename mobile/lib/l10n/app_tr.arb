@@ -2597,6 +2597,7 @@
     "videoEditorReverseNoLocalFile": "Tersine çevrilemiyor: klip yerel olarak kullanılamıyor.",
     "videoEditorReverseFailed": "Klip tersine çevrilemedi. Lütfen tekrar deneyin.",
     "videoEditorSpeedSheetTitle": "Klip Hızı",
+    "videoEditorSpeedPresetSemanticLabel": "Hız {speed}×",
     "videoEditorFadeLabel": "Solma",
     "videoEditorFadeSoundSemanticLabel": "Seçili ses için yavaş giriş ve çıkışı ayarla",
     "videoEditorFadeSheetTitle": "Yavaş giriş ve çıkış",
