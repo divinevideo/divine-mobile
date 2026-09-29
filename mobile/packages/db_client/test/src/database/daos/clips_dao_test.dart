@@ -198,6 +198,32 @@ void main() {
 
         expect(referenced, {'pre_key.mp4', 'chroma_bg_1.png'});
       });
+
+      test('protects the backdrop video a chroma key plays', () async {
+        // A video backdrop is another library clip's file. Deleting that clip
+        // must not take the file away from a key that still renders it: a
+        // recorded key waiting to bake, or a baked one that can be re-keyed.
+        await dao.upsertClip(
+          id: 'clip_backdrops',
+          draftId: testDraftId,
+          orderIndex: 0,
+          durationMs: 3000,
+          recordedAt: DateTime(2023, 11, 14, 10),
+          filePath: 'clip_backdrops.mp4',
+          thumbnailPath: null,
+          data:
+              '{"captureChromaKey":{"backgroundVideo":"pending_backdrop.mp4"},'
+              '"chromaKey":{"backgroundVideo":"baked_backdrop.mp4"}}',
+        );
+
+        final referenced = await dao.referencedFilenames({
+          'pending_backdrop.mp4',
+          'baked_backdrop.mp4',
+          'unrelated.mp4',
+        });
+
+        expect(referenced, {'pending_backdrop.mp4', 'baked_backdrop.mp4'});
+      });
     });
 
     group('getClipsByDraftId', () {
