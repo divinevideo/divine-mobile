@@ -1208,6 +1208,23 @@ class DivineVideoPlayerInstanceTest {
         assertEquals("debug", entry?.first)
     }
 
+    @Test
+    fun `a stall after an HLS lap has restarted is still reported`() {
+        val listener = capturePlayerListener()
+        instance.onMethodCall(hlsSetClipsCall(), mockk(relaxed = true))
+        instance.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
+        every { mockPlayer.playWhenReady } returns true
+        listener.onPlaybackStateChanged(Player.STATE_ENDED)
+        listener.onPlaybackStateChanged(Player.STATE_READY)
+        every { mockPlayer.playbackState } returns Player.STATE_BUFFERING
+
+        val entry = captureUnrequestedStopLog { listener.onIsPlayingChanged(false) }
+
+        // Once the restarted lap is ready, a stop is no longer ours. The
+        // player is pooled, so a flag left set would hide every later stall.
+        assertEquals("info", entry?.first)
+    }
+
     /**
      * Records the audio-renderer selections the instance makes, newest last.
      *
