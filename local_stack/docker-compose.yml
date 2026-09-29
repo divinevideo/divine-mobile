@@ -1,5 +1,6 @@
-# Pull policy: images pinned to a version pull only when missing, so `up` stops
-# asking the registry about them once they are cached.
+# Pull policy: images pinned to a version set none. `up` then pulls them only
+# when missing, while `docker compose pull` still refreshes them; an explicit
+# `missing` would make that command skip them once they are cached.
 # The `:latest` images keep `always` to follow new builds, so a plain `up` still
 # needs the network; `mise run local_up_cached` starts from the cache alone.
 services:
@@ -8,7 +9,6 @@ services:
   # ---------------------------------------------------------------------------
   keycast-postgres:
     image: postgres:16
-    pull_policy: missing
     environment:
       POSTGRES_DB: keycast
       POSTGRES_USER: postgres
@@ -25,7 +25,6 @@ services:
 
   keycast-redis:
     image: redis:7
-    pull_policy: missing
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 3s
@@ -91,7 +90,6 @@ services:
   # ---------------------------------------------------------------------------
   funnelcake-clickhouse:
     image: clickhouse/clickhouse-server:25.8
-    pull_policy: missing
     ports:
       - "18123:8123"
       - "19000:9000"
@@ -111,7 +109,6 @@ services:
 
   funnelcake-redis:
     image: redis/redis-stack-server:7.4.0-v1
-    pull_policy: missing
     ports:
       - "16380:6379"
     healthcheck:
@@ -138,7 +135,6 @@ services:
   # See tuning/refresh_intervals.sql for the measurements.
   funnelcake-local-tuning:
     image: clickhouse/clickhouse-server:25.8
-    pull_policy: missing
     profiles: ["tools"]
     depends_on:
       funnelcake-migrate:
