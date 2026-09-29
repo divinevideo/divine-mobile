@@ -199,7 +199,11 @@ class _ChromaKeySettings extends StatelessWidget {
       child: ChromaKeyControlsPanel(
         scrollController: scrollController,
         chromaKey: chromaKey,
-        isDetecting: status == ChromaKeyMeasurementStatus.detecting,
+        // Also while a written-off still is out: the camera cannot take a
+        // second one until it is back.
+        isDetecting:
+            status == ChromaKeyMeasurementStatus.detecting ||
+            status == ChromaKeyMeasurementStatus.superseded,
         detectionNotice: _measurementNotice(context.l10n, status),
         onDetect: () =>
             bloc.add(const VideoRecorderChromaKeyMeasureRequested()),
@@ -234,7 +238,8 @@ class _ChromaKeySettings extends StatelessWidget {
     ChromaKeyMeasurementStatus.timedOut =>
       l10n.videoEditorChromaKeyDetectTimedOut,
     ChromaKeyMeasurementStatus.idle ||
-    ChromaKeyMeasurementStatus.detecting => null,
+    ChromaKeyMeasurementStatus.detecting ||
+    ChromaKeyMeasurementStatus.superseded => null,
   };
 
   Future<void> _pickBackdrop(

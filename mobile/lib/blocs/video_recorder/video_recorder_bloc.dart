@@ -1967,9 +1967,12 @@ class VideoRecorderBloc
       return;
     }
 
-    // A hand edit while this ran took the status back to idle: the edit was
-    // deliberate and this is a guess.
-    if (!state.isMeasuringChromaKey) return;
+    // A hand edit while this ran wrote it off: the edit was deliberate and this
+    // is a guess.
+    if (!state.isMeasuringChromaKey) {
+      _endChromaKeyMeasurement(emit, ChromaKeyMeasurementStatus.idle);
+      return;
+    }
     emit(
       state.copyWith(
         chromaKey: state.chromaKey.withKeySettings(
@@ -1981,13 +1984,21 @@ class VideoRecorderBloc
     );
   }
 
-  /// Reports how a measurement ended, unless a hand edit already wrote it off.
+  /// Reports how a measurement ended. A written-off one only frees Auto-detect
+  /// again, because its outcome no longer matters.
   void _endChromaKeyMeasurement(
     Emitter<VideoRecorderBlocState> emit,
     ChromaKeyMeasurementStatus status,
   ) {
-    if (!state.isMeasuringChromaKey) return;
-    emit(state.copyWith(chromaKeyMeasurementStatus: status));
+    final next = switch (state.chromaKeyMeasurementStatus) {
+      ChromaKeyMeasurementStatus.detecting => status,
+      ChromaKeyMeasurementStatus.superseded => ChromaKeyMeasurementStatus.idle,
+      ChromaKeyMeasurementStatus.idle ||
+      ChromaKeyMeasurementStatus.failed ||
+      ChromaKeyMeasurementStatus.timedOut => null,
+    };
+    if (next == null) return;
+    emit(state.copyWith(chromaKeyMeasurementStatus: next));
   }
 
   /// Captures a still, measures the wall in it, and deletes the still again.
@@ -2037,7 +2048,7 @@ class VideoRecorderBloc
     emit(
       state.copyWith(
         chromaKey: state.chromaKey.withPreset(event.preset),
-        chromaKeyMeasurementStatus: ChromaKeyMeasurementStatus.idle,
+        chromaKeyMeasurementStatus: state.chromaKeyMeasurementWrittenOff,
       ),
     );
   }
@@ -2054,7 +2065,7 @@ class VideoRecorderBloc
           smoothness: event.smoothness,
           spill: event.spill,
         ),
-        chromaKeyMeasurementStatus: ChromaKeyMeasurementStatus.idle,
+        chromaKeyMeasurementStatus: state.chromaKeyMeasurementWrittenOff,
       ),
     );
   }
@@ -2359,7 +2370,7 @@ class VideoRecorderBloc
         chromaKey: state.chromaKey,
         chromaKeyMeasurementStatus: isFrontCamera == state.isFrontCamera
             ? state.chromaKeyMeasurementStatus
-            : ChromaKeyMeasurementStatus.idle,
+            : state.chromaKeyMeasurementWrittenOff,
         unrecordedChromaKeyImagePath: state.unrecordedChromaKeyImagePath,
       ),
     );

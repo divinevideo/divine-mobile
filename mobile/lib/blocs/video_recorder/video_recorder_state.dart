@@ -30,6 +30,11 @@ enum ChromaKeyMeasurementStatus {
   /// A still is being captured and measured.
   detecting,
 
+  /// A hand edit or a camera flip wrote the running measurement off, but its
+  /// still is not back yet. Its result will be dropped. Another measurement
+  /// cannot start until the still is back, because the camera is busy.
+  superseded,
+
   /// The last measurement found no screen filling the frame behind the
   /// subject. The key is left as it was so the user can set it by hand.
   failed,
@@ -303,6 +308,18 @@ class VideoRecorderBlocState extends Equatable {
   /// Whether a wall measurement is running.
   bool get isMeasuringChromaKey =>
       chromaKeyMeasurementStatus == ChromaKeyMeasurementStatus.detecting;
+
+  /// Whether a measurement's still is out, including one written off.
+  bool get isChromaKeyStillOut =>
+      isMeasuringChromaKey ||
+      chromaKeyMeasurementStatus == ChromaKeyMeasurementStatus.superseded;
+
+  /// The status to use when a hand edit or a flip overrides the measurement.
+  /// A still that is still out is marked superseded rather than forgotten.
+  ChromaKeyMeasurementStatus get chromaKeyMeasurementWrittenOff =>
+      isChromaKeyStillOut
+      ? ChromaKeyMeasurementStatus.superseded
+      : ChromaKeyMeasurementStatus.idle;
 
   /// Path of the most recently captured stop-motion frame, if any.
   String? get stopMotionLastFrame => stopMotionFrames.lastOrNull;
