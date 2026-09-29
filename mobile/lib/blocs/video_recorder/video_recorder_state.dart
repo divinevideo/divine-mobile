@@ -95,6 +95,7 @@ class VideoRecorderBlocState extends Equatable {
     this.chromaKey = _initialChromaKey,
     this.chromaKeyMeasurementStatus = ChromaKeyMeasurementStatus.idle,
     this.unrecordedChromaKeyImagePath,
+    this.takeChromaKey,
   });
 
   /// Recorder mode from the camera.
@@ -279,9 +280,10 @@ class VideoRecorderBlocState extends Equatable {
   /// than delayed by the capture write (~400ms).
   final int stopMotionShutterTick;
 
-  /// The key the chroma-key viewfinder previews, and that every clip
-  /// recorded in [VideoRecorderMode.chromaKey] carries as its
-  /// [DivineVideoClip.captureChromaKey].
+  /// The key the chroma-key viewfinder previews, and that a clip recorded in
+  /// [VideoRecorderMode.chromaKey] carries as its
+  /// [DivineVideoClip.captureChromaKey], as it was when the take started — see
+  /// [takeChromaKey].
   ///
   /// Kept across mode switches and camera re-syncs, so leaving the mode and
   /// coming back, or flipping the camera, finds the wall and backdrop as they
@@ -299,6 +301,14 @@ class VideoRecorderBlocState extends Equatable {
   /// recorder closes. Once a clip is recorded with it, the clip owns it and the
   /// usual clip cleanup takes over, so this goes back to `null`.
   final String? unrecordedChromaKeyImagePath;
+
+  /// [chromaKey] as it was when the camera started writing the current take,
+  /// or `null` while no chroma-key take is on the camera.
+  ///
+  /// The take is stamped with this rather than the live key: a wall
+  /// measurement or an edit that lands mid-take changes the viewfinder and the
+  /// next take, never frames that were already written against this key.
+  final ClipChromaKey? takeChromaKey;
 
   /// Whether a wall measurement is running.
   bool get isMeasuringChromaKey =>
@@ -374,6 +384,8 @@ class VideoRecorderBlocState extends Equatable {
     ChromaKeyMeasurementStatus? chromaKeyMeasurementStatus,
     String? unrecordedChromaKeyImagePath,
     bool clearUnrecordedChromaKeyImagePath = false,
+    ClipChromaKey? takeChromaKey,
+    bool clearTakeChromaKey = false,
   }) {
     return VideoRecorderBlocState(
       recorderMode: recorderMode ?? this.recorderMode,
@@ -432,6 +444,9 @@ class VideoRecorderBlocState extends Equatable {
       unrecordedChromaKeyImagePath: clearUnrecordedChromaKeyImagePath
           ? null
           : (unrecordedChromaKeyImagePath ?? this.unrecordedChromaKeyImagePath),
+      takeChromaKey: clearTakeChromaKey
+          ? null
+          : (takeChromaKey ?? this.takeChromaKey),
     );
   }
 
@@ -480,5 +495,6 @@ class VideoRecorderBlocState extends Equatable {
     chromaKey,
     chromaKeyMeasurementStatus,
     unrecordedChromaKeyImagePath,
+    takeChromaKey,
   ];
 }
