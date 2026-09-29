@@ -1,7 +1,7 @@
 // ABOUTME: Guards the DivineSticker artwork bundled with the app: every
-// ABOUTME: variant has a file, every file is a lossless-format WebP within 512 px
-// ABOUTME: that decodes and keeps its alpha, and the directory holds nothing
-// ABOUTME: the catalog does not name.
+// ABOUTME: variant has a file, every file is a lossless-format WebP within
+// ABOUTME: 512 px that decodes and keeps its alpha, and the directory holds
+// ABOUTME: nothing the catalog does not name.
 
 import 'dart:convert';
 import 'dart:io';
