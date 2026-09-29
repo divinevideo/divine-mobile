@@ -292,6 +292,10 @@ void main() {
           )..emit(chromaKeyState);
         },
         act: detect,
+        // The expects above run inside the detector, where the measurement's
+        // catch-all turns a failure into a bloc error instead of failing the
+        // test. Asserting no errors surfaces them.
+        errors: () => const <Object>[],
         verify: (_) {
           expect(File('${tempDir.path}/still.jpg').existsSync(), isFalse);
         },
