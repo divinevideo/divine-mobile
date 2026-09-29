@@ -156,15 +156,23 @@ class _CaptionCueRowState extends State<CaptionCueRow> {
               children: [
                 Expanded(
                   child: _InputSurface(
-                    child: DivineTextField(
-                      controller: _textController,
-                      focusNode: _focusNode,
-                      labelText: widget.textFieldLabel,
-                      minLines: 1,
-                      maxLines: 3,
-                      keyboardType: .multiline,
-                      textInputAction: .newline,
-                      onChanged: widget.onTextChanged,
+                    // The return key adds a line break, so on iOS the keyboard
+                    // has no key that closes it; tapping outside does.
+                    // TextFieldTapRegion shares the text-field group, so the
+                    // selection toolbar and the other cue fields count as
+                    // inside and keep the keyboard up.
+                    child: TextFieldTapRegion(
+                      onTapOutside: (_) => _focusNode.unfocus(),
+                      child: DivineTextField(
+                        controller: _textController,
+                        focusNode: _focusNode,
+                        labelText: widget.textFieldLabel,
+                        minLines: 1,
+                        maxLines: 3,
+                        keyboardType: .multiline,
+                        textInputAction: .newline,
+                        onChanged: widget.onTextChanged,
+                      ),
                     ),
                   ),
                 ),

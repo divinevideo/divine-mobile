@@ -206,6 +206,54 @@ void main() {
       },
     );
 
+    testWidgets('keeps the add button above the keyboard while typing', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildHost(
+          burnIn: true,
+          initialCues: const [
+            CaptionCue(
+              id: 'cue-0',
+              text: 'Existing.',
+              start: Duration.zero,
+              end: Duration(seconds: 1),
+            ),
+          ],
+        ),
+      );
+      await open(tester);
+      final addCue = find.text(l10n.videoEditorCaptionsAddCue);
+      final burnInLabel = find.text(l10n.videoEditorCaptionsBurnInLabel);
+      expect(burnInLabel, findsOneWidget);
+
+      const keyboardHeight = 300.0;
+      tester.view.viewInsets = FakeViewPadding(
+        bottom: keyboardHeight * tester.view.devicePixelRatio,
+      );
+      addTearDown(tester.view.resetViewInsets);
+      // The controls slide away rather than vanishing in one frame.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(burnInLabel, findsOneWidget);
+      await tester.pumpAndSettle();
+
+      final screenHeight =
+          tester.view.physicalSize.height / tester.view.devicePixelRatio;
+      expect(addCue.hitTestable(), findsOneWidget);
+      expect(
+        tester.getBottomLeft(addCue).dy,
+        lessThanOrEqualTo(screenHeight - keyboardHeight),
+      );
+      // The burn-in and style controls make room for the cue being typed.
+      expect(burnInLabel, findsNothing);
+
+      tester.view.resetViewInsets();
+      await tester.pumpAndSettle();
+
+      expect(burnInLabel, findsOneWidget);
+    });
+
     testWidgets('existing session skips generation', (tester) async {
       await tester.pumpWidget(
         buildHost(
