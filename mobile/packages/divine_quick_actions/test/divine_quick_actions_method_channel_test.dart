@@ -39,6 +39,10 @@ void main() {
                 'type': 'search',
                 'payload': <String, String>{'query': 'nostr'},
               };
+            case 'isCameraWidgetPinSupported':
+              return true;
+            case 'requestPinCameraWidget':
+              return false;
           }
           return null;
         });
@@ -106,6 +110,40 @@ void main() {
       expect(action?.type, 'search');
       expect(action?.payload, <String, String>{'query': 'nostr'});
       expect(action?.isLaunchAction, isTrue);
+    });
+  });
+
+  group('isCameraWidgetPinSupported', () {
+    test('isCameraWidgetPinSupported delegates to native platform', () async {
+      expect(await platform.isCameraWidgetPinSupported(), isTrue);
+      expect(calls.single.method, 'isCameraWidgetPinSupported');
+    });
+  });
+
+  group('requestPinCameraWidget', () {
+    test('requestPinCameraWidget reports a refused request', () async {
+      expect(await platform.requestPinCameraWidget(), isFalse);
+      expect(calls.single.method, 'requestPinCameraWidget');
+    });
+  });
+
+  group('cameraWidgetPinnedStream', () {
+    test('native pin confirmation is emitted on the stream', () async {
+      final pinned = expectLater(
+        platform.cameraWidgetPinnedStream,
+        emits(null),
+      );
+
+      await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .handlePlatformMessage(
+            channel.name,
+            channel.codec.encodeMethodCall(
+              const MethodCall('onCameraWidgetPinned'),
+            ),
+            (_) {},
+          );
+
+      await pinned;
     });
   });
 

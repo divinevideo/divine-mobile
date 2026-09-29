@@ -71,6 +71,33 @@ class DivineQuickActions {
     return _platform.clearActions();
   }
 
+  /// Emits each time the launcher confirms the camera widget was added after
+  /// [requestPinCameraWidget].
+  ///
+  /// Nothing is emitted when the user cancels the launcher's confirmation, so
+  /// the absence of an event is not a refusal.
+  Stream<void> get cameraWidgetPinnedStream =>
+      _platform.cameraWidgetPinnedStream;
+
+  /// Returns whether the launcher can add the camera widget on the user's
+  /// behalf.
+  ///
+  /// Always `false` on iOS, which has no API for placing a widget, and on
+  /// Android launchers that do not support pinning. Branch the UI on this
+  /// rather than on the platform.
+  Future<bool> get isCameraWidgetPinSupported =>
+      _platform.isCameraWidgetPinSupported();
+
+  /// Asks the launcher to add the camera widget to the home screen.
+  ///
+  /// Returns `true` when the launcher accepted the request and is showing its
+  /// own confirmation; [cameraWidgetPinnedStream] emits once the widget is
+  /// actually added. Returns `false` when pinning is unsupported or the
+  /// launcher refused the request, so callers still need a manual fallback.
+  Future<bool> requestPinCameraWidget() {
+    return _platform.requestPinCameraWidget();
+  }
+
   /// Removes the callback installed by [initialize].
   Future<void> dispose() async {
     await _actionSubscription?.cancel();

@@ -52,6 +52,9 @@ public class DivineQuickActionsPlugin: NSObject, FlutterPlugin, FlutterSceneLife
     case "consumeLaunchAction":
       result(pendingLaunchAction)
       pendingLaunchAction = nil
+    case "isCameraWidgetPinSupported", "requestPinCameraWidget":
+      // iOS has no API to add a widget on the user's behalf.
+      result(false)
     default:
       result(FlutterMethodNotImplemented)
     }
