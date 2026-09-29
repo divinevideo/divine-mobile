@@ -41,6 +41,9 @@ import '../helpers/navigation_helpers.dart';
 import '../helpers/test_setup.dart';
 
 void main() {
+  // A plain suite, so it stays out of integration_test/auth/: `mise run
+  // e2e_test` runs that directory as one patrol bundle, which installs
+  // PatrolBinding first, and this second binding would abort the whole bundle.
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   group('Deferred sign-in behind a queued upload', () {
