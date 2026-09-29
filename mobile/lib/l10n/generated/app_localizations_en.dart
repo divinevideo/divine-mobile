@@ -11707,7 +11707,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get supporterMembershipBody =>
-      'Help keep Divine human, independent, and open. Your membership supports the network and makes you eligible to apply for verification.';
+      'Help keep Divine human, independent, and open. Your membership supports the network.';
 
   @override
   String get supporterRecognitionDisclaimer =>
@@ -11725,21 +11725,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get supporterPublicRecognitionBody =>
       'Let others see that you support Divine. This is optional and is not a verification badge.';
-
-  @override
-  String get supporterVerificationJoin =>
-      'Become a supporter to apply for verification';
-
-  @override
-  String get supporterVerificationEligible =>
-      'Your support makes you eligible to apply for verification';
-
-  @override
-  String get supporterVerificationBody =>
-      'Membership does not verify your identity or guarantee approval. Link accounts to show where people know you.';
-
-  @override
-  String get supporterExploreVerification => 'Explore verification';
 
   @override
   String get supporterTitle => 'Divine Supporters';

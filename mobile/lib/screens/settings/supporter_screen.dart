@@ -1,11 +1,10 @@
 // ABOUTME: Settings screen for the Divine supporter subscription.
-// ABOUTME: Acknowledges membership, manages recognition, and explains verification eligibility.
+// ABOUTME: Acknowledges membership and manages optional public recognition.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/supporter/supporter_cubit.dart';
@@ -15,7 +14,6 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
-import 'package:openvine/screens/verify/verify_screen.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -115,25 +113,6 @@ class _SupporterScreenViewState extends State<SupporterScreenView> {
                           : context.read<SupporterCubit>().setPublicRecognition,
                     ),
                   ],
-                  const SizedBox(height: 16),
-                  Text(
-                    state.isSupporter
-                        ? context.l10n.supporterVerificationEligible
-                        : context.l10n.supporterVerificationJoin,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    context.l10n.supporterVerificationBody,
-                    textAlign: TextAlign.center,
-                  ),
-                  if (state.isSupporter)
-                    DivineButton(
-                      label: context.l10n.supporterExploreVerification,
-                      type: DivineButtonType.link,
-                      onPressed: () => context.push(VerifyPage.path),
-                    ),
                   const SizedBox(height: 16),
                   if (!state.isSupporter && widget.storeBillingAvailable)
                     _RestoreButton(state: state),
