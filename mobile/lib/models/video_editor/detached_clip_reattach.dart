@@ -40,11 +40,18 @@ DivineVideoClip detachedClipTrimmedToLayer({
       : clip.duration -
             trimStart -
             clip.playbackDurationToSourceDuration(shown);
+  // A clip is stored in whole milliseconds, so it has to hold its trims that
+  // way or it differs from its own history entry and the editor reloads it.
+  // Cut back rather than rounded, so the clip keeps all the layer showed.
+  final wholeTrimEnd = _wholeMilliseconds(trimEnd);
   return clip.copyWith(
-    trimStart: trimStart,
-    trimEnd: trimEnd < clip.trimEnd ? clip.trimEnd : trimEnd,
+    trimStart: _wholeMilliseconds(trimStart),
+    trimEnd: wholeTrimEnd < clip.trimEnd ? clip.trimEnd : wholeTrimEnd,
   );
 }
+
+Duration _wholeMilliseconds(Duration duration) =>
+    Duration(milliseconds: duration.inMilliseconds);
 
 /// Where a clip put back at [playhead] joins [clips].
 ///

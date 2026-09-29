@@ -76,6 +76,30 @@ void main() {
       expect(result.trimEnd, const Duration(seconds: 4));
       expect(result.playbackDuration, const Duration(seconds: 1));
     });
+
+    test('trims in whole milliseconds, as a clip is stored', () {
+      final result = detachedClipTrimmedToLayer(
+        clip: _clip(
+          'a',
+          duration: const Duration(seconds: 8),
+          playbackSpeed: 1.5,
+        ),
+        sourceOffset: const Duration(microseconds: 1000700),
+        window: const Duration(microseconds: 1000100),
+      );
+
+      // The speed conversion leaves microseconds (1501.05 ms and 4998.8 ms
+      // here). Both are cut back rather than rounded, so the clip never loses
+      // a sliver the layer showed.
+      expect(result.trimStart, const Duration(milliseconds: 1501));
+      expect(result.trimEnd, const Duration(milliseconds: 4998));
+      // Stored to whole milliseconds, a clip that kept the finer value would
+      // come back from history different from the one in the editor, and the
+      // editor would reload it to match.
+      final stored = DivineVideoClip.fromJson(result.toJson(), '/docs');
+      expect(stored.trimStart, result.trimStart);
+      expect(stored.trimEnd, result.trimEnd);
+    });
   });
 
   group('reattachInsertIndex', () {
