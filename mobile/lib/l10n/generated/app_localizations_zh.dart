@@ -6781,7 +6781,7 @@ class AppLocalizationsZh extends AppLocalizations {
       '删除账号最多可能需要一天。处理完成前，你可以关闭应用或使用其他账号。';
 
   @override
-  String get accountDeletionOverdueBody => '删除账号所需时间比预期更长。请联系支持团队，我们会帮你完成。';
+  String get accountDeletionOverdueBody => '删除账号所需时间比预期更长。请联系客服，我们会帮你完成。';
 
   @override
   String get accountDeletionOtherAccountPending =>

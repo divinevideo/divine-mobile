@@ -6843,7 +6843,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get accountDeletionOverdueBody =>
-      '계정 삭제가 예상보다 오래 걸리고 있어요. 고객 지원에 문의하시면 저희가 마무리할게요.';
+      '계정 삭제가 예상보다 오래 걸리고 있어요. 지원팀에 문의하시면 저희가 마무리할게요.';
 
   @override
   String get accountDeletionOtherAccountPending =>

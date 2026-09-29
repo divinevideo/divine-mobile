@@ -3810,7 +3810,7 @@
     "accountDeletionRecoveryBody": "계정 삭제를 완료하지 못했어요. 사용자명은 그대로 예약돼 있어서 아직 되돌릴 수 있어요.",
     "accountDeletionRestoreUsername": "사용자명 되돌리기",
     "accountDeletionProcessingBody": "계정 삭제에는 최대 하루가 걸릴 수 있어요. 완료될 때까지 앱을 닫거나 다른 계정을 사용할 수 있어요.",
-    "accountDeletionOverdueBody": "계정 삭제가 예상보다 오래 걸리고 있어요. 고객 지원에 문의하시면 저희가 마무리할게요.",
+    "accountDeletionOverdueBody": "계정 삭제가 예상보다 오래 걸리고 있어요. 지원팀에 문의하시면 저희가 마무리할게요.",
     "accountDeletionOtherAccountPending": "이 기기에서 다른 계정의 삭제가 아직 처리 중이에요. 처리가 완료된 후 이 계정을 삭제해 주세요.",
     "accountDeletionCancellingBody": "삭제를 취소하고 있어요. 이 화면을 나가기 전에 다시 확인해 주세요.",
     "accountDeletionRecoveryFailed": "사용자명을 아직 되돌리지 못했어요. 연결 상태를 확인하고 다시 시도해 주세요.",
