@@ -315,5 +315,31 @@ void main() {
         expect(service.declaredContentLanguage, isNull);
       });
     });
+
+    group('reloadFromStorage', () {
+      test('adopts the stored value and notifies once', () async {
+        await service.initialize();
+        await service.setContentLanguage('pt');
+        var notificationCount = 0;
+        service.addListener(() => notificationCount++);
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(LanguagePreferenceService.prefsKey);
+        await service.reloadFromStorage();
+
+        expect(service.declaredContentLanguage, isNull);
+        expect(notificationCount, equals(1));
+      });
+
+      test('stays silent when nothing stored has changed', () async {
+        var notificationCount = 0;
+        service.addListener(() => notificationCount++);
+
+        await service.reloadFromStorage();
+
+        expect(service.declaredContentLanguage, isNull);
+        expect(notificationCount, equals(0));
+      });
+    });
   });
 }

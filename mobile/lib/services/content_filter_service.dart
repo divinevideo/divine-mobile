@@ -153,6 +153,22 @@ class ContentFilterService extends ChangeNotifier {
   /// Load preferences from SharedPreferences.
   Future<void> initialize() => initialized;
 
+  /// Reloads the stored preferences, notifying only when they changed.
+  ///
+  /// The account-boundary sweep clears the stored preferences and calls this,
+  /// so every holder of this instance sees the incoming account's filters.
+  Future<void> reloadFromStorage() async {
+    await initialized;
+    final previous = Map.of(_preferences);
+
+    _preferences.clear();
+    _initialized = false;
+    _initializeFuture = null;
+    await initialized;
+
+    if (!mapEquals(previous, _preferences)) notifyListeners();
+  }
+
   Future<void> _initialize() async {
     if (_initialized) return;
 

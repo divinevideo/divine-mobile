@@ -21,8 +21,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// videos predate content credentials by a decade and can never satisfy a
 /// provenance check.
 class VideoProvenanceFilterService extends ChangeNotifier {
-  VideoProvenanceFilterService(this._prefs)
-    : _showVerifiedOnly = _prefs.getBool(showVerifiedOnlyStorageKey) ?? false;
+  VideoProvenanceFilterService(this._prefs) : _showVerifiedOnly = _read(_prefs);
 
   /// Public so `UserDataCleanupService` can clear it by reference.
   /// A copied literal cannot detect that this key was renamed (#8314).
@@ -32,6 +31,21 @@ class VideoProvenanceFilterService extends ChangeNotifier {
   bool _showVerifiedOnly;
 
   bool get showVerifiedOnly => _showVerifiedOnly;
+
+  static bool _read(SharedPreferences prefs) =>
+      prefs.getBool(showVerifiedOnlyStorageKey) ?? false;
+
+  /// Re-reads the stored preference, notifying only when it changed.
+  ///
+  /// The account-boundary sweep clears the key and calls this, so every
+  /// holder of this instance sees the incoming account's setting.
+  void reloadFromStorage() {
+    final stored = _read(_prefs);
+    if (stored == _showVerifiedOnly) return;
+
+    _showVerifiedOnly = stored;
+    notifyListeners();
+  }
 
   Future<void> setShowVerifiedOnly(bool value) async {
     if (_showVerifiedOnly == value) return;

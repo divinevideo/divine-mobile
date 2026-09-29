@@ -53,5 +53,38 @@ void main() {
 
       expect(notificationCount, 1);
     });
+
+    group('reloadFromStorage', () {
+      test('adopts the stored value and notifies once', () async {
+        SharedPreferences.setMockInitialValues({
+          DivineHostFilterService.showDivineHostedOnlyStorageKey: false,
+        });
+        final prefs = await SharedPreferences.getInstance();
+        final service = DivineHostFilterService(prefs);
+        var notificationCount = 0;
+        service.addListener(() => notificationCount++);
+
+        await prefs.remove(
+          DivineHostFilterService.showDivineHostedOnlyStorageKey,
+        );
+        service.reloadFromStorage();
+
+        expect(service.showDivineHostedOnly, isTrue);
+        expect(notificationCount, 1);
+      });
+
+      test('stays silent when the stored value already matches', () async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final service = DivineHostFilterService(prefs);
+        var notificationCount = 0;
+        service.addListener(() => notificationCount++);
+
+        service.reloadFromStorage();
+
+        expect(service.showDivineHostedOnly, isTrue);
+        expect(notificationCount, 0);
+      });
+    });
   });
 }

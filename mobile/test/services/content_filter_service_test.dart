@@ -176,6 +176,42 @@ void main() {
       });
     });
 
+    group('reloadFromStorage', () {
+      test('restores defaults once the stored preferences are cleared, '
+          'notifying once', () async {
+        await service.initialize();
+        await service.setPreference(
+          ContentLabel.spoiler,
+          ContentFilterPreference.hide,
+        );
+        var notificationCount = 0;
+        service.addListener(() => notificationCount++);
+
+        await preferences.remove(ContentFilterService.filterPrefsStorageKey);
+        await service.reloadFromStorage();
+
+        expect(
+          service.getPreference(ContentLabel.spoiler),
+          equals(ContentFilterPreference.warn),
+        );
+        expect(notificationCount, equals(1));
+      });
+
+      test('stays silent when nothing stored has changed, even before its '
+          'first load completes', () async {
+        var notificationCount = 0;
+        service.addListener(() => notificationCount++);
+
+        await service.reloadFromStorage();
+
+        expect(
+          service.getPreference(ContentLabel.spoiler),
+          equals(ContentFilterPreference.warn),
+        );
+        expect(notificationCount, equals(0));
+      });
+    });
+
     group('age gate enforcement', () {
       test('adult categories locked to hide when not age verified', () async {
         await ageService.initialize();

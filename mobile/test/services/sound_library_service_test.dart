@@ -252,5 +252,27 @@ void main() {
       expect(service.customSounds.length, equals(1));
       expect(service.customSounds.first.id, equals('custom_005'));
     });
+
+    test(
+      'reloadCustomSounds drops custom sounds no longer in storage',
+      () async {
+        final service = SoundLibraryService();
+        await service.addCustomSound(
+          VineSound(
+            id: 'custom_006',
+            title: 'Departing Sound',
+            assetPath: '/path/to/sound.mp3',
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        expect(service.customSounds, hasLength(1));
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(SoundLibraryService.customSoundsStorageKey);
+        await service.reloadCustomSounds();
+
+        expect(service.customSounds, isEmpty);
+      },
+    );
   });
 }

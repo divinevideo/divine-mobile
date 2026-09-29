@@ -98,6 +98,15 @@ class SoundLibraryService {
     }
   }
 
+  /// Replaces the in-memory custom sounds with what storage holds now.
+  ///
+  /// [loadCustomSounds] keeps the current list when nothing is stored, so
+  /// after the account-boundary sweep this starts from an empty list instead.
+  Future<void> reloadCustomSounds() async {
+    _customSounds = [];
+    await loadCustomSounds();
+  }
+
   /// Saves custom sounds to persistent storage
   Future<void> _saveCustomSounds() async {
     try {
