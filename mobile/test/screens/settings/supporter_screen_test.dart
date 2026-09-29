@@ -372,7 +372,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Keep Divine running'), findsOneWidget);
+      expect(
+        find.text('A Divinely human corner of the internet.'),
+        findsOneWidget,
+      );
       expect(find.text('Restore purchases'), findsOneWidget);
       expect(
         find.text('Become a supporter to apply for verification'),

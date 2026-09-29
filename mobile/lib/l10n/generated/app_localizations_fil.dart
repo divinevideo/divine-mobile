@@ -11674,7 +11674,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get supporterTileSubtitle =>
-      'Suportahan ang Divine gamit ang optional na monthly subscription.';
+      'Suportahan ang Divine gamit ang optional na subscription.';
 
   @override
   String get supporterHeroTitle => 'Panatilihing tumatakbo ang Divine';

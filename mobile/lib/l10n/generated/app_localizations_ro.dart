@@ -11819,7 +11819,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get supporterTileSubtitle =>
-      'Susține Divine cu un abonament lunar opțional.';
+      'Susține Divine cu un abonament opțional.';
 
   @override
   String get supporterHeroTitle => 'Ține Divine pe picioare';

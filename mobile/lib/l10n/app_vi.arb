@@ -6157,7 +6157,7 @@
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."
   },
-  "supporterTileSubtitle": "Ủng hộ Divine bằng gói đăng ký hàng tháng tùy chọn.",
+  "supporterTileSubtitle": "Ủng hộ Divine bằng gói đăng ký tùy chọn.",
   "@supporterTileSubtitle": {
     "description": "Subtitle of the supporter subscription settings tile."
   },

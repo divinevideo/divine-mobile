@@ -11572,8 +11572,7 @@ class AppLocalizationsMs extends AppLocalizations {
   String get supporterTitle => 'Penyokong Divine';
 
   @override
-  String get supporterTileSubtitle =>
-      'Sokong Divine dengan langganan bulanan pilihan.';
+  String get supporterTileSubtitle => 'Sokong Divine dengan langganan pilihan.';
 
   @override
   String get supporterHeroTitle => 'Pastikan Divine terus berjalan';

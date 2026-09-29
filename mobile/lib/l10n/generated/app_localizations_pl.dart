@@ -11797,8 +11797,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get supporterTitle => 'Wspierający Divine';
 
   @override
-  String get supporterTileSubtitle =>
-      'Wesprzyj Divine opcjonalną miesięczną subskrypcją.';
+  String get supporterTileSubtitle => 'Wesprzyj Divine opcjonalną subskrypcją.';
 
   @override
   String get supporterHeroTitle => 'Niech Divine działa dalej';

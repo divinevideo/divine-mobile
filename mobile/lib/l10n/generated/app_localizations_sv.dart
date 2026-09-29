@@ -11575,7 +11575,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get supporterTileSubtitle =>
-      'Stöd Divine med en valfri månadsprenumeration.';
+      'Stöd Divine med en valfri prenumeration.';
 
   @override
   String get supporterHeroTitle => 'Håll Divine igång';

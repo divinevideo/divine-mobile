@@ -2321,7 +2321,7 @@
     "@crosspostingConnectionDenied": {"description": "Snackbar when the user denied the connection on the provider's page.", "placeholders": {"platform": {"type": "String"}}},
     "supporterTitle": "Mga Divine Supporter",
     "@supporterTitle": {"description": "Title of the supporter subscription settings screen and its settings tile."},
-    "supporterTileSubtitle": "Suportahan ang Divine gamit ang optional na monthly subscription.",
+    "supporterTileSubtitle": "Suportahan ang Divine gamit ang optional na subscription.",
     "@supporterTileSubtitle": {"description": "Subtitle of the supporter subscription settings tile."},
     "supporterHeroTitle": "Panatilihing tumatakbo ang Divine",
     "@supporterHeroTitle": {"description": "Headline at the top of the supporter subscription screen."},

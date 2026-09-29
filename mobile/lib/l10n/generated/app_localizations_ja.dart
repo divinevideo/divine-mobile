@@ -11000,7 +11000,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get supporterTitle => 'Divine サポーター';
 
   @override
-  String get supporterTileSubtitle => '任意の月額サブスクで Divine を応援。';
+  String get supporterTileSubtitle => '任意のサブスクで Divine を応援。';
 
   @override
   String get supporterHeroTitle => 'Divine を走らせ続けよう';

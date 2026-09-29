@@ -11663,10 +11663,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get supporterTileSubtitle =>
-      'Support Divine with an optional monthly subscription.';
+      'Support Divine with an optional monthly or annual subscription.';
 
   @override
-  String get supporterHeroTitle => 'Keep Divine running';
+  String get supporterHeroTitle => 'A Divinely human corner of the internet.';
 
   @override
   String get supporterActiveBadge =>

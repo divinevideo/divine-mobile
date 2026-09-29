@@ -11558,7 +11558,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get supporterTileSubtitle =>
-      'اختیاری ماہانہ سبسکرپشن سے Divine کی سپورٹ کریں۔';
+      'اختیاری سبسکرپشن سے Divine کی سپورٹ کریں۔';
 
   @override
   String get supporterHeroTitle => 'Divine کو چلتے رکھیں';

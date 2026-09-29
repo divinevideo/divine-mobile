@@ -11489,7 +11489,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get supporterTileSubtitle =>
-      'Dukung Divine dengan langganan bulanan opsional.';
+      'Dukung Divine dengan langganan opsional.';
 
   @override
   String get supporterHeroTitle => 'Bantu Divine tetap berjalan';

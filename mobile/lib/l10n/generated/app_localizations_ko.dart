@@ -11018,7 +11018,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get supporterTitle => 'Divine 서포터';
 
   @override
-  String get supporterTileSubtitle => '선택형 월간 구독으로 Divine을 후원해요.';
+  String get supporterTileSubtitle => '선택형 구독으로 Divine을 후원해요.';
 
   @override
   String get supporterHeroTitle => 'Divine이 계속 돌아가게 해주세요';

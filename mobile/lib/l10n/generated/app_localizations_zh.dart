@@ -10873,7 +10873,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get supporterTitle => 'Divine 支持者';
 
   @override
-  String get supporterTileSubtitle => '通过自愿的月度订阅支持 Divine。';
+  String get supporterTileSubtitle => '通过自愿订阅支持 Divine。';
 
   @override
   String get supporterHeroTitle => '让 Divine 一直转下去';

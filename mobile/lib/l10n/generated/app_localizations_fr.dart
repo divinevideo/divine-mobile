@@ -11744,7 +11744,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get supporterTileSubtitle =>
-      'Soutiens Divine avec un abonnement mensuel optionnel.';
+      'Soutiens Divine avec un abonnement optionnel.';
 
   @override
   String get supporterHeroTitle => 'Fais tourner Divine';
