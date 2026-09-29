@@ -8401,17 +8401,17 @@ abstract class AppLocalizations {
   /// **'Description (optional)'**
   String get listDescriptionLabel;
 
-  /// No description provided for @listPublicList.
+  /// Title of the switch on the list info sheet that makes a curated list visible to others.
   ///
   /// In en, this message translates to:
-  /// **'Public List'**
-  String get listPublicList;
+  /// **'Make public'**
+  String get listMakePublicLabel;
 
-  /// No description provided for @listPublicListSubtitle.
+  /// Supporting line under the 'Make public' switch on the list info sheet, shown while the switch is on.
   ///
   /// In en, this message translates to:
-  /// **'Others can follow and see this list'**
-  String get listPublicListSubtitle;
+  /// **'Let others see this list'**
+  String get listMakePublicSubtitle;
 
   /// No description provided for @listPrivateListSubtitle.
   ///
@@ -8436,12 +8436,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No lists yet. Make one for the loops you want to keep together.'**
   String get profileListsEmpty;
-
-  /// No description provided for @listEditTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Edit list'**
-  String get listEditTitle;
 
   /// No description provided for @listEditInfoAction.
   ///
@@ -8604,12 +8598,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{name} on Divine'**
   String listShareSubject(String name);
-
-  /// No description provided for @listCancel.
-  ///
-  /// In en, this message translates to:
-  /// **'Cancel'**
-  String get listCancel;
 
   /// No description provided for @listCreate.
   ///

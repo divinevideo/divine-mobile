@@ -19,6 +19,7 @@ import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/screens/saved_videos_screen.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
+import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
 import 'package:openvine/widgets/profile/profile_lists_grid.dart';
 
 import '../../helpers/test_provider_overrides.dart';
@@ -169,6 +170,25 @@ void main() {
     });
 
     group('navigation', () {
+      testWidgets('opens the empty create sheet from the create button', (
+        tester,
+      ) async {
+        await tester.binding.setSurfaceSize(const Size(800, 1200));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.byType(ListInfoForm), findsNothing);
+
+        await tester.tap(find.text(l10n.listCreateNewList));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(ListInfoForm), findsOneWidget);
+        // Once on the button underneath, once as the sheet's title.
+        expect(find.text(l10n.listCreateNewList), findsNWidgets(2));
+        expect(find.bySemanticsLabel(l10n.listCreate), findsOneWidget);
+      });
+
       testWidgets('opens the list detail when a video card is tapped', (
         tester,
       ) async {

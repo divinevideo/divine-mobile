@@ -3143,13 +3143,18 @@
   "listCollaboratorSearchHint": "Search Divine...",
   "listNameLabel": "List Name",
   "listDescriptionLabel": "Description (optional)",
-  "listPublicList": "Public List",
-  "listPublicListSubtitle": "Others can follow and see this list",
+  "listMakePublicLabel": "Make public",
+  "@listMakePublicLabel": {
+    "description": "Title of the switch on the list info sheet that makes a curated list visible to others."
+  },
+  "listMakePublicSubtitle": "Let others see this list",
+  "@listMakePublicSubtitle": {
+    "description": "Supporting line under the 'Make public' switch on the list info sheet, shown while the switch is on."
+  },
   "listPrivateListSubtitle": "Videos stay private. Name, description, tags, and cover stay visible.",
   "listVisibilityPublic": "Public",
   "listVisibilityPrivate": "Private",
   "profileListsEmpty": "No lists yet. Make one for the loops you want to keep together.",
-  "listEditTitle": "Edit list",
   "listEditInfoAction": "Edit list info",
   "listManageVideosAction": "Manage videos",
   "listFollowButton": "Follow",
@@ -3260,7 +3265,6 @@
       }
     }
   },
-  "listCancel": "Cancel",
   "listCreate": "Create",
   "listCreateFailed": "Failed to create list",
   "keyManagementTitle": "Nostr Keys",

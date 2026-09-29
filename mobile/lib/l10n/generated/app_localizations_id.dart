@@ -4859,11 +4859,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get listDescriptionLabel => 'Deskripsi (opsional)';
 
   @override
-  String get listPublicList => 'Daftar Publik';
+  String get listMakePublicLabel => 'Make public';
 
   @override
-  String get listPublicListSubtitle =>
-      'Orang lain bisa mengikuti dan melihat daftar ini';
+  String get listMakePublicSubtitle => 'Let others see this list';
 
   @override
   String get listPrivateListSubtitle =>
@@ -4878,9 +4877,6 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'Belum ada daftar. Bikin satu untuk loop yang mau kamu simpan bareng.';
-
-  @override
-  String get listEditTitle => 'Edit daftar';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5020,9 +5016,6 @@ class AppLocalizationsId extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name di Divine';
   }
-
-  @override
-  String get listCancel => 'Batal';
 
   @override
   String get listCreate => 'Buat';

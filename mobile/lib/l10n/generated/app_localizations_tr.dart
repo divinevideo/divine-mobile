@@ -4870,11 +4870,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get listDescriptionLabel => 'Açıklama (opsiyonel)';
 
   @override
-  String get listPublicList => 'Herkese Açık Liste';
+  String get listMakePublicLabel => 'Make public';
 
   @override
-  String get listPublicListSubtitle =>
-      'Diğerleri bu listeyi takip edebilir ve görebilir';
+  String get listMakePublicSubtitle => 'Let others see this list';
 
   @override
   String get listPrivateListSubtitle =>
@@ -4889,9 +4888,6 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'Henüz liste yok. Bir arada tutmak istediğin döngüler için bir tane oluştur.';
-
-  @override
-  String get listEditTitle => 'Listeyi düzenle';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5031,9 +5027,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String listShareSubject(String name) {
     return 'Divine\'da $name';
   }
-
-  @override
-  String get listCancel => 'İptal';
 
   @override
   String get listCreate => 'Oluştur';

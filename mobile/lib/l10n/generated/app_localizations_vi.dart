@@ -4897,11 +4897,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get listDescriptionLabel => 'Mô tả (không bắt buộc)';
 
   @override
-  String get listPublicList => 'Danh sách công khai';
+  String get listMakePublicLabel => 'Make public';
 
   @override
-  String get listPublicListSubtitle =>
-      'Người khác có thể theo dõi và xem danh sách này';
+  String get listMakePublicSubtitle => 'Let others see this list';
 
   @override
   String get listPrivateListSubtitle =>
@@ -4916,9 +4915,6 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'Chưa có danh sách nào. Tạo một cái cho những loop bạn muốn để chung.';
-
-  @override
-  String get listEditTitle => 'Sửa danh sách';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5060,9 +5056,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name trên Divine';
   }
-
-  @override
-  String get listCancel => 'Hủy';
 
   @override
   String get listCreate => 'Tạo';

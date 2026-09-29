@@ -1628,13 +1628,10 @@
     "listCollaboratorSearchHint": "Divine durchsuchen...",
     "listNameLabel": "Listenname",
     "listDescriptionLabel": "Beschreibung (optional)",
-    "listPublicList": "Öffentliche Liste",
-    "listPublicListSubtitle": "Andere können folgen und diese Liste sehen",
     "listPrivateListSubtitle": "Videos bleiben privat. Name, Beschreibung, Tags und Cover bleiben sichtbar.",
     "listVisibilityPublic": "Öffentlich",
     "listVisibilityPrivate": "Privat",
     "profileListsEmpty": "Noch keine Listen. Leg eine an für die Loops, die zusammengehören.",
-    "listEditTitle": "Liste bearbeiten",
     "listShareAction": "Liste teilen",
     "listShareFailed": "Liste konnte nicht geteilt werden. Versuch es nochmal.",
     "listSave": "Speichern",
@@ -1663,7 +1660,6 @@
             }
         }
     },
-    "listCancel": "Abbrechen",
     "listCreate": "Erstellen",
     "listCreateFailed": "Liste konnte nicht erstellt werden",
     "keyManagementTitle": "Nostr-Schlüssel",

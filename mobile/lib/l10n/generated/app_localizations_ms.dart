@@ -4930,11 +4930,10 @@ class AppLocalizationsMs extends AppLocalizations {
   String get listDescriptionLabel => 'Keterangan (pilihan)';
 
   @override
-  String get listPublicList => 'Senarai Awam';
+  String get listMakePublicLabel => 'Make public';
 
   @override
-  String get listPublicListSubtitle =>
-      'Orang lain boleh mengikuti dan melihat senarai ini';
+  String get listMakePublicSubtitle => 'Let others see this list';
 
   @override
   String get listPrivateListSubtitle =>
@@ -4949,9 +4948,6 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'Belum ada senarai. Buat satu untuk loop yang anda mahu simpan bersama.';
-
-  @override
-  String get listEditTitle => 'Edit senarai';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5092,9 +5088,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name di Divine';
   }
-
-  @override
-  String get listCancel => 'Batal';
 
   @override
   String get listCreate => 'Cipta';

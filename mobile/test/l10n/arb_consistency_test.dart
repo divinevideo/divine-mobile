@@ -581,6 +581,10 @@ const _knownUntranslatedDebt = <String>{
   // connection-error wording.
   'listMemberCount',
   'peopleListsLoadFailed',
+  // The list info sheet's visibility switch (#8540), deferred to the same
+  // pass.
+  'listMakePublicLabel',
+  'listMakePublicSubtitle',
   // The people-list picker's row actions and its update-failure copy
   // (#8540), deferred to the same pass.
   'peopleListsAddPersonSemanticLabel',

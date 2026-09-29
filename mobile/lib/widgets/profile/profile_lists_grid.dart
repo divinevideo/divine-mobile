@@ -18,10 +18,9 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
-import 'package:openvine/utils/pause_aware_modals.dart';
-import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
+import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
 
 /// My Lists surface for the current user's profile: the same two-column
 /// card gallery as the Explore discovery tab, scoped to lists the viewer
@@ -121,8 +120,11 @@ class _ProfileListsContent extends StatelessWidget {
             // border and primary ink.
             type: DivineButtonType.secondary,
             expanded: true,
-            onPressed: () => context.showVideoPausingDialog<void>(
-              builder: (_) => const CreateListDialog(),
+            onPressed: () => runDetached(
+              showListInfoSheet(context),
+              'open list creation sheet',
+              logName: 'ProfileListsGrid',
+              category: LogCategory.ui,
             ),
           ),
         ),

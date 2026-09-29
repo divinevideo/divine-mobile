@@ -1628,13 +1628,10 @@
     "listCollaboratorSearchHint": "Zoek in Divine...",
     "listNameLabel": "Lijstnaam",
     "listDescriptionLabel": "Beschrijving (optioneel)",
-    "listPublicList": "Openbare lijst",
-    "listPublicListSubtitle": "Anderen kunnen deze lijst volgen en zien",
     "listPrivateListSubtitle": "Video's blijven privé. Naam, beschrijving, tags en omslag blijven zichtbaar.",
     "listVisibilityPublic": "Openbaar",
     "listVisibilityPrivate": "Privé",
     "profileListsEmpty": "Nog geen lijsten. Maak er een voor de loops die je bij elkaar wilt houden.",
-    "listEditTitle": "Lijst bewerken",
     "listShareAction": "Lijst delen",
     "listShareFailed": "Kon deze lijst niet delen. Probeer het opnieuw.",
     "listSave": "Opslaan",
@@ -1663,7 +1660,6 @@
             }
         }
     },
-    "listCancel": "Annuleren",
     "listCreate": "Maken",
     "listCreateFailed": "Lijst maken mislukt",
     "keyManagementTitle": "Nostr-sleutels",

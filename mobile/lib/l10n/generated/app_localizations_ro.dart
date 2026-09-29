@@ -5072,11 +5072,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get listDescriptionLabel => 'Descriere (opțional)';
 
   @override
-  String get listPublicList => 'Listă publică';
+  String get listMakePublicLabel => 'Make public';
 
   @override
-  String get listPublicListSubtitle =>
-      'Alții pot urmări și vedea această listă';
+  String get listMakePublicSubtitle => 'Let others see this list';
 
   @override
   String get listPrivateListSubtitle =>
@@ -5091,9 +5090,6 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'Încă n-ai liste. Fă una pentru buclele pe care vrei să le ții împreună.';
-
-  @override
-  String get listEditTitle => 'Editează lista';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5233,9 +5229,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name pe Divine';
   }
-
-  @override
-  String get listCancel => 'Anulează';
 
   @override
   String get listCreate => 'Creează';

@@ -4627,10 +4627,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get listDescriptionLabel => '描述（可选）';
 
   @override
-  String get listPublicList => '公开列表';
+  String get listMakePublicLabel => 'Make public';
 
   @override
-  String get listPublicListSubtitle => '其他人可以关注并查看此列表';
+  String get listMakePublicSubtitle => 'Let others see this list';
 
   @override
   String get listPrivateListSubtitle => '视频保持私密。名称、描述、标签和封面仍会显示。';
@@ -4643,9 +4643,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get profileListsEmpty => '还没有列表。为想放在一起的循环建一个吧。';
-
-  @override
-  String get listEditTitle => '编辑列表';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -4784,9 +4781,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String listShareSubject(String name) {
     return 'Divine 上的 $name';
   }
-
-  @override
-  String get listCancel => '取消';
 
   @override
   String get listCreate => '创建';

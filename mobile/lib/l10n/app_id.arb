@@ -1625,13 +1625,10 @@
     "listCollaboratorSearchHint": "Cari di Divine...",
     "listNameLabel": "Nama Daftar",
     "listDescriptionLabel": "Deskripsi (opsional)",
-    "listPublicList": "Daftar Publik",
-    "listPublicListSubtitle": "Orang lain bisa mengikuti dan melihat daftar ini",
     "listPrivateListSubtitle": "Videonya tetap privat. Nama, deskripsi, tag, dan sampul tetap terlihat.",
     "listVisibilityPublic": "Publik",
     "listVisibilityPrivate": "Privat",
     "profileListsEmpty": "Belum ada daftar. Bikin satu untuk loop yang mau kamu simpan bareng.",
-    "listEditTitle": "Edit daftar",
     "listShareAction": "Bagikan daftar",
     "listShareFailed": "Daftar ini gagal dibagikan. Coba lagi.",
     "listSave": "Simpan",
@@ -1660,7 +1657,6 @@
             }
         }
     },
-    "listCancel": "Batal",
     "listCreate": "Buat",
     "listCreateFailed": "Gagal membuat daftar",
     "keyManagementTitle": "Kunci Nostr",

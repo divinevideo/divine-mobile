@@ -4935,11 +4935,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get listDescriptionLabel => 'تفصیل (اختیاری)';
 
   @override
-  String get listPublicList => 'عوامی فہرست';
+  String get listMakePublicLabel => 'Make public';
 
   @override
-  String get listPublicListSubtitle =>
-      'دوسرے اس فہرست کو فالو اور دیکھ سکتے ہیں';
+  String get listMakePublicSubtitle => 'Let others see this list';
 
   @override
   String get listPrivateListSubtitle =>
@@ -4954,9 +4953,6 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'ابھی کوئی فہرست نہیں۔ جو لوپ ساتھ رکھنے ہیں، ان کے لیے ایک بنائیں۔';
-
-  @override
-  String get listEditTitle => 'فہرست میں ترمیم کریں';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5097,9 +5093,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String listShareSubject(String name) {
     return 'Divine پر $name';
   }
-
-  @override
-  String get listCancel => 'منسوخ کریں';
 
   @override
   String get listCreate => 'بنائیں';
