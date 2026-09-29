@@ -42,11 +42,13 @@ class ProfileStats {
 
   /// Total views across all videos.
   ///
-  /// This is the author's aggregate engagement figure, not an archival-only
-  /// count: `ProfileRepository` fills it from funnelcake's `engagement` total,
-  /// falling back to the loop total, so a classic Vine's archived loops and a
-  /// live Divine video's loops land in the same number. A surface that needs
-  /// the archival-only per-video figure must read the event tags instead.
+  /// `ProfileRepository` fills it from funnelcake's `engagement` total, which
+  /// counts Divine-era views (falling back to Divine watch loops when there
+  /// are no views). Archived Vine loops are not included, so surfaces label
+  /// it as views. The bundled classic-Viner seed is the one exception: it
+  /// holds archived totals until the first funnelcake fetch replaces them. A
+  /// surface that needs the archived per-video loop count must read the event
+  /// tags instead.
   final int totalViews;
 
   /// Whether [totalViews] came from a source that supplied a value.

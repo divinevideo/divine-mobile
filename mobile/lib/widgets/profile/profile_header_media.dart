@@ -330,7 +330,7 @@ class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow> {
               count: isLoading ? _skeletonPlaceholderCount : totalViews!,
               label: l10n.profileViewsLabel,
               isLoading: isLoading && _timeoutExpired,
-              // Loops is the owner's own reach figure, so it is where a creator
+              // Views is the owner's own reach figure, so it is where a creator
               // looks first for the detail behind it. Visitors get no tap: the
               // dashboard is the owner's, and Settings keeps its own entry.
               onTap: widget.isOwnProfile && !isLoading
