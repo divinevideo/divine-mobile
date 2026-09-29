@@ -163,7 +163,8 @@ BASELINE="$(baseline_paths)"
 # Callers MUST fail closed on 1/3 — the ratchet cannot be verified.
 MAIN_BASELINE=""
 load_base_baseline() {
-  if ! git -C "$REPO_ROOT" rev-parse --verify --quiet "$BASE_REF" >/dev/null 2>&1; then
+  if ! git -C "$REPO_ROOT" rev-parse --verify --quiet "$BASE_REF" >/dev/null 2>&1 &&
+     [[ "$(git -C "$REPO_ROOT" rev-parse --is-shallow-repository)" == "true" ]]; then
     git -C "$REPO_ROOT" fetch --quiet --depth=1 origin main 2>/dev/null || true
   fi
   if ! git -C "$REPO_ROOT" rev-parse --verify --quiet "$BASE_REF" >/dev/null 2>&1; then

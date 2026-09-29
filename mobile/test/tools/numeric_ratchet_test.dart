@@ -56,7 +56,7 @@ void main() {
       ).writeAsStringSync('# probe baseline\na\t5\nb\t3\n');
       File('${tmp.path}/a').writeAsStringSync('same\n');
       for (final args in [
-        ['init'],
+        ['init', '--initial-branch=main'],
         ['config', 'user.email', 'test@example.invalid'],
         ['config', 'user.name', 'Ratchet Test'],
         ['add', '.'],
@@ -117,6 +117,33 @@ run_numeric_ratchet
       final res = run();
       expect(res.exitCode, 0, reason: res.stdout.toString());
       expect(res.stdout, contains('OK [probe]'));
+    });
+
+    test('missing base ref does not make a full repository shallow', () {
+      final remote = Process.runSync('git', [
+        '-C',
+        tmp.path,
+        'remote',
+        'add',
+        'origin',
+        '.',
+      ]);
+      expect(remote.exitCode, 0, reason: remote.stderr.toString());
+      writeCurrent('a\t5\nb\t3\n');
+      run(update: true);
+
+      final result = run(baseRef: 'refs/heads/probe-missing-base');
+
+      expect(result.exitCode, 0, reason: result.stdout.toString());
+      expect(result.stdout, contains('unavailable; skipping'));
+      final shallow = Process.runSync('git', [
+        '-C',
+        tmp.path,
+        'rev-parse',
+        '--is-shallow-repository',
+      ]);
+      expect(shallow.exitCode, 0);
+      expect(shallow.stdout.toString().trim(), 'false');
     });
 
     test('fails when a key count grows', () {

@@ -103,6 +103,43 @@ run_list_ratchet
     });
 
     group('filter_baseline_growth hook', () {
+      test('missing base ref does not make a full repository shallow', () {
+        seedBaseRef(['a']);
+        writeCurrent(['a']);
+        final branch = Process.runSync('git', [
+          '-C',
+          tmp.path,
+          'branch',
+          'main',
+        ]);
+        expect(branch.exitCode, 0, reason: branch.stderr.toString());
+        final remote = Process.runSync('git', [
+          '-C',
+          tmp.path,
+          'remote',
+          'add',
+          'origin',
+          '.',
+        ]);
+        expect(remote.exitCode, 0, reason: remote.stderr.toString());
+
+        final result = run(
+          baseRef: 'refs/heads/probe-missing-base',
+          allowNoBase: true,
+        );
+
+        expect(result.exitCode, 0, reason: result.stdout.toString());
+        expect(result.stdout, contains('unavailable; skipping'));
+        final shallow = Process.runSync('git', [
+          '-C',
+          tmp.path,
+          'rev-parse',
+          '--is-shallow-repository',
+        ]);
+        expect(shallow.exitCode, 0);
+        expect(shallow.stdout.toString().trim(), 'false');
+      });
+
       test('growth fails when no hook is declared', () {
         seedBaseRef(['a']);
         writeBaseline(['a', 'b']);
