@@ -2056,6 +2056,22 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     ClipEditorDetachedClipReattachRequested event,
     Emitter<ClipEditorState> emit,
   ) async {
+    // A second tap can land before the layer has left the canvas, and its
+    // request queues behind the first. By the time it runs the clip its layer
+    // carried is already back, so there is nothing left to put back.
+    final last = state.lastDetachedClipReattachResult;
+    if (last != null &&
+        last.layerId == event.layerId &&
+        state.clips.any((c) => c.id == last.clipId)) {
+      Log.debug(
+        '↩️ Reattach ignored: the clip of layer ${event.layerId} is already '
+        'back on the timeline',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+      );
+      return;
+    }
+
     // A free crop on the canvas can have left the file any shape, and the
     // clip's recorded ratios are not a dependable answer for a draft that
     // went through both a timeline and a canvas crop. The preview fits the
@@ -2122,6 +2138,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         lastDetachedClipReattachResult: DetachedClipReattachResult(
           previousClips: currentClips,
           layerId: event.layerId,
+          clipId: clip.id,
         ),
       ),
     );

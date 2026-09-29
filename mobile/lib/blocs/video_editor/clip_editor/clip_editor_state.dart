@@ -901,8 +901,17 @@ final class DetachedClipReattachResult {
   DetachedClipReattachResult({
     required this.previousClips,
     required this.layerId,
+    required this.clipId,
   });
 
   final List<DivineVideoClip> previousClips;
   final String layerId;
+
+  /// Id the clip has on the timeline now, which is not the id it carried on
+  /// the layer when it had to be renamed to stay unique.
+  ///
+  /// Together with [layerId] it tells a repeat request for the same layer from
+  /// a fresh one: the layer's clip is still on the timeline for a repeat, and
+  /// gone again once an undo has put the layer back on the canvas.
+  final String clipId;
 }

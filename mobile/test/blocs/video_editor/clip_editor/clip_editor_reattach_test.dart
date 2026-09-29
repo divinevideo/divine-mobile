@@ -167,5 +167,66 @@ void main() {
       expect(state.clips, hasLength(3));
       expect(state.clips.map((c) => c.id).toSet(), hasLength(3));
     });
+
+    test(
+      'ignores a repeat request for a layer whose clip is already back',
+      () async {
+        final bloc = seeded([
+          _clip('a'),
+          _clip('placeholder_1', isPlaceholder: true),
+          _clip('c'),
+        ]);
+        await bloc.stream.first;
+        final request = ClipEditorDetachedClipReattachRequested(
+          layerId: 'detached_b',
+          clip: _clip('b'),
+          playhead: Duration.zero,
+          placeholderClipId: 'placeholder_1',
+        );
+
+        // Two taps before the layer has left the canvas: the second request is
+        // queued behind the first, so it arrives with the clip already back.
+        bloc
+          ..add(request)
+          ..add(request);
+        await pumpEventQueue();
+
+        expect(bloc.state.clips.map((c) => c.id), ['a', 'b', 'c']);
+      },
+    );
+
+    test(
+      'takes the same layer again once its clip has left the timeline',
+      () async {
+        final before = [
+          _clip('a'),
+          _clip('placeholder_1', isPlaceholder: true),
+          _clip('c'),
+        ];
+        final bloc = seeded(before);
+        await bloc.stream.first;
+        final request = ClipEditorDetachedClipReattachRequested(
+          layerId: 'detached_b',
+          clip: _clip('b'),
+          playhead: Duration.zero,
+          placeholderClipId: 'placeholder_1',
+        );
+
+        bloc.add(request);
+        await pumpEventQueue();
+        expect(bloc.state.clips.map((c) => c.id), ['a', 'b', 'c']);
+
+        // Undo puts the layer back on the canvas and the slot back on the
+        // timeline, so sending it back again is a new request, not a repeat.
+        bloc.add(ClipEditorInitialized(before));
+        await pumpEventQueue();
+        expect(bloc.state.clips.map((c) => c.id), ['a', 'placeholder_1', 'c']);
+
+        bloc.add(request);
+        await pumpEventQueue();
+
+        expect(bloc.state.clips.map((c) => c.id), ['a', 'b', 'c']);
+      },
+    );
   });
 }

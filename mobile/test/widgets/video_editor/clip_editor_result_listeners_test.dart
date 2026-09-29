@@ -147,6 +147,7 @@ void main() {
                 _clip('placeholder_1', isPlaceholder: true),
               ],
               layerId: 'detached_b',
+              clipId: 'b',
             ),
           ),
         ),
