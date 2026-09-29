@@ -99,20 +99,17 @@ void main() {
       removedVideoIdsController = StreamController<String>.broadcast();
 
       // Default stub for watchLikedEventIds
-      when(
-        () => mockLikesRepository.watchLikedEventIds(),
-      ).thenAnswer((_) => likedIdsController.stream);
+      when(() => mockLikesRepository.watchLikedEventIds())
+          .thenAnswer((_) => likedIdsController.stream);
 
       // Default stub for getOrderedLikedEventIds (returns empty = no cache)
       // This forces the "no cache" flow which syncs from relay
-      when(
-        () => mockLikesRepository.getOrderedLikedEventIds(),
-      ).thenAnswer((_) async => []);
+      when(() => mockLikesRepository.getOrderedLikedEventIds())
+          .thenAnswer((_) async => []);
 
       // The bloc subscribes to stateStream in its constructor.
-      when(
-        () => mockBlocklistRepository.stateStream,
-      ).thenAnswer((_) => blocklistStateController.stream);
+      when(() => mockBlocklistRepository.stateStream)
+          .thenAnswer((_) => blocklistStateController.stream);
       when(
         () => mockBlocklistRepository.filterContent<VideoEvent>(any(), any()),
       ).thenAnswer(
@@ -120,10 +117,10 @@ void main() {
       );
     });
 
-    tearDown(() {
-      likedIdsController.close();
-      blocklistStateController.close();
-      removedVideoIdsController.close();
+    tearDown(() async {
+      await likedIdsController.close();
+      await blocklistStateController.close();
+      await removedVideoIdsController.close();
     });
 
     ProfileLikedVideosBloc createBloc({
@@ -155,13 +152,13 @@ void main() {
       );
     }
 
-    test('initial state is initial with empty collections', () {
+    test('initial state is initial with empty collections', () async {
       final bloc = createBloc();
       expect(bloc.state.status, ProfileLikedVideosStatus.initial);
       expect(bloc.state.videos, isEmpty);
       expect(bloc.state.likedEventIds, isEmpty);
       expect(bloc.state.error, isNull);
-      bloc.close();
+      await bloc.close();
     });
 
     group('ProfileLikedVideosState', () {
@@ -235,9 +232,8 @@ void main() {
       blocTest<ProfileLikedVideosBloc, ProfileLikedVideosState>(
         'emits [success] with empty videos when no liked IDs',
         setUp: () {
-          when(
-            () => mockLikesRepository.syncUserReactions(),
-          ).thenAnswer((_) async => const LikesSyncResult.empty());
+          when(() => mockLikesRepository.syncUserReactions())
+              .thenAnswer((_) async => const LikesSyncResult.empty());
         },
         build: createBloc,
         act: (bloc) => bloc.add(const ProfileLikedVideosSyncRequested()),
@@ -253,9 +249,8 @@ void main() {
       test(
         're-sync of a settled empty tab still settles (pull-to-refresh)',
         () async {
-          when(
-            () => mockLikesRepository.syncUserReactions(),
-          ).thenAnswer((_) async => const LikesSyncResult.empty());
+          when(() => mockLikesRepository.syncUserReactions())
+              .thenAnswer((_) async => const LikesSyncResult.empty());
           final bloc = createBloc();
           addTearDown(bloc.close);
 
@@ -295,9 +290,8 @@ void main() {
       );
 
       test('a sync arriving during the snapshot write still runs', () async {
-        when(
-          () => mockLikesRepository.syncUserReactions(),
-        ).thenAnswer((_) async => const LikesSyncResult.empty());
+        when(() => mockLikesRepository.syncUserReactions())
+            .thenAnswer((_) async => const LikesSyncResult.empty());
         final bloc = createBloc();
         addTearDown(bloc.close);
 
@@ -372,9 +366,8 @@ void main() {
       blocTest<ProfileLikedVideosBloc, ProfileLikedVideosState>(
         'emits [failure] when sync fails and nothing is cached',
         setUp: () {
-          when(
-            () => mockLikesRepository.syncUserReactions(),
-          ).thenThrow(const SyncFailedException('Network error'));
+          when(() => mockLikesRepository.syncUserReactions())
+              .thenThrow(const SyncFailedException('Network error'));
         },
         build: createBloc,
         act: (bloc) => bloc.add(const ProfileLikedVideosSyncRequested()),
@@ -860,9 +853,8 @@ void main() {
               hasMoreContent: true,
             ).toJson(),
           );
-          when(
-            () => mockLikesRepository.fetchUserLikes(any()),
-          ).thenAnswer((_) async => cachedIds);
+          when(() => mockLikesRepository.fetchUserLikes(any()))
+              .thenAnswer((_) async => cachedIds);
           when(
             () => mockVideosRepository.getVideosByIds(
               any(),
@@ -1214,9 +1206,8 @@ void main() {
     group('Other user profile (targetUserPubkey)', () {
       setUp(() {
         // Set up fetchUserLikes for other user
-        when(
-          () => mockLikesRepository.fetchUserLikes(any()),
-        ).thenAnswer((_) async => <String>[]);
+        when(() => mockLikesRepository.fetchUserLikes(any()))
+            .thenAnswer((_) async => <String>[]);
       });
 
       blocTest<ProfileLikedVideosBloc, ProfileLikedVideosState>(
@@ -1234,9 +1225,8 @@ void main() {
           // Should NOT use syncUserReactions for other users
           verifyNever(() => mockLikesRepository.syncUserReactions());
           // Should use fetchUserLikes with the target user's pubkey
-          verify(
-            () => mockLikesRepository.fetchUserLikes(otherUserPubkey),
-          ).called(1);
+          verify(() => mockLikesRepository.fetchUserLikes(otherUserPubkey))
+              .called(1);
         },
       );
 
@@ -1256,9 +1246,8 @@ void main() {
       blocTest<ProfileLikedVideosBloc, ProfileLikedVideosState>(
         'uses syncUserReactions when targetUserPubkey matches current user',
         setUp: () {
-          when(
-            () => mockLikesRepository.syncUserReactions(),
-          ).thenAnswer((_) async => const LikesSyncResult.empty());
+          when(() => mockLikesRepository.syncUserReactions())
+              .thenAnswer((_) async => const LikesSyncResult.empty());
         },
         build: () => createBloc(targetUserPubkey: currentUserPubkey),
         act: (bloc) => bloc.add(const ProfileLikedVideosSyncRequested()),
