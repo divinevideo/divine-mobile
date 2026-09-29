@@ -1,7 +1,7 @@
 // ABOUTME: The look of a free-form text overlay — font, colors, background
-// ABOUTME: mode, alignment, size and enter/leave animation — as one
-// ABOUTME: serializable unit that can be lifted off a layer and applied to
-// ABOUTME: another (#7742).
+// ABOUTME: mode, alignment, size, outline and shadow, and enter/leave
+// ABOUTME: animation — as one serializable unit that can be lifted off a layer
+// ABOUTME: and applied to another (#7742).
 
 import 'dart:math';
 
@@ -12,6 +12,7 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/layer_animation_apply.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/models/video_editor/layer_slide_point.dart';
+import 'package:openvine/models/video_editor/text_effects.dart';
 import 'package:openvine/utils/editor_text_fonts.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show LayerBackgroundMode, TextLayer;
@@ -39,6 +40,7 @@ class TitleStyle extends Equatable {
     this.customSecondaryColor = false,
     this.align = TextAlign.center,
     this.fontScale = 1,
+    this.effects = TextEffects.none,
     this.enter = const [],
     this.leave = const [],
     this.enterPoint,
@@ -60,6 +62,7 @@ class TitleStyle extends Equatable {
       customSecondaryColor: layer.customSecondaryColor,
       align: layer.align,
       fontScale: layer.fontScale,
+      effects: TextEffects.of(layer),
       enter: layer.divineEnterAnimations,
       leave: layer.divineLeaveAnimations,
       enterPoint: points.enter,
@@ -97,6 +100,7 @@ class TitleStyle extends Equatable {
         orElse: () => TextAlign.center,
       ),
       fontScale: (fontScale as num?)?.toDouble() ?? 1,
+      effects: TextEffects.fromJson(json['effects']),
       enter: enter,
       leave: leave,
       enterPoint: _offsetFromJson(json['enterPoint']),
@@ -125,6 +129,9 @@ class TitleStyle extends Equatable {
 
   /// Multiplier on the editor's base font size — the font-size slider.
   final double fontScale;
+
+  /// The outline and shadow drawn around the text.
+  final TextEffects effects;
 
   /// Animations played when the layer appears.
   final List<pve.LayerAnimation> enter;
@@ -166,15 +173,17 @@ class TitleStyle extends Equatable {
     required Size canvasSize,
     required Duration totalDuration,
   }) {
-    final restyled = layer.copyWith(
-      textStyle: font(),
-      color: color,
-      background: background,
-      colorMode: colorMode,
-      customSecondaryColor: customSecondaryColor,
-      align: align,
-      fontScale: fontScale,
-    );
+    final restyled = effects
+        .applyTo(layer)
+        .copyWith(
+          textStyle: effects.applyToStyle(font()),
+          color: color,
+          background: background,
+          colorMode: colorMode,
+          customSecondaryColor: customSecondaryColor,
+          align: align,
+          fontScale: fontScale,
+        );
     // `TextLayer.copyWith` returns a `TextLayer`, so the animation write —
     // typed on the base `Layer` — hands back the same subtype.
     return restyled.withDivineAnimations(
@@ -195,6 +204,7 @@ class TitleStyle extends Equatable {
     'customSecondaryColor': customSecondaryColor,
     'align': align.name,
     'fontScale': fontScale,
+    'effects': effects.toJson(),
     'enter': [for (final animation in enter) animation.toMap()],
     'leave': [for (final animation in leave) animation.toMap()],
     if (enterPoint case final point?) 'enterPoint': _offsetToJson(point),
@@ -210,6 +220,7 @@ class TitleStyle extends Equatable {
     customSecondaryColor,
     align,
     fontScale,
+    effects,
     enter,
     leave,
     enterPoint,

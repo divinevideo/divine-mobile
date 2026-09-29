@@ -8873,6 +8873,27 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'خلفية النص';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'الحد الخارجي والظل';
+
+  @override
+  String get videoEditorTextOutline => 'الحد الخارجي';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'سُمك الحد الخارجي';
+
+  @override
+  String get videoEditorTextOutlineColor => 'لون الحد الخارجي';
+
+  @override
+  String get videoEditorTextShadow => 'الظل';
+
+  @override
+  String get videoEditorTextShadowStrength => 'قوة الظل';
+
+  @override
+  String get videoEditorTextShadowColor => 'لون الظل';
+
+  @override
   String get videoEditorFontSemanticLabel => 'الخط';
 
   @override

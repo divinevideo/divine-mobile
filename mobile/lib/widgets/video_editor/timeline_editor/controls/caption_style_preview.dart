@@ -1,6 +1,7 @@
 // ABOUTME: Looped animated preview of a caption CaptionStyle (font + colors
-// ABOUTME: + animation), cycling two cues so the enter→leave→next transition
-// ABOUTME: is visible, shared by the preset grid and custom editor.
+// ABOUTME: + outline and shadow + animation), cycling two cues so the
+// ABOUTME: enter→leave→next transition is visible, shared by the preset grid
+// ABOUTME: and custom editor.
 
 import 'dart:ui' show lerpDouble;
 
@@ -9,6 +10,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/config/app_config.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/video_editor/caption_style.dart';
+import 'package:openvine/widgets/video_editor/text_effects_preview_text.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/animation_picker_components.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
@@ -92,10 +94,11 @@ class CaptionStylePreview extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         )
                       : null,
-                  child: Text(
+                  child: TextEffectsPreviewText(
                     text,
                     maxLines: 1,
                     textAlign: TextAlign.center,
+                    effects: style.effects,
                     style: style.font(
                       fontSize:
                           VideoEditorConstants.baseFontSize *

@@ -59,7 +59,11 @@ void main() {
       when(() => mockFocusNode.hasFocus).thenReturn(false);
     });
 
-    Widget buildWidget({VideoEditorTextState? state}) {
+    Widget buildWidget({
+      VideoEditorTextState? state,
+      double width = 400,
+      double textScale = 1,
+    }) {
       if (state != null) {
         when(() => mockBloc.state).thenReturn(state);
       }
@@ -67,21 +71,65 @@ void main() {
       return MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
         home: Scaffold(
           body: VideoTextEditorScope(
             editorKey: mockKey,
             child: BlocProvider<VideoEditorTextBloc>.value(
               value: mockBloc,
-              child: const SizedBox(
-                width: 400,
+              child: SizedBox(
+                width: width,
                 height: 100,
-                child: VideoEditorTextStyleBar(),
+                child: const VideoEditorTextStyleBar(),
               ),
             ),
           ),
         ),
       );
     }
+
+    group('Layout', () {
+      Finder fontName() => find.text('Bricolage Grotesque');
+
+      testWidgets('fits a narrow screen with large text by scrolling', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            state: const VideoEditorTextState(selectedFontIndex: 1),
+            width: 320,
+            textScale: 1.3,
+          ),
+        );
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        // The font name keeps a readable width instead of being squeezed.
+        expect(tester.getSize(fontName()).width, greaterThan(40));
+        expect(find.byType(SingleChildScrollView), findsOneWidget);
+      });
+
+      testWidgets('keeps the font button at the far end when it all fits', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(state: const VideoEditorTextState(selectedFontIndex: 1)),
+        );
+        await tester.pump();
+
+        final button = find.ancestor(
+          of: fontName(),
+          matching: find.byType(GestureDetector),
+        );
+        // 400 wide with a 16 dp margin on each side.
+        expect(tester.getTopRight(button.first).dx, closeTo(384, 0.5));
+      });
+    });
 
     group('Color swatch button', () {
       testWidgets('renders with correct semantics label', (tester) async {
@@ -283,6 +331,64 @@ void main() {
         await tester.pump();
 
         verify(() => mockEditor.toggleBackgroundMode()).called(1);
+      });
+    });
+
+    group('Outline and shadow button', () {
+      Finder effectsButton() {
+        final label = lookupAppLocalizations(
+          const Locale('en'),
+        ).videoEditorTextEffectsSemanticLabel;
+        return find.byWidgetPredicate(
+          (widget) => widget is Semantics && widget.properties.label == label,
+        );
+      }
+
+      testWidgets('renders with its semantics label', (tester) async {
+        await tester.pumpWidget(buildWidget());
+        await tester.pump();
+
+        expect(effectsButton(), findsOneWidget);
+      });
+
+      testWidgets('tapping toggles the outline and shadow panel', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget());
+        await tester.pump();
+
+        await tester.tap(effectsButton());
+        await tester.pump();
+
+        verify(
+          () => mockBloc.add(const VideoEditorTextEffectsPanelToggled()),
+        ).called(1);
+      });
+
+      testWidgets('unfocuses keyboard when opening the panel', (tester) async {
+        when(() => mockFocusNode.hasFocus).thenReturn(true);
+
+        await tester.pumpWidget(buildWidget());
+        await tester.pump();
+
+        await tester.tap(effectsButton());
+        await tester.pump();
+
+        verify(() => mockFocusNode.unfocus()).called(1);
+      });
+
+      testWidgets('requests focus when closing the panel', (tester) async {
+        when(
+          () => mockBloc.state,
+        ).thenReturn(const VideoEditorTextState(showEffectsPanel: true));
+
+        await tester.pumpWidget(buildWidget());
+        await tester.pump();
+
+        await tester.tap(effectsButton());
+        await tester.pump();
+
+        verify(() => mockFocusNode.requestFocus()).called(1);
       });
     });
 

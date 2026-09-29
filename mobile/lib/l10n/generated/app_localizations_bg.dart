@@ -8995,6 +8995,27 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Текстов фон';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Контур и сянка';
+
+  @override
+  String get videoEditorTextOutline => 'Контур';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Дебелина на контура';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Цвят на контура';
+
+  @override
+  String get videoEditorTextShadow => 'Сянка';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Интензивност на сянката';
+
+  @override
+  String get videoEditorTextShadowColor => 'Цвят на сянката';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Шрифт';
 
   @override

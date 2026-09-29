@@ -8505,6 +8505,27 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => '텍스트 배경';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => '외곽선 및 그림자';
+
+  @override
+  String get videoEditorTextOutline => '외곽선';
+
+  @override
+  String get videoEditorTextOutlineThickness => '외곽선 두께';
+
+  @override
+  String get videoEditorTextOutlineColor => '외곽선 색상';
+
+  @override
+  String get videoEditorTextShadow => '그림자';
+
+  @override
+  String get videoEditorTextShadowStrength => '그림자 강도';
+
+  @override
+  String get videoEditorTextShadowColor => '그림자 색상';
+
+  @override
   String get videoEditorFontSemanticLabel => '폰트';
 
   @override

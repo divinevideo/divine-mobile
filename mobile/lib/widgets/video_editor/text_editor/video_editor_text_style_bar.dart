@@ -1,5 +1,7 @@
-// ABOUTME: Style controls bar for text editor with color, alignment, background and font buttons.
+// ABOUTME: Style controls bar for text editor with color, alignment, background, outline and shadow, and font buttons.
 // ABOUTME: Directly accesses VideoEditorTextBloc for state management.
+
+import 'dart:math';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -12,11 +14,17 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 
 /// Style controls bar for text editor.
 ///
-/// Displays buttons for color, alignment, background style, and font selection.
+/// Displays buttons for color, alignment, background style, outline and
+/// shadow, and font selection.
 /// Directly accesses [VideoEditorTextBloc] for state management and syncs
 /// changes with the [TextEditorState] via [VideoTextEditorScope].
 class VideoEditorTextStyleBar extends StatelessWidget {
   const VideoEditorTextStyleBar({super.key});
+
+  static const double _horizontalPadding = 16;
+
+  /// The narrowest the font button gets before the bar scrolls instead.
+  static const double _minFontButtonWidth = 120;
 
   void _toggleFontSelector(BuildContext context, VideoEditorTextState state) {
     _togglePanel(
@@ -34,8 +42,16 @@ class VideoEditorTextStyleBar extends StatelessWidget {
     );
   }
 
-  /// Toggles a panel (font selector or color picker) and manages
-  /// keyboard focus.
+  void _toggleEffectsPanel(BuildContext context, VideoEditorTextState state) {
+    _togglePanel(
+      context: context,
+      isOpen: state.showEffectsPanel,
+      event: const VideoEditorTextEffectsPanelToggled(),
+    );
+  }
+
+  /// Toggles a panel (font selector, color picker, or outline and shadow) and
+  /// manages keyboard focus.
   void _togglePanel({
     required BuildContext context,
     required bool isOpen,
@@ -64,65 +80,104 @@ class VideoEditorTextStyleBar extends StatelessWidget {
 
     return Material(
       type: .transparency,
-      child: Padding(
-        padding: const .symmetric(horizontal: 16),
-        child: BlocBuilder<VideoEditorTextBloc, VideoEditorTextState>(
-          buildWhen: (previous, current) =>
-              previous.selectedFontIndex != current.selectedFontIndex ||
-              previous.showFontSelector != current.showFontSelector ||
-              previous.showColorPicker != current.showColorPicker ||
-              previous.backgroundStyle != current.backgroundStyle ||
-              previous.alignment != current.alignment ||
-              previous.color != current.color,
-          builder: (context, state) {
-            return Row(
-              spacing: 16,
-              mainAxisAlignment: .spaceBetween,
-              children: [
-                Row(
-                  spacing: 8,
-                  children: [
-                    _ColorSwatchButton(
-                      semanticsLabel:
-                          context.l10n.videoEditorTextColorSemanticLabel,
-                      color: state.color,
-                      onTap: () => _toggleColorPicker(context, state),
-                    ),
-                    DivineIconButton(
-                      semanticLabel:
-                          context.l10n.videoEditorTextAlignmentSemanticLabel,
-                      semanticValue: state.alignment.localizedAccessibilityName(
-                        context.l10n,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final available = constraints.maxWidth - _horizontalPadding * 2;
+          // The four 48 dp style buttons with their 8 dp gaps, and the 16 dp
+          // gap before the font button. Should this undercount, the bar
+          // scrolls a little; it never overflows.
+          final styleButtonsWidth =
+              DivineIcon.scaleSize(context, 48) * 4 + 8 * 3 + 16;
+          final fontButtonMaxWidth = max(
+            _minFontButtonWidth,
+            available - styleButtonsWidth,
+          );
+          return SingleChildScrollView(
+            // On a narrow screen the bar scrolls out to the screen edge instead
+            // of overflowing or squeezing the font name to nothing.
+            scrollDirection: .horizontal,
+            padding: const .symmetric(horizontal: _horizontalPadding),
+            child: ConstrainedBox(
+              // Where everything fits, the font button sits at the far end.
+              constraints: BoxConstraints(minWidth: available),
+              child: BlocBuilder<VideoEditorTextBloc, VideoEditorTextState>(
+                buildWhen: (previous, current) =>
+                    previous.selectedFontIndex != current.selectedFontIndex ||
+                    previous.showFontSelector != current.showFontSelector ||
+                    previous.showColorPicker != current.showColorPicker ||
+                    previous.showEffectsPanel != current.showEffectsPanel ||
+                    previous.backgroundStyle != current.backgroundStyle ||
+                    previous.alignment != current.alignment ||
+                    previous.color != current.color,
+                builder: (context, state) {
+                  return Row(
+                    spacing: 16,
+                    mainAxisAlignment: .spaceBetween,
+                    children: [
+                      Row(
+                        mainAxisSize: .min,
+                        spacing: 8,
+                        children: [
+                          _ColorSwatchButton(
+                            semanticsLabel:
+                                context.l10n.videoEditorTextColorSemanticLabel,
+                            color: state.color,
+                            onTap: () => _toggleColorPicker(context, state),
+                          ),
+                          DivineIconButton(
+                            semanticLabel: context
+                                .l10n
+                                .videoEditorTextAlignmentSemanticLabel,
+                            semanticValue: state.alignment
+                                .localizedAccessibilityName(
+                                  context.l10n,
+                                ),
+                            size: .small,
+                            type: .secondary,
+                            icon: state.alignment.icon,
+                            onPressed: textEditor.toggleTextAlign,
+                          ),
+                          DivineIconButton(
+                            semanticLabel: context
+                                .l10n
+                                .videoEditorTextBackgroundSemanticLabel,
+                            semanticValue: state.backgroundStyle
+                                .localizedAccessibilityName(context.l10n),
+                            size: .small,
+                            type: .secondary,
+                            icon: state.backgroundStyle.icon,
+                            onPressed: textEditor.toggleBackgroundMode,
+                          ),
+                          DivineIconButton(
+                            semanticLabel: context
+                                .l10n
+                                .videoEditorTextEffectsSemanticLabel,
+                            size: .small,
+                            type: .secondary,
+                            icon: .textOutlineShadow,
+                            onPressed: () =>
+                                _toggleEffectsPanel(context, state),
+                          ),
+                        ],
                       ),
-                      size: .small,
-                      type: .secondary,
-                      icon: state.alignment.icon,
-                      onPressed: textEditor.toggleTextAlign,
-                    ),
-                    DivineIconButton(
-                      semanticLabel:
-                          context.l10n.videoEditorTextBackgroundSemanticLabel,
-                      semanticValue: state.backgroundStyle
-                          .localizedAccessibilityName(context.l10n),
-                      size: .small,
-                      type: .secondary,
-                      icon: state.backgroundStyle.icon,
-                      onPressed: textEditor.toggleBackgroundMode,
-                    ),
-                  ],
-                ),
-                // Font selector button
-                Flexible(
-                  child: _FontSelectorButton(
-                    fontName: state.selectedFontName,
-                    isOpen: state.showFontSelector,
-                    onTap: () => _toggleFontSelector(context, state),
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
+                      // Font selector button; a long font name ellipsizes.
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: fontButtonMaxWidth,
+                        ),
+                        child: _FontSelectorButton(
+                          fontName: state.selectedFontName,
+                          isOpen: state.showFontSelector,
+                          onTap: () => _toggleFontSelector(context, state),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          );
+        },
       ),
     );
   }

@@ -8835,6 +8835,27 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Latar belakang teks';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Garis tepi dan bayangan';
+
+  @override
+  String get videoEditorTextOutline => 'Garis tepi';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Ketebalan garis tepi';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Warna garis tepi';
+
+  @override
+  String get videoEditorTextShadow => 'Bayangan';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Kekuatan bayangan';
+
+  @override
+  String get videoEditorTextShadowColor => 'Warna bayangan';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Font';
 
   @override

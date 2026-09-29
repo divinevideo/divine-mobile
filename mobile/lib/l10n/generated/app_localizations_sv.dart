@@ -8912,6 +8912,27 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Textbakgrund';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Kontur och skugga';
+
+  @override
+  String get videoEditorTextOutline => 'Kontur';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Konturtjocklek';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Konturfärg';
+
+  @override
+  String get videoEditorTextShadow => 'Skugga';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Skuggstyrka';
+
+  @override
+  String get videoEditorTextShadowColor => 'Skuggfärg';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Typsnitt';
 
   @override

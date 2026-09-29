@@ -8960,6 +8960,27 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Tekstachtergrond';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Contour en schaduw';
+
+  @override
+  String get videoEditorTextOutline => 'Contour';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Contourdikte';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Contourkleur';
+
+  @override
+  String get videoEditorTextShadow => 'Schaduw';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Schaduwsterkte';
+
+  @override
+  String get videoEditorTextShadowColor => 'Schaduwkleur';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Lettertype';
 
   @override

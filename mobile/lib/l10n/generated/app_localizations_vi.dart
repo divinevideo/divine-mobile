@@ -8882,6 +8882,27 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Nền chữ';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Viền và bóng';
+
+  @override
+  String get videoEditorTextOutline => 'Viền';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Độ dày viền';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Màu viền';
+
+  @override
+  String get videoEditorTextShadow => 'Bóng';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Độ đậm của bóng';
+
+  @override
+  String get videoEditorTextShadowColor => 'Màu bóng';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Phông chữ';
 
   @override

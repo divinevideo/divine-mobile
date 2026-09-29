@@ -9171,6 +9171,27 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'వచన నేపథ్యం';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'అంచు గీత మరియు నీడ';
+
+  @override
+  String get videoEditorTextOutline => 'అంచు గీత';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'అంచు గీత మందం';
+
+  @override
+  String get videoEditorTextOutlineColor => 'అంచు గీత రంగు';
+
+  @override
+  String get videoEditorTextShadow => 'నీడ';
+
+  @override
+  String get videoEditorTextShadowStrength => 'నీడ తీవ్రత';
+
+  @override
+  String get videoEditorTextShadowColor => 'నీడ రంగు';
+
+  @override
   String get videoEditorFontSemanticLabel => 'ఫాంట్';
 
   @override

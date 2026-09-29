@@ -9095,6 +9095,27 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Tło tekstu';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Obrys i cień';
+
+  @override
+  String get videoEditorTextOutline => 'Obrys';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Grubość obrysu';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Kolor obrysu';
+
+  @override
+  String get videoEditorTextShadow => 'Cień';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Intensywność cienia';
+
+  @override
+  String get videoEditorTextShadowColor => 'Kolor cienia';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Czcionka';
 
   @override

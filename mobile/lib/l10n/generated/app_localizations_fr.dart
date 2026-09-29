@@ -9045,6 +9045,27 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Arrière-plan du texte';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Contour et ombre';
+
+  @override
+  String get videoEditorTextOutline => 'Contour';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Épaisseur du contour';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Couleur du contour';
+
+  @override
+  String get videoEditorTextShadow => 'Ombre';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Intensité de l\'ombre';
+
+  @override
+  String get videoEditorTextShadowColor => 'Couleur de l\'ombre';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Police';
 
   @override

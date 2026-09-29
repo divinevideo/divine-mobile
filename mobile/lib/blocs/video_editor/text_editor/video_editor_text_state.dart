@@ -11,6 +11,8 @@ class VideoEditorTextState extends Equatable {
     this.fontSize = 0.5,
     this.showFontSelector = false,
     this.showColorPicker = false,
+    this.effects = TextEffects.none,
+    this.showEffectsPanel = false,
   });
 
   /// The current text content.
@@ -45,6 +47,17 @@ class VideoEditorTextState extends Equatable {
   /// Whether the color picker is currently shown (replaces keyboard).
   final bool showColorPicker;
 
+  /// The outline and shadow drawn around the text.
+  final TextEffects effects;
+
+  /// Whether the outline and shadow panel is currently shown (replaces
+  /// keyboard).
+  final bool showEffectsPanel;
+
+  /// Whether any panel replaces the keyboard.
+  bool get showsPanel =>
+      showFontSelector || showColorPicker || showEffectsPanel;
+
   /// Creates a copy with the given fields replaced.
   VideoEditorTextState copyWith({
     String? text,
@@ -55,6 +68,8 @@ class VideoEditorTextState extends Equatable {
     double? fontSize,
     bool? showFontSelector,
     bool? showColorPicker,
+    TextEffects? effects,
+    bool? showEffectsPanel,
   }) {
     return VideoEditorTextState(
       text: text ?? this.text,
@@ -65,6 +80,8 @@ class VideoEditorTextState extends Equatable {
       fontSize: fontSize ?? this.fontSize,
       showFontSelector: showFontSelector ?? this.showFontSelector,
       showColorPicker: showColorPicker ?? this.showColorPicker,
+      effects: effects ?? this.effects,
+      showEffectsPanel: showEffectsPanel ?? this.showEffectsPanel,
     );
   }
 
@@ -78,5 +95,7 @@ class VideoEditorTextState extends Equatable {
     fontSize,
     showFontSelector,
     showColorPicker,
+    effects,
+    showEffectsPanel,
   ];
 }

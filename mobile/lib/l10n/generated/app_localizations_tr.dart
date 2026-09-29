@@ -8838,6 +8838,27 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Metin arka planı';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Kontur ve gölge';
+
+  @override
+  String get videoEditorTextOutline => 'Kontur';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Kontur kalınlığı';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Kontur rengi';
+
+  @override
+  String get videoEditorTextShadow => 'Gölge';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Gölge yoğunluğu';
+
+  @override
+  String get videoEditorTextShadowColor => 'Gölge rengi';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Yazı tipi';
 
   @override
