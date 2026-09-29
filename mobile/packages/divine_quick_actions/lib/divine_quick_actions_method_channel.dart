@@ -23,8 +23,15 @@ class MethodChannelDivineQuickActions extends DivineQuickActionsPlatform {
   final StreamController<DivineQuickActionEvent> _actionController =
       StreamController<DivineQuickActionEvent>.broadcast();
 
+  final StreamController<void> _cameraWidgetPinnedController =
+      StreamController<void>.broadcast();
+
   @override
   Stream<DivineQuickActionEvent> get actionStream => _actionController.stream;
+
+  @override
+  Stream<void> get cameraWidgetPinnedStream =>
+      _cameraWidgetPinnedController.stream;
 
   Future<dynamic> _handleMethodCall(MethodCall call) async {
     switch (call.method) {
@@ -36,6 +43,9 @@ class MethodChannelDivineQuickActions extends DivineQuickActionsPlatform {
             _actionController.add(action);
           }
         }
+        return null;
+      case 'onCameraWidgetPinned':
+        _cameraWidgetPinnedController.add(null);
         return null;
       default:
         return null;
@@ -80,5 +90,21 @@ class MethodChannelDivineQuickActions extends DivineQuickActionsPlatform {
     );
     if (result == null) return null;
     return DivineQuickActionEvent.tryFromMap(result, isLaunchAction: true);
+  }
+
+  @override
+  Future<bool> isCameraWidgetPinSupported() async {
+    final result = await methodChannel.invokeMethod<bool>(
+      'isCameraWidgetPinSupported',
+    );
+    return result ?? false;
+  }
+
+  @override
+  Future<bool> requestPinCameraWidget() async {
+    final result = await methodChannel.invokeMethod<bool>(
+      'requestPinCameraWidget',
+    );
+    return result ?? false;
   }
 }

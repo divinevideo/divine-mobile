@@ -60,4 +60,18 @@ abstract class DivineQuickActionsPlatform extends PlatformInterface {
   Future<DivineQuickActionEvent?> consumeLaunchAction() {
     throw UnimplementedError('consumeLaunchAction() has not been implemented.');
   }
+
+  // The camera-widget members below default to "unsupported" rather than
+  // throwing: a platform that cannot pin widgets is truthfully reporting that.
+
+  /// Emits each time the launcher confirms the camera widget was added after
+  /// [requestPinCameraWidget].
+  Stream<void> get cameraWidgetPinnedStream => const Stream<void>.empty();
+
+  /// Returns whether the launcher can add the camera widget on the user's
+  /// behalf.
+  Future<bool> isCameraWidgetPinSupported() => Future<bool>.value(false);
+
+  /// Asks the launcher to add the camera widget to the home screen.
+  Future<bool> requestPinCameraWidget() => Future<bool>.value(false);
 }
