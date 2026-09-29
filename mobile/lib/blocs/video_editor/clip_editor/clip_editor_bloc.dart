@@ -2046,7 +2046,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
   /// What the layer did on the canvas stays behind: its position, size and
   /// rotation have no timeline equivalent, and neither has its live green
   /// screen, which a timeline clip can only carry baked into its file. A key
-  /// baked in before the clip was detached is part of the clip and comes back
+  /// baked in before the clip was detached is part of its file and comes back
   /// with it.
   ///
   /// Removing the layer is the widget layer's half, driven by
@@ -2089,7 +2089,9 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       window: event.window,
     );
     // Duplicating or splitting a layer copies its clip id, so a second layer
-    // of the same footage would otherwise collide with the first one back.
+    // of the same footage would otherwise collide with the first one back. A
+    // new id makes a new clip, which — as with a timeline duplicate — keeps a
+    // baked key's pixels in its file but not the key's record.
     if (currentClips.any((c) => c.id == clip.id)) {
       clip = clip.copyWith(
         id: '${clip.id}_${DateTime.now().microsecondsSinceEpoch}',

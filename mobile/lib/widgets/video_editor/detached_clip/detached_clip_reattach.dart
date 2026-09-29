@@ -23,8 +23,8 @@ import 'package:pro_image_editor/pro_image_editor.dart' show Layer;
 /// bar is what the user sees and what plays, while the layer still carries the
 /// end it was placed with.
 ///
-/// The layer's action bar is closed straight away, so a second tap cannot
-/// send the same clip back twice.
+/// The layer's action bar is closed straight away. A tap that still gets
+/// through while it closes is ignored by the bloc once the clip is back.
 Future<void> reattachDetachedClip(
   BuildContext context,
   Layer layer, {

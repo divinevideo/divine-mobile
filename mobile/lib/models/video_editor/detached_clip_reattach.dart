@@ -56,9 +56,8 @@ Duration _wholeMilliseconds(Duration duration) =>
 /// Where a clip put back at [playhead] joins [clips].
 ///
 /// On a seam it goes in at that seam. Inside a clip it goes in right after
-/// that clip, so the clip under the playhead is never cut in two — the rule
-/// stills captured into a stop-motion clip follow too. Past the end it
-/// follows the last clip.
+/// that clip, so the clip under the playhead is never cut in two. Past the end
+/// it follows the last clip.
 int reattachInsertIndex(List<DivineVideoClip> clips, Duration playhead) {
   var clipStart = Duration.zero;
   for (var i = 0; i < clips.length; i++) {
