@@ -97,10 +97,11 @@ class EditorOverlaySnapshot {
   ///
   /// The copy is safe even though `copyWith` on a concrete layer subtype
   /// (text/paint/…) returns that same subtype: the visual content already
-  /// travels in the rasterized `bytes`, and the render reads back only base
-  /// `Layer` fields — offset, time window, animations. Copying rather than
-  /// mutating matters because these fields are mutable and the source is the
-  /// editor's live layer.
+  /// travels in the rasterized `bytes` (a text layer's lit words in
+  /// `highlightBytes`), and the render reads back only offset, time window,
+  /// animations and a text layer's highlights. Copying rather than mutating
+  /// matters because these fields are mutable and the source is the editor's
+  /// live layer.
   ///
   /// A layer that reached past the window on a side sat steadily on screen
   /// there on the timeline — its enter (start clamped) or leave (end clamped)
