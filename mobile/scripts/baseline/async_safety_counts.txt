@@ -91,7 +91,6 @@ discarded_futures|test/widgets/find_people_sheet_test.dart	1
 discarded_futures|test/widgets/save_original_progress_sheet_test.dart	1
 discarded_futures|test/widgets/upload_failure_listener_test.dart	1
 discarded_futures|test/widgets/upload_progress_dialog_test.dart	1
-discarded_futures|test/widgets/video_feed_item/inline_comment_composer_bar_test.dart	2
 discarded_futures|test/widgets/watermark_download_progress_sheet_test.dart	1
 unawaited_futures|integration_test/e2e/deleted_video_visible_to_other_users_test.dart	2
 unawaited_futures|lib/features/app/startup/startup_coordinator.dart	1

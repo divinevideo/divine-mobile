@@ -56,17 +56,14 @@ void main() {
       fullscreenBloc = _MockFullscreenFeedBloc();
       composerCubit = _MockInlineCommentComposerCubit();
 
-      when(
-        () => fullscreenBloc.state,
-      ).thenReturn(stateWithVideo(buildVideo()));
-      when(
-        () => composerCubit.state,
-      ).thenReturn(const InlineCommentComposerState());
+      when(() => fullscreenBloc.state).thenReturn(stateWithVideo(buildVideo()));
+      when(() => composerCubit.state)
+          .thenReturn(const InlineCommentComposerState());
     });
 
-    tearDown(() {
-      fullscreenBloc.close();
-      composerCubit.close();
+    tearDown(() async {
+      await fullscreenBloc.close();
+      await composerCubit.close();
     });
 
     Widget buildBar() {
@@ -125,24 +122,21 @@ void main() {
       );
     });
 
-    testWidgets(
-      'configures the field to grow from 1 to 5 lines on long input, '
-      'matching the comments-sheet composer',
-      (tester) async {
-        await tester.pumpWidget(buildBar());
+    testWidgets('configures the field to grow from 1 to 5 lines on long input, '
+        'matching the comments-sheet composer', (tester) async {
+      await tester.pumpWidget(buildBar());
 
-        final field = tester.widget<TextField>(
-          find.descendant(
-            of: find.bySemanticsIdentifier('inline_comment_composer_field'),
-            matching: find.byType(TextField),
-          ),
-        );
+      final field = tester.widget<TextField>(
+        find.descendant(
+          of: find.bySemanticsIdentifier('inline_comment_composer_field'),
+          matching: find.byType(TextField),
+        ),
+      );
 
-        expect(field.minLines, 1);
-        expect(field.maxLines, 5);
-        expect(field.keyboardType, TextInputType.multiline);
-      },
-    );
+      expect(field.minLines, 1);
+      expect(field.maxLines, 5);
+      expect(field.keyboardType, TextInputType.multiline);
+    });
 
     testWidgets('enables spell check on the composer field', (tester) async {
       await tester.pumpWidget(buildBar());
@@ -183,9 +177,8 @@ void main() {
       'clears the field',
       (tester) async {
         final activeVideo = buildVideo();
-        when(
-          () => fullscreenBloc.state,
-        ).thenReturn(stateWithVideo(activeVideo));
+        when(() => fullscreenBloc.state)
+            .thenReturn(stateWithVideo(activeVideo));
         when(
           () => composerCubit.submit(
             video: any(named: 'video'),
@@ -205,10 +198,8 @@ void main() {
         await tester.pump();
 
         verify(
-          () => composerCubit.submit(
-            video: activeVideo,
-            content: 'great video!',
-          ),
+          () =>
+              composerCubit.submit(video: activeVideo, content: 'great video!'),
         ).called(1);
 
         // Field is cleared after submit so the send affordance disappears.
@@ -219,91 +210,85 @@ void main() {
       },
     );
 
-    testWidgets(
-      'submitting via the keyboard send action triggers the cubit',
-      (tester) async {
-        when(
-          () => composerCubit.submit(
-            video: any(named: 'video'),
-            content: any(named: 'content'),
+    testWidgets('submitting via the keyboard send action triggers the cubit', (
+      tester,
+    ) async {
+      when(
+        () => composerCubit.submit(
+          video: any(named: 'video'),
+          content: any(named: 'content'),
+        ),
+      ).thenAnswer((_) async {});
+
+      await tester.pumpWidget(buildBar());
+      await tester.enterText(
+        find.bySemanticsIdentifier('inline_comment_composer_field'),
+        'hi',
+      );
+      await tester.testTextInput.receiveAction(TextInputAction.send);
+      await tester.pump();
+
+      verify(
+        () => composerCubit.submit(
+          video: any(named: 'video'),
+          content: 'hi',
+        ),
+      ).called(1);
+    });
+
+    testWidgets('shows the success snackbar when the cubit emits submitted', (
+      tester,
+    ) async {
+      whenListen<InlineCommentComposerState>(
+        composerCubit,
+        Stream.fromIterable(const [
+          InlineCommentComposerState(
+            status: InlineCommentComposerStatus.submitting,
           ),
-        ).thenAnswer((_) async {});
-
-        await tester.pumpWidget(buildBar());
-        await tester.enterText(
-          find.bySemanticsIdentifier('inline_comment_composer_field'),
-          'hi',
-        );
-        await tester.testTextInput.receiveAction(TextInputAction.send);
-        await tester.pump();
-
-        verify(
-          () => composerCubit.submit(
-            video: any(named: 'video'),
-            content: 'hi',
+          InlineCommentComposerState(
+            status: InlineCommentComposerStatus.submitted,
           ),
-        ).called(1);
-      },
-    );
+        ]),
+        initialState: const InlineCommentComposerState(),
+      );
 
-    testWidgets(
-      'shows the success snackbar when the cubit emits submitted',
-      (tester) async {
-        whenListen<InlineCommentComposerState>(
-          composerCubit,
-          Stream.fromIterable(const [
-            InlineCommentComposerState(
-              status: InlineCommentComposerStatus.submitting,
-            ),
-            InlineCommentComposerState(
-              status: InlineCommentComposerStatus.submitted,
-            ),
-          ]),
-          initialState: const InlineCommentComposerState(),
-        );
+      await tester.pumpWidget(buildBar());
+      await tester.pump();
+      // Allow the snackbar entrance animation to settle.
+      await tester.pump(const Duration(seconds: 1));
 
-        await tester.pumpWidget(buildBar());
-        await tester.pump();
-        // Allow the snackbar entrance animation to settle.
-        await tester.pump(const Duration(seconds: 1));
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l10n.videoOverlayCommentPostedSnackbar), findsOneWidget);
+      verify(() => composerCubit.acknowledge()).called(1);
+    });
 
-        final l10n = lookupAppLocalizations(const Locale('en'));
-        expect(
-          find.text(l10n.videoOverlayCommentPostedSnackbar),
-          findsOneWidget,
-        );
-        verify(() => composerCubit.acknowledge()).called(1);
-      },
-    );
+    testWidgets('shows the failure snackbar when the cubit emits failure', (
+      tester,
+    ) async {
+      whenListen<InlineCommentComposerState>(
+        composerCubit,
+        Stream.fromIterable(const [
+          InlineCommentComposerState(
+            status: InlineCommentComposerStatus.submitting,
+          ),
+          InlineCommentComposerState(
+            status: InlineCommentComposerStatus.failure,
+          ),
+        ]),
+        initialState: const InlineCommentComposerState(),
+      );
 
-    testWidgets(
-      'shows the failure snackbar when the cubit emits failure',
-      (tester) async {
-        whenListen<InlineCommentComposerState>(
-          composerCubit,
-          Stream.fromIterable(const [
-            InlineCommentComposerState(
-              status: InlineCommentComposerStatus.submitting,
-            ),
-            InlineCommentComposerState(
-              status: InlineCommentComposerStatus.failure,
-            ),
-          ]),
-          initialState: const InlineCommentComposerState(),
-        );
+      await tester.pumpWidget(buildBar());
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-        await tester.pumpWidget(buildBar());
-        await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
-
-        final l10n = lookupAppLocalizations(const Locale('en'));
-        expect(
-          find.text(l10n.videoOverlayCommentPostFailedSnackbar),
-          findsOneWidget,
-        );
-        verify(() => composerCubit.acknowledge()).called(1);
-      },
-    );
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(
+        find.text(l10n.videoOverlayCommentPostFailedSnackbar),
+        findsOneWidget,
+      );
+      verify(() => composerCubit.acknowledge()).called(1);
+    });
 
     testWidgets(
       'restores the draft and re-shows the send button when the cubit '
@@ -320,9 +305,8 @@ void main() {
         // sequence on subscription, before the test has had a chance
         // to capture a draft.
         final activeVideo = buildVideo();
-        when(
-          () => fullscreenBloc.state,
-        ).thenReturn(stateWithVideo(activeVideo));
+        when(() => fullscreenBloc.state)
+            .thenReturn(stateWithVideo(activeVideo));
         when(
           () => composerCubit.submit(
             video: any(named: 'video'),
@@ -370,68 +354,61 @@ void main() {
       },
     );
 
-    testWidgets(
-      'does not clobber freshly-typed text if the user starts a new '
-      'draft before the failure arrives',
-      (tester) async {
-        final activeVideo = buildVideo();
-        when(
-          () => fullscreenBloc.state,
-        ).thenReturn(stateWithVideo(activeVideo));
-        when(
-          () => composerCubit.submit(
-            video: any(named: 'video'),
-            content: any(named: 'content'),
-          ),
-        ).thenAnswer((_) async {});
-        final stateController = StreamController<InlineCommentComposerState>();
-        addTearDown(stateController.close);
-        whenListen<InlineCommentComposerState>(
-          composerCubit,
-          stateController.stream,
-          initialState: const InlineCommentComposerState(),
-        );
+    testWidgets('does not clobber freshly-typed text if the user starts a new '
+        'draft before the failure arrives', (tester) async {
+      final activeVideo = buildVideo();
+      when(() => fullscreenBloc.state).thenReturn(stateWithVideo(activeVideo));
+      when(
+        () => composerCubit.submit(
+          video: any(named: 'video'),
+          content: any(named: 'content'),
+        ),
+      ).thenAnswer((_) async {});
+      final stateController = StreamController<InlineCommentComposerState>();
+      addTearDown(stateController.close);
+      whenListen<InlineCommentComposerState>(
+        composerCubit,
+        stateController.stream,
+        initialState: const InlineCommentComposerState(),
+      );
 
-        await tester.pumpWidget(buildBar());
-        await tester.enterText(
-          find.bySemanticsIdentifier('inline_comment_composer_field'),
-          'first draft',
-        );
-        await tester.pump();
-        await tester.tap(
-          find.bySemanticsIdentifier('inline_comment_composer_send_button'),
-        );
-        await tester.pump();
+      await tester.pumpWidget(buildBar());
+      await tester.enterText(
+        find.bySemanticsIdentifier('inline_comment_composer_field'),
+        'first draft',
+      );
+      await tester.pump();
+      await tester.tap(
+        find.bySemanticsIdentifier('inline_comment_composer_send_button'),
+      );
+      await tester.pump();
 
-        // User starts typing a new comment before the failure lands.
-        await tester.enterText(
-          find.bySemanticsIdentifier('inline_comment_composer_field'),
-          'new thought',
-        );
-        await tester.pump();
+      // User starts typing a new comment before the failure lands.
+      await tester.enterText(
+        find.bySemanticsIdentifier('inline_comment_composer_field'),
+        'new thought',
+      );
+      await tester.pump();
 
-        // Now the publish fails. The bar must NOT overwrite "new
-        // thought" with the stale "first draft" — the guard on
-        // `_controller.text.isEmpty` is what protects us.
-        stateController.add(
-          const InlineCommentComposerState(
-            status: InlineCommentComposerStatus.failure,
-          ),
-        );
-        await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
+      // Now the publish fails. The bar must NOT overwrite "new
+      // thought" with the stale "first draft" — the guard on
+      // `_controller.text.isEmpty` is what protects us.
+      stateController.add(
+        const InlineCommentComposerState(
+          status: InlineCommentComposerStatus.failure,
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-        expect(find.text('new thought'), findsOneWidget);
-        expect(find.text('first draft'), findsNothing);
-      },
-    );
+      expect(find.text('new thought'), findsOneWidget);
+      expect(find.text('first draft'), findsNothing);
+    });
 
     testWidgets('does nothing on send when there is no active video', (
       tester,
     ) async {
-      when(
-        () => fullscreenBloc.state,
-      ).thenReturn(FullscreenFeedState());
+      when(() => fullscreenBloc.state).thenReturn(FullscreenFeedState());
 
       await tester.pumpWidget(buildBar());
       await tester.enterText(
