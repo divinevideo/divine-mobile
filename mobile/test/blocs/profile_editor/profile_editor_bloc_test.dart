@@ -154,11 +154,11 @@ void main() {
       stagedProfileMediaStore: stagedProfileMediaStore,
     );
 
-    test('initial state is ProfileEditorStatus.initial', () {
+    test('initial state is ProfileEditorStatus.initial', () async {
       final bloc = createBloc();
       expect(bloc.state.status, ProfileEditorStatus.initial);
       expect(bloc.state.error, isNull);
-      bloc.close();
+      await bloc.close();
     });
 
     group('ProfileSaved', () {
