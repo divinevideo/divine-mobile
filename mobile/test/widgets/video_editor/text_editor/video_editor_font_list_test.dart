@@ -155,6 +155,26 @@ void main() {
         expect(oswaldIndex, 9);
         expect(picked, oswaldIndex);
       });
+
+      testWidgets(
+        'reports the catalogue index, not the row, for a font whose row '
+        'differs from it',
+        (tester) async {
+          // Oswald's row and catalogue index happen to coincide (9), so the
+          // test above cannot tell them apart. DM Sans sits in row 23 of the
+          // grouped list but at catalogue index 63.
+          final dmSansIndex = VideoEditorConstants.textFontCatalogue.indexWhere(
+            (entry) => entry.familyName == 'DM Sans',
+          );
+          int? picked;
+          await pumpList(tester, onSelected: (index) => picked = index);
+
+          await tester.tap(find.text('DM Sans'));
+
+          expect(dmSansIndex, 63);
+          expect(picked, dmSansIndex);
+        },
+      );
     });
 
     group('category chips', () {
