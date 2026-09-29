@@ -1135,6 +1135,22 @@ class DivineVideoPlayerInstanceTest {
     }
 
     @Test
+    fun `a host that only resembles a Divine host does not keep the repeat`() {
+        // Matching on a substring or a bare suffix would let these through,
+        // and a third-party playlist under a repeat mode runs the heap out.
+        for (uri in listOf(
+            "https://media.divine.video.example.com/a/hls/master.m3u8",
+            "https://evildivine.video/a/hls/master.m3u8",
+        )) {
+            clearMocks(mockPlayer, answers = false, recordedCalls = true)
+            instance.onMethodCall(setClipsCall(uri), mockk(relaxed = true))
+            instance.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
+
+            verify(exactly = 0) { mockPlayer.repeatMode = Player.REPEAT_MODE_ONE }
+        }
+    }
+
+    @Test
     fun `a looping HLS clip starts its next lap from the beginning when it ends`() {
         val listener = capturePlayerListener()
         val sink = mockk<EventChannel.EventSink>(relaxed = true)
