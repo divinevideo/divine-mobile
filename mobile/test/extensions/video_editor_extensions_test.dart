@@ -254,6 +254,115 @@ void main() {
       );
     });
 
+    group('setClipStateRemovingLayer', () {
+      // The clip that comes back can make the composition longer, so a sound
+      // that covered the old end has to follow it, as after any other edit
+      // that lengthens the composition (#6401).
+      final covering = AudioEvent(
+        id: 'sound-1',
+        pubkey: 'bundled',
+        createdAt: 0,
+        url: 'asset://sounds/loop.mp3',
+        duration: 30,
+        endTime: const Duration(seconds: 3),
+      );
+
+      Map<String, dynamic> capturedMeta() =>
+          verify(
+                () => editor.addHistory(
+                  layers: any(named: 'layers'),
+                  meta: captureAny(named: 'meta'),
+                ),
+              ).captured.single
+              as Map<String, dynamic>;
+
+      test('drops the layer in the clips entry', () {
+        final kept = TextLayer(id: 'text', text: 'hi');
+        final detached = TextLayer(id: 'detached_b', text: 'clip');
+        when(() => editor.activeLayers).thenReturn([kept, detached]);
+        when(() => stateManager.activeMeta).thenReturn({});
+
+        editor.setClipStateRemovingLayer(
+          previousClips: [_clip('a')],
+          clips: [_clip('a'), _clip('b')],
+          layerId: 'detached_b',
+        );
+
+        // One entry, so a single undo lifts the clip back onto the canvas
+        // instead of leaving it on the timeline and the canvas at once.
+        final captured = verify(
+          () => editor.addHistory(
+            layers: captureAny(named: 'layers'),
+            meta: captureAny(named: 'meta'),
+          ),
+        ).captured;
+        expect((captured[0] as List<Layer>).map((l) => l.id), ['text']);
+        expect(
+          (captured[1] as Map<String, dynamic>)[VideoEditorConstants
+              .clipsStateHistoryKey],
+          hasLength(2),
+        );
+      });
+
+      test('grows a sound that covered the old end onto the clip that came '
+          'back', () {
+        when(() => editor.activeLayers).thenReturn(<Layer>[]);
+        when(() => stateManager.activeMeta).thenReturn({
+          VideoEditorConstants.audioStateHistoryKey: [covering.toJson()],
+        });
+
+        editor.setClipStateRemovingLayer(
+          previousClips: [_clip('clip-1')],
+          clips: [_clip('clip-1'), _clip('clip-2')],
+          layerId: 'detached_b',
+        );
+
+        final audio =
+            capturedMeta()[VideoEditorConstants.audioStateHistoryKey]
+                as List<dynamic>;
+        expect(
+          AudioEvent.fromJson(audio.single as Map<String, dynamic>).endTime,
+          const Duration(seconds: 6),
+        );
+      });
+
+      test('writes no audio key when the composition has no sound', () {
+        when(() => editor.activeLayers).thenReturn(<Layer>[]);
+        when(() => stateManager.activeMeta).thenReturn({});
+
+        editor.setClipStateRemovingLayer(
+          previousClips: [_clip('clip-1')],
+          clips: [_clip('clip-1'), _clip('clip-2')],
+          layerId: 'detached_b',
+        );
+
+        expect(
+          capturedMeta().containsKey(VideoEditorConstants.audioStateHistoryKey),
+          isFalse,
+        );
+      });
+
+      test('writes the rebased timeline markers into the entry', () {
+        when(() => editor.activeLayers).thenReturn(<Layer>[]);
+        when(() => stateManager.activeMeta).thenReturn({
+          VideoEditorConstants.timelineMarkersStateHistoryKey: [900],
+        });
+
+        editor.setClipStateRemovingLayer(
+          previousClips: [_clip('clip-1')],
+          clips: [_clip('clip-1'), _clip('clip-2')],
+          layerId: 'detached_b',
+          timelineMarkers: const [Duration(seconds: 1), Duration(seconds: 4)],
+        );
+
+        // The markers the caller rebased, not the ones the entry started from.
+        expect(
+          capturedMeta()[VideoEditorConstants.timelineMarkersStateHistoryKey],
+          [1000, 4000],
+        );
+      });
+    });
+
     test('setClipState updates current markers when skipping history', () {
       final activeMeta = <String, dynamic>{
         VideoEditorConstants.timelineMarkersStateHistoryKey: [900],

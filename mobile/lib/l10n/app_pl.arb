@@ -3650,6 +3650,8 @@
   "videoEditorDetachProgressLabel": "Odłączanie klipu…",
   "videoEditorDetachFailed": "Nie udało się odłączyć tego klipu. Twoja oś czasu pozostaje bez zmian.",
   "videoEditorDetachImagePickFailed": "Nie udało się wczytać tego zdjęcia.",
+  "videoEditorReattachLabel": "Przywróć",
+  "videoEditorReattachSemanticLabel": "Przywróć wybrany klip na oś czasu",
   "videoEditorBackdropLabel": "Tło",
   "videoEditorBackdropSemanticLabel": "Zmień tło, które trzyma to miejsce",
   "videoEditorBackdropTitle": "Zmień tło",

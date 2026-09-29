@@ -15540,6 +15540,18 @@ abstract class AppLocalizations {
   /// **'Couldn\'t load that photo.'**
   String get videoEditorDetachImagePickFailed;
 
+  /// Action-bar button on a clip detached onto the canvas. Puts the clip back onto the timeline as a regular clip, in the slot it left if that is still there, otherwise at the playhead. Keep it short — it sits under a 52dp icon beside Split, Crop and Green screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to timeline'**
+  String get videoEditorReattachLabel;
+
+  /// No description provided for @videoEditorReattachSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Put the selected clip back on the timeline'**
+  String get videoEditorReattachSemanticLabel;
+
   /// Clip action-bar button on the still that holds the slot a detached clip left behind. Opens the sheet that swaps that still for another colour or photo. Keep it short — it sits under a 52dp icon beside Delete and Done.
   ///
   /// In en, this message translates to:

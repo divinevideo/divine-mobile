@@ -3650,6 +3650,8 @@
   "videoEditorDetachProgressLabel": "Clip wordt losgemaakt…",
   "videoEditorDetachFailed": "Kon die clip niet losmaken. Je tijdlijn blijft ongewijzigd.",
   "videoEditorDetachImagePickFailed": "Kon die foto niet laden.",
+  "videoEditorReattachLabel": "Terugzetten",
+  "videoEditorReattachSemanticLabel": "Geselecteerde clip terugzetten op de tijdlijn",
   "videoEditorBackdropLabel": "Achtergrond",
   "videoEditorBackdropSemanticLabel": "De achtergrond van deze plek wijzigen",
   "videoEditorBackdropTitle": "Achtergrond wijzigen",

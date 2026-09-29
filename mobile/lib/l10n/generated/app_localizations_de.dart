@@ -9221,6 +9221,13 @@ class AppLocalizationsDe extends AppLocalizations {
       'Das Foto konnte nicht geladen werden.';
 
   @override
+  String get videoEditorReattachLabel => 'Zur Timeline';
+
+  @override
+  String get videoEditorReattachSemanticLabel =>
+      'Ausgewählten Clip zurück auf die Timeline legen';
+
+  @override
   String get videoEditorBackdropLabel => 'Hintergrund';
 
   @override

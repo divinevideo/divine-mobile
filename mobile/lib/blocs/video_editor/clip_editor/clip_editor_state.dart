@@ -51,6 +51,7 @@ class ClipEditorState extends Equatable {
     this.detachingRenderId,
     this.lastDetachResult,
     this.lastDetachedClipTransformResult,
+    this.lastDetachedClipReattachResult,
     this.isRefillingPlaceholder = false,
     this.refillingPlaceholderClipId,
     this.refillingPlaceholderRenderId,
@@ -318,6 +319,12 @@ class ClipEditorState extends Equatable {
   /// onto the layer and into editor history.
   final DetachedClipTransformResult? lastDetachedClipTransformResult;
 
+  /// Last detached clip put back onto the timeline.
+  ///
+  /// Consumed by the widget layer, which removes the layer the clip came off
+  /// and commits that together with [clips] as one history entry.
+  final DetachedClipReattachResult? lastDetachedClipReattachResult;
+
   /// Index of the currently selected still in a frames-only stop-motion clip,
   /// or `null` when no frame is selected (or the composition is not
   /// stop-motion). Drives the per-frame action bar and tile highlight.
@@ -384,6 +391,7 @@ class ClipEditorState extends Equatable {
     bool clearDetachingClipId = false,
     ClipDetachResult? lastDetachResult,
     DetachedClipTransformResult? lastDetachedClipTransformResult,
+    DetachedClipReattachResult? lastDetachedClipReattachResult,
     bool? isRefillingPlaceholder,
     String? refillingPlaceholderClipId,
     String? refillingPlaceholderRenderId,
@@ -473,6 +481,8 @@ class ClipEditorState extends Equatable {
       lastDetachedClipTransformResult:
           lastDetachedClipTransformResult ??
           this.lastDetachedClipTransformResult,
+      lastDetachedClipReattachResult:
+          lastDetachedClipReattachResult ?? this.lastDetachedClipReattachResult,
       isRefillingPlaceholder:
           isRefillingPlaceholder ?? this.isRefillingPlaceholder,
       refillingPlaceholderClipId: clearRefillingPlaceholderClipId
@@ -548,6 +558,7 @@ class ClipEditorState extends Equatable {
     identityHashCode(lastDetachResult),
     // Identity-only, for the same reason.
     identityHashCode(lastDetachedClipTransformResult),
+    identityHashCode(lastDetachedClipReattachResult),
     isRefillingPlaceholder,
     refillingPlaceholderClipId,
     refillingPlaceholderRenderId,
@@ -873,3 +884,34 @@ final class DetachedClipTransformSuccess extends DetachedClipTransformResult {
 
 /// The render failed; the layer still carries its pre-crop file.
 final class DetachedClipTransformFailure extends DetachedClipTransformResult {}
+
+// === DETACHED-CLIP REATTACH RESULT ===
+
+/// One-shot signal that a detached clip is back on the timeline.
+///
+/// Emitted into [ClipEditorState.lastDetachedClipReattachResult]. The bloc has
+/// already put the clip into [ClipEditorState.clips]; the widget layer removes
+/// the layer [layerId] and commits both changes as one history entry.
+/// [previousClips] is the list as it was immediately before, so timeline
+/// markers can be rebased onto the new composition.
+///
+/// There is no failure counterpart: nothing here renders, so there is nothing
+/// to fail. Identity-compared like every other one-shot result.
+final class DetachedClipReattachResult {
+  DetachedClipReattachResult({
+    required this.previousClips,
+    required this.layerId,
+    required this.clipId,
+  });
+
+  final List<DivineVideoClip> previousClips;
+  final String layerId;
+
+  /// Id the clip has on the timeline now, which is not the id it carried on
+  /// the layer when it had to be renamed to stay unique.
+  ///
+  /// Together with [layerId] it tells a repeat request for the same layer from
+  /// a fresh one: the layer's clip is still on the timeline for a repeat, and
+  /// gone again once an undo has put the layer back on the canvas.
+  final String clipId;
+}

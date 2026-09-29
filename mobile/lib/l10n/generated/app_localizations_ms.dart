@@ -9111,6 +9111,13 @@ class AppLocalizationsMs extends AppLocalizations {
       'Foto itu tidak dapat dimuatkan.';
 
   @override
+  String get videoEditorReattachLabel => 'Kembalikan';
+
+  @override
+  String get videoEditorReattachSemanticLabel =>
+      'Kembalikan klip dipilih ke garis masa';
+
+  @override
   String get videoEditorBackdropLabel => 'Latar';
 
   @override

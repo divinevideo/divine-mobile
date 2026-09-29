@@ -3650,6 +3650,8 @@
   "videoEditorDetachProgressLabel": "Separando tu clip…",
   "videoEditorDetachFailed": "No se pudo separar ese clip. Tu línea de tiempo queda igual.",
   "videoEditorDetachImagePickFailed": "No se pudo cargar esa foto.",
+  "videoEditorReattachLabel": "Devolver",
+  "videoEditorReattachSemanticLabel": "Devolver el clip seleccionado a la línea de tiempo",
   "videoEditorBackdropLabel": "Fondo",
   "videoEditorBackdropSemanticLabel": "Cambiar el fondo que ocupa este lugar",
   "videoEditorBackdropTitle": "Cambiar fondo",

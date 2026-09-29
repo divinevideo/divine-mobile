@@ -2642,6 +2642,8 @@
   "videoEditorDetachProgressLabel": "Inaalis ang clip mo…",
   "videoEditorDetachFailed": "Hindi ma-detach ang clip na iyon. Hindi nagbago ang timeline mo.",
   "videoEditorDetachImagePickFailed": "Hindi ma-load ang larawang iyon.",
+  "videoEditorReattachLabel": "Ibalik",
+  "videoEditorReattachSemanticLabel": "Ibalik ang napiling clip sa timeline",
   "videoEditorBackdropLabel": "Background",
   "videoEditorBackdropSemanticLabel": "Palitan ang background na humahawak sa puwestong ito",
   "videoEditorBackdropTitle": "Palitan ang background",

@@ -3650,6 +3650,8 @@
   "videoEditorDetachProgressLabel": "Melepaskan klip kamu…",
   "videoEditorDetachFailed": "Klip itu tidak bisa dilepas. Timeline-mu tidak berubah.",
   "videoEditorDetachImagePickFailed": "Foto itu tidak bisa dimuat.",
+  "videoEditorReattachLabel": "Kembalikan",
+  "videoEditorReattachSemanticLabel": "Kembalikan klip yang dipilih ke timeline",
   "videoEditorBackdropLabel": "Latar",
   "videoEditorBackdropSemanticLabel": "Ubah latar yang menahan tempat ini",
   "videoEditorBackdropTitle": "Ubah latar",

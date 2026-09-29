@@ -4741,6 +4741,8 @@
   "videoEditorDetachProgressLabel": "آپ کی کلپ الگ کی جا رہی ہے…",
   "videoEditorDetachFailed": "وہ کلپ الگ نہیں ہو سکا۔ آپ کی ٹائم لائن ویسی ہی ہے۔",
   "videoEditorDetachImagePickFailed": "وہ تصویر لوڈ نہیں ہو سکی۔",
+  "videoEditorReattachLabel": "ٹائم لائن پر",
+  "videoEditorReattachSemanticLabel": "منتخب کلپ کو واپس ٹائم لائن پر رکھیں",
   "videoEditorBackdropLabel": "پس منظر",
   "videoEditorBackdropSemanticLabel": "اس جگہ کا پس منظر بدلیں",
   "videoEditorBackdropTitle": "پس منظر بدلیں",

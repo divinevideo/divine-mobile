@@ -14,6 +14,7 @@ class VideoEditorTimelineControls extends StatelessWidget {
     this.onSplit,
     this.onDetach,
     this.isDetaching = false,
+    this.onReattach,
     this.onBackdrop,
     this.isChangingBackdrop = false,
     this.onAnimate,
@@ -60,6 +61,9 @@ class VideoEditorTimelineControls extends StatelessWidget {
   /// Whether the active clip's replacement still is currently rendering. Shows
   /// the action as a spinner, matching the other render actions.
   final bool isDetaching;
+
+  /// Puts a detached clip's layer back onto the timeline as a clip.
+  final VoidCallback? onReattach;
 
   /// Opens the backdrop picker for the still that holds a detached clip's
   /// slot. Placeholder clips only.
@@ -202,6 +206,14 @@ class VideoEditorTimelineControls extends StatelessWidget {
                           context.l10n.videoEditorDetachSemanticLabel,
                       onPressed: isDetaching ? null : onDetach,
                       isLoading: isDetaching,
+                    ),
+                  if (onReattach != null)
+                    _ControlButton(
+                      icon: .arrowBendDownLeft,
+                      label: context.l10n.videoEditorReattachLabel,
+                      semanticLabel:
+                          context.l10n.videoEditorReattachSemanticLabel,
+                      onPressed: onReattach,
                     ),
                   if (onBackdrop != null)
                     _ControlButton(

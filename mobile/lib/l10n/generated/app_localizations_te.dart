@@ -9363,6 +9363,13 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఆ ఫోటోను లోడ్ చేయడం సాధ్యపడలేదు.';
 
   @override
+  String get videoEditorReattachLabel => 'టైమ్‌లైన్‌కు';
+
+  @override
+  String get videoEditorReattachSemanticLabel =>
+      'ఎంచుకున్న క్లిప్‌ని తిరిగి టైమ్‌లైన్‌లో ఉంచండి';
+
+  @override
   String get videoEditorBackdropLabel => 'నేపథ్యం';
 
   @override

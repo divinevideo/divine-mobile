@@ -4741,6 +4741,8 @@
   "videoEditorDetachProgressLabel": "正在分离你的片段…",
   "videoEditorDetachFailed": "没能分离那个片段。你的时间线没有改动。",
   "videoEditorDetachImagePickFailed": "这张照片加载不了。",
+  "videoEditorReattachLabel": "放回时间线",
+  "videoEditorReattachSemanticLabel": "把选中片段放回时间线",
   "videoEditorBackdropLabel": "背景",
   "videoEditorBackdropSemanticLabel": "更换占住这个位置的背景",
   "videoEditorBackdropTitle": "更换背景",

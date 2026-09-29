@@ -8668,6 +8668,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorDetachImagePickFailed => 'その写真を読み込めませんでした。';
 
   @override
+  String get videoEditorReattachLabel => 'タイムラインに戻す';
+
+  @override
+  String get videoEditorReattachSemanticLabel => '選択したクリップをタイムラインに戻す';
+
+  @override
   String get videoEditorBackdropLabel => '背景';
 
   @override

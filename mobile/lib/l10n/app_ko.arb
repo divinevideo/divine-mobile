@@ -3196,6 +3196,8 @@
   "videoEditorDetachProgressLabel": "클립을 분리하는 중…",
   "videoEditorDetachFailed": "그 클립을 분리하지 못했어요. 타임라인은 그대로예요.",
   "videoEditorDetachImagePickFailed": "그 사진을 불러오지 못했어요.",
+  "videoEditorReattachLabel": "타임라인으로",
+  "videoEditorReattachSemanticLabel": "선택한 클립을 타임라인으로 되돌리기",
   "videoEditorBackdropLabel": "배경",
   "videoEditorBackdropSemanticLabel": "이 자리를 채운 배경 바꾸기",
   "videoEditorBackdropTitle": "배경 바꾸기",

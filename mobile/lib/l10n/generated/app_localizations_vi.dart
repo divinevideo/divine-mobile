@@ -9066,6 +9066,13 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorDetachImagePickFailed => 'Không tải được ảnh đó.';
 
   @override
+  String get videoEditorReattachLabel => 'Về timeline';
+
+  @override
+  String get videoEditorReattachSemanticLabel =>
+      'Đưa clip đã chọn trở lại timeline';
+
+  @override
   String get videoEditorBackdropLabel => 'Nền';
 
   @override

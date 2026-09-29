@@ -4741,6 +4741,8 @@
   "videoEditorDetachProgressLabel": "Meleraikan klip anda…",
   "videoEditorDetachFailed": "Klip itu tidak dapat ditanggalkan. Garis masa anda tidak berubah.",
   "videoEditorDetachImagePickFailed": "Foto itu tidak dapat dimuatkan.",
+  "videoEditorReattachLabel": "Kembalikan",
+  "videoEditorReattachSemanticLabel": "Kembalikan klip dipilih ke garis masa",
   "videoEditorBackdropLabel": "Latar",
   "videoEditorBackdropSemanticLabel": "Tukar latar yang menahan tempat ini",
   "videoEditorBackdropTitle": "Tukar latar",

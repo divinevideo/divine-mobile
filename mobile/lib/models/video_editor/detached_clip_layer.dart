@@ -51,6 +51,13 @@ const String detachedClipLayerSourceOffsetKey = 'sourceOffsetUs';
 /// composition, and both read the same values from here.
 const String detachedClipLayerChromaKeyKey = 'chromaKey';
 
+/// Key under which the id of the placeholder clip that took the detached
+/// clip's slot is written. Absent when the gap was closed instead.
+///
+/// Putting the clip back needs it: the slot is only a clip with a generated
+/// id, and nothing else ties it to the layer that left it.
+const String detachedClipLayerPlaceholderIdKey = 'placeholderClipId';
+
 /// A clip lifted out of the timeline and turned into a freely placeable layer
 /// on the editor canvas.
 ///
@@ -65,6 +72,7 @@ class DetachedClipLayerData {
     required this.layerId,
     this.sourceOffset = Duration.zero,
     this.chromaKey,
+    this.placeholderClipId,
   });
 
   /// The detached clip.
@@ -83,6 +91,10 @@ class DetachedClipLayerData {
   /// of whatever the file holds — see [detachedClipLayerChromaKeyKey].
   final ClipChromaKey? chromaKey;
 
+  /// Id of the placeholder clip holding the slot this clip left, or `null`
+  /// when the gap was closed — see [detachedClipLayerPlaceholderIdKey].
+  final String? placeholderClipId;
+
   /// Serializes to the map stored in `WidgetLayer.exportConfigs.meta`.
   ///
   /// Paths inside are basenames — [DivineVideoClip.toJson]'s contract — so the
@@ -94,6 +106,7 @@ class DetachedClipLayerData {
     detachedClipLayerIdKey: layerId,
     detachedClipLayerSourceOffsetKey: sourceOffset.inMicroseconds,
     if (chromaKey case final key?) detachedClipLayerChromaKeyKey: key.toJson(),
+    detachedClipLayerPlaceholderIdKey: ?placeholderClipId,
   };
 
   /// Whether [meta] describes a detached clip rather than a sticker.
@@ -129,6 +142,7 @@ class DetachedClipLayerData {
           documentsPath,
           useOriginalPath: useOriginalPath,
         ),
+        placeholderClipId: placeholderClipIdOf(meta),
       );
     } on FormatException {
       return null;
@@ -272,6 +286,14 @@ class DetachedClipLayerData {
   static String? layerIdOf(Map<String, dynamic>? meta) {
     if (!isDetachedClipMeta(meta)) return null;
     final id = meta![detachedClipLayerIdKey];
+    return id is String && id.isNotEmpty ? id : null;
+  }
+
+  /// The id of the placeholder holding this clip's slot, or `null` when the
+  /// gap was closed or the layer predates the key.
+  static String? placeholderClipIdOf(Map<String, dynamic>? meta) {
+    if (!isDetachedClipMeta(meta)) return null;
+    final id = meta![detachedClipLayerPlaceholderIdKey];
     return id is String && id.isNotEmpty ? id : null;
   }
 

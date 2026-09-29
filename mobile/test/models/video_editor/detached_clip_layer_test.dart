@@ -154,6 +154,37 @@ void main() {
         expect(restored.chromaKey, isNull);
       });
 
+      test('round-trips the placeholder holding the slot', () {
+        final meta = DetachedClipLayerData(
+          clip: _clip(),
+          layerId: 'layer-1',
+          placeholderClipId: 'placeholder_1',
+        ).toMeta();
+
+        // Putting the clip back finds its slot by this id alone.
+        expect(
+          DetachedClipLayerData.fromMeta(meta, '/docs')?.placeholderClipId,
+          'placeholder_1',
+        );
+        expect(
+          DetachedClipLayerData.placeholderClipIdOf(meta),
+          'placeholder_1',
+        );
+      });
+
+      test('reads no placeholder when the gap was closed', () {
+        final meta = DetachedClipLayerData(
+          clip: _clip(),
+          layerId: 'layer-1',
+        ).toMeta();
+
+        expect(DetachedClipLayerData.placeholderClipIdOf(meta), isNull);
+        expect(
+          DetachedClipLayerData.fromMeta(meta, '/docs')?.placeholderClipId,
+          isNull,
+        );
+      });
+
       test('returns null for a sticker meta', () {
         final restored = DetachedClipLayerData.fromMeta({
           'description': 'a sticker',

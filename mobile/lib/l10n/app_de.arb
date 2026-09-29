@@ -3650,6 +3650,8 @@
   "videoEditorDetachProgressLabel": "Clip wird losgelöst …",
   "videoEditorDetachFailed": "Der Clip konnte nicht abgelöst werden. Deine Timeline bleibt unverändert.",
   "videoEditorDetachImagePickFailed": "Das Foto konnte nicht geladen werden.",
+  "videoEditorReattachLabel": "Zur Timeline",
+  "videoEditorReattachSemanticLabel": "Ausgewählten Clip zurück auf die Timeline legen",
   "videoEditorBackdropLabel": "Hintergrund",
   "videoEditorBackdropSemanticLabel": "Den Hintergrund dieses Platzes ändern",
   "videoEditorBackdropTitle": "Hintergrund ändern",

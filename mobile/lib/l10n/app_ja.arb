@@ -3650,6 +3650,8 @@
   "videoEditorDetachProgressLabel": "クリップを切り離しています…",
   "videoEditorDetachFailed": "そのクリップを切り離せませんでした。タイムラインは変更されていません。",
   "videoEditorDetachImagePickFailed": "その写真を読み込めませんでした。",
+  "videoEditorReattachLabel": "タイムラインに戻す",
+  "videoEditorReattachSemanticLabel": "選択したクリップをタイムラインに戻す",
   "videoEditorBackdropLabel": "背景",
   "videoEditorBackdropSemanticLabel": "この枠の背景を変更",
   "videoEditorBackdropTitle": "背景を変更",

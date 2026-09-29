@@ -9188,6 +9188,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorDetachImagePickFailed => 'No se pudo cargar esa foto.';
 
   @override
+  String get videoEditorReattachLabel => 'Devolver';
+
+  @override
+  String get videoEditorReattachSemanticLabel =>
+      'Devolver el clip seleccionado a la línea de tiempo';
+
+  @override
   String get videoEditorBackdropLabel => 'Fondo';
 
   @override

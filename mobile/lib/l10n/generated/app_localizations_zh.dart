@@ -8593,6 +8593,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorDetachImagePickFailed => '这张照片加载不了。';
 
   @override
+  String get videoEditorReattachLabel => '放回时间线';
+
+  @override
+  String get videoEditorReattachSemanticLabel => '把选中片段放回时间线';
+
+  @override
   String get videoEditorBackdropLabel => '背景';
 
   @override

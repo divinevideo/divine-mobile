@@ -16,6 +16,7 @@ import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:openvine/screens/video_editor/video_audio_editor_timing_screen.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_chroma_key.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
+import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_reattach.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_transform.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_audio_fade_sheet.dart';
@@ -102,6 +103,10 @@ class _LayerOverlayControls extends StatelessWidget {
       multiSelectSemanticLabel:
           context.l10n.videoEditorLayerMultiSelectSemanticLabel,
       onSplit: () => _splitLayer(context: context),
+      // The way back from Detach, for a detached clip only.
+      onReattach: isDetachedClip
+          ? () => _reattachLayer(context: context)
+          : null,
       // Crop / rotate / flip, for a detached clip only. Every other layer is
       // already whatever shape it was drawn or typed at; a detached clip
       // carries a video file that can genuinely be re-rendered.
@@ -155,6 +160,12 @@ class _LayerOverlayControls extends StatelessWidget {
     if (updatedLayer == null) return;
 
     editor.applyTextLayerChanges(layer, updatedLayer);
+  }
+
+  Future<void> _reattachLayer({required BuildContext context}) async {
+    final layer = _liveLayer(context);
+    if (layer == null) return;
+    await reattachDetachedClip(context, layer, item: item);
   }
 
   Future<void> _transformLayer({required BuildContext context}) async {

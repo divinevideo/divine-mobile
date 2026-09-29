@@ -9306,6 +9306,13 @@ class AppLocalizationsRo extends AppLocalizations {
       'Fotografia nu a putut fi încărcată.';
 
   @override
+  String get videoEditorReattachLabel => 'Pune înapoi';
+
+  @override
+  String get videoEditorReattachSemanticLabel =>
+      'Pune clipul selectat înapoi pe cronologie';
+
+  @override
   String get videoEditorBackdropLabel => 'Fundal';
 
   @override

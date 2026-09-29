@@ -3650,6 +3650,8 @@
   "videoEditorDetachProgressLabel": "Détachement de votre clip…",
   "videoEditorDetachFailed": "Impossible de détacher ce clip. Ta timeline est inchangée.",
   "videoEditorDetachImagePickFailed": "Impossible de charger cette photo.",
+  "videoEditorReattachLabel": "Remettre",
+  "videoEditorReattachSemanticLabel": "Remettre le clip sélectionné dans la timeline",
   "videoEditorBackdropLabel": "Arrière-plan",
   "videoEditorBackdropSemanticLabel": "Changer l'arrière-plan qui occupe cette place",
   "videoEditorBackdropTitle": "Changer l'arrière-plan",

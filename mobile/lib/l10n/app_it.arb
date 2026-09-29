@@ -3650,6 +3650,8 @@
   "videoEditorDetachProgressLabel": "Sto staccando la clip…",
   "videoEditorDetachFailed": "Non è stato possibile staccare quella clip. La timeline resta invariata.",
   "videoEditorDetachImagePickFailed": "Impossibile caricare quella foto.",
+  "videoEditorReattachLabel": "Rimetti",
+  "videoEditorReattachSemanticLabel": "Rimetti la clip selezionata nella timeline",
   "videoEditorBackdropLabel": "Sfondo",
   "videoEditorBackdropSemanticLabel": "Cambia lo sfondo che tiene questo posto",
   "videoEditorBackdropTitle": "Cambia sfondo",

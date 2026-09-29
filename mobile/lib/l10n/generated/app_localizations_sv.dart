@@ -9100,6 +9100,13 @@ class AppLocalizationsSv extends AppLocalizations {
       'Det gick inte att läsa in fotot.';
 
   @override
+  String get videoEditorReattachLabel => 'Lägg tillbaka';
+
+  @override
+  String get videoEditorReattachSemanticLabel =>
+      'Lägg tillbaka valt klipp på tidslinjen';
+
+  @override
   String get videoEditorBackdropLabel => 'Bakgrund';
 
   @override
