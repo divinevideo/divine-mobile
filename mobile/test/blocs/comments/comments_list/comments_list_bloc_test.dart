@@ -37,8 +37,9 @@ void main() {
           onEose: any(named: 'onEose'),
         ),
       ).thenAnswer((_) => const Stream<Comment>.empty());
-      when(() => mockCommentsRepository.stopWatchingComments())
-          .thenAnswer((_) async {});
+      when(
+        () => mockCommentsRepository.stopWatchingComments(),
+      ).thenAnswer((_) async {});
     });
 
     Comment makeComment(
@@ -1109,41 +1110,44 @@ void main() {
         verify(() => mockCommentsRepository.stopWatchingComments()).called(1);
       });
 
-      test('streamed comments arriving after close() do not throw (isClosed guard)', () async {
-        final streamController = StreamController<Comment>.broadcast();
-        when(
-          () => mockCommentsRepository.watchComments(
-            rootEventId: any(named: 'rootEventId'),
-            rootEventKind: any(named: 'rootEventKind'),
-            rootAddressableId: any(named: 'rootAddressableId'),
-            since: any(named: 'since'),
-            onEose: any(named: 'onEose'),
-          ),
-        ).thenAnswer((_) => streamController.stream);
-        when(
-          () => mockCommentsRepository.loadComments(
-            rootEventId: any(named: 'rootEventId'),
-            rootEventKind: any(named: 'rootEventKind'),
-            rootAddressableId: any(named: 'rootAddressableId'),
-            limit: any(named: 'limit'),
-          ),
-        ).thenAnswer((_) async => CommentThread.empty(validId('root')));
+      test(
+        'streamed comments arriving after close() do not throw (isClosed guard)',
+        () async {
+          final streamController = StreamController<Comment>.broadcast();
+          when(
+            () => mockCommentsRepository.watchComments(
+              rootEventId: any(named: 'rootEventId'),
+              rootEventKind: any(named: 'rootEventKind'),
+              rootAddressableId: any(named: 'rootAddressableId'),
+              since: any(named: 'since'),
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer((_) => streamController.stream);
+          when(
+            () => mockCommentsRepository.loadComments(
+              rootEventId: any(named: 'rootEventId'),
+              rootEventKind: any(named: 'rootEventKind'),
+              rootAddressableId: any(named: 'rootAddressableId'),
+              limit: any(named: 'limit'),
+            ),
+          ).thenAnswer((_) async => CommentThread.empty(validId('root')));
 
-        final bloc = createBloc();
-        bloc.add(const CommentsLoadRequested());
-        await Future<void>.delayed(const Duration(milliseconds: 10));
+          final bloc = createBloc();
+          bloc.add(const CommentsLoadRequested());
+          await Future<void>.delayed(const Duration(milliseconds: 10));
 
-        await bloc.close();
+          await bloc.close();
 
-        // Emit AFTER close — the throttleListen onData wrapper guards on
-        // !isClosed and silently drops. Must not throw "Cannot add events
-        // after close" on the bloc.
-        expect(() {
-          streamController.add(makeComment(validId('late')));
-        }, returnsNormally);
+          // Emit AFTER close — the throttleListen onData wrapper guards on
+          // !isClosed and silently drops. Must not throw "Cannot add events
+          // after close" on the bloc.
+          expect(() {
+            streamController.add(makeComment(validId('late')));
+          }, returnsNormally);
 
-        await streamController.close();
-      });
+          await streamController.close();
+        },
+      );
     });
   });
 }
