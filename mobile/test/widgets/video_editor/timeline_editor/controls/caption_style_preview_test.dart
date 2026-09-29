@@ -77,7 +77,8 @@ void main() {
         loopValue: 0.2,
       );
 
-      expect(litWords(tester), isEmpty);
+      // Plain text has no spans at all, so no word is lit in any color.
+      expect(tester.widget<Text>(find.byType(Text)).textSpan, isNull);
     });
   });
 }
