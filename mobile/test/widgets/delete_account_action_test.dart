@@ -565,6 +565,31 @@ void main() {
     );
 
     testWidgets(
+      'the blocked-delete explanation outlasts the default snackbar duration',
+      (tester) async {
+        await tapDeleteWithOtherAccountPending(
+          tester,
+          monitorState: const AccountDeletionRecoveryState(
+            status: AccountDeletionRecoveryStatus.processing,
+            attempt: _processing,
+          ),
+        );
+
+        // Let the snackbar finish entering, wait past the 4-second default,
+        // then let any dismissal animation run.
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pump(const Duration(seconds: 6));
+        await tester.pump(const Duration(milliseconds: 300));
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(
+          find.text(l10n.accountDeletionOtherAccountPending),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
       'a pending receipt whose deletion failed blocks deletion with support',
       (tester) async {
         final recoveryCubit = await tapDeleteWithOtherAccountPending(

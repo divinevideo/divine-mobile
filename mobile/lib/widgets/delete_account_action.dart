@@ -25,6 +25,12 @@ import 'package:openvine/widgets/modal_progress_overlay.dart';
 /// rather than hanging the tap.
 const Duration _profileResolveTimeout = Duration(seconds: 3);
 
+/// How long the blocked-delete explanation stays up when it has no action.
+///
+/// A snackbar without an action dismisses itself after four seconds, too short
+/// for two sentences. One with an action persists and ignores this.
+const Duration _blockedDeleteSnackBarDuration = Duration(seconds: 12);
+
 /// Open the account deletion flow: resolve the identity to confirm against,
 /// show the type-to-confirm gate, then run the deletion.
 ///
@@ -69,6 +75,7 @@ Future<void> startAccountDeletionFlow({
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(context.l10n.accountDeletionOtherAccountPending),
+        duration: _blockedDeleteSnackBarDuration,
         action: offerSupport
             ? SnackBarAction(
                 label: context.l10n.supportContactSupport,
