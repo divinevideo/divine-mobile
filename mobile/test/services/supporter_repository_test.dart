@@ -1318,13 +1318,15 @@ void main() {
       );
       addTearDown(repo.dispose);
       addTearDown(apiClient.dispose);
-      // Establish canonical non-member state first, so the claim returns a
-      // value identical to the current one. The changes stream coalesces that;
-      // the settled stream must still fire so checkout can end.
-      await repo.refreshFromServer();
       final settled = <SupporterEntitlement>[];
       final subscription = repo.settledPurchases.listen(settled.add);
       addTearDown(subscription.cancel);
+      // A routine refresh must not settle anything. It also leaves the account
+      // a non-member, so the claim below repeats the current value, which the
+      // changes stream cannot tell apart from that refresh.
+      await repo.refreshFromServer();
+      await pumpEventQueue();
+      expect(settled, isEmpty);
 
       validator.proofController.add(
         const SupporterPurchaseProof(
