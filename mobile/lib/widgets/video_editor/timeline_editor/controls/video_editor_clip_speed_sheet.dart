@@ -205,10 +205,7 @@ class _SpeedPresetChip extends StatelessWidget {
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: _minTapTarget,
-            minHeight: _minTapTarget,
-          ),
+          constraints: const BoxConstraints(minHeight: _minTapTarget),
           child: Center(
             child: FittedBox(
               fit: BoxFit.scaleDown,
