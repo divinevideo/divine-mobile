@@ -83,6 +83,7 @@ class StereoWaveformPainter extends CustomPainter {
     this.barSpacing = WaveformConstants.barSpacing,
     this.fadeIn = Duration.zero,
     this.fadeOut = Duration.zero,
+    this.audibleDuration,
   });
 
   /// Left channel amplitude data.
@@ -128,6 +129,11 @@ class StereoWaveformPainter extends CustomPainter {
   /// How long the displayed audio fades out; its bars fall to silence where
   /// the audio ends.
   final Duration fadeOut;
+
+  /// How long the displayed audio actually sounds, when that is shorter than
+  /// what is drawn: the fade out ends there, and later bars sit at the
+  /// baseline. `null` when the whole displayed audio sounds.
+  final Duration? audibleDuration;
 
   /// Computed step (width + spacing) for each bar.
   double get _barStep => barWidth + barSpacing;
@@ -300,7 +306,11 @@ class StereoWaveformPainter extends CustomPainter {
   }) {
     final barCount = (waveformWidth / _barStep).floor();
     final hasFade = fadeIn > Duration.zero || fadeOut > Duration.zero;
-    final audibleLength = Duration(microseconds: (visibleMs * 1000).round());
+    final visibleLength = Duration(microseconds: (visibleMs * 1000).round());
+    final audibleLength =
+        audibleDuration != null && audibleDuration! < visibleLength
+        ? audibleDuration!
+        : visibleLength;
 
     if (barCount <= 0 || visibleSampleCount <= 0) return;
 
@@ -378,6 +388,7 @@ class StereoWaveformPainter extends CustomPainter {
         oldDelegate.barWidth != barWidth ||
         oldDelegate.barSpacing != barSpacing ||
         oldDelegate.fadeIn != fadeIn ||
-        oldDelegate.fadeOut != fadeOut;
+        oldDelegate.fadeOut != fadeOut ||
+        oldDelegate.audibleDuration != audibleDuration;
   }
 }

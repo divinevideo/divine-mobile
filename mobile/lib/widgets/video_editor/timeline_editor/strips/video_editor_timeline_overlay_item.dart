@@ -1,11 +1,14 @@
 import 'dart:typed_data';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/audio_fade.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/widgets/stereo_waveform_painter.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_strip_thumbnails.dart';
@@ -115,7 +118,9 @@ class TimelineOverlayItemTile extends StatelessWidget {
           ),
           child: ClipRRect(
             borderRadius: isSelected ? .zero : radius,
-            child: item.type == .sound
+            child: item.type == .sound && item.fadeOut > Duration.zero
+                ? _FadingOutSoundContent(item: item, color: foregroundColor)
+                : item.type == .sound
                 ? _SoundContent(
                     label: item.label,
                     color: foregroundColor,
@@ -125,7 +130,6 @@ class TimelineOverlayItemTile extends StatelessWidget {
                     leftChannel: item.waveformLeftChannel,
                     rightChannel: item.waveformRightChannel,
                     fadeIn: item.fadeIn,
-                    fadeOut: item.fadeOut,
                   )
                 : _isDetachedClip(item.layer)
                 ? _DetachedClipContent(item: item)
@@ -349,6 +353,40 @@ class _StickerPreview extends StatelessWidget {
   }
 }
 
+/// A sound that fades out, whose ramp ends where the preview and export stop
+/// it: the end of the rendered video when that cuts the sound short.
+class _FadingOutSoundContent extends StatelessWidget {
+  const _FadingOutSoundContent({required this.item, required this.color});
+
+  final TimelineOverlayItem item;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final outputEnd = context.select(
+      (ClipEditorBloc bloc) => renderedAudioEnd(bloc.state.clips),
+    );
+    final end = fadedSoundEnd(
+      startTime: item.startTime,
+      endTime: item.endTime,
+      fadeOut: item.fadeOut,
+      outputEnd: outputEnd,
+    );
+    return _SoundContent(
+      label: item.label,
+      color: color,
+      currentDuration: item.duration,
+      sourceDuration: item.sourceDuration,
+      startOffset: item.startOffset,
+      leftChannel: item.waveformLeftChannel,
+      rightChannel: item.waveformRightChannel,
+      fadeIn: item.fadeIn,
+      fadeOut: item.fadeOut,
+      audibleDuration: end < item.endTime ? end - item.startTime : null,
+    );
+  }
+}
+
 /// Sound-item content: label text at top, waveform bars at bottom.
 ///
 /// The waveform shows the source samples windowed to
@@ -366,6 +404,7 @@ class _SoundContent extends StatelessWidget {
     this.rightChannel,
     this.fadeIn = Duration.zero,
     this.fadeOut = Duration.zero,
+    this.audibleDuration,
   });
 
   final String label;
@@ -386,6 +425,9 @@ class _SoundContent extends StatelessWidget {
   /// The sound's fade in and out, drawn as a ramp on the waveform.
   final Duration fadeIn;
   final Duration fadeOut;
+
+  /// How long the sound sounds when the rendered video cuts it short.
+  final Duration? audibleDuration;
 
   @override
   Widget build(BuildContext context) {
@@ -430,6 +472,7 @@ class _SoundContent extends StatelessWidget {
                   barWidth: TimelineConstants.soundWaveformBarWidth,
                   fadeIn: fadeIn,
                   fadeOut: fadeOut,
+                  audibleDuration: audibleDuration,
                 ),
               ),
             ),
