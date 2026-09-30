@@ -73,7 +73,8 @@ class _Strip extends StatelessWidget {
             // number of clip-width slots almost never sums to the bar, and the
             // remainder overflows the Row. Each frame is cover-fitted, so the
             // small aspect difference crops rather than distorts.
-            final preferred = (height * aspectRatio).clamp(8.0, width);
+            final minimum = width < 8.0 ? width : 8.0;
+            final preferred = (height * aspectRatio).clamp(minimum, width);
             final slots = (width / preferred).ceil();
             final slotWidth = width / slots;
             final cacheHeight =

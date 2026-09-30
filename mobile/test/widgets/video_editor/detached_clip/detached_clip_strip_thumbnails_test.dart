@@ -153,6 +153,38 @@ void main() {
       await _settlePool(tester);
     });
 
+    testWidgets('survives a bar narrower than the minimum frame width', (
+      tester,
+    ) async {
+      final meta = DetachedClipLayerData(
+        clip: _clip(),
+        layerId: 'layer-1',
+      ).toMeta();
+
+      await tester.pumpWidget(
+        _app(
+          SizedBox(
+            width: 4,
+            height: 40,
+            child: DetachedClipStripThumbnails(meta: meta),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      final slots = tester.widgetList<SizedBox>(
+        find.descendant(
+          of: find.byType(DetachedClipStripThumbnails),
+          matching: find.byWidgetPredicate(
+            (w) => w is SizedBox && w.height == 40,
+          ),
+        ),
+      );
+      expect(slots, hasLength(1));
+      await _settlePool(tester);
+    });
+
     testWidgets('renders nothing for meta it cannot read', (tester) async {
       await tester.pumpWidget(
         _app(
