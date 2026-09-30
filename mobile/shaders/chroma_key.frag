@@ -29,7 +29,15 @@ uniform vec2 uKeyDir;
 
 uniform float uSimilarity;
 uniform float uSmoothness;
+
+// Already scaled by (1 - uLumaWeight), as the renderers do, so a neutral key
+// does not despill.
 uniform float uSpill;
+
+// The key colour's luma, and how much brightness counts toward the matte:
+// 0 for a saturated key, 1 for a neutral one (ChromaKeyDetector.lumaWeightOf).
+uniform float uKeyLuma;
+uniform float uLumaWeight;
 
 // Engine-set: the filter input.
 uniform sampler2D uTexture;
@@ -56,9 +64,10 @@ void main() {
       dot(rgb, vec3(-0.168736, -0.331264, 0.5)),
       dot(rgb, vec3(0.5, -0.418688, -0.081312)));
 
-  // Matte: distance in the chroma plane, ramped by smoothstep. `max` keeps a
-  // zero-width ramp from dividing by zero.
-  float d = distance(cbcr, uKeyCbCr);
+  // Matte: distance in the chroma plane, plus brightness weighted by how
+  // neutral the key is, ramped by smoothstep. `max` keeps a zero-width ramp
+  // from dividing by zero.
+  float d = length(vec3(cbcr - uKeyCbCr, (y - uKeyLuma) * uLumaWeight));
   float a = smoothstep(uSimilarity, uSimilarity + max(uSmoothness, 1e-4), d);
 
   // Spill: remove the chroma component pointing at the key hue, keeping y so a

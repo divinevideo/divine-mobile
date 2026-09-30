@@ -9145,21 +9145,21 @@ class AppLocalizationsSv extends AppLocalizations {
       'Det gick inte att ändra bakgrunden. Platsen har kvar den förra.';
 
   @override
-  String get videoEditorChromaKeyLabel => 'Green screen';
+  String get videoEditorChromaKeyLabel => 'Färgmask';
 
   @override
-  String get videoEditorChromaKeyTitle => 'Green screen';
+  String get videoEditorChromaKeyTitle => 'Färgmask';
 
   @override
   String get videoEditorChromaKeySemanticLabel =>
-      'Ställ in green screen för det här klippet';
+      'Ställ in en färgmask för det här klippet';
 
   @override
   String get videoEditorChromaKeyCloseSemanticLabel =>
-      'Ignorera ändringarna av green screen';
+      'Ignorera ändringarna av färgmasken';
 
   @override
-  String get videoEditorChromaKeyDoneSemanticLabel => 'Använd green screen';
+  String get videoEditorChromaKeyDoneSemanticLabel => 'Använd färgmasken';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Hitta automatiskt';
@@ -9171,14 +9171,14 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorChromaKeyPresetBlue => 'Blå';
 
   @override
-  String get videoEditorChromaKeyScreenColorLabel => 'Bakgrundsfärg';
+  String get videoEditorChromaKeyScreenColorLabel => 'Färg att maskera';
 
   @override
   String get videoEditorChromaKeyAmountLabel => 'Styrka';
 
   @override
   String get videoEditorChromaKeyAmountHint =>
-      'Hur mycket av bakgrundsfärgen som försvinner';
+      'Hur mycket av den maskerade färgen som försvinner';
 
   @override
   String get videoEditorChromaKeyEdgeLabel => 'Kant';
@@ -9192,7 +9192,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySpillHint =>
-      'Drar bort bakgrundens färg från ditt motiv';
+      'Tar bort den maskerade färgens färgstick från ditt motiv';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Ersätt med';
@@ -9219,15 +9219,15 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Vilken slät yta som helst bakom dig fungerar — en vägg duger — så länge den fyller hela bilden.';
+      'Vill du byta bakgrund? En stark färg eller en jämnt belyst vit vägg fungerar, så länge den fyller hela bilden och du inte har den färgen på dig.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Hittade ingen bakgrund – den måste fylla hela bilden bakom dig. En slät vägg räcker. Eller välj färgen för hand.';
+      'Hittade ingen jämn färg längs bildens kanter. Välj färgen för hand i stället.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
-      'Det tog för lång tid att mäta bakgrunden. Prova Hitta automatiskt igen, eller välj färgen för hand.';
+      'Det tog för lång tid att läsa klippet. Prova Hitta automatiskt igen, eller välj färgen för hand.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Välj ett klipp';
@@ -9241,18 +9241,18 @@ class AppLocalizationsSv extends AppLocalizations {
       'Det gick inte att läsa in bilden.';
 
   @override
-  String get videoEditorChromaKeyRemove => 'Ta bort green screen';
+  String get videoEditorChromaKeyRemove => 'Ta bort färgmasken';
 
   @override
   String get videoEditorChromaKeyFailed =>
-      'Det gick inte att använda green screen. Ditt klipp är oförändrat.';
+      'Det gick inte att använda färgmasken. Ditt klipp är oförändrat.';
 
   @override
   String get videoEditorChromaKeyRemoveFailed =>
-      'Det gick inte att ta bort green screen. Ditt klipp är oförändrat.';
+      'Det gick inte att ta bort färgmasken. Ditt klipp är oförändrat.';
 
   @override
-  String get videoEditorChromaKeyApplying => 'Använder green screen …';
+  String get videoEditorChromaKeyApplying => 'Använder färgmasken …';
 
   @override
   String get videoEditorChromaKeyPreviewUnavailable =>

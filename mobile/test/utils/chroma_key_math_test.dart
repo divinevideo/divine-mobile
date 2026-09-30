@@ -102,5 +102,38 @@ void main() {
         );
       }
     });
+
+    group('effectiveSpill', () {
+      test('keeps the full spill for a saturated key', () {
+        final projection = ChromaKeyProjection.of(
+          const ChromaKey.greenScreen().color,
+        );
+
+        expect(projection.lumaWeight, 0);
+        expect(projection.effectiveSpill(0.5), closeTo(0.5, 1e-12));
+      });
+
+      test('drops despill for a tinted white wall, as the renderers do', () {
+        // A white wall is never exactly neutral, so its key still has a hue
+        // direction. pro_video_editor 2.19.0 despills at spill * (1 - weight),
+        // so the export leaves that faint tint on the subject; the preview has
+        // to as well, or it shows a colour cast the export does not.
+        final projection = ChromaKeyProjection.of(const Color(0xFFF4F0E8));
+
+        expect(projection.directionCb, isNot(0));
+        expect(projection.lumaWeight, 1);
+        expect(projection.effectiveSpill(0.5), 0);
+      });
+
+      test('scales spill down for a pale key between the two', () {
+        final projection = ChromaKeyProjection.of(const Color(0xFFC8E6C8));
+
+        expect(projection.lumaWeight, inExclusiveRange(0, 1));
+        expect(
+          projection.effectiveSpill(0.5),
+          closeTo(0.5 * (1 - projection.lumaWeight), 1e-12),
+        );
+      });
+    });
   });
 }

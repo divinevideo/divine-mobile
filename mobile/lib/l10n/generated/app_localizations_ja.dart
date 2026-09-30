@@ -8708,19 +8708,19 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorBackdropFailed => 'その背景を変更できませんでした。枠は今までの背景のままです。';
 
   @override
-  String get videoEditorChromaKeyLabel => 'グリーンバック';
+  String get videoEditorChromaKeyLabel => 'カラーマスク';
 
   @override
-  String get videoEditorChromaKeyTitle => 'グリーンバック';
+  String get videoEditorChromaKeyTitle => 'カラーマスク';
 
   @override
-  String get videoEditorChromaKeySemanticLabel => 'このクリップのグリーンバックを設定';
+  String get videoEditorChromaKeySemanticLabel => 'このクリップのカラーマスクを設定';
 
   @override
-  String get videoEditorChromaKeyCloseSemanticLabel => 'グリーンバックの変更を破棄';
+  String get videoEditorChromaKeyCloseSemanticLabel => 'カラーマスクの変更を破棄';
 
   @override
-  String get videoEditorChromaKeyDoneSemanticLabel => 'グリーンバックを適用';
+  String get videoEditorChromaKeyDoneSemanticLabel => 'カラーマスクを適用';
 
   @override
   String get videoEditorChromaKeyAutoDetect => '自動検出';
@@ -8732,13 +8732,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorChromaKeyPresetBlue => 'ブルー';
 
   @override
-  String get videoEditorChromaKeyScreenColorLabel => '背景の色';
+  String get videoEditorChromaKeyScreenColorLabel => 'マスクする色';
 
   @override
   String get videoEditorChromaKeyAmountLabel => '強さ';
 
   @override
-  String get videoEditorChromaKeyAmountHint => '背景の色をどれだけ消すか';
+  String get videoEditorChromaKeyAmountHint => 'マスクする色をどれだけ消すか';
 
   @override
   String get videoEditorChromaKeyEdgeLabel => 'エッジ';
@@ -8750,7 +8750,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorChromaKeySpillLabel => '色かぶり';
 
   @override
-  String get videoEditorChromaKeySpillHint => '背景の色みを被写体から取り除きます';
+  String get videoEditorChromaKeySpillHint => 'マスクする色の色かぶりを被写体から取り除きます';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => '置き換える';
@@ -8777,15 +8777,15 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      '後ろに無地の面があれば使えます。壁でも大丈夫です。ただし画面いっぱいに広がっている必要があります。';
+      '背景を差し替えるなら、鮮やかな単色か、ムラなく照らした白い壁が使えます。画面いっぱいに映し、同じ色の服は避けてください。';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      '背景が見つかりませんでした。後ろの面が画面いっぱいに広がっている必要があります。無地の壁でも大丈夫です。手動で色を選ぶこともできます。';
+      '画面の端に均一な色が見つかりませんでした。代わりに手動で色を選んでください。';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
-      '背景の測定に時間がかかりすぎました。もう一度「自動検出」を試すか、手動で色を選んでください。';
+      'クリップの読み込みに時間がかかりすぎました。もう一度「自動検出」を試すか、手動で色を選んでください。';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'クリップを選ぶ';
@@ -8798,17 +8798,17 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorChromaKeyImagePickFailed => 'その画像を読み込めませんでした。';
 
   @override
-  String get videoEditorChromaKeyRemove => 'グリーンバックを削除';
+  String get videoEditorChromaKeyRemove => 'カラーマスクを削除';
 
   @override
-  String get videoEditorChromaKeyFailed => 'グリーンバックを適用できませんでした。クリップは変更されていません。';
+  String get videoEditorChromaKeyFailed => 'カラーマスクを適用できませんでした。クリップは変更されていません。';
 
   @override
   String get videoEditorChromaKeyRemoveFailed =>
-      'グリーンバックを削除できませんでした。クリップは変更されていません。';
+      'カラーマスクを削除できませんでした。クリップは変更されていません。';
 
   @override
-  String get videoEditorChromaKeyApplying => 'グリーンバックを適用しています…';
+  String get videoEditorChromaKeyApplying => 'カラーマスクを適用しています…';
 
   @override
   String get videoEditorChromaKeyPreviewUnavailable =>

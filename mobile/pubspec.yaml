@@ -396,6 +396,13 @@ dependencies:
   # layers over in that frame, so on an older release a smaller first clip
   # misplaces every layer on Android. Android-only and not self-enforcing: no
   # CI job renders on Android, so a relaxed floor is only caught on a device.
+  # 2.19.0 is the first release whose chroma key weighs brightness for a
+  # neutral key, so a white wall is masked without taking black and grey with
+  # it, and whose auto-detect accepts a bright neutral frame edge (#8544,
+  # hm21/pro_video_editor#218). Self-enforcing: the colour-mask preview shader
+  # reads `ChromaKeyDetector.lumaWeightOf`, which does not exist before it, so
+  # a relaxed floor is a compile error rather than a preview that disagrees
+  # with the export.
   # 2.17.0 is the first release whose `VideoAudioTrack` carries a fade in and
   # a fade out, which is what bakes a sound's fade into the export (#9557).
   # Self-enforcing: `resolveRenderAudioTracks` passes `fadeInDuration`, which

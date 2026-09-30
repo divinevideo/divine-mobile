@@ -9102,21 +9102,20 @@ class AppLocalizationsAr extends AppLocalizations {
       'تعذّر تغيير هذه الخلفية. المكان ما زال يحتفظ بالخلفية السابقة.';
 
   @override
-  String get videoEditorChromaKeyLabel => 'الشاشة الخضراء';
+  String get videoEditorChromaKeyLabel => 'قناع اللون';
 
   @override
-  String get videoEditorChromaKeyTitle => 'الشاشة الخضراء';
+  String get videoEditorChromaKeyTitle => 'قناع اللون';
 
   @override
-  String get videoEditorChromaKeySemanticLabel =>
-      'اضبط الشاشة الخضراء لهذا المقطع';
+  String get videoEditorChromaKeySemanticLabel => 'ضبط قناع اللون لهذا المقطع';
 
   @override
   String get videoEditorChromaKeyCloseSemanticLabel =>
-      'تجاهل تغييرات الشاشة الخضراء';
+      'تجاهل تغييرات قناع اللون';
 
   @override
-  String get videoEditorChromaKeyDoneSemanticLabel => 'طبّق الشاشة الخضراء';
+  String get videoEditorChromaKeyDoneSemanticLabel => 'تطبيق قناع اللون';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'كشف تلقائي';
@@ -9128,13 +9127,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorChromaKeyPresetBlue => 'أزرق';
 
   @override
-  String get videoEditorChromaKeyScreenColorLabel => 'لون الخلفية';
+  String get videoEditorChromaKeyScreenColorLabel => 'اللون المراد إخفاؤه';
 
   @override
   String get videoEditorChromaKeyAmountLabel => 'القوة';
 
   @override
-  String get videoEditorChromaKeyAmountHint => 'مقدار ما يختفي من لون الخلفية';
+  String get videoEditorChromaKeyAmountHint => 'مقدار ما يختفي من هذا اللون';
 
   @override
   String get videoEditorChromaKeyEdgeLabel => 'الحافة';
@@ -9147,7 +9146,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorChromaKeySpillLabel => 'التسرّب';
 
   @override
-  String get videoEditorChromaKeySpillHint => 'يزيل لون الخلفية عن الشخص';
+  String get videoEditorChromaKeySpillHint => 'يزيل أثر هذا اللون عن الشخص';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'استبدلها بـ';
@@ -9174,15 +9173,15 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'أي سطح أملس في الخلفية يصلح — حتى الجدار — ما دام يملأ الإطار بالكامل.';
+      'لتغيير الخلفية، يصلح لون زاهٍ أو جدار أبيض بإضاءة متساوية، ما دام يملأ الإطار بالكامل ولا يظهر في الملابس.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'لم يتم العثور على خلفية: يجب أن تملأ الإطار بالكامل. الجدار الأملس يكفي. أو يمكن اختيار اللون يدويًا.';
+      'لم يُعثر على لون واحد متجانس حول أطراف الإطار. يمكن اختيار اللون يدويًا بدلًا من ذلك.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
-      'استغرق قياس الخلفية وقتًا طويلًا. جرّب «كشف تلقائي» مرة أخرى، أو اختر اللون يدويًا.';
+      'استغرقت قراءة المقطع وقتًا طويلًا. يمكن تجربة «كشف تلقائي» مرة أخرى، أو اختيار اللون يدويًا.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'اختر مقطعًا';
@@ -9195,18 +9194,18 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorChromaKeyImagePickFailed => 'تعذّر تحميل هذه الصورة.';
 
   @override
-  String get videoEditorChromaKeyRemove => 'أزل الشاشة الخضراء';
+  String get videoEditorChromaKeyRemove => 'إزالة قناع اللون';
 
   @override
   String get videoEditorChromaKeyFailed =>
-      'تعذّر تطبيق الشاشة الخضراء. مقطعك كما هو دون تغيير.';
+      'تعذّر تطبيق قناع اللون. مقطعك كما هو دون تغيير.';
 
   @override
   String get videoEditorChromaKeyRemoveFailed =>
-      'تعذّر إزالة الشاشة الخضراء. مقطعك كما هو دون تغيير.';
+      'تعذّرت إزالة قناع اللون. مقطعك كما هو دون تغيير.';
 
   @override
-  String get videoEditorChromaKeyApplying => 'جارٍ تطبيق الشاشة الخضراء…';
+  String get videoEditorChromaKeyApplying => 'جارٍ تطبيق قناع اللون…';
 
   @override
   String get videoEditorChromaKeyPreviewUnavailable =>

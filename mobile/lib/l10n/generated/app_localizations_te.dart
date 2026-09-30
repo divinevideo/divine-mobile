@@ -9408,22 +9408,22 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఆ నేపథ్యాన్ని మార్చడం సాధ్యపడలేదు. స్థానంలో పాతదే ఉంది.';
 
   @override
-  String get videoEditorChromaKeyLabel => 'గ్రీన్ స్క్రీన్';
+  String get videoEditorChromaKeyLabel => 'రంగు మాస్క్';
 
   @override
-  String get videoEditorChromaKeyTitle => 'గ్రీన్ స్క్రీన్';
+  String get videoEditorChromaKeyTitle => 'రంగు మాస్క్';
 
   @override
   String get videoEditorChromaKeySemanticLabel =>
-      'ఈ క్లిప్ కోసం గ్రీన్ స్క్రీన్‌ను సెటప్ చేయండి';
+      'ఈ క్లిప్ కోసం రంగు మాస్క్‌ను సెటప్ చేయండి';
 
   @override
   String get videoEditorChromaKeyCloseSemanticLabel =>
-      'గ్రీన్ స్క్రీన్ మార్పులను విస్మరించండి';
+      'రంగు మాస్క్ మార్పులను విస్మరించండి';
 
   @override
   String get videoEditorChromaKeyDoneSemanticLabel =>
-      'ఆకుపచ్చ స్క్రీన్‌ను వర్తింపజేయండి';
+      'రంగు మాస్క్‌ను వర్తింపజేయండి';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'ఆటో-డిటెక్ట్';
@@ -9435,14 +9435,14 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorChromaKeyPresetBlue => 'నీలం';
 
   @override
-  String get videoEditorChromaKeyScreenColorLabel => 'స్క్రీన్ రంగు';
+  String get videoEditorChromaKeyScreenColorLabel => 'మాస్క్ చేయాల్సిన రంగు';
 
   @override
   String get videoEditorChromaKeyAmountLabel => 'మొత్తం';
 
   @override
   String get videoEditorChromaKeyAmountHint =>
-      'స్క్రీన్ రంగులో ఎంత భాగం అదృశ్యమవుతుంది';
+      'మాస్క్ చేసిన రంగులో ఎంత భాగం అదృశ్యమవుతుంది';
 
   @override
   String get videoEditorChromaKeyEdgeLabel => 'ఎడ్జ్';
@@ -9456,7 +9456,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySpillHint =>
-      'స్క్రీన్ రంగును మీ విషయం నుండి వెనక్కి లాగుతుంది';
+      'మాస్క్ చేసిన రంగు ఛాయను మీ సబ్జెక్ట్ నుండి తొలగిస్తుంది';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'దీనితో భర్తీ చేయండి';
@@ -9483,15 +9483,15 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'మీ వెనుక ఉన్న ఏదైనా నునుపైన ఉపరితలం పని చేస్తుంది — గోడ అయినా సరిపోతుంది — అది ఫ్రేమ్‌ను పూర్తిగా నింపినంత వరకు.';
+      'మీ బ్యాక్‌గ్రౌండ్ మార్చాలనుకుంటున్నారా? గాఢమైన రంగు లేదా సమానంగా వెలుతురు పడిన తెల్లని గోడ పనిచేస్తుంది, అది ఫ్రేమ్ మొత్తం నింపి, మీరు ఆ రంగు ధరించకపోతే చాలు.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'స్క్రీన్ కనిపించలేదు: అది మీ వెనుక ఉన్న ఫ్రేమ్‌ను పూర్తిగా నింపాలి. నునుపైన గోడ కూడా సరిపోతుంది. లేదా రంగును మీరే ఎంచుకోండి.';
+      'ఫ్రేమ్ అంచుల చుట్టూ ఒకే సమానమైన రంగు కనిపించలేదు. బదులుగా రంగును మీరే ఎంచుకోండి.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
-      'స్క్రీన్‌ను కొలవడానికి చాలా సమయం పట్టింది. ఆటో-డిటెక్ట్‌ను మళ్లీ ప్రయత్నించండి, లేదా రంగును మీరే ఎంచుకోండి.';
+      'క్లిప్‌ను చదవడానికి చాలా సమయం పట్టింది. ఆటో-డిటెక్ట్‌ను మళ్లీ ప్రయత్నించండి, లేదా రంగును మీరే ఎంచుకోండి.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'క్లిప్‌ను ఎంచుకోండి';
@@ -9505,19 +9505,18 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఆ చిత్రాన్ని లోడ్ చేయడం సాధ్యపడలేదు.';
 
   @override
-  String get videoEditorChromaKeyRemove => 'ఆకుపచ్చ స్క్రీన్‌ను తీసివేయండి';
+  String get videoEditorChromaKeyRemove => 'రంగు మాస్క్‌ను తీసివేయండి';
 
   @override
   String get videoEditorChromaKeyFailed =>
-      'ఆకుపచ్చ స్క్రీన్‌ని వర్తింపజేయడం సాధ్యపడలేదు. మీ క్లిప్ మారలేదు.';
+      'రంగు మాస్క్‌ను వర్తింపజేయడం సాధ్యపడలేదు. మీ క్లిప్ మారలేదు.';
 
   @override
   String get videoEditorChromaKeyRemoveFailed =>
-      'ఆకుపచ్చ స్క్రీన్‌ని తీసివేయడం సాధ్యపడలేదు. మీ క్లిప్ మారలేదు.';
+      'రంగు మాస్క్‌ను తీసివేయడం సాధ్యపడలేదు. మీ క్లిప్ మారలేదు.';
 
   @override
-  String get videoEditorChromaKeyApplying =>
-      'గ్రీన్ స్క్రీన్‌ని వర్తింపజేస్తోంది…';
+  String get videoEditorChromaKeyApplying => 'రంగు మాస్క్‌ను వర్తింపజేస్తోంది…';
 
   @override
   String get videoEditorChromaKeyPreviewUnavailable =>

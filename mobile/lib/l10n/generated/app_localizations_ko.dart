@@ -8722,19 +8722,19 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorBackdropFailed => '그 배경을 바꾸지 못했어요. 자리는 원래 배경 그대로예요.';
 
   @override
-  String get videoEditorChromaKeyLabel => '크로마키';
+  String get videoEditorChromaKeyLabel => '색상 마스크';
 
   @override
-  String get videoEditorChromaKeyTitle => '크로마키';
+  String get videoEditorChromaKeyTitle => '색상 마스크';
 
   @override
-  String get videoEditorChromaKeySemanticLabel => '이 클립의 크로마키 설정';
+  String get videoEditorChromaKeySemanticLabel => '이 클립의 색상 마스크 설정';
 
   @override
-  String get videoEditorChromaKeyCloseSemanticLabel => '크로마키 변경 사항 취소';
+  String get videoEditorChromaKeyCloseSemanticLabel => '색상 마스크 변경 사항 취소';
 
   @override
-  String get videoEditorChromaKeyDoneSemanticLabel => '크로마키 적용';
+  String get videoEditorChromaKeyDoneSemanticLabel => '색상 마스크 적용';
 
   @override
   String get videoEditorChromaKeyAutoDetect => '자동 감지';
@@ -8746,13 +8746,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorChromaKeyPresetBlue => '파랑';
 
   @override
-  String get videoEditorChromaKeyScreenColorLabel => '배경 색';
+  String get videoEditorChromaKeyScreenColorLabel => '마스크할 색';
 
   @override
   String get videoEditorChromaKeyAmountLabel => '강도';
 
   @override
-  String get videoEditorChromaKeyAmountHint => '배경 색이 얼마나 지워질지';
+  String get videoEditorChromaKeyAmountHint => '마스크할 색이 얼마나 지워질지';
 
   @override
   String get videoEditorChromaKeyEdgeLabel => '가장자리';
@@ -8764,7 +8764,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorChromaKeySpillLabel => '색 번짐';
 
   @override
-  String get videoEditorChromaKeySpillHint => '배경 색을 피사체에서 걷어냅니다';
+  String get videoEditorChromaKeySpillHint => '마스크할 색이 피사체에 남긴 색감을 걷어내요';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => '이걸로 바꾸기';
@@ -8791,15 +8791,15 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      '뒤에 있는 단색 면이면 뭐든 돼요. 벽도 괜찮아요. 다만 화면을 가득 채워야 해요.';
+      '배경을 바꾸려면 선명한 단색이나 고르게 비춘 흰 벽이면 돼요. 화면을 가득 채우고, 같은 색 옷은 피하세요.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      '배경을 찾지 못했어요. 뒤쪽 면이 화면을 가득 채워야 해요. 단색 벽도 괜찮아요. 색을 직접 골라도 돼요.';
+      '화면 가장자리에서 고른 단색을 찾지 못했어요. 대신 색을 직접 골라 주세요.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
-      '배경을 측정하는 데 시간이 너무 오래 걸렸어요. 자동 감지를 다시 시도하거나, 색을 직접 골라 보세요.';
+      '클립을 읽는 데 시간이 너무 오래 걸렸어요. 자동 감지를 다시 시도하거나, 색을 직접 골라 보세요.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => '클립 고르기';
@@ -8812,17 +8812,17 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorChromaKeyImagePickFailed => '그 이미지를 불러오지 못했습니다.';
 
   @override
-  String get videoEditorChromaKeyRemove => '크로마키 제거';
+  String get videoEditorChromaKeyRemove => '색상 마스크 제거';
 
   @override
-  String get videoEditorChromaKeyFailed => '크로마키를 적용하지 못했습니다. 클립은 그대로입니다.';
+  String get videoEditorChromaKeyFailed => '색상 마스크를 적용하지 못했어요. 클립은 그대로예요.';
 
   @override
   String get videoEditorChromaKeyRemoveFailed =>
-      '크로마키를 제거하지 못했습니다. 클립은 그대로입니다.';
+      '색상 마스크를 제거하지 못했어요. 클립은 그대로예요.';
 
   @override
-  String get videoEditorChromaKeyApplying => '크로마키를 적용하는 중…';
+  String get videoEditorChromaKeyApplying => '색상 마스크를 적용하는 중…';
 
   @override
   String get videoEditorChromaKeyPreviewUnavailable =>

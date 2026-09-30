@@ -9189,21 +9189,21 @@ class AppLocalizationsNl extends AppLocalizations {
       'Kon die achtergrond niet wijzigen. De plek houdt de vorige.';
 
   @override
-  String get videoEditorChromaKeyLabel => 'Greenscreen';
+  String get videoEditorChromaKeyLabel => 'Kleurmasker';
 
   @override
-  String get videoEditorChromaKeyTitle => 'Greenscreen';
+  String get videoEditorChromaKeyTitle => 'Kleurmasker';
 
   @override
   String get videoEditorChromaKeySemanticLabel =>
-      'Greenscreen voor deze clip instellen';
+      'Kleurmasker voor deze clip instellen';
 
   @override
   String get videoEditorChromaKeyCloseSemanticLabel =>
-      'Greenscreen-wijzigingen verwerpen';
+      'Kleurmaskerwijzigingen verwerpen';
 
   @override
-  String get videoEditorChromaKeyDoneSemanticLabel => 'Greenscreen toepassen';
+  String get videoEditorChromaKeyDoneSemanticLabel => 'Kleurmasker toepassen';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Automatisch detecteren';
@@ -9215,14 +9215,14 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorChromaKeyPresetBlue => 'Blauw';
 
   @override
-  String get videoEditorChromaKeyScreenColorLabel => 'Achtergrondkleur';
+  String get videoEditorChromaKeyScreenColorLabel => 'Te maskeren kleur';
 
   @override
   String get videoEditorChromaKeyAmountLabel => 'Sterkte';
 
   @override
   String get videoEditorChromaKeyAmountHint =>
-      'Hoeveel van de achtergrondkleur verdwijnt';
+      'Hoeveel van de gemaskeerde kleur verdwijnt';
 
   @override
   String get videoEditorChromaKeyEdgeLabel => 'Rand';
@@ -9236,7 +9236,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySpillHint =>
-      'Haalt de kleur van de achtergrond van je onderwerp af';
+      'Haalt de zweem van de gemaskeerde kleur van je onderwerp af';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Vervangen door';
@@ -9263,15 +9263,15 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Elk effen vlak achter je werkt — een muur is prima — zolang het het hele beeld vult.';
+      'Wil je je achtergrond vervangen? Een felle kleur of een gelijkmatig verlichte witte muur werkt, zolang die het hele beeld vult en je die kleur niet draagt.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Geen achtergrond gevonden: het moet het hele beeld achter je vullen. Een effen muur telt ook. Of kies de kleur zelf.';
+      'Geen egale kleur gevonden langs de randen van het beeld. Kies de kleur liever zelf.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
-      'Het meten van de achtergrond duurde te lang. Probeer Automatisch detecteren opnieuw, of kies de kleur zelf.';
+      'Het lezen van de clip duurde te lang. Probeer Automatisch detecteren opnieuw, of kies de kleur zelf.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Kies een clip';
@@ -9285,18 +9285,18 @@ class AppLocalizationsNl extends AppLocalizations {
       'Kon die afbeelding niet laden.';
 
   @override
-  String get videoEditorChromaKeyRemove => 'Greenscreen verwijderen';
+  String get videoEditorChromaKeyRemove => 'Kleurmasker verwijderen';
 
   @override
   String get videoEditorChromaKeyFailed =>
-      'Kon het greenscreen niet toepassen. Je clip blijft ongewijzigd.';
+      'Kon het kleurmasker niet toepassen. Je clip blijft ongewijzigd.';
 
   @override
   String get videoEditorChromaKeyRemoveFailed =>
-      'Kon het greenscreen niet verwijderen. Je clip blijft ongewijzigd.';
+      'Kon het kleurmasker niet verwijderen. Je clip blijft ongewijzigd.';
 
   @override
-  String get videoEditorChromaKeyApplying => 'Greenscreen wordt toegepast…';
+  String get videoEditorChromaKeyApplying => 'Kleurmasker wordt toegepast…';
 
   @override
   String get videoEditorChromaKeyPreviewUnavailable =>
