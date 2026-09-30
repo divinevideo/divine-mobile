@@ -107,16 +107,37 @@ class ShareableUser {
 /// Contains all the information needed to build a rich [ShareParams].
 typedef ShareData = ({String shareUrl, String? title, String? thumbnailUrl});
 
+/// What a share did for one recipient.
+///
+/// A failed share means one of two opposite things, and the share sheet has
+/// to tell them apart (#8672): a send the durable queue will keep retrying,
+/// and a send nothing will ever retry.
+enum ShareDelivery {
+  /// Published, or queued with the relay's `OK` still pending — reported as
+  /// sent, the same way the DM composer reports it.
+  sent,
+
+  /// Not published, but a queue row exists and the retry sweep will keep
+  /// sending it. Sharing again would deliver a second copy.
+  retrying,
+
+  /// Will never arrive unless the user acts: refused by the send policy, or
+  /// failed before any queue row existed.
+  notSent,
+}
+
 /// Result of sharing operation
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
 class ShareResult {
   const ShareResult({
-    required this.success,
+    required this.delivery,
     this.error,
     this.messageEventId,
     this.conversationId,
   });
-  final bool success;
+
+  /// What this share did for the recipient.
+  final ShareDelivery delivery;
   final String? error;
   final String? messageEventId;
 
@@ -127,13 +148,18 @@ class ShareResult {
     String messageEventId, {
     String? conversationId,
   }) => ShareResult(
-    success: true,
+    delivery: ShareDelivery.sent,
     messageEventId: messageEventId,
     conversationId: conversationId,
   );
 
+  /// A share that will never arrive unless the user sends it again.
   factory ShareResult.failure(String error) =>
-      ShareResult(success: false, error: error);
+      ShareResult(delivery: ShareDelivery.notSent, error: error);
+
+  /// A share the durable queue will keep retrying.
+  factory ShareResult.retrying(String error) =>
+      ShareResult(delivery: ShareDelivery.retrying, error: error);
 }
 
 /// Service for sharing videos with other users
@@ -263,7 +289,7 @@ class VideoSharingService {
       final conversationId = DmRepository.computeConversationId(participants);
 
       Log.info(
-        'Video shared via NIP-17: ${result.messageEventId}',
+        'Video shared via NIP-17: $optimisticMessageId',
         name: 'VideoSharingService',
         category: LogCategory.video,
       );
@@ -274,7 +300,29 @@ class VideoSharingService {
       );
     }
 
-    return ShareResult.failure(result.error ?? 'Failed to send NIP-17 message');
+    final error = result.error ?? 'Failed to send NIP-17 message';
+
+    // Only a publish that failed after the enqueue leaves a row the retry
+    // sweep re-drives. A send-policy refusal and an oversized message are
+    // refused before the enqueue, so nothing will ever send them (#8672).
+    final queuedRumorId = result.queuedRumorId;
+    if (queuedRumorId != null) {
+      Log.warning(
+        'Share to ${pubkeyForLogs(recipientPubkey)} not published; queued '
+        'for background retry as $queuedRumorId: $error',
+        name: 'VideoSharingService',
+        category: LogCategory.video,
+      );
+      return ShareResult.retrying(error);
+    }
+
+    Log.warning(
+      'Share to ${pubkeyForLogs(recipientPubkey)} not sent and not queued: '
+      '$error',
+      name: 'VideoSharingService',
+      category: LogCategory.video,
+    );
+    return ShareResult.failure(error);
   }
 
   Future<ShareResult> _shareViaNip04({

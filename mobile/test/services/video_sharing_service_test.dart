@@ -316,7 +316,7 @@ void main() {
         recipientPubkey: _recipientPubkey,
       );
 
-      expect(result.success, isFalse);
+      expect(result.delivery, ShareDelivery.notSent);
       expect(result.error, contains('not authenticated'));
     });
 
@@ -340,7 +340,7 @@ void main() {
         recipientPubkey: _recipientPubkey,
       );
 
-      expect(result.success, isFalse);
+      expect(result.delivery, ShareDelivery.notSent);
       expect(result.error, contains('Signing is not available'));
       // Never reached the signer: the gate short-circuits before any event is
       // created, rather than letting it fail 30s later on an RPC timeout.
@@ -376,7 +376,7 @@ void main() {
         recipientPubkey: _recipientPubkey,
       );
 
-      expect(result.success, isFalse);
+      expect(result.delivery, ShareDelivery.notSent);
       expect(result.error, contains('Failed to create'));
     });
 
@@ -414,7 +414,7 @@ void main() {
         recipientPubkey: _recipientPubkey,
       );
 
-      expect(result.success, isTrue);
+      expect(result.delivery, ShareDelivery.sent);
       expect(result.messageEventId, equals('signed_event_id'));
     });
 
@@ -446,7 +446,7 @@ void main() {
         recipientPubkey: _recipientPubkey,
       );
 
-      expect(result.success, isFalse);
+      expect(result.delivery, ShareDelivery.notSent);
       expect(result.error, contains('Failed to publish'));
     });
   });
@@ -506,7 +506,7 @@ void main() {
         recipientPubkey: _recipientPubkey,
       );
 
-      expect(result.success, isTrue);
+      expect(result.delivery, ShareDelivery.sent);
       expect(result.messageEventId, equals('nip17-msg-id'));
       expect(result.conversationId, isNotNull);
 
@@ -574,7 +574,7 @@ void main() {
           recipientPubkey: _recipientPubkey,
         );
 
-        expect(result.success, isTrue);
+        expect(result.delivery, ShareDelivery.sent);
         expect(result.messageEventId, 'queued-rumor-id');
         expect(result.conversationId, isNotNull);
       },
@@ -632,9 +632,11 @@ void main() {
         // The middle recipient threw, but the loop still attempted all three
         // and reports a per-recipient result for each.
         expect(results.keys, containsAll(<String>[goodA, bad, goodC]));
-        expect(results[goodA]!.success, isTrue);
-        expect(results[bad]!.success, isFalse);
-        expect(results[goodC]!.success, isTrue);
+        expect(results[goodA]!.delivery, ShareDelivery.sent);
+        // A send throws only before its queue row is written, so nothing
+        // will retry this recipient.
+        expect(results[bad]!.delivery, ShareDelivery.notSent);
+        expect(results[goodC]!.delivery, ShareDelivery.sent);
         verify(
           () => mockDmRepository.sendSharedVideo(
             recipientPubkey: goodC,
@@ -696,7 +698,7 @@ void main() {
             )
             .timeout(const Duration(seconds: 2));
 
-        expect(result.success, isTrue);
+        expect(result.delivery, ShareDelivery.sent);
         expect(result.messageEventId, equals('nip17-msg-id'));
       },
     );
@@ -731,8 +733,74 @@ void main() {
         recipientPubkey: _recipientPubkey,
       );
 
-      expect(result.success, isFalse);
+      expect(result.delivery, ShareDelivery.notSent);
       expect(result.error, contains('Relay rejected'));
+    });
+
+    group('reports what will happen to a share that did not go out', () {
+      Future<ShareResult> shareWith(NIP17SendResult sendResult) {
+        when(() => mockAuthService.isAuthenticated).thenReturn(true);
+        when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
+        when(
+          () => mockDmRepository.sendSharedVideo(
+            recipientPubkey: any(named: 'recipientPubkey'),
+            baseContent: any(named: 'baseContent'),
+            videoKind: any(named: 'videoKind'),
+            videoAuthorPubkey: any(named: 'videoAuthorPubkey'),
+            videoDTag: any(named: 'videoDTag'),
+            videoEventId: any(named: 'videoEventId'),
+            relayHint: any(named: 'relayHint'),
+            skipNip04Fallback: any(named: 'skipNip04Fallback'),
+          ),
+        ).thenAnswer((_) async => sendResult);
+
+        final now = DateTime.now();
+        return nip17Service.shareVideoWithUser(
+          video: VideoEvent(
+            id: _testVideoId,
+            pubkey: _testPubkey,
+            createdAt: now.millisecondsSinceEpoch ~/ 1000,
+            timestamp: now,
+            content: 'Test',
+          ),
+          recipientPubkey: _recipientPubkey,
+        );
+      }
+
+      test(
+        'a failed publish that left a queue row is retrying, not failed',
+        () async {
+          final result = await shareWith(
+            const NIP17SendResult.failure(
+              'Relay rejected',
+              queuedRumorId: 'queued-rumor-id',
+            ),
+          );
+
+          expect(result.delivery, ShareDelivery.retrying);
+        },
+      );
+
+      test(
+        'a send-policy refusal is not sent: it is never queued (#8672)',
+        () async {
+          final result = await shareWith(
+            const NIP17SendResult.blocked(
+              'blocked: recipient not permitted by send policy',
+            ),
+          );
+
+          expect(result.delivery, ShareDelivery.notSent);
+        },
+      );
+
+      test('an oversized message is not sent: it is never queued', () async {
+        final result = await shareWith(
+          const NIP17SendResult.tooLong('message is too large to send'),
+        );
+
+        expect(result.delivery, ShareDelivery.notSent);
+      });
     });
 
     test('includes personal message in content', () async {

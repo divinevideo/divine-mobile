@@ -319,7 +319,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState> {
 
       final delivered = [
         for (final r in recipients)
-          if (results[r.pubkey]?.success ?? false) r,
+          if (results[r.pubkey]?.delivery == ShareDelivery.sent) r,
       ];
       final failedCount = recipients.length - delivered.length;
 
