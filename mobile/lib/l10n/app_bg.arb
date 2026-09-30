@@ -5868,5 +5868,8 @@
       }
     }
   },
-  "userRowPosted": "Публикувано {time}"
+  "userRowPosted": "Публикувано {time}",
+  "badgeSubscribedAction": "Абониран",
+  "badgeSubscribeAction": "Абониране за значката",
+  "badgeAcceptedHoldersTitle": "Приели значката"
 }

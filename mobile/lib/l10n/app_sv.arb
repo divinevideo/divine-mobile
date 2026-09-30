@@ -5744,5 +5744,8 @@
       }
     }
   },
-  "userRowPosted": "Publicerat {time}"
+  "userRowPosted": "Publicerat {time}",
+  "badgeSubscribedAction": "Prenumererar",
+  "badgeSubscribeAction": "Prenumerera på märket",
+  "badgeAcceptedHoldersTitle": "Personer som godkänt märket"
 }

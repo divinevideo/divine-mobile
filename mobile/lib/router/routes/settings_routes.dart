@@ -18,6 +18,7 @@ import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/badges/badge_award_screen.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
 import 'package:openvine/screens/badges/badge_editor_screen.dart';
+import 'package:openvine/screens/badges/badge_videos_screen.dart';
 import 'package:openvine/screens/badges/badges_screen.dart';
 import 'package:openvine/screens/blossom_settings_screen.dart';
 import 'package:openvine/screens/clip_recovery_screen.dart';
@@ -116,6 +117,14 @@ List<RouteBase> settingsRoutes(Ref ref) {
       builder: (_, state) => _badgeRouteScreen(
         state,
         (coordinate) => BadgeDetailScreen(coordinate: coordinate),
+      ),
+    ),
+    GoRoute(
+      path: BadgeVideosScreen.path,
+      name: BadgeVideosScreen.routeName,
+      builder: (_, state) => _badgeRouteScreen(
+        state,
+        (coordinate) => BadgeVideosScreen(coordinate: coordinate),
       ),
     ),
     GoRoute(

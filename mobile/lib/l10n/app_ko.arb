@@ -5290,5 +5290,8 @@
       }
     }
   },
-  "userRowPosted": "{time} 게시"
+  "userRowPosted": "{time} 게시",
+  "badgeSubscribedAction": "구독 중",
+  "badgeSubscribeAction": "배지 구독",
+  "badgeAcceptedHoldersTitle": "배지를 수락한 사람"
 }

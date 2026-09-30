@@ -5744,5 +5744,8 @@
       }
     }
   },
-  "userRowPosted": "Geplaatst {time}"
+  "userRowPosted": "Geplaatst {time}",
+  "badgeSubscribedAction": "Volgend",
+  "badgeSubscribeAction": "Badge volgen",
+  "badgeAcceptedHoldersTitle": "Geaccepteerde badgehouders"
 }

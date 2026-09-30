@@ -5744,5 +5744,8 @@
       }
     }
   },
-  "userRowPosted": "Publicado {time}"
+  "userRowPosted": "Publicado {time}",
+  "badgeSubscribedAction": "Suscrito",
+  "badgeSubscribeAction": "Suscribirse a la insignia",
+  "badgeAcceptedHoldersTitle": "Personas que aceptaron la insignia"
 }

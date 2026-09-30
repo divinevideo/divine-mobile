@@ -5744,5 +5744,8 @@
       }
     }
   },
-  "userRowPosted": "Publicat {time}"
+  "userRowPosted": "Publicat {time}",
+  "badgeSubscribedAction": "Abonat",
+  "badgeSubscribeAction": "Abonează-te la insignă",
+  "badgeAcceptedHoldersTitle": "Persoane care au acceptat insigna"
 }

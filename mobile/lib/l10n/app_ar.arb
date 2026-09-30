@@ -5744,5 +5744,8 @@
       }
     }
   },
-  "userRowPosted": "نُشر {time}"
+  "userRowPosted": "نُشر {time}",
+  "badgeSubscribedAction": "مشترك",
+  "badgeSubscribeAction": "اشترك في الشارة",
+  "badgeAcceptedHoldersTitle": "حاملو الشارة الذين قبلوها"
 }

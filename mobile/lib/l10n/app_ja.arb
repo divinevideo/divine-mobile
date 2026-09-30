@@ -5744,5 +5744,8 @@
       }
     }
   },
-  "userRowPosted": "{time}に投稿"
+  "userRowPosted": "{time}に投稿",
+  "badgeSubscribedAction": "購読中",
+  "badgeSubscribeAction": "バッジを購読",
+  "badgeAcceptedHoldersTitle": "バッジを承認した人"
 }

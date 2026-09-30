@@ -5744,5 +5744,8 @@
       }
     }
   },
-  "userRowPosted": "Pubblicato {time}"
+  "userRowPosted": "Pubblicato {time}",
+  "badgeSubscribedAction": "Iscritto",
+  "badgeSubscribeAction": "Iscriviti al badge",
+  "badgeAcceptedHoldersTitle": "Persone che hanno accettato il badge"
 }

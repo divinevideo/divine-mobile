@@ -5804,5 +5804,8 @@
       }
     }
   },
-  "userRowPosted": "የተለጠፈው {time}"
+  "userRowPosted": "የተለጠፈው {time}",
+  "badgeSubscribedAction": "ተከትለዋል",
+  "badgeSubscribeAction": "ባጁን ተከተል",
+  "badgeAcceptedHoldersTitle": "ባጁን የተቀበሉ"
 }

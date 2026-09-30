@@ -5744,5 +5744,8 @@
       }
     }
   },
-  "userRowPosted": "Diposting {time}"
+  "userRowPosted": "Diposting {time}",
+  "badgeSubscribedAction": "Diikuti",
+  "badgeSubscribeAction": "Ikuti lencana",
+  "badgeAcceptedHoldersTitle": "Pemegang lencana yang menerima"
 }
