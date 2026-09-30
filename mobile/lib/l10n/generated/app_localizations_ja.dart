@@ -299,8 +299,13 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String videoOverlayVideoLoops(String count) {
-    return 'この動画$count回ループ';
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ループ',
+    );
+    return 'この動画$compactCount回$_temp0';
   }
 
   @override

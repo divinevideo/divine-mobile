@@ -757,6 +757,7 @@ class _VideoMetaLineContent extends ConsumerWidget {
       if (showVideoCount)
         context.l10n.videoOverlayVideoLoops(
           StringUtils.formatCompactNumber(video.totalLoops),
+          video.totalLoops,
         ),
       if (showPublishedDate &&
           video != null &&

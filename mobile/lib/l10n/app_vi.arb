@@ -140,7 +140,7 @@
   "appearanceSettingsLight": "Sáng",
   "appearanceSettingsDark": "Tối",
   "videoOverlayTotalLoops": "tổng {count}",
-  "videoOverlayVideoLoops": "video lặp {count} lượt",
+  "videoOverlayVideoLoops": "video lặp {compactCount} {count, plural, other{lượt}}",
   "generalSettingsClosedCaptions": "Phụ đề",
   "generalSettingsClosedCaptionsSubtitle": "Hiện phụ đề khi video có sẵn",
   "generalSettingsVideoShapeSquareOnly": "Chỉ video vuông",

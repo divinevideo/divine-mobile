@@ -342,8 +342,13 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String videoOverlayVideoLoops(String count) {
-    return 'video lặp $count lượt';
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'lượt',
+    );
+    return 'video lặp $compactCount $_temp0';
   }
 
   @override

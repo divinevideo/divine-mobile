@@ -2561,7 +2561,7 @@
     "appearanceSettingsLight": "라이트",
     "appearanceSettingsDark": "다크",
     "videoOverlayTotalLoops": "전체 {count}",
-    "videoOverlayVideoLoops": "이 동영상 {count}회 반복",
+    "videoOverlayVideoLoops": "이 동영상 {compactCount}{count, plural, other{회 반복}}",
     "generalSettingsClosedCaptions": "자막",
     "generalSettingsClosedCaptionsSubtitle": "영상에 자막이 있을 때 보여줘요",
     "generalSettingsVideoShapeSquareOnly": "정사각형 영상만",

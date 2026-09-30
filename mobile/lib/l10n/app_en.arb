@@ -279,11 +279,12 @@
       "count": {"type": "String"}
     }
   },
-  "videoOverlayVideoLoops": "{count} video loops",
+  "videoOverlayVideoLoops": "{compactCount} video {count, plural, =1{loop} other{loops}}",
   "@videoOverlayVideoLoops": {
-    "description": "The current video's loop count on the video overlay.",
+    "description": "The current video's loop count on the video overlay. compactCount is the formatted number; count selects the plural form.",
     "placeholders": {
-      "count": {"type": "String"}
+      "compactCount": {"type": "String"},
+      "count": {"type": "int"}
     }
   },
   "generalSettingsShowTotalLoops": "Show total loops",

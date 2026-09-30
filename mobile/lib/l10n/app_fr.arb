@@ -3022,7 +3022,7 @@
     "appearanceSettingsLight": "Clair",
     "appearanceSettingsDark": "Sombre",
     "videoOverlayTotalLoops": "{count} au total",
-    "videoOverlayVideoLoops": "{count} boucles de la vidéo",
+    "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{boucle} other{boucles}} de la vidéo",
     "generalSettingsClosedCaptions": "Sous-titres",
     "generalSettingsClosedCaptionsSubtitle": "Affiche les sous-titres quand les vidéos en proposent",
     "generalSettingsVideoShapeSquareOnly": "Vidéos carrées uniquement",

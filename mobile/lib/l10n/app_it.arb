@@ -3022,7 +3022,7 @@
     "appearanceSettingsLight": "Chiaro",
     "appearanceSettingsDark": "Scuro",
     "videoOverlayTotalLoops": "{count} totali",
-    "videoOverlayVideoLoops": "{count} loop del video",
+    "videoOverlayVideoLoops": "{compactCount} {count, plural, other{loop}} del video",
     "generalSettingsClosedCaptions": "Sottotitoli",
     "generalSettingsClosedCaptionsSubtitle": "Mostra i sottotitoli quando i video li includono",
     "generalSettingsVideoShapeSquareOnly": "Solo video quadrati",

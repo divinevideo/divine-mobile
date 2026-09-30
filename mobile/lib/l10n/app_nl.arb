@@ -3022,7 +3022,7 @@
     "appearanceSettingsLight": "Licht",
     "appearanceSettingsDark": "Donker",
     "videoOverlayTotalLoops": "{count} totaal",
-    "videoOverlayVideoLoops": "{count} videoloops",
+    "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{videoloop} other{videoloops}}",
     "generalSettingsClosedCaptions": "Ondertiteling",
     "generalSettingsClosedCaptionsSubtitle": "Toon ondertiteling als video's die hebben",
     "generalSettingsVideoShapeSquareOnly": "Alleen vierkante video's",

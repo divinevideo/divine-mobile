@@ -661,11 +661,11 @@ abstract class AppLocalizations {
   /// **'{count} total'**
   String videoOverlayTotalLoops(String count);
 
-  /// The current video's loop count on the video overlay.
+  /// The current video's loop count on the video overlay. compactCount is the formatted number; count selects the plural form.
   ///
   /// In en, this message translates to:
-  /// **'{count} video loops'**
-  String videoOverlayVideoLoops(String count);
+  /// **'{compactCount} video {count, plural, =1{loop} other{loops}}'**
+  String videoOverlayVideoLoops(String compactCount, int count);
 
   /// No description provided for @generalSettingsShowTotalLoops.
   ///

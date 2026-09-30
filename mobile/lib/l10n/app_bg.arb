@@ -3176,7 +3176,7 @@
     "appearanceSettingsLight": "Светла",
     "appearanceSettingsDark": "Тъмна",
     "videoOverlayTotalLoops": "{count} общо",
-    "videoOverlayVideoLoops": "{count} повторения на видеото",
+    "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{повторение} other{повторения}} на видеото",
     "generalSettingsClosedCaptions": "Субтитри",
     "generalSettingsClosedCaptionsSubtitle": "Показвай субтитри, когато видеата ги имат",
     "generalSettingsVideoShapeSquareOnly": "Само квадратни видеа",

@@ -358,8 +358,13 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String videoOverlayVideoLoops(String count) {
-    return '$count دورة للفيديو';
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'دورة',
+    );
+    return '$compactCount $_temp0 للفيديو';
   }
 
   @override

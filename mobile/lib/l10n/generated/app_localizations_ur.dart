@@ -373,8 +373,13 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
-  String videoOverlayVideoLoops(String count) {
-    return 'ویڈیو کے $count لوپس';
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'لوپس',
+    );
+    return 'ویڈیو کے $compactCount $_temp0';
   }
 
   @override

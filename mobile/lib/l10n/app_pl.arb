@@ -3022,7 +3022,7 @@
     "appearanceSettingsLight": "Jasny",
     "appearanceSettingsDark": "Ciemny",
     "videoOverlayTotalLoops": "{count} łącznie",
-    "videoOverlayVideoLoops": "{count} pętli filmu",
+    "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{pętla} few{pętle} many{pętli} other{pętli}} filmu",
     "generalSettingsClosedCaptions": "Napisy",
     "generalSettingsClosedCaptionsSubtitle": "Pokazuj napisy, gdy filmy je zawierają",
     "generalSettingsVideoShapeSquareOnly": "Tylko kwadratowe filmy",

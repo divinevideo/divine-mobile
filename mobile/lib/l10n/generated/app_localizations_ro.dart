@@ -392,8 +392,14 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String videoOverlayVideoLoops(String count) {
-    return '$count bucle ale videoclipului';
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'bucle ale videoclipului',
+      one: 'buclă a videoclipului',
+    );
+    return '$compactCount $_temp0';
   }
 
   @override

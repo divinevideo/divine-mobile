@@ -3022,7 +3022,7 @@
     "appearanceSettingsLight": "Hell",
     "appearanceSettingsDark": "Dunkel",
     "videoOverlayTotalLoops": "{count} gesamt",
-    "videoOverlayVideoLoops": "{count} Video-Loops",
+    "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{Video-Loop} other{Video-Loops}}",
     "generalSettingsClosedCaptions": "Untertitel",
     "generalSettingsClosedCaptionsSubtitle": "Untertitel anzeigen, wenn Videos welche haben",
     "generalSettingsVideoShapeSquareOnly": "Nur quadratische Videos",
