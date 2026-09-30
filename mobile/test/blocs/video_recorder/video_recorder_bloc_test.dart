@@ -2220,9 +2220,11 @@ void main() {
             ..setApplicationDocumentsPath(docsDir.path)
             ..setTemporaryPath(docsDir.path);
 
+          workCopyRead = false;
           final editor = _MockProVideoEditor();
-          when(() => editor.getMetadata(any())).thenAnswer(
-            (_) async => VideoMetadata(
+          when(() => editor.getMetadata(any())).thenAnswer((_) async {
+            workCopyRead = true;
+            return VideoMetadata(
               duration: const Duration(milliseconds: 6033),
               audioDuration: const Duration(milliseconds: 5998),
               extension: 'mp4',
@@ -2230,8 +2232,8 @@ void main() {
               resolution: const Size(720, 1280),
               rotation: 0,
               bitrate: 2000000,
-            ),
-          );
+            );
+          });
           when(() => editor.getThumbnails(any())).thenAnswer(
             (_) async => [
               Uint8List.fromList(const [1, 2, 3]),
@@ -2315,7 +2317,7 @@ void main() {
           ),
         act: (bloc) async {
           bloc.add(const VideoRecorderRecordingStopRequested());
-          await pumpEventQueue(times: 100);
+          await enrichmentSettled();
         },
         verify: (_) {
           verify(
@@ -2464,10 +2466,12 @@ void main() {
             ..setApplicationDocumentsPath(docsDir.path)
             ..setTemporaryPath(docsDir.path);
 
+          workCopyRead = false;
           final editor = _MockProVideoEditor();
-          when(() => editor.getMetadata(any())).thenAnswer(
-            (_) async => VideoMetadata.fromMap(const {'duration': 2000}, 'mp4'),
-          );
+          when(() => editor.getMetadata(any())).thenAnswer((_) async {
+            workCopyRead = true;
+            return VideoMetadata.fromMap(const {'duration': 2000}, 'mp4');
+          });
           when(() => editor.getThumbnails(any())).thenAnswer(
             (_) async => [
               Uint8List.fromList(const [1, 2, 3]),
@@ -2527,7 +2531,7 @@ void main() {
           ),
         act: (bloc) async {
           bloc.add(const VideoRecorderRecordingStopRequested());
-          await pumpEventQueue(times: 100);
+          await enrichmentSettled();
         },
         verify: (_) {
           // Only the bare clip save ran; the enriched save was skipped because
