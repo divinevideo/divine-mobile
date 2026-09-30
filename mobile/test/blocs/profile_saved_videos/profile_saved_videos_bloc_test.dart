@@ -251,11 +251,11 @@ void main() {
 
     test('initial state is initial with empty collections', () {
       final bloc = createBloc();
+      addTearDown(bloc.close);
       expect(bloc.state.status, ProfileSavedVideosStatus.initial);
       expect(bloc.state.videos, isEmpty);
       expect(bloc.state.savedEventIds, isEmpty);
       expect(bloc.state.error, isNull);
-      bloc.close();
     });
 
     group('ProfileSavedVideosState', () {
