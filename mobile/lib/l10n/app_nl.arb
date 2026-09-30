@@ -2993,7 +2993,6 @@
     "peopleListsViewProfileHint": "Profiel van {name} bekijken",
     "settingsGeneralTitle": "Algemene instellingen",
     "settingsContentSafetyTitle": "Inhoud & veiligheid",
-    "settingsPrivacyTitle": "Privacy",
     "settingsPrivacySubtitle": "Kies welke gebruiksgegevens je deelt",
     "privacySettingsAnalyticsSection": "STATISTIEKEN",
     "privacySettingsShareUsage": "Gebruiksgegevens delen",
@@ -3214,8 +3213,6 @@
     "nostrSettingsCouldNotRemoveKeys": "Dit account kon niet van dit apparaat verwijderd worden. Probeer het opnieuw.",
     "nostrSettingsDeleteAccount": "Account en data verwijderen",
     "nostrSettingsDeleteAccountSubtitle": "Stuurt verwijderverzoeken voor je content en meldt je op dit apparaat af. Relays, clients, zoekindexen en andere aangemelde apparaten kunnen kopieën bewaren.",
-    "safetySettingsWhatYouSee": "WAT JIJ ZIET",
-    "safetySettingsWhatYouPublish": "WAT JIJ PUBLICEERT",
     "listPersonCount": "{count, plural, =1{1 persoon} other{{count} personen}}",
     "@listPersonCount": {
         "placeholders": {

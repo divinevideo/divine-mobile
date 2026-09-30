@@ -2993,7 +2993,6 @@
     "peopleListsViewProfileHint": "{name} profilini görüntüle",
     "settingsGeneralTitle": "Genel Ayarlar",
     "settingsContentSafetyTitle": "İçerik ve Güvenlik",
-    "settingsPrivacyTitle": "Gizlilik",
     "settingsPrivacySubtitle": "Hangi kullanım verilerini paylaştığını seç",
     "privacySettingsAnalyticsSection": "ANALİTİK",
     "privacySettingsShareUsage": "Kullanım verilerini paylaş",
@@ -3214,8 +3213,6 @@
     "nostrSettingsCouldNotRemoveKeys": "Bu hesap bu cihazdan kaldırılamadı. Lütfen tekrar dene.",
     "nostrSettingsDeleteAccount": "Hesabı ve Verileri Sil",
     "nostrSettingsDeleteAccountSubtitle": "İçeriğin için silme istekleri gönderir ve bu cihazda oturumunu kapatır. Röleler, istemciler, arama dizinleri ve oturum açmış diğer cihazlar kopyaları saklayabilir.",
-    "safetySettingsWhatYouSee": "GÖRDÜKLERİN",
-    "safetySettingsWhatYouPublish": "PAYLAŞTIKLARIN",
     "listPersonCount": "{count, plural, =1{1 kişi} other{{count} kişi}}",
     "@listPersonCount": {
         "placeholders": {

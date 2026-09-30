@@ -305,9 +305,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get settingsContentSafetyTitle => 'مواد اور حفاظت';
 
   @override
-  String get settingsPrivacyTitle => 'رازداری';
-
-  @override
   String get settingsPrivacySubtitle =>
       'منتخب کریں کہ آپ استعمال کا کون سا ڈیٹا شیئر کرتے ہیں';
 
@@ -2848,12 +2845,6 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get notificationSettingsAboutDescription =>
       'اطلاعات Nostr پروٹوکول پر چلتی ہیں۔ ریئل ٹائم اپڈیٹس کا انحصار Nostr ریلے سے آپ کے کنکشن پر ہے۔ کچھ اطلاعات میں تاخیر ہو سکتی ہے۔';
-
-  @override
-  String get safetySettingsWhatYouSee => 'آپ کیا دیکھتے ہیں';
-
-  @override
-  String get safetySettingsWhatYouPublish => 'آپ کیا شائع کرتے ہیں';
 
   @override
   String get safetySettingsShowDivineHostedOnly =>

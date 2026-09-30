@@ -308,9 +308,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get settingsContentSafetyTitle => 'Съдържание и безопасност';
 
   @override
-  String get settingsPrivacyTitle => 'Поверителност';
-
-  @override
   String get settingsPrivacySubtitle =>
       'Избери какви данни за ползване споделяш';
 
@@ -2889,12 +2886,6 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get notificationSettingsAboutDescription =>
       'Известията се захранват от Nostr. Обновяването в реално време зависи от връзката ти с Nostr релета. Някои известия може да закъсняват.';
-
-  @override
-  String get safetySettingsWhatYouSee => 'КАКВО ВИЖДАШ';
-
-  @override
-  String get safetySettingsWhatYouPublish => 'КАКВО ПУБЛИКУВАШ';
 
   @override
   String get safetySettingsShowDivineHostedOnly =>

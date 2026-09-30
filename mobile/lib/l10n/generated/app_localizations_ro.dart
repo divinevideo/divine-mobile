@@ -325,9 +325,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get settingsContentSafetyTitle => 'Conținut și siguranță';
 
   @override
-  String get settingsPrivacyTitle => 'Confidențialitate';
-
-  @override
   String get settingsPrivacySubtitle => 'Alege ce date de utilizare partajezi';
 
   @override
@@ -2949,12 +2946,6 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get notificationSettingsAboutDescription =>
       'Notificările sunt alimentate de protocolul Nostr. Actualizările în timp real depind de conexiunea ta la relay-urile Nostr. Unele notificări pot avea întârzieri.';
-
-  @override
-  String get safetySettingsWhatYouSee => 'CE VEZI';
-
-  @override
-  String get safetySettingsWhatYouPublish => 'CE PUBLICI';
 
   @override
   String get safetySettingsShowDivineHostedOnly =>

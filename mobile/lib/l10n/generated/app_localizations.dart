@@ -541,13 +541,7 @@ abstract class AppLocalizations {
   /// **'Content & Safety'**
   String get settingsContentSafetyTitle;
 
-  /// Settings hub row and app bar title for the Privacy screen, which holds the analytics consent control.
-  ///
-  /// In en, this message translates to:
-  /// **'Privacy'**
-  String get settingsPrivacyTitle;
-
-  /// Supporting copy on the Settings hub row that opens the Privacy screen.
+  /// Explanatory copy under the Analytics section of the Privacy & safety screen.
   ///
   /// In en, this message translates to:
   /// **'Choose what usage data you share'**
@@ -4842,18 +4836,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Notifications are powered by the Nostr protocol. Real-time updates depend on your connection to Nostr relays. Some notifications may have delays.'**
   String get notificationSettingsAboutDescription;
-
-  /// No description provided for @safetySettingsWhatYouSee.
-  ///
-  /// In en, this message translates to:
-  /// **'WHAT YOU SEE'**
-  String get safetySettingsWhatYouSee;
-
-  /// No description provided for @safetySettingsWhatYouPublish.
-  ///
-  /// In en, this message translates to:
-  /// **'WHAT YOU PUBLISH'**
-  String get safetySettingsWhatYouPublish;
 
   /// No description provided for @safetySettingsShowDivineHostedOnly.
   ///

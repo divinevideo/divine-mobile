@@ -60,7 +60,8 @@ void main() {
         await pumpScreen(tester);
         await tester.pumpAndSettle();
 
-        expect(find.text(l10n.settingsPrivacyTitle), findsOneWidget);
+        expect(find.text(l10n.settingsPrivacySafetyTitle), findsOneWidget);
+        expect(find.text(l10n.settingsContentSafetyTitle), findsOneWidget);
         expect(
           find.text(l10n.privacySettingsAnalyticsSection),
           findsOneWidget,

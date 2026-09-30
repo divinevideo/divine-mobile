@@ -244,9 +244,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get settingsContentSafetyTitle => 'Konten & Keamanan';
 
   @override
-  String get settingsPrivacyTitle => 'Privasi';
-
-  @override
   String get settingsPrivacySubtitle =>
       'Pilih data penggunaan yang kamu bagikan';
 
@@ -2774,12 +2771,6 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get notificationSettingsAboutDescription =>
       'Notifikasi ditenagai oleh protokol Nostr. Pembaruan real-time bergantung pada koneksimu ke relay Nostr. Beberapa notifikasi mungkin tertunda.';
-
-  @override
-  String get safetySettingsWhatYouSee => 'YANG KAMU LIHAT';
-
-  @override
-  String get safetySettingsWhatYouPublish => 'YANG KAMU PUBLIKASIKAN';
 
   @override
   String get safetySettingsShowDivineHostedOnly =>

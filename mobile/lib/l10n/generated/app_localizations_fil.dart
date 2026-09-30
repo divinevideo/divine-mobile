@@ -274,9 +274,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get settingsContentSafetyTitle => 'Content at Safety';
 
   @override
-  String get settingsPrivacyTitle => 'Privacy';
-
-  @override
   String get settingsPrivacySubtitle =>
       'Piliin kung anong usage data ang ibinabahagi mo';
 
@@ -2854,12 +2851,6 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get notificationSettingsAboutDescription =>
       'Ang mga notification ay pinapagana ng Nostr protocol. Ang real-time na update ay nakadepende sa iyong koneksyon sa mga Nostr relay. May ilang notification na maaaring ma-delay.';
-
-  @override
-  String get safetySettingsWhatYouSee => 'ANG NAKIKITA MO';
-
-  @override
-  String get safetySettingsWhatYouPublish => 'ANG PINO-POST MO';
 
   @override
   String get safetySettingsShowDivineHostedOnly =>

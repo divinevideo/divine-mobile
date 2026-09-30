@@ -236,9 +236,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get settingsContentSafetyTitle => '콘텐츠 및 안전';
 
   @override
-  String get settingsPrivacyTitle => '개인정보';
-
-  @override
   String get settingsPrivacySubtitle => '공유할 사용 데이터를 선택해요';
 
   @override
@@ -2665,12 +2662,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get notificationSettingsAboutDescription =>
       '알림은 Nostr 프로토콜로 구동돼요. 실시간 업데이트는 Nostr 릴레이에의 연결에 따라 달라져요. 일부 알림은 지연될 수 있어요.';
-
-  @override
-  String get safetySettingsWhatYouSee => '보이는 것';
-
-  @override
-  String get safetySettingsWhatYouPublish => '게시하는 것';
 
   @override
   String get safetySettingsShowDivineHostedOnly => 'Divine이 호스팅하는 영상만 보이기';

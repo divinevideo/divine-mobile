@@ -2993,7 +2993,6 @@
     "peopleListsViewProfileHint": "Visualizza profilo di {name}",
     "settingsGeneralTitle": "Impostazioni generali",
     "settingsContentSafetyTitle": "Contenuti e sicurezza",
-    "settingsPrivacyTitle": "Privacy",
     "settingsPrivacySubtitle": "Scegli quali dati d'uso condividi",
     "privacySettingsAnalyticsSection": "STATISTICHE",
     "privacySettingsShareUsage": "Condividi i dati d'uso",
@@ -3214,8 +3213,6 @@
     "nostrSettingsCouldNotRemoveKeys": "Impossibile rimuovere questo account da questo dispositivo. Riprova.",
     "nostrSettingsDeleteAccount": "Elimina account e dati",
     "nostrSettingsDeleteAccountSubtitle": "Invia richieste di eliminazione per i tuoi contenuti e ti disconnette su questo dispositivo. Relay, client, indici di ricerca e altri dispositivi con l'accesso effettuato potrebbero conservare copie.",
-    "safetySettingsWhatYouSee": "COSA VEDI",
-    "safetySettingsWhatYouPublish": "COSA PUBBLICHI",
     "listPersonCount": "{count, plural, =1{1 persona} other{{count} persone}}",
     "@listPersonCount": {
         "placeholders": {

@@ -265,9 +265,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsContentSafetyTitle => '内容与安全';
 
   @override
-  String get settingsPrivacyTitle => '隐私';
-
-  @override
   String get settingsPrivacySubtitle => '选择你分享哪些使用数据';
 
   @override
@@ -2668,12 +2665,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get notificationSettingsAboutDescription =>
       '通知由 Nostr 协议驱动。实时更新取决于你与 Nostr 中继的连接，部分通知可能会有延迟。';
-
-  @override
-  String get safetySettingsWhatYouSee => '你看到的内容';
-
-  @override
-  String get safetySettingsWhatYouPublish => '你发布的内容';
 
   @override
   String get safetySettingsShowDivineHostedOnly => '只显示 Divine 托管的视频';

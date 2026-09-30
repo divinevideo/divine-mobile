@@ -3147,7 +3147,6 @@
     },
     "settingsGeneralTitle": "Общи настройки",
     "settingsContentSafetyTitle": "Съдържание и безопасност",
-    "settingsPrivacyTitle": "Поверителност",
     "settingsPrivacySubtitle": "Избери какви данни за ползване споделяш",
     "privacySettingsAnalyticsSection": "АНАЛИТИКА",
     "privacySettingsShareUsage": "Споделяй данни за ползване",
@@ -3331,8 +3330,6 @@
     "nostrSettingsCouldNotRemoveKeys": "Не успяхме да махнем този акаунт от това устройство. Опитай пак.",
     "nostrSettingsDeleteAccount": "Изтрий акаунта и данните",
     "nostrSettingsDeleteAccountSubtitle": "Изпраща заявки за изтриване на съдържанието ти и те отписва на това устройство. Релетата, клиентите, индексите за търсене и другите устройства с вход може да запазят копия.",
-    "safetySettingsWhatYouSee": "КАКВО ВИЖДАШ",
-    "safetySettingsWhatYouPublish": "КАКВО ПУБЛИКУВАШ",
     "listPersonCount": "{count, plural, =1{1 човек} other{{count} души}}",
     "@listPersonCount": {
         "placeholders": {

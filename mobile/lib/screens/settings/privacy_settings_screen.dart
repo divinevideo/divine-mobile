@@ -16,7 +16,7 @@ import 'package:openvine/screens/safety_settings_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Settings → Privacy & safety, or the legacy Privacy route.
+/// Settings → Privacy & safety.
 ///
 /// Until #7982 the analytics consent preference had no affordance at all — it
 /// could only be changed by calling `AnalyticsService.setAnalyticsEnabled`
@@ -27,18 +27,13 @@ class PrivacySettingsScreen extends StatelessWidget {
   static const routeName = 'privacy-settings';
   static const String path = RoutePaths.privacySettings;
 
-  const PrivacySettingsScreen({this.combined = false, super.key});
-
-  /// Shows the safety destination when entered from the new Settings menu.
-  final bool combined;
+  const PrivacySettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: DiVineAppBar(
-        title: combined
-            ? context.l10n.settingsPrivacySafetyTitle
-            : context.l10n.settingsPrivacyTitle,
+        title: context.l10n.settingsPrivacySafetyTitle,
         showBackButton: true,
         // Reachable by deep link, where the stack has nothing to pop.
         onBackPressed: () => context.safePop(fallback: RoutePaths.settings),
@@ -61,13 +56,11 @@ class PrivacySettingsScreen extends StatelessWidget {
                 ),
               ),
               const _AnalyticsConsentToggle(),
-              if (combined) ...[
-                DivineListTile(
-                  icon: DivineIconName.shieldCheck,
-                  title: context.l10n.settingsContentSafetyTitle,
-                  onTap: () => context.push(SafetySettingsScreen.path),
-                ),
-              ],
+              DivineListTile(
+                icon: DivineIconName.shieldCheck,
+                title: context.l10n.settingsContentSafetyTitle,
+                onTap: () => context.push(SafetySettingsScreen.path),
+              ),
             ],
           ),
         ),

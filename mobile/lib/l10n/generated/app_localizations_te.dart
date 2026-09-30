@@ -311,9 +311,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get settingsContentSafetyTitle => 'కంటెంట్ & భద్రత';
 
   @override
-  String get settingsPrivacyTitle => 'గోప్యత';
-
-  @override
   String get settingsPrivacySubtitle =>
       'మీరు పంచుకునే వినియోగ డేటాను ఎంచుకోండి';
 
@@ -2950,12 +2947,6 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get notificationSettingsAboutDescription =>
       'నోటిఫికేషన్‌లు Nostr ప్రోటోకాల్ ద్వారా అందించబడతాయి. నిజ-సమయ నవీకరణలు Nostr రిలేలకు మీ కనెక్షన్‌పై ఆధారపడి ఉంటాయి. కొన్ని నోటిఫికేషన్‌లు ఆలస్యం కావచ్చు.';
-
-  @override
-  String get safetySettingsWhatYouSee => 'మీరు ఏమి చూస్తారు';
-
-  @override
-  String get safetySettingsWhatYouPublish => 'మీరు ఏమి ప్రచురించారు';
 
   @override
   String get safetySettingsShowDivineHostedOnly =>
