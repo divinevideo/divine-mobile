@@ -93,7 +93,12 @@ _lr_write_baseline() {
 # Return: 0 loaded (LR_MAIN_BASELINE set); 2 base ref ok but file absent
 # (bootstrap); 1 base ref unresolvable; 3 file exists but blob unreadable.
 _lr_load_base_baseline() {
-  if ! git -C "$LR_REPO_ROOT" rev-parse --verify --quiet "$BASE_REF" >/dev/null 2>&1; then
+  # A depth-limited fetch moves the shallow boundary every linked worktree
+  # shares, so use it only where it can help: restoring origin/main in an
+  # already-shallow checkout, as in CI.
+  if [[ "$BASE_REF" == "origin/main" ]] &&
+     ! git -C "$LR_REPO_ROOT" rev-parse --verify --quiet "$BASE_REF" >/dev/null 2>&1 &&
+     [[ "$(git -C "$LR_REPO_ROOT" rev-parse --is-shallow-repository)" == "true" ]]; then
     git -C "$LR_REPO_ROOT" fetch --quiet --depth=1 origin main 2>/dev/null || true
   fi
   if ! git -C "$LR_REPO_ROOT" rev-parse --verify --quiet "$BASE_REF" >/dev/null 2>&1; then
@@ -170,7 +175,7 @@ run_list_ratchet() {
       else
         echo "FAIL [$RATCHET_LABEL]: could not load the baseline from ${BASE_REF}, so the"
         echo "  growth ratchet cannot be verified — failing closed. Ensure ${BASE_REF} is"
-        echo "  fetched (CI runs 'git fetch --depth=1 origin main' before this guard)."
+        echo "  fetched (git fetch origin main; CI fetches it before this guard)."
         echo "  For a local run without a base ref, set ${ALLOW_NO_BASE_VAR}=1 to skip."
         fail=1
       fi

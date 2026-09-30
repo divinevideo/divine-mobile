@@ -56,7 +56,7 @@ void main() {
       ).writeAsStringSync('# probe baseline\na\t5\nb\t3\n');
       File('${tmp.path}/a').writeAsStringSync('same\n');
       for (final args in [
-        ['init'],
+        ['init', '--initial-branch=main'],
         ['config', 'user.email', 'test@example.invalid'],
         ['config', 'user.name', 'Ratchet Test'],
         ['add', '.'],
@@ -117,6 +117,82 @@ run_numeric_ratchet
       final res = run();
       expect(res.exitCode, 0, reason: res.stdout.toString());
       expect(res.stdout, contains('OK [probe]'));
+    });
+
+    test('missing base ref does not make a full repository shallow', () {
+      final remote = Process.runSync('git', [
+        '-C',
+        tmp.path,
+        'remote',
+        'add',
+        'origin',
+        '.',
+      ]);
+      expect(remote.exitCode, 0, reason: remote.stderr.toString());
+      writeCurrent('a\t5\nb\t3\n');
+      run(update: true);
+
+      final result = run(baseRef: 'origin/main');
+
+      expect(result.exitCode, 0, reason: result.stdout.toString());
+      expect(result.stdout, contains('unavailable; skipping'));
+      final shallow = Process.runSync('git', [
+        '-C',
+        tmp.path,
+        'rev-parse',
+        '--is-shallow-repository',
+      ]);
+      expect(shallow.exitCode, 0);
+      expect(shallow.stdout.toString().trim(), 'false');
+    });
+
+    test('missing base ref does not truncate a shallow repository', () {
+      for (final args in [
+        ['commit', '--allow-empty', '-m', 'second'],
+        ['commit', '--allow-empty', '-m', 'third'],
+        ['remote', 'add', 'origin', '.'],
+        ['fetch', '--quiet', '--depth=2', 'origin', 'main'],
+      ]) {
+        final result = Process.runSync('git', ['-C', tmp.path, ...args]);
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      }
+      String visibleHistory() => Process.runSync('git', [
+        '-C',
+        tmp.path,
+        'rev-list',
+        '--count',
+        'HEAD',
+      ]).stdout.toString().trim();
+      expect(visibleHistory(), equals('2'));
+      writeCurrent('a\t5\nb\t3\n');
+      run(update: true);
+
+      final result = run(baseRef: 'refs/heads/probe-missing-base');
+
+      expect(result.exitCode, 0, reason: result.stdout.toString());
+      expect(result.stdout, contains('unavailable; skipping'));
+      expect(visibleHistory(), equals('2'));
+    });
+
+    test('missing origin/main is fetched into a shallow checkout', () {
+      // CI checks out shallow and has not fetched origin/main yet.
+      for (final args in [
+        ['remote', 'add', 'origin', '.'],
+        ['fetch', '--quiet', '--depth=1', 'origin', 'main'],
+        ['update-ref', '-d', 'refs/remotes/origin/main'],
+      ]) {
+        final result = Process.runSync('git', ['-C', tmp.path, ...args]);
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      }
+      // The baseline committed on main lacks `c`, so only a base ref that was
+      // fetched and loaded can report the addition.
+      writeCurrent('a\t5\nb\t3\nc\t1\n');
+      run(update: true);
+
+      final result = run(baseRef: 'origin/main');
+
+      expect(result.exitCode, 1, reason: result.stdout.toString());
+      expect(result.stdout, contains('ADDED a key'));
     });
 
     test('fails when a key count grows', () {

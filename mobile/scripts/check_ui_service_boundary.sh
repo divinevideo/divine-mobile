@@ -163,7 +163,9 @@ BASELINE="$(baseline_paths)"
 # Callers MUST fail closed on 1/3 — the ratchet cannot be verified.
 MAIN_BASELINE=""
 load_base_baseline() {
-  if ! git -C "$REPO_ROOT" rev-parse --verify --quiet "$BASE_REF" >/dev/null 2>&1; then
+  if [[ "$BASE_REF" == "origin/main" ]] &&
+     ! git -C "$REPO_ROOT" rev-parse --verify --quiet "$BASE_REF" >/dev/null 2>&1 &&
+     [[ "$(git -C "$REPO_ROOT" rev-parse --is-shallow-repository)" == "true" ]]; then
     git -C "$REPO_ROOT" fetch --quiet --depth=1 origin main 2>/dev/null || true
   fi
   if ! git -C "$REPO_ROOT" rev-parse --verify --quiet "$BASE_REF" >/dev/null 2>&1; then
@@ -228,7 +230,7 @@ case "$base_status" in
     else
       echo "FAIL [ui_service_boundary]: could not load the baseline from ${BASE_REF}, so the"
       echo "  growth ratchet cannot be verified — failing closed. Ensure ${BASE_REF} is"
-      echo "  fetched (CI runs 'git fetch --depth=1 origin main' before this guard)."
+      echo "  fetched (git fetch origin main; CI fetches it before this guard)."
       echo "  For a local run without a base ref, set UI_SERVICE_ALLOW_NO_BASE=1 to skip."
       fail=1
     fi

@@ -78,7 +78,9 @@ emit_base() {
   | LC_ALL=C sort -t "$TAB" -k1,1
 }
 
-if ! git -C "$REPO_ROOT" rev-parse --verify --quiet "$BASE_REF" >/dev/null 2>&1; then
+if [[ "$BASE_REF" == "origin/main" ]] &&
+   ! git -C "$REPO_ROOT" rev-parse --verify --quiet "$BASE_REF" >/dev/null 2>&1 &&
+   [[ "$(git -C "$REPO_ROOT" rev-parse --is-shallow-repository)" == "true" ]]; then
   git -C "$REPO_ROOT" fetch --quiet --depth=1 origin main 2>/dev/null || true
 fi
 

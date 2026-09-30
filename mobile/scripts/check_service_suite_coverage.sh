@@ -98,7 +98,9 @@ fi
 base_manifest="${SERVICE_SUITE_BASE_MANIFEST:-}"
 skipped_growth=false
 if [ -z "$base_manifest" ]; then
-  if ! git -C "$REPO_DIR" rev-parse --verify --quiet "$BASE_REF^{commit}" >/dev/null 2>&1; then
+  if [ "$BASE_REF" = "origin/main" ] &&
+     ! git -C "$REPO_DIR" rev-parse --verify --quiet "$BASE_REF^{commit}" >/dev/null 2>&1 &&
+     [ "$(git -C "$REPO_DIR" rev-parse --is-shallow-repository)" = "true" ]; then
     git -C "$REPO_DIR" fetch --quiet --depth=1 origin main 2>/dev/null || true
   fi
   if ! git -C "$REPO_DIR" rev-parse --verify --quiet "$BASE_REF^{commit}" >/dev/null 2>&1; then

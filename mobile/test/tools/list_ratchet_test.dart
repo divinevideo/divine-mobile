@@ -245,6 +245,100 @@ run_list_ratchet
         expect(res.exitCode, 0, reason: res.stdout.toString());
         expect(res.stdout, contains('skipping growth check'));
       });
+
+      test('missing base ref does not make a full repository shallow', () {
+        seedBaseRef(['a']);
+        writeCurrent(['a']);
+        final branch = Process.runSync('git', [
+          '-C',
+          tmp.path,
+          'branch',
+          'main',
+        ]);
+        expect(branch.exitCode, 0, reason: branch.stderr.toString());
+        final remote = Process.runSync('git', [
+          '-C',
+          tmp.path,
+          'remote',
+          'add',
+          'origin',
+          '.',
+        ]);
+        expect(remote.exitCode, 0, reason: remote.stderr.toString());
+
+        final result = run(baseRef: 'origin/main', allowNoBase: true);
+
+        expect(result.exitCode, 0, reason: result.stdout.toString());
+        expect(result.stdout, contains('unavailable; skipping'));
+        final shallow = Process.runSync('git', [
+          '-C',
+          tmp.path,
+          'rev-parse',
+          '--is-shallow-repository',
+        ]);
+        expect(shallow.exitCode, 0);
+        expect(shallow.stdout.toString().trim(), 'false');
+      });
+
+      test('missing base ref does not truncate a shallow repository', () {
+        seedBaseRef(['a']);
+        writeCurrent(['a']);
+        for (final args in [
+          ['commit', '--allow-empty', '-m', 'second'],
+          ['commit', '--allow-empty', '-m', 'third'],
+          ['branch', 'main'],
+          ['remote', 'add', 'origin', '.'],
+          ['fetch', '--quiet', '--depth=2', 'origin', 'main'],
+        ]) {
+          final result = Process.runSync('git', [
+            '-C',
+            tmp.path,
+            '-c',
+            'user.email=probe@example.com',
+            '-c',
+            'user.name=probe',
+            ...args,
+          ]);
+          expect(result.exitCode, 0, reason: result.stderr.toString());
+        }
+        String visibleHistory() => Process.runSync('git', [
+          '-C',
+          tmp.path,
+          'rev-list',
+          '--count',
+          'HEAD',
+        ]).stdout.toString().trim();
+        expect(visibleHistory(), equals('2'));
+
+        final result = run(
+          baseRef: 'refs/heads/probe-missing-base',
+          allowNoBase: true,
+        );
+
+        expect(result.exitCode, 0, reason: result.stdout.toString());
+        expect(result.stdout, contains('unavailable; skipping'));
+        expect(visibleHistory(), equals('2'));
+      });
+
+      test('missing origin/main is fetched into a shallow checkout', () {
+        seedBaseRef(['a']);
+        writeCurrent(['a']);
+        // CI checks out shallow and has not fetched origin/main yet.
+        for (final args in [
+          ['branch', 'main'],
+          ['remote', 'add', 'origin', '.'],
+          ['fetch', '--quiet', '--depth=1', 'origin', 'main'],
+          ['update-ref', '-d', 'refs/remotes/origin/main'],
+        ]) {
+          final result = Process.runSync('git', ['-C', tmp.path, ...args]);
+          expect(result.exitCode, 0, reason: result.stderr.toString());
+        }
+
+        final res = run(baseRef: 'origin/main');
+
+        expect(res.exitCode, 0, reason: res.stdout.toString());
+        expect(res.stdout, contains('ratcheted vs origin/main'));
+      });
     });
   });
 }
