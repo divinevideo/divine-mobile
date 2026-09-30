@@ -2,6 +2,7 @@
 // ABOUTME: a text field for its wording, shared by every caption editor.
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/gestures.dart' show kTouchSlop;
 import 'package:material_ui/material_ui.dart';
 
 /// The editing row for a single caption cue.
@@ -75,6 +76,23 @@ class _CaptionCueRowState extends State<CaptionCueRow> {
     text: widget.text,
   );
   late final FocusNode _focusNode = FocusNode()..addListener(_onFocusChanged);
+
+  /// Where a touch outside the field went down, to tell a tap from the start
+  /// of a scroll when it lifts.
+  Offset? _outsideDownPosition;
+
+  /// Closes the keyboard when a touch outside the field ends as a tap.
+  ///
+  /// Closing on the touch-down would also close it as a scroll of the list
+  /// begins, and the list would jump under the finger as the controls above
+  /// it return.
+  void _onTapUpOutside(PointerUpEvent event) {
+    final down = _outsideDownPosition;
+    _outsideDownPosition = null;
+    if (down == null) return;
+    final slop = MediaQuery.gestureSettingsOf(context).touchSlop ?? kTouchSlop;
+    if ((event.position - down).distance <= slop) _focusNode.unfocus();
+  }
 
   void _onFocusChanged() {
     if (_focusNode.hasFocus) widget.onFocused?.call();
@@ -162,7 +180,9 @@ class _CaptionCueRowState extends State<CaptionCueRow> {
                     // selection toolbar and the other cue fields count as
                     // inside and keep the keyboard up.
                     child: TextFieldTapRegion(
-                      onTapOutside: (_) => _focusNode.unfocus(),
+                      onTapOutside: (event) =>
+                          _outsideDownPosition = event.position,
+                      onTapUpOutside: _onTapUpOutside,
                       child: DivineTextField(
                         controller: _textController,
                         focusNode: _focusNode,

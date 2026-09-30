@@ -60,6 +60,22 @@ void main() {
       );
     });
 
+    testWidgets('keeps the keyboard up while a drag outside scrolls', (
+      tester,
+    ) async {
+      await tester.pumpWidget(pump(text: 'hello'));
+
+      await tester.tap(find.byType(TextField));
+      await tester.pump();
+      await tester.dragFrom(
+        tester.getBottomLeft(find.byType(Scaffold)) - const Offset(-8, 8),
+        const Offset(0, -120),
+      );
+      await tester.pump();
+
+      expect(tester.testTextInput.isVisible, isTrue);
+    });
+
     testWidgets('resyncs text changed by the owning editor', (tester) async {
       await tester.pumpWidget(pump(text: 'before'));
       expect(find.text('before'), findsOneWidget);
