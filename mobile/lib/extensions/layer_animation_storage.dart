@@ -4,6 +4,7 @@
 
 import 'dart:ui';
 
+import 'package:meta/meta.dart';
 import 'package:openvine/models/video_editor/layer_slide_point.dart';
 import 'package:pro_image_editor/core/models/layers/layer.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' as pve;
@@ -100,12 +101,61 @@ Map<String, dynamic> _offsetToMap(Offset offset) => <String, dynamic>{
   'dy': offset.dy,
 };
 
-/// Top-left corner of an exported layer, in the video's pixel space.
+/// Maps editor body coordinates onto the pixels of the frame an export
+/// composites its layers on.
+///
+/// The editor shows the centred target-ratio rect of the body, and the export
+/// keeps the centred target-ratio rect of every clip, so those two rects are
+/// what line up. The frame is not always shaped like the body: a render that
+/// crops after compositing hands over the uncropped recording, but clips
+/// normalized one by one, and the finished track under a detached clip, are
+/// already cropped. Scaling by width alone only fits the first case; on a
+/// cropped square frame it pushed every layer down.
+@immutable
+class ExportLayerMapping {
+  /// Maps [bodySize] onto [frameSize] for an export cropped to
+  /// [targetAspectRatio].
+  factory ExportLayerMapping({
+    required Size bodySize,
+    required Size frameSize,
+    required double targetAspectRatio,
+  }) {
+    final bodyRect = _centredRect(bodySize, targetAspectRatio);
+    final frameRect = _centredRect(frameSize, targetAspectRatio);
+    final scale = frameRect.width / bodyRect.width;
+    return ExportLayerMapping._(
+      scale: scale,
+      origin: frameRect.topLeft - bodyRect.topLeft * scale,
+    );
+  }
+
+  const ExportLayerMapping._({required this.scale, required this.origin});
+
+  /// Body pixels to frame pixels.
+  final double scale;
+
+  /// Where the body's top-left corner lands in the frame.
+  final Offset origin;
+
+  /// Largest rect of [aspectRatio] centred in [size].
+  static Rect _centredRect(Size size, double aspectRatio) {
+    final fitted = size.aspectRatio > aspectRatio
+        ? Size(size.height * aspectRatio, size.height)
+        : Size(size.width, size.width / aspectRatio);
+    return Rect.fromCenter(
+      center: size.center(Offset.zero),
+      width: fitted.width,
+      height: fitted.height,
+    );
+  }
+}
+
+/// Top-left corner of an exported layer, in the pixels of the frame [mapping]
+/// maps onto.
 ///
 /// [anchor] is a point in editor body coordinates measured from the body's
 /// centre — a layer's own [Layer.offset], or the custom slide point a
-/// [LayerSlidePoints] resolves to. [logicalSize] is the layer's unscaled size
-/// and [scale] maps body coordinates onto video pixels.
+/// [LayerSlidePoints] resolves to. [logicalSize] is the layer's unscaled size.
 ///
 /// `ImageLayer.offset` and `LayerAnimation.slideFrom` share this corner
 /// convention, so both are derived here — a layer that slides in from a custom
@@ -115,11 +165,14 @@ Offset exportedLayerTopLeft({
   required Offset anchor,
   required Size bodySize,
   required Size logicalSize,
-  required double scale,
-}) => Offset(
-  (bodySize.width / 2 + anchor.dx - logicalSize.width / 2) * scale,
-  (bodySize.height / 2 + anchor.dy - logicalSize.height / 2) * scale,
-);
+  required ExportLayerMapping mapping,
+}) =>
+    mapping.origin +
+    Offset(
+          bodySize.width / 2 + anchor.dx - logicalSize.width / 2,
+          bodySize.height / 2 + anchor.dy - logicalSize.height / 2,
+        ) *
+        mapping.scale;
 
 /// Resolves a layer's animations for the export pipeline, folding in any custom
 /// slide point stored on [Layer.meta].
@@ -128,8 +181,8 @@ extension LayerExportAnimations on Layer {
   /// `LayerAnimation.slideFrom`, in the video's pixel space.
   ///
   /// [bodySize] is the editor body the layer was laid out against,
-  /// [logicalSize] the layer's unscaled size, and [scale] the body-to-video
-  /// pixel factor — the same three values [exportedLayerTopLeft] maps the
+  /// [logicalSize] the layer's unscaled size, and [mapping] the body-to-video
+  /// transform — the same three values [exportedLayerTopLeft] maps the
   /// layer's resting offset with.
   ///
   /// A phase without a custom point keeps its `slideDirection` and travels from
@@ -140,7 +193,7 @@ extension LayerExportAnimations on Layer {
   List<pve.LayerAnimation> divineAnimationsForExport({
     required Size bodySize,
     required Size logicalSize,
-    required double scale,
+    required ExportLayerMapping mapping,
   }) {
     final animations = divineAnimations;
     final points = LayerSlidePoints.of(this);
@@ -156,7 +209,7 @@ extension LayerExportAnimations on Layer {
               anchor: anchor,
               bodySize: bodySize,
               logicalSize: logicalSize,
-              scale: scale,
+              mapping: mapping,
             ),
           )
         else

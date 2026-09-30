@@ -6,7 +6,7 @@ import 'dart:ui' show Size;
 
 import 'package:meta/meta.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart'
-    show exportedLayerTopLeft;
+    show ExportLayerMapping, exportedLayerTopLeft;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
@@ -152,7 +152,7 @@ Size unrotatedLayerBox({
 
 /// Builds the composition layer that places [item] over the base track.
 ///
-/// Placement uses the same body-space scale and centre-relative offset
+/// Placement uses the same [ExportLayerMapping] and centre-relative offset
 /// convention as `VideoEditorRenderService.buildImageLayers`, but recovers the
 /// unrotated box and passes rotation separately: detached clips are composited
 /// from their video rather than the rotated raster used for image layers.
@@ -176,10 +176,15 @@ VideoLayer buildDetachedClipVideoLayer({
   required EditorVideo resolvedVideo,
   required Size bodySize,
   required Size videoSize,
+  required double targetAspectRatio,
   required TransitionTimelineMap timelineMap,
   required bool speedFlattened,
 }) {
-  final scale = videoSize.width / bodySize.width;
+  final mapping = ExportLayerMapping(
+    bodySize: bodySize,
+    frameSize: videoSize,
+    targetAspectRatio: targetAspectRatio,
+  );
   final layer = item.layer;
   final clip = item.clip;
 
@@ -196,9 +201,9 @@ VideoLayer buildDetachedClipVideoLayer({
     anchor: layer.offset,
     bodySize: bodySize,
     logicalSize: box,
-    scale: scale,
+    mapping: mapping,
   );
-  final size = Size(box.width * scale, box.height * scale);
+  final size = Size(box.width * mapping.scale, box.height * mapping.scale);
 
   final start = timelineMap.editorToOutputOrNull(layer.startTime);
   final end = timelineMap.editorToOutputOrNull(layer.endTime);
