@@ -65,7 +65,6 @@ discarded_futures|test/helpers/service_init_helper.dart	2
 discarded_futures|test/helpers/video_feed_builder_streaming_test.dart	1
 discarded_futures|test/helpers/video_feed_builder_test.dart	1
 discarded_futures|test/in_memory/in_memory_auth_service.dart	1
-discarded_futures|test/infrastructure/drift_setup_test.dart	1
 discarded_futures|test/mocks/mock_subscription_manager.dart	1
 discarded_futures|test/providers/deep_link_provider_test.dart	2
 discarded_futures|test/providers/subtitle_visibility_test.dart	1
