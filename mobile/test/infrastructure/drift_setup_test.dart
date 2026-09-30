@@ -42,10 +42,10 @@ void main() {
       }
     });
 
-    test('AppDatabase can be instantiated', () {
+    test('AppDatabase can be instantiated', () async {
       final db = AppDatabase.test(NativeDatabase(File(testDbPath)));
       expect(db, isNotNull);
-      db.close();
+      await db.close();
     });
 
     test('AppDatabase uses correct shared database path', () async {
