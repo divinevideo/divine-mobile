@@ -474,6 +474,11 @@ class ClipsDao extends DatabaseAccessor<AppDatabase> with _$ClipsDaoMixin {
   /// `file_path` to the keyed render, which makes the pre-key original look
   /// orphaned to the draft-save diff — but the clip still needs it to undo or
   /// re-tune the key.
+  ///
+  /// `backgroundVideo` is another library clip's file, played behind the
+  /// subject. Deleting that clip must not delete the file while a key still
+  /// renders it: a recorded key waiting to bake, or a baked one that can be
+  /// re-tuned.
   static const _jsonFilePathKeys = {
     'filePath',
     'thumbnailPath',
@@ -482,6 +487,7 @@ class ClipsDao extends DatabaseAccessor<AppDatabase> with _$ClipsDaoMixin {
     'reversedVideoPath',
     'chromaKeySourcePath',
     'backgroundImage',
+    'backgroundVideo',
     'path',
   };
 

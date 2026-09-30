@@ -24,6 +24,7 @@ import 'package:openvine/l10n/current_app_l10n.dart';
 import 'package:openvine/l10n/email_verification_error_l10n.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/creator_sync_provider.dart';
 import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/layer_rasterizer_provider.dart';
@@ -242,6 +243,9 @@ VideoPublishService createBackgroundPublishService(
   return VideoPublishService(
     rerenderDraft: DraftRenderParametersService(
       rasterizer: ref.read(layerRasterizerProvider),
+      bakeCapturedChromaKey: ref
+          .read(clipManagerProvider.notifier)
+          .bakeCapturedChromaKey,
     ).renderDraft,
     uploadManager: ref.read(uploadManagerProvider),
     authService: ref.read(authServiceProvider),

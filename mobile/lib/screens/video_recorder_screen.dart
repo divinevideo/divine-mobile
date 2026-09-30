@@ -25,8 +25,10 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/widgets/camera_permission_gate.dart';
+import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_shader.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_capture_stack.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_stop_motion_budget.dart';
+import 'package:openvine/widgets/video_recorder/modes/chroma_key/video_recorder_chroma_key_stack.dart';
 import 'package:openvine/widgets/video_recorder/modes/classic/video_recorder_classic_stack.dart';
 import 'package:openvine/widgets/video_recorder/modes/lip_sync/video_recorder_lip_sync_stack.dart';
 import 'package:openvine/widgets/video_recorder/modes/upload/video_recorder_upload_stack.dart';
@@ -176,6 +178,7 @@ class _VideoRecorderBlocScope extends ConsumerWidget {
         performanceMonitor: ref.read(performanceMonitoringServiceProvider),
         onRecordingStarted: (mode) =>
             unawaited(creationAnalyticsTracker.recordingStarted(mode)),
+        liveChromaKeySupported: ChromaKeyShader.isBackendSupported,
       ),
       child: child,
     );
@@ -572,6 +575,7 @@ class _VideoRecorderScaffold extends StatelessWidget {
                     topBarCenter: const VideoRecorderStopMotionBudget(),
                   ),
                   .lipSync => const VideoRecorderLipSyncStack(),
+                  .chromaKey => const VideoRecorderChromaKeyStack(),
                   .classic => const VideoRecorderClassicStack(),
                 },
               ),

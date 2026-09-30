@@ -410,6 +410,17 @@ class ClipEditorChromaKeyRemoved extends ClipEditorEvent {
   List<Object?> get props => [clipId];
 }
 
+/// Bake the key into every clip recorded in chroma key mode that still
+/// waits for it — see [DivineVideoClip.captureChromaKey].
+///
+/// The recorder only previews the key and writes the raw camera footage, so
+/// this is where a chroma-key take becomes the composite the user saw.
+/// Dispatched once the editor holds its clips, and again whenever clips join
+/// it; clips without a pending key are left alone, so a repeat is cheap.
+class ClipEditorCapturedChromaKeysBakeRequested extends ClipEditorEvent {
+  const ClipEditorCapturedChromaKeysBakeRequested();
+}
+
 // === DETACH ===
 
 /// Lift the clip with [clipId] out of the timeline so it can be placed freely

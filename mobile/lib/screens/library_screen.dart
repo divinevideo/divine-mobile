@@ -502,6 +502,13 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
 
     final clipsBloc = context.read<ClipsLibraryBloc>();
 
+    // A chroma-key take recorded just before the library opened can still be
+    // baking; when its keyed file lands, show that instead of the raw take.
+    ref.listen(
+      clipManagerProvider.select((s) => s.libraryRevision),
+      (_, _) => clipsBloc.add(const ClipsLibraryClipsChanged()),
+    );
+
     return MultiBlocListener(
       listeners: [
         BlocListener<ClipsLibraryBloc, ClipsLibraryState>(

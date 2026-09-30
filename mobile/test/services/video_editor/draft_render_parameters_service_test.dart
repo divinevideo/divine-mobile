@@ -11,10 +11,12 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/aspect_ratio_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/services/video_editor/draft_render_parameters_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show ChromaKey, EditorVideo;
 
 DivineVideoClip _clip() => DivineVideoClip(
   id: 'clip_1',
@@ -134,6 +136,60 @@ void main() {
         },
       );
     }
+
+    test('renders a take still waiting on its recorded key keyed', () async {
+      final pending = _clip().copyWith(
+        captureChromaKey: const ClipChromaKey(key: ChromaKey.greenScreen()),
+      );
+      List<DivineVideoClip>? rendered;
+      VideoEditorRenderService.renderVideoToClipOverride =
+          ({
+            required clips,
+            required editorStateHistory,
+            parameters,
+            taskId,
+          }) async {
+            rendered = clips;
+            return (_clip(), null);
+          };
+
+      await DraftRenderParametersService(
+        rasterizer: rasterizer,
+        bakeCapturedChromaKey: (clip) async => clip.copyWith(
+          video: EditorVideo.file('/tmp/keyed.mp4'),
+          chromaKey: clip.captureChromaKey,
+        ),
+      ).renderDraft(_draft().copyWith(clips: [pending]));
+
+      expect(rendered?.single.video?.file?.path, '/tmp/keyed.mp4');
+      expect(rendered?.single.hasPendingCaptureChromaKey, isFalse);
+    });
+
+    test('does not render a take whose recorded key failed to bake', () async {
+      final pending = _clip().copyWith(
+        captureChromaKey: const ClipChromaKey(key: ChromaKey.greenScreen()),
+      );
+      var rendered = false;
+      VideoEditorRenderService.renderVideoToClipOverride =
+          ({
+            required clips,
+            required editorStateHistory,
+            parameters,
+            taskId,
+          }) async {
+            rendered = true;
+            return (_clip(), null);
+          };
+
+      await expectLater(
+        DraftRenderParametersService(
+          rasterizer: rasterizer,
+          bakeCapturedChromaKey: (_) async => throw StateError('bake failed'),
+        ).renderDraft(_draft().copyWith(clips: [pending])),
+        throwsStateError,
+      );
+      expect(rendered, isFalse);
+    });
 
     test('returns null when the draft carries no editor state', () async {
       expect(await service.buildForDraft(_draft()), isNull);

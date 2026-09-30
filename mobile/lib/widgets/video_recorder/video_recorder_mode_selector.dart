@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
@@ -23,11 +24,16 @@ class VideoRecorderModeSelectorWheel extends StatefulWidget {
   const VideoRecorderModeSelectorWheel({
     required this.selectedMode,
     required this.onModeChanged,
+    this.modes = VideoRecorderMode.values,
     super.key,
   });
 
   final VideoRecorderMode selectedMode;
   final ValueChanged<VideoRecorderMode> onModeChanged;
+
+  /// The modes offered, in wheel order. Defaults to every mode; a device that
+  /// cannot show one leaves it out — see [VideoRecorderMode.available].
+  final List<VideoRecorderMode> modes;
 
   @override
   State<VideoRecorderModeSelectorWheel> createState() =>
@@ -62,15 +68,18 @@ class _VideoRecorderModeSelectorWheelState
   @override
   void initState() {
     super.initState();
-    _selectedIndex = VideoRecorderMode.values.indexOf(widget.selectedMode);
-    _snapOffsets = _snapOffsetsFor(_itemWidths(TextScaler.noScaling));
+    _selectedIndex = _indexOf(widget.selectedMode);
+    _snapOffsets = _snapOffsetsFor(
+      _itemWidths(TextScaler.noScaling, (mode) => mode.label),
+    );
     _scrollController = ScrollController(
       initialScrollOffset: _snapOffsets[_selectedIndex],
     );
-    // The initial offset is measured at noScaling; the first build recomputes
-    // _snapOffsets from the actual (clamped) text scaler. Under a larger system
-    // font those widths differ, leaving the pre-selected mode off-centre until
-    // the user scrolls — recenter once the scaled offsets are known.
+    // The initial offset is measured at noScaling, with the English labels
+    // since localizations cannot be read yet; the first build recomputes
+    // _snapOffsets from the actual (clamped) text scaler and the labels it
+    // shows. Where those widths differ, the pre-selected mode would sit
+    // off-centre until the user scrolls — recenter once the offsets are known.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollController.hasClients) return;
       final target = _snapOffsets[_selectedIndex];
@@ -84,7 +93,7 @@ class _VideoRecorderModeSelectorWheelState
   void didUpdateWidget(VideoRecorderModeSelectorWheel oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.selectedMode != widget.selectedMode) {
-      final index = VideoRecorderMode.values.indexOf(widget.selectedMode);
+      final index = _indexOf(widget.selectedMode);
       // Self-originated changes (tap/snap) already animated to this index.
       if (index == _selectedIndex) return;
       setState(() => _selectedIndex = index);
@@ -100,6 +109,11 @@ class _VideoRecorderModeSelectorWheelState
     _scrollController.dispose();
     super.dispose();
   }
+
+  /// Wheel position of [mode]. A mode the wheel does not offer lands on the
+  /// first entry rather than on an index that does not exist.
+  int _indexOf(VideoRecorderMode mode) =>
+      math.max(0, widget.modes.indexOf(mode));
 
   void _jumpTo(int index) {
     if (!_scrollController.hasClients) return;
@@ -177,7 +191,7 @@ class _VideoRecorderModeSelectorWheelState
       logName: 'VideoRecorderModeSelectorWheel',
       category: LogCategory.ui,
     );
-    widget.onModeChanged(VideoRecorderMode.values[index]);
+    widget.onModeChanged(widget.modes[index]);
   }
 
   /// Rendered width of [label] at [textScaler].
@@ -200,9 +214,12 @@ class _VideoRecorderModeSelectorWheelState
 
   /// Width of each item — its label plus a constant [_labelGap] — so the
   /// spacing between adjacent labels stays uniform regardless of text width.
-  List<double> _itemWidths(TextScaler textScaler) => [
-    for (final mode in VideoRecorderMode.values)
-      _textWidth(mode.label, textScaler) + _labelGap,
+  List<double> _itemWidths(
+    TextScaler textScaler,
+    String Function(VideoRecorderMode mode) labelOf,
+  ) => [
+    for (final mode in widget.modes)
+      _textWidth(labelOf(mode), textScaler) + _labelGap,
   ];
 
   /// Scroll offset that centers each item, derived from [itemWidths]. The
@@ -225,9 +242,13 @@ class _VideoRecorderModeSelectorWheelState
 
   @override
   Widget build(BuildContext context) {
-    const modes = VideoRecorderMode.values;
+    final modes = widget.modes;
+    final l10n = context.l10n;
     final textScaler = context.textScaler.clamp(maxScaleFactor: 1.3);
-    final itemWidths = _itemWidths(textScaler);
+    final itemWidths = _itemWidths(
+      textScaler,
+      (mode) => mode.wheelLabel(l10n),
+    );
     _snapOffsets = _snapOffsetsFor(itemWidths);
     final pendingJumpIndex = _pendingJumpIndex;
     if (pendingJumpIndex != null) {
@@ -239,7 +260,6 @@ class _VideoRecorderModeSelectorWheelState
     }
     final colors = context.vineColors;
     final isLight = colors.isLight;
-    final l10n = context.l10n;
     return LayoutBuilder(
       builder: (context, constraints) {
         final leadingPadding = (constraints.maxWidth - itemWidths.first) / 2;
@@ -255,7 +275,10 @@ class _VideoRecorderModeSelectorWheelState
                   duration: _animationDuration.autoReduceMotion(context),
                   curve: Curves.easeInOut,
                   height: _pillHeight,
-                  width: _pillWidth(modes[_selectedIndex].label, textScaler),
+                  width: _pillWidth(
+                    modes[_selectedIndex].wheelLabel(l10n),
+                    textScaler,
+                  ),
                   decoration: BoxDecoration(
                     color: colors.surfaceContainer,
                     borderRadius: .circular(_pillHeight / 2),
@@ -294,15 +317,14 @@ class _VideoRecorderModeSelectorWheelState
                   itemCount: modes.length,
                   itemBuilder: (context, i) {
                     final isSelected = i == _selectedIndex;
+                    final label = modes[i].wheelLabel(l10n);
                     return SizedBox(
                       width: itemWidths[i],
                       child: Semantics(
                         identifier: SemanticIds.cameraMode(modes[i].name),
                         label: isSelected
-                            ? modes[i].label
-                            : l10n.videoRecorderSwitchToModeLabel(
-                                modes[i].label,
-                              ),
+                            ? label
+                            : l10n.videoRecorderSwitchToModeLabel(label),
                         selected: isSelected,
                         button: true,
                         child: GestureDetector(
@@ -326,7 +348,7 @@ class _VideoRecorderModeSelectorWheelState
                               ),
                               child: ExcludeSemantics(
                                 child: Text(
-                                  modes[i].label,
+                                  label,
                                   maxLines: 1,
                                   overflow: TextOverflow.visible,
                                   softWrap: false,
@@ -355,6 +377,16 @@ class _VideoRecorderModeSelectorWheelState
       },
     );
   }
+}
+
+extension on VideoRecorderMode {
+  /// What the wheel shows for this mode. Chroma key shares the editor's
+  /// localized name; the other modes keep the English labels they had before
+  /// it.
+  String wheelLabel(AppLocalizations l10n) => switch (this) {
+    VideoRecorderMode.chromaKey => l10n.videoEditorChromaKeyLabel,
+    _ => label,
+  };
 }
 
 /// Fades the wheel's labels out towards both edges by painting [color] — the

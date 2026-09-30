@@ -44,6 +44,7 @@ import 'package:openvine/providers/video_reply_context_provider.dart';
 import 'package:openvine/services/c2pa_signing_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/file_cleanup_service.dart';
+import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
@@ -1416,6 +1417,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     // re-attributing this one, and start stays fire-and-forget so render
     // dispatch is synchronous (the overlapping-render test relies on that).
     final performance = ref.read(performanceMonitoringServiceProvider);
+    final clipManager = ref.read(clipManagerProvider.notifier);
     final trace = performance.startOperationTrace('video_generation');
     final clipCount = _clips.length;
     final aspectRatio = _clips.isEmpty
@@ -1426,8 +1428,17 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     try {
       final renderParameters = _buildRenderParameters();
 
+      final clips = _clips;
       final result = await VideoEditorRenderService.renderVideoToClip(
-        clips: _clips,
+        // A take whose recorded key failed to bake is keyed now, never
+        // exported raw. Awaited only then: without one, the render must still
+        // be dispatched synchronously.
+        clips: clips.any((clip) => clip.hasPendingCaptureChromaKey)
+            ? await bakePendingCapturedChromaKeys(
+                clips,
+                clipManager.bakeCapturedChromaKey,
+              )
+            : clips,
         parameters: renderParameters,
         editorStateHistory: state.editorStateHistory,
         taskId: draftId,

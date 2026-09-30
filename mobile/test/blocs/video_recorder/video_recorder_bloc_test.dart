@@ -14,6 +14,7 @@ import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_recorder/camera_initialization_error.dart';
 import 'package:openvine/models/video_recorder/video_recorder_flash_mode.dart';
@@ -33,6 +34,7 @@ import 'package:sound_service/sound_service.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:wakelock_plus_platform_interface/wakelock_plus_platform_interface.dart';
 
+import '../../helpers/test_helpers.dart' show TestHelpers;
 import '../../mocks/mock_path_provider_platform.dart';
 
 class _MockCameraService extends Mock implements CameraService {}
@@ -241,6 +243,7 @@ void main() {
   VideoRecorderBloc buildBloc({
     RecordingStartedCallback? onRecordingStarted,
     CameraServiceFactory? cameraServiceFactory,
+    bool liveChromaKeySupported = false,
   }) {
     return VideoRecorderBloc(
       readClipManager: () => clipManager,
@@ -250,6 +253,7 @@ void main() {
       cameraService: cameraServiceFactory == null ? cameraService : null,
       cameraServiceFactory: cameraServiceFactory ?? CameraService.create,
       onRecordingStarted: onRecordingStarted,
+      liveChromaKeySupported: liveChromaKeySupported,
     );
   }
 
@@ -1560,6 +1564,27 @@ void main() {
         },
       );
 
+      test('reports footage as captured only once the countdown is over', () {
+        fakeAsync((async) {
+          final bloc = buildCountdownBloc();
+          bloc.add(const VideoRecorderRecordingStartRequested());
+          async.flushMicrotasks();
+
+          // Recording already for the countdown, but nothing is written yet —
+          // a chroma-key video backdrop must not start playing here.
+          expect(bloc.state.isRecording, isTrue);
+          expect(bloc.state.isCapturingFootage, isFalse);
+
+          async.elapse(const Duration(seconds: 3));
+          async.flushMicrotasks();
+
+          expect(bloc.state.isCapturingFootage, isTrue);
+
+          unawaited(bloc.close());
+          async.flushMicrotasks();
+        });
+      });
+
       test('leaves the mic alone when the timer is off', () {
         fakeAsync((async) {
           // Same wiring, but the default state has no timer set.
@@ -1701,6 +1726,7 @@ void main() {
               targetAspectRatio: any(named: 'targetAspectRatio'),
               lensMetadata: any(named: 'lensMetadata'),
               limitClipDuration: any(named: 'limitClipDuration'),
+              captureChromaKey: any(named: 'captureChromaKey'),
             ),
           ).thenReturn(
             DivineVideoClip(
@@ -1743,6 +1769,7 @@ void main() {
               targetAspectRatio: any(named: 'targetAspectRatio'),
               lensMetadata: any(named: 'lensMetadata'),
               limitClipDuration: any(named: 'limitClipDuration'),
+              captureChromaKey: any(named: 'captureChromaKey'),
             ),
           ).called(1);
         },
@@ -1884,6 +1911,7 @@ void main() {
               targetAspectRatio: any(named: 'targetAspectRatio'),
               lensMetadata: any(named: 'lensMetadata'),
               limitClipDuration: false,
+              captureChromaKey: any(named: 'captureChromaKey'),
             ),
           ).thenReturn(
             DivineVideoClip(
@@ -1927,6 +1955,7 @@ void main() {
               targetAspectRatio: any(named: 'targetAspectRatio'),
               lensMetadata: any(named: 'lensMetadata'),
               limitClipDuration: false,
+              captureChromaKey: any(named: 'captureChromaKey'),
             ),
           ).called(1);
           verifyNever(() => cameraService.stopRecording());
@@ -1980,6 +2009,7 @@ void main() {
                 targetAspectRatio: any(named: 'targetAspectRatio'),
                 lensMetadata: any(named: 'lensMetadata'),
                 limitClipDuration: any(named: 'limitClipDuration'),
+                captureChromaKey: any(named: 'captureChromaKey'),
               ),
             );
           },
@@ -2118,6 +2148,7 @@ void main() {
               targetAspectRatio: any(named: 'targetAspectRatio'),
               lensMetadata: any(named: 'lensMetadata'),
               limitClipDuration: any(named: 'limitClipDuration'),
+              captureChromaKey: any(named: 'captureChromaKey'),
             ),
           ).thenReturn(
             DivineVideoClip(
@@ -2167,6 +2198,18 @@ void main() {
       late File recordingFile;
       late ProVideoEditor originalProVideoEditor;
       late PathProviderPlatform originalPathProvider;
+      late bool workCopyRead;
+
+      /// Waits until enrichment has read the recording's work copy and then
+      /// deleted it, the last thing it does. Its file IO finishes off the
+      /// event loop, so a fixed number of queue turns can run out first.
+      Future<void> enrichmentSettled() => TestHelpers.waitForCondition(
+        () =>
+            workCopyRead &&
+            !File('${recordingFile.path}.work.mp4').existsSync(),
+        checkInterval: const Duration(milliseconds: 10),
+        description: 'detached enrichment to delete its work copy',
+      );
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'saves the common track end after detached enrichment settles',
@@ -2177,9 +2220,11 @@ void main() {
             ..setApplicationDocumentsPath(docsDir.path)
             ..setTemporaryPath(docsDir.path);
 
+          workCopyRead = false;
           final editor = _MockProVideoEditor();
-          when(() => editor.getMetadata(any())).thenAnswer(
-            (_) async => VideoMetadata(
+          when(() => editor.getMetadata(any())).thenAnswer((_) async {
+            workCopyRead = true;
+            return VideoMetadata(
               duration: const Duration(milliseconds: 6033),
               audioDuration: const Duration(milliseconds: 5998),
               extension: 'mp4',
@@ -2187,8 +2232,8 @@ void main() {
               resolution: const Size(720, 1280),
               rotation: 0,
               bitrate: 2000000,
-            ),
-          );
+            );
+          });
           when(() => editor.getThumbnails(any())).thenAnswer(
             (_) async => [
               Uint8List.fromList(const [1, 2, 3]),
@@ -2225,6 +2270,7 @@ void main() {
               targetAspectRatio: any(named: 'targetAspectRatio'),
               lensMetadata: any(named: 'lensMetadata'),
               limitClipDuration: any(named: 'limitClipDuration'),
+              captureChromaKey: any(named: 'captureChromaKey'),
             ),
           ).thenReturn(currentClip);
           when(() => clipManager.updateClipDuration(any(), any())).thenAnswer((
@@ -2271,7 +2317,7 @@ void main() {
           ),
         act: (bloc) async {
           bloc.add(const VideoRecorderRecordingStopRequested());
-          await pumpEventQueue(times: 100);
+          await enrichmentSettled();
         },
         verify: (_) {
           verify(
@@ -2293,6 +2339,121 @@ void main() {
       );
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'keeps the poster of a take the editor keyed before enrichment',
+        setUp: () {
+          docsDir = Directory.systemTemp.createTempSync('rec_enrich_docs');
+          originalPathProvider = PathProviderPlatform.instance;
+          PathProviderPlatform.instance = MockPathProviderPlatform()
+            ..setApplicationDocumentsPath(docsDir.path)
+            ..setTemporaryPath(docsDir.path);
+
+          workCopyRead = false;
+          final editor = _MockProVideoEditor();
+          when(() => editor.getMetadata(any())).thenAnswer((_) async {
+            workCopyRead = true;
+            return VideoMetadata.fromMap(const {'duration': 2000}, 'mp4');
+          });
+          when(() => editor.getThumbnails(any())).thenAnswer(
+            (_) async => [
+              Uint8List.fromList(const [1, 2, 3]),
+            ],
+          );
+          when(
+            () => editor.getSingleThumbnail(any()),
+          ).thenAnswer((_) async => Uint8List.fromList(const [1, 2, 3]));
+          originalProVideoEditor = ProVideoEditor.instance;
+          ProVideoEditor.instance = editor;
+
+          recordingFile = File('${docsDir.path}/recording.mp4')
+            ..writeAsStringSync('recorded clip');
+          final recorded = _MockEditorVideo();
+          when(
+            recorded.safeFilePath,
+          ).thenAnswer((_) async => recordingFile.path);
+          when(
+            () => cameraService.stopRecording(),
+          ).thenAnswer((_) async => recorded);
+
+          final take = DivineVideoClip(
+            id: 'keyed-take',
+            video: recorded,
+            duration: const Duration(seconds: 2),
+            recordedAt: DateTime(2024),
+            targetAspectRatio: model.AspectRatio.vertical,
+            originalAspectRatio: 9 / 16,
+          );
+          when(
+            () => clipManager.addClip(
+              video: any(named: 'video'),
+              originalAspectRatio: any(named: 'originalAspectRatio'),
+              targetAspectRatio: any(named: 'targetAspectRatio'),
+              lensMetadata: any(named: 'lensMetadata'),
+              limitClipDuration: any(named: 'limitClipDuration'),
+              captureChromaKey: any(named: 'captureChromaKey'),
+            ),
+          ).thenReturn(take);
+          // The editor opened on the take first and already keyed it, with a
+          // poster of the composite.
+          when(() => clipManager.getClipById('keyed-take')).thenReturn(
+            take.copyWith(
+              chromaKey: const ClipChromaKey(key: ChromaKey.greenScreen()),
+            ),
+          );
+          when(
+            () => clipManager.updateClipDuration(any(), any()),
+          ).thenAnswer((_) {});
+          when(
+            () => clipManager.updateThumbnail(
+              clipId: any(named: 'clipId'),
+              thumbnailPath: any(named: 'thumbnailPath'),
+              thumbnailTimestamp: any(named: 'thumbnailTimestamp'),
+            ),
+          ).thenAnswer((_) {});
+          when(
+            () => clipManager.updateGhostFrame(
+              clipId: any(named: 'clipId'),
+              ghostFramePath: any(named: 'ghostFramePath'),
+            ),
+          ).thenAnswer((_) {});
+          when(() => clipManager.clips).thenReturn(const []);
+          when(
+            () => clipManager.saveClipToLibrary(any()),
+          ).thenAnswer((_) async => true);
+        },
+        tearDown: () {
+          ProVideoEditor.instance = originalProVideoEditor;
+          PathProviderPlatform.instance = originalPathProvider;
+          if (docsDir.existsSync()) docsDir.deleteSync(recursive: true);
+        },
+        build: () => buildBloc()
+          ..emit(
+            const VideoRecorderBlocState(
+              recordingState: VideoRecorderState.recording,
+            ),
+          ),
+        act: (bloc) async {
+          bloc.add(const VideoRecorderRecordingStopRequested());
+          await enrichmentSettled();
+        },
+        verify: (_) {
+          // Enrichment reached the poster step, and left the keyed one alone.
+          verify(
+            () => clipManager.updateGhostFrame(
+              clipId: 'keyed-take',
+              ghostFramePath: any(named: 'ghostFramePath'),
+            ),
+          ).called(1);
+          verifyNever(
+            () => clipManager.updateThumbnail(
+              clipId: any(named: 'clipId'),
+              thumbnailPath: any(named: 'thumbnailPath'),
+              thumbnailTimestamp: any(named: 'thumbnailTimestamp'),
+            ),
+          );
+        },
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'skips the enriched save and still deletes the work copy when the clip '
         'is gone before the metadata save — the work copy must not leak',
         setUp: () {
@@ -2305,10 +2466,12 @@ void main() {
             ..setApplicationDocumentsPath(docsDir.path)
             ..setTemporaryPath(docsDir.path);
 
+          workCopyRead = false;
           final editor = _MockProVideoEditor();
-          when(() => editor.getMetadata(any())).thenAnswer(
-            (_) async => VideoMetadata.fromMap(const {'duration': 2000}, 'mp4'),
-          );
+          when(() => editor.getMetadata(any())).thenAnswer((_) async {
+            workCopyRead = true;
+            return VideoMetadata.fromMap(const {'duration': 2000}, 'mp4');
+          });
           when(() => editor.getThumbnails(any())).thenAnswer(
             (_) async => [
               Uint8List.fromList(const [1, 2, 3]),
@@ -2336,6 +2499,7 @@ void main() {
               targetAspectRatio: any(named: 'targetAspectRatio'),
               lensMetadata: any(named: 'lensMetadata'),
               limitClipDuration: any(named: 'limitClipDuration'),
+              captureChromaKey: any(named: 'captureChromaKey'),
             ),
           ).thenReturn(
             DivineVideoClip(
@@ -2367,7 +2531,7 @@ void main() {
           ),
         act: (bloc) async {
           bloc.add(const VideoRecorderRecordingStopRequested());
-          await pumpEventQueue(times: 100);
+          await enrichmentSettled();
         },
         verify: (_) {
           // Only the bare clip save ran; the enriched save was skipped because
@@ -2928,15 +3092,21 @@ void main() {
         ).thenReturn(mode);
 
         // Classic hides the control; Stop Motion captures stills, which the
-        // stabilization never reaches, so only the preview would be cropped.
+        // stabilization never reaches, so only the preview would be cropped;
+        // Chroma Key composites its backdrop live against the preview, which
+        // look-ahead stabilization delays behind the file.
         for (final mode in [
           VideoRecorderMode.classic,
           VideoRecorderMode.stopMotion,
+          VideoRecorderMode.chromaKey,
         ]) {
           blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
             'turns stabilization off in ${mode.name}, keeping the saved choice',
             setUp: () => cameraRuns(DivineVideoStabilizationMode.cinematic),
-            build: buildBloc,
+            // Chroma Key is only offered where the key renders live.
+            build: () => buildBloc(
+              liveChromaKeySupported: mode == VideoRecorderMode.chromaKey,
+            ),
             act: (bloc) => bloc.add(VideoRecorderRecorderModeSet(mode)),
             verify: (_) {
               verify(
@@ -3841,6 +4011,7 @@ void main() {
               originalAspectRatio: any(named: 'originalAspectRatio'),
               targetAspectRatio: any(named: 'targetAspectRatio'),
               limitClipDuration: any(named: 'limitClipDuration'),
+              captureChromaKey: any(named: 'captureChromaKey'),
               duration: any(named: 'duration'),
               thumbnailPath: any(named: 'thumbnailPath'),
               lensMetadata: any(named: 'lensMetadata'),

@@ -1,7 +1,6 @@
 // ABOUTME: Full-screen progress overlays for the long-running clip operations
-// ABOUTME: (reverse, transform, detach, backdrop, merge, library import) that
-// ABOUTME: block the
-// ABOUTME: editor.
+// ABOUTME: (reverse, transform, detach, backdrop, merge, library import,
+// ABOUTME: recorded chroma key) that block the editor.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -33,6 +32,7 @@ class ClipOperationProgressOverlays extends StatelessWidget {
         _BackdropProgressOverlay(),
         _MergeProgressOverlay(),
         _LibraryImportProgressOverlay(),
+        _CapturedChromaKeyProgressOverlay(),
       ],
     );
   }
@@ -328,6 +328,37 @@ class _LibraryImportProgressOverlay extends StatelessWidget {
                   label: import.intoStills
                       ? context.l10n.videoEditorLibraryImportStillsProgressLabel
                       : context.l10n.videoEditorLibraryImportProgressLabel,
+                ),
+        );
+      },
+    );
+  }
+}
+
+/// Full-screen progress overlay shown while clips recorded in chroma key mode
+/// have the key they were recorded with baked in.
+///
+/// Covers the editor like the other renders: until the bake lands the timeline
+/// still holds the raw take, so an edit or a publish started now would work on
+/// footage the user never saw. The render id moves on clip by clip, and the
+/// progress stream follows it.
+class _CapturedChromaKeyProgressOverlay extends StatelessWidget {
+  const _CapturedChromaKeyProgressOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<ClipEditorBloc, ClipEditorState, String?>(
+      selector: (state) => state.isBakingCapturedChromaKeys
+          ? state.capturedChromaKeyRenderId
+          : null,
+      builder: (context, renderId) {
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: renderId == null
+              ? const SizedBox.shrink()
+              : _RenderProgressContent(
+                  renderId: renderId,
+                  label: context.l10n.videoEditorChromaKeyApplying,
                 ),
         );
       },

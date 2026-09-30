@@ -142,8 +142,65 @@ void main() {
       test('is true only for stop-motion', () {
         expect(VideoRecorderMode.stopMotion.capturesStills, isTrue);
         expect(VideoRecorderMode.capture.capturesStills, isFalse);
+        expect(VideoRecorderMode.chromaKey.capturesStills, isFalse);
         expect(VideoRecorderMode.classic.capturesStills, isFalse);
         expect(VideoRecorderMode.upload.capturesStills, isFalse);
+      });
+    });
+
+    group('chromaKey', () {
+      test('has label "Chroma Key"', () {
+        expect(VideoRecorderMode.chromaKey.label, equals('Chroma Key'));
+      });
+
+      test('records without a limit and hands off to the editor', () {
+        expect(VideoRecorderMode.chromaKey.hasRecordingLimit, isFalse);
+        expect(VideoRecorderMode.chromaKey.hasVideoEditor, isTrue);
+      });
+
+      test('supports the countdown timer', () {
+        expect(VideoRecorderMode.chromaKey.supportsCountdownTimer, isTrue);
+      });
+
+      test('defaults to vertical aspect ratio', () {
+        expect(
+          VideoRecorderMode.chromaKey.defaultAspectRatio,
+          equals(model.AspectRatio.vertical),
+        );
+      });
+    });
+
+    group('needsLiveChromaKey', () {
+      test('is true only for chroma key', () {
+        for (final mode in VideoRecorderMode.values) {
+          expect(
+            mode.needsLiveChromaKey,
+            mode == VideoRecorderMode.chromaKey,
+            reason: mode.name,
+          );
+        }
+      });
+    });
+
+    group('available', () {
+      test('offers every mode when the live key can be drawn', () {
+        expect(
+          VideoRecorderMode.available(liveChromaKeySupported: true),
+          equals(VideoRecorderMode.values),
+        );
+      });
+
+      test('leaves chroma key out when the live key cannot be drawn', () {
+        expect(
+          VideoRecorderMode.available(liveChromaKeySupported: false),
+          equals([
+            VideoRecorderMode.capture,
+            VideoRecorderMode.stopMotion,
+            VideoRecorderMode.lipSync,
+            VideoRecorderMode.classic,
+            VideoRecorderMode.upload,
+          ]),
+        );
       });
     });
   });

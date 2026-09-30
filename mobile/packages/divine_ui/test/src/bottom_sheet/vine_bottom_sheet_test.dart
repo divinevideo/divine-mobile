@@ -782,6 +782,73 @@ void main() {
       });
     });
 
+    group('barrierColor', () {
+      Future<Color?> showAndReadBarrier(
+        WidgetTester tester, {
+        required bool scrollable,
+        Color? barrierColor,
+      }) async {
+        Color? routeBarrier;
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () => VineBottomSheet.show<void>(
+                    context: context,
+                    scrollable: scrollable,
+                    barrierColor: barrierColor,
+                    body: Builder(
+                      builder: (sheetContext) {
+                        routeBarrier = ModalRoute.of(
+                          sheetContext,
+                        )?.barrierColor;
+                        return const Text('Sheet Body');
+                      },
+                    ),
+                  ),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        expect(find.text('Sheet Body'), findsOneWidget);
+        return routeBarrier;
+      }
+
+      for (final scrollable in [true, false]) {
+        final mode = scrollable ? 'scrollable' : 'fixed';
+
+        testWidgets('tints above a $mode sheet with the given colour', (
+          tester,
+        ) async {
+          final barrier = await showAndReadBarrier(
+            tester,
+            scrollable: scrollable,
+            barrierColor: VineTheme.transparent,
+          );
+
+          expect(barrier, VineTheme.transparent);
+        });
+
+        testWidgets('keeps the default scrim above a $mode sheet', (
+          tester,
+        ) async {
+          final barrier = await showAndReadBarrier(
+            tester,
+            scrollable: scrollable,
+          );
+
+          expect(barrier, isNotNull);
+          expect(barrier, isNot(VineTheme.transparent));
+        });
+      }
+    });
+
     group('tapOutsideToDismiss', () {
       Future<void> showDraggable(
         WidgetTester tester, {

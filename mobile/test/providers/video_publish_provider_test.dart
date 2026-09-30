@@ -17,9 +17,11 @@ import 'package:openvine/l10n/publish_error_kind_l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_publish/video_publish_state.dart';
 import 'package:openvine/models/video_reply_context.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/layer_rasterizer_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
@@ -42,6 +44,22 @@ class MockProfileRepository extends Mock implements ProfileRepository {}
 class _MockDraftStorageService extends Mock implements DraftStorageService {}
 
 class _FakeDivineVideoDraft extends Fake implements DivineVideoDraft {}
+
+/// A clip manager whose shared chroma-key bake keys a take at once, or fails.
+class _BakingClipManager extends ClipManagerNotifier {
+  _BakingClipManager({required this.fails});
+
+  final bool fails;
+
+  @override
+  Future<DivineVideoClip> bakeCapturedChromaKey(DivineVideoClip clip) async {
+    if (fails) throw StateError('bake failed');
+    return clip.copyWith(
+      video: EditorVideo.file('/tmp/keyed.mp4'),
+      chromaKey: clip.captureChromaKey,
+    );
+  }
+}
 
 void main() {
   group('VideoPublishNotifier', () {
@@ -543,6 +561,7 @@ void main() {
       Future<ProviderContainer> pumpHarness(
         WidgetTester tester, {
         LayerRasterizer? rasterizer,
+        ClipManagerNotifier Function()? clipManager,
       }) async {
         SharedPreferences.setMockInitialValues({});
         final prefs = await SharedPreferences.getInstance();
@@ -556,6 +575,8 @@ void main() {
             sharedPreferencesProvider.overrideWithValue(prefs),
             if (rasterizer != null)
               layerRasterizerProvider.overrideWithValue(rasterizer),
+            if (clipManager != null)
+              clipManagerProvider.overrideWith(clipManager),
           ],
         );
         addTearDown(container.dispose);
@@ -605,6 +626,87 @@ void main() {
               'a lone clip used to skip the render and ship the raw recording, '
               'losing every layer plus trim, speed and volume',
         );
+      });
+
+      testWidgets('renders a take still waiting on its recorded key keyed', (
+        tester,
+      ) async {
+        final container = await pumpHarness(
+          tester,
+          clipManager: () => _BakingClipManager(fails: false),
+        );
+        List<DivineVideoClip>? rendered;
+        VideoEditorRenderService.renderVideoToClipOverride =
+            ({
+              required clips,
+              required editorStateHistory,
+              parameters,
+              taskId,
+            }) async {
+              rendered = clips;
+              // Stop the publish here; the clips rendered are the assertion.
+              throw const VideoRenderFailedException(
+                VideoRenderFailureReason.nativeRender,
+              );
+            };
+
+        final context = tester.element(find.byType(SizedBox));
+        await container
+            .read(videoPublishProvider.notifier)
+            .publishVideo(
+              context,
+              draft(
+                clips: [
+                  clip().copyWith(
+                    captureChromaKey: const ClipChromaKey(
+                      key: ChromaKey.greenScreen(),
+                    ),
+                  ),
+                ],
+              ),
+            );
+
+        expect(rendered?.single.video?.file?.path, '/tmp/keyed.mp4');
+      });
+
+      testWidgets('does not render a take whose recorded key failed to bake', (
+        tester,
+      ) async {
+        final container = await pumpHarness(
+          tester,
+          clipManager: () => _BakingClipManager(fails: true),
+        );
+        var renderCalls = 0;
+        VideoEditorRenderService.renderVideoToClipOverride =
+            ({
+              required clips,
+              required editorStateHistory,
+              parameters,
+              taskId,
+            }) async {
+              renderCalls++;
+              throw const VideoRenderFailedException(
+                VideoRenderFailureReason.nativeRender,
+              );
+            };
+
+        final context = tester.element(find.byType(SizedBox));
+        await container
+            .read(videoPublishProvider.notifier)
+            .publishVideo(
+              context,
+              draft(
+                clips: [
+                  clip().copyWith(
+                    captureChromaKey: const ClipChromaKey(
+                      key: ChromaKey.greenScreen(),
+                    ),
+                  ),
+                ],
+              ),
+            );
+
+        expect(renderCalls, isZero);
       });
 
       testWidgets('renders again instead of publishing a stale final render', (

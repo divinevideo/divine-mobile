@@ -10,6 +10,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/permissions_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
@@ -53,11 +54,20 @@ class _ClipPickerBody extends ConsumerWidget {
   }
 }
 
-class _ClipPickerGrid extends StatelessWidget {
+class _ClipPickerGrid extends ConsumerWidget {
   const _ClipPickerGrid();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // A chroma-key take recorded just before this opened can still be baking;
+    // when its keyed file lands, show that instead of the raw take.
+    ref.listen(
+      clipManagerProvider.select((s) => s.libraryRevision),
+      (_, _) => context.read<ClipsLibraryBloc>().add(
+        const ClipsLibraryClipsChanged(),
+      ),
+    );
+
     final (status, clips) = context.select(
       (ClipsLibraryBloc b) => (b.state.status, b.state.sortedClips),
     );

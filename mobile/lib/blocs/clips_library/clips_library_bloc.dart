@@ -42,6 +42,7 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
          ),
        ) {
     on<ClipsLibraryLoadRequested>(_onLoadRequested, transformer: droppable());
+    on<ClipsLibraryClipsChanged>(_onClipsChanged, transformer: restartable());
     on<ClipsLibraryToggleSelection>(_onToggleSelection);
     on<ClipsLibraryClearSelection>(_onClearSelection);
     on<ClipsLibraryDragSelectionStarted>(_onDragSelectionStarted);
@@ -591,6 +592,57 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
         ),
       ),
     );
+  }
+
+  Future<void> _onClipsChanged(
+    ClipsLibraryClipsChanged event,
+    Emitter<ClipsLibraryState> emit,
+  ) async {
+    // A load still to come reads the change itself.
+    if (state.status == ClipsLibraryStatus.initial) return;
+    try {
+      // A load or delete in flight may have read the clips before the change
+      // landed, so read them again once it is done.
+      const busy = {ClipsLibraryStatus.loading, ClipsLibraryStatus.deleting};
+      if (busy.contains(state.status)) {
+        await stream.firstWhere(
+          (s) => !busy.contains(s.status),
+          orElse: () => state,
+        );
+        if (isClosed) return;
+      }
+      final clips = _applyTypeFilter(await _clipLibraryService.getAllClips());
+      if (state.isShowingTrash) {
+        // The trash view and its selection stay as they are; the fresh clips
+        // show once the user goes back to them.
+        emit(state.copyWith(clips: clips));
+        return;
+      }
+      final clipsById = {for (final c in clips) c.id: c};
+      final selectedClipIds = {
+        for (final id in state.selectedClipIds)
+          if (clipsById.containsKey(id)) id,
+      };
+      emit(
+        state.copyWith(
+          clips: clips,
+          sortedClips: _visibleClips(clips, state.filter, state.clipSort),
+          selectedClipIds: selectedClipIds,
+          selectedDuration: selectedClipIds.fold<Duration>(
+            Duration.zero,
+            (total, id) => total + clipsById[id]!.duration,
+          ),
+        ),
+      );
+    } catch (e, stackTrace) {
+      Log.error(
+        '📚 Failed to reload changed clips: $e',
+        name: 'ClipsLibraryBloc',
+        category: LogCategory.video,
+      );
+      // Matrix-NO: ClipLibraryService.getAllClips is local Drift IO.
+      addError(e, stackTrace);
+    }
   }
 
   /// Runs asset recovery in the background and dispatches a fresh load

@@ -7,18 +7,15 @@ import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
-import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/chroma_key/chroma_key_editor_cubit.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
-import 'package:openvine/utils/image_orientation.dart';
+import 'package:openvine/utils/chroma_key_backdrop_image.dart';
 import 'package:openvine/utils/loop_restarts.dart';
-import 'package:openvine/utils/path_resolver.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_backdrop.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_clip_picker_sheet.dart';
@@ -26,7 +23,6 @@ import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_controls.dar
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_keyed_video.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
-import 'package:path/path.dart' as p;
 import 'package:pro_video_editor/pro_video_editor.dart'
     show ChromaKey, EditorVideo, ProVideoEditor, ProgressModel;
 import 'package:unified_logger/unified_logger.dart';
@@ -101,8 +97,12 @@ class VideoClipChromaKeyScreen extends StatefulWidget {
   final ChromaKeySurface surface;
 
   /// The key the screen opens on, or `null` to measure one off the footage.
+  ///
+  /// A timeline clip recorded in chroma key mode whose bake has not landed
+  /// opens on the settings it was recorded with: the user already chose them
+  /// against the live camera, so measuring over them would throw that away.
   ClipChromaKey? get initialChromaKey => switch (surface) {
-    ChromaKeySurface.track => clip.chromaKey,
+    ChromaKeySurface.track => clip.chromaKey ?? clip.captureChromaKey,
     ChromaKeySurface.canvas => _layerChromaKey,
   };
 
@@ -273,35 +273,14 @@ class _VideoClipChromaKeyScreenState extends State<VideoClipChromaKeyScreen> {
     }
   }
 
-  /// Shoots a photo to sit behind the keyed subject.
-  ///
-  /// Camera only, deliberately: the gallery is a route for AI-generated
-  /// imagery to enter a Divine video, and a backdrop the user photographs on
-  /// the spot cannot be one.
+  /// Shoots a photo to sit behind the keyed subject. See
+  /// [captureChromaKeyBackdropImage] for why it is camera only.
   Future<void> _pickImageBackground() async {
     try {
-      final picked = await ImagePicker().pickImage(source: ImageSource.camera);
-      if (picked == null) return;
-      // `image_picker` hands back a cache path the OS may prune, while clip
-      // state persists as a documents-relative basename — so take a copy we
-      // own before pointing the key at it.
-      //
-      // The copy is normalized rather than byte-for-byte: a photo shot in
-      // portrait is stored as landscape pixels plus an EXIF orientation tag,
-      // and the renderer decodes raw bytes, so it would show the backdrop
-      // rotated. Baking the rotation in also caps the photo to a sane size for
-      // a backdrop that is stretched to the video frame anyway.
-      final documentsPath = await getDocumentsPath();
-      final target = p.join(
-        documentsPath,
-        'chroma_bg_${widget.clip.id}_'
-        '${DateTime.now().microsecondsSinceEpoch}.png',
+      final target = await captureChromaKeyBackdropImage(
+        ownerId: widget.clip.id,
       );
-      final normalized = await compute(
-        bakeImageOrientation,
-        await File(picked.path).readAsBytes(),
-      );
-      await File(target).writeAsBytes(normalized, flush: true);
+      if (target == null) return;
       if (!mounted) {
         await _deleteCreatedImage(target);
         return;

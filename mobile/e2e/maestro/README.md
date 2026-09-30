@@ -100,7 +100,7 @@ or Maestro version change. The `e2e-smoke-android` workflow is manual.
 
 ## The recorder flows
 
-Four of the recorder's five modes are covered, one flow each:
+Four of the recorder's six modes are covered, one flow each:
 
 | Flow | Mode | Covers |
 |---|---|---|
@@ -109,7 +109,7 @@ Four of the recorder's five modes are covered, one flow each:
 | `flows/stopMotionModeFlow.yaml` | stop-motion | open, drive the control rail, shoot two stills, undo them, close |
 | `flows/classicModeFlow.yaml` | classic | open, drive the action row, record a clip off the preview, prove a second recording stops itself at the duration limit, delete both, close |
 
-Upload is not covered yet.
+Upload and Chroma Key are not covered yet.
 
 The gate is lip-sync's own behaviour and it takes **both** shutter tests to
 cover it. `lipSyncModeAudioGate` proves the shutter refuses with no sound
@@ -383,13 +383,21 @@ Stop-motion only:
 
 Classic only:
 
-- **Reaching the mode at all.** Classic sits three places from Capture —
+- **Reaching the mode at all.** Classic sits three places from Capture, or
+  four where the wheel also offers Chroma Key between Lip Sync and Classic —
   further than any other mode a flow has to travel on a lazy `ListView` that
   only builds entries near the armed one. `openClassicMode`
   therefore hops one entry at a time, and guards the hops on Classic not
   already being on screen: on a rerun the recorder opens straight on Classic
-  (selecting a mode persists it), and from there Stop Motion is two entries
-  away and may not be built at all.
+  (selecting a mode persists it), and from there Stop Motion is at least two
+  entries away and may not be built at all.
+- **Chroma Key is not on every wheel.** `VideoRecorderMode.available` offers
+  it only where the renderer supports shader image filters: every iOS build,
+  but not every Android one. So `openClassicMode` hops through it only while
+  its entry shows, and elsewhere steps from Lip Sync straight to Classic.
+  `test/tools/maestro_mode_wheel_walk_test.dart` holds every mode-selecting
+  helper to this walk, so a mode added between Capture and a helper's target
+  fails it until the helper hops through the new entry.
 - **The shutter is the preview.** There is no `camera_record_button` here, so
   `utils/recordCaptureClip.yaml` is not reusable and classic gets its own
   `utils/recordClassicClip.yaml`. Both wait on the close button leaving and

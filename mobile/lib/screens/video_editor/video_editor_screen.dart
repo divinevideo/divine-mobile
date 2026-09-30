@@ -47,6 +47,7 @@ import 'package:openvine/utils/await_push_transition.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/editor_text_fonts.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
+import 'package:openvine/utils/path_resolver.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_selection_bottom_sheet.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
@@ -214,6 +215,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     // session, so deferred cleanup and final-clip invalidation still need to
     // reach it — otherwise orphans never enter `_deferredFileCleanup`.
     final videoEditor = ref.read(videoEditorProvider.notifier);
+    final clipManager = ref.read(clipManagerProvider.notifier);
     _clipEditorBloc = ClipEditorBloc(
       // The clip library sits behind a Riverpod provider the BLoC can't reach,
       // so it arrives as a callback — the same transition seam that brings the
@@ -223,6 +225,20 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       saveClipToLibrary: ({required clip}) async {
         if (!mounted) return false;
         return ref.read(clipManagerProvider.notifier).saveClipToLibrary(clip);
+      },
+      // Joins the bake the recorder started right after the take. Captured
+      // while mounted, like `videoEditor` above: the bake outlives a screen
+      // the user backs out of, and must still land in the clip manager.
+      bakeCapturedChromaKey: clipManager.bakeCapturedChromaKey,
+      onCapturedChromaKeysBaked: (keyed) {
+        videoEditor.invalidateFinalRenderedClip();
+        if (!mounted) return;
+        runDetached(
+          _adoptCapturedChromaKeyBakes(keyed),
+          'write recorded chroma-key bakes into the editor history',
+          logName: 'VideoEditorScreen',
+          category: LogCategory.video,
+        );
       },
       deferFileCleanup: videoEditor.deferFileCleanup,
       onFinalClipInvalidated: () {
@@ -333,6 +349,30 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       _loadedStickerLocale = localeCode;
       _stickerBloc.add(VideoEditorStickerLoad(localeCode));
     }
+  }
+
+  /// Writes [keyed] into every editor history entry that still holds the raw
+  /// take, as part of the session's starting state rather than as an edit,
+  /// then persists that history like any other history change.
+  Future<void> _adoptCapturedChromaKeyBakes(List<DivineVideoClip> keyed) async {
+    final documentsPath = await getDocumentsPath();
+    final editor = _editor;
+    if (!mounted || editor == null) return;
+    if (!editor.stateManager.adoptCapturedChromaKeyBakes(
+      keyed,
+      documentsPath,
+    )) {
+      return;
+    }
+    final exported = await editor.exportStateHistory(
+      configs: const ExportEditorConfigs(
+        historySpan: .currentAndBackward,
+        enableMinify: false,
+      ),
+    );
+    final history = await exported.toMap();
+    if (!mounted) return;
+    ref.read(videoEditorProvider.notifier).updateEditorStateHistory(history);
   }
 
   @override

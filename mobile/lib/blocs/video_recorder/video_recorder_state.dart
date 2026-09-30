@@ -22,6 +22,37 @@ enum StopMotionStatus {
   failure,
 }
 
+/// Where the chroma-key wall measurement stands.
+enum ChromaKeyMeasurementStatus {
+  /// Nothing is being measured, and the last measurement (if any) landed.
+  idle,
+
+  /// A still is being captured and measured.
+  detecting,
+
+  /// A hand edit or a camera flip wrote the running measurement off before it
+  /// finished. Its result will be dropped. Another measurement cannot start
+  /// until it finishes, or until [VideoEditorConstants.chromaKeyDetectTimeout]
+  /// gives up on it, even if its still is not back yet.
+  superseded,
+
+  /// The last measurement found no screen filling the frame behind the
+  /// subject. The key is left as it was so the user can set it by hand.
+  failed,
+
+  /// The last measurement did not finish within
+  /// [VideoEditorConstants.chromaKeyDetectTimeout]. Says nothing about the
+  /// wall — the capture or the decode stalled — so the UI asks for a retry
+  /// instead of telling the user their wall is wrong.
+  timedOut,
+}
+
+/// The chroma-key key a session starts from before anything is measured.
+///
+/// The green preset rather than a bare default, so the viewfinder shows a
+/// plausible matte the moment the mode opens against an actual green screen.
+const _initialChromaKey = ClipChromaKey(key: ChromaKey.greenScreen());
+
 /// State for [VideoRecorderBloc].
 class VideoRecorderBlocState extends Equatable {
   const VideoRecorderBlocState({
@@ -67,6 +98,9 @@ class VideoRecorderBlocState extends Equatable {
     this.stopMotionFrames = const [],
     this.stopMotionStatus = StopMotionStatus.idle,
     this.stopMotionShutterTick = 0,
+    this.chromaKey = _initialChromaKey,
+    this.chromaKeyMeasurementStatus = ChromaKeyMeasurementStatus.idle,
+    this.unrecordedChromaKeyImagePath,
   });
 
   /// Recorder mode from the camera.
@@ -251,6 +285,43 @@ class VideoRecorderBlocState extends Equatable {
   /// than delayed by the capture write (~400ms).
   final int stopMotionShutterTick;
 
+  /// The key the chroma-key viewfinder previews, and that every clip
+  /// recorded in [VideoRecorderMode.chromaKey] carries as its
+  /// [DivineVideoClip.captureChromaKey].
+  ///
+  /// Kept across mode switches and camera re-syncs, so leaving the mode and
+  /// coming back, or flipping the camera, finds the wall and backdrop as they
+  /// were set.
+  final ClipChromaKey chromaKey;
+
+  /// Where the wall measurement stands.
+  final ChromaKeyMeasurementStatus chromaKeyMeasurementStatus;
+
+  /// A backdrop image this recorder copied into the documents directory that
+  /// no clip has been recorded with yet, or `null`.
+  ///
+  /// Nothing else can reclaim such a file: no clip, draft or library row
+  /// points at it. It is deleted as soon as the backdrop moves off it or the
+  /// recorder closes. Once a clip is recorded with it, the clip owns it and the
+  /// usual clip cleanup takes over, so this goes back to `null`.
+  final String? unrecordedChromaKeyImagePath;
+
+  /// Whether a wall measurement is running.
+  bool get isMeasuringChromaKey =>
+      chromaKeyMeasurementStatus == ChromaKeyMeasurementStatus.detecting;
+
+  /// Whether a measurement's still is out, including one written off.
+  bool get isChromaKeyStillOut =>
+      isMeasuringChromaKey ||
+      chromaKeyMeasurementStatus == ChromaKeyMeasurementStatus.superseded;
+
+  /// The status to use when a hand edit or a flip overrides the measurement.
+  /// A still that is still out is marked superseded rather than forgotten.
+  ChromaKeyMeasurementStatus get chromaKeyMeasurementWrittenOff =>
+      isChromaKeyStillOut
+      ? ChromaKeyMeasurementStatus.superseded
+      : ChromaKeyMeasurementStatus.idle;
+
   /// Path of the most recently captured stop-motion frame, if any.
   String? get stopMotionLastFrame => stopMotionFrames.lastOrNull;
 
@@ -262,6 +333,10 @@ class VideoRecorderBlocState extends Equatable {
   /// [isRecording] stays true until the file is finalized — ~1.6s later on
   /// iOS with a look-ahead stabilization mode.
   bool get showsActiveRecording => isRecording && !isStoppingRecording;
+
+  /// Whether the camera is writing the take: past any countdown, and past the
+  /// native start. [isRecording] is true for the whole countdown already.
+  bool get isCapturingFootage => isRecording && !isStartingRecording;
 
   /// Whether camera is initialized and not in error state.
   bool get isInitialized =>
@@ -313,6 +388,10 @@ class VideoRecorderBlocState extends Equatable {
     List<String>? stopMotionFrames,
     StopMotionStatus? stopMotionStatus,
     int? stopMotionShutterTick,
+    ClipChromaKey? chromaKey,
+    ChromaKeyMeasurementStatus? chromaKeyMeasurementStatus,
+    String? unrecordedChromaKeyImagePath,
+    bool clearUnrecordedChromaKeyImagePath = false,
   }) {
     return VideoRecorderBlocState(
       recorderMode: recorderMode ?? this.recorderMode,
@@ -365,6 +444,12 @@ class VideoRecorderBlocState extends Equatable {
       stopMotionStatus: stopMotionStatus ?? this.stopMotionStatus,
       stopMotionShutterTick:
           stopMotionShutterTick ?? this.stopMotionShutterTick,
+      chromaKey: chromaKey ?? this.chromaKey,
+      chromaKeyMeasurementStatus:
+          chromaKeyMeasurementStatus ?? this.chromaKeyMeasurementStatus,
+      unrecordedChromaKeyImagePath: clearUnrecordedChromaKeyImagePath
+          ? null
+          : (unrecordedChromaKeyImagePath ?? this.unrecordedChromaKeyImagePath),
     );
   }
 
@@ -410,5 +495,8 @@ class VideoRecorderBlocState extends Equatable {
     stopMotionFrames,
     stopMotionStatus,
     stopMotionShutterTick,
+    chromaKey,
+    chromaKeyMeasurementStatus,
+    unrecordedChromaKeyImagePath,
   ];
 }

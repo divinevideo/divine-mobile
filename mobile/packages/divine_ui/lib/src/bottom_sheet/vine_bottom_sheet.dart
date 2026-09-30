@@ -195,6 +195,10 @@ class VineBottomSheet extends StatelessWidget {
   /// In fixed mode, [expanded] is the legacy default for
   /// [isScrollControlled]. It does not change the body's layout and is ignored
   /// in scrollable mode.
+  ///
+  /// [barrierColor] tints everything above the sheet; `null` keeps the modal
+  /// route's default scrim. Pass [VineTheme.transparent] for a sheet that tunes
+  /// something live behind it, so the result is not judged through a scrim.
   static Future<T?> show<T>({
     required BuildContext context,
     List<Widget>? children,
@@ -230,6 +234,7 @@ class VineBottomSheet extends StatelessWidget {
     bool isDismissible = true,
     bool enableDrag = true,
     DraggableScrollableController? draggableController,
+    Color? barrierColor,
   }) {
     // Call onShow callback before showing modal
     onShow?.call();
@@ -266,6 +271,7 @@ class VineBottomSheet extends StatelessWidget {
         isDismissible: effectiveIsDismissible,
         enableDrag: enableDrag,
         backgroundColor: VineTheme.transparent,
+        barrierColor: barrierColor,
         elevation: 0,
         builder: (modalContext) {
           Widget buildSheet(ScrollController scrollController) {
@@ -368,6 +374,7 @@ class VineBottomSheet extends StatelessWidget {
         isDismissible: effectiveIsDismissible,
         enableDrag: enableDrag,
         backgroundColor: VineTheme.transparent,
+        barrierColor: barrierColor,
         elevation: 0,
         builder: (modalContext) {
           final Widget sheet = VineBottomSheet(

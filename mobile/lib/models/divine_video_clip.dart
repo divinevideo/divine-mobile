@@ -49,6 +49,7 @@ class DivineVideoClip {
     this.transition,
     this.chromaKey,
     this.chromaKeySourcePath,
+    this.captureChromaKey,
     String? sourceAuthorPubkey,
     String? sourceEventId,
     String? sourceAddressableId,
@@ -214,6 +215,36 @@ class DivineVideoClip {
   /// becomes a new logical clip (split, duplicate), since the source no longer
   /// matches what the clip is now.
   final String? chromaKeySourcePath;
+
+  /// Chroma-key settings the clip was *recorded* with, not yet baked.
+  ///
+  /// Set by the recorder's chroma key mode, which keys the viewfinder live
+  /// but writes the raw camera footage. This is an intent, which is why it is
+  /// not [chromaKey]: that one asserts the key is already burned into [video].
+  /// It is baked in the background right after the take. If that has not
+  /// happened yet, the editor bakes it when it opens. Either way it moves to
+  /// [chromaKey] on success. Until then it seeds the chroma key screen for
+  /// this clip.
+  final ClipChromaKey? captureChromaKey;
+
+  /// Whether this clip was recorded in chroma key mode and still waits for
+  /// its key to be baked.
+  bool get hasPendingCaptureChromaKey =>
+      captureChromaKey != null && chromaKey == null && video != null;
+
+  /// This clip with the bake of its recorded key, [keyed], swapped in: the
+  /// keyed file, the key, the raw take as its source, and the keyed poster.
+  /// Everything else on this copy, such as trims or edits, stays.
+  DivineVideoClip withCapturedChromaKeyBake(DivineVideoClip keyed) => copyWith(
+    video: keyed.video,
+    chromaKey: keyed.chromaKey,
+    chromaKeySourcePath: keyed.chromaKeySourcePath,
+    clearCaptureChromaKey: true,
+    clearForwardVideoPath: true,
+    clearReversedVideoPath: true,
+    thumbnailPath: keyed.thumbnailPath,
+    thumbnailTimestamp: keyed.thumbnailTimestamp,
+  );
 
   /// All factual source credits carried by this clip.
   ///
@@ -381,6 +412,7 @@ class DivineVideoClip {
     yield ghostFramePath;
     yield chromaKeySourcePath;
     yield chromaKey?.backgroundImagePath;
+    yield captureChromaKey?.backgroundImagePath;
   }
 
   /// Whether this clip was recorded with a front-facing camera.
@@ -465,6 +497,8 @@ class DivineVideoClip {
     ClipChromaKey? chromaKey,
     String? chromaKeySourcePath,
     bool clearChromaKey = false,
+    ClipChromaKey? captureChromaKey,
+    bool clearCaptureChromaKey = false,
     // Provenance is copied as a whole list: the scalar source fields are a
     // read-only view of its first entry, so setting one here could only mean
     // "replace the whole list with a single credit" — which silently drops the
@@ -530,6 +564,12 @@ class DivineVideoClip {
       chromaKeySourcePath: isNewLogicalClip || clearChromaKey
           ? null
           : (chromaKeySourcePath ?? this.chromaKeySourcePath),
+      // Unlike the baked key this survives a split or duplicate: it describes
+      // how the footage was shot, not a particular file, so both halves of a
+      // chroma-key take still want it applied.
+      captureChromaKey: clearCaptureChromaKey
+          ? null
+          : (captureChromaKey ?? this.captureChromaKey),
       sourceCredits: nextSourceCredits,
     );
   }
@@ -579,6 +619,8 @@ class DivineVideoClip {
       if (chromaKey != null) 'chromaKey': chromaKey!.toJson(),
       if (chromaKeySourcePath != null)
         'chromaKeySourcePath': p.basename(chromaKeySourcePath!),
+      if (captureChromaKey != null)
+        'captureChromaKey': captureChromaKey!.toJson(),
       if (sourceAuthorPubkey != null) 'sourceAuthorPubkey': sourceAuthorPubkey,
       if (sourceEventId != null) 'sourceEventId': sourceEventId,
       if (sourceAddressableId != null)
@@ -719,6 +761,11 @@ class DivineVideoClip {
         documentsPath,
         useOriginalPath: useOriginalPath,
       ),
+      captureChromaKey: _chromaKeyFromJson(
+        json['captureChromaKey'],
+        documentsPath,
+        useOriginalPath: useOriginalPath,
+      ),
       sourceAuthorPubkey: json['sourceAuthorPubkey'] as String?,
       sourceEventId: json['sourceEventId'] as String?,
       sourceAddressableId: json['sourceAddressableId'] as String?,
@@ -813,8 +860,10 @@ class DivineVideoClip {
   /// Parses persisted green-screen settings, degrading to `null` when the
   /// stored shape can't be read. Same rationale as [_transitionFromJson]: a
   /// draft deserializes every clip through `fromJson`, so one unreadable
-  /// effect must not abort the whole draft load. The key is already baked into
-  /// the video, so losing it costs re-editability, not the effect itself.
+  /// effect must not abort the whole draft load. For [chromaKey] the key is
+  /// already baked into the video, so losing it costs re-editability, not the
+  /// effect itself; for [captureChromaKey] it costs the automatic bake, and the
+  /// raw footage stays keyable by hand.
   static ClipChromaKey? _chromaKeyFromJson(
     Object? raw,
     String documentsPath, {

@@ -35,6 +35,9 @@ class ClipEditorState extends Equatable {
     this.chromaKeyingClipId,
     this.chromaKeyingRenderId,
     this.lastChromaKeyResult,
+    this.isBakingCapturedChromaKeys = false,
+    this.capturedChromaKeyRenderId,
+    this.lastCapturedChromaKeyBakeResult,
     this.isMultiSelectMode = false,
     this.selectedClipIds = const {},
     this.isMerging = false,
@@ -195,6 +198,22 @@ class ClipEditorState extends Equatable {
   /// Outcome of the last chroma-key bake. Compared by identity so the same
   /// outcome twice in a row still surfaces.
   final ChromaKeyResult? lastChromaKeyResult;
+
+  /// Whether clips recorded in chroma key mode are having the key they were
+  /// recorded with baked in.
+  ///
+  /// Kept apart from [isChromaKeying], which belongs to the chroma-key
+  /// screen of one clip and its own blocking overlay: this runs over the whole
+  /// editor as it opens, before anyone has picked a clip.
+  final bool isBakingCapturedChromaKeys;
+
+  /// Render id of the recorded clip currently being baked, or `null`. Moves
+  /// on clip by clip, so the progress follows the render actually running.
+  final String? capturedChromaKeyRenderId;
+
+  /// Outcome of the last pass over recorded chroma-key clips. Compared by
+  /// identity so the same outcome twice in a row still surfaces.
+  final CapturedChromaKeyBakeResult? lastCapturedChromaKeyBakeResult;
 
   /// Whether the timeline is in multi-select mode — tapping a clip toggles its
   /// membership in [selectedClipIds] instead of entering single-clip editing.
@@ -372,6 +391,10 @@ class ClipEditorState extends Equatable {
     String? chromaKeyingRenderId,
     bool clearChromaKeyingClipId = false,
     ChromaKeyResult? lastChromaKeyResult,
+    bool? isBakingCapturedChromaKeys,
+    String? capturedChromaKeyRenderId,
+    bool clearCapturedChromaKeyRenderId = false,
+    CapturedChromaKeyBakeResult? lastCapturedChromaKeyBakeResult,
     bool clearTransformingClipId = false,
     ClipTransformResult? lastTransformResult,
     bool? isMultiSelectMode,
@@ -451,6 +474,14 @@ class ClipEditorState extends Equatable {
           ? null
           : (chromaKeyingRenderId ?? this.chromaKeyingRenderId),
       lastChromaKeyResult: lastChromaKeyResult ?? this.lastChromaKeyResult,
+      isBakingCapturedChromaKeys:
+          isBakingCapturedChromaKeys ?? this.isBakingCapturedChromaKeys,
+      capturedChromaKeyRenderId: clearCapturedChromaKeyRenderId
+          ? null
+          : (capturedChromaKeyRenderId ?? this.capturedChromaKeyRenderId),
+      lastCapturedChromaKeyBakeResult:
+          lastCapturedChromaKeyBakeResult ??
+          this.lastCapturedChromaKeyBakeResult,
       isMultiSelectMode: isMultiSelectMode ?? this.isMultiSelectMode,
       selectedClipIds: selectedClipIds ?? this.selectedClipIds,
       isMerging: isMerging ?? this.isMerging,
@@ -537,6 +568,10 @@ class ClipEditorState extends Equatable {
     chromaKeyingClipId,
     chromaKeyingRenderId,
     identityHashCode(lastChromaKeyResult),
+    isBakingCapturedChromaKeys,
+    capturedChromaKeyRenderId,
+    // Identity-only: each CapturedChromaKeyBakeResult is a fresh instance.
+    identityHashCode(lastCapturedChromaKeyBakeResult),
     isMultiSelectMode,
     selectedClipIds,
     isMerging,
@@ -672,6 +707,18 @@ final class ChromaKeyFailure extends ChromaKeyResult {}
 /// Distinct from [ChromaKeyFailure] because the two need opposite copy: this
 /// one is "we couldn't take it off", not "we couldn't put it on".
 final class ChromaKeyRemoveFailure extends ChromaKeyResult {}
+
+/// One-shot signal describing a pass over clips recorded in chroma key mode.
+sealed class CapturedChromaKeyBakeResult {}
+
+/// Every recorded clip that was waiting now has its key baked in.
+final class CapturedChromaKeyBakeSuccess extends CapturedChromaKeyBakeResult {}
+
+/// At least one recorded clip could not be baked and keeps its raw footage.
+///
+/// Its recorded settings stay on the clip, so the next pass — or the clip's
+/// own chroma key screen, which opens on them — can try again.
+final class CapturedChromaKeyBakeFailure extends CapturedChromaKeyBakeResult {}
 
 // === TRANSFORM RESULT ===
 
