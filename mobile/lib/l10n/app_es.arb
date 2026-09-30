@@ -2982,7 +2982,7 @@
     "appearanceSettingsSystem": "Predeterminado del sistema",
     "appearanceSettingsLight": "Claro",
     "appearanceSettingsDark": "Oscuro",
-    "videoOverlayTotalLoops": "{count} bucles en total",
+    "videoOverlayTotalLoops": "{compactCount} {count, plural, =1{bucle} other{bucles}} en total",
     "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{bucle} other{bucles}} del video",
     "generalSettingsClosedCaptions": "Subtítulos",
     "generalSettingsClosedCaptionsSubtitle": "Mostrar los subtítulos cuando los videos los incluyan",

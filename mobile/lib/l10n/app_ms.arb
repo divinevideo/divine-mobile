@@ -137,7 +137,7 @@
   "appearanceSettingsSystem": "Lalai sistem",
   "appearanceSettingsLight": "Cerah",
   "appearanceSettingsDark": "Gelap",
-  "videoOverlayTotalLoops": "jumlah {count} ulangan",
+  "videoOverlayTotalLoops": "{count, plural, other{jumlah {compactCount} ulangan}}",
   "videoOverlayVideoLoops": "{compactCount} {count, plural, other{ulangan}} video",
   "generalSettingsClosedCaptions": "Sarikata Tertutup",
   "generalSettingsClosedCaptionsSubtitle": "Papar sarikata apabila video menyertainya",

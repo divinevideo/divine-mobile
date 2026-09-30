@@ -369,8 +369,14 @@ class AppLocalizationsDe extends AppLocalizations {
       'Halt deinen Feed im klassischen Quadratformat';
 
   @override
-  String videoOverlayTotalLoops(String count) {
-    return '$count Loops insgesamt';
+  String videoOverlayTotalLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Loops',
+      one: 'Loop',
+    );
+    return '$compactCount $_temp0 insgesamt';
   }
 
   @override

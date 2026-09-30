@@ -387,8 +387,14 @@ class AppLocalizationsRo extends AppLocalizations {
       'Păstrează feedurile în formatul clasic pătrat';
 
   @override
-  String videoOverlayTotalLoops(String count) {
-    return '$count bucle în total';
+  String videoOverlayTotalLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'bucle',
+      one: 'buclă',
+    );
+    return '$compactCount $_temp0 în total';
   }
 
   @override

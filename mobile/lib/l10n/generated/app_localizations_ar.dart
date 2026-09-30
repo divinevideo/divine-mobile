@@ -353,8 +353,13 @@ class AppLocalizationsAr extends AppLocalizations {
       'أبقِ التغذيات بالشكل المربّع الكلاسيكي';
 
   @override
-  String videoOverlayTotalLoops(String count) {
-    return 'إجمالي التكرارات: $count';
+  String videoOverlayTotalLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'إجمالي التكرارات: $compactCount',
+    );
+    return '$_temp0';
   }
 
   @override

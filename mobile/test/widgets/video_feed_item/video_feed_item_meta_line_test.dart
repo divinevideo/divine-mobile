@@ -250,6 +250,25 @@ void main() {
       expect(content, '1 video loop');
     });
 
+    testWidgets('uses the singular for a creator total of one loop', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: true,
+        StatsVisibilityPreferences.showVideoLoopsKey: true,
+        StatsVisibilityPreferences.showPublishedDateKey: false,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await pump(
+        tester,
+        video: _video(rawTags: {'views': '1'}, createdAt: 1735689600),
+        authorTotalLoops: 1,
+        prefs: prefs,
+      );
+
+      expect(_metaLine(tester), startsWith('1 total loop\u2009'));
+    });
+
     testWidgets('shows only the publish date when it alone is enabled', (
       tester,
     ) async {

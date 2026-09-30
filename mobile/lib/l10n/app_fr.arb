@@ -2974,7 +2974,7 @@
     "appearanceSettingsSystem": "Paramètre du système",
     "appearanceSettingsLight": "Clair",
     "appearanceSettingsDark": "Sombre",
-    "videoOverlayTotalLoops": "{count} boucles au total",
+    "videoOverlayTotalLoops": "{compactCount} {count, plural, =1{boucle} other{boucles}} au total",
     "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{boucle} other{boucles}} de la vidéo",
     "generalSettingsClosedCaptions": "Sous-titres",
     "generalSettingsClosedCaptionsSubtitle": "Affiche les sous-titres quand les vidéos en proposent",

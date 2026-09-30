@@ -656,11 +656,11 @@ abstract class AppLocalizations {
   /// **'Keep feeds in the classic square format'**
   String get generalSettingsVideoShapeSquareOnlySubtitle;
 
-  /// The creator's total loop count on the video overlay.
+  /// The creator's total loop count on the video overlay. compactCount is the formatted number; count selects the plural form.
   ///
   /// In en, this message translates to:
-  /// **'{count} total loops'**
-  String videoOverlayTotalLoops(String count);
+  /// **'{compactCount} total {count, plural, =1{loop} other{loops}}'**
+  String videoOverlayTotalLoops(String compactCount, int count);
 
   /// The current video's loop count on the video overlay. compactCount is the formatted number; count selects the plural form.
   ///
