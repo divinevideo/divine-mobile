@@ -3021,7 +3021,7 @@
     "appearanceSettingsSystem": "Implicit de sistem",
     "appearanceSettingsLight": "Luminos",
     "appearanceSettingsDark": "Întunecat",
-    "videoOverlayTotalLoops": "{count} în total",
+    "videoOverlayTotalLoops": "{count} bucle în total",
     "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{buclă a videoclipului} other{bucle ale videoclipului}}",
     "generalSettingsClosedCaptions": "Subtitrări",
     "generalSettingsClosedCaptionsSubtitle": "Afișează subtitrările când videoclipurile le includ",

@@ -338,7 +338,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String videoOverlayTotalLoops(String count) {
-    return '$count lahat';
+    return '$count loop sa kabuuan';
   }
 
   @override

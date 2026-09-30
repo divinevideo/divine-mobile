@@ -375,7 +375,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String videoOverlayTotalLoops(String count) {
-    return 'మొత్తం $count';
+    return 'మొత్తం $count లూప్‌లు';
   }
 
   @override

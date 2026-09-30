@@ -296,7 +296,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String videoOverlayTotalLoops(String count) {
-    return '전체 $count';
+    return '전체 $count회 반복';
   }
 
   @override

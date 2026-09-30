@@ -3021,7 +3021,7 @@
     "appearanceSettingsSystem": "Predefinito di sistema",
     "appearanceSettingsLight": "Chiaro",
     "appearanceSettingsDark": "Scuro",
-    "videoOverlayTotalLoops": "{count} totali",
+    "videoOverlayTotalLoops": "{count} loop totali",
     "videoOverlayVideoLoops": "{compactCount} {count, plural, other{loop}} del video",
     "generalSettingsClosedCaptions": "Sottotitoli",
     "generalSettingsClosedCaptionsSubtitle": "Mostra i sottotitoli quando i video li includono",

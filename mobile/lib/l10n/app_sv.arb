@@ -3021,7 +3021,7 @@
     "appearanceSettingsSystem": "Systemstandard",
     "appearanceSettingsLight": "Ljust",
     "appearanceSettingsDark": "Mörkt",
-    "videoOverlayTotalLoops": "{count} totalt",
+    "videoOverlayTotalLoops": "{count} loopar totalt",
     "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{videoloop} other{videoloopar}}",
     "generalSettingsClosedCaptions": "Undertexter",
     "generalSettingsClosedCaptionsSubtitle": "Visa undertexter när videor har dem",

@@ -356,7 +356,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String videoOverlayTotalLoops(String count) {
-    return '$count totalt';
+    return '$count loopar totalt';
   }
 
   @override

@@ -295,7 +295,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String videoOverlayTotalLoops(String count) {
-    return '合計$count';
+    return '合計$count回ループ';
   }
 
   @override

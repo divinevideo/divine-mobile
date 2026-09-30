@@ -338,7 +338,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String videoOverlayTotalLoops(String count) {
-    return 'tổng $count';
+    return 'tổng $count lượt lặp';
   }
 
   @override

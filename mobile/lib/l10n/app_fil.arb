@@ -2463,7 +2463,7 @@
     "appearanceSettingsSystem": "Default ng system",
     "appearanceSettingsLight": "Maliwanag",
     "appearanceSettingsDark": "Madilim",
-    "videoOverlayTotalLoops": "{count} lahat",
+    "videoOverlayTotalLoops": "{count} loop sa kabuuan",
     "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{loop} other{loops}} ng video",
     "generalSettingsClosedCaptions": "Closed Captions",
     "generalSettingsClosedCaptionsSubtitle": "Ipakita ang captions kapag may captions ang video",

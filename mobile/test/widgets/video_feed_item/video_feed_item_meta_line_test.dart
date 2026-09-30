@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:clock/clock.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -41,6 +42,11 @@ class _MockAuthService extends Mock implements AuthService {}
 
 AppLocalizations _l10n(WidgetTester tester) =>
     AppLocalizations.of(tester.element(find.byType(Scaffold).first));
+
+String _metaLine(WidgetTester tester) => tester
+    .widget<Text>(find.byKey(const Key('video_meta_line')))
+    .textSpan!
+    .toPlainText();
 
 VideoEvent _video({
   String pubkey = _authorPubkey,
@@ -148,11 +154,8 @@ void main() {
     }
   }
 
-  String loopLine(WidgetTester tester, int count) =>
-      _l10n(tester).videoFeedLoopCountLine(
-        StringUtils.formatCompactNumber(count),
-        count,
-      );
+  String loopLine(WidgetTester tester, int count) => _l10n(tester)
+      .videoFeedLoopCountLine(StringUtils.formatCompactNumber(count), count);
 
   group('video card meta line', () {
     testWidgets('shows all enabled details on one line under the username', (
@@ -180,15 +183,12 @@ void main() {
       final line = tester.widget<Text>(
         find.byKey(const Key('video_meta_line')),
       );
-      final content = line.data!;
-      expect(content, contains('total'));
-      expect(content, contains('video'));
+      final content = _metaLine(tester);
+      expect(content, contains('23.2M total loops'));
+      expect(content, contains('50K video loops'));
       expect(content, contains('1/1/2025'));
-      expect(content, contains(' · '));
-      expect(
-        content.indexOf('total'),
-        lessThan(content.indexOf('video')),
-      );
+      expect(content, contains('\u2009·\u2009'));
+      expect(content.indexOf('total'), lessThan(content.indexOf('video')));
       expect(
         content.indexOf('video'),
         lessThan(content.indexOf('1/1/2025')),
@@ -200,7 +200,12 @@ void main() {
           matching: find.byType(RichText),
         ),
       );
-      expect(paragraph.didExceedMaxLines, isFalse);
+      expect(
+        paragraph.didExceedMaxLines,
+        isFalse,
+        reason:
+            'available=${paragraph.constraints.maxWidth}, content=${paragraph.getMaxIntrinsicWidth(1000)}',
+      );
     });
 
     testWidgets('shows video loops without looking up a disabled total', (
@@ -221,10 +226,7 @@ void main() {
         onAuthorStatsLookup: () => lookups++,
       );
 
-      expect(
-        tester.widget<Text>(find.byKey(const Key('video_meta_line'))).data,
-        '50K video loops',
-      );
+      expect(_metaLine(tester), '50K video loops');
       expect(lookups, 0);
     });
 
@@ -243,9 +245,7 @@ void main() {
         prefs: prefs,
       );
 
-      final content = tester
-          .widget<Text>(find.byKey(const Key('video_meta_line')))
-          .data;
+      final content = _metaLine(tester);
       expect(content, _l10n(tester).videoOverlayVideoLoops('1', 1));
       expect(content, '1 video loop');
     });
@@ -266,15 +266,31 @@ void main() {
         prefs: prefs,
       );
 
-      expect(
-        tester.widget<Text>(find.byKey(const Key('video_meta_line'))).data,
-        '1/1/2025',
-      );
+      expect(_metaLine(tester), '1/1/2025');
     });
 
-    testWidgets('shows no line when every setting is disabled', (
+    testWidgets('uses a short, readable date for a video from this year', (
       tester,
     ) async {
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: false,
+        StatsVisibilityPreferences.showVideoLoopsKey: false,
+        StatsVisibilityPreferences.showPublishedDateKey: true,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final published = DateTime.utc(2026, 1, 15);
+      await withClock(Clock(() => DateTime.utc(2026, 9, 30)), () async {
+        await pump(
+          tester,
+          video: _video(createdAt: published.millisecondsSinceEpoch ~/ 1000),
+          prefs: prefs,
+        );
+
+        expect(_metaLine(tester), 'Jan 15');
+      });
+    });
+
+    testWidgets('shows no line when every setting is disabled', (tester) async {
       SharedPreferences.setMockInitialValues({
         StatsVisibilityPreferences.showTotalLoopsKey: false,
         StatsVisibilityPreferences.showVideoLoopsKey: false,
@@ -383,7 +399,7 @@ void main() {
       await tester.runAsync(() => settings.setShowVideoLoops(true));
       await tester.pump();
       expect(
-        find.textContaining('23.2M total · 50K video loops'),
+        find.textContaining('23.2M total loops\u2009·\u200950K video loops'),
         findsOneWidget,
       );
       await tester.runAsync(() => settings.setShowPublishedDate(true));
@@ -533,9 +549,7 @@ void main() {
       expect(find.textContaining(loopLine(tester, 50000)), findsNothing);
     });
 
-    testWidgets('hides the publish date by default', (
-      tester,
-    ) async {
+    testWidgets('hides the publish date by default', (tester) async {
       await pump(
         tester,
         video: _video(rawTags: {'views': '50000'}, createdAt: 1735689600),

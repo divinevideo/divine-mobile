@@ -324,7 +324,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String videoOverlayTotalLoops(String count) {
-    return '总计 $count';
+    return '总计 $count 次循环';
   }
 
   @override

@@ -272,7 +272,7 @@
   "generalSettingsClosedCaptionsSubtitle": "Show captions when videos include them",
   "generalSettingsVideoShapeSquareOnly": "Square videos only",
   "generalSettingsVideoShapeSquareOnlySubtitle": "Keep feeds in the classic square format",
-  "videoOverlayTotalLoops": "{count} total",
+  "videoOverlayTotalLoops": "{count} total loops",
   "@videoOverlayTotalLoops": {
     "description": "The creator's total loop count on the video overlay.",
     "placeholders": {
