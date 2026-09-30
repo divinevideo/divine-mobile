@@ -387,6 +387,18 @@ void main() {
         const Size(1080, 1080),
       );
     });
+
+    // Larger on one axis is enough: a landscape clip after a portrait one
+    // replaces it although it is shorter.
+    test('is a later segment that is only wider', () {
+      expect(
+        VideoEditorRenderService.layerFrameSize(const [
+          Size(1080, 1920),
+          Size(1920, 1080),
+        ]),
+        const Size(1920, 1080),
+      );
+    });
   });
 
   group('buildColorFilters', () {
