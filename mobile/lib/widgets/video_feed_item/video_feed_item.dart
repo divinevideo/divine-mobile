@@ -3,6 +3,7 @@
 // ABOUTME: SCOPE: Non-feed detail use cases only (e.g. debug screens).
 // ABOUTME: Feed surfaces must use PooledFullscreenVideoFeedScreen / FeedVideos instead.
 
+import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -744,39 +745,94 @@ class _VideoMetaLineContent extends ConsumerWidget {
     final publishedAtSeconds = video == null
         ? null
         : int.tryParse(video.publishedAt ?? '') ?? video.createdAt;
-    final parts = <String>[
-      if (totalLoops != null && totalLoops > 0 && showVideoCount)
-        context.l10n.videoOverlayTotalLoops(
-          StringUtils.formatCompactNumber(totalLoops),
-        ),
-      if (totalLoops != null && totalLoops > 0 && !showVideoCount)
-        context.l10n.videoFeedLoopCountLine(
-          StringUtils.formatCompactNumber(totalLoops),
-          totalLoops,
-        ),
-      if (showVideoCount)
-        context.l10n.videoOverlayVideoLoops(
-          StringUtils.formatCompactNumber(video.totalLoops),
-          video.totalLoops,
-        ),
-      if (showPublishedDate &&
-          video != null &&
-          !video.hasUnknownOriginalDate &&
-          publishedAtSeconds != null &&
-          publishedAtSeconds > 0)
-        DateFormat.yMd(Localizations.localeOf(context).toString()).format(
-          DateTime.fromMillisecondsSinceEpoch(
+    final publishedAt =
+        !showPublishedDate ||
+            video == null ||
+            video.hasUnknownOriginalDate ||
+            publishedAtSeconds == null ||
+            publishedAtSeconds <= 0
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch(
             publishedAtSeconds * 1000,
             isUtc: true,
+          );
+    final compactTotal = totalLoops == null
+        ? null
+        : StringUtils.formatCompactNumber(totalLoops);
+    final compactVideo = showVideoCount
+        ? StringUtils.formatCompactNumber(video.totalLoops)
+        : null;
+    final parts = <({String text, String? count})>[
+      if (totalLoops != null && totalLoops > 0 && showVideoCount)
+        (
+          text: context.l10n.videoOverlayTotalLoops(compactTotal!),
+          count: compactTotal,
+        ),
+      if (totalLoops != null && totalLoops > 0 && !showVideoCount)
+        (
+          text: context.l10n.videoFeedLoopCountLine(compactTotal!, totalLoops),
+          count: compactTotal,
+        ),
+      if (showVideoCount)
+        (
+          text: context.l10n.videoOverlayVideoLoops(
+            compactVideo!,
+            video.totalLoops,
           ),
+          count: compactVideo,
+        ),
+      if (publishedAt != null)
+        (
+          text:
+              (publishedAt.year == clock.now().toUtc().year
+                      ? DateFormat.MMMd(
+                          Localizations.localeOf(context).toString(),
+                        )
+                      : DateFormat.yMd(
+                          Localizations.localeOf(context).toString(),
+                        ))
+                  .format(publishedAt),
+          count: null,
         ),
     ];
     if (parts.isEmpty) return const SizedBox.shrink();
 
-    return Text(
-      parts.join(' · '),
+    final fieldStyle = VineTheme.labelSmallFont(
+      color: VineTheme.whiteText.withValues(alpha: 0.82),
+    ).copyWith(fontWeight: FontWeight.w400, letterSpacing: -0.1);
+    final countStyle = fieldStyle.copyWith(
+      color: VineTheme.whiteText,
+      fontWeight: FontWeight.w600,
+    );
+    final spans = <InlineSpan>[];
+    for (final part in parts) {
+      if (spans.isNotEmpty) {
+        spans.add(
+          TextSpan(
+            text: '\u2009·\u2009',
+            style: fieldStyle.copyWith(
+              color: VineTheme.whiteText.withValues(alpha: 0.5),
+            ),
+          ),
+        );
+      }
+      final count = part.count;
+      final countOffset = count == null ? -1 : part.text.indexOf(count);
+      if (countOffset < 0) {
+        spans.add(TextSpan(text: part.text));
+      } else {
+        spans.add(TextSpan(text: part.text.substring(0, countOffset)));
+        spans.add(TextSpan(text: count, style: countStyle));
+        spans.add(
+          TextSpan(text: part.text.substring(countOffset + count!.length)),
+        );
+      }
+    }
+
+    return Text.rich(
+      TextSpan(children: spans),
       key: const Key('video_meta_line'),
-      style: VineTheme.labelSmallFont(color: VineTheme.onSurfaceVariant),
+      style: fieldStyle,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
     );

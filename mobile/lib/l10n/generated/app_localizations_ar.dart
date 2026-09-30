@@ -354,7 +354,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String videoOverlayTotalLoops(String count) {
-    return '$count إجمالاً';
+    return 'إجمالي التكرارات: $count';
   }
 
   @override

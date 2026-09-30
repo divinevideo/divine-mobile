@@ -370,7 +370,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String videoOverlayTotalLoops(String count) {
-    return '$count no total';
+    return '$count loops no total';
   }
 
   @override

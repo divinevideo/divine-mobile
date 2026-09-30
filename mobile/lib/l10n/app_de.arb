@@ -2974,7 +2974,7 @@
     "appearanceSettingsSystem": "Systemstandard",
     "appearanceSettingsLight": "Hell",
     "appearanceSettingsDark": "Dunkel",
-    "videoOverlayTotalLoops": "{count} gesamt",
+    "videoOverlayTotalLoops": "{count} Loops insgesamt",
     "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{Video-Loop} other{Video-Loops}}",
     "generalSettingsClosedCaptions": "Untertitel",
     "generalSettingsClosedCaptionsSubtitle": "Untertitel anzeigen, wenn Videos welche haben",

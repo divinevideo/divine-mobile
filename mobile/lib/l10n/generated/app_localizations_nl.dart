@@ -367,7 +367,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String videoOverlayTotalLoops(String count) {
-    return '$count totaal';
+    return '$count loops totaal';
   }
 
   @override

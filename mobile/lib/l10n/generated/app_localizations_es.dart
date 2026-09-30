@@ -369,7 +369,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String videoOverlayTotalLoops(String count) {
-    return '$count total';
+    return '$count bucles en total';
   }
 
   @override

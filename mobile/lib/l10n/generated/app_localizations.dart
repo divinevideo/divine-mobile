@@ -659,7 +659,7 @@ abstract class AppLocalizations {
   /// The creator's total loop count on the video overlay.
   ///
   /// In en, this message translates to:
-  /// **'{count} total'**
+  /// **'{count} total loops'**
   String videoOverlayTotalLoops(String count);
 
   /// The current video's loop count on the video overlay. compactCount is the formatted number; count selects the plural form.
