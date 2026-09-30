@@ -155,8 +155,6 @@ void main() {
 
       test('records without a limit and hands off to the editor', () {
         expect(VideoRecorderMode.chromaKey.hasRecordingLimit, isFalse);
-        // The key is baked there, so skipping the editor would publish the
-        // raw footage.
         expect(VideoRecorderMode.chromaKey.hasVideoEditor, isTrue);
       });
 
