@@ -2756,7 +2756,7 @@
   "videoEditorCaptionsCustomTextColor": "Цвят на текста",
   "videoEditorCaptionsCustomBackground": "Фон",
   "videoEditorCaptionsCustomBackgroundColor": "Цвят на фона",
-  "videoEditorCaptionsCustomHighlightColor": "Цвят на открояване",
+  "videoEditorCaptionsCustomHighlightColor": "Цвят на маркиране",
   "videoEditorCaptionsCustomAnimation": "Анимация",
   "videoEditorCaptionsAnimationNone": "Няма",
   "videoEditorCaptionsAnimationFade": "Избледняване",

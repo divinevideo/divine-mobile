@@ -4566,7 +4566,7 @@
   "videoEditorCaptionsCustomTextColor": "Màu chữ",
   "videoEditorCaptionsCustomBackground": "Nền",
   "videoEditorCaptionsCustomBackgroundColor": "Màu nền",
-  "videoEditorCaptionsCustomHighlightColor": "Màu làm nổi bật",
+  "videoEditorCaptionsCustomHighlightColor": "Màu tô sáng",
   "videoEditorCaptionsCustomAnimation": "Hiệu ứng",
   "videoEditorCaptionsAnimationNone": "Không có",
   "videoEditorCaptionsAnimationFade": "Mờ dần",

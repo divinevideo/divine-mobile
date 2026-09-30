@@ -2003,7 +2003,7 @@
   "videoEditorCaptionsCustomTextColor": "글자 색",
   "videoEditorCaptionsCustomBackground": "배경",
   "videoEditorCaptionsCustomBackgroundColor": "배경색",
-  "videoEditorCaptionsCustomHighlightColor": "강조 색상",
+  "videoEditorCaptionsCustomHighlightColor": "하이라이트 색상",
   "videoEditorCaptionsCustomAnimation": "애니메이션",
   "videoEditorCaptionsAnimationNone": "없음",
   "videoEditorCaptionsAnimationFade": "페이드",

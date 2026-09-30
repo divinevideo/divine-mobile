@@ -8703,7 +8703,7 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorCaptionsCustomBackgroundColor => 'Цвят на фона';
 
   @override
-  String get videoEditorCaptionsCustomHighlightColor => 'Цвят на открояване';
+  String get videoEditorCaptionsCustomHighlightColor => 'Цвят на маркиране';
 
   @override
   String get videoEditorCaptionsCustomAnimation => 'Анимация';

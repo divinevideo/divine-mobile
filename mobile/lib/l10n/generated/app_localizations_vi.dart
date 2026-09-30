@@ -8594,7 +8594,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorCaptionsCustomBackgroundColor => 'Màu nền';
 
   @override
-  String get videoEditorCaptionsCustomHighlightColor => 'Màu làm nổi bật';
+  String get videoEditorCaptionsCustomHighlightColor => 'Màu tô sáng';
 
   @override
   String get videoEditorCaptionsCustomAnimation => 'Hiệu ứng';

@@ -8223,7 +8223,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorCaptionsCustomBackgroundColor => '배경색';
 
   @override
-  String get videoEditorCaptionsCustomHighlightColor => '강조 색상';
+  String get videoEditorCaptionsCustomHighlightColor => '하이라이트 색상';
 
   @override
   String get videoEditorCaptionsCustomAnimation => '애니메이션';
