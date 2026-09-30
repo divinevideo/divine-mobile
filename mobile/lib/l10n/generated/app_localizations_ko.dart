@@ -1698,6 +1698,36 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String shareStillTryingToSendTo(String recipientName) {
+    return '$recipientName님에게 계속 보내는 중이에요';
+  }
+
+  @override
+  String shareStillTryingToSendToCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count명에게 계속 보내는 중이에요',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String shareCouldNotSendTo(String recipientName) {
+    return '$recipientName님에게 보내지 못했어요';
+  }
+
+  @override
+  String shareCouldNotSendToCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count명에게 보내지 못했어요',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareFailedToSend => '영상을 보내지 못했어요';
 
   @override

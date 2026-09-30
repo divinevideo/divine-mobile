@@ -600,6 +600,10 @@
             }
         }
     },
+    "shareStillTryingToSendTo": "Încă încercăm să trimitem către {recipientName}",
+    "shareStillTryingToSendToCount": "{count, plural, one{Încă încercăm să trimitem către {count} persoană} few{Încă încercăm să trimitem către {count} persoane} other{Încă încercăm să trimitem către {count} de persoane}}",
+    "shareCouldNotSendTo": "Nu am putut trimite către {recipientName}",
+    "shareCouldNotSendToCount": "{count, plural, one{Nu am putut trimite către {count} persoană} few{Nu am putut trimite către {count} persoane} other{Nu am putut trimite către {count} de persoane}}",
     "shareFailedToSend": "N-am putut trimite videoclipul",
     "shareAddedToBookmarks": "Adăugat la semne de carte",
     "shareRemovedFromBookmarks": "Eliminat din semne de carte",

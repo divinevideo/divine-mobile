@@ -837,6 +837,10 @@
       }
     }
   },
+  "shareStillTryingToSendTo": "Masih cuba menghantar kepada {recipientName}",
+  "shareStillTryingToSendToCount": "{count, plural, one{Masih cuba menghantar kepada {count} orang} other{Masih cuba menghantar kepada {count} orang}}",
+  "shareCouldNotSendTo": "Tidak dapat menghantar kepada {recipientName}",
+  "shareCouldNotSendToCount": "{count, plural, one{Tidak dapat menghantar kepada {count} orang} other{Tidak dapat menghantar kepada {count} orang}}",
   "shareFailedToSend": "Gagal menghantar video",
   "shareAddedToBookmarks": "Ditambah ke penanda buku",
   "shareRemovedFromBookmarks": "Dialih keluar daripada penanda buku",

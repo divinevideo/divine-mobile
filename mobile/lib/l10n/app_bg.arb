@@ -639,6 +639,10 @@
             }
         }
     },
+    "shareStillTryingToSendTo": "Още опитваме да изпратим на {recipientName}",
+    "shareStillTryingToSendToCount": "{count, plural, one{Още опитваме да изпратим на {count} човек} other{Още опитваме да изпратим на {count} души}}",
+    "shareCouldNotSendTo": "Не успяхме да изпратим на {recipientName}",
+    "shareCouldNotSendToCount": "{count, plural, one{Не успяхме да изпратим на {count} човек} other{Не успяхме да изпратим на {count} души}}",
     "shareFailedToSend": "Не успяхме да изпратим видеото",
     "shareAddedToBookmarks": "Добавен към отметките",
     "shareRemovedFromBookmarks": "Премахнато от отметките",

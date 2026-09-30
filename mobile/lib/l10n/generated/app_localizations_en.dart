@@ -1846,6 +1846,38 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String shareStillTryingToSendTo(String recipientName) {
+    return 'Still trying to send to $recipientName';
+  }
+
+  @override
+  String shareStillTryingToSendToCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Still trying to send to $count people',
+      one: 'Still trying to send to $count person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String shareCouldNotSendTo(String recipientName) {
+    return 'Couldn\'t send to $recipientName';
+  }
+
+  @override
+  String shareCouldNotSendToCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Couldn\'t send to $count people',
+      one: 'Couldn\'t send to $count person',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareFailedToSend => 'Failed to send video';
 
   @override

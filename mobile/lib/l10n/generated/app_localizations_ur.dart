@@ -1843,6 +1843,38 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
+  String shareStillTryingToSendTo(String recipientName) {
+    return '$recipientName کو بھیجنے کی کوشش ابھی جاری ہے';
+  }
+
+  @override
+  String shareStillTryingToSendToCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count لوگوں کو بھیجنے کی کوشش ابھی جاری ہے',
+      one: '$count شخص کو بھیجنے کی کوشش ابھی جاری ہے',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String shareCouldNotSendTo(String recipientName) {
+    return '$recipientName کو نہیں بھیجا جا سکا';
+  }
+
+  @override
+  String shareCouldNotSendToCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count لوگوں کو نہیں بھیجا جا سکا',
+      one: '$count شخص کو نہیں بھیجا جا سکا',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareFailedToSend => 'ویڈیو نہیں بھیجی جا سکی';
 
   @override

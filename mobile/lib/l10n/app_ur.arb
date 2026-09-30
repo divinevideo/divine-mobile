@@ -837,6 +837,10 @@
       }
     }
   },
+  "shareStillTryingToSendTo": "{recipientName} کو بھیجنے کی کوشش ابھی جاری ہے",
+  "shareStillTryingToSendToCount": "{count, plural, one{{count} شخص کو بھیجنے کی کوشش ابھی جاری ہے} other{{count} لوگوں کو بھیجنے کی کوشش ابھی جاری ہے}}",
+  "shareCouldNotSendTo": "{recipientName} کو نہیں بھیجا جا سکا",
+  "shareCouldNotSendToCount": "{count, plural, one{{count} شخص کو نہیں بھیجا جا سکا} other{{count} لوگوں کو نہیں بھیجا جا سکا}}",
   "shareFailedToSend": "ویڈیو نہیں بھیجی جا سکی",
   "shareAddedToBookmarks": "بک مارکس میں شامل ہو گئی",
   "shareRemovedFromBookmarks": "بک مارکس سے ہٹا دی گئی",

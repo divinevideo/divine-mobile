@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
@@ -846,6 +847,138 @@ void main() {
             expect(find.text(l10n.dmReelReplyViewChat), findsNothing);
           },
         );
+
+        group('when not every recipient got the video', () {
+          late List<Map<Object?, Object?>> announcements;
+
+          setUp(() {
+            announcements = [];
+          });
+
+          void captureAnnouncements(WidgetTester tester) {
+            tester.binding.defaultBinaryMessenger
+                .setMockDecodedMessageHandler<Object?>(
+                  SystemChannels.accessibility,
+                  (Object? message) async {
+                    if (message is Map) announcements.add(message);
+                    return null;
+                  },
+                );
+            addTearDown(
+              () => tester.binding.defaultBinaryMessenger
+                  .setMockDecodedMessageHandler<Object?>(
+                    SystemChannels.accessibility,
+                    null,
+                  ),
+            );
+          }
+
+          bool announced(String text) => announcements.any((message) {
+            final data = message['data'];
+            return message['type'] == 'announce' &&
+                data is Map &&
+                data['message'] == text;
+          });
+
+          void stubSend(Map<String, ShareResult> results) {
+            when(
+              () => mockVideoSharingService.shareVideoWithMultipleUsers(
+                video: any(named: 'video'),
+                recipientPubkeys: any(named: 'recipientPubkeys'),
+                personalMessage: any(named: 'personalMessage'),
+              ),
+            ).thenAnswer((_) async => results);
+          }
+
+          Future<void> send(WidgetTester tester, List<String> names) async {
+            await pumpOpenSheet(tester);
+            for (final name in names) {
+              await tester.tap(find.text(name));
+              await tester.pumpAndSettle();
+            }
+            await tester.tap(
+              find.byWidgetPredicate(
+                (widget) =>
+                    widget is DivineIcon &&
+                    widget.icon == DivineIconName.arrowUp,
+              ),
+            );
+            await tester.pumpAndSettle();
+          }
+
+          testWidgets(
+            'names a refused recipient in an error snackbar instead of '
+            'reporting the share as sent (#8672)',
+            (tester) async {
+              captureAnnouncements(tester);
+              stubSend({
+                alice.pubkey: ShareResult.createSuccess('msg-1'),
+                bob.pubkey: ShareResult.failure(
+                  'blocked: recipient not permitted by send policy',
+                ),
+              });
+
+              await send(tester, ['Alice', 'Bob']);
+
+              final message =
+                  '${l10n.sharePostSharedWith('Alice')}\n'
+                  '${l10n.shareCouldNotSendTo('Bob')}';
+              expect(find.text('Share with'), findsNothing);
+              expect(find.text(message), findsOneWidget);
+              expect(
+                tester
+                    .widget<DivineSnackbarContainer>(
+                      find.byType(DivineSnackbarContainer),
+                    )
+                    .error,
+                isTrue,
+              );
+              expect(find.text(l10n.dmReelReplyViewChat), findsNothing);
+              expect(announced(message), isTrue);
+            },
+          );
+
+          testWidgets(
+            'reports a lone queued share as still sending, not as failed',
+            (tester) async {
+              captureAnnouncements(tester);
+              stubSend({
+                alice.pubkey: ShareResult.retrying('no relay reached'),
+              });
+
+              await send(tester, ['Alice']);
+
+              final message = l10n.shareStillTryingToSendTo('Alice');
+              expect(find.text(message), findsOneWidget);
+              expect(find.text(l10n.shareFailedToSend), findsNothing);
+              expect(
+                tester
+                    .widget<DivineSnackbarContainer>(
+                      find.byType(DivineSnackbarContainer),
+                    )
+                    .error,
+                isFalse,
+              );
+              expect(announced(message), isTrue);
+            },
+          );
+
+          testWidgets('counts recipients who share an outcome', (
+            tester,
+          ) async {
+            stubSend({
+              alice.pubkey: ShareResult.failure('refused'),
+              bob.pubkey: ShareResult.failure('refused'),
+            });
+
+            await send(tester, ['Alice', 'Bob']);
+
+            expect(
+              find.text(l10n.shareCouldNotSendToCount(2)),
+              findsOneWidget,
+            );
+          });
+        });
       });
 
       testWidgets(

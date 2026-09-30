@@ -317,46 +317,44 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState> {
 
       if (isClosed) return;
 
-      final delivered = [
-        for (final r in recipients)
-          if (results[r.pubkey]?.delivery == ShareDelivery.sent) r,
-      ];
-      final failedCount = recipients.length - delivered.length;
-
-      // The send is dismiss-and-forget: a recipient publish that fails is
-      // already durably enqueued (VideoSharingService -> DmRepository.
-      // sendMessage enqueues before publish) and OutgoingDmRetryService
-      // replays the SAME rumor id on the next app-foreground. Re-sending from
-      // the sheet would mint a NEW rumor id the receiver can't dedup against
-      // that replay, double-delivering — so we never keep recipients selected
-      // for a manual retry. We report what was delivered and let the queue
-      // finish the rest.
-      if (delivered.isNotEmpty) {
-        if (failedCount > 0) {
-          Log.warning(
-            'Partial share: ${delivered.length} delivered, $failedCount '
-            'queued for background retry',
-            name: 'ShareSheetBloc',
-            category: LogCategory.ui,
-          );
+      final sent = <ShareableUser>[];
+      final retrying = <ShareableUser>[];
+      final notSent = <ShareableUser>[];
+      for (final r in recipients) {
+        switch (results[r.pubkey]?.delivery) {
+          case ShareDelivery.sent:
+            sent.add(r);
+          case ShareDelivery.retrying:
+            retrying.add(r);
+          case ShareDelivery.notSent || null:
+            notSent.add(r);
         }
-        final single = delivered.length == 1 && recipients.length == 1
-            ? delivered.single
-            : null;
+      }
+
+      // Non-null for every selectable row — both pickers resolve the name
+      // through `dmPeerDisplayName` before selection. The generated fallback
+      // is the naming chain's own floor for a peer with no profile, and unlike
+      // a bare 'user' it is neither English nor a second answer to "who is
+      // this".
+      List<String> namesOf(List<ShareableUser> users) => [
+        for (final r in users)
+          r.displayName ?? UserProfile.defaultDisplayNameFor(r.pubkey),
+      ];
+
+      // The send is dismiss-and-forget, so the selection is always cleared.
+      // A queued recipient is replayed by OutgoingDmRetryService with the
+      // SAME rumor id; re-sending from the sheet would mint a NEW one the
+      // receiver can't dedup, delivering twice. A refused recipient was never
+      // queued and a re-send is refused again. Neither is kept selected; the
+      // result names both instead (#8672).
+      if (retrying.isEmpty && notSent.isEmpty) {
+        final single = recipients.length == 1 ? sent.single : null;
         emit(
           state.copyWith(
             isSending: false,
             selectedRecipients: const [],
             actionResult: ShareSheetSendSuccess(
-              recipientNames: [
-                // Non-null for every selectable row — both pickers resolve the
-                // name through `dmPeerDisplayName` before selection. The
-                // generated fallback is the naming chain's own floor for a
-                // peer with no profile, and unlike a bare 'user' it is neither
-                // English nor a second answer to "who is this".
-                for (final r in delivered)
-                  r.displayName ?? UserProfile.defaultDisplayNameFor(r.pubkey),
-              ],
+              recipientNames: namesOf(sent),
               recipientPubkey: single?.pubkey,
               conversationId: single == null
                   ? null
@@ -365,11 +363,21 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState> {
           ),
         );
       } else {
+        Log.warning(
+          'Share incomplete: ${sent.length} sent, ${retrying.length} queued '
+          'for background retry, ${notSent.length} not sent',
+          name: 'ShareSheetBloc',
+          category: LogCategory.ui,
+        );
         emit(
           state.copyWith(
             isSending: false,
             selectedRecipients: const [],
-            actionResult: ShareSheetSendFailure(),
+            actionResult: ShareSheetSendIncomplete(
+              sentNames: namesOf(sent),
+              retryingNames: namesOf(retrying),
+              notSentNames: namesOf(notSent),
+            ),
           ),
         );
       }

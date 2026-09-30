@@ -1810,6 +1810,38 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String shareStillTryingToSendTo(String recipientName) {
+    return 'Vẫn đang thử gửi cho $recipientName';
+  }
+
+  @override
+  String shareStillTryingToSendToCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Vẫn đang thử gửi cho $count người',
+      one: 'Vẫn đang thử gửi cho $count người',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String shareCouldNotSendTo(String recipientName) {
+    return 'Không gửi được cho $recipientName';
+  }
+
+  @override
+  String shareCouldNotSendToCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Không gửi được cho $count người',
+      one: 'Không gửi được cho $count người',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareFailedToSend => 'Không gửi được video';
 
   @override

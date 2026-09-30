@@ -1864,6 +1864,38 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String shareStillTryingToSendTo(String recipientName) {
+    return 'Още опитваме да изпратим на $recipientName';
+  }
+
+  @override
+  String shareStillTryingToSendToCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Още опитваме да изпратим на $count души',
+      one: 'Още опитваме да изпратим на $count човек',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String shareCouldNotSendTo(String recipientName) {
+    return 'Не успяхме да изпратим на $recipientName';
+  }
+
+  @override
+  String shareCouldNotSendToCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Не успяхме да изпратим на $count души',
+      one: 'Не успяхме да изпратим на $count човек',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareFailedToSend => 'Не успяхме да изпратим видеото';
 
   @override

@@ -1887,6 +1887,42 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String shareStillTryingToSendTo(String recipientName) {
+    return 'Nadal próbujemy wysłać do $recipientName';
+  }
+
+  @override
+  String shareStillTryingToSendToCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nadal próbujemy wysłać do $count osoby',
+      many: 'Nadal próbujemy wysłać do $count osób',
+      few: 'Nadal próbujemy wysłać do $count osób',
+      one: 'Nadal próbujemy wysłać do $count osoby',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String shareCouldNotSendTo(String recipientName) {
+    return 'Nie udało się wysłać do $recipientName';
+  }
+
+  @override
+  String shareCouldNotSendToCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nie udało się wysłać do $count osoby',
+      many: 'Nie udało się wysłać do $count osób',
+      few: 'Nie udało się wysłać do $count osób',
+      one: 'Nie udało się wysłać do $count osoby',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareFailedToSend => 'Nie udało się wysłać filmu';
 
   @override

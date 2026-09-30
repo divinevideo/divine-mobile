@@ -1121,11 +1121,11 @@ void main() {
       );
 
       blocTest<ShareSheetBloc, ShareSheetState>(
-        'on partial failure reports the delivered recipients and clears the '
-        'selection (durable queue retries the rest, no manual re-send)',
+        'names a queued recipient as still sending and clears the selection '
+        '(the durable queue retries them, no manual re-send)',
         setUp: () => stubMultiSend({
           testRecipient.pubkey: ShareResult.createSuccess('msg-1'),
-          otherRecipient.pubkey: ShareResult.failure('Relay offline'),
+          otherRecipient.pubkey: ShareResult.retrying('Relay offline'),
         }),
         seed: () => const ShareSheetState(
           status: ShareSheetStatus.ready,
@@ -1145,17 +1145,81 @@ void main() {
               .having(
                 (s) => s.actionResult,
                 'actionResult',
-                // Reports only the delivered recipient; no View chat because
-                // more than one recipient was targeted.
-                isA<ShareSheetSendSuccess>()
-                    .having((r) => r.recipientNames, 'names', ['Alice'])
-                    .having((r) => r.conversationId, 'conversationId', isNull),
+                isA<ShareSheetSendIncomplete>()
+                    .having((r) => r.sentNames, 'sent', ['Alice'])
+                    .having((r) => r.retryingNames, 'retrying', ['Bob'])
+                    .having((r) => r.notSentNames, 'not sent', isEmpty),
               ),
         ],
       );
 
       blocTest<ShareSheetBloc, ShareSheetState>(
-        'emits failure and clears the selection when every recipient fails',
+        'names a refused recipient instead of reporting the share as sent '
+        '(#8672)',
+        setUp: () => stubMultiSend({
+          testRecipient.pubkey: ShareResult.createSuccess('msg-1'),
+          otherRecipient.pubkey: ShareResult.failure(
+            'blocked: recipient not permitted by send policy',
+          ),
+        }),
+        seed: () => const ShareSheetState(
+          status: ShareSheetStatus.ready,
+          selectedRecipients: [testRecipient, otherRecipient],
+        ),
+        build: createBloc,
+        act: (bloc) => bloc.add(const ShareSheetSendRequested()),
+        expect: () => [
+          isA<ShareSheetState>().having(
+            (s) => s.isSending,
+            'isSending',
+            isTrue,
+          ),
+          isA<ShareSheetState>()
+              .having((s) => s.isSending, 'isSending', isFalse)
+              .having((s) => s.selectedRecipients, 'selection cleared', isEmpty)
+              .having(
+                (s) => s.actionResult,
+                'actionResult',
+                isA<ShareSheetSendIncomplete>()
+                    .having((r) => r.sentNames, 'sent', ['Alice'])
+                    .having((r) => r.retryingNames, 'retrying', isEmpty)
+                    .having((r) => r.notSentNames, 'not sent', ['Bob']),
+              ),
+        ],
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'reports a lone queued share as still sending, not as failed',
+        setUp: () => stubMultiSend({
+          testRecipient.pubkey: ShareResult.retrying('no relay reached'),
+        }),
+        seed: () => const ShareSheetState(
+          status: ShareSheetStatus.ready,
+          selectedRecipients: [testRecipient],
+        ),
+        build: createBloc,
+        act: (bloc) => bloc.add(const ShareSheetSendRequested()),
+        expect: () => [
+          isA<ShareSheetState>().having(
+            (s) => s.isSending,
+            'isSending',
+            isTrue,
+          ),
+          isA<ShareSheetState>()
+              .having((s) => s.selectedRecipients, 'selection cleared', isEmpty)
+              .having(
+                (s) => s.actionResult,
+                'actionResult',
+                isA<ShareSheetSendIncomplete>()
+                    .having((r) => r.sentNames, 'sent', isEmpty)
+                    .having((r) => r.retryingNames, 'retrying', ['Alice'])
+                    .having((r) => r.notSentNames, 'not sent', isEmpty),
+              ),
+        ],
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'names every recipient and clears the selection when none was sent',
         setUp: () => stubMultiSend({
           testRecipient.pubkey: ShareResult.failure('Relay offline'),
           otherRecipient.pubkey: ShareResult.failure('Relay offline'),
@@ -1177,8 +1241,41 @@ void main() {
               .having(
                 (s) => s.actionResult,
                 'actionResult',
-                isA<ShareSheetSendFailure>(),
+                isA<ShareSheetSendIncomplete>()
+                    .having((r) => r.sentNames, 'sent', isEmpty)
+                    .having((r) => r.retryingNames, 'retrying', isEmpty)
+                    .having((r) => r.notSentNames, 'not sent', [
+                      'Alice',
+                      'Bob',
+                    ]),
               ),
+        ],
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'reports a recipient the service returned no result for as not sent',
+        setUp: () => stubMultiSend({
+          testRecipient.pubkey: ShareResult.createSuccess('msg-1'),
+        }),
+        seed: () => const ShareSheetState(
+          status: ShareSheetStatus.ready,
+          selectedRecipients: [testRecipient, otherRecipient],
+        ),
+        build: createBloc,
+        act: (bloc) => bloc.add(const ShareSheetSendRequested()),
+        expect: () => [
+          isA<ShareSheetState>().having(
+            (s) => s.isSending,
+            'isSending',
+            isTrue,
+          ),
+          isA<ShareSheetState>().having(
+            (s) => s.actionResult,
+            'actionResult',
+            isA<ShareSheetSendIncomplete>()
+                .having((r) => r.sentNames, 'sent', ['Alice'])
+                .having((r) => r.notSentNames, 'not sent', ['Bob']),
+          ),
         ],
       );
 

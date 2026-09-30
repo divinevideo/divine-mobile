@@ -1703,6 +1703,38 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String shareStillTryingToSendTo(String recipientName) {
+    return '仍在尝试发送给 $recipientName';
+  }
+
+  @override
+  String shareStillTryingToSendToCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '仍在尝试发送给 $count 个人',
+      one: '仍在尝试发送给 $count 个人',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String shareCouldNotSendTo(String recipientName) {
+    return '无法发送给 $recipientName';
+  }
+
+  @override
+  String shareCouldNotSendToCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '无法发送给 $count 个人',
+      one: '无法发送给 $count 个人',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareFailedToSend => '视频发送失败';
 
   @override

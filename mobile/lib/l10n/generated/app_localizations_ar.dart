@@ -1833,6 +1833,44 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String shareStillTryingToSendTo(String recipientName) {
+    return 'ما زلنا نحاول الإرسال إلى $recipientName';
+  }
+
+  @override
+  String shareStillTryingToSendToCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ما زلنا نحاول الإرسال إلى $count شخص',
+      many: 'ما زلنا نحاول الإرسال إلى $count شخصًا',
+      few: 'ما زلنا نحاول الإرسال إلى $count أشخاص',
+      two: 'ما زلنا نحاول الإرسال إلى شخصين',
+      one: 'ما زلنا نحاول الإرسال إلى شخص واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String shareCouldNotSendTo(String recipientName) {
+    return 'تعذّر الإرسال إلى $recipientName';
+  }
+
+  @override
+  String shareCouldNotSendToCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'تعذّر الإرسال إلى $count شخص',
+      many: 'تعذّر الإرسال إلى $count شخصًا',
+      few: 'تعذّر الإرسال إلى $count أشخاص',
+      two: 'تعذّر الإرسال إلى شخصين',
+      one: 'تعذّر الإرسال إلى شخص واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareFailedToSend => 'فشل إرسال الفيديو';
 
   @override

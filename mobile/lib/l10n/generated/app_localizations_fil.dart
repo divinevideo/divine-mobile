@@ -1836,6 +1836,38 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
+  String shareStillTryingToSendTo(String recipientName) {
+    return 'Sinusubukan pa ring ipadala kay $recipientName';
+  }
+
+  @override
+  String shareStillTryingToSendToCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Sinusubukan pa ring ipadala sa $count tao',
+      one: 'Sinusubukan pa ring ipadala sa $count tao',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String shareCouldNotSendTo(String recipientName) {
+    return 'Hindi maipadala kay $recipientName';
+  }
+
+  @override
+  String shareCouldNotSendToCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Hindi maipadala sa $count tao',
+      one: 'Hindi maipadala sa $count tao',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareFailedToSend => 'Nabigong ipadala ang video';
 
   @override

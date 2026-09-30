@@ -348,9 +348,48 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
                 : null,
           ),
         );
+      case ShareSheetSendIncomplete(
+        :final sentNames,
+        :final retryingNames,
+        :final notSentNames,
+      ):
+        final l10n = context.l10n;
+        // One line per outcome, so a refused recipient is never folded into
+        // a success (#8672) and a queued one is never called a failure.
+        final message = [
+          if (sentNames.length == 1)
+            l10n.sharePostSharedWith(sentNames.single)
+          else if (sentNames.isNotEmpty)
+            l10n.sharePostSharedWithCount(sentNames.length),
+          if (retryingNames.length == 1)
+            l10n.shareStillTryingToSendTo(retryingNames.single)
+          else if (retryingNames.isNotEmpty)
+            l10n.shareStillTryingToSendToCount(retryingNames.length),
+          if (notSentNames.length == 1)
+            l10n.shareCouldNotSendTo(notSentNames.single)
+          else if (notSentNames.isNotEmpty)
+            l10n.shareCouldNotSendToCount(notSentNames.length),
+        ].join('\n');
+        // Read before the pop deactivates this context.
+        final view = View.of(context);
+        final textDirection = Directionality.of(context);
+        _safePop(context);
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            DivineSnackbarContainer.snackBar(
+              message,
+              error: notSentNames.isNotEmpty,
+            ),
+          );
+        _runShareDetached(
+          SemanticsService.sendAnnouncement(view, message, textDirection),
+          'announce incomplete share',
+        );
       case ShareSheetSendFailure():
-        // Dismiss too: the send is durably queued and retried in the
-        // background, so there is no in-sheet manual retry to keep open for.
+        // The whole send threw, so no recipient's outcome is known. Nothing
+        // is kept open: a retry from here could deliver a second copy of
+        // anything that did go out.
         _safePop(context);
         messenger
           ..hideCurrentSnackBar()

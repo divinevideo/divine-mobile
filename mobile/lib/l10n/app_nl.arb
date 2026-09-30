@@ -600,6 +600,10 @@
             }
         }
     },
+    "shareStillTryingToSendTo": "We proberen nog naar {recipientName} te verzenden",
+    "shareStillTryingToSendToCount": "{count, plural, one{We proberen nog naar {count} persoon te verzenden} other{We proberen nog naar {count} personen te verzenden}}",
+    "shareCouldNotSendTo": "Kon niet naar {recipientName} worden verzonden",
+    "shareCouldNotSendToCount": "{count, plural, one{Kon niet naar {count} persoon worden verzonden} other{Kon niet naar {count} personen worden verzonden}}",
     "shareFailedToSend": "Video versturen mislukt",
     "shareAddedToBookmarks": "Toegevoegd aan bladwijzers",
     "shareRemovedFromBookmarks": "Verwijderd uit bladwijzers",

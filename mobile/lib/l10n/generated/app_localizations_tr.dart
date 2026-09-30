@@ -1777,6 +1777,38 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String shareStillTryingToSendTo(String recipientName) {
+    return 'Hâlâ gönderilmeye çalışılıyor: $recipientName';
+  }
+
+  @override
+  String shareStillTryingToSendToCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Hâlâ $count kişiye gönderilmeye çalışılıyor',
+      one: 'Hâlâ $count kişiye gönderilmeye çalışılıyor',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String shareCouldNotSendTo(String recipientName) {
+    return 'Gönderilemedi: $recipientName';
+  }
+
+  @override
+  String shareCouldNotSendToCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count kişiye gönderilemedi',
+      one: '$count kişiye gönderilemedi',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareFailedToSend => 'Video gönderilemedi';
 
   @override
