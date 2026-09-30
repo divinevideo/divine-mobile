@@ -82,12 +82,12 @@ void main() {
       initialTotalCount: initialTotalCount,
     );
 
-    test('initial state', () {
+    test('initial state', () async {
       final bloc = createBloc();
       expect(bloc.state.status, CommentsStatus.initial);
       expect(bloc.state.commentsById, isEmpty);
       expect(bloc.state.rootEventId, validId('root'));
-      bloc.close();
+      await bloc.close();
     });
 
     group('CommentsLoadRequested', () {
