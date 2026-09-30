@@ -307,6 +307,16 @@ class AppLocalizationsId extends AppLocalizations {
       'Pertahankan feed dalam format persegi klasik';
 
   @override
+  String videoOverlayTotalLoops(String count) {
+    return '$count total';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String count) {
+    return '$count putaran video';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'Show total loops';
 
   @override

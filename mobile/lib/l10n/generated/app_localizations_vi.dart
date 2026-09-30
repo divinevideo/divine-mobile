@@ -337,6 +337,16 @@ class AppLocalizationsVi extends AppLocalizations {
       'Giữ bảng tin ở định dạng vuông cổ điển';
 
   @override
+  String videoOverlayTotalLoops(String count) {
+    return 'tổng $count';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String count) {
+    return 'video lặp $count lượt';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'Show total loops';
 
   @override

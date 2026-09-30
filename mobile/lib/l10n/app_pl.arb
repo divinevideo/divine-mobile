@@ -2974,6 +2974,8 @@
     "appearanceSettingsSystem": "Domyślne systemu",
     "appearanceSettingsLight": "Jasny",
     "appearanceSettingsDark": "Ciemny",
+    "videoOverlayTotalLoops": "{count} łącznie",
+    "videoOverlayVideoLoops": "{count} pętli filmu",
     "generalSettingsClosedCaptions": "Napisy",
     "generalSettingsClosedCaptionsSubtitle": "Pokazuj napisy, gdy filmy je zawierają",
     "generalSettingsVideoShapeSquareOnly": "Tylko kwadratowe filmy",

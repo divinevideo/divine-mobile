@@ -306,6 +306,16 @@ class AppLocalizationsTr extends AppLocalizations {
       'Akışları klasik kare formatta tut';
 
   @override
+  String videoOverlayTotalLoops(String count) {
+    return 'toplam $count';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String count) {
+    return 'videoda $count döngü';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'Show total loops';
 
   @override

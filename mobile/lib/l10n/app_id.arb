@@ -2974,6 +2974,8 @@
     "appearanceSettingsSystem": "Default sistem",
     "appearanceSettingsLight": "Terang",
     "appearanceSettingsDark": "Gelap",
+    "videoOverlayTotalLoops": "{count} total",
+    "videoOverlayVideoLoops": "{count} putaran video",
     "generalSettingsClosedCaptions": "Teks Tertutup",
     "generalSettingsClosedCaptionsSubtitle": "Tampilkan teks saat video menyertakannya",
     "generalSettingsVideoShapeSquareOnly": "Video persegi saja",

@@ -137,6 +137,8 @@
   "appearanceSettingsSystem": "Lalai sistem",
   "appearanceSettingsLight": "Cerah",
   "appearanceSettingsDark": "Gelap",
+  "videoOverlayTotalLoops": "{count} jumlah",
+  "videoOverlayVideoLoops": "{count} ulangan video",
   "generalSettingsClosedCaptions": "Sarikata Tertutup",
   "generalSettingsClosedCaptionsSubtitle": "Papar sarikata apabila video menyertainya",
   "generalSettingsVideoShapeSquareOnly": "Video segi empat sahaja",

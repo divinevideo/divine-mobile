@@ -368,6 +368,16 @@ class AppLocalizationsEs extends AppLocalizations {
       'Mantené los feeds en el formato cuadrado clásico';
 
   @override
+  String videoOverlayTotalLoops(String count) {
+    return '$count total';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String count) {
+    return '$count bucles del video';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'Show total loops';
 
   @override

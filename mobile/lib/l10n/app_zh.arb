@@ -137,6 +137,8 @@
   "appearanceSettingsSystem": "跟随系统",
   "appearanceSettingsLight": "浅色",
   "appearanceSettingsDark": "深色",
+  "videoOverlayTotalLoops": "总计 {count}",
+  "videoOverlayVideoLoops": "视频 {count} 次循环",
   "generalSettingsClosedCaptions": "隐藏字幕",
   "generalSettingsClosedCaptionsSubtitle": "视频带字幕时自动显示",
   "generalSettingsVideoShapeSquareOnly": "仅方形视频",

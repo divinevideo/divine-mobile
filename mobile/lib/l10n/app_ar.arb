@@ -2967,6 +2967,8 @@
     "appearanceSettingsSystem": "إعداد النظام",
     "appearanceSettingsLight": "فاتح",
     "appearanceSettingsDark": "داكن",
+    "videoOverlayTotalLoops": "{count} إجمالاً",
+    "videoOverlayVideoLoops": "{count} دورة للفيديو",
     "generalSettingsClosedCaptions": "الترجمة المصاحبة",
     "generalSettingsClosedCaptionsSubtitle": "اعرض الترجمة عندما تتضمّنها الفيديوهات",
     "generalSettingsVideoShapeSquareOnly": "فيديوهات مربّعة فقط",

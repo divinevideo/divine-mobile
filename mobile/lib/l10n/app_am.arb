@@ -155,6 +155,8 @@
     "appearanceSettingsSystem": "የሥርዓት ነባሪ",
     "appearanceSettingsLight": "ብሩህ",
     "appearanceSettingsDark": "ጨለማ",
+    "videoOverlayTotalLoops": "ጠቅላላ {count}",
+    "videoOverlayVideoLoops": "የቪዲዮ {count} ዙሮች",
     "generalSettingsClosedCaptions": "የተዘጉ መግለጫዎች",
     "generalSettingsClosedCaptionsSubtitle": "ቪዲዮዎች መግለጫዎችን ሲያካትቱ አሳይ",
     "generalSettingsVideoShapeSquareOnly": "ካሬ ቪዲዮዎች ብቻ",

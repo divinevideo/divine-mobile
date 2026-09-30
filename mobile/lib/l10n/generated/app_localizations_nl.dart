@@ -366,6 +366,16 @@ class AppLocalizationsNl extends AppLocalizations {
       'Hou feeds in het klassieke vierkante formaat';
 
   @override
+  String videoOverlayTotalLoops(String count) {
+    return '$count totaal';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String count) {
+    return '$count videoloops';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'Show total loops';
 
   @override

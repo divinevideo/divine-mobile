@@ -353,6 +353,16 @@ class AppLocalizationsAr extends AppLocalizations {
       'أبقِ التغذيات بالشكل المربّع الكلاسيكي';
 
   @override
+  String videoOverlayTotalLoops(String count) {
+    return '$count إجمالاً';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String count) {
+    return '$count دورة للفيديو';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'Show total loops';
 
   @override
