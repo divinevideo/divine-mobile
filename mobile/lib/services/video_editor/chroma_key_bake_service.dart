@@ -98,7 +98,7 @@ abstract class ChromaKeyBakeService {
     final outputFile = File(outputPath);
 
     Log.info(
-      '🟩 Baking the green screen into clip ${sourceClip.id} '
+      '🟩 Baking the chroma key into clip ${sourceClip.id} '
       '(${chromaKey.backgroundType.name} background)',
       name: _logName,
       category: LogCategory.video,

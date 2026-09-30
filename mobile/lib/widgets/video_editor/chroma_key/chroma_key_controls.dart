@@ -10,6 +10,7 @@ import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_shader.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show ChromaKey;
 import 'package:unified_logger/unified_logger.dart';
 
 /// What the clip being keyed sits on, which decides what "Nothing" behind the
@@ -31,7 +32,8 @@ enum ChromaKeySurface {
   canvas,
 }
 
-/// Everything below the preview on the chroma-key screen.
+/// Everything below the preview on the chroma-key screen, driven by the
+/// [ChromaKeyEditorCubit] above it.
 class ChromaKeyControls extends StatelessWidget {
   const ChromaKeyControls({
     required this.onPickBackground,
@@ -49,20 +51,137 @@ class ChromaKeyControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final (chromaKey, isDetecting) = context.select(
+      (ChromaKeyEditorCubit c) => (c.state.chromaKey, c.state.isDetecting),
+    );
+    final cubit = context.read<ChromaKeyEditorCubit>();
+
+    return ChromaKeyControlsPanel(
+      chromaKey: chromaKey,
+      isDetecting: isDetecting,
+      onDetect: cubit.detectFromFootage,
+      onGreenPreset: cubit.useGreenScreenPreset,
+      onBluePreset: cubit.useBlueScreenPreset,
+      onKeyColorChanged: cubit.setKeyColor,
+      onSimilarityChanged: cubit.setSimilarity,
+      onSmoothnessChanged: cubit.setSmoothness,
+      onSpillChanged: cubit.setSpill,
+      onPickBackground: onPickBackground,
+      surface: surface,
+    );
+  }
+}
+
+/// The chroma-key settings panel, free of any particular state holder.
+///
+/// Shared by the editor's chroma key screen, where [ChromaKeyControls] binds
+/// it to [ChromaKeyEditorCubit], and the recorder's chroma key mode, which
+/// binds it to the recorder so the key can be tuned against the live camera.
+class ChromaKeyControlsPanel extends StatelessWidget {
+  const ChromaKeyControlsPanel({
+    required this.chromaKey,
+    required this.isDetecting,
+    required this.onDetect,
+    required this.onGreenPreset,
+    required this.onBluePreset,
+    required this.onKeyColorChanged,
+    required this.onSimilarityChanged,
+    required this.onSmoothnessChanged,
+    required this.onSpillChanged,
+    required this.onPickBackground,
+    this.surface = ChromaKeySurface.track,
+    this.detectionNotice,
+    this.scrollController,
+    super.key,
+  });
+
+  /// The key as currently configured.
+  final ClipChromaKey chromaKey;
+
+  /// Whether a measurement is running. Holds Auto-detect only: presets and
+  /// hand edits stay live and overtake it.
+  final bool isDetecting;
+
+  /// Measures the screen and adopts its colour and amount.
+  final VoidCallback onDetect;
+
+  /// Adopts the green-screen preset, keeping the backdrop.
+  final VoidCallback onGreenPreset;
+
+  /// Adopts the blue-screen preset, keeping the backdrop.
+  final VoidCallback onBluePreset;
+
+  final ValueChanged<Color> onKeyColorChanged;
+  final ValueChanged<double> onSimilarityChanged;
+  final ValueChanged<double> onSmoothnessChanged;
+  final ValueChanged<double> onSpillChanged;
+
+  /// Opens the picker for the chosen background type.
+  final ValueChanged<ClipChromaKeyBackgroundType> onPickBackground;
+
+  /// What the keyed clip sits on. See [ChromaKeySurface].
+  final ChromaKeySurface surface;
+
+  /// Why the last measurement came back empty, shown inline above
+  /// Auto-detect, or `null` for nothing to report.
+  ///
+  /// The editor reports it as a snackbar instead. A panel inside a bottom
+  /// sheet cannot: the snackbar lands on the scaffold underneath the sheet.
+  final String? detectionNotice;
+
+  /// Drives the panel's scroll view, for a host that has to own it — a
+  /// draggable sheet resizes off the same controller its content scrolls.
+  final ScrollController? scrollController;
+
+  @override
+  Widget build(BuildContext context) {
+    final notice = detectionNotice;
     return SingleChildScrollView(
+      controller: scrollController,
       padding: const EdgeInsets.only(top: 8, bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        spacing: 20,
+        spacing: _sectionSpacing,
         children: [
-          const _Gutter(child: _PreviewUnavailableNotice()),
-          const _Gutter(child: _SurfaceRequirementHint()),
-          const _Gutter(child: _DetectRow()),
-          const _Gutter(child: _ScreenColorRow()),
-          const _Gutter(child: _ToleranceSliders()),
+          // One slot for both. The notice is usually absent, and an absent
+          // child in a `spacing` column still costs a full gap — which left
+          // the panel's first line floating away from whatever sits above it.
+          const _Gutter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _PreviewUnavailableNotice(),
+                _SurfaceRequirementHint(),
+              ],
+            ),
+          ),
+          if (notice != null) _Gutter(child: _InfoRow(text: notice)),
+          _Gutter(
+            child: _DetectRow(
+              isDetecting: isDetecting,
+              onDetect: onDetect,
+              onGreenPreset: onGreenPreset,
+              onBluePreset: onBluePreset,
+            ),
+          ),
+          _Gutter(
+            child: _ScreenColorRow(
+              color: chromaKey.key.color,
+              onColorChanged: onKeyColorChanged,
+            ),
+          ),
+          _Gutter(
+            child: _ToleranceSliders(
+              chromaKey: chromaKey.key,
+              onSimilarityChanged: onSimilarityChanged,
+              onSmoothnessChanged: onSmoothnessChanged,
+              onSpillChanged: onSpillChanged,
+            ),
+          ),
           // Unpadded: the section insets its own text but lets the chips
           // scroll past the gutter to the screen edge.
           _BackgroundSection(
+            type: chromaKey.backgroundType,
             onPickBackground: onPickBackground,
             surface: surface,
           ),
@@ -74,6 +193,9 @@ class ChromaKeyControls extends StatelessWidget {
 
 /// Distance between the panel's content and the screen edges.
 const double _gutter = 16;
+
+/// Vertical gap between the panel's sections.
+const double _sectionSpacing = 20;
 
 /// Insets a row to the panel's side [_gutter].
 ///
@@ -146,7 +268,14 @@ class _PreviewUnavailableNoticeState extends State<_PreviewUnavailableNotice> {
       return const SizedBox.shrink();
     }
 
-    return _InfoRow(text: context.l10n.videoEditorChromaKeyPreviewUnavailable);
+    // Carries the section gap itself: it shares a slot with the surface hint
+    // so that it costs no space at all when it is not shown.
+    return Padding(
+      padding: const EdgeInsets.only(bottom: _sectionSpacing),
+      child: _InfoRow(
+        text: context.l10n.videoEditorChromaKeyPreviewUnavailable,
+      ),
+    );
   }
 }
 
@@ -209,15 +338,20 @@ class _InfoRow extends StatelessWidget {
 /// preset tapped while one runs writes it off instead — see
 /// [ChromaKeyEditorState.isDetecting].
 class _DetectRow extends StatelessWidget {
-  const _DetectRow();
+  const _DetectRow({
+    required this.isDetecting,
+    required this.onDetect,
+    required this.onGreenPreset,
+    required this.onBluePreset,
+  });
+
+  final bool isDetecting;
+  final VoidCallback onDetect;
+  final VoidCallback onGreenPreset;
+  final VoidCallback onBluePreset;
 
   @override
   Widget build(BuildContext context) {
-    final isDetecting = context.select(
-      (ChromaKeyEditorCubit c) => c.state.isDetecting,
-    );
-    final cubit = context.read<ChromaKeyEditorCubit>();
-
     return Row(
       spacing: 8,
       children: [
@@ -227,20 +361,20 @@ class _DetectRow extends StatelessWidget {
             leadingIcon: .sparkle,
             size: .small,
             isLoading: isDetecting,
-            onPressed: isDetecting ? null : cubit.detectFromFootage,
+            onPressed: isDetecting ? null : onDetect,
           ),
         ),
         DivineButton(
           label: context.l10n.videoEditorChromaKeyPresetGreen,
           type: .secondary,
           size: .small,
-          onPressed: cubit.useGreenScreenPreset,
+          onPressed: onGreenPreset,
         ),
         DivineButton(
           label: context.l10n.videoEditorChromaKeyPresetBlue,
           type: .secondary,
           size: .small,
-          onPressed: cubit.useBlueScreenPreset,
+          onPressed: onBluePreset,
         ),
       ],
     );
@@ -249,15 +383,13 @@ class _DetectRow extends StatelessWidget {
 
 /// The colour being removed, with a swatch that opens the picker.
 class _ScreenColorRow extends StatelessWidget {
-  const _ScreenColorRow();
+  const _ScreenColorRow({required this.color, required this.onColorChanged});
+
+  final Color color;
+  final ValueChanged<Color> onColorChanged;
 
   @override
   Widget build(BuildContext context) {
-    final color = context.select(
-      (ChromaKeyEditorCubit c) => c.state.chromaKey.key.color,
-    );
-    final cubit = context.read<ChromaKeyEditorCubit>();
-
     return Row(
       children: [
         Expanded(
@@ -276,7 +408,7 @@ class _ScreenColorRow extends StatelessWidget {
               context,
               initialColor: color,
             );
-            if (picked != null) cubit.setKeyColor(picked);
+            if (picked != null) onColorChanged(picked);
           },
         ),
       ],
@@ -325,14 +457,21 @@ class _ColorSwatchButton extends StatelessWidget {
 
 /// The three tolerance sliders.
 class _ToleranceSliders extends StatelessWidget {
-  const _ToleranceSliders();
+  const _ToleranceSliders({
+    required this.chromaKey,
+    required this.onSimilarityChanged,
+    required this.onSmoothnessChanged,
+    required this.onSpillChanged,
+  });
+
+  final ChromaKey chromaKey;
+  final ValueChanged<double> onSimilarityChanged;
+  final ValueChanged<double> onSmoothnessChanged;
+  final ValueChanged<double> onSpillChanged;
 
   @override
   Widget build(BuildContext context) {
-    final key = context.select(
-      (ChromaKeyEditorCubit c) => c.state.chromaKey.key,
-    );
-    final cubit = context.read<ChromaKeyEditorCubit>();
+    final key = chromaKey;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -343,19 +482,19 @@ class _ToleranceSliders extends StatelessWidget {
           hint: context.l10n.videoEditorChromaKeyAmountHint,
           value: key.similarity,
           min: ChromaKeyEditorCubit.minSimilarity,
-          onChanged: cubit.setSimilarity,
+          onChanged: onSimilarityChanged,
         ),
         _LabeledSlider(
           label: context.l10n.videoEditorChromaKeyEdgeLabel,
           hint: context.l10n.videoEditorChromaKeyEdgeHint,
           value: key.smoothness,
-          onChanged: cubit.setSmoothness,
+          onChanged: onSmoothnessChanged,
         ),
         _LabeledSlider(
           label: context.l10n.videoEditorChromaKeySpillLabel,
           hint: context.l10n.videoEditorChromaKeySpillHint,
           value: key.spill,
-          onChanged: cubit.setSpill,
+          onChanged: onSpillChanged,
         ),
       ],
     );
@@ -414,10 +553,13 @@ class _LabeledSlider extends StatelessWidget {
 /// Picks what fills the area the key removed.
 class _BackgroundSection extends StatelessWidget {
   const _BackgroundSection({
+    required this.type,
     required this.onPickBackground,
     required this.surface,
   });
 
+  /// The background currently chosen.
+  final ClipChromaKeyBackgroundType type;
   final ValueChanged<ClipChromaKeyBackgroundType> onPickBackground;
   final ChromaKeySurface surface;
 
@@ -432,10 +574,6 @@ class _BackgroundSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final type = context.select(
-      (ChromaKeyEditorCubit c) => c.state.backgroundType,
-    );
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 8,

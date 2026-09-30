@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
@@ -23,11 +24,16 @@ class VideoRecorderModeSelectorWheel extends StatefulWidget {
   const VideoRecorderModeSelectorWheel({
     required this.selectedMode,
     required this.onModeChanged,
+    this.modes = VideoRecorderMode.values,
     super.key,
   });
 
   final VideoRecorderMode selectedMode;
   final ValueChanged<VideoRecorderMode> onModeChanged;
+
+  /// The modes offered, in wheel order. Defaults to every mode; a device that
+  /// cannot show one leaves it out — see [VideoRecorderMode.available].
+  final List<VideoRecorderMode> modes;
 
   @override
   State<VideoRecorderModeSelectorWheel> createState() =>
@@ -62,7 +68,7 @@ class _VideoRecorderModeSelectorWheelState
   @override
   void initState() {
     super.initState();
-    _selectedIndex = VideoRecorderMode.values.indexOf(widget.selectedMode);
+    _selectedIndex = _indexOf(widget.selectedMode);
     _snapOffsets = _snapOffsetsFor(_itemWidths(TextScaler.noScaling));
     _scrollController = ScrollController(
       initialScrollOffset: _snapOffsets[_selectedIndex],
@@ -84,7 +90,7 @@ class _VideoRecorderModeSelectorWheelState
   void didUpdateWidget(VideoRecorderModeSelectorWheel oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.selectedMode != widget.selectedMode) {
-      final index = VideoRecorderMode.values.indexOf(widget.selectedMode);
+      final index = _indexOf(widget.selectedMode);
       // Self-originated changes (tap/snap) already animated to this index.
       if (index == _selectedIndex) return;
       setState(() => _selectedIndex = index);
@@ -100,6 +106,11 @@ class _VideoRecorderModeSelectorWheelState
     _scrollController.dispose();
     super.dispose();
   }
+
+  /// Wheel position of [mode]. A mode the wheel does not offer lands on the
+  /// first entry rather than on an index that does not exist.
+  int _indexOf(VideoRecorderMode mode) =>
+      math.max(0, widget.modes.indexOf(mode));
 
   void _jumpTo(int index) {
     if (!_scrollController.hasClients) return;
@@ -177,7 +188,7 @@ class _VideoRecorderModeSelectorWheelState
       logName: 'VideoRecorderModeSelectorWheel',
       category: LogCategory.ui,
     );
-    widget.onModeChanged(VideoRecorderMode.values[index]);
+    widget.onModeChanged(widget.modes[index]);
   }
 
   /// Rendered width of [label] at [textScaler].
@@ -201,7 +212,7 @@ class _VideoRecorderModeSelectorWheelState
   /// Width of each item — its label plus a constant [_labelGap] — so the
   /// spacing between adjacent labels stays uniform regardless of text width.
   List<double> _itemWidths(TextScaler textScaler) => [
-    for (final mode in VideoRecorderMode.values)
+    for (final mode in widget.modes)
       _textWidth(mode.label, textScaler) + _labelGap,
   ];
 
@@ -225,7 +236,7 @@ class _VideoRecorderModeSelectorWheelState
 
   @override
   Widget build(BuildContext context) {
-    const modes = VideoRecorderMode.values;
+    final modes = widget.modes;
     final textScaler = context.textScaler.clamp(maxScaleFactor: 1.3);
     final itemWidths = _itemWidths(textScaler);
     _snapOffsets = _snapOffsetsFor(itemWidths);

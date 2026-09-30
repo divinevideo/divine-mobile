@@ -31,6 +31,17 @@ final class ClipsLibraryLoadRequested extends ClipsLibraryEvent {
   List<Object?> get props => [preSelectedIds, disabledClipIds];
 }
 
+/// Clips changed in storage behind the bloc's back — a chroma-key take whose
+/// keyed file landed while the library was open — so the listing reloads in
+/// place.
+///
+/// Unlike [ClipsLibraryLoadRequested] it keeps what the user has selected and
+/// does not pass through a loading state, so an update arriving mid-browse
+/// neither flashes the grid nor drops the selection.
+final class ClipsLibraryClipsChanged extends ClipsLibraryEvent {
+  const ClipsLibraryClipsChanged();
+}
+
 /// Event to toggle selection of a clip.
 final class ClipsLibraryToggleSelection extends ClipsLibraryEvent {
   const ClipsLibraryToggleSelection(this.clip);

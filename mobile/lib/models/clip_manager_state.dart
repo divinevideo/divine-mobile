@@ -48,10 +48,16 @@ class ClipManagerState {
     this.activeRecordingDuration = .zero,
     this.mergeOutputPath,
     this.pendingDeletion,
+    this.libraryRevision = 0,
   });
 
   /// List of all recorded clips in order.
   final List<DivineVideoClip> clips;
+
+  /// Goes up each time this manager rewrites a clip in the library behind the
+  /// library's back — a chroma-key take whose keyed file landed — so a library
+  /// that is already on screen knows to load again.
+  final int libraryRevision;
 
   /// ID of the currently selected clip for editing, or null if none selected.
   final String? selectedClipId;
@@ -152,6 +158,7 @@ class ClipManagerState {
     bool clearMergeOutputPath = false,
     ClipPendingDeletion? pendingDeletion,
     bool clearPendingDeletion = false,
+    int? libraryRevision,
   }) {
     return ClipManagerState(
       clips: clips ?? this.clips,
@@ -173,6 +180,7 @@ class ClipManagerState {
       pendingDeletion: clearPendingDeletion
           ? null
           : (pendingDeletion ?? this.pendingDeletion),
+      libraryRevision: libraryRevision ?? this.libraryRevision,
     );
   }
 }

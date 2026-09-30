@@ -30,6 +30,7 @@ void main() {
       VideoRecorderMode? mode,
       ThemeData? theme,
       bool reduceMotion = false,
+      List<VideoRecorderMode> modes = VideoRecorderMode.values,
     }) {
       return MaterialApp(
         theme: theme,
@@ -48,6 +49,7 @@ void main() {
               child: VideoRecorderModeSelectorWheel(
                 selectedMode: mode ?? selectedMode,
                 onModeChanged: (m) => modeChanges.add(m),
+                modes: modes,
               ),
             ),
           ),
@@ -60,13 +62,19 @@ void main() {
       VideoRecorderMode? mode,
       ThemeData? theme,
       bool reduceMotion = false,
+      List<VideoRecorderMode> modes = VideoRecorderMode.values,
     }) async {
       tester.view.physicalSize = const Size(surfaceWidth, 400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       await tester.pumpWidget(
-        buildWidget(mode: mode, theme: theme, reduceMotion: reduceMotion),
+        buildWidget(
+          mode: mode,
+          theme: theme,
+          reduceMotion: reduceMotion,
+          modes: modes,
+        ),
       );
       await tester.pumpAndSettle();
     }
@@ -84,6 +92,32 @@ void main() {
         )
         .style
         .color!;
+
+    group('modes', () {
+      final withoutChromaKey = VideoRecorderMode.available(
+        liveChromaKeySupported: false,
+      );
+
+      testWidgets('offers only the modes it is given', (tester) async {
+        await pumpSelector(tester, modes: withoutChromaKey);
+
+        expect(find.text(VideoRecorderMode.chromaKey.label), findsNothing);
+        expect(find.text(VideoRecorderMode.classic.label), findsOneWidget);
+      });
+
+      testWidgets('reports the mode that was tapped from the given list', (
+        tester,
+      ) async {
+        await pumpSelector(tester, modes: withoutChromaKey);
+
+        await tester.tap(find.text(VideoRecorderMode.classic.label));
+        await tester.pumpAndSettle();
+
+        // Positions shift when a mode is left out, so a lookup into the full
+        // list would report the wrong one.
+        expect(modeChanges, [VideoRecorderMode.classic]);
+      });
+    });
 
     group('renders', () {
       testWidgets('renders all mode labels', (tester) async {

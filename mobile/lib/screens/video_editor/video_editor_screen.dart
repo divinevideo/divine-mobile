@@ -214,6 +214,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     // session, so deferred cleanup and final-clip invalidation still need to
     // reach it — otherwise orphans never enter `_deferredFileCleanup`.
     final videoEditor = ref.read(videoEditorProvider.notifier);
+    final clipManager = ref.read(clipManagerProvider.notifier);
     _clipEditorBloc = ClipEditorBloc(
       // The clip library sits behind a Riverpod provider the BLoC can't reach,
       // so it arrives as a callback — the same transition seam that brings the
@@ -224,6 +225,10 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
         if (!mounted) return false;
         return ref.read(clipManagerProvider.notifier).saveClipToLibrary(clip);
       },
+      // Joins the bake the recorder started right after the take. Captured
+      // while mounted, like `videoEditor` above: the bake outlives a screen
+      // the user backs out of, and must still land in the clip manager.
+      bakeCapturedChromaKey: clipManager.bakeCapturedChromaKey,
       deferFileCleanup: videoEditor.deferFileCleanup,
       onFinalClipInvalidated: () {
         // A clip render (reverse / transform) can resolve after this screen is

@@ -13,7 +13,8 @@ import 'package:divine_camera/divine_camera.dart'
         CameraLensMetadata,
         DivineCameraLens,
         DivineVideoQuality,
-        DivineVideoStabilizationMode;
+        DivineVideoStabilizationMode,
+        PhotoCaptureResult;
 import 'package:divine_video_player/divine_video_player.dart'
     show DivineVideoPlayerController, VideoClip;
 import 'package:equatable/equatable.dart';
@@ -24,12 +25,14 @@ import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
+import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_recorder/camera_initialization_error.dart';
 import 'package:openvine/models/video_recorder/video_recorder_flash_mode.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/models/video_recorder/video_recorder_state.dart';
 import 'package:openvine/models/video_recorder/video_recorder_timer_duration.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/services/haptic_service.dart';
@@ -39,6 +42,7 @@ import 'package:openvine/services/video_editor/clip_media_duration.dart';
 import 'package:openvine/services/video_recorder/camera/camera_base_service.dart';
 import 'package:openvine/services/video_recorder/stop_motion_session_store.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
+import 'package:openvine/utils/chroma_key_still_detection.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sound_service/sound_service.dart';
@@ -98,6 +102,16 @@ typedef ReadSharedPreferences = SharedPreferences Function();
 
 /// Reports the recorder mode only after media capture actually starts.
 typedef RecordingStartedCallback = void Function(VideoRecorderMode mode);
+
+/// Measures the chroma-key screen in the still at `photoPath`, keeping only the
+/// centre shaped like the video (width over height).
+///
+/// Injectable so tests can stand in a measurement without an image codec; in
+/// the app it is [detectChromaKeyInStill].
+typedef ChromaKeyStillDetector = Future<ChromaKeyDetection> Function(
+  String photoPath, {
+  required double visibleAspectRatio,
+});
 
 /// Default [CountdownSoundService] factory.
 ///
@@ -160,6 +174,12 @@ class VideoRecorderBloc
   /// [countdownSoundServiceFactory] and [audioPlaybackServiceFactory]
   /// are optional test overrides. Defaults preserve the iOS
   /// audio-session wiring required by #4539.
+  ///
+  /// [liveChromaKeySupported] says whether the renderer can draw the keyed
+  /// chroma-key viewfinder. Without it [VideoRecorderMode.chromaKey] is
+  /// neither restored nor entered. Off unless the caller knows, so a bloc built
+  /// without asking the renderer never offers a mode it cannot show.
+  /// [detectChromaKeyStill] is a test seam for the wall measurement.
   VideoRecorderBloc({
     required ReadClipManager readClipManager,
     required ReadVideoEditor readVideoEditor,
@@ -171,6 +191,8 @@ class VideoRecorderBloc
     AudioPlaybackServiceFactory? audioPlaybackServiceFactory,
     PerformanceTraceMonitor? performanceMonitor,
     RecordingStartedCallback? onRecordingStarted,
+    bool liveChromaKeySupported = false,
+    ChromaKeyStillDetector detectChromaKeyStill = detectChromaKeyInStill,
   }) : _readClipManager = readClipManager,
        _readVideoEditor = readVideoEditor,
        _readVideoEditorState = readVideoEditorState,
@@ -183,6 +205,8 @@ class VideoRecorderBloc
        _performanceMonitor =
            performanceMonitor ?? const NoOpPerformanceTraceMonitor(),
        _onRecordingStarted = onRecordingStarted,
+       _liveChromaKeySupported = liveChromaKeySupported,
+       _detectChromaKeyStill = detectChromaKeyStill,
        super(const VideoRecorderBlocState()) {
     _cameraService =
         _cameraServiceOverride ??
@@ -268,6 +292,15 @@ class VideoRecorderBloc
       _onStopMotionAssembleRequested,
       transformer: droppable(),
     );
+    on<VideoRecorderChromaKeyMeasureRequested>(
+      _onChromaKeyMeasureRequested,
+      transformer: droppable(),
+    );
+    on<VideoRecorderChromaKeyPresetSelected>(_onChromaKeyPresetSelected);
+    on<VideoRecorderChromaKeySettingsChanged>(
+      _onChromaKeySettingsChanged,
+    );
+    on<VideoRecorderChromaKeyBackdropSet>(_onChromaKeyBackdropSet);
     on<_VideoRecorderCameraStateChanged>(_onCameraStateChanged);
     on<_VideoRecorderRemoteRecordTriggered>(_onRemoteRecordTriggered);
     on<_VideoRecorderAutoStopped>(_onAutoStopped);
@@ -285,8 +318,15 @@ class VideoRecorderBloc
   final AudioPlaybackServiceFactory _audioPlaybackServiceFactory;
   final PerformanceTraceMonitor _performanceMonitor;
   final RecordingStartedCallback? _onRecordingStarted;
+  final bool _liveChromaKeySupported;
+  final ChromaKeyStillDetector _detectChromaKeyStill;
 
   late final CameraService _cameraService;
+
+  /// The clip manager holding background chroma-key bakes back for the take
+  /// in progress, or `null` while nothing is held. Kept so [close] can let
+  /// them go even after the widget that reads the clip manager is gone.
+  ClipManagerNotifier? _chromaKeyBakeHolder;
   AudioPlaybackService? _audioPlaybackService;
   CountdownSoundService? _countdownSoundService;
   Timer? _focusPointTimer;
@@ -313,6 +353,30 @@ class VideoRecorderBloc
 
   bool get _remoteRecordPausedForSound =>
       _readVideoEditorState().selectedSound != null;
+
+  /// Keeps background chroma-key bakes off the hardware while the camera
+  /// encodes: held from the moment a take starts, released once it is over.
+  ///
+  /// Watched here rather than in the start and stop handlers because a take
+  /// can end on many paths — a stop, a failed start, an abort for navigation
+  /// — and every one of them leaves the state saying it is no longer
+  /// recording.
+  @override
+  void onChange(Change<VideoRecorderBlocState> change) {
+    super.onChange(change);
+    final isCapturing =
+        change.nextState.isStartingRecording || change.nextState.isRecording;
+    if (isCapturing && _chromaKeyBakeHolder == null) {
+      _chromaKeyBakeHolder = _readClipManager()..holdCapturedChromaKeyBakes();
+    } else if (!isCapturing) {
+      _releaseChromaKeyBakes();
+    }
+  }
+
+  void _releaseChromaKeyBakes() {
+    _chromaKeyBakeHolder?.releaseCapturedChromaKeyBakes();
+    _chromaKeyBakeHolder = null;
+  }
 
   // === Event handlers ===
 
@@ -342,11 +406,12 @@ class VideoRecorderBloc
         prefs.setString(VideoRecorderMode.persistenceKey, requestedMode.name),
       );
     }
-    final savedMode =
-        requestedMode ??
-        VideoRecorderMode.fromName(
-          prefs.getString(VideoRecorderMode.persistenceKey),
-        );
+    final savedMode = _offeredMode(
+      requestedMode ??
+          VideoRecorderMode.fromName(
+            prefs.getString(VideoRecorderMode.persistenceKey),
+          ),
+    );
     if (!event.fromEditor && savedMode != state.recorderMode) {
       try {
         await _applyRecorderMode(emit, savedMode, keepAutosavedDraft: true);
@@ -1155,13 +1220,25 @@ class VideoRecorderBloc
       return;
     }
 
+    // The footage is the raw camera frame; the key the viewfinder showed
+    // travels with it as an intent and is baked once the editor opens.
+    final captureChromaKey = state.recorderMode.needsLiveChromaKey
+        ? state.chromaKey
+        : null;
     final clip = clipManager.addClip(
       video: videoResult,
       originalAspectRatio: _cameraService.cameraAspectRatio,
       targetAspectRatio: state.aspectRatio,
       lensMetadata: _cameraService.currentLensMetadata,
       limitClipDuration: state.recorderMode.hasRecordingLimit,
+      captureChromaKey: captureChromaKey,
     );
+    // The clip owns the backdrop image from here; the recorder no longer
+    // deletes it when the backdrop changes or the recorder closes.
+    if (captureChromaKey?.backgroundImagePath case final imagePath?
+        when imagePath == state.unrecordedChromaKeyImagePath) {
+      emit(state.copyWith(clearUnrecordedChromaKeyImagePath: true));
+    }
     unawaited(
       clipManager.saveClipToLibrary(clip).then((saved) {
         if (!saved) {
@@ -1197,23 +1274,56 @@ class VideoRecorderBloc
     // bare clip was already persisted by the unawaited save above.
     unawaited(
       _enrichAndSaveClip(
-        videoResult: videoResult,
-        clip: clip,
-        clipManager: clipManager,
-        remainingDuration: remainingDuration,
-      ).catchError((Object error, StackTrace stackTrace) {
-        // Detached work must not escape as an unhandled async error. The bare
-        // clip is already saved, so a failure here only loses the enriched
-        // metadata, not the recording.
-        Log.error(
-          '⚠️ Clip post-processing failed for ${clip.id}',
-          name: 'VideoRecorderBloc',
-          category: LogCategory.video,
-          error: error,
-          stackTrace: stackTrace,
-        );
-      }),
+            videoResult: videoResult,
+            clip: clip,
+            clipManager: clipManager,
+            remainingDuration: remainingDuration,
+          )
+          .catchError((Object error, StackTrace stackTrace) {
+            // Detached work must not escape as an unhandled async error. The bare
+            // clip is already saved, so a failure here only loses the enriched
+            // metadata, not the recording.
+            Log.error(
+              '⚠️ Clip post-processing failed for ${clip.id}',
+              name: 'VideoRecorderBloc',
+              category: LogCategory.video,
+              error: error,
+              stackTrace: stackTrace,
+            );
+          })
+          .then((_) => _bakeRecordedChromaKey(clipManager, clip.id)),
     );
+  }
+
+  /// Bakes a chroma-key take into the composite the viewfinder showed, so the
+  /// clip and its library copy hold that rather than the raw footage.
+  ///
+  /// Started only once post-processing is done: that pass ends by saving the
+  /// raw take to the library, and a raw save landing after the keyed one would
+  /// put the wall back. A take deleted since, or already keyed by an editor
+  /// that opened first, is left alone.
+  Future<void> _bakeRecordedChromaKey(
+    ClipManagerNotifier clipManager,
+    String clipId,
+  ) async {
+    try {
+      final clip = clipManager.getClipById(clipId);
+      if (clip == null || !clip.hasPendingCaptureChromaKey) return;
+      await clipManager.bakeCapturedChromaKey(clip);
+    } catch (e, stackTrace) {
+      // The take keeps its raw footage and its recorded key; the editor tries
+      // again when it opens on the clip.
+      Log.warning(
+        '⚠️ Chroma-key bake failed for $clipId: $e',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
+      Log.debug(
+        '$stackTrace',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
+    }
   }
 
   /// Enriches a freshly recorded [clip] with its real duration, thumbnail and
@@ -1661,6 +1771,7 @@ class VideoRecorderBloc
     VideoRecorderRecorderModeSet event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
+    if (_offeredMode(event.mode) != event.mode) return;
     final previousMode = state.recorderMode;
     await _applyRecorderMode(
       emit,
@@ -1733,6 +1844,12 @@ class VideoRecorderBloc
     );
   }
 
+  /// [mode], or [VideoRecorderMode.capture] when this device cannot show it.
+  VideoRecorderMode _offeredMode(VideoRecorderMode mode) =>
+      mode.needsLiveChromaKey && !_liveChromaKeySupported
+      ? VideoRecorderMode.capture
+      : mode;
+
   void _onTimerCycled(
     VideoRecorderTimerCycled event,
     Emitter<VideoRecorderBlocState> emit,
@@ -1789,6 +1906,206 @@ class VideoRecorderBloc
   bool _gridLinesEnabledFor(VideoRecorderMode mode) =>
       mode.supportGridLines &&
       (_readSharedPreferences().getBool(_kGridLinesEnabledKey) ?? true);
+
+  // === Chroma-key handlers ===
+
+  /// Measures the wall behind the subject from a still and adopts the
+  /// measured screen colour and amount.
+  ///
+  /// The rest of the key — edge, spill and the backdrop — is the user's and
+  /// is kept. A setting changed by hand while this runs writes the
+  /// measurement off, and its result is dropped when it lands.
+  Future<void> _onChromaKeyMeasureRequested(
+    VideoRecorderChromaKeyMeasureRequested event,
+    Emitter<VideoRecorderBlocState> emit,
+  ) async {
+    if (!state.recorderMode.needsLiveChromaKey ||
+        state.isRecording ||
+        !_cameraService.isInitialized ||
+        _cameraService.isSwitchingCamera) {
+      return;
+    }
+    emit(
+      state.copyWith(
+        chromaKeyMeasurementStatus: ChromaKeyMeasurementStatus.detecting,
+      ),
+    );
+
+    final ChromaKeyDetection detection;
+    try {
+      detection = await _measureChromaKey(
+        visibleAspectRatio: state.aspectRatio.value,
+      ).timeout(VideoEditorConstants.chromaKeyDetectTimeout);
+    } on ChromaKeyDetectionException catch (error) {
+      // Expected: plenty of rooms have no plain surface filling the frame.
+      // The panel says so and the user sets the key by hand.
+      Log.info(
+        'Chroma-key measurement found no usable wall: ${error.message}',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
+      _endChromaKeyMeasurement(emit, ChromaKeyMeasurementStatus.failed);
+      return;
+    } on TimeoutException {
+      Log.warning(
+        'Chroma-key measurement gave up after '
+        '${VideoEditorConstants.chromaKeyDetectTimeout.inSeconds}s',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
+      _endChromaKeyMeasurement(emit, ChromaKeyMeasurementStatus.timedOut);
+      return;
+    } catch (error, stackTrace) {
+      addError(switch (error) {
+        StateError() || TypeError() || RangeError() => Reportable(
+          error,
+          context: '_onChromaKeyMeasureRequested',
+        ),
+        _ => error,
+      }, stackTrace);
+      _endChromaKeyMeasurement(emit, ChromaKeyMeasurementStatus.failed);
+      return;
+    }
+
+    // A hand edit while this ran took the status back to idle: the edit was
+    // deliberate and this is a guess.
+    if (!state.isMeasuringChromaKey) return;
+    emit(
+      state.copyWith(
+        chromaKey: state.chromaKey.withKeySettings(
+          color: detection.color,
+          similarity: detection.similarity,
+        ),
+        chromaKeyMeasurementStatus: ChromaKeyMeasurementStatus.idle,
+      ),
+    );
+  }
+
+  /// Reports how a measurement ended, unless a hand edit already wrote it off.
+  void _endChromaKeyMeasurement(
+    Emitter<VideoRecorderBlocState> emit,
+    ChromaKeyMeasurementStatus status,
+  ) {
+    if (!state.isMeasuringChromaKey) return;
+    emit(state.copyWith(chromaKeyMeasurementStatus: status));
+  }
+
+  /// Captures a still, measures the wall in it, and deletes the still again.
+  ///
+  /// Written to the temp directory rather than documents: the still is a
+  /// measurement, not media, and must not outlive a crash mid-measurement.
+  ///
+  /// Auto flash is held off for the still. A photo in auto fires a burst — or
+  /// on the front camera, a white screen — that the video never gets, and
+  /// would measure the wall in light the recording will not see. A torch
+  /// stays on: it lights the take the same way.
+  Future<ChromaKeyDetection> _measureChromaKey({
+    required double visibleAspectRatio,
+  }) async {
+    final restoreAutoFlash =
+        state.flashMode == DivineFlashMode.auto &&
+        await _cameraService.setFlashMode(DivineFlashMode.off);
+    final PhotoCaptureResult? photo;
+    try {
+      photo = await _cameraService.capturePhoto(
+        outputDirectory: Directory.systemTemp.path,
+      );
+    } finally {
+      if (restoreAutoFlash) {
+        await _cameraService.setFlashMode(DivineFlashMode.auto);
+      }
+    }
+    if (photo == null) {
+      throw const ChromaKeyDetectionException('The camera returned no still');
+    }
+    try {
+      return await _detectChromaKeyStill(
+        photo.filePath,
+        visibleAspectRatio: visibleAspectRatio,
+      );
+    } finally {
+      _deleteFileQuietly(photo.filePath);
+    }
+  }
+
+  void _onChromaKeyPresetSelected(
+    VideoRecorderChromaKeyPresetSelected event,
+    Emitter<VideoRecorderBlocState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        chromaKey: state.chromaKey.withPreset(event.preset),
+        chromaKeyMeasurementStatus: ChromaKeyMeasurementStatus.idle,
+      ),
+    );
+  }
+
+  void _onChromaKeySettingsChanged(
+    VideoRecorderChromaKeySettingsChanged event,
+    Emitter<VideoRecorderBlocState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        chromaKey: state.chromaKey.withKeySettings(
+          color: event.color,
+          similarity: event.similarity,
+          smoothness: event.smoothness,
+          spill: event.spill,
+        ),
+        chromaKeyMeasurementStatus: ChromaKeyMeasurementStatus.idle,
+      ),
+    );
+  }
+
+  /// Swaps the backdrop, deleting an image the previous one left behind that
+  /// no clip was recorded with.
+  void _onChromaKeyBackdropSet(
+    VideoRecorderChromaKeyBackdropSet event,
+    Emitter<VideoRecorderBlocState> emit,
+  ) {
+    final key = state.chromaKey;
+    final nextKey = switch (event.type) {
+      ClipChromaKeyBackgroundType.transparent =>
+        key.withTransparentBackground(),
+      ClipChromaKeyBackgroundType.color => key.withColorBackground(
+        event.color!,
+      ),
+      ClipChromaKeyBackgroundType.image => key.withImageBackground(event.path!),
+      ClipChromaKeyBackgroundType.video => key.withVideoBackground(event.path!),
+    };
+
+    final orphan = state.unrecordedChromaKeyImagePath;
+    final newImage = event.type == ClipChromaKeyBackgroundType.image
+        ? event.path
+        : null;
+    if (orphan != null && orphan != newImage) _deleteFileQuietly(orphan);
+    emit(
+      state.copyWith(
+        chromaKey: nextKey,
+        unrecordedChromaKeyImagePath: newImage,
+        clearUnrecordedChromaKeyImagePath: newImage == null,
+      ),
+    );
+  }
+
+  /// Deletes [path], logging rather than throwing: a file that cannot be
+  /// removed costs disk, not correctness.
+  ///
+  /// Synchronous on purpose. Both callers hand over a single small file — a
+  /// measurement still or a backdrop photo — and deleting it in the same turn
+  /// means a close right after cannot race the cleanup.
+  void _deleteFileQuietly(String path) {
+    try {
+      final file = File(path);
+      if (file.existsSync()) file.deleteSync();
+    } catch (e) {
+      Log.warning(
+        '⚠️ Failed to delete $path: $e',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
+    }
+  }
 
   // === Stop-motion handlers ===
 
@@ -2318,6 +2635,15 @@ class VideoRecorderBloc
     _focusPointTimer = null;
     _zoomIndicatorTimer?.cancel();
     _zoomIndicatorTimer = null;
+    // A recorder closed mid-take must not leave the bakes held for good.
+    _releaseChromaKeyBakes();
+    // A backdrop image no clip was recorded with is referenced by nothing
+    // once this recorder is gone. Unless a take is still being wrapped up:
+    // the clip it becomes may yet point at the image.
+    if (state.unrecordedChromaKeyImagePath case final orphan?
+        when !state.isRecording && !state.isStoppingRecording) {
+      _deleteFileQuietly(orphan);
+    }
     try {
       await _stopMotionSessions.idle;
     } catch (e) {

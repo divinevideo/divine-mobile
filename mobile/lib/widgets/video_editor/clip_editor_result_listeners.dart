@@ -24,8 +24,8 @@ import 'package:pro_image_editor/pro_image_editor.dart'
 ///
 /// Every operation the user can wait on — split, reverse, transform, merge,
 /// detach, backdrop change, detached-clip transform and reattach, remove, audio
-/// extraction, library save, library import — reports its outcome through a
-/// `last*Result` field on [ClipEditorState].
+/// extraction, library save, library import, recorded chroma key — reports its
+/// outcome through a `last*Result` field on [ClipEditorState].
 /// The listeners below turn those into user-visible feedback and, for the
 /// operations that change the timeline, into one editor-history step.
 ///
@@ -49,7 +49,11 @@ class ClipEditorResultListeners extends StatelessWidget {
                     child: _ClipsRemovedResultListener(
                       child: _AudioExtractionResultListener(
                         child: _ClipLibrarySaveResultListener(
-                          child: _ClipLibraryImportResultListener(child: child),
+                          child: _ClipLibraryImportResultListener(
+                            child: _CapturedChromaKeyBakeResultListener(
+                              child: child,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -773,6 +777,11 @@ class _ClipLibraryImportResultListener extends StatelessWidget {
           clips: state.clips,
           addedAudioTracks: audioTracks,
         );
+        // A library clip recorded in chroma key mode carries the key it was
+        // recorded with, still unbaked.
+        context.read<ClipEditorBloc>().add(
+          const ClipEditorCapturedChromaKeysBakeRequested(),
+        );
       case ClipLibraryImportFailure():
         // The timeline is unchanged on failure, so its kind still says which
         // shape the picked clip failed to take.
@@ -794,5 +803,37 @@ class _ClipLibraryImportResultListener extends StatelessWidget {
         // timeline left to add to and no user action that warrants a snackbar.
         break;
     }
+  }
+}
+
+/// Listens to [ClipEditorState.lastCapturedChromaKeyBakeResult] and says so
+/// when a clip recorded in chroma key mode could not be keyed.
+///
+/// Success needs nothing here: the bloc has already swapped the clip files and
+/// committed the list to editor history, and the canvas reloads off the new
+/// files through the same player-sync listener a transform goes through.
+class _CapturedChromaKeyBakeResultListener extends StatelessWidget {
+  const _CapturedChromaKeyBakeResultListener({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<ClipEditorBloc, ClipEditorState>(
+      listenWhen: (prev, curr) =>
+          !identical(
+            prev.lastCapturedChromaKeyBakeResult,
+            curr.lastCapturedChromaKeyBakeResult,
+          ) &&
+          curr.lastCapturedChromaKeyBakeResult is CapturedChromaKeyBakeFailure,
+      listener: (context, _) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          DivineSnackbarContainer.snackBar(
+            context.l10n.videoEditorChromaKeyFailed,
+          ),
+        );
+      },
+      child: child,
+    );
   }
 }

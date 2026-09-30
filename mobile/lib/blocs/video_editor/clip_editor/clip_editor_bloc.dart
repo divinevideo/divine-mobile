@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:bloc_concurrency/bloc_concurrency.dart';
+import 'package:collection/collection.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart' show AudioEvent;
@@ -158,6 +159,17 @@ typedef SaveClipToLibraryFn = Future<bool> Function({
   required DivineVideoClip clip,
 });
 
+/// Bakes the key a chroma-key take was recorded with and returns the keyed
+/// take — the same clip with its file, key and poster moved on.
+///
+/// Wired by the widget layer to `ClipManagerNotifier.bakeCapturedChromaKey`,
+/// for the same reason as [SaveClipToLibraryFn]: the recorder starts that bake
+/// right after the take, so the editor has to join it rather than render the
+/// take a second time, and the library copy is kept in step there.
+typedef BakeCapturedChromaKeyFn = Future<DivineVideoClip> Function(
+  DivineVideoClip clip,
+);
+
 /// BLoC for managing video clip editor state.
 ///
 /// Owns a local copy of the clip list so that all mutations (add, remove,
@@ -189,6 +201,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     MaterializeStopMotionClipFn? materializeStopMotionClip,
     SampleStopMotionFramesFn? sampleStopMotionFrames,
     CleanupSampledFramesFn? cleanupSampledFrames,
+    BakeCapturedChromaKeyFn? bakeCapturedChromaKey,
   }) : _audioExtractionService =
            audioExtractionService ?? AudioExtractionService(),
        _splitClip = splitClip ?? VideoEditorSplitService.splitClip,
@@ -219,6 +232,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
            cleanupSampledFrames ??
            StopMotionFrameSampleService.cleanupSampledFrames,
        _saveClipToLibrary = saveClipToLibrary,
+       _bakeCapturedChromaKey = bakeCapturedChromaKey,
        super(const ClipEditorState()) {
     // Clip data
     on<ClipEditorInitialized>(_onInitialized);
@@ -295,6 +309,12 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       transformer: droppable(),
     );
     on<ClipEditorChromaKeyRemoved>(_onChromaKeyRemoved);
+    // sequential (not droppable) so clips that join while a pass runs — a
+    // library import landing mid-bake — get a pass of their own.
+    on<ClipEditorCapturedChromaKeysBakeRequested>(
+      _onCapturedChromaKeysBakeRequested,
+      transformer: sequential(),
+    );
 
     // Lift a clip off the timeline and onto the canvas
     // sequential (not droppable) so detaching a second clip while the first
@@ -357,6 +377,10 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
   final CleanupFlattenedClipFn _cleanupFlattenedClip;
   final DeferFileCleanupFn _deferFileCleanup;
   final SaveClipToLibraryFn _saveClipToLibrary;
+
+  /// `null` when nothing is wired to bake chroma-key takes, which leaves them
+  /// raw — see [BakeCapturedChromaKeyFn].
+  final BakeCapturedChromaKeyFn? _bakeCapturedChromaKey;
   final RenderClipPlaceholderFn _renderClipPlaceholder;
   final MaterializeStopMotionClipFn _materializeStopMotionClip;
   final SampleStopMotionFramesFn _sampleStopMotionFrames;
@@ -2384,6 +2408,102 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         ),
       );
     }
+  }
+
+  /// Bakes the key each chroma-key take was recorded with, one clip at a
+  /// time.
+  ///
+  /// A clip that fails keeps its raw footage and its recorded settings, and
+  /// the pass moves on to the next one: one broken backdrop must not leave
+  /// every other take unkeyed. Each clip is tried once per pass, so a failure
+  /// cannot spin; the next pass — the editor opening again, or more clips
+  /// joining — tries it again.
+  Future<void> _onCapturedChromaKeysBakeRequested(
+    ClipEditorCapturedChromaKeysBakeRequested event,
+    Emitter<ClipEditorState> emit,
+  ) async {
+    final bake = _bakeCapturedChromaKey;
+    if (bake == null) return;
+    final attempted = <String>{};
+    var bakedAny = false;
+    var failedAny = false;
+
+    while (true) {
+      final clip = state.clips.firstWhereOrNull(
+        (c) => c.hasPendingCaptureChromaKey && !attempted.contains(c.id),
+      );
+      if (clip == null) break;
+      attempted.add(clip.id);
+
+      emit(
+        state.copyWith(
+          isBakingCapturedChromaKeys: true,
+          capturedChromaKeyRenderId: ChromaKeyBakeService.renderIdFor(clip.id),
+        ),
+      );
+
+      try {
+        final keyed = await bake(clip);
+        // The keyed file is not this editor's to clean up: the clip manager
+        // and the library copy of the take both point at it.
+        if (isClosed) return;
+        final index = state.clips.indexWhere((c) => c.id == clip.id);
+        if (index == -1) continue;
+
+        // Exactly what a confirmed chroma key screen records, so re-opening
+        // the clip restores these settings and re-keys from the raw take.
+        final current = state.clips[index];
+        final updated = current.copyWith(
+          video: keyed.video,
+          chromaKey: keyed.chromaKey,
+          chromaKeySourcePath: keyed.chromaKeySourcePath,
+          clearCaptureChromaKey: true,
+          clearForwardVideoPath: true,
+          clearReversedVideoPath: true,
+          thumbnailPath: keyed.thumbnailPath,
+          thumbnailTimestamp: keyed.thumbnailTimestamp,
+        );
+        emit(
+          state.copyWith(
+            clips: List.unmodifiable(
+              List<DivineVideoClip>.of(state.clips)..[index] = updated,
+            ),
+          ),
+        );
+        bakedAny = true;
+        _deferSupersededFiles(current);
+      } catch (e, stackTrace) {
+        failedAny = true;
+        addError(switch (e) {
+          // A backdrop clip deleted from the library since the take is an
+          // expected outcome, not a defect.
+          ChromaKeyBackdropMissingException() => e,
+          StateError() || TypeError() || RangeError() => Reportable(
+            e,
+            context: '_onCapturedChromaKeysBakeRequested',
+          ),
+          _ => e,
+        }, stackTrace);
+        Log.error(
+          '❌ Failed to bake the recorded chroma key into clip ${clip.id}: '
+          '$e',
+          name: 'ClipEditorBloc',
+          category: LogCategory.video,
+        );
+      }
+    }
+
+    if (attempted.isEmpty) return;
+    emit(
+      state.copyWith(
+        isBakingCapturedChromaKeys: false,
+        clearCapturedChromaKeyRenderId: true,
+        lastCapturedChromaKeyBakeResult: failedAny
+            ? CapturedChromaKeyBakeFailure()
+            : CapturedChromaKeyBakeSuccess(),
+      ),
+    );
+    if (bakedAny) onFinalClipInvalidated.call();
   }
 
   /// Queues every file [superseded] pointed at that the clip list no longer

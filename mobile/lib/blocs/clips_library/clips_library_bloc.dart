@@ -42,6 +42,7 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
          ),
        ) {
     on<ClipsLibraryLoadRequested>(_onLoadRequested, transformer: droppable());
+    on<ClipsLibraryClipsChanged>(_onClipsChanged, transformer: restartable());
     on<ClipsLibraryToggleSelection>(_onToggleSelection);
     on<ClipsLibraryClearSelection>(_onClearSelection);
     on<ClipsLibraryDragSelectionStarted>(_onDragSelectionStarted);
@@ -595,6 +596,41 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
 
   /// Runs asset recovery in the background and dispatches a fresh load
   /// event when done so the UI picks up the updated thumbnails/ghost frames.
+  Future<void> _onClipsChanged(
+    ClipsLibraryClipsChanged event,
+    Emitter<ClipsLibraryState> emit,
+  ) async {
+    // A load still to come, or in flight, reads the change itself.
+    if (state.status != ClipsLibraryStatus.loaded) return;
+    try {
+      final clips = _applyTypeFilter(await _clipLibraryService.getAllClips());
+      final clipsById = {for (final c in clips) c.id: c};
+      final selectedClipIds = {
+        for (final id in state.selectedClipIds)
+          if (clipsById.containsKey(id)) id,
+      };
+      emit(
+        state.copyWith(
+          clips: clips,
+          sortedClips: _visibleClips(clips, state.filter, state.clipSort),
+          selectedClipIds: selectedClipIds,
+          selectedDuration: selectedClipIds.fold<Duration>(
+            Duration.zero,
+            (total, id) => total + clipsById[id]!.duration,
+          ),
+        ),
+      );
+    } catch (e, stackTrace) {
+      Log.error(
+        '📚 Failed to reload changed clips: $e',
+        name: 'ClipsLibraryBloc',
+        category: LogCategory.video,
+      );
+      // Matrix-NO: ClipLibraryService.getAllClips is local Drift IO.
+      addError(e, stackTrace);
+    }
+  }
+
   Future<void> _recoverAndReload(List<DivineVideoClip> clips) async {
     try {
       final recovered = await _clipLibraryService.recoverMissingAssets(clips);

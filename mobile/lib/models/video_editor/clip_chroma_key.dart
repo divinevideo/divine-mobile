@@ -2,6 +2,8 @@
 // ABOUTME: Wraps pro_video_editor's ChromaKey and adds the video-background
 // ABOUTME: mode, which a single-track render cannot express on its own.
 
+import 'dart:ui' show Color;
+
 import 'package:flutter/foundation.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:path/path.dart' as p;
@@ -88,6 +90,49 @@ class ClipChromaKey {
   /// Use for the transparent / color / image types, whose fill lives entirely
   /// inside [ChromaKey].
   ClipChromaKey withKey(ChromaKey key) => ClipChromaKey(key: key);
+
+  /// A copy with the screen colour or tolerances changed and the backdrop —
+  /// fill or clip — kept as it is.
+  ClipChromaKey withKeySettings({
+    Color? color,
+    double? similarity,
+    double? smoothness,
+    double? spill,
+  }) => ClipChromaKey(
+    key: key.copyWith(
+      color: color,
+      similarity: similarity,
+      smoothness: smoothness,
+      spill: spill,
+    ),
+    backgroundVideoPath: backgroundVideoPath,
+  );
+
+  /// A copy switched to [preset]'s screen colour and tolerances, keeping the
+  /// chosen backdrop.
+  ///
+  /// A preset describes the screen, never what replaces it, so switching from
+  /// green to blue must not throw away a backdrop the user already picked.
+  ClipChromaKey withPreset(ChromaKey preset) => ClipChromaKey(
+    key: preset.copyWith(
+      backgroundColor: key.backgroundColor,
+      backgroundImage: key.backgroundColor == null ? key.backgroundImage : null,
+    ),
+    backgroundVideoPath: backgroundVideoPath,
+  );
+
+  /// A copy that leaves the keyed area unfilled.
+  ClipChromaKey withTransparentBackground() =>
+      withKey(key.copyWith(removeBackground: true));
+
+  /// A copy that fills the keyed area with [color].
+  ClipChromaKey withColorBackground(Color color) =>
+      withKey(key.copyWith(backgroundColor: color));
+
+  /// A copy that fills the keyed area with the image at [path], stretched to
+  /// the frame.
+  ClipChromaKey withImageBackground(String path) =>
+      withKey(key.copyWith(backgroundImage: EditorLayerImage.file(path)));
 
   /// Serializes the settings for persisted editor state.
   ///

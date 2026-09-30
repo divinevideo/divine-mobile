@@ -1,6 +1,7 @@
 // ABOUTME: Camera preview widget with animated aspect ratio transitions and grid overlay
 // ABOUTME: Handles tap-to-focus and displays rule-of-thirds grid during non-recording state
 
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:divine_ui/divine_ui.dart';
@@ -12,6 +13,8 @@ import 'package:openvine/config/screenshot_mode.dart';
 import 'package:openvine/l10n/camera_initialization_error_l10n.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/utils/platform_helpers.dart';
+import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_backdrop.dart';
+import 'package:openvine/widgets/video_editor/chroma_key/chroma_keyed_video.dart';
 import 'package:openvine/widgets/video_recorder/preview/video_recorder_mobile_preview.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_camera_placeholder.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_focus_point.dart';
@@ -153,13 +156,83 @@ class _CameraPreview extends StatelessWidget {
               // camera-rebuild remount of the enclosing Stack resets the switch
               // blur — it lives above [_StackItems], so its ramp-out plays over
               // the new frame.
-              VideoRecorderMobilePreview(
-                key: ValueKey(textureId),
-                enableTapToFocus: enableTapToFocus,
+              _ChromaKeyViewfinder(
+                child: VideoRecorderMobilePreview(
+                  key: ValueKey(textureId),
+                  enableTapToFocus: enableTapToFocus,
+                ),
               ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Keys the camera texture live in chroma key mode, and passes it through
+/// untouched in every other mode.
+///
+/// Preview only: the recorder still writes the raw camera frames. Sits inside
+/// the sensor-shaped box the texture fills, so the backdrop is stretched over
+/// exactly the frame the recording will contain — which is how the editor's
+/// bake places it — and the viewfinder's crop then trims both alike.
+class _ChromaKeyViewfinder extends StatefulWidget {
+  const _ChromaKeyViewfinder({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_ChromaKeyViewfinder> createState() => _ChromaKeyViewfinderState();
+}
+
+class _ChromaKeyViewfinderState extends State<_ChromaKeyViewfinder> {
+  final _recordingStarts = StreamController<void>.broadcast();
+  StreamSubscription<VideoRecorderBlocState>? _stateSubscription;
+
+  /// Restarts a video backdrop each time a recording starts.
+  ///
+  /// The bake plays the backdrop from its first frame under every clip, so
+  /// starting it over on record is what lets the user react to what is behind
+  /// them at the moment it will really be there.
+  late final _backdropSync = ChromaKeyBackdropSync(
+    restarts: _recordingStarts.stream,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    final bloc = context.read<VideoRecorderBloc>();
+    var wasRecording = bloc.state.isRecording;
+    _stateSubscription = bloc.stream.listen((state) {
+      if (state.isRecording && !wasRecording) _recordingStarts.add(null);
+      wasRecording = state.isRecording;
+    });
+  }
+
+  @override
+  void dispose() {
+    unawaited(_stateSubscription?.cancel());
+    unawaited(_recordingStarts.close());
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final (:chromaKey, :isFrontCamera) = context.select(
+      (VideoRecorderBloc b) => (
+        chromaKey: b.state.recorderMode.needsLiveChromaKey
+            ? b.state.chromaKey
+            : null,
+        isFrontCamera: b.state.isFrontCamera,
+      ),
+    );
+
+    return ChromaKeyedVideo(
+      chromaKey: chromaKey,
+      backdropSync: _backdropSync,
+      // The selfie preview is shown mirrored while the recording is not.
+      mirrorBackdrop: isFrontCamera,
+      child: widget.child,
     );
   }
 }

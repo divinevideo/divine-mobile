@@ -174,12 +174,9 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
 
     emitIfOpen(
       state.copyWith(
-        chromaKey: ClipChromaKey(
-          key: state.chromaKey.key.copyWith(
-            color: detection.color,
-            similarity: detection.similarity,
-          ),
-          backgroundVideoPath: state.chromaKey.backgroundVideoPath,
+        chromaKey: state.chromaKey.withKeySettings(
+          color: detection.color,
+          similarity: detection.similarity,
         ),
         detectionStatus: ChromaKeyDetectionStatus.idle,
       ),
@@ -212,24 +209,24 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
 
   /// Sets the screen colour to remove, writing off a measurement in flight.
   void setKeyColor(Color color) => _updateKey(
-    (key) => key.copyWith(color: color),
+    state.chromaKey.withKeySettings(color: color),
     detectionStatus: _statusAfterManualKeyEdit,
   );
 
   /// Sets how far from the key colour a pixel may sit and still be removed,
   /// writing off a measurement in flight.
   void setSimilarity(double value) => _updateKey(
-    (key) => key.copyWith(similarity: value),
+    state.chromaKey.withKeySettings(similarity: value),
     detectionStatus: _statusAfterManualKeyEdit,
   );
 
   /// Sets the width of the soft ramp just beyond the similarity threshold.
   void setSmoothness(double value) =>
-      _updateKey((key) => key.copyWith(smoothness: value));
+      _updateKey(state.chromaKey.withKeySettings(smoothness: value));
 
   /// Sets how strongly the key's colour cast is pulled off the subject.
   void setSpill(double value) =>
-      _updateKey((key) => key.copyWith(spill: value));
+      _updateKey(state.chromaKey.withKeySettings(spill: value));
 
   /// Adopts the green-screen preset, keeping the chosen background and
   /// writing off a measurement in flight.
@@ -243,18 +240,9 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
   void useBlueScreenPreset() => _usePreset(const ChromaKey.blueScreen());
 
   void _usePreset(ChromaKey preset) {
-    final current = state.chromaKey;
     emit(
       state.copyWith(
-        chromaKey: ClipChromaKey(
-          key: preset.copyWith(
-            backgroundColor: current.key.backgroundColor,
-            backgroundImage: current.key.backgroundColor == null
-                ? current.key.backgroundImage
-                : null,
-          ),
-          backgroundVideoPath: current.backgroundVideoPath,
-        ),
+        chromaKey: state.chromaKey.withPreset(preset),
         detectionStatus: _statusAfterManualKeyEdit,
       ),
     );
@@ -270,27 +258,16 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
       state.isDetecting ? ChromaKeyDetectionStatus.idle : null;
 
   /// Leaves the keyed area unfilled.
-  void useTransparentBackground() => _setBackground(
-    state.chromaKey.withKey(
-      state.chromaKey.key.copyWith(removeBackground: true),
-    ),
-  );
+  void useTransparentBackground() =>
+      _setBackground(state.chromaKey.withTransparentBackground());
 
   /// Fills the keyed area with [color].
-  void useColorBackground(Color color) => _setBackground(
-    state.chromaKey.withKey(
-      state.chromaKey.key.copyWith(backgroundColor: color),
-    ),
-  );
+  void useColorBackground(Color color) =>
+      _setBackground(state.chromaKey.withColorBackground(color));
 
   /// Fills the keyed area with the image at [path], stretched to the frame.
-  void useImageBackground(String path) => _setBackground(
-    state.chromaKey.withKey(
-      state.chromaKey.key.copyWith(
-        backgroundImage: EditorLayerImage.file(path),
-      ),
-    ),
-  );
+  void useImageBackground(String path) =>
+      _setBackground(state.chromaKey.withImageBackground(path));
 
   /// Plays the library video at [path] behind the subject.
   void useVideoBackground(String path) =>
@@ -300,18 +277,11 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
       emit(state.copyWith(chromaKey: chromaKey));
 
   void _updateKey(
-    ChromaKey Function(ChromaKey key) update, {
+    ClipChromaKey chromaKey, {
     ChromaKeyDetectionStatus? detectionStatus,
   }) {
-    final current = state.chromaKey;
     emit(
-      state.copyWith(
-        chromaKey: ClipChromaKey(
-          key: update(current.key),
-          backgroundVideoPath: current.backgroundVideoPath,
-        ),
-        detectionStatus: detectionStatus,
-      ),
+      state.copyWith(chromaKey: chromaKey, detectionStatus: detectionStatus),
     );
   }
 }

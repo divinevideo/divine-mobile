@@ -208,6 +208,63 @@ void main() {
       );
     });
 
+    group('ClipsLibraryClipsChanged', () {
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        'reloads in place and keeps the selection',
+        setUp: () {
+          when(() => mockClipLibraryService.getAllClips()).thenAnswer(
+            (_) async => [
+              createClip(id: 'keyed').copyWith(
+                video: EditorVideo.file('/path/to/keyed.mp4'),
+              ),
+              createClip(id: 'other', duration: const Duration(seconds: 3)),
+            ],
+          );
+        },
+        build: createBloc,
+        seed: () => ClipsLibraryState(
+          status: ClipsLibraryStatus.loaded,
+          clips: [
+            createClip(id: 'keyed'),
+            createClip(id: 'other', duration: const Duration(seconds: 3)),
+            createClip(id: 'gone'),
+          ],
+          selectedClipIds: const {'other', 'gone'},
+        ),
+        act: (bloc) => bloc.add(const ClipsLibraryClipsChanged()),
+        // No loading state in between: the grid never blanks mid-browse.
+        expect: () => [
+          isA<ClipsLibraryState>()
+              .having((s) => s.status, 'status', ClipsLibraryStatus.loaded)
+              .having(
+                (s) => s.clips.first.video?.file?.path,
+                'first clip file',
+                '/path/to/keyed.mp4',
+              )
+              .having(
+                (s) => s.selectedClipIds,
+                'selectedClipIds',
+                {'other'},
+              )
+              .having(
+                (s) => s.selectedDuration,
+                'selectedDuration',
+                const Duration(seconds: 3),
+              ),
+        ],
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        'leaves a library that has not loaded yet to its own load',
+        build: createBloc,
+        act: (bloc) => bloc.add(const ClipsLibraryClipsChanged()),
+        expect: () => const <ClipsLibraryState>[],
+        verify: (_) {
+          verifyNever(() => mockClipLibraryService.getAllClips());
+        },
+      );
+    });
+
     group('ClipsLibraryLoadRequested', () {
       blocTest<ClipsLibraryBloc, ClipsLibraryState>(
         'emits [loading, loaded] with clips from service',

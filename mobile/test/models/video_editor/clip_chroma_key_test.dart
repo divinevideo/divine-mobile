@@ -89,6 +89,96 @@ void main() {
       expect(swapped.backgroundVideoPath, isNull);
     });
 
+    group('withKeySettings', () {
+      test('changes the tuning and keeps a backdrop clip', () {
+        const key = ClipChromaKey(
+          key: ChromaKey.greenScreen(),
+          backgroundVideoPath: '/a/backdrop.mp4',
+        );
+
+        final tuned = key.withKeySettings(
+          color: const Color(0xFF3355AA),
+          similarity: 0.22,
+          smoothness: 0.05,
+          spill: 0.3,
+        );
+
+        expect(tuned.key.color, const Color(0xFF3355AA));
+        expect(tuned.key.similarity, 0.22);
+        expect(tuned.key.smoothness, 0.05);
+        expect(tuned.key.spill, 0.3);
+        expect(tuned.backgroundVideoPath, '/a/backdrop.mp4');
+      });
+
+      test('keeps a colour fill', () {
+        const key = ClipChromaKey(
+          key: ChromaKey.greenScreen(backgroundColor: Color(0xFF102030)),
+        );
+
+        expect(
+          key.withKeySettings(similarity: 0.2).key.backgroundColor,
+          const Color(0xFF102030),
+        );
+      });
+    });
+
+    group('withPreset', () {
+      test('adopts the preset screen and keeps an image backdrop', () {
+        final key = ClipChromaKey(
+          key: const ChromaKey.greenScreen().copyWith(
+            similarity: 0.3,
+            backgroundImage: EditorLayerImage.file('/a/bg.png'),
+          ),
+        );
+
+        final blue = key.withPreset(const ChromaKey.blueScreen());
+
+        expect(blue.key.color, const ChromaKey.blueScreen().color);
+        expect(blue.key.similarity, const ChromaKey.blueScreen().similarity);
+        expect(blue.backgroundImagePath, '/a/bg.png');
+      });
+
+      test('keeps a backdrop clip', () {
+        const key = ClipChromaKey(
+          key: ChromaKey.greenScreen(),
+          backgroundVideoPath: '/a/backdrop.mp4',
+        );
+
+        final blue = key.withPreset(const ChromaKey.blueScreen());
+
+        expect(blue.backgroundType, ClipChromaKeyBackgroundType.video);
+      });
+    });
+
+    group('background setters', () {
+      const key = ClipChromaKey(
+        key: ChromaKey(color: Color(0xFF00FF00), similarity: 0.27),
+        backgroundVideoPath: '/a/backdrop.mp4',
+      );
+
+      test('withTransparentBackground leaves the area unfilled', () {
+        final swapped = key.withTransparentBackground();
+
+        expect(swapped.backgroundType, ClipChromaKeyBackgroundType.transparent);
+        expect(swapped.key.similarity, 0.27);
+      });
+
+      test('withColorBackground fills the area with the colour', () {
+        final swapped = key.withColorBackground(const Color(0xFF102030));
+
+        expect(swapped.backgroundType, ClipChromaKeyBackgroundType.color);
+        expect(swapped.key.backgroundColor, const Color(0xFF102030));
+      });
+
+      test('withImageBackground fills the area with the image', () {
+        final swapped = key.withImageBackground('/a/bg.png');
+
+        expect(swapped.backgroundType, ClipChromaKeyBackgroundType.image);
+        expect(swapped.backgroundImagePath, '/a/bg.png');
+        expect(swapped.key.color, const Color(0xFF00FF00));
+      });
+    });
+
     group('serialization', () {
       const documentsPath = '/documents';
 

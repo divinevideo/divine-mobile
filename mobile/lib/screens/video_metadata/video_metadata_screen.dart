@@ -192,14 +192,16 @@ class _VideoMetadataScreenState extends ConsumerState<VideoMetadataScreen> {
       child: GestureDetector(
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
         child: switch (recorderMode) {
-          // Lip-sync shares capture's editor + metadata flow. Stop-motion
-          // produces a normal video clip, so it shares the same capture-mode
-          // metadata UI. Upload has no video editor, so recorder navigation
-          // pushes this route without a mode query. A restored draft uses the
-          // capture stack even when upload is the persisted recorder mode.
+          // Lip-sync and chroma key share capture's editor + metadata flow.
+          // Stop-motion produces a normal video clip, so it shares the same
+          // capture-mode metadata UI. Upload has no video editor, so recorder
+          // navigation pushes this route without a mode query. A restored
+          // draft uses the capture stack even when upload is the persisted
+          // recorder mode.
           .capture ||
           .stopMotion ||
           .lipSync ||
+          .chromaKey ||
           .upload => const VideoMetadataCaptureStack(),
           .classic => const VideoMetadataClassicStack(),
         },

@@ -12,6 +12,7 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/editor_background_work.dart';
 import 'package:openvine/providers/social_providers.dart';
@@ -19,7 +20,9 @@ import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/services/file_cleanup_service.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
+import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
+import 'package:path/path.dart' as p;
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 import 'package:unified_logger/unified_logger.dart';
 
@@ -27,6 +30,14 @@ final clipManagerProvider =
     NotifierProvider<ClipManagerNotifier, ClipManagerState>(
       ClipManagerNotifier.new,
     );
+
+/// Bakes chroma-key takes in the background.
+///
+/// One for the app, so the recorder that shot a take and the editor that opens
+/// it share a single queue — and a single hold while the camera records.
+final capturedChromaKeyBakerProvider = Provider<CapturedChromaKeyBaker>(
+  (ref) => CapturedChromaKeyBaker(),
+);
 
 /// Manages recorded video clips for the video editor.
 ///
@@ -41,6 +52,10 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   final _recordStopwatch = Stopwatch();
   final List<DivineVideoClip> _clips = [];
   Timer? _pendingDeletionTimer;
+
+  /// Chroma-key bakes still running, by clip id, so a second request for the
+  /// same take joins the first instead of rendering it again.
+  final Map<String, Future<DivineVideoClip>> _capturedChromaKeyBakes = {};
 
   /// Nullable rather than `late`, which would throw a
   /// `LateInitializationError` in two ways. Riverpod reuses this notifier
@@ -205,6 +220,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     Duration? duration,
     String? thumbnailPath,
     CameraLensMetadata? lensMetadata,
+    ClipChromaKey? captureChromaKey,
   }) {
     // A new recording supersedes any pending undo from a previous tap.
     if (state.pendingDeletion != null) {
@@ -234,6 +250,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
       originalAspectRatio: originalAspectRatio,
       processingCompleter: processingCompleter,
       lensMetadata: lensMetadata,
+      captureChromaKey: captureChromaKey,
     );
 
     // Asynchronously trim the clip if it exceeds remaining duration
@@ -1005,6 +1022,132 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     } catch (e, stackTrace) {
       Log.error(
         '❌ Failed to save clip ${clip.id}: $e',
+        name: 'ClipManagerNotifier',
+        category: .video,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+
+  /// Bakes the key [clip] was recorded with and returns the keyed take — see
+  /// [CapturedChromaKeyBaker.bake].
+  ///
+  /// A take this manager holds that is already keyed comes straight back, and
+  /// a take whose bake is running joins it: the recorder asks right after the
+  /// take, and the editor asks again if it opens first, so both have to land
+  /// on the same render. Whoever asked, the working set and the library copy
+  /// of the take move to the keyed file as soon as it lands.
+  ///
+  /// Throws whatever the bake throws; the take then keeps its raw footage and
+  /// the key it was recorded with, so the next request tries again.
+  Future<DivineVideoClip> bakeCapturedChromaKey(DivineVideoClip clip) {
+    final held = getClipById(clip.id);
+    if (held != null &&
+        held.chromaKey != null &&
+        !held.hasPendingCaptureChromaKey) {
+      return Future.value(held);
+    }
+    final running = _capturedChromaKeyBakes[clip.id];
+    if (running != null) return running;
+
+    final bake = _bakeCapturedChromaKey(clip);
+    _capturedChromaKeyBakes[clip.id] = bake;
+    _editorBackgroundWork.track(
+      bake.then<void>((_) {}, onError: (Object _) {}).whenComplete(() {
+        if (identical(_capturedChromaKeyBakes[clip.id], bake)) {
+          _capturedChromaKeyBakes.remove(clip.id);
+        }
+      }),
+    );
+    return bake;
+  }
+
+  Future<DivineVideoClip> _bakeCapturedChromaKey(DivineVideoClip clip) async {
+    final keyed = await ref.read(capturedChromaKeyBakerProvider).bake(clip);
+    if (!ref.mounted) return keyed;
+
+    final index = _clips.indexWhere((c) => c.id == clip.id);
+    // Only a take still waiting on the very footage that was keyed: one the
+    // editor already swapped the bake into, or that moved on to another file,
+    // is left alone.
+    if (index != -1 &&
+        _clips[index].hasPendingCaptureChromaKey &&
+        _clips[index].video?.file?.path == clip.video?.file?.path) {
+      _clips[index] = _clips[index].copyWith(
+        video: keyed.video,
+        chromaKey: keyed.chromaKey,
+        chromaKeySourcePath: keyed.chromaKeySourcePath,
+        clearCaptureChromaKey: true,
+        clearForwardVideoPath: true,
+        clearReversedVideoPath: true,
+        thumbnailPath: keyed.thumbnailPath,
+        thumbnailTimestamp: keyed.thumbnailTimestamp,
+      );
+      state = state.copyWith(clips: List.unmodifiable(_clips));
+      _triggerAutosave();
+    }
+
+    if (await applyChromaKeyBakeToLibrary(raw: clip, baked: keyed) &&
+        ref.mounted) {
+      state = state.copyWith(libraryRevision: state.libraryRevision + 1);
+    }
+    return keyed;
+  }
+
+  /// Holds chroma-key bakes back while the camera records — see
+  /// [CapturedChromaKeyBaker.hold].
+  void holdCapturedChromaKeyBakes() =>
+      ref.read(capturedChromaKeyBakerProvider).hold();
+
+  /// Lets held chroma-key bakes run again.
+  void releaseCapturedChromaKeyBakes() =>
+      ref.read(capturedChromaKeyBakerProvider).release();
+
+  /// Gives the library copy of [raw] the chroma key [baked] carries, so the
+  /// library holds a chroma-key take the way the viewfinder showed it.
+  ///
+  /// Only a library row that still plays [raw]'s footage is touched: a take
+  /// the user deleted from the library stays deleted, and a row that has moved
+  /// on to other footage is left alone. Everything else on the row — title,
+  /// category, trims — is kept; only the file, the key and the poster change.
+  /// The raw take stays on disk as the row's key source, so the key can still
+  /// be re-tuned from clean footage.
+  ///
+  /// Returns whether a library row was updated. Never throws.
+  Future<bool> applyChromaKeyBakeToLibrary({
+    required DivineVideoClip raw,
+    required DivineVideoClip baked,
+  }) async {
+    try {
+      final clipService = ref.read(clipLibraryServiceProvider);
+      final libraryClip = await clipService.getClipById(raw.id);
+      final libraryFile = libraryClip?.video?.file?.path;
+      final rawFile = raw.video?.file?.path;
+      // Compared by name: paths are re-anchored per install on iOS.
+      if (libraryClip == null ||
+          libraryFile == null ||
+          rawFile == null ||
+          p.basename(libraryFile) != p.basename(rawFile)) {
+        return false;
+      }
+      await clipService.saveClip(
+        libraryClip.copyWith(
+          video: baked.video,
+          chromaKey: baked.chromaKey,
+          chromaKeySourcePath: baked.chromaKeySourcePath,
+          clearCaptureChromaKey: true,
+          clearForwardVideoPath: true,
+          clearReversedVideoPath: true,
+          thumbnailPath: baked.thumbnailPath,
+          thumbnailTimestamp: baked.thumbnailTimestamp,
+        ),
+      );
+      return true;
+    } catch (e, stackTrace) {
+      Log.error(
+        '❌ Failed to carry the chroma key over to library clip ${raw.id}',
         name: 'ClipManagerNotifier',
         category: .video,
         error: e,

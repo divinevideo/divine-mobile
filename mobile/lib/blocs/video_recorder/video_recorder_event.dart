@@ -335,6 +335,81 @@ final class VideoRecorderStopMotionAssembleRequested
   List<Object?> get props => [appendToComposition];
 }
 
+// === Chroma key ===
+
+/// Captures a still and measures the wall behind the subject, adopting the
+/// measured screen colour and amount into
+/// [VideoRecorderBlocState.chromaKey].
+///
+/// Registered with `transformer: droppable()` so a second tap cannot start a
+/// second capture while one is in flight.
+final class VideoRecorderChromaKeyMeasureRequested extends VideoRecorderEvent {
+  const VideoRecorderChromaKeyMeasureRequested();
+}
+
+/// Switches the chroma-key key to [preset]'s screen colour and tolerances,
+/// keeping the chosen backdrop.
+final class VideoRecorderChromaKeyPresetSelected extends VideoRecorderEvent {
+  const VideoRecorderChromaKeyPresetSelected(this.preset);
+
+  final ChromaKey preset;
+
+  @override
+  List<Object?> get props => [preset];
+}
+
+/// Changes one or more of the chroma-key key's settings, keeping the
+/// backdrop. Unset fields keep their value.
+final class VideoRecorderChromaKeySettingsChanged extends VideoRecorderEvent {
+  const VideoRecorderChromaKeySettingsChanged({
+    this.color,
+    this.similarity,
+    this.smoothness,
+    this.spill,
+  });
+
+  final Color? color;
+  final double? similarity;
+  final double? smoothness;
+  final double? spill;
+
+  @override
+  List<Object?> get props => [color, similarity, smoothness, spill];
+}
+
+/// Replaces what the chroma-key key puts behind the subject.
+final class VideoRecorderChromaKeyBackdropSet extends VideoRecorderEvent {
+  /// Leaves the keyed area unfilled.
+  const VideoRecorderChromaKeyBackdropSet.transparent()
+    : type = ClipChromaKeyBackgroundType.transparent,
+      color = null,
+      path = null;
+
+  /// Fills the keyed area with [color].
+  const VideoRecorderChromaKeyBackdropSet.color(Color this.color)
+    : type = ClipChromaKeyBackgroundType.color,
+      path = null;
+
+  /// Fills the keyed area with the image at [path], which the recorder copied
+  /// into the documents directory for this and owns until a clip is recorded
+  /// with it.
+  const VideoRecorderChromaKeyBackdropSet.image(String this.path)
+    : type = ClipChromaKeyBackgroundType.image,
+      color = null;
+
+  /// Plays the library clip at [path] behind the subject.
+  const VideoRecorderChromaKeyBackdropSet.video(String this.path)
+    : type = ClipChromaKeyBackgroundType.video,
+      color = null;
+
+  final ClipChromaKeyBackgroundType type;
+  final Color? color;
+  final String? path;
+
+  @override
+  List<Object?> get props => [type, color, path];
+}
+
 // === Internal events dispatched from service callbacks ===
 
 /// Internal event: camera service reported a state change

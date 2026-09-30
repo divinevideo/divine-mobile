@@ -316,6 +316,78 @@ void main() {
     });
   });
 
+  group('DivineVideoClip.captureChromaKey', () {
+    final key = ClipChromaKey(
+      key: const editor.ChromaKey.greenScreen().copyWith(
+        backgroundImage: editor.EditorLayerImage.file('/videos/wall.png'),
+      ),
+    );
+
+    test('round-trips through JSON, backdrop image included', () {
+      final recorded = clip('/videos/clip.mp4').copyWith(captureChromaKey: key);
+
+      final restored = DivineVideoClip.fromJson(recorded.toJson(), '/videos');
+
+      expect(restored.captureChromaKey, key);
+      expect(
+        restored.captureChromaKey?.backgroundImagePath,
+        '/videos/wall.png',
+      );
+      // An intent, not a bake: nothing claims the key is in the footage.
+      expect(restored.chromaKey, isNull);
+    });
+
+    test('is absent from JSON and null on legacy drafts', () {
+      final json = clip('/videos/clip.mp4').toJson();
+      expect(json.containsKey('captureChromaKey'), isFalse);
+
+      final restored = DivineVideoClip.fromJson(json, '/videos');
+      expect(restored.captureChromaKey, isNull);
+    });
+
+    test('follows a split, since it describes the take and not a file', () {
+      final recorded = clip('/videos/clip.mp4').copyWith(captureChromaKey: key);
+
+      expect(recorded.copyWith(id: 'c2').captureChromaKey, key);
+    });
+
+    test('can be cleared once it has been baked', () {
+      final recorded = clip('/videos/clip.mp4').copyWith(captureChromaKey: key);
+
+      expect(
+        recorded.copyWith(clearCaptureChromaKey: true).captureChromaKey,
+        isNull,
+      );
+    });
+
+    test('is pending only until a key has been baked', () {
+      final recorded = clip('/videos/clip.mp4').copyWith(captureChromaKey: key);
+      expect(recorded.hasPendingCaptureChromaKey, isTrue);
+
+      final baked = recorded.copyWith(
+        chromaKey: key,
+        chromaKeySourcePath: '/videos/raw.mp4',
+      );
+      expect(baked.hasPendingCaptureChromaKey, isFalse);
+    });
+
+    test('owns its backdrop image', () {
+      final recorded = clip('/videos/clip.mp4').copyWith(captureChromaKey: key);
+
+      expect(recorded.ownedFilePaths, contains('/videos/wall.png'));
+    });
+
+    test('drops an unparseable intent instead of failing the whole clip', () {
+      final json = clip('/videos/clip.mp4').toJson()
+        ..['captureChromaKey'] = 'not-a-map';
+
+      final restored = DivineVideoClip.fromJson(json, '/videos');
+
+      expect(restored.captureChromaKey, isNull);
+      expect(restored.id, 'c1');
+    });
+  });
+
   group('DivineVideoClip.placeholderFill', () {
     test('round-trips a colour through JSON', () {
       final filled = clip('/videos/clip.mp4').copyWith(

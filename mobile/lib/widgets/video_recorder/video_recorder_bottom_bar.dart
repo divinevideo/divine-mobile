@@ -4,6 +4,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
+import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
+import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_shader.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_library_button.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_mode_selector.dart';
 
@@ -38,6 +40,9 @@ class VideoRecorderBottomBar extends StatelessWidget {
               children: [
                 VideoRecorderModeSelectorWheel(
                   selectedMode: state.recorderMode,
+                  modes: VideoRecorderMode.available(
+                    liveChromaKeySupported: ChromaKeyShader.isBackendSupported,
+                  ),
                   onModeChanged: (mode) => context
                       .read<VideoRecorderBloc>()
                       .add(VideoRecorderRecorderModeSet(mode)),

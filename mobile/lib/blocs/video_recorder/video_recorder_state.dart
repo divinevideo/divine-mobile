@@ -22,6 +22,31 @@ enum StopMotionStatus {
   failure,
 }
 
+/// Where the chroma-key wall measurement stands.
+enum ChromaKeyMeasurementStatus {
+  /// Nothing is being measured, and the last measurement (if any) landed.
+  idle,
+
+  /// A still is being captured and measured.
+  detecting,
+
+  /// The last measurement found no screen filling the frame behind the
+  /// subject. The key is left as it was so the user can set it by hand.
+  failed,
+
+  /// The last measurement did not finish within
+  /// [VideoEditorConstants.chromaKeyDetectTimeout]. Says nothing about the
+  /// wall — the capture or the decode stalled — so the UI asks for a retry
+  /// instead of telling the user their wall is wrong.
+  timedOut,
+}
+
+/// The chroma-key key a session starts from before anything is measured.
+///
+/// The green preset rather than a bare default, so the viewfinder shows a
+/// plausible matte the moment the mode opens against an actual green screen.
+const _initialChromaKey = ClipChromaKey(key: ChromaKey.greenScreen());
+
 /// State for [VideoRecorderBloc].
 class VideoRecorderBlocState extends Equatable {
   const VideoRecorderBlocState({
@@ -67,6 +92,9 @@ class VideoRecorderBlocState extends Equatable {
     this.stopMotionFrames = const [],
     this.stopMotionStatus = StopMotionStatus.idle,
     this.stopMotionShutterTick = 0,
+    this.chromaKey = _initialChromaKey,
+    this.chromaKeyMeasurementStatus = ChromaKeyMeasurementStatus.idle,
+    this.unrecordedChromaKeyImagePath,
   });
 
   /// Recorder mode from the camera.
@@ -251,6 +279,30 @@ class VideoRecorderBlocState extends Equatable {
   /// than delayed by the capture write (~400ms).
   final int stopMotionShutterTick;
 
+  /// The key the chroma-key viewfinder previews, and that every clip
+  /// recorded in [VideoRecorderMode.chromaKey] carries as its
+  /// [DivineVideoClip.captureChromaKey].
+  ///
+  /// Kept across mode switches, so leaving the mode and coming back finds the
+  /// wall and backdrop as they were set.
+  final ClipChromaKey chromaKey;
+
+  /// Where the wall measurement stands.
+  final ChromaKeyMeasurementStatus chromaKeyMeasurementStatus;
+
+  /// A backdrop image this recorder copied into the documents directory that
+  /// no clip has been recorded with yet, or `null`.
+  ///
+  /// Nothing else can reclaim such a file: no clip, draft or library row
+  /// points at it. It is deleted as soon as the backdrop moves off it or the
+  /// recorder closes. Once a clip is recorded with it, the clip owns it and the
+  /// usual clip cleanup takes over, so this goes back to `null`.
+  final String? unrecordedChromaKeyImagePath;
+
+  /// Whether a wall measurement is running.
+  bool get isMeasuringChromaKey =>
+      chromaKeyMeasurementStatus == ChromaKeyMeasurementStatus.detecting;
+
   /// Path of the most recently captured stop-motion frame, if any.
   String? get stopMotionLastFrame => stopMotionFrames.lastOrNull;
 
@@ -313,6 +365,10 @@ class VideoRecorderBlocState extends Equatable {
     List<String>? stopMotionFrames,
     StopMotionStatus? stopMotionStatus,
     int? stopMotionShutterTick,
+    ClipChromaKey? chromaKey,
+    ChromaKeyMeasurementStatus? chromaKeyMeasurementStatus,
+    String? unrecordedChromaKeyImagePath,
+    bool clearUnrecordedChromaKeyImagePath = false,
   }) {
     return VideoRecorderBlocState(
       recorderMode: recorderMode ?? this.recorderMode,
@@ -365,6 +421,12 @@ class VideoRecorderBlocState extends Equatable {
       stopMotionStatus: stopMotionStatus ?? this.stopMotionStatus,
       stopMotionShutterTick:
           stopMotionShutterTick ?? this.stopMotionShutterTick,
+      chromaKey: chromaKey ?? this.chromaKey,
+      chromaKeyMeasurementStatus:
+          chromaKeyMeasurementStatus ?? this.chromaKeyMeasurementStatus,
+      unrecordedChromaKeyImagePath: clearUnrecordedChromaKeyImagePath
+          ? null
+          : (unrecordedChromaKeyImagePath ?? this.unrecordedChromaKeyImagePath),
     );
   }
 
@@ -410,5 +472,8 @@ class VideoRecorderBlocState extends Equatable {
     stopMotionFrames,
     stopMotionStatus,
     stopMotionShutterTick,
+    chromaKey,
+    chromaKeyMeasurementStatus,
+    unrecordedChromaKeyImagePath,
   ];
 }

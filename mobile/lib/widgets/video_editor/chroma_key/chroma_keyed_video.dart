@@ -26,6 +26,7 @@ class ChromaKeyedVideo extends StatefulWidget {
     this.chromaKey,
     this.backdropSync,
     this.previewTransparency = true,
+    this.mirrorBackdrop = false,
     super.key,
   });
 
@@ -45,6 +46,14 @@ class ChromaKeyedVideo extends StatefulWidget {
   /// whatever is underneath *is* the backdrop — a checkerboard there would hide
   /// exactly what the key is meant to reveal.
   final bool previewTransparency;
+
+  /// Whether the backdrop is flipped horizontally.
+  ///
+  /// For a [child] that is itself shown mirrored while the file it stands for
+  /// is not — the selfie camera preview. Mirroring the backdrop along with it
+  /// keeps the subject on the same side of the backdrop the finished video
+  /// will put them, so the preview reads as a mirror of that video.
+  final bool mirrorBackdrop;
 
   @override
   State<ChromaKeyedVideo> createState() => _ChromaKeyedVideoState();
@@ -124,16 +133,20 @@ class _ChromaKeyedVideoState extends State<ChromaKeyedVideo> {
     final shader = _shader;
     if (chromaKey == null || shader == null) return widget.child;
 
+    final backdrop = ChromaKeyBackdrop(
+      chromaKey: chromaKey,
+      sync: widget.backdropSync,
+      previewTransparency: widget.previewTransparency,
+    );
+
     return Stack(
       // The keyed video sizes the stack; the backdrop fills whatever that is.
       fit: StackFit.passthrough,
       children: [
         Positioned.fill(
-          child: ChromaKeyBackdrop(
-            chromaKey: chromaKey,
-            sync: widget.backdropSync,
-            previewTransparency: widget.previewTransparency,
-          ),
+          child: widget.mirrorBackdrop
+              ? Transform.flip(flipX: true, child: backdrop)
+              : backdrop,
         ),
         ImageFiltered(
           imageFilter: ui.ImageFilter.shader(shader),

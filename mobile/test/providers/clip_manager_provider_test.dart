@@ -1,6 +1,9 @@
 // ABOUTME: Tests for ClipManagerProvider - Riverpod state management
 // ABOUTME: Validates state updates and provider lifecycle
 
+import 'dart:async';
+import 'dart:ui' show Color;
+
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +12,7 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/editor_background_work.dart';
@@ -16,6 +20,7 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
+import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -37,6 +42,10 @@ void main() {
     late ProviderContainer container;
     late _MockDraftStorageService mockDraftStorageService;
     late _MockClipLibraryService mockClipLibraryService;
+
+    /// Read lazily through the override below, so only the groups that bake
+    /// have to set it.
+    late CapturedChromaKeyBaker chromaKeyBaker;
 
     setUpAll(() {
       registerFallbackValue(
@@ -75,6 +84,7 @@ void main() {
             mockDraftStorageService,
           ),
           clipLibraryServiceProvider.overrideWithValue(mockClipLibraryService),
+          capturedChromaKeyBakerProvider.overrideWith((_) => chromaKeyBaker),
         ],
       );
     });
@@ -1043,6 +1053,221 @@ void main() {
         expect(clip.thumbnailPath, equals('/path/to/thumb.jpg'));
         expect(clip.duration, equals(const Duration(seconds: 2)));
         expect(clip.ghostFramePath, equals('/path/to/ghost.jpg'));
+      });
+    });
+
+    group('bakeCapturedChromaKey', () {
+      const key = ClipChromaKey(
+        key: ChromaKey.greenScreen(backgroundColor: Color(0xFF203040)),
+      );
+
+      late List<String> rendered;
+      Completer<void>? renderGate;
+
+      setUp(() {
+        rendered = [];
+        renderGate = null;
+        chromaKeyBaker = CapturedChromaKeyBaker(
+          render:
+              ({
+                required sourceClip,
+                required chromaKey,
+                required renderId,
+              }) async {
+                rendered.add(sourceClip.id);
+                await renderGate?.future;
+                return (
+                  video: EditorVideo.file('/documents/keyed.mp4'),
+                  source: sourceClip.video!.file!.path,
+                );
+              },
+          extractPoster: ({required videoPath, required timestamp}) async =>
+              null,
+          cancelRender: (_) async {},
+        );
+        when(
+          () => mockClipLibraryService.saveClip(any()),
+        ).thenAnswer((_) async {});
+      });
+
+      DivineVideoClip recordTake(ClipManagerNotifier notifier) =>
+          notifier.addClip(
+            limitClipDuration: false,
+            video: EditorVideo.file('/documents/raw.mp4'),
+            duration: const Duration(seconds: 2),
+            targetAspectRatio: .vertical,
+            originalAspectRatio: 9 / 16,
+            captureChromaKey: key,
+          );
+
+      test(
+        'moves the take and its library copy to the keyed file',
+        () async {
+          final notifier = container.read(clipManagerProvider.notifier);
+          final take = recordTake(notifier);
+          when(
+            () => mockClipLibraryService.getClipById(take.id),
+          ).thenAnswer((_) async => take);
+
+          final keyed = await notifier.bakeCapturedChromaKey(take);
+
+          expect(keyed.video?.file?.path, '/documents/keyed.mp4');
+          final held = container.read(clipManagerProvider).clips.single;
+          expect(held.video?.file?.path, '/documents/keyed.mp4');
+          expect(held.chromaKey, key);
+          expect(held.captureChromaKey, isNull);
+          final saved =
+              verify(
+                    () => mockClipLibraryService.saveClip(captureAny()),
+                  ).captured.last
+                  as DivineVideoClip;
+          expect(saved.video?.file?.path, '/documents/keyed.mp4');
+          // An open library reloads on this.
+          expect(container.read(clipManagerProvider).libraryRevision, 1);
+        },
+      );
+
+      test('joins the bake already running for the same take', () async {
+        final notifier = container.read(clipManagerProvider.notifier);
+        final take = recordTake(notifier);
+        when(
+          () => mockClipLibraryService.getClipById(take.id),
+        ).thenAnswer((_) async => null);
+        renderGate = Completer<void>();
+
+        // The recorder asks after the take; an editor opening meanwhile asks
+        // too.
+        final fromRecorder = notifier.bakeCapturedChromaKey(take);
+        final fromEditor = notifier.bakeCapturedChromaKey(take);
+        await pumpEventQueue();
+        renderGate!.complete();
+
+        expect(
+          (await fromEditor).video?.file?.path,
+          (await fromRecorder).video?.file?.path,
+        );
+        expect(rendered, [take.id]);
+      });
+
+      test('hands back a take it already keyed without rendering', () async {
+        final notifier = container.read(clipManagerProvider.notifier);
+        final take = recordTake(notifier);
+        when(
+          () => mockClipLibraryService.getClipById(take.id),
+        ).thenAnswer((_) async => null);
+        await notifier.bakeCapturedChromaKey(take);
+
+        final again = await notifier.bakeCapturedChromaKey(take);
+
+        expect(again.chromaKey, key);
+        expect(rendered, [take.id]);
+      });
+
+      test('leaves the library alone once the take is gone from it', () async {
+        final notifier = container.read(clipManagerProvider.notifier);
+        final take = recordTake(notifier);
+        when(
+          () => mockClipLibraryService.getClipById(take.id),
+        ).thenAnswer((_) async => null);
+
+        await notifier.bakeCapturedChromaKey(take);
+
+        expect(container.read(clipManagerProvider).libraryRevision, 0);
+        expect(
+          container.read(clipManagerProvider).clips.single.chromaKey,
+          key,
+        );
+      });
+    });
+
+    group('applyChromaKeyBakeToLibrary', () {
+      const key = ClipChromaKey(
+        key: ChromaKey.greenScreen(backgroundColor: Color(0xFF203040)),
+      );
+
+      DivineVideoClip take(String file) => DivineVideoClip(
+        id: 'take',
+        video: EditorVideo.file(file),
+        duration: const Duration(seconds: 2),
+        recordedAt: DateTime(2024),
+        targetAspectRatio: .vertical,
+        originalAspectRatio: 9 / 16,
+      );
+
+      late DivineVideoClip raw;
+      late DivineVideoClip baked;
+
+      setUp(() {
+        when(
+          () => mockClipLibraryService.saveClip(any()),
+        ).thenAnswer((_) async {});
+        raw = take('/documents/raw.mp4').copyWith(captureChromaKey: key);
+        baked = take('/documents/keyed.mp4').copyWith(
+          chromaKey: key,
+          chromaKeySourcePath: '/documents/raw.mp4',
+          thumbnailPath: '/documents/keyed.jpg',
+        );
+      });
+
+      test('swaps in the keyed take and keeps the rest of the row', () async {
+        // Same file under a different container path, as after an iOS update.
+        when(() => mockClipLibraryService.getClipById('take')).thenAnswer(
+          (_) async => take('/old-container/raw.mp4').copyWith(
+            captureChromaKey: key,
+            libraryTitle: 'Beach',
+            trimStart: const Duration(milliseconds: 300),
+          ),
+        );
+        final notifier = container.read(clipManagerProvider.notifier);
+
+        final updated = await notifier.applyChromaKeyBakeToLibrary(
+          raw: raw,
+          baked: baked,
+        );
+
+        expect(updated, isTrue);
+        final saved =
+            verify(
+                  () => mockClipLibraryService.saveClip(captureAny()),
+                ).captured.single
+                as DivineVideoClip;
+        expect(saved.video?.file?.path, '/documents/keyed.mp4');
+        expect(saved.chromaKey, key);
+        expect(saved.chromaKeySourcePath, '/documents/raw.mp4');
+        expect(saved.captureChromaKey, isNull);
+        expect(saved.thumbnailPath, '/documents/keyed.jpg');
+        expect(saved.libraryTitle, 'Beach');
+        expect(saved.trimStart, const Duration(milliseconds: 300));
+      });
+
+      test('leaves a take deleted from the library deleted', () async {
+        when(
+          () => mockClipLibraryService.getClipById('take'),
+        ).thenAnswer((_) async => null);
+        final notifier = container.read(clipManagerProvider.notifier);
+
+        final updated = await notifier.applyChromaKeyBakeToLibrary(
+          raw: raw,
+          baked: baked,
+        );
+
+        expect(updated, isFalse);
+        verifyNever(() => mockClipLibraryService.saveClip(any()));
+      });
+
+      test('leaves a row that plays other footage alone', () async {
+        when(
+          () => mockClipLibraryService.getClipById('take'),
+        ).thenAnswer((_) async => take('/documents/other.mp4'));
+        final notifier = container.read(clipManagerProvider.notifier);
+
+        final updated = await notifier.applyChromaKeyBakeToLibrary(
+          raw: raw,
+          baked: baked,
+        );
+
+        expect(updated, isFalse);
+        verifyNever(() => mockClipLibraryService.saveClip(any()));
       });
     });
 

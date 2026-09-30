@@ -1701,6 +1701,7 @@ void main() {
               targetAspectRatio: any(named: 'targetAspectRatio'),
               lensMetadata: any(named: 'lensMetadata'),
               limitClipDuration: any(named: 'limitClipDuration'),
+              captureChromaKey: any(named: 'captureChromaKey'),
             ),
           ).thenReturn(
             DivineVideoClip(
@@ -1743,6 +1744,7 @@ void main() {
               targetAspectRatio: any(named: 'targetAspectRatio'),
               lensMetadata: any(named: 'lensMetadata'),
               limitClipDuration: any(named: 'limitClipDuration'),
+              captureChromaKey: any(named: 'captureChromaKey'),
             ),
           ).called(1);
         },
@@ -1884,6 +1886,7 @@ void main() {
               targetAspectRatio: any(named: 'targetAspectRatio'),
               lensMetadata: any(named: 'lensMetadata'),
               limitClipDuration: false,
+              captureChromaKey: any(named: 'captureChromaKey'),
             ),
           ).thenReturn(
             DivineVideoClip(
@@ -1927,6 +1930,7 @@ void main() {
               targetAspectRatio: any(named: 'targetAspectRatio'),
               lensMetadata: any(named: 'lensMetadata'),
               limitClipDuration: false,
+              captureChromaKey: any(named: 'captureChromaKey'),
             ),
           ).called(1);
           verifyNever(() => cameraService.stopRecording());
@@ -1980,6 +1984,7 @@ void main() {
                 targetAspectRatio: any(named: 'targetAspectRatio'),
                 lensMetadata: any(named: 'lensMetadata'),
                 limitClipDuration: any(named: 'limitClipDuration'),
+                captureChromaKey: any(named: 'captureChromaKey'),
               ),
             );
           },
@@ -2118,6 +2123,7 @@ void main() {
               targetAspectRatio: any(named: 'targetAspectRatio'),
               lensMetadata: any(named: 'lensMetadata'),
               limitClipDuration: any(named: 'limitClipDuration'),
+              captureChromaKey: any(named: 'captureChromaKey'),
             ),
           ).thenReturn(
             DivineVideoClip(
@@ -2225,6 +2231,7 @@ void main() {
               targetAspectRatio: any(named: 'targetAspectRatio'),
               lensMetadata: any(named: 'lensMetadata'),
               limitClipDuration: any(named: 'limitClipDuration'),
+              captureChromaKey: any(named: 'captureChromaKey'),
             ),
           ).thenReturn(currentClip);
           when(() => clipManager.updateClipDuration(any(), any())).thenAnswer((
@@ -2336,6 +2343,7 @@ void main() {
               targetAspectRatio: any(named: 'targetAspectRatio'),
               lensMetadata: any(named: 'lensMetadata'),
               limitClipDuration: any(named: 'limitClipDuration'),
+              captureChromaKey: any(named: 'captureChromaKey'),
             ),
           ).thenReturn(
             DivineVideoClip(
@@ -3841,6 +3849,7 @@ void main() {
               originalAspectRatio: any(named: 'originalAspectRatio'),
               targetAspectRatio: any(named: 'targetAspectRatio'),
               limitClipDuration: any(named: 'limitClipDuration'),
+              captureChromaKey: any(named: 'captureChromaKey'),
               duration: any(named: 'duration'),
               thumbnailPath: any(named: 'thumbnailPath'),
               lensMetadata: any(named: 'lensMetadata'),
