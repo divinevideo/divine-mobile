@@ -2361,7 +2361,6 @@
   "reportLearnMoreAt": "Ketahui lebih lanjut di",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "Tutup",
-  "listAddToList": "Tambah ke Senarai",
   "listVideoCount": "{count} video",
   "@listVideoCount": {
     "placeholders": {
@@ -2371,25 +2370,8 @@
     }
   },
   "listByAuthorPrefix": "Oleh ",
-  "listNewList": "Senarai Baharu",
   "listDone": "Siap",
   "listErrorLoading": "Ralat memuatkan senarai",
-  "listRemovedFrom": "Dialih keluar daripada {name}",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "Ditambah ke {name}",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "Cipta Senarai Baharu",
   "listNewPeopleList": "Senarai orang baharu",
   "listCollaboratorsNone": "Tiada",

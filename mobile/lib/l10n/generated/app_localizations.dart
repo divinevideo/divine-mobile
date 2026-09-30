@@ -8305,17 +8305,17 @@ abstract class AppLocalizations {
   /// **'Close'**
   String get reportClose;
 
-  /// No description provided for @listAddToList.
-  ///
-  /// In en, this message translates to:
-  /// **'Add to List'**
-  String get listAddToList;
-
   /// No description provided for @listVideoCount.
   ///
   /// In en, this message translates to:
   /// **'{count, plural, =1{{count} video} other{{count} videos}}'**
   String listVideoCount(int count);
+
+  /// Title of the sheet where the viewer picks which of their video lists a video belongs to.
+  ///
+  /// In en, this message translates to:
+  /// **'Select list'**
+  String get listSelectList;
 
   /// Screen-reader count spoken for a people-list card, after the list name.
   ///
@@ -8329,12 +8329,6 @@ abstract class AppLocalizations {
   /// **'By '**
   String get listByAuthorPrefix;
 
-  /// No description provided for @listNewList.
-  ///
-  /// In en, this message translates to:
-  /// **'New List'**
-  String get listNewList;
-
   /// No description provided for @listDone.
   ///
   /// In en, this message translates to:
@@ -8346,18 +8340,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Error loading lists'**
   String get listErrorLoading;
-
-  /// No description provided for @listRemovedFrom.
-  ///
-  /// In en, this message translates to:
-  /// **'Removed from {name}'**
-  String listRemovedFrom(String name);
-
-  /// No description provided for @listAddedTo.
-  ///
-  /// In en, this message translates to:
-  /// **'Added to {name}'**
-  String listAddedTo(String name);
 
   /// No description provided for @listCreateNewList.
   ///

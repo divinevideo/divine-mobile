@@ -2361,7 +2361,6 @@
   "reportLearnMoreAt": "了解更多：",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "关闭",
-  "listAddToList": "加入列表",
   "listVideoCount": "{count} 个视频",
   "@listVideoCount": {
     "placeholders": {
@@ -2371,25 +2370,8 @@
     }
   },
   "listByAuthorPrefix": "来自 ",
-  "listNewList": "新列表",
   "listDone": "完成",
   "listErrorLoading": "加载列表出错",
-  "listRemovedFrom": "已从 {name} 移除",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "已加入 {name}",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "创建新列表",
   "listNewPeopleList": "新人物列表",
   "listCollaboratorsNone": "无",

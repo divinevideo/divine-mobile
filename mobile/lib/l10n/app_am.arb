@@ -1976,7 +1976,6 @@
     "reportReceivedReviewNotice": "ከበይነመረብ ጋር ስትገናኝ በራስ-ሰር እንልከዋለን። ቡድናችን የእርስዎን ሪፖርት ተመልክቶ ተገቢውን እርምጃ ይወስዳል። ዝማኔዎችን በቀጥታ መልእክት ሊቀበሉ ይችላሉ።",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "ገጠመ",
-    "listAddToList": "ወደ ዝርዝር ያክሉ",
     "listVideoCount": "{count} ቪዲዮዎች",
     "@listVideoCount": {
         "placeholders": {
@@ -1986,25 +1985,8 @@
         }
     },
     "listByAuthorPrefix": "በ",
-    "listNewList": "አዲስ ዝርዝር",
     "listDone": "ተከናውኗል",
     "listErrorLoading": "ዝርዝሮችን መጫን ላይ ስህተት",
-    "listRemovedFrom": "ከ{name} ተወግዷል",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "ወደ {name} ታክሏል።",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "አዲስ ዝርዝር ይፍጠሩ",
     "listNewPeopleList": "አዲስ ሰዎች ዝርዝር",
     "listCollaboratorsNone": "ምንም",

@@ -1590,7 +1590,6 @@
     "reportReceivedReviewNotice": "Kami akan mengirimkannya otomatis saat kamu terhubung ke internet. Tim kami akan meninjau laporanmu dan mengambil tindakan yang sesuai. Kamu mungkin menerima pembaruan via pesan langsung.",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "Tutup",
-    "listAddToList": "Tambah ke Daftar",
     "listVideoCount": "{count} video",
     "@listVideoCount": {
         "placeholders": {
@@ -1599,25 +1598,8 @@
             }
         }
     },
-    "listNewList": "Daftar Baru",
     "listDone": "Selesai",
     "listErrorLoading": "Kesalahan memuat daftar",
-    "listRemovedFrom": "Dihapus dari {name}",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "Ditambahkan ke {name}",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "Buat Daftar Baru",
     "listNewPeopleList": "Daftar orang baru",
     "listCollaboratorsNone": "Tidak ada",

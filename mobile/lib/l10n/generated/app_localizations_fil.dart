@@ -4897,12 +4897,12 @@ class AppLocalizationsFil extends AppLocalizations {
   String get reportClose => 'Isara';
 
   @override
-  String get listAddToList => 'Idagdag sa Listahan';
-
-  @override
   String listVideoCount(int count) {
     return '$count mga video';
   }
+
+  @override
+  String get listSelectList => 'Select list';
 
   @override
   String listMemberCount(int count) {
@@ -4919,23 +4919,10 @@ class AppLocalizationsFil extends AppLocalizations {
   String get listByAuthorPrefix => 'Ni ';
 
   @override
-  String get listNewList => 'Bagong Listahan';
-
-  @override
   String get listDone => 'Tapos na';
 
   @override
   String get listErrorLoading => 'Error sa pag-load ng listahan';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'Inalis sa $name';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'Naidagdag sa $name';
-  }
 
   @override
   String get listCreateNewList => 'Gumawa ng Bagong Listahan';

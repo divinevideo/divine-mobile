@@ -4868,12 +4868,12 @@ class AppLocalizationsMs extends AppLocalizations {
   String get reportClose => 'Tutup';
 
   @override
-  String get listAddToList => 'Tambah ke Senarai';
-
-  @override
   String listVideoCount(int count) {
     return '$count video';
   }
+
+  @override
+  String get listSelectList => 'Select list';
 
   @override
   String listMemberCount(int count) {
@@ -4890,23 +4890,10 @@ class AppLocalizationsMs extends AppLocalizations {
   String get listByAuthorPrefix => 'Oleh ';
 
   @override
-  String get listNewList => 'Senarai Baharu';
-
-  @override
   String get listDone => 'Siap';
 
   @override
   String get listErrorLoading => 'Ralat memuatkan senarai';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'Dialih keluar daripada $name';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'Ditambah ke $name';
-  }
 
   @override
   String get listCreateNewList => 'Cipta Senarai Baharu';

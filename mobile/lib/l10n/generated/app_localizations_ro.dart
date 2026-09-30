@@ -5003,9 +5003,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get reportClose => 'Închide';
 
   @override
-  String get listAddToList => 'Adaugă la listă';
-
-  @override
   String listVideoCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5016,6 +5013,9 @@ class AppLocalizationsRo extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get listSelectList => 'Select list';
 
   @override
   String listMemberCount(int count) {
@@ -5032,23 +5032,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get listByAuthorPrefix => 'De ';
 
   @override
-  String get listNewList => 'Listă nouă';
-
-  @override
   String get listDone => 'Gata';
 
   @override
   String get listErrorLoading => 'Eroare la încărcarea listelor';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'Eliminat din $name';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'Adăugat la $name';
-  }
 
   @override
   String get listCreateNewList => 'Creează o listă nouă';

@@ -4595,12 +4595,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportClose => '닫기';
 
   @override
-  String get listAddToList => '목록에 추가';
-
-  @override
   String listVideoCount(int count) {
     return '영상 $count개';
   }
+
+  @override
+  String get listSelectList => 'Select list';
 
   @override
   String listMemberCount(int count) {
@@ -4617,23 +4617,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get listByAuthorPrefix => '작성자: ';
 
   @override
-  String get listNewList => '새 목록';
-
-  @override
   String get listDone => '완료';
 
   @override
   String get listErrorLoading => '목록을 불러오는 중 오류 발생';
-
-  @override
-  String listRemovedFrom(String name) {
-    return '$name에서 삭제했어요';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return '$name에 추가했어요';
-  }
 
   @override
   String get listCreateNewList => '새 목록 만들기';

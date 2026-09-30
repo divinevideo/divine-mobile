@@ -3098,7 +3098,6 @@
   "reportLearnMoreAt": "Learn more at",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "Close",
-  "listAddToList": "Add to List",
   "listVideoCount": "{count, plural, =1{{count} video} other{{count} videos}}",
   "@listVideoCount": {
     "placeholders": {
@@ -3106,6 +3105,10 @@
         "type": "int"
       }
     }
+  },
+  "listSelectList": "Select list",
+  "@listSelectList": {
+    "description": "Title of the sheet where the viewer picks which of their video lists a video belongs to."
   },
   "listMemberCount": "{count, plural, =1{{count} member} other{{count} members}}",
   "@listMemberCount": {
@@ -3117,25 +3120,8 @@
     }
   },
   "listByAuthorPrefix": "By ",
-  "listNewList": "New List",
   "listDone": "Done",
   "listErrorLoading": "Error loading lists",
-  "listRemovedFrom": "Removed from {name}",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "Added to {name}",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "Create New List",
   "listNewPeopleList": "New people list",
   "listCollaboratorsNone": "None",

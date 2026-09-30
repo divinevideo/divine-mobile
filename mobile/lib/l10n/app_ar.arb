@@ -1583,7 +1583,6 @@
     "reportReceivedReviewNotice": "سنرسله تلقائيًا عندما تتصل بالإنترنت. سيُراجع فريقنا بلاغك ويتخذ الإجراء المناسب. قد تتلقى تحديثات عبر رسالة مباشرة.",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "إغلاق",
-    "listAddToList": "إضافة إلى قائمة",
     "listVideoCount": "{count} مقاطع فيديو",
     "@listVideoCount": {
         "placeholders": {
@@ -1592,25 +1591,8 @@
             }
         }
     },
-    "listNewList": "قائمة جديدة",
     "listDone": "تم",
     "listErrorLoading": "تعذر تحميل القوائم",
-    "listRemovedFrom": "تمت الإزالة من {name}",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "تمت الإضافة إلى {name}",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "إنشاء قائمة جديدة",
     "listNewPeopleList": "قائمة أشخاص جديدة",
     "listCollaboratorsNone": "لا أحد",

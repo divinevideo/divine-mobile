@@ -1,0 +1,368 @@
+// ABOUTME: Tests for the list picker sheet: the rows it renders, how picks
+// ABOUTME: are made and saved, and how it follows a list created from it.
+
+import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
+import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/list_providers.dart';
+import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
+import 'package:openvine/widgets/select_list_sheet/select_list_sheet.dart';
+import 'package:openvine/widgets/vine_cached_image.dart';
+
+import '../../helpers/test_provider_overrides.dart';
+
+class _MockCuratedListService extends Mock implements CuratedListService {}
+
+/// Set before each test; read by [_FakeCuratedListsState].
+_MockCuratedListService? _fakeService;
+
+class _FakeCuratedListsState extends CuratedListsState {
+  @override
+  CuratedListService? get service => _fakeService;
+
+  @override
+  Future<List<CuratedList>> build() async => const [];
+}
+
+class _FailingCuratedListsState extends CuratedListsState {
+  @override
+  Future<List<CuratedList>> build() async => throw StateError('no relay');
+}
+
+// Full-length 64-char identifiers — never truncate.
+const String _videoEventId =
+    '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+const String _authorPubkey =
+    'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789';
+const String _openLabel = 'Open list picker';
+
+void main() {
+  final l10n = lookupAppLocalizations(const Locale('en'));
+
+  group('showSelectListSheet', () {
+    late _MockCuratedListService service;
+    late VideoEvent video;
+
+    setUp(() {
+      service = _MockCuratedListService();
+      _fakeService = service;
+      when(() => service.myLists).thenReturn(const []);
+      video = VideoEvent(
+        id: _videoEventId,
+        pubkey: _authorPubkey,
+        createdAt: 1757385263,
+        content: 'Test video',
+        timestamp: DateTime.fromMillisecondsSinceEpoch(1757385263 * 1000),
+        videoUrl: 'https://example.com/video.mp4',
+        title: 'Test Video',
+      );
+    });
+
+    CuratedList list(
+      String name, {
+      bool isPublic = true,
+      List<String> videoEventIds = const [],
+      List<String> thumbnailUrls = const [],
+    }) => CuratedList(
+      id: 'list_${name.toLowerCase().replaceAll(' ', '_')}',
+      pubkey: _authorPubkey,
+      name: name,
+      isPublic: isPublic,
+      videoEventIds: videoEventIds,
+      thumbnailUrls: thumbnailUrls,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+
+    Future<void> openSheet(
+      WidgetTester tester, {
+      CuratedListsState Function() listsState = _FakeCuratedListsState.new,
+      List<CuratedList> thumbnails = const [],
+    }) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        testMaterialApp(
+          additionalOverrides: [
+            curatedListsStateProvider.overrideWith(listsState),
+            myListsWithThumbnailsProvider.overrideWith(
+              (ref) async => thumbnails,
+            ),
+          ],
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: TextButton(
+                onPressed: () => runDetached(
+                  showSelectListSheet(context, video: video),
+                  'open list picker sheet',
+                  logName: 'SelectListSheetTest',
+                  category: LogCategory.ui,
+                ),
+                child: const Text(_openLabel),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text(_openLabel));
+      await tester.pumpAndSettle();
+    }
+
+    /// The checks marking picked rows; the header's check button is a
+    /// separate widget outside the body.
+    Finder rowChecks() => find.descendant(
+      of: find.byType(SelectListSheetBody),
+      matching: find.byWidgetPredicate(
+        (widget) => widget is DivineIcon && widget.icon == DivineIconName.check,
+      ),
+    );
+
+    Finder saveButton() => find.bySemanticsLabel(l10n.listDone);
+
+    group('renders', () {
+      testWidgets('the title, one row per list, and a check on each list '
+          'that holds the video', (tester) async {
+        when(() => service.myLists).thenReturn([
+          list('Holds it', videoEventIds: const [_videoEventId]),
+          list('Watch later', isPublic: false),
+        ]);
+
+        await openSheet(tester);
+
+        expect(find.text(l10n.listSelectList), findsOneWidget);
+        expect(find.text('Holds it'), findsOneWidget);
+        expect(find.text('1 video • Public'), findsOneWidget);
+        expect(find.text('Watch later'), findsOneWidget);
+        expect(find.text('0 videos • Private'), findsOneWidget);
+        expect(rowChecks(), findsOneWidget);
+        expect(find.text(l10n.listCreateNewList), findsOneWidget);
+      });
+
+      testWidgets('a hint when the viewer has no lists yet', (tester) async {
+        await openSheet(tester);
+
+        expect(find.text(l10n.profileListsEmpty), findsOneWidget);
+        expect(find.text(l10n.listCreateNewList), findsOneWidget);
+      });
+
+      testWidgets("a list's first thumbnail once resolved, and a placeholder "
+          'until then', (tester) async {
+        when(
+          () => service.myLists,
+        ).thenReturn([list('Pictured'), list('Bare')]);
+
+        await openSheet(
+          tester,
+          thumbnails: [
+            list('Pictured', thumbnailUrls: const ['https://example.com/t']),
+          ],
+        );
+
+        final image = tester.widget<VineCachedImage>(
+          find.byType(VineCachedImage),
+        );
+        expect(image.imageUrl, 'https://example.com/t');
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineIcon && widget.icon == DivineIconName.playlist,
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('a failure to load the lists on the screen underneath '
+          'instead of opening', (tester) async {
+        await openSheet(tester, listsState: _FailingCuratedListsState.new);
+
+        expect(find.byType(SelectListSheetBody), findsNothing);
+        expect(find.text(l10n.listErrorLoading), findsOneWidget);
+      });
+    });
+
+    group('interactions', () {
+      testWidgets('tapping rows picks and unpicks them without writing', (
+        tester,
+      ) async {
+        when(() => service.myLists).thenReturn([
+          list('Holds it', videoEventIds: const [_videoEventId]),
+          list('Empty'),
+        ]);
+        await openSheet(tester);
+
+        await tester.tap(find.text('Empty'));
+        await tester.pump();
+        expect(rowChecks(), findsNWidgets(2));
+
+        await tester.tap(find.text('Holds it'));
+        await tester.pump();
+        expect(rowChecks(), findsOneWidget);
+
+        verifyNever(() => service.addVideoToList(any(), any()));
+        verifyNever(() => service.removeVideoFromList(any(), any()));
+      });
+
+      testWidgets('the check writes every pick, so one visit can add the '
+          'video to several lists, then closes', (tester) async {
+        when(() => service.myLists).thenReturn([
+          list('Holds it', videoEventIds: const [_videoEventId]),
+          list('First'),
+          list('Second'),
+        ]);
+        when(
+          () => service.addVideoToList(any(), any()),
+        ).thenAnswer((_) async => true);
+        when(
+          () => service.removeVideoFromList(any(), any()),
+        ).thenAnswer((_) async => true);
+        await openSheet(tester);
+
+        await tester.tap(find.text('First'));
+        await tester.tap(find.text('Second'));
+        await tester.tap(find.text('Holds it'));
+        await tester.pump();
+        await tester.tap(saveButton());
+        await tester.pumpAndSettle();
+
+        verify(
+          () => service.addVideoToList('list_first', _videoEventId),
+        ).called(1);
+        verify(
+          () => service.addVideoToList('list_second', _videoEventId),
+        ).called(1);
+        verify(
+          () => service.removeVideoFromList('list_holds_it', _videoEventId),
+        ).called(1);
+        expect(find.byType(SelectListSheetBody), findsNothing);
+      });
+
+      testWidgets('the check closes at once when nothing was changed', (
+        tester,
+      ) async {
+        when(
+          () => service.myLists,
+        ).thenReturn([
+          list('Holds it', videoEventIds: const [_videoEventId]),
+        ]);
+        await openSheet(tester);
+
+        await tester.tap(saveButton());
+        await tester.pumpAndSettle();
+
+        expect(find.byType(SelectListSheetBody), findsNothing);
+        verifyNever(() => service.addVideoToList(any(), any()));
+        verifyNever(() => service.removeVideoFromList(any(), any()));
+      });
+
+      testWidgets('a refused change keeps the sheet open, says so, and keeps '
+          'the pick for a retry', (tester) async {
+        when(() => service.myLists).thenReturn([list('Refuses')]);
+        when(
+          () => service.addVideoToList(any(), any()),
+        ).thenAnswer((_) async => false);
+        await openSheet(tester);
+
+        await tester.tap(find.text('Refuses'));
+        await tester.pump();
+        await tester.tap(saveButton());
+        await tester.pumpAndSettle();
+
+        expect(find.byType(SelectListSheetBody), findsOneWidget);
+        expect(find.text(l10n.listUpdateFailed), findsOneWidget);
+        expect(find.text(l10n.listPrivateFull), findsNothing);
+        expect(rowChecks(), findsOneWidget);
+      });
+
+      testWidgets('a full private list explains why rather than asking for '
+          'a retry', (tester) async {
+        // Before #7331 a failed toggle rendered nothing at all, so a private
+        // list at the NIP-44 size ceiling swallowed every add silently.
+        when(() => service.myLists).thenReturn([
+          list(
+            'Full',
+            isPublic: false,
+            // Enough references that one more cannot fit in a single NIP-44
+            // plaintext, so the converter's real arithmetic decides.
+            videoEventIds: [
+              for (var i = 0; i < 1000; i++) i.toString().padLeft(64, '0'),
+            ],
+          ),
+        ]);
+        when(
+          () => service.addVideoToList(any(), any()),
+        ).thenAnswer((_) async => false);
+        await openSheet(tester);
+
+        await tester.tap(find.text('Full'));
+        await tester.pump();
+        await tester.tap(saveButton());
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.listPrivateFull), findsOneWidget);
+        expect(find.text(l10n.listUpdateFailed), findsNothing);
+      });
+
+      testWidgets('the X closes without writing the picks', (tester) async {
+        when(() => service.myLists).thenReturn([list('Empty')]);
+        await openSheet(tester);
+
+        await tester.tap(find.text('Empty'));
+        await tester.pump();
+        await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(SelectListSheetBody), findsNothing);
+        verifyNever(() => service.addVideoToList(any(), any()));
+      });
+
+      testWidgets('Create new list opens the create sheet, and the list it '
+          'creates shows up picked', (tester) async {
+        when(() => service.myLists).thenReturn([list('Empty')]);
+        final fresh = list('Fresh', videoEventIds: const [_videoEventId]);
+        when(
+          () => service.createList(
+            name: any(named: 'name'),
+            description: any(named: 'description'),
+            isPublic: any(named: 'isPublic'),
+            isCollaborative: any(named: 'isCollaborative'),
+            allowedCollaborators: any(named: 'allowedCollaborators'),
+          ),
+        ).thenAnswer((_) async => fresh);
+        when(
+          () => service.addVideoToList(any(), any()),
+        ).thenAnswer((_) async => true);
+        await openSheet(tester);
+
+        await tester.tap(find.text(l10n.listCreateNewList));
+        await tester.pumpAndSettle();
+        expect(find.byType(ListInfoForm), findsOneWidget);
+
+        await tester.enterText(find.byType(TextField).first, 'Fresh');
+        await tester.pump();
+        await tester.tap(find.bySemanticsLabel(l10n.listCreate));
+        await tester.pumpAndSettle();
+        expect(find.byType(ListInfoForm), findsNothing);
+        verify(() => service.addVideoToList(fresh.id, _videoEventId)).called(1);
+
+        // The real service tells its listeners once the list exists.
+        final listener =
+            verify(() => service.addListener(captureAny())).captured.single
+                as VoidCallback;
+        when(() => service.myLists).thenReturn([list('Empty'), fresh]);
+        listener();
+        // One frame delivers the cubit's state, the next rebuilds the rows.
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text('Fresh'), findsOneWidget);
+        expect(rowChecks(), findsOneWidget);
+      });
+    });
+  });
+}

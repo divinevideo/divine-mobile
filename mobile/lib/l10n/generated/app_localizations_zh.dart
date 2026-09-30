@@ -4565,12 +4565,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reportClose => '关闭';
 
   @override
-  String get listAddToList => '加入列表';
-
-  @override
   String listVideoCount(int count) {
     return '$count 个视频';
   }
+
+  @override
+  String get listSelectList => 'Select list';
 
   @override
   String listMemberCount(int count) {
@@ -4587,23 +4587,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get listByAuthorPrefix => '来自 ';
 
   @override
-  String get listNewList => '新列表';
-
-  @override
   String get listDone => '完成';
 
   @override
   String get listErrorLoading => '加载列表出错';
-
-  @override
-  String listRemovedFrom(String name) {
-    return '已从 $name 移除';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return '已加入 $name';
-  }
 
   @override
   String get listCreateNewList => '创建新列表';

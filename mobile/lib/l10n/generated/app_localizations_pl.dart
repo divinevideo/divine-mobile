@@ -4991,9 +4991,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get reportClose => 'Zamknij';
 
   @override
-  String get listAddToList => 'Dodaj do listy';
-
-  @override
   String listVideoCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5005,6 +5002,9 @@ class AppLocalizationsPl extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get listSelectList => 'Select list';
 
   @override
   String listMemberCount(int count) {
@@ -5021,23 +5021,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get listByAuthorPrefix => 'Autor: ';
 
   @override
-  String get listNewList => 'Nowa lista';
-
-  @override
   String get listDone => 'Gotowe';
 
   @override
   String get listErrorLoading => 'Błąd wczytywania list';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'Usunięto z $name';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'Dodano do $name';
-  }
 
   @override
   String get listCreateNewList => 'Utwórz nową listę';

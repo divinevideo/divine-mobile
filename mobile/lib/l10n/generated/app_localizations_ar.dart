@@ -4837,12 +4837,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reportClose => 'إغلاق';
 
   @override
-  String get listAddToList => 'إضافة إلى قائمة';
-
-  @override
   String listVideoCount(int count) {
     return '$count مقاطع فيديو';
   }
+
+  @override
+  String get listSelectList => 'Select list';
 
   @override
   String listMemberCount(int count) {
@@ -4859,23 +4859,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get listByAuthorPrefix => 'بقلم ';
 
   @override
-  String get listNewList => 'قائمة جديدة';
-
-  @override
   String get listDone => 'تم';
 
   @override
   String get listErrorLoading => 'تعذر تحميل القوائم';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'تمت الإزالة من $name';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'تمت الإضافة إلى $name';
-  }
 
   @override
   String get listCreateNewList => 'إنشاء قائمة جديدة';

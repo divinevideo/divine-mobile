@@ -585,6 +585,8 @@ const _knownUntranslatedDebt = <String>{
   // pass.
   'listMakePublicLabel',
   'listMakePublicSubtitle',
+  // The list picker sheet's title (#8540), deferred to the same pass.
+  'listSelectList',
   // The people-list picker's row actions and its update-failure copy
   // (#8540), deferred to the same pass.
   'peopleListsAddPersonSemanticLabel',

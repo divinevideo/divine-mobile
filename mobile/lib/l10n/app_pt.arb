@@ -1593,7 +1593,6 @@
     "reportReceivedReviewNotice": "Vamos enviar automaticamente quando você tiver conexão. Nossa equipe vai revisar sua denúncia e tomar as medidas adequadas. Você pode receber atualizações por mensagem direta.",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "Fechar",
-    "listAddToList": "Adicionar à lista",
     "listVideoCount": "{count} vídeos",
     "@listVideoCount": {
         "placeholders": {
@@ -1602,25 +1601,8 @@
             }
         }
     },
-    "listNewList": "Nova lista",
     "listDone": "Concluído",
     "listErrorLoading": "Erro ao carregar listas",
-    "listRemovedFrom": "Removido de {name}",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "Adicionado a {name}",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "Criar nova lista",
     "listNewPeopleList": "Nova lista de pessoas",
     "listCollaboratorsNone": "Nenhum",

@@ -4873,12 +4873,12 @@ class AppLocalizationsUr extends AppLocalizations {
   String get reportClose => 'بند کریں';
 
   @override
-  String get listAddToList => 'فہرست میں شامل کریں';
-
-  @override
   String listVideoCount(int count) {
     return '$count ویڈیوز';
   }
+
+  @override
+  String get listSelectList => 'Select list';
 
   @override
   String listMemberCount(int count) {
@@ -4895,23 +4895,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get listByAuthorPrefix => 'از ';
 
   @override
-  String get listNewList => 'نئی فہرست';
-
-  @override
   String get listDone => 'ہو گیا';
 
   @override
   String get listErrorLoading => 'فہرستیں لوڈ کرنے میں خرابی';
-
-  @override
-  String listRemovedFrom(String name) {
-    return '$name سے ہٹا دی گئی';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return '$name میں شامل کر دی گئی';
-  }
 
   @override
   String get listCreateNewList => 'نئی فہرست بنائیں';

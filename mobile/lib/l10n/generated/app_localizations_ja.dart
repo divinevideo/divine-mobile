@@ -4578,12 +4578,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get reportClose => '閉じる';
 
   @override
-  String get listAddToList => 'リストに追加';
-
-  @override
   String listVideoCount(int count) {
     return '$count本の動画';
   }
+
+  @override
+  String get listSelectList => 'Select list';
 
   @override
   String listMemberCount(int count) {
@@ -4600,23 +4600,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get listByAuthorPrefix => '作成者: ';
 
   @override
-  String get listNewList => '新しいリスト';
-
-  @override
   String get listDone => '完了';
 
   @override
   String get listErrorLoading => 'リストの読み込みに失敗';
-
-  @override
-  String listRemovedFrom(String name) {
-    return '$nameから削除したよ';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return '$nameに追加したよ';
-  }
 
   @override
   String get listCreateNewList => '新しいリストを作る';

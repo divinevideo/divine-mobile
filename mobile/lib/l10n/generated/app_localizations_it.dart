@@ -4919,12 +4919,12 @@ class AppLocalizationsIt extends AppLocalizations {
   String get reportClose => 'Chiudi';
 
   @override
-  String get listAddToList => 'Aggiungi a lista';
-
-  @override
   String listVideoCount(int count) {
     return '$count video';
   }
+
+  @override
+  String get listSelectList => 'Select list';
 
   @override
   String listMemberCount(int count) {
@@ -4941,23 +4941,10 @@ class AppLocalizationsIt extends AppLocalizations {
   String get listByAuthorPrefix => 'Di ';
 
   @override
-  String get listNewList => 'Nuova lista';
-
-  @override
   String get listDone => 'Fatto';
 
   @override
   String get listErrorLoading => 'Errore nel caricamento delle liste';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'Rimosso da $name';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'Aggiunto a $name';
-  }
 
   @override
   String get listCreateNewList => 'Crea nuova lista';

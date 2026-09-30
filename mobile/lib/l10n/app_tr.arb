@@ -1590,7 +1590,6 @@
     "reportReceivedReviewNotice": "İnternete bağlandığında otomatik olarak göndereceğiz. Ekibimiz bildirimini inceleyecek ve uygun adımı atacak. Direkt mesaj yoluyla güncelleme alabilirsin.",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "Kapat",
-    "listAddToList": "Listeye Ekle",
     "listVideoCount": "{count} video",
     "@listVideoCount": {
         "placeholders": {
@@ -1599,25 +1598,8 @@
             }
         }
     },
-    "listNewList": "Yeni Liste",
     "listDone": "Bitti",
     "listErrorLoading": "Listeler yüklenirken hata",
-    "listRemovedFrom": "{name} listesinden kaldırıldı",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "{name} listesine eklendi",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "Yeni Liste Oluştur",
     "listNewPeopleList": "Yeni kişi listesi",
     "listCollaboratorsNone": "Yok",

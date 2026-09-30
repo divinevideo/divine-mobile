@@ -1593,7 +1593,6 @@
     "reportReceivedReviewNotice": "Îl vom trimite automat când te conectezi la internet. Echipa noastră âți va revizui raportul și va lua măsuri corespunzătoare. S-ar putea să primești actualizări prin mesaj direct.",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "Închide",
-    "listAddToList": "Adaugă la listă",
     "listVideoCount": "{count, plural, one{1 videoclip} few{{count} videoclipuri} other{{count} de videoclipuri}}",
     "@listVideoCount": {
         "placeholders": {
@@ -1602,25 +1601,8 @@
             }
         }
     },
-    "listNewList": "Listă nouă",
     "listDone": "Gata",
     "listErrorLoading": "Eroare la încărcarea listelor",
-    "listRemovedFrom": "Eliminat din {name}",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "Adăugat la {name}",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "Creează o listă nouă",
     "listNewPeopleList": "Listă nouă de persoane",
     "listCollaboratorsNone": "Niciunul",

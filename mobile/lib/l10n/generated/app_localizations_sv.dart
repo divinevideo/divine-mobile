@@ -4861,12 +4861,12 @@ class AppLocalizationsSv extends AppLocalizations {
   String get reportClose => 'Stäng';
 
   @override
-  String get listAddToList => 'Lägg till i lista';
-
-  @override
   String listVideoCount(int count) {
     return '$count videor';
   }
+
+  @override
+  String get listSelectList => 'Select list';
 
   @override
   String listMemberCount(int count) {
@@ -4883,23 +4883,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get listByAuthorPrefix => 'Av ';
 
   @override
-  String get listNewList => 'Ny lista';
-
-  @override
   String get listDone => 'Klar';
 
   @override
   String get listErrorLoading => 'Fel vid inläsning av listor';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'Borttagen från $name';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'Tillagd i $name';
-  }
 
   @override
   String get listCreateNewList => 'Skapa ny lista';

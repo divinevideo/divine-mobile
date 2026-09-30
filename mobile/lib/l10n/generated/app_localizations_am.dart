@@ -4749,12 +4749,12 @@ class AppLocalizationsAm extends AppLocalizations {
   String get reportClose => 'ገጠመ';
 
   @override
-  String get listAddToList => 'ወደ ዝርዝር ያክሉ';
-
-  @override
   String listVideoCount(int count) {
     return '$count ቪዲዮዎች';
   }
+
+  @override
+  String get listSelectList => 'Select list';
 
   @override
   String listMemberCount(int count) {
@@ -4771,23 +4771,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get listByAuthorPrefix => 'በ';
 
   @override
-  String get listNewList => 'አዲስ ዝርዝር';
-
-  @override
   String get listDone => 'ተከናውኗል';
 
   @override
   String get listErrorLoading => 'ዝርዝሮችን መጫን ላይ ስህተት';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'ከ$name ተወግዷል';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'ወደ $name ታክሏል።';
-  }
 
   @override
   String get listCreateNewList => 'አዲስ ዝርዝር ይፍጠሩ';

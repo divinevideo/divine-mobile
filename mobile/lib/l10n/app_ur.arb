@@ -2361,7 +2361,6 @@
   "reportLearnMoreAt": "مزید جانیں",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "بند کریں",
-  "listAddToList": "فہرست میں شامل کریں",
   "listVideoCount": "{count} ویڈیوز",
   "@listVideoCount": {
     "placeholders": {
@@ -2371,25 +2370,8 @@
     }
   },
   "listByAuthorPrefix": "از ",
-  "listNewList": "نئی فہرست",
   "listDone": "ہو گیا",
   "listErrorLoading": "فہرستیں لوڈ کرنے میں خرابی",
-  "listRemovedFrom": "{name} سے ہٹا دی گئی",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "{name} میں شامل کر دی گئی",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "نئی فہرست بنائیں",
   "listNewPeopleList": "لوگوں کی نئی فہرست",
   "listCollaboratorsNone": "کوئی نہیں",

@@ -1789,7 +1789,6 @@
     "reportReceivedReviewNotice": "Ще го изпратим автоматично, когато се свържеш с интернет. Екипът ни ще прегледа сигнала ти и ще предприеме нужните действия. Може да получаваш новини чрез директно съобщение.",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "Затвори",
-    "listAddToList": "Добави към списъка",
     "listVideoCount": "{count} видеа",
     "@listVideoCount": {
         "placeholders": {
@@ -1798,25 +1797,8 @@
             }
         }
     },
-    "listNewList": "Нов списък",
     "listDone": "Готово",
     "listErrorLoading": "Грешка при зареждане на списъците",
-    "listRemovedFrom": "Премахнато от {name}",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "Добавено към {name}",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "Създаване на нов списък",
     "listNewPeopleList": "Нов списък с хора",
     "listCollaboratorsNone": "Няма",
