@@ -21,6 +21,7 @@ import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_opacity.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_reattach.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_transform.dart';
+import 'package:openvine/widgets/video_editor/effects_editor/flashing_effect_snack_bar.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/open_effects_editor.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_audio_fade_sheet.dart';
@@ -435,8 +436,9 @@ class _FilterOverlayControls extends StatelessWidget {
 ///
 /// Edit reopens the effects editor on this effect, keeping its window.
 /// Duplicate places the copy right after it in the list, overlapping until
-/// moved; split cuts it at the playhead, the tail becoming a new effect whose
-/// animation starts over there.
+/// moved, except for a flashing effect, which may not overlap another; split
+/// cuts it at the playhead, the tail becoming a new effect whose animation
+/// starts over there.
 class _EffectOverlayControls extends StatelessWidget {
   const _EffectOverlayControls({required this.item});
 
@@ -469,6 +471,11 @@ class _EffectOverlayControls extends StatelessWidget {
     final effects = editor.stateManager.videoEffectEntries;
     final index = effects.indexWhere((e) => e.id == item.id);
     if (index < 0) return;
+    // The copy would lie on top of the original and flash along with it.
+    if (isFlashingVideoEffect(effects[index].effect.type)) {
+      showFlashingEffectNotDuplicatedSnackBar(context);
+      return;
+    }
 
     final copy = EditorVideoEffect(
       id: _copyId(item.id),

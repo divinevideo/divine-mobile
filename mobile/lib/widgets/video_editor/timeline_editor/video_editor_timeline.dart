@@ -17,6 +17,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
+import 'package:openvine/widgets/video_editor/effects_editor/flashing_effect_snack_bar.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_control_bar.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_clip_strip.dart';
@@ -756,6 +757,7 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
           listIndex: targetIdx,
           skipUpdateHistory: true,
         );
+        _separateFlashingEffects(editor, item.id);
         _syncEffectsPreview(editor);
     }
 
@@ -922,6 +924,14 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
         overlayBloc.add(TimelineOverlayTrimStarted(selectedId));
       }
     } else {
+      final trimmed = overlayBloc.state.items
+          .where((i) => i.id == overlayBloc.state.selectedItemId)
+          .firstOrNull;
+      if (trimmed?.type == .effect) {
+        final editor = VideoEditorScope.of(context).requireEditor;
+        _separateFlashingEffects(editor, trimmed!.id);
+        _syncEffectsPreview(editor);
+      }
       overlayBloc.add(const TimelineOverlayTrimEnded());
     }
   }
@@ -1032,6 +1042,14 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
           skipUpdateHistory: true,
         );
         _syncEffectsPreview(editor);
+    }
+  }
+
+  /// Once a gesture ends, lets a flashing effect replace any other flashing
+  /// effect it now overlaps, and says why.
+  void _separateFlashingEffects(ProImageEditorState editor, String id) {
+    if (editor.separateFlashingVideoEffects(id)) {
+      showFlashingEffectReplacedSnackBar(context);
     }
   }
 

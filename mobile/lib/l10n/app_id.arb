@@ -2450,6 +2450,8 @@
   "videoEditorEffectStrobe": "Strobo",
   "videoEditorEffectNegativeFlash": "Kilat Negatif",
   "videoEditorEffectVignette": "Vignet",
+  "videoEditorEffectsFlashingReplaced": "Satu efek berkedip dalam satu waktu. Kedipan berlebihan bisa membahayakan orang yang sensitif, jadi kami mengganti efek lainnya di sini.",
+  "videoEditorEffectsFlashingNotDuplicated": "Satu efek berkedip dalam satu waktu. Kedipan berlebihan bisa membahayakan orang yang sensitif.",
   "videoEditorOpenTuneSemanticLabel": "Buka editor penyesuaian",
   "videoEditorTuneBrightness": "Kecerahan",
   "videoEditorTuneContrast": "Kontras",

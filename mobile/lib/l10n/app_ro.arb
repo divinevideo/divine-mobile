@@ -2488,6 +2488,8 @@
   "videoEditorEffectStrobe": "Stroboscop",
   "videoEditorEffectNegativeFlash": "Bliț negativ",
   "videoEditorEffectVignette": "Vinietă",
+  "videoEditorEffectsFlashingReplaced": "Un singur efect intermitent odată. Prea multe clipiri pot face rău persoanelor sensibile, așa că l-am înlocuit aici pe celălalt.",
+  "videoEditorEffectsFlashingNotDuplicated": "Un singur efect intermitent odată. Prea multe clipiri pot face rău persoanelor sensibile.",
   "videoEditorOpenTuneSemanticLabel": "Deschide editorul de ajustări",
   "videoEditorTuneBrightness": "Luminozitate",
   "videoEditorTuneContrast": "Contrast",

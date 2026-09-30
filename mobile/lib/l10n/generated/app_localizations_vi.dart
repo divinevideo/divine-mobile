@@ -8606,6 +8606,14 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectVignette => 'Làm tối viền';
 
   @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'Mỗi lúc chỉ một hiệu ứng nhấp nháy. Nhấp nháy quá nhiều có thể gây hại cho người nhạy cảm, nên chúng mình đã thay hiệu ứng kia ở đây.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'Mỗi lúc chỉ một hiệu ứng nhấp nháy. Nhấp nháy quá nhiều có thể gây hại cho người nhạy cảm.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel =>
       'Mở trình chỉnh sửa điều chỉnh';
 

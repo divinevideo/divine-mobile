@@ -8233,6 +8233,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectVignette => '비네트';
 
   @override
+  String get videoEditorEffectsFlashingReplaced =>
+      '깜빡이는 효과는 한 번에 하나만 쓸 수 있어요. 깜빡임이 너무 많으면 민감한 사람에게 해로울 수 있어서 여기서는 다른 효과를 바꿨어요.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      '깜빡이는 효과는 한 번에 하나만 쓸 수 있어요. 깜빡임이 너무 많으면 민감한 사람에게 해로울 수 있어요.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => '조정 편집기 열기';
 
   @override

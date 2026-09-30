@@ -8732,6 +8732,14 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorEffectVignette => 'Vignettatura';
 
   @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'Un solo effetto lampeggiante alla volta. Troppi lampeggiamenti possono fare male alle persone sensibili, quindi qui abbiamo sostituito l\'altro.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'Un solo effetto lampeggiante alla volta. Troppi lampeggiamenti possono fare male alle persone sensibili.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Apri editor regolazioni';
 
   @override

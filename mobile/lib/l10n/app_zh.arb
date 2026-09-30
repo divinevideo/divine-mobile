@@ -4561,6 +4561,8 @@
   "videoEditorEffectStrobe": "频闪",
   "videoEditorEffectNegativeFlash": "负片闪烁",
   "videoEditorEffectVignette": "暗角",
+  "videoEditorEffectsFlashingReplaced": "一次只能用一个闪烁效果。闪烁太多可能会伤害对闪光敏感的人，所以我们在这里替换了另一个。",
+  "videoEditorEffectsFlashingNotDuplicated": "一次只能用一个闪烁效果。闪烁太多可能会伤害对闪光敏感的人。",
   "videoEditorOpenTuneSemanticLabel": "打开调节编辑器",
   "videoEditorTuneBrightness": "亮度",
   "videoEditorTuneContrast": "对比度",

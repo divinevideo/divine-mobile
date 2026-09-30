@@ -8445,6 +8445,14 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectVignette => 'ቪኜት';
 
   @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'አንድ ብልጭ ድርግም የሚል ኢፌክት በአንድ ጊዜ። ብዙ ብልጭታ ለሚነኩ ሰዎች ሊጎዳ ይችላል፣ ስለዚህ ሌላውን እዚህ ተክተነዋል።';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'አንድ ብልጭ ድርግም የሚል ኢፌክት በአንድ ጊዜ። ብዙ ብልጭታ ለሚነኩ ሰዎች ሊጎዳ ይችላል።';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'የማስተካከያ አርታዒን ክፈት';
 
   @override

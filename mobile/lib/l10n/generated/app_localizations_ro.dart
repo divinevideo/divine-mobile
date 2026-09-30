@@ -8835,6 +8835,14 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorEffectVignette => 'Vinietă';
 
   @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'Un singur efect intermitent odată. Prea multe clipiri pot face rău persoanelor sensibile, așa că l-am înlocuit aici pe celălalt.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'Un singur efect intermitent odată. Prea multe clipiri pot face rău persoanelor sensibile.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel =>
       'Deschide editorul de ajustări';
 

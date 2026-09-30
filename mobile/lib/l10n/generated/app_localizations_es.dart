@@ -8720,6 +8720,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorEffectVignette => 'Viñeta';
 
   @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'Solo un efecto parpadeante a la vez. Demasiado parpadeo puede hacer daño a las personas sensibles, así que aquí hemos reemplazado el otro.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'Solo un efecto parpadeante a la vez. Demasiado parpadeo puede hacer daño a las personas sensibles.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Abrir editor de ajustes';
 
   @override

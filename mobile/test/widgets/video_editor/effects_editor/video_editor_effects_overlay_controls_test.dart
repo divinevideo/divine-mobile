@@ -7,11 +7,13 @@ import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effects_overlay_controls.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/video_editor_vertical_slider.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show VideoEffectType;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show VideoEffect, VideoEffectType;
 
 class _MockVideoEditorMainBloc
     extends MockBloc<VideoEditorMainEvent, VideoEditorMainState>
@@ -151,6 +153,29 @@ void main() {
           () => mainBloc.add(const VideoEditorMainSubEditorClosed()),
         ).called(1);
         expect(cubit.state.isEditing, isFalse);
+      });
+
+      testWidgets('done explains when a flashing effect replaced another', (
+        tester,
+      ) async {
+        cubit
+          ..syncApplied(const [
+            EditorVideoEffect(
+              id: 'negative',
+              effect: VideoEffect.negativeFlash(),
+            ),
+          ])
+          ..selectType(VideoEffectType.strobe);
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.bySemanticsLabel(doneLabel));
+        await tester.pump();
+
+        expect(
+          find.text(l10n.videoEditorEffectsFlashingReplaced),
+          findsOneWidget,
+        );
       });
 
       testWidgets('close discards the pick without touching the history', (

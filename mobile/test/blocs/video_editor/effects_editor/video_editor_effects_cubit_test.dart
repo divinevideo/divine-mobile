@@ -141,7 +141,7 @@ void main() {
           id: 'new',
           effect: VideoEffect.glitch(intensity: 0.5),
         );
-        expect(cubit.confirm(), const [vhs, added]);
+        expect(cubit.confirm().effects, const [vhs, added]);
         expect(cubit.state.isEditing, isFalse);
         expect(cubit.state.applied, const [vhs, added]);
       });
@@ -154,7 +154,7 @@ void main() {
           ..setIntensity(0.9);
         addTearDown(cubit.close);
 
-        expect(cubit.confirm(), const [
+        expect(cubit.confirm().effects, const [
           EditorVideoEffect(
             id: 'vhs',
             effect: VideoEffect.oldFilm(
@@ -173,13 +173,45 @@ void main() {
           ..startEditing(effectId: 'vhs')
           ..selectType(null);
         addTearDown(cubit.close);
-        expect(cubit.confirm(), const [vignette]);
+        expect(cubit.confirm().effects, const [vignette]);
 
         cubit
           ..startEditing(effectId: 'vignette')
           ..setIntensity(0);
-        expect(cubit.confirm(), isEmpty);
+        expect(cubit.confirm().effects, isEmpty);
         expect(cubit.state.applied, isEmpty);
+      });
+
+      test('lets a new flashing effect replace another one in its window, '
+          'and says so', () {
+        const negative = EditorVideoEffect(
+          id: 'negative',
+          effect: VideoEffect.negativeFlash(
+            startTime: Duration(seconds: 1),
+            endTime: Duration(seconds: 2),
+          ),
+        );
+        final cubit = buildCubit()
+          ..syncApplied(const [negative, vignette])
+          ..startEditing()
+          ..selectType(VideoEffectType.strobe);
+        addTearDown(cubit.close);
+
+        final result = cubit.confirm();
+
+        expect(result.replacedFlashing, isTrue);
+        expect(result.effects.map((e) => e.id), ['vignette', 'new']);
+        expect(cubit.state.applied, result.effects);
+      });
+
+      test('reports no replacement when nothing flashes on top', () {
+        final cubit = buildCubit()
+          ..syncApplied(const [vhs])
+          ..startEditing()
+          ..selectType(VideoEffectType.strobe);
+        addTearDown(cubit.close);
+
+        expect(cubit.confirm().replacedFlashing, isFalse);
       });
 
       test('adds nothing when a new effect is left on "none"', () {
@@ -188,7 +220,7 @@ void main() {
           ..startEditing();
         addTearDown(cubit.close);
 
-        expect(cubit.confirm(), const [vhs]);
+        expect(cubit.confirm().effects, const [vhs]);
       });
     });
   });

@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show VideoEffect, VideoEffectType;
+import 'package:uuid/uuid.dart';
 
 part 'video_editor_effects_state.dart';
 
@@ -16,7 +17,7 @@ part 'video_editor_effects_state.dart';
 /// the timeline, see [startEditing].
 class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState> {
   VideoEditorEffectsCubit({String Function()? createId})
-    : _createId = createId ?? _timestampId,
+    : _createId = createId ?? _uniqueId,
       super(const VideoEditorEffectsState());
 
   /// The intensity an effect starts at when it is first picked.
@@ -24,8 +25,9 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState> {
 
   final String Function() _createId;
 
-  static String _timestampId() =>
-      'effect_${DateTime.now().microsecondsSinceEpoch}';
+  static const _uuid = Uuid();
+
+  static String _uniqueId() => 'effect_${_uuid.v4()}';
 
   /// Mirrors the effects committed to the editor history, after an undo,
   /// redo, timeline edit or draft restore.
@@ -73,20 +75,22 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState> {
   ///
   /// A new effect is added over the whole video; an edited one keeps its
   /// window and place in the list. Picking no effect adds nothing, or removes
-  /// the edited effect.
-  List<EditorVideoEffect> confirm() {
+  /// the edited effect. A flashing effect replaces other flashing effects in
+  /// its window (see [withoutFlashingOverlaps]); `replacedFlashing` says so,
+  /// for the UI to explain.
+  ({List<EditorVideoEffect> effects, bool replacedFlashing}) confirm() {
     final selection = state.selection;
     final picked = selection != null && selection.intensity > 0
         ? selection
         : null;
-    final effects = <EditorVideoEffect>[];
-    var edited = false;
+    var effects = <EditorVideoEffect>[];
+    String? committedId;
     for (final entry in state.applied) {
       if (entry.id != state.editingId) {
         effects.add(entry);
         continue;
       }
-      edited = true;
+      committedId = entry.id;
       if (picked == null) continue;
       effects.add(
         EditorVideoEffect(
@@ -100,9 +104,20 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState> {
         ),
       );
     }
-    if (!edited && picked != null) {
-      effects.add(EditorVideoEffect(id: _createId(), effect: picked));
+    if (committedId == null && picked != null) {
+      committedId = _createId();
+      effects.add(EditorVideoEffect(id: committedId, effect: picked));
     }
+
+    final separated = picked == null || committedId == null
+        ? null
+        : withoutFlashingOverlaps(
+            effects,
+            keepId: committedId,
+            createId: _createId,
+          );
+    effects = separated ?? effects;
+
     emit(
       state.copyWith(
         isEditing: false,
@@ -110,6 +125,6 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState> {
         applied: List.unmodifiable(effects),
       ),
     );
-    return effects;
+    return (effects: effects, replacedFlashing: separated != null);
   }
 }

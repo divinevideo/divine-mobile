@@ -8715,6 +8715,14 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEffectVignette => 'Винетка';
 
   @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'Само един мигащ ефект наведнъж. Прекаленото мигане може да навреди на чувствителни хора, затова тук заменихме другия.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'Само един мигащ ефект наведнъж. Прекаленото мигане може да навреди на чувствителни хора.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel =>
       'Отваряне на редактора за настройки';
 

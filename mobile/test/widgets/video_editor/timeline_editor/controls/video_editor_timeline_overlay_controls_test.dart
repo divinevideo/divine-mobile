@@ -1794,6 +1794,42 @@ void main() {
           expect(effects.last.id, isNot('effect-1'));
         });
 
+        testWidgets('duplicate leaves a flashing effect alone and says why', (
+          tester,
+        ) async {
+          const strobe = EditorVideoEffect(
+            id: 'strobe-1',
+            effect: pve.VideoEffect.strobe(),
+          );
+          when(() => mockStateManager.activeMeta).thenReturn({
+            VideoEditorConstants.effectsStateHistoryKey: [strobe.toMap()],
+          });
+          when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+
+          await tester.pumpWidget(
+            buildWithEditor(
+              item.copyWith(
+                id: 'strobe-1',
+                effectType: pve.VideoEffectType.strobe,
+              ),
+              mockEditor,
+              mainBloc,
+            ),
+          );
+          await tester.tap(
+            find.bySemanticsLabel(
+              l10n.videoEditorDuplicateSelectedItemSemanticLabel,
+            ),
+          );
+          await tester.pump();
+
+          verifyNever(() => mockEditor.addHistory(meta: any(named: 'meta')));
+          expect(
+            find.text(l10n.videoEditorEffectsFlashingNotDuplicated),
+            findsOneWidget,
+          );
+        });
+
         testWidgets('delete removes the effect and clears the selection', (
           tester,
         ) async {

@@ -8605,6 +8605,14 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorEffectVignette => 'تعتيم الحواف';
 
   @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'تأثير وامض واحد في كل مرة. الوميض الكثير قد يؤذي الأشخاص الحساسين له، لذلك استبدلنا التأثير الآخر هنا.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'تأثير وامض واحد في كل مرة. الوميض الكثير قد يؤذي الأشخاص الحساسين له.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'فتح محرر التعديلات';
 
   @override

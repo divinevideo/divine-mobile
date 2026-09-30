@@ -10,6 +10,7 @@ import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/widgets/video_editor/effects_editor/flashing_effect_snack_bar.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
 import 'package:openvine/widgets/video_editor/video_editor_vertical_slider.dart';
@@ -114,7 +115,11 @@ class _TopBarContent extends StatelessWidget {
               mainBloc.add(const VideoEditorMainSubEditorClosed());
             },
             onDone: () {
-              scope.editor?.setVideoEffectEntries(cubit.confirm());
+              final result = cubit.confirm();
+              scope.editor?.setVideoEffectEntries(result.effects);
+              if (result.replacedFlashing) {
+                showFlashingEffectReplacedSnackBar(context);
+              }
               mainBloc.add(const VideoEditorMainSubEditorClosed());
             },
           ),

@@ -4561,6 +4561,8 @@
   "videoEditorEffectStrobe": "Strob",
   "videoEditorEffectNegativeFlash": "Kilat Negatif",
   "videoEditorEffectVignette": "Vignet",
+  "videoEditorEffectsFlashingReplaced": "Satu kesan berkelip pada satu masa. Kelipan berlebihan boleh memudaratkan orang yang sensitif, jadi kami menggantikan yang satu lagi di sini.",
+  "videoEditorEffectsFlashingNotDuplicated": "Satu kesan berkelip pada satu masa. Kelipan berlebihan boleh memudaratkan orang yang sensitif.",
   "videoEditorOpenTuneSemanticLabel": "Buka penyunting pelarasan",
   "videoEditorTuneBrightness": "Kecerahan",
   "videoEditorTuneContrast": "Kontras",

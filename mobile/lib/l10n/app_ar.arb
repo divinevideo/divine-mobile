@@ -2443,6 +2443,8 @@
   "videoEditorEffectStrobe": "ستروب",
   "videoEditorEffectNegativeFlash": "وميض نيجاتيف",
   "videoEditorEffectVignette": "تعتيم الحواف",
+  "videoEditorEffectsFlashingReplaced": "تأثير وامض واحد في كل مرة. الوميض الكثير قد يؤذي الأشخاص الحساسين له، لذلك استبدلنا التأثير الآخر هنا.",
+  "videoEditorEffectsFlashingNotDuplicated": "تأثير وامض واحد في كل مرة. الوميض الكثير قد يؤذي الأشخاص الحساسين له.",
   "videoEditorOpenTuneSemanticLabel": "فتح محرر التعديلات",
   "videoEditorTuneBrightness": "السطوع",
   "videoEditorTuneContrast": "التباين",

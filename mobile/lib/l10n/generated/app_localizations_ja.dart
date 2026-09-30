@@ -8218,6 +8218,14 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectVignette => 'ビネット';
 
   @override
+  String get videoEditorEffectsFlashingReplaced =>
+      '点滅エフェクトは一度にひとつだけ。点滅が多すぎると、敏感な人の体に負担がかかることがあるので、ここではもう一方を置き換えました。';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      '点滅エフェクトは一度にひとつだけ。点滅が多すぎると、敏感な人の体に負担がかかることがあります。';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => '調整エディターを開く';
 
   @override

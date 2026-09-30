@@ -8751,6 +8751,14 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorEffectVignette => 'Vignette';
 
   @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'Immer nur ein blinkender Effekt. Zu viel Blinken kann empfindlichen Menschen schaden, deshalb haben wir den anderen hier ersetzt.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'Immer nur ein blinkender Effekt. Zu viel Blinken kann empfindlichen Menschen schaden.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Anpassungseditor öffnen';
 
   @override

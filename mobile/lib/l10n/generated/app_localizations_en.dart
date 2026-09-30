@@ -8736,6 +8736,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorEffectVignette => 'Vignette';
 
   @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'One flashing effect at a time. Too much flashing can hurt people who are sensitive to it, so we swapped out the other one here.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'One flashing effect at a time. Too much flashing can hurt people who are sensitive to it.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Open adjustments editor';
 
   @override

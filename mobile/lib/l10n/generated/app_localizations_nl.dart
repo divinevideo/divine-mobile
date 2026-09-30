@@ -8679,6 +8679,14 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorEffectVignette => 'Vignet';
 
   @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'Eén knipperend effect tegelijk. Te veel knipperen kan schadelijk zijn voor mensen die er gevoelig voor zijn, dus hebben we het andere hier vervangen.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'Eén knipperend effect tegelijk. Te veel knipperen kan schadelijk zijn voor mensen die er gevoelig voor zijn.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Aanpassingseditor openen';
 
   @override

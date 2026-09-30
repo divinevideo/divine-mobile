@@ -14675,6 +14675,18 @@ abstract class AppLocalizations {
   /// **'Vignette'**
   String get videoEditorEffectVignette;
 
+  /// Snack bar after a flashing video effect (strobe, negative flash) replaced another flashing effect where the two overlapped on the timeline. Explains, without technical terms, that overlapping flashes can harm people with photosensitivity.
+  ///
+  /// In en, this message translates to:
+  /// **'One flashing effect at a time. Too much flashing can hurt people who are sensitive to it, so we swapped out the other one here.'**
+  String get videoEditorEffectsFlashingReplaced;
+
+  /// Snack bar when the user tries to duplicate a flashing video effect (strobe, negative flash): the copy would flash on top of the original, so it is not duplicated. Same reason as videoEditorEffectsFlashingReplaced.
+  ///
+  /// In en, this message translates to:
+  /// **'One flashing effect at a time. Too much flashing can hurt people who are sensitive to it.'**
+  String get videoEditorEffectsFlashingNotDuplicated;
+
   /// No description provided for @videoEditorOpenTuneSemanticLabel.
   ///
   /// In en, this message translates to:

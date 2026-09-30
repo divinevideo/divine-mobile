@@ -8823,6 +8823,14 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorEffectVignette => 'Winieta';
 
   @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'Tylko jeden migający efekt naraz. Zbyt dużo migania może szkodzić osobom wrażliwym, więc zastąpiliśmy tutaj ten drugi.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'Tylko jeden migający efekt naraz. Zbyt dużo migania może szkodzić osobom wrażliwym.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Otwórz edytor korekt';
 
   @override

@@ -2488,6 +2488,8 @@
   "videoEditorEffectStrobe": "Stroboskop",
   "videoEditorEffectNegativeFlash": "Błysk negatywu",
   "videoEditorEffectVignette": "Winieta",
+  "videoEditorEffectsFlashingReplaced": "Tylko jeden migający efekt naraz. Zbyt dużo migania może szkodzić osobom wrażliwym, więc zastąpiliśmy tutaj ten drugi.",
+  "videoEditorEffectsFlashingNotDuplicated": "Tylko jeden migający efekt naraz. Zbyt dużo migania może szkodzić osobom wrażliwym.",
   "videoEditorOpenTuneSemanticLabel": "Otwórz edytor korekt",
   "videoEditorTuneBrightness": "Jasność",
   "videoEditorTuneContrast": "Kontrast",

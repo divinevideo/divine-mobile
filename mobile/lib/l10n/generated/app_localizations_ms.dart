@@ -8648,6 +8648,14 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorEffectVignette => 'Vignet';
 
   @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'Satu kesan berkelip pada satu masa. Kelipan berlebihan boleh memudaratkan orang yang sensitif, jadi kami menggantikan yang satu lagi di sini.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'Satu kesan berkelip pada satu masa. Kelipan berlebihan boleh memudaratkan orang yang sensitif.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Buka penyunting pelarasan';
 
   @override

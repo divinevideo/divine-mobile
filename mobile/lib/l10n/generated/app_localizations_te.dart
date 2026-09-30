@@ -8888,6 +8888,14 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectVignette => 'విగ్నెట్';
 
   @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'ఒకసారి ఒక మెరిసే ఎఫెక్ట్ మాత్రమే. ఎక్కువ మెరుపులు సున్నితమైన వారికి హాని చేయవచ్చు, అందుకే ఇక్కడ మరొకదాన్ని మార్చాం.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'ఒకసారి ఒక మెరిసే ఎఫెక్ట్ మాత్రమే. ఎక్కువ మెరుపులు సున్నితమైన వారికి హాని చేయవచ్చు.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'సర్దుబాట్ల ఎడిటర్‌ను తెరవండి';
 
   @override

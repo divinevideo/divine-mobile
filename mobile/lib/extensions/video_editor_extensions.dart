@@ -12,6 +12,7 @@ import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
 import 'package:pro_image_editor/pro_image_editor.dart' hide AudioTrack;
+import 'package:uuid/uuid.dart';
 
 /// Builds the editor history meta for appending [newTracks] after the audio
 /// tracks already present in [existingTracks].
@@ -171,6 +172,24 @@ extension VideoEditorExtensions on ProImageEditorState {
       addHistory(meta: _metaWithVideoEffects(effects));
     }
     setState(() {});
+  }
+
+  /// Cuts other flashing effects out of the window of the effect with [id],
+  /// in place in the current history entry, so the timeline gesture that put
+  /// them on top of each other stays one undo step. Returns whether anything
+  /// was cut; see [withoutFlashingOverlaps].
+  bool separateFlashingVideoEffects(String id) {
+    final separated = withoutFlashingOverlaps(
+      stateManager.videoEffectEntries,
+      keepId: id,
+      createId: () => '${id}_${const Uuid().v4()}',
+    );
+    if (separated == null) return false;
+    stateManager.activeMeta[VideoEditorConstants.effectsStateHistoryKey] = [
+      for (final effect in separated) effect.toMap(),
+    ];
+    setState(() {});
+    return true;
   }
 
   Map<String, dynamic> _metaWithVideoEffects(List<EditorVideoEffect> effects) {

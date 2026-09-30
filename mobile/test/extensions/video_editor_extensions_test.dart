@@ -541,6 +541,45 @@ void main() {
       );
     });
 
+    test('separateFlashingVideoEffects cuts the other flashing effect in '
+        'place and reports it', () {
+      const strobe = EditorVideoEffect(
+        id: 'strobe',
+        effect: VideoEffect.strobe(
+          startTime: Duration.zero,
+          endTime: Duration(seconds: 4),
+        ),
+      );
+      const negative = EditorVideoEffect(
+        id: 'negative',
+        effect: VideoEffect.negativeFlash(
+          startTime: Duration(seconds: 3),
+          endTime: Duration(seconds: 6),
+        ),
+      );
+      final activeMeta = <String, dynamic>{
+        VideoEditorConstants.effectsStateHistoryKey: [
+          strobe.toMap(),
+          negative.toMap(),
+        ],
+      };
+      when(() => stateManager.activeMeta).thenReturn(activeMeta);
+
+      expect(editor.separateFlashingVideoEffects('negative'), isTrue);
+
+      verifyNever(() => editor.addHistory(meta: any(named: 'meta')));
+      expect(
+        stateManager.videoEffectEntries.map(
+          (e) => (e.id, e.effect.startTime, e.effect.endTime),
+        ),
+        [
+          ('strobe', Duration.zero, const Duration(seconds: 3)),
+          ('negative', const Duration(seconds: 3), const Duration(seconds: 6)),
+        ],
+      );
+      expect(editor.separateFlashingVideoEffects('negative'), isFalse);
+    });
+
     test('videoEffectEntries skips an entry this build cannot read and '
         'names one stored without an id after its position', () {
       when(() => stateManager.activeMeta).thenReturn({

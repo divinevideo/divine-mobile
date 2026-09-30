@@ -8705,6 +8705,14 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorEffectVignette => 'Vinheta';
 
   @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'Só um efeito piscante de cada vez. Piscar demais pode fazer mal a pessoas sensíveis, por isso substituímos o outro aqui.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'Só um efeito piscante de cada vez. Piscar demais pode fazer mal a pessoas sensíveis.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Abrir editor de ajustes';
 
   @override

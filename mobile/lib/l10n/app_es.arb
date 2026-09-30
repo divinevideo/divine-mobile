@@ -2496,6 +2496,8 @@
   "videoEditorEffectStrobe": "Estroboscopio",
   "videoEditorEffectNegativeFlash": "Destello negativo",
   "videoEditorEffectVignette": "Viñeta",
+  "videoEditorEffectsFlashingReplaced": "Solo un efecto parpadeante a la vez. Demasiado parpadeo puede hacer daño a las personas sensibles, así que aquí hemos reemplazado el otro.",
+  "videoEditorEffectsFlashingNotDuplicated": "Solo un efecto parpadeante a la vez. Demasiado parpadeo puede hacer daño a las personas sensibles.",
   "videoEditorOpenTuneSemanticLabel": "Abrir editor de ajustes",
   "videoEditorTuneBrightness": "Brillo",
   "videoEditorTuneContrast": "Contraste",

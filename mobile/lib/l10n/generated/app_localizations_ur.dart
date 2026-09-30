@@ -8640,6 +8640,14 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectVignette => 'وِگنیٹ';
 
   @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'ایک وقت میں صرف ایک ٹمٹماتا ایفیکٹ۔ زیادہ ٹمٹماہٹ حساس لوگوں کو نقصان پہنچا سکتی ہے، اس لیے ہم نے یہاں دوسرے کو بدل دیا۔';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'ایک وقت میں صرف ایک ٹمٹماتا ایفیکٹ۔ زیادہ ٹمٹماہٹ حساس لوگوں کو نقصان پہنچا سکتی ہے۔';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'ایڈجسٹمنٹ ایڈیٹر کھولیں';
 
   @override

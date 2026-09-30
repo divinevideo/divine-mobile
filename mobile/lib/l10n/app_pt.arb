@@ -2488,6 +2488,8 @@
   "videoEditorEffectStrobe": "Estroboscópio",
   "videoEditorEffectNegativeFlash": "Flash negativo",
   "videoEditorEffectVignette": "Vinheta",
+  "videoEditorEffectsFlashingReplaced": "Só um efeito piscante de cada vez. Piscar demais pode fazer mal a pessoas sensíveis, por isso substituímos o outro aqui.",
+  "videoEditorEffectsFlashingNotDuplicated": "Só um efeito piscante de cada vez. Piscar demais pode fazer mal a pessoas sensíveis.",
   "videoEditorOpenTuneSemanticLabel": "Abrir editor de ajustes",
   "videoEditorTuneBrightness": "Brilho",
   "videoEditorTuneContrast": "Contraste",

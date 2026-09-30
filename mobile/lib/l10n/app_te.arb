@@ -5423,6 +5423,8 @@
   "videoEditorEffectStrobe": "స్ట్రోబ్",
   "videoEditorEffectNegativeFlash": "నెగటివ్ ఫ్లాష్",
   "videoEditorEffectVignette": "విగ్నెట్",
+  "videoEditorEffectsFlashingReplaced": "ఒకసారి ఒక మెరిసే ఎఫెక్ట్ మాత్రమే. ఎక్కువ మెరుపులు సున్నితమైన వారికి హాని చేయవచ్చు, అందుకే ఇక్కడ మరొకదాన్ని మార్చాం.",
+  "videoEditorEffectsFlashingNotDuplicated": "ఒకసారి ఒక మెరిసే ఎఫెక్ట్ మాత్రమే. ఎక్కువ మెరుపులు సున్నితమైన వారికి హాని చేయవచ్చు.",
   "videoEditorOpenTuneSemanticLabel": "సర్దుబాట్ల ఎడిటర్‌ను తెరవండి",
   "videoEditorTuneBrightness": "ప్రకాశం",
   "videoEditorTuneContrast": "కాంట్రాస్ట్",

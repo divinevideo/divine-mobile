@@ -2488,6 +2488,8 @@
   "videoEditorEffectStrobe": "Stroboskop",
   "videoEditorEffectNegativeFlash": "Negativblixt",
   "videoEditorEffectVignette": "Vinjett",
+  "videoEditorEffectsFlashingReplaced": "En blinkande effekt i taget. För mycket blinkande kan skada känsliga personer, så vi har ersatt den andra här.",
+  "videoEditorEffectsFlashingNotDuplicated": "En blinkande effekt i taget. För mycket blinkande kan skada känsliga personer.",
   "videoEditorOpenTuneSemanticLabel": "Öppna justeringsredigeraren",
   "videoEditorTuneBrightness": "Ljusstyrka",
   "videoEditorTuneContrast": "Kontrast",
