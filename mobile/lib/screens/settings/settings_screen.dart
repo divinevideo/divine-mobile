@@ -362,7 +362,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           showBackButton: true,
           onBackPressed: widget.accountOnly
               ? () => context.safePop(fallback: RoutePaths.settings)
-              : context.pop,
+              : context.safePop,
         ),
         backgroundColor: context.vineColors.surface,
         body: Align(
