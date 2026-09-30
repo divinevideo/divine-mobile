@@ -119,8 +119,8 @@ class CommentsRepository {
   /// relays when REST is unavailable. A stale-but-non-empty REST response
   /// short-circuits, so a fresh read after posting omits the user's own
   /// comment until the index catches up. Entries are merged into read results
-  /// and pruned once the fetched thread contains them or after
-  /// [_recentlyPostedRetention].
+  /// and pruned once the fetched thread contains them, when [deleteComment]
+  /// deletes them, or after [_recentlyPostedRetention].
   final Map<String, List<_RecentlyPostedComment>> _recentlyPostedComments = {};
 
   /// How long a just-posted comment is retained for the self-heal merge before
@@ -600,8 +600,10 @@ class CommentsRepository {
   /// The token is the newest retained post time (microseconds), so it is stable
   /// across reads within a post window (the edge can still cache that variant)
   /// and changes when a newer comment is posted. Once [_recentlyPostedComments]
-  /// prunes (merged in or older than [_recentlyPostedRetention]), it returns
-  /// `null` and reads fall back to the normal cached URL (#5854).
+  /// prunes (merged in, deleted, or older than [_recentlyPostedRetention]), it
+  /// returns `null` and reads fall back to the normal cached URL (#5854); a
+  /// stale cached list cannot bring back a deleted comment because
+  /// [_deletedCommentIds] filters it out.
   String? _commentsCacheBustToken(String rootEventId) {
     final pending = _recentlyPostedComments[rootEventId];
     if (pending == null || pending.isEmpty) return null;
