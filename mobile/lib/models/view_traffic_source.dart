@@ -34,6 +34,9 @@ enum ViewTrafficSource {
   /// travels separately as the source detail.
   discoveryFeatured,
 
+  /// Video viewed from an accepted badge-holder collection.
+  discoveryBadges,
+
   /// Unknown/unspecified source
   unknown,
 }
@@ -47,6 +50,7 @@ extension ViewTrafficSourceTags on ViewTrafficSource {
       ViewTrafficSource.discoveryForYou => 'discovery:foryou',
       ViewTrafficSource.discoveryPopular => 'discovery:popular',
       ViewTrafficSource.discoveryFeatured => 'discovery:featured',
+      ViewTrafficSource.discoveryBadges => 'discovery:badges',
       ViewTrafficSource.profile => 'profile',
       ViewTrafficSource.share => 'share',
       ViewTrafficSource.search => 'search',
@@ -70,6 +74,8 @@ ViewTrafficSource viewTrafficSourceFromTag(String raw) {
     'discovery_for_you' => ViewTrafficSource.discoveryForYou,
     'discovery:featured' ||
     'discovery_featured' => ViewTrafficSource.discoveryFeatured,
+    'discovery:badges' ||
+    'discovery_badges' => ViewTrafficSource.discoveryBadges,
     _ => ViewTrafficSource.unknown,
   };
 }

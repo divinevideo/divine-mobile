@@ -59,6 +59,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     HomeFeedCache? homeFeedCache,
     EnrichVideos? enrichVideos,
     FeedTuningRepository? feedTuningRepository,
+    Future<List<String>> Function()? badgeAuthors,
   }) : _videosRepository = videosRepository,
        _followRepository = followRepository,
        _curatedListRepository = curatedListRepository,
@@ -71,6 +72,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
        _feedTracker = feedTracker,
        _enrichVideos = enrichVideos,
        _feedTuningRepository = feedTuningRepository,
+       _badgeAuthors = badgeAuthors,
        _resumeManager = HomeFeedResumeManager(
          cache: homeFeedCache ?? const HomeFeedCache(),
          videosRepository: videosRepository,
@@ -112,6 +114,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   final FeedPerformanceTracker? _feedTracker;
   final EnrichVideos? _enrichVideos;
   final FeedTuningRepository? _feedTuningRepository;
+  final Future<List<String>> Function()? _badgeAuthors;
+  bool _hasBadgeAuthors = false;
+  List<String>? _cachedBadgeAuthors;
 
   /// Owns the cross-restart cache serve / splice / resume-persist logic.
   final HomeFeedResumeManager _resumeManager;
@@ -274,7 +279,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     if (state.source == source &&
         source.type == VideoFeedSourceType.following) {
       final currentFollowing = _followRepository.followingPubkeys;
-      if (currentFollowing.isEmpty && state.videos.isEmpty) {
+      if (currentFollowing.isEmpty &&
+          !_hasBadgeAuthors &&
+          state.videos.isEmpty &&
+          state.status == VideoFeedStatus.success) {
         emit(
           state.copyWith(
             status: VideoFeedStatus.success,
@@ -671,7 +679,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     if (state.status == VideoFeedStatus.loading) return;
 
     // Empty follow list → show "follow someone" CTA.
-    if (event.followingPubkeys.isEmpty) {
+    if (event.followingPubkeys.isEmpty && !_hasBadgeAuthors) {
       emit(
         state.copyWith(
           status: VideoFeedStatus.success,
@@ -1093,11 +1101,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
               skipCache: skipCache,
               revalidate: revalidate,
             ),
-    VideoFeedSourceType.following => _videosRepository.getHomeFeedVideos(
-      authors: _followRepository.followingPubkeys,
-      userPubkey: _userPubkey,
-      until: until,
-    ),
+    VideoFeedSourceType.following => _fetchFollowingWithBadges(until: until),
     VideoFeedSourceType.subscribedList =>
       _videosRepository
           .getVideosForList(
@@ -1125,6 +1129,20 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       skipCache: skipCache,
     ),
   };
+
+  Future<HomeFeedResult> _fetchFollowingWithBadges({int? until}) async {
+    final badgeAuthors = until != null && _cachedBadgeAuthors != null
+        ? _cachedBadgeAuthors!
+        : await _badgeAuthors?.call() ?? const <String>[];
+    _cachedBadgeAuthors = badgeAuthors;
+    _hasBadgeAuthors = badgeAuthors.isNotEmpty;
+    return _videosRepository.getHomeFeedVideos(
+      authors: _followRepository.followingPubkeys,
+      badgeAuthors: badgeAuthors,
+      userPubkey: _userPubkey,
+      until: until,
+    );
+  }
 
   void _scheduleNostrEnrichment({
     required VideoFeedSource source,

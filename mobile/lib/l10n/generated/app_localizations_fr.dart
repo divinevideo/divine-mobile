@@ -10191,6 +10191,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get badgesTitle => 'Insignes';
 
   @override
+  String get badgeSubscribeAction => 'S’abonner au badge';
+
+  @override
+  String get badgeSubscribedAction => 'Abonné';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'Titulaires ayant accepté le badge';
+
+  @override
   String get badgesLoadError => 'Impossible de charger les badges';
 
   @override

@@ -88,10 +88,17 @@ class VideoFeedPage extends ConsumerWidget {
 
     final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
     final feedTuningRepository = ref.watch(feedTuningRepositoryProvider);
+    final badgeRepository = ref.watch(badgeRepositoryProvider);
+    final badgeSubscriptionsRevision = ref.watch(
+      badgeSubscriptionsRevisionProvider,
+    );
     final enrichmentAttemptTracker = NostrTagEnrichmentAttemptTracker();
 
     return MultiBlocProvider(
-      key: ValueKey('video-feed-$showDivineHostedOnly-$contentFilterVersion'),
+      key: ValueKey(
+        'video-feed-$showDivineHostedOnly-$contentFilterVersion-'
+        '$badgeSubscriptionsRevision',
+      ),
       providers: [
         BlocProvider(
           create: (_) =>
@@ -109,6 +116,21 @@ class VideoFeedPage extends ConsumerWidget {
                 // fresh, so the cached serve is never stale to the viewer.
                 feedTracker: ref.read(feedPerformanceTrackerProvider),
                 feedTuningRepository: feedTuningRepository,
+                badgeAuthors: () async {
+                  if (authService.currentPublicKeyHex == null) {
+                    return const <String>[];
+                  }
+                  final subscriptions = await badgeRepository
+                      .loadSubscriptions();
+                  final holderSets = await Future.wait([
+                    for (final badge in subscriptions)
+                      badgeRepository.loadAcceptedHolders(badge),
+                  ]);
+                  return holderSets
+                      .expand((holders) => holders)
+                      .toSet()
+                      .toList();
+                },
                 enrichVideos: (videos) => enrichVideosWithNostrTags(
                   videos,
                   nostrService: ref.read(nostrServiceProvider),

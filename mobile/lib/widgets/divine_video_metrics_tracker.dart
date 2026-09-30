@@ -548,7 +548,8 @@ ProductAnalyticsV2Surface _productSurface(ViewTrafficSource source) {
     ViewTrafficSource.discoveryClassic ||
     ViewTrafficSource.discoveryForYou ||
     ViewTrafficSource.discoveryPopular ||
-    ViewTrafficSource.discoveryFeatured => ProductAnalyticsV2Surface.discovery,
+    ViewTrafficSource.discoveryFeatured ||
+    ViewTrafficSource.discoveryBadges => ProductAnalyticsV2Surface.discovery,
     ViewTrafficSource.share ||
     ViewTrafficSource.unknown => ProductAnalyticsV2Surface.unknown,
   };

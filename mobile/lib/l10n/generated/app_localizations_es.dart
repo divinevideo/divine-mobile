@@ -10141,6 +10141,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get badgesTitle => 'Insignias';
 
   @override
+  String get badgeSubscribeAction => 'Suscribirse a la insignia';
+
+  @override
+  String get badgeSubscribedAction => 'Suscrito';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'Personas que aceptaron la insignia';
+
+  @override
   String get badgesLoadError => 'No se pudieron cargar las insignias';
 
   @override

@@ -746,6 +746,61 @@ void main() {
       });
     });
 
+    group('getVideosByAuthors', () {
+      test(
+        'passes author chunk and parses moderation and pagination',
+        () async {
+          when(
+            () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+          ).thenAnswer(
+            (_) async => http.Response('''
+{
+  "data": [{
+    "id": "feed123",
+    "pubkey": "$testPubkey",
+    "created_at": 1700000000,
+    "kind": 34236,
+    "d_tag": "feed-1",
+    "title": "Feed Video",
+    "thumbnail": "https://example.com/thumb.jpg",
+    "video_url": "https://example.com/video.mp4",
+    "reactions": 0,
+    "comments": 0,
+    "reposts": 0,
+    "engagement_score": 0,
+    "moderation_labels": ["violence"]
+  }],
+  "pagination": {"has_more": true, "next_cursor": "t:1700000000"}
+}
+''', 200),
+          );
+
+          final page = await client.getVideosByAuthors(
+            authors: [testPubkey],
+            limit: 25,
+            offset: 50,
+            before: 1700000100,
+          );
+
+          final uri =
+              verify(
+                    () => mockHttpClient.get(
+                      captureAny(),
+                      headers: any(named: 'headers'),
+                    ),
+                  ).captured.single
+                  as Uri;
+          expect(uri.path, '/api/v2/videos/by-authors');
+          expect(uri.queryParameters['authors'], testPubkey);
+          expect(uri.queryParameters['offset'], '50');
+          expect(uri.queryParameters['before'], '1700000100');
+          expect(page.videos.single.moderationLabels, ['violence']);
+          expect(page.hasMore, isTrue);
+          expect(page.nextCursor, 't:1700000000');
+        },
+      );
+    });
+
     group('getHomeFeed', () {
       const validFeedResponse =
           '''

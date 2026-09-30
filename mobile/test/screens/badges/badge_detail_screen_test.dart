@@ -34,6 +34,9 @@ void main() {
     setUp(() {
       repository = _MockBadgeRepository();
       contentBlocklistRepository = _MockContentBlocklistRepository();
+      when(
+        () => repository.loadAcceptedHolders(any()),
+      ).thenAnswer((_) async => <String>{});
     });
 
     /// Pumps the screen behind a real [GoRouter].

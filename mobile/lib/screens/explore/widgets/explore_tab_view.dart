@@ -4,6 +4,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/explore_tabs/explore_tabs_cubit.dart';
 import 'package:openvine/screens/apps/apps_directory_screen.dart';
+import 'package:openvine/screens/explore/tabs/explore_badges_tab.dart';
 import 'package:openvine/screens/explore/tabs/explore_lists_tab.dart';
 import 'package:openvine/screens/explore/tabs/featured_videos_tab.dart';
 import 'package:openvine/screens/explore/widgets/explore_buffered_videos_banner.dart';
@@ -51,6 +52,7 @@ class ExploreTabView extends StatelessWidget {
                 exploreCategoriesTabName => const CategoriesTab(),
                 exploreForYouTabName => const ForYouTab(),
                 exploreListsTabName => const ExploreListsTab(),
+                exploreBadgesTabName => const ExploreBadgesTab(),
                 exploreAppsTabName => const AppsDirectoryScreen(
                   embedded: true,
                 ),
