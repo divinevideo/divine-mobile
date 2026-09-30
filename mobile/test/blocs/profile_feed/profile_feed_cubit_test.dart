@@ -1051,8 +1051,12 @@ void main() {
         // left awaiting across teardown.
         completer.complete(_result(const []));
         async.flushMicrotasks();
-        cubit.close();
+        // fakeAsync owns the zone's microtask queue, so close is intentionally
+        // fire-and-forget here after settling the load; awaiting it outside
+        // the zone would strand the test continuation in that queue.
+        unawaited(cubit.close());
         async.flushMicrotasks();
+        expect(cubit.isClosed, isTrue);
       });
     });
 
