@@ -9,6 +9,7 @@ import 'package:openvine/repositories/crossposting_repository.dart';
 import 'package:openvine/services/auth_service.dart'
     show AuthService, AuthState;
 import 'package:openvine/services/crossposting_api_client.dart';
+import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// How this build can drive the crossposting connect flow.
@@ -20,7 +21,7 @@ enum CrosspostingAvailability {
   /// or the system version could not be determined). Connect on the web.
   webOnly,
 
-  /// Signed out or not registered; show no crossposting CTA.
+  /// Signed out or unable to sign; show no crossposting CTA.
   unavailable,
 }
 
@@ -33,15 +34,15 @@ final crosspostingWebOpenerProvider = Provider<CrosspostingWebOpener>((ref) {
 });
 
 /// Whether the signed-in account can crosspost at all: authenticated, with a
-/// known public key, and registered with Divine.
+/// known public key, and a signer that is ready now.
 bool isCrosspostingAccountEligible({
   required AuthState authState,
   required String? publicKeyHex,
-  required bool isRegistered,
+  required bool canSign,
 }) {
   return authState == AuthState.authenticated &&
       publicKeyHex != null &&
-      isRegistered;
+      canSign;
 }
 
 /// The single availability decision shared by
@@ -61,13 +62,14 @@ bool _isCurrentAccountEligible(AuthState authState, AuthService authService) {
   return isCrosspostingAccountEligible(
     authState: authState,
     publicKeyHex: authService.currentPublicKeyHex,
-    isRegistered: authService.isRegistered,
+    canSign: authService.canPublishNostrWritesNow,
   );
 }
 
 final crosspostingAvailabilityProvider = Provider<CrosspostingAvailability>((
   ref,
 ) {
+  ref.watch(currentAuthRpcCapabilityProvider);
   final eligible = _isCurrentAccountEligible(
     ref.watch(currentAuthStateProvider),
     ref.watch(authServiceProvider),
@@ -82,23 +84,36 @@ final crosspostingAvailabilityProvider = Provider<CrosspostingAvailability>((
   );
 });
 
-typedef CrosspostingApiClientFactory = CrosspostingApiClient Function(
-  CrosspostingAccessTokenReader accessTokenReader,
-);
+/// The account a NIP-98 request must be signed by.
+final crosspostingOwnerPubkeyProvider = Provider<String?>((ref) {
+  if (ref.watch(currentAuthStateProvider) != AuthState.authenticated) {
+    return null;
+  }
+  return ref.watch(authServiceProvider).currentPublicKeyHex;
+});
+
+typedef CrosspostingApiClientFactory = CrosspostingApiClient Function({
+  required Nip98AuthService nip98AuthService,
+  required String? ownerPubkey,
+});
 
 final crosspostingApiClientFactoryProvider =
     Provider<CrosspostingApiClientFactory>((ref) {
       final newHttpClient = ref.watch(instrumentedHttpClientFactoryProvider);
-      return (accessTokenReader) => CrosspostingApiClient(
-        accessTokenReader: accessTokenReader,
-        httpClient: newHttpClient(),
-      );
+      return ({required nip98AuthService, required ownerPubkey}) =>
+          CrosspostingApiClient(
+            nip98AuthService: nip98AuthService,
+            ownerPubkey: ownerPubkey,
+            httpClient: newHttpClient(),
+          );
     });
 
 final crosspostingApiClientProvider = Provider<CrosspostingApiClient>((ref) {
-  final authService = ref.watch(authServiceProvider);
   final createClient = ref.watch(crosspostingApiClientFactoryProvider);
-  final client = createClient(authService.getBoundDivineAccessToken);
+  final client = createClient(
+    nip98AuthService: ref.watch(nip98AuthServiceProvider),
+    ownerPubkey: ref.watch(crosspostingOwnerPubkeyProvider),
+  );
   ref.onDispose(client.close);
   return client;
 });

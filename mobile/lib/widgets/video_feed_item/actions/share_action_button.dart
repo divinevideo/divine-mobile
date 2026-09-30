@@ -177,15 +177,12 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
       if (ref.read(crosspostingAvailabilityProvider) !=
           CrosspostingAvailability.unavailable) {
         final crosspostCubit = VideoCrosspostCubit(
-          client: ref.read(crossposterApiClientProvider),
+          client: ref.read(crosspostingApiClientProvider),
           eventId: widget.video.id,
         );
         _crosspostCubit = crosspostCubit;
         final connectionsLoad = crosspostCubit.loadConnections();
-        _runShareDetached(
-          connectionsLoad,
-          'load crosspost connections',
-        );
+        _runShareDetached(connectionsLoad, 'load crosspost connections');
         _runShareDetached(
           _logCrosspostCtaExposure(crosspostCubit, connectionsLoad),
           'log crosspost CTA exposure',
@@ -868,9 +865,8 @@ class _UnifiedShareSheetView extends StatelessWidget {
           return operation.deleteStatus == OwnerVideoDeleteStatus.deleting ||
               operation.cleanupStatus == OwnerVideoCleanupStatus.inProgress;
         });
-    final textScaler = MediaQuery.textScalerOf(
-      context,
-    ).clamp(maxScaleFactor: 1.5);
+    final textScaler = MediaQuery.textScalerOf(context)
+        .clamp(maxScaleFactor: 1.5);
     return MediaQuery(
       data: MediaQuery.of(context).copyWith(textScaler: textScaler),
       child: Material(
