@@ -116,6 +116,13 @@ abstract class SemanticIds {
   /// Settings rows on the path to managing local account keys. These journeys
   /// have to stay addressable after settings information-architecture moves.
   static const String settingsNostrRow = 'nostr_settings_tile';
+
+  /// Settings category rows. Account and experimental-feature journeys start
+  /// from these, one level above the rows that used to sit on the root.
+  static const String settingsAccountRow = 'settings_account_tile';
+  static const String settingsAppPreferencesRow =
+      'settings_app_preferences_tile';
+  static const String settingsConnectionsRow = 'settings_connections_tile';
   static const String settingsKeyManagementRow = 'key_management_tile';
   static const String settingsRemoveKeysRow = 'remove_keys_tile';
 

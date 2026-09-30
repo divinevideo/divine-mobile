@@ -11,23 +11,24 @@ tags:
 # every subsequent run starts already signed in.
 #
 #Steps:
-# 1. Open Settings, then Nostr Settings
+# 1. Open Settings, then Account
 # 2. Tap Remove keys, cancel once to prove the escape hatch works
 # 3. Tap it again and confirm: the device returns to the welcome screen
 
-# 1. Settings -> Nostr Settings
+# 1. Settings -> Account
 - runFlow: '../utils/openSettings.yaml'
 - tapOn:
-    id: "nostr_settings_tile"
+    id: "settings_account_tile"
 
 # 2. Remove keys, then cancel.
 #
-# Targeted by id: the row's title and subtitle both changed ("Remove Keys
-# from Device" is now "Remove this account from this device") and it moved
-# off the Settings root onto this screen.
-- extendedWaitUntil:
-    visible:
+# Targeted by id: the row's copy is localized and has changed before, and
+# the row has moved between Settings screens more than once. It sits below
+# the account header and credential rows, so scroll to it.
+- scrollUntilVisible:
+    element:
       id: "remove_keys_tile"
+    direction: DOWN
     timeout: 30000
 - tapOn:
     id: "remove_keys_tile"

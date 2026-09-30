@@ -14,6 +14,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show UserProfile;
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/locale/locale_cubit.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/feature_flags/screens/feature_flag_screen.dart';
@@ -28,6 +29,7 @@ import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/apps/apps_directory_screen.dart';
 import 'package:openvine/screens/apps/apps_permissions_screen.dart';
 import 'package:openvine/screens/badges/badges_screen.dart';
@@ -466,6 +468,40 @@ void main() {
       await tester.pump();
     });
 
+    testWidgets('category rows expose automation ids for their routes', (
+      tester,
+    ) async {
+      // E2E journeys enter Account, App preferences and Connections by id,
+      // so each id must open its own destination rather than another's.
+      final mockGoRouter = MockGoRouter();
+      when(() => mockGoRouter.push(any())).thenAnswer((_) async => null);
+      await tester.pumpWidget(buildSubject(goRouter: mockGoRouter));
+      await tester.pumpAndSettle();
+
+      final scrollable = find.byType(Scrollable);
+      for (final (id, path) in [
+        (SemanticIds.settingsAccountRow, RoutePaths.settingsAccount),
+        (
+          SemanticIds.settingsAppPreferencesRow,
+          RoutePaths.settingsAppPreferences,
+        ),
+        (SemanticIds.settingsConnectionsRow, RoutePaths.settingsConnections),
+      ]) {
+        final row = find.bySemanticsIdentifier(id);
+        await scrollUntilTappable(tester, row, 100, scrollable: scrollable);
+        await tester.tap(row);
+        await tester.pumpAndSettle();
+        verify(() => mockGoRouter.push(path)).called(1);
+      }
+      expect(
+        find.bySemanticsIdentifier(SemanticIds.settingsNostrRow),
+        findsNothing,
+      );
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+    });
+
     testWidgets('renders the supporter tile when the Worker is configured', (
       tester,
     ) async {
@@ -525,6 +561,31 @@ void main() {
         );
         expect(find.text(title), findsOneWidget);
       }
+    });
+
+    testWidgets('Account exposes the key journeys to automation', (
+      tester,
+    ) async {
+      // The key backup and key removal E2E journeys continue from the
+      // Account row to these rows by id.
+      stubAccountDestinationAuth();
+      await tester.pumpWidget(
+        buildSubject(child: const SettingsScreen(accountOnly: true)),
+      );
+      await tester.pumpAndSettle();
+
+      final scrollable = find.byType(Scrollable);
+      for (final id in [
+        SemanticIds.settingsKeyManagementRow,
+        SemanticIds.settingsRemoveKeysRow,
+      ]) {
+        final row = find.bySemanticsIdentifier(id);
+        await scrollUntilTappable(tester, row, 250, scrollable: scrollable);
+        expect(row, findsOneWidget);
+      }
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
     });
 
     testWidgets('Account shows credentials only for Divine sign-in', (

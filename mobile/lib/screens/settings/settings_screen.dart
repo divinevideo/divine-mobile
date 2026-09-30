@@ -442,6 +442,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     icon: DivineIconName.userFocus,
                     title: context.l10n.settingsAccountTitle,
                     subtitle: context.l10n.settingsAccountSubtitle,
+                    semanticIdentifier: SemanticIds.settingsAccountRow,
                     onTap: () => context.push(RoutePaths.settingsAccount),
                   ),
                   DivineListTile(
@@ -471,6 +472,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     icon: DivineIconName.sun,
                     title: context.l10n.settingsAppPreferencesTitle,
                     subtitle: context.l10n.settingsAppPreferencesSubtitle,
+                    semanticIdentifier: SemanticIds.settingsAppPreferencesRow,
                     onTap: () =>
                         context.push(AppPreferencesSettingsScreen.path),
                   ),
@@ -478,7 +480,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     icon: DivineIconName.graph,
                     title: context.l10n.settingsConnectionsTitle,
                     subtitle: context.l10n.settingsConnectionsSubtitle,
-                    semanticIdentifier: SemanticIds.settingsNostrRow,
+                    semanticIdentifier: SemanticIds.settingsConnectionsRow,
                     onTap: () => context.push(ConnectionsSettingsScreen.path),
                   ),
                   DivineListTile(
