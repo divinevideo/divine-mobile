@@ -361,9 +361,10 @@ class AppLocalizationsAr extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$compactCount تكرارات لـ$authorName',
+      other: 'تكرارات',
+      one: 'تكرار',
     );
-    return '$_temp0';
+    return '$compactCount $_temp0 لـ$authorName';
   }
 
   @override

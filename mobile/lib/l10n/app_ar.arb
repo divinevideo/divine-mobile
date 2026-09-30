@@ -2967,7 +2967,7 @@
     "appearanceSettingsSystem": "إعداد النظام",
     "appearanceSettingsLight": "فاتح",
     "appearanceSettingsDark": "داكن",
-    "videoOverlayTotalLoops": "{count, plural, other{{compactCount} تكرارات لـ{authorName}}}",
+    "videoOverlayTotalLoops": "{compactCount} {count, plural, =1{تكرار} other{تكرارات}} لـ{authorName}",
     "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{دورة} other{دورات}} لهذا الفيديو",
     "generalSettingsClosedCaptions": "الترجمة المصاحبة",
     "generalSettingsClosedCaptionsSubtitle": "اعرض الترجمة عندما تتضمّنها الفيديوهات",

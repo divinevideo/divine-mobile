@@ -406,10 +406,10 @@ class AppLocalizationsRo extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'bucle',
-      one: 'buclă',
+      other: 'bucle ale acestui videoclip',
+      one: 'buclă a acestui videoclip',
     );
-    return '$compactCount $_temp0 ale acestui videoclip';
+    return '$compactCount $_temp0';
   }
 
   @override
