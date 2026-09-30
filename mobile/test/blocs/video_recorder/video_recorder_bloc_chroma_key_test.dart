@@ -115,6 +115,8 @@ void main() {
 
   /// A mode switch persists the mode and clears the session it leaves.
   void stubModeSwitch() {
+    // The camera is not up, so the switch leaves its stabilization alone.
+    when(() => cameraService.isInitialized).thenReturn(false);
     when(() => prefs.getString(any())).thenReturn(null);
     when(() => prefs.setString(any(), any())).thenAnswer((_) async => true);
     when(() => prefs.getBool(any())).thenReturn(null);
