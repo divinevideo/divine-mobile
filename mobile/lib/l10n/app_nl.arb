@@ -3021,7 +3021,7 @@
     "appearanceSettingsSystem": "Systeemstandaard",
     "appearanceSettingsLight": "Licht",
     "appearanceSettingsDark": "Donker",
-    "videoOverlayTotalLoops": "{count} loops totaal",
+    "videoOverlayTotalLoops": "{compactCount} {count, plural, =1{loop} other{loops}} totaal",
     "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{videoloop} other{videoloops}}",
     "generalSettingsClosedCaptions": "Ondertiteling",
     "generalSettingsClosedCaptionsSubtitle": "Toon ondertiteling als video's die hebben",

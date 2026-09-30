@@ -3021,7 +3021,7 @@
     "appearanceSettingsSystem": "Sistem varsayılanı",
     "appearanceSettingsLight": "Açık",
     "appearanceSettingsDark": "Koyu",
-    "videoOverlayTotalLoops": "toplam {count} döngü",
+    "videoOverlayTotalLoops": "{count, plural, other{toplam {compactCount} döngü}}",
     "videoOverlayVideoLoops": "videoda {compactCount} {count, plural, other{döngü}}",
     "generalSettingsClosedCaptions": "Altyazılar",
     "generalSettingsClosedCaptionsSubtitle": "Videolarda altyazı varsa göster",

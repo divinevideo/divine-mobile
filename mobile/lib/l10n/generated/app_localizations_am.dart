@@ -366,8 +366,14 @@ class AppLocalizationsAm extends AppLocalizations {
       'ምግቦችን በክላሲክ ካሬ ቅርጽ ያቆዩ';
 
   @override
-  String videoOverlayTotalLoops(String count) {
-    return 'ጠቅላላ $count ዙሮች';
+  String videoOverlayTotalLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ዙሮች',
+      one: 'ዙር',
+    );
+    return 'ጠቅላላ $compactCount $_temp0';
   }
 
   @override

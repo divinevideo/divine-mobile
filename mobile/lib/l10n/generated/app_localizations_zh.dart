@@ -323,8 +323,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get generalSettingsVideoShapeSquareOnlySubtitle => '让信息流保持经典方形格式';
 
   @override
-  String videoOverlayTotalLoops(String count) {
-    return '总计 $count 次循环';
+  String videoOverlayTotalLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '总计 $compactCount 次循环',
+    );
+    return '$_temp0';
   }
 
   @override

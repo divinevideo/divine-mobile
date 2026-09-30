@@ -295,8 +295,13 @@ class AppLocalizationsKo extends AppLocalizations {
       '피드를 클래식한 정사각형으로 유지해요';
 
   @override
-  String videoOverlayTotalLoops(String count) {
-    return '전체 $count회 반복';
+  String videoOverlayTotalLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '전체 $compactCount회 반복',
+    );
+    return '$_temp0';
   }
 
   @override

@@ -336,8 +336,13 @@ class AppLocalizationsMs extends AppLocalizations {
       'Kekalkan suapan dalam format segi empat klasik';
 
   @override
-  String videoOverlayTotalLoops(String count) {
-    return 'jumlah $count ulangan';
+  String videoOverlayTotalLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'jumlah $compactCount ulangan',
+    );
+    return '$_temp0';
   }
 
   @override

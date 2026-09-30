@@ -3021,7 +3021,7 @@
     "appearanceSettingsSystem": "Domyślne systemu",
     "appearanceSettingsLight": "Jasny",
     "appearanceSettingsDark": "Ciemny",
-    "videoOverlayTotalLoops": "{count} pętli łącznie",
+    "videoOverlayTotalLoops": "{compactCount} {count, plural, =1{pętla} few{pętle} many{pętli} other{pętli}} łącznie",
     "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{pętla} few{pętle} many{pętli} other{pętli}} filmu",
     "generalSettingsClosedCaptions": "Napisy",
     "generalSettingsClosedCaptionsSubtitle": "Pokazuj napisy, gdy filmy je zawierają",

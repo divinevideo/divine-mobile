@@ -3021,7 +3021,7 @@
     "appearanceSettingsSystem": "Default sistem",
     "appearanceSettingsLight": "Terang",
     "appearanceSettingsDark": "Gelap",
-    "videoOverlayTotalLoops": "{count} total putaran",
+    "videoOverlayTotalLoops": "{count, plural, other{{compactCount} total putaran}}",
     "videoOverlayVideoLoops": "{compactCount} {count, plural, other{putaran}} video",
     "generalSettingsClosedCaptions": "Teks Tertutup",
     "generalSettingsClosedCaptionsSubtitle": "Tampilkan teks saat video menyertakannya",

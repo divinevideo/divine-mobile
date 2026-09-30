@@ -307,8 +307,13 @@ class AppLocalizationsId extends AppLocalizations {
       'Pertahankan feed dalam format persegi klasik';
 
   @override
-  String videoOverlayTotalLoops(String count) {
-    return '$count total putaran';
+  String videoOverlayTotalLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$compactCount total putaran',
+    );
+    return '$_temp0';
   }
 
   @override

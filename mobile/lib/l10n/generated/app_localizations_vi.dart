@@ -337,8 +337,13 @@ class AppLocalizationsVi extends AppLocalizations {
       'Giữ bảng tin ở định dạng vuông cổ điển';
 
   @override
-  String videoOverlayTotalLoops(String count) {
-    return 'tổng $count lượt lặp';
+  String videoOverlayTotalLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'tổng $compactCount lượt lặp',
+    );
+    return '$_temp0';
   }
 
   @override

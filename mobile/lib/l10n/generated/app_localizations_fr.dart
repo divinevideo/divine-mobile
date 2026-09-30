@@ -378,8 +378,14 @@ class AppLocalizationsFr extends AppLocalizations {
       'Garde les fils dans le format carré classique';
 
   @override
-  String videoOverlayTotalLoops(String count) {
-    return '$count boucles au total';
+  String videoOverlayTotalLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'boucles',
+      one: 'boucle',
+    );
+    return '$compactCount $_temp0 au total';
   }
 
   @override

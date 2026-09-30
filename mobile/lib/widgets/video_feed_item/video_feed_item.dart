@@ -765,7 +765,10 @@ class _VideoMetaLineContent extends ConsumerWidget {
     final parts = <({String text, String? count})>[
       if (totalLoops != null && totalLoops > 0 && showVideoCount)
         (
-          text: context.l10n.videoOverlayTotalLoops(compactTotal!),
+          text: context.l10n.videoOverlayTotalLoops(
+            compactTotal!,
+            totalLoops,
+          ),
           count: compactTotal,
         ),
       if (totalLoops != null && totalLoops > 0 && !showVideoCount)
