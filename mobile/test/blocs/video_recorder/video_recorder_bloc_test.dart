@@ -241,6 +241,7 @@ void main() {
   VideoRecorderBloc buildBloc({
     RecordingStartedCallback? onRecordingStarted,
     CameraServiceFactory? cameraServiceFactory,
+    bool liveChromaKeySupported = false,
   }) {
     return VideoRecorderBloc(
       readClipManager: () => clipManager,
@@ -250,6 +251,7 @@ void main() {
       cameraService: cameraServiceFactory == null ? cameraService : null,
       cameraServiceFactory: cameraServiceFactory ?? CameraService.create,
       onRecordingStarted: onRecordingStarted,
+      liveChromaKeySupported: liveChromaKeySupported,
     );
   }
 
@@ -2957,15 +2959,21 @@ void main() {
         ).thenReturn(mode);
 
         // Classic hides the control; Stop Motion captures stills, which the
-        // stabilization never reaches, so only the preview would be cropped.
+        // stabilization never reaches, so only the preview would be cropped;
+        // Chroma Key composites its backdrop live against the preview, which
+        // look-ahead stabilization delays behind the file.
         for (final mode in [
           VideoRecorderMode.classic,
           VideoRecorderMode.stopMotion,
+          VideoRecorderMode.chromaKey,
         ]) {
           blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
             'turns stabilization off in ${mode.name}, keeping the saved choice',
             setUp: () => cameraRuns(DivineVideoStabilizationMode.cinematic),
-            build: buildBloc,
+            // Chroma Key is only offered where the key renders live.
+            build: () => buildBloc(
+              liveChromaKeySupported: mode == VideoRecorderMode.chromaKey,
+            ),
             act: (bloc) => bloc.add(VideoRecorderRecorderModeSet(mode)),
             verify: (_) {
               verify(
