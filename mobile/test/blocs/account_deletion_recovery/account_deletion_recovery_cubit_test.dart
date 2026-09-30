@@ -140,7 +140,7 @@ void main() {
       final cubit = buildCubit();
       addTearDown(cubit.close);
 
-      cubit.signerUnavailable();
+      await cubit.signerUnavailable();
 
       expect(cubit.state.status, AccountDeletionRecoveryStatus.loadFailed);
       expect(
@@ -160,8 +160,8 @@ void main() {
           () => authService.tryRefreshExpiredSession(),
         ).thenAnswer((_) async => false);
         final cubit = buildCubit();
-        cubit.signerUnavailable();
         addTearDown(cubit.close);
+        await cubit.signerUnavailable();
 
         await cubit.retry();
 
@@ -1197,7 +1197,7 @@ void main() {
           () => authService.tryRefreshExpiredSession(),
         ).thenAnswer((_) => refresh.future);
         final cubit = buildCubit();
-        cubit.signerUnavailable();
+        await cubit.signerUnavailable();
 
         final retry = cubit.retry();
         await Future<void>.delayed(Duration.zero);
