@@ -366,23 +366,25 @@ void main() {
       }
     });
 
-    test('chroma key copy names a wall, the frame, and the manual way out', () {
+    test('chroma key copy names the white wall, its lighting, and a manual '
+        'way out', () {
       final template = _readArb(File('lib/l10n/app_en.arb'));
       final hint = (template['videoEditorChromaKeySurfaceHint']! as String)
           .toLowerCase();
       final failure = (template['videoEditorChromaKeyDetectFailed']! as String)
           .toLowerCase();
 
-      // Epic #8543 ratified the reframing: the requirement is not a green
-      // sheet, it is any uniform surface the subject is not wearing, and most
-      // people already own one. These three facts are what turn the feature's
-      // biggest bounce point into its onboarding (#8546, #8547) — losing any
-      // of them to a copy tweak puts the dead end back.
-      expect(hint, contains('wall'));
+      // Most people own a white wall, not a green screen, and since
+      // pro_video_editor 2.19.0 the mask keys one (#8544). It weighs
+      // brightness to do so, so a shadow on the wall now survives: the tip
+      // has to say "evenly lit" before the clip is shot, or the dead end
+      // #8547 removed comes back as a blotchy matte.
       expect(hint, contains('frame'));
+      expect(hint, contains('wearing'));
+      expect(hint, contains('white'));
+      expect(hint, contains('evenly'));
 
-      expect(failure, contains('wall'));
-      expect(failure, contains('frame'));
+      expect(failure, contains('edges'));
       expect(
         failure,
         contains('by hand'),

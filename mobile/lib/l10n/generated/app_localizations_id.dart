@@ -9065,21 +9065,21 @@ class AppLocalizationsId extends AppLocalizations {
       'Latar itu tidak bisa diubah. Tempatnya tetap dengan yang lama.';
 
   @override
-  String get videoEditorChromaKeyLabel => 'Layar hijau';
+  String get videoEditorChromaKeyLabel => 'Masking warna';
 
   @override
-  String get videoEditorChromaKeyTitle => 'Layar hijau';
+  String get videoEditorChromaKeyTitle => 'Masking warna';
 
   @override
   String get videoEditorChromaKeySemanticLabel =>
-      'Atur layar hijau untuk klip ini';
+      'Atur masking warna untuk klip ini';
 
   @override
   String get videoEditorChromaKeyCloseSemanticLabel =>
-      'Buang perubahan layar hijau';
+      'Buang perubahan masking warna';
 
   @override
-  String get videoEditorChromaKeyDoneSemanticLabel => 'Terapkan layar hijau';
+  String get videoEditorChromaKeyDoneSemanticLabel => 'Terapkan masking warna';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Deteksi otomatis';
@@ -9091,14 +9091,14 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorChromaKeyPresetBlue => 'Biru';
 
   @override
-  String get videoEditorChromaKeyScreenColorLabel => 'Warna layar';
+  String get videoEditorChromaKeyScreenColorLabel => 'Warna yang disembunyikan';
 
   @override
   String get videoEditorChromaKeyAmountLabel => 'Kekuatan';
 
   @override
   String get videoEditorChromaKeyAmountHint =>
-      'Seberapa banyak warna layar yang hilang';
+      'Seberapa banyak warna itu yang hilang';
 
   @override
   String get videoEditorChromaKeyEdgeLabel => 'Tepi';
@@ -9112,7 +9112,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySpillHint =>
-      'Menarik warna layar dari subjekmu';
+      'Menarik rona warna itu dari subjekmu';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Ganti dengan';
@@ -9139,15 +9139,15 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Permukaan polos apa pun di belakang kamu bisa dipakai — tembok juga boleh — asal memenuhi seluruh bingkai.';
+      'Mau ganti latar? Warna mencolok atau tembok putih dengan cahaya merata bisa dipakai, asal memenuhi bingkai dan warnanya tidak ada di bajumu.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Layar tidak ditemukan: harus memenuhi seluruh bingkai di belakang kamu. Tembok polos juga bisa. Atau pilih warnanya sendiri.';
+      'Tidak ada satu warna rata di tepi bingkai. Pilih warnanya sendiri saja.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
-      'Mengukur layar terlalu lama. Coba Deteksi otomatis lagi, atau pilih warnanya sendiri.';
+      'Membaca klip terlalu lama. Coba Deteksi otomatis lagi, atau pilih warnanya sendiri.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Pilih klip';
@@ -9161,18 +9161,18 @@ class AppLocalizationsId extends AppLocalizations {
       'Gambar itu tidak bisa dimuat.';
 
   @override
-  String get videoEditorChromaKeyRemove => 'Hapus layar hijau';
+  String get videoEditorChromaKeyRemove => 'Hapus masking warna';
 
   @override
   String get videoEditorChromaKeyFailed =>
-      'Layar hijau tidak bisa diterapkan. Klipmu tidak berubah.';
+      'Masking warna tidak bisa diterapkan. Klipmu tidak berubah.';
 
   @override
   String get videoEditorChromaKeyRemoveFailed =>
-      'Layar hijau tidak bisa dihapus. Klipmu tidak berubah.';
+      'Masking warna tidak bisa dihapus. Klipmu tidak berubah.';
 
   @override
-  String get videoEditorChromaKeyApplying => 'Menerapkan layar hijau…';
+  String get videoEditorChromaKeyApplying => 'Menerapkan masking warna…';
 
   @override
   String get videoEditorChromaKeyPreviewUnavailable =>

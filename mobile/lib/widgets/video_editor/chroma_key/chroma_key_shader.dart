@@ -5,7 +5,8 @@
 import 'dart:ui' as ui;
 
 import 'package:openvine/utils/chroma_key_math.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show ChromaKey;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show ChromaKey, ChromaKeyDetector;
 import 'package:unified_logger/unified_logger.dart';
 
 /// The compiled `shaders/chroma_key.frag` program.
@@ -95,6 +96,11 @@ abstract class ChromaKeyShader {
       ..setFloat(5, projection.directionCr)
       ..setFloat(6, key.similarity)
       ..setFloat(7, key.smoothness)
-      ..setFloat(8, key.spill);
+      ..setFloat(8, projection.effectiveSpill(key.spill))
+      ..setFloat(
+        9,
+        ChromaKeyDetector.lumaOf(key.color.r, key.color.g, key.color.b),
+      )
+      ..setFloat(10, projection.lumaWeight);
   }
 }

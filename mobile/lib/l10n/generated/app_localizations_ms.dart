@@ -9156,21 +9156,21 @@ class AppLocalizationsMs extends AppLocalizations {
       'Latar itu tidak dapat ditukar. Tempatnya kekal dengan yang lama.';
 
   @override
-  String get videoEditorChromaKeyLabel => 'Skrin hijau';
+  String get videoEditorChromaKeyLabel => 'Topeng warna';
 
   @override
-  String get videoEditorChromaKeyTitle => 'Skrin hijau';
+  String get videoEditorChromaKeyTitle => 'Topeng warna';
 
   @override
   String get videoEditorChromaKeySemanticLabel =>
-      'Sediakan skrin hijau untuk klip ini';
+      'Sediakan topeng warna untuk klip ini';
 
   @override
   String get videoEditorChromaKeyCloseSemanticLabel =>
-      'Buang perubahan skrin hijau';
+      'Buang perubahan topeng warna';
 
   @override
-  String get videoEditorChromaKeyDoneSemanticLabel => 'Gunakan skrin hijau';
+  String get videoEditorChromaKeyDoneSemanticLabel => 'Gunakan topeng warna';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Kesan automatik';
@@ -9182,14 +9182,14 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorChromaKeyPresetBlue => 'Biru';
 
   @override
-  String get videoEditorChromaKeyScreenColorLabel => 'Warna skrin';
+  String get videoEditorChromaKeyScreenColorLabel => 'Warna yang disembunyikan';
 
   @override
   String get videoEditorChromaKeyAmountLabel => 'Kekuatan';
 
   @override
   String get videoEditorChromaKeyAmountHint =>
-      'Berapa banyak warna skrin yang hilang';
+      'Berapa banyak warna itu yang hilang';
 
   @override
   String get videoEditorChromaKeyEdgeLabel => 'Tepi';
@@ -9203,7 +9203,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySpillHint =>
-      'Menarik warna skrin keluar daripada subjek anda';
+      'Menarik keluar rona warna itu daripada subjek anda';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Ganti dengan';
@@ -9230,15 +9230,15 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Mana-mana permukaan rata di belakang anda boleh digunakan — dinding pun memadai — asalkan ia memenuhi seluruh bingkai.';
+      'Mahu tukar latar belakang? Warna terang atau dinding putih yang diterangi sekata boleh digunakan, asalkan ia memenuhi bingkai dan anda tidak memakai warna itu.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Skrin tidak dijumpai: ia perlu memenuhi seluruh bingkai di belakang anda. Dinding rata pun dikira. Atau pilih warnanya secara manual.';
+      'Tiada satu warna sekata di tepi bingkai. Pilih warnanya secara manual.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
-      'Mengukur skrin mengambil masa terlalu lama. Cuba Kesan automatik sekali lagi, atau pilih warnanya secara manual.';
+      'Membaca klip mengambil masa terlalu lama. Cuba Kesan automatik sekali lagi, atau pilih warnanya secara manual.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Pilih klip';
@@ -9252,18 +9252,18 @@ class AppLocalizationsMs extends AppLocalizations {
       'Imej itu tidak dapat dimuatkan.';
 
   @override
-  String get videoEditorChromaKeyRemove => 'Alih keluar skrin hijau';
+  String get videoEditorChromaKeyRemove => 'Alih keluar topeng warna';
 
   @override
   String get videoEditorChromaKeyFailed =>
-      'Skrin hijau tidak dapat digunakan. Klip anda tidak berubah.';
+      'Topeng warna tidak dapat digunakan. Klip anda tidak berubah.';
 
   @override
   String get videoEditorChromaKeyRemoveFailed =>
-      'Skrin hijau tidak dapat dialih keluar. Klip anda tidak berubah.';
+      'Topeng warna tidak dapat dialih keluar. Klip anda tidak berubah.';
 
   @override
-  String get videoEditorChromaKeyApplying => 'Menggunakan skrin hijau…';
+  String get videoEditorChromaKeyApplying => 'Menggunakan topeng warna…';
 
   @override
   String get videoEditorChromaKeyPreviewUnavailable =>

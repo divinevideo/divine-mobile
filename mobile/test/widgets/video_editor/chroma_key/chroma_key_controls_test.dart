@@ -91,9 +91,7 @@ void main() {
         .map((t) => t.style?.color)
         .toSet();
 
-    testWidgets('states the surface requirement without being asked', (
-      tester,
-    ) async {
+    testWidgets('shows the background tip without being asked', (tester) async {
       await pump(tester, VineTheme.theme);
 
       final en = lookupAppLocalizations(const Locale('en'));
@@ -101,16 +99,15 @@ void main() {
         find.text(en.videoEditorChromaKeySurfaceHint),
         findsOneWidget,
         reason:
-            'The prerequisite used to surface only as a failed detect, after '
-            'the clip was already shot (#8547).',
+            'What a background swap needs used to surface only as a failed '
+            'detect, after the clip was already shot (#8547).',
       );
       expect(
         en.videoEditorChromaKeySurfaceHint.toLowerCase(),
-        contains('wall'),
+        contains('white'),
         reason:
-            'Naming a wall is the point: most people own no green screen and '
-            'do not know an ordinary wall keys. Epic #8543 ratified that '
-            'framing.',
+            'A white wall is the background most people own, and the mask '
+            'keys one since pro_video_editor 2.19.0 (#8544).',
       );
     });
 

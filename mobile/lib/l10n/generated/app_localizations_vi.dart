@@ -9110,21 +9110,21 @@ class AppLocalizationsVi extends AppLocalizations {
       'Không đổi được nền đó. Chỗ này vẫn giữ nền cũ.';
 
   @override
-  String get videoEditorChromaKeyLabel => 'Phông xanh';
+  String get videoEditorChromaKeyLabel => 'Mặt nạ màu';
 
   @override
-  String get videoEditorChromaKeyTitle => 'Phông xanh';
+  String get videoEditorChromaKeyTitle => 'Mặt nạ màu';
 
   @override
   String get videoEditorChromaKeySemanticLabel =>
-      'Thiết lập phông xanh cho clip này';
+      'Thiết lập mặt nạ màu cho clip này';
 
   @override
   String get videoEditorChromaKeyCloseSemanticLabel =>
-      'Bỏ các thay đổi phông xanh';
+      'Bỏ các thay đổi mặt nạ màu';
 
   @override
-  String get videoEditorChromaKeyDoneSemanticLabel => 'Áp dụng phông xanh';
+  String get videoEditorChromaKeyDoneSemanticLabel => 'Áp dụng mặt nạ màu';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Tự động nhận diện';
@@ -9136,13 +9136,13 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorChromaKeyPresetBlue => 'Xanh dương';
 
   @override
-  String get videoEditorChromaKeyScreenColorLabel => 'Màu phông';
+  String get videoEditorChromaKeyScreenColorLabel => 'Màu cần ẩn';
 
   @override
   String get videoEditorChromaKeyAmountLabel => 'Mức độ';
 
   @override
-  String get videoEditorChromaKeyAmountHint => 'Xóa bao nhiêu phần màu phông';
+  String get videoEditorChromaKeyAmountHint => 'Ẩn bao nhiêu phần màu đó';
 
   @override
   String get videoEditorChromaKeyEdgeLabel => 'Viền';
@@ -9156,7 +9156,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySpillHint =>
-      'Kéo màu phông ra khỏi chủ thể của bạn';
+      'Kéo sắc màu đó ra khỏi chủ thể của bạn';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Thay bằng';
@@ -9183,15 +9183,15 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Bất kỳ bề mặt phẳng nào phía sau bạn đều được — một bức tường cũng ổn — miễn là nó lấp kín khung hình.';
+      'Muốn thay nền? Một màu nổi bật hoặc bức tường trắng được chiếu sáng đều đều được, miễn là nó phủ kín khung hình và bạn không mặc màu đó.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Không tìm thấy phông nền: nó phải lấp kín khung hình phía sau bạn. Một bức tường phẳng là đủ. Hoặc tự chọn màu.';
+      'Không tìm thấy một màu đồng đều nào quanh các cạnh khung hình. Hãy tự chọn màu nhé.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
-      'Đo phông nền mất quá lâu. Thử Tự động nhận diện lại, hoặc tự chọn màu.';
+      'Đọc clip mất quá lâu. Thử Tự động nhận diện lại, hoặc tự chọn màu.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Chọn một clip';
@@ -9204,18 +9204,18 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorChromaKeyImagePickFailed => 'Không tải được ảnh đó.';
 
   @override
-  String get videoEditorChromaKeyRemove => 'Gỡ phông xanh';
+  String get videoEditorChromaKeyRemove => 'Gỡ mặt nạ màu';
 
   @override
   String get videoEditorChromaKeyFailed =>
-      'Không áp dụng được phông xanh. Clip của bạn vẫn nguyên.';
+      'Không áp dụng được mặt nạ màu. Clip của bạn vẫn nguyên.';
 
   @override
   String get videoEditorChromaKeyRemoveFailed =>
-      'Không gỡ được phông xanh. Clip của bạn vẫn nguyên.';
+      'Không gỡ được mặt nạ màu. Clip của bạn vẫn nguyên.';
 
   @override
-  String get videoEditorChromaKeyApplying => 'Đang áp dụng phông xanh…';
+  String get videoEditorChromaKeyApplying => 'Đang áp dụng mặt nạ màu…';
 
   @override
   String get videoEditorChromaKeyPreviewUnavailable =>

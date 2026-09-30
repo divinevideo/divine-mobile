@@ -9351,21 +9351,21 @@ class AppLocalizationsRo extends AppLocalizations {
       'Fundalul nu a putut fi schimbat. Locul rămâne cu cel dinainte.';
 
   @override
-  String get videoEditorChromaKeyLabel => 'Ecran verde';
+  String get videoEditorChromaKeyLabel => 'Mască de culoare';
 
   @override
-  String get videoEditorChromaKeyTitle => 'Ecran verde';
+  String get videoEditorChromaKeyTitle => 'Mască de culoare';
 
   @override
   String get videoEditorChromaKeySemanticLabel =>
-      'Configurează ecranul verde pentru acest clip';
+      'Configurează o mască de culoare pentru acest clip';
 
   @override
   String get videoEditorChromaKeyCloseSemanticLabel =>
-      'Renunță la modificările ecranului verde';
+      'Renunță la modificările măștii de culoare';
 
   @override
-  String get videoEditorChromaKeyDoneSemanticLabel => 'Aplică ecranul verde';
+  String get videoEditorChromaKeyDoneSemanticLabel => 'Aplică masca de culoare';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Detectare automată';
@@ -9377,14 +9377,14 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorChromaKeyPresetBlue => 'Albastru';
 
   @override
-  String get videoEditorChromaKeyScreenColorLabel => 'Culoarea fundalului';
+  String get videoEditorChromaKeyScreenColorLabel => 'Culoarea de mascat';
 
   @override
   String get videoEditorChromaKeyAmountLabel => 'Intensitate';
 
   @override
   String get videoEditorChromaKeyAmountHint =>
-      'Cât din culoarea fundalului dispare';
+      'Cât din culoarea mascată dispare';
 
   @override
   String get videoEditorChromaKeyEdgeLabel => 'Margine';
@@ -9398,7 +9398,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySpillHint =>
-      'Scoate nuanța fundalului de pe subiect';
+      'Scoate nuanța culorii mascate de pe subiect';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Înlocuiește cu';
@@ -9425,15 +9425,15 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Merge orice suprafață simplă din spatele tău — și un perete — atâta timp cât umple tot cadrul.';
+      'Vrei să schimbi fundalul? Merge o culoare puternică sau un perete alb luminat uniform, atâta timp cât umple tot cadrul și nu porți culoarea respectivă.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Nu am găsit niciun fundal: trebuie să umple tot cadrul din spatele tău. Un perete simplu e suficient. Sau alege culoarea manual.';
+      'Nu am găsit o culoare uniformă pe marginile cadrului. Alege culoarea manual.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
-      'Măsurarea fundalului a durat prea mult. Încearcă din nou „Detectare automată” sau alege culoarea manual.';
+      'Citirea clipului a durat prea mult. Încearcă din nou „Detectare automată” sau alege culoarea manual.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Alege un clip';
@@ -9447,18 +9447,18 @@ class AppLocalizationsRo extends AppLocalizations {
       'Imaginea nu a putut fi încărcată.';
 
   @override
-  String get videoEditorChromaKeyRemove => 'Elimină ecranul verde';
+  String get videoEditorChromaKeyRemove => 'Elimină masca de culoare';
 
   @override
   String get videoEditorChromaKeyFailed =>
-      'Ecranul verde nu a putut fi aplicat. Clipul tău rămâne neschimbat.';
+      'Masca de culoare nu a putut fi aplicată. Clipul tău rămâne neschimbat.';
 
   @override
   String get videoEditorChromaKeyRemoveFailed =>
-      'Ecranul verde nu a putut fi eliminat. Clipul tău rămâne neschimbat.';
+      'Masca de culoare nu a putut fi eliminată. Clipul tău rămâne neschimbat.';
 
   @override
-  String get videoEditorChromaKeyApplying => 'Se aplică ecranul verde…';
+  String get videoEditorChromaKeyApplying => 'Se aplică masca de culoare…';
 
   @override
   String get videoEditorChromaKeyPreviewUnavailable =>

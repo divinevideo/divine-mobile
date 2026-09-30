@@ -9145,21 +9145,21 @@ class AppLocalizationsUr extends AppLocalizations {
       'وہ پس منظر نہیں بدلا جا سکا۔ جگہ پر پہلے والا ہی ہے۔';
 
   @override
-  String get videoEditorChromaKeyLabel => 'گرین اسکرین';
+  String get videoEditorChromaKeyLabel => 'کلر ماسک';
 
   @override
-  String get videoEditorChromaKeyTitle => 'گرین اسکرین';
+  String get videoEditorChromaKeyTitle => 'کلر ماسک';
 
   @override
   String get videoEditorChromaKeySemanticLabel =>
-      'اس کلپ کے لیے گرین اسکرین سیٹ کریں';
+      'اس کلپ کے لیے کلر ماسک سیٹ کریں';
 
   @override
   String get videoEditorChromaKeyCloseSemanticLabel =>
-      'گرین اسکرین کی تبدیلیاں رد کریں';
+      'کلر ماسک کی تبدیلیاں رد کریں';
 
   @override
-  String get videoEditorChromaKeyDoneSemanticLabel => 'گرین اسکرین لاگو کریں';
+  String get videoEditorChromaKeyDoneSemanticLabel => 'کلر ماسک لاگو کریں';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'خودکار شناخت';
@@ -9171,13 +9171,14 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorChromaKeyPresetBlue => 'نیلا';
 
   @override
-  String get videoEditorChromaKeyScreenColorLabel => 'اسکرین کا رنگ';
+  String get videoEditorChromaKeyScreenColorLabel => 'ماسک کیا جانے والا رنگ';
 
   @override
   String get videoEditorChromaKeyAmountLabel => 'مقدار';
 
   @override
-  String get videoEditorChromaKeyAmountHint => 'اسکرین کا رنگ کتنا غائب ہوگا';
+  String get videoEditorChromaKeyAmountHint =>
+      'ماسک کیا گیا رنگ کتنا غائب ہوگا';
 
   @override
   String get videoEditorChromaKeyEdgeLabel => 'کنارہ';
@@ -9191,7 +9192,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySpillHint =>
-      'اسکرین کا رنگ آپ کے سبجیکٹ سے ہٹاتا ہے';
+      'ماسک کیے گئے رنگ کی جھلک آپ کے سبجیکٹ سے ہٹاتا ہے';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'اس سے بدلیں';
@@ -9218,15 +9219,15 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'آپ کے پیچھے کوئی بھی سادہ سطح کام کر جاتی ہے — دیوار بھی چلے گی — بس وہ پورے فریم کو بھر دے۔';
+      'پس منظر بدلنا ہے؟ شوخ رنگ یا یکساں روشنی والی سفید دیوار چل جائے گی، بس وہ پورا فریم بھر دے اور آپ نے وہ رنگ نہ پہنا ہو۔';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'کوئی اسکرین نہیں ملی: اسے آپ کے پیچھے پورا فریم بھرنا ہوگا۔ سادہ دیوار بھی کافی ہے۔ یا رنگ خود منتخب کریں۔';
+      'فریم کے کناروں پر ایک یکساں رنگ نہیں ملا۔ اس کی بجائے رنگ خود منتخب کریں۔';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
-      'اسکرین کی پیمائش میں بہت وقت لگ گیا۔ «خودکار شناخت» دوبارہ آزمائیں، یا رنگ خود منتخب کریں۔';
+      'کلپ پڑھنے میں بہت وقت لگ گیا۔ «خودکار شناخت» دوبارہ آزمائیں، یا رنگ خود منتخب کریں۔';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'کلپ چنیں';
@@ -9239,18 +9240,18 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorChromaKeyImagePickFailed => 'وہ تصویر لوڈ نہیں ہو سکی۔';
 
   @override
-  String get videoEditorChromaKeyRemove => 'گرین اسکرین ہٹائیں';
+  String get videoEditorChromaKeyRemove => 'کلر ماسک ہٹائیں';
 
   @override
   String get videoEditorChromaKeyFailed =>
-      'گرین اسکرین لاگو نہیں ہو سکی۔ آپ کا کلپ ویسا ہی ہے۔';
+      'کلر ماسک لاگو نہیں ہو سکا۔ آپ کا کلپ ویسا ہی ہے۔';
 
   @override
   String get videoEditorChromaKeyRemoveFailed =>
-      'گرین اسکرین ہٹائی نہیں جا سکی۔ آپ کا کلپ ویسا ہی ہے۔';
+      'کلر ماسک ہٹایا نہیں جا سکا۔ آپ کا کلپ ویسا ہی ہے۔';
 
   @override
-  String get videoEditorChromaKeyApplying => 'گرین اسکرین لاگو ہو رہی ہے…';
+  String get videoEditorChromaKeyApplying => 'کلر ماسک لاگو ہو رہا ہے…';
 
   @override
   String get videoEditorChromaKeyPreviewUnavailable =>

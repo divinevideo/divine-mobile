@@ -5,6 +5,8 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:pro_video_editor/pro_video_editor.dart' show ChromaKeyDetector;
+
 /// The key colour's position and direction in the BT.601 Cb/Cr chroma plane.
 ///
 /// The keyer measures distance in this plane. Note it is a *position*, not a
@@ -16,6 +18,7 @@ class ChromaKeyProjection {
     required this.cr,
     required this.directionCb,
     required this.directionCr,
+    required this.lumaWeight,
   });
 
   /// Projects [color] into the chroma plane.
@@ -40,6 +43,7 @@ class ChromaKeyProjection {
       cr: cr,
       directionCb: hasHue ? cb / length : 0,
       directionCr: hasHue ? cr / length : 0,
+      lumaWeight: ChromaKeyDetector.lumaWeightOf(cb, cr),
     );
   }
 
@@ -55,8 +59,19 @@ class ChromaKeyProjection {
   /// Cr of the unit vector pointing from neutral toward the key hue.
   final double directionCr;
 
+  /// How much brightness counts toward the matte: 0 for a saturated key, 1 for
+  /// a neutral one (`ChromaKeyDetector.lumaWeightOf`).
+  final double lumaWeight;
+
+  /// The despill strength the renderers apply for [spill].
+  ///
+  /// They scale it by `1 - lumaWeight`, so a near-white key whose faint tint
+  /// still gives it a direction does not strip that tint from the subject.
+  double effectiveSpill(double spill) => spill * (1 - lumaWeight);
+
   @override
   String toString() =>
       'ChromaKeyProjection(cb: $cb, cr: $cr, '
-      'directionCb: $directionCb, directionCr: $directionCr)';
+      'directionCb: $directionCb, directionCr: $directionCr, '
+      'lumaWeight: $lumaWeight)';
 }
