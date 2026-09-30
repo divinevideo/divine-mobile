@@ -12,6 +12,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
 import 'package:openvine/screens/badges/widgets/badge_recipient_row.dart';
+import 'package:openvine/widgets/user_profile_tile.dart';
 
 import '../../helpers/test_provider_overrides.dart';
 
@@ -485,6 +486,27 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.badgeDetailMissing), findsOneWidget);
+    });
+
+    testWidgets('lists accepted holders with a follow control', (
+      tester,
+    ) async {
+      when(() => repository.loadBadgeDetail(any())).thenAnswer(
+        (_) async => _detail(definition: _definition(), isOwner: false),
+      );
+      when(
+        () => repository.loadAcceptedHolders(any()),
+      ).thenAnswer((_) async => {_pubkey(3)});
+
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is UserProfileTile && widget.pubkey == _pubkey(3),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('offers a retry when the lookup fails', (tester) async {

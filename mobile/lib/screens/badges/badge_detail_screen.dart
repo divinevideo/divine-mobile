@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/badges/badge_detail_cubit.dart';
+import 'package:openvine/blocs/badges/badge_holders_cubit.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -330,152 +331,147 @@ class _BadgeDetailBody extends StatelessWidget {
 
 /// The complete accepted holder set, with individual follows kept separate
 /// from the account's badge subscription.
-class _AcceptedHolders extends ConsumerStatefulWidget {
+class _AcceptedHolders extends ConsumerWidget {
   const _AcceptedHolders({required this.coordinate, super.key});
 
   final BadgeCoordinate coordinate;
 
   @override
-  ConsumerState<_AcceptedHolders> createState() => _AcceptedHoldersState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final badgeRepository = ref.watch(badgeRepositoryProvider);
+    final followRepository = ref.watch(followRepositoryProvider);
+    final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
+    final signedIn = ref.watch(authServiceProvider).currentPublicKeyHex != null;
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          key: ValueKey((badgeRepository, signedIn)),
+          create: (_) => BadgeHoldersCubit(
+            repository: badgeRepository,
+            coordinate: coordinate,
+            canSubscribe: signedIn,
+          )..load(),
+        ),
+        BlocProvider(
+          key: ValueKey((followRepository, blocklistRepository)),
+          create: (_) => MyFollowingBloc(
+            followRepository: followRepository,
+            contentBlocklistRepository: blocklistRepository,
+          )..add(const MyFollowingListLoadRequested()),
+        ),
+      ],
+      child: MultiBlocListener(
+        listeners: [
+          BlocListener<BadgeHoldersCubit, BadgeHoldersState>(
+            listenWhen: (previous, current) =>
+                previous.subscriptionRevision != current.subscriptionRevision,
+            listener: (_, _) =>
+                ref.read(badgeSubscriptionsRevisionProvider.notifier).state++,
+          ),
+          BlocListener<BadgeHoldersCubit, BadgeHoldersState>(
+            listenWhen: (previous, current) =>
+                previous.saveFailures != current.saveFailures,
+            listener: (context, _) =>
+                ScaffoldMessenger.of(context).showSnackBar(
+                  DivineSnackbarContainer.snackBar(
+                    context.l10n.badgesUpdateError,
+                    error: true,
+                  ),
+                ),
+          ),
+        ],
+        child: const SliverMainAxisGroup(
+          slivers: [
+            SliverToBoxAdapter(child: _SubscriptionHeader()),
+            _AcceptedHolderList(),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _AcceptedHoldersState extends ConsumerState<_AcceptedHolders> {
-  Future<Set<String>>? _holders;
-  Future<Set<BadgeCoordinate>>? _subscriptions;
-  BadgeRepository? _repository;
-  bool _saving = false;
-
-  void _reload(BadgeRepository repository) {
-    _holders = repository.loadAcceptedHolders(widget.coordinate);
-    _subscriptions = ref.read(authServiceProvider).currentPublicKeyHex == null
-        ? null
-        : repository.loadSubscriptions();
-  }
+class _SubscriptionHeader extends StatelessWidget {
+  const _SubscriptionHeader();
 
   @override
   Widget build(BuildContext context) {
-    final repository = ref.watch(badgeRepositoryProvider);
-    if (!identical(repository, _repository)) {
-      _repository = repository;
-      _reload(repository);
-    }
-    final signedIn = ref.watch(authServiceProvider).currentPublicKeyHex != null;
-    return SliverMainAxisGroup(
-      slivers: [
-        SliverToBoxAdapter(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (signedIn)
-                FutureBuilder<Set<BadgeCoordinate>>(
-                  future: _subscriptions,
-                  builder: (context, snapshot) {
-                    if (snapshot.hasError) {
-                      return DivineButton(
-                        onPressed: () => setState(() => _reload(repository)),
-                        label: context.l10n.badgesLoadError,
-                      );
-                    }
-                    final subscribed =
-                        snapshot.data?.contains(widget.coordinate) ?? false;
-                    return DivineButton(
-                      label: subscribed
-                          ? context.l10n.badgeSubscribedAction
-                          : context.l10n.badgeSubscribeAction,
-                      onPressed: !snapshot.hasData || _saving
-                          ? null
-                          : () async {
-                              final messenger = ScaffoldMessenger.of(context);
-                              final errorMessage =
-                                  context.l10n.badgesUpdateError;
-                              setState(() => _saving = true);
-                              try {
-                                final updated = await repository
-                                    .setSubscription(
-                                      widget.coordinate,
-                                      subscribed: !subscribed,
-                                    );
-                                if (mounted) {
-                                  setState(
-                                    () =>
-                                        _subscriptions = Future.value(updated),
-                                  );
-                                  ref
-                                      .read(
-                                        badgeSubscriptionsRevisionProvider
-                                            .notifier,
-                                      )
-                                      .state++;
-                                }
-                              } catch (_) {
-                                if (mounted) {
-                                  messenger.showSnackBar(
-                                    DivineSnackbarContainer.snackBar(
-                                      errorMessage,
-                                      error: true,
-                                    ),
-                                  );
-                                }
-                              } finally {
-                                if (mounted) setState(() => _saving = false);
-                              }
-                            },
-                    );
-                  },
-                ),
-              Padding(
-                padding: const EdgeInsets.only(top: 20),
-                child: Text(
-                  context.l10n.badgeAcceptedHoldersTitle,
-                  style: VineTheme.titleSmallFont(
-                    color: context.vineColors.primaryText,
-                  ),
-                ),
-              ),
-            ],
+    final (status, subscribed) = context.select(
+      (BadgeHoldersCubit cubit) =>
+          (cubit.state.subscriptionStatus, cubit.state.isSubscribed),
+    );
+    final cubit = context.read<BadgeHoldersCubit>();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        switch (status) {
+          BadgeSubscriptionStatus.unavailable ||
+          BadgeSubscriptionStatus.initial => const SizedBox.shrink(),
+          BadgeSubscriptionStatus.failure => DivineButton(
+            onPressed: cubit.load,
+            label: context.l10n.badgesLoadError,
           ),
-        ),
-        FutureBuilder<Set<String>>(
-          future: _holders,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const SliverToBoxAdapter(
-                child: Center(child: BrandedLoadingIndicator(size: 40)),
-              );
-            }
-            if (snapshot.hasError) {
-              return SliverToBoxAdapter(
-                child: DivineButton(
-                  onPressed: () => setState(() => _reload(repository)),
-                  label: context.l10n.badgesLoadError,
-                ),
-              );
-            }
-            final holders = snapshot.data?.toList() ?? const <String>[];
-            if (holders.isEmpty) {
-              return const SliverToBoxAdapter(child: SizedBox.shrink());
-            }
-            return SliverList.builder(
-              itemCount: holders.length,
-              itemBuilder: (context, index) {
-                final holder = holders[index];
-                return BlocSelector<MyFollowingBloc, MyFollowingState, bool>(
-                  selector: (state) => state.isFollowing(holder),
-                  builder: (context, isFollowing) => UserProfileTile(
-                    pubkey: holder,
-                    isFollowing: isFollowing,
-                    onToggleFollow: () => context.read<MyFollowingBloc>().add(
-                      MyFollowingToggleRequested(holder),
-                    ),
-                    padding: const EdgeInsets.fromLTRB(0, 12, 16, 12),
-                  ),
-                );
-              },
-            );
-          },
+          _ => DivineButton(
+            label: subscribed
+                ? context.l10n.badgeSubscribedAction
+                : context.l10n.badgeSubscribeAction,
+            onPressed: status == BadgeSubscriptionStatus.ready
+                ? cubit.toggleSubscription
+                : null,
+          ),
+        },
+        Padding(
+          padding: const EdgeInsets.only(top: 20),
+          child: Text(
+            context.l10n.badgeAcceptedHoldersTitle,
+            style: VineTheme.titleSmallFont(
+              color: context.vineColors.primaryText,
+            ),
+          ),
         ),
       ],
     );
+  }
+}
+
+class _AcceptedHolderList extends StatelessWidget {
+  const _AcceptedHolderList();
+
+  @override
+  Widget build(BuildContext context) {
+    final (status, holders) = context.select(
+      (BadgeHoldersCubit cubit) =>
+          (cubit.state.holdersStatus, cubit.state.holders),
+    );
+    return switch (status) {
+      BadgeHoldersStatus.initial ||
+      BadgeHoldersStatus.loading => const SliverToBoxAdapter(
+        child: Center(child: BrandedLoadingIndicator(size: 40)),
+      ),
+      BadgeHoldersStatus.failure => SliverToBoxAdapter(
+        child: DivineButton(
+          onPressed: context.read<BadgeHoldersCubit>().load,
+          label: context.l10n.badgesLoadError,
+        ),
+      ),
+      BadgeHoldersStatus.loaded => SliverList.builder(
+        itemCount: holders.length,
+        itemBuilder: (context, index) {
+          final holder = holders[index];
+          return BlocSelector<MyFollowingBloc, MyFollowingState, bool>(
+            selector: (state) => state.isFollowing(holder),
+            builder: (context, isFollowing) => UserProfileTile(
+              pubkey: holder,
+              isFollowing: isFollowing,
+              onToggleFollow: () => context.read<MyFollowingBloc>().add(
+                MyFollowingToggleRequested(holder),
+              ),
+              padding: const EdgeInsets.fromLTRB(0, 12, 16, 12),
+            ),
+          );
+        },
+      ),
+    };
   }
 }
 
