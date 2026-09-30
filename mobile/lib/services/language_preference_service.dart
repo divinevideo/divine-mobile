@@ -42,6 +42,21 @@ class LanguagePreferenceService implements Listenable {
     await _initializeFuture;
   }
 
+  /// Reloads the stored language, notifying only when it changed.
+  ///
+  /// The account-boundary sweep clears the key and calls this, so every
+  /// holder of this instance sees the incoming account's language.
+  Future<void> reloadFromStorage() async {
+    await initialize();
+    final previous = _customLanguage;
+
+    _customLanguage = null;
+    _initializeFuture = _loadPreference();
+    await _initializeFuture;
+
+    if (_customLanguage != previous) _notifyListeners();
+  }
+
   Future<void> _loadPreference() async {
     try {
       final prefs = await SharedPreferences.getInstance();

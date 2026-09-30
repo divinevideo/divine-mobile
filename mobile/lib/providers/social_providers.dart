@@ -103,27 +103,48 @@ final seenVideosClearProvider = Provider<Future<void> Function()>((ref) {
   };
 });
 
-/// Recreates preference-backed services after an account-boundary sweep.
+/// Resets preference-backed services after an account-boundary sweep.
 ///
-/// These services cache account-specific values in memory. Invalidating them
-/// does not construct an unused provider, but any live consumer rebuilds from
-/// the now-cleared preferences instead of retaining the departing account's
-/// settings for the rest of the session.
-final accountScopedPreferenceServicesResetProvider = Provider<void Function()>(
-  (ref) {
-    return () {
-      ref
-        ..invalidate(divineHostFilterServiceProvider)
-        ..invalidate(videoProvenanceFilterServiceProvider)
-        ..invalidate(contentFilterServiceProvider)
-        ..invalidate(accountLabelServiceProvider)
-        ..invalidate(moderationLabelServiceProvider)
-        ..invalidate(languagePreferenceServiceProvider)
-        ..invalidate(audioSharingPreferenceServiceProvider)
-        ..invalidate(soundLibraryServiceProvider);
-    };
-  },
-);
+/// These services cache account-specific values in memory, so each must
+/// reflect the now-cleared preferences for the rest of the session.
+///
+/// The five that other providers watch reload in place. Invalidating one
+/// while its dependents are paused leaves it for the next widget build to
+/// rebuild, and that rebuild refreshes the dependents with a setState during
+/// build, which Riverpod 3.3.2 asserts on (#8121). Reloading also covers
+/// holders that captured the instance with `ref.read`. A service that was
+/// never built reads the cleared preferences when it first is.
+///
+/// Account and moderation labels are rebuilt at every account boundary
+/// anyway because they watch the Nostr client, and only widgets watch audio
+/// sharing, so those are still invalidated.
+final accountScopedPreferenceServicesResetProvider =
+    Provider<Future<void> Function()>((ref) {
+      return () async {
+        if (ref.exists(divineHostFilterServiceProvider)) {
+          ref.read(divineHostFilterServiceProvider).reloadFromStorage();
+        }
+        if (ref.exists(videoProvenanceFilterServiceProvider)) {
+          ref.read(videoProvenanceFilterServiceProvider).reloadFromStorage();
+        }
+        if (ref.exists(contentFilterServiceProvider)) {
+          await ref.read(contentFilterServiceProvider).reloadFromStorage();
+        }
+        if (ref.exists(languagePreferenceServiceProvider)) {
+          await ref.read(languagePreferenceServiceProvider).reloadFromStorage();
+        }
+        if (ref.exists(soundLibraryServiceProvider)) {
+          final soundLibrary = await ref.read(
+            soundLibraryServiceProvider.future,
+          );
+          await soundLibrary.reloadCustomSounds();
+        }
+        ref
+          ..invalidate(accountLabelServiceProvider)
+          ..invalidate(moderationLabelServiceProvider)
+          ..invalidate(audioSharingPreferenceServiceProvider);
+      };
+    });
 
 /// Stops the live DM gift-wrap subscription during account cleanup.
 ///
@@ -845,9 +866,10 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
             'pushPreferences',
             ref.read(notificationPreferencesStoreProvider).clearPreferences,
           );
-          await requiredCleanup('accountScopedPreferenceServices', () async {
-            ref.read(accountScopedPreferenceServicesResetProvider)();
-          });
+          await requiredCleanup(
+            'accountScopedPreferenceServices',
+            ref.read(accountScopedPreferenceServicesResetProvider),
+          );
         }
         // Clear the leaving account's DM sync cursors so its next login
         // re-fetches from relays instead of resuming from a `since:` boundary

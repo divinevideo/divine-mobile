@@ -49,5 +49,38 @@ void main() {
 
       expect(notifications, equals(1));
     });
+
+    group('reloadFromStorage', () {
+      test('adopts the stored value and notifies once', () async {
+        SharedPreferences.setMockInitialValues({
+          VideoProvenanceFilterService.showVerifiedOnlyStorageKey: true,
+        });
+        final prefs = await SharedPreferences.getInstance();
+        final service = VideoProvenanceFilterService(prefs);
+        var notifications = 0;
+        service.addListener(() => notifications++);
+
+        await prefs.remove(
+          VideoProvenanceFilterService.showVerifiedOnlyStorageKey,
+        );
+        service.reloadFromStorage();
+
+        expect(service.showVerifiedOnly, isFalse);
+        expect(notifications, equals(1));
+      });
+
+      test('stays silent when the stored value already matches', () async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final service = VideoProvenanceFilterService(prefs);
+        var notifications = 0;
+        service.addListener(() => notifications++);
+
+        service.reloadFromStorage();
+
+        expect(service.showVerifiedOnly, isFalse);
+        expect(notifications, equals(0));
+      });
+    });
   });
 }
