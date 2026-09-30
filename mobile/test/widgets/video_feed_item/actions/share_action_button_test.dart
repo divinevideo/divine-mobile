@@ -23,6 +23,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
@@ -259,9 +260,7 @@ void main() {
               home: StatefulBuilder(
                 builder: (context, setState) {
                   rebuildHost = setState;
-                  return Scaffold(
-                    body: ShareActionButton(video: testVideo),
-                  );
+                  return Scaffold(body: ShareActionButton(video: testVideo));
                 },
               ),
               additionalOverrides: [
@@ -315,9 +314,8 @@ void main() {
         tester,
       ) async {
         final mockAuth = createMockAuthService();
-        when(
-          () => mockVideoSharingService.generateShareUrl(any()),
-        ).thenReturn('https://divine.video/v/test');
+        when(() => mockVideoSharingService.generateShareUrl(any()))
+            .thenReturn('https://divine.video/v/test');
 
         await tester.pumpWidget(
           testMaterialApp(
@@ -399,13 +397,13 @@ void main() {
           WidgetTester tester, {
           MockGoRouter? goRouter,
           List<Override>? additionalOverrides,
-          bool isRegistered = true,
+          bool canSign = true,
         }) async {
           final mockAuth = createMockAuthService(
             authState: AuthState.authenticated,
             currentPublicKeyHex: ownPubkey,
           );
-          when(() => mockAuth.isRegistered).thenReturn(isRegistered);
+          when(() => mockAuth.canPublishNostrWritesNow).thenReturn(canSign);
           final app = testMaterialApp(
             home: Scaffold(body: ShareActionButton(video: testVideo)),
             additionalOverrides: [
@@ -435,9 +433,8 @@ void main() {
           tester,
         ) async {
           final goRouter = MockGoRouter();
-          when(
-            () => goRouter.push<void>(any(), extra: any(named: 'extra')),
-          ).thenAnswer((_) async {});
+          when(() => goRouter.push<void>(any(), extra: any(named: 'extra')))
+              .thenAnswer((_) async {});
 
           await pumpOwnerSheet(tester, goRouter: goRouter);
 
@@ -513,7 +510,7 @@ void main() {
         testWidgets(
           'hides Crosspost for an identity the crossposter cannot serve',
           (tester) async {
-            await pumpOwnerSheet(tester, isRegistered: false);
+            await pumpOwnerSheet(tester, canSign: false);
 
             expect(find.text(l10n.shareMenuEditVideo), findsOneWidget);
             expect(find.text(l10n.shareSheetCrosspost), findsNothing);
@@ -524,9 +521,8 @@ void main() {
           'Crosspost waits for connections instead of routing to setup',
           (tester) async {
             final goRouter = MockGoRouter();
-            when(
-              () => goRouter.push<void>(any(), extra: any(named: 'extra')),
-            ).thenAnswer((_) async {});
+            when(() => goRouter.push<void>(any(), extra: any(named: 'extra')))
+                .thenAnswer((_) async {});
             final client = _MockCrosspostingApiClient();
             final connections = Completer<List<CrosspostingConnection>>();
             when(client.getConnections).thenAnswer((_) => connections.future);
@@ -536,7 +532,7 @@ void main() {
               tester,
               goRouter: goRouter,
               additionalOverrides: [
-                crossposterApiClientProvider.overrideWithValue(client),
+                crosspostingApiClientProvider.overrideWithValue(client),
                 analyticsEventSinkProvider.overrideWithValue(sink),
               ],
             );
@@ -568,9 +564,8 @@ void main() {
           tester,
         ) async {
           final goRouter = MockGoRouter();
-          when(
-            () => goRouter.push<void>(any(), extra: any(named: 'extra')),
-          ).thenAnswer((_) async {});
+          when(() => goRouter.push<void>(any(), extra: any(named: 'extra')))
+              .thenAnswer((_) async {});
 
           final sink = _RecordingAnalyticsSink();
           final client = _MockCrosspostingApiClient();
@@ -584,7 +579,7 @@ void main() {
             additionalOverrides: [
               appOAuthSupportProvider.overrideWith((ref) async => true),
               analyticsEventSinkProvider.overrideWithValue(sink),
-              crossposterApiClientProvider.overrideWithValue(client),
+              crosspostingApiClientProvider.overrideWithValue(client),
             ],
           );
 
@@ -599,9 +594,8 @@ void main() {
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 100));
 
-          verify(
-            () => goRouter.push<void>(RoutePaths.crosspostingSettings),
-          ).called(1);
+          verify(() => goRouter.push<void>(RoutePaths.crosspostingSettings))
+              .called(1);
           final tapEvents = sink.events
               .where((event) => event.name == 'crosspost_cta_tapped')
               .toList();
@@ -616,14 +610,12 @@ void main() {
           'Crosspost after a failed connections load logs no CTA events',
           (tester) async {
             final goRouter = MockGoRouter();
-            when(
-              () => goRouter.push<void>(any(), extra: any(named: 'extra')),
-            ).thenAnswer((_) async {});
+            when(() => goRouter.push<void>(any(), extra: any(named: 'extra')))
+                .thenAnswer((_) async {});
             final sink = _RecordingAnalyticsSink();
             final client = _MockCrosspostingApiClient();
-            when(
-              client.getConnections,
-            ).thenThrow(const CrosspostingApiException('offline'));
+            when(client.getConnections)
+                .thenThrow(const CrosspostingApiException('offline'));
 
             await pumpOwnerSheet(
               tester,
@@ -631,7 +623,7 @@ void main() {
               additionalOverrides: [
                 appOAuthSupportProvider.overrideWith((ref) async => true),
                 analyticsEventSinkProvider.overrideWithValue(sink),
-                crossposterApiClientProvider.overrideWithValue(client),
+                crosspostingApiClientProvider.overrideWithValue(client),
               ],
             );
 
@@ -639,9 +631,8 @@ void main() {
             await tester.pump();
             await tester.pump(const Duration(milliseconds: 100));
 
-            verify(
-              () => goRouter.push<void>(RoutePaths.crosspostingSettings),
-            ).called(1);
+            verify(() => goRouter.push<void>(RoutePaths.crosspostingSettings))
+                .called(1);
             expect(sink.events, isEmpty);
           },
         );
@@ -665,9 +656,8 @@ void main() {
 
         setUp(() {
           l10n = lookupAppLocalizations(const Locale('en'));
-          when(
-            () => mockVideoSharingService.recentlySharedWith,
-          ).thenReturn([alice, bob]);
+          when(() => mockVideoSharingService.recentlySharedWith)
+              .thenReturn([alice, bob]);
         });
 
         // #8421: the "Share with" row is a DM send target — tapping a contact
@@ -691,9 +681,8 @@ void main() {
             ShareableUser contact, {
             bool isVanished = false,
           }) async {
-            when(
-              () => mockVideoSharingService.recentlySharedWith,
-            ).thenReturn([contact]);
+            when(() => mockVideoSharingService.recentlySharedWith)
+                .thenReturn([contact]);
 
             await tester.pumpWidget(
               testMaterialApp(
@@ -702,9 +691,8 @@ void main() {
                   videoSharingServiceProvider.overrideWith(
                     (ref) => mockVideoSharingService,
                   ),
-                  profileVanishedProvider(
-                    contact.pubkey,
-                  ).overrideWith((ref) => isVanished),
+                  profileVanishedProvider(contact.pubkey)
+                      .overrideWith((ref) => isVanished),
                 ],
                 mockAuthService: createMockAuthService(),
                 mockProfileRepository: mockProfileRepository,
@@ -720,10 +708,7 @@ void main() {
           ) async {
             await pumpWithContact(tester, vanished, isVanished: true);
 
-            expect(
-              find.text(l10n.profileDeletedAccountName),
-              findsOneWidget,
-            );
+            expect(find.text(l10n.profileDeletedAccountName), findsOneWidget);
             expect(find.text('Aeontropy'), findsNothing);
           });
 
@@ -801,9 +786,8 @@ void main() {
               '22222222222222222222222222222222';
           final hydration = Completer<Map<String, UserProfile>>();
           when(() => mockVideoSharingService.recentlySharedWith).thenReturn([]);
-          when(
-            () => mockFollowRepository.followingPubkeys,
-          ).thenReturn([unknownPubkey]);
+          when(() => mockFollowRepository.followingPubkeys)
+              .thenReturn([unknownPubkey]);
           when(
             () => mockProfileRepository.fetchBatchProfiles(
               pubkeys: [unknownPubkey],
@@ -934,10 +918,7 @@ void main() {
             await tester.pumpAndSettle();
 
             expect(find.text('Share with'), findsNothing);
-            expect(
-              find.text(l10n.sharePostSharedWithCount(2)),
-              findsOneWidget,
-            );
+            expect(find.text(l10n.sharePostSharedWithCount(2)), findsOneWidget);
             expect(find.text(l10n.dmReelReplyViewChat), findsNothing);
           },
         );
@@ -1142,9 +1123,7 @@ void main() {
             },
           );
 
-          testWidgets('counts recipients who share an outcome', (
-            tester,
-          ) async {
+          testWidgets('counts recipients who share an outcome', (tester) async {
             stubSend({
               alice.pubkey: ShareResult.failure('refused'),
               bob.pubkey: ShareResult.failure('refused'),
@@ -1152,10 +1131,7 @@ void main() {
 
             await send(tester, ['Alice', 'Bob']);
 
-            expect(
-              find.text(l10n.shareCouldNotSendToCount(2)),
-              findsOneWidget,
-            );
+            expect(find.text(l10n.shareCouldNotSendToCount(2)), findsOneWidget);
           });
 
           testWidgets(
@@ -1231,9 +1207,8 @@ void main() {
             );
 
             setUp(() {
-              when(
-                () => mockVideoSharingService.recentlySharedWith,
-              ).thenReturn([alice, bob, carol]);
+              when(() => mockVideoSharingService.recentlySharedWith)
+                  .thenReturn([alice, bob, carol]);
             });
 
             testWidgets(

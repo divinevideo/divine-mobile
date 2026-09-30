@@ -13,7 +13,6 @@
 packages/divine_video_player/test/src/linux_video_player_backend_test.dart	1
 test/blocs/saved_sounds/saved_sounds_bloc_test.dart	9
 test/providers/analytics_providers_test.dart	6
-test/providers/crossposting_providers_test.dart	1
 test/providers/deep_link_provider_test.dart	1
 test/providers/dm_send_policy_test.dart	6
 test/providers/og_viner_cache_provider_test.dart	2

@@ -4,23 +4,72 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:nostr_sdk/event.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/crossposting_api_client.dart';
+import 'package:openvine/services/nip98_auth_service.dart';
 
 class _MockHttpClient extends Mock implements http.Client {}
+
+class _MockAuthService extends Mock implements AuthService {}
+
+const _ownerPubkey =
+    'aabbccdd0123456789abcdef0123456789abcdef0123456789abcdef01234567';
+const _otherPubkey =
+    '1122334455667788990011223344556677889900112233445566778899001122';
+
+/// Decodes an `Authorization: Nostr <base64 event>` header into the event
+/// JSON, failing the test for any other scheme.
+Map<String, dynamic> _decodeNostrHeader(String? header) {
+  expect(header, isNotNull);
+  expect(header, startsWith('Nostr '));
+  expect(header, isNot(contains('Bearer')));
+  final encoded = header!.substring('Nostr '.length);
+  return jsonDecode(utf8.decode(base64.decode(encoded)))
+      as Map<String, dynamic>;
+}
+
+String? _tag(Map<String, dynamic> event, String name) {
+  for (final tag in (event['tags'] as List).cast<List<dynamic>>()) {
+    if (tag.isNotEmpty && tag.first == name) return tag[1] as String;
+  }
+  return null;
+}
+
+/// Asserts [headers] carry a NIP-98 event signed for exactly [uri], [method]
+/// and — when non-null — the exact [body] string that was sent.
+void _expectNip98(
+  Map<String, String> headers, {
+  required Uri uri,
+  required String method,
+  String? body,
+}) {
+  final event = _decodeNostrHeader(headers['Authorization']);
+  expect(event['kind'], equals(27235));
+  expect(event['pubkey'], equals(_ownerPubkey));
+  expect(_tag(event, 'u'), equals(uri.toString()));
+  expect(_tag(event, 'method'), equals(method));
+  expect(
+    _tag(event, 'payload'),
+    body == null
+        ? isNull
+        : equals(sha256.convert(utf8.encode(body)).toString()),
+  );
+}
 
 void main() {
   group(CrosspostingApiClient, () {
     late _MockHttpClient httpClient;
+    late _MockAuthService authService;
+    late Nip98AuthService nip98AuthService;
     late CrosspostingApiClient client;
-    late String? currentAccessToken;
-    late Object? accessTokenError;
-
-    const accessToken = 'session-access-token';
+    late String signerPubkey;
+    late bool signerReady;
 
     setUpAll(() {
       registerFallbackValue(Uri());
@@ -28,14 +77,34 @@ void main() {
 
     setUp(() {
       httpClient = _MockHttpClient();
-      currentAccessToken = accessToken;
-      accessTokenError = null;
+      authService = _MockAuthService();
+      signerPubkey = _ownerPubkey;
+      signerReady = true;
+      when(() => authService.isAuthenticated).thenAnswer((_) => signerReady);
+      when(() => authService.currentPublicKeyHex).thenReturn(_ownerPubkey);
+      when(
+        () => authService.createAndSignEvent(
+          kind: any(named: 'kind'),
+          content: any(named: 'content'),
+          tags: any(named: 'tags'),
+        ),
+      ).thenAnswer((invocation) async {
+        final tags = invocation.namedArguments[#tags] as List<List<String>>;
+        return Event.fromJson({
+          'id': 'ab' * 32,
+          'kind': invocation.namedArguments[#kind] as int,
+          'pubkey': signerPubkey,
+          'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          'content': '',
+          'tags': tags,
+          'sig': 'cd' * 64,
+        });
+      });
+      nip98AuthService = Nip98AuthService(authService: authService);
+      addTearDown(nip98AuthService.dispose);
       client = CrosspostingApiClient(
-        accessTokenReader: () async {
-          final error = accessTokenError;
-          if (error != null) throw error;
-          return currentAccessToken;
-        },
+        nip98AuthService: nip98AuthService,
+        ownerPubkey: _ownerPubkey,
         httpClient: httpClient,
       );
     });
@@ -47,23 +116,33 @@ void main() {
     }
 
     group('getPlatforms', () {
-      test('sends the Keycast bearer token and JSON content type', () async {
-        stubGet(jsonEncode({'platforms': <Object>[]}));
+      test(
+        'signs the full URL with NIP-98 and sends JSON content type',
+        () async {
+          stubGet(jsonEncode({'platforms': <Object>[]}));
 
-        await client.getPlatforms();
+          await client.getPlatforms();
 
-        final captured = verify(
-          () => httpClient.get(
-            captureAny(),
-            headers: captureAny(named: 'headers'),
-          ),
-        ).captured;
-        final uri = captured[0] as Uri;
-        final headers = captured[1] as Map<String, String>;
-        expect(uri.path, equals('/platforms'));
-        expect(headers['Authorization'], equals('Bearer $accessToken'));
-        expect(headers['Content-Type'], equals('application/json'));
-      });
+          final captured = verify(
+            () => httpClient.get(
+              captureAny(),
+              headers: captureAny(named: 'headers'),
+            ),
+          ).captured;
+          final uri = captured[0] as Uri;
+          final headers = captured[1] as Map<String, String>;
+          expect(uri.path, equals('/platforms'));
+          _expectNip98(headers, uri: uri, method: 'GET');
+          final event = _decodeNostrHeader(headers['Authorization']);
+          expect(
+            _tag(event, 'u'),
+            equals(
+              '${CrosspostingApiClient.defaultBaseUrl}/platforms?format=json',
+            ),
+          );
+          expect(headers['Content-Type'], equals('application/json'));
+        },
+      );
 
       test('uses the production HTTPS origin by default', () async {
         stubGet(jsonEncode({'platforms': <Object>[]}));
@@ -221,7 +300,7 @@ void main() {
     });
 
     group('getConnections', () {
-      test('sends bearer token and parses connections', () async {
+      test('signs with NIP-98 and parses connections', () async {
         stubGet(
           jsonEncode({
             'connections': [
@@ -249,7 +328,7 @@ void main() {
         final uri = captured[0] as Uri;
         final headers = captured[1] as Map<String, String>;
         expect(uri.path, equals('/connections'));
-        expect(headers['Authorization'], equals('Bearer $accessToken'));
+        _expectNip98(headers, uri: uri, method: 'GET');
         expect(headers['Content-Type'], equals('application/json'));
 
         expect(connections, hasLength(2));
@@ -370,11 +449,11 @@ void main() {
         );
       });
 
-      test('throws unauthorized when there is no session', () async {
-        currentAccessToken = null;
+      test('throws unauthorized when the signer cannot sign', () async {
+        signerReady = false;
 
-        expect(
-          () => client.getConnections(),
+        await expectLater(
+          client.getConnections(),
           throwsA(
             isA<CrosspostingApiException>().having(
               (e) => e.kind,
@@ -388,32 +467,61 @@ void main() {
         );
       });
 
-      test(
-        'translates token refresh network failures to unauthorized',
-        () async {
-          accessTokenError = OAuthNetworkException('offline');
+      test('throws unauthorized when no account is bound', () async {
+        final unbound = CrosspostingApiClient(
+          nip98AuthService: nip98AuthService,
+          ownerPubkey: null,
+          httpClient: httpClient,
+        );
 
-          expect(
-            () => client.getConnections(),
-            throwsA(
-              isA<CrosspostingApiException>()
-                  .having(
-                    (e) => e.kind,
-                    'kind',
-                    CrosspostingApiErrorKind.unauthorized,
-                  )
-                  .having(
-                    (e) => e.cause,
-                    'cause',
-                    isA<OAuthNetworkException>(),
-                  ),
+        await expectLater(
+          unbound.getConnections(),
+          throwsA(
+            isA<CrosspostingApiException>().having(
+              (e) => e.statusCode,
+              'statusCode',
+              401,
             ),
-          );
-          verifyNever(
-            () => httpClient.get(any(), headers: any(named: 'headers')),
-          );
-        },
-      );
+          ),
+        );
+        verifyNever(
+          () => httpClient.get(any(), headers: any(named: 'headers')),
+        );
+      });
+
+      test('refuses to send a request signed by another account', () async {
+        // Models an account switch between client construction and signing.
+        signerPubkey = _otherPubkey;
+
+        await expectLater(
+          client.getConnections(),
+          throwsA(
+            isA<CrosspostingApiException>().having(
+              (e) => e.kind,
+              'kind',
+              CrosspostingApiErrorKind.unauthorized,
+            ),
+          ),
+        );
+        verifyNever(
+          () => httpClient.get(any(), headers: any(named: 'headers')),
+        );
+      });
+
+      test('signs a fresh event for every request', () async {
+        stubGet(jsonEncode({'connections': <Object>[]}));
+
+        await client.getConnections();
+        await client.getConnections();
+
+        verify(
+          () => authService.createAndSignEvent(
+            kind: 27235,
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).called(2);
+      });
 
       test('rejects a malformed connections collection', () async {
         stubGet(jsonEncode({'connections': 'not-a-list'}));
@@ -504,7 +612,12 @@ void main() {
           final uri = captured[0] as Uri;
           expect(uri.path, equals('/connections/instagram/start'));
           final headers = captured[1] as Map<String, String>;
-          expect(headers['Authorization'], equals('Bearer $accessToken'));
+          _expectNip98(
+            headers,
+            uri: uri,
+            method: 'POST',
+            body: captured[2] as String,
+          );
           expect(headers['Content-Type'], equals('application/json'));
           final body = jsonDecode(captured[2] as String);
           expect(body, equals(<String, dynamic>{'returnUrl': returnUrl}));
@@ -686,7 +799,7 @@ void main() {
         final uri = captured[0] as Uri;
         final headers = captured[1] as Map<String, String>;
         expect(uri.path, equals('/connections/instagram/conn-1'));
-        expect(headers['Authorization'], equals('Bearer $accessToken'));
+        _expectNip98(headers, uri: uri, method: 'DELETE');
         expect(headers['Content-Type'], equals('application/json'));
       });
 
@@ -756,7 +869,7 @@ void main() {
         ).captured;
         expect((captured[0] as Uri).path, equals('/preferences'));
         final headers = captured[1] as Map<String, String>;
-        expect(headers['Authorization'], equals('Bearer $accessToken'));
+        _expectNip98(headers, uri: captured[0] as Uri, method: 'GET');
         expect(headers['Content-Type'], equals('application/json'));
         expect(preferences, hasLength(2));
         expect(preferences.first.mode, CrosspostingMode.automatic);
@@ -862,7 +975,12 @@ void main() {
         ).captured;
         expect((captured[0] as Uri).path, equals('/preferences/x'));
         final headers = captured[1] as Map<String, String>;
-        expect(headers['Authorization'], equals('Bearer $accessToken'));
+        _expectNip98(
+          headers,
+          uri: captured[0] as Uri,
+          method: 'PUT',
+          body: captured[2] as String,
+        );
         expect(headers['Content-Type'], equals('application/json'));
         final body = jsonDecode(captured[2] as String) as Map<String, dynamic>;
         expect(body['mode'], equals('manual'));
@@ -1187,13 +1305,19 @@ void main() {
           final captured = verify(
             () => httpClient.post(
               captureAny(),
-              headers: any(named: 'headers'),
+              headers: captureAny(named: 'headers'),
               body: captureAny(named: 'body'),
             ),
           ).captured;
           expect(
             (captured.first as Uri).path,
             equals('/videos/$eventId/crossposts'),
+          );
+          _expectNip98(
+            captured[1] as Map<String, String>,
+            uri: captured.first as Uri,
+            method: 'POST',
+            body: captured.last as String,
           );
           expect(
             jsonDecode(captured.last as String),

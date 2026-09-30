@@ -369,59 +369,6 @@ final class BlueskyCrosspostRepositoryProvider
 String _$blueskyCrosspostRepositoryHash() =>
     r'b628946204b48356106b28c09485a54378b6aaea';
 
-/// Crossposter service client for manual per-video crossposting
-
-@ProviderFor(crossposterApiClient)
-final crossposterApiClientProvider = CrossposterApiClientProvider._();
-
-/// Crossposter service client for manual per-video crossposting
-
-final class CrossposterApiClientProvider
-    extends
-        $FunctionalProvider<
-          CrosspostingApiClient,
-          CrosspostingApiClient,
-          CrosspostingApiClient
-        >
-    with $Provider<CrosspostingApiClient> {
-  /// Crossposter service client for manual per-video crossposting
-  CrossposterApiClientProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'crossposterApiClientProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$crossposterApiClientHash();
-
-  @$internal
-  @override
-  $ProviderElement<CrosspostingApiClient> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
-
-  @override
-  CrosspostingApiClient create(Ref ref) {
-    return crossposterApiClient(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(CrosspostingApiClient value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<CrosspostingApiClient>(value),
-    );
-  }
-}
-
-String _$crossposterApiClientHash() =>
-    r'165cb3feea5400f51e48f9ce88a9049d817c78ff';
-
 /// Audio playback service for sound playback during recording and preview
 ///
 /// Used by the camera screen for lip-sync recording. Handles audio
