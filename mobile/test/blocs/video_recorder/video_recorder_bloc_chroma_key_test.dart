@@ -327,6 +327,54 @@ void main() {
         expect(flash, DivineFlashMode.auto);
       });
 
+      test(
+        'restores the flash picked while the still was out, not auto',
+        () async {
+          final still = stubStill();
+          final captured = Completer<PhotoCaptureResult?>();
+          var flash = DivineFlashMode.auto;
+          when(() => cameraService.setFlashMode(any())).thenAnswer((
+            invocation,
+          ) {
+            flash = invocation.positionalArguments.single as DivineFlashMode;
+            return Future.value(true);
+          });
+          when(
+            () => cameraService.capturePhoto(
+              outputDirectory: any(named: 'outputDirectory'),
+            ),
+          ).thenAnswer((_) => captured.future);
+          final bloc = buildBloc()
+            ..emit(chromaKeyState.copyWith(flashMode: DivineFlashMode.auto));
+          addTearDown(bloc.close);
+
+          bloc.add(const VideoRecorderChromaKeyMeasureRequested());
+          await pumpEventQueue();
+          expect(flash, DivineFlashMode.off);
+
+          // Toggles run concurrently, so each one lands before the next.
+          bloc.add(const VideoRecorderFlashToggled());
+          await pumpEventQueue();
+          bloc.add(const VideoRecorderFlashToggled());
+          await pumpEventQueue();
+          expect(bloc.state.flashMode, DivineFlashMode.torch);
+
+          final landed = bloc.stream.firstWhere(
+            (state) =>
+                state.chromaKeyMeasurementStatus !=
+                ChromaKeyMeasurementStatus.detecting,
+          );
+          captured.complete(PhotoCaptureResult(filePath: still.path));
+          await landed;
+
+          expect(
+            flash,
+            DivineFlashMode.torch,
+            reason: 'the camera must end on the flash the recorder shows',
+          );
+        },
+      );
+
       test('keeps a torch on for the still', () async {
         stubStill();
         final bloc = buildBloc()
