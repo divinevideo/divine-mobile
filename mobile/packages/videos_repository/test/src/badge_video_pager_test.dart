@@ -24,54 +24,56 @@ VideoStats _video(int id, int createdAt) => VideoStats(
 void main() {
   setUpAll(() => registerFallbackValue(<String>[]));
 
-  test(
-    'merges over 200 authors with stable pagination and deduplication',
-    () async {
-      final client = _Client();
-      final calls = <(int, int)>[];
-      when(
-        () => client.getVideosByAuthors(
-          authors: any(named: 'authors'),
-          limit: any(named: 'limit'),
-          offset: any(named: 'offset'),
-          before: any(named: 'before'),
-        ),
-      ).thenAnswer((invocation) async {
-        final authors = invocation.namedArguments[#authors]! as List<String>;
-        final offset = invocation.namedArguments[#offset]! as int;
-        calls.add((authors.length, offset));
-        final videos = switch ((authors.length, offset)) {
-          (200, 0) => [_video(1, 300)],
-          (200, 1) => [_video(3, 100)],
-          (5, 0) => [_video(1, 300), _video(2, 200)],
-          _ => <VideoStats>[],
-        };
-        return RecentVideosResponse(
-          videos: videos,
-          serverItemCount: videos.length,
-          hasMore: authors.length == 200 && offset == 0,
+  group('BadgeVideoPager', () {
+    test(
+      'merges over 200 authors with stable pagination and deduplication',
+      () async {
+        final client = _Client();
+        final calls = <(int, int)>[];
+        when(
+          () => client.getVideosByAuthors(
+            authors: any(named: 'authors'),
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer((invocation) async {
+          final authors = invocation.namedArguments[#authors]! as List<String>;
+          final offset = invocation.namedArguments[#offset]! as int;
+          calls.add((authors.length, offset));
+          final videos = switch ((authors.length, offset)) {
+            (200, 0) => [_video(1, 300)],
+            (200, 1) => [_video(3, 100)],
+            (5, 0) => [_video(1, 300), _video(2, 200)],
+            _ => <VideoStats>[],
+          };
+          return RecentVideosResponse(
+            videos: videos,
+            serverItemCount: videos.length,
+            hasMore: authors.length == 200 && offset == 0,
+          );
+        });
+        final pager = BadgeVideoPager(
+          client: client,
+          authors: [
+            for (var i = 0; i < 205; i++) i.toRadixString(16).padLeft(64, '0'),
+          ],
+          transform: (stats) =>
+              stats.map((video) => video.toVideoEvent()).toList(),
+          before: 400,
         );
-      });
-      final pager = BadgeVideoPager(
-        client: client,
-        authors: [
-          for (var i = 0; i < 205; i++) i.toRadixString(16).padLeft(64, '0'),
-        ],
-        transform: (stats) =>
-            stats.map((video) => video.toVideoEvent()).toList(),
-        before: 400,
-      );
 
-      final first = await pager.loadMore(limit: 2);
-      final second = await pager.loadMore(limit: 1);
+        final first = await pager.loadMore(limit: 2);
+        final second = await pager.loadMore(limit: 1);
 
-      expect(first.map((video) => video.id), [
-        _video(1, 300).id,
-        _video(2, 200).id,
-      ]);
-      expect(second.map((video) => video.id), [_video(3, 100).id]);
-      expect(calls, containsAll([(200, 0), (5, 0), (200, 1)]));
-      expect(pager.hasMore, isFalse);
-    },
-  );
+        expect(first.map((video) => video.id), [
+          _video(1, 300).id,
+          _video(2, 200).id,
+        ]);
+        expect(second.map((video) => video.id), [_video(3, 100).id]);
+        expect(calls, containsAll([(200, 0), (5, 0), (200, 1)]));
+        expect(pager.hasMore, isFalse);
+      },
+    );
+  });
 }

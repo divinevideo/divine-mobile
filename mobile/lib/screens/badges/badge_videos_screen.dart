@@ -1,5 +1,7 @@
 // ABOUTME: Paginated videos by every currently accepted holder of one badge.
 
+import 'dart:async';
+
 import 'package:badge_repository/badge_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
@@ -49,7 +51,7 @@ class _BadgeVideosScreenState extends ConsumerState<BadgeVideosScreen> {
   @override
   void initState() {
     super.initState();
-    Future<void>.microtask(_reload);
+    unawaited(Future<void>.microtask(_reload));
   }
 
   Future<void> _reload() async {
@@ -109,9 +111,9 @@ class _BadgeVideosScreenState extends ConsumerState<BadgeVideosScreen> {
       body: switch ((_loading, _failed)) {
         (true, _) => const Center(child: BrandedLoadingIndicator(size: 60)),
         (_, true) => Center(
-          child: TextButton(
+          child: DivineButton(
             onPressed: _reload,
-            child: Text(context.l10n.feedFailedToLoadVideos),
+            label: context.l10n.feedFailedToLoadVideos,
           ),
         ),
         _ => ComposableVideoGrid(
@@ -124,15 +126,17 @@ class _BadgeVideosScreenState extends ConsumerState<BadgeVideosScreen> {
           emptyBuilder: () => Center(
             child: Text(context.l10n.exploreNoVideosAvailable),
           ),
-          onVideoTap: (videos, index) => context.push(
-            PooledFullscreenVideoFeedScreen.pathForVideoId(videos[index].id),
-            extra: PooledFullscreenVideoFeedArgs(
-              source: VideoListViewSource(videos),
-              feedRepository: ref.read(feedRepositoryProvider),
-              initialIndex: index,
-              initialVideoId: videos[index].id,
-              trafficSource: ViewTrafficSource.discoveryBadges,
-              sourceDetail: widget.coordinate.value,
+          onVideoTap: (videos, index) => unawaited(
+            context.push(
+              PooledFullscreenVideoFeedScreen.pathForVideoId(videos[index].id),
+              extra: PooledFullscreenVideoFeedArgs(
+                source: VideoListViewSource(videos),
+                feedRepository: ref.read(feedRepositoryProvider),
+                initialIndex: index,
+                initialVideoId: videos[index].id,
+                trafficSource: ViewTrafficSource.discoveryBadges,
+                sourceDetail: widget.coordinate.value,
+              ),
             ),
           ),
         ),
