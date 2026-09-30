@@ -55,6 +55,7 @@ void main() {
       CapturedChromaKeysBakedFn? onCapturedChromaKeysBaked,
       ExtractPosterFn? extractPoster,
       MergeClipsFn? mergeClips,
+      FlattenClipForLibraryFn? flattenClipForLibrary,
     }) {
       final bloc = ClipEditorBloc(
         onFinalClipInvalidated: onFinalClipInvalidated ?? () {},
@@ -67,6 +68,7 @@ void main() {
             extractPoster ??
             ({required videoPath, required timestamp}) async => null,
         mergeClips: mergeClips,
+        flattenClipForLibrary: flattenClipForLibrary,
       );
       addTearDown(bloc.close);
       return bloc..add(ClipEditorInitialized(clips));
@@ -394,6 +396,51 @@ void main() {
 
         expect(merged?.first.video?.file?.path, '/documents/a_keyed.mp4');
         expect(merged?.last.video?.file?.path, '/documents/b.mp4');
+      },
+    );
+
+    test(
+      'saves the keyed version of a take still waiting on its key',
+      () async {
+        DivineVideoClip? flattened;
+        final bloc = seeded(
+          [_clip('a', captureChromaKey: _recordedKey)],
+          bake: _keyed,
+          flattenClipForLibrary:
+              ({required clip, required renderId, overlays}) async {
+                flattened = clip;
+                return null;
+              },
+        );
+        await pumpEventQueue();
+
+        bloc.add(const ClipEditorSaveClipToLibraryRequested(clipId: 'a'));
+        await pumpEventQueue();
+
+        expect(flattened?.video?.file?.path, '/documents/a_keyed.mp4');
+      },
+    );
+
+    test(
+      'saves nothing when the key of a waiting take fails to bake',
+      () async {
+        var flattened = false;
+        final bloc = seeded(
+          [_clip('a', captureChromaKey: _recordedKey)],
+          bake: (_) async => throw StateError('bake failed'),
+          flattenClipForLibrary:
+              ({required clip, required renderId, overlays}) async {
+                flattened = true;
+                return null;
+              },
+        );
+        await pumpEventQueue();
+
+        bloc.add(const ClipEditorSaveClipToLibraryRequested(clipId: 'a'));
+        await pumpEventQueue();
+
+        expect(flattened, isFalse);
+        expect(bloc.state.lastClipLibrarySave, isA<ClipLibrarySaveFailure>());
       },
     );
   });
