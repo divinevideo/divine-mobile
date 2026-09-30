@@ -1392,7 +1392,7 @@ void main() {
           ).called(1);
         });
 
-        test('uses rounded loops when unified views are unavailable', () async {
+        test('does not substitute loops for a real zero view count', () async {
           when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
           when(
             () => mockProfileStatsDao.getStatsRaw(testPubkey),
@@ -1422,7 +1422,7 @@ void main() {
               followingCount: any(named: 'followingCount'),
               videoCount: any(named: 'videoCount'),
               totalLikes: any(named: 'totalLikes'),
-              totalViews: 13,
+              totalViews: 0,
             ),
           ).called(1);
         });
@@ -1528,38 +1528,40 @@ void main() {
             verifyCachedTotal(99);
           });
 
-          test('an outage zero does not overwrite a known total', () async {
-            // With ClickHouse down, funnelcake still answers 200 with
-            // `total_views: 0` and cannot compute `archived_loops`.
-            stubCachedTotal(1000);
-            stubEngagement(const {
-              'total_views': 0,
-              'total_loops': 0,
-              'archived_loops': null,
-            });
+          test(
+            'a failed view lookup does not overwrite a known total',
+            () async {
+              // Funnelcake reports a failed view lookup as null. The archive
+              // lookup can fail independently too.
+              stubCachedTotal(1000);
+              stubEngagement(const {
+                'total_views': null,
+                'total_loops': 0,
+                'archived_loops': null,
+              });
 
-            await repoWithFunnelcake.fetchFreshProfile(pubkey: testPubkey);
+              await repoWithFunnelcake.fetchFreshProfile(pubkey: testPubkey);
 
-            verifyCachedTotalKept();
-          });
+              verifyCachedTotalKept();
+            },
+          );
 
-          test('a zero with archived loops reported as zero does not '
-              'overwrite a known total', () async {
+          test('a real zero total replaces a known total', () async {
             stubCachedTotal(1000);
             stubEngagement(const {'total_views': 0, 'archived_loops': 0});
 
             await repoWithFunnelcake.fetchFreshProfile(pubkey: testPubkey);
 
-            verifyCachedTotalKept();
+            verifyCachedTotal(0);
           });
 
           test('an archive-only response after a failed view lookup does '
               'not lower a known total', () async {
-            // Funnelcake reports a failed view lookup as `total_views: 0`
+            // Funnelcake reports a failed view lookup as `total_views: null`
             // while its archive lookup can still succeed.
             stubCachedTotal(501000);
             stubEngagement(const {
-              'total_views': 0,
+              'total_views': null,
               'total_loops': 0,
               'archived_loops': 1000,
             });
@@ -1575,7 +1577,7 @@ void main() {
             // queries, so `total_loops` can survive a failed view lookup.
             stubCachedTotal(501000);
             stubEngagement(const {
-              'total_views': 0,
+              'total_views': null,
               'total_loops': 10,
               'archived_loops': 1000,
             });
@@ -1585,10 +1587,10 @@ void main() {
             verifyCachedTotalKept();
           });
 
-          test('an archive-only response still raises a smaller cached '
+          test('a failed view lookup with an archive raises a smaller cached '
               'total', () async {
             stubCachedTotal(50);
-            stubEngagement(const {'total_views': 0, 'archived_loops': 1000});
+            stubEngagement(const {'total_views': null, 'archived_loops': 1000});
 
             await repoWithFunnelcake.fetchFreshProfile(pubkey: testPubkey);
 

@@ -16,8 +16,9 @@
 > **Author lifetime total, 2026-09-29:** that total is archived Vine loops plus
 > Divine-era views, summed by `ProfileRepository` from funnelcake's
 > `engagement.archived_loops` and `engagement.total_views`. A response missing
-> either part (no `archived_loops`, or zero Divine-era views) can raise the
-> cached total but not lower it, so until funnelcake reports `archived_loops`
+> either part (`archived_loops: null` or `total_views: null`) can raise the
+> cached total but not lower it. A reported zero is valid data. Until
+> funnelcake reports `archived_loops`
 > the total is Divine-era views unless a larger total, such as a classic Vine
 > seed's, is still cached.
 

@@ -863,30 +863,26 @@ class ProfileRepository implements ProfileReader {
   /// Returns the creator's lifetime loop total to cache from [engagement],
   /// or `null` to keep whatever total the row already holds.
   ///
-  /// The total is archived Vine loops plus Divine-era views, the sum
-  /// `VideoEvent.totalLoops` makes per video; when funnelcake reports no
-  /// views, its watch-duration loops stand in for them. Funnelcake reports
-  /// the archive as `engagement.archived_loops`; while it does not (an older
-  /// backend, or one that could not compute it), the response carries
-  /// Divine-era views only, and is therefore not allowed to lower a cached
-  /// total, such as the archived total the classic Vine seed writes into this
-  /// row while that row stays cached.
+  /// The total is archived Vine loops plus Divine-era views. Funnelcake
+  /// reports the archive as `engagement.archived_loops`; while it does not
+  /// (an older backend, or one that could not compute it), the response
+  /// carries Divine-era views only, and is therefore not allowed to lower a
+  /// cached total, such as the archived total the classic Vine seed writes
+  /// into this row while that row stays cached.
   ///
-  /// A zero `total_views` is just as incomplete: funnelcake answers 200 with
-  /// `total_views: 0` when its view lookup fails, even when the separate
-  /// archive and watch-duration loop lookups succeeded. An incomplete response
-  /// may raise a cached total but never lower it.
+  /// A null `total_views` means funnelcake could not complete the view lookup.
+  /// A reported zero is valid data. An incomplete response may raise a cached
+  /// total but never lower it.
   Future<int?> _lifetimeTotalToCache(
     String pubkey,
     ProfileStatsDao dao,
     ProfileEngagementData engagement,
   ) async {
-    final divineViews = engagement.totalViews > 0
-        ? engagement.totalViews
-        : engagement.totalLoops.round();
+    final totalViews = engagement.totalViews;
+    final divineViews = totalViews ?? 0;
     final archivedLoops = engagement.archivedLoops;
     final total = (archivedLoops ?? 0) + divineViews;
-    final isIncomplete = archivedLoops == null || engagement.totalViews == 0;
+    final isIncomplete = archivedLoops == null || totalViews == null;
     if (!isIncomplete) return total;
 
     final cachedTotal = (await dao.getStatsRaw(pubkey))?.totalViews ?? 0;

@@ -222,7 +222,7 @@ class ProfileEngagementData {
     return ProfileEngagementData(
       totalReactions: parseIntSafe(json['total_reactions']),
       totalLoops: parseDoubleSafe(json['total_loops']),
-      totalViews: parseIntSafe(json['total_views']),
+      totalViews: tryParseEngagementCount(json['total_views']),
       archivedLoops: tryParseEngagementCount(json['archived_loops']),
     );
   }
@@ -231,7 +231,9 @@ class ProfileEngagementData {
   final double totalLoops;
 
   /// Divine-era views across the creator's videos.
-  final int totalViews;
+  ///
+  /// `null` means the view lookup failed. A reported `0` is a real zero.
+  final int? totalViews;
 
   /// Sum of the archived Vine loop counts across the creator's videos.
   ///

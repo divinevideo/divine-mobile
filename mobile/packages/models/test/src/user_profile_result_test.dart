@@ -181,6 +181,22 @@ void main() {
       expect(data.totalViews, equals(200));
     });
 
+    test('preserves a failed views lookup as null', () {
+      final data = ProfileEngagementData.fromJson(const {
+        'total_views': null,
+      });
+
+      expect(data.totalViews, isNull);
+    });
+
+    test('preserves a successful zero views lookup as zero', () {
+      final data = ProfileEngagementData.fromJson(const {
+        'total_views': 0,
+      });
+
+      expect(data.totalViews, 0);
+    });
+
     group('archivedLoops', () {
       test('parses the archived Vine loop sum', () {
         final data = ProfileEngagementData.fromJson(const {
