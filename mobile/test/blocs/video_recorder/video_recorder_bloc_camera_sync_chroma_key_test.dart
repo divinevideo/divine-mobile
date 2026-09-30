@@ -93,17 +93,12 @@ void main() {
       when(() => camera.initializationError).thenReturn(null);
       when(() => camera.dispose()).thenAnswer((_) async {});
       when(() => camera.setFlashMode(any())).thenAnswer((_) async => true);
-      // What CameraMobileService does: a flip reports a forced rebuild, a
-      // stabilization change a plain update.
+      // What CameraMobileService does: a flip reports a forced rebuild.
       when(() => camera.switchCamera()).thenAnswer((_) async {
         lens = lens.isFrontFacing
             ? DivineCameraLens.back
             : DivineCameraLens.front;
         reportCameraUpdate(forceCameraRebuild: true);
-        return true;
-      });
-      when(() => camera.setVideoStabilizationMode(any())).thenAnswer((_) async {
-        reportCameraUpdate();
         return true;
       });
       when(() => camera.setOnRemoteRecordTrigger(any())).thenReturn(null);
