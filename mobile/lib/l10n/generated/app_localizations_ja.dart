@@ -294,6 +294,16 @@ class AppLocalizationsJa extends AppLocalizations {
       'クラシックな正方形フォーマットでフィードを保つ';
 
   @override
+  String videoOverlayTotalLoops(String count) {
+    return '合計$count';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String count) {
+    return 'この動画$count回ループ';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => '合計ループ数を表示';
 
   @override

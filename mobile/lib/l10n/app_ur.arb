@@ -139,6 +139,8 @@
   "appearanceSettingsSystem": "سسٹم ڈیفالٹ",
   "appearanceSettingsLight": "لائٹ",
   "appearanceSettingsDark": "ڈارک",
+  "videoOverlayTotalLoops": "کل {count}",
+  "videoOverlayVideoLoops": "ویڈیو کے {count} لوپس",
   "generalSettingsClosedCaptions": "کلوزڈ کیپشنز",
   "generalSettingsClosedCaptionsSubtitle": "جب ویڈیوز میں کیپشن شامل ہوں تو دکھائیں",
   "generalSettingsVideoShapeSquareOnly": "صرف چوکور ویڈیوز",

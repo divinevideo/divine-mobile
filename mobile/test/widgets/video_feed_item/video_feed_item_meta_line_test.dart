@@ -1,9 +1,9 @@
-// ABOUTME: Widget tests for the video card's author lifetime-loops meta line.
-// ABOUTME: Pins the author total (not the video's), the chits, the author node.
+// ABOUTME: Widget tests for the viewer-selected video metadata line.
+// ABOUTME: Pins independent creator/video/date settings and the author node.
 
 import 'dart:async';
 
-import 'package:flutter/semantics.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,6 +17,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/og_diviner_eligibility_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/widgets/og_beta_badge.dart';
 import 'package:openvine/widgets/special_profile_checkmark.dart';
@@ -44,8 +45,10 @@ AppLocalizations _l10n(WidgetTester tester) =>
 VideoEvent _video({
   String pubkey = _authorPubkey,
   Map<String, String> rawTags = const {},
+  int? createdAt,
+  String? publishedAt,
 }) {
-  final at = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+  final at = createdAt ?? DateTime.now().millisecondsSinceEpoch ~/ 1000;
   return VideoEvent(
     id: 'video-card-meta-line-test-0123456789abcdef0123456789abcdef0123',
     pubkey: pubkey,
@@ -53,6 +56,7 @@ VideoEvent _video({
     content: 'caption',
     timestamp: DateTime.fromMillisecondsSinceEpoch(at * 1000, isUtc: true),
     rawTags: rawTags,
+    publishedAt: publishedAt,
   );
 }
 
@@ -68,12 +72,10 @@ void main() {
     mockRepostsRepository = _MockRepostsRepository();
     mockAuthService = _MockAuthService();
 
-    when(
-      () => mockInteractionsBloc.stream,
-    ).thenAnswer((_) => const Stream.empty());
-    when(
-      () => mockInteractionsBloc.state,
-    ).thenReturn(const VideoInteractionsState());
+    when(() => mockInteractionsBloc.stream)
+        .thenAnswer((_) => const Stream.empty());
+    when(() => mockInteractionsBloc.state)
+        .thenReturn(const VideoInteractionsState());
     when(
       () => mockRepostsRepository.fetchEventReposters(
         eventId: any(named: 'eventId'),
@@ -82,9 +84,8 @@ void main() {
     ).thenAnswer((_) async => const <String>[]);
     when(() => mockAuthService.currentPublicKeyHex).thenReturn(_strangerPubkey);
     when(() => mockAuthService.authState).thenReturn(AuthState.authenticated);
-    when(
-      () => mockAuthService.authStateStream,
-    ).thenAnswer((_) => authStateController.stream);
+    when(() => mockAuthService.authStateStream)
+        .thenAnswer((_) => authStateController.stream);
   });
 
   tearDown(() => authStateController.close());
@@ -147,11 +148,231 @@ void main() {
     }
   }
 
-  String loopLine(WidgetTester tester, int count) => _l10n(
-    tester,
-  ).videoFeedLoopCountLine(StringUtils.formatCompactNumber(count), count);
+  String loopLine(WidgetTester tester, int count) =>
+      _l10n(tester).videoFeedLoopCountLine(
+        StringUtils.formatCompactNumber(count),
+        count,
+      );
 
   group('video card meta line', () {
+    testWidgets('shows all enabled details on one line under the username', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(393, 852);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: true,
+        StatsVisibilityPreferences.showVideoLoopsKey: true,
+        StatsVisibilityPreferences.showPublishedDateKey: true,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await pump(
+        tester,
+        video: _video(rawTags: {'views': '50000'}, createdAt: 1735689600),
+        authorTotalLoops: 23200000,
+        prefs: prefs,
+      );
+
+      final line = tester.widget<Text>(
+        find.byKey(const Key('video_meta_line')),
+      );
+      final content = line.data!;
+      expect(content, contains('total'));
+      expect(content, contains('video'));
+      expect(content, contains('1/1/2025'));
+      expect(content, contains(' · '));
+      expect(
+        content.indexOf('total'),
+        lessThan(content.indexOf('video')),
+      );
+      expect(
+        content.indexOf('video'),
+        lessThan(content.indexOf('1/1/2025')),
+      );
+      expect(line.maxLines, 1);
+      final paragraph = tester.renderObject<RenderParagraph>(
+        find.descendant(
+          of: find.byKey(const Key('video_meta_line')),
+          matching: find.byType(RichText),
+        ),
+      );
+      expect(paragraph.didExceedMaxLines, isFalse);
+    });
+
+    testWidgets('shows video loops without looking up a disabled total', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: false,
+        StatsVisibilityPreferences.showVideoLoopsKey: true,
+        StatsVisibilityPreferences.showPublishedDateKey: false,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      var lookups = 0;
+      await pump(
+        tester,
+        video: _video(rawTags: {'views': '50000'}, createdAt: 1735689600),
+        authorTotalLoops: 23200000,
+        prefs: prefs,
+        onAuthorStatsLookup: () => lookups++,
+      );
+
+      expect(
+        tester.widget<Text>(find.byKey(const Key('video_meta_line'))).data,
+        '50K video loops',
+      );
+      expect(lookups, 0);
+    });
+
+    testWidgets('shows only the publish date when it alone is enabled', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: false,
+        StatsVisibilityPreferences.showVideoLoopsKey: false,
+        StatsVisibilityPreferences.showPublishedDateKey: true,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await pump(
+        tester,
+        video: _video(rawTags: {'views': '50000'}, createdAt: 1735689600),
+        authorTotalLoops: 23200000,
+        prefs: prefs,
+      );
+
+      expect(
+        tester.widget<Text>(find.byKey(const Key('video_meta_line'))).data,
+        '1/1/2025',
+      );
+    });
+
+    testWidgets('shows no line when every setting is disabled', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: false,
+        StatsVisibilityPreferences.showVideoLoopsKey: false,
+        StatsVisibilityPreferences.showPublishedDateKey: false,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await pump(
+        tester,
+        video: _video(rawTags: {'views': '50000'}, createdAt: 1735689600),
+        authorTotalLoops: 23200000,
+        prefs: prefs,
+      );
+
+      expect(find.byKey(const Key('video_meta_line')), findsNothing);
+    });
+
+    testWidgets('omits unavailable values even when enabled', (tester) async {
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: true,
+        StatsVisibilityPreferences.showVideoLoopsKey: true,
+        StatsVisibilityPreferences.showPublishedDateKey: true,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await pump(
+        tester,
+        video: _video(rawTags: {'platform': 'vine'}, createdAt: 1735689600),
+        authorTotalLoops: 0,
+        prefs: prefs,
+      );
+
+      expect(find.byKey(const Key('video_meta_line')), findsNothing);
+    });
+
+    testWidgets('uses a valid published date when creation time is unknown', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: false,
+        StatsVisibilityPreferences.showVideoLoopsKey: false,
+        StatsVisibilityPreferences.showPublishedDateKey: true,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await pump(
+        tester,
+        video: _video(createdAt: 0, publishedAt: '1735689600'),
+        prefs: prefs,
+      );
+
+      expect(find.text('1/1/2025'), findsOneWidget);
+    });
+
+    testWidgets('keeps the details on one line on a narrow screen', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(320, 700);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+        tester.platformDispatcher.clearTextScaleFactorTestValue();
+      });
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: true,
+        StatsVisibilityPreferences.showVideoLoopsKey: true,
+        StatsVisibilityPreferences.showPublishedDateKey: true,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await pump(
+        tester,
+        video: _video(rawTags: {'views': '50000'}, createdAt: 1735689600),
+        authorTotalLoops: 23200000,
+        prefs: prefs,
+      );
+
+      final line = tester.widget<Text>(
+        find.byKey(const Key('video_meta_line')),
+      );
+      expect(line.maxLines, 1);
+      expect(line.overflow, TextOverflow.ellipsis);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('adds and removes each field while the video stays mounted', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: false,
+        StatsVisibilityPreferences.showVideoLoopsKey: false,
+        StatsVisibilityPreferences.showPublishedDateKey: false,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await pump(
+        tester,
+        video: _video(rawTags: {'views': '50000'}, createdAt: 1735689600),
+        authorTotalLoops: 23200000,
+        prefs: prefs,
+      );
+      final settings = ProviderScope.containerOf(
+        tester.element(find.byType(VideoOverlayActions)),
+      ).read(statsVisibilityPreferencesProvider);
+
+      await tester.runAsync(() => settings.setShowTotalLoops(true));
+      await tester.pumpAndSettle();
+      expect(find.textContaining(loopLine(tester, 23200000)), findsOneWidget);
+      await tester.runAsync(() => settings.setShowVideoLoops(true));
+      await tester.pump();
+      expect(
+        find.textContaining('23.2M total · 50K video loops'),
+        findsOneWidget,
+      );
+      await tester.runAsync(() => settings.setShowPublishedDate(true));
+      await tester.pump();
+      expect(find.textContaining('1/1/2025'), findsOneWidget);
+      await tester.runAsync(() => settings.setShowTotalLoops(false));
+      await tester.pump();
+      expect(find.textContaining('total'), findsNothing);
+      expect(find.textContaining('50K video loops'), findsOneWidget);
+    });
+
     testWidgets('shows OG Beta Tester for an eligible non-team member', (
       tester,
     ) async {
@@ -195,8 +416,7 @@ void main() {
         authorTotalLoops: 23200000,
       );
 
-      // The card reports the author's body of work, so the per-video view tag
-      // is ignored even when it is large.
+      // Video loops are off by default, so only the creator total appears.
       expect(find.textContaining(loopLine(tester, 23200000)), findsOneWidget);
       expect(find.textContaining(loopLine(tester, 50000)), findsNothing);
     });
@@ -291,16 +511,16 @@ void main() {
       expect(find.textContaining(loopLine(tester, 50000)), findsNothing);
     });
 
-    testWidgets('never shows the post date, even beside a count', (
+    testWidgets('hides the publish date by default', (
       tester,
     ) async {
       await pump(
         tester,
-        video: _video(rawTags: {'views': '50000'}),
+        video: _video(rawTags: {'views': '50000'}, createdAt: 1735689600),
         authorTotalLoops: 50000,
       );
 
-      expect(find.textContaining(_l10n(tester).timeVerboseNow), findsNothing);
+      expect(find.textContaining('1/1/2025'), findsNothing);
       expect(find.textContaining(loopLine(tester, 50000)), findsOneWidget);
     });
 

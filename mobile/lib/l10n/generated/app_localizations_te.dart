@@ -374,6 +374,16 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఫీడ్‌లను క్లాసిక్ స్క్వేర్ ఫార్మాట్‌లో ఉంచండి';
 
   @override
+  String videoOverlayTotalLoops(String count) {
+    return 'మొత్తం $count';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String count) {
+    return 'వీడియోకు $count లూప్‌లు';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'మొత్తం లూప్‌లను చూపించండి';
 
   @override

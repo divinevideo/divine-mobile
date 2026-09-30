@@ -3014,6 +3014,8 @@
     "appearanceSettingsSystem": "システムのデフォルト",
     "appearanceSettingsLight": "ライト",
     "appearanceSettingsDark": "ダーク",
+    "videoOverlayTotalLoops": "合計{count}",
+    "videoOverlayVideoLoops": "この動画{count}回ループ",
     "generalSettingsClosedCaptions": "字幕",
     "generalSettingsClosedCaptionsSubtitle": "動画に字幕がある場合に表示するよ",
     "generalSettingsVideoShapeSquareOnly": "正方形の動画のみ",

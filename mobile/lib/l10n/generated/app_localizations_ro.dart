@@ -387,6 +387,16 @@ class AppLocalizationsRo extends AppLocalizations {
       'Păstrează feedurile în formatul clasic pătrat';
 
   @override
+  String videoOverlayTotalLoops(String count) {
+    return '$count în total';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String count) {
+    return '$count bucle ale videoclipului';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'Arată totalul buclelor';
 
   @override

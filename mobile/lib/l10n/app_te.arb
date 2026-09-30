@@ -250,6 +250,8 @@
   "appearanceSettingsSystem": "సిస్టమ్ డిఫాల్ట్",
   "appearanceSettingsLight": "కాంతి",
   "appearanceSettingsDark": "చీకటి",
+  "videoOverlayTotalLoops": "మొత్తం {count}",
+  "videoOverlayVideoLoops": "వీడియోకు {count} లూప్‌లు",
   "generalSettingsClosedCaptions": "సంవృత శీర్షికలు",
   "generalSettingsClosedCaptionsSubtitle": "వీడియోలు వాటిని చేర్చినప్పుడు వాటిని చూపండి",
   "generalSettingsVideoShapeSquareOnly": "స్క్వేర్ వీడియోలు మాత్రమే",

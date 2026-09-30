@@ -372,6 +372,16 @@ class AppLocalizationsBg extends AppLocalizations {
       'Запази емисиите в класическия квадратен формат';
 
   @override
+  String videoOverlayTotalLoops(String count) {
+    return '$count общо';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String count) {
+    return '$count повторения на видеото';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'Показвай общия брой лупове';
 
   @override

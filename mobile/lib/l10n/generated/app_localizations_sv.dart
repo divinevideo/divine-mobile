@@ -355,6 +355,16 @@ class AppLocalizationsSv extends AppLocalizations {
       'Behåll flöden i klassiskt kvadratiskt format';
 
   @override
+  String videoOverlayTotalLoops(String count) {
+    return '$count totalt';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String count) {
+    return '$count videoloopar';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'Visa totalt antal loopar';
 
   @override

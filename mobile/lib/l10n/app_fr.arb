@@ -3021,6 +3021,8 @@
     "appearanceSettingsSystem": "Paramètre du système",
     "appearanceSettingsLight": "Clair",
     "appearanceSettingsDark": "Sombre",
+    "videoOverlayTotalLoops": "{count} au total",
+    "videoOverlayVideoLoops": "{count} boucles de la vidéo",
     "generalSettingsClosedCaptions": "Sous-titres",
     "generalSettingsClosedCaptionsSubtitle": "Affiche les sous-titres quand les vidéos en proposent",
     "generalSettingsVideoShapeSquareOnly": "Vidéos carrées uniquement",

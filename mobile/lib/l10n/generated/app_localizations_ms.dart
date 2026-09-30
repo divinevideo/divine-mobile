@@ -336,6 +336,16 @@ class AppLocalizationsMs extends AppLocalizations {
       'Kekalkan suapan dalam format segi empat klasik';
 
   @override
+  String videoOverlayTotalLoops(String count) {
+    return '$count jumlah';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String count) {
+    return '$count ulangan video';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'Tunjukkan jumlah loop';
 
   @override

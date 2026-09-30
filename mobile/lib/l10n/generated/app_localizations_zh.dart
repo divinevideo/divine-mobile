@@ -323,6 +323,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get generalSettingsVideoShapeSquareOnlySubtitle => '让信息流保持经典方形格式';
 
   @override
+  String videoOverlayTotalLoops(String count) {
+    return '总计 $count';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String count) {
+    return '视频 $count 次循环';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => '显示总循环次数';
 
   @override

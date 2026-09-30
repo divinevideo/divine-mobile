@@ -368,6 +368,16 @@ class AppLocalizationsUr extends AppLocalizations {
       'فیڈز کو کلاسک چوکور فارمیٹ میں رکھیں';
 
   @override
+  String videoOverlayTotalLoops(String count) {
+    return 'کل $count';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String count) {
+    return 'ویڈیو کے $count لوپس';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'کل لوپ دکھائیں';
 
   @override

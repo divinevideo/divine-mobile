@@ -655,6 +655,18 @@ abstract class AppLocalizations {
   /// **'Keep feeds in the classic square format'**
   String get generalSettingsVideoShapeSquareOnlySubtitle;
 
+  /// The creator's total loop count on the video overlay.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} total'**
+  String videoOverlayTotalLoops(String count);
+
+  /// The current video's loop count on the video overlay.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} video loops'**
+  String videoOverlayVideoLoops(String count);
+
   /// No description provided for @generalSettingsShowTotalLoops.
   ///
   /// In en, this message translates to:
