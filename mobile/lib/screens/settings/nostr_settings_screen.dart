@@ -12,6 +12,7 @@ import 'package:nostr_key_manager/nostr_key_manager.dart'
     show SecureKeyStorageException;
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/constants/semantic_ids.dart';
+import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -36,21 +37,23 @@ class NostrSettingsScreen extends ConsumerWidget {
   static const routeName = 'nostr-settings';
   static const String path = RoutePaths.nostrSettings;
 
-  const NostrSettingsScreen({super.key});
+  const NostrSettingsScreen({this.networkOnly = false, super.key});
+
+  /// Hide account controls when reached through the Connections destination.
+  final bool networkOnly;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final showAdvancedRelaySettings = ref.watch(
       isFeatureEnabledProvider(FeatureFlag.advancedRelaySettings),
     );
-    final authState = ref.watch(currentAuthStateProvider);
-    final isAuthenticated = authState == AuthState.authenticated;
-
     return Scaffold(
       appBar: DiVineAppBar(
         title: context.l10n.settingsNostrSettings,
         showBackButton: true,
-        onBackPressed: context.pop,
+        onBackPressed: networkOnly
+            ? () => context.safePop(fallback: RoutePaths.settingsConnections)
+            : context.pop,
       ),
       backgroundColor: context.vineColors.background,
       body: Align(
@@ -104,62 +107,65 @@ class NostrSettingsScreen extends ConsumerWidget {
                 onTap: () => context.push(BlossomSettingsScreen.path),
               ),
               const _SignatureVerificationTile(),
-
-              // Account section
-              if (isAuthenticated) ...[
-                DivineSectionHeader(context.l10n.nostrSettingsSectionAccount),
-                DivineListTile(
-                  icon: DivineIconName.key,
-                  iconColor: context.vineColors.accentPositive,
-                  title: context.l10n.nostrSettingsKeyManagement,
-                  subtitle: context.l10n.nostrSettingsKeyManagementSubtitle,
-                  semanticIdentifier: SemanticIds.settingsKeyManagementRow,
-                  onTap: () => context.push(KeyManagementScreen.path),
-                ),
-                const _ClientAttributionToggle(),
-                DivineListTile(
-                  leading: Icon(
-                    Icons.alternate_email,
-                    size: DivineIcon.scaleSize(context, 24),
-                    color: context.vineColors.accentPositive,
-                  ),
-                  title: context.l10n.nostrSettingsNip05Address,
-                  subtitle: context.l10n.nostrSettingsNip05AddressSubtitle,
-                  onTap: () => context.pushNamed(Nip05SettingsScreen.routeName),
-                ),
-                DivineListTile(
-                  icon: DivineIconName.downloadSimple,
-                  iconColor: context.vineColors.accentPositive,
-                  title: context.l10n.nostrSettingsMoveAccount,
-                  subtitle: context.l10n.nostrSettingsMoveAccountSubtitle,
-                  semanticIdentifier: SemanticIds.settingsMoveAccountRow,
-                  onTap: () => openExternalLink(
-                    context,
-                    AppConstants.accountPortabilityUrl,
-                  ),
-                ),
-                _RemoveKeysTile(ref: ref),
-                DivineSectionHeader(
-                  context.l10n.nostrSettingsSectionDangerZone,
-                ),
-                DivineListTile(
-                  icon: DivineIconName.trash,
-                  title: context.l10n.nostrSettingsDeleteAccount,
-                  subtitle: context.l10n.nostrSettingsDeleteAccountSubtitle,
-                  iconColor: VineTheme.error,
-                  titleColor: VineTheme.error,
-                  trailingColor: VineTheme.error,
-                  onTap: () => startAccountDeletionFlow(
-                    context: context,
-                    ref: ref,
-                    screenName: 'NostrSettingsScreen',
-                  ),
-                ),
-              ],
+              const _ClientAttributionToggle(),
+              if (!networkOnly) const NostrAccountSettingsSection(),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Account ownership actions shared by the Settings account destination.
+class NostrAccountSettingsSection extends ConsumerWidget {
+  const NostrAccountSettingsSection({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(currentAuthStateProvider) != AuthState.authenticated) {
+      return const SizedBox.shrink();
+    }
+    return Column(
+      children: [
+        DivineSectionHeader(context.l10n.nostrSettingsSectionAccount),
+        DivineListTile(
+          icon: DivineIconName.key,
+          title: context.l10n.nostrSettingsKeyManagement,
+          subtitle: context.l10n.nostrSettingsKeyManagementSubtitle,
+          semanticIdentifier: SemanticIds.settingsKeyManagementRow,
+          onTap: () => context.push(KeyManagementScreen.path),
+        ),
+        DivineListTile(
+          icon: DivineIconName.globe,
+          title: context.l10n.nostrSettingsNip05Address,
+          subtitle: context.l10n.nostrSettingsNip05AddressSubtitle,
+          onTap: () => context.pushNamed(Nip05SettingsScreen.routeName),
+        ),
+        DivineListTile(
+          icon: DivineIconName.downloadSimple,
+          title: context.l10n.nostrSettingsMoveAccount,
+          subtitle: context.l10n.nostrSettingsMoveAccountSubtitle,
+          semanticIdentifier: SemanticIds.settingsMoveAccountRow,
+          onTap: () =>
+              openExternalLink(context, AppConstants.accountPortabilityUrl),
+        ),
+        _RemoveKeysTile(ref: ref),
+        DivineSectionHeader(context.l10n.nostrSettingsSectionDangerZone),
+        DivineListTile(
+          icon: DivineIconName.trash,
+          title: context.l10n.nostrSettingsDeleteAccount,
+          subtitle: context.l10n.nostrSettingsDeleteAccountSubtitle,
+          iconColor: VineTheme.error,
+          titleColor: VineTheme.error,
+          trailingColor: VineTheme.error,
+          onTap: () => startAccountDeletionFlow(
+            context: context,
+            ref: ref,
+            screenName: 'SettingsScreen',
+          ),
+        ),
+      ],
     );
   }
 }

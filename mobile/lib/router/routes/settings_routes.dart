@@ -13,6 +13,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/router/go_router_page_name.dart';
 import 'package:openvine/router/providers/support_route_trail_provider.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/badges/badge_award_screen.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
@@ -41,6 +42,7 @@ import 'package:openvine/screens/settings/monetization_links_settings_screen.dar
 import 'package:openvine/screens/settings/nip05_settings_screen.dart';
 import 'package:openvine/screens/settings/nostr_settings_screen.dart';
 import 'package:openvine/screens/settings/privacy_settings_screen.dart';
+import 'package:openvine/screens/settings/settings_categories_screen.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
 import 'package:openvine/screens/settings/signature_verification_policy_screen.dart';
 import 'package:openvine/screens/settings/storage/storage_management_page.dart';
@@ -62,6 +64,41 @@ List<RouteBase> settingsRoutes(Ref ref) {
           builder: (_, _) => const FeatureFlagScreen(),
         ),
       ],
+    ),
+    GoRoute(
+      path: RoutePaths.settingsAccount,
+      name: 'settings-account',
+      builder: (_, _) => const SettingsScreen(accountOnly: true),
+    ),
+    GoRoute(
+      path: ViewingSettingsScreen.path,
+      name: ViewingSettingsScreen.routeName,
+      builder: (_, _) => const ViewingSettingsScreen(),
+    ),
+    GoRoute(
+      path: AppPreferencesSettingsScreen.path,
+      name: AppPreferencesSettingsScreen.routeName,
+      builder: (_, _) => const AppPreferencesSettingsScreen(),
+    ),
+    GoRoute(
+      path: CreatingSettingsScreen.path,
+      name: CreatingSettingsScreen.routeName,
+      builder: (_, _) => const CreatingSettingsScreen(),
+    ),
+    GoRoute(
+      path: ConnectionsSettingsScreen.path,
+      name: ConnectionsSettingsScreen.routeName,
+      builder: (_, _) => const ConnectionsSettingsScreen(),
+    ),
+    GoRoute(
+      path: RoutePaths.settingsNostrNetwork,
+      name: 'settings-nostr-network',
+      builder: (_, _) => const NostrSettingsScreen(networkOnly: true),
+    ),
+    GoRoute(
+      path: HelpAboutSettingsScreen.path,
+      name: HelpAboutSettingsScreen.routeName,
+      builder: (_, _) => const HelpAboutSettingsScreen(),
     ),
     GoRoute(
       path: BadgesScreen.path,
@@ -242,12 +279,12 @@ List<RouteBase> settingsRoutes(Ref ref) {
     GoRoute(
       path: SafetySettingsScreen.path,
       name: SafetySettingsScreen.routeName,
-      builder: (_, _) => const SafetySettingsScreen(),
+      builder: (_, _) => const SafetySettingsScreen(legacySections: false),
     ),
     GoRoute(
       path: PrivacySettingsScreen.path,
       name: PrivacySettingsScreen.routeName,
-      builder: (_, _) => const PrivacySettingsScreen(),
+      builder: (_, _) => const PrivacySettingsScreen(combined: true),
     ),
     GoRoute(
       path: ContentFiltersScreen.path,

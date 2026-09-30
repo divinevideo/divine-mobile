@@ -25,7 +25,10 @@ import 'package:openvine/widgets/vine_cached_image.dart';
 /// Page: bridges the seven moderation services + repositories into
 /// [SafetySettingsCubit].
 class SafetySettingsScreen extends ConsumerWidget {
-  const SafetySettingsScreen({super.key});
+  const SafetySettingsScreen({this.legacySections = true, super.key});
+
+  /// Existing direct entries retain their original layout for compatibility.
+  final bool legacySections;
 
   /// Route name for this screen.
   static const routeName = 'safety-settings';
@@ -82,7 +85,7 @@ class SafetySettingsScreen extends ConsumerWidget {
         );
         return cubit;
       },
-      child: const SafetySettingsView(),
+      child: SafetySettingsView(legacySections: legacySections),
     );
   }
 }
@@ -90,7 +93,9 @@ class SafetySettingsScreen extends ConsumerWidget {
 /// View: renders the moderation hub from the Cubit state.
 class SafetySettingsView extends StatelessWidget {
   @visibleForTesting
-  const SafetySettingsView({super.key});
+  const SafetySettingsView({this.legacySections = true, super.key});
+
+  final bool legacySections;
 
   @override
   Widget build(BuildContext context) {
@@ -112,8 +117,10 @@ class SafetySettingsView extends StatelessWidget {
               }
               return ListView(
                 children: [
-                  DivineSectionHeader(context.l10n.safetySettingsWhatYouSee),
-                  const _ContentFiltersTile(),
+                  if (legacySections) ...[
+                    DivineSectionHeader(context.l10n.safetySettingsWhatYouSee),
+                    const _ContentFiltersTile(),
+                  ],
                   DivineSectionHeader(
                     context.l10n.safetySettingsAgeVerification,
                   ),
@@ -127,10 +134,12 @@ class SafetySettingsView extends StatelessWidget {
                   const _CustomLabelersSection(),
                   DivineSectionHeader(context.l10n.safetySettingsBlockedUsers),
                   const _BlockedUsersSection(),
-                  DivineSectionHeader(
-                    context.l10n.safetySettingsWhatYouPublish,
-                  ),
-                  const AccountContentLabelsTile(),
+                  if (legacySections) ...[
+                    DivineSectionHeader(
+                      context.l10n.safetySettingsWhatYouPublish,
+                    ),
+                    const AccountContentLabelsTile(),
+                  ],
                 ],
               );
             },

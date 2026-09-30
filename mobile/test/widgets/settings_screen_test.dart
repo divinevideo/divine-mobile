@@ -33,6 +33,7 @@ import 'package:openvine/screens/apps/apps_permissions_screen.dart';
 import 'package:openvine/screens/badges/badges_screen.dart';
 import 'package:openvine/screens/developer_options_screen.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
+import 'package:openvine/screens/settings/settings_categories_screen.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
 import 'package:openvine/screens/settings/supporter_screen.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
@@ -114,7 +115,11 @@ void main() {
       when(() => mockLocaleCubit.state).thenReturn(const LocaleState());
 
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
+      when(() => mockAuthService.isRegistered).thenReturn(false);
       when(() => mockAuthService.isAnonymous).thenReturn(false);
+      when(() => mockAuthService.authenticationSource)
+          .thenReturn(AuthenticationSource.automatic);
+      when(() => mockAuthService.userRelays).thenReturn([]);
       when(() => mockAuthService.currentPublicKeyHex).thenReturn(currentPubkey);
       when(() => mockAuthService.authState).thenReturn(AuthState.authenticated);
       when(
@@ -146,6 +151,7 @@ void main() {
       _MockBackgroundPublishBloc? publishBloc,
       bool developerMode = false,
       AccountEnforcementKind? enforcement,
+      Widget? child,
     }) {
       stubReadOnlySupporterEntry();
       when(
@@ -198,7 +204,7 @@ void main() {
                 value: effectivePublishBloc,
               ),
             ],
-            child: const SettingsScreen(),
+            child: child ?? const SettingsScreen(),
           ),
         ),
       );
@@ -431,21 +437,19 @@ void main() {
       },
     );
 
-    testWidgets('renders navigation tiles', (tester) async {
+    testWidgets('renders task-based navigation tiles', (tester) async {
       await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
-
       final scrollable = find.byType(Scrollable);
-
-      expect(find.text('Creator Analytics'), findsOneWidget);
-      expect(find.text('Support Center'), findsOneWidget);
-
-      // Tiles below the centered header may need scrolling
       for (final title in [
+        l10n.settingsAccountTitle,
+        l10n.settingsWhatYouSeeTitle,
+        l10n.settingsCreateShareTitle,
         l10n.settingsNotifications,
-        l10n.settingsGeneralTitle,
-        l10n.settingsContentSafetyTitle,
-        l10n.settingsNostrSettings,
+        l10n.settingsPrivacySafetyTitle,
+        l10n.settingsAppPreferencesTitle,
+        l10n.settingsConnectionsTitle,
+        l10n.settingsHelpAboutTitle,
       ]) {
         await tester.scrollUntilVisible(
           find.text(title),
@@ -454,7 +458,6 @@ void main() {
         );
         expect(find.text(title), findsOneWidget);
       }
-
       await tester.pumpWidget(const SizedBox());
       await tester.pump();
     });
@@ -468,7 +471,12 @@ void main() {
       final mockGoRouter = MockGoRouter();
       when(() => mockGoRouter.push(any())).thenAnswer((_) async => null);
 
-      await tester.pumpWidget(buildSubject(goRouter: mockGoRouter));
+      await tester.pumpWidget(
+        buildSubject(
+          goRouter: mockGoRouter,
+          child: const SettingsScreen(accountOnly: true),
+        ),
+      );
       await tester.pumpAndSettle();
 
       final scrollable = find.byType(Scrollable);
@@ -489,13 +497,79 @@ void main() {
       await tester.pump();
     });
 
+    testWidgets('Account gathers ownership and deletion actions', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildSubject(child: const SettingsScreen(accountOnly: true)),
+      );
+      await tester.pumpAndSettle();
+
+      final scrollable = find.byType(Scrollable);
+      for (final title in [
+        l10n.nostrSettingsKeyManagement,
+        l10n.nostrSettingsMoveAccount,
+        l10n.nostrSettingsDeleteAccount,
+      ]) {
+        await scrollUntilTappable(
+          tester,
+          find.text(title),
+          250,
+          scrollable: scrollable,
+        );
+        expect(find.text(title), findsOneWidget);
+      }
+    });
+
+    testWidgets('Account shows credentials only for Divine sign-in', (
+      tester,
+    ) async {
+      when(() => mockAuthService.authenticationSource)
+          .thenReturn(AuthenticationSource.divineOAuth);
+      await tester.pumpWidget(
+        buildSubject(child: const SettingsScreen(accountOnly: true)),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.accountSettingsChangeEmail), findsOneWidget);
+      expect(find.text(l10n.accountSettingsChangePassword), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox());
+      when(() => mockAuthService.authenticationSource)
+          .thenReturn(AuthenticationSource.automatic);
+      await tester.pumpWidget(
+        buildSubject(child: const SettingsScreen(accountOnly: true)),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.accountSettingsChangeEmail), findsNothing);
+      expect(find.text(l10n.accountSettingsChangePassword), findsNothing);
+    });
+
+    testWidgets('signed-out Account offers sign-in without account actions', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildSubject(
+          authState: AuthState.unauthenticated,
+          child: const SettingsScreen(accountOnly: true),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.authSignInTitle), findsOneWidget);
+      expect(find.text(l10n.nostrSettingsDeleteAccount), findsNothing);
+    });
+
     testWidgets('tapping Integration Permissions opens the permissions route', (
       tester,
     ) async {
       final mockGoRouter = MockGoRouter();
       when(() => mockGoRouter.push(any())).thenAnswer((_) async => null);
 
-      await tester.pumpWidget(buildSubject(goRouter: mockGoRouter));
+      await tester.pumpWidget(
+        buildSubject(
+          goRouter: mockGoRouter,
+          child: const ConnectionsSettingsScreen(),
+        ),
+      );
       await tester.pumpAndSettle();
 
       final scrollable = find.byType(Scrollable);
@@ -549,7 +623,7 @@ void main() {
                 providers: [
                   BlocProvider<LocaleCubit>.value(value: mockLocaleCubit),
                 ],
-                child: const SettingsScreen(),
+                child: const ConnectionsSettingsScreen(),
               ),
             ),
           ),
@@ -577,7 +651,12 @@ void main() {
       final mockGoRouter = MockGoRouter();
       when(() => mockGoRouter.push(any())).thenAnswer((_) async => null);
 
-      await tester.pumpWidget(buildSubject(goRouter: mockGoRouter));
+      await tester.pumpWidget(
+        buildSubject(
+          goRouter: mockGoRouter,
+          child: const CreatingSettingsScreen(),
+        ),
+      );
       await tester.pumpAndSettle();
 
       final scrollable = find.byType(Scrollable);
@@ -750,10 +829,10 @@ void main() {
         await tester.pumpAndSettle();
 
         await tester.scrollUntilVisible(
-          find.text(l10n.settingsGeneralTitle),
+          find.text(l10n.settingsCreateShareTitle),
           200,
         );
-        expect(find.text(l10n.settingsGeneralTitle), findsOneWidget);
+        expect(find.text(l10n.settingsCreateShareTitle), findsOneWidget);
         expect(find.text('Bluesky Publishing'), findsNothing);
 
         await tester.pumpWidget(const SizedBox());
@@ -887,10 +966,15 @@ void main() {
       final mockGoRouter = MockGoRouter();
       when(() => mockGoRouter.push(any())).thenAnswer((_) async => null);
 
-      await tester.pumpWidget(buildSubject(goRouter: mockGoRouter));
+      await tester.pumpWidget(
+        buildSubject(
+          goRouter: mockGoRouter,
+          child: const AppPreferencesSettingsScreen(),
+        ),
+      );
       await tester.pumpAndSettle();
 
-      expect(find.text(l10n.settingsLegal), findsOneWidget);
+      expect(find.text(l10n.settingsAppPreferencesTitle), findsOneWidget);
       expect(find.text(l10n.settingsExperimentalFeatures), findsOneWidget);
 
       await tester.tap(find.text(l10n.settingsExperimentalFeatures));
@@ -912,7 +996,11 @@ void main() {
         when(() => mockGoRouter.push(any())).thenAnswer((_) async => null);
 
         await tester.pumpWidget(
-          buildSubject(goRouter: mockGoRouter, developerMode: true),
+          buildSubject(
+            goRouter: mockGoRouter,
+            developerMode: true,
+            child: const AppPreferencesSettingsScreen(),
+          ),
         );
         await tester.pumpAndSettle();
 
@@ -948,7 +1036,11 @@ void main() {
         when(() => mockGoRouter.push(any())).thenAnswer((_) async => null);
 
         await tester.pumpWidget(
-          buildSubject(goRouter: mockGoRouter, developerMode: true),
+          buildSubject(
+            goRouter: mockGoRouter,
+            developerMode: true,
+            child: const AppPreferencesSettingsScreen(),
+          ),
         );
         await tester.pumpAndSettle();
 
@@ -976,11 +1068,7 @@ void main() {
       'reveals Developer Options tile immediately when developer mode is '
       'unlocked at runtime',
       (tester) async {
-        // The user's emphasis: enabling developer mode (7 taps on the version
-        // tile calls EnvironmentService.enableDeveloperMode) must surface the
-        // tile without leaving and re-entering the screen. This exercises the
-        // real service -> notifyListeners -> isDeveloperModeEnabledProvider ->
-        // rebuild path, so it fails if the hub stops watching the provider.
+        // Enabling developer mode must update App preferences without re-entry.
         final environmentService = EnvironmentService();
         await environmentService.initialize(
           sharedPreferences: sharedPreferences,
@@ -1013,7 +1101,7 @@ void main() {
                 providers: [
                   BlocProvider<LocaleCubit>.value(value: mockLocaleCubit),
                 ],
-                child: const SettingsScreen(),
+                child: const AppPreferencesSettingsScreen(),
               ),
             ),
           ),
