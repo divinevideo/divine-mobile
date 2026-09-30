@@ -1,5 +1,5 @@
 // ABOUTME: Test setup helpers for E2E integration tests
-// ABOUTME: Error suppression and ErrorWidget.builder management
+// ABOUTME: Error-hook handling that keeps a failing check from hanging a run
 
 import 'dart:async';
 
@@ -30,7 +30,7 @@ bool _isNonCriticalAsyncError(String message) {
 /// - Relay rejected event errors surfaced by the app's error handler
 ///
 /// Returns the original error handler for restoration.
-FlutterExceptionHandler? suppressSetStateErrors() {
+FlutterExceptionHandler? _suppressNonCriticalErrors() {
   final originalOnError = FlutterError.onError;
   FlutterError.onError = (details) {
     final message = details.exceptionAsString();
@@ -40,6 +40,34 @@ FlutterExceptionHandler? suppressSetStateErrors() {
     originalOnError?.call(details);
   };
   return originalOnError;
+}
+
+/// Runs [body], an E2E scenario that launches the real app, with the error
+/// hooks that app.main() replaces saved and restored, and known noise
+/// ([_isNonCriticalAsyncError]) suppressed.
+///
+/// app.main() installs a FlutterError.onError that does not chain to
+/// flutter_test's, and flutter_test reports a failed `expect` through the
+/// current handler. So when [body] throws, the original handler is put back
+/// first, or the failure never reaches the binding and the run hangs (#9659).
+/// When [body] returns, the handler is left to the teardown as before, so
+/// errors while the app is torn down still reach the app's own handler.
+///
+/// ErrorWidget.builder is restored when [body] ends either way, because
+/// flutter_test checks it at the end of the test body, before teardown (#5839).
+Future<void> runWithAppErrorHandlers(Future<void> Function() body) async {
+  final originalOnError = _suppressNonCriticalErrors();
+  addTearDown(() => FlutterError.onError = originalOnError);
+  final originalErrorBuilder = ErrorWidget.builder;
+  addTearDown(() => ErrorWidget.builder = originalErrorBuilder);
+  try {
+    await body();
+  } catch (_) {
+    FlutterError.onError = originalOnError;
+    rethrow;
+  } finally {
+    ErrorWidget.builder = originalErrorBuilder;
+  }
 }
 
 /// Drain any pending async exceptions (e.g. WebSocket errors from external
@@ -71,24 +99,6 @@ void launchAppGuarded(void Function() appMain) {
       Zone.current.parent?.handleUncaughtError(error, stack);
     },
   );
-}
-
-/// Restore the original FlutterError.onError handler.
-void restoreErrorHandler(FlutterExceptionHandler? original) {
-  FlutterError.onError = original;
-}
-
-/// Save ErrorWidget.builder before app.main() sets a custom one.
-///
-/// Must be called before app.main() and restored before test body ends
-/// (the framework asserts it hasn't changed).
-ErrorWidgetBuilder saveErrorWidgetBuilder() {
-  return ErrorWidget.builder;
-}
-
-/// Restore ErrorWidget.builder to the saved value.
-void restoreErrorWidgetBuilder(ErrorWidgetBuilder original) {
-  ErrorWidget.builder = original;
 }
 
 /// Print a timestamped log message matching the app's `[HH:MM:SS.mmm]` format.

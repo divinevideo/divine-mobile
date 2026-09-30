@@ -61,110 +61,113 @@ void main() {
     testWidgets('in-place swap switches between two real local accounts', (
       tester,
     ) async {
-      final originalOnError = suppressSetStateErrors();
-      addTearDown(() => restoreErrorHandler(originalOnError));
-
-      // Real device dependencies: native (in-memory) DB, real SharedPreferences,
-      // and — because integration_test does not mock platform channels — the
-      // real iOS Keychain backs SecureKeyStorage.
-      final database = AppDatabase(NativeDatabase.memory());
-      addTearDown(database.close);
-      SharedPreferences.setMockInitialValues({});
-      final prefs = await SharedPreferences.getInstance();
-      final controller = AccountSwitchController();
-      final deviceScope = DeviceScope(
-        database: database,
-        sharedPreferences: prefs,
-        switchController: controller,
-        startupPerformance: StartupPerformanceService(
-          crashReporting: CrashReportingService(),
-        ),
-        appVersion: 'test',
-        crashReporting: CrashReportingService(),
-        documentsPath: '/documents',
-        logMessageBatcher: LogMessageBatcher(),
-      );
-
-      // Create two real local-key identities in a setup container. Guarded
-      // because createNewIdentity kicks off fire-and-forget relay discovery.
-      String? pubkeyA;
-      String? pubkeyB;
-      await _guarded(() async {
-        final setup = buildAccountContainer(deviceScope);
-        final setupAuth = setup.read(authServiceProvider);
-        await setupAuth.initialize();
-        await setupAuth.createNewIdentity();
-        pubkeyA = setupAuth.currentPublicKeyHex;
-
-        await setupAuth.signOut();
-        await setupAuth.createNewIdentity();
-        pubkeyB = setupAuth.currentPublicKeyHex;
-        setup.dispose();
-      });
-      expect(pubkeyA, isNotNull, reason: 'Account A should be created');
-      expect(pubkeyB, isNotNull, reason: 'Account B should be created');
-      expect(pubkeyB, isNot(equals(pubkeyA)), reason: 'Two distinct accounts');
-
-      // Mount the host on a container signed in as B (the "current" account).
-      final bContainer = buildAccountContainer(deviceScope);
-      await _guarded(
-        () => bContainer
-            .read(authServiceProvider)
-            .signInForAccount(pubkeyB!, AuthenticationSource.automatic),
-      );
-      await tester.pumpWidget(
-        ContainerSwapHost(
-          initialContainer: bContainer,
-          controller: controller,
-          child: const SizedBox(),
-        ),
-      );
-
-      // Perform the REAL in-place swap to account A. Capture the swapped-in
-      // container so the result can be asserted; the sign-in itself is the real
-      // production signInForAccount.
-      ProviderContainer? swapped;
-      await _guarded(
-        () => swapAccount(
-          deviceScope: deviceScope,
-          controller: controller,
-          currentAuthService: bContainer.read(authServiceProvider),
-          account: KnownAccount(
-            pubkeyHex: pubkeyA!,
-            authSource: AuthenticationSource.automatic,
-            addedAt: DateTime(2026),
-            lastUsedAt: DateTime(2026),
+      await runWithAppErrorHandlers(() async {
+        // Real device dependencies: native (in-memory) DB, real SharedPreferences,
+        // and — because integration_test does not mock platform channels — the
+        // real iOS Keychain backs SecureKeyStorage.
+        final database = AppDatabase(NativeDatabase.memory());
+        addTearDown(database.close);
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final controller = AccountSwitchController();
+        final deviceScope = DeviceScope(
+          database: database,
+          sharedPreferences: prefs,
+          switchController: controller,
+          startupPerformance: StartupPerformanceService(
+            crashReporting: CrashReportingService(),
           ),
-          signIn: (container, account) async {
-            swapped = container;
-            await container
-                .read(environmentServiceProvider)
-                .initialize(sharedPreferences: prefs);
-            await container
-                .read(authServiceProvider)
-                .initializeForAccountSwitch();
-            await container
-                .read(authServiceProvider)
-                .signInForAccount(
-                  account.pubkeyHex,
-                  account.authSource,
-                  claimLegacyRows: false,
-                );
-          },
-        ),
-      );
-      await tester.pump();
+          appVersion: 'test',
+          crashReporting: CrashReportingService(),
+          documentsPath: '/documents',
+          logMessageBatcher: LogMessageBatcher(),
+        );
 
-      // The swapped-in container is authenticated as A, in place.
-      final swappedAuth = swapped!.read(authServiceProvider);
-      expect(
-        swappedAuth.currentPublicKeyHex,
-        equals(pubkeyA),
-        reason: 'After the swap the live account is A',
-      );
-      expect(swappedAuth.isAuthenticated, isTrue);
+        // Create two real local-key identities in a setup container. Guarded
+        // because createNewIdentity kicks off fire-and-forget relay discovery.
+        String? pubkeyA;
+        String? pubkeyB;
+        await _guarded(() async {
+          final setup = buildAccountContainer(deviceScope);
+          final setupAuth = setup.read(authServiceProvider);
+          await setupAuth.initialize();
+          await setupAuth.createNewIdentity();
+          pubkeyA = setupAuth.currentPublicKeyHex;
 
-      drainAsyncErrors(tester);
+          await setupAuth.signOut();
+          await setupAuth.createNewIdentity();
+          pubkeyB = setupAuth.currentPublicKeyHex;
+          setup.dispose();
+        });
+        expect(pubkeyA, isNotNull, reason: 'Account A should be created');
+        expect(pubkeyB, isNotNull, reason: 'Account B should be created');
+        expect(
+          pubkeyB,
+          isNot(equals(pubkeyA)),
+          reason: 'Two distinct accounts',
+        );
+
+        // Mount the host on a container signed in as B (the "current" account).
+        final bContainer = buildAccountContainer(deviceScope);
+        await _guarded(
+          () => bContainer
+              .read(authServiceProvider)
+              .signInForAccount(pubkeyB!, AuthenticationSource.automatic),
+        );
+        await tester.pumpWidget(
+          ContainerSwapHost(
+            initialContainer: bContainer,
+            controller: controller,
+            child: const SizedBox(),
+          ),
+        );
+
+        // Perform the REAL in-place swap to account A. Capture the swapped-in
+        // container so the result can be asserted; the sign-in itself is the real
+        // production signInForAccount.
+        ProviderContainer? swapped;
+        await _guarded(
+          () => swapAccount(
+            deviceScope: deviceScope,
+            controller: controller,
+            currentAuthService: bContainer.read(authServiceProvider),
+            account: KnownAccount(
+              pubkeyHex: pubkeyA!,
+              authSource: AuthenticationSource.automatic,
+              addedAt: DateTime(2026),
+              lastUsedAt: DateTime(2026),
+            ),
+            signIn: (container, account) async {
+              swapped = container;
+              await container
+                  .read(environmentServiceProvider)
+                  .initialize(sharedPreferences: prefs);
+              await container
+                  .read(authServiceProvider)
+                  .initializeForAccountSwitch();
+              await container
+                  .read(authServiceProvider)
+                  .signInForAccount(
+                    account.pubkeyHex,
+                    account.authSource,
+                    claimLegacyRows: false,
+                  );
+            },
+          ),
+        );
+        await tester.pump();
+
+        // The swapped-in container is authenticated as A, in place.
+        final swappedAuth = swapped!.read(authServiceProvider);
+        expect(
+          swappedAuth.currentPublicKeyHex,
+          equals(pubkeyA),
+          reason: 'After the swap the live account is A',
+        );
+        expect(swappedAuth.isAuthenticated, isTrue);
+
+        drainAsyncErrors(tester);
+      });
     });
   });
 }

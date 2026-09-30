@@ -18,45 +18,39 @@ void main() {
       ($) async {
         final tester = $.tester;
 
-        final originalOnError = suppressSetStateErrors();
-        addTearDown(() => restoreErrorHandler(originalOnError));
-        final originalErrorBuilder = saveErrorWidgetBuilder();
-        addTearDown(() => restoreErrorWidgetBuilder(originalErrorBuilder));
+        await runWithAppErrorHandlers(() async {
+          launchAppGuarded(app.main);
+          await tester.pumpAndSettle(const Duration(seconds: 3));
 
-        launchAppGuarded(app.main);
-        await tester.pumpAndSettle(const Duration(seconds: 3));
+          // Verify app is on a known screen (welcome or main)
+          final hasApp = find.byType(MaterialApp).evaluate().isNotEmpty;
+          expect(hasApp, isTrue, reason: 'App should be running');
 
-        // Verify app is on a known screen (welcome or main)
-        final hasApp = find.byType(MaterialApp).evaluate().isNotEmpty;
-        expect(hasApp, isTrue, reason: 'App should be running');
+          // Press home to background the app
+          await $.platformAutomator.mobile.pressHome();
 
-        // Press home to background the app
-        await $.platformAutomator.mobile.pressHome();
+          // Wait briefly while app is in background
+          await Future<void>.delayed(const Duration(seconds: 2));
 
-        // Wait briefly while app is in background
-        await Future<void>.delayed(const Duration(seconds: 2));
+          // Reopen the app by launching it again
+          await $.platformAutomator.mobile.openApp();
 
-        // Reopen the app by launching it again
-        await $.platformAutomator.mobile.openApp();
+          // Wait for app to resume
+          await tester.pump(const Duration(seconds: 3));
 
-        // Wait for app to resume
-        await tester.pump(const Duration(seconds: 3));
+          // Verify app is still running and state is preserved
+          final hasAppAfterResume = find
+              .byType(MaterialApp)
+              .evaluate()
+              .isNotEmpty;
+          expect(
+            hasAppAfterResume,
+            isTrue,
+            reason: 'App should still be running after backgrounding',
+          );
 
-        // Verify app is still running and state is preserved
-        final hasAppAfterResume = find
-            .byType(MaterialApp)
-            .evaluate()
-            .isNotEmpty;
-        expect(
-          hasAppAfterResume,
-          isTrue,
-          reason: 'App should still be running after backgrounding',
-        );
-
-        drainAsyncErrors(tester);
-        // Inline restore is required by the framework's end-of-body
-        // ErrorWidget.builder check; the addTearDown above covers throws.
-        restoreErrorWidgetBuilder(originalErrorBuilder);
+          drainAsyncErrors(tester);
+        });
       },
       timeout: const Timeout(Duration(minutes: 2)),
     );

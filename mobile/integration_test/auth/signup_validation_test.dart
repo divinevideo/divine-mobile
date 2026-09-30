@@ -18,45 +18,38 @@ void main() {
       'invalid email and password mismatch stay on create account',
       ($) async {
         final tester = $.tester;
-        final originalOnError = suppressSetStateErrors();
-        addTearDown(() => restoreErrorHandler(originalOnError));
-        final originalErrorBuilder = saveErrorWidgetBuilder();
-        addTearDown(() => restoreErrorWidgetBuilder(originalErrorBuilder));
+        await runWithAppErrorHandlers(() async {
+          launchAppGuarded(app.main);
+          await tester.pumpAndSettle(const Duration(seconds: 3));
 
-        launchAppGuarded(app.main);
-        await tester.pumpAndSettle(const Duration(seconds: 3));
+          await navigateToCreateAccount(tester);
 
-        await navigateToCreateAccount(tester);
+          final fields = find.byType(DivineAuthTextField);
+          expect(
+            fields,
+            findsNWidgets(3),
+            reason: 'Create account should show email, password, and confirm fields',
+          );
 
-        final fields = find.byType(DivineAuthTextField);
-        expect(
-          fields,
-          findsNWidgets(3),
-          reason:
-              'Create account should show email, password, and confirm fields',
-        );
+          await tester.enterText(fields.at(0), 'person@gmail..com');
+          await tester.enterText(fields.at(1), 'SecurePass123!');
+          await tester.enterText(fields.at(2), 'SecurePass123!');
+          await tester.tap(find.widgetWithText(DivineButton, 'Create account'));
+          await tester.pumpAndSettle();
 
-        await tester.enterText(fields.at(0), 'person@gmail..com');
-        await tester.enterText(fields.at(1), 'SecurePass123!');
-        await tester.enterText(fields.at(2), 'SecurePass123!');
-        await tester.tap(find.widgetWithText(DivineButton, 'Create account'));
-        await tester.pumpAndSettle();
+          expect(find.text('Please enter a valid email'), findsOneWidget);
+          expect(find.text('Complete your registration'), findsNothing);
 
-        expect(find.text('Please enter a valid email'), findsOneWidget);
-        expect(find.text('Complete your registration'), findsNothing);
+          await tester.enterText(fields.at(0), 'person@example.com');
+          await tester.enterText(fields.at(2), 'DifferentPass123!');
+          await tester.tap(find.widgetWithText(DivineButton, 'Create account'));
+          await tester.pumpAndSettle();
 
-        await tester.enterText(fields.at(0), 'person@example.com');
-        await tester.enterText(fields.at(2), 'DifferentPass123!');
-        await tester.tap(find.widgetWithText(DivineButton, 'Create account'));
-        await tester.pumpAndSettle();
+          expect(find.text("Passwords don't match"), findsOneWidget);
+          expect(find.text('Complete your registration'), findsNothing);
 
-        expect(find.text("Passwords don't match"), findsOneWidget);
-        expect(find.text('Complete your registration'), findsNothing);
-
-        drainAsyncErrors(tester);
-        // Inline restore is required by the framework's end-of-body
-        // ErrorWidget.builder check; the addTearDown above covers throws.
-        restoreErrorWidgetBuilder(originalErrorBuilder);
+          drainAsyncErrors(tester);
+        });
       },
       timeout: const Timeout(Duration(minutes: 2)),
     );

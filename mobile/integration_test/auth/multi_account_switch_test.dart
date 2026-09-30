@@ -43,152 +43,151 @@ void main() {
       ($) async {
         final tester = $.tester;
 
-        final originalOnError = suppressSetStateErrors();
-        addTearDown(() => restoreErrorHandler(originalOnError));
-        final originalErrorBuilder = saveErrorWidgetBuilder();
-        addTearDown(() => restoreErrorWidgetBuilder(originalErrorBuilder));
-        final semanticsHandle = tester.ensureSemantics();
+        await runWithAppErrorHandlers(() async {
+          final semanticsHandle = tester.ensureSemantics();
 
-        launchAppGuarded(app.main);
-        await tester.pumpAndSettle(const Duration(seconds: 3));
+          launchAppGuarded(app.main);
+          await tester.pumpAndSettle(const Duration(seconds: 3));
 
-        // ══════════════════════════════════════════════════════════
-        // Phase 1: Register Keycast Account A
-        // ══════════════════════════════════════════════════════════
+          // ══════════════════════════════════════════════════════════
+          // Phase 1: Register Keycast Account A
+          // ══════════════════════════════════════════════════════════
 
-        final emailA =
-            'switch-a-${DateTime.now().millisecondsSinceEpoch}@test.divine.video';
-        const password = 'TestPass123!';
+          final emailA =
+              'switch-a-${DateTime.now().millisecondsSinceEpoch}@test.divine.video';
+          const password = 'TestPass123!';
 
-        await navigateToCreateAccount(tester);
-        await registerNewUser(tester, emailA, password);
+          await navigateToCreateAccount(tester);
+          await registerNewUser(tester, emailA, password);
 
-        final foundVerify = await waitForText(
-          tester,
-          'Complete your registration',
-        );
-        expect(foundVerify, isTrue, reason: 'Should reach verification screen');
+          final foundVerify = await waitForText(
+            tester,
+            'Complete your registration',
+          );
+          expect(
+            foundVerify,
+            isTrue,
+            reason: 'Should reach verification screen',
+          );
 
-        final tokenA = await getVerificationToken(emailA);
-        await callVerifyEmail(tokenA);
+          final tokenA = await getVerificationToken(emailA);
+          await callVerifyEmail(tokenA);
 
-        final leftVerify = await waitForTextGone(
-          tester,
-          'Complete your registration',
-        );
-        expect(leftVerify, isTrue, reason: 'Verification should complete');
+          final leftVerify = await waitForTextGone(
+            tester,
+            'Complete your registration',
+          );
+          expect(leftVerify, isTrue, reason: 'Verification should complete');
 
-        await pumpUntilSettled(tester);
+          await pumpUntilSettled(tester);
 
-        final container = ProviderScope.containerOf(
-          tester.element(find.byType(MaterialApp)),
-        );
-        final authService = container.read(authServiceProvider);
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(MaterialApp)),
+          );
+          final authService = container.read(authServiceProvider);
 
-        expect(authService.isAuthenticated, isTrue);
-        await dismissNotificationPermission($);
-        final pubkeyA = authService.currentPublicKeyHex!;
-        logPhase('Phase 1: Account A registered — pubkey=$pubkeyA');
+          expect(authService.isAuthenticated, isTrue);
+          await dismissNotificationPermission($);
+          final pubkeyA = authService.currentPublicKeyHex!;
+          logPhase('Phase 1: Account A registered — pubkey=$pubkeyA');
 
-        // ══════════════════════════════════════════════════════════
-        // Phase 2: Sign out A, register Keycast Account B
-        // ══════════════════════════════════════════════════════════
+          // ══════════════════════════════════════════════════════════
+          // Phase 2: Sign out A, register Keycast Account B
+          // ══════════════════════════════════════════════════════════
 
-        await tester.runAsync(authService.signOut);
-        await pumpUntilSettled(tester);
+          await tester.runAsync(authService.signOut);
+          await pumpUntilSettled(tester);
 
-        logPhase('Phase 2a: Signed out from A');
+          logPhase('Phase 2a: Signed out from A');
 
-        final emailB =
-            'switch-b-${DateTime.now().millisecondsSinceEpoch}@test.divine.video';
+          final emailB =
+              'switch-b-${DateTime.now().millisecondsSinceEpoch}@test.divine.video';
 
-        await navigateToCreateAccount(tester);
-        await registerNewUser(tester, emailB, password);
+          await navigateToCreateAccount(tester);
+          await registerNewUser(tester, emailB, password);
 
-        final foundVerifyB = await waitForText(
-          tester,
-          'Complete your registration',
-        );
-        expect(
-          foundVerifyB,
-          isTrue,
-          reason: 'Should reach verification screen for B',
-        );
+          final foundVerifyB = await waitForText(
+            tester,
+            'Complete your registration',
+          );
+          expect(
+            foundVerifyB,
+            isTrue,
+            reason: 'Should reach verification screen for B',
+          );
 
-        final tokenB = await getVerificationToken(emailB);
-        await callVerifyEmail(tokenB);
+          final tokenB = await getVerificationToken(emailB);
+          await callVerifyEmail(tokenB);
 
-        final leftVerifyB = await waitForTextGone(
-          tester,
-          'Complete your registration',
-        );
-        expect(leftVerifyB, isTrue, reason: 'Verification B should complete');
+          final leftVerifyB = await waitForTextGone(
+            tester,
+            'Complete your registration',
+          );
+          expect(leftVerifyB, isTrue, reason: 'Verification B should complete');
 
-        await pumpUntilSettled(tester);
+          await pumpUntilSettled(tester);
 
-        expect(authService.isAuthenticated, isTrue);
-        await dismissNotificationPermission($);
-        final pubkeyB = authService.currentPublicKeyHex!;
-        expect(pubkeyB, isNot(equals(pubkeyA)));
-        logPhase('Phase 2b: Account B registered — pubkey=$pubkeyB');
+          expect(authService.isAuthenticated, isTrue);
+          await dismissNotificationPermission($);
+          final pubkeyB = authService.currentPublicKeyHex!;
+          expect(pubkeyB, isNot(equals(pubkeyA)));
+          logPhase('Phase 2b: Account B registered — pubkey=$pubkeyB');
 
-        // ══════════════════════════════════════════════════════════
-        // Phase 3: Sign out B, switch back to A
-        // ══════════════════════════════════════════════════════════
+          // ══════════════════════════════════════════════════════════
+          // Phase 3: Sign out B, switch back to A
+          // ══════════════════════════════════════════════════════════
 
-        await tester.runAsync(authService.signOut);
-        await pumpUntilSettled(tester);
+          await tester.runAsync(authService.signOut);
+          await pumpUntilSettled(tester);
 
-        logPhase('Phase 3a: Signed out from B');
+          logPhase('Phase 3a: Signed out from B');
 
-        // This is the flow that fails without our fix: signInForAccount
-        // tries to restore A's archived OAuth session, which has an
-        // expired access token. Previously it threw; now it should
-        // recover via refresh or local key fallback.
-        await tester.runAsync(
-          () => authService.signInForAccount(
-            pubkeyA,
-            AuthenticationSource.divineOAuth,
-          ),
-        );
-        await pumpUntilSettled(tester);
+          // This is the flow that fails without our fix: signInForAccount
+          // tries to restore A's archived OAuth session, which has an
+          // expired access token. Previously it threw; now it should
+          // recover via refresh or local key fallback.
+          await tester.runAsync(
+            () => authService.signInForAccount(
+              pubkeyA,
+              AuthenticationSource.divineOAuth,
+            ),
+          );
+          await pumpUntilSettled(tester);
 
-        expect(authService.isAuthenticated, isTrue);
-        expect(
-          authService.currentPublicKeyHex,
-          equals(pubkeyA),
-          reason:
-              'After switching back to A, identity should be A '
-              '(not B, not crash)',
-        );
+          expect(authService.isAuthenticated, isTrue);
+          expect(
+            authService.currentPublicKeyHex,
+            equals(pubkeyA),
+            reason:
+                'After switching back to A, identity should be A '
+                '(not B, not crash)',
+          );
 
-        logPhase('Phase 3b: Successfully switched back to A');
+          logPhase('Phase 3b: Successfully switched back to A');
 
-        // ══════════════════════════════════════════════════════════
-        // Phase 4: Verify signing works for A
-        // ══════════════════════════════════════════════════════════
+          // ══════════════════════════════════════════════════════════
+          // Phase 4: Verify signing works for A
+          // ══════════════════════════════════════════════════════════
 
-        final signedEvent = await tester.runAsync(
-          () => authService.createAndSignEvent(
-            kind: 1,
-            content: 'multi-account switch test',
-          ),
-        );
+          final signedEvent = await tester.runAsync(
+            () => authService.createAndSignEvent(
+              kind: 1,
+              content: 'multi-account switch test',
+            ),
+          );
 
-        expect(
-          signedEvent,
-          isNotNull,
-          reason: 'Signing should work after switching back to A',
-        );
-        expect(signedEvent?.pubkey, equals(pubkeyA));
+          expect(
+            signedEvent,
+            isNotNull,
+            reason: 'Signing should work after switching back to A',
+          );
+          expect(signedEvent?.pubkey, equals(pubkeyA));
 
-        logPhase('Phase 4: Signing works for A');
+          logPhase('Phase 4: Signing works for A');
 
-        semanticsHandle.dispose();
-        drainAsyncErrors(tester);
-        // Inline restore is required by the framework's end-of-body
-        // ErrorWidget.builder check; the addTearDown above covers throws.
-        restoreErrorWidgetBuilder(originalErrorBuilder);
+          semanticsHandle.dispose();
+          drainAsyncErrors(tester);
+        });
       },
       timeout: const Timeout(Duration(minutes: 5)),
     );
@@ -198,122 +197,117 @@ void main() {
       ($) async {
         final tester = $.tester;
 
-        final originalOnError = suppressSetStateErrors();
-        addTearDown(() => restoreErrorHandler(originalOnError));
-        final originalErrorBuilder = saveErrorWidgetBuilder();
-        addTearDown(() => restoreErrorWidgetBuilder(originalErrorBuilder));
-        final semanticsHandle = tester.ensureSemantics();
+        await runWithAppErrorHandlers(() async {
+          final semanticsHandle = tester.ensureSemantics();
 
-        launchAppGuarded(app.main);
-        await tester.pumpAndSettle(const Duration(seconds: 3));
+          launchAppGuarded(app.main);
+          await tester.pumpAndSettle(const Duration(seconds: 3));
 
-        // ══════════════════════════════════════════════════════════
-        // Phase 1: Register Keycast Account A
-        // ══════════════════════════════════════════════════════════
+          // ══════════════════════════════════════════════════════════
+          // Phase 1: Register Keycast Account A
+          // ══════════════════════════════════════════════════════════
 
-        final emailA =
-            'nsec-a-${DateTime.now().millisecondsSinceEpoch}@test.divine.video';
-        const password = 'TestPass123!';
+          final emailA =
+              'nsec-a-${DateTime.now().millisecondsSinceEpoch}@test.divine.video';
+          const password = 'TestPass123!';
 
-        await navigateToCreateAccount(tester);
-        await registerNewUser(tester, emailA, password);
+          await navigateToCreateAccount(tester);
+          await registerNewUser(tester, emailA, password);
 
-        final foundVerify = await waitForText(
-          tester,
-          'Complete your registration',
-        );
-        expect(foundVerify, isTrue);
+          final foundVerify = await waitForText(
+            tester,
+            'Complete your registration',
+          );
+          expect(foundVerify, isTrue);
 
-        final tokenA = await getVerificationToken(emailA);
-        await callVerifyEmail(tokenA);
-        await waitForTextGone(tester, 'Complete your registration');
-        await pumpUntilSettled(tester);
+          final tokenA = await getVerificationToken(emailA);
+          await callVerifyEmail(tokenA);
+          await waitForTextGone(tester, 'Complete your registration');
+          await pumpUntilSettled(tester);
 
-        final container = ProviderScope.containerOf(
-          tester.element(find.byType(MaterialApp)),
-        );
-        final authService = container.read(authServiceProvider);
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(MaterialApp)),
+          );
+          final authService = container.read(authServiceProvider);
 
-        expect(authService.isAuthenticated, isTrue);
-        await dismissNotificationPermission($);
-        final pubkeyA = authService.currentPublicKeyHex!;
-        logPhase('Phase 1: Keycast Account A registered — pubkey=$pubkeyA');
+          expect(authService.isAuthenticated, isTrue);
+          await dismissNotificationPermission($);
+          final pubkeyA = authService.currentPublicKeyHex!;
+          logPhase('Phase 1: Keycast Account A registered — pubkey=$pubkeyA');
 
-        // ══════════════════════════════════════════════════════════
-        // Phase 2: Sign out A, import nsec B
-        // ══════════════════════════════════════════════════════════
+          // ══════════════════════════════════════════════════════════
+          // Phase 2: Sign out A, import nsec B
+          // ══════════════════════════════════════════════════════════
 
-        final privateKeyB = generatePrivateKey();
-        final nsecB = Nip19.encodePrivateKey(privateKeyB);
+          final privateKeyB = generatePrivateKey();
+          final nsecB = Nip19.encodePrivateKey(privateKeyB);
 
-        await tester.runAsync(authService.signOut);
-        await pumpUntilSettled(tester);
+          await tester.runAsync(authService.signOut);
+          await pumpUntilSettled(tester);
 
-        logPhase('Phase 2a: Signed out from A');
+          logPhase('Phase 2a: Signed out from A');
 
-        final resultB = await tester.runAsync(
-          () => authService.importFromNsec(nsecB),
-        );
-        expect(resultB!.success, isTrue);
-        await tester.runAsync(authService.acceptTerms);
-        await pumpUntilSettled(tester);
+          final resultB = await tester.runAsync(
+            () => authService.importFromNsec(nsecB),
+          );
+          expect(resultB!.success, isTrue);
+          await tester.runAsync(authService.acceptTerms);
+          await pumpUntilSettled(tester);
 
-        expect(authService.isAuthenticated, isTrue);
-        final pubkeyB = authService.currentPublicKeyHex!;
-        expect(pubkeyB, isNot(equals(pubkeyA)));
+          expect(authService.isAuthenticated, isTrue);
+          final pubkeyB = authService.currentPublicKeyHex!;
+          expect(pubkeyB, isNot(equals(pubkeyA)));
 
-        logPhase('Phase 2b: nsec B imported — pubkey=$pubkeyB');
+          logPhase('Phase 2b: nsec B imported — pubkey=$pubkeyB');
 
-        // ══════════════════════════════════════════════════════════
-        // Phase 3: Reinitialize (simulates app restart)
-        //
-        // This is the #2936 bug: _tryRestoreFromKnownAccounts may
-        // pick Account A (most recently used Keycast account) over
-        // Account B (the just-imported nsec) if the restore logic
-        // doesn't respect _kLastUsedNpubKey correctly.
-        // ══════════════════════════════════════════════════════════
+          // ══════════════════════════════════════════════════════════
+          // Phase 3: Reinitialize (simulates app restart)
+          //
+          // This is the #2936 bug: _tryRestoreFromKnownAccounts may
+          // pick Account A (most recently used Keycast account) over
+          // Account B (the just-imported nsec) if the restore logic
+          // doesn't respect _kLastUsedNpubKey correctly.
+          // ══════════════════════════════════════════════════════════
 
-        // Re-initialize auth service (simulates cold start)
-        await tester.runAsync(authService.initialize);
-        await pumpUntilSettled(tester);
+          // Re-initialize auth service (simulates cold start)
+          await tester.runAsync(authService.initialize);
+          await pumpUntilSettled(tester);
 
-        logPhase(
-          'Phase 3: After reinitialize — '
-          'pubkey=${authService.currentPublicKeyHex}',
-        );
+          logPhase(
+            'Phase 3: After reinitialize — '
+            'pubkey=${authService.currentPublicKeyHex}',
+          );
 
-        expect(
-          authService.isAuthenticated,
-          isTrue,
-          reason: 'Should be authenticated after reinitialize',
-        );
-        expect(
-          authService.currentPublicKeyHex,
-          equals(pubkeyB),
-          reason:
-              'BUG #2936: After reinitialize, identity should still be B '
-              '(the imported nsec), not A (the Keycast account). If this '
-              'fails, _tryRestoreFromKnownAccounts is overriding the '
-              'imported identity.',
-        );
+          expect(
+            authService.isAuthenticated,
+            isTrue,
+            reason: 'Should be authenticated after reinitialize',
+          );
+          expect(
+            authService.currentPublicKeyHex,
+            equals(pubkeyB),
+            reason:
+                'BUG #2936: After reinitialize, identity should still be B '
+                '(the imported nsec), not A (the Keycast account). If this '
+                'fails, _tryRestoreFromKnownAccounts is overriding the '
+                'imported identity.',
+          );
 
-        // Verify signing still works for B
-        final signedEvent = await tester.runAsync(
-          () => authService.createAndSignEvent(
-            kind: 1,
-            content: 'nsec import persistence test',
-          ),
-        );
-        expect(signedEvent, isNotNull);
-        expect(signedEvent?.pubkey, equals(pubkeyB));
+          // Verify signing still works for B
+          final signedEvent = await tester.runAsync(
+            () => authService.createAndSignEvent(
+              kind: 1,
+              content: 'nsec import persistence test',
+            ),
+          );
+          expect(signedEvent, isNotNull);
+          expect(signedEvent?.pubkey, equals(pubkeyB));
 
-        logPhase('Phase 4: Signing works for B after reinitialize');
+          logPhase('Phase 4: Signing works for B after reinitialize');
 
-        semanticsHandle.dispose();
-        drainAsyncErrors(tester);
-        // Inline restore is required by the framework's end-of-body
-        // ErrorWidget.builder check; the addTearDown above covers throws.
-        restoreErrorWidgetBuilder(originalErrorBuilder);
+          semanticsHandle.dispose();
+          drainAsyncErrors(tester);
+        });
       },
       timeout: const Timeout(Duration(minutes: 5)),
     );
