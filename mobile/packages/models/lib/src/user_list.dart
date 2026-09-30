@@ -54,10 +54,15 @@ class UserList extends Equatable {
   /// `false` for system lists like Divine Team.
   final bool isEditable;
 
+  /// Copy with the given fields replaced.
+  ///
+  /// [clearDescription] drops the description, which a null [description]
+  /// cannot express since null means "keep the current one".
   UserList copyWith({
     String? id,
     String? name,
     String? description,
+    bool clearDescription = false,
     String? imageUrl,
     List<String>? pubkeys,
     DateTime? createdAt,
@@ -68,7 +73,7 @@ class UserList extends Equatable {
   }) => UserList(
     id: id ?? this.id,
     name: name ?? this.name,
-    description: description ?? this.description,
+    description: clearDescription ? null : description ?? this.description,
     imageUrl: imageUrl ?? this.imageUrl,
     pubkeys: pubkeys ?? this.pubkeys,
     createdAt: createdAt ?? this.createdAt,

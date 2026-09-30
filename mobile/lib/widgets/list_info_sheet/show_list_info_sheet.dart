@@ -14,17 +14,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_save_button.dart';
-
-/// Header inset that puts the faces of the two header buttons on the 16pt
-/// margin the form's cards sit on.
-///
-/// A small icon button is a 40pt face centered in a 48pt tap target, so the
-/// target starts 4pt further out than the face.
-const EdgeInsetsDirectional _headerPadding = EdgeInsetsDirectional.only(
-  start: 12,
-  end: 12,
-  top: 8,
-);
+import 'package:openvine/widgets/list_info_sheet/list_info_sheet_layout.dart';
 
 /// Shows the sheet that creates a curated list, or edits [existingList].
 ///
@@ -63,7 +53,7 @@ Future<void> showListInfoSheet(
       title: Text(
         existingList == null ? l10n.listCreateNewList : l10n.listEditInfoAction,
       ),
-      headerPadding: _headerPadding,
+      headerPadding: listInfoSheetHeaderPadding,
       headerLeadingAction: DivineIconButton(
         icon: DivineIconName.x,
         type: DivineIconButtonType.secondary,

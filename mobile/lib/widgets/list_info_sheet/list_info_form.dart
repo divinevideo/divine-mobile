@@ -8,18 +8,8 @@ import 'package:openvine/blocs/curated_list_info/curated_list_info_cubit.dart';
 import 'package:openvine/extensions/modal_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_collaborators_row.dart';
-
-/// Corner radius of the form's input cards.
-const double _fieldRadius = 24;
-
-/// Space between an input card's edge and its text.
-const EdgeInsets _fieldPadding = EdgeInsets.symmetric(
-  horizontal: 20,
-  vertical: 16,
-);
-
-/// Most lines the description shows before it scrolls.
-const int _descriptionMaxLines = 4;
+import 'package:openvine/widgets/list_info_sheet/list_info_failure_message.dart';
+import 'package:openvine/widgets/list_info_sheet/list_info_fields.dart';
 
 /// The form inside the list info sheet.
 ///
@@ -90,10 +80,6 @@ class _ListInfoFormState extends State<ListInfoForm> {
   }
 }
 
-/// Says the save failed, above the fields where the sheet cannot hide it.
-///
-/// A snackbar would be drawn on the screen underneath and covered by the
-/// sheet itself.
 class _SaveFailedMessage extends StatelessWidget {
   const _SaveFailedMessage();
 
@@ -109,17 +95,8 @@ class _SaveFailedMessage extends StatelessWidget {
     if (!failed) return const SizedBox.shrink();
 
     final l10n = context.l10n;
-    return Semantics(
-      liveRegion: true,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-        child: Text(
-          isEditing ? l10n.listUpdateFailed : l10n.listCreateFailed,
-          style: VineTheme.bodyMediumFont(
-            color: context.vineColors.onErrorContainer,
-          ),
-        ),
-      ),
+    return ListInfoFailureMessage(
+      isEditing ? l10n.listUpdateFailed : l10n.listCreateFailed,
     );
   }
 }
@@ -134,18 +111,9 @@ class _NameField extends StatelessWidget {
     final isSaving = context.select(
       (CuratedListInfoCubit cubit) => cubit.state.isSaving,
     );
-    return DivineTextField(
+    return ListNameField(
       controller: controller,
-      labelText: context.l10n.listNameLabel,
-      filled: true,
-      fillColor: context.vineColors.surfaceContainer,
-      fillBorderRadius: _fieldRadius,
-      contentPadding: _fieldPadding,
       enabled: !isSaving,
-      textCapitalization: TextCapitalization.words,
-      // Focus moves on to the description, which is where the chain ends: a
-      // multiline field keeps its return key for line breaks.
-      textInputAction: TextInputAction.next,
       onChanged: context.read<CuratedListInfoCubit>().nameChanged,
     );
   }
@@ -161,18 +129,9 @@ class _DescriptionField extends StatelessWidget {
     final isSaving = context.select(
       (CuratedListInfoCubit cubit) => cubit.state.isSaving,
     );
-    return DivineTextField(
+    return ListDescriptionField(
       controller: controller,
-      labelText: context.l10n.listDescriptionLabel,
-      filled: true,
-      fillColor: context.vineColors.surfaceContainer,
-      fillBorderRadius: _fieldRadius,
-      contentPadding: _fieldPadding,
       enabled: !isSaving,
-      keyboardType: TextInputType.multiline,
-      textInputAction: TextInputAction.newline,
-      minLines: 1,
-      maxLines: _descriptionMaxLines,
       onChanged: context.read<CuratedListInfoCubit>().descriptionChanged,
     );
   }

@@ -731,7 +731,7 @@ void main() {
     });
 
     testWidgets(
-      'owner actions sheet lists add people first and delete list last',
+      'owner actions sheet lists edit info, then add people, then delete',
       (tester) async {
         final bloc = _MockPeopleListsBloc();
         final list = _buildList(id: 'punk-friends', name: 'Punk Friends');
@@ -750,16 +750,77 @@ void main() {
         await tester.tap(find.byTooltip(l10n.peopleListsActionsTooltip));
         await tester.pumpAndSettle();
 
+        final editInfo = find.text(l10n.listEditInfoAction);
         final addPeople = find.text(l10n.peopleListsAddPeopleTooltip);
         final deleteList = find.text(l10n.listDeleteAction);
+        expect(editInfo, findsOneWidget);
         expect(addPeople, findsOneWidget);
         expect(deleteList, findsOneWidget);
+        expect(
+          tester.getTopLeft(editInfo).dy,
+          lessThan(tester.getTopLeft(addPeople).dy),
+        );
         expect(
           tester.getTopLeft(addPeople).dy,
           lessThan(tester.getTopLeft(deleteList).dy),
         );
       },
     );
+
+    testWidgets("edit info option opens the sheet on the list's values", (
+      tester,
+    ) async {
+      final bloc = _MockPeopleListsBloc();
+      final repository = _MockPeopleListsRepository();
+      final list = UserList(
+        id: 'punk-friends',
+        name: 'Punk Friends',
+        description: 'The early crew',
+        pubkeys: const [],
+        createdAt: DateTime.utc(2025),
+        updatedAt: DateTime.utc(2025),
+      );
+      whenListen(
+        bloc,
+        const Stream<PeopleListsState>.empty(),
+        initialState: PeopleListsState(
+          status: PeopleListsStatus.ready,
+          ownerPubkey: _ownerPubkey,
+          lists: [list],
+        ),
+      );
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        testProviderScope(
+          additionalOverrides: [
+            peopleListsRepositoryProvider.overrideWithValue(repository),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: BlocProvider<PeopleListsBloc>.value(
+              value: bloc,
+              child: UserListPeopleScreen(listId: list.id),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.byTooltip(l10n.peopleListsActionsTooltip));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.listEditInfoAction));
+      await tester.pumpAndSettle();
+
+      // The sheet's title, beside the hero's own copy of the name.
+      expect(find.text(l10n.listEditInfoAction), findsOneWidget);
+      expect(find.text('Punk Friends'), findsNWidgets(2));
+      expect(find.text('The early crew'), findsNWidgets(2));
+      expect(find.bySemanticsLabel(l10n.listSave), findsOneWidget);
+      expect(find.text(l10n.listMakePublicLabel), findsNothing);
+      expect(find.text(l10n.metadataCollaboratorsLabel), findsNothing);
+    });
 
     testWidgets('add people option opens the picker', (tester) async {
       final bloc = _MockPeopleListsBloc();

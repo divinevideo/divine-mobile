@@ -166,6 +166,144 @@ void main() {
       });
     });
 
+    group('encodeInfoEdit', () {
+      UserList renamed({String? description}) => UserList(
+        id: 'punk-friends',
+        name: 'Punk Family',
+        description: description,
+        pubkeys: const [memberPubkeyA],
+        createdAt: DateTime.fromMillisecondsSinceEpoch(1710000000000),
+        updatedAt: DateTime.fromMillisecondsSinceEpoch(1710000000000),
+      );
+
+      test('rewrites title and description in place, keeping the rest', () {
+        const ciphertext = 'nip44-ciphertext-written-by-another-client';
+
+        final payload = Nip51PeopleListCodec.encodeInfoEdit(
+          renamed(description: 'the whole family'),
+          sourceTags: const [
+            ['d', 'punk-friends', 'extra-position'],
+            ['title', 'Punk Friends'],
+            ['description', 'people from the early crew'],
+            ['image', 'https://example.com/list.png'],
+            ['p', memberPubkeyA, 'wss://relay.example', 'friend'],
+            ['t', 'nostr'],
+          ],
+          sourceContent: ciphertext,
+        );
+
+        expect(payload.kind, Nip51PeopleListCodec.kind);
+        expect(payload.tags, const [
+          ['d', 'punk-friends', 'extra-position'],
+          ['title', 'Punk Family'],
+          ['description', 'the whole family'],
+          ['image', 'https://example.com/list.png'],
+          ['p', memberPubkeyA, 'wss://relay.example', 'friend'],
+          ['t', 'nostr'],
+        ]);
+        expect(payload.content, ciphertext);
+      });
+
+      test('adds a title after d and a description after it when the '
+          'source has neither', () {
+        final payload = Nip51PeopleListCodec.encodeInfoEdit(
+          renamed(description: 'the whole family'),
+          sourceTags: const [
+            ['alt', 'Follow set'],
+            ['d', 'punk-friends'],
+            ['p', memberPubkeyA],
+          ],
+          sourceContent: '',
+        );
+
+        expect(payload.tags, const [
+          ['alt', 'Follow set'],
+          ['d', 'punk-friends'],
+          ['title', 'Punk Family'],
+          ['description', 'the whole family'],
+          ['p', memberPubkeyA],
+        ]);
+      });
+
+      test('drops the description tag for a blank description', () {
+        final payload = Nip51PeopleListCodec.encodeInfoEdit(
+          renamed(description: '   '),
+          sourceTags: const [
+            ['d', 'punk-friends'],
+            ['title', 'Punk Friends'],
+            ['description', 'people from the early crew'],
+            ['p', memberPubkeyA],
+          ],
+          sourceContent: '',
+        );
+
+        expect(payload.tags, const [
+          ['d', 'punk-friends'],
+          ['title', 'Punk Family'],
+          ['p', memberPubkeyA],
+        ]);
+      });
+
+      test('keeps one title and one description', () {
+        final payload = Nip51PeopleListCodec.encodeInfoEdit(
+          renamed(description: 'the whole family'),
+          sourceTags: const [
+            ['d', 'punk-friends'],
+            ['title', 'Punk Friends'],
+            ['title', 'Stale duplicate'],
+            ['description', 'people from the early crew'],
+            ['description', 'stale duplicate'],
+          ],
+          sourceContent: '',
+        );
+
+        expect(payload.tags, const [
+          ['d', 'punk-friends'],
+          ['title', 'Punk Family'],
+          ['description', 'the whole family'],
+        ]);
+      });
+
+      test('rejects a source for a different addressable list', () {
+        expect(
+          () => Nip51PeopleListCodec.encodeInfoEdit(
+            renamed(),
+            sourceTags: const [
+              ['d', 'some-other-list'],
+              ['title', 'Punk Friends'],
+            ],
+            sourceContent: '',
+          ),
+          throwsArgumentError,
+        );
+      });
+
+      test('round-trips through decode', () {
+        final payload = Nip51PeopleListCodec.encodeInfoEdit(
+          renamed(description: 'the whole family'),
+          sourceTags: const [
+            ['d', 'punk-friends'],
+            ['title', 'Punk Friends'],
+            ['p', memberPubkeyA],
+          ],
+          sourceContent: '',
+        );
+        final event = Event(
+          ownerPubkey,
+          payload.kind,
+          payload.tags,
+          payload.content,
+          createdAt: 1710000000,
+        );
+
+        final decoded = Nip51PeopleListCodec.decode(event);
+        expect(decoded, isNotNull);
+        expect(decoded!.name, 'Punk Family');
+        expect(decoded.description, 'the whole family');
+        expect(decoded.pubkeys, const [memberPubkeyA]);
+      });
+    });
+
     group('encodeReserved', () {
       test('edits members over the complete source event', () {
         final payload = Nip51PeopleListCodec.encodeReserved(

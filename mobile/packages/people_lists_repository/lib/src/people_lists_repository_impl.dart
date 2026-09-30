@@ -199,6 +199,61 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
   }
 
   @override
+  Future<PeopleListPublishResult> updateListInfo({
+    required String ownerPubkey,
+    required String listId,
+    required String name,
+    String? description,
+  }) async {
+    // A replacement built on a stale cache drops members only the relay has.
+    if (!await _reconcileOwner(ownerPubkey)) {
+      return const PeopleListPublishResult.failed();
+    }
+    final record = await _findList(ownerPubkey: ownerPubkey, listId: listId);
+    if (record == null) {
+      return const PeopleListPublishResult.failed();
+    }
+    final existing = record.list;
+    final trimmedName = name.trim();
+    final trimmedDescription = description?.trim();
+    final nextDescription =
+        trimmedDescription == null || trimmedDescription.isEmpty
+        ? null
+        : trimmedDescription;
+    if (existing.name == trimmedName &&
+        existing.description == nextDescription) {
+      return const PeopleListPublishResult.noop();
+    }
+    final sourceTags = record.sourceTags;
+    final sourceContent = record.sourceContent;
+    if (sourceTags == null || sourceContent == null) {
+      Log.warning(
+        'Cannot edit the info of people list $listId: the cached row '
+        'predates source preservation, so no complete replacement '
+        'can be built from it',
+        name: _logName,
+        category: LogCategory.relay,
+      );
+      return const PeopleListPublishResult.failed();
+    }
+    final updated = existing.copyWith(
+      name: trimmedName,
+      description: nextDescription,
+      clearDescription: nextDescription == null,
+      updatedAt: DateTime.now().toUtc(),
+    );
+    return _publishReplacement(
+      ownerPubkey: ownerPubkey,
+      list: updated,
+      encode: () => Nip51PeopleListCodec.encodeInfoEdit(
+        updated,
+        sourceTags: sourceTags,
+        sourceContent: sourceContent,
+      ),
+    );
+  }
+
+  @override
   Future<PeopleListPublishResult> addPubkey({
     required String ownerPubkey,
     required String listId,
@@ -717,16 +772,27 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     required UserList list,
     List<List<String>>? sourceTags,
     String? sourceContent,
+  }) => _publishReplacement(
+    ownerPubkey: ownerPubkey,
+    list: list,
+    encode: () => Nip51PeopleListCodec.encode(
+      list,
+      sourceTags: sourceTags,
+      sourceContent: sourceContent,
+    ),
+  );
+
+  /// Publishes the event [encode] builds for [list] and caches what was sent.
+  Future<PeopleListPublishResult> _publishReplacement({
+    required String ownerPubkey,
+    required UserList list,
+    required PeopleListEventPayload Function() encode,
   }) async {
     try {
       // encode throws ArgumentError on a malformed or mismatched source, so
       // it belongs inside the catch: callers only ever see the documented
       // failure result, never a raw programming-invariant throw.
-      final payload = Nip51PeopleListCodec.encode(
-        list,
-        sourceTags: sourceTags,
-        sourceContent: sourceContent,
-      );
+      final payload = encode();
       final event = Event(
         ownerPubkey,
         payload.kind,

@@ -576,6 +576,141 @@ void main() {
       });
     });
 
+    group('updateListInfo', () {
+      _MockNostrClient clientHolding(Event remote) {
+        final client = _MockNostrClient();
+        when(() => client.publicKey).thenReturn(_ownerPubkey);
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: true,
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => (events: [remote], timedOut: false, noRelays: false),
+        );
+        when(() => client.publishEvent(any())).thenAnswer((invocation) async {
+          final event = invocation.positionalArguments.first as Event;
+          return PublishSuccess(event: event);
+        });
+        return client;
+      }
+
+      Event sharedList({String? description}) => signedEvent(
+        kind: _peopleListKind,
+        tags: [
+          const ['d', 'shared-list'],
+          const ['title', 'Shared'],
+          if (description != null) ['description', description],
+          const ['alt', 'Written by another client'],
+          const ['p', _memberA, 'wss://relay.example', 'friend'],
+        ],
+        content: 'nip44-encrypted-private-members',
+        createdAt: 1000,
+      );
+
+      test('rewrites the title and description over the source event and '
+          'caches the result', () async {
+        final client = clientHolding(sharedList(description: 'Old words'));
+        final repository = buildRepository(nostrClient: client);
+
+        final result = await repository.updateListInfo(
+          ownerPubkey: _ownerPubkey,
+          listId: 'shared-list',
+          name: '  Renamed  ',
+          description: ' New words ',
+        );
+
+        expect(result.status, PeopleListPublishStatus.submitted);
+        final published =
+            verify(() => client.publishEvent(captureAny())).captured.single
+                as Event;
+        expect(published.tags, const [
+          ['d', 'shared-list'],
+          ['title', 'Renamed'],
+          ['description', 'New words'],
+          ['alt', 'Written by another client'],
+          ['p', _memberA, 'wss://relay.example', 'friend'],
+        ]);
+        expect(published.content, 'nip44-encrypted-private-members');
+
+        final stored = await repository.readLists(ownerPubkey: _ownerPubkey);
+        expect(stored.single.name, 'Renamed');
+        expect(stored.single.description, 'New words');
+        expect(stored.single.pubkeys, const [_memberA]);
+      });
+
+      test('drops the description when given a blank one', () async {
+        final client = clientHolding(sharedList(description: 'Old words'));
+        final repository = buildRepository(nostrClient: client);
+
+        final result = await repository.updateListInfo(
+          ownerPubkey: _ownerPubkey,
+          listId: 'shared-list',
+          name: 'Shared',
+          description: '   ',
+        );
+
+        expect(result.status, PeopleListPublishStatus.submitted);
+        final published =
+            verify(() => client.publishEvent(captureAny())).captured.single
+                as Event;
+        expect(
+          published.tags.any((tag) => tag.first == 'description'),
+          isFalse,
+        );
+        final stored = await repository.readLists(ownerPubkey: _ownerPubkey);
+        expect(stored.single.description, isNull);
+      });
+
+      test('returns noop, publishing nothing, when nothing changes', () async {
+        final client = clientHolding(sharedList(description: 'Old words'));
+        final repository = buildRepository(nostrClient: client);
+
+        final result = await repository.updateListInfo(
+          ownerPubkey: _ownerPubkey,
+          listId: 'shared-list',
+          name: 'Shared ',
+          description: ' Old words',
+        );
+
+        expect(result.status, PeopleListPublishStatus.noop);
+        verifyNever(() => client.publishEvent(any()));
+      });
+
+      test('returns failed for a list the owner does not have', () async {
+        final client = clientHolding(sharedList());
+        final repository = buildRepository(nostrClient: client);
+
+        final result = await repository.updateListInfo(
+          ownerPubkey: _ownerPubkey,
+          listId: 'no-such-list',
+          name: 'Renamed',
+        );
+
+        expect(result.status, PeopleListPublishStatus.failed);
+        verifyNever(() => client.publishEvent(any()));
+      });
+
+      test('returns failed when the relay refuses the replacement', () async {
+        final client = clientHolding(sharedList());
+        when(
+          () => client.publishEvent(any()),
+        ).thenAnswer((_) async => const PublishFailed());
+        final repository = buildRepository(nostrClient: client);
+
+        final result = await repository.updateListInfo(
+          ownerPubkey: _ownerPubkey,
+          listId: 'shared-list',
+          name: 'Renamed',
+        );
+
+        expect(result.status, PeopleListPublishStatus.failed);
+        final stored = await repository.readLists(ownerPubkey: _ownerPubkey);
+        expect(stored.single.name, 'Shared');
+      });
+    });
+
     group('removePubkey', () {
       test(
         'returns noop and does not publish when pubkey is not in list',
@@ -804,6 +939,26 @@ void main() {
         expect(result.status, equals(PeopleListPublishStatus.failed));
         verifyNever(() => client.publishEvent(any()));
       });
+
+      test(
+        'updateListInfo does not publish when the reconcile is inconclusive',
+        () async {
+          final client = publishingClient();
+          final repository = buildRepository(nostrClient: client);
+          final listId = await seedList(repository);
+          clearInteractions(client);
+          stubReconcile(client, timedOut: true);
+
+          final result = await repository.updateListInfo(
+            ownerPubkey: _ownerPubkey,
+            listId: listId,
+            name: 'Renamed',
+          );
+
+          expect(result.status, equals(PeopleListPublishStatus.failed));
+          verifyNever(() => client.publishEvent(any()));
+        },
+      );
 
       test(
         'removePubkey does not publish when the reconcile is inconclusive',
