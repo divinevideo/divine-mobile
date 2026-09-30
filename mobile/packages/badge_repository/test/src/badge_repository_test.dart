@@ -236,6 +236,104 @@ void main() {
       );
     });
 
+    group('loadSubscribedHolders', () {
+      test('is empty without a signed-in account', () async {
+        final signedOut = BadgeRepository(
+          nostrClient: nostrClient,
+          sharedPreferences: preferences,
+          currentPubkey: () => null,
+          signEvent: ({required kind, required content, required tags}) async =>
+              null,
+        );
+
+        expect(await signedOut.loadSubscribedHolders(), isEmpty);
+        verifyNever(() => nostrClient.queryEvents(any()));
+      });
+
+      test('unions the accepted holders of every subscribed badge', () async {
+        final daily = BadgeCoordinate(
+          pubkey: _pubkey(2),
+          identifier: 'daily-diviner',
+        );
+        final weekly = BadgeCoordinate(
+          pubkey: _pubkey(2),
+          identifier: 'weekly-diviner',
+        );
+        final holderOf = {
+          daily.value: [_pubkey(10), _pubkey(11)],
+          weekly.value: [_pubkey(11), _pubkey(12)],
+        };
+        when(() => nostrClient.queryEvents(any())).thenAnswer(
+          (_) async => [
+            _event(
+              id: _eventId(1),
+              pubkey: _pubkey(1),
+              kind: EventKind.appSpecificData,
+              tags: [
+                ['d', 'divine.badge_subscriptions'],
+                ['a', daily.value],
+                ['a', weekly.value],
+              ],
+            ),
+          ],
+        );
+        when(() => nostrClient.readAllEvents(any())).thenAnswer((
+          invocation,
+        ) async {
+          final filter = invocation.positionalArguments.single as Filter;
+          if (filter.kinds?.contains(EventKind.badgeAward) == true) {
+            final badge = filter.a!.single;
+            return PagedQueryResult(
+              events: [
+                _awardEvent(
+                  id: _eventId(badge == daily.value ? 100 : 101),
+                  issuerPubkey: _pubkey(2),
+                  definitionCoordinate: badge,
+                  recipients: holderOf[badge]!,
+                ),
+              ],
+              isComplete: true,
+              pages: 1,
+            );
+          }
+          if (filter.kinds?.contains(EventKind.profileBadges) == true) {
+            return PagedQueryResult(
+              events: [
+                for (final pubkey in filter.authors ?? const <String>[])
+                  _profileBadgesEvent(
+                    id: _eventId(500 + int.parse(pubkey, radix: 16)),
+                    pubkey: pubkey,
+                    tags: [
+                      for (final entry in holderOf.entries)
+                        if (entry.value.contains(pubkey)) ...[
+                          ['a', entry.key],
+                          [
+                            'e',
+                            _eventId(entry.key == daily.value ? 100 : 101),
+                          ],
+                        ],
+                    ],
+                  ),
+              ],
+              isComplete: true,
+              pages: 1,
+            );
+          }
+          return const PagedQueryResult(
+            events: [],
+            isComplete: true,
+            pages: 1,
+          );
+        });
+
+        expect(await repository.loadSubscribedHolders(), {
+          _pubkey(10),
+          _pubkey(11),
+          _pubkey(12),
+        });
+      });
+    });
+
     test(
       'accepted holders include recipients beyond a 200-event page',
       () async {

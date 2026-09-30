@@ -59,7 +59,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     HomeFeedCache? homeFeedCache,
     EnrichVideos? enrichVideos,
     FeedTuningRepository? feedTuningRepository,
-    Future<List<String>> Function()? badgeAuthors,
+    Future<Iterable<String>> Function()? badgeAuthors,
   }) : _videosRepository = videosRepository,
        _followRepository = followRepository,
        _curatedListRepository = curatedListRepository,
@@ -114,7 +114,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   final FeedPerformanceTracker? _feedTracker;
   final EnrichVideos? _enrichVideos;
   final FeedTuningRepository? _feedTuningRepository;
-  final Future<List<String>> Function()? _badgeAuthors;
+  final Future<Iterable<String>> Function()? _badgeAuthors;
   bool _hasBadgeAuthors = false;
   List<String>? _cachedBadgeAuthors;
   BadgeVideoPager? _badgeVideoPager;
@@ -1134,19 +1134,34 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   Future<HomeFeedResult> _fetchFollowingWithBadges({int? until}) async {
     final badgeAuthors = until != null && _cachedBadgeAuthors != null
         ? _cachedBadgeAuthors!
-        : await _badgeAuthors?.call() ?? const <String>[];
+        : await _loadBadgeAuthors();
     _cachedBadgeAuthors = badgeAuthors;
     _hasBadgeAuthors = badgeAuthors.isNotEmpty;
     if (badgeAuthors.isNotEmpty) {
-      if (until == null || _badgeVideoPager == null) {
-        _badgeVideoPager = _videosRepository.createBadgeVideoPager([
-          ..._followRepository.followingPubkeys,
-          ...badgeAuthors,
-        ]);
+      try {
+        if (until == null || _badgeVideoPager == null) {
+          _badgeVideoPager = _videosRepository.createBadgeVideoPager([
+            ..._followRepository.followingPubkeys,
+            ...badgeAuthors,
+          ]);
+        }
+        final pager = _badgeVideoPager!;
+        final videos = await pager.loadMore(limit: 5);
+        return HomeFeedResult(videos: videos, hasMore: pager.hasMore);
+      } catch (error, stackTrace) {
+        // A later page keeps the merged feed's ordering; only the first page
+        // may fall back without mixing two orderings in one list.
+        if (until != null) rethrow;
+        Log.warning(
+          'VideoFeedBloc: badge holder videos unavailable, showing follows',
+          name: 'VideoFeedBloc',
+          category: LogCategory.video,
+          error: error,
+          stackTrace: stackTrace,
+        );
+        _cachedBadgeAuthors = const [];
+        _hasBadgeAuthors = false;
       }
-      final pager = _badgeVideoPager!;
-      final videos = await pager.loadMore(limit: 5);
-      return HomeFeedResult(videos: videos, hasMore: pager.hasMore);
     }
     _badgeVideoPager = null;
     return _videosRepository.getHomeFeedVideos(
@@ -1154,6 +1169,23 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       userPubkey: _userPubkey,
       until: until,
     );
+  }
+
+  /// Subscribed badge holders, or none when they cannot be resolved: a relay
+  /// failure there must not take the direct-follow feed down with it.
+  Future<List<String>> _loadBadgeAuthors() async {
+    try {
+      return (await _badgeAuthors?.call())?.toList() ?? const <String>[];
+    } catch (error, stackTrace) {
+      Log.warning(
+        'VideoFeedBloc: badge subscriptions unavailable, showing follows',
+        name: 'VideoFeedBloc',
+        category: LogCategory.video,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return const <String>[];
+    }
   }
 
   void _scheduleNostrEnrichment({

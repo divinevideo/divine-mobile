@@ -1240,6 +1240,89 @@ void main() {
       );
 
       blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        'shows direct follows when badge subscriptions cannot be resolved',
+        setUp: () {
+          when(() => mockFollowRepository.followingPubkeys).thenReturn([
+            'direct-follow',
+          ]);
+          when(
+            () => mockVideosRepository.getHomeFeedVideos(
+              authors: ['direct-follow'],
+              videoRefs: any(named: 'videoRefs'),
+              userPubkey: any(named: 'userPubkey'),
+              limit: any(named: 'limit'),
+              until: any(named: 'until'),
+            ),
+          ).thenAnswer(
+            (_) async => HomeFeedResult(videos: [createTestVideo('follow')]),
+          );
+        },
+        build: () => VideoFeedBloc(
+          videosRepository: mockVideosRepository,
+          followRepository: mockFollowRepository,
+          curatedListRepository: mockCuratedListRepository,
+          badgeAuthors: () async =>
+              throw StateError('Badge holders could not be fully loaded'),
+        ),
+        act: (bloc) =>
+            bloc.add(const VideoFeedStarted(mode: FeedMode.following)),
+        expect: () => [
+          const VideoFeedBlocState(mode: FeedMode.following),
+          isA<VideoFeedBlocState>()
+              .having((s) => s.status, 'status', VideoFeedStatus.success)
+              .having((s) => s.videos.map((v) => v.id), 'videos', [
+                'follow',
+              ]),
+        ],
+        verify: (_) => verifyNever(
+          () => mockVideosRepository.createBadgeVideoPager(any()),
+        ),
+      );
+
+      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        'shows direct follows when badge holder videos are unavailable',
+        setUp: () {
+          when(() => mockFollowRepository.followingPubkeys).thenReturn([
+            'direct-follow',
+          ]);
+          when(
+            () => mockVideosRepository.getHomeFeedVideos(
+              authors: ['direct-follow'],
+              videoRefs: any(named: 'videoRefs'),
+              userPubkey: any(named: 'userPubkey'),
+              limit: any(named: 'limit'),
+              until: any(named: 'until'),
+            ),
+          ).thenAnswer(
+            (_) async => HomeFeedResult(videos: [createTestVideo('follow')]),
+          );
+          final pager = _MockBadgeVideoPager();
+          when(
+            () => mockVideosRepository.createBadgeVideoPager(any()),
+          ).thenReturn(pager);
+          when(
+            () => pager.loadMore(limit: 5),
+          ).thenThrow(Exception('by-authors unavailable'));
+        },
+        build: () => VideoFeedBloc(
+          videosRepository: mockVideosRepository,
+          followRepository: mockFollowRepository,
+          curatedListRepository: mockCuratedListRepository,
+          badgeAuthors: () async => ['badge-holder'],
+        ),
+        act: (bloc) =>
+            bloc.add(const VideoFeedStarted(mode: FeedMode.following)),
+        expect: () => [
+          const VideoFeedBlocState(mode: FeedMode.following),
+          isA<VideoFeedBlocState>()
+              .having((s) => s.status, 'status', VideoFeedStatus.success)
+              .having((s) => s.videos.map((v) => v.id), 'videos', [
+                'follow',
+              ]),
+        ],
+      );
+
+      blocTest<VideoFeedBloc, VideoFeedBlocState>(
         'does not emit noFollowedUsers for forYou when following list is empty',
         setUp: () {
           when(() => mockFollowRepository.followingPubkeys).thenReturn([]);
