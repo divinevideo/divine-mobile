@@ -366,14 +366,18 @@ class AppLocalizationsAm extends AppLocalizations {
       'ምግቦችን በክላሲክ ካሬ ቅርጽ ያቆዩ';
 
   @override
-  String videoOverlayTotalLoops(String compactCount, int count) {
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
       other: 'ዙሮች',
       one: 'ዙር',
     );
-    return 'ጠቅላላ $compactCount $_temp0';
+    return 'የ$authorName $compactCount $_temp0';
   }
 
   @override
@@ -384,7 +388,7 @@ class AppLocalizationsAm extends AppLocalizations {
       other: 'ዙሮች',
       one: 'ዙር',
     );
-    return 'የቪዲዮ $compactCount $_temp0';
+    return 'የዚህ ቪዲዮ $compactCount $_temp0';
   }
 
   @override

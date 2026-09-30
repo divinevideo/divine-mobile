@@ -372,14 +372,18 @@ class AppLocalizationsBg extends AppLocalizations {
       'Запази емисиите в класическия квадратен формат';
 
   @override
-  String videoOverlayTotalLoops(String compactCount, int count) {
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
       other: 'повторения',
       one: 'повторение',
     );
-    return 'Общо $compactCount $_temp0';
+    return '$compactCount $_temp0 на $authorName';
   }
 
   @override
@@ -390,7 +394,7 @@ class AppLocalizationsBg extends AppLocalizations {
       other: 'повторения',
       one: 'повторение',
     );
-    return '$compactCount $_temp0 на видеото';
+    return '$compactCount $_temp0 на това видео';
   }
 
   @override

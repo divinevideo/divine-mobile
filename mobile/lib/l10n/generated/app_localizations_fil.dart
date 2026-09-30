@@ -337,11 +337,15 @@ class AppLocalizationsFil extends AppLocalizations {
       'Panatilihin ang feeds sa classic na square format';
 
   @override
-  String videoOverlayTotalLoops(String compactCount, int count) {
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$compactCount loop sa kabuuan',
+      other: '$compactCount loop ni $authorName',
     );
     return '$_temp0';
   }
@@ -354,7 +358,7 @@ class AppLocalizationsFil extends AppLocalizations {
       other: 'loops',
       one: 'loop',
     );
-    return '$compactCount $_temp0 ng video';
+    return '$compactCount $_temp0 ng video na ito';
   }
 
   @override

@@ -337,11 +337,15 @@ class AppLocalizationsVi extends AppLocalizations {
       'Giữ bảng tin ở định dạng vuông cổ điển';
 
   @override
-  String videoOverlayTotalLoops(String compactCount, int count) {
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'tổng $compactCount lượt lặp',
+      other: '$compactCount lượt lặp của $authorName',
     );
     return '$_temp0';
   }
@@ -353,7 +357,7 @@ class AppLocalizationsVi extends AppLocalizations {
       locale: localeName,
       other: 'lượt',
     );
-    return 'video lặp $compactCount $_temp0';
+    return 'video này lặp $compactCount $_temp0';
   }
 
   @override

@@ -387,14 +387,18 @@ class AppLocalizationsRo extends AppLocalizations {
       'Păstrează feedurile în formatul clasic pătrat';
 
   @override
-  String videoOverlayTotalLoops(String compactCount, int count) {
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
       other: 'bucle',
       one: 'buclă',
     );
-    return '$compactCount $_temp0 în total';
+    return '$authorName: $compactCount $_temp0';
   }
 
   @override
@@ -402,10 +406,10 @@ class AppLocalizationsRo extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'bucle ale videoclipului',
-      one: 'buclă a videoclipului',
+      other: 'bucle',
+      one: 'buclă',
     );
-    return '$compactCount $_temp0';
+    return '$compactCount $_temp0 ale acestui videoclip';
   }
 
   @override

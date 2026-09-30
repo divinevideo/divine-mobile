@@ -306,11 +306,15 @@ class AppLocalizationsTr extends AppLocalizations {
       'Akışları klasik kare formatta tut';
 
   @override
-  String videoOverlayTotalLoops(String compactCount, int count) {
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'toplam $compactCount döngü',
+      other: '$authorName: $compactCount döngü',
     );
     return '$_temp0';
   }
@@ -322,7 +326,7 @@ class AppLocalizationsTr extends AppLocalizations {
       locale: localeName,
       other: 'döngü',
     );
-    return 'videoda $compactCount $_temp0';
+    return 'bu videoda $compactCount $_temp0';
   }
 
   @override
