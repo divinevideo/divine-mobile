@@ -883,10 +883,6 @@
   "@videoSettingsCaptionsOff": {
     "description": "Snackbar confirming that captions were just turned off from the playback-settings pill."
   },
-  "videoSettingsCaptionsOffForVideo": "ఈ వీడియోకు శీర్షికలు ఆఫ్ చేయబడ్డాయి",
-  "@videoSettingsCaptionsOffForVideo": {
-    "description": "Snackbar confirming that captions were just turned off for the current video from the playback-settings pill."
-  },
   "contentWarningLabel": "కంటెంట్ హెచ్చరిక",
   "contentWarningNudity": "నగ్నత్వం",
   "contentWarningSexualContent": "లైంగిక కంటెంట్",

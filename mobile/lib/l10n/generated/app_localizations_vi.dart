@@ -1471,9 +1471,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Đã tắt phụ đề';
 
   @override
-  String get videoSettingsCaptionsOffForVideo => 'Đã tắt phụ đề cho video này';
-
-  @override
   String get contentWarningLabel => 'Cảnh báo nội dung';
 
   @override

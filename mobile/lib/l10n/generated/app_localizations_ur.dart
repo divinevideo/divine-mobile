@@ -1506,10 +1506,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'کیپشن آف';
 
   @override
-  String get videoSettingsCaptionsOffForVideo =>
-      'اس ویڈیو کے لیے کیپشنز آف ہیں';
-
-  @override
   String get contentWarningLabel => 'مواد انتباہ';
 
   @override

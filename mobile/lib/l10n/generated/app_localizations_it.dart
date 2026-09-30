@@ -1522,10 +1522,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Sottotitoli disattivati';
 
   @override
-  String get videoSettingsCaptionsOffForVideo =>
-      'Sottotitoli disattivati per questo video';
-
-  @override
   String get contentWarningLabel => 'Avviso sui contenuti';
 
   @override

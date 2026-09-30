@@ -1546,10 +1546,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Subtitrări dezactivate';
 
   @override
-  String get videoSettingsCaptionsOffForVideo =>
-      'Subtitrările sunt oprite pentru acest videoclip';
-
-  @override
   String get contentWarningLabel => 'Atenționare de conținut';
 
   @override
