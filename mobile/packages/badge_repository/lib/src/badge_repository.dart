@@ -449,6 +449,20 @@ class BadgeRepository {
     });
   }
 
+  /// Every accepted holder of the badges the current account subscribes to.
+  ///
+  /// Empty when signed out or subscribed to nothing. Throws when a holder set
+  /// cannot be fully loaded, like [loadAcceptedHolders].
+  Future<Set<String>> loadSubscribedHolders() async {
+    final pubkey = _currentPubkey();
+    if (pubkey == null || pubkey.isEmpty) return const {};
+    final subscriptions = await loadSubscriptions();
+    final holderSets = await Future.wait(
+      subscriptions.map(loadAcceptedHolders),
+    );
+    return Set.unmodifiable({for (final holders in holderSets) ...holders});
+  }
+
   /// Public, account-synced badge subscriptions stored in a NIP-78 event.
   Future<Set<BadgeCoordinate>> loadSubscriptions({
     bool requireComplete = false,
