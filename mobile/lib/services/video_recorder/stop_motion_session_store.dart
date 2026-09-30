@@ -117,11 +117,16 @@ class StopMotionSessionStore {
   /// is queued behind the capture-time writes rather than awaited, and the
   /// handoff to the editor stays instant.
   ///
+  /// With [appendToComposition], a session shot over an existing stop-motion
+  /// composition goes onto the end of that composition's frames clip instead
+  /// (see [_appendToComposition]).
+  ///
   /// Throws a [StateError] when no still in [framePaths] is readable.
   DivineVideoClip ingest(
     List<String> framePaths, {
     required model.AspectRatio aspectRatio,
     CameraLensMetadata? lensMetadata,
+    bool appendToComposition = false,
   }) {
     final clipManager = _readClipManager();
 
@@ -141,9 +146,27 @@ class StopMotionSessionStore {
       for (final path in readablePaths)
         StopMotionClipFrame(path: path, duration: hold),
     ];
+    final id = sessionId(framePaths.first);
+    final composition = clipManager.clips;
+
+    if (appendToComposition && isStopMotionComposition(composition)) {
+      _queueLibrarySave(
+        id,
+        () => clipManager.saveStopMotionSessionToLibrary(
+          id: id,
+          frames: frames,
+          originalAspectRatio: aspectRatio.value,
+          targetAspectRatio: aspectRatio,
+          duration: StopMotionFrameOps.totalDuration(frames),
+          thumbnailPath: frames.first.path,
+          lensMetadata: lensMetadata,
+        ),
+      );
+      return _appendToComposition(clipManager, composition, frames);
+    }
 
     final clip = clipManager.addStopMotionClip(
-      id: sessionId(framePaths.first),
+      id: id,
       frames: frames,
       originalAspectRatio: aspectRatio.value,
       targetAspectRatio: aspectRatio,
@@ -156,19 +179,54 @@ class StopMotionSessionStore {
       (c) => c.id == clip.id,
       orElse: () => clip,
     );
+    _queueLibrarySave(id, () => clipManager.saveClipToLibrary(updatedClip));
+    return clip;
+  }
+
+  /// Puts the session's [frames] onto the end of the frames clip of the
+  /// stop-motion [composition] already in the clip manager, and returns that
+  /// clip.
+  ///
+  /// The editor edits exactly one frames clip (see
+  /// [StopMotionFrameOps.mergeClips]). A second clip would sit outside its
+  /// frames-per-image control and keep the fill-a-second stretch of a fresh
+  /// session ([StopMotionFrameOps.initialHold]), so a handful of stills shot
+  /// after backing out would play several times slower than the rest. They
+  /// take the composition's own hold instead, as they do when the editor's
+  /// camera splices them in.
+  DivineVideoClip _appendToComposition(
+    ClipManagerNotifier clipManager,
+    List<DivineVideoClip> composition,
+    List<StopMotionClipFrame> frames,
+  ) {
+    final target =
+        StopMotionFrameOps.mergeClips(composition) ?? composition.first;
+    final targetFrames = target.stopMotionFrames ?? const [];
+    final appended = StopMotionFrameOps.setGlobalHold(
+      frames,
+      StopMotionFrameOps.globalDefaultFramesPerImage(targetFrames),
+    );
+    final merged = StopMotionFrameOps.clipWithFrames(target, [
+      ...targetFrames,
+      ...appended,
+    ]);
+    clipManager.replaceClips([merged]);
+    return merged;
+  }
+
+  /// Queues [save] of the session row [id] behind the capture-time writes.
+  void _queueLibrarySave(String id, Future<bool> Function() save) {
     unawaited(
       _enqueue(() async {
-        final saved = await clipManager.saveClipToLibrary(updatedClip);
-        if (!saved) {
+        if (!await save()) {
           Log.warning(
-            '⚠️ Stop-motion clip save to library failed for ${clip.id}',
+            '⚠️ Stop-motion clip save to library failed for $id',
             name: _logName,
             category: LogCategory.video,
           );
         }
       }),
     );
-    return clip;
   }
 
   /// Discards an abandoned capture session: deletes its frame files and drops

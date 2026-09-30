@@ -10,6 +10,8 @@ import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/models/video_recorder/video_recorder_state.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_capture_top_bar.dart';
@@ -37,12 +39,17 @@ void main() {
       List<DivineVideoClip>? clips,
       Duration activeRecordingDuration = Duration.zero,
       bool showRecordingProgress = true,
+      VideoRecorderMode recorderMode = VideoRecorderMode.capture,
+      List<String> stopMotionFrames = const [],
+      bool fromEditor = false,
     }) {
       when(() => recorderBloc.state).thenReturn(
         VideoRecorderBlocState(
           recordingState: recordingState,
           isCameraInitialized: true,
           canRecord: true,
+          recorderMode: recorderMode,
+          stopMotionFrames: stopMotionFrames,
         ),
       );
 
@@ -62,7 +69,7 @@ void main() {
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: VideoRecorderCaptureTopBar(
-                fromEditor: false,
+                fromEditor: fromEditor,
                 showRecordingProgress: showRecordingProgress,
               ),
             ),
@@ -174,6 +181,104 @@ void main() {
           findsOneWidget,
         );
       });
+    });
+
+    group('stop-motion', () {
+      Finder nextButton() =>
+          find.bySemanticsIdentifier(SemanticIds.cameraNextButton);
+
+      DivineVideoClip composition() => DivineVideoClip(
+        id: 'clip_sm_first',
+        duration: const Duration(seconds: 1),
+        recordedAt: DateTime(2026),
+        targetAspectRatio: .vertical,
+        originalAspectRatio: 9 / 16,
+        stopMotionFrames: const [
+          StopMotionClipFrame(
+            path: '/test/first.jpg',
+            duration: Duration(seconds: 1),
+          ),
+        ],
+      );
+
+      testWidgets('next leads back to a composition with no stills pending', (
+        tester,
+      ) async {
+        // Backing out of the editor to shoot more leaves the stills in the
+        // clip manager and none in the recorder; "next" must still reach the
+        // editor without another still being shot first.
+        await tester.pumpWidget(
+          buildWidget(
+            recorderMode: VideoRecorderMode.stopMotion,
+            clips: [composition()],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(nextButton().hitTestable(), findsOneWidget);
+      });
+
+      testWidgets('next ignores taps while hidden', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(recorderMode: VideoRecorderMode.stopMotion),
+        );
+        await tester.pumpAndSettle();
+
+        final hiddenNext = find.byWidgetPredicate(
+          (widget) =>
+              widget is DivineIconButton &&
+              widget.semanticIdentifier == SemanticIds.cameraNextButton,
+        );
+        expect(hiddenNext, findsOneWidget);
+        expect(hiddenNext.hitTestable(), findsNothing);
+      });
+
+      testWidgets('next appends pending stills to the composition', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            recorderMode: VideoRecorderMode.stopMotion,
+            stopMotionFrames: const ['/test/a.jpg'],
+            clips: [composition()],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(nextButton());
+
+        verify(
+          () => recorderBloc.add(
+            const VideoRecorderStopMotionAssembleRequested(
+              appendToComposition: true,
+            ),
+          ),
+        ).called(1);
+      });
+
+      testWidgets(
+        'editor-hosted next hands pending stills over as a clip of their own',
+        (tester) async {
+          // The editor splices that clip in at its playhead itself.
+          await tester.pumpWidget(
+            buildWidget(
+              recorderMode: VideoRecorderMode.stopMotion,
+              stopMotionFrames: const ['/test/a.jpg'],
+              clips: [composition()],
+              fromEditor: true,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          await tester.tap(nextButton());
+
+          verify(
+            () => recorderBloc.add(
+              const VideoRecorderStopMotionAssembleRequested(),
+            ),
+          ).called(1);
+        },
+      );
     });
 
     group('recording state', () {

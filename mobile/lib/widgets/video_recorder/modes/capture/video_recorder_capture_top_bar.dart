@@ -49,8 +49,11 @@ class VideoRecorderCaptureTopBar extends ConsumerWidget {
     );
     final hasClips = ref.watch(clipManagerProvider.select((p) => p.hasClips));
     // Stop-motion assembles its frames into a clip on "next" rather than
-    // navigating straight to the editor.
-    final showNext = capturesStills ? stopMotionFrameCount > 0 : hasClips;
+    // navigating straight to the editor. With no stills pending, "next" goes
+    // straight back to a composition the user backed out of to shoot more —
+    // without it the only way back to the editor was another still.
+    final assemblesStills = capturesStills && stopMotionFrameCount > 0;
+    final showNext = assemblesStills || hasClips;
 
     return SafeArea(
       left: false,
@@ -80,20 +83,27 @@ class VideoRecorderCaptureTopBar extends ConsumerWidget {
                     AnimatedOpacity(
                       duration: _animationDuration,
                       opacity: showNext ? 1 : 0,
-                      child: DivineIconButton(
-                        icon: .caretRight,
-                        semanticLabel:
-                            context.l10n.videoRecorderContinueToEditorLabel,
-                        semanticIdentifier: SemanticIds.cameraNextButton,
-                        size: .small,
-                        type: .ghostOverMedia,
-                        onPressed: capturesStills
-                            ? () => context.read<VideoRecorderBloc>().add(
-                                const VideoRecorderStopMotionAssembleRequested(),
-                              )
-                            : () => fromEditor
-                                  ? context.pop(true)
-                                  : openVideoEditorFromRecorder(context, ref),
+                      // Opacity alone does not stop hit testing: a hidden
+                      // "next" would open the editor on an empty session.
+                      child: IgnorePointer(
+                        ignoring: !showNext,
+                        child: DivineIconButton(
+                          icon: .caretRight,
+                          semanticLabel:
+                              context.l10n.videoRecorderContinueToEditorLabel,
+                          semanticIdentifier: SemanticIds.cameraNextButton,
+                          size: .small,
+                          type: .ghostOverMedia,
+                          onPressed: assemblesStills
+                              ? () => context.read<VideoRecorderBloc>().add(
+                                  VideoRecorderStopMotionAssembleRequested(
+                                    appendToComposition: !fromEditor,
+                                  ),
+                                )
+                              : () => fromEditor
+                                    ? context.pop(true)
+                                    : openVideoEditorFromRecorder(context, ref),
+                        ),
                       ),
                     ),
                   ],

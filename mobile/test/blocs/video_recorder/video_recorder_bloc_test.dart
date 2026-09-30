@@ -175,6 +175,7 @@ void main() {
       ),
     );
     registerFallbackValue(<StopMotionClipFrame>[]);
+    registerFallbackValue(<DivineVideoClip>[]);
     registerFallbackValue(Duration.zero);
   });
 
@@ -4372,6 +4373,62 @@ void main() {
             captured.captured[1],
             StopMotionFrameOps.minimumInitialDuration,
           );
+        },
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'appends to the composition the recorder was asked to continue',
+        setUp: () {
+          stubClipIngest();
+          when(() => clipManager.clips).thenReturn([
+            DivineVideoClip(
+              id: 'clip_sm_old',
+              duration: StopMotionFrameOps.framesPerImageToDuration(3),
+              recordedAt: DateTime(2024),
+              targetAspectRatio: model.AspectRatio.vertical,
+              originalAspectRatio: 9 / 16,
+              stopMotionFrames: [
+                StopMotionClipFrame(
+                  path: framePath,
+                  duration: StopMotionFrameOps.framesPerImageToDuration(3),
+                ),
+              ],
+            ),
+          ]);
+        },
+        build: buildBloc,
+        seed: () => VideoRecorderBlocState(
+          recorderMode: VideoRecorderMode.stopMotion,
+          stopMotionFrames: [frameAPath, frameBPath],
+        ),
+        act: (bloc) => bloc.add(
+          const VideoRecorderStopMotionAssembleRequested(
+            appendToComposition: true,
+          ),
+        ),
+        verify: (bloc) {
+          final replaced =
+              verify(
+                    () => clipManager.replaceClips(captureAny()),
+                  ).captured.single
+                  as List<DivineVideoClip>;
+          expect(
+            replaced.single.stopMotionFrames!.map((f) => f.path),
+            [framePath, frameAPath, frameBPath],
+          );
+          verifyNever(
+            () => clipManager.addStopMotionClip(
+              id: any(named: 'id'),
+              frames: any(named: 'frames'),
+              originalAspectRatio: any(named: 'originalAspectRatio'),
+              targetAspectRatio: any(named: 'targetAspectRatio'),
+              duration: any(named: 'duration'),
+              thumbnailPath: any(named: 'thumbnailPath'),
+              lensMetadata: any(named: 'lensMetadata'),
+            ),
+          );
+          expect(bloc.state.stopMotionStatus, StopMotionStatus.ready);
+          expect(bloc.state.stopMotionFrames, isEmpty);
         },
       );
 
