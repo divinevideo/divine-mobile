@@ -236,6 +236,23 @@ void main() {
       );
 
       blocTest<CaptionsEditorCubit, CaptionsEditorState>(
+        'updateCueText keeps them when a word is deleted and typed back',
+        build: () => build(initialCues: const [spoken]),
+        act: (cubit) => cubit
+          ..updateCueText('cue-0', 'Helo ')
+          ..updateCueText('cue-0', 'Helo w')
+          ..updateCueText('cue-0', 'Helo world'),
+        skip: 2,
+        expect: () => [
+          isA<CaptionsEditorState>().having(
+            (s) => s.cues.single.wordTimings,
+            'word timings',
+            spoken.words,
+          ),
+        ],
+      );
+
+      blocTest<CaptionsEditorCubit, CaptionsEditorState>(
         'updateCueTiming leaves them where they are spoken',
         build: () => build(initialCues: const [spoken]),
         act: (cubit) =>

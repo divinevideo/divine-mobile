@@ -101,8 +101,12 @@ class CaptionCue extends Equatable {
   /// This cue showing [text].
   ///
   /// An edit that keeps the number of words, such as fixing a misheard word,
-  /// keeps every word's recognized timing. Any other edit cannot tell which
-  /// word went where, so the cue falls back to spreading its words.
+  /// keeps every word's recognized timing. While the count differs, which
+  /// word went where is unknown and [wordTimings] spreads the text instead;
+  /// the timings are kept, not dropped, because the text is edited one
+  /// keystroke at a time, so deleting a word and typing it back passes
+  /// through a different count and must still end with the timings it
+  /// started with.
   CaptionCue withText(String text) {
     final texts = splitCaptionWords(text);
     return CaptionCue(
@@ -119,7 +123,7 @@ class CaptionCue extends Equatable {
                   end: word.end,
                 ),
             ]
-          : const [],
+          : words,
     );
   }
 

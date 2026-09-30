@@ -132,12 +132,26 @@ void main() {
         ]);
       });
 
-      test('withText drops the timings when the word count changes', () {
+      test('withText spreads the text while the word count differs', () {
         final rewritten = spoken.withText('Hello there, world.');
 
         expect(rewritten.text, equals('Hello there, world.'));
-        expect(rewritten.words, isEmpty);
         expect(rewritten.wordTimings, hasLength(3));
+        expect(
+          rewritten.wordTimings.map((w) => w.text),
+          ['Hello', 'there,', 'world.'],
+        );
+      });
+
+      test('withText restores the timings when the word count returns', () {
+        // Deleting a word keystroke by keystroke and typing it back passes
+        // through a different count on the way.
+        final retyped = spoken
+            .withText('Hello ')
+            .withText('Hello w')
+            .withText('Hello world.');
+
+        expect(retyped.wordTimings, equals(spoken.words));
       });
 
       test('withTiming moves the words along with a moved cue', () {
