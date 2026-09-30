@@ -30,9 +30,10 @@ enum ChromaKeyMeasurementStatus {
   /// A still is being captured and measured.
   detecting,
 
-  /// A hand edit or a camera flip wrote the running measurement off, but its
-  /// still is not back yet. Its result will be dropped. Another measurement
-  /// cannot start until the still is back, because the camera is busy.
+  /// A hand edit or a camera flip wrote the running measurement off before it
+  /// finished. Its result will be dropped. Another measurement cannot start
+  /// until it finishes, or until [VideoEditorConstants.chromaKeyDetectTimeout]
+  /// gives up on it, even if its still is not back yet.
   superseded,
 
   /// The last measurement found no screen filling the frame behind the

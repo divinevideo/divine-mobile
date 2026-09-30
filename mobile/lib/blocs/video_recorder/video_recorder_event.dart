@@ -342,7 +342,8 @@ final class VideoRecorderStopMotionAssembleRequested
 /// [VideoRecorderBlocState.chromaKey].
 ///
 /// Registered with `transformer: droppable()` so a second tap cannot start a
-/// second capture while one is in flight.
+/// second capture while one is in flight, until
+/// [VideoEditorConstants.chromaKeyDetectTimeout] gives up on the first.
 final class VideoRecorderChromaKeyMeasureRequested extends VideoRecorderEvent {
   const VideoRecorderChromaKeyMeasureRequested();
 }

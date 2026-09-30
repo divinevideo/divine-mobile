@@ -390,8 +390,8 @@ void main() {
           const VideoRecorderChromaKeySettingsChanged(similarity: 0.3),
         );
         await pumpEventQueue();
-        // The still is not back, so Auto-detect stays off: the camera cannot
-        // take a second one yet.
+        // The written-off measurement is still running, so Auto-detect stays
+        // off until it finishes.
         expect(
           bloc.state.chromaKeyMeasurementStatus,
           ChromaKeyMeasurementStatus.superseded,
