@@ -27,6 +27,7 @@ void main() {
       registerFallbackValue(model.AspectRatio.square);
       registerFallbackValue(Duration.zero);
       registerFallbackValue(<StopMotionClipFrame>[]);
+      registerFallbackValue(<DivineVideoClip>[]);
       registerFallbackValue(
         DivineVideoClip(
           id: 'fallback',
@@ -234,6 +235,192 @@ void main() {
                 as DivineVideoClip;
         expect(saved.libraryTitle, 'from manager');
         expect(returned.libraryTitle, isNull);
+      });
+    });
+
+    group('ingest with appendToComposition', () {
+      // A composition on threes: a fresh two-still session would instead be
+      // stretched to fill a second (fifteen frames per still).
+      final compositionHold = StopMotionFrameOps.framesPerImageToDuration(3);
+
+      DivineVideoClip compositionClip(String id, List<String> paths) =>
+          DivineVideoClip(
+            id: id,
+            duration: compositionHold * paths.length,
+            recordedAt: DateTime(2026),
+            targetAspectRatio: model.AspectRatio.square,
+            originalAspectRatio: 1,
+            stopMotionFrames: [
+              for (final path in paths)
+                StopMotionClipFrame(path: path, duration: compositionHold),
+            ],
+          );
+
+      List<DivineVideoClip> replacedClips() =>
+          verify(() => clipManager.replaceClips(captureAny())).captured.single
+              as List<DivineVideoClip>;
+
+      void verifyNoClipAdded() => verifyNever(
+        () => clipManager.addStopMotionClip(
+          id: any(named: 'id'),
+          frames: any(named: 'frames'),
+          originalAspectRatio: any(named: 'originalAspectRatio'),
+          targetAspectRatio: any(named: 'targetAspectRatio'),
+          duration: any(named: 'duration'),
+          thumbnailPath: any(named: 'thumbnailPath'),
+          lensMetadata: any(named: 'lensMetadata'),
+        ),
+      );
+
+      setUp(() {
+        stubSessionSave(() async => true);
+        when(
+          () => clipManager.addStopMotionClip(
+            id: any(named: 'id'),
+            frames: any(named: 'frames'),
+            originalAspectRatio: any(named: 'originalAspectRatio'),
+            targetAspectRatio: any(named: 'targetAspectRatio'),
+            duration: any(named: 'duration'),
+            thumbnailPath: any(named: 'thumbnailPath'),
+            lensMetadata: any(named: 'lensMetadata'),
+          ),
+        ).thenAnswer(
+          (invocation) => compositionClip(
+            invocation.namedArguments[#id] as String,
+            const [],
+          ),
+        );
+        when(() => clipManager.saveClipToLibrary(any())).thenAnswer(
+          (_) async => true,
+        );
+      });
+
+      test('puts the stills on the end of the composition at its hold', () {
+        when(
+          () => clipManager.clips,
+        ).thenReturn([
+          compositionClip('clip_sm_old', ['/old/1.jpg']),
+        ]);
+
+        final returned = store.ingest(
+          [frameA, frameB],
+          aspectRatio: model.AspectRatio.square,
+          appendToComposition: true,
+        );
+
+        final clip = replacedClips().single;
+        expect(clip.id, 'clip_sm_old');
+        expect(clip.stopMotionFrames!.map((f) => f.path), [
+          '/old/1.jpg',
+          frameA,
+          frameB,
+        ]);
+        expect(clip.stopMotionFrames!.map((f) => f.duration).toSet(), {
+          compositionHold,
+        });
+        expect(clip.duration, compositionHold * 3);
+        expect(returned, clip);
+        verifyNoClipAdded();
+      });
+
+      test('keeps the session as a library set of its own', () async {
+        when(
+          () => clipManager.clips,
+        ).thenReturn([
+          compositionClip('clip_sm_old', ['/old/1.jpg']),
+        ]);
+
+        store.ingest(
+          [frameA, frameB],
+          aspectRatio: model.AspectRatio.square,
+          appendToComposition: true,
+        );
+        await store.idle;
+
+        // Captured values follow the method's parameter declaration order:
+        // id is declared before frames.
+        final captured = verify(
+          () => clipManager.saveStopMotionSessionToLibrary(
+            id: captureAny(named: 'id'),
+            frames: captureAny(named: 'frames'),
+            originalAspectRatio: any(named: 'originalAspectRatio'),
+            targetAspectRatio: any(named: 'targetAspectRatio'),
+            duration: any(named: 'duration'),
+            thumbnailPath: any(named: 'thumbnailPath'),
+            lensMetadata: any(named: 'lensMetadata'),
+          ),
+        ).captured;
+        expect(captured[0], 'clip_sm_a');
+        final frames = captured[1] as List<StopMotionClipFrame>;
+        expect(frames.map((f) => f.path), [frameA, frameB]);
+        verifyNever(() => clipManager.saveClipToLibrary(any()));
+      });
+
+      test('collapses a composition that already spans several clips', () {
+        when(() => clipManager.clips).thenReturn([
+          compositionClip('clip_sm_old', ['/old/1.jpg']),
+          compositionClip('clip_sm_older', ['/old/2.jpg']),
+        ]);
+
+        store.ingest(
+          [frameA],
+          aspectRatio: model.AspectRatio.square,
+          appendToComposition: true,
+        );
+
+        final clips = replacedClips();
+        expect(clips, hasLength(1));
+        expect(clips.single.stopMotionFrames!.map((f) => f.path), [
+          '/old/1.jpg',
+          '/old/2.jpg',
+          frameA,
+        ]);
+      });
+
+      test('adds a clip of its own when there is no composition yet', () {
+        when(() => clipManager.clips).thenReturn(const []);
+
+        store.ingest(
+          [frameA],
+          aspectRatio: model.AspectRatio.square,
+          appendToComposition: true,
+        );
+
+        verify(
+          () => clipManager.addStopMotionClip(
+            id: 'clip_sm_a',
+            frames: any(named: 'frames'),
+            originalAspectRatio: any(named: 'originalAspectRatio'),
+            targetAspectRatio: any(named: 'targetAspectRatio'),
+            duration: any(named: 'duration'),
+            thumbnailPath: any(named: 'thumbnailPath'),
+            lensMetadata: any(named: 'lensMetadata'),
+          ),
+        ).called(1);
+        verifyNever(() => clipManager.replaceClips(any()));
+      });
+
+      test('adds a clip of its own for the editor to splice in', () {
+        when(
+          () => clipManager.clips,
+        ).thenReturn([
+          compositionClip('clip_sm_old', ['/old/1.jpg']),
+        ]);
+
+        store.ingest([frameA], aspectRatio: model.AspectRatio.square);
+
+        verify(
+          () => clipManager.addStopMotionClip(
+            id: 'clip_sm_a',
+            frames: any(named: 'frames'),
+            originalAspectRatio: any(named: 'originalAspectRatio'),
+            targetAspectRatio: any(named: 'targetAspectRatio'),
+            duration: any(named: 'duration'),
+            thumbnailPath: any(named: 'thumbnailPath'),
+            lensMetadata: any(named: 'lensMetadata'),
+          ),
+        ).called(1);
+        verifyNever(() => clipManager.replaceClips(any()));
       });
     });
 

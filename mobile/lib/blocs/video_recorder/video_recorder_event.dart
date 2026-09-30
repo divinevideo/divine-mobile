@@ -319,7 +319,20 @@ final class VideoRecorderStopMotionFrameUndone extends VideoRecorderEvent {
 /// open the editor.
 final class VideoRecorderStopMotionAssembleRequested
     extends VideoRecorderEvent {
-  const VideoRecorderStopMotionAssembleRequested();
+  const VideoRecorderStopMotionAssembleRequested({
+    this.appendToComposition = false,
+  });
+
+  /// Whether stills shot over an existing stop-motion composition go onto the
+  /// end of its frames clip instead of into a clip of their own.
+  ///
+  /// The standalone recorder sets this: the user backed out of the editor to
+  /// shoot more. The editor-hosted recorder leaves it off, because the editor
+  /// splices the separate clip in at its playhead itself.
+  final bool appendToComposition;
+
+  @override
+  List<Object?> get props => [appendToComposition];
 }
 
 // === Internal events dispatched from service callbacks ===

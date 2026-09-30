@@ -1942,6 +1942,7 @@ class VideoRecorderBloc
         frames,
         aspectRatio: state.aspectRatio,
         lensMetadata: _cameraService.currentLensMetadata,
+        appendToComposition: event.appendToComposition,
       );
     } catch (e, stackTrace) {
       Log.warning(
