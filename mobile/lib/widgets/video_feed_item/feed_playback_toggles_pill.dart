@@ -21,9 +21,9 @@ import 'package:unified_logger/unified_logger.dart';
 /// Scrim-30 backdrop-blurred capsule housing the three playback toggles:
 /// auto-advance ("compilations"), audio mute, and closed-captions.
 ///
-/// Auto-advance and audio mute are feed-wide controls. Captions are scoped to
-/// [videoId] when a feed surface has current-video context; otherwise the
-/// captions button falls back to the global Settings preference.
+/// Auto-advance, audio mute, and captions are feed-wide controls. [videoId]
+/// identifies a current-video visibility override to clear when captions
+/// change globally.
 class FeedPlaybackTogglesPill extends StatelessWidget {
   const FeedPlaybackTogglesPill({
     super.key,
@@ -214,31 +214,21 @@ class _CaptionsToggle extends ConsumerWidget {
             logName: 'FeedPlaybackTogglesPill',
             category: LogCategory.ui,
           );
-        } else if (enabled) {
-          ref
-              .read(subtitleVisibilityOverrideProvider.notifier)
-              .setForVideo(videoId, false);
         } else {
           ref
               .read(subtitleVisibilityOverrideProvider.notifier)
               .clearForVideo(videoId);
-          if (!ref.read(subtitleVisibilityProvider)) {
-            runDetached(
-              ref.read(subtitleVisibilityProvider.notifier).setEnabled(true),
-              'persist enabled captions preference',
-              logName: 'FeedPlaybackTogglesPill',
-              category: LogCategory.ui,
-            );
-          }
+          runDetached(
+            ref.read(subtitleVisibilityProvider.notifier).setEnabled(!enabled),
+            'persist global captions preference',
+            logName: 'FeedPlaybackTogglesPill',
+            category: LogCategory.ui,
+          );
         }
         _showToggleFeedback(
           context,
-          videoId == null
-              ? enabled
-                    ? context.l10n.videoSettingsCaptionsOff
-                    : context.l10n.videoSettingsCaptionsOn
-              : enabled
-              ? context.l10n.videoSettingsCaptionsOffForVideo
+          enabled
+              ? context.l10n.videoSettingsCaptionsOff
               : context.l10n.videoSettingsCaptionsOn,
         );
       },

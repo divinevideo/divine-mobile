@@ -32,7 +32,7 @@ import 'package:openvine/widgets/video_feed_item/feed_playback_toggles_pill.dart
 ///
 /// The popover content is the shared [FeedPlaybackTogglesPill] widget. Feed
 /// surfaces should pass [videoId] when they have current-video context so the
-/// captions toggle stays scoped to that video instead of mutating Settings.
+/// captions toggle can clear a visibility override for that video.
 /// Pass [video] only on surfaces that should expose owner edit/delete actions.
 class FeedSettingsMenu extends ConsumerStatefulWidget {
   const FeedSettingsMenu({super.key, this.video, this.videoId});

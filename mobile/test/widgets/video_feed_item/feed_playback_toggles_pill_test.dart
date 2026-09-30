@@ -173,7 +173,7 @@ void main() {
       expect(find.text(l10n.videoSettingsCaptionsOff), findsOneWidget);
     });
 
-    testWidgets('scoped captions toggle leaves global preference untouched', (
+    testWidgets('turning captions off in the feed also disables the next video', (
       tester,
     ) async {
       const videoId =
@@ -221,22 +221,22 @@ void main() {
       );
       await tester.pump();
 
-      expect(container.read(subtitleVisibilityProvider), isTrue);
+      expect(container.read(subtitleVisibilityProvider), isFalse);
       expect(
         container.read(subtitleVisibilityForVideoProvider(videoId)),
         isFalse,
       );
       expect(
         container.read(subtitleVisibilityForVideoProvider(otherVideoId)),
-        isTrue,
+        isFalse,
       );
-      verifyNever(
-        () => mockPrefs.setBool('subtitle_visibility_enabled', any()),
-      );
-      expect(find.text(l10n.videoSettingsCaptionsOffForVideo), findsOneWidget);
+      verify(
+        () => mockPrefs.setBool('subtitle_visibility_enabled', false),
+      ).called(1);
+      expect(find.text(l10n.videoSettingsCaptionsOff), findsOneWidget);
     });
 
-    testWidgets('scoped captions enable persists the global preference', (
+    testWidgets('turning captions on in the feed enables the next video', (
       tester,
     ) async {
       const videoId =
@@ -292,7 +292,7 @@ void main() {
       expect(find.text(l10n.videoSettingsCaptionsOn), findsOneWidget);
     });
 
-    testWidgets('scoped captions enable clears its disabled override', (
+    testWidgets('turning captions on clears the current video override', (
       tester,
     ) async {
       const videoId =
@@ -333,9 +333,9 @@ void main() {
 
       expect(container.read(subtitleVisibilityProvider), isTrue);
       expect(container.read(subtitleVisibilityOverrideProvider), isNull);
-      verifyNever(
-        () => mockPrefs.setBool('subtitle_visibility_enabled', any()),
-      );
+      verify(
+        () => mockPrefs.setBool('subtitle_visibility_enabled', true),
+      ).called(1);
       expect(find.text(l10n.videoSettingsCaptionsOn), findsOneWidget);
     });
 

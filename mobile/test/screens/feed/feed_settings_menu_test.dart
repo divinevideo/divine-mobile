@@ -209,7 +209,7 @@ void main() {
   });
 
   group('playback toggles', () {
-    testWidgets('uses the provided video id for scoped captions', (
+    testWidgets('passes the provided video id to the captions toggle', (
       tester,
     ) async {
       final l10n = lookupAppLocalizations(const Locale('en'));
