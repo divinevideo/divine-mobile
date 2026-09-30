@@ -346,11 +346,20 @@ class _AcceptedHolders extends ConsumerWidget {
       providers: [
         BlocProvider(
           key: ValueKey((badgeRepository, signedIn)),
-          create: (_) => BadgeHoldersCubit(
-            repository: badgeRepository,
-            coordinate: coordinate,
-            canSubscribe: signedIn,
-          )..load(),
+          create: (_) {
+            final cubit = BadgeHoldersCubit(
+              repository: badgeRepository,
+              coordinate: coordinate,
+              canSubscribe: signedIn,
+            );
+            runDetached(
+              cubit.load(),
+              'load badge holders',
+              logName: 'BadgeDetailScreen',
+              category: LogCategory.ui,
+            );
+            return cubit;
+          },
         ),
         BlocProvider(
           key: ValueKey((followRepository, blocklistRepository)),
