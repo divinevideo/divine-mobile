@@ -21,17 +21,10 @@ import 'package:unified_logger/unified_logger.dart';
 /// Scrim-30 backdrop-blurred capsule housing the three playback toggles:
 /// auto-advance ("compilations"), audio mute, and closed-captions.
 ///
-/// Auto-advance, audio mute, and captions are feed-wide controls. [videoId]
-/// identifies a current-video visibility override to clear when captions
-/// change globally.
+/// All three are feed-wide controls; captions persist the global Settings
+/// preference.
 class FeedPlaybackTogglesPill extends StatelessWidget {
-  const FeedPlaybackTogglesPill({
-    super.key,
-    this.videoId,
-    this.onAutoAdvanceToggled,
-  });
-
-  final String? videoId;
+  const FeedPlaybackTogglesPill({super.key, this.onAutoAdvanceToggled});
 
   /// Called after auto-advance is turned on so the host surface can dismiss.
   /// Turning it off leaves the top-bar popover open for other settings.
@@ -74,10 +67,7 @@ class FeedPlaybackTogglesPill extends StatelessWidget {
                   onAutoAdvanceToggled: onAutoAdvanceToggled,
                 ),
                 _AudioToggle(foregroundColor: chromeForeground),
-                _CaptionsToggle(
-                  foregroundColor: chromeForeground,
-                  videoId: videoId,
-                ),
+                _CaptionsToggle(foregroundColor: chromeForeground),
               ],
             ),
           ),
@@ -190,41 +180,25 @@ class _AudioToggle extends StatelessWidget {
 /// Closed-captions toggle. Active state means subtitles are visible.
 /// Confirms its new state in a snackbar.
 class _CaptionsToggle extends ConsumerWidget {
-  const _CaptionsToggle({required this.foregroundColor, this.videoId});
+  const _CaptionsToggle({required this.foregroundColor});
 
   final Color foregroundColor;
-  final String? videoId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final videoId = this.videoId;
-    final enabled = videoId == null
-        ? ref.watch(subtitleVisibilityProvider)
-        : ref.watch(subtitleVisibilityForVideoProvider(videoId));
+    final enabled = ref.watch(subtitleVisibilityProvider);
     return _PopoverToggle(
       isOn: enabled,
       semanticLabel: enabled
           ? context.l10n.videoSettingsCaptionsDisable
           : context.l10n.videoSettingsCaptionsEnable,
       onTap: () {
-        if (videoId == null) {
-          runDetached(
-            ref.read(subtitleVisibilityProvider.notifier).toggle(),
-            'persist global captions preference',
-            logName: 'FeedPlaybackTogglesPill',
-            category: LogCategory.ui,
-          );
-        } else {
-          ref
-              .read(subtitleVisibilityOverrideProvider.notifier)
-              .clearForVideo(videoId);
-          runDetached(
-            ref.read(subtitleVisibilityProvider.notifier).setEnabled(!enabled),
-            'persist global captions preference',
-            logName: 'FeedPlaybackTogglesPill',
-            category: LogCategory.ui,
-          );
-        }
+        runDetached(
+          ref.read(subtitleVisibilityProvider.notifier).setEnabled(!enabled),
+          'persist global captions preference',
+          logName: 'FeedPlaybackTogglesPill',
+          category: LogCategory.ui,
+        );
         _showToggleFeedback(
           context,
           enabled

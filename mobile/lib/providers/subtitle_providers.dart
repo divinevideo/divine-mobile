@@ -2,7 +2,6 @@
 // ABOUTME: Delegates fetch logic to fetchSubtitleCues in subtitle_fetcher.dart.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/misc.dart';
 import 'package:http/http.dart' as http;
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/service_providers.dart';
@@ -15,8 +14,6 @@ part 'subtitle_providers.g.dart';
 
 const _subtitleVisibilityPreferenceKey = 'subtitle_visibility_enabled';
 
-typedef SubtitleVisibilityOverride = ({String videoId, bool visible});
-
 final subtitleHttpClientProvider = Provider<http.Client>((ref) {
   final client = ref.watch(instrumentedHttpClientFactoryProvider)();
   ref.onDispose(client.close);
@@ -26,88 +23,6 @@ final subtitleHttpClientProvider = Provider<http.Client>((ref) {
 final subtitlePollDelayProvider = Provider<SubtitlePollDelay>(
   (_) => Future<void>.delayed,
 );
-
-final subtitleVisibilityOverrideProvider =
-    NotifierProvider<
-      SubtitleVisibilityOverrideNotifier,
-      SubtitleVisibilityOverride?
-    >(SubtitleVisibilityOverrideNotifier.new);
-
-final ProviderFamily<bool, String> subtitleVisibilityForVideoProvider = Provider
-    .autoDispose
-    .family<bool, String>((ref, videoId) {
-      final override = ref.watch(subtitleVisibilityOverrideProvider);
-      if (override?.videoId == videoId) return override!.visible;
-      return ref.watch(subtitleVisibilityProvider);
-    });
-
-class SubtitleVisibilityOverrideNotifier
-    extends Notifier<SubtitleVisibilityOverride?> {
-  final Map<Object, String> _activeVideoByOwner = <Object, String>{};
-  final Map<String, int> _activeOwnerCountsByVideo = <String, int>{};
-
-  @override
-  SubtitleVisibilityOverride? build() => null;
-
-  void setForVideo(String videoId, bool visible) {
-    if (!ref.mounted) return;
-    state = (videoId: videoId, visible: visible);
-  }
-
-  /// Removes this video's scoped visibility override, if it owns one.
-  void clearForVideo(String videoId) {
-    if (!ref.mounted || state?.videoId != videoId) return;
-    state = null;
-  }
-
-  void syncOwnerToVideo(Object owner, String videoId) {
-    if (!ref.mounted) return;
-    final previousVideoId = _activeVideoByOwner[owner];
-    if (previousVideoId == videoId) return;
-
-    if (previousVideoId != null) {
-      _removeOwner(previousVideoId);
-    }
-    _activeVideoByOwner[owner] = videoId;
-    _activeOwnerCountsByVideo[videoId] =
-        (_activeOwnerCountsByVideo[videoId] ?? 0) + 1;
-
-    _clearUnownedOverrideUnlessVideo(videoId);
-  }
-
-  void clearOwner(Object owner) {
-    if (!ref.mounted) return;
-    final previousVideoId = _activeVideoByOwner.remove(owner);
-    if (previousVideoId == null) return;
-
-    _removeOwner(previousVideoId);
-    if (state?.videoId == previousVideoId &&
-        !_hasActiveOwner(previousVideoId)) {
-      state = null;
-    }
-  }
-
-  void _removeOwner(String videoId) {
-    final count = _activeOwnerCountsByVideo[videoId];
-    if (count == null) return;
-    if (count <= 1) {
-      _activeOwnerCountsByVideo.remove(videoId);
-    } else {
-      _activeOwnerCountsByVideo[videoId] = count - 1;
-    }
-  }
-
-  void _clearUnownedOverrideUnlessVideo(String videoId) {
-    final current = state;
-    if (current == null || current.videoId == videoId) return;
-    if (!_hasActiveOwner(current.videoId)) {
-      state = null;
-    }
-  }
-
-  bool _hasActiveOwner(String videoId) =>
-      (_activeOwnerCountsByVideo[videoId] ?? 0) > 0;
-}
 
 /// Fetches subtitle cues for a video, using ordered fallback.
 ///

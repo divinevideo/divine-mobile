@@ -209,47 +209,6 @@ void main() {
   });
 
   group('playback toggles', () {
-    testWidgets('passes the provided video id to the captions toggle', (
-      tester,
-    ) async {
-      final l10n = lookupAppLocalizations(const Locale('en'));
-      final authService = createMockAuthService();
-      final volumeCubit = _MockVideoVolumeCubit();
-      final autoAdvance = FeedAutoAdvanceCubit();
-      addTearDown(autoAdvance.close);
-      when(() => volumeCubit.state).thenReturn(const VideoVolumeState());
-
-      await tester.pumpWidget(
-        testMaterialApp(
-          home: MultiBlocProvider(
-            providers: [
-              BlocProvider<FeedAutoAdvanceCubit>.value(value: autoAdvance),
-              BlocProvider<VideoVolumeCubit>.value(value: volumeCubit),
-            ],
-            child: Scaffold(
-              body: Align(
-                alignment: Alignment.topRight,
-                child: FeedSettingsMenu(video: video),
-              ),
-            ),
-          ),
-          mockAuthService: authService,
-        ),
-      );
-
-      await tester.tap(find.bySemanticsLabel(l10n.videoSettingsMenuOpen));
-      await tester.pump();
-
-      expect(
-        tester
-            .widget<FeedPlaybackTogglesPill>(
-              find.byType(FeedPlaybackTogglesPill),
-            )
-            .videoId,
-        video.id,
-      );
-    });
-
     testWidgets('turning Auto on dismisses the popover', (tester) async {
       // The popover used to stay open over a still-paused video, so the
       // viewer could not see that Auto had taken effect.
