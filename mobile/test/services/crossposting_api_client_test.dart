@@ -1031,9 +1031,13 @@ void main() {
           () => httpClient.get(any(), headers: any(named: 'headers')),
         ).thenAnswer((_) => Completer<http.Response>().future);
         Object? error;
-        client.getConnections().then<void>((_) {}).catchError((Object caught) {
-          error = caught;
-        });
+        unawaited(
+          client.getConnections().then<void>((_) {}).catchError((
+            Object caught,
+          ) {
+            error = caught;
+          }),
+        );
 
         async
           ..flushMicrotasks()
