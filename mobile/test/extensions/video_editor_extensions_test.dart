@@ -696,6 +696,49 @@ void main() {
       expect(captionLayer.highlights, hasLength(3));
     });
 
+    test('setCaptionCueTimeline moves the words with a moved cue', () {
+      const spoken = CaptionCue(
+        id: 'cue-1',
+        text: 'Hello there',
+        start: Duration(milliseconds: 500),
+        end: Duration(milliseconds: 2000),
+        words: [
+          CaptionSegment(
+            text: 'Hello',
+            start: Duration(milliseconds: 600),
+            end: Duration(milliseconds: 900),
+          ),
+          CaptionSegment(
+            text: 'there',
+            start: Duration(milliseconds: 1200),
+            end: Duration(milliseconds: 1600),
+          ),
+        ],
+      );
+      when(() => stateManager.activeMeta).thenReturn({
+        VideoEditorConstants.captionsStateHistoryKey: track
+            .copyWith(cues: [spoken])
+            .toJson(),
+      });
+
+      // Dragged later and clamped at the video end, so the length changes.
+      editor.setCaptionCueTimeline(
+        cueId: 'cue-1',
+        startTime: const Duration(milliseconds: 1500),
+        endTime: const Duration(milliseconds: 2800),
+        moved: true,
+      );
+
+      final updated = CaptionTrack.fromJson(
+        capturedHistoryMeta()[VideoEditorConstants.captionsStateHistoryKey]
+            as Map<Object?, Object?>,
+      );
+      expect(updated.cues.single.words.map((w) => w.start), [
+        const Duration(milliseconds: 1600),
+        const Duration(milliseconds: 2200),
+      ]);
+    });
+
     test('setCaptionCueTimeline mutates meta in-place during drags', () {
       final activeMeta = <String, dynamic>{
         VideoEditorConstants.captionsStateHistoryKey: track.toJson(),

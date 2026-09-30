@@ -197,12 +197,15 @@ extension VideoEditorExtensions on ProImageEditorState {
   /// the interaction layer owns the minimum-duration policy. When the track
   /// is burned in, the matching caption layer is retimed in the same step so
   /// the canvas render and the exported video stay in sync, including its
-  /// word highlights (see [CaptionCue.withTiming]). No-op when the session
-  /// has no caption track or [cueId] is unknown.
+  /// word highlights. Pass [moved] for a drag of the whole cue, which moves
+  /// its words along; a trim leaves them where they are spoken (see
+  /// [CaptionCue.withTiming]). No-op when the session has no caption track or
+  /// [cueId] is unknown.
   void setCaptionCueTimeline({
     required String cueId,
     Duration? startTime,
     Duration? endTime,
+    bool moved = false,
     bool skipUpdateHistory = false,
   }) {
     final track = stateManager.captionTrack;
@@ -213,7 +216,7 @@ extension VideoEditorExtensions on ProImageEditorState {
     final cue = track.cues[index];
     final newStart = startTime ?? cue.start;
     final newEnd = endTime ?? cue.end;
-    final retimed = cue.withTiming(start: newStart, end: newEnd);
+    final retimed = cue.withTiming(start: newStart, end: newEnd, moved: moved);
     final highlightsWords = _burnInHighlightsWords(track);
     final cues = List<CaptionCue>.from(track.cues);
     cues[index] = retimed;

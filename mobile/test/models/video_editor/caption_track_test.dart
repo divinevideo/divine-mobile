@@ -158,6 +158,7 @@ void main() {
         final moved = spoken.withTiming(
           start: const Duration(milliseconds: 1250),
           end: const Duration(milliseconds: 2750),
+          moved: true,
         );
 
         expect(moved.start, equals(const Duration(milliseconds: 1250)));
@@ -166,6 +167,17 @@ void main() {
           word('Hello', 1300, 1700),
           word('world.', 1900, 2500),
         ]);
+      });
+
+      test('withTiming moves the words when a move shortens the cue', () {
+        // Dragged towards the end of the video, whose end clamps the cue.
+        final moved = spoken.withTiming(
+          start: const Duration(milliseconds: 1250),
+          end: const Duration(milliseconds: 2000),
+          moved: true,
+        );
+
+        expect(moved.words.first.start, const Duration(milliseconds: 1300));
       });
 
       test('withTiming leaves the words in place when trimming', () {

@@ -129,22 +129,26 @@ class CaptionCue extends Equatable {
 
   /// This cue shown from [start] to [end].
   ///
-  /// Moving the whole cue moves its words along, since the move lines the
-  /// caption up with the speech. Trimming or extending it leaves the words
-  /// where they are spoken: a word that starts after the new end never lights
-  /// up, and the last word that started before the new start stays lit from
-  /// the first frame until the next one begins.
-  CaptionCue withTiming({Duration? start, Duration? end}) {
+  /// When [moved], the whole cue was dragged along the timeline, which lines
+  /// the caption up with the speech, so its words move along by the change
+  /// of [start]. Otherwise it was trimmed or extended and the words stay
+  /// where they are spoken: a word that starts after the new end never
+  /// lights up, and the last word that started before the new start stays
+  /// lit from the first frame until the next one begins.
+  ///
+  /// Whether it moved is the caller's to say: the timeline can clamp a
+  /// moved cue's end to the end of the video, so the length alone cannot
+  /// tell a move from a trim.
+  CaptionCue withTiming({Duration? start, Duration? end, bool moved = false}) {
     final newStart = start ?? this.start;
     final newEnd = end ?? this.end;
     final shift = newStart - this.start;
-    final moved = shift != Duration.zero && newEnd - newStart == duration;
     return CaptionCue(
       id: id,
       text: text,
       start: newStart,
       end: newEnd,
-      words: moved
+      words: moved && shift != Duration.zero
           ? [
               for (final word in words)
                 CaptionSegment(
