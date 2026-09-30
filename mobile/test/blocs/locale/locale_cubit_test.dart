@@ -110,6 +110,35 @@ void main() {
         expect(cubit.state.locale, const Locale('de'));
       });
 
+      test(
+        'keeps the latest selection when an older download finishes last',
+        () async {
+          final downloads = {
+            'de': Completer<void>(),
+            'es': Completer<void>(),
+          };
+          final cubit = LocaleCubit(
+            localePreferenceService: service,
+            preloadLocale: (locale) => downloads[locale!.languageCode]!.future,
+          );
+          addTearDown(cubit.close);
+
+          final german = cubit.setLocale('de');
+          await pumpEventQueue();
+          final spanish = cubit.setLocale('es');
+          await pumpEventQueue();
+
+          downloads['es']!.complete();
+          await spanish;
+          expect(cubit.state.locale, const Locale('es'));
+
+          downloads['de']!.complete();
+          await german;
+
+          expect(cubit.state.locale, const Locale('es'));
+        },
+      );
+
       test('preloads the device language before following it', () async {
         when(() => service.getLocale()).thenReturn('es');
         final cubit = buildPreloading();

@@ -36,6 +36,7 @@ class LocaleCubit extends Cubit<LocaleState>
 
   final LocalePreferenceService _service;
   final LocalePreloader _preloadLocale;
+  int _localeRequest = 0;
 
   static Future<void> _noPreload(Locale? locale) async {
     // Intentional no-op: without a preloader the locale is emitted straight
@@ -51,16 +52,22 @@ class LocaleCubit extends Cubit<LocaleState>
 
   /// Sets the app locale to [localeCode] (e.g. `'es'`, `'tr'`).
   Future<void> setLocale(String localeCode) async {
+    final request = ++_localeRequest;
     final locale = Locale(localeCode);
     await _service.setLocale(localeCode);
+    if (request != _localeRequest) return;
     await _preloadLocale(locale);
+    if (request != _localeRequest) return;
     emitIfOpen(LocaleState(locale: locale));
   }
 
   /// Clears the custom locale, reverting to device default.
   Future<void> clearLocale() async {
+    final request = ++_localeRequest;
     await _service.clearLocale();
+    if (request != _localeRequest) return;
     await _preloadLocale(null);
+    if (request != _localeRequest) return;
     emitIfOpen(const LocaleState());
   }
 }
