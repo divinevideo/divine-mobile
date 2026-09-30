@@ -47,6 +47,8 @@ class NostrSettingsScreen extends ConsumerWidget {
     final showAdvancedRelaySettings = ref.watch(
       isFeatureEnabledProvider(FeatureFlag.advancedRelaySettings),
     );
+    final isAuthenticated =
+        ref.watch(currentAuthStateProvider) == AuthState.authenticated;
     return Scaffold(
       appBar: DiVineAppBar(
         title: context.l10n.settingsNostrSettings,
@@ -107,7 +109,8 @@ class NostrSettingsScreen extends ConsumerWidget {
                 onTap: () => context.push(BlossomSettingsScreen.path),
               ),
               const _SignatureVerificationTile(),
-              const _ClientAttributionToggle(),
+              // Attribution tags the signed-in account's events.
+              if (isAuthenticated) const _ClientAttributionToggle(),
               if (!networkOnly) const NostrAccountSettingsSection(),
             ],
           ),
