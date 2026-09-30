@@ -1,6 +1,7 @@
 // ABOUTME: Tests that a camera re-sync keeps the chroma-key setup: the key,
 // ABOUTME: the backdrop photo the recorder owns, and a running measurement.
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
@@ -202,6 +203,47 @@ void main() {
           reason: 'a camera flip must not reset the tuned key',
         );
       });
+
+      test(
+        'writes off a running measurement and drops its result',
+        () async {
+          final measured = Completer<ChromaKeyDetection>();
+          final bloc = buildBloc(
+            detect: (_, {required visibleAspectRatio}) => measured.future,
+          );
+          addTearDown(bloc.close);
+
+          bloc.add(const VideoRecorderChromaKeyMeasureRequested());
+          await pumpEventQueue();
+          expect(
+            bloc.state.chromaKeyMeasurementStatus,
+            ChromaKeyMeasurementStatus.detecting,
+          );
+
+          bloc.add(const VideoRecorderCameraSwitched());
+          await pumpEventQueue();
+          expect(bloc.state.isFrontCamera, isTrue);
+          expect(
+            bloc.state.chromaKeyMeasurementStatus,
+            ChromaKeyMeasurementStatus.superseded,
+            reason:
+                'the wall behind the other lens is not the one measured, and '
+                'Auto-detect must stay busy until the running measurement ends',
+          );
+
+          measured.complete(_measured);
+          await pumpEventQueue();
+          expect(
+            bloc.state.chromaKeyMeasurementStatus,
+            ChromaKeyMeasurementStatus.idle,
+          );
+          expect(
+            bloc.state.chromaKey.key.color,
+            isNot(_measured.color),
+            reason: 'a written-off measurement must not land on the key',
+          );
+        },
+      );
 
       test(
         'still owns an unrecorded backdrop photo and deletes it on close',
