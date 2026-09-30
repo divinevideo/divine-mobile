@@ -62,9 +62,8 @@ void main() {
       final keyContainer = MockSecureKeyContainer();
       when(() => keyContainer.publicKeyHex).thenReturn(_testPublicKey);
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
-      when(
-        () => mockAuthService.currentIdentity,
-      ).thenReturn(LocalNostrIdentity(keyContainer: keyContainer));
+      when(() => mockAuthService.currentIdentity)
+          .thenReturn(LocalNostrIdentity(keyContainer: keyContainer));
 
       expect(service.canCreatePassiveHeaders, isTrue);
     });
@@ -242,15 +241,25 @@ void main() {
 
             ViewerAuthResult? result;
             var completed = false;
-            service
-                .createAuthHeaders(
-                  sha256Hash: 'abc123',
-                  serverUrl: 'https://media.divine.video',
-                )
-                .then((r) {
-                  result = r;
-                  completed = true;
-                });
+            Object? completionError;
+            // fakeAsync owns the timeout progression and inspects the result.
+            unawaited(
+              service
+                  .createAuthHeaders(
+                    sha256Hash: 'abc123',
+                    serverUrl: 'https://media.divine.video',
+                  )
+                  .then<void>(
+                    (r) {
+                      result = r;
+                      completed = true;
+                    },
+                    onError: (Object error, StackTrace stackTrace) {
+                      completionError = error;
+                      completed = true;
+                    },
+                  ),
+            );
 
             // Still pending just before the 6s caller-side timeout.
             async.elapse(const Duration(seconds: 5));
@@ -259,6 +268,7 @@ void main() {
             // Fires at the timeout, far short of Keycast's 30s ceiling.
             async.elapse(const Duration(seconds: 2));
             expect(completed, isTrue);
+            expect(completionError, isNull);
             expect(result, isA<ViewerAuthSignerUnreachable>());
           });
         },
@@ -285,17 +295,28 @@ void main() {
 
             ViewerAuthResult? result;
             var completed = false;
-            service
-                .createAuthHeaders(
-                  url: 'https://media.divine.video/no-hash/playlist.m3u8',
-                )
-                .then((r) {
-                  result = r;
-                  completed = true;
-                });
+            Object? completionError;
+            // fakeAsync owns the timeout progression and inspects the result.
+            unawaited(
+              service
+                  .createAuthHeaders(
+                    url: 'https://media.divine.video/no-hash/playlist.m3u8',
+                  )
+                  .then<void>(
+                    (r) {
+                      result = r;
+                      completed = true;
+                    },
+                    onError: (Object error, StackTrace stackTrace) {
+                      completionError = error;
+                      completed = true;
+                    },
+                  ),
+            );
 
             async.elapse(const Duration(seconds: 7));
             expect(completed, isTrue);
+            expect(completionError, isNull);
             expect(result, isA<ViewerAuthSignerUnreachable>());
           });
         },
@@ -349,15 +370,25 @@ void main() {
 
           ViewerAuthResult? result;
           var completed = false;
-          service
-              .createAuthHeaders(
-                sha256Hash: 'abc123',
-                serverUrl: 'https://media.divine.video',
-              )
-              .then((r) {
-                result = r;
-                completed = true;
-              });
+          Object? completionError;
+          // fakeAsync owns the result until its manually released signer ends.
+          unawaited(
+            service
+                .createAuthHeaders(
+                  sha256Hash: 'abc123',
+                  serverUrl: 'https://media.divine.video',
+                )
+                .then<void>(
+                  (r) {
+                    result = r;
+                    completed = true;
+                  },
+                  onError: (Object error, StackTrace stackTrace) {
+                    completionError = error;
+                    completed = true;
+                  },
+                ),
+          );
 
           // Well past the 6s timeout: because the timeout is NOT applied to
           // this signer, the call is still awaiting the human approval.
@@ -368,6 +399,7 @@ void main() {
           completer.complete('Nostr slow-token');
           async.flushMicrotasks();
           expect(completed, isTrue);
+          expect(completionError, isNull);
           expect(result, isA<ViewerAuthAuthorized>());
           expect(
             result?.headersOrNull,
