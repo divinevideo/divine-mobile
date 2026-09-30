@@ -364,6 +364,43 @@ void main() {
     });
   });
 
+  group('layerFrameSize', () {
+    test('is the first segment when no later one is larger', () {
+      expect(
+        VideoEditorRenderService.layerFrameSize(const [
+          Size(1080, 1080),
+          Size(720, 720),
+        ]),
+        const Size(1080, 1080),
+      );
+    });
+
+    // A square video starting with a saved classic Vine: the camera clip after
+    // it is the frame the segments are composited into, not the Vine.
+    test('is a larger segment that comes later', () {
+      expect(
+        VideoEditorRenderService.layerFrameSize(const [
+          Size(480, 480),
+          Size(1080, 1080),
+          Size(720, 720),
+        ]),
+        const Size(1080, 1080),
+      );
+    });
+
+    // Larger on one axis is enough: a landscape clip after a portrait one
+    // replaces it although it is shorter.
+    test('is a later segment that is only wider', () {
+      expect(
+        VideoEditorRenderService.layerFrameSize(const [
+          Size(1080, 1920),
+          Size(1920, 1080),
+        ]),
+        const Size(1920, 1080),
+      );
+    });
+  });
+
   group('buildColorFilters', () {
     pie.TuneAdjustmentMatrix tune({Duration? startTime, Duration? endTime}) =>
         pie.TuneAdjustmentMatrix(

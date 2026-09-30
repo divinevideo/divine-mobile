@@ -872,10 +872,10 @@ class VideoEditorRenderService {
 
     Size? renderResolution;
     if (capturedLayers.isNotEmpty && volumeSegments.isNotEmpty) {
-      final metadata = await ProVideoEditor.instance.getMetadata(
-        volumeSegments.first.video,
-      );
-      renderResolution = metadata.resolution;
+      renderResolution = layerFrameSize([
+        for (final segment in volumeSegments)
+          (await ProVideoEditor.instance.getMetadata(segment.video)).resolution,
+      ]);
     }
 
     // Overlay/effect time windows are authored on the editor timeline (clips at
@@ -1026,6 +1026,24 @@ class VideoEditorRenderService {
         RenderCancellationRegistry.finish(baseTask.id, renderGeneration.token);
       }
     }
+  }
+
+  /// The frame `pro_video_editor` composites segments of [resolutions] into,
+  /// and so the frame an [ImageLayer]'s pixels are laid out in.
+  ///
+  /// The first segment's size, replaced by each later one that is wider or
+  /// taller; every segment is scaled to fit inside it. Taking the first
+  /// segment alone put layers into the wrong frame whenever a larger clip
+  /// came after a smaller one, such as a camera clip after a saved classic
+  /// Vine in a square video (#9700).
+  static Size layerFrameSize(List<Size> resolutions) {
+    var frame = resolutions.first;
+    for (final resolution in resolutions.skip(1)) {
+      if (resolution.width > frame.width || resolution.height > frame.height) {
+        frame = resolution;
+      }
+    }
+    return frame;
   }
 
   /// Builds the [ImageLayer]s composited over the exported video from the
