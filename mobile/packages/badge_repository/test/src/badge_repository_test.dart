@@ -113,6 +113,129 @@ void main() {
       verifyNever(() => nostrClient.publishEventAwaitOk(any()));
     });
 
+    test('subscriptions prefer the newest event and can be removed', () async {
+      final coordinate = BadgeCoordinate(
+        pubkey: _pubkey(2),
+        identifier: 'daily-diviner',
+      );
+      final older = _event(
+        id: _eventId(1),
+        pubkey: _pubkey(1),
+        kind: EventKind.appSpecificData,
+        createdAt: 999,
+        tags: [
+          ['d', 'divine.badge_subscriptions'],
+        ],
+      );
+      final newer = _event(
+        id: _eventId(2),
+        pubkey: _pubkey(1),
+        kind: EventKind.appSpecificData,
+        tags: [
+          ['d', 'divine.badge_subscriptions'],
+          ['a', coordinate.value],
+        ],
+      );
+      when(() => nostrClient.queryEvents(any())).thenAnswer(
+        (_) async => [older, newer],
+      );
+      expect(await repository.loadSubscriptions(), {coordinate});
+
+      await repository.setSubscription(coordinate, subscribed: true);
+      when(() => nostrClient.queryEvents(any())).thenAnswer(
+        (_) async => [older],
+      );
+      expect(await repository.loadSubscriptions(), {coordinate});
+
+      final sameSecondHigherId = _event(
+        id: _eventId(900000),
+        pubkey: _pubkey(1),
+        kind: EventKind.appSpecificData,
+        tags: [
+          ['d', 'divine.badge_subscriptions'],
+        ],
+      );
+      when(() => nostrClient.queryEvents(any())).thenAnswer(
+        (_) async => [sameSecondHigherId],
+      );
+      expect(await repository.loadSubscriptions(), {coordinate});
+
+      expect(
+        await repository.setSubscription(coordinate, subscribed: false),
+        isEmpty,
+      );
+      expect(lastSignedEvent()?.tags, [
+        ['d', 'divine.badge_subscriptions'],
+      ]);
+    });
+
+    test('loads the latest definitions from curated issuers', () async {
+      final issuer = _pubkey(2);
+      final secondIssuer = _pubkey(3);
+      when(() => nostrClient.readAllEvents(any())).thenAnswer((
+        invocation,
+      ) async {
+        final filter = invocation.positionalArguments.single as Filter;
+        final author = filter.authors!.single;
+        return PagedQueryResult(
+          events: author == issuer
+              ? [
+                  _definitionEvent(
+                    pubkey: issuer,
+                    dTag: 'daily',
+                    name: 'Old name',
+                    id: _eventId(10),
+                    createdAt: 900,
+                  ),
+                  _definitionEvent(
+                    pubkey: issuer,
+                    dTag: 'daily',
+                    name: 'Daily',
+                    id: _eventId(11),
+                  ),
+                ]
+              : [
+                  _definitionEvent(
+                    pubkey: secondIssuer,
+                    dTag: 'weekly',
+                    name: 'Weekly',
+                    id: _eventId(12),
+                  ),
+                ],
+          isComplete: true,
+          pages: 1,
+        );
+      });
+
+      final definitions = await repository.loadDefinitionsByIssuers([
+        'not-a-pubkey',
+        issuer,
+        issuer,
+        secondIssuer,
+      ]);
+
+      expect(definitions.map((definition) => definition.name), [
+        'Daily',
+        'Weekly',
+      ]);
+      verify(() => nostrClient.readAllEvents(any())).called(2);
+    });
+
+    test('rejects an incomplete curated definition walk', () async {
+      when(() => nostrClient.readAllEvents(any())).thenAnswer(
+        (_) async => const PagedQueryResult(
+          events: [],
+          isComplete: false,
+          pages: 1,
+        ),
+      );
+
+      await expectLater(
+        repository.loadDefinitionsByIssuers([_pubkey(2)]),
+        throwsStateError,
+      );
+    });
+
     test(
       'accepted holders include recipients beyond a 200-event page',
       () async {
@@ -221,6 +344,39 @@ void main() {
         return PagedQueryResult(
           events: const [],
           isComplete: filter.kinds?.contains(EventKind.profileBadges) != true,
+          pages: 1,
+        );
+      });
+
+      await expectLater(
+        repository.loadAcceptedHolders(coordinate),
+        throwsStateError,
+      );
+    });
+
+    test('accepted holders reject an incomplete revocation read', () async {
+      final coordinate = BadgeCoordinate(
+        pubkey: _pubkey(2),
+        identifier: 'daily-diviner',
+      );
+      when(() => nostrClient.readAllEvents(any())).thenAnswer((
+        invocation,
+      ) async {
+        final filter = invocation.positionalArguments.single as Filter;
+        final isDeletion =
+            filter.kinds?.contains(EventKind.eventDeletion) == true;
+        return PagedQueryResult(
+          events: isDeletion
+              ? []
+              : [
+                  _awardEvent(
+                    id: _eventId(50),
+                    issuerPubkey: coordinate.pubkey,
+                    definitionCoordinate: coordinate.value,
+                    recipients: [_pubkey(3)],
+                  ),
+                ],
+          isComplete: !isDeletion,
           pages: 1,
         );
       });

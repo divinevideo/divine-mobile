@@ -25,6 +25,8 @@ import 'package:videos_repository/videos_repository.dart';
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
+class _MockBadgeVideoPager extends Mock implements BadgeVideoPager {}
+
 class _MockFollowRepository extends Mock implements FollowRepository {}
 
 class _MockCuratedListRepository extends Mock
@@ -1143,18 +1145,14 @@ void main() {
         'loads subscribed badge holders when there are no direct follows',
         setUp: () {
           when(() => mockFollowRepository.followingPubkeys).thenReturn([]);
+          final pager = _MockBadgeVideoPager();
           when(
-            () => mockVideosRepository.getHomeFeedVideos(
-              authors: any(named: 'authors'),
-              badgeAuthors: any(named: 'badgeAuthors'),
-              videoRefs: any(named: 'videoRefs'),
-              userPubkey: any(named: 'userPubkey'),
-              limit: any(named: 'limit'),
-              until: any(named: 'until'),
-            ),
-          ).thenAnswer(
-            (_) async => HomeFeedResult(videos: [createTestVideo('badge')]),
+            () => mockVideosRepository.createBadgeVideoPager(any()),
+          ).thenReturn(pager);
+          when(() => pager.loadMore(limit: 5)).thenAnswer(
+            (_) async => [createTestVideo('badge')],
           );
+          when(() => pager.hasMore).thenReturn(false);
         },
         build: () => VideoFeedBloc(
           videosRepository: mockVideosRepository,
@@ -1172,13 +1170,73 @@ void main() {
               .having((s) => s.error, 'error', isNull),
         ],
         verify: (_) => verify(
-          () => mockVideosRepository.getHomeFeedVideos(
-            authors: [],
-            badgeAuthors: ['badge-holder'],
-            userPubkey: any(named: 'userPubkey'),
-            until: any(named: 'until'),
-          ),
+          () => mockVideosRepository.createBadgeVideoPager(['badge-holder']),
         ).called(1),
+      );
+
+      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        'pages a subscribed badge and direct follows through one merged pager',
+        setUp: () {
+          when(() => mockFollowRepository.followingPubkeys).thenReturn([
+            'direct-follow',
+          ]);
+          final pager = _MockBadgeVideoPager();
+          when(
+            () => mockVideosRepository.createBadgeVideoPager(any()),
+          ).thenReturn(pager);
+          var pages = 0;
+          when(() => pager.loadMore(limit: 5)).thenAnswer((_) async {
+            pages++;
+            return [
+              createTestVideo(
+                pages == 1 ? 'first' : 'second',
+                createdAt: 100 - pages,
+              ),
+            ];
+          });
+          when(() => pager.hasMore).thenAnswer((_) => pages < 2);
+        },
+        build: () => VideoFeedBloc(
+          videosRepository: mockVideosRepository,
+          followRepository: mockFollowRepository,
+          curatedListRepository: mockCuratedListRepository,
+          badgeAuthors: () async => ['direct-follow', 'badge-holder'],
+        ),
+        act: (bloc) async {
+          bloc.add(const VideoFeedStarted(mode: FeedMode.following));
+          await bloc.stream.firstWhere(
+            (state) => state.status == VideoFeedStatus.success,
+          );
+          bloc.add(const VideoFeedLoadMoreRequested());
+        },
+        expect: () => [
+          const VideoFeedBlocState(mode: FeedMode.following),
+          isA<VideoFeedBlocState>()
+              .having((s) => s.videos.length, 'first page', 1)
+              .having((s) => s.hasMore, 'has more', true),
+          isA<VideoFeedBlocState>().having(
+            (s) => s.isLoadingMore,
+            'loading more',
+            true,
+          ),
+          isA<VideoFeedBlocState>()
+              .having((s) => s.videos.length, 'both pages', 2)
+              .having((s) => s.hasMore, 'exhausted', false),
+        ],
+        verify: (_) {
+          verify(
+            () => mockVideosRepository.createBadgeVideoPager([
+              'direct-follow',
+              'direct-follow',
+              'badge-holder',
+            ]),
+          ).called(1);
+          verifyNever(
+            () => mockVideosRepository.getHomeFeedVideos(
+              authors: any(named: 'authors'),
+            ),
+          );
+        },
       );
 
       blocTest<VideoFeedBloc, VideoFeedBlocState>(
