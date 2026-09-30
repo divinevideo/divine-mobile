@@ -49,9 +49,9 @@ class _ExploreBadgesTabState extends ConsumerState<ExploreBadgesTab> {
         }
         if (snapshot.hasError) {
           return Center(
-            child: TextButton(
+            child: DivineButton(
               onPressed: () => setState(() => _definitions = _load(repository)),
-              child: Text(context.l10n.badgesLoadError),
+              label: context.l10n.badgesLoadError,
             ),
           );
         }
