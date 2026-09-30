@@ -9266,21 +9266,21 @@ class AppLocalizationsDe extends AppLocalizations {
       'Der Hintergrund konnte nicht geändert werden. Der Platz behält den bisherigen.';
 
   @override
-  String get videoEditorChromaKeyLabel => 'Greenscreen';
+  String get videoEditorChromaKeyLabel => 'Farbmaske';
 
   @override
-  String get videoEditorChromaKeyTitle => 'Greenscreen';
+  String get videoEditorChromaKeyTitle => 'Farbmaske';
 
   @override
   String get videoEditorChromaKeySemanticLabel =>
-      'Greenscreen für diesen Clip einrichten';
+      'Farbmaske für diesen Clip einrichten';
 
   @override
   String get videoEditorChromaKeyCloseSemanticLabel =>
-      'Greenscreen-Änderungen verwerfen';
+      'Farbmasken-Änderungen verwerfen';
 
   @override
-  String get videoEditorChromaKeyDoneSemanticLabel => 'Greenscreen anwenden';
+  String get videoEditorChromaKeyDoneSemanticLabel => 'Farbmaske anwenden';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Automatisch erkennen';
@@ -9292,14 +9292,14 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorChromaKeyPresetBlue => 'Blau';
 
   @override
-  String get videoEditorChromaKeyScreenColorLabel => 'Screen-Farbe';
+  String get videoEditorChromaKeyScreenColorLabel => 'Maskierte Farbe';
 
   @override
   String get videoEditorChromaKeyAmountLabel => 'Stärke';
 
   @override
   String get videoEditorChromaKeyAmountHint =>
-      'Wie viel von der Screen-Farbe verschwindet';
+      'Wie viel von der maskierten Farbe verschwindet';
 
   @override
   String get videoEditorChromaKeyEdgeLabel => 'Kante';
@@ -9313,7 +9313,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySpillHint =>
-      'Zieht die Screen-Farbe von deinem Motiv ab';
+      'Zieht den Farbstich der maskierten Farbe von deinem Motiv ab';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Ersetzen durch';
@@ -9340,15 +9340,15 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Jede glatte Fläche hinter dir funktioniert – eine Wand reicht –, solange sie das ganze Bild füllt.';
+      'Du willst den Hintergrund tauschen? Film vor einer kräftigen Farbe, die du nicht trägst und die das ganze Bild füllt. Weiße oder graue Wände klappen nicht.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Kein Screen gefunden – er muss das ganze Bild hinter dir füllen. Eine glatte Wand zählt. Oder wähl die Farbe von Hand.';
+      'Am Bildrand war keine einzelne kräftige Farbe zu finden. Wähl die Farbe stattdessen von Hand.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
-      'Das Messen des Screens hat zu lange gedauert. Versuch „Automatisch erkennen“ noch mal – oder wähl die Farbe von Hand.';
+      'Das Lesen des Clips hat zu lange gedauert. Versuch „Automatisch erkennen“ noch mal – oder wähl die Farbe von Hand.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Clip auswählen';
@@ -9362,18 +9362,18 @@ class AppLocalizationsDe extends AppLocalizations {
       'Das Bild konnte nicht geladen werden.';
 
   @override
-  String get videoEditorChromaKeyRemove => 'Greenscreen entfernen';
+  String get videoEditorChromaKeyRemove => 'Farbmaske entfernen';
 
   @override
   String get videoEditorChromaKeyFailed =>
-      'Der Greenscreen konnte nicht angewendet werden. Dein Clip bleibt unverändert.';
+      'Die Farbmaske konnte nicht angewendet werden. Dein Clip bleibt unverändert.';
 
   @override
   String get videoEditorChromaKeyRemoveFailed =>
-      'Der Greenscreen konnte nicht entfernt werden. Dein Clip bleibt unverändert.';
+      'Die Farbmaske konnte nicht entfernt werden. Dein Clip bleibt unverändert.';
 
   @override
-  String get videoEditorChromaKeyApplying => 'Greenscreen wird angewendet …';
+  String get videoEditorChromaKeyApplying => 'Farbmaske wird angewendet …';
 
   @override
   String get videoEditorChromaKeyPreviewUnavailable =>

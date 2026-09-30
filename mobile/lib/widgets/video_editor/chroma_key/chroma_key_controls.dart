@@ -93,12 +93,12 @@ class _Gutter extends StatelessWidget {
   }
 }
 
-/// States the feature's one prerequisite on entry to the controls.
+/// Tells a first-time user what a background swap needs, on entry to the
+/// controls.
 ///
-/// The requirement used to surface only as a failed detect, after the clip was
-/// already shot — and it named a screen, which most people do not own. Saying
-/// a wall works is what turns the biggest bounce point into onboarding
-/// (#8547).
+/// That used to surface only as a failed detect, after the clip was already
+/// shot (#8547). It is a tip for the classic use, not a definition of the
+/// tool: the mask removes a colour wherever it appears (#8544).
 class _SurfaceRequirementHint extends StatelessWidget {
   const _SurfaceRequirementHint();
 
@@ -111,7 +111,7 @@ class _SurfaceRequirementHint extends StatelessWidget {
 /// Says so when the renderer cannot show the key applied.
 ///
 /// Without this the preview just quietly shows the unkeyed video, which reads
-/// as "the green screen does nothing" rather than "you can't see it yet".
+/// as "the colour mask does nothing" rather than "you can't see it yet".
 class _PreviewUnavailableNotice extends StatefulWidget {
   const _PreviewUnavailableNotice();
 

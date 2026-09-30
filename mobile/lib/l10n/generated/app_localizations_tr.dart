@@ -9067,21 +9067,21 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bu arka plan değiştirilemedi. Yer, öncekini tutmaya devam ediyor.';
 
   @override
-  String get videoEditorChromaKeyLabel => 'Yeşil perde';
+  String get videoEditorChromaKeyLabel => 'Renk maskesi';
 
   @override
-  String get videoEditorChromaKeyTitle => 'Yeşil perde';
+  String get videoEditorChromaKeyTitle => 'Renk maskesi';
 
   @override
   String get videoEditorChromaKeySemanticLabel =>
-      'Bu klip için yeşil perdeyi ayarla';
+      'Bu klip için renk maskesini ayarla';
 
   @override
   String get videoEditorChromaKeyCloseSemanticLabel =>
-      'Yeşil perde değişikliklerini iptal et';
+      'Renk maskesi değişikliklerini iptal et';
 
   @override
-  String get videoEditorChromaKeyDoneSemanticLabel => 'Yeşil perdeyi uygula';
+  String get videoEditorChromaKeyDoneSemanticLabel => 'Renk maskesini uygula';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Otomatik algıla';
@@ -9093,14 +9093,14 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorChromaKeyPresetBlue => 'Mavi';
 
   @override
-  String get videoEditorChromaKeyScreenColorLabel => 'Perde rengi';
+  String get videoEditorChromaKeyScreenColorLabel => 'Maskelenecek renk';
 
   @override
   String get videoEditorChromaKeyAmountLabel => 'Miktar';
 
   @override
   String get videoEditorChromaKeyAmountHint =>
-      'Perde renginin ne kadarı kaybolacak';
+      'Maskelenen rengin ne kadarı kaybolacak';
 
   @override
   String get videoEditorChromaKeyEdgeLabel => 'Kenar';
@@ -9114,7 +9114,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySpillHint =>
-      'Perdenin rengini öznenin üzerinden çeker';
+      'Maskelenen rengin tonunu öznenin üzerinden çeker';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Şununla değiştir';
@@ -9141,15 +9141,15 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Arkandaki düz herhangi bir yüzey işe yarar — bir duvar da olur — yeter ki kareyi tamamen doldursun.';
+      'Arka planı mı değiştireceksin? Üzerinde olmayan canlı tek bir rengin önünde, kareyi tamamen dolduracak şekilde çek. Beyaz ya da gri duvarlar işe yaramaz.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Perde bulunamadı: arkandaki kareyi tamamen doldurması gerek. Düz bir duvar da olur. Ya da rengi elle seç.';
+      'Karenin kenarlarında tek bir canlı renk bulunamadı. Onun yerine rengi elle seç.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
-      'Perdeyi ölçmek çok uzun sürdü. Otomatik algıla\'yı yeniden dene ya da rengi elle seç.';
+      'Klibi okumak çok uzun sürdü. Otomatik algıla\'yı yeniden dene ya da rengi elle seç.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Bir klip seç';
@@ -9162,18 +9162,18 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorChromaKeyImagePickFailed => 'Bu görsel yüklenemedi.';
 
   @override
-  String get videoEditorChromaKeyRemove => 'Yeşil perdeyi kaldır';
+  String get videoEditorChromaKeyRemove => 'Renk maskesini kaldır';
 
   @override
   String get videoEditorChromaKeyFailed =>
-      'Yeşil perde uygulanamadı. Klibin değişmedi.';
+      'Renk maskesi uygulanamadı. Klibin değişmedi.';
 
   @override
   String get videoEditorChromaKeyRemoveFailed =>
-      'Yeşil perde kaldırılamadı. Klibin değişmedi.';
+      'Renk maskesi kaldırılamadı. Klibin değişmedi.';
 
   @override
-  String get videoEditorChromaKeyApplying => 'Yeşil perde uygulanıyor…';
+  String get videoEditorChromaKeyApplying => 'Renk maskesi uygulanıyor…';
 
   @override
   String get videoEditorChromaKeyPreviewUnavailable =>

@@ -9217,21 +9217,21 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi mapalitan ang background na iyon. Nanatili sa puwesto ang dati.';
 
   @override
-  String get videoEditorChromaKeyLabel => 'Green screen';
+  String get videoEditorChromaKeyLabel => 'Color mask';
 
   @override
-  String get videoEditorChromaKeyTitle => 'Green screen';
+  String get videoEditorChromaKeyTitle => 'Color mask';
 
   @override
   String get videoEditorChromaKeySemanticLabel =>
-      'I-set up ang green screen para sa clip na ito';
+      'I-set up ang color mask para sa clip na ito';
 
   @override
   String get videoEditorChromaKeyCloseSemanticLabel =>
-      'Itapon ang mga pagbabago sa green screen';
+      'Itapon ang mga pagbabago sa color mask';
 
   @override
-  String get videoEditorChromaKeyDoneSemanticLabel => 'Ilapat ang green screen';
+  String get videoEditorChromaKeyDoneSemanticLabel => 'Ilapat ang color mask';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Auto-detect';
@@ -9243,14 +9243,14 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorChromaKeyPresetBlue => 'Asul';
 
   @override
-  String get videoEditorChromaKeyScreenColorLabel => 'Kulay ng screen';
+  String get videoEditorChromaKeyScreenColorLabel => 'Kulay na ima-mask';
 
   @override
   String get videoEditorChromaKeyAmountLabel => 'Lakas';
 
   @override
   String get videoEditorChromaKeyAmountHint =>
-      'Gaano karaming kulay ng screen ang mawawala';
+      'Gaano karami ng na-mask na kulay ang mawawala';
 
   @override
   String get videoEditorChromaKeyEdgeLabel => 'Gilid';
@@ -9264,7 +9264,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySpillHint =>
-      'Inaalis ang kulay ng screen sa subject mo';
+      'Inaalis ang tint ng na-mask na kulay sa subject mo';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Palitan ng';
@@ -9291,15 +9291,15 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Kahit anong plain na surface sa likod mo, pwede — pader lang, okay na — basta punong-puno ang frame.';
+      'Papalitan ang background? Mag-film sa harap ng isang matapang na kulay na hindi mo suot, na puno ang frame. Hindi gagana ang puti o gray na pader.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Walang nahanap na screen: kailangang punuin nito ang buong frame sa likod mo. Pwede ang plain na pader. O pumili ng kulay nang manual.';
+      'Walang nahanap na iisang matapang na kulay sa mga gilid ng frame. Pumili na lang ng kulay nang manual.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
-      'Masyadong natagalan ang pagsukat ng screen. Subukan ulit ang Auto-detect, o pumili ng kulay nang manual.';
+      'Masyadong natagalan ang pagbasa ng clip. Subukan ulit ang Auto-detect, o pumili ng kulay nang manual.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Pumili ng clip';
@@ -9313,18 +9313,18 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi ma-load ang larawang iyon.';
 
   @override
-  String get videoEditorChromaKeyRemove => 'Alisin ang green screen';
+  String get videoEditorChromaKeyRemove => 'Alisin ang color mask';
 
   @override
   String get videoEditorChromaKeyFailed =>
-      'Hindi na-apply ang green screen. Hindi nagbago ang clip mo.';
+      'Hindi na-apply ang color mask. Hindi nagbago ang clip mo.';
 
   @override
   String get videoEditorChromaKeyRemoveFailed =>
-      'Hindi naalis ang green screen. Hindi nagbago ang clip mo.';
+      'Hindi naalis ang color mask. Hindi nagbago ang clip mo.';
 
   @override
-  String get videoEditorChromaKeyApplying => 'Ina-apply ang green screen…';
+  String get videoEditorChromaKeyApplying => 'Ina-apply ang color mask…';
 
   @override
   String get videoEditorChromaKeyPreviewUnavailable =>

@@ -9248,21 +9248,22 @@ class AppLocalizationsIt extends AppLocalizations {
       'Non è stato possibile cambiare quello sfondo. Il posto tiene ancora quello di prima.';
 
   @override
-  String get videoEditorChromaKeyLabel => 'Green screen';
+  String get videoEditorChromaKeyLabel => 'Maschera colore';
 
   @override
-  String get videoEditorChromaKeyTitle => 'Green screen';
+  String get videoEditorChromaKeyTitle => 'Maschera colore';
 
   @override
   String get videoEditorChromaKeySemanticLabel =>
-      'Imposta il green screen di questa clip';
+      'Imposta una maschera colore per questa clip';
 
   @override
   String get videoEditorChromaKeyCloseSemanticLabel =>
-      'Annulla le modifiche al green screen';
+      'Annulla le modifiche alla maschera colore';
 
   @override
-  String get videoEditorChromaKeyDoneSemanticLabel => 'Applica il green screen';
+  String get videoEditorChromaKeyDoneSemanticLabel =>
+      'Applica la maschera colore';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Rilevamento automatico';
@@ -9274,14 +9275,14 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorChromaKeyPresetBlue => 'Blu';
 
   @override
-  String get videoEditorChromaKeyScreenColorLabel => 'Colore dello sfondo';
+  String get videoEditorChromaKeyScreenColorLabel => 'Colore da mascherare';
 
   @override
   String get videoEditorChromaKeyAmountLabel => 'Intensità';
 
   @override
   String get videoEditorChromaKeyAmountHint =>
-      'Quanto colore dello sfondo sparisce';
+      'Quanto del colore mascherato sparisce';
 
   @override
   String get videoEditorChromaKeyEdgeLabel => 'Bordo';
@@ -9295,7 +9296,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySpillHint =>
-      'Toglie la tinta dello sfondo dal soggetto';
+      'Toglie la tinta del colore mascherato dal soggetto';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Sostituisci con';
@@ -9322,15 +9323,15 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Va bene qualsiasi superficie liscia dietro di te — anche un muro — purché riempia tutta l\'inquadratura.';
+      'Vuoi cambiare sfondo? Riprendi davanti a un unico colore acceso che non indossi e che riempia tutta l\'inquadratura. I muri bianchi o grigi non funzionano.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Nessuno sfondo trovato: deve riempire tutta l\'inquadratura dietro di te. Un muro liscio va bene. Oppure scegli il colore a mano.';
+      'Nessun colore acceso e uniforme sui bordi dell\'inquadratura. Scegli il colore a mano.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
-      'Misurare lo sfondo ha richiesto troppo tempo. Riprova con «Rilevamento automatico» oppure scegli il colore a mano.';
+      'Leggere la clip ha richiesto troppo tempo. Riprova con «Rilevamento automatico» oppure scegli il colore a mano.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Scegli una clip';
@@ -9344,18 +9345,18 @@ class AppLocalizationsIt extends AppLocalizations {
       'Impossibile caricare quell\'immagine.';
 
   @override
-  String get videoEditorChromaKeyRemove => 'Rimuovi il green screen';
+  String get videoEditorChromaKeyRemove => 'Rimuovi la maschera colore';
 
   @override
   String get videoEditorChromaKeyFailed =>
-      'Non è stato possibile applicare il green screen. La clip resta invariata.';
+      'Non è stato possibile applicare la maschera colore. La clip resta invariata.';
 
   @override
   String get videoEditorChromaKeyRemoveFailed =>
-      'Non è stato possibile rimuovere il green screen. La clip resta invariata.';
+      'Non è stato possibile rimuovere la maschera colore. La clip resta invariata.';
 
   @override
-  String get videoEditorChromaKeyApplying => 'Applico il green screen…';
+  String get videoEditorChromaKeyApplying => 'Applico la maschera colore…';
 
   @override
   String get videoEditorChromaKeyPreviewUnavailable =>

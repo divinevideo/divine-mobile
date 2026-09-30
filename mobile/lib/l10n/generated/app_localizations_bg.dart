@@ -9227,21 +9227,21 @@ class AppLocalizationsBg extends AppLocalizations {
       'Фонът не можа да се смени. Мястото остава с предишния.';
 
   @override
-  String get videoEditorChromaKeyLabel => 'Зелен екран';
+  String get videoEditorChromaKeyLabel => 'Цветова маска';
 
   @override
-  String get videoEditorChromaKeyTitle => 'Зелен екран';
+  String get videoEditorChromaKeyTitle => 'Цветова маска';
 
   @override
   String get videoEditorChromaKeySemanticLabel =>
-      'Настрой зеления екран за този клип';
+      'Настрой цветова маска за този клип';
 
   @override
   String get videoEditorChromaKeyCloseSemanticLabel =>
-      'Отхвърли промените по зеления екран';
+      'Отхвърли промените по цветовата маска';
 
   @override
-  String get videoEditorChromaKeyDoneSemanticLabel => 'Приложи зеления екран';
+  String get videoEditorChromaKeyDoneSemanticLabel => 'Приложи цветовата маска';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Автоматично разпознаване';
@@ -9253,13 +9253,14 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorChromaKeyPresetBlue => 'Синьо';
 
   @override
-  String get videoEditorChromaKeyScreenColorLabel => 'Цвят на фона';
+  String get videoEditorChromaKeyScreenColorLabel => 'Цвят за маскиране';
 
   @override
   String get videoEditorChromaKeyAmountLabel => 'Сила';
 
   @override
-  String get videoEditorChromaKeyAmountHint => 'Колко от цвета на фона изчезва';
+  String get videoEditorChromaKeyAmountHint =>
+      'Колко от маскирания цвят изчезва';
 
   @override
   String get videoEditorChromaKeyEdgeLabel => 'Ръб';
@@ -9273,7 +9274,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySpillHint =>
-      'Издърпва цвета на фона от обекта ти';
+      'Издърпва оттенъка на маскирания цвят от обекта ти';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Замени с';
@@ -9300,15 +9301,15 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Всяка равна повърхност зад теб върши работа — и стена става — стига да запълва целия кадър.';
+      'Сменяш фона? Снимай пред един наситен цвят, който не носиш, и нека запълва целия кадър. Бели или сиви стени не стават.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Не открихме фон: трябва да запълва целия кадър зад теб. Равна стена също става. Или избери цвета ръчно.';
+      'Не открихме един наситен цвят по краищата на кадъра. Избери цвета ръчно.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
-      'Измерването на фона отне твърде дълго. Опитай „Автоматично разпознаване“ отново или избери цвета ръчно.';
+      'Прочитането на клипа отне твърде дълго. Опитай „Автоматично разпознаване“ отново или избери цвета ръчно.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Избери клип';
@@ -9322,18 +9323,18 @@ class AppLocalizationsBg extends AppLocalizations {
       'Изображението не можа да се зареди.';
 
   @override
-  String get videoEditorChromaKeyRemove => 'Премахни зеления екран';
+  String get videoEditorChromaKeyRemove => 'Премахни цветовата маска';
 
   @override
   String get videoEditorChromaKeyFailed =>
-      'Зеленият екран не можа да се приложи. Клипът ти остава непроменен.';
+      'Цветовата маска не можа да се приложи. Клипът ти остава непроменен.';
 
   @override
   String get videoEditorChromaKeyRemoveFailed =>
-      'Зеленият екран не можа да се премахне. Клипът ти остава непроменен.';
+      'Цветовата маска не можа да се премахне. Клипът ти остава непроменен.';
 
   @override
-  String get videoEditorChromaKeyApplying => 'Прилагане на зеления екран…';
+  String get videoEditorChromaKeyApplying => 'Прилагане на цветовата маска…';
 
   @override
   String get videoEditorChromaKeyPreviewUnavailable =>

@@ -9240,21 +9240,21 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t change that backdrop. The slot still holds the one it had.';
 
   @override
-  String get videoEditorChromaKeyLabel => 'Green screen';
+  String get videoEditorChromaKeyLabel => 'Color mask';
 
   @override
-  String get videoEditorChromaKeyTitle => 'Green screen';
+  String get videoEditorChromaKeyTitle => 'Color mask';
 
   @override
   String get videoEditorChromaKeySemanticLabel =>
-      'Set up the green screen for this clip';
+      'Set up a color mask for this clip';
 
   @override
   String get videoEditorChromaKeyCloseSemanticLabel =>
-      'Discard green screen changes';
+      'Discard color mask changes';
 
   @override
-  String get videoEditorChromaKeyDoneSemanticLabel => 'Apply the green screen';
+  String get videoEditorChromaKeyDoneSemanticLabel => 'Apply the color mask';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Auto-detect';
@@ -9266,14 +9266,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorChromaKeyPresetBlue => 'Blue';
 
   @override
-  String get videoEditorChromaKeyScreenColorLabel => 'Screen color';
+  String get videoEditorChromaKeyScreenColorLabel => 'Color to mask';
 
   @override
   String get videoEditorChromaKeyAmountLabel => 'Amount';
 
   @override
   String get videoEditorChromaKeyAmountHint =>
-      'How much of the screen color disappears';
+      'How much of the masked color disappears';
 
   @override
   String get videoEditorChromaKeyEdgeLabel => 'Edge';
@@ -9287,7 +9287,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySpillHint =>
-      'Pulls the screen\'s color back off your subject';
+      'Pulls the masked color\'s tint back off your subject';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Replace with';
@@ -9314,15 +9314,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Any plain surface behind you works — a wall is fine — as long as it fills the frame.';
+      'Replacing your background? Film against one bold color you\'re not wearing, filling the frame. White or gray walls won\'t work.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Couldn\'t find a screen — it has to fill the frame behind you. A plain wall counts. Or pick the color by hand.';
+      'Couldn\'t find one bold color around the edges of the frame. Pick the color by hand instead.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
-      'Took too long to measure the screen. Try Auto-detect again, or pick the color by hand.';
+      'Took too long to read the clip. Try Auto-detect again, or pick the color by hand.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Pick a clip';
@@ -9336,18 +9336,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t load that image.';
 
   @override
-  String get videoEditorChromaKeyRemove => 'Remove green screen';
+  String get videoEditorChromaKeyRemove => 'Remove color mask';
 
   @override
   String get videoEditorChromaKeyFailed =>
-      'Couldn\'t apply the green screen. Your clip is unchanged.';
+      'Couldn\'t apply the color mask. Your clip is unchanged.';
 
   @override
   String get videoEditorChromaKeyRemoveFailed =>
-      'Couldn\'t remove the green screen. Your clip is unchanged.';
+      'Couldn\'t remove the color mask. Your clip is unchanged.';
 
   @override
-  String get videoEditorChromaKeyApplying => 'Applying the green screen…';
+  String get videoEditorChromaKeyApplying => 'Applying the color mask…';
 
   @override
   String get videoEditorChromaKeyPreviewUnavailable =>

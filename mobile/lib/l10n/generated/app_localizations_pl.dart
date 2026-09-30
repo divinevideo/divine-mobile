@@ -9327,21 +9327,21 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nie udało się zmienić tła. Miejsce zostaje z poprzednim.';
 
   @override
-  String get videoEditorChromaKeyLabel => 'Zielone tło';
+  String get videoEditorChromaKeyLabel => 'Maska koloru';
 
   @override
-  String get videoEditorChromaKeyTitle => 'Zielone tło';
+  String get videoEditorChromaKeyTitle => 'Maska koloru';
 
   @override
   String get videoEditorChromaKeySemanticLabel =>
-      'Skonfiguruj zielone tło dla tego klipu';
+      'Skonfiguruj maskę koloru dla tego klipu';
 
   @override
   String get videoEditorChromaKeyCloseSemanticLabel =>
-      'Odrzuć zmiany zielonego tła';
+      'Odrzuć zmiany maski koloru';
 
   @override
-  String get videoEditorChromaKeyDoneSemanticLabel => 'Zastosuj zielone tło';
+  String get videoEditorChromaKeyDoneSemanticLabel => 'Zastosuj maskę koloru';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Wykryj automatycznie';
@@ -9353,13 +9353,13 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorChromaKeyPresetBlue => 'Niebieski';
 
   @override
-  String get videoEditorChromaKeyScreenColorLabel => 'Kolor tła';
+  String get videoEditorChromaKeyScreenColorLabel => 'Kolor do zamaskowania';
 
   @override
   String get videoEditorChromaKeyAmountLabel => 'Siła';
 
   @override
-  String get videoEditorChromaKeyAmountHint => 'Ile koloru tła znika';
+  String get videoEditorChromaKeyAmountHint => 'Ile maskowanego koloru znika';
 
   @override
   String get videoEditorChromaKeyEdgeLabel => 'Krawędź';
@@ -9373,7 +9373,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySpillHint =>
-      'Ściąga kolor tła z twojego obiektu';
+      'Ściąga odcień maskowanego koloru z twojego obiektu';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Zastąp przez';
@@ -9400,15 +9400,15 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Wystarczy dowolna gładka powierzchnia za tobą — ściana też — o ile wypełnia cały kadr.';
+      'Chcesz podmienić tło? Nagrywaj na tle jednego wyrazistego koloru, którego nie masz na sobie i który wypełnia cały kadr. Białe i szare ściany się nie nadają.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Nie znaleziono tła — musi wypełniać cały kadr za tobą. Gładka ściana wystarczy. Albo wybierz kolor ręcznie.';
+      'Nie znaleziono jednego wyrazistego koloru przy krawędziach kadru. Wybierz kolor ręcznie.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
-      'Pomiar tła trwał za długo. Spróbuj ponownie „Wykryj automatycznie” albo wybierz kolor ręcznie.';
+      'Odczyt klipu trwał za długo. Spróbuj ponownie „Wykryj automatycznie” albo wybierz kolor ręcznie.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Wybierz klip';
@@ -9422,18 +9422,18 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nie udało się wczytać tego obrazu.';
 
   @override
-  String get videoEditorChromaKeyRemove => 'Usuń zielone tło';
+  String get videoEditorChromaKeyRemove => 'Usuń maskę koloru';
 
   @override
   String get videoEditorChromaKeyFailed =>
-      'Nie udało się zastosować zielonego tła. Twój klip pozostaje bez zmian.';
+      'Nie udało się zastosować maski koloru. Twój klip pozostaje bez zmian.';
 
   @override
   String get videoEditorChromaKeyRemoveFailed =>
-      'Nie udało się usunąć zielonego tła. Twój klip pozostaje bez zmian.';
+      'Nie udało się usunąć maski koloru. Twój klip pozostaje bez zmian.';
 
   @override
-  String get videoEditorChromaKeyApplying => 'Stosowanie zielonego tła…';
+  String get videoEditorChromaKeyApplying => 'Stosowanie maski koloru…';
 
   @override
   String get videoEditorChromaKeyPreviewUnavailable =>

@@ -8632,19 +8632,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorBackdropFailed => '没能更换那个背景。这个位置还是原来的背景。';
 
   @override
-  String get videoEditorChromaKeyLabel => '绿幕';
+  String get videoEditorChromaKeyLabel => '颜色蒙版';
 
   @override
-  String get videoEditorChromaKeyTitle => '绿幕';
+  String get videoEditorChromaKeyTitle => '颜色蒙版';
 
   @override
-  String get videoEditorChromaKeySemanticLabel => '为这个片段设置绿幕';
+  String get videoEditorChromaKeySemanticLabel => '为这个片段设置颜色蒙版';
 
   @override
-  String get videoEditorChromaKeyCloseSemanticLabel => '放弃绿幕改动';
+  String get videoEditorChromaKeyCloseSemanticLabel => '放弃颜色蒙版改动';
 
   @override
-  String get videoEditorChromaKeyDoneSemanticLabel => '应用绿幕';
+  String get videoEditorChromaKeyDoneSemanticLabel => '应用颜色蒙版';
 
   @override
   String get videoEditorChromaKeyAutoDetect => '自动识别';
@@ -8656,13 +8656,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorChromaKeyPresetBlue => '蓝色';
 
   @override
-  String get videoEditorChromaKeyScreenColorLabel => '幕布颜色';
+  String get videoEditorChromaKeyScreenColorLabel => '要抠掉的颜色';
 
   @override
   String get videoEditorChromaKeyAmountLabel => '强度';
 
   @override
-  String get videoEditorChromaKeyAmountHint => '幕布颜色被抠掉多少';
+  String get videoEditorChromaKeyAmountHint => '这个颜色被抠掉多少';
 
   @override
   String get videoEditorChromaKeyEdgeLabel => '边缘';
@@ -8674,7 +8674,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorChromaKeySpillLabel => '溢色';
 
   @override
-  String get videoEditorChromaKeySpillHint => '把幕布的颜色从主体上去掉';
+  String get videoEditorChromaKeySpillHint => '把这个颜色映在主体上的色偏去掉';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => '替换为';
@@ -8698,15 +8698,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorChromaKeyCanvasTransparentHint => '片段后面的内容会透出来。';
 
   @override
-  String get videoEditorChromaKeySurfaceHint => '你身后任何一块纯色平面都可以，墙也行，只要能铺满整个画面。';
+  String get videoEditorChromaKeySurfaceHint =>
+      '想换背景？在一种你身上没有的鲜艳纯色前拍，让它铺满整个画面。白墙或灰墙不行。';
 
   @override
-  String get videoEditorChromaKeyDetectFailed =>
-      '没找到幕布：它得铺满你身后的整个画面。一面纯色的墙就够了。也可以手动选颜色。';
+  String get videoEditorChromaKeyDetectFailed => '画面边缘没找到一种鲜艳的纯色。可以改为手动选颜色。';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
-      '测量幕布花的时间太长了。再试一次「自动识别」，或者手动选颜色。';
+      '读取片段花的时间太长了。再试一次「自动识别」，或者手动选颜色。';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => '选个片段';
@@ -8718,16 +8718,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorChromaKeyImagePickFailed => '这张图片加载不了。';
 
   @override
-  String get videoEditorChromaKeyRemove => '移除绿幕';
+  String get videoEditorChromaKeyRemove => '移除颜色蒙版';
 
   @override
-  String get videoEditorChromaKeyFailed => '绿幕没能应用。你的片段没有改动。';
+  String get videoEditorChromaKeyFailed => '颜色蒙版没能应用。你的片段没有改动。';
 
   @override
-  String get videoEditorChromaKeyRemoveFailed => '绿幕没能移除。你的片段没有改动。';
+  String get videoEditorChromaKeyRemoveFailed => '颜色蒙版没能移除。你的片段没有改动。';
 
   @override
-  String get videoEditorChromaKeyApplying => '正在应用绿幕…';
+  String get videoEditorChromaKeyApplying => '正在应用颜色蒙版…';
 
   @override
   String get videoEditorChromaKeyPreviewUnavailable =>

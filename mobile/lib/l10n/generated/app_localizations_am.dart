@@ -8940,19 +8940,19 @@ class AppLocalizationsAm extends AppLocalizations {
       'ያንን ዳራ መቀየር አልተቻለም። ቦታው የቀድሞውን ይዞ ይቆያል።';
 
   @override
-  String get videoEditorChromaKeyLabel => 'አረንጓዴ ስክሪን';
+  String get videoEditorChromaKeyLabel => 'የቀለም ጭንብል';
 
   @override
-  String get videoEditorChromaKeyTitle => 'አረንጓዴ ስክሪን';
+  String get videoEditorChromaKeyTitle => 'የቀለም ጭንብል';
 
   @override
-  String get videoEditorChromaKeySemanticLabel => 'ለዚህ ቅንጥብ አረንጓዴ ስክሪን አዘጋጅ';
+  String get videoEditorChromaKeySemanticLabel => 'ለዚህ ቅንጥብ የቀለም ጭንብል ማዘጋጀት';
 
   @override
-  String get videoEditorChromaKeyCloseSemanticLabel => 'የአረንጓዴ ስክሪን ለውጦችን ተው';
+  String get videoEditorChromaKeyCloseSemanticLabel => 'የቀለም ጭንብል ለውጦችን መተው';
 
   @override
-  String get videoEditorChromaKeyDoneSemanticLabel => 'አረንጓዴ ስክሪኑን ተግብር';
+  String get videoEditorChromaKeyDoneSemanticLabel => 'የቀለም ጭንብሉን መተግበር';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'በራስ-ሰር ለይ';
@@ -8964,13 +8964,13 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorChromaKeyPresetBlue => 'ሰማያዊ';
 
   @override
-  String get videoEditorChromaKeyScreenColorLabel => 'የስክሪኑ ቀለም';
+  String get videoEditorChromaKeyScreenColorLabel => 'የሚወገደው ቀለም';
 
   @override
   String get videoEditorChromaKeyAmountLabel => 'መጠን';
 
   @override
-  String get videoEditorChromaKeyAmountHint => 'ከስክሪኑ ቀለም ምን ያህል እንደሚጠፋ';
+  String get videoEditorChromaKeyAmountHint => 'ከሚወገደው ቀለም ምን ያህል እንደሚጠፋ';
 
   @override
   String get videoEditorChromaKeyEdgeLabel => 'ጠርዝ';
@@ -8982,7 +8982,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorChromaKeySpillLabel => 'ቀለም መፍሰስ';
 
   @override
-  String get videoEditorChromaKeySpillHint => 'የስክሪኑን ቀለም ከሰውዬው ላይ ያነሳል';
+  String get videoEditorChromaKeySpillHint => 'የሚወገደውን ቀለም ቅልም ከሰውዬው ላይ ያነሳል';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'በዚህ ተካ';
@@ -9009,15 +9009,15 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'ከኋላዎ ያለ ማንኛውም ለስላሳ ገጽ ይሠራል — ግድግዳም በቂ ነው — ሙሉ ፍሬሙን እስከሸፈነ ድረስ።';
+      'ዳራዎን መቀየር ይፈልጋሉ? ያልለበሱትን አንድ ደማቅ ቀለም ከኋላዎ ያድርጉ፣ ሙሉ ፍሬሙን እንዲሸፍን። ነጭ ወይም ግራጫ ግድግዳ አይሰራም።';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'ስክሪን አልተገኘም፦ ከኋላዎ ያለውን ሙሉ ፍሬም መሸፈን አለበት። ለስላሳ ግድግዳም ይበቃል። ወይም ቀለሙን በእጅ መምረጥ ይችላሉ።';
+      'በፍሬሙ ጠርዞች ዙሪያ አንድ ደማቅ ቀለም አልተገኘም። በምትኩ ቀለሙን በእጅ ይምረጡ።';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
-      'ስክሪኑን ለመለካት ብዙ ጊዜ ወስዷል። «በራስ-ሰር ለይ»ን እንደገና ይሞክሩ፣ ወይም ቀለሙን በእጅ ይምረጡ።';
+      'ቅንጥቡን ለማንበብ ብዙ ጊዜ ወስዷል። «በራስ-ሰር ለይ»ን እንደገና ይሞክሩ፣ ወይም ቀለሙን በእጅ ይምረጡ።';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'ቅንጥብ ምረጥ';
@@ -9030,18 +9030,18 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorChromaKeyImagePickFailed => 'ያንን ምስል መጫን አልተቻለም።';
 
   @override
-  String get videoEditorChromaKeyRemove => 'አረንጓዴ ስክሪኑን አስወግድ';
+  String get videoEditorChromaKeyRemove => 'የቀለም ጭንብሉን ማስወገድ';
 
   @override
   String get videoEditorChromaKeyFailed =>
-      'አረንጓዴ ስክሪኑን መተግበር አልተቻለም። ቅንጥብህ ሳይለወጥ ይቆያል።';
+      'የቀለም ጭንብሉን መተግበር አልተቻለም። ቅንጥብዎ ሳይለወጥ ይቆያል።';
 
   @override
   String get videoEditorChromaKeyRemoveFailed =>
-      'አረንጓዴ ስክሪኑን ማስወገድ አልተቻለም። ቅንጥብህ ሳይለወጥ ይቆያል።';
+      'የቀለም ጭንብሉን ማስወገድ አልተቻለም። ቅንጥብዎ ሳይለወጥ ይቆያል።';
 
   @override
-  String get videoEditorChromaKeyApplying => 'አረንጓዴ ስክሪን እየተተገበረ ነው…';
+  String get videoEditorChromaKeyApplying => 'የቀለም ጭንብል እየተተገበረ ነው…';
 
   @override
   String get videoEditorChromaKeyPreviewUnavailable =>

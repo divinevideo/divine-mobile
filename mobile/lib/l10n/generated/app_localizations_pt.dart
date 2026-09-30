@@ -9216,21 +9216,22 @@ class AppLocalizationsPt extends AppLocalizations {
       'Não foi possível mudar esse fundo. O lugar continua com o de antes.';
 
   @override
-  String get videoEditorChromaKeyLabel => 'Fundo verde';
+  String get videoEditorChromaKeyLabel => 'Máscara de cor';
 
   @override
-  String get videoEditorChromaKeyTitle => 'Fundo verde';
+  String get videoEditorChromaKeyTitle => 'Máscara de cor';
 
   @override
   String get videoEditorChromaKeySemanticLabel =>
-      'Configurar o fundo verde deste clipe';
+      'Configurar uma máscara de cor para este clipe';
 
   @override
   String get videoEditorChromaKeyCloseSemanticLabel =>
-      'Descartar as alterações do fundo verde';
+      'Descartar as alterações da máscara de cor';
 
   @override
-  String get videoEditorChromaKeyDoneSemanticLabel => 'Aplicar o fundo verde';
+  String get videoEditorChromaKeyDoneSemanticLabel =>
+      'Aplicar a máscara de cor';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Detetar automaticamente';
@@ -9242,14 +9243,14 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorChromaKeyPresetBlue => 'Azul';
 
   @override
-  String get videoEditorChromaKeyScreenColorLabel => 'Cor do fundo';
+  String get videoEditorChromaKeyScreenColorLabel => 'Cor a mascarar';
 
   @override
   String get videoEditorChromaKeyAmountLabel => 'Intensidade';
 
   @override
   String get videoEditorChromaKeyAmountHint =>
-      'Quanto da cor do fundo desaparece';
+      'Quanto da cor mascarada desaparece';
 
   @override
   String get videoEditorChromaKeyEdgeLabel => 'Contorno';
@@ -9263,7 +9264,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySpillHint =>
-      'Tira o tom do fundo do teu motivo';
+      'Tira o tom da cor mascarada do primeiro plano';
 
   @override
   String get videoEditorChromaKeyBackgroundLabel => 'Substituir por';
@@ -9290,15 +9291,15 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Qualquer superfície lisa atrás de você funciona — uma parede já serve — desde que preencha todo o quadro.';
+      'Quer trocar o fundo? Grave na frente de uma cor forte que você não esteja usando e que preencha todo o quadro. Paredes brancas ou cinza não funcionam.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Nenhum fundo encontrado: ele precisa preencher todo o quadro atrás de você. Uma parede lisa vale. Ou escolha a cor na mão.';
+      'Não achamos uma cor forte nas bordas do quadro. Escolha a cor na mão.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>
-      'Medir o fundo demorou demais. Tente Detetar automaticamente de novo, ou escolha a cor na mão.';
+      'Ler o clipe demorou demais. Tente Detetar automaticamente de novo, ou escolha a cor na mão.';
 
   @override
   String get videoEditorChromaKeyPickClipTitle => 'Escolher um clipe';
@@ -9312,18 +9313,18 @@ class AppLocalizationsPt extends AppLocalizations {
       'Não foi possível carregar essa imagem.';
 
   @override
-  String get videoEditorChromaKeyRemove => 'Remover o fundo verde';
+  String get videoEditorChromaKeyRemove => 'Remover a máscara de cor';
 
   @override
   String get videoEditorChromaKeyFailed =>
-      'Não foi possível aplicar o fundo verde. O teu clipe fica igual.';
+      'Não foi possível aplicar a máscara de cor. Seu clipe continua igual.';
 
   @override
   String get videoEditorChromaKeyRemoveFailed =>
-      'Não foi possível remover o fundo verde. O teu clipe fica igual.';
+      'Não foi possível remover a máscara de cor. Seu clipe continua igual.';
 
   @override
-  String get videoEditorChromaKeyApplying => 'A aplicar o fundo verde…';
+  String get videoEditorChromaKeyApplying => 'Aplicando a máscara de cor…';
 
   @override
   String get videoEditorChromaKeyPreviewUnavailable =>

@@ -15558,7 +15558,7 @@ abstract class AppLocalizations {
   /// **'Couldn\'t load that photo.'**
   String get videoEditorDetachImagePickFailed;
 
-  /// Action-bar button on a clip detached onto the canvas. Puts the clip back onto the timeline as a regular clip, in the slot it left if that is still there, otherwise at the playhead. Keep it short — it sits under a 52dp icon beside Split, Crop and Green screen.
+  /// Action-bar button on a clip detached onto the canvas. Puts the clip back onto the timeline as a regular clip, in the slot it left if that is still there, otherwise at the playhead. Keep it short — it sits under a 52dp icon beside Split, Crop and Color mask.
   ///
   /// In en, this message translates to:
   /// **'Back to timeline'**
@@ -15618,34 +15618,34 @@ abstract class AppLocalizations {
   /// **'Couldn\'t change that backdrop. The slot still holds the one it had.'**
   String get videoEditorBackdropFailed;
 
-  /// No description provided for @videoEditorChromaKeyLabel.
+  /// Name of the tool that removes one colour from a clip wherever it appears and puts a colour, image or clip in its place. Deliberately not "green screen" or this locale's word for chroma key: those promise a background swap and nothing else, while the tool also creates looks by masking a colour in the middle of a shot. Translate it as a plain description of what the tool does, and use the same term in every other videoEditorChromaKey string. Keep it short — it sits under a 52dp icon in the clip controls.
   ///
   /// In en, this message translates to:
-  /// **'Green screen'**
+  /// **'Color mask'**
   String get videoEditorChromaKeyLabel;
 
   /// No description provided for @videoEditorChromaKeyTitle.
   ///
   /// In en, this message translates to:
-  /// **'Green screen'**
+  /// **'Color mask'**
   String get videoEditorChromaKeyTitle;
 
   /// No description provided for @videoEditorChromaKeySemanticLabel.
   ///
   /// In en, this message translates to:
-  /// **'Set up the green screen for this clip'**
+  /// **'Set up a color mask for this clip'**
   String get videoEditorChromaKeySemanticLabel;
 
   /// No description provided for @videoEditorChromaKeyCloseSemanticLabel.
   ///
   /// In en, this message translates to:
-  /// **'Discard green screen changes'**
+  /// **'Discard color mask changes'**
   String get videoEditorChromaKeyCloseSemanticLabel;
 
   /// No description provided for @videoEditorChromaKeyDoneSemanticLabel.
   ///
   /// In en, this message translates to:
-  /// **'Apply the green screen'**
+  /// **'Apply the color mask'**
   String get videoEditorChromaKeyDoneSemanticLabel;
 
   /// No description provided for @videoEditorChromaKeyAutoDetect.
@@ -15666,10 +15666,10 @@ abstract class AppLocalizations {
   /// **'Blue'**
   String get videoEditorChromaKeyPresetBlue;
 
-  /// No description provided for @videoEditorChromaKeyScreenColorLabel.
+  /// Label beside the swatch of the colour the mask removes. Never use the word this locale uses for the replacement background here — the replacement is chosen further down under videoEditorChromaKeyBackgroundLabel.
   ///
   /// In en, this message translates to:
-  /// **'Screen color'**
+  /// **'Color to mask'**
   String get videoEditorChromaKeyScreenColorLabel;
 
   /// No description provided for @videoEditorChromaKeyAmountLabel.
@@ -15678,10 +15678,10 @@ abstract class AppLocalizations {
   /// **'Amount'**
   String get videoEditorChromaKeyAmountLabel;
 
-  /// Hint under the chroma-key similarity slider. Raise it when parts of the screen survive, lower it when the subject starts disappearing.
+  /// Hint under the colour-mask similarity slider. Raise it when parts of the masked colour survive, lower it when the subject starts disappearing.
   ///
   /// In en, this message translates to:
-  /// **'How much of the screen color disappears'**
+  /// **'How much of the masked color disappears'**
   String get videoEditorChromaKeyAmountHint;
 
   /// No description provided for @videoEditorChromaKeyEdgeLabel.
@@ -15705,7 +15705,7 @@ abstract class AppLocalizations {
   /// No description provided for @videoEditorChromaKeySpillHint.
   ///
   /// In en, this message translates to:
-  /// **'Pulls the screen\'s color back off your subject'**
+  /// **'Pulls the masked color\'s tint back off your subject'**
   String get videoEditorChromaKeySpillHint;
 
   /// No description provided for @videoEditorChromaKeyBackgroundLabel.
@@ -15744,28 +15744,28 @@ abstract class AppLocalizations {
   /// **'Video can\'t hold transparency, so this exports as black.'**
   String get videoEditorChromaKeyTransparentHint;
 
-  /// Shown under the background chips of the green-screen screen when "Nothing" is selected for a clip that was detached onto the editor canvas. Unlike videoEditorChromaKeyTransparentHint, this is a reassurance, not a warning: a detached clip is composited over the rest of the video at export, so the removed area really is see-through. Keep the same noun for the clip as this locale's videoEditorChromaKeyPickClipTitle.
+  /// Shown under the background chips of the colour-mask screen when "Nothing" is selected for a clip that was detached onto the editor canvas. Unlike videoEditorChromaKeyTransparentHint, this is a reassurance, not a warning: a detached clip is composited over the rest of the video at export, so the removed area really is see-through. Keep the same noun for the clip as this locale's videoEditorChromaKeyPickClipTitle.
   ///
   /// In en, this message translates to:
   /// **'Whatever\'s behind the clip shows through.'**
   String get videoEditorChromaKeyCanvasTransparentHint;
 
-  /// Standing hint in the chroma key controls, directly above the Auto-detect button. States the feature's one prerequisite — a uniform surface behind the subject that reaches every edge of the frame — as soon as the controls open. Naming a wall is the point: most people own no green screen and do not know an ordinary wall keys. Keep all three facts when translating: that an ordinary wall qualifies, that the surface must fill the frame, and the plain register.
+  /// Standing tip in the colour-mask controls, directly above the Auto-detect button. It covers the classic use — replacing the background — and is not a definition of the tool, which masks a colour wherever it appears; keep the conditional opening that says so. The mask compares hue, not brightness, so a white or grey wall cannot be masked without also removing black, white and grey clothing, and Auto-detect rejects it outright. Keep all four facts when translating: one bold colour, that the subject is not wearing, filling the frame, and that white or grey walls do not work.
   ///
   /// In en, this message translates to:
-  /// **'Any plain surface behind you works — a wall is fine — as long as it fills the frame.'**
+  /// **'Replacing your background? Film against one bold color you\'re not wearing, filling the frame. White or gray walls won\'t work.'**
   String get videoEditorChromaKeySurfaceHint;
 
-  /// Shown when auto-detect cannot find a surface to key. Three facts have to survive translation, because losing any of them puts back the dead end this copy was written to remove: that the surface must fill the frame behind the subject, that an ordinary wall qualifies, and that the colour can be picked by hand instead. End on what the user can do next, not on what went wrong. Use the same noun for the keyed surface as videoEditorChromaKeyScreenColorLabel in this locale, and never the word this locale uses for the replacement background.
+  /// Shown when auto-detect finds no colour to mask. Auto-detect samples the edges of the frame and needs one saturated colour covering most of them, so a busy edge and a white or grey wall both end here. Two facts have to survive translation: that it looked for one bold colour around the edges, and that the colour can be picked by hand instead. End on what the user can do next, not on what went wrong, and never use the word this locale uses for the replacement background.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t find a screen — it has to fill the frame behind you. A plain wall counts. Or pick the color by hand.'**
+  /// **'Couldn\'t find one bold color around the edges of the frame. Pick the color by hand instead.'**
   String get videoEditorChromaKeyDetectFailed;
 
-  /// Shown when auto-detect gave up waiting for the footage to decode, which says nothing about the footage itself. Two things have to survive translation: that the user can simply run Auto-detect again, and that the colour can be picked by hand instead. Name the button exactly as videoEditorChromaKeyAutoDetect does in this locale, use the same noun for the keyed surface as videoEditorChromaKeyScreenColorLabel, and end on what the user can do next.
+  /// Shown when auto-detect gave up waiting for the footage to decode, which says nothing about the footage itself. Two things have to survive translation: that the user can simply run Auto-detect again, and that the colour can be picked by hand instead. Name the button exactly as videoEditorChromaKeyAutoDetect does in this locale, and end on what the user can do next.
   ///
   /// In en, this message translates to:
-  /// **'Took too long to measure the screen. Try Auto-detect again, or pick the color by hand.'**
+  /// **'Took too long to read the clip. Try Auto-detect again, or pick the color by hand.'**
   String get videoEditorChromaKeyDetectTimedOut;
 
   /// No description provided for @videoEditorChromaKeyPickClipTitle.
@@ -15789,28 +15789,28 @@ abstract class AppLocalizations {
   /// No description provided for @videoEditorChromaKeyRemove.
   ///
   /// In en, this message translates to:
-  /// **'Remove green screen'**
+  /// **'Remove color mask'**
   String get videoEditorChromaKeyRemove;
 
   /// No description provided for @videoEditorChromaKeyFailed.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t apply the green screen. Your clip is unchanged.'**
+  /// **'Couldn\'t apply the color mask. Your clip is unchanged.'**
   String get videoEditorChromaKeyFailed;
 
-  /// Shown when dropping a clip's already-baked green screen fails, so the clip keeps the keyed video. The counterpart videoEditorChromaKeyFailed is for the opposite direction — applying one.
+  /// Shown when dropping a clip's already-baked colour mask fails, so the clip keeps the keyed video. The counterpart videoEditorChromaKeyFailed is for the opposite direction — applying one.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t remove the green screen. Your clip is unchanged.'**
+  /// **'Couldn\'t remove the color mask. Your clip is unchanged.'**
   String get videoEditorChromaKeyRemoveFailed;
 
   /// No description provided for @videoEditorChromaKeyApplying.
   ///
   /// In en, this message translates to:
-  /// **'Applying the green screen…'**
+  /// **'Applying the color mask…'**
   String get videoEditorChromaKeyApplying;
 
-  /// Shown in the green-screen editor when the renderer has no shader image filter, so the preview cannot show the key applied.
+  /// Shown in the colour-mask editor when the renderer has no shader image filter, so the preview cannot show the key applied.
   ///
   /// In en, this message translates to:
   /// **'This device can\'t show the live preview. Your settings still apply when you export.'**
