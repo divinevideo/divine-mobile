@@ -177,6 +177,7 @@ void main() {
   group('buildDetachedClipVideoLayer', () {
     const bodySize = Size(360, 640);
     const videoSize = Size(1080, 1920);
+    const targetAspectRatio = 9 / 16;
     // Editor body → video pixels.
     const scale = 3.0;
     // What pro_image_editor reports for a 90x90 layer turned 45 degrees.
@@ -215,6 +216,7 @@ void main() {
         resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
         bodySize: bodySize,
         videoSize: videoSize,
+        targetAspectRatio: targetAspectRatio,
         timelineMap: identityMap,
         speedFlattened: false,
       );
@@ -236,6 +238,7 @@ void main() {
         resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
         bodySize: bodySize,
         videoSize: videoSize,
+        targetAspectRatio: targetAspectRatio,
         timelineMap: identityMap,
         speedFlattened: false,
       );
@@ -254,6 +257,7 @@ void main() {
         resolvedVideo: EditorVideo.file('/docs/flattened.mp4'),
         bodySize: bodySize,
         videoSize: videoSize,
+        targetAspectRatio: targetAspectRatio,
         timelineMap: identityMap,
         speedFlattened: true,
       );
@@ -269,6 +273,7 @@ void main() {
         resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
         bodySize: bodySize,
         videoSize: videoSize,
+        targetAspectRatio: targetAspectRatio,
         timelineMap: identityMap,
         speedFlattened: false,
       );
@@ -290,6 +295,7 @@ void main() {
         resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
         bodySize: bodySize,
         videoSize: videoSize,
+        targetAspectRatio: targetAspectRatio,
         timelineMap: identityMap,
         speedFlattened: false,
       );
@@ -308,6 +314,7 @@ void main() {
         resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
         bodySize: bodySize,
         videoSize: videoSize,
+        targetAspectRatio: targetAspectRatio,
         timelineMap: identityMap,
         speedFlattened: false,
       );
@@ -322,6 +329,7 @@ void main() {
         resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
         bodySize: bodySize,
         videoSize: videoSize,
+        targetAspectRatio: targetAspectRatio,
         timelineMap: identityMap,
         speedFlattened: false,
       );
@@ -346,6 +354,7 @@ void main() {
         resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
         bodySize: bodySize,
         videoSize: videoSize,
+        targetAspectRatio: targetAspectRatio,
         timelineMap: identityMap,
         speedFlattened: false,
       );
@@ -377,6 +386,7 @@ void main() {
         resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
         bodySize: bodySize,
         videoSize: videoSize,
+        targetAspectRatio: targetAspectRatio,
         timelineMap: identityMap,
         speedFlattened: false,
       );
@@ -392,6 +402,7 @@ void main() {
         resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
         bodySize: bodySize,
         videoSize: videoSize,
+        targetAspectRatio: targetAspectRatio,
         timelineMap: identityMap,
         speedFlattened: false,
       );
@@ -400,6 +411,24 @@ void main() {
         layer.clips.single.transform!.offset,
         const Offset((360 / 2 + 20 - 45) * scale, (640 / 2 - 30 - 45) * scale),
       );
+    });
+
+    // The composition goes over the finished track, which a square export has
+    // already cropped, so the part of the body the editor hid comes off.
+    test('lines a square export up with the square the editor shows', () {
+      final layer = buildDetachedClipVideoLayer(
+        item: item(_clip()),
+        resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
+        bodySize: bodySize,
+        videoSize: const Size(1080, 1080),
+        targetAspectRatio: model.AspectRatio.square.value,
+        timelineMap: identityMap,
+        speedFlattened: false,
+      );
+
+      // A centred 90x90 layer lands in the middle of the 1080x1080 frame.
+      expect(layer.clips.single.transform!.offset, const Offset(405, 405));
+      expect(layer.clips.single.transform!.size, const Size(270, 270));
     });
 
     test('applies the clip trim window and volume', () {
@@ -414,6 +443,7 @@ void main() {
         resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
         bodySize: bodySize,
         videoSize: videoSize,
+        targetAspectRatio: targetAspectRatio,
         timelineMap: identityMap,
         speedFlattened: false,
       );
@@ -430,6 +460,7 @@ void main() {
         resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
         bodySize: bodySize,
         videoSize: videoSize,
+        targetAspectRatio: targetAspectRatio,
         timelineMap: identityMap,
         speedFlattened: false,
       );
@@ -447,6 +478,7 @@ void main() {
         resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
         bodySize: bodySize,
         videoSize: videoSize,
+        targetAspectRatio: targetAspectRatio,
         timelineMap: identityMap,
         speedFlattened: false,
       );
@@ -464,6 +496,7 @@ void main() {
         resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
         bodySize: bodySize,
         videoSize: videoSize,
+        targetAspectRatio: targetAspectRatio,
         timelineMap: identityMap,
         speedFlattened: false,
       );
@@ -482,6 +515,7 @@ void main() {
         resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
         bodySize: bodySize,
         videoSize: videoSize,
+        targetAspectRatio: targetAspectRatio,
         timelineMap: identityMap,
         speedFlattened: false,
       );
@@ -497,6 +531,7 @@ void main() {
         resolvedVideo: EditorVideo.file('/cache/flat.mp4'),
         bodySize: bodySize,
         videoSize: videoSize,
+        targetAspectRatio: targetAspectRatio,
         timelineMap: identityMap,
         speedFlattened: true,
       );
@@ -518,6 +553,7 @@ void main() {
         resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
         bodySize: bodySize,
         videoSize: videoSize,
+        targetAspectRatio: targetAspectRatio,
         timelineMap: identityMap,
         speedFlattened: false,
       );
@@ -535,6 +571,7 @@ void main() {
         resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
         bodySize: bodySize,
         videoSize: videoSize,
+        targetAspectRatio: targetAspectRatio,
         timelineMap: identityMap,
         speedFlattened: false,
       );
@@ -548,6 +585,7 @@ void main() {
         resolvedVideo: EditorVideo.file('/cache/flat.mp4'),
         bodySize: bodySize,
         videoSize: videoSize,
+        targetAspectRatio: targetAspectRatio,
         timelineMap: identityMap,
         speedFlattened: true,
       );

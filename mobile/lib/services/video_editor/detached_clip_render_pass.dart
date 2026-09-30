@@ -146,6 +146,7 @@ class DetachedClipRenderPass {
           resolvedVideo: video,
           bodySize: bodySize,
           videoSize: videoSize,
+          targetAspectRatio: aspectRatio.value,
           timelineMap: timelineMap,
           speedFlattened: flattened,
         ),
@@ -161,6 +162,7 @@ class DetachedClipRenderPass {
         capturedLayers: partitioned.above,
         bodySize: bodySize,
         videoSize: videoSize,
+        targetAspectRatio: aspectRatio.value,
         timelineMap: timelineMap,
         // Valid detached clips were already removed by the partition. Anything
         // with only the kind marker left here is the deliberately rescued

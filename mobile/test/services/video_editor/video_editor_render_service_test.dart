@@ -83,12 +83,15 @@ void main() {
   ];
 
   group('buildImageLayers', () {
+    final vertical = model.AspectRatio.vertical.value;
+
     test('returns null when there are no captured layers', () {
       expect(
         VideoEditorRenderService.buildImageLayers(
           capturedLayers: const [],
           bodySize: const Size(100, 200),
           videoSize: const Size(300, 600),
+          targetAspectRatio: vertical,
           timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
         ),
         isNull,
@@ -116,6 +119,7 @@ void main() {
         capturedLayers: [layer(), detached],
         bodySize: const Size(100, 200),
         videoSize: const Size(300, 600),
+        targetAspectRatio: vertical,
         timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
       );
 
@@ -144,6 +148,7 @@ void main() {
         capturedLayers: [broken],
         bodySize: const Size(100, 200),
         videoSize: const Size(300, 600),
+        targetAspectRatio: vertical,
         timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
         excludeDetachedClips: false,
       );
@@ -157,6 +162,7 @@ void main() {
           capturedLayers: [layer()],
           bodySize: null,
           videoSize: const Size(300, 600),
+          targetAspectRatio: vertical,
           timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
         ),
         isNull,
@@ -169,6 +175,7 @@ void main() {
         capturedLayers: [layer()],
         bodySize: const Size(100, 200),
         videoSize: const Size(300, 600),
+        targetAspectRatio: vertical,
         timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
       )!;
 
@@ -176,6 +183,38 @@ void main() {
       // (bodyW/2 + dx - logicalW/2) * scale = (50 + 0 - 5) * 3 = 135.
       expect(built.offset, const Offset(135, 270));
       expect(built.size, const Size(30, 60));
+    });
+
+    // A square session is edited on the recording's 9:16 body. Clips of mixed
+    // resolution are cropped one by one before the layers go on, so the frame
+    // is already square and the part of the body the editor hid has to come
+    // off the offset — scaling by width alone put this layer 420 px too low.
+    test('lines a square crop up with the square the editor shows', () {
+      final layers = VideoEditorRenderService.buildImageLayers(
+        capturedLayers: [layer(logicalSize: const Size(120, 60))],
+        bodySize: const Size(360, 640),
+        videoSize: const Size(1080, 1080),
+        targetAspectRatio: model.AspectRatio.square.value,
+        timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
+      )!;
+
+      expect(layers.single.offset, const Offset(360, 450));
+      expect(layers.single.size, const Size(360, 180));
+    });
+
+    // Clips that share a resolution keep the recording's shape here and are
+    // cropped after the layers go on, so the layer sits where the crop keeps it.
+    test('places a square layer on an uncropped recording at its crop', () {
+      final layers = VideoEditorRenderService.buildImageLayers(
+        capturedLayers: [layer(logicalSize: const Size(120, 60))],
+        bodySize: const Size(360, 640),
+        videoSize: const Size(1080, 1920),
+        targetAspectRatio: model.AspectRatio.square.value,
+        timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
+      )!;
+
+      // The centred square crop starts at y 420, so this is 450 once cropped.
+      expect(layers.single.offset, const Offset(360, 870));
     });
 
     test('passes layer times through unchanged when there is no overlap '
@@ -186,6 +225,7 @@ void main() {
         ],
         bodySize: const Size(100, 200),
         videoSize: const Size(300, 600),
+        targetAspectRatio: vertical,
         timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
       )!;
 
@@ -207,6 +247,7 @@ void main() {
         ],
         bodySize: const Size(100, 200),
         videoSize: const Size(300, 600),
+        targetAspectRatio: vertical,
         timelineMap: map,
       )!;
 
@@ -220,6 +261,7 @@ void main() {
         capturedLayers: [layer()],
         bodySize: const Size(100, 200),
         videoSize: const Size(300, 600),
+        targetAspectRatio: vertical,
         timelineMap: TransitionTimelineMap.fromClips(overlapClips),
       )!;
 
@@ -279,6 +321,7 @@ void main() {
           capturedLayers: [karaoke()],
           bodySize: const Size(100, 200),
           videoSize: const Size(300, 600),
+          targetAspectRatio: vertical,
           timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
         )!;
 
@@ -305,6 +348,7 @@ void main() {
           capturedLayers: [karaoke()],
           bodySize: const Size(100, 200),
           videoSize: const Size(300, 600),
+          targetAspectRatio: vertical,
           timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
         )!;
 

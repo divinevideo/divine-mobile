@@ -899,6 +899,7 @@ class VideoEditorRenderService {
         capturedLayers: capturedLayers,
         bodySize: parameters?.bodySize,
         videoSize: videoSize,
+        targetAspectRatio: aspectRatio.value,
         timelineMap: timelineMap,
         // A non-null override came from DetachedClipRenderPass, which already
         // removed every valid video layer. Keep its unreadable-layer raster
@@ -1030,11 +1031,13 @@ class VideoEditorRenderService {
   /// Builds the [ImageLayer]s composited over the exported video from the
   /// captured overlay layers.
   ///
-  /// Each layer is scaled from editor body space ([bodySize]) into the rendered
-  /// video's pixel space ([videoSize]), and its time window is mapped from the
-  /// editor timeline onto the output axis via [timelineMap] — so an overlap
-  /// transition can't push a layer (or its leave animation) past the real video
-  /// end. Returns `null` when there is nothing to overlay.
+  /// Each layer is mapped from editor body space ([bodySize]) onto [videoSize],
+  /// the frame the layers are composited on, so that the part of the body the
+  /// editor shows lands on the [targetAspectRatio] crop the export keeps — see
+  /// [ExportLayerMapping]. Its time window is mapped from the editor timeline
+  /// onto the output axis via [timelineMap] — so an overlap transition can't
+  /// push a layer (or its leave animation) past the real video end. Returns
+  /// `null` when there is nothing to overlay.
   ///
   /// Detached clips are skipped: their raster is a single frame of a video, and
   /// [DetachedClipRenderPass.composite] composites the moving picture instead.
@@ -1054,11 +1057,16 @@ class VideoEditorRenderService {
     required List<ExportedLayer> capturedLayers,
     required Size? bodySize,
     required Size videoSize,
+    required double targetAspectRatio,
     required TransitionTimelineMap timelineMap,
     bool excludeDetachedClips = true,
   }) {
     if (capturedLayers.isEmpty || bodySize == null) return null;
-    final scale = videoSize.width / bodySize.width;
+    final mapping = ExportLayerMapping(
+      bodySize: bodySize,
+      frameSize: videoSize,
+      targetAspectRatio: targetAspectRatio,
+    );
     return [
       for (final item in capturedLayers)
         if (!excludeDetachedClips ||
@@ -1066,7 +1074,7 @@ class VideoEditorRenderService {
           ..._imageLayersFor(
             item,
             bodySize: bodySize,
-            scale: scale,
+            mapping: mapping,
             timelineMap: timelineMap,
           ),
     ];
@@ -1076,23 +1084,23 @@ class VideoEditorRenderService {
   static List<ImageLayer> _imageLayersFor(
     ExportedLayer item, {
     required Size bodySize,
-    required double scale,
+    required ExportLayerMapping mapping,
     required TransitionTimelineMap timelineMap,
   }) {
     final offset = exportedLayerTopLeft(
       anchor: item.layer.offset,
       bodySize: bodySize,
       logicalSize: item.logicalSize,
-      scale: scale,
+      mapping: mapping,
     );
     final size = Size(
-      item.logicalSize.width * scale,
-      item.logicalSize.height * scale,
+      item.logicalSize.width * mapping.scale,
+      item.logicalSize.height * mapping.scale,
     );
     final animations = item.layer.divineAnimationsForExport(
       bodySize: bodySize,
       logicalSize: item.logicalSize,
-      scale: scale,
+      mapping: mapping,
     );
     final frames = item.frames;
     return [

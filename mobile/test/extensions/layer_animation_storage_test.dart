@@ -293,14 +293,61 @@ void main() {
     });
   });
 
+  group(ExportLayerMapping, () {
+    test('keeps a frame shaped like the body at the origin', () {
+      final mapping = ExportLayerMapping(
+        bodySize: const Size(360, 640),
+        frameSize: const Size(1080, 1920),
+        targetAspectRatio: 9 / 16,
+      );
+
+      expect(mapping.scale, equals(3));
+      expect(mapping.origin, equals(Offset.zero));
+    });
+
+    // A square session edits on the 9:16 recording but can composite on a
+    // frame that is already square: the 140 px the editor hides above the
+    // square have to come off every layer.
+    test('shifts a cropped frame by the body the crop removed', () {
+      final mapping = ExportLayerMapping(
+        bodySize: const Size(360, 640),
+        frameSize: const Size(1080, 1080),
+        targetAspectRatio: 1,
+      );
+
+      expect(mapping.scale, equals(3));
+      expect(mapping.origin, equals(const Offset(0, -420)));
+    });
+
+    // A landscape first clip makes the body wider than the crop, so the scale
+    // comes from the height the two share, not the width.
+    test('scales a body wider than the crop by its height', () {
+      final mapping = ExportLayerMapping(
+        bodySize: const Size(640, 360),
+        frameSize: const Size(1080, 1920),
+        targetAspectRatio: 9 / 16,
+      );
+
+      expect(mapping.scale, closeTo(1920 / 360, 1e-9));
+      expect(mapping.origin.dx, closeTo(-(640 - 202.5) / 2 * 1920 / 360, 1e-9));
+      expect(mapping.origin.dy, closeTo(0, 1e-9));
+    });
+  });
+
   group('exportedLayerTopLeft', () {
+    ExportLayerMapping scaleBy(double factor) => ExportLayerMapping(
+      bodySize: const Size(400, 800),
+      frameSize: Size(400 * factor, 800 * factor),
+      targetAspectRatio: 1 / 2,
+    );
+
     test('maps a centred layer onto the middle of the video', () {
       expect(
         exportedLayerTopLeft(
           anchor: Offset.zero,
           bodySize: const Size(400, 800),
           logicalSize: const Size(100, 50),
-          scale: 2,
+          mapping: scaleBy(2),
         ),
         equals(const Offset(300, 750)),
       );
@@ -312,13 +359,13 @@ void main() {
         anchor: Offset.zero,
         bodySize: bodySize,
         logicalSize: const Size(100, 100),
-        scale: 1,
+        mapping: scaleBy(1),
       );
       final large = exportedLayerTopLeft(
         anchor: Offset.zero,
         bodySize: bodySize,
         logicalSize: const Size(200, 200),
-        scale: 1,
+        mapping: scaleBy(1),
       );
 
       expect(large, equals(small - const Offset(50, 50)));
@@ -330,7 +377,7 @@ void main() {
           anchor: const Offset(50, -100),
           bodySize: const Size(400, 800),
           logicalSize: Size.zero,
-          scale: 3,
+          mapping: scaleBy(3),
         ),
         equals(const Offset(750, 900)),
       );
@@ -340,7 +387,13 @@ void main() {
   group('LayerExportAnimations', () {
     const bodySize = Size(400, 800);
     const logicalSize = Size(100, 50);
-    const scale = 2.0;
+    // A square crop of the body on an already-square frame, so the transform
+    // carries a translation as well as a scale.
+    final mapping = ExportLayerMapping(
+      bodySize: bodySize,
+      frameSize: const Size(800, 800),
+      targetAspectRatio: 1,
+    );
 
     const slideIn = editor.LayerAnimation(
       type: editor.LayerAnimationType.slide,
@@ -353,7 +406,7 @@ void main() {
         layer.divineAnimationsForExport(
           bodySize: bodySize,
           logicalSize: logicalSize,
-          scale: scale,
+          mapping: mapping,
         );
 
     test('leaves a layer without points on its edge slide', () {
@@ -384,7 +437,7 @@ void main() {
             anchor: points.resolve(editor.AnimationPhase.animateIn, bodySize)!,
             bodySize: bodySize,
             logicalSize: logicalSize,
-            scale: scale,
+            mapping: mapping,
           ),
         ),
       );
@@ -467,7 +520,7 @@ void main() {
       final exported = layer.divineAnimationsForExport(
         bodySize: Size.zero,
         logicalSize: logicalSize,
-        scale: scale,
+        mapping: mapping,
       );
 
       expect(exported.single.slideFrom, isNull);
