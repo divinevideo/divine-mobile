@@ -19,6 +19,7 @@ import 'package:openvine/models/caption_mention.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
@@ -76,6 +77,22 @@ class _RecordingTrace implements PerformanceTrace {
 
   @override
   Future<void> stop() async => stopCount++;
+}
+
+/// A clip manager whose shared chroma-key bake keys a take at once, or fails.
+class _BakingClipManager extends ClipManagerNotifier {
+  _BakingClipManager({required this.fails});
+
+  final bool fails;
+
+  @override
+  Future<DivineVideoClip> bakeCapturedChromaKey(DivineVideoClip clip) async {
+    if (fails) throw StateError('bake failed');
+    return clip.copyWith(
+      video: EditorVideo.file('/docs/keyed.mp4'),
+      chromaKey: clip.captureChromaKey,
+    );
+  }
 }
 
 /// Hands out — and retains — a [_RecordingTrace] per [startOperationTrace] call.
@@ -686,6 +703,93 @@ void main() {
               'when finalRenderedClip already exists',
         );
       });
+
+      /// A session holding one take still waiting on its recorded key, whose
+      /// bake keys it or fails as [bakeFails] says.
+      Future<ProviderContainer> containerWithPendingTake({
+        required bool bakeFails,
+      }) async {
+        final pendingContainer = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(
+              await SharedPreferences.getInstance(),
+            ),
+            performanceMonitoringServiceProvider.overrideWithValue(
+              _RecordingPerformanceMonitor(),
+            ),
+            clipManagerProvider.overrideWith(
+              () => _BakingClipManager(fails: bakeFails),
+            ),
+          ],
+        );
+        addTearDown(pendingContainer.dispose);
+        pendingContainer
+            .read(clipManagerProvider.notifier)
+            .addClip(
+              limitClipDuration: false,
+              video: EditorVideo.file('/docs/raw.mp4'),
+              targetAspectRatio: .vertical,
+              originalAspectRatio: 9 / 16,
+              duration: const Duration(seconds: 2),
+              captureChromaKey: const ClipChromaKey(
+                key: ChromaKey.greenScreen(),
+              ),
+            );
+        return pendingContainer;
+      }
+
+      test('exports a take still waiting on its recorded key keyed', () async {
+        final pendingContainer = await containerWithPendingTake(
+          bakeFails: false,
+        );
+        List<DivineVideoClip>? rendered;
+        VideoEditorRenderService.renderVideoToClipOverride =
+            ({
+              required clips,
+              required editorStateHistory,
+              parameters,
+              taskId,
+            }) async {
+              rendered = clips;
+              return (clips.single, null);
+            };
+
+        await pendingContainer
+            .read(videoEditorProvider.notifier)
+            .startRenderVideo();
+
+        expect(rendered?.single.video?.file?.path, '/docs/keyed.mp4');
+      });
+
+      test(
+        'does not export a take whose recorded key failed to bake',
+        () async {
+          final pendingContainer = await containerWithPendingTake(
+            bakeFails: true,
+          );
+          var rendered = false;
+          VideoEditorRenderService.renderVideoToClipOverride =
+              ({
+                required clips,
+                required editorStateHistory,
+                parameters,
+                taskId,
+              }) async {
+                rendered = true;
+                return (clips.single, null);
+              };
+
+          await pendingContainer
+              .read(videoEditorProvider.notifier)
+              .startRenderVideo();
+
+          expect(rendered, isFalse);
+          expect(
+            pendingContainer.read(videoEditorProvider).finalRenderedClip,
+            isNull,
+          );
+        },
+      );
 
       test('sets finalRenderedClip when render completes', () async {
         final notifier = container.read(videoEditorProvider.notifier);
