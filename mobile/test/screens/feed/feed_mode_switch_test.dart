@@ -45,9 +45,9 @@ void main() {
       l10n = lookupAppLocalizations(const Locale('en'));
     });
 
-    tearDown(() {
-      mockBloc.close();
-      mockVolumeCubit.close();
+    tearDown(() async {
+      await mockBloc.close();
+      await mockVolumeCubit.close();
     });
 
     Widget createTestWidget({
