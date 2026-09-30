@@ -15,17 +15,15 @@ appId: co.openvine.app.staging
 - tapOn:
     id: "settings_button"
 
-# Settings itself is asserted by whatever is looking for a specific row:
-# the screen is a flat list whose contents vary with feature flags and
-# developer mode, so there is no stable full-screen assertion to make.
+# Settings is a short list of categories; every journey continues through
+# one of them. Wait on the Account row, which is always present for a
+# signed-in user, rather than on any row deeper in the tree.
 #
-# Scroll to that row rather than waiting for it to appear. The list has
-# outgrown the viewport, so the Nostr row now sits below the fold on a stock
-# iPhone and a plain visibility wait times out on a screen that is already
-# fully drawn. Scrolling is a superset of the old wait: it returns
-# immediately when the row is on screen already.
+# Scroll to that row rather than waiting for it to appear: a scroll returns
+# immediately when the row is already on screen, and survives the list
+# outgrowing the viewport on a small device.
 - scrollUntilVisible:
     element:
-      id: "nostr_settings_tile"
+      id: "settings_account_tile"
     direction: DOWN
     timeout: 30000
