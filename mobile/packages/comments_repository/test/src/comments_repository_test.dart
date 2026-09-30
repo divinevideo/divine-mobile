@@ -2506,6 +2506,136 @@ void main() {
 
         expect(cached, equals(10));
       });
+
+      test(
+        'does not restore a recently posted comment after deletion',
+        () async {
+          when(() => mockNostrClient.publishEvent(any())).thenAnswer((
+            inv,
+          ) async {
+            final event = inv.positionalArguments.first as Event;
+            event.id = event.kind == _commentKind
+                ? 'recently-posted-comment'
+                : 'comment-deletion';
+            return PublishSuccess(event: event);
+          });
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
+
+          final posted = await repository.postComment(
+            content: 'Original text',
+            rootEventId: testRootEventId,
+            rootEventKind: _testRootEventKind,
+            rootEventAuthorPubkey: testRootAuthorPubkey,
+          );
+          final beforeDelete = await repository.loadComments(
+            rootEventId: testRootEventId,
+            rootEventKind: _testRootEventKind,
+          );
+          expect(beforeDelete.commentCache.keys, equals([posted.id]));
+
+          await repository.deleteComment(
+            commentId: posted.id,
+            rootEventId: testRootEventId,
+          );
+
+          final loaded = await repository.loadComments(
+            rootEventId: testRootEventId,
+            rootEventKind: _testRootEventKind,
+          );
+
+          expect(loaded.comments, isEmpty);
+        },
+      );
+
+      test(
+        'keeps other recently posted comments when deleting without a root '
+        'event id',
+        () async {
+          var postedCommentCount = 0;
+          when(() => mockNostrClient.publishEvent(any())).thenAnswer((
+            inv,
+          ) async {
+            final event = inv.positionalArguments.first as Event;
+            if (event.kind == _commentKind) {
+              postedCommentCount++;
+              event.id = 'posted-comment-$postedCommentCount';
+            } else {
+              event.id = 'comment-deletion';
+            }
+            return PublishSuccess(event: event);
+          });
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
+
+          final deleted = await repository.postComment(
+            content: 'Deleted text',
+            rootEventId: testRootEventId,
+            rootEventKind: _testRootEventKind,
+            rootEventAuthorPubkey: testRootAuthorPubkey,
+          );
+          final kept = await repository.postComment(
+            content: 'Kept text',
+            rootEventId: testRootEventId,
+            rootEventKind: _testRootEventKind,
+            rootEventAuthorPubkey: testRootAuthorPubkey,
+          );
+          await repository.deleteComment(commentId: deleted.id);
+
+          final loaded = await repository.loadComments(
+            rootEventId: testRootEventId,
+            rootEventKind: _testRootEventKind,
+          );
+
+          expect(loaded.commentCache.keys, equals([kept.id]));
+        },
+      );
+
+      test('keeps only edited text after deleting and reposting', () async {
+        var postedCommentCount = 0;
+        when(() => mockNostrClient.publishEvent(any())).thenAnswer((inv) async {
+          final event = inv.positionalArguments.first as Event;
+          if (event.kind == _commentKind) {
+            postedCommentCount++;
+            event.id = 'posted-comment-$postedCommentCount';
+          } else {
+            event.id = 'comment-deletion';
+          }
+          return PublishSuccess(event: event);
+        });
+        when(
+          () => mockNostrClient.queryEvents(any()),
+        ).thenAnswer((_) async => <Event>[]);
+
+        final original = await repository.postComment(
+          content: 'Original text',
+          rootEventId: testRootEventId,
+          rootEventKind: _testRootEventKind,
+          rootEventAuthorPubkey: testRootAuthorPubkey,
+        );
+        await repository.deleteComment(
+          commentId: original.id,
+          rootEventId: testRootEventId,
+        );
+        await repository.postComment(
+          content: 'Edited text',
+          rootEventId: testRootEventId,
+          rootEventKind: _testRootEventKind,
+          rootEventAuthorPubkey: testRootAuthorPubkey,
+        );
+
+        final loaded = await repository.loadComments(
+          rootEventId: testRootEventId,
+          rootEventKind: _testRootEventKind,
+        );
+
+        expect(
+          loaded.comments.map((comment) => comment.content),
+          equals(['Edited text']),
+        );
+      });
     });
 
     group('watchComments', () {

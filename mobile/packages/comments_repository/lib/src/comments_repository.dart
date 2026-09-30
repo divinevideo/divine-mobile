@@ -119,8 +119,8 @@ class CommentsRepository {
   /// relays when REST is unavailable. A stale-but-non-empty REST response
   /// short-circuits, so a fresh read after posting omits the user's own
   /// comment until the index catches up. Entries are merged into read results
-  /// and pruned once the fetched thread contains them or after
-  /// [_recentlyPostedRetention].
+  /// and pruned once the fetched thread contains them, when [deleteComment]
+  /// deletes them, or after [_recentlyPostedRetention].
   final Map<String, List<_RecentlyPostedComment>> _recentlyPostedComments = {};
 
   /// How long a just-posted comment is retained for the self-heal merge before
@@ -128,6 +128,16 @@ class CommentsRepository {
   /// enough that a never-indexed comment (relay-rejected, or deleted from
   /// another client) cannot linger locally indefinitely.
   static const _recentlyPostedRetention = Duration(minutes: 10);
+
+  /// Ids of comments deleted through [deleteComment], hidden from every read.
+  ///
+  /// A published NIP-09 deletion reaches read sources late: a relay that has
+  /// not stored the comment yet applies it only in a later sweep, and the
+  /// edge-cached REST list is not purged. Until then they still return the
+  /// comment, so an edit showed the old text beside the new (#9643). Kept
+  /// across [clearCommentCountCache] because a deletion holds for every
+  /// viewer; bounded by how many comments are deleted in one session.
+  final Set<String> _deletedCommentIds = {};
 
   /// Subscription ID for the active comment watch, if any.
   String? _watchSubscriptionId;
@@ -185,11 +195,13 @@ class CommentsRepository {
             cacheBustToken: _commentsCacheBustToken(rootEventId),
           );
           if (response != null) {
-            final restThread = _buildThreadFromRestComments(
-              response,
-              rootEventId,
-              rootEventKind,
-              rootAddressableId: rootAddressableId,
+            final restThread = _dropDeletedComments(
+              _buildThreadFromRestComments(
+                response,
+                rootEventId,
+                rootEventKind,
+                rootAddressableId: rootAddressableId,
+              ),
             );
             // Merge the user's own just-posted comment when the REST index has
             // not yet ingested it, so a sheet reopen doesn't drop it (#5598).
@@ -270,6 +282,7 @@ class CommentsRepository {
           rootEventKind,
         );
       }
+      thread = _dropDeletedComments(thread);
 
       // Merge the user's own just-posted comment on first-page loads when the
       // relay query has not yet returned it, mirroring the REST path (#5598).
@@ -587,8 +600,10 @@ class CommentsRepository {
   /// The token is the newest retained post time (microseconds), so it is stable
   /// across reads within a post window (the edge can still cache that variant)
   /// and changes when a newer comment is posted. Once [_recentlyPostedComments]
-  /// prunes (merged in or older than [_recentlyPostedRetention]), it returns
-  /// `null` and reads fall back to the normal cached URL (#5854).
+  /// prunes (merged in, deleted, or older than [_recentlyPostedRetention]), it
+  /// returns `null` and reads fall back to the normal cached URL (#5854); a
+  /// stale cached list cannot bring back a deleted comment because
+  /// [_deletedCommentIds] filters it out.
   String? _commentsCacheBustToken(String rootEventId) {
     final pending = _recentlyPostedComments[rootEventId];
     if (pending == null || pending.isEmpty) return null;
@@ -604,6 +619,17 @@ class CommentsRepository {
     _recentlyPostedComments.putIfAbsent(rootEventId, () => [])
       ..removeWhere((p) => p.comment.id == comment.id)
       ..add(_RecentlyPostedComment(comment, _now()));
+  }
+
+  /// Removes a deleted comment from every root's recently-posted cache.
+  ///
+  /// [deleteComment] may be called without a root event id, so search all
+  /// roots by the globally unique Nostr event id.
+  void _removeRecentlyPostedComment(String commentId) {
+    for (final pending in _recentlyPostedComments.values) {
+      pending.removeWhere((p) => p.comment.id == commentId);
+    }
+    _recentlyPostedComments.removeWhere((_, pending) => pending.isEmpty);
   }
 
   /// Merges any retained just-posted comments for [rootEventId] into [thread]
@@ -691,6 +717,9 @@ class CommentsRepository {
         );
       }
 
+      _deletedCommentIds.add(commentId);
+      _removeRecentlyPostedComment(commentId);
+
       if (rootEventId != null) {
         _adjustCachedCommentCount(
           rootEventId,
@@ -766,6 +795,7 @@ class CommentsRepository {
 
       final filter = _blockFilter;
       return eventStream
+          .where((event) => !_deletedCommentIds.contains(event.id))
           .where((event) => seenIds.add(event.id))
           .map((event) => _eventToComment(event, rootEventId, rootEventKind))
           .where((comment) => comment != null)
@@ -820,7 +850,11 @@ class CommentsRepository {
       final events = await _nostrClient.queryEvents([filter]);
 
       final comments =
-          events.map(_eventToCommentFromRawEvent).whereType<Comment>().toList()
+          events
+              .where((event) => !_deletedCommentIds.contains(event.id))
+              .map(_eventToCommentFromRawEvent)
+              .whereType<Comment>()
+              .toList()
             ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
       return comments;
@@ -847,6 +881,26 @@ class CommentsRepository {
       commentCache: Map<String, Comment>.unmodifiable({
         for (final c in filtered) c.id: c,
       }),
+    );
+  }
+
+  /// Drops comments in [_deletedCommentIds] from [thread], lowering
+  /// [CommentThread.totalCount] by the number dropped since the source
+  /// counted them too.
+  CommentThread _dropDeletedComments(CommentThread thread) {
+    if (_deletedCommentIds.isEmpty) return thread;
+    final kept = thread.comments
+        .where((c) => !_deletedCommentIds.contains(c.id))
+        .toList();
+    final dropped = thread.comments.length - kept.length;
+    if (dropped == 0) return thread;
+    final totalCount = thread.totalCount - dropped;
+    return thread.copyWith(
+      comments: kept,
+      commentCache: Map<String, Comment>.unmodifiable({
+        for (final c in kept) c.id: c,
+      }),
+      totalCount: totalCount < 0 ? 0 : totalCount,
     );
   }
 
