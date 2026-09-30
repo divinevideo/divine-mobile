@@ -240,26 +240,21 @@ void main() {
               ),
             ).thenAnswer((_) => Completer<String?>().future);
 
-            ViewerAuthResult? result;
-            var completed = false;
-            service
-                .createAuthHeaders(
-                  sha256Hash: 'abc123',
-                  serverUrl: 'https://media.divine.video',
-                )
-                .then((r) {
-                  result = r;
-                  completed = true;
-                });
+            final request = _RequestOutcome(
+              service.createAuthHeaders(
+                sha256Hash: 'abc123',
+                serverUrl: 'https://media.divine.video',
+              ),
+            );
 
             // Still pending just before the 6s caller-side timeout.
             async.elapse(const Duration(seconds: 5));
-            expect(completed, isFalse);
+            expect(request.isCompleted, isFalse);
 
             // Fires at the timeout, far short of Keycast's 30s ceiling.
             async.elapse(const Duration(seconds: 2));
-            expect(completed, isTrue);
-            expect(result, isA<ViewerAuthSignerUnreachable>());
+            expect(request.error, isNull);
+            expect(request.result, isA<ViewerAuthSignerUnreachable>());
           });
         },
       );
@@ -283,20 +278,15 @@ void main() {
               ),
             ).thenAnswer((_) => Completer<Nip98Token?>().future);
 
-            ViewerAuthResult? result;
-            var completed = false;
-            service
-                .createAuthHeaders(
-                  url: 'https://media.divine.video/no-hash/playlist.m3u8',
-                )
-                .then((r) {
-                  result = r;
-                  completed = true;
-                });
+            final request = _RequestOutcome(
+              service.createAuthHeaders(
+                url: 'https://media.divine.video/no-hash/playlist.m3u8',
+              ),
+            );
 
             async.elapse(const Duration(seconds: 7));
-            expect(completed, isTrue);
-            expect(result, isA<ViewerAuthSignerUnreachable>());
+            expect(request.error, isNull);
+            expect(request.result, isA<ViewerAuthSignerUnreachable>());
           });
         },
       );
@@ -347,36 +337,53 @@ void main() {
             ),
           ).thenAnswer((_) => completer.future);
 
-          ViewerAuthResult? result;
-          var completed = false;
-          service
-              .createAuthHeaders(
-                sha256Hash: 'abc123',
-                serverUrl: 'https://media.divine.video',
-              )
-              .then((r) {
-                result = r;
-                completed = true;
-              });
+          final request = _RequestOutcome(
+            service.createAuthHeaders(
+              sha256Hash: 'abc123',
+              serverUrl: 'https://media.divine.video',
+            ),
+          );
 
           // Well past the 6s timeout: because the timeout is NOT applied to
           // this signer, the call is still awaiting the human approval.
           async.elapse(const Duration(seconds: 20));
-          expect(completed, isFalse);
+          expect(request.isCompleted, isFalse);
 
           // The valid signature finally arrives and is used.
           completer.complete('Nostr slow-token');
           async.flushMicrotasks();
-          expect(completed, isTrue);
-          expect(result, isA<ViewerAuthAuthorized>());
+          expect(request.error, isNull);
+          expect(request.result, isA<ViewerAuthAuthorized>());
           expect(
-            result?.headersOrNull,
+            request.result?.headersOrNull,
             equals({'Authorization': 'Nostr slow-token'}),
           );
         });
       });
     });
   });
+}
+
+/// Records how a viewer-auth request settles, so a `fakeAsync` body can
+/// assert on it synchronously after advancing fake time.
+///
+/// The request is deliberately not awaited: it only progresses when the
+/// `fakeAsync` body calls `elapse` or `flushMicrotasks`, so awaiting it would
+/// stall.
+class _RequestOutcome {
+  _RequestOutcome(Future<ViewerAuthResult> request) {
+    unawaited(
+      request.then<void>(
+        (value) => result = value,
+        onError: (Object caught) => error = caught,
+      ),
+    );
+  }
+
+  ViewerAuthResult? result;
+  Object? error;
+
+  bool get isCompleted => result != null || error != null;
 }
 
 Event _createMockEvent() {
