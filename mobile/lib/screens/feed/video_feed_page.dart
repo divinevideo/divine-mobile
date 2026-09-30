@@ -116,21 +116,7 @@ class VideoFeedPage extends ConsumerWidget {
                 // fresh, so the cached serve is never stale to the viewer.
                 feedTracker: ref.read(feedPerformanceTrackerProvider),
                 feedTuningRepository: feedTuningRepository,
-                badgeAuthors: () async {
-                  if (authService.currentPublicKeyHex == null) {
-                    return const <String>[];
-                  }
-                  final subscriptions = await badgeRepository
-                      .loadSubscriptions();
-                  final holderSets = await Future.wait([
-                    for (final badge in subscriptions)
-                      badgeRepository.loadAcceptedHolders(badge),
-                  ]);
-                  return holderSets
-                      .expand((holders) => holders)
-                      .toSet()
-                      .toList();
-                },
+                badgeAuthors: badgeRepository.loadSubscribedHolders,
                 enrichVideos: (videos) => enrichVideosWithNostrTags(
                   videos,
                   nostrService: ref.read(nostrServiceProvider),
