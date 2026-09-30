@@ -73,6 +73,15 @@ void main() {
     );
   }
 
+  /// An iPhone-sized screen: the default 800x600 test surface is shorter
+  /// than a raised keyboard plus the sheet's footer.
+  void usePhoneScreen(WidgetTester tester) {
+    tester.view
+      ..physicalSize = const Size(1170, 2532)
+      ..devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+  }
+
   Future<void> open(WidgetTester tester) async {
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
@@ -209,6 +218,7 @@ void main() {
     testWidgets('keeps the add button above the keyboard while typing', (
       tester,
     ) async {
+      usePhoneScreen(tester);
       await tester.pumpWidget(
         buildHost(
           burnIn: true,
@@ -252,6 +262,40 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(burnInLabel, findsOneWidget);
+    });
+
+    testWidgets('keeps the controls reachable for a screen reader while '
+        'typing', (tester) async {
+      usePhoneScreen(tester);
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(accessibleNavigation: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      await tester.pumpWidget(
+        buildHost(
+          burnIn: true,
+          initialCues: const [
+            CaptionCue(
+              id: 'cue-0',
+              text: 'Existing.',
+              start: Duration.zero,
+              end: Duration(seconds: 1),
+            ),
+          ],
+        ),
+      );
+      await open(tester);
+
+      tester.view.viewInsets = FakeViewPadding(
+        bottom: 300 * tester.view.devicePixelRatio,
+      );
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle();
+
+      // A multiline field has no key that closes the keyboard, so collapsing
+      // would leave these unreachable until another control is activated.
+      expect(find.text(l10n.videoEditorCaptionsBurnInLabel), findsOneWidget);
     });
 
     testWidgets('existing session skips generation', (tester) async {

@@ -176,8 +176,12 @@ class _CaptionsSheetBody extends StatelessWidget {
     // The sheet does not move with the keyboard, so the body lifts itself
     // above it: the add button stays reachable while typing, and the cue list
     // between them keeps the focused field in view.
-    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-    final keyboardOpen = bottomInset > 0;
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    // A screen reader user cannot close the multiline field's keyboard
+    // without activating another control, so the controls stay reachable
+    // for them.
+    final collapseControls =
+        keyboardOpen && !MediaQuery.accessibleNavigationOf(context);
     return BlocConsumer<CaptionsEditorCubit, CaptionsEditorState>(
       // Only when a cue is added to an already-shown list — not the initial
       // generation fill (generating→ready), which should stay scrolled to the
@@ -220,7 +224,7 @@ class _CaptionsSheetBody extends StatelessWidget {
                           alignment: Alignment.topCenter,
                           child: _CollapsibleModeControls(
                             state: state,
-                            collapsed: keyboardOpen,
+                            collapsed: collapseControls,
                           ),
                         ),
                       ),
@@ -254,10 +258,12 @@ class _CaptionsSheetBody extends StatelessWidget {
               thickness: 2,
               color: context.vineColors.surfaceContainer,
             ),
-            SafeArea(
-              top: false,
+            // Rides on top of the keyboard, so adding a cue stays one tap away
+            // while typing.
+            VineKeyboardAwareFooter(
+              includeSafeArea: true,
               child: Padding(
-                padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset),
+                padding: const EdgeInsets.all(16),
                 child: DivineButton(
                   label: context.l10n.videoEditorCaptionsAddCue,
                   type: .secondary,
@@ -350,6 +356,28 @@ class _FallbackView extends StatelessWidget {
   }
 }
 
+/// Swaps its [child] by growing or shrinking it while it fades, the way the
+/// sheet shows and hides its controls. Instant with reduced motion.
+class _SizeFadeSwitcher extends StatelessWidget {
+  const _SizeFadeSwitcher({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 220),
+      transitionBuilder: (child, animation) => SizeTransition(
+        sizeFactor: animation,
+        child: FadeTransition(opacity: animation, child: child),
+      ),
+      child: child,
+    );
+  }
+}
+
 /// Burn-in choice and style above the cue list, sliding away while [collapsed].
 ///
 /// They step aside while the keyboard is up, which would otherwise leave the
@@ -366,14 +394,7 @@ class _CollapsibleModeControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSwitcher(
-      duration: MediaQuery.disableAnimationsOf(context)
-          ? Duration.zero
-          : const Duration(milliseconds: 220),
-      transitionBuilder: (child, animation) => SizeTransition(
-        sizeFactor: animation,
-        child: FadeTransition(opacity: animation, child: child),
-      ),
+    return _SizeFadeSwitcher(
       child: collapsed
           ? const SizedBox(width: .infinity)
           : Column(
@@ -440,15 +461,7 @@ class _CaptionsModeControls extends StatelessWidget {
           ),
         ),
 
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 220),
-          transitionBuilder: (child, animation) => SizeTransition(
-            sizeFactor: animation,
-            child: FadeTransition(
-              opacity: animation,
-              child: child,
-            ),
-          ),
+        _SizeFadeSwitcher(
           child: state.burnIn
               ? DivineButton(
                   label: '${l10n.videoEditorCaptionsPresetTitle}: $styleName',
