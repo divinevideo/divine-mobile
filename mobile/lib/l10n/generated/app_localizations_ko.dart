@@ -8194,6 +8194,45 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorTuneLabel => '조정';
 
   @override
+  String get videoEditorEffectsLabel => '효과';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel => '효과 편집기 열기';
+
+  @override
+  String get videoEditorEffectNone => '없음';
+
+  @override
+  String get videoEditorEffectGlitch => '글리치';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => '픽셀화';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'RGB 분리';
+
+  @override
+  String get videoEditorEffectTvStatic => '노이즈';
+
+  @override
+  String get videoEditorEffectPixelPulse => '픽셀 펄스';
+
+  @override
+  String get videoEditorEffectOldFilm => '오래된 필름';
+
+  @override
+  String get videoEditorEffectStrobe => '스트로브';
+
+  @override
+  String get videoEditorEffectNegativeFlash => '네거티브 플래시';
+
+  @override
+  String get videoEditorEffectVignette => '비네트';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => '조정 편집기 열기';
 
   @override

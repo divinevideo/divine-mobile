@@ -12,6 +12,7 @@ import 'package:openvine/models/video_editor/audio_fade.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/widgets/stereo_waveform_painter.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_strip_thumbnails.dart';
+import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effects_bottom_bar.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 /// Multi-select visual state for an overlay tile while the timeline is in
@@ -142,7 +143,9 @@ class TimelineOverlayItemTile extends StatelessWidget {
                           : item.layer is WidgetLayer
                           ? _StickerPreview(item: item)
                           : Text(
-                              item.label,
+                              item.type == .effect
+                                  ? videoEffectLabel(context, item.effectType)
+                                  : item.label,
                               style: VineTheme.labelMediumFont(
                                 color: foregroundColor,
                               ).copyWith(fontFamily: fontFamily),

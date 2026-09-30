@@ -8113,6 +8113,45 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorTuneLabel => '调节';
 
   @override
+  String get videoEditorEffectsLabel => '特效';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel => '打开特效编辑器';
+
+  @override
+  String get videoEditorEffectNone => '无';
+
+  @override
+  String get videoEditorEffectGlitch => '故障';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => '像素化';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'RGB分离';
+
+  @override
+  String get videoEditorEffectTvStatic => '雪花';
+
+  @override
+  String get videoEditorEffectPixelPulse => '像素脉冲';
+
+  @override
+  String get videoEditorEffectOldFilm => '老电影';
+
+  @override
+  String get videoEditorEffectStrobe => '频闪';
+
+  @override
+  String get videoEditorEffectNegativeFlash => '负片闪烁';
+
+  @override
+  String get videoEditorEffectVignette => '暗角';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => '打开调节编辑器';
 
   @override

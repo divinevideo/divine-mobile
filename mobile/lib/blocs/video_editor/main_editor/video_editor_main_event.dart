@@ -146,6 +146,10 @@ enum SubEditorType {
   draw,
   filter,
   tune,
+
+  /// The video effects editor (glitch, VHS, pixelate). App-owned: it is not a
+  /// pro_image_editor sub-editor, so the canvas stays the main editor's.
+  effects,
   stickers,
   music,
   clips,

@@ -8795,6 +8795,46 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorTuneLabel => 'Ajustează';
 
   @override
+  String get videoEditorEffectsLabel => 'Efecte';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel =>
+      'Deschide editorul de efecte';
+
+  @override
+  String get videoEditorEffectNone => 'Niciunul';
+
+  @override
+  String get videoEditorEffectGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => 'Pixelare';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'Separare RGB';
+
+  @override
+  String get videoEditorEffectTvStatic => 'Zgomot';
+
+  @override
+  String get videoEditorEffectPixelPulse => 'Puls de pixeli';
+
+  @override
+  String get videoEditorEffectOldFilm => 'Film vechi';
+
+  @override
+  String get videoEditorEffectStrobe => 'Stroboscop';
+
+  @override
+  String get videoEditorEffectNegativeFlash => 'Bliț negativ';
+
+  @override
+  String get videoEditorEffectVignette => 'Vinietă';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel =>
       'Deschide editorul de ajustări';
 

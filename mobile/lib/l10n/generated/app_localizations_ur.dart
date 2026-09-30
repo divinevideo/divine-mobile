@@ -8601,6 +8601,45 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorTuneLabel => 'ایڈجسٹ';
 
   @override
+  String get videoEditorEffectsLabel => 'ایفیکٹس';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel => 'ایفیکٹس ایڈیٹر کھولیں';
+
+  @override
+  String get videoEditorEffectNone => 'کوئی نہیں';
+
+  @override
+  String get videoEditorEffectGlitch => 'گلچ';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => 'پکسلیٹ';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'RGB تقسیم';
+
+  @override
+  String get videoEditorEffectTvStatic => 'شور';
+
+  @override
+  String get videoEditorEffectPixelPulse => 'پکسل پلس';
+
+  @override
+  String get videoEditorEffectOldFilm => 'پرانی فلم';
+
+  @override
+  String get videoEditorEffectStrobe => 'اسٹروب';
+
+  @override
+  String get videoEditorEffectNegativeFlash => 'نیگیٹو فلیش';
+
+  @override
+  String get videoEditorEffectVignette => 'وِگنیٹ';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'ایڈجسٹمنٹ ایڈیٹر کھولیں';
 
   @override

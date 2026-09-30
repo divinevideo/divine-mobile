@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
@@ -24,6 +25,8 @@ import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timel
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_header.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_interactive_body.dart';
 import 'package:openvine/widgets/video_editor/tune_editor/tune_set_timeline_ops.dart';
+import 'package:pro_image_editor/pro_image_editor.dart'
+    show ProImageEditorState;
 
 /// Interactive timeline editor for composing video clips.
 ///
@@ -742,6 +745,18 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
           moved: true,
           skipUpdateHistory: true,
         );
+
+      case .effect:
+        // The list order is the order overlapping effects combine in, and
+        // the row order the strip stacks them in, like filters.
+        editor.setVideoEffectTimeline(
+          id: item.id,
+          startTime: startTime,
+          endTime: startTime + duration,
+          listIndex: targetIdx,
+          skipUpdateHistory: true,
+        );
+        _syncEffectsPreview(editor);
     }
 
     context.read<TimelineOverlayBloc>().add(
@@ -870,6 +885,15 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
           endTime: endTime,
           skipUpdateHistory: true,
         );
+
+      case .effect:
+        editor.setVideoEffectTimeline(
+          id: item.id,
+          startTime: startTime,
+          endTime: endTime,
+          skipUpdateHistory: true,
+        );
+        _syncEffectsPreview(editor);
     }
 
     context.read<TimelineOverlayBloc>().add(
@@ -999,7 +1023,24 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
           moved: true,
           skipUpdateHistory: true,
         );
+
+      case .effect:
+        editor.setVideoEffectTimeline(
+          id: item.id,
+          startTime: startTime,
+          endTime: startTime + item.duration,
+          skipUpdateHistory: true,
+        );
+        _syncEffectsPreview(editor);
     }
+  }
+
+  /// Shows a moved or trimmed effect's new window in the preview while the
+  /// gesture runs; the history sync that follows it only runs on release.
+  void _syncEffectsPreview(ProImageEditorState editor) {
+    context.read<VideoEditorEffectsCubit>().syncApplied(
+      editor.stateManager.videoEffectEntries,
+    );
   }
 
   void _onOverlayDragEnded() {

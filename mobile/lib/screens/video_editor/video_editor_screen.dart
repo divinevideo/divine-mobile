@@ -10,6 +10,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
+import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/sticker/video_editor_sticker_bloc.dart';
@@ -49,6 +50,7 @@ import 'package:openvine/utils/editor_text_fonts.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_selection_bottom_sheet.dart';
+import 'package:openvine/widgets/video_editor/effects_editor/open_effects_editor.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker_sheet.dart';
@@ -1086,6 +1088,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
         BlocProvider.value(value: _stickerBloc),
         BlocProvider(create: (_) => VideoEditorFilterBloc()),
         BlocProvider(create: (_) => VideoEditorTuneBloc()),
+        BlocProvider(create: (_) => VideoEditorEffectsCubit()),
         BlocProvider(create: (_) => VideoEditorDrawBloc()),
         BlocProvider(create: (_) => VideoEditorTextBloc()),
         BlocProvider.value(value: _timelineOverlayBloc),
@@ -1183,6 +1186,10 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
                   'open captions editor',
                 );
               },
+              onOpenEffects: () => openEffectsEditor(
+                context.read<VideoEditorMainBloc>(),
+                context.read<VideoEditorEffectsCubit>(),
+              ),
               awaitPushCoverTransition: _awaitMetadataCoverTransition,
               child: ValueListenableBuilder<bool>(
                 valueListenable: _isLoadingDraft,

@@ -163,6 +163,7 @@ void main() {
             onOpenMusicLibrary: () {},
             onOpenVoiceOver: () {},
             onOpenCaptions: () {},
+            onOpenEffects: () {},
             editorOverride: editor,
             child: Builder(
               builder: (context) => TextButton(

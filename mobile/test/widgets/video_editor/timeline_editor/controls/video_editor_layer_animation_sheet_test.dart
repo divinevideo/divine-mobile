@@ -656,6 +656,7 @@ void main() {
               onOpenMusicLibrary: () {},
               onOpenVoiceOver: () {},
               onOpenCaptions: () {},
+              onOpenEffects: () {},
               editorOverride: mockEditor,
               child: Scaffold(
                 body: Stack(

@@ -213,6 +213,26 @@ void main() {
       expect(openedCaptions, isTrue);
     });
 
+    testWidgets('tap on Effects triggers onOpenEffects', (tester) async {
+      var openedEffects = false;
+
+      await tester.pumpWidget(
+        _buildWidget(
+          mainBloc: mainBloc,
+          clipBloc: clipBloc,
+          timelineOverlayBloc: timelineOverlayBloc,
+          onOpenEffects: () => openedEffects = true,
+        ),
+      );
+
+      await tester.tap(
+        find.bySemanticsLabel(l10n.videoEditorOpenEffectsSemanticLabel),
+      );
+      await tester.pumpAndSettle();
+
+      expect(openedEffects, isTrue);
+    });
+
     testWidgets('tap on Stickers triggers onAddStickers', (tester) async {
       var addedStickers = false;
 
@@ -327,6 +347,7 @@ VideoEditorScope _scope({
   VoidCallback? onOpenMusicLibrary,
   VoidCallback? onOpenVoiceOver,
   VoidCallback? onOpenCaptions,
+  VoidCallback? onOpenEffects,
   VoidCallback? onAddStickers,
 }) => VideoEditorScope(
   editorKey: GlobalKey<ProImageEditorState>(),
@@ -338,6 +359,7 @@ VideoEditorScope _scope({
   onOpenMusicLibrary: onOpenMusicLibrary ?? () {},
   onOpenVoiceOver: onOpenVoiceOver ?? () {},
   onOpenCaptions: onOpenCaptions ?? () {},
+  onOpenEffects: onOpenEffects ?? () {},
   originalClipAspectRatio: 9 / 16,
   bodySizeNotifier: ValueNotifier(const Size(400, 800)),
   zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
@@ -387,6 +409,7 @@ Widget _buildWidget({
   VoidCallback? onOpenMusicLibrary,
   VoidCallback? onOpenVoiceOver,
   VoidCallback? onOpenCaptions,
+  VoidCallback? onOpenEffects,
   VoidCallback? onAddStickers,
 }) => _app(
   child: MultiBlocProvider(
@@ -401,6 +424,7 @@ Widget _buildWidget({
         onOpenMusicLibrary: onOpenMusicLibrary,
         onOpenVoiceOver: onOpenVoiceOver,
         onOpenCaptions: onOpenCaptions,
+        onOpenEffects: onOpenEffects,
         onAddStickers: onAddStickers,
       ),
     ),

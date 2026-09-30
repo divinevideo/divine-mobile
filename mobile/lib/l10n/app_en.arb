@@ -5720,6 +5720,58 @@
   "videoEditorDrawLabel": "Draw",
   "videoEditorFilterLabel": "Filter",
   "videoEditorTuneLabel": "Adjust",
+  "videoEditorEffectsLabel": "Effects",
+  "@videoEditorEffectsLabel": {
+    "description": "Label of the video editor tool that adds visual effects (glitch, VHS, pixelate) to the whole video."
+  },
+  "videoEditorOpenEffectsSemanticLabel": "Open effects editor",
+  "@videoEditorOpenEffectsSemanticLabel": {
+    "description": "Screen reader label of the button that opens the video effects editor."
+  },
+  "videoEditorEffectNone": "None",
+  "@videoEditorEffectNone": {
+    "description": "Name of the option that removes the video effect. Refers to 'effect', so use the matching grammatical gender."
+  },
+  "videoEditorEffectGlitch": "Glitch",
+  "@videoEditorEffectGlitch": {
+    "description": "Name of a video effect: digital distortion where the color channels split and slices of the picture jump sideways."
+  },
+  "videoEditorEffectVhs": "VHS",
+  "@videoEditorEffectVhs": {
+    "description": "Name of a video effect imitating an old VHS videotape: scanlines, grain, a rolling tracking band. VHS is a format name and usually stays as is."
+  },
+  "videoEditorEffectPixelate": "Pixelate",
+  "@videoEditorEffectPixelate": {
+    "description": "Name of a video effect that turns the picture into large square pixels."
+  },
+  "videoEditorEffectRgbSplit": "RGB Split",
+  "@videoEditorEffectRgbSplit": {
+    "description": "Name of a video effect: the red and blue color channels shift apart, punching out once a second."
+  },
+  "videoEditorEffectTvStatic": "Static",
+  "@videoEditorEffectTvStatic": {
+    "description": "Name of a video effect imitating a badly tuned TV: heavy flickering grain ('snow') and a picture that jumps now and then."
+  },
+  "videoEditorEffectPixelPulse": "Pixel Pulse",
+  "@videoEditorEffectPixelPulse": {
+    "description": "Name of a video effect: once a second the picture breaks into large square pixels and sharpens again."
+  },
+  "videoEditorEffectOldFilm": "Old Film",
+  "@videoEditorEffectOldFilm": {
+    "description": "Name of a video effect: sepia tones, film grain, a flickering exposure and darkened corners, like an old film print."
+  },
+  "videoEditorEffectStrobe": "Strobe",
+  "@videoEditorEffectStrobe": {
+    "description": "Name of a video effect: the picture flashes white twice a second, like a strobe light."
+  },
+  "videoEditorEffectNegativeFlash": "Negative Flash",
+  "@videoEditorEffectNegativeFlash": {
+    "description": "Name of a video effect: once a second the picture turns into its photographic negative for a moment."
+  },
+  "videoEditorEffectVignette": "Vignette",
+  "@videoEditorEffectVignette": {
+    "description": "Name of a video effect: the corners of the picture are darkened, drawing the eye to the center."
+  },
   "videoEditorOpenTuneSemanticLabel": "Open adjustments editor",
   "videoEditorTuneBrightness": "Brightness",
   "videoEditorTuneContrast": "Contrast",

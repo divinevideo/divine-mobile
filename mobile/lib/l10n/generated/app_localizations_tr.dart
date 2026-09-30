@@ -8520,6 +8520,45 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorTuneLabel => 'Ayarla';
 
   @override
+  String get videoEditorEffectsLabel => 'Efektler';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel => 'Efekt düzenleyiciyi aç';
+
+  @override
+  String get videoEditorEffectNone => 'Yok';
+
+  @override
+  String get videoEditorEffectGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => 'Pikselleştir';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'RGB Ayrışma';
+
+  @override
+  String get videoEditorEffectTvStatic => 'Parazit';
+
+  @override
+  String get videoEditorEffectPixelPulse => 'Piksel Nabzı';
+
+  @override
+  String get videoEditorEffectOldFilm => 'Eski Film';
+
+  @override
+  String get videoEditorEffectStrobe => 'Stroboskop';
+
+  @override
+  String get videoEditorEffectNegativeFlash => 'Negatif Flaş';
+
+  @override
+  String get videoEditorEffectVignette => 'Vinyet';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Ayarlar düzenleyicisini aç';
 
   @override

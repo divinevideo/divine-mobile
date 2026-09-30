@@ -143,6 +143,7 @@ void main() {
                 onOpenMusicLibrary: () {},
                 onOpenVoiceOver: () {},
                 onOpenCaptions: () {},
+                onOpenEffects: () {},
                 onAddEditTextLayer: ([layer]) async => null,
                 child: MultiBlocProvider(
                   providers: [
@@ -233,6 +234,7 @@ void main() {
                       onOpenMusicLibrary: () {},
                       onOpenVoiceOver: () {},
                       onOpenCaptions: () {},
+                      onOpenEffects: () {},
                       onAddEditTextLayer: ([layer]) async => null,
                       child: MultiBlocProvider(
                         providers: [
@@ -824,6 +826,7 @@ void main() {
         when(() => stateManager.activeFilters).thenReturn(const []);
         when(() => stateManager.activeTuneAdjustments).thenReturn(const []);
         when(() => stateManager.activeBlur).thenReturn(0);
+        when(() => stateManager.activeMeta).thenReturn(const {});
         when(() => sizesManager.bodySize).thenReturn(const Size(400, 600));
 
         await tester.pumpWidget(
@@ -848,6 +851,7 @@ void main() {
                   onOpenMusicLibrary: () {},
                   onOpenVoiceOver: () {},
                   onOpenCaptions: () {},
+                  onOpenEffects: () {},
                   onAddEditTextLayer: ([layer]) async => null,
                   child: MultiBlocProvider(
                     providers: [

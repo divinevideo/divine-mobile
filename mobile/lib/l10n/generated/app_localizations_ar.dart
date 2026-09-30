@@ -8566,6 +8566,45 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorTuneLabel => 'ضبط';
 
   @override
+  String get videoEditorEffectsLabel => 'تأثيرات';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel => 'فتح محرر التأثيرات';
+
+  @override
+  String get videoEditorEffectNone => 'بلا';
+
+  @override
+  String get videoEditorEffectGlitch => 'تشويش';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => 'بكسلة';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'فصل RGB';
+
+  @override
+  String get videoEditorEffectTvStatic => 'ضوضاء';
+
+  @override
+  String get videoEditorEffectPixelPulse => 'نبض البكسل';
+
+  @override
+  String get videoEditorEffectOldFilm => 'فيلم قديم';
+
+  @override
+  String get videoEditorEffectStrobe => 'ستروب';
+
+  @override
+  String get videoEditorEffectNegativeFlash => 'وميض نيجاتيف';
+
+  @override
+  String get videoEditorEffectVignette => 'تعتيم الحواف';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'فتح محرر التعديلات';
 
   @override

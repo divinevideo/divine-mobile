@@ -8658,6 +8658,45 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorTuneLabel => 'Isaayos';
 
   @override
+  String get videoEditorEffectsLabel => 'Mga Effect';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel => 'Buksan ang effects editor';
+
+  @override
+  String get videoEditorEffectNone => 'Wala';
+
+  @override
+  String get videoEditorEffectGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => 'Pixelate';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'RGB Split';
+
+  @override
+  String get videoEditorEffectTvStatic => 'Static';
+
+  @override
+  String get videoEditorEffectPixelPulse => 'Pixel Pulse';
+
+  @override
+  String get videoEditorEffectOldFilm => 'Old Film';
+
+  @override
+  String get videoEditorEffectStrobe => 'Strobe';
+
+  @override
+  String get videoEditorEffectNegativeFlash => 'Negative Flash';
+
+  @override
+  String get videoEditorEffectVignette => 'Vignette';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel =>
       'Buksan ang editor ng pagsasaayos';
 

@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:openvine/widgets/video_editor/video_editor_widget_layer_loader.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show VideoEffect;
 import 'package:unified_logger/unified_logger.dart';
 
 /// Deserializes [CompleteParameters] from a persisted draft map, rehydrating
@@ -61,6 +63,10 @@ extension CompleteParametersEquality on CompleteParameters {
       return null;
     }
   }
+
+  /// Restores the video effects from the completion metadata.
+  List<VideoEffect> get videoEffectsFromCompleteMeta =>
+      videoEffectsFromMeta(meta[VideoEditorConstants.effectsStateHistoryKey]);
 
   /// Restores [DivineVideoClip] objects from the completion metadata.
   ///

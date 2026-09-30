@@ -8609,6 +8609,45 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorTuneLabel => 'Laras';
 
   @override
+  String get videoEditorEffectsLabel => 'Kesan';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel => 'Buka penyunting kesan';
+
+  @override
+  String get videoEditorEffectNone => 'Tiada';
+
+  @override
+  String get videoEditorEffectGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => 'Pikselkan';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'Pecahan RGB';
+
+  @override
+  String get videoEditorEffectTvStatic => 'Statik';
+
+  @override
+  String get videoEditorEffectPixelPulse => 'Denyut Piksel';
+
+  @override
+  String get videoEditorEffectOldFilm => 'Filem Lama';
+
+  @override
+  String get videoEditorEffectStrobe => 'Strob';
+
+  @override
+  String get videoEditorEffectNegativeFlash => 'Kilat Negatif';
+
+  @override
+  String get videoEditorEffectVignette => 'Vignet';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Buka penyunting pelarasan';
 
   @override

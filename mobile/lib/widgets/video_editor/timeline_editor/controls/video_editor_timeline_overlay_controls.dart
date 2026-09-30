@@ -2,6 +2,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
@@ -12,6 +13,7 @@ import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:openvine/screens/video_editor/video_audio_editor_timing_screen.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_chroma_key.dart';
@@ -19,6 +21,7 @@ import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_opacity.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_reattach.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_transform.dart';
+import 'package:openvine/widgets/video_editor/effects_editor/open_effects_editor.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_audio_fade_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_layer_animation_sheet.dart';
@@ -44,6 +47,7 @@ class TimelineOverlayControls extends StatelessWidget {
       .tune => _TuneOverlayControls(item: item),
       .layer => _LayerOverlayControls(item: item),
       .captions => _CaptionOverlayControls(item: item),
+      .effect => _EffectOverlayControls(item: item),
     };
   }
 
@@ -421,6 +425,85 @@ class _FilterOverlayControls extends StatelessWidget {
     filters[filterIdx] = filter.copyWith(endTime: splitAt);
     filters.insert(filterIdx + 1, second);
     editor.addHistory(filters: filters);
+    context.read<TimelineOverlayBloc>().add(
+      TimelineOverlayItemSelected(second.id),
+    );
+  }
+}
+
+/// Controls for a video effect: delete, edit, duplicate, split, and done.
+///
+/// Edit reopens the effects editor on this effect, keeping its window.
+/// Duplicate places the copy right after it in the list, overlapping until
+/// moved; split cuts it at the playhead, the tail becoming a new effect whose
+/// animation starts over there.
+class _EffectOverlayControls extends StatelessWidget {
+  const _EffectOverlayControls({required this.item});
+
+  final TimelineOverlayItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return VideoEditorTimelineControls(
+      onDelete: () => _removeEffect(context: context),
+      onEdit: () => openEffectsEditor(
+        context.read<VideoEditorMainBloc>(),
+        context.read<VideoEditorEffectsCubit>(),
+        effectId: item.id,
+      ),
+      onDuplicated: () => _duplicateEffect(context: context),
+      onSplit: () => _splitEffect(context: context),
+      onDone: () => TimelineOverlayControls._deselect(context),
+    );
+  }
+
+  void _removeEffect({required BuildContext context}) {
+    VideoEditorScope.of(context).editor?.removeVideoEffect(item.id);
+    TimelineOverlayControls._deselect(context);
+  }
+
+  void _duplicateEffect({required BuildContext context}) {
+    final editor = VideoEditorScope.of(context).editor;
+    if (editor == null) return;
+
+    final effects = editor.stateManager.videoEffectEntries;
+    final index = effects.indexWhere((e) => e.id == item.id);
+    if (index < 0) return;
+
+    final copy = EditorVideoEffect(
+      id: _copyId(item.id),
+      effect: effects[index].effect,
+    );
+    effects.insert(index + 1, copy);
+    editor.setVideoEffectEntries(effects);
+    context.read<TimelineOverlayBloc>().add(
+      TimelineOverlayItemSelected(copy.id),
+    );
+  }
+
+  void _splitEffect({required BuildContext context}) {
+    final editor = VideoEditorScope.of(context).editor;
+    if (editor == null) return;
+
+    final splitAt = _validSplitPosition(context, item);
+    if (splitAt == null) return;
+
+    final effects = editor.stateManager.videoEffectEntries;
+    final index = effects.indexWhere((e) => e.id == item.id);
+    if (index < 0) return;
+
+    final effect = effects[index];
+    final second = EditorVideoEffect(
+      id: _copyId(item.id),
+      effect: effect.effect,
+    ).retimed(startTime: splitAt, endTime: item.endTime);
+
+    effects[index] = effect.retimed(
+      startTime: item.startTime,
+      endTime: splitAt,
+    );
+    effects.insert(index + 1, second);
+    editor.setVideoEffectEntries(effects);
     context.read<TimelineOverlayBloc>().add(
       TimelineOverlayItemSelected(second.id),
     );

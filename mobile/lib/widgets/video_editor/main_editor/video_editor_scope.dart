@@ -26,6 +26,7 @@ class VideoEditorScope extends InheritedWidget {
     required this.onOpenMusicLibrary,
     required this.onOpenVoiceOver,
     required this.onOpenCaptions,
+    required this.onOpenEffects,
     required this.originalClipAspectRatio,
     required this.bodySizeNotifier,
     required this.zoomMatrixNotifier,
@@ -77,6 +78,9 @@ class VideoEditorScope extends InheritedWidget {
 
   /// Callback to open the captions editor.
   final VoidCallback onOpenCaptions;
+
+  /// Callback to open the video effects editor.
+  final VoidCallback onOpenEffects;
 
   /// Original aspect ratio of the clip being edited.
   final double originalClipAspectRatio;

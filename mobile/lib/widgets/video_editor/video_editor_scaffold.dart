@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
@@ -12,6 +13,9 @@ import 'package:openvine/widgets/video_editor/clip_editor_result_listeners.dart'
 import 'package:openvine/widgets/video_editor/clip_operation_progress_overlays.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/video_editor_draw_bottom_bar.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/video_editor_draw_overlay_controls.dart';
+import 'package:openvine/widgets/video_editor/effects_editor/open_effects_editor.dart';
+import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effects_bottom_bar.dart';
+import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effects_overlay_controls.dart';
 import 'package:openvine/widgets/video_editor/filter_editor/video_editor_filter_bottom_bar.dart';
 import 'package:openvine/widgets/video_editor/filter_editor/video_editor_filter_overlay_controls.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas.dart';
@@ -111,7 +115,7 @@ class _TimelineSectionState extends State<_TimelineSection>
   late final CurvedAnimation _collapseAnimation;
 
   static bool _shouldHide(SubEditorType? type) =>
-      type == .draw || type == .filter || type == .tune;
+      type == .draw || type == .filter || type == .tune || type == .effects;
 
   @override
   void initState() {
@@ -152,6 +156,16 @@ class _TimelineSectionState extends State<_TimelineSection>
               _controller.reverse();
             }
           },
+        ),
+        // Done, close and the back gesture all end up here.
+        BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
+          listenWhen: (prev, curr) =>
+              prev.openSubEditor == SubEditorType.effects &&
+              curr.openSubEditor != SubEditorType.effects,
+          listener: (context, state) => pausePlaybackStartedByEffectsEditor(
+            context.read<VideoEditorMainBloc>(),
+            context.read<VideoEditorEffectsCubit>(),
+          ),
         ),
         BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
           listenWhen: (prev, curr) =>
@@ -235,6 +249,12 @@ class _OverlayControls extends StatelessWidget {
           padding: .only(bottom: VideoEditorConstants.bottomBarHeight),
           child: VideoEditorTuneOverlayControls(),
         ),
+        // Effects-Editor
+        VideoEditorMainState(openSubEditor: .effects) => const Padding(
+          key: ValueKey('Effects-Overlay-Controls'),
+          padding: .only(bottom: VideoEditorConstants.bottomBarHeight),
+          child: VideoEditorEffectsOverlayControls(),
+        ),
         // Fallback
         _ => const VideoEditorMainOverlayActions(),
       },
@@ -244,7 +264,7 @@ class _OverlayControls extends StatelessWidget {
 
 /// Bottom section that switches between different toolbars based on context.
 ///
-/// Only visible while the draw, filter or tune sub-editor is open. Otherwise
+/// Only visible while the draw, filter, tune or effects editor is open. Otherwise
 /// the timeline is shown instead (see [_TimelineSection]).
 class _BottomActions extends StatelessWidget {
   const _BottomActions();
@@ -277,8 +297,15 @@ class _BottomActions extends StatelessWidget {
             key: ValueKey('Tune-Editor-Bottom-Bar'),
           ),
         ),
+        // Effects-Bar
+        SubEditorType.effects => Padding(
+          padding: .only(bottom: systemNavigationBarHeight),
+          child: const VideoEditorEffectsBottomBar(
+            key: ValueKey('Effects-Editor-Bottom-Bar'),
+          ),
+        ),
         // Fallback — should not happen since _BottomActions is only
-        // rendered for draw/filter/tune, but handle gracefully.
+        // rendered for draw/filter/tune/effects, but handle gracefully.
         _ => const SizedBox.shrink(),
       },
     );

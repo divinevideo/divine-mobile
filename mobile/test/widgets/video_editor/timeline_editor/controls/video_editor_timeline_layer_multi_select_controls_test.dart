@@ -75,6 +75,7 @@ void main() {
                 onOpenMusicLibrary: () {},
                 onOpenVoiceOver: () {},
                 onOpenCaptions: () {},
+                onOpenEffects: () {},
                 editorOverride: editor,
                 child: const TimelineLayerMultiSelectControls(),
               ),

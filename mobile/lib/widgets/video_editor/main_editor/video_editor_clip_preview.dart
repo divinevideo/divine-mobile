@@ -29,6 +29,7 @@ class VideoEditorClipPreview extends StatelessWidget {
     required this.bodySize,
     required this.renderSize,
     required this.playTime,
+    this.frameBuilder,
     super.key,
   });
 
@@ -47,6 +48,9 @@ class VideoEditorClipPreview extends StatelessWidget {
   /// Timeline position of the frame on screen, advanced every frame while
   /// playing (see `VideoEditorScope.playTimeNotifier`).
   final ValueListenable<Duration> playTime;
+
+  /// See [VideoEditorPlayer.frameBuilder].
+  final Widget Function(Widget frame)? frameBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -71,6 +75,7 @@ class VideoEditorClipPreview extends StatelessWidget {
             videoAspectRatio: videoAspectRatio,
             bodySize: bodySize,
             renderSize: renderSize,
+            frameBuilder: frameBuilder,
           ),
         ),
       );
@@ -107,6 +112,7 @@ class VideoEditorClipPreview extends StatelessWidget {
             renderSize: renderSize,
             stopMotionFrames: frames,
             stopMotionPosition: position,
+            frameBuilder: frameBuilder,
           ),
         );
       },

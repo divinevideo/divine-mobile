@@ -55,6 +55,7 @@ Widget _buildWidget({
       onOpenMusicLibrary: () {},
       onOpenVoiceOver: () {},
       onOpenCaptions: () {},
+      onOpenEffects: () {},
       originalClipAspectRatio: 9 / 16,
       bodySizeNotifier: ValueNotifier(const Size(400, 800)),
       zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),

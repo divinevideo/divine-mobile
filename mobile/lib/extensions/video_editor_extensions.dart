@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/video_editor_history_extensions.dart';
@@ -8,6 +9,7 @@ import 'package:openvine/models/video_editor/caption_style_preset.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:openvine/models/video_editor/composition_duration.dart';
 import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
+import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
 import 'package:pro_image_editor/pro_image_editor.dart' hide AudioTrack;
 
@@ -67,6 +69,7 @@ extension VideoEditorExtensions on ProImageEditorState {
       capturedLayers: capturedLayers,
       filterStates: List.of(stateManager.activeFilters),
       tuneAdjustments: List.of(stateManager.activeTuneAdjustments),
+      effects: stateManager.videoEffects,
       blur: stateManager.activeBlur,
       bodySize: sizesManager.bodySize,
     );
@@ -112,6 +115,74 @@ extension VideoEditorExtensions on ProImageEditorState {
           audioTracks.map((e) => e.toJson()).toList();
     }
     setState(() {});
+  }
+
+  /// Persists [effects] in the editor's history metadata as one undo point.
+  ///
+  /// Does nothing when they equal the current ones, so confirming the effects
+  /// editor without a change leaves no empty undo step behind.
+  void setVideoEffectEntries(List<EditorVideoEffect> effects) {
+    if (listEquals(effects, stateManager.videoEffectEntries)) return;
+    addHistory(meta: _metaWithVideoEffects(effects));
+    setState(() {});
+  }
+
+  /// Removes the effect with [id] as one undo point; no-op when it is gone.
+  void removeVideoEffect(String id) {
+    final effects = stateManager.videoEffectEntries;
+    final remaining = [
+      for (final entry in effects)
+        if (entry.id != id) entry,
+    ];
+    if (remaining.length == effects.length) return;
+    setVideoEffectEntries(remaining);
+  }
+
+  /// Moves or trims the effect with [id] to [startTime] until [endTime].
+  ///
+  /// Mirrors [setSoundTimeline]: with [skipUpdateHistory] the current meta is
+  /// updated in place (an ongoing drag, whose undo point was taken when it
+  /// started), otherwise a new undo point is created. [listIndex] moves the
+  /// effect to that position in the list, which is the order overlapping
+  /// effects combine in and the timeline stacks them in. No-op when [id] is
+  /// unknown.
+  void setVideoEffectTimeline({
+    required String id,
+    required Duration startTime,
+    required Duration endTime,
+    int? listIndex,
+    bool skipUpdateHistory = false,
+  }) {
+    final effects = stateManager.videoEffectEntries;
+    final index = effects.indexWhere((entry) => entry.id == id);
+    if (index < 0) return;
+
+    final entry = effects.removeAt(index);
+    effects.insert(
+      (listIndex ?? index).clamp(0, effects.length),
+      entry.retimed(startTime: startTime, endTime: endTime),
+    );
+
+    if (skipUpdateHistory) {
+      stateManager.activeMeta[VideoEditorConstants.effectsStateHistoryKey] = [
+        for (final effect in effects) effect.toMap(),
+      ];
+    } else {
+      addHistory(meta: _metaWithVideoEffects(effects));
+    }
+    setState(() {});
+  }
+
+  Map<String, dynamic> _metaWithVideoEffects(List<EditorVideoEffect> effects) {
+    final meta = {...stateManager.activeMeta};
+    if (effects.isEmpty) {
+      meta.remove(VideoEditorConstants.effectsStateHistoryKey);
+    } else {
+      meta[VideoEditorConstants.effectsStateHistoryKey] = [
+        for (final effect in effects) effect.toMap(),
+      ];
+    }
+    return meta;
   }
 
   /// Persists the caption track in the editor's history metadata.

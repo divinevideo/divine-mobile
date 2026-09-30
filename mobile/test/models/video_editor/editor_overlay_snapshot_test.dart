@@ -7,6 +7,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show VideoEffect;
 
 ExportedLayer _layer({String id = 'l', Duration? start, Duration? end}) {
   return ExportedLayer(
@@ -309,6 +310,32 @@ void main() {
         ).windowedTo(start: _s3, end: _s6);
 
         expect(result.tuneAdjustments, isEmpty);
+      });
+    });
+
+    group('windowedTo effects', () {
+      test('windows a whole-video effect to the clip, from its start', () {
+        final result = const EditorOverlaySnapshot(
+          effects: [VideoEffect.vhs(intensity: 0.5)],
+        ).windowedTo(start: _s3, end: _s6);
+
+        expect(result.isEmpty, isFalse);
+        expect(
+          result.effects.single,
+          const VideoEffect.vhs(
+            intensity: 0.5,
+            startTime: Duration.zero,
+            endTime: _s3,
+          ),
+        );
+      });
+
+      test('drops an effect outside the window', () {
+        final result = const EditorOverlaySnapshot(
+          effects: [VideoEffect.glitch(startTime: _s6)],
+        ).windowedTo(start: _s3, end: _s6);
+
+        expect(result.effects, isEmpty);
       });
     });
 

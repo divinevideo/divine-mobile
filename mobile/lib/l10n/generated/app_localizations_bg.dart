@@ -8675,6 +8675,46 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorTuneLabel => 'Настройка';
 
   @override
+  String get videoEditorEffectsLabel => 'Ефекти';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel =>
+      'Отвори редактора на ефекти';
+
+  @override
+  String get videoEditorEffectNone => 'Без';
+
+  @override
+  String get videoEditorEffectGlitch => 'Глич';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => 'Пикселизация';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'RGB разделяне';
+
+  @override
+  String get videoEditorEffectTvStatic => 'Шум';
+
+  @override
+  String get videoEditorEffectPixelPulse => 'Пикселен пулс';
+
+  @override
+  String get videoEditorEffectOldFilm => 'Стар филм';
+
+  @override
+  String get videoEditorEffectStrobe => 'Стробоскоп';
+
+  @override
+  String get videoEditorEffectNegativeFlash => 'Негативна светкавица';
+
+  @override
+  String get videoEditorEffectVignette => 'Винетка';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel =>
       'Отваряне на редактора за настройки';
 

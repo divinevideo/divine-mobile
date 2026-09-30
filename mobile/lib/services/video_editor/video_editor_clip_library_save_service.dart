@@ -4,6 +4,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
@@ -155,6 +156,13 @@ class VideoEditorClipLibrarySaveService {
       filterStates: overlays.filterStates,
       tuneAdjustments: overlays.tuneAdjustments,
       bodySize: overlays.bodySize,
+      // The render reads effects from the history meta, as in a full export.
+      meta: {
+        if (overlays.effects.isNotEmpty)
+          VideoEditorConstants.effectsStateHistoryKey: [
+            for (final effect in overlays.effects) effect.toMap(),
+          ],
+      },
       // Geometry: the render pipeline *does* read these into its ExportTransform,
       // so they are deliberately left at identity — a clip's own spatial
       // transform is already baked into its file, and the aspect-ratio crop

@@ -29,6 +29,7 @@ void main() {
       onOpenMusicLibrary: () {},
       onOpenVoiceOver: () {},
       onOpenCaptions: () {},
+      onOpenEffects: () {},
       originalClipAspectRatio: 9 / 16,
       bodySizeNotifier: bodySize,
       zoomMatrixNotifier: zoom,

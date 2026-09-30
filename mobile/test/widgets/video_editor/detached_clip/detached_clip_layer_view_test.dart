@@ -477,6 +477,7 @@ void main() {
               onOpenMusicLibrary: () {},
               onOpenVoiceOver: () {},
               onOpenCaptions: () {},
+              onOpenEffects: () {},
               onAddEditTextLayer: ([_]) async => null,
               originalClipAspectRatio: 9 / 16,
               bodySizeNotifier: bodySize,

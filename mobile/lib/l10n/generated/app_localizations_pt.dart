@@ -8666,6 +8666,45 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorTuneLabel => 'Ajustar';
 
   @override
+  String get videoEditorEffectsLabel => 'Efeitos';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel => 'Abrir editor de efeitos';
+
+  @override
+  String get videoEditorEffectNone => 'Nenhum';
+
+  @override
+  String get videoEditorEffectGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => 'Pixelar';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'Divisão RGB';
+
+  @override
+  String get videoEditorEffectTvStatic => 'Estática';
+
+  @override
+  String get videoEditorEffectPixelPulse => 'Pulso de pixels';
+
+  @override
+  String get videoEditorEffectOldFilm => 'Filme antigo';
+
+  @override
+  String get videoEditorEffectStrobe => 'Estroboscópio';
+
+  @override
+  String get videoEditorEffectNegativeFlash => 'Flash negativo';
+
+  @override
+  String get videoEditorEffectVignette => 'Vinheta';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Abrir editor de ajustes';
 
   @override

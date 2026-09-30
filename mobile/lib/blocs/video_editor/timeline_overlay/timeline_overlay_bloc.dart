@@ -15,6 +15,7 @@ import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/caption_layer_mapping.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 part 'timeline_overlay_event.dart';
@@ -214,10 +215,25 @@ class TimelineOverlayBloc
         ),
     ];
 
+    // A new effect covers the whole video (null window) until it is trimmed
+    // or moved, like a filter.
+    final effects = <TimelineOverlayItem>[
+      for (final entry in event.effects)
+        TimelineOverlayItem(
+          id: entry.id,
+          type: .effect,
+          startTime: entry.effect.startTime ?? .zero,
+          endTime: _clampEnd(entry.effect.endTime ?? total, total),
+          label: entry.effect.type.name,
+          effectType: entry.effect.type,
+        ),
+    ];
+
     final newItems = [
       ...TimelineOverlayRowLayout.assignRows(sounds),
       ...TimelineOverlayRowLayout.assignRows(filters),
       ...TimelineOverlayRowLayout.assignRows(tunes),
+      ...TimelineOverlayRowLayout.assignRows(effects),
       ...TimelineOverlayRowLayout.assignRows(layers),
       ...TimelineOverlayRowLayout.assignRows(captions),
     ];

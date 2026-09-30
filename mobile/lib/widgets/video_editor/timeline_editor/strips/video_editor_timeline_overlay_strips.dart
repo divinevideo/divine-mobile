@@ -56,11 +56,13 @@ class _TimelineOverlayStripsState extends State<TimelineOverlayStrips> {
   var _soundItems = const <TimelineOverlayItem>[];
   var _filterItems = const <TimelineOverlayItem>[];
   var _tuneItems = const <TimelineOverlayItem>[];
+  var _effectItems = const <TimelineOverlayItem>[];
   var _layerItems = const <TimelineOverlayItem>[];
   var _captionItems = const <TimelineOverlayItem>[];
   var _soundRowCount = 0;
   var _filterRowCount = 0;
   var _tuneRowCount = 0;
+  var _effectRowCount = 0;
   var _layerRowCount = 0;
   var _captionRowCount = 0;
 
@@ -71,11 +73,13 @@ class _TimelineOverlayStripsState extends State<TimelineOverlayStrips> {
     final soundItems = <TimelineOverlayItem>[];
     final filterItems = <TimelineOverlayItem>[];
     final tuneItems = <TimelineOverlayItem>[];
+    final effectItems = <TimelineOverlayItem>[];
     final layerItems = <TimelineOverlayItem>[];
     final captionItems = <TimelineOverlayItem>[];
     var maxSoundRow = -1;
     var maxFilterRow = -1;
     var maxTuneRow = -1;
+    var maxEffectRow = -1;
     var maxLayerRow = -1;
     var maxCaptionRow = -1;
 
@@ -90,6 +94,9 @@ class _TimelineOverlayStripsState extends State<TimelineOverlayStrips> {
         case TimelineOverlayType.tune:
           tuneItems.add(item);
           if (item.row > maxTuneRow) maxTuneRow = item.row;
+        case TimelineOverlayType.effect:
+          effectItems.add(item);
+          if (item.row > maxEffectRow) maxEffectRow = item.row;
         case TimelineOverlayType.layer:
           layerItems.add(item);
           if (item.row > maxLayerRow) maxLayerRow = item.row;
@@ -102,11 +109,13 @@ class _TimelineOverlayStripsState extends State<TimelineOverlayStrips> {
     _soundItems = soundItems;
     _filterItems = filterItems;
     _tuneItems = tuneItems;
+    _effectItems = effectItems;
     _layerItems = layerItems;
     _captionItems = captionItems;
     _soundRowCount = maxSoundRow + 1;
     _filterRowCount = maxFilterRow + 1;
     _tuneRowCount = maxTuneRow + 1;
+    _effectRowCount = maxEffectRow + 1;
     _layerRowCount = maxLayerRow + 1;
     _captionRowCount = maxCaptionRow + 1;
   }
@@ -214,6 +223,14 @@ class _TimelineOverlayStripsState extends State<TimelineOverlayStrips> {
         isCollapsed: collapsedTypes.contains(TimelineOverlayType.tune),
         type: TimelineOverlayType.tune,
         color: VineTheme.accentBlueBackground,
+        rowHeight: TimelineConstants.overlayRowHeight,
+      ),
+      (
+        items: _effectItems,
+        rowCount: _effectRowCount,
+        isCollapsed: collapsedTypes.contains(TimelineOverlayType.effect),
+        type: TimelineOverlayType.effect,
+        color: VineTheme.accentOrangeBackground,
         rowHeight: TimelineConstants.overlayRowHeight,
       ),
       (

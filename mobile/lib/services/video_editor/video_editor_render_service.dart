@@ -13,6 +13,7 @@ import 'package:openvine/extensions/complete_parameters_extensions.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/video_editor/clip_normalization_models.dart';
@@ -912,6 +913,10 @@ class VideoEditorRenderService {
         filterStates: parameters?.filterStates ?? const [],
         timelineMap: timelineMap,
       ),
+      effects: buildVideoEffects(
+        effects: parameters?.videoEffectsFromCompleteMeta ?? const [],
+        timelineMap: timelineMap,
+      ),
       imageBytesWithCropping: true,
       qualityConfig: VideoQualityConfig.custom(
         bitrate: VideoEditorConstants.quality.bitrate,
@@ -1179,6 +1184,18 @@ class VideoEditorRenderService {
             endTime: timelineMap.editorToOutputOrNull(filter.endTime),
           ),
     ];
+  }
+
+  /// Maps each video effect's editor-timeline window onto the output axis,
+  /// like [buildColorFilters]. A `null` start/end stays open, so a
+  /// whole-video effect runs from the first output frame, which is also where
+  /// the preview starts its animation.
+  @visibleForTesting
+  static List<VideoEffect> buildVideoEffects({
+    required List<VideoEffect> effects,
+    required TransitionTimelineMap timelineMap,
+  }) {
+    return videoEffectsOnOutput(effects, timelineMap);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
