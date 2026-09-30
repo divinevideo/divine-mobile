@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:divine_camera/src/models/camera_lens_metadata.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -25,6 +27,49 @@ void main() {
       isoMin: 50,
       isoMax: 3200,
     );
+
+    group('fromMap', () {
+      test('keeps finite readings', () {
+        final parsed = CameraLensMetadata.fromMap(const {
+          'lensType': 'back',
+          'exposureDuration': 0.033,
+          'iso': 100,
+        });
+
+        expect(parsed.exposureDuration, equals(0.033));
+        expect(parsed.iso, equals(100.0));
+      });
+
+      test('reads a reading that is not a finite number as unknown', () {
+        final parsed = CameraLensMetadata.fromMap(const {
+          'lensType': 'back',
+          'focalLength': double.nan,
+          'focalLengthEquivalent35mm': double.infinity,
+          'aperture': double.nan,
+          'sensorWidth': double.nan,
+          'sensorHeight': double.negativeInfinity,
+          'minFocusDistance': double.nan,
+          'fieldOfView': double.nan,
+          'exposureDuration': double.nan,
+          'exposureTimeMin': double.nan,
+          'exposureTimeMax': double.infinity,
+          'iso': double.nan,
+        });
+
+        expect(parsed, equals(const CameraLensMetadata(lensType: 'back')));
+      });
+
+      test('a NaN exposure reading still encodes to JSON', () {
+        // iOS reports CMTimeGetSeconds of an invalid exposure time as NaN;
+        // clips persist this map, and json.encode throws on NaN.
+        final parsed = CameraLensMetadata.fromMap(const {
+          'lensType': 'back',
+          'exposureDuration': double.nan,
+        });
+
+        expect(() => jsonEncode(parsed.toMap()), returnsNormally);
+      });
+    });
 
     group('equality', () {
       test(
