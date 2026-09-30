@@ -73,7 +73,6 @@ discarded_futures|test/providers/subtitle_visibility_test.dart	1
 discarded_futures|test/repositories/community_content_label_repository_test.dart	1
 discarded_futures|test/router/providers/last_tab_position_provider_test.dart	1
 discarded_futures|test/router/providers/tab_history_provider_test.dart	1
-discarded_futures|test/screens/feed/feed_mode_switch_test.dart	2
 discarded_futures|test/services/auth_service_bootstrap_relay_list_test.dart	2
 discarded_futures|test/services/auth_service_signout_cleanup_test.dart	1
 discarded_futures|test/services/crossposting_api_client_test.dart	1
