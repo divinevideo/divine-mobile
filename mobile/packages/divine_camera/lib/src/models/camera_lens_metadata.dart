@@ -33,20 +33,24 @@ class CameraLensMetadata extends Equatable {
   });
 
   /// Creates [CameraLensMetadata] from a platform map.
+  ///
+  /// A reading that is not a finite number is taken as unknown (`null`): see
+  /// [_finite].
   factory CameraLensMetadata.fromMap(Map<dynamic, dynamic> map) {
     return CameraLensMetadata(
       lensType: map['lensType'] as String? ?? 'unknown',
       cameraId: map['cameraId'] as String?,
-      focalLength: (map['focalLength'] as num?)?.toDouble(),
-      focalLengthEquivalent35mm: (map['focalLengthEquivalent35mm'] as num?)
-          ?.toDouble(),
-      aperture: (map['aperture'] as num?)?.toDouble(),
-      sensorWidth: (map['sensorWidth'] as num?)?.toDouble(),
-      sensorHeight: (map['sensorHeight'] as num?)?.toDouble(),
+      focalLength: _finite(map['focalLength'] as num?),
+      focalLengthEquivalent35mm: _finite(
+        map['focalLengthEquivalent35mm'] as num?,
+      ),
+      aperture: _finite(map['aperture'] as num?),
+      sensorWidth: _finite(map['sensorWidth'] as num?),
+      sensorHeight: _finite(map['sensorHeight'] as num?),
       pixelArrayWidth: map['pixelArrayWidth'] as int?,
       pixelArrayHeight: map['pixelArrayHeight'] as int?,
-      minFocusDistance: (map['minFocusDistance'] as num?)?.toDouble(),
-      fieldOfView: (map['fieldOfView'] as num?)?.toDouble(),
+      minFocusDistance: _finite(map['minFocusDistance'] as num?),
+      fieldOfView: _finite(map['fieldOfView'] as num?),
       hasOpticalStabilization: map['hasOpticalStabilization'] as bool? ?? false,
       isLogicalCamera: map['isLogicalCamera'] as bool? ?? false,
       physicalCameraIds:
@@ -54,13 +58,24 @@ class CameraLensMetadata extends Equatable {
               ?.whereType<String>()
               .toList() ??
           const [],
-      exposureDuration: (map['exposureDuration'] as num?)?.toDouble(),
-      exposureTimeMin: (map['exposureTimeMin'] as num?)?.toDouble(),
-      exposureTimeMax: (map['exposureTimeMax'] as num?)?.toDouble(),
-      iso: (map['iso'] as num?)?.toDouble(),
+      exposureDuration: _finite(map['exposureDuration'] as num?),
+      exposureTimeMin: _finite(map['exposureTimeMin'] as num?),
+      exposureTimeMax: _finite(map['exposureTimeMax'] as num?),
+      iso: _finite(map['iso'] as num?),
       isoMin: map['isoMin'] as int?,
       isoMax: map['isoMax'] as int?,
     );
+  }
+
+  /// [value] as a double, or `null` when it is absent or not finite.
+  ///
+  /// iOS reads exposure as `CMTimeGetSeconds(device.exposureDuration)`, which
+  /// returns NaN for an invalid time. The metadata rides along on every
+  /// recorded clip and `json.encode` rejects NaN, so one such reading made
+  /// every draft save and autosave holding that clip fail.
+  static double? _finite(num? value) {
+    final number = value?.toDouble();
+    return number != null && number.isFinite ? number : null;
   }
 
   /// The lens type identifier (e.g., 'back', 'front', 'ultraWide').
