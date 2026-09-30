@@ -2,6 +2,7 @@
 // ABOUTME: shows what the clip is rather than just naming it
 
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -9,6 +10,10 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/detached_clip_thumbnails/detached_clip_thumbnails_cubit.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart'
     show detachedClipSourceKey;
+
+/// Narrowest frame the strip lays out, so a near-zero aspect ratio cannot
+/// split the bar into hundreds of slots. A narrower bar gets a single slot.
+const _minFrameWidth = 8.0;
 
 /// Frames of a detached clip, tiled across its bar on the timeline.
 ///
@@ -73,7 +78,10 @@ class _Strip extends StatelessWidget {
             // number of clip-width slots almost never sums to the bar, and the
             // remainder overflows the Row. Each frame is cover-fitted, so the
             // small aspect difference crops rather than distorts.
-            final preferred = (height * aspectRatio).clamp(8.0, width);
+            final preferred = (height * aspectRatio).clamp(
+              math.min(_minFrameWidth, width),
+              width,
+            );
             final slots = (width / preferred).ceil();
             final slotWidth = width / slots;
             final cacheHeight =
