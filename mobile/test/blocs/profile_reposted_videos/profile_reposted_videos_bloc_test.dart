@@ -80,19 +80,17 @@ void main() {
       repostedIdsController = StreamController<Set<String>>.broadcast();
 
       // Default stub for watchRepostedAddressableIds
-      when(
-        () => mockRepostsRepository.watchRepostedAddressableIds(),
-      ).thenAnswer((_) => repostedIdsController.stream);
+      when(() => mockRepostsRepository.watchRepostedAddressableIds())
+          .thenAnswer((_) => repostedIdsController.stream);
 
       // Default stub for getOrderedRepostedAddressableIds (returns empty = no cache)
       // This forces the "no cache" flow which syncs from relay
-      when(
-        () => mockRepostsRepository.getOrderedRepostedAddressableIds(),
-      ).thenAnswer((_) async => []);
+      when(() => mockRepostsRepository.getOrderedRepostedAddressableIds())
+          .thenAnswer((_) async => []);
     });
 
-    tearDown(() {
-      repostedIdsController.close();
+    tearDown(() async {
+      await repostedIdsController.close();
     });
 
     ProfileRepostedVideosBloc createBloc({
@@ -133,13 +131,13 @@ void main() {
       return '34236:$pubkey:$dTag';
     }
 
-    test('initial state is initial with empty collections', () {
+    test('initial state is initial with empty collections', () async {
       final bloc = createBloc();
       expect(bloc.state.status, ProfileRepostedVideosStatus.initial);
       expect(bloc.state.videos, isEmpty);
       expect(bloc.state.repostedAddressableIds, isEmpty);
       expect(bloc.state.error, isNull);
-      bloc.close();
+      await bloc.close();
     });
 
     group('ProfileRepostedVideosState', () {
@@ -237,9 +235,8 @@ void main() {
       blocTest<ProfileRepostedVideosBloc, ProfileRepostedVideosState>(
         'emits [success] with empty videos when no reposted IDs',
         setUp: () {
-          when(
-            () => mockRepostsRepository.syncUserReposts(),
-          ).thenAnswer((_) async => const RepostsSyncResult.empty());
+          when(() => mockRepostsRepository.syncUserReposts())
+              .thenAnswer((_) async => const RepostsSyncResult.empty());
         },
         build: createBloc,
         act: (bloc) => bloc.add(const ProfileRepostedVideosSyncRequested()),
@@ -255,9 +252,8 @@ void main() {
       test(
         're-sync of a settled empty tab still settles (pull-to-refresh)',
         () async {
-          when(
-            () => mockRepostsRepository.syncUserReposts(),
-          ).thenAnswer((_) async => const RepostsSyncResult.empty());
+          when(() => mockRepostsRepository.syncUserReposts())
+              .thenAnswer((_) async => const RepostsSyncResult.empty());
           final bloc = createBloc();
           addTearDown(bloc.close);
 
@@ -297,9 +293,8 @@ void main() {
       );
 
       test('a sync arriving during the snapshot write still runs', () async {
-        when(
-          () => mockRepostsRepository.syncUserReposts(),
-        ).thenAnswer((_) async => const RepostsSyncResult.empty());
+        when(() => mockRepostsRepository.syncUserReposts())
+            .thenAnswer((_) async => const RepostsSyncResult.empty());
         final bloc = createBloc();
         addTearDown(bloc.close);
 
@@ -385,9 +380,8 @@ void main() {
       blocTest<ProfileRepostedVideosBloc, ProfileRepostedVideosState>(
         'emits [failure] when sync fails and nothing is cached',
         setUp: () {
-          when(
-            () => mockRepostsRepository.syncUserReposts(),
-          ).thenThrow(const SyncFailedException('Network error'));
+          when(() => mockRepostsRepository.syncUserReposts())
+              .thenThrow(const SyncFailedException('Network error'));
         },
         build: createBloc,
         act: (bloc) => bloc.add(const ProfileRepostedVideosSyncRequested()),
@@ -838,9 +832,8 @@ void main() {
               hasMoreContent: true,
             ).toJson(),
           );
-          when(
-            () => mockRepostsRepository.fetchUserReposts(any()),
-          ).thenAnswer((_) async => ids);
+          when(() => mockRepostsRepository.fetchUserReposts(any()))
+              .thenAnswer((_) async => ids);
         },
         build: () => createBloc(targetUserPubkey: otherUserPubkey),
         act: (bloc) => bloc.add(const ProfileRepostedVideosSyncRequested()),
@@ -1166,9 +1159,8 @@ void main() {
     group('Other user profile (targetUserPubkey)', () {
       setUp(() {
         // Set up fetchUserReposts for other user
-        when(
-          () => mockRepostsRepository.fetchUserReposts(any()),
-        ).thenAnswer((_) async => <String>[]);
+        when(() => mockRepostsRepository.fetchUserReposts(any()))
+            .thenAnswer((_) async => <String>[]);
       });
 
       blocTest<ProfileRepostedVideosBloc, ProfileRepostedVideosState>(
@@ -1186,9 +1178,8 @@ void main() {
           // Should NOT use syncUserReposts for other users
           verifyNever(() => mockRepostsRepository.syncUserReposts());
           // Should use fetchUserReposts with the target user's pubkey
-          verify(
-            () => mockRepostsRepository.fetchUserReposts(otherUserPubkey),
-          ).called(1);
+          verify(() => mockRepostsRepository.fetchUserReposts(otherUserPubkey))
+              .called(1);
         },
       );
 
@@ -1210,9 +1201,8 @@ void main() {
       blocTest<ProfileRepostedVideosBloc, ProfileRepostedVideosState>(
         'uses syncUserReposts when targetUserPubkey matches current user',
         setUp: () {
-          when(
-            () => mockRepostsRepository.syncUserReposts(),
-          ).thenAnswer((_) async => const RepostsSyncResult.empty());
+          when(() => mockRepostsRepository.syncUserReposts())
+              .thenAnswer((_) async => const RepostsSyncResult.empty());
         },
         build: () => createBloc(targetUserPubkey: currentUserPubkey),
         act: (bloc) => bloc.add(const ProfileRepostedVideosSyncRequested()),
@@ -1241,9 +1231,8 @@ void main() {
             vineId: 'd1',
           );
 
-          when(
-            () => mockRepostsRepository.fetchUserReposts(otherUserPubkey),
-          ).thenAnswer((_) async => [addressableId1]);
+          when(() => mockRepostsRepository.fetchUserReposts(otherUserPubkey))
+              .thenAnswer((_) async => [addressableId1]);
 
           when(
             () => mockVideosRepository.getVideosByAddressableIds(
