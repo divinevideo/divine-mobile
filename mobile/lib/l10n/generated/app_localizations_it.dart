@@ -9323,11 +9323,11 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Vuoi cambiare sfondo? Riprendi davanti a un unico colore acceso che non indossi e che riempia tutta l\'inquadratura. I muri bianchi o grigi non funzionano.';
+      'Vuoi cambiare sfondo? Va bene un colore acceso o un muro bianco illuminato in modo uniforme, purché riempia tutta l\'inquadratura e tu non indossi lo stesso colore.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Nessun colore acceso e uniforme sui bordi dell\'inquadratura. Scegli il colore a mano.';
+      'Nessun colore uniforme sui bordi dell\'inquadratura. Scegli il colore a mano.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>

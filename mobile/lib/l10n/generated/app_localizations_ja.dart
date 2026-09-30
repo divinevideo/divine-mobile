@@ -8777,11 +8777,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      '背景を差し替えるなら、身につけていない鮮やかな単色を画面いっぱいに映して撮影してください。白やグレーの壁では使えません。';
+      '背景を差し替えるなら、鮮やかな単色か、ムラなく照らした白い壁が使えます。画面いっぱいに映し、同じ色の服は避けてください。';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      '画面の端に鮮やかな単色が見つかりませんでした。代わりに手動で色を選んでください。';
+      '画面の端に均一な色が見つかりませんでした。代わりに手動で色を選んでください。';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>

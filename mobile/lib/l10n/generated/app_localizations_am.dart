@@ -9009,11 +9009,11 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'ዳራዎን መቀየር ይፈልጋሉ? ያልለበሱትን አንድ ደማቅ ቀለም ከኋላዎ ያድርጉ፣ ሙሉ ፍሬሙን እንዲሸፍን። ነጭ ወይም ግራጫ ግድግዳ አይሰራም።';
+      'ዳራዎን መቀየር ይፈልጋሉ? ደማቅ ቀለም ወይም በእኩል የበራ ነጭ ግድግዳ ይሰራል፤ ሙሉ ፍሬሙን እስከሸፈነና እርስዎ እስካልለበሱት ድረስ።';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'በፍሬሙ ጠርዞች ዙሪያ አንድ ደማቅ ቀለም አልተገኘም። በምትኩ ቀለሙን በእጅ ይምረጡ።';
+      'በፍሬሙ ጠርዞች ዙሪያ አንድ ወጥ ቀለም አልተገኘም። በምትኩ ቀለሙን በእጅ ይምረጡ።';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>

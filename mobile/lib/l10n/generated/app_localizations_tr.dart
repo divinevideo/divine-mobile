@@ -9141,11 +9141,11 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Arka planı mı değiştireceksin? Üzerinde olmayan canlı tek bir rengin önünde, kareyi tamamen dolduracak şekilde çek. Beyaz ya da gri duvarlar işe yaramaz.';
+      'Arka planı mı değiştireceksin? Canlı bir renk ya da eşit aydınlatılmış beyaz bir duvar işe yarar; yeter ki kareyi tamamen doldursun ve o rengi üzerinde taşıma.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Karenin kenarlarında tek bir canlı renk bulunamadı. Onun yerine rengi elle seç.';
+      'Karenin kenarlarında tek düze bir renk bulunamadı. Onun yerine rengi elle seç.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>

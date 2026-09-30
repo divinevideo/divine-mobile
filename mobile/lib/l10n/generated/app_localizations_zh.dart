@@ -8699,10 +8699,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      '想换背景？在一种你身上没有的鲜艳纯色前拍，让它铺满整个画面。白墙或灰墙不行。';
+      '想换背景？鲜艳的纯色或光线均匀的白墙都可以，只要铺满整个画面，而且你身上没有这个颜色。';
 
   @override
-  String get videoEditorChromaKeyDetectFailed => '画面边缘没找到一种鲜艳的纯色。可以改为手动选颜色。';
+  String get videoEditorChromaKeyDetectFailed => '画面边缘没找到一种均匀的颜色。可以改为手动选颜色。';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>

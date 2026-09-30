@@ -9183,11 +9183,11 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Muốn thay nền? Hãy quay trước một màu nổi bật mà bạn không mặc, phủ kín khung hình. Tường trắng hoặc xám sẽ không được.';
+      'Muốn thay nền? Một màu nổi bật hoặc bức tường trắng được chiếu sáng đều đều được, miễn là nó phủ kín khung hình và bạn không mặc màu đó.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Không tìm thấy một màu nổi bật nào quanh các cạnh khung hình. Hãy tự chọn màu nhé.';
+      'Không tìm thấy một màu đồng đều nào quanh các cạnh khung hình. Hãy tự chọn màu nhé.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>

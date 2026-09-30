@@ -9425,11 +9425,11 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Vrei să schimbi fundalul? Filmează în fața unei singure culori puternice pe care nu o porți și care umple tot cadrul. Pereții albi sau gri nu merg.';
+      'Vrei să schimbi fundalul? Merge o culoare puternică sau un perete alb luminat uniform, atâta timp cât umple tot cadrul și nu porți culoarea respectivă.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Nu am găsit o singură culoare puternică pe marginile cadrului. Alege culoarea manual.';
+      'Nu am găsit o culoare uniformă pe marginile cadrului. Alege culoarea manual.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>

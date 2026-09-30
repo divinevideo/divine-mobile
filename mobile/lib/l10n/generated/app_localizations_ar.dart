@@ -9173,11 +9173,11 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'لتغيير الخلفية، يلزم لون واحد زاهٍ يملأ الإطار بالكامل ولا يظهر في الملابس. الجدران البيضاء أو الرمادية لا تنفع.';
+      'لتغيير الخلفية، يصلح لون زاهٍ أو جدار أبيض بإضاءة متساوية، ما دام يملأ الإطار بالكامل ولا يظهر في الملابس.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'لم يُعثر على لون واحد زاهٍ حول أطراف الإطار. يمكن اختيار اللون يدويًا بدلًا من ذلك.';
+      'لم يُعثر على لون واحد متجانس حول أطراف الإطار. يمكن اختيار اللون يدويًا بدلًا من ذلك.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>

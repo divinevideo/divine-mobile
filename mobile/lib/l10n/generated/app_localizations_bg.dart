@@ -9301,11 +9301,11 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Сменяш фона? Снимай пред един наситен цвят, който не носиш, и нека запълва целия кадър. Бели или сиви стени не стават.';
+      'Сменяш фона? Става наситен цвят или равномерно осветена бяла стена, стига да запълва кадъра и да не го носиш.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Не открихме един наситен цвят по краищата на кадъра. Избери цвета ръчно.';
+      'Не открихме един равномерен цвят по краищата на кадъра. Избери цвета ръчно.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>

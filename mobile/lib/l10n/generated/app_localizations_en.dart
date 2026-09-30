@@ -9314,11 +9314,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Replacing your background? Film against one bold color you\'re not wearing, filling the frame. White or gray walls won\'t work.';
+      'Replacing your background? A bold color or an evenly lit white wall works, as long as it fills the frame and you\'re not wearing it.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Couldn\'t find one bold color around the edges of the frame. Pick the color by hand instead.';
+      'Couldn\'t find one even color around the edges of the frame. Pick the color by hand instead.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>

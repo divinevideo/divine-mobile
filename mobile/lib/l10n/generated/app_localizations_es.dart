@@ -9308,11 +9308,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      '¿Querés cambiar el fondo? Filmá frente a un solo color fuerte que no tengas puesto y que llene todo el cuadro. Las paredes blancas o grises no sirven.';
+      '¿Querés cambiar el fondo? Sirve un color fuerte o una pared blanca con luz pareja, siempre que llene todo el cuadro y no lo tengas puesto.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'No encontramos un solo color fuerte en los bordes del cuadro. Elegí el color a mano.';
+      'No encontramos un solo color parejo en los bordes del cuadro. Elegí el color a mano.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>

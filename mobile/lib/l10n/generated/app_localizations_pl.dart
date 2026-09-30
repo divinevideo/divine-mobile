@@ -9400,11 +9400,11 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Chcesz podmienić tło? Nagrywaj na tle jednego wyrazistego koloru, którego nie masz na sobie i który wypełnia cały kadr. Białe i szare ściany się nie nadają.';
+      'Chcesz podmienić tło? Sprawdzi się wyrazisty kolor albo równo oświetlona biała ściana, o ile wypełnia cały kadr i nie masz tego koloru na sobie.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Nie znaleziono jednego wyrazistego koloru przy krawędziach kadru. Wybierz kolor ręcznie.';
+      'Nie znaleziono jednolitego koloru przy krawędziach kadru. Wybierz kolor ręcznie.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>

@@ -9263,11 +9263,11 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Wil je je achtergrond vervangen? Film voor één felle kleur die je niet draagt en die het hele beeld vult. Witte of grijze muren werken niet.';
+      'Wil je je achtergrond vervangen? Een felle kleur of een gelijkmatig verlichte witte muur werkt, zolang die het hele beeld vult en je die kleur niet draagt.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Geen felle, egale kleur gevonden langs de randen van het beeld. Kies de kleur liever zelf.';
+      'Geen egale kleur gevonden langs de randen van het beeld. Kies de kleur liever zelf.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>

@@ -9291,11 +9291,11 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Papalitan ang background? Mag-film sa harap ng isang matapang na kulay na hindi mo suot, na puno ang frame. Hindi gagana ang puti o gray na pader.';
+      'Papalitan ang background? Pwede ang matapang na kulay o puting pader na pantay ang ilaw, basta puno ang frame at hindi mo ito suot.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Walang nahanap na iisang matapang na kulay sa mga gilid ng frame. Pumili na lang ng kulay nang manual.';
+      'Walang nahanap na iisang pantay na kulay sa mga gilid ng frame. Pumili na lang ng kulay nang manual.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>

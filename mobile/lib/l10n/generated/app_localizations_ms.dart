@@ -9230,11 +9230,11 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Mahu tukar latar belakang? Rakam di hadapan satu warna terang yang anda tidak pakai, sehingga memenuhi bingkai. Dinding putih atau kelabu tidak boleh.';
+      'Mahu tukar latar belakang? Warna terang atau dinding putih yang diterangi sekata boleh digunakan, asalkan ia memenuhi bingkai dan anda tidak memakai warna itu.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Tiada satu warna terang di tepi bingkai. Pilih warnanya secara manual.';
+      'Tiada satu warna sekata di tepi bingkai. Pilih warnanya secara manual.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>

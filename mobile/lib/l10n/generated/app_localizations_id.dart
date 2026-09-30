@@ -9139,11 +9139,11 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Mau ganti latar? Rekam di depan satu warna mencolok yang tidak kamu pakai, sampai memenuhi bingkai. Tembok putih atau abu-abu tidak bisa.';
+      'Mau ganti latar? Warna mencolok atau tembok putih dengan cahaya merata bisa dipakai, asal memenuhi bingkai dan warnanya tidak ada di bajumu.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Tidak ada satu warna mencolok di tepi bingkai. Pilih warnanya sendiri saja.';
+      'Tidak ada satu warna rata di tepi bingkai. Pilih warnanya sendiri saja.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>

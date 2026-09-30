@@ -9219,11 +9219,11 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'پس منظر بدلنا ہے؟ ایسے ایک شوخ رنگ کے سامنے فلم بنائیں جو آپ نے نہ پہنا ہو اور جو پورا فریم بھر دے۔ سفید یا سرمئی دیواریں کام نہیں کریں گی۔';
+      'پس منظر بدلنا ہے؟ شوخ رنگ یا یکساں روشنی والی سفید دیوار چل جائے گی، بس وہ پورا فریم بھر دے اور آپ نے وہ رنگ نہ پہنا ہو۔';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'فریم کے کناروں پر ایک شوخ رنگ نہیں ملا۔ اس کی بجائے رنگ خود منتخب کریں۔';
+      'فریم کے کناروں پر ایک یکساں رنگ نہیں ملا۔ اس کی بجائے رنگ خود منتخب کریں۔';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>

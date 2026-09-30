@@ -9340,11 +9340,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Du willst den Hintergrund tauschen? Film vor einer kräftigen Farbe, die du nicht trägst und die das ganze Bild füllt. Weiße oder graue Wände klappen nicht.';
+      'Du willst den Hintergrund tauschen? Eine kräftige Farbe oder eine gleichmäßig beleuchtete weiße Wand klappt, solange sie das ganze Bild füllt und du sie nicht trägst.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Am Bildrand war keine einzelne kräftige Farbe zu finden. Wähl die Farbe stattdessen von Hand.';
+      'Am Bildrand war keine einheitliche Farbe zu finden. Wähl die Farbe stattdessen von Hand.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>

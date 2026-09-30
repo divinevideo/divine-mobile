@@ -366,7 +366,7 @@ void main() {
       }
     });
 
-    test('chroma key copy warns off neutral walls and ends on a manual '
+    test('chroma key copy names the white wall, its lighting, and a manual '
         'way out', () {
       final template = _readArb(File('lib/l10n/app_en.arb'));
       final hint = (template['videoEditorChromaKeySurfaceHint']! as String)
@@ -374,15 +374,15 @@ void main() {
       final failure = (template['videoEditorChromaKeyDetectFailed']! as String)
           .toLowerCase();
 
-      // The mask compares hue, not brightness, and auto-detect rejects a
-      // near-neutral frame edge. So the white or grey wall most people own
-      // cannot be masked, and keying one by hand also removes black, white
-      // and grey clothing (#8543, #8544). The tip has to say so before the
-      // clip is shot, or the dead end #8547 removed comes back.
+      // Most people own a white wall, not a green screen, and since
+      // pro_video_editor 2.19.0 the mask keys one (#8544). It weighs
+      // brightness to do so, so a shadow on the wall now survives: the tip
+      // has to say "evenly lit" before the clip is shot, or the dead end
+      // #8547 removed comes back as a blotchy matte.
       expect(hint, contains('frame'));
       expect(hint, contains('wearing'));
       expect(hint, contains('white'));
-      expect(hint, contains('gray'));
+      expect(hint, contains('evenly'));
 
       expect(failure, contains('edges'));
       expect(

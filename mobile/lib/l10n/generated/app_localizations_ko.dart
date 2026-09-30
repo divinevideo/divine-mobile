@@ -8791,11 +8791,11 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      '배경을 바꾸려면 입고 있지 않은 선명한 단색 앞에서 화면을 가득 채워 찍어 보세요. 흰색이나 회색 벽은 안 돼요.';
+      '배경을 바꾸려면 선명한 단색이나 고르게 비춘 흰 벽이면 돼요. 화면을 가득 채우고, 같은 색 옷은 피하세요.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      '화면 가장자리에서 선명한 단색을 찾지 못했어요. 대신 색을 직접 골라 주세요.';
+      '화면 가장자리에서 고른 단색을 찾지 못했어요. 대신 색을 직접 골라 주세요.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>

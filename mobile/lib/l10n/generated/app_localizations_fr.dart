@@ -9359,11 +9359,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Tu veux changer de fond ? Filme devant une couleur vive et unie que tu ne portes pas, qui remplit tout le cadre. Les murs blancs ou gris ne marchent pas.';
+      'Tu veux changer de fond ? Une couleur vive ou un mur blanc éclairé de façon uniforme fait l\'affaire, tant qu\'il remplit tout le cadre et que tu ne portes pas la même couleur.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Pas de couleur vive et unie sur les bords du cadre. Choisis plutôt la couleur à la main.';
+      'Pas de couleur unie sur les bords du cadre. Choisis plutôt la couleur à la main.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>

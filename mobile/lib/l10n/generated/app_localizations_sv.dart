@@ -9219,11 +9219,11 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoEditorChromaKeySurfaceHint =>
-      'Vill du byta bakgrund? Filma framför en stark färg som du inte har på dig och som fyller hela bilden. Vita eller grå väggar fungerar inte.';
+      'Vill du byta bakgrund? En stark färg eller en jämnt belyst vit vägg fungerar, så länge den fyller hela bilden och du inte har den färgen på dig.';
 
   @override
   String get videoEditorChromaKeyDetectFailed =>
-      'Hittade ingen enskild stark färg längs bildens kanter. Välj färgen för hand i stället.';
+      'Hittade ingen jämn färg längs bildens kanter. Välj färgen för hand i stället.';
 
   @override
   String get videoEditorChromaKeyDetectTimedOut =>

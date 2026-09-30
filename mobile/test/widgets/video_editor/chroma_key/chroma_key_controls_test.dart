@@ -106,8 +106,8 @@ void main() {
         en.videoEditorChromaKeySurfaceHint.toLowerCase(),
         contains('white'),
         reason:
-            'A white wall is the one most people would try, and the mask '
-            'cannot key it: it compares hue, not brightness (#8544).',
+            'A white wall is the background most people own, and the mask '
+            'keys one since pro_video_editor 2.19.0 (#8544).',
       );
     });
 
