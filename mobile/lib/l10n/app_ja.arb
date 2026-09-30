@@ -6129,5 +6129,77 @@
   "videoEditorLoopRepairProgress": "ループを揃えています…",
   "videoEditorLoopRepairTrimmed": "ループを滑らかにしました。{seconds}秒を削除しました。",
   "notificationFromDivine": "Divineからのお知らせ",
-  "announcementUnavailable": "このお知らせは現在ご覧いただけません。"
+  "announcementUnavailable": "このお知らせは現在ご覧いただけません。",
+  "exploreDiscoverLists": "リストを見つけよう",
+  "exploreAboutLists": "リストについて",
+  "exploreAboutListsDescription": "リストを使うと、Divine のコンテンツを2つの方法で整理・キュレーションできるよ:",
+  "explorePeopleListsDescription": "クリエイターのグループをフォローして、最新の動画をチェックしよう",
+  "exploreVideoListsDescription": "お気に入りの動画をプレイリストにまとめて、あとで見よう",
+  "exploreMyLists": "マイリスト",
+  "exploreSubscribedLists": "購読中のリスト",
+  "listAddToList": "リストに追加",
+  "listNewList": "新しいリスト",
+  "listRemovedFrom": "{name}から削除したよ",
+  "@listRemovedFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "listAddedTo": "{name}に追加したよ",
+  "@listAddedTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "listPublicList": "公開リスト",
+  "listPublicListSubtitle": "みんながフォロー・閲覧できるよ",
+  "listCancel": "キャンセル",
+  "inboxRemoveConfirmBodyGroup": "このグループの会話が受信トレイから削除されます。誰かがまたグループにメッセージを送ると、新しい会話が始まります。",
+  "videoEditorAddElementSemanticLabel": "要素を追加",
+  "videoEditorLayerMultiSelectSemanticLabel": "複数の描画を選択",
+  "videoEditorStickerMultiSelectSemanticLabel": "複数のステッカーを選択",
+  "videoEditorLoopFoundEarlier": "よりなめらかなループが見つかりました。{seconds}秒早く終わります。",
+  "videoEditorLoopFoundLater": "よりなめらかなループが見つかりました。{seconds}秒遅く終わります。",
+  "videoEditorLoopClosestEarlier": "完全に一致する位置はありませんが、これが最も近い位置です。{seconds}秒早く終わります。",
+  "videoEditorLoopClosestLater": "完全に一致する位置はありませんが、これが最も近い位置です。{seconds}秒遅く終わります。",
+  "videoEditorLoopKeepLabel": "採用",
+  "videoEditorLoopKeepSemanticLabel": "新しいループ位置を採用",
+  "videoEditorLoopDiscardSemanticLabel": "元の終わりに戻す",
+  "peopleListsSheetTitle": "リストに追加",
+  "peopleListsCreateList": "リストを作成",
+  "peopleListsAddButton": "追加",
+  "peopleListsAddButtonWithCount": "{count}人追加",
+  "listPersonCount": "{count, plural, =1{1人} other{{count}人}}",
+  "@listPersonCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverListsTitle": "リストを見つける",
+  "discoverListsFailedToLoad": "リストの読み込みに失敗",
+  "discoverListsLoading": "公開リストを探してるよ...",
+  "discoverListsRelayTimeout": "リレーが時間内にリストを返さなかったよ。もう一度試してね。",
+  "discoverListsServiceUnavailable": "サービスを利用できません。",
+  "discoverListsEmptyTitle": "公開リストが見つからなかった",
+  "discoverListsEmptySubtitle": "あとでまたチェックしてみてね",
+  "discoverListsByAuthorPrefix": "作成者:",
+  "soundsImportPromptDescription": "デバイスから音声ファイルを選んでください。マイサウンドに非公開で保存するか、Divine の誰でも使えるように共有できます。",
+  "inboxMessageRequestsSemanticLabel": "メッセージリクエスト、{requestCount}件保留中",
+  "@inboxMessageRequestsSemanticLabel": {
+    "placeholders": {
+      "requestCount": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsSearchConnectionsHint": "フォロワーとフォロー中のユーザーを検索",
+  "badgeSubscribedAction": "購読中",
+  "badgeSubscribeAction": "バッジを購読",
+  "badgeAcceptedHoldersTitle": "バッジを承認した人"
 }

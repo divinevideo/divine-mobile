@@ -6129,5 +6129,77 @@
   "videoEditorLoopRepairProgress": "Justerar din loop…",
   "videoEditorLoopRepairTrimmed": "Loopen är mjukare. Tog bort {seconds} s.",
   "notificationFromDivine": "Från Divine",
-  "announcementUnavailable": "Det här meddelandet är inte längre tillgängligt."
+  "announcementUnavailable": "Det här meddelandet är inte längre tillgängligt.",
+  "exploreDiscoverLists": "Upptäck listor",
+  "exploreAboutLists": "Om listor",
+  "exploreAboutListsDescription": "Listor hjälper dig organisera och kuratera Divine-innehåll på två sätt:",
+  "explorePeopleListsDescription": "Följ grupper av kreatörer och se deras senaste videor",
+  "exploreVideoListsDescription": "Skapa spellistor med dina favoritvideor för att titta på senare",
+  "exploreMyLists": "Mina listor",
+  "exploreSubscribedLists": "Prenumererade listor",
+  "listAddToList": "Lägg till i lista",
+  "listNewList": "Ny lista",
+  "listRemovedFrom": "Borttagen från {name}",
+  "@listRemovedFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "listAddedTo": "Tillagd i {name}",
+  "@listAddedTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "listPublicList": "Publik lista",
+  "listPublicListSubtitle": "Andra kan följa och se den här listan",
+  "listCancel": "Avbryt",
+  "inboxRemoveConfirmBodyGroup": "Det här tar bort gruppkonversationen från din inkorg. Om någon skriver i gruppen igen startar en ny konversation.",
+  "videoEditorLayerMultiSelectSemanticLabel": "Välj flera teckningar",
+  "videoEditorStickerMultiSelectSemanticLabel": "Välj flera klistermärken",
+  "videoEditorLoopFoundEarlier": "Mjukare loop hittad. Den slutar {seconds} s tidigare.",
+  "videoEditorLoopFoundLater": "Mjukare loop hittad. Den slutar {seconds} s senare.",
+  "videoEditorLoopClosestEarlier": "Ingen perfekt träff, men det här är den närmaste. Den slutar {seconds} s tidigare.",
+  "videoEditorLoopClosestLater": "Ingen perfekt träff, men det här är den närmaste. Den slutar {seconds} s senare.",
+  "videoEditorLoopKeepLabel": "Behåll",
+  "videoEditorLoopKeepSemanticLabel": "Behåll den nya looppunkten",
+  "videoEditorLoopDiscardSemanticLabel": "Sätt tillbaka det gamla slutet",
+  "videoEditorAddElementSemanticLabel": "Lägg till element",
+  "peopleListsSheetTitle": "Lägg till i lista",
+  "peopleListsCreateList": "Skapa lista",
+  "peopleListsAddButton": "Lägg till",
+  "peopleListsAddButtonWithCount": "Lägg till {count}",
+  "listPersonCount": "{count, plural, =1{1 person} other{{count} personer}}",
+  "@listPersonCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverListsTitle": "Upptäck listor",
+  "discoverListsFailedToLoad": "Kunde inte ladda listor",
+  "discoverListsLoading": "Söker upp publika listor...",
+  "discoverListsRelayTimeout": "Relayen returnerade inga listor i tid. Försök igen.",
+  "discoverListsServiceUnavailable": "Tjänsten är inte tillgänglig.",
+  "discoverListsEmptyTitle": "Inga publika listor hittades",
+  "discoverListsEmptySubtitle": "Kom tillbaka senare för nya listor",
+  "discoverListsByAuthorPrefix": "av",
+  "soundsImportPromptDescription": "Välj en ljudfil från din enhet. Behåll den privat i Mina ljud eller dela den så att alla på Divine kan använda den.",
+  "inboxMessageRequestsSemanticLabel": "Meddelandeförfrågningar, {requestCount} väntande",
+  "@inboxMessageRequestsSemanticLabel": {
+    "placeholders": {
+      "requestCount": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsSearchConnectionsHint": "Sök bland följare och personer du följer",
+  "badgeSubscribedAction": "Prenumererar",
+  "badgeSubscribeAction": "Prenumerera på märket",
+  "badgeAcceptedHoldersTitle": "Personer som godkänt märket"
 }

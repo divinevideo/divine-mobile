@@ -6129,5 +6129,77 @@
   "videoEditorLoopRepairProgress": "جارٍ محاذاة الحلقة…",
   "videoEditorLoopRepairTrimmed": "تم تنعيم التكرار. أُزيلت {seconds} ث.",
   "notificationFromDivine": "من Divine",
-  "announcementUnavailable": "لم يعد هذا الإعلان متاحًا."
+  "announcementUnavailable": "لم يعد هذا الإعلان متاحًا.",
+  "exploreDiscoverLists": "اكتشف القوائم",
+  "exploreAboutLists": "عن القوائم",
+  "exploreAboutListsDescription": "القوائم تساعدك في تنظيم محتوى Divine بطريقتين:",
+  "explorePeopleListsDescription": "تابع مجموعات من الصناع وشاهد أحدث فيديوهاتهم",
+  "exploreVideoListsDescription": "أنشئ قوائم تشغيل لفيديوهاتك المفضلة لمشاهدتها لاحقًا",
+  "exploreMyLists": "قوائمي",
+  "exploreSubscribedLists": "القوائم المشترك بها",
+  "listAddToList": "إضافة إلى قائمة",
+  "listNewList": "قائمة جديدة",
+  "listRemovedFrom": "تمت الإزالة من {name}",
+  "@listRemovedFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "listAddedTo": "تمت الإضافة إلى {name}",
+  "@listAddedTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "listPublicList": "قائمة عامة",
+  "listPublicListSubtitle": "يمكن للآخرين متابعة هذه القائمة ورؤيتها",
+  "listCancel": "إلغاء",
+  "inboxRemoveConfirmBodyGroup": "يؤدي هذا إلى إزالة محادثة المجموعة من صندوق الوارد. إذا راسل أي شخص المجموعة مرة أخرى، تبدأ محادثة جديدة.",
+  "videoEditorAddElementSemanticLabel": "إضافة عنصر",
+  "videoEditorLayerMultiSelectSemanticLabel": "تحديد عدة رسومات",
+  "videoEditorStickerMultiSelectSemanticLabel": "تحديد عدة ملصقات",
+  "videoEditorLoopFoundEarlier": "وجدنا تكرارًا أكثر سلاسة. ينتهي أبكر بمقدار {seconds} ث.",
+  "videoEditorLoopFoundLater": "وجدنا تكرارًا أكثر سلاسة. ينتهي متأخرًا بمقدار {seconds} ث.",
+  "videoEditorLoopClosestEarlier": "لا يوجد تطابق تام، لكن هذا الأقرب. ينتهي أبكر بمقدار {seconds} ث.",
+  "videoEditorLoopClosestLater": "لا يوجد تطابق تام، لكن هذا الأقرب. ينتهي متأخرًا بمقدار {seconds} ث.",
+  "videoEditorLoopKeepLabel": "احتفظ",
+  "videoEditorLoopKeepSemanticLabel": "احتفظ بنقطة التكرار الجديدة",
+  "videoEditorLoopDiscardSemanticLabel": "أعِد النهاية السابقة",
+  "peopleListsSheetTitle": "أضف إلى القائمة",
+  "peopleListsCreateList": "إنشاء قائمة",
+  "peopleListsAddButton": "إضافة",
+  "peopleListsAddButtonWithCount": "إضافة {count}",
+  "listPersonCount": "{count, plural, zero{لا أحد} one{شخص واحد} two{شخصان} few{{count} أشخاص} many{{count} شخصًا} other{{count} شخص}}",
+  "@listPersonCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverListsTitle": "اكتشف القوائم",
+  "discoverListsFailedToLoad": "فشل تحميل القوائم",
+  "discoverListsLoading": "جاري اكتشاف القوائم العامة...",
+  "discoverListsRelayTimeout": "لم يُرجع الريلاي القوائم في الوقت المناسب. حاول مرة أخرى.",
+  "discoverListsServiceUnavailable": "الخدمة غير متاحة.",
+  "discoverListsEmptyTitle": "لم يتم العثور على قوائم عامة",
+  "discoverListsEmptySubtitle": "عاود التحقق لاحقًا لرؤية قوائم جديدة",
+  "discoverListsByAuthorPrefix": "بقلم",
+  "soundsImportPromptDescription": "يمكن اختيار ملف صوتي من الجهاز، ثم إبقاؤه خاصًا في «أصواتي» أو مشاركته ليستخدمه أي شخص على Divine.",
+  "inboxMessageRequestsSemanticLabel": "طلبات الرسائل، {requestCount} قيد الانتظار",
+  "@inboxMessageRequestsSemanticLabel": {
+    "placeholders": {
+      "requestCount": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsSearchConnectionsHint": "ابحث في المتابعين ومن تتابعهم",
+  "badgeSubscribedAction": "مشترك",
+  "badgeSubscribeAction": "اشترك في الشارة",
+  "badgeAcceptedHoldersTitle": "حاملو الشارة الذين قبلوها"
 }

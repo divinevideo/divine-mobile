@@ -6129,5 +6129,77 @@
   "videoEditorLoopRepairProgress": "Döngün hizalanıyor…",
   "videoEditorLoopRepairTrimmed": "Döngü yumuşatıldı. {seconds} sn kaldırıldı.",
   "notificationFromDivine": "Divine’dan",
-  "announcementUnavailable": "Bu duyuru artık kullanılamıyor."
+  "announcementUnavailable": "Bu duyuru artık kullanılamıyor.",
+  "exploreDiscoverLists": "Listeleri Keşfet",
+  "exploreAboutLists": "Listeler Hakkında",
+  "exploreAboutListsDescription": "Listeler, Divine içeriğini iki şekilde düzenlemene ve derlemene yardımcı olur:",
+  "explorePeopleListsDescription": "İçerik üretici gruplarını takip et ve en son videolarını gör",
+  "exploreVideoListsDescription": "Sonra izlemek için favori videolarından oynatma listeleri oluştur",
+  "exploreMyLists": "Listelerim",
+  "exploreSubscribedLists": "Abone Olunan Listeler",
+  "listAddToList": "Listeye Ekle",
+  "listNewList": "Yeni Liste",
+  "listRemovedFrom": "{name} listesinden kaldırıldı",
+  "@listRemovedFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "listAddedTo": "{name} listesine eklendi",
+  "@listAddedTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "listPublicList": "Herkese Açık Liste",
+  "listPublicListSubtitle": "Diğerleri bu listeyi takip edebilir ve görebilir",
+  "listCancel": "İptal",
+  "inboxRemoveConfirmBodyGroup": "Bu, grup sohbetini gelen kutundan kaldırır. Biri gruba tekrar yazarsa yeni bir sohbet başlar.",
+  "videoEditorAddElementSemanticLabel": "Öğe ekle",
+  "videoEditorLayerMultiSelectSemanticLabel": "Birden fazla çizim seç",
+  "videoEditorStickerMultiSelectSemanticLabel": "Birden fazla çıkartma seç",
+  "videoEditorLoopFoundEarlier": "Daha akıcı bir döngü bulundu. {seconds} sn önce bitiyor.",
+  "videoEditorLoopFoundLater": "Daha akıcı bir döngü bulundu. {seconds} sn sonra bitiyor.",
+  "videoEditorLoopClosestEarlier": "Tam eşleşme yok ama en yakını bu. {seconds} sn önce bitiyor.",
+  "videoEditorLoopClosestLater": "Tam eşleşme yok ama en yakını bu. {seconds} sn sonra bitiyor.",
+  "videoEditorLoopKeepLabel": "Koru",
+  "videoEditorLoopKeepSemanticLabel": "Yeni döngü noktasını koru",
+  "videoEditorLoopDiscardSemanticLabel": "Eski bitişi geri getir",
+  "peopleListsSheetTitle": "Listeye ekle",
+  "peopleListsCreateList": "Liste oluştur",
+  "peopleListsAddButton": "Ekle",
+  "peopleListsAddButtonWithCount": "{count} ekle",
+  "listPersonCount": "{count, plural, =1{1 kişi} other{{count} kişi}}",
+  "@listPersonCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverListsTitle": "Listeleri Keşfet",
+  "discoverListsFailedToLoad": "Listeler yüklenemedi",
+  "discoverListsLoading": "Herkese açık listeler keşfediliyor...",
+  "discoverListsRelayTimeout": "Relay listeleri zamanında döndürmedi. Tekrar dene.",
+  "discoverListsServiceUnavailable": "Hizmet kullanılamıyor.",
+  "discoverListsEmptyTitle": "Herkese açık liste bulunamadı",
+  "discoverListsEmptySubtitle": "Yeni listeler için sonra tekrar bak",
+  "discoverListsByAuthorPrefix": "yazan",
+  "soundsImportPromptDescription": "Cihazından bir ses dosyası seç. Seslerim'de gizli tut ya da Divine'daki herkes kullanabilsin diye paylaş.",
+  "inboxMessageRequestsSemanticLabel": "Mesaj istekleri, {requestCount} beklemede",
+  "@inboxMessageRequestsSemanticLabel": {
+    "placeholders": {
+      "requestCount": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsSearchConnectionsHint": "Takipçilerin ve takip ettiklerin arasında ara",
+  "badgeSubscribedAction": "Abone olundu",
+  "badgeSubscribeAction": "Rozete abone ol",
+  "badgeAcceptedHoldersTitle": "Rozeti kabul edenler"
 }

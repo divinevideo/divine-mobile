@@ -5675,5 +5675,77 @@
   "videoEditorLoopRepairProgress": "루프를 정렬하는 중…",
   "videoEditorLoopRepairTrimmed": "루프를 다듬었어요. {seconds}초를 잘라냈어요.",
   "notificationFromDivine": "Divine의 소식",
-  "announcementUnavailable": "이 공지는 더 이상 볼 수 없습니다."
+  "announcementUnavailable": "이 공지는 더 이상 볼 수 없습니다.",
+  "exploreDiscoverLists": "리스트 둘러보기",
+  "exploreAboutLists": "리스트란?",
+  "exploreAboutListsDescription": "리스트는 Divine 콘텐츠를 두 가지 방식으로 정리하고 큐레이션할 수 있게 해줘요:",
+  "explorePeopleListsDescription": "크리에이터 그룹을 팔로우하고 그들의 최신 영상을 확인해보세요",
+  "exploreVideoListsDescription": "좋아하는 영상의 플레이리스트를 만들어서 나중에 다시 보세요",
+  "exploreMyLists": "내 리스트",
+  "exploreSubscribedLists": "구독 리스트",
+  "listAddToList": "목록에 추가",
+  "listNewList": "새 목록",
+  "listRemovedFrom": "{name}에서 삭제했어요",
+  "@listRemovedFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "listAddedTo": "{name}에 추가했어요",
+  "@listAddedTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "listPublicList": "공개 목록",
+  "listPublicListSubtitle": "다른 사람들이 이 목록을 팔로우하고 볼 수 있어요",
+  "listCancel": "취소",
+  "inboxRemoveConfirmBodyGroup": "이 그룹 대화가 받은 편지함에서 삭제돼요. 누군가 그룹에 다시 메시지를 보내면 새 대화가 시작돼요.",
+  "videoEditorAddElementSemanticLabel": "요소 추가",
+  "videoEditorLayerMultiSelectSemanticLabel": "여러 그림 선택",
+  "videoEditorStickerMultiSelectSemanticLabel": "여러 스티커 선택",
+  "videoEditorLoopFoundEarlier": "더 매끄러운 루프를 찾았어요. {seconds}초 일찍 끝나요.",
+  "videoEditorLoopFoundLater": "더 매끄러운 루프를 찾았어요. {seconds}초 늦게 끝나요.",
+  "videoEditorLoopClosestEarlier": "딱 맞는 지점은 없지만 이게 가장 가까워요. {seconds}초 일찍 끝나요.",
+  "videoEditorLoopClosestLater": "딱 맞는 지점은 없지만 이게 가장 가까워요. {seconds}초 늦게 끝나요.",
+  "videoEditorLoopKeepLabel": "유지",
+  "videoEditorLoopKeepSemanticLabel": "새 루프 지점 유지",
+  "videoEditorLoopDiscardSemanticLabel": "이전 끝으로 되돌리기",
+  "peopleListsSheetTitle": "목록에 추가",
+  "peopleListsCreateList": "목록 만들기",
+  "peopleListsAddButton": "추가",
+  "peopleListsAddButtonWithCount": "{count}명 추가",
+  "listPersonCount": "{count, plural, =1{1명} other{{count}명}}",
+  "@listPersonCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverListsTitle": "리스트 둘러보기",
+  "discoverListsFailedToLoad": "리스트를 불러오지 못했어요",
+  "discoverListsLoading": "공개 리스트를 찾는 중...",
+  "discoverListsRelayTimeout": "릴레이가 제때 리스트를 주지 않았어요. 다시 시도해 주세요.",
+  "discoverListsServiceUnavailable": "서비스를 사용할 수 없어요.",
+  "discoverListsEmptyTitle": "공개 리스트를 찾지 못했어요",
+  "discoverListsEmptySubtitle": "새 리스트가 올라오면 다시 와봐요",
+  "discoverListsByAuthorPrefix": "작성자",
+  "soundsImportPromptDescription": "기기에서 오디오 파일을 골라 주세요. 내 사운드에 비공개로 두거나, Divine의 누구나 쓸 수 있게 공유할 수 있어요.",
+  "inboxMessageRequestsSemanticLabel": "메시지 요청, {requestCount}건 대기 중",
+  "@inboxMessageRequestsSemanticLabel": {
+    "placeholders": {
+      "requestCount": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsSearchConnectionsHint": "팔로워 및 팔로우 중인 사람 검색",
+  "badgeSubscribedAction": "구독 중",
+  "badgeSubscribeAction": "배지 구독",
+  "badgeAcceptedHoldersTitle": "배지를 수락한 사람"
 }

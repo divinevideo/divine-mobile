@@ -6129,5 +6129,77 @@
   "videoEditorLoopRepairProgress": "Allineamento del loop…",
   "videoEditorLoopRepairTrimmed": "Loop reso più fluido. Rimossi {seconds} s.",
   "notificationFromDivine": "Da Divine",
-  "announcementUnavailable": "Questo annuncio non è più disponibile."
+  "announcementUnavailable": "Questo annuncio non è più disponibile.",
+  "exploreDiscoverLists": "Scopri liste",
+  "exploreAboutLists": "Info sulle liste",
+  "exploreAboutListsDescription": "Le liste ti aiutano a organizzare e curare i contenuti di Divine in due modi:",
+  "explorePeopleListsDescription": "Segui gruppi di creator e vedi i loro ultimi video",
+  "exploreVideoListsDescription": "Crea playlist dei tuoi video preferiti da guardare dopo",
+  "exploreMyLists": "Le mie liste",
+  "exploreSubscribedLists": "Liste iscritte",
+  "listAddToList": "Aggiungi a lista",
+  "listNewList": "Nuova lista",
+  "listRemovedFrom": "Rimosso da {name}",
+  "@listRemovedFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "listAddedTo": "Aggiunto a {name}",
+  "@listAddedTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "listPublicList": "Lista pubblica",
+  "listPublicListSubtitle": "Altri possono seguire e vedere questa lista",
+  "listCancel": "Annulla",
+  "inboxRemoveConfirmBodyGroup": "Questo rimuove la conversazione di gruppo dalla tua posta in arrivo. Se qualcuno scrive di nuovo nel gruppo, inizia una nuova conversazione.",
+  "videoEditorLayerMultiSelectSemanticLabel": "Seleziona più disegni",
+  "videoEditorStickerMultiSelectSemanticLabel": "Seleziona più sticker",
+  "videoEditorLoopFoundEarlier": "Trovato un loop più fluido. Finisce {seconds} s prima.",
+  "videoEditorLoopFoundLater": "Trovato un loop più fluido. Finisce {seconds} s dopo.",
+  "videoEditorLoopClosestEarlier": "Nessuna corrispondenza perfetta, ma questa è la più vicina. Finisce {seconds} s prima.",
+  "videoEditorLoopClosestLater": "Nessuna corrispondenza perfetta, ma questa è la più vicina. Finisce {seconds} s dopo.",
+  "videoEditorLoopKeepLabel": "Tieni",
+  "videoEditorLoopKeepSemanticLabel": "Tieni il nuovo punto di loop",
+  "videoEditorLoopDiscardSemanticLabel": "Ripristina la fine precedente",
+  "videoEditorAddElementSemanticLabel": "Aggiungi elemento",
+  "peopleListsSheetTitle": "Aggiungi alla lista",
+  "peopleListsCreateList": "Crea lista",
+  "peopleListsAddButton": "Aggiungi",
+  "peopleListsAddButtonWithCount": "Aggiungi {count}",
+  "listPersonCount": "{count, plural, =1{1 persona} other{{count} persone}}",
+  "@listPersonCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverListsTitle": "Scopri liste",
+  "discoverListsFailedToLoad": "Impossibile caricare le liste",
+  "discoverListsLoading": "Cercando liste pubbliche...",
+  "discoverListsRelayTimeout": "Il relay non ha restituito liste in tempo. Riprova.",
+  "discoverListsServiceUnavailable": "Servizio non disponibile.",
+  "discoverListsEmptyTitle": "Nessuna lista pubblica trovata",
+  "discoverListsEmptySubtitle": "Torna più tardi per nuove liste",
+  "discoverListsByAuthorPrefix": "di",
+  "soundsImportPromptDescription": "Scegli un file audio dal tuo dispositivo. Tienilo privato in I miei suoni o condividilo perché chiunque su Divine possa usarlo.",
+  "inboxMessageRequestsSemanticLabel": "Richieste di messaggio, {requestCount} in sospeso",
+  "@inboxMessageRequestsSemanticLabel": {
+    "placeholders": {
+      "requestCount": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsSearchConnectionsHint": "Cerca tra follower e persone che segui",
+  "badgeSubscribedAction": "Iscritto",
+  "badgeSubscribeAction": "Iscriviti al badge",
+  "badgeAcceptedHoldersTitle": "Persone che hanno accettato il badge"
 }
