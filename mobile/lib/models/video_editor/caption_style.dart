@@ -218,20 +218,30 @@ List<TextHighlight> captionWordHighlights(CaptionCue cue) {
   }
 
   final highlights = <TextHighlight>[];
-  for (final (index, span) in spans.indexed) {
-    final from = offsetOf(words[index].start);
+  var first = 0;
+  while (first < spans.length) {
+    // Words the recognizer starts at the same moment light up together;
+    // otherwise all but the last of them would get no time at all.
+    var last = first;
+    while (last + 1 < words.length &&
+        words[last + 1].start == words[first].start) {
+      last++;
+    }
+    final from = offsetOf(words[first].start);
     final to = offsetOf(
-      index + 1 < words.length ? words[index + 1].start : cue.end,
+      last + 1 < words.length ? words[last + 1].start : cue.end,
     );
-    if (to <= from) continue;
-    highlights.add(
-      TextHighlight(
-        start: span.start,
-        end: span.end,
-        startTime: from,
-        endTime: to,
-      ),
-    );
+    if (to > from) {
+      highlights.add(
+        TextHighlight(
+          start: spans[first].start,
+          end: spans[last].end,
+          startTime: from,
+          endTime: to,
+        ),
+      );
+    }
+    first = last + 1;
   }
   return highlights;
 }

@@ -382,6 +382,32 @@ void main() {
       expect(captionWordHighlights(cue).map((h) => h.start), [0]);
     });
 
+    test('lights words that start together as one', () {
+      const cue = CaptionCue(
+        id: 'cue',
+        text: 'New York',
+        start: Duration(seconds: 1),
+        end: Duration(seconds: 2),
+        words: [
+          CaptionSegment(
+            text: 'New',
+            start: Duration(milliseconds: 1000),
+            end: Duration(milliseconds: 1100),
+          ),
+          CaptionSegment(
+            text: 'York',
+            start: Duration(milliseconds: 1000),
+            end: Duration(milliseconds: 1200),
+          ),
+        ],
+      );
+
+      expect(
+        captionWordHighlights(cue).map((h) => (h.start, h.end, h.startTime)),
+        [(0, 8, Duration.zero)],
+      );
+    });
+
     test('spreads the words of a cue without word timings', () {
       const cue = CaptionCue(
         id: 'cue',
