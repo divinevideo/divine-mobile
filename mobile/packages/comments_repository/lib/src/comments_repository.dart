@@ -611,10 +611,10 @@ class CommentsRepository {
   /// [deleteComment] may be called without a root event id, so search all
   /// roots by the globally unique Nostr event id.
   void _removeRecentlyPostedComment(String commentId) {
-    _recentlyPostedComments.removeWhere((_, comments) {
-      comments.removeWhere((comment) => comment.comment.id == commentId);
-      return comments.isEmpty;
-    });
+    for (final pending in _recentlyPostedComments.values) {
+      pending.removeWhere((p) => p.comment.id == commentId);
+    }
+    _recentlyPostedComments.removeWhere((_, pending) => pending.isEmpty);
   }
 
   /// Merges any retained just-posted comments for [rootEventId] into [thread]
