@@ -697,7 +697,7 @@ void main() {
       });
     });
 
-    test('spreads the words of a server cue over its time', () async {
+    test('leaves server cues without word timings', () async {
       stubMerge([_offset(0, 3000)]);
       final service = buildService(
         remote: remoteReturning([_word('Hi there.', 0, 900)]),
@@ -708,11 +708,15 @@ void main() {
         localeIdentifier: 'en-US',
       );
 
-      // The server only times whole cues; each word gets a share by length.
-      expect((outcome as CaptionsGenerated).cues.single.words, [
-        _word('Hi', 0, 225),
-        _word('there.', 225, 900),
-      ]);
+      // The server only times whole cues, so the words are spread over the
+      // cue's window whenever they are read, including after a trim.
+      final cue = (outcome as CaptionsGenerated).cues.single;
+      expect(cue.words, isEmpty);
+      expect(cue.wordTimings, [_word('Hi', 0, 225), _word('there.', 225, 900)]);
+      expect(
+        cue.withTiming(end: const Duration(milliseconds: 450)).wordTimings,
+        [_word('Hi', 0, 113), _word('there.', 113, 450)],
+      );
     });
   });
 }

@@ -175,7 +175,16 @@ class CaptionGenerationService {
         timelineStarts,
       );
       if (mapped.isEmpty) return const CaptionsEmpty();
-      final cues = _buildCues(groupCaptionSegments(mapped), totalDuration);
+      // The server times whole cues only, so the words the grouper spreads
+      // over them are an estimate. The cues keep none: an estimate stored as
+      // if it were spoken would stop following the cue when it is trimmed,
+      // while an empty list lets the cue spread its words over whatever
+      // window it ends up with.
+      final cues = _buildCues(
+        groupCaptionSegments(mapped),
+        totalDuration,
+        keepWords: false,
+      );
       return cues.isEmpty ? const CaptionsEmpty() : CaptionsGenerated(cues);
     } on Object catch (e) {
       Log.warning(
@@ -378,20 +387,20 @@ class CaptionGenerationService {
     ];
   }
 
-  /// Turns grouped segments into cues that keep their word timings. The
-  /// server transcript only times whole cues, so its words arrive spread over
-  /// each cue by `groupCaptionSegments`.
+  /// Turns grouped segments into cues, keeping the recognizer's word timings
+  /// when [keepWords] is set.
   List<CaptionCue> _buildCues(
     List<CaptionSegment> grouped,
-    Duration totalDuration,
-  ) => [
+    Duration totalDuration, {
+    bool keepWords = true,
+  }) => [
     for (final (index, segment) in grouped.indexed)
       CaptionCue(
         id: 'cue-$index',
         text: segment.text,
         start: segment.start,
         end: segment.end > totalDuration ? totalDuration : segment.end,
-        words: segment.words,
+        words: keepWords ? segment.words : const [],
       ),
   ];
 
