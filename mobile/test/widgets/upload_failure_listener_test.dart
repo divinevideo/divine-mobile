@@ -243,8 +243,8 @@ void main() {
     publishStream = StreamController<BackgroundPublishState>.broadcast();
   });
 
-  tearDown(() {
-    publishStream.close();
+  tearDown(() async {
+    await publishStream.close();
   });
 
   /// Stubs [publishBloc] with the given initial state and stream.
