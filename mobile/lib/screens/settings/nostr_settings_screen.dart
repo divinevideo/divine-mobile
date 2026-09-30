@@ -53,7 +53,7 @@ class NostrSettingsScreen extends ConsumerWidget {
         showBackButton: true,
         onBackPressed: networkOnly
             ? () => context.safePop(fallback: RoutePaths.settingsConnections)
-            : context.pop,
+            : () => context.safePop(fallback: RoutePaths.settings),
       ),
       backgroundColor: context.vineColors.background,
       body: Align(

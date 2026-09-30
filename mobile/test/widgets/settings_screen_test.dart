@@ -115,11 +115,7 @@ void main() {
       when(() => mockLocaleCubit.state).thenReturn(const LocaleState());
 
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
-      when(() => mockAuthService.isRegistered).thenReturn(false);
       when(() => mockAuthService.isAnonymous).thenReturn(false);
-      when(() => mockAuthService.authenticationSource)
-          .thenReturn(AuthenticationSource.automatic);
-      when(() => mockAuthService.userRelays).thenReturn([]);
       when(() => mockAuthService.currentPublicKeyHex).thenReturn(currentPubkey);
       when(() => mockAuthService.authState).thenReturn(AuthState.authenticated);
       when(
@@ -142,6 +138,14 @@ void main() {
           .thenReturn(AuthRpcCapability.unavailable);
       when(() => mockAuthService.authRpcCapabilityStream)
           .thenAnswer((_) => const Stream.empty());
+    }
+
+    void stubAccountDestinationAuth({
+      AuthenticationSource source = AuthenticationSource.automatic,
+    }) {
+      when(() => mockAuthService.isRegistered).thenReturn(false);
+      when(() => mockAuthService.authenticationSource).thenReturn(source);
+      when(() => mockAuthService.userRelays).thenReturn([]);
     }
 
     Widget buildSubject({
@@ -465,6 +469,7 @@ void main() {
     testWidgets('renders the supporter tile when the Worker is configured', (
       tester,
     ) async {
+      stubAccountDestinationAuth();
       // The compiled default is a usable https URL, so no override is needed:
       // the tile is the user-visible half of the condition the supporter route
       // guard checks.
@@ -500,6 +505,7 @@ void main() {
     testWidgets('Account gathers ownership and deletion actions', (
       tester,
     ) async {
+      stubAccountDestinationAuth();
       await tester.pumpWidget(
         buildSubject(child: const SettingsScreen(accountOnly: true)),
       );
@@ -524,8 +530,7 @@ void main() {
     testWidgets('Account shows credentials only for Divine sign-in', (
       tester,
     ) async {
-      when(() => mockAuthService.authenticationSource)
-          .thenReturn(AuthenticationSource.divineOAuth);
+      stubAccountDestinationAuth(source: AuthenticationSource.divineOAuth);
       await tester.pumpWidget(
         buildSubject(child: const SettingsScreen(accountOnly: true)),
       );
@@ -534,8 +539,7 @@ void main() {
       expect(find.text(l10n.accountSettingsChangePassword), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox());
-      when(() => mockAuthService.authenticationSource)
-          .thenReturn(AuthenticationSource.automatic);
+      stubAccountDestinationAuth();
       await tester.pumpWidget(
         buildSubject(child: const SettingsScreen(accountOnly: true)),
       );
@@ -547,6 +551,7 @@ void main() {
     testWidgets('signed-out Account offers sign-in without account actions', (
       tester,
     ) async {
+      stubAccountDestinationAuth();
       await tester.pumpWidget(
         buildSubject(
           authState: AuthState.unauthenticated,
@@ -648,6 +653,8 @@ void main() {
     });
 
     testWidgets('tapping Badges opens the badges dashboard', (tester) async {
+      when(() => mockAuthService.isRegistered).thenReturn(false);
+      when(() => mockAuthService.userRelays).thenReturn([]);
       final mockGoRouter = MockGoRouter();
       when(() => mockGoRouter.push(any())).thenAnswer((_) async => null);
 

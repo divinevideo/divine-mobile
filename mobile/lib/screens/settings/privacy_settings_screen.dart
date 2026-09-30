@@ -51,6 +51,15 @@ class PrivacySettingsScreen extends StatelessWidget {
           child: ListView(
             children: [
               DivineSectionHeader(context.l10n.privacySettingsAnalyticsSection),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  context.l10n.settingsPrivacySubtitle,
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.mutedText,
+                  ),
+                ),
+              ),
               const _AnalyticsConsentToggle(),
               if (combined) ...[
                 DivineListTile(
