@@ -311,8 +311,13 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String videoOverlayVideoLoops(String count) {
-    return 'videoda $count döngü';
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'döngü',
+    );
+    return 'videoda $compactCount $_temp0';
   }
 
   @override

@@ -2983,7 +2983,7 @@
     "appearanceSettingsLight": "Claro",
     "appearanceSettingsDark": "Oscuro",
     "videoOverlayTotalLoops": "{count} total",
-    "videoOverlayVideoLoops": "{count} bucles del video",
+    "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{bucle} other{bucles}} del video",
     "generalSettingsClosedCaptions": "Subtítulos",
     "generalSettingsClosedCaptionsSubtitle": "Mostrar los subtítulos cuando los videos los incluyan",
     "generalSettingsVideoShapeSquareOnly": "Solo videos cuadrados",

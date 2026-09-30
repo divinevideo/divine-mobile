@@ -328,8 +328,13 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String videoOverlayVideoLoops(String count) {
-    return '视频 $count 次循环';
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '次循环',
+    );
+    return '视频 $compactCount $_temp0';
   }
 
   @override

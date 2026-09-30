@@ -312,8 +312,13 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
-  String videoOverlayVideoLoops(String count) {
-    return '$count putaran video';
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'putaran',
+    );
+    return '$compactCount $_temp0 video';
   }
 
   @override

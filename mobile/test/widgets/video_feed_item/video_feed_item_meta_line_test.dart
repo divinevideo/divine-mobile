@@ -228,6 +228,28 @@ void main() {
       expect(lookups, 0);
     });
 
+    testWidgets('uses the singular for a video that looped once', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: false,
+        StatsVisibilityPreferences.showVideoLoopsKey: true,
+        StatsVisibilityPreferences.showPublishedDateKey: false,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await pump(
+        tester,
+        video: _video(rawTags: {'views': '1'}, createdAt: 1735689600),
+        prefs: prefs,
+      );
+
+      final content = tester
+          .widget<Text>(find.byKey(const Key('video_meta_line')))
+          .data;
+      expect(content, _l10n(tester).videoOverlayVideoLoops('1', 1));
+      expect(content, '1 video loop');
+    });
+
     testWidgets('shows only the publish date when it alone is enabled', (
       tester,
     ) async {

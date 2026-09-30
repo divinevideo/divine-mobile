@@ -2975,7 +2975,7 @@
     "appearanceSettingsLight": "Claro",
     "appearanceSettingsDark": "Escuro",
     "videoOverlayTotalLoops": "{count} no total",
-    "videoOverlayVideoLoops": "{count} loops do vídeo",
+    "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{loop} other{loops}} do vídeo",
     "generalSettingsClosedCaptions": "Legendas",
     "generalSettingsClosedCaptionsSubtitle": "Mostrar legendas quando os vídeos tiverem",
     "generalSettingsVideoShapeSquareOnly": "Só vídeos quadrados",

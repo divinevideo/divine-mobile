@@ -300,8 +300,13 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String videoOverlayVideoLoops(String count) {
-    return '이 동영상 $count회 반복';
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '회 반복',
+    );
+    return '이 동영상 $compactCount$_temp0';
   }
 
   @override

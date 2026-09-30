@@ -2975,7 +2975,7 @@
     "appearanceSettingsLight": "Ljust",
     "appearanceSettingsDark": "Mörkt",
     "videoOverlayTotalLoops": "{count} totalt",
-    "videoOverlayVideoLoops": "{count} videoloopar",
+    "videoOverlayVideoLoops": "{compactCount} {count, plural, =1{videoloop} other{videoloopar}}",
     "generalSettingsClosedCaptions": "Undertexter",
     "generalSettingsClosedCaptionsSubtitle": "Visa undertexter när videor har dem",
     "generalSettingsVideoShapeSquareOnly": "Endast kvadratiska videor",

@@ -376,8 +376,14 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
-  String videoOverlayVideoLoops(String count) {
-    return '$count повторения на видеото';
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'повторения',
+      one: 'повторение',
+    );
+    return '$compactCount $_temp0 на видеото';
   }
 
   @override
