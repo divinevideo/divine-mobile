@@ -62,8 +62,9 @@ void main() {
       final keyContainer = MockSecureKeyContainer();
       when(() => keyContainer.publicKeyHex).thenReturn(_testPublicKey);
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
-      when(() => mockAuthService.currentIdentity)
-          .thenReturn(LocalNostrIdentity(keyContainer: keyContainer));
+      when(
+        () => mockAuthService.currentIdentity,
+      ).thenReturn(LocalNostrIdentity(keyContainer: keyContainer));
 
       expect(service.canCreatePassiveHeaders, isTrue);
     });
