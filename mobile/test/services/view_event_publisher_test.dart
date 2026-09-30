@@ -698,6 +698,7 @@ void main() {
           ViewTrafficSource.discoveryForYou: 'discovery:foryou',
           ViewTrafficSource.discoveryPopular: 'discovery:popular',
           ViewTrafficSource.discoveryFeatured: 'discovery:featured',
+          ViewTrafficSource.discoveryBadges: 'discovery:badges',
           ViewTrafficSource.profile: 'profile',
           ViewTrafficSource.share: 'share',
           ViewTrafficSource.search: 'search',
