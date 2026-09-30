@@ -2,6 +2,7 @@
 // ABOUTME: Validates camera preview rendering, aspect ratio, and grid overlay
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,7 +12,9 @@ import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/video_recorder/camera_initialization_error.dart';
+import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
+import 'package:openvine/widgets/video_editor/chroma_key/chroma_keyed_video.dart';
 import 'package:openvine/widgets/video_recorder/preview/video_recorder_camera_preview.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_camera_placeholder.dart';
 
@@ -133,6 +136,41 @@ void main() {
       await tester.pump();
 
       expect(find.byType(ImageFiltered), findsNothing);
+    });
+
+    testWidgets('keys the chroma viewfinder onto black, not a checkerboard', (
+      tester,
+    ) async {
+      when(() => recorderBloc.state).thenReturn(
+        const VideoRecorderBlocState(
+          isCameraInitialized: true,
+          recorderMode: VideoRecorderMode.chromaKey,
+        ),
+      );
+
+      await tester.pumpWidget(buildSubject());
+      await tester.pump();
+
+      // The test renderer has no shader image filter, so the keyed composite
+      // never draws here, and what the viewfinder asks for is what can be
+      // checked. The bake composites a key with no backdrop onto black, so
+      // the viewfinder must show black there too.
+      final keyed = tester.widget<ChromaKeyedVideo>(
+        find.byType(ChromaKeyedVideo),
+      );
+      expect(keyed.chromaKey, isNotNull);
+      expect(keyed.previewTransparency, isFalse);
+      expect(
+        find.ancestor(
+          of: find.byType(ChromaKeyedVideo),
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is ColoredBox &&
+                widget.color == VineTheme.backgroundColor,
+          ),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('blurs the frozen preview while switching cameras', (
