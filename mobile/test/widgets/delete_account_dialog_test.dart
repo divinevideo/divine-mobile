@@ -644,7 +644,7 @@ void main() {
       );
       verify(authService.signOut).called(1);
       expect(
-        find.text(_englishL10n().accountDeletionFinishingBody),
+        find.text(_englishL10n().accountDeletionProcessingBody),
         findsOneWidget,
       );
     });
@@ -731,8 +731,8 @@ void main() {
         await tester.pumpAndSettle();
 
         final l10n = _englishL10n();
-        expect(find.text(l10n.accountDeletionFinishingBody), findsOneWidget);
-        expect(announced, contains(l10n.accountDeletionFinishingBody));
+        expect(find.text(l10n.accountDeletionProcessingBody), findsOneWidget);
+        expect(announced, contains(l10n.accountDeletionProcessingBody));
       },
     );
 
@@ -778,7 +778,7 @@ void main() {
 
         expect(find.text(_welcomeMarker), findsOneWidget);
         expect(
-          find.text(_englishL10n().accountDeletionFinishingBody),
+          find.text(_englishL10n().accountDeletionProcessingBody),
           findsOneWidget,
         );
       },
@@ -1275,7 +1275,7 @@ void main() {
           find.text(
             lookupAppLocalizations(
               const Locale('en'),
-            ).accountDeletionFinishingBody,
+            ).accountDeletionProcessingBody,
           ),
           findsOneWidget,
         );
@@ -1354,7 +1354,7 @@ void main() {
         find.text(
           lookupAppLocalizations(
             const Locale('en'),
-          ).accountDeletionFinishingBody,
+          ).accountDeletionProcessingBody,
         ),
         findsNothing,
       );

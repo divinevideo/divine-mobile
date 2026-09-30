@@ -7282,8 +7282,12 @@ class AppLocalizationsFr extends AppLocalizations {
       'Récupérer mon nom d\'utilisateur';
 
   @override
-  String get accountDeletionFinishingBody =>
-      'Ta demande de suppression est toujours en cours de traitement. Tu peux utiliser un autre compte pendant que nous terminons.';
+  String get accountDeletionProcessingBody =>
+      'La suppression de ton compte peut prendre jusqu\'à un jour. Tu peux fermer l\'app ou utiliser un autre compte pendant que nous terminons.';
+
+  @override
+  String get accountDeletionOverdueBody =>
+      'La suppression de ton compte prend plus de temps que prévu. Contacte le support et nous la terminerons.';
 
   @override
   String get accountDeletionOtherAccountPending =>

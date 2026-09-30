@@ -4358,10 +4358,8 @@
   "@accountDeletionRestoreUsername": {
     "description": "Button that cancels an interrupted account deletion and restores its pending username."
   },
-  "accountDeletionFinishingBody": "మీ ఖాతా తొలగింపు అభ్యర్థన ఇప్పటికీ ప్రాసెస్ చేయబడుతోంది. మేము దీన్ని పూర్తి చేసే వరకు మీరు మరొక ఖాతాను ఉపయోగించవచ్చు.",
-  "@accountDeletionFinishingBody": {
-    "description": "Shown while the server is durably completing an immediate account deletion."
-  },
+  "accountDeletionProcessingBody": "మీ ఖాతాను తొలగించడానికి ఒక రోజు వరకు పట్టవచ్చు. మేము పూర్తి చేసే వరకు మీరు యాప్‌ను మూసివేయవచ్చు లేదా మరొక ఖాతాను ఉపయోగించవచ్చు.",
+  "accountDeletionOverdueBody": "మీ ఖాతా తొలగింపుకు అనుకున్నదానికంటే ఎక్కువ సమయం పడుతోంది. సపోర్ట్‌ను సంప్రదించండి, మేము దాన్ని పూర్తి చేస్తాము.",
   "accountDeletionOtherAccountPending": "ఈ పరికరంలో మరొక ఖాతా తొలగింపు ఇప్పటికీ ప్రాసెస్ చేయబడుతోంది. ఈ ఖాతాను తొలగించే ముందు అది పూర్తయ్యే వరకు వేచి ఉండండి.",
   "accountDeletionCancellingBody": "మేము మీ తొలగింపును రద్దు చేస్తున్నాము. ఈ స్క్రీన్ నుండి నిష్క్రమించే ముందు మళ్లీ తనిఖీ చేయండి.",
   "@accountDeletionCancellingBody": {

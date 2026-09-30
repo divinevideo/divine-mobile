@@ -7230,8 +7230,12 @@ class AppLocalizationsFil extends AppLocalizations {
   String get accountDeletionRestoreUsername => 'Ibalik ang username ko';
 
   @override
-  String get accountDeletionFinishingBody =>
-      'Pinoproseso pa ang request na i-delete ang account mo. Puwede kang gumamit ng ibang account habang tinatapos namin ito.';
+  String get accountDeletionProcessingBody =>
+      'Puwedeng umabot nang hanggang isang araw ang pag-delete ng account mo. Puwede mong isara ang app o gumamit ng ibang account habang tinatapos namin ito.';
+
+  @override
+  String get accountDeletionOverdueBody =>
+      'Mas matagal kaysa dapat ang pag-delete ng account mo. Makipag-ugnayan sa support at tatapusin namin ito.';
 
   @override
   String get accountDeletionOtherAccountPending =>

@@ -6819,8 +6819,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get accountDeletionRestoreUsername => 'ユーザー名を元に戻す';
 
   @override
-  String get accountDeletionFinishingBody =>
-      '削除リクエストはまだ処理中です。処理が完了するまで、別のアカウントを使用できます。';
+  String get accountDeletionProcessingBody =>
+      'アカウントの削除には最大1日かかることがあります。完了するまで、アプリを閉じるか、別のアカウントを使用できます。';
+
+  @override
+  String get accountDeletionOverdueBody =>
+      'アカウントの削除に想定より時間がかかっています。サポートにご連絡いただければ、削除を完了します。';
 
   @override
   String get accountDeletionOtherAccountPending =>

@@ -7109,8 +7109,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get accountDeletionRestoreUsername => 'Kullanıcı adımı geri al';
 
   @override
-  String get accountDeletionFinishingBody =>
-      'Silme isteğin hâlâ işleniyor. Biz işlemi tamamlarken başka bir hesap kullanabilirsin.';
+  String get accountDeletionProcessingBody =>
+      'Hesabının silinmesi bir güne kadar sürebilir. Biz işlemi tamamlarken uygulamayı kapatabilir veya başka bir hesap kullanabilirsin.';
+
+  @override
+  String get accountDeletionOverdueBody =>
+      'Hesabının silinmesi olması gerekenden uzun sürüyor. Destekle iletişime geç, işlemi biz tamamlayalım.';
 
   @override
   String get accountDeletionOtherAccountPending =>

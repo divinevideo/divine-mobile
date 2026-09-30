@@ -82,6 +82,17 @@ const _cancelling = AccountDeletionAttempt(
   operation: AccountDeletionAttemptOperation.cancelling,
   username: 'alice',
 );
+final Duration _overdue =
+    AccountDeletionRecoveryPolling.processingSupportEscapeAfter +
+    const Duration(minutes: 1);
+
+/// Where the short 15-minute support bound lands: polling pauses a few seconds
+/// before it, never at a shorter or a longer bound.
+final Matcher _shortBound = allOf(
+  greaterThan(const Duration(minutes: 14)),
+  lessThanOrEqualTo(const Duration(minutes: 15)),
+);
+
 const _processing = AccountDeletionAttempt(
   id: 'attempt-id',
   status: AccountDeletionAttemptStatus.processing,
@@ -646,6 +657,129 @@ void main() {
   });
 
   group('polling and cleanup', () {
+    test(
+      'a deletion still processing after hours keeps polling without support',
+      () async {
+        when(() => authService.currentPublicKeyHex).thenReturn('c' * 64);
+        when(
+          () => repository.fetchStatus(
+            attemptId: _processing.id,
+            pubkeyHex: 'a' * 64,
+          ),
+        ).thenAnswer((_) async => _processing);
+        final start = now;
+        final cubit = buildCubit(withReceipt: true);
+        await cubit.resume(_processing);
+
+        while (now.difference(start) < const Duration(hours: 6)) {
+          await timers.fireNext();
+        }
+
+        expect(cubit.state.status, AccountDeletionRecoveryStatus.processing);
+        expect(cubit.state.pollingPaused, isFalse);
+        expect(
+          timers.timers.singleWhere((timer) => timer.isActive).delay,
+          const Duration(minutes: 5),
+        );
+        await cubit.close();
+      },
+    );
+
+    test(
+      'a processing deletion offers support only after about 36 hours',
+      () async {
+        when(() => authService.currentPublicKeyHex).thenReturn('c' * 64);
+        when(
+          () => repository.fetchStatus(
+            attemptId: _processing.id,
+            pubkeyHex: 'a' * 64,
+          ),
+        ).thenAnswer((_) async => _processing);
+        final start = now;
+        final cubit = buildCubit(withReceipt: true);
+        await cubit.resume(_processing);
+
+        while (now.difference(start) < const Duration(minutes: 15)) {
+          expect(
+            timers.timers.singleWhere((timer) => timer.isActive).delay,
+            lessThanOrEqualTo(const Duration(seconds: 30)),
+          );
+          await timers.fireNext();
+        }
+        expect(
+          timers.timers.singleWhere((timer) => timer.isActive).delay,
+          const Duration(minutes: 5),
+        );
+        while (timers.timers.any((timer) => timer.isActive)) {
+          await timers.fireNext();
+        }
+
+        expect(cubit.state.pollingPaused, isTrue);
+        expect(
+          now.difference(start),
+          allOf(
+            greaterThan(const Duration(hours: 35, minutes: 50)),
+            lessThanOrEqualTo(const Duration(hours: 36)),
+          ),
+        );
+        await cubit.close();
+      },
+    );
+
+    test('polls at the 30-second cap until the 15-minute mark', () async {
+      when(() => authService.currentPublicKeyHex).thenReturn('c' * 64);
+      when(
+        () => repository.fetchStatus(
+          attemptId: _processing.id,
+          pubkeyHex: 'a' * 64,
+        ),
+      ).thenAnswer((_) async => _processing);
+      final start = now;
+      final cubit = buildCubit(withReceipt: true);
+      addTearDown(cubit.close);
+      await cubit.resume(_processing);
+      final delays = <Duration>[];
+
+      while (now.difference(start) < const Duration(minutes: 15)) {
+        delays.add(timers.timers.singleWhere((timer) => timer.isActive).delay);
+        await timers.fireNext();
+      }
+
+      expect(delays.take(6).toList(), const [
+        Duration(seconds: 2),
+        Duration(seconds: 3),
+        Duration(seconds: 5),
+        Duration(seconds: 8),
+        Duration(seconds: 13),
+        Duration(seconds: 21),
+      ]);
+      expect(delays.skip(6), isNotEmpty);
+      expect(delays.skip(6), everyElement(const Duration(seconds: 30)));
+    });
+
+    test('a deletion that completes after hours reaches completed', () async {
+      var status = _processing;
+      when(
+        () => repository.fetchStatus(
+          attemptId: _processing.id,
+          pubkeyHex: 'a' * 64,
+        ),
+      ).thenAnswer((_) async => status);
+      final start = now;
+      final cubit = buildCubit(withReceipt: true);
+      await cubit.resume(_processing);
+      while (now.difference(start) < const Duration(hours: 6)) {
+        await timers.fireNext();
+      }
+
+      status = _completed;
+      await timers.fireNext();
+
+      expect(cubit.state.status, AccountDeletionRecoveryStatus.completed);
+      verify(() => authService.deleteLocalAccount('a' * 64)).called(1);
+      await cubit.close();
+    });
+
     test('polling retries transient failure and completes cleanup', () async {
       var fetches = 0;
       when(repository.fetchCurrent).thenAnswer((_) async {
@@ -737,6 +871,80 @@ void main() {
       },
     );
 
+    test(
+      'a completed attempt whose receipt write keeps failing offers support '
+      'after 15 minutes',
+      () async {
+        when(
+          () => repository.fetchStatus(
+            attemptId: _completed.id,
+            pubkeyHex: 'a' * 64,
+          ),
+        ).thenAnswer((_) async => _completed);
+        final start = now;
+        final cubit = buildCubit(
+          withReceipt: true,
+          onAttemptUpdated: (_) async =>
+              throw StateError('receipt write failed'),
+        );
+
+        await cubit.resume(_completed);
+        while (timers.timers.any((timer) => timer.isActive)) {
+          await timers.fireNext();
+        }
+
+        expect(cubit.state.status, AccountDeletionRecoveryStatus.processing);
+        expect(
+          cubit.state.attempt?.status,
+          AccountDeletionAttemptStatus.completed,
+        );
+        expect(cubit.state.pollingPaused, isTrue);
+        expect(now.difference(start), _shortBound);
+        await cubit.close();
+      },
+    );
+
+    test('a stuck cancellation pauses at the short support bound', () async {
+      when(repository.fetchCurrent).thenAnswer((_) async => _cancelling);
+      final start = now;
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+
+      await cubit.resume(_cancelling);
+      while (timers.timers.any((timer) => timer.isActive)) {
+        await timers.fireNext();
+      }
+
+      expect(cubit.state.status, AccountDeletionRecoveryStatus.cancelInFlight);
+      expect(cubit.state.pollingPaused, isTrue);
+      expect(now.difference(start), _shortBound);
+    });
+
+    test('a failing local cleanup pauses at the short support bound', () async {
+      when(() => authService.currentPublicKeyHex).thenReturn('c' * 64);
+      when(
+        () => authService.deleteLocalAccount('a' * 64),
+      ).thenThrow(const SecureKeyStorageException('locked'));
+      when(
+        () => repository.fetchStatus(
+          attemptId: _completed.id,
+          pubkeyHex: 'a' * 64,
+        ),
+      ).thenAnswer((_) async => _completed);
+      final start = now;
+      final cubit = buildCubit(withReceipt: true);
+      addTearDown(cubit.close);
+
+      await cubit.resume(_completed);
+      while (timers.timers.any((timer) => timer.isActive)) {
+        await timers.fireNext();
+      }
+
+      expect(cubit.state.status, AccountDeletionRecoveryStatus.cleanupFailed);
+      expect(cubit.state.pollingPaused, isTrue);
+      expect(now.difference(start), _shortBound);
+    });
+
     test('receipt update failure polls again before local cleanup', () async {
       var updates = 0;
       when(
@@ -801,7 +1009,7 @@ void main() {
         final store = InMemoryAccountDeletionRecoveryPollBudgetStore();
         await store.recordStartIfAbsent(
           _processing.id,
-          now.subtract(const Duration(minutes: 16)),
+          now.subtract(_overdue),
         );
         final cubit = buildCubit(withReceipt: true, pollBudgetStore: store);
 
@@ -836,7 +1044,7 @@ void main() {
       final store = InMemoryAccountDeletionRecoveryPollBudgetStore();
       await store.recordStartIfAbsent(
         _processing.id,
-        now.subtract(const Duration(minutes: 16)),
+        now.subtract(_overdue),
       );
       final cubit = buildCubit(withReceipt: true, pollBudgetStore: store);
 
@@ -861,7 +1069,7 @@ void main() {
       final first = buildCubit(pollBudgetStore: store);
       await first.load();
       await first.close();
-      now = now.add(const Duration(minutes: 16));
+      now = now.add(_overdue);
 
       final relaunched = buildCubit(pollBudgetStore: store);
       addTearDown(relaunched.close);
@@ -873,11 +1081,126 @@ void main() {
       );
     });
 
+    test(
+      'a relaunch hours into processing checks within seconds, then slows',
+      () async {
+        when(() => authService.currentPublicKeyHex).thenReturn('c' * 64);
+        when(
+          () => repository.fetchStatus(
+            attemptId: _processing.id,
+            pubkeyHex: 'a' * 64,
+          ),
+        ).thenAnswer((_) async => _processing);
+        final store = InMemoryAccountDeletionRecoveryPollBudgetStore();
+        await store.recordStartIfAbsent(
+          _processing.id,
+          now.subtract(const Duration(hours: 6)),
+        );
+        final cubit = buildCubit(withReceipt: true, pollBudgetStore: store);
+
+        await cubit.resume(_processing);
+
+        for (final seconds in const [2, 3, 5, 8, 13, 21]) {
+          expect(
+            timers.timers.singleWhere((timer) => timer.isActive).delay,
+            Duration(seconds: seconds),
+          );
+          await timers.fireNext();
+        }
+        expect(cubit.state.pollingPaused, isFalse);
+        expect(
+          timers.timers.singleWhere((timer) => timer.isActive).delay,
+          const Duration(minutes: 5),
+        );
+        await cubit.close();
+      },
+    );
+
+    test('a relaunch hours into an unconfirmed submission checks once, then '
+        'offers support', () async {
+      when(() => authService.currentPublicKeyHex).thenReturn('c' * 64);
+      when(
+        () => repository.submit(
+          attemptId: _recoverable.id,
+          vanishEventId: 'b' * 64,
+        ),
+      ).thenThrow(const AccountDeletionRecoveryException('offline'));
+      when(
+        () => repository.fetchStatus(
+          attemptId: _recoverable.id,
+          pubkeyHex: 'a' * 64,
+        ),
+      ).thenAnswer((_) async => _recoverable);
+      final store = InMemoryAccountDeletionRecoveryPollBudgetStore();
+      await store.recordStartIfAbsent(
+        _recoverable.id,
+        now.subtract(const Duration(hours: 2)),
+      );
+      final cubit = buildCubit(withReceipt: true, pollBudgetStore: store);
+      addTearDown(cubit.close);
+
+      await cubit.resume(_recoverable);
+
+      expect(
+        cubit.state.status,
+        AccountDeletionRecoveryStatus.confirmingSubmission,
+      );
+      expect(
+        timers.timers.singleWhere((timer) => timer.isActive).delay,
+        Duration.zero,
+      );
+      await timers.fireNext();
+
+      expect(cubit.state.pollingPaused, isTrue);
+      expect(timers.timers.any((timer) => timer.isActive), isFalse);
+    });
+
+    test('a submission accepted late moves to the processing bound', () async {
+      var status = _recoverable;
+      when(() => authService.currentPublicKeyHex).thenReturn('c' * 64);
+      final start = now;
+      when(
+        () => repository.submit(
+          attemptId: _recoverable.id,
+          vanishEventId: 'b' * 64,
+        ),
+      ).thenAnswer((_) async {
+        if (now.difference(start) < const Duration(minutes: 10)) {
+          throw const AccountDeletionRecoveryException('offline');
+        }
+        status = _processing;
+        return _processing;
+      });
+      when(
+        () => repository.fetchStatus(
+          attemptId: _recoverable.id,
+          pubkeyHex: 'a' * 64,
+        ),
+      ).thenAnswer((_) async => status);
+      final cubit = buildCubit(withReceipt: true);
+      addTearDown(cubit.close);
+
+      await cubit.resume(_recoverable);
+      while (timers.timers.any((timer) => timer.isActive)) {
+        await timers.fireNext();
+      }
+
+      expect(cubit.state.status, AccountDeletionRecoveryStatus.processing);
+      expect(cubit.state.pollingPaused, isTrue);
+      expect(
+        now.difference(start),
+        allOf(
+          greaterThan(const Duration(hours: 35, minutes: 50)),
+          lessThanOrEqualTo(const Duration(hours: 36)),
+        ),
+      );
+    });
+
     test('a different attempt receives a fresh budget', () async {
       final store = InMemoryAccountDeletionRecoveryPollBudgetStore();
       await store.recordStartIfAbsent(
         _processing.id,
-        now.subtract(const Duration(minutes: 16)),
+        now.subtract(_overdue),
       );
       const differentAttempt = AccountDeletionAttempt(
         id: 'different-attempt-id',
@@ -900,7 +1223,7 @@ void main() {
       final store = InMemoryAccountDeletionRecoveryPollBudgetStore();
       await store.recordStartIfAbsent(
         _processing.id,
-        now.subtract(const Duration(minutes: 16)),
+        now.subtract(_overdue),
       );
       final cubit = buildCubit(pollBudgetStore: store);
 
@@ -1087,6 +1410,7 @@ void main() {
           ),
         ).thenAnswer((_) async => _recoverable);
         final cubit = buildCubit(withReceipt: true);
+        final start = now;
 
         await cubit.resume(_recoverable);
         final firstDelay = timers.timers.single.delay;
@@ -1104,6 +1428,9 @@ void main() {
           AccountDeletionRecoveryStatus.confirmingSubmission,
         );
         expect(cubit.state.pollingPaused, isTrue);
+        // An unconfirmed submission is not normal processing, so it keeps the
+        // short support bound rather than waiting a day and a half.
+        expect(now.difference(start), _shortBound);
         await cubit.close();
       },
     );

@@ -27,10 +27,38 @@ abstract class AccountDeletionRecoveryPolling {
     Duration(seconds: 21),
   ];
   static const cap = Duration(seconds: 30);
+
+  /// After this long, [slowCap] replaces [cap]. Final erasure runs on a server
+  /// schedule and usually lands hours later, so a 30-second cadence for the
+  /// whole wait would only spend battery and requests. [schedule] still runs
+  /// first after every start, so a relaunch checks within seconds.
+  static const slowAfter = Duration(minutes: 15);
+  static const slowCap = Duration(minutes: 5);
+
+  /// When polling pauses for a state that is not confirmed processing: an
+  /// unconfirmed submission, a stuck cancellation, a failed local cleanup and a
+  /// completed attempt whose receipt cannot be saved are not normal progress.
+  /// The screen offers Contact Support after the pause only for the
+  /// unconfirmed submission and the unsaved receipt; the others keep Retry.
   static const supportEscapeAfter = Duration(minutes: 15);
 
-  static Duration delayForTick(int tickIndex) =>
-      tickIndex < schedule.length ? schedule[tickIndex] : cap;
+  /// The bound once the server has accepted the deletion. Completion
+  /// normally takes hours, and up to a day, so support waits until then.
+  static const processingSupportEscapeAfter = Duration(hours: 36);
+
+  /// The server attempt must be `processing` too: a completed attempt whose
+  /// receipt write keeps failing is re-polled as `processing`, but it is a
+  /// local failure, not normal progress.
+  static Duration supportEscapeAfterFor(AccountDeletionRecoveryState state) =>
+      state.status == AccountDeletionRecoveryStatus.processing &&
+          state.attempt?.status == AccountDeletionAttemptStatus.processing
+      ? processingSupportEscapeAfter
+      : supportEscapeAfter;
+
+  static Duration delayForTick(int tickIndex, {Duration elapsed = .zero}) {
+    if (tickIndex < schedule.length) return schedule[tickIndex];
+    return elapsed >= slowAfter ? slowCap : cap;
+  }
 }
 
 typedef RecoveryTimerFactory = Timer Function(
@@ -635,11 +663,14 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
     await _loadPollBudget();
     if (!_isCurrent(generation)) return;
     final tickIndex = state.pollTickIndex;
-    final delay = AccountDeletionRecoveryPolling.delayForTick(tickIndex);
     final elapsed = _now().toUtc().difference(_pollBudgetStartedAt!);
     final nonNegativeElapsed = elapsed.isNegative ? Duration.zero : elapsed;
+    final delay = AccountDeletionRecoveryPolling.delayForTick(
+      tickIndex,
+      elapsed: nonNegativeElapsed,
+    );
     if (nonNegativeElapsed + delay >
-        AccountDeletionRecoveryPolling.supportEscapeAfter) {
+        AccountDeletionRecoveryPolling.supportEscapeAfterFor(state)) {
       if (!_overdueRefreshUsed) {
         _overdueRefreshUsed = true;
         _pollTimer = _timerFactory(

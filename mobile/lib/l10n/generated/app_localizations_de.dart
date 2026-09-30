@@ -7277,8 +7277,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get accountDeletionRestoreUsername => 'Benutzernamen zurückholen';
 
   @override
-  String get accountDeletionFinishingBody =>
-      'Deine Löschanfrage wird noch bearbeitet. Währenddessen kannst du ein anderes Konto verwenden.';
+  String get accountDeletionProcessingBody =>
+      'Das Löschen deines Kontos kann bis zu einem Tag dauern. Du kannst die App schließen oder währenddessen ein anderes Konto verwenden.';
+
+  @override
+  String get accountDeletionOverdueBody =>
+      'Das Löschen deines Kontos dauert länger als erwartet. Kontaktiere den Support, dann schließen wir es ab.';
 
   @override
   String get accountDeletionOtherAccountPending =>

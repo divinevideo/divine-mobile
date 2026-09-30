@@ -7348,8 +7348,12 @@ class AppLocalizationsPl extends AppLocalizations {
       'Odzyskaj moją nazwę użytkownika';
 
   @override
-  String get accountDeletionFinishingBody =>
-      'Twoje żądanie usunięcia jest nadal przetwarzane. W tym czasie możesz korzystać z innego konta.';
+  String get accountDeletionProcessingBody =>
+      'Usunięcie konta może potrwać do jednego dnia. W tym czasie możesz zamknąć aplikację lub korzystać z innego konta.';
+
+  @override
+  String get accountDeletionOverdueBody =>
+      'Usuwanie Twojego konta trwa dłużej, niż powinno. Skontaktuj się z pomocą techniczną, a my je dokończymy.';
 
   @override
   String get accountDeletionOtherAccountPending =>

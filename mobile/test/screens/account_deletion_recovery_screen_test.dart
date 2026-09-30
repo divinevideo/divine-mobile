@@ -11,6 +11,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/account_deletion_recovery/account_deletion_recovery_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/account_deletion_recovery_screen.dart';
 
 class _MockRecoveryCubit extends MockCubit<AccountDeletionRecoveryState>
@@ -45,6 +46,10 @@ Widget _app(
       GoRoute(
         path: '/welcome',
         builder: (_, _) => const Scaffold(body: Text('Welcome')),
+      ),
+      GoRoute(
+        path: RoutePaths.supportCenter,
+        builder: (_, _) => const Scaffold(body: Text('Support center')),
       ),
     ],
   );
@@ -155,6 +160,7 @@ void main() {
       await tester.pumpWidget(_app(cubit));
 
       final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l10n.accountDeletionOverdueBody), findsOneWidget);
       expect(
         find.widgetWithText(DivineButton, l10n.supportContactSupport),
         findsOneWidget,
@@ -178,6 +184,7 @@ void main() {
       await tester.pumpWidget(_app(cubit));
 
       final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l10n.accountDeletionOverdueBody), findsOneWidget);
       expect(
         find.widgetWithText(DivineButton, l10n.supportContactSupport),
         findsOneWidget,
@@ -187,6 +194,55 @@ void main() {
         findsOneWidget,
       );
     });
+
+    const pausedStates = {
+      'processing': AccountDeletionRecoveryState(
+        status: AccountDeletionRecoveryStatus.processing,
+        attempt: AccountDeletionAttempt(
+          id: 'attempt-id',
+          status: AccountDeletionAttemptStatus.processing,
+        ),
+        pollingPaused: true,
+      ),
+      'submission confirmation': AccountDeletionRecoveryState(
+        status: AccountDeletionRecoveryStatus.confirmingSubmission,
+        attempt: _recoverable,
+        pollingPaused: true,
+      ),
+    };
+
+    for (final MapEntry(key: name, value: state) in pausedStates.entries) {
+      testWidgets('paused $name opens support from Contact Support', (
+        tester,
+      ) async {
+        when(() => cubit.state).thenReturn(state);
+        await tester.pumpWidget(_app(cubit));
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(
+          find.widgetWithText(DivineButton, l10n.supportContactSupport),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Support center'), findsOneWidget);
+      });
+
+      testWidgets('paused $name switches account from Use another account', (
+        tester,
+      ) async {
+        when(() => cubit.state).thenReturn(state);
+        await tester.pumpWidget(_app(cubit));
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(
+          find.widgetWithText(DivineButton, l10n.authUseAnotherAccount),
+        );
+        await tester.pumpAndSettle();
+
+        verify(cubit.switchAccount).called(1);
+        expect(find.text('Welcome'), findsOneWidget);
+      });
+    }
 
     testWidgets('processing remains non-cancellable', (tester) async {
       when(() => cubit.state).thenReturn(
@@ -201,9 +257,13 @@ void main() {
       await tester.pumpWidget(_app(cubit));
 
       final l10n = lookupAppLocalizations(const Locale('en'));
-      expect(find.text(l10n.accountDeletionFinishingBody), findsOneWidget);
+      expect(find.text(l10n.accountDeletionProcessingBody), findsOneWidget);
       expect(
         find.widgetWithText(DivineButton, l10n.accountDeletionRestoreUsername),
+        findsNothing,
+      );
+      expect(
+        find.widgetWithText(DivineButton, l10n.supportContactSupport),
         findsNothing,
       );
       await tester.tap(

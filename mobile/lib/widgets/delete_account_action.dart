@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/account_deletion_recovery/account_deletion_recovery_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -23,6 +24,12 @@ import 'package:openvine/widgets/modal_progress_overlay.dart';
 /// Cache-first, so this is usually instant. A miss degrades to npub + DELETE
 /// rather than hanging the tap.
 const Duration _profileResolveTimeout = Duration(seconds: 3);
+
+/// How long the blocked-delete explanation stays up when it has no action.
+///
+/// A snackbar without an action dismisses itself after four seconds, too short
+/// for two sentences. One with an action persists and ignores this.
+const Duration _blockedDeleteSnackBarDuration = Duration(seconds: 12);
 
 /// Open the account deletion flow: resolve the identity to confirm against,
 /// show the type-to-confirm gate, then run the deletion.
@@ -55,16 +62,26 @@ Future<void> startAccountDeletionFlow({
   final pendingDeletion = ref.read(submittedAccountDeletionAttemptProvider);
   if (pendingDeletion != null && pendingDeletion.pubkeyHex != pubkey) {
     final monitor = ref.read(submittedAccountDeletionMonitorProvider);
-    if (monitor?.state.pollingPaused ?? false) {
+    final monitorState = monitor?.state;
+    final overdue = monitorState?.pollingPaused ?? false;
+    // Support is offered only once the other deletion is overdue or has
+    // failed; a normal deletion can take up to a day to finish.
+    final offerSupport =
+        overdue ||
+        monitorState?.status == AccountDeletionRecoveryStatus.terminalFailure;
+    if (overdue) {
       unawaited(monitor!.resume(pendingDeletion.attempt));
     }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(context.l10n.accountDeletionOtherAccountPending),
-        action: SnackBarAction(
-          label: context.l10n.supportContactSupport,
-          onPressed: () => context.push(RoutePaths.supportCenter),
-        ),
+        duration: _blockedDeleteSnackBarDuration,
+        action: offerSupport
+            ? SnackBarAction(
+                label: context.l10n.supportContactSupport,
+                onPressed: () => context.push(RoutePaths.supportCenter),
+              )
+            : null,
       ),
     );
     return;

@@ -7253,8 +7253,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get accountDeletionRestoreUsername => 'Recuperar mi nombre de usuario';
 
   @override
-  String get accountDeletionFinishingBody =>
-      'Tu solicitud de eliminación todavía se está procesando. Podés usar otra cuenta mientras terminamos.';
+  String get accountDeletionProcessingBody =>
+      'Eliminar tu cuenta puede tardar hasta un día. Podés cerrar la app o usar otra cuenta mientras terminamos.';
+
+  @override
+  String get accountDeletionOverdueBody =>
+      'La eliminación de tu cuenta está tardando más de lo esperado. Contactá a soporte y la terminamos.';
 
   @override
   String get accountDeletionOtherAccountPending =>

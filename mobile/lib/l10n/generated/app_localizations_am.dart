@@ -7020,8 +7020,12 @@ class AppLocalizationsAm extends AppLocalizations {
   String get accountDeletionRestoreUsername => 'የተጠቃሚ ስሜን ይመልሱ';
 
   @override
-  String get accountDeletionFinishingBody =>
-      'የመለያዎ ስረዛ ጥያቄ አሁንም በሂደት ላይ ነው። እስክናጠናቅቅ ድረስ ሌላ መለያ መጠቀም ይችላሉ።';
+  String get accountDeletionProcessingBody =>
+      'መለያዎን መሰረዝ እስከ አንድ ቀን ሊወስድ ይችላል። እስክናጠናቅቅ ድረስ መተግበሪያውን መዝጋት ወይም ሌላ መለያ መጠቀም ይችላሉ።';
+
+  @override
+  String get accountDeletionOverdueBody =>
+      'መለያዎን መሰረዝ ከሚገባው በላይ እየዘገየ ነው። ድጋፍን ያግኙ፣ እኛም እናጠናቅቀዋለን።';
 
   @override
   String get accountDeletionOtherAccountPending =>

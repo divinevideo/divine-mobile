@@ -7359,8 +7359,12 @@ class AppLocalizationsRo extends AppLocalizations {
       'Recuperează-mi numele de utilizator';
 
   @override
-  String get accountDeletionFinishingBody =>
-      'Cererea ta de ștergere este încă în curs de procesare. Poți folosi alt cont până terminăm.';
+  String get accountDeletionProcessingBody =>
+      'Ștergerea contului tău poate dura până la o zi. Poți închide aplicația sau poți folosi alt cont până terminăm.';
+
+  @override
+  String get accountDeletionOverdueBody =>
+      'Ștergerea contului tău durează mai mult decât ar trebui. Contactează asistența și o vom finaliza.';
 
   @override
   String get accountDeletionOtherAccountPending =>

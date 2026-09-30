@@ -7155,8 +7155,12 @@ class AppLocalizationsVi extends AppLocalizations {
       'Lấy lại tên người dùng của mình';
 
   @override
-  String get accountDeletionFinishingBody =>
-      'Yêu cầu xóa tài khoản của bạn vẫn đang được xử lý. Bạn có thể dùng một tài khoản khác trong lúc chúng tôi hoàn tất.';
+  String get accountDeletionProcessingBody =>
+      'Việc xóa tài khoản của bạn có thể mất đến một ngày. Bạn có thể đóng ứng dụng hoặc dùng một tài khoản khác trong lúc chúng tôi hoàn tất.';
+
+  @override
+  String get accountDeletionOverdueBody =>
+      'Việc xóa tài khoản của bạn đang mất nhiều thời gian hơn dự kiến. Hãy liên hệ bộ phận hỗ trợ và chúng tôi sẽ hoàn tất.';
 
   @override
   String get accountDeletionOtherAccountPending =>

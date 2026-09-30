@@ -7217,8 +7217,12 @@ class AppLocalizationsNl extends AppLocalizations {
       'Mijn gebruikersnaam terugzetten';
 
   @override
-  String get accountDeletionFinishingBody =>
-      'Je verwijderverzoek wordt nog verwerkt. Je kunt een ander account gebruiken terwijl wij dit afronden.';
+  String get accountDeletionProcessingBody =>
+      'Het verwijderen van je account kan tot een dag duren. Je kunt de app sluiten of een ander account gebruiken terwijl wij dit afronden.';
+
+  @override
+  String get accountDeletionOverdueBody =>
+      'Het verwijderen van je account duurt langer dan verwacht. Neem contact op met support, dan ronden wij het af.';
 
   @override
   String get accountDeletionOtherAccountPending =>

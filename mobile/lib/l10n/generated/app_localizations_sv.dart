@@ -7178,8 +7178,12 @@ class AppLocalizationsSv extends AppLocalizations {
   String get accountDeletionRestoreUsername => 'Återställ mitt användarnamn';
 
   @override
-  String get accountDeletionFinishingBody =>
-      'Din begäran om radering behandlas fortfarande. Du kan använda ett annat konto medan vi slutför processen.';
+  String get accountDeletionProcessingBody =>
+      'Det kan ta upp till en dag att radera ditt konto. Du kan stänga appen eller använda ett annat konto medan vi slutför processen.';
+
+  @override
+  String get accountDeletionOverdueBody =>
+      'Raderingen av ditt konto tar längre tid än den borde. Kontakta supporten så slutför vi den.';
 
   @override
   String get accountDeletionOtherAccountPending =>

@@ -6838,8 +6838,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get accountDeletionRestoreUsername => '사용자명 되돌리기';
 
   @override
-  String get accountDeletionFinishingBody =>
-      '계정 삭제 요청이 아직 처리 중이에요. 처리가 완료될 때까지 다른 계정을 사용할 수 있어요.';
+  String get accountDeletionProcessingBody =>
+      '계정 삭제에는 최대 하루가 걸릴 수 있어요. 완료될 때까지 앱을 닫거나 다른 계정을 사용할 수 있어요.';
+
+  @override
+  String get accountDeletionOverdueBody =>
+      '계정 삭제가 예상보다 오래 걸리고 있어요. 지원팀에 문의하시면 저희가 마무리할게요.';
 
   @override
   String get accountDeletionOtherAccountPending =>
