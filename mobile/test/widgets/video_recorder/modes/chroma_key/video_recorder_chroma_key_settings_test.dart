@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -124,6 +125,33 @@ void main() {
             const VideoRecorderChromaKeyMeasureRequested(),
           ),
         ).called(1);
+      });
+
+      testWidgets('ignores Auto-detect while a written-off still is out', (
+        tester,
+      ) async {
+        await pumpChip(tester, status: ChromaKeyMeasurementStatus.superseded);
+        // The busy button's spinner never settles, so the sheet is pumped
+        // through its opening rather than settled.
+        await tester.tap(find.text(l10n.videoEditorChromaKeyTitle));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        await tester.tap(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineButton &&
+                widget.leadingIcon == DivineIconName.sparkle,
+          ),
+        );
+        await tester.pump();
+
+        // The camera is still busy with the written-off still.
+        verifyNever(
+          () => recorderBloc.add(
+            const VideoRecorderChromaKeyMeasureRequested(),
+          ),
+        );
       });
 
       testWidgets('switches to the blue-screen preset', (tester) async {
