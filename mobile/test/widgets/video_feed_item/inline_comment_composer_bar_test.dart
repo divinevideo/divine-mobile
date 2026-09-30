@@ -64,9 +64,9 @@ void main() {
       ).thenReturn(const InlineCommentComposerState());
     });
 
-    tearDown(() {
-      fullscreenBloc.close();
-      composerCubit.close();
+    tearDown(() async {
+      await fullscreenBloc.close();
+      await composerCubit.close();
     });
 
     Widget buildBar() {
