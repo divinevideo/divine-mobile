@@ -376,6 +376,7 @@ class AppLocalizationsAm extends AppLocalizations {
       count,
       locale: localeName,
       other: 'ዙሮች',
+      one: 'ዙር',
     );
     return 'የቪዲዮ $compactCount $_temp0';
   }

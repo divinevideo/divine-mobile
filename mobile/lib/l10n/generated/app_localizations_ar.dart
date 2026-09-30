@@ -362,7 +362,8 @@ class AppLocalizationsAr extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'دورة',
+      other: 'دورات',
+      one: 'دورة',
     );
     return '$compactCount $_temp0 للفيديو';
   }
