@@ -129,6 +129,16 @@ class CommentsRepository {
   /// another client) cannot linger locally indefinitely.
   static const _recentlyPostedRetention = Duration(minutes: 10);
 
+  /// Ids of comments deleted through [deleteComment], hidden from every read.
+  ///
+  /// A published NIP-09 deletion reaches read sources late: a relay that has
+  /// not stored the comment yet applies it only in a later sweep, and the
+  /// edge-cached REST list is not purged. Until then they still return the
+  /// comment, so an edit showed the old text beside the new (#9643). Kept
+  /// across [clearCommentCountCache] because a deletion holds for every
+  /// viewer; bounded by how many comments are deleted in one session.
+  final Set<String> _deletedCommentIds = {};
+
   /// Subscription ID for the active comment watch, if any.
   String? _watchSubscriptionId;
 
@@ -185,11 +195,13 @@ class CommentsRepository {
             cacheBustToken: _commentsCacheBustToken(rootEventId),
           );
           if (response != null) {
-            final restThread = _buildThreadFromRestComments(
-              response,
-              rootEventId,
-              rootEventKind,
-              rootAddressableId: rootAddressableId,
+            final restThread = _dropDeletedComments(
+              _buildThreadFromRestComments(
+                response,
+                rootEventId,
+                rootEventKind,
+                rootAddressableId: rootAddressableId,
+              ),
             );
             // Merge the user's own just-posted comment when the REST index has
             // not yet ingested it, so a sheet reopen doesn't drop it (#5598).
@@ -270,6 +282,7 @@ class CommentsRepository {
           rootEventKind,
         );
       }
+      thread = _dropDeletedComments(thread);
 
       // Merge the user's own just-posted comment on first-page loads when the
       // relay query has not yet returned it, mirroring the REST path (#5598).
@@ -702,6 +715,7 @@ class CommentsRepository {
         );
       }
 
+      _deletedCommentIds.add(commentId);
       _removeRecentlyPostedComment(commentId);
 
       if (rootEventId != null) {
@@ -779,6 +793,7 @@ class CommentsRepository {
 
       final filter = _blockFilter;
       return eventStream
+          .where((event) => !_deletedCommentIds.contains(event.id))
           .where((event) => seenIds.add(event.id))
           .map((event) => _eventToComment(event, rootEventId, rootEventKind))
           .where((comment) => comment != null)
@@ -833,7 +848,11 @@ class CommentsRepository {
       final events = await _nostrClient.queryEvents([filter]);
 
       final comments =
-          events.map(_eventToCommentFromRawEvent).whereType<Comment>().toList()
+          events
+              .where((event) => !_deletedCommentIds.contains(event.id))
+              .map(_eventToCommentFromRawEvent)
+              .whereType<Comment>()
+              .toList()
             ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
       return comments;
@@ -860,6 +879,26 @@ class CommentsRepository {
       commentCache: Map<String, Comment>.unmodifiable({
         for (final c in filtered) c.id: c,
       }),
+    );
+  }
+
+  /// Drops comments in [_deletedCommentIds] from [thread], lowering
+  /// [CommentThread.totalCount] by the number dropped since the source
+  /// counted them too.
+  CommentThread _dropDeletedComments(CommentThread thread) {
+    if (_deletedCommentIds.isEmpty) return thread;
+    final kept = thread.comments
+        .where((c) => !_deletedCommentIds.contains(c.id))
+        .toList();
+    final dropped = thread.comments.length - kept.length;
+    if (dropped == 0) return thread;
+    final totalCount = thread.totalCount - dropped;
+    return thread.copyWith(
+      comments: kept,
+      commentCache: Map<String, Comment>.unmodifiable({
+        for (final c in kept) c.id: c,
+      }),
+      totalCount: totalCount < 0 ? 0 : totalCount,
     );
   }
 
