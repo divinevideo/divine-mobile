@@ -9943,6 +9943,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get badgesTitle => '배지';
 
   @override
+  String get badgeSubscribeAction => '배지 구독';
+
+  @override
+  String get badgeSubscribedAction => '구독 중';
+
+  @override
+  String get badgeAcceptedHoldersTitle => '배지를 수락한 사람';
+
+  @override
   String get badgesLoadError => '배지를 불러오지 못했어요';
 
   @override

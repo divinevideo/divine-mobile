@@ -17,6 +17,7 @@ void main() {
 
     setUpAll(() {
       registerFallbackValue(<Filter>[]);
+      registerFallbackValue(Filter());
       registerFallbackValue(_event(id: _eventId(999), pubkey: _pubkey(999)));
     });
 
@@ -28,6 +29,14 @@ void main() {
       lastSignedEvent = () => signedEvent;
 
       when(() => nostrClient.queryEvents(any())).thenAnswer((_) async => []);
+      when(
+        () => nostrClient.queryEventsDetailed(
+          any(),
+          requireAllRelaysSettled: true,
+        ),
+      ).thenAnswer(
+        (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+      );
       when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((
         invocation,
       ) async {
@@ -50,6 +59,253 @@ void main() {
         },
       );
     });
+
+    test('subscriptions publish a public addressable event and sync', () async {
+      final coordinate = BadgeCoordinate(
+        pubkey: _pubkey(2),
+        identifier: 'daily-diviner',
+      );
+
+      final saved = await repository.setSubscription(
+        coordinate,
+        subscribed: true,
+      );
+
+      expect(saved, {coordinate});
+      expect(lastSignedEvent()?.kind, EventKind.appSpecificData);
+      expect(lastSignedEvent()?.tags, [
+        ['d', 'divine.badge_subscriptions'],
+        ['a', coordinate.value],
+      ]);
+      expect(await repository.loadSubscriptions(), {coordinate});
+
+      final published = lastSignedEvent()!;
+      when(() => nostrClient.queryEvents(any())).thenAnswer(
+        (_) async => [published],
+      );
+      final otherDevice = BadgeRepository(
+        nostrClient: nostrClient,
+        sharedPreferences: preferences,
+        currentPubkey: () => _pubkey(1),
+        signEvent: ({required kind, required content, required tags}) async =>
+            null,
+      );
+      expect(await otherDevice.loadSubscriptions(), {coordinate});
+    });
+
+    test('subscription mutation refuses a partial relay read', () async {
+      when(
+        () => nostrClient.queryEventsDetailed(
+          any(),
+          requireAllRelaysSettled: true,
+        ),
+      ).thenAnswer(
+        (_) async => (events: <Event>[], timedOut: true, noRelays: false),
+      );
+
+      await expectLater(
+        repository.setSubscription(
+          BadgeCoordinate(pubkey: _pubkey(2), identifier: 'daily-diviner'),
+          subscribed: true,
+        ),
+        throwsStateError,
+      );
+      verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+    });
+
+    test(
+      'accepted holders include recipients beyond a 200-event page',
+      () async {
+        final coordinate = BadgeCoordinate(
+          pubkey: _pubkey(2),
+          identifier: 'daily-diviner',
+        );
+        final recipients = [for (var i = 10; i < 215; i++) _pubkey(i)];
+        when(() => nostrClient.readAllEvents(any())).thenAnswer((
+          invocation,
+        ) async {
+          final filter = invocation.positionalArguments.single as Filter;
+          if (filter.kinds?.contains(EventKind.eventDeletion) == true) {
+            return const PagedQueryResult(
+              events: [],
+              isComplete: true,
+              pages: 1,
+            );
+          }
+          if (filter.kinds?.contains(EventKind.profileBadges) == true) {
+            return PagedQueryResult(
+              events: [
+                for (final pubkey in filter.authors ?? const <String>[])
+                  _profileBadgesEvent(
+                    id: _eventId(500 + recipients.indexOf(pubkey)),
+                    pubkey: pubkey,
+                    tags: [
+                      ['a', coordinate.value],
+                      ['e', _eventId(100 + recipients.indexOf(pubkey))],
+                    ],
+                  ),
+              ],
+              isComplete: true,
+              pages: 1,
+            );
+          }
+          if (filter.kinds?.contains(EventKind.badgeSet) == true) {
+            return const PagedQueryResult(
+              events: [],
+              isComplete: true,
+              pages: 1,
+            );
+          }
+          return PagedQueryResult(
+            events: [
+              for (var i = 0; i < recipients.length; i++)
+                _awardEvent(
+                  id: _eventId(i + 100),
+                  issuerPubkey: coordinate.pubkey,
+                  definitionCoordinate: coordinate.value,
+                  recipients: [recipients[i]],
+                ),
+            ],
+            isComplete: true,
+            pages: 2,
+          );
+        });
+        final holders = await repository.loadAcceptedHolders(coordinate);
+
+        expect(holders, recipients.toSet());
+      },
+    );
+
+    test('accepted holders reject an incomplete relay walk', () async {
+      final coordinate = BadgeCoordinate(
+        pubkey: _pubkey(2),
+        identifier: 'daily-diviner',
+      );
+      when(() => nostrClient.readAllEvents(any())).thenAnswer((_) async {
+        return const PagedQueryResult(
+          events: [],
+          isComplete: false,
+          pages: 1,
+        );
+      });
+
+      await expectLater(
+        repository.loadAcceptedHolders(coordinate),
+        throwsStateError,
+      );
+    });
+
+    test('accepted holders reject an incomplete profile read', () async {
+      final coordinate = BadgeCoordinate(
+        pubkey: _pubkey(2),
+        identifier: 'daily-diviner',
+      );
+      when(() => nostrClient.readAllEvents(any())).thenAnswer((
+        invocation,
+      ) async {
+        final filter = invocation.positionalArguments.single as Filter;
+        if (filter.kinds?.contains(EventKind.badgeAward) == true) {
+          return PagedQueryResult(
+            events: [
+              _awardEvent(
+                id: _eventId(50),
+                issuerPubkey: coordinate.pubkey,
+                definitionCoordinate: coordinate.value,
+                recipients: [_pubkey(3)],
+              ),
+            ],
+            isComplete: true,
+            pages: 1,
+          );
+        }
+        return PagedQueryResult(
+          events: const [],
+          isComplete: filter.kinds?.contains(EventKind.profileBadges) != true,
+          pages: 1,
+        );
+      });
+
+      await expectLater(
+        repository.loadAcceptedHolders(coordinate),
+        throwsStateError,
+      );
+    });
+
+    test('accepted holders exclude issuer-revoked awards', () async {
+      final coordinate = BadgeCoordinate(
+        pubkey: _pubkey(2),
+        identifier: 'daily-diviner',
+      );
+      final award = _awardEvent(
+        id: _eventId(50),
+        issuerPubkey: coordinate.pubkey,
+        definitionCoordinate: coordinate.value,
+        recipients: [_pubkey(3)],
+      );
+      when(() => nostrClient.readAllEvents(any())).thenAnswer((
+        invocation,
+      ) async {
+        final filter = invocation.positionalArguments.single as Filter;
+        return PagedQueryResult(
+          events: filter.kinds?.contains(EventKind.eventDeletion) == true
+              ? [
+                  _event(
+                    id: _eventId(51),
+                    pubkey: coordinate.pubkey,
+                    kind: EventKind.eventDeletion,
+                    tags: [
+                      ['e', award.id],
+                    ],
+                  ),
+                ]
+              : [award],
+          isComplete: true,
+          pages: 1,
+        );
+      });
+
+      expect(await repository.loadAcceptedHolders(coordinate), isEmpty);
+    });
+
+    test(
+      'accepted holders exclude a recipient who removed the badge',
+      () async {
+        final coordinate = BadgeCoordinate(
+          pubkey: _pubkey(2),
+          identifier: 'daily-diviner',
+        );
+        when(() => nostrClient.readAllEvents(any())).thenAnswer((
+          invocation,
+        ) async {
+          final filter = invocation.positionalArguments.single as Filter;
+          return PagedQueryResult(
+            events: filter.kinds?.contains(EventKind.badgeAward) == true
+                ? [
+                    _awardEvent(
+                      id: _eventId(50),
+                      issuerPubkey: coordinate.pubkey,
+                      definitionCoordinate: coordinate.value,
+                      recipients: [_pubkey(3)],
+                    ),
+                  ]
+                : [],
+            isComplete: true,
+            pages: 1,
+          );
+        });
+        _stubQueries(nostrClient, {
+          'profileCurrent:${_pubkey(3)}': [
+            _profileBadgesEvent(
+              id: _eventId(51),
+              pubkey: _pubkey(3),
+              tags: [],
+            ),
+          ],
+        });
+
+        expect(await repository.loadAcceptedHolders(coordinate), isEmpty);
+      },
+    );
 
     test('loadAwardedBadges marks awards accepted by profile badges', () async {
       final award = _awardEvent(

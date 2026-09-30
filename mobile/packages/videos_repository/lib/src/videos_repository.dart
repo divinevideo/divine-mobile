@@ -13,6 +13,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/src/author_feed_result.dart';
+import 'package:videos_repository/src/badge_video_pager.dart';
 import 'package:videos_repository/src/home_feed_result.dart';
 import 'package:videos_repository/src/in_memory_feed_cache.dart';
 import 'package:videos_repository/src/popular_videos_page.dart';
@@ -289,8 +290,22 @@ class VideosRepository {
     }
   }
 
-  /// Fetches videos from followed users for the home feed, optionally
-  /// merging in videos from subscribed curated lists.
+  /// A snapshot pager for videos by all currently accepted badge holders.
+  BadgeVideoPager createBadgeVideoPager(Iterable<String> authors) {
+    final client = _funnelcakeApiClient;
+    if (client == null || !client.isAvailable) {
+      throw const FunnelcakeNotConfiguredException();
+    }
+    final unique = authors.toSet().toList()..sort();
+    return BadgeVideoPager(
+      client: client,
+      authors: unique,
+      transform: (stats) => _transformVideoStats(stats, sortByCreatedAt: false),
+    );
+  }
+
+  /// Fetches videos from followed users for the home feed, merging videos
+  /// from subscribed badge holders and curated lists when supplied.
   ///
   /// This is the "Home" feed mode - shows videos from followed users
   /// plus any videos referenced by subscribed curated lists.
@@ -304,6 +319,8 @@ class VideosRepository {
   ///
   /// Parameters:
   /// - [authors]: List of pubkeys to filter by (followed users)
+  /// - [badgeAuthors]: Currently accepted holders of subscribed badges;
+  ///   these are merged without publishing individual follows.
   /// - [videoRefs]: Map of listId → video references from subscribed
   ///   curated lists. References can be 64-char hex event IDs or
   ///   addressable coordinates (`kind:pubkey:d-tag`). Defaults to empty.
@@ -315,17 +332,18 @@ class VideosRepository {
   ///
   /// Returns a [HomeFeedResult] containing videos sorted by creation time
   /// (newest first) plus attribution metadata mapping videos to their
-  /// source curated lists. Returns empty result if both [authors] is empty
-  /// and [userPubkey] is null. When [userPubkey] is provided, the Funnelcake
-  /// API is attempted even with an empty [authors] list (fast-path startup).
+  /// source curated lists. Returns empty when [authors] and [badgeAuthors]
+  /// are empty and [userPubkey] is null. When [userPubkey] is provided,
+  /// Funnelcake is attempted even with no followed authors.
   Future<HomeFeedResult> getHomeFeedVideos({
     required List<String> authors,
+    List<String> badgeAuthors = const [],
     Map<String, List<String>> videoRefs = const {},
     String? userPubkey,
     int limit = _defaultLimit,
     int? until,
   }) async {
-    if (authors.isEmpty && userPubkey == null) {
+    if (authors.isEmpty && userPubkey == null && badgeAuthors.isEmpty) {
       return const HomeFeedResult(videos: []);
     }
 
@@ -337,9 +355,31 @@ class VideosRepository {
       until: until,
     );
 
+    final badgeVideos = await _fetchBadgeHolderVideos(
+      badgeAuthors,
+      limit: limit,
+      until: until,
+    );
+    final combined = <VideoEvent>[];
+    final seenVideoKeys = <String>{};
+    _appendUniqueVideos(
+      combined,
+      following.videos,
+      seenVideoKeys: seenVideoKeys,
+    );
+    _appendUniqueVideos(combined, badgeVideos, seenVideoKeys: seenVideoKeys);
+    if (badgeVideos.isNotEmpty) {
+      combined.sort((a, b) {
+        final byTime = b.createdAt.compareTo(a.createdAt);
+        return byTime != 0 ? byTime : b.id.compareTo(a.id);
+      });
+    }
+
     // 2. If no list refs, return following-only result (with seen demotion)
     if (videoRefs.isEmpty) {
-      final ordered = await _orderBySeenFreshness(following.videos);
+      final ordered = await _orderBySeenFreshness(
+        combined.take(limit).toList(),
+      );
       final result = HomeFeedResult(
         videos: ordered,
         followingPageCount: following.pageCount,
@@ -349,7 +389,7 @@ class VideosRepository {
 
     // 3. Merge list videos with following videos
     final merged = await _mergeListVideos(
-      followingVideos: following.videos,
+      followingVideos: combined.take(limit).toList(),
       videoRefs: videoRefs,
     );
     final orderedVideos = await _orderBySeenFreshness(merged.videos);
@@ -360,6 +400,42 @@ class VideosRepository {
       followingPageCount: following.pageCount,
     );
     return result;
+  }
+
+  Future<List<VideoEvent>> _fetchBadgeHolderVideos(
+    List<String> authors, {
+    required int limit,
+    int? until,
+  }) async {
+    if (authors.isEmpty) return const [];
+    final client = _funnelcakeApiClient;
+    if (client == null || !client.isAvailable) {
+      throw const FunnelcakeNotConfiguredException();
+    }
+    final unique = authors.toSet().toList()..sort();
+    final chunks = [
+      for (var i = 0; i < unique.length; i += 200)
+        unique.skip(i).take(200).toList(growable: false),
+    ];
+    final pages = <RecentVideosResponse>[];
+    for (final chunk in chunks) {
+      pages.add(
+        await client.getVideosByAuthors(
+          authors: chunk,
+          limit: (limit * 2).clamp(1, 100),
+          before: until,
+        ),
+      );
+    }
+    final videos = <VideoEvent>[];
+    for (final page in pages) {
+      videos.addAll(_transformVideoStats(page.videos, sortByCreatedAt: false));
+    }
+    videos.sort((a, b) {
+      final byTime = b.createdAt.compareTo(a.createdAt);
+      return byTime != 0 ? byTime : b.id.compareTo(a.id);
+    });
+    return videos;
   }
 
   /// Fetches videos from followed users via Funnelcake API or Nostr relays.

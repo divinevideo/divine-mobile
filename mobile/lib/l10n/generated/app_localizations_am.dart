@@ -10192,6 +10192,15 @@ class AppLocalizationsAm extends AppLocalizations {
   String get badgesTitle => 'ባጆች';
 
   @override
+  String get badgeSubscribeAction => 'ባጁን ተከተል';
+
+  @override
+  String get badgeSubscribedAction => 'ተከትለዋል';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'ባጁን የተቀበሉ';
+
+  @override
   String get badgesLoadError => 'ባጆችን መጫን አልተቻለም';
 
   @override

@@ -10394,6 +10394,15 @@ class AppLocalizationsVi extends AppLocalizations {
   String get badgesTitle => 'Huy hiệu';
 
   @override
+  String get badgeSubscribeAction => 'Theo dõi huy hiệu';
+
+  @override
+  String get badgeSubscribedAction => 'Đang theo dõi';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'Người đã chấp nhận huy hiệu';
+
+  @override
   String get badgesLoadError => 'Không tải được huy hiệu';
 
   @override

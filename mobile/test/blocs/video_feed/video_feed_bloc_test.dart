@@ -1140,6 +1140,48 @@ void main() {
       );
 
       blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        'loads subscribed badge holders when there are no direct follows',
+        setUp: () {
+          when(() => mockFollowRepository.followingPubkeys).thenReturn([]);
+          when(
+            () => mockVideosRepository.getHomeFeedVideos(
+              authors: any(named: 'authors'),
+              badgeAuthors: any(named: 'badgeAuthors'),
+              videoRefs: any(named: 'videoRefs'),
+              userPubkey: any(named: 'userPubkey'),
+              limit: any(named: 'limit'),
+              until: any(named: 'until'),
+            ),
+          ).thenAnswer(
+            (_) async => HomeFeedResult(videos: [createTestVideo('badge')]),
+          );
+        },
+        build: () => VideoFeedBloc(
+          videosRepository: mockVideosRepository,
+          followRepository: mockFollowRepository,
+          curatedListRepository: mockCuratedListRepository,
+          badgeAuthors: () async => ['badge-holder'],
+        ),
+        act: (bloc) =>
+            bloc.add(const VideoFeedStarted(mode: FeedMode.following)),
+        expect: () => [
+          const VideoFeedBlocState(mode: FeedMode.following),
+          isA<VideoFeedBlocState>()
+              .having((s) => s.status, 'status', VideoFeedStatus.success)
+              .having((s) => s.videos.length, 'videos count', 1)
+              .having((s) => s.error, 'error', isNull),
+        ],
+        verify: (_) => verify(
+          () => mockVideosRepository.getHomeFeedVideos(
+            authors: [],
+            badgeAuthors: ['badge-holder'],
+            userPubkey: any(named: 'userPubkey'),
+            until: any(named: 'until'),
+          ),
+        ).called(1),
+      );
+
+      blocTest<VideoFeedBloc, VideoFeedBlocState>(
         'does not emit noFollowedUsers for forYou when following list is empty',
         setUp: () {
           when(() => mockFollowRepository.followingPubkeys).thenReturn([]);

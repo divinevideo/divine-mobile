@@ -10359,6 +10359,15 @@ class AppLocalizationsTr extends AppLocalizations {
   String get badgesTitle => 'Rozetler';
 
   @override
+  String get badgeSubscribeAction => 'Rozete abone ol';
+
+  @override
+  String get badgeSubscribedAction => 'Abone olundu';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'Rozeti kabul edenler';
+
+  @override
   String get badgesLoadError => 'Rozetler yüklenemedi';
 
   @override

@@ -17697,6 +17697,24 @@ abstract class AppLocalizations {
   /// **'Badges'**
   String get badgesTitle;
 
+  /// No description provided for @badgeSubscribeAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscribe to badge'**
+  String get badgeSubscribeAction;
+
+  /// No description provided for @badgeSubscribedAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscribed'**
+  String get badgeSubscribedAction;
+
+  /// No description provided for @badgeAcceptedHoldersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted holders'**
+  String get badgeAcceptedHoldersTitle;
+
   /// No description provided for @badgesLoadError.
   ///
   /// In en, this message translates to:

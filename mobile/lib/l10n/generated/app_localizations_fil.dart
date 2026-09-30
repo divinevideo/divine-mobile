@@ -10524,6 +10524,15 @@ class AppLocalizationsFil extends AppLocalizations {
   String get badgesTitle => 'Mga Badge';
 
   @override
+  String get badgeSubscribeAction => 'Mag-subscribe sa badge';
+
+  @override
+  String get badgeSubscribedAction => 'Naka-subscribe';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'Mga tumanggap ng badge';
+
+  @override
   String get badgesLoadError => 'Hindi na-load ang mga badge';
 
   @override

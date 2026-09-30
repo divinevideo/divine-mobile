@@ -371,6 +371,173 @@ class BadgeRepository {
   /// back — the badge would keep its old name until a manual refresh.
   final Map<String, Nip58BadgeDefinition> _publishedDefinitions = {};
 
+  /// A just-published subscription event may take a moment to appear in relay
+  /// queries. Keep it until the relay supplies the same or a newer event.
+  Event? _publishedSubscriptions;
+
+  static const _subscriptionsIdentifier = 'divine.badge_subscriptions';
+
+  /// Definitions from the issuers selected for Explore.
+  Future<List<Nip58BadgeDefinition>> loadDefinitionsByIssuers(
+    Iterable<String> issuerPubkeys,
+  ) async {
+    final definitions = <String, Nip58BadgeDefinition>{};
+    for (final issuer in issuerPubkeys.toSet()) {
+      if (!isBadgePubkey(issuer)) continue;
+      final result = await _nostrClient.readAllEvents(
+        Filter(authors: [issuer], kinds: [EventKind.badgeDefinition]),
+      );
+      if (!result.isComplete) {
+        throw StateError('Badge definitions could not be fully loaded');
+      }
+      for (final definition in _newestDefinitionPerIdentifier(result.events)) {
+        definitions[definition.coordinate] = definition;
+      }
+    }
+    return definitions.values.toList(growable: false)
+      ..sort((a, b) => (a.name ?? a.dTag).compareTo(b.name ?? b.dTag));
+  }
+
+  /// Every currently accepted holder with an issuer-signed award.
+  ///
+  /// An incomplete relay walk is an error: returning the partial set would
+  /// misrepresent a large badge as having no further holders.
+  Future<Set<String>> loadAcceptedHolders(BadgeCoordinate coordinate) async {
+    final awardsPage = await _nostrClient.readAllEvents(
+      Filter(
+        authors: [coordinate.pubkey],
+        kinds: [EventKind.badgeAward],
+        a: [coordinate.value],
+      ),
+    );
+    if (!awardsPage.isComplete) {
+      throw StateError('Badge holders could not be fully loaded');
+    }
+    final awardIds = awardsPage.events.map((event) => event.id).toList();
+    final revokedIds = <String>{};
+    for (var i = 0; i < awardIds.length; i += 100) {
+      final deletions = await _nostrClient.readAllEvents(
+        Filter(
+          authors: [coordinate.pubkey],
+          kinds: [EventKind.eventDeletion],
+          e: awardIds.skip(i).take(100).toList(),
+        ),
+      );
+      if (!deletions.isComplete) {
+        throw StateError('Badge revocations could not be fully loaded');
+      }
+      for (final deletion in deletions.events) {
+        for (final tag in deletion.tags) {
+          if (tag.length >= 2 && tag[0] == 'e') revokedIds.add(tag[1]);
+        }
+      }
+    }
+    final awarded = <String>{};
+    for (final event in awardsPage.events) {
+      if (revokedIds.contains(event.id)) continue;
+      final award = Nip58BadgeParser.parseAward(event);
+      if (award?.definitionCoordinate == coordinate.value) {
+        awarded.addAll(award!.recipientPubkeys);
+      }
+    }
+    if (awarded.isEmpty) return const {};
+    final profiles = await _completeProfileBadgesByPubkeyChunked(awarded);
+    return Set.unmodifiable({
+      for (final entry in profiles.entries)
+        if (_containsBadgeCoordinateValue(entry.value, coordinate.value))
+          entry.key,
+    });
+  }
+
+  /// Public, account-synced badge subscriptions stored in a NIP-78 event.
+  Future<Set<BadgeCoordinate>> loadSubscriptions({
+    bool requireComplete = false,
+  }) async {
+    final pubkey = _requireCurrentPubkey();
+    final filters = [
+      Filter(
+        authors: [pubkey],
+        kinds: [EventKind.appSpecificData],
+        d: [_subscriptionsIdentifier],
+        limit: 10,
+      ),
+    ];
+    final List<Event> events;
+    if (requireComplete) {
+      final result = await _nostrClient.queryEventsDetailed(
+        filters,
+        requireAllRelaysSettled: true,
+      );
+      if (result.timedOut || result.noRelays) {
+        throw StateError('Badge subscriptions could not be fully loaded');
+      }
+      events = result.events;
+    } else {
+      events = await _nostrClient.queryEvents(filters);
+    }
+    final matching =
+        events
+            .where(
+              (event) =>
+                  event.pubkey == pubkey &&
+                  event.tags.any(
+                    (tag) =>
+                        tag.length >= 2 &&
+                        tag[0] == 'd' &&
+                        tag[1] == _subscriptionsIdentifier,
+                  ),
+            )
+            .toList()
+          ..sort((a, b) {
+            final byTime = b.createdAt.compareTo(a.createdAt);
+            return byTime != 0 ? byTime : a.id.compareTo(b.id);
+          });
+    final published = _publishedSubscriptions;
+    final latest = matching.isEmpty ? null : matching.first;
+    final event =
+        published != null &&
+            published.pubkey == pubkey &&
+            (latest == null ||
+                published.createdAt > latest.createdAt ||
+                (published.createdAt == latest.createdAt &&
+                    published.id.compareTo(latest.id) < 0))
+        ? published
+        : latest;
+    if (event == null) return const {};
+    final coordinates = <BadgeCoordinate>{};
+    for (final tag in event.tags) {
+      if (tag.length < 2 || tag[0] != 'a') continue;
+      final coordinate = BadgeCoordinate.parse(tag[1]);
+      if (coordinate != null) coordinates.add(coordinate);
+    }
+    return Set.unmodifiable(coordinates);
+  }
+
+  /// Add or remove one badge subscription without following its holders.
+  Future<Set<BadgeCoordinate>> setSubscription(
+    BadgeCoordinate coordinate, {
+    required bool subscribed,
+  }) async {
+    final current = {...await loadSubscriptions(requireComplete: true)};
+    if (subscribed) {
+      current.add(coordinate);
+    } else {
+      current.remove(coordinate);
+    }
+    final tags = [
+      ['d', _subscriptionsIdentifier],
+      for (final item
+          in current.toList()..sort((a, b) => a.value.compareTo(b.value)))
+        ['a', item.value],
+    ];
+    _publishedSubscriptions = await _signAndPublish(
+      kind: EventKind.appSpecificData,
+      label: 'badge subscriptions',
+      tags: tags,
+    );
+    return Set.unmodifiable(current);
+  }
+
   Future<BadgeDashboardData> loadDashboard() async {
     final memo = _DashboardLookupMemo();
     final awardedFuture = _loadAwardedBadges(memo);
@@ -1194,6 +1361,40 @@ class BadgeRepository {
       }
     }
     return result;
+  }
+
+  Future<Map<String, Nip58ProfileBadges?>>
+  _completeProfileBadgesByPubkeyChunked(Iterable<String> pubkeys) async {
+    final unique = pubkeys.toSet().toList(growable: false);
+    final profiles = <String, Nip58ProfileBadges?>{};
+    for (var start = 0; start < unique.length; start += 100) {
+      final chunk = unique.skip(start).take(100).toList(growable: false);
+      final current = await _nostrClient.readAllEvents(
+        Filter(authors: chunk, kinds: [EventKind.profileBadges]),
+      );
+      final legacy = await _nostrClient.readAllEvents(
+        Filter(
+          authors: chunk,
+          kinds: [EventKind.badgeSet],
+          d: ['profile_badges'],
+        ),
+      );
+      if (!current.isComplete || !legacy.isComplete) {
+        throw StateError('Badge holder profiles could not be fully loaded');
+      }
+      final byPubkey = <String, List<Event>>{};
+      for (final event in [...current.events, ...legacy.events]) {
+        if (!chunk.contains(event.pubkey)) continue;
+        byPubkey.putIfAbsent(event.pubkey, () => []).add(event);
+      }
+      for (final pubkey in chunk) {
+        profiles[pubkey] = _preferPublishedProfileBadges(
+          pubkey,
+          _newestParsedProfileBadges(byPubkey[pubkey] ?? const <Event>[]),
+        );
+      }
+    }
+    return profiles;
   }
 
   Future<Map<String, Nip58ProfileBadges?>> _profileBadgesByPubkey(
