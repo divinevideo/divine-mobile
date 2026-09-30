@@ -1376,6 +1376,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                         controller: _videoPlayer,
                         bodySize: widget.bodySize,
                         renderSize: widget.renderSize,
+                        playTime: VideoEditorScope.of(context).playTimeNotifier,
                       ),
                       Positioned.fill(
                         child: ValueListenableBuilder<int>(

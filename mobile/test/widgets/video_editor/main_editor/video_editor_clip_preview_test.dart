@@ -23,6 +23,7 @@ void main() {
 
     late _MockClipEditorBloc clipEditorBloc;
     late VideoEditorMainBloc mainBloc;
+    late ValueNotifier<Duration> playTime;
 
     List<StopMotionClipFrame> framesNamed(List<String> names) => [
       for (final name in names)
@@ -67,6 +68,8 @@ void main() {
       );
       mainBloc = VideoEditorMainBloc();
       addTearDown(mainBloc.close);
+      playTime = ValueNotifier(Duration.zero);
+      addTearDown(playTime.dispose);
     }
 
     Future<void> pumpPreview(WidgetTester tester, DivineVideoClip clip) {
@@ -86,6 +89,7 @@ void main() {
                     controller: null,
                     bodySize: bodySize,
                     renderSize: renderSize,
+                    playTime: playTime,
                   ),
                 ),
               ),
@@ -128,9 +132,11 @@ void main() {
       final before = readPlayer(tester);
 
       await tickPlayhead(tester);
+      playTime.value = tickPosition;
+      await tester.pump();
 
-      // Same widget instance ⇒ the video branch's selector reads a ratio, not
-      // the position, so a tick that stays inside one clip rebuilds nothing.
+      // Same widget instance ⇒ the video branch only rebuilds when the ratio
+      // changes, so ticks that stay inside one clip rebuild nothing.
       expect(identical(readPlayer(tester), before), isTrue);
     });
 
@@ -149,13 +155,13 @@ void main() {
       await pumpPreview(tester, first);
       expect(readPlayer(tester).videoAspectRatio, 9 / 16);
 
-      // Into clip 2 (clip 1 plays for 2s).
-      mainBloc.add(
-        const VideoEditorPositionChanged(Duration(milliseconds: 2500)),
-      );
-      await tester.pump();
+      // Into clip 2 (clip 1 plays for 2s). The player's next position report
+      // is still up to 200 ms away, so the bloc stays in clip 1 — following it
+      // squeezed clip 2's frames into clip 1's box until then.
+      playTime.value = const Duration(milliseconds: 2020);
       await tester.pump();
 
+      expect(mainBloc.state.currentPosition, Duration.zero);
       expect(readPlayer(tester).videoAspectRatio, 1);
     });
 
