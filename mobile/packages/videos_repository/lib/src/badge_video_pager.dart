@@ -38,8 +38,15 @@ class BadgeVideoPager {
     while (result.length < limit) {
       // A 200-author read is memory-heavy server-side. Walk chunks one at a
       // time so one viewer cannot multiply that cost by the holder count.
-      for (final chunk in _chunks) {
-        await _ensureCandidate(chunk);
+      try {
+        for (final chunk in _chunks) {
+          await _ensureCandidate(chunk);
+        }
+      } on Object {
+        // Videos already taken from a buffer cannot be returned later, so a
+        // failed refill ends the page early; the next call retries it.
+        if (result.isEmpty) rethrow;
+        break;
       }
       _AuthorChunk? newestChunk;
       for (final chunk in _chunks) {

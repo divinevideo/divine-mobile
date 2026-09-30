@@ -75,5 +75,65 @@ void main() {
         expect(pager.hasMore, isFalse);
       },
     );
+
+    test('keeps consumed videos when a later refill fails', () async {
+      final client = _Client();
+      var failRefill = true;
+      when(
+        () => client.getVideosByAuthors(
+          authors: any(named: 'authors'),
+          limit: any(named: 'limit'),
+          offset: any(named: 'offset'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer((invocation) async {
+        final offset = invocation.namedArguments[#offset]! as int;
+        if (offset == 1 && failRefill) {
+          failRefill = false;
+          throw const FunnelcakeException('refill failed');
+        }
+        final videos = offset == 0 ? [_video(1, 300)] : [_video(2, 200)];
+        return RecentVideosResponse(
+          videos: videos,
+          serverItemCount: videos.length,
+          hasMore: offset == 0,
+        );
+      });
+      final pager = BadgeVideoPager(
+        client: client,
+        authors: ['a' * 64],
+        transform: (stats) =>
+            stats.map((video) => video.toVideoEvent()).toList(),
+        before: 400,
+      );
+
+      final first = await pager.loadMore(limit: 2);
+      final second = await pager.loadMore(limit: 2);
+
+      expect(first.map((video) => video.id), [_video(1, 300).id]);
+      expect(second.map((video) => video.id), [_video(2, 200).id]);
+      expect(pager.hasMore, isFalse);
+    });
+
+    test('reports a failure that yields no videos', () async {
+      final client = _Client();
+      when(
+        () => client.getVideosByAuthors(
+          authors: any(named: 'authors'),
+          limit: any(named: 'limit'),
+          offset: any(named: 'offset'),
+          before: any(named: 'before'),
+        ),
+      ).thenThrow(const FunnelcakeException('unavailable'));
+      final pager = BadgeVideoPager(
+        client: client,
+        authors: ['a' * 64],
+        transform: (stats) =>
+            stats.map((video) => video.toVideoEvent()).toList(),
+      );
+
+      await expectLater(pager.loadMore(), throwsA(isA<FunnelcakeException>()));
+      expect(pager.hasMore, isTrue);
+    });
   });
 }
