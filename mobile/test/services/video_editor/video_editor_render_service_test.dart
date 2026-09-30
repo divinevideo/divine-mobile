@@ -268,6 +268,12 @@ void main() {
         },
       );
 
+      // Both renderers treat an overlay's window as closed, so each frame but
+      // the last ends one tick before the next begins: a video frame landing
+      // exactly on a word change would otherwise draw two captions at once.
+      Duration justBefore(int ms) =>
+          Duration(milliseconds: ms) - const Duration(microseconds: 1);
+
       test('become one overlay per lit word at the same place', () {
         final layers = VideoEditorRenderService.buildImageLayers(
           capturedLayers: [karaoke()],
@@ -285,8 +291,8 @@ void main() {
             ),
           ),
           [
-            (0, const Duration(seconds: 1), const Duration(milliseconds: 1500)),
-            (1, const Duration(milliseconds: 1500), const Duration(seconds: 2)),
+            (0, const Duration(seconds: 1), justBefore(1500)),
+            (1, const Duration(milliseconds: 1500), justBefore(2000)),
             (2, const Duration(seconds: 2), const Duration(seconds: 3)),
           ],
         );

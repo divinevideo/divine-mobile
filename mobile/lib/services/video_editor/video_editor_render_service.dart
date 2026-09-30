@@ -1100,7 +1100,14 @@ class VideoEditorRenderService {
         ImageLayer(
           image: EditorLayerImage.memory(frame.bytes),
           startTime: timelineMap.editorToOutputOrNull(frame.startTime),
-          endTime: timelineMap.editorToOutputOrNull(frame.endTime),
+          // Both renderers show an overlay from its start to its end
+          // inclusive, so a frame ending where the next one starts would draw
+          // both on that instant and stack the translucent pill. Every frame
+          // but the last ends one tick early.
+          endTime: index < frames.length - 1
+              ? timelineMap.editorToOutput(frames[index + 1].startTime!) -
+                    const Duration(microseconds: 1)
+              : timelineMap.editorToOutputOrNull(frame.endTime),
           offset: offset,
           size: size,
           animations: frames.length == 1
