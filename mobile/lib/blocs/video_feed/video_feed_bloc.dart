@@ -117,6 +117,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   final Future<List<String>> Function()? _badgeAuthors;
   bool _hasBadgeAuthors = false;
   List<String>? _cachedBadgeAuthors;
+  BadgeVideoPager? _badgeVideoPager;
 
   /// Owns the cross-restart cache serve / splice / resume-persist logic.
   final HomeFeedResumeManager _resumeManager;
@@ -1136,9 +1137,20 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         : await _badgeAuthors?.call() ?? const <String>[];
     _cachedBadgeAuthors = badgeAuthors;
     _hasBadgeAuthors = badgeAuthors.isNotEmpty;
+    if (badgeAuthors.isNotEmpty) {
+      if (until == null || _badgeVideoPager == null) {
+        _badgeVideoPager = _videosRepository.createBadgeVideoPager([
+          ..._followRepository.followingPubkeys,
+          ...badgeAuthors,
+        ]);
+      }
+      final pager = _badgeVideoPager!;
+      final videos = await pager.loadMore(limit: 5);
+      return HomeFeedResult(videos: videos, hasMore: pager.hasMore);
+    }
+    _badgeVideoPager = null;
     return _videosRepository.getHomeFeedVideos(
       authors: _followRepository.followingPubkeys,
-      badgeAuthors: badgeAuthors,
       userPubkey: _userPubkey,
       until: until,
     );

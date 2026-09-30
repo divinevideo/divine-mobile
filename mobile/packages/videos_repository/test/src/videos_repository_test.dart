@@ -157,6 +157,70 @@ void main() {
       expect(repository, isNotNull);
     });
 
+    group('createBadgeVideoPager', () {
+      test('requires an available multi-author API', () {
+        expect(
+          () => repository.createBadgeVideoPager(['holder']),
+          throwsA(isA<FunnelcakeNotConfiguredException>()),
+        );
+        final client = MockFunnelcakeApiClient();
+        when(() => client.isAvailable).thenReturn(false);
+        final withClient = VideosRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: client,
+        );
+        expect(
+          () => withClient.createBadgeVideoPager(['holder']),
+          throwsA(isA<FunnelcakeNotConfiguredException>()),
+        );
+      });
+
+      test('sorts unique authors and transforms the returned video', () async {
+        final client = MockFunnelcakeApiClient();
+        when(() => client.isAvailable).thenReturn(true);
+        final stats = _createVideoStats(
+          id: 'badge-video',
+          pubkey: 'holder-a',
+          dTag: 'badge-video',
+          videoUrl: 'https://example.com/badge-video.mp4',
+        );
+        when(
+          () => client.getVideosByAuthors(
+            authors: any(named: 'authors'),
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer(
+          (_) async => RecentVideosResponse(
+            videos: [stats],
+            serverItemCount: 1,
+            hasMore: false,
+          ),
+        );
+        final withClient = VideosRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: client,
+        );
+        final pager = withClient.createBadgeVideoPager([
+          'holder-b',
+          'holder-a',
+          'holder-a',
+        ]);
+
+        final videos = await pager.loadMore(limit: 1);
+
+        expect(videos.single.id, stats.id);
+        verify(
+          () => client.getVideosByAuthors(
+            authors: ['holder-a', 'holder-b'],
+            limit: 100,
+            before: any(named: 'before'),
+          ),
+        ).called(1);
+      });
+    });
+
     group('refreshAudioReusePolicy', () {
       final video = VideoEvent(
         id: 'video-id',
@@ -2263,78 +2327,6 @@ void main() {
           );
           verifyNever(() => mockNostrClient.queryEvents(any()));
         });
-
-        test(
-          'merges badge holders across 200-author chunks '
-          'without duplicate follows',
-          () async {
-            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
-            final followedVideo = _createVideoStats(
-              id: 'event-1',
-              pubkey: 'followed-user',
-              dTag: 'dtag-1',
-              videoUrl: 'https://example.com/one.mp4',
-            );
-            final badgeVideo = _createVideoStats(
-              id: 'event-2',
-              pubkey: 'badge-holder',
-              dTag: 'dtag-2',
-              videoUrl: 'https://example.com/two.mp4',
-            );
-            when(
-              () => mockFunnelcakeClient.getHomeFeed(
-                pubkey: any(named: 'pubkey'),
-                limit: any(named: 'limit'),
-                before: any(named: 'before'),
-              ),
-            ).thenAnswer(
-              (_) async => HomeFeedResponse(
-                videos: [followedVideo],
-              ),
-            );
-            final chunkSizes = <int>[];
-            when(
-              () => mockFunnelcakeClient.getVideosByAuthors(
-                authors: any(named: 'authors'),
-                limit: any(named: 'limit'),
-                offset: any(named: 'offset'),
-                before: any(named: 'before'),
-              ),
-            ).thenAnswer((invocation) async {
-              final authors =
-                  invocation.namedArguments[#authors]! as List<String>;
-              chunkSizes.add(authors.length);
-              final videos = authors.length == 200
-                  ? [followedVideo]
-                  : [badgeVideo];
-              return RecentVideosResponse(
-                videos: videos,
-                serverItemCount: videos.length,
-                hasMore: false,
-              );
-            });
-            final repositoryWithApi = VideosRepository(
-              nostrClient: mockNostrClient,
-              funnelcakeApiClient: mockFunnelcakeClient,
-            );
-
-            final result = await repositoryWithApi.getHomeFeedVideos(
-              authors: ['followed-user'],
-              badgeAuthors: [
-                for (var i = 0; i < 205; i++)
-                  i.toRadixString(16).padLeft(64, '0'),
-              ],
-              userPubkey: 'my-pubkey',
-            );
-
-            expect(
-              result.videos.map((video) => video.id),
-              containsAll(['event-1', 'event-2']),
-            );
-            expect(result.videos, hasLength(2));
-            expect(chunkSizes, containsAll([200, 5]));
-          },
-        );
 
         test(
           'preserves the Funnelcake page order for the Following feed',
