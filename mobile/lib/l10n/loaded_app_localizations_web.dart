@@ -1,6 +1,7 @@
 // ABOUTME: Web builds: every locale but English is a deferred library, fetched
-// ABOUTME: on first use and cached here so later lookups are synchronous.
+// ABOUTME: on demand and cached here so later lookups are synchronous.
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/l10n/generated/app_localizations_en.dart';
@@ -12,16 +13,41 @@ import 'package:openvine/l10n/generated/app_localizations_en.dart';
 /// and the most common UI language, so most visitors fetch no extra file.
 final Map<String, AppLocalizations> _loaded = {'en': AppLocalizationsEn()};
 
+/// Downloads in flight, keyed by language code, so concurrent requests for one
+/// locale share a single fetch.
+final Map<String, Future<void>> _pending = {};
+
+/// Fetches a locale's deferred library; the generated lookup does exactly that.
+@visibleForTesting
+Future<AppLocalizations> Function(Locale locale) loadDeferredAppLocalizations =
+    lookupAppLocalizations;
+
 /// The localizations for [locale] once they are loaded, or `null` while its
 /// deferred library has not been fetched yet.
 AppLocalizations? loadedAppLocalizations(Locale locale) =>
     _loaded[locale.languageCode];
 
-/// Records localizations fetched asynchronously for [locale], so the next
-/// lookup for it resolves synchronously.
-void rememberLoadedAppLocalizations(
-  Locale locale,
-  AppLocalizations localizations,
-) {
-  _loaded[locale.languageCode] = localizations;
+/// Fetches [locale]'s deferred library unless it is already loaded, so that
+/// [loadedAppLocalizations] returns it from then on.
+///
+/// Throws whatever the fetch throws; a failed fetch is not cached, so the next
+/// call retries it.
+Future<void> ensureAppLocalizationsLoaded(Locale locale) {
+  final languageCode = locale.languageCode;
+  if (_loaded.containsKey(languageCode)) return SynchronousFuture<void>(null);
+  return _pending[languageCode] ??= loadDeferredAppLocalizations(locale)
+      .then<void>((localizations) => _loaded[languageCode] = localizations)
+      // A block body, not `=> _pending.remove(...)`: that returns this very
+      // future, and whenComplete would then wait for itself forever.
+      .whenComplete(() {
+        _pending.remove(languageCode);
+      });
+}
+
+/// Forgets every fetched locale except English.
+@visibleForTesting
+void resetLoadedAppLocalizations() {
+  _loaded.removeWhere((languageCode, _) => languageCode != 'en');
+  _pending.clear();
+  loadDeferredAppLocalizations = lookupAppLocalizations;
 }

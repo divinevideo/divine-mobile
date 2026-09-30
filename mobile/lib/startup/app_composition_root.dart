@@ -106,6 +106,7 @@ class AppCompositionRoot extends ConsumerWidget {
                 localePreferenceService: LocalePreferenceService(
                   sharedPreferences: ref.read(sharedPreferencesProvider),
                 ),
+                preloadLocale: preloadAppUiLocalizationsFor,
               ),
             ),
             BlocProvider.value(value: ref.read(appearanceCubitProvider)),

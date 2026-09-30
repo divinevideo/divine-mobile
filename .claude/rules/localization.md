@@ -172,9 +172,9 @@ expect(find.text('Select the audio segment for your video'), findsOneWidget);
 
 Deferral changes nothing outside the web. Native builds and tests compile every locale in, and `appLocalizationsDelegates` registers a delegate (`lib/l10n/l10n.dart`) that returns the locale synchronously wherever it is already available (`lib/l10n/loaded_app_localizations.dart` picks the native or web implementation). That is what keeps a `Localizations` widget painting translated text in its first frame, and `lookupAppLocalizations` and `currentAppL10n` usable without awaiting. The generated delegate and lookup always wait for the deferred library, so nothing outside `l10n.dart` may register or call them; `test/l10n/l10n_test.dart` pins that for `lib`.
 
-On the web a context-less `lookupAppLocalizations` for a locale that has not rendered yet returns English.
+On the web a context-less `lookupAppLocalizations` for a locale that has not been downloaded returns English. Context-less services capture their strings when they are built, so the language must be loaded before any of them exists: startup awaits `preloadAppUiLocalizations` right after `SharedPreferences` (`app_bootstrap.dart`), and `LocaleCubit` downloads a newly chosen language before it emits it. Anything that reads strings without a `BuildContext` must run after one of those. The one gap left is a device language change while the app follows the device: until the UI has downloaded the new language, context-less reads return English.
 
-`analysis_options.yaml` excludes `**/l10n/**`, so neither `lib/l10n/` nor `test/l10n/` is covered by `flutter analyze lib test`; analyze files there by path (`dart analyze lib/l10n/l10n.dart`).
+`analysis_options.yaml` excludes `**/l10n/**`, which in practice drops `lib/l10n/` from `flutter analyze lib` and CI's Analyze job (`test/l10n/` is still analyzed); analyze files there by path (`dart analyze lib/l10n/l10n.dart`).
 
 ## Key Files
 

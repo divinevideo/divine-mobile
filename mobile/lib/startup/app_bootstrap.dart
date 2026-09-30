@@ -22,6 +22,7 @@ import 'package:openvine/bootstrap/shorebird_licenses.dart';
 import 'package:openvine/config/screenshot_mode.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/features/app/startup/startup_phase.dart';
+import 'package:openvine/l10n/current_app_l10n.dart';
 import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/notifications/notification_tap_router.dart';
 import 'package:openvine/notifications/services/notification_refresh_coordinator.dart';
@@ -460,6 +461,11 @@ Future<void> startOpenVineApp({
   startupPerformance.startPhase('shared_preferences');
   final sharedPreferences = await SharedPreferences.getInstance();
   startupPerformance.completePhase('shared_preferences');
+
+  // On the web every UI language but English is downloaded on demand. Fetch
+  // the one the UI will render in before any context-less service can capture
+  // strings through currentAppL10n; a no-op on native builds.
+  await preloadAppUiLocalizations(sharedPreferences);
 
   // Load package info for version checking (non-blocking, fast).
   final packageInfo = await PackageInfo.fromPlatform();

@@ -1,6 +1,7 @@
 // ABOUTME: Native and test builds: every locale is compiled in, so the app
 // ABOUTME: localizations resolve synchronously, exactly as before deferral.
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/l10n/generated/app_localizations_am.dart';
@@ -70,11 +71,8 @@ AppLocalizations? loadedAppLocalizations(Locale locale) =>
       ),
     };
 
-/// Records localizations fetched asynchronously for [locale].
-void rememberLoadedAppLocalizations(
-  Locale locale,
-  AppLocalizations localizations,
-) {
-  // Intentional no-op: native builds never load a locale asynchronously, so
-  // there is nothing to remember.
-}
+/// Makes [locale] available to [loadedAppLocalizations].
+///
+/// Completes immediately: native builds and tests compile every locale in.
+Future<void> ensureAppLocalizationsLoaded(Locale locale) =>
+    SynchronousFuture<void>(null);

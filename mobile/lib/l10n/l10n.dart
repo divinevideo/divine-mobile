@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart' as framework;
 import 'package:material_ui/material_ui.dart' show GlobalMaterialLocalizations;
-import 'package:openvine/l10n/generated/app_localizations.dart' as generated;
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/l10n/loaded_app_localizations.dart';
 
@@ -20,10 +19,10 @@ extension AppLocalizationsX on BuildContext {
 /// This one does not: native builds and tests compile every locale in and
 /// resolve it immediately.
 ///
-/// On the web a locale other than English is fetched the first time the app
-/// renders in it. Until then this returns English, the fallback the app shows
-/// for any unsupported locale too; that only affects a context-less caller
-/// running before the UI has loaded its locale.
+/// On the web a locale other than English is a deferred library, and until it
+/// has been downloaded this returns English. Startup downloads the UI language
+/// before any context-less caller exists (`preloadAppUiLocalizations`), and
+/// `LocaleCubit` downloads a newly chosen one before switching to it.
 AppLocalizations lookupAppLocalizations(Locale locale) =>
     loadedAppLocalizations(locale) ??
     loadedAppLocalizations(const Locale('en'))!;
@@ -70,10 +69,9 @@ class _AppLocalizationsLoader extends LocalizationsDelegate<AppLocalizations> {
   Future<AppLocalizations> load(Locale locale) {
     final loaded = loadedAppLocalizations(locale);
     if (loaded != null) return SynchronousFuture(loaded);
-    return generated.lookupAppLocalizations(locale).then((localizations) {
-      rememberLoadedAppLocalizations(locale, localizations);
-      return localizations;
-    });
+    return ensureAppLocalizationsLoaded(
+      locale,
+    ).then((_) => loadedAppLocalizations(locale)!);
   }
 
   @override
