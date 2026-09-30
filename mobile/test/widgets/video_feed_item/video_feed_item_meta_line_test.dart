@@ -50,6 +50,7 @@ String _metaLine(WidgetTester tester) => tester
 
 VideoEvent _video({
   String pubkey = _authorPubkey,
+  String authorName = 'Kayl',
   Map<String, String> rawTags = const {},
   int? createdAt,
   String? publishedAt,
@@ -63,6 +64,7 @@ VideoEvent _video({
     timestamp: DateTime.fromMillisecondsSinceEpoch(at * 1000, isUtc: true),
     rawTags: rawTags,
     publishedAt: publishedAt,
+    authorName: authorName,
   );
 }
 
@@ -173,26 +175,25 @@ void main() {
         StatsVisibilityPreferences.showPublishedDateKey: true,
       });
       final prefs = await SharedPreferences.getInstance();
-      await pump(
-        tester,
-        video: _video(rawTags: {'views': '50000'}, createdAt: 1735689600),
-        authorTotalLoops: 23200000,
-        prefs: prefs,
-      );
+      await withClock(Clock(() => DateTime.utc(2026, 9, 30)), () async {
+        await pump(
+          tester,
+          video: _video(rawTags: {'views': '3'}, createdAt: 1790726400),
+          authorTotalLoops: 78600,
+          prefs: prefs,
+        );
+      });
 
       final line = tester.widget<Text>(
         find.byKey(const Key('video_meta_line')),
       );
       final content = _metaLine(tester);
-      expect(content, contains('23.2M total loops'));
-      expect(content, contains('50K video loops'));
-      expect(content, contains('1/1/2025'));
+      expect(content, contains("78.6K Kayl's loops"));
+      expect(content, contains("3 this video's loops"));
+      expect(content, contains('Sep 30'));
       expect(content, contains('\u2009·\u2009'));
-      expect(content.indexOf('total'), lessThan(content.indexOf('video')));
-      expect(
-        content.indexOf('video'),
-        lessThan(content.indexOf('1/1/2025')),
-      );
+      expect(content.indexOf('Kayl'), lessThan(content.indexOf('video')));
+      expect(content.indexOf('video'), lessThan(content.indexOf('Sep 30')));
       expect(line.maxLines, 1);
       final paragraph = tester.renderObject<RenderParagraph>(
         find.descendant(
@@ -205,6 +206,12 @@ void main() {
         isFalse,
         reason:
             'available=${paragraph.constraints.maxWidth}, content=${paragraph.getMaxIntrinsicWidth(1000)}',
+      );
+      expect(
+        tester.getRect(find.byKey(const Key('video_meta_line'))).right,
+        lessThanOrEqualTo(
+          tester.getRect(find.byType(VideoOverlayActionColumn)).left,
+        ),
       );
     });
 
@@ -226,7 +233,7 @@ void main() {
         onAuthorStatsLookup: () => lookups++,
       );
 
-      expect(_metaLine(tester), '50K video loops');
+      expect(_metaLine(tester), "50K this video's loops");
       expect(lookups, 0);
     });
 
@@ -247,7 +254,7 @@ void main() {
 
       final content = _metaLine(tester);
       expect(content, _l10n(tester).videoOverlayVideoLoops('1', 1));
-      expect(content, '1 video loop');
+      expect(content, "1 this video's loop");
     });
 
     testWidgets('uses the singular for a creator total of one loop', (
@@ -266,7 +273,7 @@ void main() {
         prefs: prefs,
       );
 
-      expect(_metaLine(tester), startsWith('1 total loop\u2009'));
+      expect(_metaLine(tester), startsWith("1 Kayl's loop\u2009"));
     });
 
     testWidgets('shows only the publish date when it alone is enabled', (
@@ -385,11 +392,66 @@ void main() {
         prefs: prefs,
       );
 
-      final line = tester.widget<Text>(
-        find.byKey(const Key('video_meta_line')),
+      final line = find.byKey(const Key('video_meta_line'));
+      expect(tester.widget<Row>(line).mainAxisSize, MainAxisSize.min);
+      expect(
+        find.descendant(of: line, matching: find.text('1/1/2025')),
+        findsOneWidget,
       );
-      expect(line.maxLines, 1);
-      expect(line.overflow, TextOverflow.ellipsis);
+      expect(
+        tester.getRect(line).right,
+        lessThanOrEqualTo(
+          tester.getRect(find.byType(VideoOverlayActionColumn)).left,
+        ),
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('keeps the video count and date visible for a long name', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(393, 852);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: true,
+        StatsVisibilityPreferences.showVideoLoopsKey: true,
+        StatsVisibilityPreferences.showPublishedDateKey: true,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await withClock(Clock(() => DateTime.utc(2026, 9, 30)), () async {
+        await pump(
+          tester,
+          video: _video(
+            authorName: 'AnExtraordinarilyLongCreatorName',
+            rawTags: {'views': '3'},
+            createdAt: 1790726400,
+          ),
+          authorTotalLoops: 78600,
+          prefs: prefs,
+        );
+      });
+
+      final line = find.byKey(const Key('video_meta_line'));
+      expect(tester.widget<Row>(line).mainAxisSize, MainAxisSize.min);
+      expect(
+        find.descendant(of: line, matching: find.text("3 this video's loops")),
+        findsOneWidget,
+      );
+      final videoCount = tester.renderObject<RenderParagraph>(
+        find.descendant(
+          of: find.text("3 this video's loops"),
+          matching: find.byType(RichText),
+        ),
+      );
+      expect(videoCount.didExceedMaxLines, isFalse);
+      expect(
+        find.descendant(of: line, matching: find.text('Sep 30')),
+        findsOneWidget,
+      );
       expect(tester.takeException(), isNull);
     });
 
@@ -418,7 +480,9 @@ void main() {
       await tester.runAsync(() => settings.setShowVideoLoops(true));
       await tester.pump();
       expect(
-        find.textContaining('23.2M total loops\u2009·\u200950K video loops'),
+        find.textContaining(
+          "23.2M Kayl's loops\u2009·\u200950K this video's loops",
+        ),
         findsOneWidget,
       );
       await tester.runAsync(() => settings.setShowPublishedDate(true));
@@ -426,8 +490,8 @@ void main() {
       expect(find.textContaining('1/1/2025'), findsOneWidget);
       await tester.runAsync(() => settings.setShowTotalLoops(false));
       await tester.pump();
-      expect(find.textContaining('total'), findsNothing);
-      expect(find.textContaining('50K video loops'), findsOneWidget);
+      expect(find.textContaining("Kayl's loops"), findsNothing);
+      expect(find.textContaining("50K this video's loops"), findsOneWidget);
     });
 
     testWidgets('shows OG Beta Tester for an eligible non-team member', (
@@ -605,6 +669,10 @@ void main() {
         reason: 'the labelled node must be the one that opens the profile',
       );
       expect(data.flagsCollection.isButton, isTrue);
+      expect(
+        tester.getRect(find.bySemanticsIdentifier('video_author_name')).width,
+        lessThan(200),
+      );
       handle.dispose();
     });
   });

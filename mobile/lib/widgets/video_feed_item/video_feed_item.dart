@@ -288,7 +288,7 @@ class VideoOverlayActions extends ConsumerWidget {
         Positioned(
           bottom: bottomOffset,
           left: 16,
-          right: 80, // Leave space for action buttons
+          right: 68, // Leave space for action buttons
           child: AnimatedOpacity(
             opacity: isActive ? 1.0 : 0.0,
             duration: const Duration(milliseconds: 200),
@@ -485,6 +485,7 @@ class VideoOverlayActions extends ConsumerWidget {
                                             ),
                                             _VideoCardMetaLine(
                                               authorPubkey: authorPubkey,
+                                              authorName: displayName,
                                               video: video,
                                             ),
                                           ],
@@ -687,9 +688,14 @@ class VideoOverlayActions extends ConsumerWidget {
 
 /// Viewer-selected creator total, video loops, and publish date under the name.
 class _VideoCardMetaLine extends ConsumerWidget {
-  const _VideoCardMetaLine({required this.authorPubkey, required this.video});
+  const _VideoCardMetaLine({
+    required this.authorPubkey,
+    required this.authorName,
+    required this.video,
+  });
 
   final String authorPubkey;
+  final String authorName;
   final VideoEvent? video;
 
   @override
@@ -706,6 +712,7 @@ class _VideoCardMetaLine extends ConsumerWidget {
         }
         return _VideoMetaLineContent(
           authorPubkey: authorPubkey,
+          authorName: authorName,
           video: video,
           showTotalLoops: statsVisibility.showTotalLoops,
           showVideoLoops: statsVisibility.showVideoLoops,
@@ -719,6 +726,7 @@ class _VideoCardMetaLine extends ConsumerWidget {
 class _VideoMetaLineContent extends ConsumerWidget {
   const _VideoMetaLineContent({
     required this.authorPubkey,
+    required this.authorName,
     required this.video,
     required this.showTotalLoops,
     required this.showVideoLoops,
@@ -726,6 +734,7 @@ class _VideoMetaLineContent extends ConsumerWidget {
   });
 
   final String authorPubkey;
+  final String authorName;
   final VideoEvent? video;
   final bool showTotalLoops;
   final bool showVideoLoops;
@@ -768,6 +777,7 @@ class _VideoMetaLineContent extends ConsumerWidget {
           text: context.l10n.videoOverlayTotalLoops(
             compactTotal!,
             totalLoops,
+            authorName,
           ),
           count: compactTotal,
         ),
@@ -807,37 +817,77 @@ class _VideoMetaLineContent extends ConsumerWidget {
       color: VineTheme.whiteText,
       fontWeight: FontWeight.w600,
     );
-    final spans = <InlineSpan>[];
-    for (final part in parts) {
-      if (spans.isNotEmpty) {
-        spans.add(
-          TextSpan(
-            text: '\u2009·\u2009',
-            style: fieldStyle.copyWith(
-              color: VineTheme.whiteText.withValues(alpha: 0.5),
-            ),
-          ),
-        );
-      }
+    final separator = TextSpan(
+      text: '\u2009·\u2009',
+      style: fieldStyle.copyWith(
+        color: VineTheme.whiteText.withValues(alpha: 0.5),
+      ),
+    );
+    TextSpan fieldSpan(({String text, String? count}) part) {
       final count = part.count;
       final countOffset = count == null ? -1 : part.text.indexOf(count);
       if (countOffset < 0) {
-        spans.add(TextSpan(text: part.text));
-      } else {
-        spans.add(TextSpan(text: part.text.substring(0, countOffset)));
-        spans.add(TextSpan(text: count, style: countStyle));
-        spans.add(
-          TextSpan(text: part.text.substring(countOffset + count!.length)),
-        );
+        return TextSpan(text: part.text);
       }
+      return TextSpan(
+        children: [
+          TextSpan(text: part.text.substring(0, countOffset)),
+          TextSpan(text: count, style: countStyle),
+          TextSpan(text: part.text.substring(countOffset + count!.length)),
+        ],
+      );
     }
 
-    return Text.rich(
-      TextSpan(children: spans),
-      key: const Key('video_meta_line'),
-      style: fieldStyle,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
+    final fieldSpans = parts.map(fieldSpan).toList();
+    final spans = <InlineSpan>[
+      for (var index = 0; index < fieldSpans.length; index++) ...[
+        if (index > 0) separator,
+        fieldSpans[index],
+      ],
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final text = TextSpan(style: fieldStyle, children: spans);
+        final painter = TextPainter(
+          text: text,
+          textDirection: Directionality.of(context),
+          textScaler: MediaQuery.textScalerOf(context),
+          maxLines: 1,
+        )..layout();
+        final fitsOnOneLine = painter.width <= constraints.maxWidth;
+        painter.dispose();
+        if (fitsOnOneLine) {
+          return Text.rich(
+            text,
+            key: const Key('video_meta_line'),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          );
+        }
+
+        return Row(
+          key: const Key('video_meta_line'),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var index = 0; index < fieldSpans.length; index++) ...[
+              if (index > 0) Text.rich(separator, style: fieldStyle),
+              if (parts[index].count == null)
+                Text.rich(fieldSpans[index], style: fieldStyle)
+              else
+                Flexible(
+                  flex: index == 0 && fieldSpans.length > 1 ? 1 : 2,
+                  child: Text.rich(
+                    fieldSpans[index],
+                    style: fieldStyle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+            ],
+          ],
+        );
+      },
     );
   }
 }
