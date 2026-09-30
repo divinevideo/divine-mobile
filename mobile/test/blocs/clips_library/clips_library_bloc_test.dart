@@ -281,6 +281,64 @@ void main() {
         ],
       );
 
+      test('reads the library again once a load in flight lands', () async {
+        final firstRead = Completer<List<DivineVideoClip>>();
+        var reads = 0;
+        when(() => mockClipLibraryService.getAllClips()).thenAnswer((_) {
+          reads++;
+          if (reads == 1) return firstRead.future;
+          return Future.value([
+            createClip(id: 'earlier'),
+            createClip(id: 'new take'),
+          ]);
+        });
+        final bloc = createBloc()..add(const ClipsLibraryLoadRequested());
+        addTearDown(bloc.close);
+        await pumpEventQueue();
+        expect(bloc.state.status, ClipsLibraryStatus.loading);
+
+        // The load read the library before the new take was saved.
+        bloc.add(const ClipsLibraryClipsChanged());
+        await pumpEventQueue();
+        firstRead.complete([createClip(id: 'earlier')]);
+        await pumpEventQueue();
+
+        expect(
+          bloc.state.sortedClips.map((clip) => clip.id),
+          contains('new take'),
+        );
+      });
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        'shows a change that landed in the trash once the user is back',
+        setUp: () {
+          when(() => mockClipLibraryService.getAllClips()).thenAnswer(
+            (_) async => [
+              createClip(id: 'keyed').copyWith(
+                video: EditorVideo.file('/path/to/keyed.mp4'),
+              ),
+            ],
+          );
+        },
+        build: createBloc,
+        seed: () => ClipsLibraryState(
+          status: ClipsLibraryStatus.trashLoaded,
+          filter: const ClipLibraryTrashFilter(),
+          clips: [createClip(id: 'keyed')],
+        ),
+        act: (bloc) async {
+          bloc.add(const ClipsLibraryClipsChanged());
+          await pumpEventQueue();
+          bloc.add(const ClipsLibraryFilterChanged(ClipLibraryAllFilter()));
+        },
+        verify: (bloc) {
+          expect(
+            bloc.state.sortedClips.single.video?.file?.path,
+            '/path/to/keyed.mp4',
+          );
+        },
+      );
+
       blocTest<ClipsLibraryBloc, ClipsLibraryState>(
         'leaves a library that has not loaded yet to its own load',
         build: createBloc,
