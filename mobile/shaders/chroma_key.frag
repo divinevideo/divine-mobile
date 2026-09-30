@@ -29,6 +29,9 @@ uniform vec2 uKeyDir;
 
 uniform float uSimilarity;
 uniform float uSmoothness;
+
+// Already scaled by (1 - uLumaWeight), as the renderers do, so a neutral key
+// does not despill.
 uniform float uSpill;
 
 // The key colour's luma, and how much brightness counts toward the matte:

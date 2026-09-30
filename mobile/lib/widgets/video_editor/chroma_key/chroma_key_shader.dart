@@ -96,14 +96,11 @@ abstract class ChromaKeyShader {
       ..setFloat(5, projection.directionCr)
       ..setFloat(6, key.similarity)
       ..setFloat(7, key.smoothness)
-      ..setFloat(8, key.spill)
+      ..setFloat(8, projection.effectiveSpill(key.spill))
       ..setFloat(
         9,
         ChromaKeyDetector.lumaOf(key.color.r, key.color.g, key.color.b),
       )
-      ..setFloat(
-        10,
-        ChromaKeyDetector.lumaWeightOf(projection.cb, projection.cr),
-      );
+      ..setFloat(10, projection.lumaWeight);
   }
 }
