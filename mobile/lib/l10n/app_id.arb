@@ -3006,7 +3006,6 @@
     "peopleListsViewProfileHint": "Lihat profil untuk {name}",
     "settingsGeneralTitle": "Pengaturan Umum",
     "settingsContentSafetyTitle": "Konten & Keamanan",
-    "settingsPrivacyTitle": "Privasi",
     "settingsPrivacySubtitle": "Pilih data penggunaan yang kamu bagikan",
     "privacySettingsAnalyticsSection": "ANALITIK",
     "privacySettingsShareUsage": "Bagikan data penggunaan",
@@ -3227,8 +3226,6 @@
     "nostrSettingsCouldNotRemoveKeys": "Gagal menghapus akun ini dari perangkat ini. Coba lagi.",
     "nostrSettingsDeleteAccount": "Hapus Akun dan Data",
     "nostrSettingsDeleteAccountSubtitle": "Mengirim permintaan penghapusan untuk kontenmu dan mengeluarkanmu dari akun di perangkat ini. Relay, klien, indeks pencarian, dan perangkat lain yang masih masuk mungkin menyimpan salinan.",
-    "safetySettingsWhatYouSee": "YANG KAMU LIHAT",
-    "safetySettingsWhatYouPublish": "YANG KAMU PUBLIKASIKAN",
     "listPersonCount": "{count, plural, =1{1 orang} other{{count} orang}}",
     "@listPersonCount": {
         "placeholders": {

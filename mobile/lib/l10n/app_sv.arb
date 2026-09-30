@@ -3006,7 +3006,6 @@
     "peopleListsViewProfileHint": "Visa profil för {name}",
     "settingsGeneralTitle": "Allmänna inställningar",
     "settingsContentSafetyTitle": "Innehåll och säkerhet",
-    "settingsPrivacyTitle": "Integritet",
     "settingsPrivacySubtitle": "Välj vilken användningsdata du delar",
     "privacySettingsAnalyticsSection": "STATISTIK",
     "privacySettingsShareUsage": "Dela användningsdata",
@@ -3227,8 +3226,6 @@
     "nostrSettingsCouldNotRemoveKeys": "Kunde inte ta bort det här kontot från enheten. Försök igen.",
     "nostrSettingsDeleteAccount": "Radera konto och data",
     "nostrSettingsDeleteAccountSubtitle": "Skickar raderingsförfrågningar för ditt innehåll och loggar ut dig på den här enheten. Reläer, klienter, sökindex och andra inloggade enheter kan behålla kopior.",
-    "safetySettingsWhatYouSee": "VAD DU SER",
-    "safetySettingsWhatYouPublish": "VAD DU PUBLICERAR",
     "listPersonCount": "{count, plural, =1{1 person} other{{count} personer}}",
     "@listPersonCount": {
         "placeholders": {

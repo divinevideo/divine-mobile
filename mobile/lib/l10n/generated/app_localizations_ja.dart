@@ -235,9 +235,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsContentSafetyTitle => 'コンテンツと安全';
 
   @override
-  String get settingsPrivacyTitle => 'プライバシー';
-
-  @override
   String get settingsPrivacySubtitle => '共有する利用データを選択できます';
 
   @override
@@ -2652,12 +2649,6 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get notificationSettingsAboutDescription =>
       '通知は Nostr プロトコルで動いてるよ。リアルタイム更新は Nostr リレーへの接続に依存するから、遅れることもあるよ。';
-
-  @override
-  String get safetySettingsWhatYouSee => 'あなたが見るもの';
-
-  @override
-  String get safetySettingsWhatYouPublish => 'あなたが公開するもの';
 
   @override
   String get safetySettingsShowDivineHostedOnly => 'Divine ホスト動画だけ表示';

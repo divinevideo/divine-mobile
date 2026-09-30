@@ -14,8 +14,6 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
-import 'package:openvine/screens/content_filters_screen.dart';
-import 'package:openvine/screens/settings/account_content_labels_tile.dart';
 import 'package:openvine/utils/dead_image_hosts.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -25,10 +23,7 @@ import 'package:openvine/widgets/vine_cached_image.dart';
 /// Page: bridges the seven moderation services + repositories into
 /// [SafetySettingsCubit].
 class SafetySettingsScreen extends ConsumerWidget {
-  const SafetySettingsScreen({this.legacySections = true, super.key});
-
-  /// Existing direct entries retain their original layout for compatibility.
-  final bool legacySections;
+  const SafetySettingsScreen({super.key});
 
   /// Route name for this screen.
   static const routeName = 'safety-settings';
@@ -85,7 +80,7 @@ class SafetySettingsScreen extends ConsumerWidget {
         );
         return cubit;
       },
-      child: SafetySettingsView(legacySections: legacySections),
+      child: const SafetySettingsView(),
     );
   }
 }
@@ -93,9 +88,7 @@ class SafetySettingsScreen extends ConsumerWidget {
 /// View: renders the moderation hub from the Cubit state.
 class SafetySettingsView extends StatelessWidget {
   @visibleForTesting
-  const SafetySettingsView({this.legacySections = true, super.key});
-
-  final bool legacySections;
+  const SafetySettingsView({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -117,10 +110,6 @@ class SafetySettingsView extends StatelessWidget {
               }
               return ListView(
                 children: [
-                  if (legacySections) ...[
-                    DivineSectionHeader(context.l10n.safetySettingsWhatYouSee),
-                    const _ContentFiltersTile(),
-                  ],
                   DivineSectionHeader(
                     context.l10n.safetySettingsAgeVerification,
                   ),
@@ -134,47 +123,12 @@ class SafetySettingsView extends StatelessWidget {
                   const _CustomLabelersSection(),
                   DivineSectionHeader(context.l10n.safetySettingsBlockedUsers),
                   const _BlockedUsersSection(),
-                  if (legacySections) ...[
-                    DivineSectionHeader(
-                      context.l10n.safetySettingsWhatYouPublish,
-                    ),
-                    const AccountContentLabelsTile(),
-                  ],
                 ],
               );
             },
           ),
         ),
       ),
-    );
-  }
-}
-
-class _ContentFiltersTile extends StatelessWidget {
-  const _ContentFiltersTile();
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: const DivineIcon(
-        icon: DivineIconName.funnelSimple,
-        color: VineTheme.vineGreen,
-      ),
-      title: Text(
-        context.l10n.contentPreferencesContentFilters,
-        style: VineTheme.bodyLargeFont(color: context.vineColors.primaryText),
-      ),
-      subtitle: Text(
-        context.l10n.contentPreferencesContentFiltersSubtitle,
-        style: VineTheme.bodyMediumFont(
-          color: context.vineColors.secondaryText,
-        ),
-      ),
-      trailing: DivineIcon(
-        icon: DivineIconName.caretRight,
-        color: context.vineColors.mutedText,
-      ),
-      onTap: () => context.push(ContentFiltersScreen.path),
     );
   }
 }

@@ -314,9 +314,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get settingsContentSafetyTitle => 'Treści i bezpieczeństwo';
 
   @override
-  String get settingsPrivacyTitle => 'Prywatność';
-
-  @override
   String get settingsPrivacySubtitle =>
       'Wybierz, jakie dane o użyciu udostępniasz';
 
@@ -2946,12 +2943,6 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get notificationSettingsAboutDescription =>
       'Powiadomienia są zasilane przez protokół Nostr. Aktualizacje w czasie rzeczywistym zależą od twojego połączenia z przekaźnikami Nostr. Niektóre powiadomienia mogą mieć opóźnienia.';
-
-  @override
-  String get safetySettingsWhatYouSee => 'CO WIDZISZ';
-
-  @override
-  String get safetySettingsWhatYouPublish => 'CO PUBLIKUJESZ';
 
   @override
   String get safetySettingsShowDivineHostedOnly =>

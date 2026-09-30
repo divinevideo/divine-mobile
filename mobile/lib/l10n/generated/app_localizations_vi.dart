@@ -275,9 +275,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get settingsContentSafetyTitle => 'Nội dung & An toàn';
 
   @override
-  String get settingsPrivacyTitle => 'Quyền riêng tư';
-
-  @override
   String get settingsPrivacySubtitle => 'Chọn dữ liệu sử dụng mà bạn chia sẻ';
 
   @override
@@ -2818,12 +2815,6 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get notificationSettingsAboutDescription =>
       'Thông báo chạy trên giao thức Nostr. Cập nhật thời gian thực phụ thuộc vào kết nối của bạn tới các relay Nostr. Một số thông báo có thể đến chậm.';
-
-  @override
-  String get safetySettingsWhatYouSee => 'NHỮNG GÌ BẠN THẤY';
-
-  @override
-  String get safetySettingsWhatYouPublish => 'NHỮNG GÌ BẠN ĐĂNG';
 
   @override
   String get safetySettingsShowDivineHostedOnly =>

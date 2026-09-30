@@ -377,9 +377,7 @@ void main() {
       tester,
     ) async {
       await setStandardSurface(tester);
-      await tester.pumpWidget(
-        wrap(const SafetySettingsScreen(legacySections: false)),
-      );
+      await tester.pumpWidget(wrap(const SafetySettingsScreen()));
       await tester.pumpAndSettle();
       expect(find.text('Content & Safety'), findsOneWidget);
       expect(find.text('Only show Divine-hosted videos'), findsOneWidget);

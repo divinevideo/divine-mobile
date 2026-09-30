@@ -293,9 +293,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get settingsContentSafetyTitle => 'Innehåll och säkerhet';
 
   @override
-  String get settingsPrivacyTitle => 'Integritet';
-
-  @override
   String get settingsPrivacySubtitle => 'Välj vilken användningsdata du delar';
 
   @override
@@ -2841,12 +2838,6 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get notificationSettingsAboutDescription =>
       'Aviseringar drivs av Nostr-protokollet. Realtidsuppdateringar beror på din anslutning till Nostr-reler. Vissa aviseringar kan vara fördröjda.';
-
-  @override
-  String get safetySettingsWhatYouSee => 'VAD DU SER';
-
-  @override
-  String get safetySettingsWhatYouPublish => 'VAD DU PUBLICERAR';
 
   @override
   String get safetySettingsShowDivineHostedOnly =>

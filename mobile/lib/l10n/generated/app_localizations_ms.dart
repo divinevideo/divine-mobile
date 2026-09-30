@@ -274,9 +274,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get settingsContentSafetyTitle => 'Kandungan & Keselamatan';
 
   @override
-  String get settingsPrivacyTitle => 'Privasi';
-
-  @override
   String get settingsPrivacySubtitle =>
       'Pilih data penggunaan yang anda kongsi';
 
@@ -2832,12 +2829,6 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get notificationSettingsAboutDescription =>
       'Pemberitahuan dikuasakan oleh protokol Nostr. Kemas kini masa nyata bergantung pada sambungan anda ke relay Nostr. Sesetengah pemberitahuan mungkin lewat.';
-
-  @override
-  String get safetySettingsWhatYouSee => 'APA YANG ANDA LIHAT';
-
-  @override
-  String get safetySettingsWhatYouPublish => 'APA YANG ANDA TERBITKAN';
 
   @override
   String get safetySettingsShowDivineHostedOnly =>

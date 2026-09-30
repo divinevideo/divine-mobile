@@ -306,9 +306,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsContentSafetyTitle => 'Contenido y seguridad';
 
   @override
-  String get settingsPrivacyTitle => 'Privacidad';
-
-  @override
   String get settingsPrivacySubtitle => 'Elegí qué datos de uso compartís';
 
   @override
@@ -2876,12 +2873,6 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get notificationSettingsAboutDescription =>
       'Las notificaciones funcionan con el protocolo Nostr. Las actualizaciones en tiempo real dependen de tu conexión con los relays de Nostr. Algunas notificaciones pueden demorarse.';
-
-  @override
-  String get safetySettingsWhatYouSee => 'LO QUE VES';
-
-  @override
-  String get safetySettingsWhatYouPublish => 'LO QUE PUBLICÁS';
 
   @override
   String get safetySettingsShowDivineHostedOnly =>

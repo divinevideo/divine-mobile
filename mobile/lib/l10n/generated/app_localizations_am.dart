@@ -305,9 +305,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get settingsContentSafetyTitle => 'ይዘት እና ደህንነት';
 
   @override
-  String get settingsPrivacyTitle => 'ግላዊነት';
-
-  @override
   String get settingsPrivacySubtitle => 'የትኞቹን የአጠቃቀም ውሂብ እንደሚያጋሩ ይምረጡ';
 
   @override
@@ -2787,12 +2784,6 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get notificationSettingsAboutDescription =>
       'ማሳወቂያዎች የተጎላበተው በNostr ፕሮቶኮል ነው። የቅጽበታዊ ዝማኔዎች ከNostr ቅብብሎሽ ጋር ባለዎት ግንኙነት ይወሰናል። አንዳንድ ማሳወቂያዎች መዘግየቶች ሊኖራቸው ይችላል።';
-
-  @override
-  String get safetySettingsWhatYouSee => 'የሚያዩት';
-
-  @override
-  String get safetySettingsWhatYouPublish => 'የሚያትሙት';
 
   @override
   String get safetySettingsShowDivineHostedOnly =>

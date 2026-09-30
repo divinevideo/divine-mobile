@@ -3006,7 +3006,6 @@
     "peopleListsViewProfileHint": "Profil von {name} anzeigen",
     "settingsGeneralTitle": "Allgemeine Einstellungen",
     "settingsContentSafetyTitle": "Inhalte & Sicherheit",
-    "settingsPrivacyTitle": "Datenschutz",
     "settingsPrivacySubtitle": "Wähle, welche Nutzungsdaten du teilst",
     "privacySettingsAnalyticsSection": "ANALYTICS",
     "privacySettingsShareUsage": "Nutzungsdaten teilen",
@@ -3227,8 +3226,6 @@
     "nostrSettingsCouldNotRemoveKeys": "Dieses Konto konnte nicht von diesem Gerät entfernt werden. Versuch es nochmal.",
     "nostrSettingsDeleteAccount": "Konto und Daten löschen",
     "nostrSettingsDeleteAccountSubtitle": "Sendet Löschanfragen für deine Inhalte und meldet dich auf diesem Gerät ab. Relays, Clients, Suchindizes und andere angemeldete Geräte behalten möglicherweise Kopien.",
-    "safetySettingsWhatYouSee": "WAS DU SIEHST",
-    "safetySettingsWhatYouPublish": "WAS DU VERÖFFENTLICHST",
     "listPersonCount": "{count, plural, =1{1 Person} other{{count} Personen}}",
     "@listPersonCount": {
         "placeholders": {

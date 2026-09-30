@@ -291,9 +291,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settingsContentSafetyTitle => 'المحتوى والأمان';
 
   @override
-  String get settingsPrivacyTitle => 'الخصوصية';
-
-  @override
   String get settingsPrivacySubtitle =>
       'التحكم في بيانات الاستخدام التي تتم مشاركتها';
 
@@ -2833,12 +2830,6 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get notificationSettingsAboutDescription =>
       'الإشعارات مدعومة ببروتوكول Nostr. التحديثات الفورية تعتمد على اتصالك بمحولات Nostr. قد تواجه بعض الإشعارات تأخيرًا.';
-
-  @override
-  String get safetySettingsWhatYouSee => 'ما تراه';
-
-  @override
-  String get safetySettingsWhatYouPublish => 'ما تنشره';
 
   @override
   String get safetySettingsShowDivineHostedOnly =>

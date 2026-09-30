@@ -243,9 +243,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get settingsContentSafetyTitle => 'İçerik ve Güvenlik';
 
   @override
-  String get settingsPrivacyTitle => 'Gizlilik';
-
-  @override
   String get settingsPrivacySubtitle =>
       'Hangi kullanım verilerini paylaştığını seç';
 
@@ -2784,12 +2781,6 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get notificationSettingsAboutDescription =>
       'Bildirimler Nostr protokolüyle desteklenir. Gerçek zamanlı güncellemeler Nostr rölelerine olan bağlantına bağlıdır. Bazı bildirimler gecikebilir.';
-
-  @override
-  String get safetySettingsWhatYouSee => 'GÖRDÜKLERİN';
-
-  @override
-  String get safetySettingsWhatYouPublish => 'PAYLAŞTIKLARIN';
 
   @override
   String get safetySettingsShowDivineHostedOnly =>

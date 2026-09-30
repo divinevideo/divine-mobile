@@ -279,12 +279,12 @@ List<RouteBase> settingsRoutes(Ref ref) {
     GoRoute(
       path: SafetySettingsScreen.path,
       name: SafetySettingsScreen.routeName,
-      builder: (_, _) => const SafetySettingsScreen(legacySections: false),
+      builder: (_, _) => const SafetySettingsScreen(),
     ),
     GoRoute(
       path: PrivacySettingsScreen.path,
       name: PrivacySettingsScreen.routeName,
-      builder: (_, _) => const PrivacySettingsScreen(combined: true),
+      builder: (_, _) => const PrivacySettingsScreen(),
     ),
     GoRoute(
       path: ContentFiltersScreen.path,
