@@ -19,9 +19,12 @@ import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_recorder/video_recorder_flash_mode.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/models/video_recorder/video_recorder_state.dart';
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/services/video_recorder/camera/camera_base_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -51,6 +54,25 @@ const _measured = ChromaKeyDetection(
   coverage: 0.95,
   spread: 0.04,
 );
+
+class _RecordingCrashReporter implements CrashReporter {
+  final recordedErrors = <Object>[];
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stackTrace, {
+    String? reason,
+  }) async {
+    recordedErrors.add(error);
+  }
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+}
 
 void main() {
   late _MockCameraService cameraService;
@@ -749,7 +771,9 @@ void main() {
         verify(() => clipManager.releaseCapturedChromaKeyBakes()).called(1);
       });
 
-      test('bake a take once its post-processing is done', () async {
+      /// A chroma-key take whose stop ends its post-processing straight away,
+      /// so the recorder moves on to the take's bake, which runs [bake].
+      void stubChromaKeyTakeStop({required Future<void> Function() bake}) {
         stubStopReads();
         final recorded = _MockEditorVideo();
         // Post-processing fails straight away, which ends it just the same.
@@ -783,7 +807,38 @@ void main() {
         ).thenAnswer((_) async => true);
         when(
           () => clipManager.bakeRecordedTake('recorded'),
-        ).thenAnswer((_) async {});
+        ).thenAnswer((_) => bake());
+      }
+
+      test('report a failed bake to crash reporting', () async {
+        final originalReporter = detachedFailureReporter;
+        final reporter = _RecordingCrashReporter();
+        detachedFailureReporter = reporter;
+        addTearDown(() => detachedFailureReporter = originalReporter);
+        stubChromaKeyTakeStop(
+          bake: () async => throw StateError('the take is gone'),
+        );
+        final bloc = buildBloc()
+          ..emit(
+            chromaKeyState.copyWith(
+              recordingState: VideoRecorderState.recording,
+            ),
+          );
+        addTearDown(bloc.close);
+
+        bloc.add(const VideoRecorderRecordingStopRequested());
+        await pumpEventQueue();
+
+        // A broken invariant must reach crash reporting, not only the log.
+        expect(reporter.recordedErrors, hasLength(1));
+        expect(
+          (reporter.recordedErrors.single as Reportable<Object>).unwrap(),
+          isA<StateError>(),
+        );
+      });
+
+      test('bake a take once its post-processing is done', () async {
+        stubChromaKeyTakeStop(bake: () async {});
         final bloc = buildBloc()
           ..emit(
             chromaKeyState.copyWith(
