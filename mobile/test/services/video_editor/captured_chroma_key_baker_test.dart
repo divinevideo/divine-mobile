@@ -298,6 +298,7 @@ void main() {
       test('fails a later render instead of retrying it forever', () async {
         final firstAttempt = Completer<({EditorVideo video, String source})>();
         var attempts = 0;
+        var attemptsOfB = 0;
         final baker = CapturedChromaKeyBaker(
           render:
               ({required sourceClip, required chromaKey, required renderId}) {
@@ -305,7 +306,12 @@ void main() {
                 if (sourceClip.id == 'a' && attempts == 1) {
                   return firstAttempt.future;
                 }
-                if (sourceClip.id == 'b') throw StateError('render failed');
+                // Only the first try fails: a baker that wrongly retries it
+                // then resolves and fails this test, instead of looping
+                // forever and starving the test's own timeout.
+                if (sourceClip.id == 'b' && ++attemptsOfB == 1) {
+                  throw StateError('render failed');
+                }
                 return Future.value(_keyedFile(sourceClip));
               },
           extractPoster: _poster,
