@@ -371,9 +371,9 @@ class _AcceptedHoldersState extends ConsumerState<_AcceptedHolders> {
                   future: _subscriptions,
                   builder: (context, snapshot) {
                     if (snapshot.hasError) {
-                      return TextButton(
+                      return DivineButton(
                         onPressed: () => setState(() => _reload(repository)),
-                        child: Text(context.l10n.badgesLoadError),
+                        label: context.l10n.badgesLoadError,
                       );
                     }
                     final subscribed =
@@ -445,9 +445,9 @@ class _AcceptedHoldersState extends ConsumerState<_AcceptedHolders> {
             }
             if (snapshot.hasError) {
               return SliverToBoxAdapter(
-                child: TextButton(
+                child: DivineButton(
                   onPressed: () => setState(() => _reload(repository)),
-                  child: Text(context.l10n.badgesLoadError),
+                  label: context.l10n.badgesLoadError,
                 ),
               );
             }
