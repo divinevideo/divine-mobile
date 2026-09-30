@@ -2529,6 +2529,12 @@ void main() {
             rootEventKind: _testRootEventKind,
             rootEventAuthorPubkey: testRootAuthorPubkey,
           );
+          final beforeDelete = await repository.loadComments(
+            rootEventId: testRootEventId,
+            rootEventKind: _testRootEventKind,
+          );
+          expect(beforeDelete.commentCache.keys, equals([posted.id]));
+
           await repository.deleteComment(
             commentId: posted.id,
             rootEventId: testRootEventId,
@@ -2540,6 +2546,50 @@ void main() {
           );
 
           expect(loaded.comments, isEmpty);
+        },
+      );
+
+      test(
+        'keeps other recently posted comments when deleting without a root '
+        'event id',
+        () async {
+          var postedCommentCount = 0;
+          when(() => mockNostrClient.publishEvent(any())).thenAnswer((
+            inv,
+          ) async {
+            final event = inv.positionalArguments.first as Event;
+            if (event.kind == _commentKind) {
+              postedCommentCount++;
+              event.id = 'posted-comment-$postedCommentCount';
+            } else {
+              event.id = 'comment-deletion';
+            }
+            return PublishSuccess(event: event);
+          });
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
+
+          final deleted = await repository.postComment(
+            content: 'Deleted text',
+            rootEventId: testRootEventId,
+            rootEventKind: _testRootEventKind,
+            rootEventAuthorPubkey: testRootAuthorPubkey,
+          );
+          final kept = await repository.postComment(
+            content: 'Kept text',
+            rootEventId: testRootEventId,
+            rootEventKind: _testRootEventKind,
+            rootEventAuthorPubkey: testRootAuthorPubkey,
+          );
+          await repository.deleteComment(commentId: deleted.id);
+
+          final loaded = await repository.loadComments(
+            rootEventId: testRootEventId,
+            rootEventKind: _testRootEventKind,
+          );
+
+          expect(loaded.commentCache.keys, equals([kept.id]));
         },
       );
 
@@ -2581,9 +2631,10 @@ void main() {
           rootEventKind: _testRootEventKind,
         );
 
-        expect(loaded.comments.map((comment) => comment.content), [
-          'Edited text',
-        ]);
+        expect(
+          loaded.comments.map((comment) => comment.content),
+          equals(['Edited text']),
+        );
       });
     });
 
