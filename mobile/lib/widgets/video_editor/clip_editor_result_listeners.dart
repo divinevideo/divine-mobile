@@ -809,9 +809,10 @@ class _ClipLibraryImportResultListener extends StatelessWidget {
 /// Listens to [ClipEditorState.lastCapturedChromaKeyBakeResult] and says so
 /// when a clip recorded in chroma key mode could not be keyed.
 ///
-/// Success needs nothing here: the bloc has already swapped the clip files and
-/// committed the list to editor history, and the canvas reloads off the new
-/// files through the same player-sync listener a transform goes through.
+/// Success needs nothing here: the bloc has already swapped the clip files,
+/// the screen writes them into editor history as the session's starting
+/// state, and the canvas reloads off the new files through the same
+/// player-sync listener a transform goes through.
 class _CapturedChromaKeyBakeResultListener extends StatelessWidget {
   const _CapturedChromaKeyBakeResultListener({required this.child});
 
