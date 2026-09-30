@@ -11729,6 +11729,15 @@ class AppLocalizationsMs extends AppLocalizations {
   String get badgesTitle => 'Lencana';
 
   @override
+  String get badgeSubscribeAction => 'Langgan lencana';
+
+  @override
+  String get badgeSubscribedAction => 'Melanggan';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'Pemegang lencana yang menerima';
+
+  @override
   String get badgesLoadError => 'Tidak dapat memuatkan lencana';
 
   @override

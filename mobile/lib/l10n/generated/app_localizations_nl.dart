@@ -11780,6 +11780,15 @@ class AppLocalizationsNl extends AppLocalizations {
   String get badgesTitle => 'Badges';
 
   @override
+  String get badgeSubscribeAction => 'Badge volgen';
+
+  @override
+  String get badgeSubscribedAction => 'Volgend';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'Geaccepteerde badgehouders';
+
+  @override
   String get badgesLoadError => 'Badges konden niet geladen worden';
 
   @override

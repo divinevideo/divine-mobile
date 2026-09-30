@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/badges/badge_detail_cubit.dart';
+import 'package:openvine/blocs/my_following/my_following_bloc.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -16,6 +17,7 @@ import 'package:openvine/screens/badges/badge_award_screen.dart';
 import 'package:openvine/screens/badges/badge_delete_confirmation_sheet.dart';
 import 'package:openvine/screens/badges/badge_editor_screen.dart';
 import 'package:openvine/screens/badges/badge_revoke_confirmation_sheet.dart';
+import 'package:openvine/screens/badges/badge_videos_screen.dart';
 import 'package:openvine/screens/badges/badges_screen.dart';
 import 'package:openvine/screens/badges/widgets/badge_recipient_row.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -248,16 +250,28 @@ class _BadgeDetailBody extends StatelessWidget {
                               ),
                             ),
                           _BadgeActions(state: state),
-                          Padding(
-                            padding: const EdgeInsets.only(top: 20),
-                            child: Text(
-                              l10n.badgeDetailRecipientsTitle,
-                              style: VineTheme.titleSmallFont(
-                                color: context.vineColors.primaryText,
-                              ),
+                          DivineButton(
+                            label: l10n.profileVideosLabel,
+                            onPressed: () => context.push<void>(
+                              BadgeVideosScreen.pathFor(state.coordinate),
                             ),
                           ),
                         ],
+                      ),
+                    ),
+                    _AcceptedHolders(
+                      key: ObjectKey(detail),
+                      coordinate: state.coordinate,
+                    ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 20),
+                        child: Text(
+                          l10n.badgeDetailRecipientsTitle,
+                          style: VineTheme.titleSmallFont(
+                            color: context.vineColors.primaryText,
+                          ),
+                        ),
                       ),
                     ),
                     if (detail.recipients.isEmpty)
@@ -311,6 +325,157 @@ class _BadgeDetailBody extends StatelessWidget {
     );
     if (!(confirmed ?? false) || cubit.isClosed) return;
     await cubit.revokeAward(recipient.pubkey);
+  }
+}
+
+/// The complete accepted holder set, with individual follows kept separate
+/// from the account's badge subscription.
+class _AcceptedHolders extends ConsumerStatefulWidget {
+  const _AcceptedHolders({required this.coordinate, super.key});
+
+  final BadgeCoordinate coordinate;
+
+  @override
+  ConsumerState<_AcceptedHolders> createState() => _AcceptedHoldersState();
+}
+
+class _AcceptedHoldersState extends ConsumerState<_AcceptedHolders> {
+  Future<Set<String>>? _holders;
+  Future<Set<BadgeCoordinate>>? _subscriptions;
+  BadgeRepository? _repository;
+  bool _saving = false;
+
+  void _reload(BadgeRepository repository) {
+    _holders = repository.loadAcceptedHolders(widget.coordinate);
+    _subscriptions = ref.read(authServiceProvider).currentPublicKeyHex == null
+        ? null
+        : repository.loadSubscriptions();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final repository = ref.watch(badgeRepositoryProvider);
+    if (!identical(repository, _repository)) {
+      _repository = repository;
+      _reload(repository);
+    }
+    final signedIn = ref.watch(authServiceProvider).currentPublicKeyHex != null;
+    return SliverMainAxisGroup(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (signedIn)
+                FutureBuilder<Set<BadgeCoordinate>>(
+                  future: _subscriptions,
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return TextButton(
+                        onPressed: () => setState(() => _reload(repository)),
+                        child: Text(context.l10n.badgesLoadError),
+                      );
+                    }
+                    final subscribed =
+                        snapshot.data?.contains(widget.coordinate) ?? false;
+                    return DivineButton(
+                      label: subscribed
+                          ? context.l10n.badgeSubscribedAction
+                          : context.l10n.badgeSubscribeAction,
+                      onPressed: !snapshot.hasData || _saving
+                          ? null
+                          : () async {
+                              final messenger = ScaffoldMessenger.of(context);
+                              final errorMessage =
+                                  context.l10n.badgesUpdateError;
+                              setState(() => _saving = true);
+                              try {
+                                final updated = await repository
+                                    .setSubscription(
+                                      widget.coordinate,
+                                      subscribed: !subscribed,
+                                    );
+                                if (mounted) {
+                                  setState(
+                                    () =>
+                                        _subscriptions = Future.value(updated),
+                                  );
+                                  ref
+                                      .read(
+                                        badgeSubscriptionsRevisionProvider
+                                            .notifier,
+                                      )
+                                      .state++;
+                                }
+                              } catch (_) {
+                                if (mounted) {
+                                  messenger.showSnackBar(
+                                    DivineSnackbarContainer.snackBar(
+                                      errorMessage,
+                                      error: true,
+                                    ),
+                                  );
+                                }
+                              } finally {
+                                if (mounted) setState(() => _saving = false);
+                              }
+                            },
+                    );
+                  },
+                ),
+              Padding(
+                padding: const EdgeInsets.only(top: 20),
+                child: Text(
+                  context.l10n.badgeAcceptedHoldersTitle,
+                  style: VineTheme.titleSmallFont(
+                    color: context.vineColors.primaryText,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        FutureBuilder<Set<String>>(
+          future: _holders,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const SliverToBoxAdapter(
+                child: Center(child: BrandedLoadingIndicator(size: 40)),
+              );
+            }
+            if (snapshot.hasError) {
+              return SliverToBoxAdapter(
+                child: TextButton(
+                  onPressed: () => setState(() => _reload(repository)),
+                  child: Text(context.l10n.badgesLoadError),
+                ),
+              );
+            }
+            final holders = snapshot.data?.toList() ?? const <String>[];
+            if (holders.isEmpty) {
+              return const SliverToBoxAdapter(child: SizedBox.shrink());
+            }
+            return SliverList.builder(
+              itemCount: holders.length,
+              itemBuilder: (context, index) {
+                final holder = holders[index];
+                return BlocSelector<MyFollowingBloc, MyFollowingState, bool>(
+                  selector: (state) => state.isFollowing(holder),
+                  builder: (context, isFollowing) => UserProfileTile(
+                    pubkey: holder,
+                    isFollowing: isFollowing,
+                    onToggleFollow: () => context.read<MyFollowingBloc>().add(
+                      MyFollowingToggleRequested(holder),
+                    ),
+                    padding: const EdgeInsets.fromLTRB(0, 12, 16, 12),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ],
+    );
   }
 }
 
