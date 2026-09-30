@@ -106,14 +106,14 @@ class GeneralSettingsScreen extends ConsumerWidget {
                   onTap: () => context.push(CrosspostingSettingsScreen.path),
                 ),
               DivineSectionHeader(context.l10n.generalSettingsSectionViewing),
-              const _ClosedCaptionsToggle(),
-              const _SquareVideosOnlyToggle(),
-              const _StatsVisibilityToggles(),
+              const ClosedCaptionsSetting(),
+              const SquareVideosSetting(),
+              const StatsVisibilitySettings(),
               DivineSectionHeader(context.l10n.generalSettingsSectionCreating),
-              const _AudioSharingToggle(),
-              const _LongPressRecordingToggle(),
+              const AudioSharingSetting(),
+              const HoldToRecordSetting(),
               DivineSectionHeader(context.l10n.generalSettingsSectionApp),
-              const _AppLanguageTile(),
+              const AppLanguageSetting(),
               ListTile(
                 leading: DivineIcon(
                   icon: DivineIconName.sun,
@@ -222,8 +222,8 @@ TextStyle _titleStyleOf(BuildContext context) =>
 TextStyle _subtitleStyleOf(BuildContext context) =>
     VineTheme.bodyMediumFont(color: context.vineColors.mutedText);
 
-class _ClosedCaptionsToggle extends ConsumerWidget {
-  const _ClosedCaptionsToggle();
+class ClosedCaptionsSetting extends ConsumerWidget {
+  const ClosedCaptionsSetting({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -238,8 +238,8 @@ class _ClosedCaptionsToggle extends ConsumerWidget {
   }
 }
 
-class _SquareVideosOnlyToggle extends ConsumerWidget {
-  const _SquareVideosOnlyToggle();
+class SquareVideosSetting extends ConsumerWidget {
+  const SquareVideosSetting({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -271,8 +271,8 @@ class _SquareVideosOnlyToggle extends ConsumerWidget {
 /// Three independent switches; any subset may be on, including none. The
 /// choice applies everywhere the figures appear, including the viewer's own
 /// profile and videos.
-class _StatsVisibilityToggles extends ConsumerWidget {
-  const _StatsVisibilityToggles();
+class StatsVisibilitySettings extends ConsumerWidget {
+  const StatsVisibilitySettings({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -309,15 +309,15 @@ class _StatsVisibilityToggles extends ConsumerWidget {
   }
 }
 
-class _AudioSharingToggle extends ConsumerStatefulWidget {
-  const _AudioSharingToggle();
+class AudioSharingSetting extends ConsumerStatefulWidget {
+  const AudioSharingSetting({super.key});
 
   @override
-  ConsumerState<_AudioSharingToggle> createState() =>
-      _AudioSharingToggleState();
+  ConsumerState<AudioSharingSetting> createState() =>
+      _AudioSharingSettingState();
 }
 
-class _AudioSharingToggleState extends ConsumerState<_AudioSharingToggle> {
+class _AudioSharingSettingState extends ConsumerState<AudioSharingSetting> {
   @override
   Widget build(BuildContext context) {
     final audioSharingService = ref.watch(
@@ -338,8 +338,8 @@ class _AudioSharingToggleState extends ConsumerState<_AudioSharingToggle> {
   }
 }
 
-class _LongPressRecordingToggle extends ConsumerWidget {
-  const _LongPressRecordingToggle();
+class HoldToRecordSetting extends ConsumerWidget {
+  const HoldToRecordSetting({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -359,8 +359,8 @@ class _LongPressRecordingToggle extends ConsumerWidget {
   }
 }
 
-class _AppLanguageTile extends StatelessWidget {
-  const _AppLanguageTile();
+class AppLanguageSetting extends StatelessWidget {
+  const AppLanguageSetting({super.key});
 
   @override
   Widget build(BuildContext context) {

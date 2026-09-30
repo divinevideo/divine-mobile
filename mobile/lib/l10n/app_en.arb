@@ -9121,5 +9121,23 @@
   "crosspostingAutoEnable": "Turn on automatic",
   "@crosspostingAutoEnable": {
     "description": "Action that switches a platform to automatic crossposting"
-  }
+  },
+  "settingsAccountTitle": "Account",
+  "settingsWhatYouSeeTitle": "What you see",
+  "settingsCreateShareTitle": "Create & share",
+  "settingsPrivacySafetyTitle": "Privacy & safety",
+  "settingsAppPreferencesTitle": "App preferences",
+  "settingsConnectionsTitle": "Connections",
+  "settingsHelpAboutTitle": "Help & About Divine",
+  "settingsCreatorToolsSection": "Creator tools",
+  "settingsNostrNetworkSection": "Nostr network",
+  "settingsAboutDivineSection": "About Divine",
+  "settingsAdvancedSection": "Advanced",
+  "settingsAccountSubtitle": "Sign-in, identity, keys, and account data",
+  "settingsWhatYouSeeSubtitle": "Language, captions, video layout, and filters",
+  "settingsCreateShareSubtitle": "Recording, publishing, and creator tools",
+  "settingsPrivacySafetySubtitle": "Usage data, moderation, and blocked accounts",
+  "settingsAppPreferencesSubtitle": "Appearance, language, storage, and advanced options",
+  "settingsConnectionsSubtitle": "Apps, relays, media servers, and permissions",
+  "settingsHelpAboutSubtitle": "Support, legal information, and app details"
 }
