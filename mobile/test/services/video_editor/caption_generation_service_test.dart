@@ -680,6 +680,43 @@ void main() {
         expect(cues.first.text, equals('Hello there.'));
         expect(cues.last.text, equals('Bye.'));
       });
+
+      test('keeps the recognized timing of every word', () async {
+        stubExtraction();
+        stubGenerator([_word('Hello', 0, 400), _word('there.', 450, 900)]);
+
+        final outcome = await buildService().generateForClips(
+          clips: [_clip('a')],
+          localeIdentifier: 'en-US',
+        );
+
+        expect((outcome as CaptionsGenerated).cues.single.words, [
+          _word('Hello', 0, 400),
+          _word('there.', 450, 900),
+        ]);
+      });
+    });
+
+    test('leaves server cues without word timings', () async {
+      stubMerge([_offset(0, 3000)]);
+      final service = buildService(
+        remote: remoteReturning([_word('Hi there.', 0, 900)]),
+      );
+
+      final outcome = await service.generateForClips(
+        clips: [_clip('a')],
+        localeIdentifier: 'en-US',
+      );
+
+      // The server only times whole cues, so the words are spread over the
+      // cue's window whenever they are read, including after a trim.
+      final cue = (outcome as CaptionsGenerated).cues.single;
+      expect(cue.words, isEmpty);
+      expect(cue.wordTimings, [_word('Hi', 0, 225), _word('there.', 225, 900)]);
+      expect(
+        cue.withTiming(end: const Duration(milliseconds: 450)).wordTimings,
+        [_word('Hi', 0, 113), _word('there.', 113, 450)],
+      );
     });
   });
 }

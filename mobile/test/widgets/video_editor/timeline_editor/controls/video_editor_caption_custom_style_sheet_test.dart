@@ -200,6 +200,60 @@ void main() {
     });
   });
 
+  group('karaoke', () {
+    final l10n = lookupAppLocalizations(const Locale('en'));
+
+    testWidgets('shows the highlight color only while Karaoke is picked', (
+      tester,
+    ) async {
+      await pumpSheet(tester, disableAnimations: true);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(l10n.videoEditorCaptionsCustomHighlightColor),
+        findsNothing,
+      );
+
+      await tester.tap(find.text(l10n.videoEditorCaptionsAnimationKaraoke));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(l10n.videoEditorCaptionsCustomHighlightColor),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('applies the picked highlight color', (tester) async {
+      CaptionCustomStyle? result;
+      await pumpSheet(
+        tester,
+        disableAnimations: true,
+        onResult: (style) => result = style,
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.videoEditorCaptionsAnimationKaraoke));
+      await tester.pumpAndSettle();
+      // The text color row has the same swatch; the highlight row is last.
+      final green = find.bySemanticsLabel(
+        l10n.rgbColorSemanticLabel(39, 197, 139),
+      );
+      await tester.ensureVisible(green.last);
+      await tester.tap(green.last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.videoEditorCaptionsCustomApply));
+      await tester.pumpAndSettle();
+
+      expect(
+        result,
+        initial.copyWith(
+          animation: CaptionAnimationStyle.highlight,
+          highlightColor: const Color(0xFF27C58B),
+        ),
+      );
+    });
+  });
+
   group('save style', () {
     final l10n = lookupAppLocalizations(const Locale('en'));
 

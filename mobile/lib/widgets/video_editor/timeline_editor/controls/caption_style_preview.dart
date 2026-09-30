@@ -17,6 +17,7 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 /// Loops two sample cues ([_cueA], then the app name) through [style]'s enter
 /// and leave animations, so the preview shows the whole transition — one word
 /// animates in, holds, animates out, the next takes over, then it restarts.
+/// A word-highlighting style lights up the words of each cue in turn instead.
 ///
 /// Composes fade (opacity) and scale the same way the export renderer and
 /// `LayerTimelineVisibility` combine per-layer animations, so the preview
@@ -67,6 +68,11 @@ class CaptionStylePreview extends StatelessWidget {
     final (:opacity, :scale) = _transform(local, windowMs);
 
     final hasPill = style.colorMode != LayerBackgroundMode.onlyColor;
+    final textStyle = style.font(
+      fontSize:
+          VideoEditorConstants.baseFontSize * style.fontScale * fontSizeFactor,
+      color: style.color,
+    );
     return ClipRRect(
       child: DecoratedBox(
         decoration: const BoxDecoration(
@@ -99,13 +105,9 @@ class CaptionStylePreview extends StatelessWidget {
                     maxLines: 1,
                     textAlign: TextAlign.center,
                     effects: style.effects,
-                    style: style.font(
-                      fontSize:
-                          VideoEditorConstants.baseFontSize *
-                          style.fontScale *
-                          fontSizeFactor,
-                      color: style.color,
-                    ),
+                    style: textStyle,
+                    highlightRange: _litWord(text, local),
+                    highlightColor: style.highlightColor,
                   ),
                 ),
               ),
@@ -115,6 +117,20 @@ class CaptionStylePreview extends StatelessWidget {
       ),
     );
   }
+
+  /// The word of [text] lit at [local] (0..1 within its cue window) by a
+  /// word-highlighting style: the words take turns across the window, the
+  /// way evenly spoken words would. `null` for a style without highlights.
+  TextRange? _litWord(String text, double local) {
+    if (style.highlightColor == null) return null;
+    final words = _wordPattern.allMatches(text).toList();
+    if (words.isEmpty) return null;
+    final lit =
+        words[(local * words.length).floor().clamp(0, words.length - 1)];
+    return TextRange(start: lit.start, end: lit.end);
+  }
+
+  static final _wordPattern = RegExp(r'\S+');
 
   /// Visual transform of the active cue at [local] (0..1 within its window of
   /// [windowMs]): enter animations play at the start, leave animations at the

@@ -375,6 +375,67 @@ void main() {
       });
     });
 
+    group('Editing an existing overlay', () {
+      testWidgets('keeps its time window and animations', (tester) async {
+        final layer = TextLayer(
+          text: 'Hello',
+          startTime: const Duration(seconds: 1),
+          endTime: const Duration(seconds: 3),
+          animations: const [
+            LayerAnimation(
+              type: LayerAnimationType.fade,
+              phase: AnimationPhase.animateIn,
+              duration: Duration(milliseconds: 300),
+            ),
+          ],
+        );
+        TextLayer? edited;
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () async {
+                    edited = await Navigator.of(context).push<TextLayer>(
+                      MaterialPageRoute(
+                        builder: (_) => InheritedGoRouter(
+                          goRouter: mockGoRouter,
+                          child: BlocProvider<VideoEditorTextBloc>.value(
+                            value: mockBloc,
+                            child: Scaffold(
+                              body: VideoTextEditorScreen(layer: layer),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+
+        tester.state<TextEditorState>(find.byType(TextEditor)).done();
+        await tester.pumpAndSettle();
+
+        // pro_image_editor before 14.6.0 returned the edited text without
+        // them, which turned the overlay full length with no animation.
+        expect(edited, isNotNull);
+        expect(edited!.startTime, const Duration(seconds: 1));
+        expect(edited!.endTime, const Duration(seconds: 3));
+        expect(edited!.animations, layer.animations);
+      });
+    });
+
     group('Panel visibility', () {
       testWidgets('does not show font selector by default', (tester) async {
         await tester.pumpWidget(buildWidget());

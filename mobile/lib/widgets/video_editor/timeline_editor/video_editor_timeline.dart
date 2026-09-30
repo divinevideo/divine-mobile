@@ -739,6 +739,7 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
           cueId: item.id,
           startTime: startTime,
           endTime: startTime + duration,
+          moved: true,
           skipUpdateHistory: true,
         );
     }
@@ -995,6 +996,7 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
           cueId: item.id,
           startTime: startTime,
           endTime: startTime + item.duration,
+          moved: true,
           skipUpdateHistory: true,
         );
     }

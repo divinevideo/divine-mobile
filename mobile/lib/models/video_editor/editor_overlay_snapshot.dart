@@ -69,9 +69,10 @@ class EditorOverlaySnapshot {
           if (_windowFor(item.layer.startTime, item.layer.endTime, start, end)
               case final w?)
             ExportedLayer(
-              layer: _windowedLayer(item.layer, w),
+              layer: _windowedLayer(item.layer, w, windowStart: start),
               bytes: item.bytes,
               logicalSize: item.logicalSize,
+              highlightBytes: item.highlightBytes,
             ),
       ],
       filterStates: [
@@ -96,10 +97,11 @@ class EditorOverlaySnapshot {
   ///
   /// The copy is safe even though `copyWith` on a concrete layer subtype
   /// (text/paint/…) returns that same subtype: the visual content already
-  /// travels in the rasterized `bytes`, and the render reads back only base
-  /// `Layer` fields — offset, time window, animations. Copying rather than
-  /// mutating matters because these fields are mutable and the source is the
-  /// editor's live layer.
+  /// travels in the rasterized `bytes` (a text layer's lit words in
+  /// `highlightBytes`), and the render reads back only offset, time window,
+  /// animations and a text layer's highlights. Copying rather than mutating
+  /// matters because these fields are mutable and the source is the editor's
+  /// live layer.
   ///
   /// A layer that reached past the window on a side sat steadily on screen
   /// there on the timeline — its enter (start clamped) or leave (end clamped)
@@ -107,7 +109,15 @@ class EditorOverlaySnapshot {
   /// motion that never happened over the clip, so the clamped-away phase (and
   /// the legacy fade synthesized from [Layer.enterDuration] /
   /// [Layer.exitDuration]) is dropped.
-  static Layer _windowedLayer(Layer layer, _OverlayWindow w) {
+  ///
+  /// [TextLayer.highlights] count from the layer's start, so when that start
+  /// moves relative to the words — a caption that began before the clip —
+  /// they are moved back by the same amount to stay on their words.
+  static Layer _windowedLayer(
+    Layer layer,
+    _OverlayWindow w, {
+    required Duration windowStart,
+  }) {
     final strip = w.startClamped || w.endClamped;
     final animations = layer.animations.isEmpty || !strip
         ? layer.animations
@@ -125,6 +135,18 @@ class EditorOverlaySnapshot {
     // value), so clear the legacy fade convenience on the fresh copy directly.
     if (w.startClamped) windowed.enterDuration = null;
     if (w.endClamped) windowed.exitDuration = null;
+
+    final startShift =
+        w.start + windowStart - (layer.startTime ?? Duration.zero);
+    if (windowed is TextLayer && startShift != Duration.zero) {
+      windowed.highlights = [
+        for (final highlight in windowed.highlights)
+          highlight.copyWith(
+            startTime: highlight.startTime - startShift,
+            endTime: highlight.endTime - startShift,
+          ),
+      ];
+    }
     return windowed;
   }
 

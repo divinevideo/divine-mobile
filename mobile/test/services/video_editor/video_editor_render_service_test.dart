@@ -226,6 +226,98 @@ void main() {
       expect(layers.single.startTime, isNull);
       expect(layers.single.endTime, isNull);
     });
+
+    group('word-highlighted captions', () {
+      pie.ExportedLayer karaoke() => pie.ExportedLayer(
+        layer: pie.TextLayer(
+          text: 'Hello world',
+          startTime: const Duration(seconds: 1),
+          endTime: const Duration(seconds: 3),
+          animations: [
+            const pie.LayerAnimation(
+              type: pie.LayerAnimationType.fade,
+              phase: pie.AnimationPhase.animateIn,
+              duration: Duration(milliseconds: 200),
+            ),
+            const pie.LayerAnimation(
+              type: pie.LayerAnimationType.fade,
+              phase: pie.AnimationPhase.animateOut,
+              duration: Duration(milliseconds: 200),
+            ),
+          ],
+          highlights: const [
+            pie.TextHighlight(
+              start: 0,
+              end: 5,
+              startTime: Duration(milliseconds: 500),
+              endTime: Duration(seconds: 1),
+            ),
+            pie.TextHighlight(
+              start: 6,
+              end: 11,
+              startTime: Duration(seconds: 1),
+              endTime: Duration(seconds: 2),
+            ),
+          ],
+        ),
+        bytes: Uint8List.fromList(const [0]),
+        logicalSize: const Size(10, 20),
+        highlightBytes: {
+          0: Uint8List.fromList(const [1]),
+          1: Uint8List.fromList(const [2]),
+        },
+      );
+
+      // Both renderers treat an overlay's window as closed, so each frame but
+      // the last ends one tick before the next begins: a video frame landing
+      // exactly on a word change would otherwise draw two captions at once.
+      Duration justBefore(int ms) =>
+          Duration(milliseconds: ms) - const Duration(microseconds: 1);
+
+      test('become one overlay per lit word at the same place', () {
+        final layers = VideoEditorRenderService.buildImageLayers(
+          capturedLayers: [karaoke()],
+          bodySize: const Size(100, 200),
+          videoSize: const Size(300, 600),
+          timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
+        )!;
+
+        expect(
+          layers.map(
+            (l) => (
+              l.image.byteArray!.single,
+              l.startTime,
+              l.endTime,
+            ),
+          ),
+          [
+            (0, const Duration(seconds: 1), justBefore(1500)),
+            (1, const Duration(milliseconds: 1500), justBefore(2000)),
+            (2, const Duration(seconds: 2), const Duration(seconds: 3)),
+          ],
+        );
+        expect(layers.map((l) => l.offset).toSet(), hasLength(1));
+        expect(layers.map((l) => l.size).toSet(), hasLength(1));
+      });
+
+      test('play the enter animation first and the leave animation last', () {
+        final layers = VideoEditorRenderService.buildImageLayers(
+          capturedLayers: [karaoke()],
+          bodySize: const Size(100, 200),
+          videoSize: const Size(300, 600),
+          timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
+        )!;
+
+        expect(
+          layers.map((l) => l.animations.map((a) => a.phase.name).toList()),
+          [
+            ['animateIn'],
+            <String>[],
+            ['animateOut'],
+          ],
+        );
+      });
+    });
   });
 
   group('buildColorFilters', () {

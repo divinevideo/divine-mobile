@@ -8882,6 +8882,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorCaptionsCustomBackgroundColor => 'నేపథ్య రంగు';
 
   @override
+  String get videoEditorCaptionsCustomHighlightColor => 'హైలైట్ రంగు';
+
+  @override
   String get videoEditorCaptionsCustomAnimation => 'యానిమేషన్';
 
   @override
@@ -8895,6 +8898,9 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorCaptionsAnimationSpring => 'వసంతకాలం';
+
+  @override
+  String get videoEditorCaptionsAnimationKaraoke => 'కరోకే';
 
   @override
   String get videoEditorCaptionsEditTitle => 'శీర్షికలు';
@@ -9040,6 +9046,9 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorCaptionsPresetClassic => 'క్లాసిక్';
+
+  @override
+  String get videoEditorCaptionsPresetKaraoke => 'కరోకే';
 
   @override
   String get videoEditorCaptionsPresetPop => 'పాప్';

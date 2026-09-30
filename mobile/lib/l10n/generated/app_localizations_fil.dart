@@ -8693,6 +8693,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorCaptionsCustomBackgroundColor => 'Kulay ng background';
 
   @override
+  String get videoEditorCaptionsCustomHighlightColor => 'Kulay ng highlight';
+
+  @override
   String get videoEditorCaptionsCustomAnimation => 'Animation';
 
   @override
@@ -8706,6 +8709,9 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoEditorCaptionsAnimationSpring => 'Spring';
+
+  @override
+  String get videoEditorCaptionsAnimationKaraoke => 'Karaoke';
 
   @override
   String get videoEditorCaptionsEditTitle => 'Mga subtitle';
@@ -8854,6 +8860,9 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoEditorCaptionsPresetClassic => 'Klasiko';
+
+  @override
+  String get videoEditorCaptionsPresetKaraoke => 'Karaoke';
 
   @override
   String get videoEditorCaptionsPresetPop => 'Pop';

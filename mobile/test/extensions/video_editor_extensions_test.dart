@@ -1,3 +1,4 @@
+import 'package:caption_generator/caption_generator.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -6,6 +7,7 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/caption_style.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -672,6 +674,179 @@ void main() {
         );
       },
     );
+
+    test('setCaptionCueTimeline keeps a karaoke layer lighting up each word '
+        'when it is spoken', () {
+      const spoken = CaptionCue(
+        id: 'cue-1',
+        text: 'Hello there',
+        start: Duration(milliseconds: 500),
+        end: Duration(milliseconds: 2000),
+        words: [
+          CaptionSegment(
+            text: 'Hello',
+            start: Duration(milliseconds: 600),
+            end: Duration(milliseconds: 900),
+          ),
+          CaptionSegment(
+            text: 'there',
+            start: Duration(milliseconds: 1200),
+            end: Duration(milliseconds: 1600),
+          ),
+        ],
+      );
+      final captionLayer = TextLayer(
+        text: 'Hello there',
+        meta: {
+          VideoEditorConstants.captionCueMetaKey: true,
+          VideoEditorConstants.captionCueIdMetaKey: 'cue-1',
+        },
+        startTime: spoken.start,
+        endTime: spoken.end,
+        highlights: captionWordHighlights(spoken),
+      );
+      when(() => editor.activeLayers).thenReturn([captionLayer]);
+      when(() => stateManager.activeMeta).thenReturn({
+        VideoEditorConstants.captionsStateHistoryKey: track
+            .copyWith(presetId: 'karaoke', cues: [spoken])
+            .toJson(),
+      });
+
+      // Trim the start past "Hello": the words stay where they are spoken.
+      editor.setCaptionCueTimeline(
+        cueId: 'cue-1',
+        startTime: const Duration(milliseconds: 1000),
+      );
+
+      final layers =
+          verify(
+                () => editor.addHistory(
+                  layers: captureAny(named: 'layers'),
+                  meta: any(named: 'meta'),
+                ),
+              ).captured.single
+              as List<Layer>;
+      final retimed = layers.single as TextLayer;
+      expect(
+        retimed.highlights.map((h) => (h.start, h.startTime, h.endTime)),
+        [
+          (0, Duration.zero, const Duration(milliseconds: 200)),
+          (
+            6,
+            const Duration(milliseconds: 200),
+            const Duration(milliseconds: 1000),
+          ),
+        ],
+      );
+      // The previous history entry keeps its own highlights for undo.
+      expect(captionLayer.highlights, captionWordHighlights(spoken));
+    });
+
+    test('setCaptionCueTimeline lights the words again after a drag left '
+        'none lit', () {
+      const spoken = CaptionCue(
+        id: 'cue-1',
+        text: 'Hello there world',
+        start: Duration(seconds: 2),
+        end: Duration(milliseconds: 3500),
+        words: [
+          CaptionSegment(
+            text: 'Hello',
+            start: Duration(seconds: 2),
+            end: Duration(milliseconds: 2400),
+          ),
+          CaptionSegment(
+            text: 'there',
+            start: Duration(milliseconds: 2500),
+            end: Duration(milliseconds: 2900),
+          ),
+          CaptionSegment(
+            text: 'world',
+            start: Duration(seconds: 3),
+            end: Duration(milliseconds: 3400),
+          ),
+        ],
+      );
+      final captionLayer = TextLayer(
+        text: spoken.text,
+        meta: {
+          VideoEditorConstants.captionCueMetaKey: true,
+          VideoEditorConstants.captionCueIdMetaKey: 'cue-1',
+        },
+        startTime: spoken.start,
+        endTime: spoken.end,
+        highlights: captionWordHighlights(spoken),
+      );
+      when(() => editor.activeLayers).thenReturn([captionLayer]);
+      when(() => stateManager.activeMeta).thenReturn({
+        VideoEditorConstants.captionsStateHistoryKey: track
+            .copyWith(presetId: 'karaoke', cues: [spoken])
+            .toJson(),
+      });
+
+      void drag({Duration? start, Duration? end}) =>
+          editor.setCaptionCueTimeline(
+            cueId: 'cue-1',
+            startTime: start,
+            endTime: end,
+            skipUpdateHistory: true,
+          );
+
+      // The start handle goes left of every word, then the end handle is
+      // pulled back before the first word: the words stay where they are
+      // spoken, so no word lights up.
+      drag(start: const Duration(milliseconds: 500));
+      drag(end: const Duration(milliseconds: 1500));
+      expect(captionLayer.highlights, isEmpty);
+
+      // Pulled out again in the same drag, the words light up once more.
+      drag(end: const Duration(milliseconds: 3500));
+
+      expect(captionLayer.highlights, hasLength(3));
+    });
+
+    test('setCaptionCueTimeline moves the words with a moved cue', () {
+      const spoken = CaptionCue(
+        id: 'cue-1',
+        text: 'Hello there',
+        start: Duration(milliseconds: 500),
+        end: Duration(milliseconds: 2000),
+        words: [
+          CaptionSegment(
+            text: 'Hello',
+            start: Duration(milliseconds: 600),
+            end: Duration(milliseconds: 900),
+          ),
+          CaptionSegment(
+            text: 'there',
+            start: Duration(milliseconds: 1200),
+            end: Duration(milliseconds: 1600),
+          ),
+        ],
+      );
+      when(() => stateManager.activeMeta).thenReturn({
+        VideoEditorConstants.captionsStateHistoryKey: track
+            .copyWith(cues: [spoken])
+            .toJson(),
+      });
+
+      // Dragged later and clamped at the video end, so the length changes.
+      editor.setCaptionCueTimeline(
+        cueId: 'cue-1',
+        startTime: const Duration(milliseconds: 1500),
+        endTime: const Duration(milliseconds: 2800),
+        moved: true,
+      );
+
+      final updated = CaptionTrack.fromJson(
+        capturedHistoryMeta()[VideoEditorConstants.captionsStateHistoryKey]
+            as Map<Object?, Object?>,
+      );
+      expect(updated.cues.single.words.map((w) => w.start), [
+        const Duration(milliseconds: 1600),
+        const Duration(milliseconds: 2200),
+      ]);
+    });
 
     test('setCaptionCueTimeline mutates meta in-place during drags', () {
       final activeMeta = <String, dynamic>{

@@ -14706,6 +14706,12 @@ abstract class AppLocalizations {
   /// **'Background color'**
   String get videoEditorCaptionsCustomBackgroundColor;
 
+  /// Section label in the custom caption style editor for the color each word lights up in while it is spoken. Shown only when the Karaoke animation is selected.
+  ///
+  /// In en, this message translates to:
+  /// **'Highlight color'**
+  String get videoEditorCaptionsCustomHighlightColor;
+
   /// No description provided for @videoEditorCaptionsCustomAnimation.
   ///
   /// In en, this message translates to:
@@ -14735,6 +14741,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Spring'**
   String get videoEditorCaptionsAnimationSpring;
+
+  /// Caption animation chip: instead of animating in and out, each word lights up in the highlight color while it is spoken.
+  ///
+  /// In en, this message translates to:
+  /// **'Karaoke'**
+  String get videoEditorCaptionsAnimationKaraoke;
 
   /// No description provided for @videoEditorCaptionsEditTitle.
   ///
@@ -14969,6 +14981,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Classic'**
   String get videoEditorCaptionsPresetClassic;
+
+  /// Name of the built-in caption style that lights up each word as it is spoken.
+  ///
+  /// In en, this message translates to:
+  /// **'Karaoke'**
+  String get videoEditorCaptionsPresetKaraoke;
 
   /// No description provided for @videoEditorCaptionsPresetPop.
   ///

@@ -20,6 +20,8 @@ class TextEffectsPreviewText extends StatelessWidget {
     this.textAlign,
     this.maxLines,
     this.overflow,
+    this.highlightRange,
+    this.highlightColor,
     super.key,
   });
 
@@ -41,6 +43,14 @@ class TextEffectsPreviewText extends StatelessWidget {
   /// See [Text.overflow].
   final TextOverflow? overflow;
 
+  /// The part of [text] filled with [highlightColor], such as the word a
+  /// karaoke caption is on. Only the fill changes; the outline and shadow
+  /// stay as they are.
+  final TextRange? highlightRange;
+
+  /// The fill color of [highlightRange].
+  final Color? highlightColor;
+
   @override
   Widget build(BuildContext context) {
     final scale =
@@ -48,13 +58,41 @@ class TextEffectsPreviewText extends StatelessWidget {
         VideoEditorConstants.baseFontSize;
     final shadows = [for (final shadow in effects.shadows) shadow.scale(scale)];
 
-    Text line(TextStyle style) => Text(
-      text,
-      style: style,
-      textAlign: textAlign,
-      maxLines: maxLines,
-      overflow: overflow,
-    );
+    Text line(TextStyle style) {
+      final range = highlightRange;
+      final color = highlightColor;
+      final lit =
+          range != null &&
+          color != null &&
+          range.isValid &&
+          !range.isCollapsed &&
+          range.end <= text.length;
+      if (!lit) {
+        return Text(
+          text,
+          style: style,
+          textAlign: textAlign,
+          maxLines: maxLines,
+          overflow: overflow,
+        );
+      }
+      return Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: range.textBefore(text)),
+            TextSpan(
+              text: range.textInside(text),
+              style: style.copyWith(color: color),
+            ),
+            TextSpan(text: range.textAfter(text)),
+          ],
+        ),
+        style: style,
+        textAlign: textAlign,
+        maxLines: maxLines,
+        overflow: overflow,
+      );
+    }
 
     if (!effects.hasOutline) return line(style.copyWith(shadows: shadows));
 

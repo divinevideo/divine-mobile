@@ -10,6 +10,12 @@ CaptionSegment _word(String text, int startMs, int endMs) => CaptionSegment(
   end: Duration(milliseconds: endMs),
 );
 
+/// [cues] without their words, for the tests about where cues split.
+List<CaptionSegment> _withoutWords(List<CaptionSegment> cues) => [
+  for (final cue in cues)
+    CaptionSegment(text: cue.text, start: cue.start, end: cue.end),
+];
+
 void main() {
   group('groupCaptionSegments', () {
     test('returns an empty list for empty input', () {
@@ -19,7 +25,7 @@ void main() {
     test('keeps a single word as one cue', () {
       final cues = groupCaptionSegments([_word('hello', 0, 400)]);
 
-      expect(cues, equals([_word('hello', 0, 400)]));
+      expect(_withoutWords(cues), equals([_word('hello', 0, 400)]));
     });
 
     test('merges words within all limits into one cue', () {
@@ -29,7 +35,10 @@ void main() {
         _word('world', 900, 1300),
       ]);
 
-      expect(cues, equals([_word('hello there world', 0, 1300)]));
+      expect(
+        _withoutWords(cues),
+        equals([_word('hello there world', 0, 1300)]),
+      );
     });
 
     test('starts a new cue after a long silence gap', () {
@@ -39,7 +48,7 @@ void main() {
       ]);
 
       expect(
-        cues,
+        _withoutWords(cues),
         equals([_word('hello', 0, 400), _word('world', 3000, 3400)]),
       );
     });
@@ -55,7 +64,7 @@ void main() {
       );
 
       expect(
-        cues,
+        _withoutWords(cues),
         equals([_word('aaaa bbbb', 0, 450), _word('cccc', 500, 700)]),
       );
     });
@@ -71,7 +80,7 @@ void main() {
       );
 
       expect(
-        cues,
+        _withoutWords(cues),
         equals([_word('one two', 0, 1300), _word('three', 1800, 2200)]),
       );
     });
@@ -83,7 +92,7 @@ void main() {
       );
 
       expect(
-        cues,
+        _withoutWords(cues),
         equals([
           _word('supercalifragilistic', 0, 900),
           _word('yes', 950, 1200),
@@ -97,7 +106,7 @@ void main() {
         _word('hello', 0, 400),
       ]);
 
-      expect(cues, equals([_word('hello world', 0, 800)]));
+      expect(_withoutWords(cues), equals([_word('hello world', 0, 800)]));
     });
 
     test('preserves caller order for words sharing a start time', () {
@@ -106,7 +115,7 @@ void main() {
         _word('York', 1000, 1200),
       ]);
 
-      expect(cues, equals([_word('New York', 1000, 1200)]));
+      expect(_withoutWords(cues), equals([_word('New York', 1000, 1200)]));
     });
 
     test('starts a new cue after sentence-final punctuation', () {
@@ -120,7 +129,7 @@ void main() {
       ]);
 
       expect(
-        cues,
+        _withoutWords(cues),
         equals([
           _word('Hello, a test.', 0, 900),
           _word('Can you?', 950, 1400),
@@ -137,7 +146,7 @@ void main() {
       ]);
 
       expect(
-        cues,
+        _withoutWords(cues),
         equals([_word('"Stop!"', 0, 400), _word('she said', 450, 900)]),
       );
     });
@@ -151,7 +160,7 @@ void main() {
         splitAtSentenceEnd: false,
       );
 
-      expect(cues, equals([_word('One. Two.', 0, 600)]));
+      expect(_withoutWords(cues), equals([_word('One. Two.', 0, 600)]));
     });
 
     test('does not split on mid-sentence commas', () {
@@ -160,7 +169,7 @@ void main() {
         _word('okay', 350, 600),
       ]);
 
-      expect(cues, equals([_word('Well, okay', 0, 600)]));
+      expect(_withoutWords(cues), equals([_word('Well, okay', 0, 600)]));
     });
 
     test('throws $ArgumentError for a non-positive character limit', () {
@@ -182,6 +191,34 @@ void main() {
         () => groupCaptionSegments(const [], maxSilenceGap: Duration.zero),
         throwsArgumentError,
       );
+    });
+
+    group('words', () {
+      test('keeps each recognized word with its own timing', () {
+        final cues = groupCaptionSegments([
+          _word('hello', 0, 400),
+          _word('there', 450, 800),
+          _word('world', 3000, 3400),
+        ]);
+
+        expect(cues.map((cue) => cue.words), [
+          [_word('hello', 0, 400), _word('there', 450, 800)],
+          [_word('world', 3000, 3400)],
+        ]);
+      });
+
+      test('spreads the words of a multi-word segment over its span', () {
+        final cues = groupCaptionSegments([
+          _word('hi there', 0, 700),
+          _word('you', 800, 1100),
+        ]);
+
+        expect(cues.single.words, [
+          _word('hi', 0, 200),
+          _word('there', 200, 700),
+          _word('you', 800, 1100),
+        ]);
+      });
     });
   });
 }

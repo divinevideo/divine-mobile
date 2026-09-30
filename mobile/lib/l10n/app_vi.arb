@@ -4566,11 +4566,13 @@
   "videoEditorCaptionsCustomTextColor": "Màu chữ",
   "videoEditorCaptionsCustomBackground": "Nền",
   "videoEditorCaptionsCustomBackgroundColor": "Màu nền",
+  "videoEditorCaptionsCustomHighlightColor": "Màu tô sáng",
   "videoEditorCaptionsCustomAnimation": "Hiệu ứng",
   "videoEditorCaptionsAnimationNone": "Không có",
   "videoEditorCaptionsAnimationFade": "Mờ dần",
   "videoEditorCaptionsAnimationPop": "Pop",
   "videoEditorCaptionsAnimationSpring": "Nảy",
+  "videoEditorCaptionsAnimationKaraoke": "Karaoke",
   "@videoEditorCaptionsBurnInLabel": {
     "description": "Checkbox label in the captions sheet to additionally burn the captions into the exported video (closed captions are always published)."
   },
@@ -4613,6 +4615,7 @@
   "videoEditorTitleSavedStylesEmpty": "Chưa lưu gì cả. Tạo kiểu chữ theo ý bạn, lưu vào đây rồi dùng lại diện mạo đó cho video tiếp theo.",
   "videoEditorTitleSavedStyleDeleteConfirmMessage": "Chữ đang dùng kiểu này vẫn giữ nguyên diện mạo.",
   "videoEditorCaptionsPresetClassic": "Cổ điển",
+  "videoEditorCaptionsPresetKaraoke": "Karaoke",
   "videoEditorCaptionsPresetPop": "Pop",
   "videoEditorCaptionsPresetZoom": "Zoom",
   "videoEditorCaptionsPresetSpring": "Nảy",

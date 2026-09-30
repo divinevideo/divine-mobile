@@ -8439,6 +8439,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorCaptionsCustomBackgroundColor => 'የዳራ ቀለም';
 
   @override
+  String get videoEditorCaptionsCustomHighlightColor => 'የማድመቂያ ቀለም';
+
+  @override
   String get videoEditorCaptionsCustomAnimation => 'እነማ';
 
   @override
@@ -8452,6 +8455,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorCaptionsAnimationSpring => 'ስፕሪንግ';
+
+  @override
+  String get videoEditorCaptionsAnimationKaraoke => 'ካራኦኬ';
 
   @override
   String get videoEditorCaptionsEditTitle => 'የግርጌ ጽሑፎች';
@@ -8590,6 +8596,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorCaptionsPresetClassic => 'ክላሲክ';
+
+  @override
+  String get videoEditorCaptionsPresetKaraoke => 'ካራኦኬ';
 
   @override
   String get videoEditorCaptionsPresetPop => 'ፖፕ';

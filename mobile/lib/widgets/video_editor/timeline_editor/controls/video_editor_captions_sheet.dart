@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/rendering.dart' show OverflowBoxFit;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/captions_editor/captions_editor_cubit.dart';
@@ -172,10 +173,15 @@ class _CaptionsSheetBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Keyboard inset as scroll padding: content stays reachable above the
-    // keyboard and the focused field can scroll itself into view — no
-    // pinned bottom bar that would cover the list while typing.
-    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    // The sheet does not move with the keyboard, so the body lifts itself
+    // above it: the add button stays reachable while typing, and the cue list
+    // between them keeps the focused field in view.
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    // A screen reader user cannot close the multiline field's keyboard
+    // without activating another control, so the controls stay reachable
+    // for them.
+    final collapseControls =
+        keyboardOpen && !MediaQuery.accessibleNavigationOf(context);
     return BlocConsumer<CaptionsEditorCubit, CaptionsEditorState>(
       // Only when a cue is added to an already-shown list — not the initial
       // generation fill (generating→ready), which should stay scrolled to the
@@ -195,41 +201,56 @@ class _CaptionsSheetBody extends StatelessWidget {
           padding: const EdgeInsets.all(24),
           children: [_FallbackView(state: state)],
         ),
-        // Cue list scrolls; the action buttons stay pinned at the sheet
-        // bottom. They carry no keyboard inset — while typing the keyboard
-        // covers them and the list (padded by the inset) keeps the focused
-        // field visible instead of the buttons overlapping it.
+        // Cue list scrolls; the add button stays pinned at the sheet bottom,
+        // right above the keyboard while typing.
         CaptionsEditorStatus.ready => Column(
           children: [
-            // Burn-in choice and style sit above the cue list so the primary
-            // decision is made before editing individual cues.
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: _CaptionsModeControls(state: state),
-            ),
-            Divider(
-              height: 2,
-              thickness: 2,
-              color: context.vineColors.surfaceContainer,
-            ),
             Expanded(
-              child: ListView(
-                controller: scrollController,
-                padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset),
-                children: [
-                  for (var i = 0; i < state.cues.length; i++) ...[
-                    if (i > 0)
-                      Divider(
-                        height: 32,
-                        color: context.vineColors.outlineMuted,
+              child: LayoutBuilder(
+                builder: (context, constraints) => Column(
+                  children: [
+                    // Bounded by the height left above the add button and
+                    // clipped, so the controls can never push the list and the
+                    // button past the sheet while they collapse under a rising
+                    // keyboard (the list gives way first, down to nothing).
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: constraints.maxHeight,
                       ),
-                    _CueRow(
-                      key: ValueKey(state.cues[i].id),
-                      cue: state.cues[i],
-                      totalDuration: totalDuration,
+                      child: ClipRect(
+                        child: OverflowBox(
+                          fit: OverflowBoxFit.deferToChild,
+                          maxHeight: double.infinity,
+                          alignment: Alignment.topCenter,
+                          child: _CollapsibleModeControls(
+                            state: state,
+                            collapsed: collapseControls,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView(
+                        controller: scrollController,
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          for (var i = 0; i < state.cues.length; i++) ...[
+                            if (i > 0)
+                              Divider(
+                                height: 32,
+                                color: context.vineColors.outlineMuted,
+                              ),
+                            _CueRow(
+                              key: ValueKey(state.cues[i].id),
+                              cue: state.cues[i],
+                              totalDuration: totalDuration,
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
                   ],
-                ],
+                ),
               ),
             ),
             Divider(
@@ -237,8 +258,10 @@ class _CaptionsSheetBody extends StatelessWidget {
               thickness: 2,
               color: context.vineColors.surfaceContainer,
             ),
-            SafeArea(
-              top: false,
+            // Rides on top of the keyboard, so adding a cue stays one tap away
+            // while typing.
+            VineKeyboardAwareFooter(
+              includeSafeArea: true,
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: DivineButton(
@@ -333,6 +356,64 @@ class _FallbackView extends StatelessWidget {
   }
 }
 
+/// Swaps its [child] by growing or shrinking it while it fades, the way the
+/// sheet shows and hides its controls. Instant with reduced motion.
+class _SizeFadeSwitcher extends StatelessWidget {
+  const _SizeFadeSwitcher({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 220),
+      transitionBuilder: (child, animation) => SizeTransition(
+        sizeFactor: animation,
+        child: FadeTransition(opacity: animation, child: child),
+      ),
+      child: child,
+    );
+  }
+}
+
+/// Burn-in choice and style above the cue list, sliding away while [collapsed].
+///
+/// They step aside while the keyboard is up, which would otherwise leave the
+/// list too little height to show the cue being typed in. They sit above the
+/// cues so the primary decision is made before editing individual cues.
+class _CollapsibleModeControls extends StatelessWidget {
+  const _CollapsibleModeControls({
+    required this.state,
+    required this.collapsed,
+  });
+
+  final CaptionsEditorState state;
+  final bool collapsed;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SizeFadeSwitcher(
+      child: collapsed
+          ? const SizedBox(width: .infinity)
+          : Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: _CaptionsModeControls(state: state),
+                ),
+                Divider(
+                  height: 2,
+                  thickness: 2,
+                  color: context.vineColors.surfaceContainer,
+                ),
+              ],
+            ),
+    );
+  }
+}
+
 /// Burn-in choice and style, shown above the cue list.
 class _CaptionsModeControls extends StatelessWidget {
   const _CaptionsModeControls({required this.state});
@@ -380,15 +461,7 @@ class _CaptionsModeControls extends StatelessWidget {
           ),
         ),
 
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 220),
-          transitionBuilder: (child, animation) => SizeTransition(
-            sizeFactor: animation,
-            child: FadeTransition(
-              opacity: animation,
-              child: child,
-            ),
-          ),
+        _SizeFadeSwitcher(
           child: state.burnIn
               ? DivineButton(
                   label: '${l10n.videoEditorCaptionsPresetTitle}: $styleName',
