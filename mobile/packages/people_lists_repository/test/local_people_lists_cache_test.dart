@@ -500,5 +500,400 @@ void main() {
         expect(lists.map((l) => l.id), equals(['two', 'one']));
       });
     });
+
+    group('followed copies', () {
+      test('reads a copy back with its owner', () async {
+        final cache = LocalPeopleListsCache(openBox: makeOpener());
+
+        await cache.putFollowedCopy(
+          viewerPubkey: _ownerA,
+          ownerPubkey: _ownerB,
+          list: _list(id: 'crew', updatedAt: DateTime.utc(2026, 4, 1)),
+        );
+
+        final copies = await cache.readFollowedCopies(viewerPubkey: _ownerA);
+
+        expect(copies, hasLength(1));
+        expect(copies.single.ownerPubkey, equals(_ownerB));
+        expect(copies.single.list.id, equals('crew'));
+        expect(copies.single.list.pubkeys, equals([_memberA]));
+      });
+
+      test('keeps copies apart per viewer', () async {
+        final cache = LocalPeopleListsCache(openBox: makeOpener());
+        await cache.putFollowedCopy(
+          viewerPubkey: _ownerA,
+          ownerPubkey: _memberA,
+          list: _list(id: 'mine', updatedAt: DateTime.utc(2026, 4, 1)),
+        );
+        await cache.putFollowedCopy(
+          viewerPubkey: _ownerB,
+          ownerPubkey: _memberA,
+          list: _list(id: 'theirs', updatedAt: DateTime.utc(2026, 4, 1)),
+        );
+
+        final forA = await cache.readFollowedCopies(viewerPubkey: _ownerA);
+        final forB = await cache.readFollowedCopies(viewerPubkey: _ownerB);
+
+        expect(forA.map((f) => f.list.id), equals(['mine']));
+        expect(forB.map((f) => f.list.id), equals(['theirs']));
+      });
+
+      test('does not surface a copy among its owner lists', () async {
+        final cache = LocalPeopleListsCache(openBox: makeOpener());
+
+        await cache.putFollowedCopy(
+          viewerPubkey: _ownerA,
+          ownerPubkey: _ownerB,
+          list: _list(id: 'crew', updatedAt: DateTime.utc(2026, 4, 1)),
+        );
+
+        expect(await cache.readLists(ownerPubkey: _ownerA), isEmpty);
+        expect(await cache.readLists(ownerPubkey: _ownerB), isEmpty);
+      });
+
+      test('orders copies by coordinate', () async {
+        final cache = LocalPeopleListsCache(openBox: makeOpener());
+        for (final id in ['zebra', 'apple']) {
+          await cache.putFollowedCopy(
+            viewerPubkey: _ownerA,
+            ownerPubkey: _ownerB,
+            list: _list(id: id, updatedAt: DateTime.utc(2026, 1, 1)),
+          );
+        }
+
+        final copies = await cache.readFollowedCopies(viewerPubkey: _ownerA);
+
+        expect(copies.map((f) => f.list.id), equals(['apple', 'zebra']));
+      });
+
+      test(
+        'putting a copy again replaces it, even with an older one',
+        () async {
+          final cache = LocalPeopleListsCache(openBox: makeOpener());
+          await cache.putFollowedCopy(
+            viewerPubkey: _ownerA,
+            ownerPubkey: _ownerB,
+            list: _list(id: 'crew', updatedAt: DateTime.utc(2026, 2, 1)),
+          );
+
+          await cache.putFollowedCopy(
+            viewerPubkey: _ownerA,
+            ownerPubkey: _ownerB,
+            list: _list(
+              id: 'crew',
+              name: 'On screen',
+              updatedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
+
+          final copies = await cache.readFollowedCopies(viewerPubkey: _ownerA);
+          expect(copies.single.list.name, equals('On screen'));
+        },
+      );
+
+      test('removes a copy and leaves the others', () async {
+        final cache = LocalPeopleListsCache(openBox: makeOpener());
+        for (final id in ['keep', 'drop']) {
+          await cache.putFollowedCopy(
+            viewerPubkey: _ownerA,
+            ownerPubkey: _ownerB,
+            list: _list(id: id, updatedAt: DateTime.utc(2026, 1, 1)),
+          );
+        }
+
+        await cache.removeFollowedCopy(
+          viewerPubkey: _ownerA,
+          ownerPubkey: _ownerB,
+          listId: 'drop',
+        );
+
+        final copies = await cache.readFollowedCopies(viewerPubkey: _ownerA);
+        expect(copies.map((f) => f.list.id), equals(['keep']));
+      });
+
+      test('skips a row that does not decode', () async {
+        final opener = makeOpener();
+        final cache = LocalPeopleListsCache(openBox: opener);
+        await cache.putFollowedCopy(
+          viewerPubkey: _ownerA,
+          ownerPubkey: _ownerB,
+          list: _list(id: 'good', updatedAt: DateTime.utc(2026, 1, 1)),
+        );
+        final box = await opener();
+        await box.put('followed:$_ownerA:$_ownerB:no-owner', <String, dynamic>{
+          'list': _list(
+            id: 'no-owner',
+            updatedAt: DateTime.utc(2026, 1, 1),
+          ).toJson(),
+        });
+        await box.put('followed:$_ownerA:$_ownerB:no-list', <String, dynamic>{
+          'ownerPubkey': _ownerB,
+          'list': 'not a map',
+        });
+        await box.put('followed:$_ownerA:$_ownerB:not-a-map', 'garbage');
+
+        final copies = await cache.readFollowedCopies(viewerPubkey: _ownerA);
+
+        expect(copies.map((f) => f.list.id), equals(['good']));
+      });
+
+      group('refreshFollowedCopy', () {
+        test('takes a newer revision', () async {
+          final cache = LocalPeopleListsCache(openBox: makeOpener());
+          await cache.putFollowedCopy(
+            viewerPubkey: _ownerA,
+            ownerPubkey: _ownerB,
+            list: _list(id: 'crew', updatedAt: DateTime.utc(2026, 1, 1)),
+          );
+
+          await cache.refreshFollowedCopy(
+            viewerPubkey: _ownerA,
+            ownerPubkey: _ownerB,
+            list: _list(
+              id: 'crew',
+              updatedAt: DateTime.utc(2026, 2, 1),
+              pubkeys: const [_memberA, _memberB],
+            ),
+          );
+
+          final copies = await cache.readFollowedCopies(
+            viewerPubkey: _ownerA,
+          );
+          expect(copies.single.list.pubkeys, equals([_memberA, _memberB]));
+        });
+
+        test(
+          'stores a copy that is not held, as after a cache reset',
+          () async {
+            final cache = LocalPeopleListsCache(openBox: makeOpener());
+
+            await cache.refreshFollowedCopy(
+              viewerPubkey: _ownerA,
+              ownerPubkey: _ownerB,
+              list: _list(id: 'crew', updatedAt: DateTime.utc(2026, 2, 1)),
+            );
+
+            final copies = await cache.readFollowedCopies(
+              viewerPubkey: _ownerA,
+            );
+            expect(copies.single.list.id, equals('crew'));
+          },
+        );
+
+        test('skips a revision that is not newer, waking nobody', () async {
+          final cache = LocalPeopleListsCache(openBox: makeOpener());
+          await cache.putFollowedCopy(
+            viewerPubkey: _ownerA,
+            ownerPubkey: _ownerB,
+            list: _list(id: 'crew', updatedAt: DateTime.utc(2026, 2, 1)),
+          );
+          final emissions = <int>[];
+          final subscription = cache
+              .watchFollowedCopies(viewerPubkey: _ownerA)
+              .listen((copies) => emissions.add(copies.length));
+          addTearDown(subscription.cancel);
+          await pumpEventQueue();
+          expect(emissions, hasLength(1));
+
+          await cache.refreshFollowedCopy(
+            viewerPubkey: _ownerA,
+            ownerPubkey: _ownerB,
+            list: _list(
+              id: 'crew',
+              name: 'Stale',
+              updatedAt: DateTime.utc(2026, 2, 1),
+            ),
+          );
+          await pumpEventQueue();
+
+          final copies = await cache.readFollowedCopies(
+            viewerPubkey: _ownerA,
+          );
+          expect(copies.single.list.name, equals('Crew'));
+          expect(emissions, hasLength(1));
+
+          // The positive control: a newer revision does wake the listener.
+          await cache.refreshFollowedCopy(
+            viewerPubkey: _ownerA,
+            ownerPubkey: _ownerB,
+            list: _list(
+              id: 'crew',
+              name: 'Fresh',
+              updatedAt: DateTime.utc(2026, 3, 1),
+            ),
+          );
+          await pumpEventQueue();
+          expect(emissions, hasLength(2));
+        });
+
+        test('repairs a row whose copy no longer decodes', () async {
+          final opener = makeOpener();
+          final cache = LocalPeopleListsCache(openBox: opener);
+          final box = await opener();
+          await box.put('followed:$_ownerA:$_ownerB:crew', <String, dynamic>{
+            'ownerPubkey': _ownerB,
+            'list': 'not a map',
+          });
+
+          await cache.refreshFollowedCopy(
+            viewerPubkey: _ownerA,
+            ownerPubkey: _ownerB,
+            list: _list(id: 'crew', updatedAt: DateTime.utc(2026, 2, 1)),
+          );
+
+          final copies = await cache.readFollowedCopies(
+            viewerPubkey: _ownerA,
+          );
+          expect(copies.single.list.id, equals('crew'));
+        });
+      });
+
+      group('watchFollowedCopies', () {
+        test('emits the current copies, then each change', () async {
+          final cache = LocalPeopleListsCache(openBox: makeOpener());
+          await cache.putFollowedCopy(
+            viewerPubkey: _ownerA,
+            ownerPubkey: _ownerB,
+            list: _list(id: 'first', updatedAt: DateTime.utc(2026, 1, 1)),
+          );
+
+          final emissions = <List<String>>[];
+          final subscription = cache
+              .watchFollowedCopies(viewerPubkey: _ownerA)
+              .listen((lists) {
+                emissions.add([for (final f in lists) f.list.id]);
+              });
+          addTearDown(subscription.cancel);
+          await pumpEventQueue();
+
+          await cache.putFollowedCopy(
+            viewerPubkey: _ownerA,
+            ownerPubkey: _ownerB,
+            list: _list(id: 'second', updatedAt: DateTime.utc(2026, 1, 1)),
+          );
+          await pumpEventQueue();
+          await cache.removeFollowedCopy(
+            viewerPubkey: _ownerA,
+            ownerPubkey: _ownerB,
+            listId: 'first',
+          );
+          await pumpEventQueue();
+
+          expect(
+            emissions,
+            equals([
+              ['first'],
+              ['first', 'second'],
+              ['second'],
+            ]),
+          );
+        });
+
+        test("stays quiet for another viewer's copies and for the "
+            'owner-scoped rows', () async {
+          final cache = LocalPeopleListsCache(openBox: makeOpener());
+          final emissions = <List<String>>[];
+          final subscription = cache
+              .watchFollowedCopies(viewerPubkey: _ownerA)
+              .listen((lists) {
+                emissions.add([for (final f in lists) f.list.id]);
+              });
+          addTearDown(subscription.cancel);
+          await pumpEventQueue();
+
+          await cache.putFollowedCopy(
+            viewerPubkey: _ownerB,
+            ownerPubkey: _memberA,
+            list: _list(id: 'other', updatedAt: DateTime.utc(2026, 1, 1)),
+          );
+          await cache.putList(
+            ownerPubkey: _ownerA,
+            list: _list(id: 'own', updatedAt: DateTime.utc(2026, 1, 1)),
+            receivedAt: DateTime.utc(2026, 5, 1),
+          );
+          await pumpEventQueue();
+
+          expect(emissions, equals([<String>[]]));
+        });
+
+        test('reaches a listener holding another cache instance', () async {
+          final opener = makeOpener();
+          final listening = LocalPeopleListsCache(openBox: opener);
+          final writing = LocalPeopleListsCache(openBox: opener);
+          final emissions = <List<String>>[];
+          final subscription = listening
+              .watchFollowedCopies(viewerPubkey: _ownerA)
+              .listen((lists) {
+                emissions.add([for (final f in lists) f.list.id]);
+              });
+          addTearDown(subscription.cancel);
+          await pumpEventQueue();
+
+          await writing.putFollowedCopy(
+            viewerPubkey: _ownerA,
+            ownerPubkey: _ownerB,
+            list: _list(id: 'crew', updatedAt: DateTime.utc(2026, 1, 1)),
+          );
+          await pumpEventQueue();
+
+          expect(emissions.last, equals(['crew']));
+        });
+      });
+
+      group('clearFollowedCopies', () {
+        test("removes one viewer's copies and nothing else", () async {
+          final cache = LocalPeopleListsCache(openBox: makeOpener());
+          await cache.putFollowedCopy(
+            viewerPubkey: _ownerA,
+            ownerPubkey: _memberA,
+            list: _list(id: 'leaving', updatedAt: DateTime.utc(2026, 1, 1)),
+          );
+          await cache.putFollowedCopy(
+            viewerPubkey: _ownerB,
+            ownerPubkey: _memberA,
+            list: _list(id: 'staying', updatedAt: DateTime.utc(2026, 1, 1)),
+          );
+          await cache.putList(
+            ownerPubkey: _ownerA,
+            list: _list(id: 'own', updatedAt: DateTime.utc(2026, 1, 1)),
+            receivedAt: DateTime.utc(2026, 5, 1),
+          );
+
+          await cache.clearFollowedCopies(viewerPubkey: _ownerA);
+
+          expect(
+            await cache.readFollowedCopies(viewerPubkey: _ownerA),
+            isEmpty,
+          );
+          expect(
+            (await cache.readFollowedCopies(
+              viewerPubkey: _ownerB,
+            )).map((f) => f.list.id),
+            equals(['staying']),
+          );
+          expect(
+            (await cache.readLists(ownerPubkey: _ownerA)).map((l) => l.id),
+            equals(['own']),
+          );
+        });
+
+        test('is a no-op for a viewer with no copies', () async {
+          final cache = LocalPeopleListsCache(openBox: makeOpener());
+          await cache.putFollowedCopy(
+            viewerPubkey: _ownerB,
+            ownerPubkey: _memberA,
+            list: _list(id: 'staying', updatedAt: DateTime.utc(2026, 1, 1)),
+          );
+
+          await cache.clearFollowedCopies(viewerPubkey: _ownerA);
+
+          expect(
+            await cache.readFollowedCopies(viewerPubkey: _ownerB),
+            hasLength(1),
+          );
+        });
+      });
+    });
   });
 }

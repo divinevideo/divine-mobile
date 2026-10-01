@@ -31,6 +31,8 @@ enum VideoFeedSourceType {
 
   /// Videos matching a followed hashtag.
   subscribedHashtag,
+  /// Videos from the members of one followed people list.
+  peopleList,
 
   /// Most recently published videos (chronological).
   newVideos,
@@ -56,13 +58,15 @@ extension VideoFeedSourceTypeAnalytics on VideoFeedSourceType {
   /// rather than the list id, unlike the hashtag and search-query call sites
   /// that pass their discriminating value. A list id is unbounded in
   /// cardinality and closer to user data than a public hashtag is, and the
-  /// question this field answers — which of the five home modes served the
-  /// view — is answered without it.
+  /// question this field answers — which of the home modes served the view —
+  /// is answered without it. [VideoFeedSourceType.peopleList] reports the bare
+  /// `peoplelist` for the same reason.
   String get analyticsTag => switch (this) {
     VideoFeedSourceType.forYou => 'foryou',
     VideoFeedSourceType.following => 'following',
     VideoFeedSourceType.subscribedList => 'list',
     VideoFeedSourceType.subscribedHashtag => 'hashtag',
+    VideoFeedSourceType.peopleList => 'peoplelist',
     VideoFeedSourceType.newVideos => 'new',
     VideoFeedSourceType.classic => 'classic',
   };
@@ -76,7 +80,8 @@ final class VideoFeedSource extends Equatable {
       listId = null,
       listName = null,
       hashtag = null,
-      displayTag = null;
+      displayTag = null,
+      listOwnerPubkey = null;
 
   /// Videos from followed creators.
   const VideoFeedSource.following()
@@ -84,7 +89,8 @@ final class VideoFeedSource extends Equatable {
       listId = null,
       listName = null,
       hashtag = null,
-      displayTag = null;
+      displayTag = null,
+      listOwnerPubkey = null;
 
   /// Videos from a subscribed curated list.
   const VideoFeedSource.subscribedList({
@@ -92,7 +98,8 @@ final class VideoFeedSource extends Equatable {
     required String this.listName,
   }) : type = VideoFeedSourceType.subscribedList,
        hashtag = null,
-       displayTag = null;
+       displayTag = null,
+       listOwnerPubkey = null;
 
   /// Videos matching one followed hashtag.
   const VideoFeedSource.subscribedHashtag({
@@ -100,7 +107,20 @@ final class VideoFeedSource extends Equatable {
     required String this.displayTag,
   }) : type = VideoFeedSourceType.subscribedHashtag,
        listId = null,
-       listName = null;
+       listName = null,
+       listOwnerPubkey = null;
+
+  /// Videos from the members of a followed people list.
+  ///
+  /// A people list's id is its `d` tag, which two owners can share, so the
+  /// source carries [listOwnerPubkey] to name the one list that was followed.
+  const VideoFeedSource.peopleList({
+    required String this.listId,
+    required String this.listName,
+    required String this.listOwnerPubkey,
+  }) : type = VideoFeedSourceType.peopleList,
+       hashtag = null,
+       displayTag = null;
 
   /// Most recently published videos (chronological).
   const VideoFeedSource.newVideos()
@@ -108,7 +128,8 @@ final class VideoFeedSource extends Equatable {
       listId = null,
       listName = null,
       hashtag = null,
-      displayTag = null;
+      displayTag = null,
+      listOwnerPubkey = null;
 
   /// Popular classic Vine archive videos.
   const VideoFeedSource.classic()
@@ -116,7 +137,8 @@ final class VideoFeedSource extends Equatable {
       listId = null,
       listName = null,
       hashtag = null,
-      displayTag = null;
+      displayTag = null,
+      listOwnerPubkey = null;
 
   /// Compatibility conversion for legacy mode-based callers.
   factory VideoFeedSource.fromMode(FeedMode mode) => switch (mode) {
@@ -129,10 +151,11 @@ final class VideoFeedSource extends Equatable {
   /// The source type.
   final VideoFeedSourceType type;
 
-  /// Complete author-qualified curated-list identity for [type] subscribedList.
+  /// Author-qualified curated-list identity for [type] subscribedList; the
+  /// complete raw d-tag for peopleList, paired with [listOwnerPubkey].
   final String? listId;
 
-  /// Selected curated list name when [type] is subscribedList.
+  /// Selected list name when [type] is subscribedList or peopleList.
   final String? listName;
 
   /// Canonical selected hashtag.
@@ -141,12 +164,34 @@ final class VideoFeedSource extends Equatable {
   /// Original spelling for the selected hashtag.
   final String? displayTag;
 
-  /// Canonical preference namespace; selector values keep the legacy shape.
+  /// Full hex pubkey of the selected list's owner when [type] is peopleList.
+  final String? listOwnerPubkey;
+
+  /// Prefix of [persistenceValue] for a followed people list.
+  static const peopleListPersistencePrefix = 'people:';
+
+  /// Distinguishes new canonical choices from unversioned legacy raw d-tags.
   static const curatedListPersistencePrefix = 'curated:';
 
   static bool isCuratedListPreference(String value) =>
       value.startsWith(curatedListPersistencePrefix) ||
       value.startsWith('list:');
+
+  /// The follow a people list's [persistenceValue] names, or `null` for a
+  /// value that is not one.
+  ///
+  /// The owner is the hex pubkey between the prefix and the first separator
+  /// after it; the rest is the `d` tag, separators and all.
+  static FollowedPeopleListRef? peopleListRefFromValue(String value) {
+    if (!value.startsWith(peopleListPersistencePrefix)) return null;
+    final rest = value.substring(peopleListPersistencePrefix.length);
+    final split = rest.indexOf(':');
+    if (split <= 0 || split == rest.length - 1) return null;
+    return FollowedPeopleListRef(
+      ownerPubkey: rest.substring(0, split),
+      listId: rest.substring(split + 1),
+    );
+  }
 
   /// Legacy mode projection for compatibility.
   FeedMode get mode => switch (type) {
@@ -155,7 +200,8 @@ final class VideoFeedSource extends Equatable {
     VideoFeedSourceType.newVideos => FeedMode.latest,
     VideoFeedSourceType.classic => FeedMode.classic,
     VideoFeedSourceType.following ||
-    VideoFeedSourceType.subscribedList => FeedMode.following,
+    VideoFeedSourceType.subscribedList ||
+    VideoFeedSourceType.peopleList => FeedMode.following,
   };
 
   /// Label fallback for UI surfaces that do not have localized copy.
@@ -164,7 +210,8 @@ final class VideoFeedSource extends Equatable {
     VideoFeedSourceType.newVideos => FeedMode.latest.name,
     VideoFeedSourceType.following => FeedMode.following.name,
     VideoFeedSourceType.classic => FeedMode.classic.name,
-    VideoFeedSourceType.subscribedList => listName ?? '',
+    VideoFeedSourceType.subscribedList ||
+    VideoFeedSourceType.peopleList => listName ?? '',
     VideoFeedSourceType.subscribedHashtag => '#${displayTag ?? hashtag}',
   };
 
@@ -177,10 +224,14 @@ final class VideoFeedSource extends Equatable {
     VideoFeedSourceType.classic => FeedMode.classic.name,
     VideoFeedSourceType.subscribedList => 'list:$listId',
     VideoFeedSourceType.subscribedHashtag => 'hashtag:$hashtag',
+    // The hex pubkey has no separator in it, so the first one after the
+    // prefix always ends the owner, whatever the `d` tag contains.
+    VideoFeedSourceType.peopleList =>
+      '$peopleListPersistencePrefix$listOwnerPubkey:$listId',
   };
 
   @override
-  List<Object?> get props => [type, listId, listName, hashtag, displayTag];
+  List<Object?> get props => [type, listId, listName, listOwnerPubkey, hashtag, displayTag];
 }
 
 /// Status of the video feed.
@@ -248,6 +299,7 @@ final class VideoFeedBlocState extends Equatable {
     VideoFeedSource? source,
     this.subscribedLists = const [],
     this.followedHashtags = const [],
+    this.followedPeopleLists = const [],
     this.hasMore = true,
     this.isLoadingMore = false,
     this.error,
@@ -283,6 +335,9 @@ final class VideoFeedBlocState extends Equatable {
 
   /// Followed hashtags available in the Home picker.
   final List<HashtagSubscription> followedHashtags;
+  /// People lists the viewer follows, available to Home as feeds of their
+  /// members' videos.
+  final List<PeopleListSearchResult> followedPeopleLists;
 
   /// Whether more videos can be loaded via pagination.
   final bool hasMore;
@@ -358,6 +413,23 @@ final class VideoFeedBlocState extends Equatable {
   bool get isSubscribedListSelected =>
       source.type == VideoFeedSourceType.subscribedList;
 
+  /// The followed people list [source] names, or `null` when it is not a
+  /// people-list source or that list is no longer followed.
+  PeopleListSearchResult? followedPeopleListFor(VideoFeedSource source) {
+    if (source.type != VideoFeedSourceType.peopleList) return null;
+    for (final followed in followedPeopleLists) {
+      if (followed.ownerPubkey == source.listOwnerPubkey &&
+          followed.list.id == source.listId) {
+        return followed;
+      }
+    }
+    return null;
+  }
+
+  /// The followed people list the active source names, if any.
+  PeopleListSearchResult? get selectedPeopleList =>
+      followedPeopleListFor(source);
+
   /// Create a copy with updated values.
   VideoFeedBlocState copyWith({
     VideoFeedStatus? status,
@@ -366,6 +438,7 @@ final class VideoFeedBlocState extends Equatable {
     VideoFeedSource? source,
     List<CuratedList>? subscribedLists,
     List<HashtagSubscription>? followedHashtags,
+    List<PeopleListSearchResult>? followedPeopleLists,
     bool? hasMore,
     bool? isLoadingMore,
     VideoFeedError? error,
@@ -388,6 +461,7 @@ final class VideoFeedBlocState extends Equatable {
           (mode != null ? VideoFeedSource.fromMode(mode) : this.source),
       subscribedLists: subscribedLists ?? this.subscribedLists,
       followedHashtags: followedHashtags ?? this.followedHashtags,
+      followedPeopleLists: followedPeopleLists ?? this.followedPeopleLists,
       hasMore: hasMore ?? this.hasMore,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       error: clearError ? null : (error ?? this.error),
@@ -411,6 +485,7 @@ final class VideoFeedBlocState extends Equatable {
     source,
     subscribedLists,
     followedHashtags,
+    followedPeopleLists,
     hasMore,
     isLoadingMore,
     error,
