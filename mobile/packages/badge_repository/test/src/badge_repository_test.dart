@@ -71,9 +71,17 @@ void main() {
       addTearDown(subscription.cancel);
 
       await repository.setSubscription(coordinate, subscribed: true);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(changes, hasLength(1));
+    });
+
+    test('dispose closes the subscription change stream', () async {
+      final done = repository.subscriptionChanges.isEmpty;
+
+      await repository.dispose();
+
+      expect(await done, isTrue);
     });
 
     test('subscriptions publish a public addressable event and sync', () async {
