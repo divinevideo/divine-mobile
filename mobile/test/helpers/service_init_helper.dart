@@ -1,20 +1,11 @@
 // ABOUTME: Service initialization helper for tests - handles proper setup without platform dependencies
-// ABOUTME: Provides mock services that work in test environment without SharedPreferences or platform channels
+// ABOUTME: Mocks the SharedPreferences, connectivity and secure-storage channels that services read in tests
 
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nostr_client/nostr_client.dart';
-import 'package:nostr_key_manager/nostr_key_manager.dart';
-import 'package:openvine/observability/crash_reporter.dart';
-import 'package:openvine/services/auth/nostr_identity.dart';
-import 'package:openvine/services/nostr_service_factory.dart';
-import 'package:openvine/services/subscription_manager.dart';
-import 'package:openvine/services/video_event_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 import 'shared_channel_override.dart';
-import 'test_nostr_service.dart';
 
 /// Helper class for initializing services in test environment
 class ServiceInitHelper {
@@ -73,94 +64,4 @@ class ServiceInitHelper {
     // Initialize logging for tests
     Log.setLogLevel(LogLevel.error); // Reduce noise in tests
   }
-
-  /// Create a real NostrService with mocked platform dependencies for testing
-  static Future<ServiceBundle> createServiceBundle() async {
-    initializeTestEnvironment();
-
-    try {
-      // Generate a test key container for testing
-      final keyContainer = await SecureKeyContainer.generate();
-
-      final nostrService = NostrServiceFactory.create(
-        signer: LocalNostrIdentity(keyContainer: keyContainer),
-      );
-      final subscriptionManager = SubscriptionManager(nostrService);
-      final videoEventService = VideoEventService(
-        nostrService,
-        crashReporter: const SilentCrashReporter(),
-      );
-
-      return ServiceBundle(
-        keyContainer: keyContainer,
-        nostrService: nostrService,
-        subscriptionManager: subscriptionManager,
-        videoEventService: videoEventService,
-      );
-    } catch (e) {
-      // If real service creation fails, fall back to test services
-      return createTestServiceBundle();
-    }
-  }
-
-  /// Create test service bundle using TestNostrService (no platform dependencies)
-  static ServiceBundle createTestServiceBundle() {
-    initializeTestEnvironment();
-
-    final testNostrService = TestNostrService();
-    testNostrService.setCurrentUserPubkey('test-pubkey-123');
-
-    final subscriptionManager = SubscriptionManager(testNostrService);
-    final videoEventService = VideoEventService(
-      testNostrService,
-      crashReporter: const SilentCrashReporter(),
-    );
-
-    return ServiceBundle(
-      nostrService: testNostrService,
-      subscriptionManager: subscriptionManager,
-      videoEventService: videoEventService,
-    );
-  }
-
-  /// Clean up all services in a bundle
-  static Future<void> disposeServiceBundle(ServiceBundle bundle) async {
-    bundle.videoEventService.dispose();
-    await bundle.subscriptionManager.dispose();
-    await bundle.nostrService.dispose();
-    bundle.keyContainer?.dispose();
-  }
-
-  /// Create Riverpod provider overrides for test environment
-  static List createProviderOverrides() {
-    // Create an empty list with proper type inference by starting with a typed list
-    // This ensures the list has the correct Override type
-    const List overrides = [];
-    return overrides;
-  }
-
-  /// Create a test-ready ProviderContainer with proper overrides
-  static ProviderContainer createTestContainer({List? additionalOverrides}) {
-    final baseOverrides = createProviderOverrides();
-    final extraOverrides = additionalOverrides ?? [];
-
-    // Combine lists and cast to the expected type
-    final List<dynamic> allOverrides = [...baseOverrides, ...extraOverrides];
-    return ProviderContainer(overrides: allOverrides.cast());
-  }
-}
-
-/// Bundle of commonly used services for tests
-class ServiceBundle {
-  ServiceBundle({
-    required this.nostrService,
-    required this.subscriptionManager,
-    required this.videoEventService,
-    this.keyContainer,
-  });
-
-  final SecureKeyContainer? keyContainer;
-  final NostrClient nostrService;
-  final SubscriptionManager subscriptionManager;
-  final VideoEventService videoEventService;
 }
