@@ -1605,6 +1605,19 @@ void main() {
 
             verifyCachedTotal(0);
           });
+
+          test('records nothing when both lookups failed and no total is '
+              'cached yet', () async {
+            stubCachedTotal(null);
+            stubEngagement(const {
+              'total_views': null,
+              'archived_loops': null,
+            });
+
+            await repoWithFunnelcake.fetchFreshProfile(pubkey: testPubkey);
+
+            verifyCachedTotalKept();
+          });
         });
 
         test('does not cache an ambiguous 0/0 social response', () async {

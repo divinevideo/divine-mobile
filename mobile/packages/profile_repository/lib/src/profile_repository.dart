@@ -872,15 +872,17 @@ class ProfileRepository implements ProfileReader {
   ///
   /// A null `total_views` means funnelcake could not complete the view lookup.
   /// A reported zero is valid data. An incomplete response may raise a cached
-  /// total but never lower it.
+  /// total but never lower it, and one with neither part known caches nothing.
   Future<int?> _lifetimeTotalToCache(
     String pubkey,
     ProfileStatsDao dao,
     ProfileEngagementData engagement,
   ) async {
     final totalViews = engagement.totalViews;
-    final divineViews = totalViews ?? 0;
     final archivedLoops = engagement.archivedLoops;
+    if (totalViews == null && archivedLoops == null) return null;
+
+    final divineViews = totalViews ?? 0;
     final total = (archivedLoops ?? 0) + divineViews;
     final isIncomplete = archivedLoops == null || totalViews == null;
     if (!isIncomplete) return total;
