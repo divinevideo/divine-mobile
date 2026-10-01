@@ -250,6 +250,25 @@ void main() {
         verifyNever(() => nostrClient.queryEvents(any()));
       });
 
+      test('fails rather than reading a timed-out subscription list as '
+          'empty', () async {
+        // Following falls back to direct follows on an error; an empty set
+        // would instead hide the subscription without a trace.
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer(
+          (_) async => (events: <Event>[], timedOut: true, noRelays: false),
+        );
+
+        await expectLater(
+          repository.loadSubscribedHolders(),
+          throwsA(isA<StateError>()),
+        );
+      });
+
       test('unions the accepted holders of every subscribed badge', () async {
         final daily = BadgeCoordinate(
           pubkey: _pubkey(2),
@@ -263,19 +282,28 @@ void main() {
           daily.value: [_pubkey(10), _pubkey(11)],
           weekly.value: [_pubkey(11), _pubkey(12)],
         };
-        when(() => nostrClient.queryEvents(any())).thenAnswer(
-          (_) async => [
-            _event(
-              id: _eventId(1),
-              pubkey: _pubkey(1),
-              kind: EventKind.appSpecificData,
-              tags: [
-                ['d', 'divine.badge_subscriptions'],
-                ['a', daily.value],
-                ['a', weekly.value],
-              ],
-            ),
-          ],
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer(
+          (_) async => (
+            events: [
+              _event(
+                id: _eventId(1),
+                pubkey: _pubkey(1),
+                kind: EventKind.appSpecificData,
+                tags: [
+                  ['d', 'divine.badge_subscriptions'],
+                  ['a', daily.value],
+                  ['a', weekly.value],
+                ],
+              ),
+            ],
+            timedOut: false,
+            noRelays: false,
+          ),
         );
         when(() => nostrClient.readAllEvents(any())).thenAnswer((
           invocation,
