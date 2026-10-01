@@ -1449,34 +1449,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Nenhum vídeo disponível';
 
   @override
-  String get exploreDiscoverLists => 'Descobrir listas';
-
-  @override
-  String get exploreAboutLists => 'Sobre listas';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Listas te ajudam a organizar e curar conteúdo do Divine de duas formas:';
-
-  @override
   String get explorePeopleLists => 'Listas de pessoas';
 
   @override
-  String get explorePeopleListsDescription =>
-      'Siga grupos de criadores e veja os últimos vídeos deles';
-
-  @override
   String get exploreVideoLists => 'Listas de vídeos';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Crie playlists dos seus vídeos favoritos para assistir depois';
-
-  @override
-  String get exploreMyLists => 'Minhas listas';
-
-  @override
-  String get exploreSubscribedLists => 'Listas inscritas';
 
   @override
   String get exploreErrorLoadingLists =>
@@ -4991,17 +4967,6 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count pessoas',
-      one: '$count pessoa',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => 'Por ';
 
   @override
@@ -6217,32 +6182,6 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Falha ao atualizar assinatura. Por favor, tente novamente.';
-
-  @override
-  String get discoverListsTitle => 'Descobrir listas';
-
-  @override
-  String get discoverListsFailedToLoad => 'Falha ao carregar listas';
-
-  @override
-  String get discoverListsLoading => 'Descobrindo listas públicas...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'O relay não devolveu listas a tempo. Tente de novo.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Serviço indisponível.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Nenhuma lista pública encontrada';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'Volte mais tarde para ver novas listas';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'por';
 
   @override
   String get curatedListEmptyTitle => 'Sem vídeos nesta lista';
@@ -13221,4 +13160,11 @@ class AppLocalizationsPt extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'Nenhuma lista deu as caras desta vez. Puxe para atualizar.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Carregando listas';
 }

@@ -1372,34 +1372,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Tidak ada video tersedia';
 
   @override
-  String get exploreDiscoverLists => 'Temukan Daftar';
-
-  @override
-  String get exploreAboutLists => 'Tentang Daftar';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Daftar membantumu mengorganisir dan mengkurasi konten Divine dengan dua cara:';
-
-  @override
   String get explorePeopleLists => 'Daftar Orang';
 
   @override
-  String get explorePeopleListsDescription =>
-      'Ikuti grup kreator dan lihat video terbaru mereka';
-
-  @override
   String get exploreVideoLists => 'Daftar Video';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Buat playlist video favoritmu untuk ditonton nanti';
-
-  @override
-  String get exploreMyLists => 'Daftarku';
-
-  @override
-  String get exploreSubscribedLists => 'Daftar yang Dilanggan';
 
   @override
   String get exploreErrorLoadingLists =>
@@ -4880,17 +4856,6 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count orang',
-      one: '1 orang',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => 'Oleh ';
 
   @override
@@ -6095,31 +6060,6 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Gagal memperbarui langganan. Silakan coba lagi.';
-
-  @override
-  String get discoverListsTitle => 'Jelajahi Daftar';
-
-  @override
-  String get discoverListsFailedToLoad => 'Gagal memuat daftar';
-
-  @override
-  String get discoverListsLoading => 'Mencari daftar publik...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Relay tidak mengembalikan daftar tepat waktu. Coba lagi.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Layanan tidak tersedia.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Tidak ada daftar publik';
-
-  @override
-  String get discoverListsEmptySubtitle => 'Cek lagi nanti untuk daftar baru';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'oleh';
 
   @override
   String get curatedListEmptyTitle => 'Belum ada video di daftar ini';
@@ -13021,4 +12961,11 @@ class AppLocalizationsId extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'Belum ada daftar yang muncul kali ini. Tarik untuk menyegarkan.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Memuat daftar';
 }

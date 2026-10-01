@@ -1399,34 +1399,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Không có video nào';
 
   @override
-  String get exploreDiscoverLists => 'Khám phá danh sách';
-
-  @override
-  String get exploreAboutLists => 'Về danh sách';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Danh sách giúp bạn sắp xếp và tuyển chọn nội dung Divine theo hai cách:';
-
-  @override
   String get explorePeopleLists => 'Danh sách người';
 
   @override
-  String get explorePeopleListsDescription =>
-      'Theo dõi nhóm nhà sáng tạo và xem video mới nhất của họ';
-
-  @override
   String get exploreVideoLists => 'Danh sách video';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Tạo danh sách phát từ những video yêu thích để xem sau';
-
-  @override
-  String get exploreMyLists => 'Danh sách của tôi';
-
-  @override
-  String get exploreSubscribedLists => 'Danh sách đã đăng ký';
 
   @override
   String get exploreErrorLoadingLists =>
@@ -4919,17 +4895,6 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count người',
-      one: '1 người',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => 'Bởi ';
 
   @override
@@ -6136,33 +6101,6 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Không cập nhật được đăng ký. Vui lòng thử lại.';
-
-  @override
-  String get discoverListsTitle => 'Khám phá danh sách';
-
-  @override
-  String get discoverListsFailedToLoad => 'Không tải được danh sách';
-
-  @override
-  String get discoverListsLoading => 'Đang khám phá danh sách công khai...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Relay không trả về danh sách kịp lúc. Thử lại nhé.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Dịch vụ không khả dụng.';
-
-  @override
-  String get discoverListsEmptyTitle =>
-      'Không tìm thấy danh sách công khai nào';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'Quay lại sau để xem danh sách mới nhé';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'bởi';
 
   @override
   String get curatedListEmptyTitle => 'Chưa có video nào trong danh sách này';
@@ -13062,4 +13000,11 @@ class AppLocalizationsVi extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'Lần này chẳng thấy danh sách nào. Kéo để làm mới.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Đang tải danh sách';
 }

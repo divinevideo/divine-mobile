@@ -2441,59 +2441,17 @@ abstract class AppLocalizations {
   /// **'No videos available'**
   String get exploreNoVideosAvailable;
 
-  /// No description provided for @exploreDiscoverLists.
-  ///
-  /// In en, this message translates to:
-  /// **'Discover Lists'**
-  String get exploreDiscoverLists;
-
-  /// No description provided for @exploreAboutLists.
-  ///
-  /// In en, this message translates to:
-  /// **'About Lists'**
-  String get exploreAboutLists;
-
-  /// No description provided for @exploreAboutListsDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Lists help you organize and curate Divine content in two ways:'**
-  String get exploreAboutListsDescription;
-
   /// No description provided for @explorePeopleLists.
   ///
   /// In en, this message translates to:
   /// **'People Lists'**
   String get explorePeopleLists;
 
-  /// No description provided for @explorePeopleListsDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Follow groups of creators and see their latest videos'**
-  String get explorePeopleListsDescription;
-
   /// No description provided for @exploreVideoLists.
   ///
   /// In en, this message translates to:
   /// **'Video Lists'**
   String get exploreVideoLists;
-
-  /// No description provided for @exploreVideoListsDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Create playlists of your favorite videos to watch later'**
-  String get exploreVideoListsDescription;
-
-  /// No description provided for @exploreMyLists.
-  ///
-  /// In en, this message translates to:
-  /// **'My Lists'**
-  String get exploreMyLists;
-
-  /// No description provided for @exploreSubscribedLists.
-  ///
-  /// In en, this message translates to:
-  /// **'Subscribed Lists'**
-  String get exploreSubscribedLists;
 
   /// No description provided for @exploreErrorLoadingLists.
   ///
@@ -8411,12 +8369,6 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{{count} video} other{{count} videos}}'**
   String listVideoCount(int count);
 
-  /// No description provided for @listPersonCount.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{1 person} other{{count} people}}'**
-  String listPersonCount(int count);
-
   /// No description provided for @listByAuthorPrefix.
   ///
   /// In en, this message translates to:
@@ -10516,54 +10468,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to update subscription. Please try again.'**
   String get discoverListsFailedToUpdateSubscription;
-
-  /// No description provided for @discoverListsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Discover Lists'**
-  String get discoverListsTitle;
-
-  /// No description provided for @discoverListsFailedToLoad.
-  ///
-  /// In en, this message translates to:
-  /// **'Failed to load lists'**
-  String get discoverListsFailedToLoad;
-
-  /// No description provided for @discoverListsLoading.
-  ///
-  /// In en, this message translates to:
-  /// **'Discovering public lists...'**
-  String get discoverListsLoading;
-
-  /// No description provided for @discoverListsRelayTimeout.
-  ///
-  /// In en, this message translates to:
-  /// **'The relay did not return lists in time. Try again.'**
-  String get discoverListsRelayTimeout;
-
-  /// No description provided for @discoverListsServiceUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Service not available.'**
-  String get discoverListsServiceUnavailable;
-
-  /// No description provided for @discoverListsEmptyTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'No public lists found'**
-  String get discoverListsEmptyTitle;
-
-  /// No description provided for @discoverListsEmptySubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Check back later for new lists'**
-  String get discoverListsEmptySubtitle;
-
-  /// No description provided for @discoverListsByAuthorPrefix.
-  ///
-  /// In en, this message translates to:
-  /// **'by'**
-  String get discoverListsByAuthorPrefix;
 
   /// No description provided for @curatedListEmptyTitle.
   ///
@@ -21954,6 +21858,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{visibility, select, private{{name}, Private, {count}} other{{name}, {count}}}'**
   String listCardSemanticLabel(String name, String visibility, String count);
+
+  /// Full-screen message on the Explore Lists tab when neither discovery column returned any lists.
+  ///
+  /// In en, this message translates to:
+  /// **'No lists turned up this time. Pull to refresh.'**
+  String get listsDiscoveryEmpty;
+
+  /// Screen-reader label for the shimmering placeholder cards shown while the Explore Lists gallery loads.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading lists'**
+  String get listsDiscoveryLoadingLabel;
 }
 
 class _AppLocalizationsDelegate

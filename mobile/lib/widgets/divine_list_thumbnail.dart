@@ -785,6 +785,59 @@ class ListSkeletonizer extends StatelessWidget {
   }
 }
 
+/// The card's silhouette while its list is still on its way.
+///
+/// Same media geometry, gap and footer boxes as [DivineListThumbnail], so
+/// a gallery column keeps its rows when the placeholders give way to cards,
+/// and the same structure inside the media box: the five-slot fan for a
+/// video list, the three-tile collage for a people list. Paints as bones
+/// under an enclosing [Skeletonizer] with `ignoreContainers` on; the
+/// caller owns the shimmer effect and the semantics label for the column.
+class DivineListThumbnailSkeleton extends StatelessWidget {
+  /// Silhouette of a video list card: the thumbnail fan.
+  const DivineListThumbnailSkeleton.videos({super.key})
+    : _kind = _ListKind.videos;
+
+  /// Silhouette of a people list card: the avatar collage.
+  const DivineListThumbnailSkeleton.people({super.key})
+    : _kind = _ListKind.people;
+
+  final _ListKind _kind;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.vineColors;
+    // The styles only size the bones; the colours match what the real
+    // footer paints so the metrics come from the same styles.
+    final titleLine = _scaledLineHeight(
+      context,
+      VineTheme.titleSmallFont(color: colors.primaryText),
+    );
+    final descriptionLine = _scaledLineHeight(
+      context,
+      VineTheme.bodySmallFont(color: colors.secondaryText),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        switch (_kind) {
+          _ListKind.videos => _FanFrame(
+            slotBuilder: (_) => const _FanSlotBone(),
+          ),
+          _ListKind.people => _CollageFrame(
+            tileBuilder: (slot, seams) => _TileBone(slot: slot, seams: seams),
+          ),
+        },
+        const SizedBox(height: 8),
+        _TextBone(lineHeight: titleLine, widthFactor: 0.6),
+        _TextBone(lineHeight: descriptionLine, widthFactor: 0.9),
+        _TextBone(lineHeight: descriptionLine, widthFactor: 0.7),
+      ],
+    );
+  }
+}
+
 /// A fan slot as a bone: the shimmer fills the card shape, the seam stays
 /// painted so neighbouring slots read as separate cards.
 class _FanSlotBone extends StatelessWidget {
@@ -852,6 +905,38 @@ class _TileBone extends StatelessWidget {
           child: DecoratedBox(decoration: BoxDecoration(border: seams)),
         ),
       ],
+    );
+  }
+}
+
+/// One text line's box with a bone inside it, so the placeholder footer is
+/// exactly as tall as the real one.
+class _TextBone extends StatelessWidget {
+  const _TextBone({required this.lineHeight, required this.widthFactor});
+
+  final double lineHeight;
+  final double widthFactor;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: lineHeight,
+      width: double.infinity,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: FractionallySizedBox(
+          alignment: Alignment.centerLeft,
+          widthFactor: widthFactor,
+          child: Skeleton.leaf(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: context.vineColors.containerLow,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

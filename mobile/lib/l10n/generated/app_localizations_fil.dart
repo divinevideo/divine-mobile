@@ -1418,34 +1418,10 @@ class AppLocalizationsFil extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Walang available na video';
 
   @override
-  String get exploreDiscoverLists => 'Tuklasin ang mga List';
-
-  @override
-  String get exploreAboutLists => 'Tungkol sa mga List';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Tinutulungan ka ng mga list na ayusin at i-curate ang Divine content sa dalawang paraan:';
-
-  @override
   String get explorePeopleLists => 'Mga People List';
 
   @override
-  String get explorePeopleListsDescription =>
-      'Sundan ang mga grupo ng creator at tingnan ang kanilang mga pinakabagong video';
-
-  @override
   String get exploreVideoLists => 'Mga Video List';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Gumawa ng playlist ng iyong mga paboritong video para mapanood mamaya';
-
-  @override
-  String get exploreMyLists => 'Mga List Ko';
-
-  @override
-  String get exploreSubscribedLists => 'Mga Subscribed List';
 
   @override
   String get exploreErrorLoadingLists =>
@@ -4987,17 +4963,6 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count tao',
-      one: '$count tao',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => 'Ni ';
 
   @override
@@ -6210,32 +6175,6 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Hindi na-update ang subscription. Subukan ulit.';
-
-  @override
-  String get discoverListsTitle => 'Tuklasin ang mga Listahan';
-
-  @override
-  String get discoverListsFailedToLoad => 'Hindi na-load ang mga listahan';
-
-  @override
-  String get discoverListsLoading => 'Naghahanap ng mga public list...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Hindi nagbalik ng mga list ang relay sa oras. Subukan ulit.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Hindi available ang serbisyo.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Walang nakitang public list';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'Bumalik mamaya para sa mga bagong listahan';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'ni';
 
   @override
   String get curatedListEmptyTitle => 'Walang video sa listahang ito';
@@ -13231,4 +13170,11 @@ class AppLocalizationsFil extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'Walang lumabas na list ngayon. Hilahin pababa para mag-refresh.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Naglo-load ng mga list';
 }
