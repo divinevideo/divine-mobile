@@ -3740,14 +3740,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get peopleListsAddPeopleRetry => '再试一次';
 
   @override
-  String get peopleListsAddButton => '添加';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return '添加 $count 人';
-  }
-
-  @override
   String peopleListsInNLists(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -12383,4 +12375,20 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get authAccountCleanupFailed => '无法清除上一个账号的数据。请重试。';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => '搜索用户';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '把 $name 从列表移除';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed => '无法更新列表，请重试。';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '把 $name 加入列表';
+  }
 }

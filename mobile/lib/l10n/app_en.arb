@@ -2548,15 +2548,6 @@
   },
   "peopleListsAddPeopleError": "Couldn't load people. Please try again.",
   "peopleListsAddPeopleRetry": "Try again",
-  "peopleListsAddButton": "Add",
-  "peopleListsAddButtonWithCount": "Add {count}",
-  "@peopleListsAddButtonWithCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "peopleListsInNLists": "{count, plural, =1{In 1 list} other{In {count} lists}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -9686,5 +9677,28 @@
   "@authAccountCleanupFailed": {
     "description": "Error shown when local account cleanup fails during sign-in or switching accounts. The user can retry."
   },
-  "authAccountCleanupFailed": "Couldn't clear the previous account's data. Try again."
+  "authAccountCleanupFailed": "Couldn't clear the previous account's data. Try again.",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "description": "Screen-reader label of the row button that removes a person from the people list being edited.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsAddPeopleSearchHint": "Search people",
+  "@peopleListsMembershipUpdateFailed": {
+    "description": "Snackbar shown when adding or removing a person from a people list fails and the change is rolled back."
+  },
+  "peopleListsRemovePersonSemanticLabel": "Remove {name} from list",
+  "peopleListsMembershipUpdateFailed": "Couldn't update the list. Please try again.",
+  "@peopleListsAddPersonSemanticLabel": {
+    "description": "Screen-reader label of the row button that adds a person to the people list being edited.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsAddPersonSemanticLabel": "Add {name} to list"
 }

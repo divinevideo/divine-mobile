@@ -981,7 +981,7 @@
   "metadataC2paCredentials": "Kelayakan Kandungan C2PA",
   "metadataProofManifest": "Manifes bukti",
   "metadataVerificationInfoTooltip": "Apakah maksud pemeriksaan ini?",
-    "metadataSectionInfoSemanticsLabel": "{section}. {question}",
+  "metadataSectionInfoSemanticsLabel": "{section}. {question}",
   "metadataVerificationInfoTitle": "Apa maksud pemeriksaan ini",
   "metadataVerificationInfoIntro": "Isyarat ini datang daripada kamera dan daripada fail video itu sendiri. Lebih banyak yang dibawa sesebuah video, lebih banyak yang boleh kami buktikan tentang asalnya.",
   "metadataVerificationInfoDeviceAttestation": "Sistem pengendalian telefon menjamin apl yang merakam ini. Bukti kukuh bahawa ia datang daripada kamera, bukan fail yang dimuat naik seseorang.",
@@ -1965,15 +1965,6 @@
   },
   "peopleListsAddPeopleError": "Tidak dapat memuatkan orang. Sila cuba lagi.",
   "peopleListsAddPeopleRetry": "Cuba lagi",
-  "peopleListsAddButton": "Tambah",
-  "peopleListsAddButtonWithCount": "Tambah {count}",
-  "@peopleListsAddButtonWithCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "peopleListsInNLists": "{count, plural, =1{Dalam 1 senarai} other{Dalam {count} senarai}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -2911,8 +2902,8 @@
     "description": "SnackBar text shown when a protected minor (13-15) tries to DM a non-approved account (#176). Neutral, no retry action."
   },
   "dmSendBlockedRetiredMessage": "Tiada sesiapa membaca perbualan ini. Hantar mesej kepada Divine Moderation sebaliknya.",
-    "dmDeleteRefusedMessage": "Tidak dapat memadam untuk semua orang.",
-    "dmDeleteRefusedDetails": "Sesetengah orang mungkin masih dapat melihat mesej ini.",
+  "dmDeleteRefusedMessage": "Tidak dapat memadam untuk semua orang.",
+  "dmDeleteRefusedDetails": "Sesetengah orang mungkin masih dapat melihat mesej ini.",
   "dmRetiredThreadClosedTitle": "Perbualan ini telah ditutup.",
   "dmFormerModerationAccountName": "Akaun pemantauan terdahulu",
   "messageRequestModerationNoticeCannotBeRemoved": "Notis Divine Moderation ini tidak boleh dialih keluar.",
@@ -3852,7 +3843,7 @@
     }
   },
   "ogVinerBadgeLabel": "OG Viner",
-    "ogBetaTesterBadgeLabel": "OG Beta Tester",
+  "ogBetaTesterBadgeLabel": "OG Beta Tester",
   "profileBadgeOgVinerBody": "Orang ini pernah menyiarkan Vine asli yang ditemui Divine dalam arkib. Ini bukan lencana pengesahan akaun.",
   "profileBadgeCheckmarkTitle": "Tanda semak profil",
   "profileBadgeCheckmarkBody": "Divine memberikan tanda semak ini kepada akaun pasukan. Ia berasingan daripada NIP-05, pautan akaun disahkan dan status OG Viner.",
@@ -6568,12 +6559,12 @@
   "supporterTierLabel": "{title} — {price}",
   "dmReactionAddBlockedByRemoval": "Selesaikan pengalihan keluar reaksi terdahulu sebelum menambah reaksi lain.",
   "updateGentleBanner": "Kemas kini baharu sudah tiba. Lihat sekarang →",
-    "updateModerateTitle": "Terdapat kemas kini sejak semakan terakhir anda",
-    "updateUrgentTitle": "Anda kehilangan pembaikan penting",
-    "updateNotNow": "Bukan sekarang",
-    "updateAction": "Kemas kini",
-    "updateNewIn": "Baharu dalam {version}:",
-    "settingsUpdateAvailable": "Kemas kini tersedia",
+  "updateModerateTitle": "Terdapat kemas kini sejak semakan terakhir anda",
+  "updateUrgentTitle": "Anda kehilangan pembaikan penting",
+  "updateNotNow": "Bukan sekarang",
+  "updateAction": "Kemas kini",
+  "updateNewIn": "Baharu dalam {version}:",
+  "settingsUpdateAvailable": "Kemas kini tersedia",
   "soundUploadAction": "Muat naik bunyi",
   "soundUploadTitle": "Muat naik bunyi",
   "soundUploadIntro": "Kongsi beat, jingle atau rakaman suara supaya sesiapa sahaja di Divine boleh membina video dengannya.",
@@ -6595,40 +6586,40 @@
   "savedSoundDeleteFailedNotOwner": "Anda hanya boleh memadam bunyi yang anda kongsi sendiri.",
   "audioPickerTypeGroup": "Audio",
   "soundUploadRetrySaveAction": "Cuba simpan ke Bunyi sekali lagi",
-    "libraryScheduledSectionTitle": "Dijadualkan",
-    "libraryScheduledGoesOutAt": "Disiarkan {time}",
-    "libraryScheduledBadgeWaitingForServer": "Menunggu pelayan",
-    "libraryScheduledBadgeFailed": "Tidak disiarkan",
-    "libraryScheduledBadgeUploading": "Memuat naik",
-    "libraryScheduledRemoteTitle": "Dijadualkan pada peranti lain",
-    "libraryScheduledMoreActionsSemanticLabel": "Tindakan lain untuk {title}",
-    "libraryScheduledActionReschedule": "Tukar masa",
-    "libraryScheduledActionPublishNow": "Siarkan sekarang",
-    "libraryScheduledActionRetry": "Cuba lagi",
-    "libraryScheduledActionCancel": "Batalkan siaran",
-    "libraryScheduledCancelTitle": "Batalkan siaran ini?",
-    "libraryScheduledCancelMessage": "Ia kembali ke draf anda. Tiada apa-apa yang disiarkan.",
-    "libraryScheduledCancelConfirm": "Ya, batalkan",
-    "libraryScheduledCancelKeep": "Simpan dahulu",
-    "libraryScheduledCancelledSnackbar": "Dibatalkan. Ia kembali dalam draf anda.",
-    "libraryScheduledRescheduledSnackbar": "Dialihkan ke masa baharu.",
-    "libraryScheduledPublishedNowSnackbar": "Telah disiarkan.",
-    "libraryScheduledRetryQueuedSnackbar": "Mencuba lagi.",
-    "libraryScheduledAlreadyPublishedSnackbar": "Terlambat — yang itu sudah disiarkan.",
-    "libraryScheduledUnavailableSnackbar": "Tidak dapat menghubungi relay. Cuba lagi sebentar.",
-    "libraryScheduledActionFailedSnackbar": "Tidak menjadi. Cuba lagi.",
-    "publishErrorScheduleRejected": "Relay tidak dapat menyimpan siaran ini untuk kemudian. Pilih masa lain atau siarkan sekarang.",
-    "videoMetadataScheduleLabel": "Masa siaran",
-    "videoMetadataSelectScheduleSemanticLabel": "Pilih masa siaran",
-    "videoMetadataScheduleNow": "Sekarang",
-    "videoMetadataScheduleTonight": "Malam ini pada {time}",
-    "videoMetadataScheduleTomorrowMorning": "Esok pada {time}",
-    "videoMetadataSchedulePickDateTime": "Pilih tarikh dan masa",
-    "videoMetadataSchedulePickerTitle": "Bila ia patut disiarkan?",
-    "videoMetadataScheduleTooSoon": "{minutes, plural, other{Beri sekurang-kurangnya {minutes} minit.}}",
-    "videoMetadataScheduleTooFar": "{days, plural, other{Itu lebih daripada {days} hari. Pilih yang lebih dekat.}}",
-    "videoMetadataScheduleButton": "Jadualkan",
-    "videoMetadataScheduleVideoHint": "Menjadualkan video ini untuk {time}",
+  "libraryScheduledSectionTitle": "Dijadualkan",
+  "libraryScheduledGoesOutAt": "Disiarkan {time}",
+  "libraryScheduledBadgeWaitingForServer": "Menunggu pelayan",
+  "libraryScheduledBadgeFailed": "Tidak disiarkan",
+  "libraryScheduledBadgeUploading": "Memuat naik",
+  "libraryScheduledRemoteTitle": "Dijadualkan pada peranti lain",
+  "libraryScheduledMoreActionsSemanticLabel": "Tindakan lain untuk {title}",
+  "libraryScheduledActionReschedule": "Tukar masa",
+  "libraryScheduledActionPublishNow": "Siarkan sekarang",
+  "libraryScheduledActionRetry": "Cuba lagi",
+  "libraryScheduledActionCancel": "Batalkan siaran",
+  "libraryScheduledCancelTitle": "Batalkan siaran ini?",
+  "libraryScheduledCancelMessage": "Ia kembali ke draf anda. Tiada apa-apa yang disiarkan.",
+  "libraryScheduledCancelConfirm": "Ya, batalkan",
+  "libraryScheduledCancelKeep": "Simpan dahulu",
+  "libraryScheduledCancelledSnackbar": "Dibatalkan. Ia kembali dalam draf anda.",
+  "libraryScheduledRescheduledSnackbar": "Dialihkan ke masa baharu.",
+  "libraryScheduledPublishedNowSnackbar": "Telah disiarkan.",
+  "libraryScheduledRetryQueuedSnackbar": "Mencuba lagi.",
+  "libraryScheduledAlreadyPublishedSnackbar": "Terlambat — yang itu sudah disiarkan.",
+  "libraryScheduledUnavailableSnackbar": "Tidak dapat menghubungi relay. Cuba lagi sebentar.",
+  "libraryScheduledActionFailedSnackbar": "Tidak menjadi. Cuba lagi.",
+  "publishErrorScheduleRejected": "Relay tidak dapat menyimpan siaran ini untuk kemudian. Pilih masa lain atau siarkan sekarang.",
+  "videoMetadataScheduleLabel": "Masa siaran",
+  "videoMetadataSelectScheduleSemanticLabel": "Pilih masa siaran",
+  "videoMetadataScheduleNow": "Sekarang",
+  "videoMetadataScheduleTonight": "Malam ini pada {time}",
+  "videoMetadataScheduleTomorrowMorning": "Esok pada {time}",
+  "videoMetadataSchedulePickDateTime": "Pilih tarikh dan masa",
+  "videoMetadataSchedulePickerTitle": "Bila ia patut disiarkan?",
+  "videoMetadataScheduleTooSoon": "{minutes, plural, other{Beri sekurang-kurangnya {minutes} minit.}}",
+  "videoMetadataScheduleTooFar": "{days, plural, other{Itu lebih daripada {days} hari. Pilih yang lebih dekat.}}",
+  "videoMetadataScheduleButton": "Jadualkan",
+  "videoMetadataScheduleVideoHint": "Menjadualkan video ini untuk {time}",
   "crosspostingBenefitTitle": "Bawa loop anda ke merata tempat",
   "@crosspostingBenefitTitle": {"description": "Headline of the crossposting benefit card in settings"},
   "crosspostingBenefitBody": "Siarkan sekali di Divine, kongsi terus ke Instagram. Orang anda sudah ada di sana — pergi jumpa mereka. Setiap loop yang anda hantar membawa pautan kecil pulang, supaya pencipta seterusnya juga jumpa kami.",
@@ -6769,5 +6760,23 @@
   "listSearchPeopleUnavailable": "Senarai orang tidak tersedia buat masa ini.",
   "listSearchVideosUnavailable": "Senarai video tidak tersedia buat masa ini.",
   "listPrivateConversionTooLarge": "Senarai ini terlalu besar untuk dijadikan peribadi. Alih keluar beberapa video dahulu. Suntingan anda kekal di sini dan belum disimpan.",
-  "authAccountCleanupFailed": "Data akaun sebelumnya tidak dapat dipadamkan. Cuba lagi."
+  "authAccountCleanupFailed": "Data akaun sebelumnya tidak dapat dipadamkan. Cuba lagi.",
+  "peopleListsAddPersonSemanticLabel": "Tambah {name} ke senarai",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "Alih keluar {name} daripada senarai",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "Tidak dapat mengemas kini senarai. Sila cuba lagi.",
+  "peopleListsAddPeopleSearchHint": "Cari orang"
 }

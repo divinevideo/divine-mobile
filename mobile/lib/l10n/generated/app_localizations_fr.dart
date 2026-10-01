@@ -4070,14 +4070,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'Réessayer';
 
   @override
-  String get peopleListsAddButton => 'Ajouter';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Ajouter $count';
-  }
-
-  @override
   String peopleListsInNLists(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -13385,4 +13377,21 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get authAccountCleanupFailed =>
       'Impossible d’effacer les données du compte précédent. Réessaie.';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'Rechercher des personnes';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Retirer $name de la liste';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Impossible de mettre à jour la liste. Réessaie.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Ajouter $name à la liste';
+  }
 }

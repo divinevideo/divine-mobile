@@ -3942,14 +3942,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'Tekrar dene';
 
   @override
-  String get peopleListsAddButton => 'Ekle';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return '$count ekle';
-  }
-
-  @override
   String peopleListsInNLists(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -13107,4 +13099,21 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get authAccountCleanupFailed =>
       'Önceki hesabın verileri temizlenemedi. Tekrar dene.';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'Kişi ara';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '$name kişisini listeden kaldır';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Liste güncellenemedi. Lütfen tekrar dene.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '$name kişisini listeye ekle';
+  }
 }

@@ -3059,8 +3059,6 @@
     "peopleListsAddToListName": "Tambahkan ke {name}",
     "peopleListsAddPeopleError": "Tidak dapat memuat orang. Silakan coba lagi.",
     "peopleListsAddPeopleRetry": "Coba lagi",
-    "peopleListsAddButton": "Tambah",
-    "peopleListsAddButtonWithCount": "Tambah {count}",
     "peopleListsInNLists": "{count, plural, other{Di {count} daftar}}",
     "peopleListsRemoveConfirmTitle": "Hapus {name}?",
     "peopleListsRemoveConfirmBody": "Mereka akan dihapus dari daftar ini.",
@@ -5002,5 +5000,23 @@
     "listSearchPeopleUnavailable": "Daftar orang sedang tidak tersedia.",
     "listSearchVideosUnavailable": "Daftar video sedang tidak tersedia.",
     "authAccountCleanupFailed": "Data akun sebelumnya tidak dapat dihapus. Coba lagi.",
-    "listPrivateConversionTooLarge": "Daftar ini terlalu besar untuk dijadikan privat. Hapus beberapa video terlebih dahulu. Perubahanmu tetap ada di sini dan belum disimpan."
+    "listPrivateConversionTooLarge": "Daftar ini terlalu besar untuk dijadikan privat. Hapus beberapa video terlebih dahulu. Perubahanmu tetap ada di sini dan belum disimpan.",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsAddPersonSemanticLabel": "Tambahkan {name} ke daftar",
+    "peopleListsMembershipUpdateFailed": "Tidak bisa memperbarui daftar. Coba lagi.",
+    "peopleListsAddPeopleSearchHint": "Cari orang",
+    "peopleListsRemovePersonSemanticLabel": "Hapus {name} dari daftar"
 }

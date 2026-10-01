@@ -2319,15 +2319,6 @@
   },
   "peopleListsAddPeopleError": "వ్యక్తులను లోడ్ చేయడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
   "peopleListsAddPeopleRetry": "మళ్లీ ప్రయత్నించండి",
-  "peopleListsAddButton": "జోడించండి",
-  "peopleListsAddButtonWithCount": "జోడించండి {count}",
-  "@peopleListsAddButtonWithCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "peopleListsInNLists": "{count, plural, =1{1 జాబితాలో} other{{count} జాబితాల్లో}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -3443,8 +3434,8 @@
   "@dmSendBlockedRetiredMessage": {
     "description": "SnackBar text shown when a send is refused because the recipient is a moderation account Divine has rotated away from (#6416). Used instead of `dmSendBlockedMessage`, whose copy is wrong here: a retired moderation key IS an official Divine account, it is just one nobody reads any more. Reached only by deep link, queue drain, or share-to-DM — the conversation itself shows `dmRetiredThreadClosedTitle` in place of the composer."
   },
-    "dmDeleteRefusedMessage": "అందరి కోసం తొలగించడం సాధ్యపడలేదు.",
-    "dmDeleteRefusedDetails": "కొంతమంది ఇప్పటికీ ఈ సందేశాన్ని చూడగలిగే అవకాశం ఉంది.",
+  "dmDeleteRefusedMessage": "అందరి కోసం తొలగించడం సాధ్యపడలేదు.",
+  "dmDeleteRefusedDetails": "కొంతమంది ఇప్పటికీ ఈ సందేశాన్ని చూడగలిగే అవకాశం ఉంది.",
   "dmRetiredThreadClosedTitle": "ఈ సంభాషణ మూసివేయబడింది.",
   "@dmRetiredThreadClosedTitle": {
     "description": "Heading of the notice that replaces the message composer in a DM thread keyed on a retired Divine Moderation account (#6416)."
@@ -8350,40 +8341,40 @@
   "savedSoundDeleteFailedNotOwner": "మీరు పంచుకున్న సౌండ్‌లను మాత్రమే తొలగించగలరు.",
   "audioPickerTypeGroup": "ఆడియో",
   "soundUploadRetrySaveAction": "సౌండ్‌లకు మళ్లీ సేవ్ చేయండి",
-    "libraryScheduledSectionTitle": "షెడ్యూల్ చేసినవి",
-    "libraryScheduledGoesOutAt": "{time}కి వెళ్తుంది",
-    "libraryScheduledBadgeWaitingForServer": "సర్వర్ కోసం వేచి ఉంది",
-    "libraryScheduledBadgeFailed": "వెళ్లలేదు",
-    "libraryScheduledBadgeUploading": "అప్‌లోడ్ అవుతోంది",
-    "libraryScheduledRemoteTitle": "మరో పరికరంలో షెడ్యూల్ చేయబడింది",
-    "libraryScheduledMoreActionsSemanticLabel": "{title} కోసం మరిన్ని చర్యలు",
-    "libraryScheduledActionReschedule": "సమయం మార్చండి",
-    "libraryScheduledActionPublishNow": "ఇప్పుడే పోస్ట్ చేయండి",
-    "libraryScheduledActionRetry": "మళ్లీ ప్రయత్నించండి",
-    "libraryScheduledActionCancel": "పోస్ట్‌ను రద్దు చేయండి",
-    "libraryScheduledCancelTitle": "ఈ పోస్ట్‌ను రద్దు చేయాలా?",
-    "libraryScheduledCancelMessage": "ఇది మీ డ్రాఫ్ట్‌లకు తిరిగి వెళ్తుంది. ఏదీ ప్రచురించబడదు.",
-    "libraryScheduledCancelConfirm": "అవును, రద్దు చేయండి",
-    "libraryScheduledCancelKeep": "ఉంచండి",
-    "libraryScheduledCancelledSnackbar": "రద్దు చేయబడింది. ఇది మీ డ్రాఫ్ట్‌లలో తిరిగి ఉంది.",
-    "libraryScheduledRescheduledSnackbar": "కొత్త సమయానికి మార్చబడింది.",
-    "libraryScheduledPublishedNowSnackbar": "పోస్ట్ చేయబడింది.",
-    "libraryScheduledRetryQueuedSnackbar": "మళ్లీ ప్రయత్నిస్తోంది.",
-    "libraryScheduledAlreadyPublishedSnackbar": "ఆలస్యమైంది — అది ఇప్పటికే వెళ్లిపోయింది.",
-    "libraryScheduledUnavailableSnackbar": "రిలేను చేరుకోలేకపోయాం. కాసేపటి తర్వాత మళ్లీ ప్రయత్నించండి.",
-    "libraryScheduledActionFailedSnackbar": "అది పని చేయలేదు. మళ్లీ ప్రయత్నించండి.",
-    "publishErrorScheduleRejected": "రిలే ఈ పోస్ట్‌ను తర్వాతి కోసం ఉంచలేకపోయింది. మరో సమయాన్ని ఎంచుకోండి లేదా ఇప్పుడే పోస్ట్ చేయండి.",
-    "videoMetadataScheduleLabel": "పోస్ట్ సమయం",
-    "videoMetadataSelectScheduleSemanticLabel": "పోస్ట్ సమయాన్ని ఎంచుకోండి",
-    "videoMetadataScheduleNow": "ఇప్పుడు",
-    "videoMetadataScheduleTonight": "ఈ రాత్రి {time}కి",
-    "videoMetadataScheduleTomorrowMorning": "రేపు {time}కి",
-    "videoMetadataSchedulePickDateTime": "తేదీ మరియు సమయాన్ని ఎంచుకోండి",
-    "videoMetadataSchedulePickerTitle": "ఇది ఎప్పుడు వెళ్లాలి?",
-    "videoMetadataScheduleTooSoon": "{minutes, plural, =1{కనీసం {minutes} నిమిషం ఇవ్వండి.} other{కనీసం {minutes} నిమిషాలు ఇవ్వండి.}}",
-    "videoMetadataScheduleTooFar": "{days, plural, =1{అది {days} రోజు కంటే ఎక్కువ దూరంలో ఉంది. దగ్గరి సమయాన్ని ఎంచుకోండి.} other{అది {days} రోజుల కంటే ఎక్కువ దూరంలో ఉంది. దగ్గరి సమయాన్ని ఎంచుకోండి.}}",
-    "videoMetadataScheduleButton": "షెడ్యూల్ చేయండి",
-    "videoMetadataScheduleVideoHint": "ఈ వీడియోను {time}కి షెడ్యూల్ చేస్తుంది",
+  "libraryScheduledSectionTitle": "షెడ్యూల్ చేసినవి",
+  "libraryScheduledGoesOutAt": "{time}కి వెళ్తుంది",
+  "libraryScheduledBadgeWaitingForServer": "సర్వర్ కోసం వేచి ఉంది",
+  "libraryScheduledBadgeFailed": "వెళ్లలేదు",
+  "libraryScheduledBadgeUploading": "అప్‌లోడ్ అవుతోంది",
+  "libraryScheduledRemoteTitle": "మరో పరికరంలో షెడ్యూల్ చేయబడింది",
+  "libraryScheduledMoreActionsSemanticLabel": "{title} కోసం మరిన్ని చర్యలు",
+  "libraryScheduledActionReschedule": "సమయం మార్చండి",
+  "libraryScheduledActionPublishNow": "ఇప్పుడే పోస్ట్ చేయండి",
+  "libraryScheduledActionRetry": "మళ్లీ ప్రయత్నించండి",
+  "libraryScheduledActionCancel": "పోస్ట్‌ను రద్దు చేయండి",
+  "libraryScheduledCancelTitle": "ఈ పోస్ట్‌ను రద్దు చేయాలా?",
+  "libraryScheduledCancelMessage": "ఇది మీ డ్రాఫ్ట్‌లకు తిరిగి వెళ్తుంది. ఏదీ ప్రచురించబడదు.",
+  "libraryScheduledCancelConfirm": "అవును, రద్దు చేయండి",
+  "libraryScheduledCancelKeep": "ఉంచండి",
+  "libraryScheduledCancelledSnackbar": "రద్దు చేయబడింది. ఇది మీ డ్రాఫ్ట్‌లలో తిరిగి ఉంది.",
+  "libraryScheduledRescheduledSnackbar": "కొత్త సమయానికి మార్చబడింది.",
+  "libraryScheduledPublishedNowSnackbar": "పోస్ట్ చేయబడింది.",
+  "libraryScheduledRetryQueuedSnackbar": "మళ్లీ ప్రయత్నిస్తోంది.",
+  "libraryScheduledAlreadyPublishedSnackbar": "ఆలస్యమైంది — అది ఇప్పటికే వెళ్లిపోయింది.",
+  "libraryScheduledUnavailableSnackbar": "రిలేను చేరుకోలేకపోయాం. కాసేపటి తర్వాత మళ్లీ ప్రయత్నించండి.",
+  "libraryScheduledActionFailedSnackbar": "అది పని చేయలేదు. మళ్లీ ప్రయత్నించండి.",
+  "publishErrorScheduleRejected": "రిలే ఈ పోస్ట్‌ను తర్వాతి కోసం ఉంచలేకపోయింది. మరో సమయాన్ని ఎంచుకోండి లేదా ఇప్పుడే పోస్ట్ చేయండి.",
+  "videoMetadataScheduleLabel": "పోస్ట్ సమయం",
+  "videoMetadataSelectScheduleSemanticLabel": "పోస్ట్ సమయాన్ని ఎంచుకోండి",
+  "videoMetadataScheduleNow": "ఇప్పుడు",
+  "videoMetadataScheduleTonight": "ఈ రాత్రి {time}కి",
+  "videoMetadataScheduleTomorrowMorning": "రేపు {time}కి",
+  "videoMetadataSchedulePickDateTime": "తేదీ మరియు సమయాన్ని ఎంచుకోండి",
+  "videoMetadataSchedulePickerTitle": "ఇది ఎప్పుడు వెళ్లాలి?",
+  "videoMetadataScheduleTooSoon": "{minutes, plural, =1{కనీసం {minutes} నిమిషం ఇవ్వండి.} other{కనీసం {minutes} నిమిషాలు ఇవ్వండి.}}",
+  "videoMetadataScheduleTooFar": "{days, plural, =1{అది {days} రోజు కంటే ఎక్కువ దూరంలో ఉంది. దగ్గరి సమయాన్ని ఎంచుకోండి.} other{అది {days} రోజుల కంటే ఎక్కువ దూరంలో ఉంది. దగ్గరి సమయాన్ని ఎంచుకోండి.}}",
+  "videoMetadataScheduleButton": "షెడ్యూల్ చేయండి",
+  "videoMetadataScheduleVideoHint": "ఈ వీడియోను {time}కి షెడ్యూల్ చేస్తుంది",
   "analyticsSocialCountsInfoLabel": "మీ అనుచరుల సంఖ్య గురించి",
   "analyticsFollowerCountsBody": "మీ అనుచరుల సంఖ్య Divineలో మిమ్మల్ని అనుసరించే వ్యక్తుల సంఖ్యను చూపిస్తుంది.",
   "analyticsSocialCountsLearnMore": "మరింత తెలుసుకోండి",
@@ -8507,5 +8498,23 @@
   "listSearchPeopleUnavailable": "ప్రస్తుతం వ్యక్తుల జాబితాలు అందుబాటులో లేవు.",
   "listSearchVideosUnavailable": "ప్రస్తుతం వీడియో జాబితాలు అందుబాటులో లేవు.",
   "listPrivateConversionTooLarge": "ఈ జాబితాను ప్రైవేట్‌గా చేయడానికి ఇది చాలా పెద్దది. ముందుగా కొన్ని వీడియోలను తీసివేయండి. మీ మార్పులు ఇక్కడే ఉంటాయి, ఇంకా సేవ్ కాలేదు.",
-  "authAccountCleanupFailed": "మునుపటి ఖాతా డేటాను తొలగించలేకపోయాం. మళ్లీ ప్రయత్నించండి."
+  "authAccountCleanupFailed": "మునుపటి ఖాతా డేటాను తొలగించలేకపోయాం. మళ్లీ ప్రయత్నించండి.",
+  "peopleListsAddPersonSemanticLabel": "{name}ని జాబితాకు జోడించండి",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "{name}ని జాబితా నుండి తీసివేయండి",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "జాబితాను నవీకరించడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
+  "peopleListsAddPeopleSearchHint": "వ్యక్తులను శోధించండి"
 }

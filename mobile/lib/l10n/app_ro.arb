@@ -3059,8 +3059,6 @@
     "peopleListsAddToListName": "Adaugă la {name}",
     "peopleListsAddPeopleError": "Nu s-au putut încărca persoanele. Te rugăm să încerci din nou.",
     "peopleListsAddPeopleRetry": "Încearcă din nou",
-    "peopleListsAddButton": "Adaugă",
-    "peopleListsAddButtonWithCount": "Adaugă {count}",
     "peopleListsInNLists": "{count, plural, =1{Într-o listă} few{În {count} liste} other{În {count} liste}}",
     "peopleListsRemoveConfirmTitle": "Elimini {name}?",
     "peopleListsRemoveConfirmBody": "Va fi eliminat/ă din această listă.",
@@ -5002,5 +5000,23 @@
     "listSearchPeopleUnavailable": "Listele de persoane nu sunt disponibile acum.",
     "listSearchVideosUnavailable": "Listele de videoclipuri nu sunt disponibile acum.",
     "authAccountCleanupFailed": "Nu am putut șterge datele contului anterior. Încearcă din nou.",
-    "listPrivateConversionTooLarge": "Această listă este prea mare pentru a deveni privată. Elimină mai întâi câteva videoclipuri. Modificările tale rămân aici și nu au fost încă salvate."
+    "listPrivateConversionTooLarge": "Această listă este prea mare pentru a deveni privată. Elimină mai întâi câteva videoclipuri. Modificările tale rămân aici și nu au fost încă salvate.",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsAddPersonSemanticLabel": "Adaugă pe {name} la listă",
+    "peopleListsMembershipUpdateFailed": "N-am putut actualiza lista. Mai încearcă.",
+    "peopleListsAddPeopleSearchHint": "Caută persoane",
+    "peopleListsRemovePersonSemanticLabel": "Elimină pe {name} din listă"
 }

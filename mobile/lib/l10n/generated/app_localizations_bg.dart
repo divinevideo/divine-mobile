@@ -4051,14 +4051,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'Опитай пак';
 
   @override
-  String get peopleListsAddButton => 'Добави';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Добави $count';
-  }
-
-  @override
   String peopleListsInNLists(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -13310,4 +13302,21 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get authAccountCleanupFailed =>
       'Данните на предишния акаунт не могат да бъдат изчистени. Опитай отново.';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'Търси хора';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Премахни $name от списъка';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Не успяхме да обновим списъка. Опитай пак.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Добави $name към списъка';
+  }
 }

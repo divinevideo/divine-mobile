@@ -3059,8 +3059,6 @@
     "peopleListsAddToListName": "Dodaj do {name}",
     "peopleListsAddPeopleError": "Nie udało się załadować osób. Spróbuj ponownie.",
     "peopleListsAddPeopleRetry": "Spróbuj ponownie",
-    "peopleListsAddButton": "Dodaj",
-    "peopleListsAddButtonWithCount": "Dodaj {count}",
     "peopleListsInNLists": "{count, plural, =1{Na 1 liście} few{Na {count} listach} many{Na {count} listach} other{Na {count} listach}}",
     "peopleListsRemoveConfirmTitle": "Usunąć {name}?",
     "peopleListsRemoveConfirmBody": "Osoba zostanie usunięta z tej listy.",
@@ -5002,5 +5000,23 @@
     "listSearchPeopleUnavailable": "Listy osób są teraz niedostępne.",
     "listSearchVideosUnavailable": "Listy filmów są teraz niedostępne.",
     "authAccountCleanupFailed": "Nie udało się usunąć danych poprzedniego konta. Spróbuj ponownie.",
-    "listPrivateConversionTooLarge": "Ta lista jest zbyt duża, by ustawić ją jako prywatną. Najpierw usuń kilka filmów. Twoje zmiany pozostają tutaj i nie zostały jeszcze zapisane."
+    "listPrivateConversionTooLarge": "Ta lista jest zbyt duża, by ustawić ją jako prywatną. Najpierw usuń kilka filmów. Twoje zmiany pozostają tutaj i nie zostały jeszcze zapisane.",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsAddPersonSemanticLabel": "Dodaj {name} do listy",
+    "peopleListsMembershipUpdateFailed": "Nie udało się zaktualizować listy. Spróbuj ponownie.",
+    "peopleListsAddPeopleSearchHint": "Szukaj osób",
+    "peopleListsRemovePersonSemanticLabel": "Usuń {name} z listy"
 }

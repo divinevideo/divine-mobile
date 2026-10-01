@@ -3747,14 +3747,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get peopleListsAddPeopleRetry => '再試行';
 
   @override
-  String get peopleListsAddButton => '追加';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return '$count人追加';
-  }
-
-  @override
   String peopleListsInNLists(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -12531,4 +12523,20 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get authAccountCleanupFailed => '前のアカウントのデータを削除できませんでした。もう一度お試しください。';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'ユーザーを検索';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '$nameをリストから削除';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed => 'リストを更新できませんでした。もう一度お試しください。';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '$nameをリストに追加';
+  }
 }

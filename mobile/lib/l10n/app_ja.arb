@@ -3052,8 +3052,6 @@
     "peopleListsAddToListName": "{name}に追加",
     "peopleListsAddPeopleError": "ユーザーを読み込めませんでした。もう一度お試しください。",
     "peopleListsAddPeopleRetry": "再試行",
-    "peopleListsAddButton": "追加",
-    "peopleListsAddButtonWithCount": "{count}人追加",
     "peopleListsInNLists": "{count, plural, other{{count}件のリストに含まれています}}",
     "peopleListsRemoveConfirmTitle": "{name}を削除しますか？",
     "peopleListsRemoveConfirmBody": "このリストから削除されます。",
@@ -5002,5 +5000,23 @@
     "listSearchPeopleUnavailable": "現在、ユーザーリストを利用できません。",
     "listSearchVideosUnavailable": "現在、動画リストを利用できません。",
     "authAccountCleanupFailed": "前のアカウントのデータを削除できませんでした。もう一度お試しください。",
-    "listPrivateConversionTooLarge": "このリストは大きすぎるため非公開にできません。先に動画をいくつか削除してください。編集内容はここに残っていますが、まだ保存されていません。"
+    "listPrivateConversionTooLarge": "このリストは大きすぎるため非公開にできません。先に動画をいくつか削除してください。編集内容はここに残っていますが、まだ保存されていません。",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsAddPersonSemanticLabel": "{name}をリストに追加",
+    "peopleListsMembershipUpdateFailed": "リストを更新できませんでした。もう一度お試しください。",
+    "peopleListsAddPeopleSearchHint": "ユーザーを検索",
+    "peopleListsRemovePersonSemanticLabel": "{name}をリストから削除"
 }

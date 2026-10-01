@@ -24,7 +24,6 @@ libraryClipsSavePartialResult # detached: "{n} saved, {n} failed" has no noun
 libraryCreateVideo # detached: parenthetical "Create Video ({count})"
 libraryDraftCopyTitle # ordinal: "(copy {number})"
 metadataMoreReposters # detached: "+{count} more" has no noun
-peopleListsAddButtonWithCount # detached: "Add {count}" has no noun
 profileBadgeMoreRecipients # detached: "+{count} more" has no noun
 profileVideoThumbnailLabel # ordinal: position in a grid
 relayDiagnosticConnectedRatio # ratio: "{connected}/{total}"

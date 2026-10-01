@@ -3059,8 +3059,6 @@
     "peopleListsAddToListName": "Ajouter à {name}",
     "peopleListsAddPeopleError": "Impossible de charger les personnes. Veuillez réessayer.",
     "peopleListsAddPeopleRetry": "Réessayer",
-    "peopleListsAddButton": "Ajouter",
-    "peopleListsAddButtonWithCount": "Ajouter {count}",
     "peopleListsInNLists": "{count, plural, =1{Dans {count} liste} other{Dans {count} listes}}",
     "peopleListsRemoveConfirmTitle": "Retirer {name} ?",
     "peopleListsRemoveConfirmBody": "Cette personne sera retirée de cette liste.",
@@ -5002,5 +5000,23 @@
     "listSearchPeopleUnavailable": "Les listes de personnes sont indisponibles pour le moment.",
     "listSearchVideosUnavailable": "Les listes de vidéos sont indisponibles pour le moment.",
     "authAccountCleanupFailed": "Impossible d’effacer les données du compte précédent. Réessaie.",
-    "listPrivateConversionTooLarge": "Cette liste est trop grande pour devenir privée. Retire d’abord quelques vidéos. Tes modifications restent ici et n’ont pas été enregistrées."
+    "listPrivateConversionTooLarge": "Cette liste est trop grande pour devenir privée. Retire d’abord quelques vidéos. Tes modifications restent ici et n’ont pas été enregistrées.",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsAddPersonSemanticLabel": "Ajouter {name} à la liste",
+    "peopleListsMembershipUpdateFailed": "Impossible de mettre à jour la liste. Réessaie.",
+    "peopleListsAddPeopleSearchHint": "Rechercher des personnes",
+    "peopleListsRemovePersonSemanticLabel": "Retirer {name} de la liste"
 }

@@ -981,7 +981,7 @@
   "metadataC2paCredentials": "Chứng nhận nội dung C2PA",
   "metadataProofManifest": "Tệp chứng minh",
   "metadataVerificationInfoTooltip": "Những kiểm tra này nghĩa là gì?",
-    "metadataSectionInfoSemanticsLabel": "{section}. {question}",
+  "metadataSectionInfoSemanticsLabel": "{section}. {question}",
   "metadataVerificationInfoTitle": "Ý nghĩa của những kiểm tra này",
   "metadataVerificationInfoIntro": "Các tín hiệu này đến từ máy ảnh và từ chính tệp video. Video mang càng nhiều tín hiệu, chúng tôi càng chứng minh được nhiều điều về nguồn gốc của nó.",
   "metadataVerificationInfoDeviceAttestation": "Hệ điều hành của điện thoại đã bảo chứng cho ứng dụng đã quay video này. Bằng chứng mạnh cho thấy nó đến từ camera, không phải tệp ai đó tải lên.",
@@ -1965,15 +1965,6 @@
   },
   "peopleListsAddPeopleError": "Không tải được danh sách người. Vui lòng thử lại.",
   "peopleListsAddPeopleRetry": "Thử lại",
-  "peopleListsAddButton": "Thêm",
-  "peopleListsAddButtonWithCount": "Thêm {count}",
-  "@peopleListsAddButtonWithCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "peopleListsInNLists": "{count, plural, =1{Trong 1 danh sách} other{Trong {count} danh sách}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -2911,8 +2902,8 @@
     "description": "SnackBar text shown when a protected minor (13-15) tries to DM a non-approved account (#176). Neutral, no retry action."
   },
   "dmSendBlockedRetiredMessage": "Không ai đọc cuộc trò chuyện này. Hãy nhắn cho Divine Moderation.",
-    "dmDeleteRefusedMessage": "Không xóa được với mọi người.",
-    "dmDeleteRefusedDetails": "Một số người vẫn có thể nhìn thấy tin nhắn này.",
+  "dmDeleteRefusedMessage": "Không xóa được với mọi người.",
+  "dmDeleteRefusedDetails": "Một số người vẫn có thể nhìn thấy tin nhắn này.",
   "dmRetiredThreadClosedTitle": "Cuộc trò chuyện này đã đóng.",
   "dmFormerModerationAccountName": "Tài khoản kiểm duyệt cũ",
   "messageRequestModerationNoticeCannotBeRemoved": "Không thể xóa thông báo Divine Moderation này.",
@@ -3852,7 +3843,7 @@
     }
   },
   "ogVinerBadgeLabel": "OG Viner",
-    "ogBetaTesterBadgeLabel": "OG Beta Tester",
+  "ogBetaTesterBadgeLabel": "OG Beta Tester",
   "profileBadgeOgVinerBody": "Người này đã đăng một Vine gốc mà Divine tìm thấy trong kho lưu trữ. Đây không phải huy hiệu xác minh tài khoản.",
   "profileBadgeCheckmarkTitle": "Dấu tích hồ sơ",
   "profileBadgeCheckmarkBody": "Divine trao dấu tích này cho các tài khoản của đội ngũ. Nó tách biệt với NIP-05, liên kết tài khoản đã xác minh và trạng thái OG Viner.",
@@ -6568,12 +6559,12 @@
   "supporterTierLabel": "{title} — {price}",
   "dmReactionAddBlockedByRemoval": "Hãy hoàn tất việc xóa cảm xúc trước đó trước khi thêm cảm xúc khác.",
   "updateGentleBanner": "Vừa có bản cập nhật mới. Xem ngay →",
-    "updateModerateTitle": "Đã có bản cập nhật kể từ lần cuối bạn kiểm tra",
-    "updateUrgentTitle": "Bạn đang thiếu các bản sửa lỗi quan trọng",
-    "updateNotNow": "Để sau",
-    "updateAction": "Cập nhật",
-    "updateNewIn": "Điểm mới trong {version}:",
-    "settingsUpdateAvailable": "Có bản cập nhật",
+  "updateModerateTitle": "Đã có bản cập nhật kể từ lần cuối bạn kiểm tra",
+  "updateUrgentTitle": "Bạn đang thiếu các bản sửa lỗi quan trọng",
+  "updateNotNow": "Để sau",
+  "updateAction": "Cập nhật",
+  "updateNewIn": "Điểm mới trong {version}:",
+  "settingsUpdateAvailable": "Có bản cập nhật",
   "soundUploadAction": "Tải lên âm thanh",
   "soundUploadTitle": "Tải lên âm thanh",
   "soundUploadIntro": "Chia sẻ một đoạn beat, một đoạn nhạc hiệu hay một câu thoại để bất kỳ ai trên Divine cũng có thể dựng video từ đó.",
@@ -6595,40 +6586,40 @@
   "savedSoundDeleteFailedNotOwner": "Bạn chỉ có thể xóa những âm thanh do chính bạn chia sẻ.",
   "audioPickerTypeGroup": "Âm thanh",
   "soundUploadRetrySaveAction": "Thử lưu lại vào Âm thanh",
-    "libraryScheduledSectionTitle": "Đã lên lịch",
-    "libraryScheduledGoesOutAt": "Lên sóng {time}",
-    "libraryScheduledBadgeWaitingForServer": "Đang chờ máy chủ",
-    "libraryScheduledBadgeFailed": "Chưa lên sóng",
-    "libraryScheduledBadgeUploading": "Đang tải lên",
-    "libraryScheduledRemoteTitle": "Được lên lịch trên thiết bị khác",
-    "libraryScheduledMoreActionsSemanticLabel": "Thêm thao tác cho {title}",
-    "libraryScheduledActionReschedule": "Đổi giờ",
-    "libraryScheduledActionPublishNow": "Đăng ngay",
-    "libraryScheduledActionRetry": "Thử lại",
-    "libraryScheduledActionCancel": "Hủy bài đăng",
-    "libraryScheduledCancelTitle": "Hủy bài đăng này?",
-    "libraryScheduledCancelMessage": "Nó quay lại bản nháp của bạn. Không có gì được đăng.",
-    "libraryScheduledCancelConfirm": "Ừ, hủy đi",
-    "libraryScheduledCancelKeep": "Giữ lại",
-    "libraryScheduledCancelledSnackbar": "Đã hủy. Nó đã về lại bản nháp của bạn.",
-    "libraryScheduledRescheduledSnackbar": "Đã dời sang giờ mới.",
-    "libraryScheduledPublishedNowSnackbar": "Đã đăng.",
-    "libraryScheduledRetryQueuedSnackbar": "Đang thử lại.",
-    "libraryScheduledAlreadyPublishedSnackbar": "Muộn rồi — bài đó đã lên sóng.",
-    "libraryScheduledUnavailableSnackbar": "Không kết nối được với relay. Thử lại sau một lát.",
-    "libraryScheduledActionFailedSnackbar": "Không được. Thử lại nhé.",
-    "publishErrorScheduleRejected": "Relay không giữ được bài này cho lần sau. Chọn giờ khác hoặc đăng ngay.",
-    "videoMetadataScheduleLabel": "Giờ đăng",
-    "videoMetadataSelectScheduleSemanticLabel": "Chọn giờ đăng",
-    "videoMetadataScheduleNow": "Bây giờ",
-    "videoMetadataScheduleTonight": "Tối nay lúc {time}",
-    "videoMetadataScheduleTomorrowMorning": "Ngày mai lúc {time}",
-    "videoMetadataSchedulePickDateTime": "Chọn ngày và giờ",
-    "videoMetadataSchedulePickerTitle": "Khi nào thì lên sóng?",
-    "videoMetadataScheduleTooSoon": "{minutes, plural, other{Để cách ít nhất {minutes} phút.}}",
-    "videoMetadataScheduleTooFar": "{days, plural, other{Cái đó cách hơn {days} ngày. Chọn sớm hơn đi.}}",
-    "videoMetadataScheduleButton": "Lên lịch",
-    "videoMetadataScheduleVideoHint": "Lên lịch video này vào {time}",
+  "libraryScheduledSectionTitle": "Đã lên lịch",
+  "libraryScheduledGoesOutAt": "Lên sóng {time}",
+  "libraryScheduledBadgeWaitingForServer": "Đang chờ máy chủ",
+  "libraryScheduledBadgeFailed": "Chưa lên sóng",
+  "libraryScheduledBadgeUploading": "Đang tải lên",
+  "libraryScheduledRemoteTitle": "Được lên lịch trên thiết bị khác",
+  "libraryScheduledMoreActionsSemanticLabel": "Thêm thao tác cho {title}",
+  "libraryScheduledActionReschedule": "Đổi giờ",
+  "libraryScheduledActionPublishNow": "Đăng ngay",
+  "libraryScheduledActionRetry": "Thử lại",
+  "libraryScheduledActionCancel": "Hủy bài đăng",
+  "libraryScheduledCancelTitle": "Hủy bài đăng này?",
+  "libraryScheduledCancelMessage": "Nó quay lại bản nháp của bạn. Không có gì được đăng.",
+  "libraryScheduledCancelConfirm": "Ừ, hủy đi",
+  "libraryScheduledCancelKeep": "Giữ lại",
+  "libraryScheduledCancelledSnackbar": "Đã hủy. Nó đã về lại bản nháp của bạn.",
+  "libraryScheduledRescheduledSnackbar": "Đã dời sang giờ mới.",
+  "libraryScheduledPublishedNowSnackbar": "Đã đăng.",
+  "libraryScheduledRetryQueuedSnackbar": "Đang thử lại.",
+  "libraryScheduledAlreadyPublishedSnackbar": "Muộn rồi — bài đó đã lên sóng.",
+  "libraryScheduledUnavailableSnackbar": "Không kết nối được với relay. Thử lại sau một lát.",
+  "libraryScheduledActionFailedSnackbar": "Không được. Thử lại nhé.",
+  "publishErrorScheduleRejected": "Relay không giữ được bài này cho lần sau. Chọn giờ khác hoặc đăng ngay.",
+  "videoMetadataScheduleLabel": "Giờ đăng",
+  "videoMetadataSelectScheduleSemanticLabel": "Chọn giờ đăng",
+  "videoMetadataScheduleNow": "Bây giờ",
+  "videoMetadataScheduleTonight": "Tối nay lúc {time}",
+  "videoMetadataScheduleTomorrowMorning": "Ngày mai lúc {time}",
+  "videoMetadataSchedulePickDateTime": "Chọn ngày và giờ",
+  "videoMetadataSchedulePickerTitle": "Khi nào thì lên sóng?",
+  "videoMetadataScheduleTooSoon": "{minutes, plural, other{Để cách ít nhất {minutes} phút.}}",
+  "videoMetadataScheduleTooFar": "{days, plural, other{Cái đó cách hơn {days} ngày. Chọn sớm hơn đi.}}",
+  "videoMetadataScheduleButton": "Lên lịch",
+  "videoMetadataScheduleVideoHint": "Lên lịch video này vào {time}",
   "crosspostingBenefitTitle": "Mang loop của bạn đi khắp nơi",
   "@crosspostingBenefitTitle": {"description": "Headline of the crossposting benefit card in settings"},
   "crosspostingBenefitBody": "Đăng một lần trên Divine, chia sẻ thẳng lên Instagram. Người của bạn đã ở đó rồi — đến gặp họ đi. Mỗi loop bạn gửi đều mang theo một liên kết nhỏ về nhà, để nhà sáng tạo tiếp theo cũng tìm thấy chúng ta.",
@@ -6769,5 +6760,23 @@
   "listSearchPeopleUnavailable": "Danh sách người hiện không khả dụng.",
   "listSearchVideosUnavailable": "Danh sách video hiện không khả dụng.",
   "listPrivateConversionTooLarge": "Danh sách này quá lớn để chuyển sang riêng tư. Hãy xóa bớt một số video trước. Các chỉnh sửa của bạn vẫn ở đây và chưa được lưu.",
-  "authAccountCleanupFailed": "Không thể xóa dữ liệu của tài khoản trước. Hãy thử lại."
+  "authAccountCleanupFailed": "Không thể xóa dữ liệu của tài khoản trước. Hãy thử lại.",
+  "peopleListsAddPersonSemanticLabel": "Thêm {name} vào danh sách",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "Xóa {name} khỏi danh sách",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "Không cập nhật được danh sách. Vui lòng thử lại.",
+  "peopleListsAddPeopleSearchHint": "Tìm người"
 }
