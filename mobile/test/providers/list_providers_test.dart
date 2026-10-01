@@ -15,15 +15,31 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
+import 'package:videos_repository/videos_repository.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
 
 class _MockPeopleListsRepository extends Mock
     implements PeopleListsRepository {}
+
+class _MockVideosRepository extends Mock implements VideosRepository {}
+
+/// A feed pool holding [videos], standing in for the live discovery stream.
+class _VideoEventsPool extends VideoEvents {
+  _VideoEventsPool(this.videos);
+
+  final List<VideoEvent> videos;
+
+  @override
+  Stream<List<VideoEvent>> build() async* {
+    yield videos;
+  }
+}
 
 class _MockVideoEventService extends Mock implements VideoEventService {}
 
@@ -48,11 +64,12 @@ VideoEvent _video({
   required String id,
   required String pubkey,
   String? dTag,
+  int? createdAt,
 }) {
   return VideoEvent(
     id: id,
     pubkey: pubkey,
-    createdAt: _frozenNow.millisecondsSinceEpoch ~/ 1000,
+    createdAt: createdAt ?? _frozenNow.millisecondsSinceEpoch ~/ 1000,
     content: '',
     timestamp: _frozenNow,
     title: id,
@@ -76,6 +93,219 @@ UserList _buildList({
 }
 
 void main() {
+  group(userListMemberVideosProvider, () {
+    const fetchedId =
+        '0000000000000000000000000000000000000000000000000000000000000bb8';
+    const pooledId =
+        '0000000000000000000000000000000000000000000000000000000000000bb9';
+    const strangerId =
+        '0000000000000000000000000000000000000000000000000000000000000bba';
+    late _MockVideosRepository videosRepository;
+
+    setUp(() {
+      videosRepository = _MockVideosRepository();
+    });
+
+    ProviderContainer buildContainer({List<VideoEvent> pooled = const []}) {
+      final container = ProviderContainer(
+        overrides: [
+          videosRepositoryProvider.overrideWithValue(videosRepository),
+          videoEventsProvider.overrideWith(() => _VideoEventsPool(pooled)),
+        ],
+      );
+      addTearDown(container.dispose);
+      return container;
+    }
+
+    /// Lets the pool emit, then collects every state the provider emits for
+    /// [members] until the event queue drains.
+    Future<List<AsyncValue<List<VideoEvent>>>> collect(
+      ProviderContainer container,
+      List<String> members,
+    ) async {
+      final pool = container.listen(videoEventsProvider, (_, _) {});
+      addTearDown(pool.close);
+      await container.read(videoEventsProvider.future);
+
+      final states = <AsyncValue<List<VideoEvent>>>[];
+      final subscription = container.listen(
+        userListMemberVideosProvider(members),
+        (_, next) => states.add(next),
+      );
+      addTearDown(subscription.close);
+      await pumpEventQueue();
+      return states;
+    }
+
+    List<List<String>> idsOf(List<AsyncValue<List<VideoEvent>>> states) => [
+      for (final state in states)
+        if (state.hasValue) [for (final video in state.value!) video.id],
+    ];
+
+    test("fetches the members' videos through the repository", () async {
+      final fetched = _video(
+        id: fetchedId,
+        pubkey: _ownerA,
+      );
+      when(
+        () => videosRepository.getVideosByAuthors(
+          authorPubkeys: any(named: 'authorPubkeys'),
+        ),
+      ).thenAnswer((_) async => [fetched]);
+
+      final states = await collect(buildContainer(), [_ownerA, _ownerB]);
+
+      expect(
+        idsOf(states),
+        equals([
+          [fetchedId],
+        ]),
+      );
+      final asked =
+          verify(
+                () => videosRepository.getVideosByAuthors(
+                  authorPubkeys: captureAny(named: 'authorPubkeys'),
+                ),
+              ).captured.single
+              as List<String>;
+      expect(asked, equals([_ownerA, _ownerB]));
+    });
+
+    test(
+      'paints pooled member videos first, then merges the fetched set',
+      () async {
+        final pooledMember = _video(
+          id: pooledId,
+          pubkey: _ownerA,
+          createdAt: 100,
+        );
+        final stranger = _video(
+          id: strangerId,
+          pubkey: _blockedAuthor,
+          createdAt: 300,
+        );
+        final fetched = _video(
+          id: fetchedId,
+          pubkey: _ownerB,
+          createdAt: 200,
+        );
+        when(
+          () => videosRepository.getVideosByAuthors(
+            authorPubkeys: any(named: 'authorPubkeys'),
+          ),
+        ).thenAnswer((_) async => [fetched]);
+
+        final states = await collect(
+          buildContainer(pooled: [pooledMember, stranger]),
+          [_ownerA, _ownerB],
+        );
+
+        expect(
+          idsOf(states),
+          equals([
+            [pooledId],
+            [
+              fetchedId,
+              pooledId,
+            ],
+          ]),
+        );
+      },
+    );
+
+    test(
+      'replaces a pooled copy with the fetched video without duplicates',
+      () async {
+        const id =
+            'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+        final pooled = _video(id: id, pubkey: _ownerA, createdAt: 100);
+        final fetched = _video(id: id, pubkey: _ownerA, createdAt: 200);
+        when(
+          () => videosRepository.getVideosByAuthors(
+            authorPubkeys: any(named: 'authorPubkeys'),
+          ),
+        ).thenAnswer((_) async => [fetched]);
+
+        final states = await collect(buildContainer(pooled: [pooled]), [
+          _ownerA,
+        ]);
+
+        expect(states.last.requireValue, [fetched]);
+        expect(states.last.requireValue.single.createdAt, 200);
+      },
+    );
+
+    test(
+      'keeps the pooled videos when the fetch fails after the first paint',
+      () async {
+        final pooledMember = _video(
+          id: pooledId,
+          pubkey: _ownerA,
+        );
+        when(
+          () => videosRepository.getVideosByAuthors(
+            authorPubkeys: any(named: 'authorPubkeys'),
+          ),
+        ).thenThrow(Exception('relay down'));
+
+        final states = await collect(buildContainer(pooled: [pooledMember]), [
+          _ownerA,
+        ]);
+
+        expect(states.last.hasError, isFalse);
+        expect(
+          idsOf(states),
+          equals([
+            [pooledId],
+          ]),
+        );
+      },
+    );
+
+    test('surfaces the failure when nothing is pooled', () async {
+      when(
+        () => videosRepository.getVideosByAuthors(
+          authorPubkeys: any(named: 'authorPubkeys'),
+        ),
+      ).thenThrow(Exception('relay down'));
+
+      final states = await collect(buildContainer(), [_ownerA]);
+
+      // The state type, not `hasError`: a provider that is quietly retrying
+      // is loading while carrying the error, which the screen renders as a
+      // spinner rather than its retry view.
+      expect(states.last, isA<AsyncError<List<VideoEvent>>>());
+      expect(idsOf(states), isEmpty);
+      verify(
+        () => videosRepository.getVideosByAuthors(
+          authorPubkeys: any(named: 'authorPubkeys'),
+        ),
+      ).called(1);
+    });
+
+    test(
+      'lets a programming error through instead of keeping the pooled videos',
+      () async {
+        final pooledMember = _video(
+          id: pooledId,
+          pubkey: _ownerA,
+        );
+        when(
+          () => videosRepository.getVideosByAuthors(
+            authorPubkeys: any(named: 'authorPubkeys'),
+          ),
+        ).thenThrow(StateError('bug'));
+
+        final states = await collect(buildContainer(pooled: [pooledMember]), [
+          _ownerA,
+        ]);
+
+        expect(states.last, isA<AsyncError<List<VideoEvent>>>());
+        expect(states.last.error, isA<StateError>());
+      },
+    );
+  });
+
   group(userListsProvider, () {
     late _MockAuthService mockAuthService;
     late _MockPeopleListsRepository mockRepository;
