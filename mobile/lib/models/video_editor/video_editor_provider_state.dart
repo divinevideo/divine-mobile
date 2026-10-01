@@ -83,13 +83,14 @@ class VideoEditorProviderState {
   /// pure signing-error signal: it is true both when C2PA signing itself failed
   /// and when signing succeeded but the ProofMode manifest could not be
   /// generated or read (see [VideoEditorNotifier.c2paSigningFailedFor]). Either
-  /// way the output cannot be confirmed as Human-Made, so the same recovery
+  /// way no usable content credential can be confirmed, so the same recovery
   /// prompt applies.
   ///
   /// Only ever true in builds with signing configured (never in CI). Drives the
-  /// "try again or post without provenance" prompt on the metadata screen
-  /// (#6058). Cleared once the user acts on it, when a new render starts, and
-  /// whenever [finalRenderedClip] is invalidated.
+  /// "try again or post without provenance" prompt on the metadata screen, or
+  /// its notice in a build without a signing token (#6058). Cleared once the
+  /// user acts on it, when a new render starts, and whenever
+  /// [finalRenderedClip] is invalidated.
   final bool c2paSigningFailed;
 
   /// Whether a draft save operation is currently in progress.

@@ -1584,8 +1584,8 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     }
   }
 
-  /// Clears the pending C2PA-missing prompt once the user has decided to post
-  /// without a content credential (#6058).
+  /// Clears the pending C2PA-missing prompt, or the no-token notice, once the
+  /// user has decided to post without a content credential (#6058).
   void acknowledgeC2paSigningFailure() {
     if (!state.c2paSigningFailed) return;
     state = state.copyWith(c2paSigningFailed: false);

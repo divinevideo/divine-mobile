@@ -194,7 +194,7 @@ class _VideoMetadataScreenState extends ConsumerState<VideoMetadataScreen> {
   Widget build(BuildContext context) {
     // When the render finishes without a C2PA content credential (signing
     // configured but failed), let the user regenerate or knowingly post
-    // without provenance (#6058).
+    // without provenance, or read why in a build without a token (#6058).
     ref.listen(videoEditorProvider.select((s) => s.c2paSigningFailed), (
       previous,
       next,

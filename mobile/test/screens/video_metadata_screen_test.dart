@@ -816,7 +816,7 @@ void main() {
           return container;
         }
 
-        testWidgets('explains the missing check instead of offering a '
+        testWidgets('explains the missing credential instead of offering a '
             'regenerate that cannot succeed', (tester) async {
           final container = await pumpTokenlessSigningFailure(tester);
 

@@ -105,8 +105,7 @@ class C2paSigningService {
   final String _signingToken;
 
   /// ProofSign rejects every request without a token, yet each attempt still
-  /// pays its network round trips — the first of a render took over ten
-  /// seconds on a real device — so a token-less build does not try at all.
+  /// pays its network round trips, so a token-less build does not try at all.
   bool get _hasToken => _signingToken.trim().isNotEmpty;
 
   static const String _videoMimeType = 'video/mp4';
