@@ -24,9 +24,6 @@ import 'package:user_ranking/user_ranking.dart';
 ///   * subscribe to [FollowRepository.followingStream] and
 ///     [FollowRepository.watchMyFollowers] for live relationship updates;
 ///   * merge both sides into a single map keyed by full-hex pubkey;
-///   * mark candidates whose pubkey appears in [existingMemberPubkeys] as
-///     [PeopleListCandidate.isAlreadyInList] so the UI can render them
-///     pre-checked and disabled;
 ///   * resolve [ProfileRepository] metadata: initial rows show at once and
 ///     hydrate in the background, while later arrivals are held back until a
 ///     cached or fresh profile is ready, with at most four fresh fetches at a
@@ -35,25 +32,22 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
     with CloseGuardedEmit<AddPeopleToListState> {
   /// Creates a new cubit scoped to a single picker instance.
   ///
-  /// [existingMemberPubkeys] should contain the full-hex pubkeys already in
-  /// the target list. Pass an empty list for a fresh list.
+  /// Membership stays in `PeopleListsBloc`, so each row reflects confirmed
+  /// additions and removals without retaining a stale membership snapshot.
   /// [initialState] may carry a snapshot over only for the same owner and
   /// list, when constructor-injected dependencies are refreshed.
   AddPeopleToListCubit({
     required FollowRepository followRepository,
     required UserRankingSignalsLoader rankingSignalsLoader,
     required ProfileRepository? profileRepository,
-    required List<String> existingMemberPubkeys,
     AddPeopleToListState initialState = const AddPeopleToListState(),
   }) : _followRepository = followRepository,
        _rankingSignalsLoader = rankingSignalsLoader,
        _profileRepository = profileRepository,
-       _existingMembers = existingMemberPubkeys.toSet(),
        super(
          _eligibleSnapshot(
            initialState,
            rankingSignalsLoader,
-           existingMemberPubkeys,
          ),
        ) {
     _candidatesByPubkey.addEntries(
@@ -68,24 +62,13 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
   static AddPeopleToListState _eligibleSnapshot(
     AddPeopleToListState snapshot,
     UserRankingSignalsLoader loader,
-    List<String> existingMembers,
   ) {
     final candidates = snapshot.candidates
         .where((candidate) => loader.isEligible(candidate.pubkey))
-        .map(
-          (candidate) => candidate.copyWith(
-            isAlreadyInList:
-                candidate.isAlreadyInList ||
-                existingMembers.contains(candidate.pubkey),
-          ),
-        )
         .toList();
     final keys = candidates.map((candidate) => candidate.pubkey).toSet();
     return snapshot.copyWith(
       candidates: List.unmodifiable(candidates),
-      selectedPubkeys: Set.unmodifiable(
-        snapshot.selectedPubkeys.where(keys.contains),
-      ),
       rankingSignals: Map.unmodifiable({
         for (final entry in snapshot.rankingSignals.entries)
           if (keys.contains(entry.key)) entry.key: entry.value,
@@ -97,7 +80,6 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
   final FollowRepository _followRepository;
   final UserRankingSignalsLoader _rankingSignalsLoader;
   final ProfileRepository? _profileRepository;
-  final Set<String> _existingMembers;
 
   StreamSubscription<List<String>>? _followingSub;
   StreamSubscription<FollowersSnapshot>? _followerSub;
@@ -172,8 +154,8 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
                 .toList(),
         now: DateTime.now(),
       );
-      // Keep canonical rows live while refreshing; confirmation callbacks may
-      // have updated them since the initial snapshot was captured.
+      // Keep canonical rows live while refreshing so later relationship and
+      // profile updates are retained throughout a dependency replacement.
       _candidatesByPubkey.removeWhere(
         (key, _) => !ranked.eligible.contains(key),
       );
@@ -235,36 +217,6 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
     emitIfOpen(state.copyWith(query: query));
   }
 
-  /// Toggle whether [pubkey] is selected for batch-add.
-  ///
-  /// Candidates already in the list
-  /// ([PeopleListCandidate.isAlreadyInList]) still toggle here, but the
-  /// view layer is expected to filter them out.
-  void candidateToggled(String pubkey) {
-    final next = Set<String>.from(state.selectedPubkeys);
-    if (!next.add(pubkey)) {
-      next.remove(pubkey);
-    }
-    emitIfOpen(state.copyWith(selectedPubkeys: next));
-  }
-
-  /// Clear only members confirmed by the repository; failed choices stay selected.
-  void additionsConfirmed(Set<String> pubkeys) {
-    _existingMembers.addAll(pubkeys);
-    for (final pubkey in pubkeys) {
-      final candidate = _candidatesByPubkey[pubkey];
-      if (candidate != null) {
-        _candidatesByPubkey[pubkey] = candidate.copyWith(isAlreadyInList: true);
-      }
-    }
-    emitIfOpen(
-      state.copyWith(
-        selectedPubkeys: state.selectedPubkeys.difference(pubkeys),
-        candidates: _sortedCandidates(),
-      ),
-    );
-  }
-
   /// Re-run the loader after a prior failure.
   void retryRequested() {
     unawaited(started());
@@ -295,14 +247,11 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
         ? existing.copyWith(
             isFollowing: isFollowing ?? existing.isFollowing,
             isFollower: isFollower ?? existing.isFollower,
-            isAlreadyInList:
-                existing.isAlreadyInList || _existingMembers.contains(pubkey),
           )
         : PeopleListCandidate(
             pubkey: pubkey,
             isFollowing: isFollowing ?? false,
             isFollower: isFollower ?? false,
-            isAlreadyInList: _existingMembers.contains(pubkey),
           );
     _candidatesByPubkey[pubkey] = updated;
     return updated;
@@ -578,11 +527,6 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
       state.copyWith(
         status: AddPeopleToListStatus.ready,
         candidates: candidates,
-        selectedPubkeys: Set.unmodifiable(
-          state.selectedPubkeys.where(
-            (key) => candidates.any((candidate) => candidate.pubkey == key),
-          ),
-        ),
         candidatePositions: Map.unmodifiable(positions),
       ),
     );

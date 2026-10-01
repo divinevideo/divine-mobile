@@ -1,5 +1,5 @@
 // ABOUTME: Unit tests for AddPeopleToListCubit.
-// ABOUTME: Covers candidate loading, sort order, filtering, toggling, and retry.
+// ABOUTME: Covers candidate loading, sort order, filtering, retained rows, and retry.
 
 import 'dart:async';
 
@@ -12,7 +12,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/features/people_lists/bloc/add_people_to_list_cubit.dart';
 import 'package:openvine/features/people_lists/bloc/add_people_to_list_state.dart';
-import 'package:openvine/features/people_lists/models/people_list_candidate.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:profile_repository/profile_repository.dart';
@@ -129,14 +128,12 @@ void main() {
     });
 
     AddPeopleToListCubit createCubit({
-      List<String> existingMembers = const [],
       AddPeopleToListState initialState = const AddPeopleToListState(),
     }) {
       return AddPeopleToListCubit(
         followRepository: followRepository,
         rankingSignalsLoader: rankingLoader,
         profileRepository: profileRepository,
-        existingMemberPubkeys: existingMembers,
         initialState: initialState,
       );
     }
@@ -157,7 +154,7 @@ void main() {
       verify(() => rankingLoader.refreshInBackground([_alicePubkey])).called(1);
     });
 
-    test('ranks arriving follower rows after hydration and keeps earlier rows and selection stable', () async {
+    test('ranks arriving follower rows after hydration and keeps earlier rows stable', () async {
       when(() => followRepository.followingPubkeys).thenReturn([_alicePubkey]);
       when(() => profileRepository.getCachedProfile(pubkey: _bobPubkey))
           .thenAnswer(
@@ -170,7 +167,6 @@ void main() {
       final cubit = createCubit();
       addTearDown(cubit.close);
       await cubit.started();
-      cubit.candidateToggled(_alicePubkey);
       followersController.add(
         const FollowersSnapshot(pubkeys: [_bobPubkey, _carolPubkey], count: 2),
       );
@@ -180,7 +176,6 @@ void main() {
         _carolPubkey,
         _bobPubkey,
       ]);
-      expect(cubit.state.selectedPubkeys, {_alicePubkey});
       followersController.add(
         const FollowersSnapshot(pubkeys: [_bobPubkey, _carolPubkey], count: 2),
       );
@@ -218,7 +213,6 @@ void main() {
         final cubit = createCubit();
         addTearDown(cubit.close);
         await cubit.started();
-        cubit.candidateToggled(_alicePubkey);
         followersController.add(
           const FollowersSnapshot(
             pubkeys: [_carolPubkey, _bobPubkey],
@@ -231,7 +225,6 @@ void main() {
           _carolPubkey,
         ]);
         expect(cubit.state.candidatePositions.containsKey(_bobPubkey), isFalse);
-        expect(cubit.state.selectedPubkeys, {_alicePubkey});
         hydrated.complete(_profile(pubkey: _bobPubkey, displayName: 'Zebra'));
         await _flush();
         expect(cubit.state.candidates.map((c) => c.pubkey), [
@@ -240,7 +233,6 @@ void main() {
           _bobPubkey,
         ]);
         expect(cubit.state.rankingSignals[_bobPubkey]!.videoCount, 100);
-        expect(cubit.state.selectedPubkeys, {_alicePubkey});
       },
     );
 
@@ -287,7 +279,6 @@ void main() {
         await _flush();
         expect(fetching, hasLength(5));
         expect(cubit.state.candidates.map((c) => c.pubkey), [_carolPubkey]);
-        cubit.candidateToggled(_carolPubkey);
         for (final entry in pending.entries) {
           if (!entry.value.isCompleted) {
             entry.value.complete(
@@ -299,7 +290,6 @@ void main() {
         expect(fetching, hasLength(keys.length));
         expect(cubit.state.candidates, hasLength(keys.length));
         expect(cubit.state.candidates.first.pubkey, _carolPubkey);
-        expect(cubit.state.selectedPubkeys, {_carolPubkey});
       },
     );
 
@@ -342,7 +332,6 @@ void main() {
       expect(cubit.state.status, AddPeopleToListStatus.initial);
       expect(cubit.state.candidates, isEmpty);
       expect(cubit.state.query, isEmpty);
-      expect(cubit.state.selectedPubkeys, isEmpty);
       await cubit.close();
     });
 
@@ -395,7 +384,6 @@ void main() {
             _bobPubkey,
           ]);
           await _flush();
-          cubit.candidateToggled(_carolPubkey);
           expect(order(cubit), [
             _davePubkey,
             _carolPubkey,
@@ -513,42 +501,37 @@ void main() {
     });
 
     group('same-owner snapshot handoff', () {
-      Future<AddPeopleToListState> selectedSnapshot() async {
+      Future<AddPeopleToListState> retainedSnapshot() async {
         when(() => followRepository.followingPubkeys)
             .thenReturn([_alicePubkey, _bobPubkey]);
         final original = createCubit();
         await original.started();
         original.queryChanged('a');
-        original.candidateToggled(_alicePubkey);
         final snapshot = original.state;
         expect(snapshot.candidates.map((c) => c.pubkey), [
           _alicePubkey,
           _bobPubkey,
         ]);
-        expect(snapshot.selectedPubkeys, {_alicePubkey});
         await original.close();
         return snapshot;
       }
 
-      test('revalidates retained rows and selection synchronously before a refresh', () async {
-        final snapshot = await selectedSnapshot();
+      test('revalidates retained rows synchronously before a refresh', () async {
+        final snapshot = await retainedSnapshot();
         when(() => rankingLoader.isEligible(_alicePubkey)).thenReturn(false);
         final replacement = createCubit(
           initialState: snapshot,
-          existingMembers: [_bobPubkey],
         );
         expect(replacement.state.candidates.map((c) => c.pubkey), [_bobPubkey]);
-        expect(replacement.state.candidates.single.isAlreadyInList, isTrue);
-        expect(replacement.state.selectedPubkeys, isEmpty);
         expect(replacement.state.query, 'a');
         expect(replacement.state.candidatePositions[_bobPubkey], 1);
         await replacement.close();
       });
 
       test(
-        'confirmation during refresh keeps rows and confirmed membership',
+        'refresh keeps retained rows and query visible',
         () async {
-          final snapshot = await selectedSnapshot();
+          final snapshot = await retainedSnapshot();
           final signals = Completer<Map<String, UserRankingSignals>>();
           final entered = Completer<void>();
           when(() => rankingLoader.load(any())).thenAnswer((_) {
@@ -570,13 +553,8 @@ void main() {
             replacement.state.candidates.map((candidate) => candidate.pubkey),
             [_alicePubkey, _bobPubkey],
           );
-          replacement.additionsConfirmed({_alicePubkey});
-          expect(
-            replacement.state.candidates.map((candidate) => candidate.pubkey),
-            [_alicePubkey, _bobPubkey],
-          );
-          expect(replacement.state.candidates.first.isAlreadyInList, isTrue);
-          expect(replacement.state.selectedPubkeys, isEmpty);
+          replacement.queryChanged('refined');
+          expect(replacement.state.query, 'refined');
           signals.complete({
             _alicePubkey: const UserRankingSignals(pubkey: _alicePubkey),
             _bobPubkey: const UserRankingSignals(pubkey: _bobPubkey),
@@ -587,9 +565,7 @@ void main() {
             replacement.state.candidates.map((candidate) => candidate.pubkey),
             [_alicePubkey, _bobPubkey],
           );
-          expect(replacement.state.candidates.first.isAlreadyInList, isTrue);
-          expect(replacement.state.selectedPubkeys, isEmpty);
-          expect(replacement.state.query, 'a');
+          expect(replacement.state.query, 'refined');
           expect(emitted, isNotEmpty);
           for (final state in emitted) {
             expect(state.candidates.map((candidate) => candidate.pubkey), [
@@ -602,18 +578,16 @@ void main() {
         },
       );
 
-      test('successful refresh omissions remove retained rows and their selections', () async {
-        final snapshot = await selectedSnapshot();
+      test('successful refresh omissions remove retained rows', () async {
+        final snapshot = await retainedSnapshot();
         when(() => rankingLoader.load(any())).thenAnswer(
           (_) async => {
             _bobPubkey: const UserRankingSignals(pubkey: _bobPubkey),
           },
         );
         final replacement = createCubit(initialState: snapshot);
-        expect(replacement.state.selectedPubkeys, {_alicePubkey});
         await replacement.started();
         expect(replacement.state.candidates.map((c) => c.pubkey), [_bobPubkey]);
-        expect(replacement.state.selectedPubkeys, isEmpty);
         expect(replacement.state.candidatePositions[_bobPubkey], 1);
         expect(replacement.state.query, 'a');
         await replacement.close();
@@ -716,25 +690,6 @@ void main() {
           await cubit.close();
         },
       );
-
-      test('existingMemberPubkeys appear with isAlreadyInList=true', () async {
-        when(
-          () => followRepository.followingPubkeys,
-        ).thenReturn([_alicePubkey]);
-        when(
-          () => followRepository.watchMyFollowers(),
-        ).thenAnswer((_) => const Stream.empty());
-
-        final cubit = createCubit(existingMembers: [_alicePubkey]);
-        await cubit.started();
-
-        final alice = cubit.state.candidates.firstWhere(
-          (c) => c.pubkey == _alicePubkey,
-        );
-        expect(alice.isAlreadyInList, isTrue);
-
-        await cubit.close();
-      });
 
       test(
         'profile lookup failure keeps candidate with fallback labels',
@@ -942,81 +897,6 @@ void main() {
       });
     });
 
-    group('candidateToggled', () {
-      test('adds and removes pubkey from selectedPubkeys', () async {
-        when(
-          () => followRepository.followingPubkeys,
-        ).thenReturn([_alicePubkey]);
-        when(
-          () => followRepository.watchMyFollowers(),
-        ).thenAnswer((_) => const Stream.empty());
-
-        final cubit = createCubit();
-        await cubit.started();
-
-        expect(cubit.state.selectedPubkeys, isEmpty);
-        cubit.candidateToggled(_alicePubkey);
-        expect(cubit.state.selectedPubkeys, contains(_alicePubkey));
-        cubit.candidateToggled(_alicePubkey);
-        expect(cubit.state.selectedPubkeys, isNot(contains(_alicePubkey)));
-
-        await cubit.close();
-      });
-    });
-
-    group('additionsConfirmed', () {
-      Future<AddPeopleToListCubit> startedWithTwoSelected() async {
-        when(
-          () => followRepository.followingPubkeys,
-        ).thenReturn([_alicePubkey, _bobPubkey]);
-        when(
-          () => followRepository.watchMyFollowers(),
-        ).thenAnswer((_) => const Stream.empty());
-        final cubit = createCubit();
-        await cubit.started();
-        cubit
-          ..candidateToggled(_alicePubkey)
-          ..candidateToggled(_bobPubkey);
-        return cubit;
-      }
-
-      PeopleListCandidate candidateOf(
-        AddPeopleToListCubit cubit,
-        String pubkey,
-      ) => cubit.state.candidates.singleWhere((c) => c.pubkey == pubkey);
-
-      test(
-        'keeps unconfirmed people selected and not yet in the list',
-        () async {
-          final cubit = await startedWithTwoSelected();
-          // Guards the assertions below: both choices begin selected.
-          expect(cubit.state.selectedPubkeys, {_alicePubkey, _bobPubkey});
-
-          cubit.additionsConfirmed({_alicePubkey});
-
-          expect(cubit.state.selectedPubkeys, {_bobPubkey});
-          expect(candidateOf(cubit, _alicePubkey).isAlreadyInList, isTrue);
-          expect(candidateOf(cubit, _bobPubkey).isAlreadyInList, isFalse);
-
-          await cubit.close();
-        },
-      );
-
-      test('settles every person once all are confirmed', () async {
-        final cubit = await startedWithTwoSelected();
-
-        cubit.additionsConfirmed({_alicePubkey, _bobPubkey});
-
-        expect(cubit.state.selectedPubkeys, isEmpty);
-        expect(
-          cubit.state.candidates.every((c) => c.isAlreadyInList),
-          isTrue,
-        );
-
-        await cubit.close();
-      });
-    });
-
     group('retryRequested', () {
       blocTest<AddPeopleToListCubit, AddPeopleToListState>(
         're-runs the loader after a prior failure',
@@ -1037,7 +917,6 @@ void main() {
           followRepository: followRepository,
           rankingSignalsLoader: rankingLoader,
           profileRepository: profileRepository,
-          existingMemberPubkeys: const [],
         ),
         act: (cubit) async {
           await cubit.started();

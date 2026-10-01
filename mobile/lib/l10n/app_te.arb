@@ -2315,15 +2315,6 @@
   },
   "peopleListsAddPeopleError": "వ్యక్తులను లోడ్ చేయడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
   "peopleListsAddPeopleRetry": "మళ్లీ ప్రయత్నించండి",
-  "peopleListsAddButton": "జోడించండి",
-  "peopleListsAddButtonWithCount": "జోడించండి {count}",
-  "@peopleListsAddButtonWithCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "peopleListsInNLists": "{count, plural, =1{1 జాబితాలో} other{{count} జాబితాల్లో}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -8609,6 +8600,24 @@
   "listSearchVideosUnavailable": "ప్రస్తుతం వీడియో జాబితాలు అందుబాటులో లేవు.",
   "listPrivateConversionTooLarge": "ఈ జాబితాను ప్రైవేట్‌గా చేయడానికి ఇది చాలా పెద్దది. ముందుగా కొన్ని వీడియోలను తీసివేయండి. మీ మార్పులు ఇక్కడే ఉంటాయి, ఇంకా సేవ్ కాలేదు.",
   "authAccountCleanupFailed": "మునుపటి ఖాతా డేటాను తొలగించలేకపోయాం. మళ్లీ ప్రయత్నించండి.",
+  "peopleListsAddPersonSemanticLabel": "{name}ని జాబితాకు జోడించండి",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "{name}ని జాబితా నుండి తీసివేయండి",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "జాబితాను నవీకరించడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
+  "peopleListsAddPeopleSearchHint": "వ్యక్తులను శోధించండి",
   "soundRequestAction": "ఈ సౌండ్‌ను అడగండి",
   "soundRequestTitle": "ఎవరో మీ సౌండ్‌ను ఉపయోగించాలనుకుంటున్నారు",
   "soundRequestDescription": "ఎవరైనా రీమిక్స్ చేయగలిగేలా ఈ వీడియో సౌండ్‌ను మళ్లీ ఉపయోగించడానికి అనుమతించండి.",

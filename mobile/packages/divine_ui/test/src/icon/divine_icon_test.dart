@@ -38,6 +38,16 @@ void main() {
       );
     });
 
+    test('checkboxSelected maps to the two-tone selected checkbox', () {
+      // Exported from the design's checkbox component with its brand fill
+      // and dark ink baked in, so it renders untinted.
+      expect(DivineIconName.checkboxSelected.fileName, 'checkbox_selected');
+      expect(
+        DivineIconName.checkboxSelected.assetPath,
+        'assets/icon/checkbox_selected.svg',
+      );
+    });
+
     test('microphone maps to the voice-over capture glyph', () {
       expect(DivineIconName.microphone.fileName, 'microphone');
       expect(DivineIconName.microphone.assetPath, 'assets/icon/microphone.svg');
