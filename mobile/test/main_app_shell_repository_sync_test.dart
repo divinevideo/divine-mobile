@@ -16,8 +16,15 @@ import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/providers/provider_identity_stream.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 
-class _MockPeopleListsRepository extends Mock
-    implements PeopleListsRepository {}
+class _MockPeopleListsRepository extends Mock implements PeopleListsRepository {
+  _MockPeopleListsRepository() {
+    // Attaching an owner also refreshes the lists they follow. The tests about
+    // that refresh verify it; every other test only needs it to complete.
+    when(
+      () => syncFollowedLists(viewerPubkey: any(named: 'viewerPubkey')),
+    ).thenAnswer((_) async {});
+  }
+}
 
 // Full-length Nostr pubkey — never truncated.
 const String _owner =

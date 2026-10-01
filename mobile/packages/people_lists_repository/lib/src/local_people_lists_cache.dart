@@ -1,16 +1,19 @@
 // ABOUTME: Hive-backed local cache for NIP-51 kind 30000 people lists.
-// ABOUTME: Scopes entries by owner pubkey and enforces deletion tombstones.
+// ABOUTME: Scopes entries by owner pubkey and enforces deletion tombstones;
+// ABOUTME: also mirrors the public lists a viewer follows, scoped by viewer.
 
 import 'dart:async';
 
 import 'package:hive_ce/hive_ce.dart';
 import 'package:models/models.dart';
+import 'package:people_lists_repository/src/people_list_search_result.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Key prefix constants and JSON field names for the Hive box.
 abstract class _CacheKeys {
   static const String listPrefix = 'list:';
   static const String deletedPrefix = 'deleted:';
+  static const String followedPrefix = 'followed:';
   static const String keySeparator = ':';
 
   static const String ownerPubkey = 'ownerPubkey';
@@ -58,6 +61,14 @@ class CachedPeopleListRecord {
 /// `deletedAtMillis >= list.updatedAt.millisecondsSinceEpoch`; a recreated
 /// list with a newer `updatedAt` can beat the tombstone and become visible
 /// again.
+///
+/// A public list somebody else owns, followed by a viewer, has a copy under
+/// `followed:<viewerPubkey>:<ownerPubkey>:<listId>`, kept apart from the
+/// owner's `list:` rows so following a list can never surface it among the
+/// lists that owner's account edits. A row there is only a mirror to show the
+/// list and read its members from. Whether the list is followed is recorded
+/// elsewhere, in a `FollowedPeopleListsStore`: this box is a relay mirror a
+/// cache reset may wipe, and a follow has nowhere to be rebuilt from.
 class LocalPeopleListsCache {
   /// Creates a cache that lazily opens the backing Hive box via [openBox].
   ///
@@ -125,20 +136,30 @@ class LocalPeopleListsCache {
   /// stream. Malformed individual rows are logged and skipped; they do not
   /// terminate the stream.
   Stream<List<UserList>> watchLists({required String ownerPubkey}) {
-    late StreamController<List<UserList>> controller;
+    return _watch(
+      affects: (key) => _keyBelongsToOwner(key, ownerPubkey),
+      collect: (box) => _collectLists(box, ownerPubkey),
+    );
+  }
+
+  /// Emits [collect] over the box immediately, then again after each box
+  /// mutation whose key [affects] accepts.
+  Stream<List<T>> _watch<T>({
+    required bool Function(String key) affects,
+    required List<T> Function(Box<dynamic> box) collect,
+  }) {
+    late StreamController<List<T>> controller;
     StreamSubscription<BoxEvent>? subscription;
 
     Future<void> start() async {
       try {
         final box = await _box();
         if (controller.isClosed) return;
-        controller.add(_collectLists(box, ownerPubkey));
+        controller.add(collect(box));
         subscription = box.watch().listen((event) {
           final key = event.key;
-          if (key is! String || !_keyBelongsToOwner(key, ownerPubkey)) {
-            return;
-          }
-          controller.add(_collectLists(box, ownerPubkey));
+          if (key is! String || !affects(key)) return;
+          controller.add(collect(box));
         });
       } on Object catch (error, stackTrace) {
         if (!controller.isClosed) {
@@ -148,7 +169,7 @@ class LocalPeopleListsCache {
       }
     }
 
-    controller = StreamController<List<UserList>>(
+    controller = StreamController<List<T>>(
       onListen: () {
         unawaited(start());
       },
@@ -272,6 +293,129 @@ class LocalPeopleListsCache {
       return;
     }
     await box.deleteAll(keysToDelete);
+  }
+
+  /// Returns the stored copies of the public lists [viewerPubkey] follows,
+  /// ordered by addressable id.
+  ///
+  /// Throws any error raised by the injected box opener. Malformed rows are
+  /// logged and skipped.
+  Future<List<PeopleListSearchResult>> readFollowedCopies({
+    required String viewerPubkey,
+  }) async {
+    final box = await _box();
+    return _collectFollowedCopies(box, viewerPubkey);
+  }
+
+  /// Emits [viewerPubkey]'s followed-list copies immediately, then re-emits
+  /// whenever one is written or removed.
+  ///
+  /// The box is shared by name across cache instances, so a copy written
+  /// through one instance reaches a listener holding another.
+  Stream<List<PeopleListSearchResult>> watchFollowedCopies({
+    required String viewerPubkey,
+  }) {
+    return _watch(
+      affects: (key) => _isFollowedKey(key, viewerPubkey),
+      collect: (box) => _collectFollowedCopies(box, viewerPubkey),
+    );
+  }
+
+  /// Stores [list], published by [ownerPubkey], as the copy [viewerPubkey]
+  /// follows, replacing any copy already held.
+  ///
+  /// Throws if the Hive box cannot be opened or the write fails.
+  Future<void> putFollowedCopy({
+    required String viewerPubkey,
+    required String ownerPubkey,
+    required UserList list,
+  }) async {
+    final box = await _box();
+    await box.put(
+      _followedKey(viewerPubkey, ownerPubkey, list.id),
+      _followedRow(ownerPubkey, list),
+    );
+  }
+
+  /// Stores [list] as [viewerPubkey]'s copy when none is held, or when it is
+  /// a newer revision than the one held.
+  ///
+  /// An equal or older revision is skipped so a relay refresh that found
+  /// nothing new does not wake every listener.
+  ///
+  /// Throws if the Hive box cannot be opened or the write fails.
+  Future<void> refreshFollowedCopy({
+    required String viewerPubkey,
+    required String ownerPubkey,
+    required UserList list,
+  }) async {
+    final box = await _box();
+    final key = _followedKey(viewerPubkey, ownerPubkey, list.id);
+    final existing = box.get(key);
+    final stored = existing is Map ? _decodeFollowedCopy(existing) : null;
+    if (stored != null && !list.updatedAt.isAfter(stored.list.updatedAt)) {
+      return;
+    }
+    await box.put(key, _followedRow(ownerPubkey, list));
+  }
+
+  /// Removes [viewerPubkey]'s copy of the list [ownerPubkey] published as
+  /// [listId]. A no-op when none is held.
+  ///
+  /// Throws if the Hive box cannot be opened or the delete fails.
+  Future<void> removeFollowedCopy({
+    required String viewerPubkey,
+    required String ownerPubkey,
+    required String listId,
+  }) async {
+    final box = await _box();
+    await box.delete(_followedKey(viewerPubkey, ownerPubkey, listId));
+  }
+
+  /// Removes every followed-list copy held for [viewerPubkey], for when that
+  /// account's data is deleted from the device.
+  ///
+  /// Throws if the Hive box cannot be opened or the bulk delete fails.
+  Future<void> clearFollowedCopies({required String viewerPubkey}) async {
+    final box = await _box();
+    final keysToDelete = box.keys
+        .whereType<String>()
+        .where((key) => _isFollowedKey(key, viewerPubkey))
+        .toList(growable: false);
+    if (keysToDelete.isEmpty) return;
+    await box.deleteAll(keysToDelete);
+  }
+
+  static Map<String, dynamic> _followedRow(String ownerPubkey, UserList list) =>
+      <String, dynamic>{
+        _CacheKeys.ownerPubkey: ownerPubkey,
+        _CacheKeys.list: list.toJson(),
+      };
+
+  List<PeopleListSearchResult> _collectFollowedCopies(
+    Box<dynamic> box,
+    String viewerPubkey,
+  ) {
+    final copies = <PeopleListSearchResult>[];
+    for (final key in box.keys) {
+      if (key is! String || !_isFollowedKey(key, viewerPubkey)) continue;
+      final raw = box.get(key);
+      if (raw is! Map) continue;
+      final copy = _decodeFollowedCopy(raw);
+      if (copy != null) copies.add(copy);
+    }
+    copies.sort((a, b) => a.addressableId.compareTo(b.addressableId));
+    return List.unmodifiable(copies);
+  }
+
+  /// Decodes one followed-list row, or `null` when it has no owner or its
+  /// list does not decode. One malformed row must not hide the others.
+  PeopleListSearchResult? _decodeFollowedCopy(Map<dynamic, dynamic> row) {
+    final ownerPubkey = row[_CacheKeys.ownerPubkey];
+    if (ownerPubkey is! String || ownerPubkey.isEmpty) return null;
+    final record = _decodeRecord(row);
+    if (record == null) return null;
+    return PeopleListSearchResult(ownerPubkey: ownerPubkey, list: record.list);
   }
 
   List<UserList> _collectLists(Box<dynamic> box, String ownerPubkey) {
@@ -416,6 +560,23 @@ class LocalPeopleListsCache {
   static bool _isListKey(String key, String ownerPubkey) {
     final prefix =
         '${_CacheKeys.listPrefix}$ownerPubkey${_CacheKeys.keySeparator}';
+    return key.startsWith(prefix);
+  }
+
+  static String _followedKey(
+    String viewerPubkey,
+    String ownerPubkey,
+    String listId,
+  ) =>
+      '${_CacheKeys.followedPrefix}$viewerPubkey'
+      '${_CacheKeys.keySeparator}$ownerPubkey'
+      '${_CacheKeys.keySeparator}$listId';
+
+  /// Pubkeys are hex, so the separator after [viewerPubkey] cannot fall
+  /// inside another viewer's key.
+  static bool _isFollowedKey(String key, String viewerPubkey) {
+    final prefix =
+        '${_CacheKeys.followedPrefix}$viewerPubkey${_CacheKeys.keySeparator}';
     return key.startsWith(prefix);
   }
 

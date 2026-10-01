@@ -21,6 +21,7 @@ import 'package:openvine/providers/background_activity_provider.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
+import 'package:openvine/providers/followed_people_lists_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/notifications_providers.dart';
@@ -1082,6 +1083,11 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
           await requiredDelete(
             'soundRequests',
             () => db.soundRequestStateDao.clearAccount(userPubkey),
+          );
+          // Remove only the deleted account's followed-list cache.
+          await requiredCleanup(
+            'followedPeopleLists',
+            () => ref.read(followedPeopleListsClearProvider)(userPubkey),
           );
         }
       };
