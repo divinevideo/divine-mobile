@@ -505,15 +505,6 @@
     "featuredTabLoadFailed": "Тази колекция не можа да се зареди.",
     "featuredTabRetry": "Опитай пак",
     "exploreNoVideosAvailable": "Няма налични видеа",
-    "exploreDiscoverLists": "Открий списъци",
-    "exploreAboutLists": "Относно списъците",
-    "exploreAboutListsDescription": "Списъците ти помагат да организираш и управляваш Divine съдържание по два начина:",
-    "explorePeopleLists": "Списъци с хора",
-    "explorePeopleListsDescription": "Следвай групи от творци и виж най-новите им видеа",
-    "exploreVideoLists": "Видео списъци",
-    "exploreVideoListsDescription": "Създай плейлисти с любимите си видеа, за да ги гледаш по-късно",
-    "exploreMyLists": "Моите списъци",
-    "exploreSubscribedLists": "Абонирани списъци",
     "exploreErrorLoadingLists": "Грешка при зареждане на списъците. Опитай пак.",
     "exploreNewVideosCount": "{count, plural, =1{1 ново видео} other{{count} нови видеа}}",
     "@exploreNewVideosCount": {
@@ -3344,14 +3335,6 @@
     "nostrSettingsDeleteAccountSubtitle": "Изпраща заявки за изтриване на съдържанието ти и те отписва на това устройство. Релетата, клиентите, индексите за търсене и другите устройства с вход може да запазят копия.",
     "safetySettingsWhatYouSee": "КАКВО ВИЖДАШ",
     "safetySettingsWhatYouPublish": "КАКВО ПУБЛИКУВАШ",
-    "listPersonCount": "{count, plural, =1{1 човек} other{{count} души}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "От ",
     "keyManagementYourPublicKeyLabel": "Твоят публичен ключ (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -3398,14 +3381,6 @@
             }
         }
     },
-    "discoverListsTitle": "Открий списъци",
-    "discoverListsFailedToLoad": "Зареждането на списъците не успя",
-    "discoverListsLoading": "Откриваме публични списъци...",
-    "discoverListsRelayTimeout": "Релето не върна списъци навреме. Опитай пак.",
-    "discoverListsServiceUnavailable": "Услугата не е налична.",
-    "discoverListsEmptyTitle": "Не са намерени публични списъци",
-    "discoverListsEmptySubtitle": "Върни се по-късно за нови списъци",
-    "discoverListsByAuthorPrefix": "от",
     "curatedListEmptyTitle": "Няма видеа в този списък",
     "curatedListEmptySubtitle": "Добави няколко видеа, за да започнеш",
     "curatedListLoadingVideos": "Видеата се зареждат...",
@@ -4988,5 +4963,7 @@
         "type": "String"
       }
     }
-  }
+  },
+    "listsDiscoveryLoadingLabel": "Зареждане на списъци",
+    "listsDiscoveryEmpty": "Този път не изскочи нито един списък. Дръпни надолу за обновяване."
 }
