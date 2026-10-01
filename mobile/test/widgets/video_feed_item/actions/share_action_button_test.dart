@@ -880,6 +880,12 @@ void main() {
                 data['message'] == text;
           });
 
+          bool snackbarIsError(WidgetTester tester) => tester
+              .widget<DivineSnackbarContainer>(
+                find.byType(DivineSnackbarContainer),
+              )
+              .error;
+
           void stubSend(Map<String, ShareResult> results) {
             when(
               () => mockVideoSharingService.shareVideoWithMultipleUsers(
@@ -976,6 +982,152 @@ void main() {
             expect(
               find.text(l10n.shareCouldNotSendToCount(2)),
               findsOneWidget,
+            );
+          });
+
+          testWidgets(
+            'uses the error style when the only recipient was refused',
+            (tester) async {
+              captureAnnouncements(tester);
+              stubSend({
+                alice.pubkey: ShareResult.failure(
+                  'blocked: recipient not permitted by send policy',
+                ),
+              });
+
+              await send(tester, ['Alice']);
+
+              final message = l10n.shareCouldNotSendTo('Alice');
+              expect(find.text(message), findsOneWidget);
+              expect(find.text(l10n.shareFailedToSend), findsNothing);
+              expect(snackbarIsError(tester), isTrue);
+              expect(announced(message), isTrue);
+            },
+          );
+
+          testWidgets(
+            'names a sent and a still-sending recipient without the error '
+            'style',
+            (tester) async {
+              captureAnnouncements(tester);
+              stubSend({
+                alice.pubkey: ShareResult.createSuccess('msg-1'),
+                bob.pubkey: ShareResult.retrying('no relay reached'),
+              });
+
+              await send(tester, ['Alice', 'Bob']);
+
+              final message =
+                  '${l10n.sharePostSharedWith('Alice')}\n'
+                  '${l10n.shareStillTryingToSendTo('Bob')}';
+              expect(find.text(message), findsOneWidget);
+              expect(snackbarIsError(tester), isFalse);
+              expect(find.text(l10n.dmReelReplyViewChat), findsNothing);
+              expect(announced(message), isTrue);
+            },
+          );
+
+          testWidgets(
+            'uses the error style when a still-sending share sits beside a '
+            'refusal',
+            (tester) async {
+              stubSend({
+                alice.pubkey: ShareResult.retrying('no relay reached'),
+                bob.pubkey: ShareResult.failure('refused'),
+              });
+
+              await send(tester, ['Alice', 'Bob']);
+
+              expect(
+                find.text(
+                  '${l10n.shareStillTryingToSendTo('Alice')}\n'
+                  '${l10n.shareCouldNotSendTo('Bob')}',
+                ),
+                findsOneWidget,
+              );
+              expect(snackbarIsError(tester), isTrue);
+            },
+          );
+
+          group('with three recipients', () {
+            const carol = ShareableUser(
+              pubkey:
+                  '22222222222222222222222222222222'
+                  '22222222222222222222222222222222',
+              displayName: 'Carol',
+            );
+
+            setUp(() {
+              when(
+                () => mockVideoSharingService.recentlySharedWith,
+              ).thenReturn([alice, bob, carol]);
+            });
+
+            testWidgets(
+              'lists sent, still-sending and refused recipients in that order',
+              (tester) async {
+                stubSend({
+                  alice.pubkey: ShareResult.createSuccess('msg-1'),
+                  bob.pubkey: ShareResult.retrying('no relay reached'),
+                  carol.pubkey: ShareResult.failure('refused'),
+                });
+
+                // Picked in reverse, so the order can only come from the
+                // outcome.
+                await send(tester, ['Carol', 'Bob', 'Alice']);
+
+                expect(
+                  find.text(
+                    '${l10n.sharePostSharedWith('Alice')}\n'
+                    '${l10n.shareStillTryingToSendTo('Bob')}\n'
+                    '${l10n.shareCouldNotSendTo('Carol')}',
+                  ),
+                  findsOneWidget,
+                );
+                expect(snackbarIsError(tester), isTrue);
+              },
+            );
+
+            testWidgets(
+              'counts the recipients who got the video beside a refusal',
+              (tester) async {
+                stubSend({
+                  alice.pubkey: ShareResult.createSuccess('msg-1'),
+                  bob.pubkey: ShareResult.createSuccess('msg-2'),
+                  carol.pubkey: ShareResult.failure('refused'),
+                });
+
+                await send(tester, ['Alice', 'Bob', 'Carol']);
+
+                expect(
+                  find.text(
+                    '${l10n.sharePostSharedWithCount(2)}\n'
+                    '${l10n.shareCouldNotSendTo('Carol')}',
+                  ),
+                  findsOneWidget,
+                );
+              },
+            );
+
+            testWidgets(
+              'counts the recipients still being sent to beside a refusal',
+              (tester) async {
+                stubSend({
+                  alice.pubkey: ShareResult.retrying('no relay reached'),
+                  bob.pubkey: ShareResult.retrying('no relay reached'),
+                  carol.pubkey: ShareResult.failure('refused'),
+                });
+
+                await send(tester, ['Alice', 'Bob', 'Carol']);
+
+                expect(
+                  find.text(
+                    '${l10n.shareStillTryingToSendToCount(2)}\n'
+                    '${l10n.shareCouldNotSendTo('Carol')}',
+                  ),
+                  findsOneWidget,
+                );
+              },
             );
           });
         });

@@ -10,9 +10,11 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
@@ -800,6 +802,51 @@ void main() {
         );
 
         expect(result.delivery, ShareDelivery.notSent);
+      });
+
+      group('logs', () {
+        late LogCaptureService logCapture;
+
+        setUp(() async {
+          logCapture = LogCaptureService();
+          await logCapture.clearAllLogs();
+        });
+
+        tearDown(() async {
+          await logCapture.clearAllLogs();
+        });
+
+        List<String> shareLines() => [
+          for (final entry in logCapture.getRecentLogs())
+            if (entry.message.startsWith('Share to ')) entry.message,
+        ];
+
+        test('a refused recipient by npub and hex, as never retried', () async {
+          await shareWith(
+            const NIP17SendResult.blocked(
+              'blocked: recipient not permitted by send policy',
+            ),
+          );
+
+          final line =
+              'Share to ${pubkeyForLogs(_recipientPubkey)} not sent and not '
+              'queued: blocked: recipient not permitted by send policy';
+          expect(shareLines(), [line]);
+        });
+
+        test('a queued recipient with the queue row the retry sends', () async {
+          await shareWith(
+            const NIP17SendResult.failure(
+              'Relay rejected',
+              queuedRumorId: 'queued-rumor-id',
+            ),
+          );
+
+          final line =
+              'Share to ${pubkeyForLogs(_recipientPubkey)} not published; '
+              'queued for background retry as queued-rumor-id: Relay rejected';
+          expect(shareLines(), [line]);
+        });
       });
     });
 
