@@ -3904,17 +3904,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get peopleListsAddToList => 'Ajouter à la liste';
 
   @override
-  String get peopleListsSheetTitle => 'Ajouter à la liste';
-
-  @override
   String get peopleListsEmptyTitle => 'Aucune liste pour l\'instant';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Crée une liste pour commencer à regrouper des personnes.';
-
-  @override
-  String get peopleListsCreateList => 'Créer une liste';
 
   @override
   String get peopleListsNewListTitle => 'Nouvelle liste';
@@ -4929,9 +4923,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get reportClose => 'Fermer';
 
   @override
-  String get listAddToList => 'Ajouter à une liste';
-
-  @override
   String listVideoCount(int count) {
     return '$count vidéos';
   }
@@ -4940,23 +4931,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get listByAuthorPrefix => 'Par ';
 
   @override
-  String get listNewList => 'Nouvelle liste';
-
-  @override
   String get listDone => 'Terminé';
 
   @override
   String get listErrorLoading => 'Erreur de chargement des listes';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'Retiré de $name';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'Ajouté à $name';
-  }
 
   @override
   String get listCreateNewList => 'Créer une nouvelle liste';
@@ -12946,4 +12924,7 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get peopleListsAddPeopleSemanticLabel =>
       'Ajouter des personnes à la liste';
+
+  @override
+  String get listAddToLists => 'Ajouter aux listes';
 }

@@ -30,7 +30,6 @@ lib/screens/settings/support_center_screen.dart
 lib/screens/sound_detail_screen.dart
 lib/screens/video_metadata/video_metadata_cover_screen.dart
 lib/screens/web_auth_screen.dart
-lib/widgets/add_to_list_dialog.dart
 lib/widgets/app_lifecycle_handler.dart
 lib/widgets/bug_report_dialog.dart
 lib/widgets/content_warning.dart

@@ -1593,7 +1593,6 @@
     "reportReceivedReviewNotice": "Nous l’enverrons automatiquement quand tu seras connecté. Notre équipe va examiner ton signalement et prendre les mesures appropriées. Tu pourras recevoir des mises à jour par message direct.",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "Fermer",
-    "listAddToList": "Ajouter à une liste",
     "listVideoCount": "{count} vidéos",
     "@listVideoCount": {
         "placeholders": {
@@ -1602,25 +1601,8 @@
             }
         }
     },
-    "listNewList": "Nouvelle liste",
     "listDone": "Terminé",
     "listErrorLoading": "Erreur de chargement des listes",
-    "listRemovedFrom": "Retiré de {name}",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "Ajouté à {name}",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "Créer une nouvelle liste",
     "listNewPeopleList": "Nouvelle liste de personnes",
     "listCollaboratorsNone": "Aucun",
@@ -2930,10 +2912,8 @@
     },
     "notificationSystemUpdate": "Tu as une nouvelle mise à jour",
     "peopleListsAddToList": "Ajouter à la liste",
-    "peopleListsSheetTitle": "Ajouter à la liste",
     "peopleListsEmptyTitle": "Aucune liste pour l'instant",
     "peopleListsEmptySubtitle": "Crée une liste pour commencer à regrouper des personnes.",
-    "peopleListsCreateList": "Créer une liste",
     "peopleListsNewListTitle": "Nouvelle liste",
     "peopleListsRouteTitle": "Liste de personnes",
     "peopleListsListNameLabel": "Nom de la liste",
@@ -4819,5 +4799,6 @@
   },
     "listsDiscoveryLoadingLabel": "Chargement des listes",
     "listsDiscoveryEmpty": "Aucune liste cette fois-ci. Tire pour actualiser.",
-    "peopleListsAddPeopleSemanticLabel": "Ajouter des personnes à la liste"
+    "peopleListsAddPeopleSemanticLabel": "Ajouter des personnes à la liste",
+    "listAddToLists": "Ajouter aux listes"
 }

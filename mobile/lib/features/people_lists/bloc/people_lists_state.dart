@@ -22,6 +22,37 @@ enum PeopleListsStatus {
   failure,
 }
 
+/// What came of one [PeopleListsPicksApplied]: how many of its writes a
+/// relay refused and the bloc rolled back.
+///
+/// Carries a [sequence] that grows with every outcome, so a sheet that
+/// applied picks can reject stale outcomes. [requestId] distinguishes two
+/// overlapping visits applying picks for the same person.
+class PeopleListsPicksOutcome extends Equatable {
+  /// Creates an outcome record.
+  const PeopleListsPicksOutcome({
+    required this.requestId,
+    required this.sequence,
+    required this.pubkey,
+    required this.refused,
+  });
+
+  /// Identifies the exact batch this outcome completes.
+  final Object requestId;
+
+  /// Grows by one per outcome, starting at 1.
+  final int sequence;
+
+  /// The full hex pubkey the picks were about. Never truncated.
+  final String pubkey;
+
+  /// How many of the picks a relay refused.
+  final int refused;
+
+  @override
+  List<Object?> get props => [requestId, sequence, pubkey, refused];
+}
+
 /// State of [PeopleListsBloc].
 ///
 /// Holds the authenticated owner's editable people lists, a reverse index
@@ -41,6 +72,7 @@ class PeopleListsState extends Equatable {
     this.pendingMutations = const {},
     this.lastSubmittedEventId,
     this.enabled = true,
+    this.lastPicksOutcome,
   });
 
   /// Current status of the bloc.
@@ -80,6 +112,9 @@ class PeopleListsState extends Equatable {
   /// subscription and runs no sync — see [activeOwnerPubkey].
   final bool enabled;
 
+  /// The outcome of the last [PeopleListsPicksApplied], if any.
+  final PeopleListsPicksOutcome? lastPicksOutcome;
+
   /// The owner the bloc may do repository work for.
   ///
   /// [ownerPubkey] while [enabled], `null` while the feature is off. Mutation
@@ -99,6 +134,7 @@ class PeopleListsState extends Equatable {
     String? lastSubmittedEventId,
     bool clearLastSubmittedEventId = false,
     bool? enabled,
+    PeopleListsPicksOutcome? lastPicksOutcome,
   }) {
     return PeopleListsState(
       status: status ?? this.status,
@@ -110,6 +146,7 @@ class PeopleListsState extends Equatable {
           ? null
           : (lastSubmittedEventId ?? this.lastSubmittedEventId),
       enabled: enabled ?? this.enabled,
+      lastPicksOutcome: lastPicksOutcome ?? this.lastPicksOutcome,
     );
   }
 
@@ -122,5 +159,6 @@ class PeopleListsState extends Equatable {
     pendingMutations,
     lastSubmittedEventId,
     enabled,
+    lastPicksOutcome,
   ];
 }
