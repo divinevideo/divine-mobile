@@ -26,14 +26,25 @@ class BadgeVideoPager {
   final int _before;
   final List<_AuthorChunk> _chunks;
   final Set<String> _seen = {};
+  Future<void> _tail = Future<void>.value();
 
   /// Whether a chunk still has buffered or unread videos.
   bool get hasMore =>
       _chunks.any((chunk) => chunk.buffer.isNotEmpty || !chunk.exhausted);
 
   /// Returns the next [limit] public, visible videos in recency order.
-  Future<List<VideoEvent>> loadMore({int limit = 25}) async {
+  ///
+  /// Calls are served one at a time. Following can ask for a page while a
+  /// refresh is still loading the first one, and two walks over the same
+  /// chunk would read one offset twice and skip the next one.
+  Future<List<VideoEvent>> loadMore({int limit = 25}) {
     if (limit < 1) throw ArgumentError.value(limit, 'limit');
+    final page = _tail.then((_) => _loadPage(limit));
+    _tail = page.then<void>((_) {}, onError: (Object _) {});
+    return page;
+  }
+
+  Future<List<VideoEvent>> _loadPage(int limit) async {
     final result = <VideoEvent>[];
     while (result.length < limit) {
       // A 200-author read is memory-heavy server-side. Walk chunks one at a
