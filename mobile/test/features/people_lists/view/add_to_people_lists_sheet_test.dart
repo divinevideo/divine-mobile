@@ -1,6 +1,8 @@
 // ABOUTME: Widget tests for AddToPeopleListsSheet.
 // ABOUTME: Covers list filtering, picking, applying the picks, and the empty state.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/semantics.dart';
@@ -238,8 +240,8 @@ void main() {
       );
 
       testWidgetsWithSurfaceSize(
-        'the check applies every pick through the bloc, one event per list, '
-        'then closes',
+        'the check applies every pick through the bloc as one event, then '
+        'closes',
         (tester) async {
           final memberList = _buildList(
             id: 'list-1',
@@ -262,25 +264,10 @@ void main() {
 
           verify(
             () => bloc.add(
-              const PeopleListsPubkeyAddRequested(
-                listId: 'list-2',
+              const PeopleListsPicksApplied(
                 pubkey: _targetPubkey,
-              ),
-            ),
-          ).called(1);
-          verify(
-            () => bloc.add(
-              const PeopleListsPubkeyAddRequested(
-                listId: 'list-3',
-                pubkey: _targetPubkey,
-              ),
-            ),
-          ).called(1);
-          verify(
-            () => bloc.add(
-              const PeopleListsPubkeyRemoveRequested(
-                listId: 'list-1',
-                pubkey: _targetPubkey,
+                addListIds: {'list-2', 'list-3'},
+                removeListIds: {'list-1'},
               ),
             ),
           ).called(1);
@@ -288,6 +275,98 @@ void main() {
             () => bloc.add(any(that: isA<PeopleListsPubkeyToggleRequested>())),
           );
           expect(find.byType(AddToPeopleListsSheet), findsNothing);
+        },
+      );
+
+      testWidgetsWithSurfaceSize(
+        'a pick the bloc rolls back after the sheet closed is reported on '
+        'the screen underneath',
+        (tester) async {
+          final list = _buildList(id: 'list-1', name: 'Close Friends');
+          final states = StreamController<PeopleListsState>.broadcast();
+          addTearDown(states.close);
+          // An outcome from an earlier visit is on the state already; the
+          // sheet must wait for the one newer than it.
+          final earlier = _stateWith(lists: [list]).copyWith(
+            lastPicksOutcome: const PeopleListsPicksOutcome(
+              sequence: 4,
+              pubkey: _targetPubkey,
+              refused: 1,
+            ),
+          );
+          whenListen(bloc, states.stream, initialState: earlier);
+
+          await openSheet(tester);
+          await tester.tap(find.text('Close Friends'));
+          await tester.pump();
+          await tester.tap(find.bySemanticsLabel(l10n.listDone));
+          await tester.pumpAndSettle();
+          expect(find.byType(AddToPeopleListsSheet), findsNothing);
+          expect(
+            find.text(l10n.peopleListsMembershipUpdateFailed),
+            findsNothing,
+          );
+
+          // The bloc applies the picks, a relay refuses one, and it records
+          // the outcome.
+          states.add(
+            earlier.copyWith(
+              lastPicksOutcome: const PeopleListsPicksOutcome(
+                sequence: 5,
+                pubkey: _targetPubkey,
+                refused: 1,
+              ),
+            ),
+          );
+          // The watch resumes on the stream's microtasks before the snackbar
+          // can be scheduled.
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text(l10n.peopleListsMembershipUpdateFailed),
+            findsOneWidget,
+          );
+        },
+      );
+
+      testWidgetsWithSurfaceSize(
+        'a pick the bloc applies after the sheet closed reports nothing',
+        (tester) async {
+          final list = _buildList(id: 'list-1', name: 'Close Friends');
+          final states = StreamController<PeopleListsState>.broadcast();
+          addTearDown(states.close);
+          whenListen(
+            bloc,
+            states.stream,
+            initialState: _stateWith(lists: [list]),
+          );
+
+          await openSheet(tester);
+          await tester.tap(find.text('Close Friends'));
+          await tester.pump();
+          await tester.tap(find.bySemanticsLabel(l10n.listDone));
+          await tester.pumpAndSettle();
+
+          final applied = _buildList(
+            id: 'list-1',
+            name: 'Close Friends',
+            pubkeys: [_targetPubkey],
+          );
+          states.add(
+            _stateWith(lists: [applied]).copyWith(
+              lastPicksOutcome: const PeopleListsPicksOutcome(
+                sequence: 1,
+                pubkey: _targetPubkey,
+                refused: 0,
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text(l10n.peopleListsMembershipUpdateFailed),
+            findsNothing,
+          );
         },
       );
 

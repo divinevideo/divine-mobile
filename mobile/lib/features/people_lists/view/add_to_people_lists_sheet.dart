@@ -8,11 +8,13 @@ import 'package:models/models.dart';
 import 'package:openvine/extensions/modal_pop_extension.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/people_lists/bloc/people_list_picks_cubit.dart';
+import 'package:openvine/features/people_lists/bloc/people_list_picks_outcome.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/curated_lists_gate.dart';
 import 'package:openvine/features/people_lists/models/people_list_entry_point.dart';
 import 'package:openvine/features/people_lists/view/widgets/widgets.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
 import 'package:openvine/widgets/list_picker_create_button.dart';
 import 'package:openvine/widgets/profile/new_people_list_sheet.dart';
@@ -81,6 +83,10 @@ class AddToPeopleListsSheet extends StatefulWidget {
     if (!curatedListsEnabled(context)) return;
 
     final l10n = context.l10n;
+    // Resolved before the sheet opens: the screen that opened it may be
+    // gone by the time a refusal is known.
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final bloc = context.read<PeopleListsBloc>();
     // The body seeds the picks from the bloc as it mounts, in the same
     // frame it starts following it, so no membership change can fall
     // between the two.
@@ -117,9 +123,44 @@ class AddToPeopleListsSheet extends StatefulWidget {
           scrollController: scrollController,
         ),
       );
+      final applied = cubit.state.applied;
+      if (applied != null) {
+        // The sheet closed as soon as the picks were sent; the bloc rolls a
+        // refused one back on its own, and this is what says so.
+        runDetached(
+          _reportRefusedPicks(
+            bloc: bloc,
+            before: applied.before,
+            messenger: messenger,
+            message: l10n.peopleListsMembershipUpdateFailed,
+            pubkey: pubkey,
+          ),
+          'report refused people list picks',
+          logName: 'AddToPeopleListsSheet',
+          category: LogCategory.ui,
+        );
+      }
     } finally {
       await cubit.close();
     }
+  }
+
+  static Future<void> _reportRefusedPicks({
+    required PeopleListsBloc bloc,
+    required PeopleListsPicksOutcome? before,
+    required ScaffoldMessengerState? messenger,
+    required String message,
+    required String pubkey,
+  }) async {
+    final refused = await awaitRefusedPicks(
+      states: bloc.stream,
+      before: before,
+      pubkey: pubkey,
+    );
+    if (refused == 0 || !(messenger?.mounted ?? false)) return;
+    messenger!.showSnackBar(
+      DivineSnackbarContainer.snackBar(message, error: true),
+    );
   }
 
   /// The sheet's scroll controller, so dragging the rows moves the sheet.
@@ -178,27 +219,34 @@ class _AddToPeopleListsSheetState extends State<AddToPeopleListsSheet> {
 
 /// The header's check button: applies the picks and closes the sheet.
 ///
-/// Each add and remove goes to [PeopleListsBloc] as its own event, which
-/// applies it optimistically and rolls it back if the relay refuses, the
-/// same way a tap used to.
+/// The picks go to [PeopleListsBloc] as one [PeopleListsPicksApplied]; the
+/// bloc applies each optimistically, rolls back any a relay refuses, and
+/// records the outcome, which the sheet's opener reports on the screen
+/// underneath, since the sheet is gone by then.
 class _ApplyButton extends StatelessWidget {
   const _ApplyButton({required this.pubkey});
 
   final String pubkey;
 
   void _apply(BuildContext context) {
-    final picks = context.read<PeopleListPicksCubit>().state;
+    final cubit = context.read<PeopleListPicksCubit>();
     final bloc = context.read<PeopleListsBloc>();
     final offered = {
       for (final list in bloc.state.lists)
         if (list.isEditable) list.id,
     };
-    for (final listId in picks.listIdsToAdd.intersection(offered)) {
-      bloc.add(PeopleListsPubkeyAddRequested(listId: listId, pubkey: pubkey));
-    }
-    for (final listId in picks.listIdsToRemove.intersection(offered)) {
+    final addListIds = cubit.state.listIdsToAdd.intersection(offered);
+    final removeListIds = cubit.state.listIdsToRemove.intersection(offered);
+    if (addListIds.isNotEmpty || removeListIds.isNotEmpty) {
+      // Recorded before the event goes out, so the outcome the bloc records
+      // for it is the first one newer than this.
+      cubit.applied(before: bloc.state.lastPicksOutcome);
       bloc.add(
-        PeopleListsPubkeyRemoveRequested(listId: listId, pubkey: pubkey),
+        PeopleListsPicksApplied(
+          pubkey: pubkey,
+          addListIds: addListIds,
+          removeListIds: removeListIds,
+        ),
       );
     }
     context.popModalIfMounted();
