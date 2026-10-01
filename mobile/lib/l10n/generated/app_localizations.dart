@@ -3152,6 +3152,30 @@ abstract class AppLocalizations {
   /// **'{count, plural, one{Post shared with {count} person} other{Post shared with {count} people}}'**
   String sharePostSharedWithCount(int count);
 
+  /// One line of the snackbar after sharing a video: the send to this person failed for now but is queued, and the app keeps retrying it in the background. Shown on its own line, possibly after a 'Post shared with' line.
+  ///
+  /// In en, this message translates to:
+  /// **'Still trying to send to {recipientName}'**
+  String shareStillTryingToSendTo(String recipientName);
+
+  /// Plural form of shareStillTryingToSendTo, for two or more people whose sends are queued and retrying in the background. Only used for count >= 2.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Still trying to send to {count} person} other{Still trying to send to {count} people}}'**
+  String shareStillTryingToSendToCount(int count);
+
+  /// One line of the snackbar after sharing a video: this person will not get it, because the send was refused (for example, an account nobody reads anymore) and will not be retried. Shown on its own line, possibly after a 'Post shared with' line.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send to {recipientName}'**
+  String shareCouldNotSendTo(String recipientName);
+
+  /// Plural form of shareCouldNotSendTo, for two or more people who will not get the shared video. Only used for count >= 2.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Couldn\'t send to {count} person} other{Couldn\'t send to {count} people}}'**
+  String shareCouldNotSendToCount(int count);
+
   /// No description provided for @shareFailedToSend.
   ///
   /// In en, this message translates to:

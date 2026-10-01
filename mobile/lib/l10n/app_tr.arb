@@ -600,6 +600,10 @@
             }
         }
     },
+    "shareStillTryingToSendTo": "Hâlâ gönderilmeye çalışılıyor: {recipientName}",
+    "shareStillTryingToSendToCount": "{count, plural, one{Hâlâ {count} kişiye gönderilmeye çalışılıyor} other{Hâlâ {count} kişiye gönderilmeye çalışılıyor}}",
+    "shareCouldNotSendTo": "Gönderilemedi: {recipientName}",
+    "shareCouldNotSendToCount": "{count, plural, one{{count} kişiye gönderilemedi} other{{count} kişiye gönderilemedi}}",
     "shareFailedToSend": "Video gönderilemedi",
     "shareAddedToBookmarks": "Yer imlerine eklendi",
     "shareRemovedFromBookmarks": "Yer imlerinden kaldırıldı",

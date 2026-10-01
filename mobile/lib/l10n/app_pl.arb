@@ -600,6 +600,10 @@
             }
         }
     },
+    "shareStillTryingToSendTo": "Nadal próbujemy wysłać do {recipientName}",
+    "shareStillTryingToSendToCount": "{count, plural, one{Nadal próbujemy wysłać do {count} osoby} few{Nadal próbujemy wysłać do {count} osób} many{Nadal próbujemy wysłać do {count} osób} other{Nadal próbujemy wysłać do {count} osoby}}",
+    "shareCouldNotSendTo": "Nie udało się wysłać do {recipientName}",
+    "shareCouldNotSendToCount": "{count, plural, one{Nie udało się wysłać do {count} osoby} few{Nie udało się wysłać do {count} osób} many{Nie udało się wysłać do {count} osób} other{Nie udało się wysłać do {count} osoby}}",
     "shareFailedToSend": "Nie udało się wysłać filmu",
     "shareAddedToBookmarks": "Dodano do zakładek",
     "shareRemovedFromBookmarks": "Usunięto z zakładek",

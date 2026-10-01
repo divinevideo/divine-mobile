@@ -887,7 +887,7 @@ void main() {
       );
     });
 
-    testWidgets('send shows failure snackbar on error', (tester) async {
+    testWidgets('send names the recipient it could not reach', (tester) async {
       when(
         () => mockVideoSharingService.shareVideoWithMultipleUsers(
           video: any(named: 'video'),
@@ -909,9 +909,11 @@ void main() {
       await tester.tap(sendButton());
       await tester.pumpAndSettle();
 
-      expect(find.text(l10n.shareFailedToSend), findsOneWidget);
-      // The sheet dismisses on failure: the send is durably queued and
-      // retried in the background, so there is no in-sheet manual retry.
+      // A failure with no queue row behind it is never retried, so the
+      // snackbar names who will not get the video.
+      expect(find.text(l10n.shareCouldNotSendTo('Alice')), findsOneWidget);
+      expect(find.text(l10n.shareFailedToSend), findsNothing);
+      // The sheet still dismisses: nothing is kept open for a manual retry.
       expect(find.text(l10n.shareWithTitle), findsNothing);
     });
   });

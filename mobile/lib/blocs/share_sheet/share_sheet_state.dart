@@ -48,6 +48,34 @@ class ShareSheetSendSuccess extends ShareSheetActionResult {
   final String? conversationId;
 }
 
+/// A send where at least one recipient did not get the video now.
+///
+/// Every recipient lands in exactly one list, in selection order, so the sheet
+/// can say who got it, who the retry sweep is still sending to, and who will
+/// never get it (#8672). A share to one recipient that did not go out lands
+/// here too — whether a retry is coming is exactly what it has to say.
+class ShareSheetSendIncomplete extends ShareSheetActionResult {
+  ShareSheetSendIncomplete({
+    required this.sentNames,
+    required this.retryingNames,
+    required this.notSentNames,
+  }) : assert(
+         retryingNames.isNotEmpty || notSentNames.isNotEmpty,
+         'A send with every recipient sent is a ShareSheetSendSuccess',
+       );
+
+  /// Recipients the video was sent to.
+  final List<String> sentNames;
+
+  /// Recipients whose send is queued; the retry sweep keeps sending it.
+  final List<String> retryingNames;
+
+  /// Recipients nothing will send it to: refused by the send policy, or failed
+  /// before the send was queued.
+  final List<String> notSentNames;
+}
+
+/// The whole send threw before any recipient's outcome was known.
 class ShareSheetSendFailure extends ShareSheetActionResult {
   ShareSheetSendFailure();
 }

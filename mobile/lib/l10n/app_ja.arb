@@ -600,6 +600,10 @@
             }
         }
     },
+    "shareStillTryingToSendTo": "{recipientName}への送信をまだ試しています",
+    "shareStillTryingToSendToCount": "{count, plural, other{{count}人への送信をまだ試しています}}",
+    "shareCouldNotSendTo": "{recipientName}に送信できませんでした",
+    "shareCouldNotSendToCount": "{count, plural, other{{count}人に送信できませんでした}}",
     "shareFailedToSend": "動画の送信がうまくいかなかった",
     "shareAddedToBookmarks": "ブックマークに追加したよ",
     "shareRemovedFromBookmarks": "ブックマークから外したよ",

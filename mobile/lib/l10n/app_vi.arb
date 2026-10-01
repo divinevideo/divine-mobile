@@ -837,6 +837,10 @@
       }
     }
   },
+  "shareStillTryingToSendTo": "Vẫn đang thử gửi cho {recipientName}",
+  "shareStillTryingToSendToCount": "{count, plural, one{Vẫn đang thử gửi cho {count} người} other{Vẫn đang thử gửi cho {count} người}}",
+  "shareCouldNotSendTo": "Không gửi được cho {recipientName}",
+  "shareCouldNotSendToCount": "{count, plural, one{Không gửi được cho {count} người} other{Không gửi được cho {count} người}}",
   "shareFailedToSend": "Không gửi được video",
   "shareAddedToBookmarks": "Đã thêm vào dấu trang",
   "shareRemovedFromBookmarks": "Đã xóa khỏi dấu trang",

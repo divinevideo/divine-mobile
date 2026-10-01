@@ -1892,6 +1892,40 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String shareStillTryingToSendTo(String recipientName) {
+    return 'Încă încercăm să trimitem către $recipientName';
+  }
+
+  @override
+  String shareStillTryingToSendToCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Încă încercăm să trimitem către $count de persoane',
+      few: 'Încă încercăm să trimitem către $count persoane',
+      one: 'Încă încercăm să trimitem către $count persoană',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String shareCouldNotSendTo(String recipientName) {
+    return 'Nu am putut trimite către $recipientName';
+  }
+
+  @override
+  String shareCouldNotSendToCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nu am putut trimite către $count de persoane',
+      few: 'Nu am putut trimite către $count persoane',
+      one: 'Nu am putut trimite către $count persoană',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareFailedToSend => 'N-am putut trimite videoclipul';
 
   @override

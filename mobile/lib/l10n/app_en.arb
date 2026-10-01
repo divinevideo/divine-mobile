@@ -1186,6 +1186,42 @@
       }
     }
   },
+  "shareStillTryingToSendTo": "Still trying to send to {recipientName}",
+  "@shareStillTryingToSendTo": {
+    "description": "One line of the snackbar after sharing a video: the send to this person failed for now but is queued, and the app keeps retrying it in the background. Shown on its own line, possibly after a 'Post shared with' line.",
+    "placeholders": {
+      "recipientName": {
+        "type": "String"
+      }
+    }
+  },
+  "shareStillTryingToSendToCount": "{count, plural, one{Still trying to send to {count} person} other{Still trying to send to {count} people}}",
+  "@shareStillTryingToSendToCount": {
+    "description": "Plural form of shareStillTryingToSendTo, for two or more people whose sends are queued and retrying in the background. Only used for count >= 2.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shareCouldNotSendTo": "Couldn't send to {recipientName}",
+  "@shareCouldNotSendTo": {
+    "description": "One line of the snackbar after sharing a video: this person will not get it, because the send was refused (for example, an account nobody reads anymore) and will not be retried. Shown on its own line, possibly after a 'Post shared with' line.",
+    "placeholders": {
+      "recipientName": {
+        "type": "String"
+      }
+    }
+  },
+  "shareCouldNotSendToCount": "{count, plural, one{Couldn't send to {count} person} other{Couldn't send to {count} people}}",
+  "@shareCouldNotSendToCount": {
+    "description": "Plural form of shareCouldNotSendTo, for two or more people who will not get the shared video. Only used for count >= 2.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "shareFailedToSend": "Failed to send video",
   "shareAddedToBookmarks": "Added to bookmarks",
   "shareRemovedFromBookmarks": "Removed from bookmarks",

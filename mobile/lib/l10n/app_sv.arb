@@ -600,6 +600,10 @@
             }
         }
     },
+    "shareStillTryingToSendTo": "Vi försöker fortfarande skicka till {recipientName}",
+    "shareStillTryingToSendToCount": "{count, plural, one{Vi försöker fortfarande skicka till {count} person} other{Vi försöker fortfarande skicka till {count} personer}}",
+    "shareCouldNotSendTo": "Det gick inte att skicka till {recipientName}",
+    "shareCouldNotSendToCount": "{count, plural, one{Det gick inte att skicka till {count} person} other{Det gick inte att skicka till {count} personer}}",
     "shareFailedToSend": "Kunde inte skicka video",
     "shareAddedToBookmarks": "Tillagd i bokmärken",
     "shareRemovedFromBookmarks": "Borttagen från bokmärken",

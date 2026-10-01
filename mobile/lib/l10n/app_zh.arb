@@ -837,6 +837,10 @@
       }
     }
   },
+  "shareStillTryingToSendTo": "仍在尝试发送给 {recipientName}",
+  "shareStillTryingToSendToCount": "{count, plural, one{仍在尝试发送给 {count} 个人} other{仍在尝试发送给 {count} 个人}}",
+  "shareCouldNotSendTo": "无法发送给 {recipientName}",
+  "shareCouldNotSendToCount": "{count, plural, one{无法发送给 {count} 个人} other{无法发送给 {count} 个人}}",
   "shareFailedToSend": "视频发送失败",
   "shareAddedToBookmarks": "已加入收藏",
   "shareRemovedFromBookmarks": "已从收藏移除",

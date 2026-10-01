@@ -600,6 +600,10 @@
             }
         }
     },
+    "shareStillTryingToSendTo": "ما زلنا نحاول الإرسال إلى {recipientName}",
+    "shareStillTryingToSendToCount": "{count, plural, one{ما زلنا نحاول الإرسال إلى شخص واحد} two{ما زلنا نحاول الإرسال إلى شخصين} few{ما زلنا نحاول الإرسال إلى {count} أشخاص} many{ما زلنا نحاول الإرسال إلى {count} شخصًا} other{ما زلنا نحاول الإرسال إلى {count} شخص}}",
+    "shareCouldNotSendTo": "تعذّر الإرسال إلى {recipientName}",
+    "shareCouldNotSendToCount": "{count, plural, one{تعذّر الإرسال إلى شخص واحد} two{تعذّر الإرسال إلى شخصين} few{تعذّر الإرسال إلى {count} أشخاص} many{تعذّر الإرسال إلى {count} شخصًا} other{تعذّر الإرسال إلى {count} شخص}}",
     "shareFailedToSend": "فشل إرسال الفيديو",
     "shareAddedToBookmarks": "تمت الإضافة إلى الإشارات المرجعية",
     "shareRemovedFromBookmarks": "تمت الإزالة من الإشارات المرجعية",

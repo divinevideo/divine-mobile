@@ -600,6 +600,10 @@
             }
         }
     },
+    "shareStillTryingToSendTo": "Masih mencoba mengirim ke {recipientName}",
+    "shareStillTryingToSendToCount": "{count, plural, other{Masih mencoba mengirim ke {count} orang}}",
+    "shareCouldNotSendTo": "Tidak dapat mengirim ke {recipientName}",
+    "shareCouldNotSendToCount": "{count, plural, other{Tidak dapat mengirim ke {count} orang}}",
     "shareFailedToSend": "Gagal mengirim video",
     "shareAddedToBookmarks": "Ditambahkan ke bookmark",
     "shareRemovedFromBookmarks": "Dihapus dari bookmark",

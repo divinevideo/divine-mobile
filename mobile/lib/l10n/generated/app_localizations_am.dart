@@ -1797,6 +1797,38 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String shareStillTryingToSendTo(String recipientName) {
+    return 'ለ$recipientName ለመላክ አሁንም እየሞከርን ነው';
+  }
+
+  @override
+  String shareStillTryingToSendToCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ለ$count ሰዎች ለመላክ አሁንም እየሞከርን ነው',
+      one: 'ለ$count ሰው ለመላክ አሁንም እየሞከርን ነው',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String shareCouldNotSendTo(String recipientName) {
+    return 'ለ$recipientName መላክ አልተቻለም';
+  }
+
+  @override
+  String shareCouldNotSendToCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ለ$count ሰዎች መላክ አልተቻለም',
+      one: 'ለ$count ሰው መላክ አልተቻለም',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareFailedToSend => 'ቪዲዮ መላክ አልተሳካም።';
 
   @override

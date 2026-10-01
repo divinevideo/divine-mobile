@@ -600,6 +600,10 @@
             }
         }
     },
+    "shareStillTryingToSendTo": "Ainda estamos tentando enviar para {recipientName}",
+    "shareStillTryingToSendToCount": "{count, plural, one{Ainda estamos tentando enviar para {count} pessoa} other{Ainda estamos tentando enviar para {count} pessoas}}",
+    "shareCouldNotSendTo": "Não foi possível enviar para {recipientName}",
+    "shareCouldNotSendToCount": "{count, plural, one{Não foi possível enviar para {count} pessoa} other{Não foi possível enviar para {count} pessoas}}",
     "shareFailedToSend": "Falha ao enviar vídeo",
     "shareAddedToBookmarks": "Adicionado aos favoritos",
     "shareRemovedFromBookmarks": "Removido dos favoritos",

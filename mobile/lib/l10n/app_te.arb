@@ -1105,6 +1105,10 @@
       }
     }
   },
+  "shareStillTryingToSendTo": "{recipientName}కు పంపడానికి ఇంకా ప్రయత్నిస్తున్నాం",
+  "shareStillTryingToSendToCount": "{count, plural, one{{count} వ్యక్తికి పంపడానికి ఇంకా ప్రయత్నిస్తున్నాం} other{{count} వ్యక్తులకు పంపడానికి ఇంకా ప్రయత్నిస్తున్నాం}}",
+  "shareCouldNotSendTo": "{recipientName}కు పంపడం సాధ్యపడలేదు",
+  "shareCouldNotSendToCount": "{count, plural, one{{count} వ్యక్తికి పంపడం సాధ్యపడలేదు} other{{count} వ్యక్తులకు పంపడం సాధ్యపడలేదు}}",
   "shareFailedToSend": "వీడియోను పంపడంలో విఫలమైంది",
   "shareAddedToBookmarks": "బుక్‌మార్క్‌లకు జోడించబడింది",
   "shareRemovedFromBookmarks": "బుక్‌మార్క్‌ల నుండి తీసివేయబడింది",
