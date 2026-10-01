@@ -5320,6 +5320,7 @@
   "videoMetadataContentWarningLabel": "添加内容警告",
   "videoMetadataSelectContentWarningsSemanticLabel": "选择内容警告",
   "videoMetadataContentWarningSelectAllThatApply": "选择所有适用项",
+  "videoMetadataContentWarningRequiredByEffect": "保持开启：你的视频含有闪烁效果",
   "videoMetadataAudioReuseSubtitle": "让其他人保存并二次使用这个视频的音频。",
   "publishAudioReuseDegradedWarning": "你的视频已发布，但声音未能发布。编辑视频以分享声音。",
   "videoMetadataCollaboratorsLabel": "添加协作者",

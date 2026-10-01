@@ -10092,6 +10092,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'Selecione tudo que se aplica ao seu conteúdo';
 
   @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Fica ativado: o seu vídeo tem um efeito piscante';
+
+  @override
   String get videoMetadataAudioReuseSubtitle =>
       'Permita que outros salvem e reutilizem o áudio deste vídeo.';
 

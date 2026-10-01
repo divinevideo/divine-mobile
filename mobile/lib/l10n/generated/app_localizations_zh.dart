@@ -9432,6 +9432,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoMetadataContentWarningSelectAllThatApply => '选择所有适用项';
 
   @override
+  String get videoMetadataContentWarningRequiredByEffect => '保持开启：你的视频含有闪烁效果';
+
+  @override
   String get videoMetadataAudioReuseSubtitle => '让其他人保存并二次使用这个视频的音频。';
 
   @override

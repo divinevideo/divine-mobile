@@ -2830,6 +2830,7 @@
     "videoMetadataContentWarningLabel": "Avviso contenuto",
     "videoMetadataSelectContentWarningsSemanticLabel": "Seleziona avvisi contenuto",
     "videoMetadataContentWarningSelectAllThatApply": "Seleziona tutto ciò che si applica ai tuoi contenuti",
+    "videoMetadataContentWarningRequiredByEffect": "Resta attivo: il tuo video ha un effetto lampeggiante",
     "videoMetadataCollaboratorsLabel": "Collaboratori",
     "videoMetadataAddCollaboratorSemanticLabel": "Aggiungi collaboratore",
     "videoMetadataMutualFollowersSearchText": "Follower reciproci",

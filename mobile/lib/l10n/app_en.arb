@@ -6817,6 +6817,10 @@
   "videoMetadataContentWarningLabel": "Add content warning",
   "videoMetadataSelectContentWarningsSemanticLabel": "Select content warnings",
   "videoMetadataContentWarningSelectAllThatApply": "Select all that apply",
+  "videoMetadataContentWarningRequiredByEffect": "Stays on: your video has a flashing effect",
+  "@videoMetadataContentWarningRequiredByEffect": {
+    "description": "Note under the Flashing Lights content warning, which is locked on because the video uses a flashing effect (strobe, negative flash) from the editor."
+  },
   "videoMetadataAudioReuseSubtitle": "Let others save and reuse this video's audio.",
   "publishAudioReuseDegradedWarning": "Your video is up, but the sound didn't publish. Edit the video to share it.",
   "@publishAudioReuseDegradedWarning": {

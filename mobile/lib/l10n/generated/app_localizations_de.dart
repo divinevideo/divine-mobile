@@ -10141,6 +10141,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Wähle alles aus, was auf deinen Inhalt zutrifft';
 
   @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Bleibt an: dein Video hat einen blinkenden Effekt';
+
+  @override
   String get videoMetadataAudioReuseSubtitle =>
       'Lass andere den Audio dieses Videos speichern und wiederverwenden.';
 

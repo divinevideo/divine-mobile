@@ -10114,6 +10114,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'Selecciona todo lo que aplique a tu contenido';
 
   @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Se queda activado: tu video tiene un efecto parpadeante';
+
+  @override
   String get videoMetadataAudioReuseSubtitle =>
       'Permite que otros guarden y reutilicen el audio de este video.';
 

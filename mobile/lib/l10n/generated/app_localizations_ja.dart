@@ -9526,6 +9526,10 @@ class AppLocalizationsJa extends AppLocalizations {
       'コンテンツに該当するものをすべて選択';
 
   @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'オンのままです：動画に点滅エフェクトがあります';
+
+  @override
   String get videoMetadataAudioReuseSubtitle =>
       '他のユーザーがこの動画の音声を保存して再利用できるようにします。';
 

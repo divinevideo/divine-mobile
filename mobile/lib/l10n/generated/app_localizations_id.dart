@@ -9933,6 +9933,10 @@ class AppLocalizationsId extends AppLocalizations {
       'Pilih semua yang berlaku untuk kontenmu';
 
   @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Tetap aktif: videomu punya efek berkedip';
+
+  @override
   String get videoMetadataAudioReuseSubtitle =>
       'Izinkan orang lain menyimpan dan menggunakan kembali audio video ini.';
 

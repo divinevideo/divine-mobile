@@ -9973,6 +9973,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Chọn tất cả những gì áp dụng';
 
   @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Luôn bật: video của bạn có hiệu ứng nhấp nháy';
+
+  @override
   String get videoMetadataAudioReuseSubtitle =>
       'Cho phép người khác lưu và dùng lại âm thanh của video này.';
 

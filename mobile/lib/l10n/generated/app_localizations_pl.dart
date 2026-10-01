@@ -10212,6 +10212,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Wybierz wszystko, co dotyczy Twojej treści';
 
   @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Zostaje włączone: twój film ma migający efekt';
+
+  @override
   String get videoMetadataAudioReuseSubtitle =>
       'Pozwól innym zapisać i ponownie użyć dźwięku z tego wideo.';
 

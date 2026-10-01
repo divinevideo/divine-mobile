@@ -17013,6 +17013,12 @@ abstract class AppLocalizations {
   /// **'Select all that apply'**
   String get videoMetadataContentWarningSelectAllThatApply;
 
+  /// Note under the Flashing Lights content warning, which is locked on because the video uses a flashing effect (strobe, negative flash) from the editor.
+  ///
+  /// In en, this message translates to:
+  /// **'Stays on: your video has a flashing effect'**
+  String get videoMetadataContentWarningRequiredByEffect;
+
   /// No description provided for @videoMetadataAudioReuseSubtitle.
   ///
   /// In en, this message translates to:

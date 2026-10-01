@@ -10064,6 +10064,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Selecteer alles wat van toepassing is op je inhoud';
 
   @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Blijft aan: je video heeft een knipperend effect';
+
+  @override
   String get videoMetadataAudioReuseSubtitle =>
       'Laat anderen de audio van deze video opslaan en hergebruiken.';
 

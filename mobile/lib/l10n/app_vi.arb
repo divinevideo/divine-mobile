@@ -5320,6 +5320,7 @@
   "videoMetadataContentWarningLabel": "Thêm cảnh báo nội dung",
   "videoMetadataSelectContentWarningsSemanticLabel": "Chọn cảnh báo nội dung",
   "videoMetadataContentWarningSelectAllThatApply": "Chọn tất cả những gì áp dụng",
+  "videoMetadataContentWarningRequiredByEffect": "Luôn bật: video của bạn có hiệu ứng nhấp nháy",
   "videoMetadataAudioReuseSubtitle": "Cho phép người khác lưu và dùng lại âm thanh của video này.",
   "publishAudioReuseDegradedWarning": "Video của bạn đã lên, nhưng âm thanh chưa đăng được. Chỉnh sửa video để chia sẻ âm thanh.",
   "videoMetadataCollaboratorsLabel": "Thêm cộng tác viên",

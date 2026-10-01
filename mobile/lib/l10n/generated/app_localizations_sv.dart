@@ -10015,6 +10015,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Välj allt som gäller för ditt innehåll';
 
   @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Förblir på: din video har en blinkande effekt';
+
+  @override
   String get videoMetadataAudioReuseSubtitle =>
       'Låt andra spara och återanvända videons ljud.';
 

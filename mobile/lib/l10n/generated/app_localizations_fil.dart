@@ -10093,6 +10093,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Piliin lahat ng tumutugma sa content mo';
 
   @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Mananatiling naka-on: may kumikislap na effect ang video mo';
+
+  @override
   String get videoMetadataAudioReuseSubtitle =>
       'Hayaan ang iba na i-save at gamitin ulit ang audio ng video na ito.';
 

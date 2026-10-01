@@ -2,6 +2,7 @@
 // ABOUTME: the timeline can move, trim, edit and delete it.
 
 import 'package:equatable/equatable.dart';
+import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show VideoEffect, VideoEffectType;
@@ -89,6 +90,17 @@ List<VideoEffect> videoEffectsOnOutput(
 /// run at a time.
 bool isFlashingVideoEffect(VideoEffectType type) =>
     type == VideoEffectType.strobe || type == VideoEffectType.negativeFlash;
+
+/// The content warnings a video with [effects] must carry, whatever the
+/// creator picks: [ContentLabel.flashingLights] when any of them flashes.
+///
+/// Derived from the effects every time rather than stored with the creator's
+/// own picks, so the warning goes away again with the last flashing effect.
+Set<ContentLabel> requiredContentLabelsForEffects(
+  Iterable<VideoEffect> effects,
+) => effects.any((e) => isFlashingVideoEffect(e.type) && e.intensity > 0)
+    ? const {ContentLabel.flashingLights}
+    : const {};
 
 /// Pieces shorter than this are dropped when a flashing effect is cut, rather
 /// than left as a sliver nobody could see or grab on the timeline.

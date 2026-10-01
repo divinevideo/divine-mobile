@@ -2719,6 +2719,7 @@
     "videoMetadataCollaboratorsLabel": "المتعاونون",
     "videoMetadataContentWarningLabel": "تحذير المحتوى",
     "videoMetadataContentWarningSelectAllThatApply": "اختر كل ما ينطبق على محتواك",
+    "videoMetadataContentWarningRequiredByEffect": "يبقى مفعّلًا: يحتوي الفيديو على تأثير وامض",
     "videoMetadataCreatorCannotBeReferencedSnackbar": "لا يمكن الإشارة إلى هذا المبدع.",
     "videoMetadataDeleteTagHint": "حذف الوسم {tag}",
     "@videoMetadataDeleteTagHint": {

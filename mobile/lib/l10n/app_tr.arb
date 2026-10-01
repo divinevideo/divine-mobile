@@ -2726,6 +2726,7 @@
     "videoMetadataCollaboratorsLabel": "Ortak çalışanlar",
     "videoMetadataContentWarningLabel": "İçerik Uyarısı",
     "videoMetadataContentWarningSelectAllThatApply": "İçeriğinize uyanların hepsini seçin",
+    "videoMetadataContentWarningRequiredByEffect": "Açık kalır: videonda yanıp sönen bir efekt var",
     "videoMetadataCreatorCannotBeReferencedSnackbar": "Bu içerik üreticisi referans alınamaz.",
     "videoMetadataDeleteTagHint": "{tag} etiketini sil",
     "@videoMetadataDeleteTagHint": {

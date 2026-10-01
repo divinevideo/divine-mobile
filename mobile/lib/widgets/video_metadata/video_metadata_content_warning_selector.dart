@@ -26,9 +26,7 @@ class VideoMetadataContentWarningSelector extends ConsumerWidget {
   ) async {
     FocusManager.instance.primaryFocus?.unfocus();
 
-    final current = ref.read(
-      videoEditorProvider.select((state) => state.contentWarnings),
-    );
+    final state = ref.read(videoEditorProvider);
 
     final result = await VineBottomSheet.show<Set<ContentLabel>>(
       context: context,
@@ -38,7 +36,8 @@ class VideoMetadataContentWarningSelector extends ConsumerWidget {
       showHeader: false,
       showDragHandle: false,
       buildScrollBody: (scrollController) => _ContentWarningMultiSelect(
-        selected: current,
+        selected: state.contentWarnings,
+        required: state.requiredContentWarnings,
         scrollController: scrollController,
       ),
     );
@@ -51,7 +50,7 @@ class VideoMetadataContentWarningSelector extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final warnings = ref.watch(
-      videoEditorProvider.select((state) => state.contentWarnings),
+      videoEditorProvider.select((state) => state.effectiveContentWarnings),
     );
 
     final isSet = warnings.isNotEmpty;
@@ -72,13 +71,18 @@ class VideoMetadataContentWarningSelector extends ConsumerWidget {
 }
 
 /// Multi-select bottom sheet for choosing content warning labels.
+///
+/// Pops the creator's own picks only. Labels in [required] show as checked
+/// and cannot be turned off; they are added at publish time.
 class _ContentWarningMultiSelect extends StatefulWidget {
   const _ContentWarningMultiSelect({
     required this.selected,
+    required this.required,
     required this.scrollController,
   });
 
   final Set<ContentLabel> selected;
+  final Set<ContentLabel> required;
   final ScrollController scrollController;
 
   @override
@@ -150,9 +154,11 @@ class _ContentWarningMultiSelectState
             ),
             itemBuilder: (_, index) {
               final label = ContentLabel.values[index];
+              final isRequired = widget.required.contains(label);
               return _ContentLabelTile(
                 label: label,
-                isChecked: _selected.contains(label),
+                isChecked: isRequired || _selected.contains(label),
+                isRequired: isRequired,
                 onTap: () => _toggle(label),
               );
             },
@@ -187,11 +193,17 @@ class _ContentLabelTile extends StatelessWidget {
   const _ContentLabelTile({
     required this.label,
     required this.isChecked,
+    required this.isRequired,
     required this.onTap,
   });
 
   final ContentLabel label;
   final bool isChecked;
+
+  /// Whether the video's effects make this label mandatory, which locks it
+  /// on and says why.
+  final bool isRequired;
+
   final VoidCallback onTap;
 
   @override
@@ -202,23 +214,46 @@ class _ContentLabelTile extends StatelessWidget {
     return MergeSemantics(
       child: Semantics(
         checked: isChecked,
+        // Only a locked row says it cannot be changed; the others keep their
+        // usual checkbox announcement.
+        enabled: isRequired ? false : null,
         child: Material(
           color: isChecked
               ? context.vineColors.surfaceContainer
               : VineTheme.transparent,
           child: InkWell(
-            onTap: onTap,
+            onTap: isRequired ? null : onTap,
             child: Container(
-              height: 64,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              constraints: const BoxConstraints(minHeight: 64),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
+              ),
               child: Row(
+                spacing: 12,
                 children: [
                   Expanded(
-                    child: Text(
-                      localizedContentLabelName(context.l10n, label),
-                      style: VineTheme.titleMediumFont(
-                        color: context.vineColors.onSurface,
-                      ),
+                    child: Column(
+                      mainAxisSize: .min,
+                      crossAxisAlignment: .start,
+                      spacing: 2,
+                      children: [
+                        Text(
+                          localizedContentLabelName(context.l10n, label),
+                          style: VineTheme.titleMediumFont(
+                            color: context.vineColors.onSurface,
+                          ),
+                        ),
+                        if (isRequired)
+                          Text(
+                            context
+                                .l10n
+                                .videoMetadataContentWarningRequiredByEffect,
+                            style: VineTheme.bodySmallFont(
+                              color: context.vineColors.secondaryText,
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                   DivineSpriteCheckbox(

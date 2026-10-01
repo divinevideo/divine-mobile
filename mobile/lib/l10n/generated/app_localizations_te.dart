@@ -10300,6 +10300,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'వర్తించే అన్నింటినీ ఎంచుకోండి';
 
   @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'ఆన్‌లోనే ఉంటుంది: మీ వీడియోలో మెరిసే ఎఫెక్ట్ ఉంది';
+
+  @override
   String get videoMetadataAudioReuseSubtitle =>
       'ఇతరులను ఈ వీడియో ఆడియోను సేవ్ చేసి, మళ్లీ ఉపయోగించనివ్వండి.';
 

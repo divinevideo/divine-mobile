@@ -187,8 +187,23 @@ class VideoEditorProviderState {
   /// cannot accidentally create a duplicate editor track.
   final bool seedSelectedSoundAsAudioTrack;
 
-  /// NIP-32 content warning labels for sensitive content self-labeling.
+  /// NIP-32 content warning labels the creator picked for self-labeling.
+  ///
+  /// Holds only their own picks; see [effectiveContentWarnings] for what is
+  /// published.
   final Set<ContentLabel> contentWarnings;
+
+  /// Content warnings the edit makes mandatory, which the creator cannot turn
+  /// off: flashing lights while the video has a flashing effect.
+  Set<ContentLabel> get requiredContentWarnings =>
+      editorEditingParameters?.requiredContentWarnings ?? const {};
+
+  /// The content warnings the video is published with: [contentWarnings]
+  /// plus [requiredContentWarnings].
+  Set<ContentLabel> get effectiveContentWarnings => {
+    ...contentWarnings,
+    ...requiredContentWarnings,
+  };
 
   /// ProofMode attestation manifest JSON for the final rendered clip.
   final String? proofManifestJson;

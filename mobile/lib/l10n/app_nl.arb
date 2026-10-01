@@ -2830,6 +2830,7 @@
     "videoMetadataContentWarningLabel": "Inhoudswaarschuwing",
     "videoMetadataSelectContentWarningsSemanticLabel": "Inhoudswaarschuwingen selecteren",
     "videoMetadataContentWarningSelectAllThatApply": "Selecteer alles wat van toepassing is op je inhoud",
+    "videoMetadataContentWarningRequiredByEffect": "Blijft aan: je video heeft een knipperend effect",
     "videoMetadataCollaboratorsLabel": "Samenwerkers",
     "videoMetadataAddCollaboratorSemanticLabel": "Samenwerker toevoegen",
     "videoMetadataMutualFollowersSearchText": "Wederzijdse volgers",

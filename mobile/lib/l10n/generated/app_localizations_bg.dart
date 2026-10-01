@@ -10110,6 +10110,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Избери всичко, което важи за съдържанието ти';
 
   @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Остава включено: видеото ти има мигащ ефект';
+
+  @override
   String get videoMetadataAudioReuseSubtitle =>
       'Позволи на другите да запазват и използват повторно звука на това видео.';
 

@@ -10113,6 +10113,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Select all that apply';
 
   @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Stays on: your video has a flashing effect';
+
+  @override
   String get videoMetadataAudioReuseSubtitle =>
       'Let others save and reuse this video\'s audio.';
 

@@ -3430,6 +3430,7 @@
     "videoMetadataContentWarningLabel": "የይዘት ማስጠንቀቂያ",
     "videoMetadataSelectContentWarningsSemanticLabel": "የይዘት ማስጠንቀቂያዎችን ይምረጡ",
     "videoMetadataContentWarningSelectAllThatApply": "በይዘትህ ላይ የሚመለከተውን ሁሉ ምረጥ",
+    "videoMetadataContentWarningRequiredByEffect": "እንደበራ ይቆያል፦ ቪዲዮዎ ብልጭ ድርግም የሚል ኢፌክት አለው",
     "videoMetadataCollaboratorsLabel": "ተባባሪዎች",
     "videoMetadataAddCollaboratorSemanticLabel": "ተባባሪ ጋብዝ",
     "videoMetadataMutualFollowersSearchText": "የጋራ ተከታዮች",

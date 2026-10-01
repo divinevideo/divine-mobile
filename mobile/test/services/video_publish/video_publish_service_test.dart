@@ -11,8 +11,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show AspectRatio;
 import 'package:nostr_sdk/event.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/exceptions/video_exceptions.dart';
 import 'package:openvine/models/caption_mention.dart';
+import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
@@ -1349,6 +1351,39 @@ void main() {
           ).called(1);
         },
       );
+
+      test('adds the flashing lights warning for a flashing effect, also for '
+          'a draft posted straight from the library', () async {
+        _setupSuccessfulPublish(
+          mockAuthService: mockAuthService,
+          mockUploadManager: mockUploadManager,
+          mockDraftService: mockDraftService,
+          mockVideoEventPublisher: mockVideoEventPublisher,
+        );
+
+        final result = await service.publishVideo(
+          draft: _createTestDraft(
+            editorEditingParameters: {
+              'meta': {
+                VideoEditorConstants.effectsStateHistoryKey: [
+                  const VideoEffect.strobe().toMap(),
+                ],
+              },
+            },
+          ),
+        );
+
+        expect(result, isA<PublishSuccess>());
+        final captured = verify(
+          () => _verifyPublishVideoEvent(
+            mockVideoEventPublisher,
+            textTrackRefs: any(named: 'textTrackRefs'),
+            textTrackLang: any(named: 'textTrackLang'),
+            contentWarning: captureAny(named: 'contentWarning'),
+          ),
+        ).captured;
+        expect(captured.single, ContentLabel.flashingLights.value);
+      });
 
       test('publishes without mention tags when resolution fails', () async {
         _setupSuccessfulPublish(
@@ -3541,12 +3576,14 @@ void _stubPublishVideoEventThrows(
 /// spell out the arguments they capture. Mocktail's verify needs every named
 /// argument of the actual invocation to be matched.
 const Object _anyLanguageMatcher = Object();
+const Object _anyContentWarningMatcher = Object();
 
 Future<bool> _verifyPublishVideoEvent(
   MockVideoEventPublisher publisher, {
   required List<String> textTrackRefs,
   required String textTrackLang,
   dynamic language = _anyLanguageMatcher,
+  dynamic contentWarning = _anyContentWarningMatcher,
 }) => publisher.publishVideoEvent(
   upload: any(named: 'upload'),
   title: any(named: 'title'),
@@ -3567,7 +3604,9 @@ Future<bool> _verifyPublishVideoEvent(
   language: identical(language, _anyLanguageMatcher)
       ? any(named: 'language') as String?
       : language as String?,
-  contentWarning: any(named: 'contentWarning'),
+  contentWarning: identical(contentWarning, _anyContentWarningMatcher)
+      ? any(named: 'contentWarning') as String?
+      : contentWarning as String?,
   thumbnailTimestamp: any(named: 'thumbnailTimestamp'),
   replyContext: any(named: 'replyContext'),
   addReplyToFeed: any(named: 'addReplyToFeed'),

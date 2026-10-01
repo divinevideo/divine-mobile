@@ -9778,6 +9778,10 @@ class AppLocalizationsAm extends AppLocalizations {
       'በይዘትህ ላይ የሚመለከተውን ሁሉ ምረጥ';
 
   @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'እንደበራ ይቆያል፦ ቪዲዮዎ ብልጭ ድርግም የሚል ኢፌክት አለው';
+
+  @override
   String get videoMetadataAudioReuseSubtitle =>
       'ሌሎች የዚህን ቪዲዮ ድምፅ እንዲያስቀምጡ እና እንደገና እንዲጠቀሙ ፍቀድ።';
 

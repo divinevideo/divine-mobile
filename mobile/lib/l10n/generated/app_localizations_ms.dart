@@ -10024,6 +10024,10 @@ class AppLocalizationsMs extends AppLocalizations {
       'Pilih semua yang berkaitan';
 
   @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Kekal aktif: video anda ada kesan berkelip';
+
+  @override
   String get videoMetadataAudioReuseSubtitle =>
       'Benarkan orang lain menyimpan dan menggunakan semula audio video ini.';
 

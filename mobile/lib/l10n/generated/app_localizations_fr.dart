@@ -10167,6 +10167,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Sélectionnez tout ce qui s\'applique à votre contenu';
 
   @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Reste activé : ta vidéo a un effet clignotant';
+
+  @override
   String get videoMetadataAudioReuseSubtitle =>
       'Permets aux autres de sauvegarder et réutiliser l\'audio de cette vidéo.';
 

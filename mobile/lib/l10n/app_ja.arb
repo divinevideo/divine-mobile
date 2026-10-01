@@ -2719,6 +2719,7 @@
     "videoMetadataCollaboratorsLabel": "コラボレーター",
     "videoMetadataContentWarningLabel": "コンテンツ警告",
     "videoMetadataContentWarningSelectAllThatApply": "コンテンツに該当するものをすべて選択",
+    "videoMetadataContentWarningRequiredByEffect": "オンのままです：動画に点滅エフェクトがあります",
     "videoMetadataCreatorCannotBeReferencedSnackbar": "このクリエイターは参照できません。",
     "videoMetadataDeleteTagHint": "タグ{tag}を削除",
     "@videoMetadataDeleteTagHint": {

@@ -2726,6 +2726,7 @@
     "videoMetadataCollaboratorsLabel": "Kolaborator",
     "videoMetadataContentWarningLabel": "Peringatan Konten",
     "videoMetadataContentWarningSelectAllThatApply": "Pilih semua yang berlaku untuk kontenmu",
+    "videoMetadataContentWarningRequiredByEffect": "Tetap aktif: videomu punya efek berkedip",
     "videoMetadataCreatorCannotBeReferencedSnackbar": "Kreator ini tidak dapat direferensikan.",
     "videoMetadataDeleteTagHint": "Hapus tag {tag}",
     "@videoMetadataDeleteTagHint": {

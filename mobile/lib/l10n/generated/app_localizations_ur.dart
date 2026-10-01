@@ -10016,6 +10016,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'جو لاگو ہو سب منتخب کریں';
 
   @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'آن رہے گا: آپ کی ویڈیو میں ٹمٹماتا ایفیکٹ ہے';
+
+  @override
   String get videoMetadataAudioReuseSubtitle =>
       'دوسروں کو اس ویڈیو کی آڈیو محفوظ اور دوبارہ استعمال کرنے دیں۔';
 

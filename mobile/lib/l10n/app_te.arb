@@ -6191,6 +6191,7 @@
   "videoMetadataContentWarningLabel": "కంటెంట్ హెచ్చరికను జోడించండి",
   "videoMetadataSelectContentWarningsSemanticLabel": "కంటెంట్ హెచ్చరికలను ఎంచుకోండి",
   "videoMetadataContentWarningSelectAllThatApply": "వర్తించే అన్నింటినీ ఎంచుకోండి",
+  "videoMetadataContentWarningRequiredByEffect": "ఆన్‌లోనే ఉంటుంది: మీ వీడియోలో మెరిసే ఎఫెక్ట్ ఉంది",
   "videoMetadataAudioReuseSubtitle": "ఇతరులను ఈ వీడియో ఆడియోను సేవ్ చేసి, మళ్లీ ఉపయోగించనివ్వండి.",
   "publishAudioReuseDegradedWarning": "మీ వీడియో ముగిసింది, కానీ ధ్వని ప్రచురించబడలేదు. భాగస్వామ్యం చేయడానికి వీడియోను సవరించండి.",
   "@publishAudioReuseDegradedWarning": {

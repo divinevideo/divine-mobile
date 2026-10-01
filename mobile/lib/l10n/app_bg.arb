@@ -3086,6 +3086,7 @@
     "videoMetadataContentWarningLabel": "Предупреждение за съдържание",
     "videoMetadataSelectContentWarningsSemanticLabel": "Избери предупреждения за съдържание",
     "videoMetadataContentWarningSelectAllThatApply": "Избери всичко, което важи за съдържанието ти",
+    "videoMetadataContentWarningRequiredByEffect": "Остава включено: видеото ти има мигащ ефект",
     "videoMetadataCollaboratorsLabel": "Сътрудници",
     "videoMetadataAddCollaboratorSemanticLabel": "Поканете сътрудник",
     "videoMetadataMutualFollowersSearchText": "Взаимни последователи",

@@ -10233,6 +10233,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Selectează tot ce se aplică conținutului tău';
 
   @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Rămâne activ: videoclipul tău are un efect intermitent';
+
+  @override
   String get videoMetadataAudioReuseSubtitle =>
       'Permite altora să salveze și să reutilizeze audio-ul acestui videoclip.';
 

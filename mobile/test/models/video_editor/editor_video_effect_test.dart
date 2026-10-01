@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
@@ -110,6 +111,29 @@ void main() {
       )!;
 
       expect(result.map((e) => e.id), ['negative']);
+    });
+  });
+
+  group('requiredContentLabelsForEffects', () {
+    test('requires the flashing lights warning for a flashing effect', () {
+      expect(
+        requiredContentLabelsForEffects(const [
+          VideoEffect.vignette(),
+          VideoEffect.negativeFlash(startTime: Duration(seconds: 2)),
+        ]),
+        {ContentLabel.flashingLights},
+      );
+    });
+
+    test('requires nothing without a flashing effect, or with one switched '
+        'off', () {
+      expect(
+        requiredContentLabelsForEffects(const [
+          VideoEffect.glitch(),
+          VideoEffect.strobe(intensity: 0),
+        ]),
+        isEmpty,
+      );
     });
   });
 }

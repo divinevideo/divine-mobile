@@ -2830,6 +2830,7 @@
     "videoMetadataContentWarningLabel": "Innehållsvarning",
     "videoMetadataSelectContentWarningsSemanticLabel": "Välj innehållsvarningar",
     "videoMetadataContentWarningSelectAllThatApply": "Välj allt som gäller för ditt innehåll",
+    "videoMetadataContentWarningRequiredByEffect": "Förblir på: din video har en blinkande effekt",
     "videoMetadataCollaboratorsLabel": "Samarbetspartners",
     "videoMetadataAddCollaboratorSemanticLabel": "Lägg till samarbetspartner",
     "videoMetadataMutualFollowersSearchText": "Ömsesidiga följare",

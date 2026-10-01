@@ -2830,6 +2830,7 @@
     "videoMetadataContentWarningLabel": "Avertisment de conținut",
     "videoMetadataSelectContentWarningsSemanticLabel": "Selectează avertismente de conținut",
     "videoMetadataContentWarningSelectAllThatApply": "Selectează tot ce se aplică conținutului tău",
+    "videoMetadataContentWarningRequiredByEffect": "Rămâne activ: videoclipul tău are un efect intermitent",
     "videoMetadataCollaboratorsLabel": "Colaboratori",
     "videoMetadataAddCollaboratorSemanticLabel": "Adaugă colaborator",
     "videoMetadataMutualFollowersSearchText": "Urmăritori reciproci",

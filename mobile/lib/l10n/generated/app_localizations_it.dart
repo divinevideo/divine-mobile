@@ -10128,6 +10128,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Seleziona tutto ciò che si applica ai tuoi contenuti';
 
   @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Resta attivo: il tuo video ha un effetto lampeggiante';
+
+  @override
   String get videoMetadataAudioReuseSubtitle =>
       'Lascia che altri salvino e riutilizzino l\'audio di questo video.';
 

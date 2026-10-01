@@ -9970,6 +9970,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'اختر كل ما ينطبق على محتواك';
 
   @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'يبقى مفعّلًا: يحتوي الفيديو على تأثير وامض';
+
+  @override
   String get videoMetadataAudioReuseSubtitle =>
       'اسمح للآخرين بحفظ صوت هذا الفيديو وإعادة استخدامه.';
 

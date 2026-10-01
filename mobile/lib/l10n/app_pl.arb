@@ -2830,6 +2830,7 @@
     "videoMetadataContentWarningLabel": "Ostrzeżenie o treści",
     "videoMetadataSelectContentWarningsSemanticLabel": "Wybierz ostrzeżenia o treści",
     "videoMetadataContentWarningSelectAllThatApply": "Wybierz wszystko, co dotyczy Twojej treści",
+    "videoMetadataContentWarningRequiredByEffect": "Zostaje włączone: twój film ma migający efekt",
     "videoMetadataCollaboratorsLabel": "Współtwórcy",
     "videoMetadataAddCollaboratorSemanticLabel": "Dodaj współtwórcę",
     "videoMetadataMutualFollowersSearchText": "Wzajemni obserwujący",

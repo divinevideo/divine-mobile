@@ -9542,6 +9542,10 @@ class AppLocalizationsKo extends AppLocalizations {
       '콘텐츠에 해당하는 것을 모두 선택';
 
   @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      '켜진 상태로 유지돼요: 영상에 깜빡이는 효과가 있어요';
+
+  @override
   String get videoMetadataAudioReuseSubtitle =>
       '다른 사람들이 이 동영상의 오디오를 저장하고 재사용할 수 있도록 합니다.';
 

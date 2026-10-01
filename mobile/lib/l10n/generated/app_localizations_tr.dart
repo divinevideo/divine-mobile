@@ -9931,6 +9931,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'İçeriğinize uyanların hepsini seçin';
 
   @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Açık kalır: videonda yanıp sönen bir efekt var';
+
+  @override
   String get videoMetadataAudioReuseSubtitle =>
       'Başkalarının bu videonun sesini kaydedip yeniden kullanmasına izin ver.';
 
