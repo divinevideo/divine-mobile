@@ -2644,9 +2644,7 @@ class BlossomUploadService {
             videoId: fileHash,
           );
         }
-        // The result below keeps only the status, so the server's own
-        // explanation would otherwise be lost: the caller silently re-uploads
-        // the whole file through the resumable path.
+        // The result below drops the response body, so log it here.
         _logBackgroundFailure(event, fileHash: fileHash, serverUrl: serverUrl);
         return BlossomUploadResult(
           success: false,

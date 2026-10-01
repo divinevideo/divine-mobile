@@ -226,9 +226,8 @@ void main() {
     test(
       'logs the HTTP status and server response of a failed upload',
       () async {
-        // The result keeps only the status code, and the caller falls back to
-        // a full resumable re-upload, so this line is the only record of why
-        // the server rejected the OS transfer.
+        // The failed result drops the response body, so this warning is the
+        // only place the server's explanation is recorded.
         await captureLogs();
         const serverError =
             '{"error":"user list update changed too many times"}';
