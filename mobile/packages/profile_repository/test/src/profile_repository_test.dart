@@ -1618,6 +1618,19 @@ void main() {
 
             verifyCachedTotalKept();
           });
+
+          test('records nothing when the view lookup failed and the creator '
+              'has no archive', () async {
+            stubCachedTotal(null);
+            stubEngagement(const {
+              'total_views': null,
+              'archived_loops': 0,
+            });
+
+            await repoWithFunnelcake.fetchFreshProfile(pubkey: testPubkey);
+
+            verifyCachedTotalKept();
+          });
         });
 
         test('does not cache an ambiguous 0/0 social response', () async {
