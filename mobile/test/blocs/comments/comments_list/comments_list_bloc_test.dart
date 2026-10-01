@@ -240,7 +240,7 @@ void main() {
             ),
           ).thenAnswer((_) => loadCompleter.future);
 
-          Future<void>.microtask(() async {
+          scheduleMicrotask(() {
             liveController.add(makeComment(validId('live')));
             loadCompleter.complete(
               CommentThread(
