@@ -1,6 +1,8 @@
 // ABOUTME: Tests for the list picker sheet: the rows it renders, how picks
 // ABOUTME: are made and saved, and how it follows a list created from it.
 
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -11,9 +13,10 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
 import 'package:openvine/widgets/select_list_sheet/select_list_sheet.dart';
-import 'package:openvine/widgets/vine_cached_image.dart';
+import 'package:openvine/widgets/video_thumbnail_widget.dart';
 
 import '../../helpers/test_provider_overrides.dart';
 
@@ -80,19 +83,24 @@ void main() {
       updatedAt: DateTime(2026),
     );
 
+    /// Opens the sheet; [thumbnails] is what the resolver returns, null for
+    /// a resolver that has not answered yet.
     Future<void> openSheet(
       WidgetTester tester, {
       CuratedListsState Function() listsState = _FakeCuratedListsState.new,
-      List<CuratedList> thumbnails = const [],
+      List<CuratedList>? thumbnails = const [],
     }) async {
       await tester.binding.setSurfaceSize(const Size(800, 1200));
       addTearDown(() => tester.binding.setSurfaceSize(null));
+      final neverResolves = Completer<List<CuratedList>>();
       await tester.pumpWidget(
         testMaterialApp(
           additionalOverrides: [
             curatedListsStateProvider.overrideWith(listsState),
             myListsWithThumbnailsProvider.overrideWith(
-              (ref) async => thumbnails,
+              (ref) => thumbnails == null
+                  ? neverResolves.future
+                  : Future.value(thumbnails),
             ),
           ],
           home: Builder(
@@ -111,7 +119,13 @@ void main() {
         ),
       );
       await tester.tap(find.text(_openLabel));
-      await tester.pumpAndSettle();
+      if (thumbnails == null) {
+        // The shimmer never settles; two frames open the sheet.
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+      } else {
+        await tester.pumpAndSettle();
+      }
     }
 
     /// The checks marking picked rows; the header's check button is a
@@ -166,8 +180,8 @@ void main() {
         expect(find.text(l10n.listCreateNewList), findsOneWidget);
       });
 
-      testWidgets("a list's first thumbnail once resolved, and a placeholder "
-          'until then', (tester) async {
+      testWidgets("each row carries the list's card media, with its resolved "
+          'thumbnails in the fan and a flat fan until then', (tester) async {
         when(
           () => service.myLists,
         ).thenReturn([list('Pictured'), list('Bare')]);
@@ -179,17 +193,32 @@ void main() {
           ],
         );
 
-        final image = tester.widget<VineCachedImage>(
-          find.byType(VineCachedImage),
+        expect(find.byType(DivineListMedia), findsNWidgets(2));
+        final image = tester.widget<PassiveAuthThumbnailImage>(
+          find.byType(PassiveAuthThumbnailImage),
         );
-        expect(image.imageUrl, 'https://example.com/t');
+        expect(image.url, 'https://example.com/t');
+        // The row's own line carries the count, so the fan drops its badge.
+        expect(find.text('0 videos • Public'), findsNWidgets(2));
         expect(
-          find.byWidgetPredicate(
-            (widget) =>
-                widget is DivineIcon && widget.icon == DivineIconName.playlist,
-          ),
-          findsOneWidget,
+          tester
+              .widgetList<ListSkeletonizer>(find.byType(ListSkeletonizer))
+              .map((skeleton) => skeleton.enabled),
+          everyElement(isFalse),
         );
+      });
+
+      testWidgets('fans shimmer while the thumbnails are still resolving', (
+        tester,
+      ) async {
+        when(() => service.myLists).thenReturn([list('Pending')]);
+
+        await openSheet(tester, thumbnails: null);
+
+        final skeleton = tester.widget<ListSkeletonizer>(
+          find.byType(ListSkeletonizer),
+        );
+        expect(skeleton.enabled, isTrue);
       });
 
       testWidgets('a failure to load the lists on the screen underneath '

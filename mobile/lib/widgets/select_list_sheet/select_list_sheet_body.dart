@@ -11,18 +11,9 @@ import 'package:openvine/extensions/modal_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
-import 'package:openvine/widgets/vine_cached_image.dart';
-
-/// Edge of a row's list thumbnail (Figma 14085:129140).
-const double _thumbnailSize = 40;
-
-/// Corner radius of a row's list thumbnail.
-const double _thumbnailRadius = 16;
-
-/// Edge of the check that marks a picked row, and of the space an unpicked
-/// row keeps for it so the titles line up.
-const double _checkSize = 24;
+import 'package:openvine/widgets/list_picker_row.dart';
 
 /// The picker's body; needs a [SelectListCubit] above it.
 ///
@@ -80,14 +71,13 @@ class _ListRows extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final lists = context.select((SelectListCubit cubit) => cubit.state.lists);
     if (lists.isEmpty) return const _EmptyHint();
-    // The resolver only supplies thumbnails and lags behind the service, so
-    // a list it has not reached yet renders with the placeholder.
-    final thumbnailById = {
-      for (final list
-          in ref.watch(myListsWithThumbnailsProvider).value ??
-              const <CuratedList>[])
-        if (list.thumbnailUrls.firstOrNull case final url? when url.isNotEmpty)
-          list.id: url,
+    // The resolver only supplies thumbnails and lags behind the service: a
+    // list it has not reached yet renders its fan with placeholder cards,
+    // shimmering until its first pass lands.
+    final hydrated = ref.watch(myListsWithThumbnailsProvider).value;
+    final thumbnailsById = {
+      for (final list in hydrated ?? const <CuratedList>[])
+        if (list.thumbnailUrls.isNotEmpty) list.id: list.thumbnailUrls,
     };
     // The sheet's own surface sits above the modal's Material, so the rows
     // need a transparent one of their own for their ink to show.
@@ -99,7 +89,11 @@ class _ListRows extends ConsumerWidget {
         itemCount: lists.length,
         itemBuilder: (context, index) {
           final list = lists[index];
-          return _ListRow(list: list, thumbnailUrl: thumbnailById[list.id]);
+          return _ListRow(
+            list: list,
+            thumbnailUrls: thumbnailsById[list.id] ?? const [],
+            thumbnailsPending: hydrated == null,
+          );
         },
       ),
     );
@@ -124,16 +118,22 @@ class _EmptyHint extends StatelessWidget {
 }
 
 class _ListRow extends StatelessWidget {
-  const _ListRow({required this.list, required this.thumbnailUrl});
+  const _ListRow({
+    required this.list,
+    required this.thumbnailUrls,
+    required this.thumbnailsPending,
+  });
 
   final CuratedList list;
 
-  /// The list's first resolved video thumbnail, if any.
-  final String? thumbnailUrl;
+  /// The list's resolved video thumbnails, in fan order.
+  final List<String> thumbnailUrls;
+
+  /// Whether the resolver has yet to return for the viewer's lists.
+  final bool thumbnailsPending;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.vineColors;
     final l10n = context.l10n;
     final isSelected = context.select(
       (SelectListCubit cubit) => cubit.state.isSelected(list.id),
@@ -144,107 +144,19 @@ class _ListRow extends StatelessWidget {
     final visibility = list.isPublic
         ? l10n.listVisibilityPublic
         : l10n.listVisibilityPrivate;
-    final subtitle =
-        '${l10n.listVideoCount(list.videoEventIds.length)} • '
-        '$visibility';
-
-    return Semantics(
-      checked: isSelected,
-      child: InkWell(
-        onTap: isSaving
-            ? null
-            : () => context.read<SelectListCubit>().toggled(list.id),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: colors.outlineDisabled)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            child: Row(
-              spacing: 16,
-              children: [
-                _ListThumbnail(url: thumbnailUrl),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        list.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: VineTheme.titleMediumFont(
-                          color: colors.onSurface,
-                        ),
-                      ),
-                      Text(
-                        subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: VineTheme.bodyMediumFont(
-                          color: colors.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox.square(
-                  dimension: DivineIcon.scaleSize(context, _checkSize),
-                  child: isSelected
-                      ? DivineIcon(
-                          icon: DivineIconName.check,
-                          color: colors.accentPositive,
-                        )
-                      : null,
-                ),
-              ],
-            ),
-          ),
-        ),
+    return ListPickerRow(
+      media: DivineListMedia.videos(
+        thumbnailUrls: thumbnailUrls,
+        videoCount: list.videoEventIds.length,
+        pending: thumbnailsPending,
+        showCount: false,
       ),
-    );
-  }
-}
-
-class _ListThumbnail extends StatelessWidget {
-  const _ListThumbnail({required this.url});
-
-  final String? url;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.vineColors;
-    final size = DivineIcon.scaleSize(context, _thumbnailSize);
-    final radius = BorderRadius.circular(_thumbnailRadius);
-    return ExcludeSemantics(
-      child: SizedBox.square(
-        dimension: size,
-        child: DecoratedBox(
-          position: DecorationPosition.foreground,
-          decoration: BoxDecoration(
-            borderRadius: radius,
-            border: Border.all(color: colors.disabled),
-          ),
-          child: ClipRRect(
-            borderRadius: radius,
-            child: switch (url) {
-              final url? => VineCachedImage(
-                imageUrl: url,
-                width: size,
-                height: size,
-              ),
-              null => ColoredBox(
-                color: colors.surfaceContainer,
-                child: Center(
-                  child: DivineIcon(
-                    icon: DivineIconName.playlist,
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            },
-          ),
-        ),
-      ),
+      title: list.name,
+      meta: '${l10n.listVideoCount(list.videoEventIds.length)} • $visibility',
+      isSelected: isSelected,
+      onTap: isSaving
+          ? null
+          : () => context.read<SelectListCubit>().toggled(list.id),
     );
   }
 }

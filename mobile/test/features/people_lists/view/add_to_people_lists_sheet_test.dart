@@ -1,5 +1,5 @@
 // ABOUTME: Widget tests for AddToPeopleListsSheet.
-// ABOUTME: Covers list filtering, empty state, and toggle dispatching.
+// ABOUTME: Covers list filtering, picking, applying the picks, and the empty state.
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -11,11 +11,15 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/features/people_lists/bloc/people_list_picks_cubit.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/models/people_list_entry_point.dart';
 import 'package:openvine/features/people_lists/view/add_to_people_lists_sheet.dart';
 import 'package:openvine/features/people_lists/view/widgets/people_list_row.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/widgets/divine_list_thumbnail.dart';
+
+import '../../../helpers/test_provider_overrides.dart';
 
 class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
     implements PeopleListsBloc {}
@@ -59,6 +63,15 @@ PeopleListsState _stateWith({required List<UserList> lists}) {
   );
 }
 
+/// The checks marking picked rows; the header's check button is a separate
+/// widget outside the body.
+Finder _rowChecks() => find.descendant(
+  of: find.byType(AddToPeopleListsSheet),
+  matching: find.byWidgetPredicate(
+    (widget) => widget is DivineIcon && widget.icon == DivineIconName.check,
+  ),
+);
+
 void main() {
   setUpAll(() {
     registerFallbackValue(
@@ -73,32 +86,72 @@ void main() {
   group(AddToPeopleListsSheet, () {
     final l10n = lookupAppLocalizations(const Locale('en'));
     late _MockPeopleListsBloc bloc;
+    late PeopleListPicksCubit picks;
 
     setUp(() {
       bloc = _MockPeopleListsBloc();
+      picks = PeopleListPicksCubit(memberListIds: const {});
     });
 
     tearDown(() async {
       await bloc.close();
+      await picks.close();
     });
 
+    /// The body on its own; it seeds the picks from the bloc as it mounts.
     Widget buildSubject({
       required String pubkey,
       PeopleListEntryPoint entryPoint = PeopleListEntryPoint.shareMenu,
     }) {
-      return MaterialApp(
-        localizationsDelegates: appLocalizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(
-          body: BlocProvider<PeopleListsBloc>.value(
-            value: bloc,
-            child: AddToPeopleListsSheet(
-              pubkey: pubkey,
-              entryPoint: entryPoint,
+      return ProviderScope(
+        overrides: getStandardTestOverrides(),
+        child: MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: BlocProvider<PeopleListsBloc>.value(
+              value: bloc,
+              child: BlocProvider<PeopleListPicksCubit>.value(
+                value: picks,
+                child: AddToPeopleListsSheet(
+                  pubkey: pubkey,
+                  entryPoint: entryPoint,
+                ),
+              ),
             ),
           ),
         ),
       );
+    }
+
+    /// Opens the real sheet from a button, as the app does.
+    Future<void> openSheet(WidgetTester tester) async {
+      await tester.pumpWidget(
+        _withCuratedListsFlag(
+          enabled: true,
+          child: BlocProvider<PeopleListsBloc>.value(
+            value: bloc,
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: Builder(
+                  builder: (context) => ElevatedButton(
+                    onPressed: () => AddToPeopleListsSheet.show(
+                      context,
+                      pubkey: _targetPubkey,
+                      entryPoint: PeopleListEntryPoint.shareMenu,
+                    ),
+                    child: const Text('open'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
     }
 
     group('renders', () {
@@ -124,7 +177,8 @@ void main() {
       );
 
       testWidgetsWithSurfaceSize(
-        'selected row is checked when target pubkey is already in the list',
+        'rows carry the collage, the member count, and a check on each '
+        'list that already holds the person',
         (tester) async {
           final memberList = _buildList(
             id: 'list-1',
@@ -138,41 +192,166 @@ void main() {
 
           await tester.pumpWidget(buildSubject(pubkey: _targetPubkey));
 
-          final checkboxes = tester
-              .widgetList<DivineSpriteCheckbox>(
-                find.byType(DivineSpriteCheckbox),
-              )
-              .toList();
-          expect(checkboxes, hasLength(2));
-          // Sheet renders lists in the bloc's declared order; first list
-          // contains the target pubkey so its checkbox is selected.
-          expect(checkboxes[0].state, equals(DivineCheckboxState.selected));
-          expect(checkboxes[1].state, equals(DivineCheckboxState.unselected));
+          expect(find.byType(DivineListMedia), findsNWidgets(2));
+          expect(find.text(l10n.listMemberCount(1)), findsOneWidget);
+          expect(find.text(l10n.listMemberCount(0)), findsOneWidget);
+          expect(_rowChecks(), findsOneWidget);
+          final checked = find.ancestor(
+            of: _rowChecks(),
+            matching: find.byType(PeopleListRow),
+          );
+          expect(
+            tester.widget<PeopleListRow>(checked).list.id,
+            equals('list-1'),
+          );
         },
       );
     });
 
     group('interactions', () {
       testWidgetsWithSurfaceSize(
-        'tapping a row dispatches $PeopleListsPubkeyToggleRequested with '
-        'the target list id and full pubkey',
+        'tapping rows picks and unpicks them without dispatching anything',
         (tester) async {
-          final list = _buildList(id: 'list-42', name: 'Close Friends');
-          when(() => bloc.state).thenReturn(_stateWith(lists: [list]));
+          final memberList = _buildList(
+            id: 'list-1',
+            name: 'Close Friends',
+            pubkeys: [_targetPubkey],
+          );
+          final other = _buildList(id: 'list-2', name: 'Work');
+          when(
+            () => bloc.state,
+          ).thenReturn(_stateWith(lists: [memberList, other]));
 
           await tester.pumpWidget(buildSubject(pubkey: _targetPubkey));
 
-          await tester.tap(find.byType(PeopleListRow));
+          await tester.tap(find.text('Work'));
           await tester.pump();
+          expect(_rowChecks(), findsNWidgets(2));
+
+          await tester.tap(find.text('Close Friends'));
+          await tester.pump();
+          expect(_rowChecks(), findsOneWidget);
+
+          verifyNever(() => bloc.add(any()));
+        },
+      );
+
+      testWidgetsWithSurfaceSize(
+        'the check applies every pick through the bloc, one event per list, '
+        'then closes',
+        (tester) async {
+          final memberList = _buildList(
+            id: 'list-1',
+            name: 'Close Friends',
+            pubkeys: [_targetPubkey],
+          );
+          final first = _buildList(id: 'list-2', name: 'Work');
+          final second = _buildList(id: 'list-3', name: 'Skaters');
+          when(
+            () => bloc.state,
+          ).thenReturn(_stateWith(lists: [memberList, first, second]));
+
+          await openSheet(tester);
+          await tester.tap(find.text('Work'));
+          await tester.tap(find.text('Skaters'));
+          await tester.tap(find.text('Close Friends'));
+          await tester.pump();
+          await tester.tap(find.bySemanticsLabel(l10n.listDone));
+          await tester.pumpAndSettle();
 
           verify(
             () => bloc.add(
-              const PeopleListsPubkeyToggleRequested(
-                listId: 'list-42',
+              const PeopleListsPubkeyAddRequested(
+                listId: 'list-2',
                 pubkey: _targetPubkey,
               ),
             ),
           ).called(1);
+          verify(
+            () => bloc.add(
+              const PeopleListsPubkeyAddRequested(
+                listId: 'list-3',
+                pubkey: _targetPubkey,
+              ),
+            ),
+          ).called(1);
+          verify(
+            () => bloc.add(
+              const PeopleListsPubkeyRemoveRequested(
+                listId: 'list-1',
+                pubkey: _targetPubkey,
+              ),
+            ),
+          ).called(1);
+          verifyNever(
+            () => bloc.add(any(that: isA<PeopleListsPubkeyToggleRequested>())),
+          );
+          expect(find.byType(AddToPeopleListsSheet), findsNothing);
+        },
+      );
+
+      testWidgetsWithSurfaceSize(
+        'the check closes without dispatching when nothing was changed',
+        (tester) async {
+          final list = _buildList(id: 'list-1', name: 'Close Friends');
+          when(() => bloc.state).thenReturn(_stateWith(lists: [list]));
+
+          await openSheet(tester);
+          await tester.tap(find.bySemanticsLabel(l10n.listDone));
+          await tester.pumpAndSettle();
+
+          verifyNever(() => bloc.add(any()));
+          expect(find.byType(AddToPeopleListsSheet), findsNothing);
+        },
+      );
+
+      testWidgetsWithSurfaceSize(
+        'the X discards the picks',
+        (tester) async {
+          final list = _buildList(id: 'list-1', name: 'Close Friends');
+          when(() => bloc.state).thenReturn(_stateWith(lists: [list]));
+
+          await openSheet(tester);
+          await tester.tap(find.text('Close Friends'));
+          await tester.pump();
+          await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+          await tester.pumpAndSettle();
+
+          verifyNever(() => bloc.add(any()));
+          expect(find.byType(AddToPeopleListsSheet), findsNothing);
+        },
+      );
+
+      testWidgetsWithSurfaceSize(
+        'a list the bloc adds the person to shows up picked',
+        (tester) async {
+          final list = _buildList(id: 'list-1', name: 'Close Friends');
+          final fresh = _buildList(
+            id: 'list-2',
+            name: 'Fresh',
+            pubkeys: [_targetPubkey],
+          );
+          final later = _stateWith(lists: [list, fresh]);
+          whenListen(
+            bloc,
+            Stream.fromIterable([later]),
+            initialState: _stateWith(lists: [list]),
+          );
+
+          await openSheet(tester);
+          await tester.pump();
+          await tester.pump();
+
+          expect(find.text('Fresh'), findsOneWidget);
+          expect(_rowChecks(), findsOneWidget);
+          final checked = find.ancestor(
+            of: _rowChecks(),
+            matching: find.byType(PeopleListRow),
+          );
+          expect(
+            tester.widget<PeopleListRow>(checked).list.id,
+            equals('list-2'),
+          );
         },
       );
     });
@@ -406,6 +585,7 @@ Widget _buildLazyBlocSubject({
 Widget _withCuratedListsFlag({required bool enabled, required Widget child}) {
   return ProviderScope(
     overrides: [
+      ...getStandardTestOverrides(),
       isFeatureEnabledProvider(
         FeatureFlag.curatedLists,
       ).overrideWithValue(enabled),
