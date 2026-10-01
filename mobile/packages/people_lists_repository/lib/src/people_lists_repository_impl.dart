@@ -11,6 +11,7 @@ import 'package:people_lists_repository/src/followed_people_lists_store.dart';
 import 'package:people_lists_repository/src/local_people_lists_cache.dart';
 import 'package:people_lists_repository/src/nip51_people_list_codec.dart';
 import 'package:people_lists_repository/src/people_list_publish_result.dart';
+import 'package:people_lists_repository/src/people_list_revision.dart';
 import 'package:people_lists_repository/src/people_list_search_result.dart';
 import 'package:people_lists_repository/src/people_lists_repository.dart';
 import 'package:rxdart/rxdart.dart';
@@ -432,7 +433,8 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
         list: list,
       );
       final existing = seen[result.addressableId];
-      if (existing != null && !_supersedes(list, existing.list)) {
+      if (existing != null &&
+          !peopleListRevisionSupersedes(list, existing.list)) {
         continue;
       }
       seen[result.addressableId] = result;
@@ -690,7 +692,9 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
       );
       if (!followed.contains(ref)) continue;
       final existing = newest[ref];
-      if (existing != null && !_supersedes(list, existing)) continue;
+      if (existing != null && !peopleListRevisionSupersedes(list, existing)) {
+        continue;
+      }
       newest[ref] = list;
     }
 
@@ -801,20 +805,6 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
       return false;
     }
     return true;
-  }
-
-  /// Whether revision [candidate] supersedes [selected] under NIP-01
-  /// replaceable-event ordering: the later `updatedAt` wins, and a tie is
-  /// broken on the lowest event id. An absent id on either side leaves the tie
-  /// unbroken, so the already-selected revision is kept.
-  static bool _supersedes(UserList candidate, UserList selected) {
-    if (candidate.updatedAt != selected.updatedAt) {
-      return candidate.updatedAt.isAfter(selected.updatedAt);
-    }
-    final candidateId = candidate.nostrEventId;
-    final selectedId = selected.nostrEventId;
-    if (candidateId == null || selectedId == null) return false;
-    return candidateId.compareTo(selectedId) < 0;
   }
 
   static bool _isNewerRevision(

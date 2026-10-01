@@ -4067,6 +4067,132 @@ void main() {
       });
 
       group('VideoFeedFollowedPeopleListsChanged', () {
+        for (final unfollow in [true, false]) {
+          for (final refreshingMembers in [true, false]) {
+            late Completer<List<VideoEvent>> staleFetch;
+            late Completer<void> fetchStarted;
+            blocTest<VideoFeedBloc, VideoFeedBlocState>(
+              '${unfollow ? 'unfollowing' : 'replacing members'} during '
+              '${refreshingMembers ? 'a membership reload' : 'a refresh'} '
+              'discards the old result',
+              setUp: () {
+                staleFetch = Completer<List<VideoEvent>>();
+                fetchStarted = Completer<void>();
+                var requests = 0;
+                when(
+                  () => mockVideosRepository.getVideosByAuthors(
+                    authorPubkeys: any(named: 'authorPubkeys'),
+                    limit: any(named: 'limit'),
+                    until: any(named: 'until'),
+                  ),
+                ).thenAnswer((_) {
+                  if (requests++ == 0) {
+                    fetchStarted.complete();
+                    return staleFetch.future;
+                  }
+                  return Future.value(createTestVideos(2, idPrefix: 'fresh'));
+                });
+                stubRecommended(createTestVideos(2, idPrefix: 'fresh'));
+              },
+              build: createPeopleBloc,
+              seed: () => VideoFeedBlocState(
+                status: VideoFeedStatus.success,
+                source: sourceFor(followedList()),
+                followedPeopleLists: [followedList()],
+                videos: createTestVideos(1),
+              ),
+              act: (bloc) async {
+                bloc.add(
+                  refreshingMembers
+                      ? VideoFeedFollowedPeopleListsChanged([
+                          followedList(pubkeys: [memberA]),
+                        ])
+                      : const VideoFeedRefreshRequested(),
+                );
+                await fetchStarted.future;
+                bloc.add(
+                  VideoFeedFollowedPeopleListsChanged(
+                    unfollow
+                        ? []
+                        : [
+                            followedList(pubkeys: [memberB]),
+                          ],
+                  ),
+                );
+                await bloc.stream.firstWhere(
+                  (state) =>
+                      state.status == VideoFeedStatus.success &&
+                      state.videos.firstOrNull?.id == 'fresh-0',
+                );
+                staleFetch.complete(createTestVideos(1, idPrefix: 'stale'));
+                await pumpEventQueue();
+              },
+              verify: (bloc) {
+                expect(bloc.state.videos.map((video) => video.id), [
+                  'fresh-0',
+                  'fresh-1',
+                ]);
+                expect(
+                  bloc.state.source.type,
+                  unfollow
+                      ? VideoFeedSourceType.forYou
+                      : VideoFeedSourceType.peopleList,
+                );
+                if (!unfollow) {
+                  expect(bloc.state.selectedPeopleList!.list.pubkeys, [
+                    memberB,
+                  ]);
+                }
+              },
+            );
+          }
+        }
+
+        test(
+          'observes an unfollow while the restored feed is still loading',
+          () async {
+            final list = followedList();
+            SharedPreferences.setMockInitialValues({
+              'selected_feed_mode_$viewer': sourceFor(list).persistenceValue,
+            });
+            when(
+              () =>
+                  peopleListsRepository.readFollowedLists(viewerPubkey: viewer),
+            ).thenAnswer((_) async => [list]);
+            final fetchStarted = Completer<void>();
+            final staleFetch = Completer<List<VideoEvent>>();
+            when(
+              () => mockVideosRepository.getVideosByAuthors(
+                authorPubkeys: any(named: 'authorPubkeys'),
+                limit: any(named: 'limit'),
+                until: any(named: 'until'),
+              ),
+            ).thenAnswer((_) {
+              fetchStarted.complete();
+              return staleFetch.future;
+            });
+            stubRecommended(createTestVideos(2, idPrefix: 'fresh'));
+            final bloc = createPeopleBloc(
+              sharedPreferences: await SharedPreferences.getInstance(),
+            );
+            addTearDown(bloc.close);
+            bloc.add(const VideoFeedStarted());
+            await fetchStarted.future;
+
+            followedController.add(const []);
+            await bloc.stream.firstWhere(
+              (state) =>
+                  state.source.type == VideoFeedSourceType.forYou &&
+                  state.status == VideoFeedStatus.success,
+            );
+            staleFetch.complete(createTestVideos(1, idPrefix: 'stale'));
+            await pumpEventQueue();
+
+            expect(bloc.state.videos.first.id, 'fresh-0');
+            expect(bloc.state.source.type, VideoFeedSourceType.forYou);
+          },
+        );
+
         blocTest<VideoFeedBloc, VideoFeedBlocState>(
           'adds a followed list to the menu without reloading another feed',
           build: createPeopleBloc,
@@ -4118,6 +4244,15 @@ void main() {
           act: (bloc) =>
               bloc.add(const VideoFeedFollowedPeopleListsChanged([])),
           expect: () => [
+            isA<VideoFeedBlocState>()
+                .having((s) => s.status, 'status', VideoFeedStatus.loading)
+                .having(
+                  (s) => s.source.type,
+                  'source',
+                  VideoFeedSourceType.peopleList,
+                )
+                .having((s) => s.followedPeopleLists, 'lists', isEmpty)
+                .having((s) => s.videos, 'videos', isEmpty),
             isA<VideoFeedBlocState>()
                 .having((s) => s.status, 'status', VideoFeedStatus.loading)
                 .having(

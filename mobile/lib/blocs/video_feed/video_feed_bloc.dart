@@ -99,7 +99,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     on<VideoFeedCuratedListsChanged>(_onCuratedListsChanged);
     on<VideoFeedFollowedPeopleListsChanged>(
       _onFollowedPeopleListsChanged,
-      transformer: sequential(),
+      transformer: concurrent(),
     );
     on<VideoFeedBlocklistChanged>(_onBlocklistChanged);
     on<VideoFeedActiveIndexChanged>(_onActiveIndexChanged);
@@ -135,6 +135,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   StreamSubscription<List<PeopleListSearchResult>>?
   _followedPeopleListsSubscription;
   int _sourceSelectionSequence = 0;
+  int _followedListsSequence = 0;
 
   /// Tracks when the last successful load completed, used by
   /// [_onAutoRefreshRequested] to skip refreshes when data is fresh.
@@ -143,6 +144,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   // Installing a fresh first page invalidates any continuation of the old
   // window, even when both requests belong to the same feed source.
   int _paginationGeneration = 0;
+
+  // A refresh of the same source must invalidate its previous first page.
+  int _loadGeneration = 0;
 
   /// Whether [source] participates in the cross-restart [HomeFeedCache].
   ///
@@ -286,6 +290,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       _followRepository.followingPubkeys,
     );
 
+    await _followedPeopleListsSubscription?.cancel();
+    if (emit.isDone) return;
+    _followedPeopleListsSubscription = _watchFollowedPeopleLists();
     await _loadVideos(source, emit, feedLoad: feedLoad, revalidate: true);
     if (emit.isDone) return;
 
@@ -313,7 +320,6 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
 
     await _followingSubscription?.cancel();
     await _curatedListsSubscription?.cancel();
-    await _followedPeopleListsSubscription?.cancel();
 
     // Subscribe to following list changes.
     //
@@ -345,8 +351,6 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         .listen((lists) {
           addIfOpen(VideoFeedCuratedListsChanged(lists));
         });
-
-    _followedPeopleListsSubscription = _watchFollowedPeopleLists();
   }
 
   /// The people lists the viewer follows: none when signed out or when Home
@@ -872,10 +876,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     final followed = event.followedPeopleLists;
     if (_listsEqual(followed, state.followedPeopleLists)) return;
 
+    final sequence = ++_followedListsSequence;
     final updated = state.copyWith(followedPeopleLists: followed);
     final source = state.source;
-    if (source.type != VideoFeedSourceType.peopleList ||
-        state.status == VideoFeedStatus.loading) {
+    if (source.type != VideoFeedSourceType.peopleList) {
       emit(updated);
       return;
     }
@@ -883,16 +887,34 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     final before = state.selectedPeopleList;
     final after = updated.selectedPeopleList;
     if (after == null) {
+      _loadGeneration++;
+      _paginationGeneration++;
+      emit(
+        updated.copyWith(
+          status: VideoFeedStatus.loading,
+          videos: [],
+          isLoadingMore: false,
+        ),
+      );
       final stillFollowed = await _isStillFollowed(
         FollowedPeopleListRef(
           ownerPubkey: source.listOwnerPubkey!,
           listId: source.listId!,
         ),
       );
-      if (emit.isDone || state.source != source) return;
+      if (emit.isDone ||
+          state.source != source ||
+          sequence != _followedListsSequence) {
+        return;
+      }
       const fallback = VideoFeedSource.forYou();
       // A missing cached copy is not an unfollow; preserve the restart choice.
       if (!stillFollowed) await _modePreferences.persist(fallback);
+      if (emit.isDone ||
+          state.source != source ||
+          sequence != _followedListsSequence) {
+        return;
+      }
       await _restartFeed(fallback, emit, followedPeopleLists: followed);
       return;
     }
@@ -989,11 +1011,21 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     bool revalidate = false,
     List<VideoEvent>? prefetchedCachedVideos,
   }) async {
+    final generation = ++_loadGeneration;
+    _paginationGeneration++;
+    bool canEmit() =>
+        generation == _loadGeneration && _canEmitForSource(source, emit);
     try {
       final servedCache =
           prefetchedCachedVideos?.isNotEmpty ??
-          await _maybeServeCachedFeed(source, emit, skipCache, feedLoad);
-      if (!_canEmitForSource(source, emit)) return;
+          await _maybeServeCachedFeed(
+            source,
+            emit,
+            skipCache,
+            feedLoad,
+            generation: generation,
+          );
+      if (!canEmit()) return;
 
       // `revalidate` serves the cached window *and* forces a fresh fetch.
       // `skipCache` alone cannot express that: it also suppresses the served
@@ -1009,7 +1041,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         skipCache: skipCache,
         revalidate: revalidate,
       );
-      if (!_canEmitForSource(source, emit)) return;
+      if (!canEmit()) return;
 
       // Filter out videos without valid URLs
       final validVideos = result.videos
@@ -1079,6 +1111,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
 
       // Batch-fetch creator profiles to warm the Drift cache.
       await _fetchCreatorProfiles(validVideos, source, emit);
+      if (!canEmit()) return;
 
       // Advance the resume window past the active position so the next cold
       // start opens on the next unseen video — even when the user just
@@ -1093,7 +1126,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         );
       }
     } catch (e) {
-      if (!_canEmitForSource(source, emit)) return;
+      if (!canEmit()) return;
 
       Log.error(
         'VideoFeedBloc: Failed to load videos - $e',
@@ -1130,9 +1163,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     VideoFeedSource source,
     Emitter<VideoFeedBlocState> emit,
     bool skipCache,
-    FeedLoadHandle? feedLoad,
-  ) async {
+    FeedLoadHandle? feedLoad, {
+    required int generation,
+  }) async {
     final cachedValid = await _readCachedFeed(source, skipCache: skipCache);
+    if (generation != _loadGeneration) return false;
     return _emitCachedFeed(source, cachedValid, emit, feedLoad: feedLoad);
   }
 
