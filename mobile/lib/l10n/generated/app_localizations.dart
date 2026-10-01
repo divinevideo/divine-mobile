@@ -14597,7 +14597,7 @@ abstract class AppLocalizations {
   /// **'Adjust'**
   String get videoEditorTuneLabel;
 
-  /// Label of the video editor tool that adds visual effects (glitch, VHS, pixelate) to the whole video.
+  /// Label of the video editor tool that adds visual effects (glitch, VHS, pixelate) to the video. Each effect can then be trimmed to part of it on the timeline.
   ///
   /// In en, this message translates to:
   /// **'Effects'**
@@ -15941,7 +15941,7 @@ abstract class AppLocalizations {
   /// **'Applying the color mask…'**
   String get videoEditorChromaKeyApplying;
 
-  /// Shown in the colour-mask editor when the renderer has no shader image filter, so the preview cannot show the key applied.
+  /// Shown in the colour-mask editor and the video effects editor when the renderer has no shader image filter, so the preview cannot show the key or the effects applied.
   ///
   /// In en, this message translates to:
   /// **'This device can\'t show the live preview. Your settings still apply when you export.'**

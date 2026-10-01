@@ -74,7 +74,8 @@ class VideoEditorConstants {
   static const String captionsStateHistoryKey = 'captions';
 
   /// Unique history key for the video effects (glitch, VHS, pixelate), each
-  /// stored as `VideoEffect.toMap()`.
+  /// stored as `EditorVideoEffect.toMap()`: the effect's own fields plus the
+  /// id the timeline addresses it by.
   static const String effectsStateHistoryKey = 'effects';
 
   /// `Layer.meta` key marking a layer as a burned-in caption cue.
