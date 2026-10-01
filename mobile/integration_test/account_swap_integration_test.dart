@@ -24,8 +24,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'helpers/test_setup.dart';
 
 /// Sign-in triggers fire-and-forget relay discovery (HTTP + WebSocket to real
-/// indexers), which throws network errors this offline test can't avoid. Runs
-/// [body] in a child zone that swallows those, surfacing only real failures.
+/// indexers), which throws network errors this offline test can't avoid.
 bool _isNetworkNoise(String m) =>
     m.contains('ClientException') ||
     m.contains('SocketException') ||
@@ -35,6 +34,8 @@ bool _isNetworkNoise(String m) =>
     m.contains('Connection') ||
     m.contains('Relay rejected');
 
+/// Runs [body] in a child zone that swallows [_isNetworkNoise] errors,
+/// surfacing only real failures.
 Future<void> _guarded(Future<void> Function() body) {
   final completer = Completer<void>();
   // The zone's callback can outlive this call. `_guarded` exposes the
