@@ -104,9 +104,6 @@ class VideoFeedPage extends ConsumerWidget {
     final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
     final feedTuningRepository = ref.watch(feedTuningRepositoryProvider);
     final badgeRepository = ref.watch(badgeRepositoryProvider);
-    final badgeSubscriptionsRevision = ref.watch(
-      badgeSubscriptionsRevisionProvider,
-    );
     final enrichmentAttemptTracker = NostrTagEnrichmentAttemptTracker();
 
     final persistence = ref
@@ -120,7 +117,6 @@ class VideoFeedPage extends ConsumerWidget {
           'video-feed',
           hashtagRepository,
           badgeRepository,
-          badgeSubscriptionsRevision,
           showDivineHostedOnly,
           contentFilterVersion,
           adultContentVerified,
@@ -151,6 +147,7 @@ class VideoFeedPage extends ConsumerWidget {
                   feedTracker: ref.read(feedPerformanceTrackerProvider),
                   feedTuningRepository: feedTuningRepository,
                   badgeAuthors: badgeRepository.loadSubscribedHolders,
+                  badgeSubscriptionChanges: badgeRepository.subscriptionChanges,
                   enrichVideos: (videos) => enrichVideosWithNostrTags(
                     videos,
                     nostrService: ref.read(nostrServiceProvider),
