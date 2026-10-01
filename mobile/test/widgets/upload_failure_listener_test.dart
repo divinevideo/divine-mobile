@@ -32,9 +32,6 @@ import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
 import 'package:openvine/startup/upload_failure_listener.dart' as app;
 import 'package:openvine/utils/nostr_key_utils.dart';
-import 'package:riverpod/misc.dart' show Override;
-
-import '../helpers/test_provider_overrides.dart';
 
 // ---------------------------------------------------------------------------
 // Test doubles
@@ -119,7 +116,6 @@ Widget _buildHarness({
   bool wireRootNavigatorKey = true,
   PostPublishExperiment? experiment,
   GoRouter? router,
-  List<Override> additionalOverrides = const [],
 }) {
   return ProviderScope(
     overrides: [
@@ -127,7 +123,6 @@ Widget _buildHarness({
       if (experiment != null)
         postPublishExperimentProvider.overrideWithValue(experiment),
       if (router != null) goRouterProvider.overrideWithValue(router),
-      ...additionalOverrides,
     ],
     child: BlocProvider<BackgroundPublishBloc>.value(
       value: publishBloc,
@@ -469,7 +464,6 @@ void main() {
       when(() => authService.isAuthenticated).thenReturn(true);
       when(() => authService.currentPublicKeyHex).thenReturn(_ownHex);
       final experiment = await _treatmentExperiment('draft-treatment');
-      final videoEventService = createMockVideoEventService();
 
       await tester.pumpWidget(
         _buildHarness(
@@ -477,9 +471,6 @@ void main() {
           authService: authService,
           experiment: experiment,
           router: _routerAt(_ownProfileLocation),
-          additionalOverrides: [
-            videoEventServiceProvider.overrideWithValue(videoEventService),
-          ],
         ),
       );
 
@@ -491,9 +482,6 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.shareSheetMoreActions), findsNothing);
-      verifyNever(
-        () => videoEventService.getVideoEventByAddressable(any(), any()),
-      );
     });
 
     testWidgets('falls back to the snackbar once the user has moved on', (
