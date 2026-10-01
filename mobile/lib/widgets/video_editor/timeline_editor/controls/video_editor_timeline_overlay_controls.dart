@@ -7,6 +7,7 @@ import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.d
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/extensions/tune_adjustment_matrix_extensions.dart';
 import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/extensions/video_editor_history_extensions.dart';
@@ -451,6 +452,7 @@ class _EffectOverlayControls extends StatelessWidget {
       onEdit: () => openEffectsEditor(
         context.read<VideoEditorMainBloc>(),
         context.read<VideoEditorEffectsCubit>(),
+        reduceMotion: context.reduceMotion,
         effectId: item.id,
       ),
       onDuplicated: () => _duplicateEffect(context: context),

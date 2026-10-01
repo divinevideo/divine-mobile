@@ -25,7 +25,7 @@ void main() {
     test('opens the editor and starts a paused video', () {
       when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
 
-      openEffectsEditor(mainBloc, effectsCubit);
+      openEffectsEditor(mainBloc, effectsCubit, reduceMotion: false);
 
       expect(effectsCubit.state.isEditing, isTrue);
       expect(effectsCubit.state.startedPlayback, isTrue);
@@ -42,8 +42,20 @@ void main() {
         () => mainBloc.state,
       ).thenReturn(const VideoEditorMainState(isPlaying: true));
 
-      openEffectsEditor(mainBloc, effectsCubit);
+      openEffectsEditor(mainBloc, effectsCubit, reduceMotion: false);
 
+      expect(effectsCubit.state.startedPlayback, isFalse);
+      verifyNever(
+        () => mainBloc.add(const VideoEditorPlaybackToggleRequested()),
+      );
+    });
+
+    test('leaves a paused video paused when reduced motion is on', () {
+      when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+
+      openEffectsEditor(mainBloc, effectsCubit, reduceMotion: true);
+
+      expect(effectsCubit.state.isEditing, isTrue);
       expect(effectsCubit.state.startedPlayback, isFalse);
       verifyNever(
         () => mainBloc.add(const VideoEditorPlaybackToggleRequested()),
@@ -56,7 +68,12 @@ void main() {
         EditorVideoEffect(id: 'strobe', effect: VideoEffect.strobe()),
       ]);
 
-      openEffectsEditor(mainBloc, effectsCubit, effectId: 'strobe');
+      openEffectsEditor(
+        mainBloc,
+        effectsCubit,
+        reduceMotion: false,
+        effectId: 'strobe',
+      );
 
       expect(effectsCubit.state.editingId, 'strobe');
       expect(effectsCubit.state.selectedType, VideoEffectType.strobe);

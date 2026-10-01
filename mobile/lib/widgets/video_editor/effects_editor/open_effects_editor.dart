@@ -1,5 +1,6 @@
 // ABOUTME: Helper to open the effects sub-editor, for a new effect or for one
-// ABOUTME: already on the timeline, with the video playing.
+// ABOUTME: already on the timeline, with the video playing unless reduced
+// ABOUTME: motion is on.
 
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
@@ -12,13 +13,16 @@ import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.d
 ///
 /// Most effects move — flashes, bursts, grain — and a paused frame shows
 /// only one moment of them, often one in which the intensity slider changes
-/// nothing visible, so the editor opens on a playing video.
+/// nothing visible, so the editor opens on a playing video. Not when
+/// [reduceMotion] is set, though: the user asked for less motion, and the
+/// play button is still there.
 void openEffectsEditor(
   VideoEditorMainBloc mainBloc,
   VideoEditorEffectsCubit effectsCubit, {
+  required bool reduceMotion,
   String? effectId,
 }) {
-  final startsPlayback = !mainBloc.state.isPlaying;
+  final startsPlayback = !reduceMotion && !mainBloc.state.isPlaying;
   effectsCubit.startEditing(
     effectId: effectId,
     startedPlayback: startsPlayback,

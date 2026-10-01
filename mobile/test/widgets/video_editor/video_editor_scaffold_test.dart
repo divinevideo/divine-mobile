@@ -261,7 +261,7 @@ void main() {
         );
         await tester.pump();
 
-        openEffectsEditor(mainBloc, effectsCubit);
+        openEffectsEditor(mainBloc, effectsCubit, reduceMotion: false);
         mainBloc.add(const VideoEditorPlaybackChanged(isPlaying: true));
         await tester.pump();
         expect(mainBloc.state.playbackToggleCounter, 1);

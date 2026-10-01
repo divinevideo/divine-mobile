@@ -20,6 +20,7 @@ import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.d
 import 'package:openvine/blocs/video_editor/voice_over/voice_over_cubit.dart';
 import 'package:openvine/blocs/video_editor/voice_over/voice_over_take_placement.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
@@ -1189,6 +1190,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
               onOpenEffects: () => openEffectsEditor(
                 context.read<VideoEditorMainBloc>(),
                 context.read<VideoEditorEffectsCubit>(),
+                reduceMotion: context.reduceMotion,
               ),
               awaitPushCoverTransition: _awaitMetadataCoverTransition,
               child: ValueListenableBuilder<bool>(
