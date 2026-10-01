@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/services/c2pa_signing_service.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Any non-empty token: without one the service never reaches [C2pa].
 const _testSigningToken = 'test-signing-token';
@@ -524,6 +525,31 @@ void main() {
           expect(output.readAsBytesSync(), equals([1, 2, 3]));
           expect(source.readAsBytesSync(), equals([4, 5, 6]));
           verifyZeroInteractions(mockC2pa);
+        },
+      );
+
+      test(
+        'records why a derived re-sign was skipped without a token',
+        () async {
+          await LogCaptureService().clearAllLogs();
+          addTearDown(LogCaptureService().clearAllLogs);
+          final output = writeFile('out.mp4', const [1, 2, 3]);
+          final source = writeFile('src.mp4', const [4, 5, 6]);
+          final tokenless = C2paSigningService(
+            c2pa: mockC2pa,
+            signingToken: '',
+          );
+
+          await tokenless.resignDerived(
+            outputPath: output.path,
+            sourcePath: source.path,
+            action: C2paEditActions.edited,
+          );
+
+          expect(
+            LogCaptureService().getRecentLogs().map((entry) => entry.message),
+            contains(contains('no signing token')),
+          );
         },
       );
 

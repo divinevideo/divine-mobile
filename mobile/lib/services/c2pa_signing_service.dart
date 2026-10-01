@@ -379,6 +379,11 @@ class C2paSigningService {
   }) async {
     try {
       if (!_hasToken) {
+        Log.info(
+          'Skipping derived re-sign: this build has no signing token',
+          name: 'C2paSigningService',
+          category: LogCategory.video,
+        );
         return C2paSigningResult(
           signedFilePath: outputPath,
           success: false,
