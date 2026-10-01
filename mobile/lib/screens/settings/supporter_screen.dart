@@ -245,6 +245,9 @@ class _TierList extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 12),
             child: DivineButton(
               label: _tierLabel(context, tier),
+              expanded: true,
+              // Wrap instead of cutting off the price on narrow screens.
+              maxLines: 3,
               onPressed: state.isBusy
                   ? null
                   : () => context.read<SupporterCubit>().subscribe(

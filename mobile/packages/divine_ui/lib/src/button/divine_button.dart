@@ -108,10 +108,11 @@ class DivineButton extends StatelessWidget {
     this.trailingIcon,
     this.expanded = false,
     this.isLoading = false,
+    this.maxLines = 1,
     this.semanticLabel,
     this.semanticIdentifier,
     super.key,
-  });
+  }) : assert(maxLines > 0, 'maxLines must be positive');
 
   /// The text label displayed on the button.
   final String label;
@@ -171,6 +172,13 @@ class DivineButton extends StatelessWidget {
   /// the button.
   final bool isLoading;
 
+  /// The most lines [label] may wrap onto before it is ellipsized.
+  ///
+  /// Defaults to one. Raise it for labels that carry information the user
+  /// must read in full, such as a price, so a narrow screen wraps the text
+  /// instead of cutting it off.
+  final int maxLines;
+
   @override
   Widget build(BuildContext context) {
     return _DivineButtonContent(
@@ -182,6 +190,7 @@ class DivineButton extends StatelessWidget {
       trailingIcon: trailingIcon,
       expanded: expanded,
       isLoading: isLoading,
+      maxLines: maxLines,
       semanticLabel: semanticLabel,
       semanticIdentifier: semanticIdentifier,
     );
@@ -196,6 +205,7 @@ class _DivineButtonContent extends StatelessWidget {
     required this.size,
     required this.expanded,
     required this.isLoading,
+    required this.maxLines,
     this.leadingIcon,
     this.trailingIcon,
     this.semanticLabel,
@@ -210,6 +220,7 @@ class _DivineButtonContent extends StatelessWidget {
   final DivineIconName? trailingIcon;
   final bool expanded;
   final bool isLoading;
+  final int maxLines;
   final String? semanticLabel;
   final String? semanticIdentifier;
 
@@ -380,7 +391,7 @@ class _DivineButtonContent extends StatelessWidget {
               label,
               style: _textStyle(colors),
               textAlign: .center,
-              maxLines: 1,
+              maxLines: maxLines,
               overflow: TextOverflow.ellipsis,
             ),
           ),

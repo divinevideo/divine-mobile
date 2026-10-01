@@ -13,6 +13,7 @@ dependencies:
   flutter:
     sdk: flutter
   in_app_purchase: ^3.2.0
+  in_app_purchase_android: ^0.5.2
   meta: ^1.17.0
   models:
     path: ../models
