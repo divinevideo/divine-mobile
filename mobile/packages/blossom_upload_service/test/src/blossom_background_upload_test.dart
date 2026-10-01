@@ -816,5 +816,69 @@ void main() {
         expect(transport.enqueued, <String>[taskId], reason: 're-uploaded');
       },
     );
+
+    test(
+      'logs the status and response of a buffered failed terminal',
+      () async {
+        await captureLogs();
+        final transport = _FakeTransport(
+          bufferedTerminals: <String, BlossomBackgroundTransferEvent>{
+            taskId: const BlossomBackgroundTransferEvent(
+              taskId: taskId,
+              status: BlossomBackgroundTransferStatus.failed,
+              httpStatusCode: 500,
+              responseBody: '{"error":"kv write failed"}',
+            ),
+          },
+          emitOnEnqueue: const <BlossomBackgroundTransferEvent>[
+            BlossomBackgroundTransferEvent(
+              taskId: taskId,
+              status: BlossomBackgroundTransferStatus.completed,
+              httpStatusCode: 200,
+            ),
+          ],
+        );
+
+        await service(transport).uploadVideoInBackground(
+          videoFile: videoFile,
+          taskId: taskId,
+          proofManifestJson: null,
+        );
+
+        final warning = failureWarnings().single;
+        expect(warning.message, contains('HTTP 500'));
+        expect(
+          warning.message,
+          endsWith('response: {"error":"kv write failed"}'),
+        );
+      },
+    );
+
+    test('does not log a failure for a buffered cancelled terminal', () async {
+      await captureLogs();
+      final transport = _FakeTransport(
+        bufferedTerminals: <String, BlossomBackgroundTransferEvent>{
+          taskId: const BlossomBackgroundTransferEvent(
+            taskId: taskId,
+            status: BlossomBackgroundTransferStatus.cancelled,
+          ),
+        },
+        emitOnEnqueue: const <BlossomBackgroundTransferEvent>[
+          BlossomBackgroundTransferEvent(
+            taskId: taskId,
+            status: BlossomBackgroundTransferStatus.completed,
+            httpStatusCode: 200,
+          ),
+        ],
+      );
+
+      await service(transport).uploadVideoInBackground(
+        videoFile: videoFile,
+        taskId: taskId,
+        proofManifestJson: null,
+      );
+
+      expect(failureWarnings(), isEmpty);
+    });
   });
 }

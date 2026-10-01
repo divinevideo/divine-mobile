@@ -2291,8 +2291,9 @@ class BlossomUploadService {
 
       // Startup reconciliation: if the OS already finished this upload while
       // the app was dead, its terminal event was buffered by the transport.
-      // Claim it and skip re-uploading the whole file. A failed/cancelled
-      // buffered event is simply discarded so this retry proceeds normally.
+      // Claim it and skip re-uploading the whole file. A failed buffered event
+      // is logged and a cancelled one is dropped; either way this retry
+      // proceeds normally.
       final buffered = await transport.takeBufferedTerminalEvent(taskId);
       if (buffered != null &&
           buffered.status == BlossomBackgroundTransferStatus.completed) {
@@ -2309,6 +2310,14 @@ class BlossomUploadService {
           await stopTraceOnce(_outcomeReused);
           return result;
         }
+      }
+      if (buffered != null &&
+          buffered.status == BlossomBackgroundTransferStatus.failed) {
+        _logBackgroundFailure(
+          buffered,
+          fileHash: fileHash,
+          serverUrl: serverUrl,
+        );
       }
 
       final uploadUrl = '$serverUrl/upload';
@@ -2635,18 +2644,10 @@ class BlossomUploadService {
             videoId: fileHash,
           );
         }
-        final response = _serverTextForLog(event.responseBody ?? '');
         // The result below keeps only the status, so the server's own
         // explanation would otherwise be lost: the caller silently re-uploads
         // the whole file through the resumable path.
-        Log.warning(
-          'Background upload failed: task ${event.taskId}, blob $fileHash, '
-          'server $serverUrl, HTTP ${statusCode ?? 'none'}, '
-          'error: ${event.error ?? 'none'}, '
-          'response: ${response.isEmpty ? 'none' : response}',
-          name: 'BlossomUploadService',
-          category: LogCategory.video,
-        );
+        _logBackgroundFailure(event, fileHash: fileHash, serverUrl: serverUrl);
         return BlossomUploadResult(
           success: false,
           statusCode: statusCode,
@@ -2660,6 +2661,22 @@ class BlossomUploadService {
                   : BlossomUploadFailureReason.unknown),
         );
     }
+  }
+
+  void _logBackgroundFailure(
+    BlossomBackgroundTransferEvent event, {
+    required String fileHash,
+    required String serverUrl,
+  }) {
+    final response = _serverTextForLog(event.responseBody ?? '');
+    Log.warning(
+      'Background upload failed: task ${event.taskId}, blob $fileHash, '
+      'server $serverUrl, HTTP ${event.httpStatusCode ?? 'none'}, '
+      'error: ${event.error ?? 'none'}, '
+      'response: ${response.isEmpty ? 'none' : response}',
+      name: 'BlossomUploadService',
+      category: LogCategory.video,
+    );
   }
 
   Map<String, dynamic>? _tryDecodeJsonMap(String body) {
