@@ -51,7 +51,9 @@ void main() {
 
         await tester.pumpWidget(buildSubject());
         await tester.pump();
-        await tester.tap(find.text(l10n.feedFailedToLoadVideos));
+
+        expect(find.text(l10n.feedFailedToLoadVideos), findsOneWidget);
+        await tester.tap(find.text(l10n.commonRetry));
 
         verify(() => cubit.load()).called(1);
       });
