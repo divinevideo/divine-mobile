@@ -1,6 +1,8 @@
 // ABOUTME: Tests for SelectListDialog and its list creation entry point
 // ABOUTME: Verifies list selection, list item interactions, and list creation form
 
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -376,6 +378,75 @@ void main() {
       verify(
         () => mockListService.addVideoToList(created.id, testVideo.id),
       ).called(1);
+    });
+
+    testWidgets('reports a refused creation after both dialogs close', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final pending = Completer<CuratedList?>();
+      final created = CuratedList(
+        id: 'new-list',
+        pubkey: testVideo.pubkey,
+        name: 'New collection',
+        videoEventIds: const [],
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+      );
+      when(
+        () => mockListService.createList(
+          name: any(named: 'name'),
+          description: any(named: 'description'),
+          isPublic: any(named: 'isPublic'),
+          isCollaborative: any(named: 'isCollaborative'),
+          allowedCollaborators: any(named: 'allowedCollaborators'),
+        ),
+      ).thenAnswer((_) => pending.future);
+      when(
+        () => mockListService.addVideoToList(created.id, testVideo.id),
+      ).thenAnswer((_) async => false);
+      final navigator = GlobalKey<NavigatorState>();
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        testProviderScope(
+          additionalOverrides: [
+            curatedListsStateProvider.overrideWith(_FakeCuratedListsState.new),
+          ],
+          child: MaterialApp(
+            navigatorKey: navigator,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const Scaffold(body: Text('Underlying screen')),
+          ),
+        ),
+      );
+      unawaited(
+        showDialog<void>(
+          context: navigator.currentContext!,
+          builder: (_) => SelectListDialog(video: testVideo),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.listNewList));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, created.name);
+      await tester.pump();
+      await tester.tap(find.bySemanticsLabel(l10n.listCreate));
+      await tester.pump();
+      navigator.currentState!.pop();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.listDone));
+      await tester.pumpAndSettle();
+      expect(find.byType(SelectListDialog), findsNothing);
+      expect(find.byType(ListInfoForm), findsNothing);
+
+      pending.complete(created);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Underlying screen'), findsOneWidget);
+      expect(find.text(l10n.listUpdateFailed), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('renders Done button', (tester) async {

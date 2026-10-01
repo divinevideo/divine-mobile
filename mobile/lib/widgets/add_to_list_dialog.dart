@@ -49,8 +49,18 @@ class _SelectListDialogState extends State<SelectListDialog> {
   bool _createdWithoutVideo = false;
 
   Future<void> _createList() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final failureMessage = context.l10n.listUpdateFailed;
     final outcome = await showListInfoSheet(context, video: widget.video);
-    if (!mounted) return;
+    if (!mounted) {
+      if (outcome == ListInfoSheetOutcome.createdWithoutVideo &&
+          messenger.mounted) {
+        messenger.showSnackBar(
+          DivineSnackbarContainer.snackBar(failureMessage, error: true),
+        );
+      }
+      return;
+    }
     setState(() {
       _createdWithoutVideo =
           outcome == ListInfoSheetOutcome.createdWithoutVideo;
