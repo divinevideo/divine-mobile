@@ -53,6 +53,7 @@ const String _authorPubkey =
 const String _listId =
     'list_created_456789abcdef0123456789abcdef0123456789abcdef012345';
 final String _collaborator = 'c' * 64;
+final String _otherCollaborator = 'd' * 64;
 
 const String _openLabel = 'Open list editor';
 
@@ -137,6 +138,7 @@ void main() {
       ProfileRepository? profileRepository,
       FollowRepository? followRepository,
       List<Override> overrides = const [],
+      Locale? locale,
       List<ListInfoSheetOutcome>? outcomes,
     }) async {
       // Tall enough that the whole form fits above the fold.
@@ -145,6 +147,7 @@ void main() {
 
       await tester.pumpWidget(
         testMaterialApp(
+          locale: locale,
           mockProfileRepository: profileRepository,
           mockFollowRepository: followRepository,
           additionalOverrides: [
@@ -608,6 +611,32 @@ void main() {
             matching: find.text(
               UserProfile.defaultDisplayNameFor(_collaborator),
             ),
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets("joins the collaborators' names with the locale's own "
+          'separator', (tester) async {
+        // Japanese lists names with 、, so a Latin ", " cannot pass here.
+        final ja = lookupAppLocalizations(const Locale('ja'));
+        await openSheet(
+          tester,
+          existingList: list(
+            collaborators: [_collaborator, _otherCollaborator],
+          ),
+          locale: const Locale('ja'),
+        );
+
+        final names = [
+          UserProfile.defaultDisplayNameFor(_collaborator),
+          UserProfile.defaultDisplayNameFor(_otherCollaborator),
+        ];
+        expect(ja.listMemberNamesSeparator, isNot(', '));
+        expect(
+          find.descendant(
+            of: collaboratorsRow(),
+            matching: find.text(names.join(ja.listMemberNamesSeparator)),
           ),
           findsOneWidget,
         );

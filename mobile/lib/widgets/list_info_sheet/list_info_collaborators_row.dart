@@ -79,7 +79,7 @@ class ListInfoCollaboratorsRow extends ConsumerWidget {
                   ?.bestDisplayName ??
               UserProfile.defaultDisplayNameFor(pubkey),
         ),
-    ].join(', ');
+    ].join(l10n.listMemberNamesSeparator);
     final value = pubkeys.isEmpty ? l10n.listCollaboratorsNone : names;
 
     void open() => runDetached(
