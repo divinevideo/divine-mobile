@@ -6303,7 +6303,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'No pudimos añadir las credenciales de contenido a este vídeo. Volvé a generarlo para intentarlo de nuevo o publicalo tal cual.';
+      'No pudimos añadir las credenciales de contenido a este video. Volvé a generarlo para intentarlo de nuevo o publicalo tal cual.';
 
   @override
   String get videoMetadataC2paMissingNote =>
@@ -6325,7 +6325,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get videoMetadataC2paUnavailableBody =>
-      'Esta versión de Divine no puede incluir credenciales de contenido en tus vídeos. Igual podés publicarlos como siempre.';
+      'Esta versión de Divine no puede incluir credenciales de contenido en tus videos. Igual podés publicarlos como siempre.';
 
   @override
   String get videoMetadataC2paUnavailableNoteAndroid =>
