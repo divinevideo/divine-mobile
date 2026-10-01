@@ -719,6 +719,9 @@ PeopleListsRepository peopleListsRepository(Ref ref) {
     nostrClient: nostrClient,
     cache: cache,
     followedListsStore: ref.watch(followedPeopleListsStoreProvider),
+    followedListsWriteCoordinator: ref.watch(
+      followedPeopleListsWriteCoordinatorProvider,
+    ),
     blockFilter: createBlockedAuthorFilter(ref),
     funnelcakeApiClient: ref.watch(funnelcakeApiClientProvider),
     discoveryRelayUrls: [ref.watch(currentEnvironmentProvider).relayUrl],

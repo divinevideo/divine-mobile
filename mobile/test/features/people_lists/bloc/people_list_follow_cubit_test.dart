@@ -44,9 +44,18 @@ void main() {
   group(PeopleListFollowCubit, () {
     late _MockPeopleListsRepository repository;
     late StreamController<List<PeopleListSearchResult>> followedController;
+    late bool durableFollow;
 
     setUp(() {
       repository = _MockPeopleListsRepository();
+      durableFollow = false;
+      when(
+        () => repository.isFollowingList(
+          viewerPubkey: _viewer,
+          ownerPubkey: _owner,
+          listId: 'crew',
+        ),
+      ).thenAnswer((_) async => durableFollow);
       followedController =
           StreamController<List<PeopleListSearchResult>>.broadcast();
       when(
@@ -63,6 +72,41 @@ void main() {
       listId: 'crew',
     );
 
+    test('unfollows a durable reference without a resolved list', () async {
+      durableFollow = true;
+      when(
+        () => repository.unfollowList(
+          viewerPubkey: _viewer,
+          ownerPubkey: _owner,
+          listId: 'crew',
+        ),
+      ).thenAnswer((_) async => durableFollow = false);
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      await cubit.started();
+      followedController.add(const []);
+      await pumpEventQueue();
+      expect(cubit.state.isFollowing, isTrue);
+      await cubit.unfollowed();
+      expect(cubit.state.isFollowing, isFalse);
+      expect(cubit.state.status, PeopleListFollowStatus.ready);
+      verify(
+        () => repository.unfollowList(
+          viewerPubkey: _viewer,
+          ownerPubkey: _owner,
+          listId: 'crew',
+        ),
+      ).called(1);
+      await cubit.unfollowed();
+      verifyNever(
+        () => repository.followList(
+          viewerPubkey: any(named: 'viewerPubkey'),
+          ownerPubkey: any(named: 'ownerPubkey'),
+          list: any(named: 'list'),
+        ),
+      );
+    });
+
     test('starts out loading and not followed', () {
       final cubit = buildCubit();
       addTearDown(cubit.close);
@@ -72,8 +116,57 @@ void main() {
     });
 
     group('started', () {
+      test(
+        'a failed initial read cannot follow until an explicit retry',
+        () async {
+          var unavailable = true;
+          when(
+            () => repository.isFollowingList(
+              viewerPubkey: _viewer,
+              ownerPubkey: _owner,
+              listId: 'crew',
+            ),
+          ).thenAnswer((_) async {
+            if (unavailable) throw Exception('durable store unavailable');
+            return true;
+          });
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+          await cubit.started();
+          followedController.add(const []);
+          await pumpEventQueue();
+          expect(cubit.state.hasReadFollowing, isFalse);
+          expect(cubit.state.isBusy, isTrue);
+          await cubit.toggled(_list());
+          verifyNever(
+            () => repository.followList(
+              viewerPubkey: any(named: 'viewerPubkey'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+              list: any(named: 'list'),
+            ),
+          );
+          unavailable = false;
+          await cubit.retryRead();
+          expect(cubit.state.hasReadFollowing, isTrue);
+          expect(cubit.state.isFollowing, isTrue);
+          expect(cubit.state.status, PeopleListFollowStatus.ready);
+        },
+      );
+
+      test('stream error reads durable Following', () async {
+        durableFollow = true;
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+        await cubit.started();
+        followedController.addError(StateError('box corrupt'));
+        await pumpEventQueue();
+        expect(cubit.state.isFollowing, isTrue);
+        expect(cubit.state.status, PeopleListFollowStatus.failure);
+      });
+
       blocTest<PeopleListFollowCubit, PeopleListFollowState>(
-        'reads as followed when the list is among the follows',
+        'reads durable follow status when the list changes',
+        setUp: () => durableFollow = true,
         build: buildCubit,
         act: (cubit) async {
           await cubit.started();
@@ -81,6 +174,7 @@ void main() {
         },
         expect: () => const [
           PeopleListFollowState(
+            hasReadFollowing: true,
             status: PeopleListFollowStatus.ready,
             isFollowing: true,
           ),
@@ -99,7 +193,10 @@ void main() {
           ]);
         },
         expect: () => const [
-          PeopleListFollowState(status: PeopleListFollowStatus.ready),
+          PeopleListFollowState(
+            hasReadFollowing: true,
+            status: PeopleListFollowStatus.ready,
+          ),
         ],
       );
 
@@ -108,16 +205,22 @@ void main() {
         build: buildCubit,
         act: (cubit) async {
           await cubit.started();
+          durableFollow = true;
           followedController.add([_followed()]);
           await pumpEventQueue();
+          durableFollow = false;
           followedController.add(const []);
         },
         expect: () => const [
           PeopleListFollowState(
+            hasReadFollowing: true,
             status: PeopleListFollowStatus.ready,
             isFollowing: true,
           ),
-          PeopleListFollowState(status: PeopleListFollowStatus.ready),
+          PeopleListFollowState(
+            hasReadFollowing: true,
+            status: PeopleListFollowStatus.ready,
+          ),
         ],
       );
 
@@ -130,8 +233,126 @@ void main() {
         },
         expect: () => const [
           PeopleListFollowState(status: PeopleListFollowStatus.failure),
+          PeopleListFollowState(
+            hasReadFollowing: true,
+            status: PeopleListFollowStatus.failure,
+          ),
         ],
         errors: () => [isA<StateError>()],
+      );
+
+      test(
+        'keeps Following without a cached copy and toggles an unfollow',
+        () async {
+          durableFollow = true;
+          when(
+            () => repository.unfollowList(
+              viewerPubkey: _viewer,
+              ownerPubkey: _owner,
+              listId: 'crew',
+            ),
+          ).thenAnswer((_) async {
+            durableFollow = false;
+          });
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+          await cubit.started();
+          followedController.add(const []);
+          await pumpEventQueue();
+
+          expect(cubit.state.isFollowing, isTrue);
+          expect(cubit.state.status, PeopleListFollowStatus.ready);
+          await cubit.toggled(_list());
+
+          expect(cubit.state.isFollowing, isFalse);
+          verify(
+            () => repository.unfollowList(
+              viewerPubkey: _viewer,
+              ownerPubkey: _owner,
+              listId: 'crew',
+            ),
+          ).called(1);
+          verifyNever(
+            () => repository.followList(
+              viewerPubkey: any(named: 'viewerPubkey'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+              list: any(named: 'list'),
+            ),
+          );
+        },
+      );
+
+      test(
+        'a stale durable read cannot overwrite a newer follow update',
+        () async {
+          final oldRead = Completer<bool>();
+          var reads = 0;
+          when(
+            () => repository.isFollowingList(
+              viewerPubkey: _viewer,
+              ownerPubkey: _owner,
+              listId: 'crew',
+            ),
+          ).thenAnswer(
+            (_) => reads++ == 0 ? oldRead.future : Future.value(true),
+          );
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+          await cubit.started();
+          followedController.add(const []);
+          await pumpEventQueue();
+          followedController.add(const []);
+          await pumpEventQueue();
+          expect(cubit.state.isFollowing, isTrue);
+
+          oldRead.complete(false);
+          await pumpEventQueue();
+
+          expect(cubit.state.isFollowing, isTrue);
+        },
+      );
+
+      test(
+        'a read started before an unfollow cannot restore Following',
+        () async {
+          durableFollow = true;
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+          await cubit.started();
+          followedController.add(const []);
+          await pumpEventQueue();
+          final staleRead = Completer<bool>();
+          when(
+            () => repository.isFollowingList(
+              viewerPubkey: _viewer,
+              ownerPubkey: _owner,
+              listId: 'crew',
+            ),
+          ).thenAnswer((_) => staleRead.future);
+          followedController.add(const []);
+          await pumpEventQueue();
+          when(
+            () => repository.unfollowList(
+              viewerPubkey: _viewer,
+              ownerPubkey: _owner,
+              listId: 'crew',
+            ),
+          ).thenAnswer((_) async {});
+          when(
+            () => repository.isFollowingList(
+              viewerPubkey: _viewer,
+              ownerPubkey: _owner,
+              listId: 'crew',
+            ),
+          ).thenAnswer((_) async => false);
+
+          await cubit.toggled(_list());
+          staleRead.complete(true);
+          await pumpEventQueue();
+
+          expect(cubit.state.isFollowing, isFalse);
+          expect(cubit.state.status, PeopleListFollowStatus.ready);
+        },
       );
 
       test('stops listening on close', () async {
@@ -155,15 +376,23 @@ void main() {
               ownerPubkey: any(named: 'ownerPubkey'),
               list: any(named: 'list'),
             ),
-          ).thenAnswer((_) async {});
+          ).thenAnswer((_) async {
+            durableFollow = true;
+          });
         },
         build: buildCubit,
-        seed: () =>
-            const PeopleListFollowState(status: PeopleListFollowStatus.ready),
+        seed: () => const PeopleListFollowState(
+          hasReadFollowing: true,
+          status: PeopleListFollowStatus.ready,
+        ),
         act: (cubit) => cubit.toggled(_list()),
         expect: () => const [
-          PeopleListFollowState(status: PeopleListFollowStatus.updating),
           PeopleListFollowState(
+            hasReadFollowing: true,
+            status: PeopleListFollowStatus.updating,
+          ),
+          PeopleListFollowState(
+            hasReadFollowing: true,
             status: PeopleListFollowStatus.ready,
             isFollowing: true,
           ),
@@ -188,20 +417,27 @@ void main() {
               ownerPubkey: any(named: 'ownerPubkey'),
               listId: any(named: 'listId'),
             ),
-          ).thenAnswer((_) async {});
+          ).thenAnswer((_) async {
+            durableFollow = false;
+          });
         },
         build: buildCubit,
         seed: () => const PeopleListFollowState(
+          hasReadFollowing: true,
           status: PeopleListFollowStatus.ready,
           isFollowing: true,
         ),
         act: (cubit) => cubit.toggled(_list()),
         expect: () => const [
           PeopleListFollowState(
+            hasReadFollowing: true,
             status: PeopleListFollowStatus.updating,
             isFollowing: true,
           ),
-          PeopleListFollowState(status: PeopleListFollowStatus.ready),
+          PeopleListFollowState(
+            hasReadFollowing: true,
+            status: PeopleListFollowStatus.ready,
+          ),
         ],
         verify: (_) {
           verify(
@@ -226,12 +462,20 @@ void main() {
           ).thenThrow(Exception('disk full'));
         },
         build: buildCubit,
-        seed: () =>
-            const PeopleListFollowState(status: PeopleListFollowStatus.ready),
+        seed: () => const PeopleListFollowState(
+          hasReadFollowing: true,
+          status: PeopleListFollowStatus.ready,
+        ),
         act: (cubit) => cubit.toggled(_list()),
         expect: () => const [
-          PeopleListFollowState(status: PeopleListFollowStatus.updating),
-          PeopleListFollowState(status: PeopleListFollowStatus.failure),
+          PeopleListFollowState(
+            hasReadFollowing: true,
+            status: PeopleListFollowStatus.updating,
+          ),
+          PeopleListFollowState(
+            hasReadFollowing: true,
+            status: PeopleListFollowStatus.failure,
+          ),
         ],
         errors: () => [isA<Exception>()],
       );
@@ -248,12 +492,20 @@ void main() {
           ).thenThrow(StateError('box is closed'));
         },
         build: buildCubit,
-        seed: () =>
-            const PeopleListFollowState(status: PeopleListFollowStatus.ready),
+        seed: () => const PeopleListFollowState(
+          hasReadFollowing: true,
+          status: PeopleListFollowStatus.ready,
+        ),
         act: (cubit) => cubit.toggled(_list()),
         expect: () => const [
-          PeopleListFollowState(status: PeopleListFollowStatus.updating),
-          PeopleListFollowState(status: PeopleListFollowStatus.failure),
+          PeopleListFollowState(
+            hasReadFollowing: true,
+            status: PeopleListFollowStatus.updating,
+          ),
+          PeopleListFollowState(
+            hasReadFollowing: true,
+            status: PeopleListFollowStatus.failure,
+          ),
         ],
         errors: () => [
           isA<Reportable<Object>>().having(
@@ -273,15 +525,23 @@ void main() {
               ownerPubkey: any(named: 'ownerPubkey'),
               list: any(named: 'list'),
             ),
-          ).thenAnswer((_) async {});
+          ).thenAnswer((_) async {
+            durableFollow = true;
+          });
         },
         build: buildCubit,
-        seed: () =>
-            const PeopleListFollowState(status: PeopleListFollowStatus.failure),
+        seed: () => const PeopleListFollowState(
+          hasReadFollowing: true,
+          status: PeopleListFollowStatus.failure,
+        ),
         act: (cubit) => cubit.toggled(_list()),
         expect: () => const [
-          PeopleListFollowState(status: PeopleListFollowStatus.updating),
           PeopleListFollowState(
+            hasReadFollowing: true,
+            status: PeopleListFollowStatus.updating,
+          ),
+          PeopleListFollowState(
+            hasReadFollowing: true,
             status: PeopleListFollowStatus.ready,
             isFollowing: true,
           ),
@@ -308,6 +568,7 @@ void main() {
         'ignores a second tap while a write is in flight',
         build: buildCubit,
         seed: () => const PeopleListFollowState(
+          hasReadFollowing: true,
           status: PeopleListFollowStatus.updating,
         ),
         act: (cubit) => cubit.toggled(_list()),

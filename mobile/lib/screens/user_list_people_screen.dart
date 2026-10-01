@@ -11,10 +11,12 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/extensions/modal_pop_extension.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
+import 'package:openvine/features/people_lists/bloc/people_list_follow_cubit.dart';
 import 'package:openvine/features/people_lists/bloc/people_list_members_cubit.dart';
 import 'package:openvine/features/people_lists/people_lists.dart';
 import 'package:openvine/features/people_lists/view/people_list_hero_header.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
@@ -23,6 +25,7 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
+import 'package:openvine/widgets/follow_list_button.dart';
 import 'package:openvine/widgets/list_video_player_mode.dart';
 import 'package:openvine/widgets/rounded_grid_viewport.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -185,7 +188,7 @@ class _DiscoveredPeopleListLoader extends ConsumerWidget {
       skipLoadingOnRefresh: false,
       data: (userList) {
         if (userList == null) {
-          return const _ListNotFoundView();
+          return _ListNotFoundView(ownerPubkey: ownerPubkey, listId: listId);
         }
         return _UserListPeopleView(
           userList: userList,
@@ -195,10 +198,12 @@ class _DiscoveredPeopleListLoader extends ConsumerWidget {
           ownerPubkey: ownerPubkey,
         );
       },
-      loading: () => const _ListLoadingView(),
+      loading: () => _ListLoadingView(ownerPubkey: ownerPubkey, listId: listId),
       // A relay failure is not "this list does not exist": keep the two
       // apart and let the viewer try again without leaving the screen.
       error: (error, stackTrace) => _ListLoadFailedView(
+        ownerPubkey: ownerPubkey,
+        listId: listId,
         onRetry: () => ref.invalidate(
           publicPeopleListProvider(ownerPubkey: ownerPubkey, listId: listId),
         ),
@@ -249,7 +254,10 @@ class _MemberVideoPlayback extends ConsumerWidget {
 /// Shown while the list is still on its way: someone else's from relays,
 /// or the viewer's own before cache and the owner read have both settled.
 class _ListLoadingView extends StatelessWidget {
-  const _ListLoadingView();
+  const _ListLoadingView({this.ownerPubkey, this.listId});
+
+  final String? ownerPubkey;
+  final String? listId;
 
   @override
   Widget build(BuildContext context) {
@@ -261,6 +269,13 @@ class _ListLoadingView extends StatelessWidget {
         // safePop: a cold deep link here is the only route on the stack,
         // and a raw pop would throw GoError (#6112).
         onBackPressed: context.safePop,
+        customActions: [
+          if (ownerPubkey != null && listId != null)
+            _FollowPeopleListAction(
+              ownerPubkey: ownerPubkey!,
+              listId: listId!,
+            ),
+        ],
       ),
       body: const Center(child: BrandedLoadingIndicator(size: 60)),
     );
@@ -269,7 +284,14 @@ class _ListLoadingView extends StatelessWidget {
 
 /// Shown when a list could not be read from the relays.
 class _ListLoadFailedView extends StatelessWidget {
-  const _ListLoadFailedView({required this.onRetry});
+  const _ListLoadFailedView({
+    required this.onRetry,
+    this.ownerPubkey,
+    this.listId,
+  });
+
+  final String? ownerPubkey;
+  final String? listId;
 
   final VoidCallback onRetry;
 
@@ -281,6 +303,13 @@ class _ListLoadFailedView extends StatelessWidget {
         title: context.l10n.peopleListsRouteTitle,
         showBackButton: true,
         onBackPressed: context.safePop,
+        customActions: [
+          if (ownerPubkey != null && listId != null)
+            _FollowPeopleListAction(
+              ownerPubkey: ownerPubkey!,
+              listId: listId!,
+            ),
+        ],
       ),
       body: Center(
         child: Padding(
@@ -316,7 +345,10 @@ class _ListLoadFailedView extends StatelessWidget {
 
 /// Shown when a settled read confirms the selected [UserList] is absent.
 class _ListNotFoundView extends StatelessWidget {
-  const _ListNotFoundView();
+  const _ListNotFoundView({this.ownerPubkey, this.listId});
+
+  final String? ownerPubkey;
+  final String? listId;
 
   @override
   Widget build(BuildContext context) {
@@ -326,6 +358,13 @@ class _ListNotFoundView extends StatelessWidget {
         title: context.l10n.peopleListsRouteTitle,
         showBackButton: true,
         onBackPressed: context.safePop,
+        customActions: [
+          if (ownerPubkey != null && listId != null)
+            _FollowPeopleListAction(
+              ownerPubkey: ownerPubkey!,
+              listId: listId!,
+            ),
+        ],
       ),
       body: Center(
         child: Column(
@@ -488,6 +527,12 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
                 }
               },
             ),
+          if (widget.ownerPubkey case final owner? when !userList.isEditable)
+            _FollowPeopleListAction(
+              ownerPubkey: owner,
+              listId: userList.id,
+              userList: userList,
+            ),
         ],
       );
       body = _MemberVideos(
@@ -589,6 +634,120 @@ class _MemberVideos extends ConsumerWidget {
           };
         },
       ),
+    );
+  }
+}
+
+/// The Follow pill on someone else's list. Following it adds the list to the
+/// feed selector in Home, as following a video list does.
+///
+/// Page half of the split: bridges the repository and the signed-in viewer
+/// into a [PeopleListFollowCubit], re-keyed on both so an account switch
+/// follows on behalf of the right viewer.
+class _FollowPeopleListAction extends ConsumerWidget {
+  const _FollowPeopleListAction({
+    required this.ownerPubkey,
+    required this.listId,
+    this.userList,
+  });
+
+  final String ownerPubkey;
+  final String listId;
+  final UserList? userList;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final viewerPubkey = context.select(
+      (PeopleListsBloc bloc) => bloc.state.activeOwnerPubkey,
+    );
+    // Follows are kept per viewer, so signed out there is nobody to follow as.
+    if (viewerPubkey == null) return const SizedBox.shrink();
+
+    final repository = ref.watch(peopleListsRepositoryProvider);
+    return BlocProvider<PeopleListFollowCubit>(
+      key: ValueKey((repository, viewerPubkey, ownerPubkey, listId)),
+      create: (_) {
+        final cubit = PeopleListFollowCubit(
+          repository: repository,
+          viewerPubkey: viewerPubkey,
+          ownerPubkey: ownerPubkey,
+          listId: listId,
+        );
+        runDetached(
+          cubit.started(),
+          'watch people list follow',
+          logName: 'FollowPeopleListAction',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
+      child: _FollowPeopleListButton(userList: userList),
+    );
+  }
+}
+
+class _FollowPeopleListButton extends StatelessWidget {
+  const _FollowPeopleListButton({required this.userList});
+
+  final UserList? userList;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<PeopleListFollowCubit, PeopleListFollowState>(
+      // Only a failed follow or unfollow: a failed read of the stored
+      // follows has nothing the viewer did to report on.
+      listenWhen: (previous, current) =>
+          previous.status == PeopleListFollowStatus.updating &&
+          current.status == PeopleListFollowStatus.failure,
+      listener: (context, state) {
+        final message = context.l10n.discoverListsFailedToUpdateSubscription;
+        announceDetached(
+          context,
+          message,
+          description: 'announce people list follow failure',
+          logName: 'FollowPeopleListButton',
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: VineTheme.error),
+        );
+      },
+      builder: (context, state) {
+        // Nothing until the follows are read, rather than a Follow label that
+        // flips to Following a frame later.
+        if (!state.hasReadFollowing &&
+            state.status == PeopleListFollowStatus.failure) {
+          return DivineIconButton(
+            key: const ValueKey('retry-people-list-follow'),
+            icon: DivineIconName.arrowClockwise,
+            type: DivineIconButtonType.ghost,
+            semanticLabel: context.l10n.commonRetry,
+            tooltip: context.l10n.commonRetry,
+            onPressed: () => runDetached(
+              context.read<PeopleListFollowCubit>().retryRead(),
+              'retry durable people list follow read',
+              logName: 'FollowPeopleListButton',
+              category: LogCategory.ui,
+            ),
+          );
+        }
+        if (!state.hasReadFollowing ||
+            state.status == PeopleListFollowStatus.loading ||
+            (userList == null && !state.isFollowing)) {
+          return const SizedBox.shrink();
+        }
+        return FollowListButton(
+          isFollowing: state.isFollowing,
+          isBusy: state.status == PeopleListFollowStatus.updating,
+          onPressed: () => runDetached(
+            userList == null
+                ? context.read<PeopleListFollowCubit>().unfollowed()
+                : context.read<PeopleListFollowCubit>().toggled(userList!),
+            'toggle people list follow',
+            logName: 'FollowPeopleListButton',
+            category: LogCategory.ui,
+          ),
+        );
+      },
     );
   }
 }

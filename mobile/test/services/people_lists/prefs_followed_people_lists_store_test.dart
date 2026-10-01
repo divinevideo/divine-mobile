@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/people_lists/prefs_followed_people_lists_store.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 final String _viewerA = 'a' * 64;
 final String _viewerB = 'b' * 64;
@@ -24,8 +25,46 @@ Future<SharedPreferences> _prefs([
 /// account's follows under the old name, so the test pins the spelling.
 String _keyFor(String viewerPubkey) => 'followed_people_lists_$viewerPubkey';
 
+class _FailedPrefs extends InMemorySharedPreferencesStore {
+  _FailedPrefs() : super.empty();
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) async =>
+      false;
+  @override
+  Future<bool> remove(String key) async => false;
+}
+
 void main() {
   group(PrefsFollowedPeopleListsStore, () {
+    for (final operation in ['add', 'remove', 'clear']) {
+      test(
+        'failed $operation throws and keeps previous follows',
+        () async {
+          final prefs = await _prefs(
+            operation == 'add'
+                ? {}
+                : {
+                    _keyFor(_viewerA): ['$_owner:crew'],
+                  },
+          );
+          final previous = await PrefsFollowedPeopleListsStore(prefs)
+              .read(viewerPubkey: _viewerA);
+          final platform = SharedPreferencesStorePlatform.instance;
+          SharedPreferencesStorePlatform.instance = _FailedPrefs();
+          addTearDown(() => SharedPreferencesStorePlatform.instance = platform);
+          final store = PrefsFollowedPeopleListsStore(prefs);
+          addTearDown(store.dispose);
+          final update = operation == 'add'
+              ? store.add(viewerPubkey: _viewerA, ref: _ref('crew'))
+              : operation == 'remove'
+              ? store.remove(viewerPubkey: _viewerA, ref: _ref('crew'))
+              : store.clear(viewerPubkey: _viewerA);
+          await expectLater(update, throwsA(isA<Exception>()));
+          expect(await store.read(viewerPubkey: _viewerA), previous);
+        },
+      );
+    }
+
     group('read', () {
       test('returns nothing for an account that follows nothing', () async {
         final store = PrefsFollowedPeopleListsStore(await _prefs());

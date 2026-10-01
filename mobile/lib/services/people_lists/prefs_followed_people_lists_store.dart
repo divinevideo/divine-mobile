@@ -6,6 +6,17 @@ import 'dart:async';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// The preferences could not save a change to the followed lists.
+class FollowedPeopleListsWriteException implements Exception {
+  /// Creates the exception.
+  const FollowedPeopleListsWriteException();
+
+  @override
+  String toString() =>
+      'FollowedPeopleListsWriteException: could not save the followed '
+      'people lists';
+}
+
 /// Persists which public people lists each viewer follows.
 ///
 /// The same shape the video-list follow uses: a string list of identifiers in
@@ -83,10 +94,8 @@ class PrefsFollowedPeopleListsStore implements FollowedPeopleListsStore {
 
   @override
   Future<void> clear({required String viewerPubkey}) async {
-    final key = _storageKey(viewerPubkey);
-    if (!_prefs.containsKey(key)) return;
-    await _prefs.remove(key);
-    _changedViewers.add(viewerPubkey);
+    if (!_prefs.containsKey(_storageKey(viewerPubkey))) return;
+    await _save(viewerPubkey, null);
   }
 
   /// Releases the change stream. The store must not be used afterwards.
@@ -114,10 +123,29 @@ class PrefsFollowedPeopleListsStore implements FollowedPeopleListsStore {
   Future<void> _write(
     String viewerPubkey,
     List<FollowedPeopleListRef> refs,
-  ) async {
-    await _prefs.setStringList(_storageKey(viewerPubkey), [
-      for (final ref in refs) '${ref.ownerPubkey}$_entrySeparator${ref.listId}',
-    ]);
+  ) => _save(viewerPubkey, [
+    for (final ref in refs) '${ref.ownerPubkey}$_entrySeparator${ref.listId}',
+  ]);
+
+  /// Saves [entries] as [viewerPubkey]'s follows, or removes them when null.
+  ///
+  /// Throws [FollowedPeopleListsWriteException] when the preferences could not
+  /// save it. They keep in memory a value they failed to save, and the next
+  /// write would save it after all, so the previous value is put back first.
+  Future<void> _save(String viewerPubkey, List<String>? entries) async {
+    final key = _storageKey(viewerPubkey);
+    final previous = _prefs.getStringList(key);
+    final saved = entries == null
+        ? await _prefs.remove(key)
+        : await _prefs.setStringList(key, entries);
+    if (!saved) {
+      if (previous == null) {
+        await _prefs.remove(key);
+      } else {
+        await _prefs.setStringList(key, previous);
+      }
+      throw const FollowedPeopleListsWriteException();
+    }
     _changedViewers.add(viewerPubkey);
   }
 }

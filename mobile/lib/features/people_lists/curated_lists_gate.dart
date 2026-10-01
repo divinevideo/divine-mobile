@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/provider_identity_stream.dart';
+import 'package:openvine/providers/repository_providers.dart';
+import 'package:people_lists_repository/people_lists_repository.dart';
 
 /// Whether curated lists are enabled for the current user.
 ///
@@ -42,3 +44,19 @@ final Provider<Stream<bool>> curatedListsEnabledStreamProvider =
     identityStreamOf<bool>(
       isFeatureEnabledProvider(FeatureFlag.curatedLists),
     );
+
+/// The repository Home reads the viewer's followed people lists from, or `null`
+/// while `FeatureFlag.curatedLists` is off.
+///
+/// The flag is the master switch for people lists. With it off, the screens
+/// that follow and unfollow a list are out of reach, so a followed list left in
+/// Home's feed selector could be neither refreshed nor removed. Home then
+/// behaves as it did before lists could be followed, and a saved selection
+/// waits for the flag to come back.
+final Provider<PeopleListsRepository?> homePeopleListsRepositoryProvider =
+    Provider<PeopleListsRepository?>((ref) {
+      if (!ref.watch(isFeatureEnabledProvider(FeatureFlag.curatedLists))) {
+        return null;
+      }
+      return ref.watch(peopleListsRepositoryProvider);
+    });

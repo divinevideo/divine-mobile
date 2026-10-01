@@ -15,7 +15,10 @@ class _MockPeopleListsRepository extends Mock implements PeopleListsRepository {
     // Attaching an owner also refreshes the lists they follow. The tests about
     // that refresh verify it; every other test only needs it to complete.
     when(
-      () => syncFollowedLists(viewerPubkey: any(named: 'viewerPubkey')),
+      () => syncFollowedLists(
+        viewerPubkey: any(named: 'viewerPubkey'),
+        isCancelled: any(named: 'isCancelled'),
+      ),
     ).thenAnswer((_) async {});
   }
 }
@@ -517,7 +520,10 @@ void main() {
       },
       verify: (_) {
         verify(
-          () => repository.syncFollowedLists(viewerPubkey: _ownerA),
+          () => repository.syncFollowedLists(
+            viewerPubkey: _ownerA,
+            isCancelled: any(named: 'isCancelled'),
+          ),
         ).called(1);
       },
     );
@@ -1589,6 +1595,7 @@ void main() {
         verifyNever(
           () => repository.syncFollowedLists(
             viewerPubkey: any(named: 'viewerPubkey'),
+            isCancelled: any(named: 'isCancelled'),
           ),
         );
         verifyNever(
