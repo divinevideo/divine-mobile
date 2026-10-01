@@ -6787,5 +6787,6 @@
   "listPermissionsUnconfirmed": "Không thể xác nhận thay đổi này. Hãy thử lại.",
   "listRecoveryPending": "Danh sách này có các thay đổi đang chờ đồng bộ.",
   "listPermissionsRecoveryPending": "Thay đổi đã được chấp nhận. Nhấn Đồng bộ ngay để hoàn tất lưu. Việc chỉnh sửa tạm dừng cho đến lúc đó.",
-  "listRecoveryReadOnly": "Một số thay đổi đã lưu trong danh sách video cần được khôi phục. Bạn có thể xem danh sách video, nhưng việc chỉnh sửa đang tạm dừng."
+  "listRecoveryReadOnly": "Một số thay đổi đã lưu trong danh sách video cần được khôi phục. Bạn có thể xem danh sách video, nhưng việc chỉnh sửa đang tạm dừng.",
+  "listAddToLists": "Thêm vào danh sách"
 }

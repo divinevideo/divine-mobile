@@ -13229,4 +13229,7 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get listRecoveryReadOnly =>
       'Vissa sparade ändringar i videolistor behöver återställas. Du kan visa videolistor, men redigeringen är pausad.';
+
+  @override
+  String get listAddToLists => 'Lägg till i listor';
 }

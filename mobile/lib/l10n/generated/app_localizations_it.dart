@@ -13384,4 +13384,7 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get listRecoveryReadOnly =>
       'Alcune modifiche salvate alle liste di video devono essere recuperate. Puoi vedere le liste di video, ma la modifica è sospesa.';
+
+  @override
+  String get listAddToLists => 'Aggiungi alle liste';
 }

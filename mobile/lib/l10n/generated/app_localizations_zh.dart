@@ -12418,4 +12418,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get listRecoveryReadOnly => '视频列表中保存的部分更改需要恢复。你可以查看视频列表，但编辑已暂停。';
+
+  @override
+  String get listAddToLists => '加入列表';
 }

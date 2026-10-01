@@ -13314,4 +13314,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get listRecoveryReadOnly =>
       'Some saved changes to video lists need recovery. You can view video lists, but editing is paused.';
+
+  @override
+  String get listAddToLists => 'Add to lists';
 }

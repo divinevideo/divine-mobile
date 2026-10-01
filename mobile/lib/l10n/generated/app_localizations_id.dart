@@ -13129,4 +13129,7 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get listRecoveryReadOnly =>
       'Beberapa perubahan tersimpan pada daftar video perlu dipulihkan. Kamu bisa melihat daftar video, tetapi pengeditan dijeda.';
+
+  @override
+  String get listAddToLists => 'Tambahkan ke daftar';
 }

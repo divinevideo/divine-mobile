@@ -13565,4 +13565,7 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get listRecoveryReadOnly =>
       'వీడియో జాబితాల్లో సేవ్ చేసిన కొన్ని మార్పులను పునరుద్ధరించాలి. మీరు వీడియో జాబితాలను చూడవచ్చు, కానీ సవరించడం తాత్కాలికంగా నిలిపివేయబడింది.';
+
+  @override
+  String get listAddToLists => 'జాబితాలకు జోడించండి';
 }

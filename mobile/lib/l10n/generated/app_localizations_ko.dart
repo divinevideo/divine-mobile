@@ -12583,4 +12583,7 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get listRecoveryReadOnly =>
       '동영상 목록에 저장된 일부 변경 사항을 복구해야 해요. 동영상 목록은 볼 수 있지만 편집은 잠시 중단돼요.';
+
+  @override
+  String get listAddToLists => '목록에 추가';
 }

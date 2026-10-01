@@ -13352,4 +13352,7 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get listRecoveryReadOnly =>
       'Някои запазени промени във видеосписъците трябва да бъдат възстановени. Можеш да разглеждаш видеосписъците, но редактирането е временно спряно.';
+
+  @override
+  String get listAddToLists => 'Добави към списъци';
 }

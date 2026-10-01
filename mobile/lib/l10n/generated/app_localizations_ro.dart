@@ -13493,4 +13493,7 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get listRecoveryReadOnly =>
       'Unele modificări salvate în listele de videoclipuri trebuie recuperate. Poți vedea listele de videoclipuri, dar editarea este suspendată.';
+
+  @override
+  String get listAddToLists => 'Adaugă la liste';
 }

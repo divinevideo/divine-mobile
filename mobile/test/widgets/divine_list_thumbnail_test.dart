@@ -295,6 +295,34 @@ void main() {
         expect(border.color, VineTheme.darkColors.surface);
       });
 
+      testWidgets('the media block alone drops the badge when asked', (
+        tester,
+      ) async {
+        Widget media({required bool showCount}) => ProviderScope(
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: SizedBox(
+                width: 177,
+                child: DivineListMedia.videos(
+                  thumbnailUrls: const [],
+                  videoCount: 3,
+                  showCount: showCount,
+                ),
+              ),
+            ),
+          ),
+        );
+
+        // The positive control: with the badge, the same media draws "3".
+        await tester.pumpWidget(media(showCount: true));
+        expect(find.text('3'), findsOneWidget);
+
+        await tester.pumpWidget(media(showCount: false));
+        expect(find.text('3'), findsNothing);
+      });
+
       testWidgets('renders the video count badge', (tester) async {
         await tester.pumpWidget(
           buildSubject(

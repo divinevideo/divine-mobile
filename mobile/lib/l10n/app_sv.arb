@@ -5027,5 +5027,6 @@
     "listPermissionsUnconfirmed": "Det gick inte att bekräfta ändringen. Försök igen.",
     "listRecoveryPending": "Den här listan har ändringar som väntar på synkronisering.",
     "listPermissionsRecoveryPending": "Din ändring har godkänts. Tryck på Synkronisera nu för att slutföra sparandet. Redigering är pausad tills dess.",
-    "listRecoveryReadOnly": "Vissa sparade ändringar i videolistor behöver återställas. Du kan visa videolistor, men redigeringen är pausad."
+    "listRecoveryReadOnly": "Vissa sparade ändringar i videolistor behöver återställas. Du kan visa videolistor, men redigeringen är pausad.",
+    "listAddToLists": "Lägg till i listor"
 }

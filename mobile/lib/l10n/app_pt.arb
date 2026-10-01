@@ -5027,5 +5027,6 @@
     "listPermissionsUnconfirmed": "Não foi possível confirmar esta alteração. Tente novamente.",
     "listRecoveryPending": "Esta lista tem alterações aguardando sincronização.",
     "listPermissionsRecoveryPending": "Sua alteração foi aceita. Toque em Sincronizar agora para terminar de salvá-la. A edição está pausada até lá.",
-    "listRecoveryReadOnly": "Algumas alterações salvas nas listas de vídeos precisam ser recuperadas. Você pode ver as listas de vídeos, mas a edição está pausada."
+    "listRecoveryReadOnly": "Algumas alterações salvas nas listas de vídeos precisam ser recuperadas. Você pode ver as listas de vídeos, mas a edição está pausada.",
+    "listAddToLists": "Adicionar às listas"
 }

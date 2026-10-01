@@ -12885,4 +12885,7 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get listRecoveryReadOnly =>
       'በቪዲዮ ዝርዝሮች ላይ የተቀመጡ አንዳንድ ለውጦች መመለስ ያስፈልጋቸዋል። የቪዲዮ ዝርዝሮችን ማየት ይችላሉ፣ ግን ማርትዕ ለጊዜው ቆሟል።';
+
+  @override
+  String get listAddToLists => 'ወደ ዝርዝሮች ያክሉ';
 }
