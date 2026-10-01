@@ -709,6 +709,62 @@ void main() {
         final stored = await repository.readLists(ownerPubkey: _ownerPubkey);
         expect(stored.single.name, 'Shared');
       });
+
+      test('waits for an add still publishing, so the rename carries the '
+          'member', () async {
+        // Without the per-list write chain the rename read the row before
+        // the add had landed, and its event reached the relay without the
+        // member while the cache kept the member and the old name.
+        final client = clientHolding(sharedList());
+        final addPublished = Completer<PublishResult>();
+        var publishes = 0;
+        when(() => client.publishEvent(any())).thenAnswer((invocation) {
+          final event = invocation.positionalArguments.first as Event;
+          publishes++;
+          if (publishes == 1) return addPublished.future;
+          return Future.value(PublishSuccess(event: event));
+        });
+        final repository = buildRepository(nostrClient: client);
+
+        final add = repository.addPubkey(
+          ownerPubkey: _ownerPubkey,
+          listId: 'shared-list',
+          pubkey: _memberB,
+        );
+        // The add reads the relay and the cache before it publishes.
+        for (var turns = 0; publishes == 0 && turns < 50; turns++) {
+          await pumpEventQueue();
+        }
+        expect(publishes, 1, reason: 'the add is on the wire');
+        final rename = repository.updateListInfo(
+          ownerPubkey: _ownerPubkey,
+          listId: 'shared-list',
+          name: 'Renamed',
+        );
+        await pumpEventQueue(times: 200);
+        expect(publishes, 1, reason: 'the rename waits for the add');
+
+        final addEvent =
+            verify(() => client.publishEvent(captureAny())).captured.single
+                as Event;
+        addPublished.complete(PublishSuccess(event: addEvent));
+        expect((await add).status, PeopleListPublishStatus.submitted);
+        expect((await rename).status, PeopleListPublishStatus.submitted);
+
+        final renameEvent =
+            verify(() => client.publishEvent(captureAny())).captured.single
+                as Event;
+        expect(
+          renameEvent.tags,
+          containsAll(const <List<String>>[
+            ['title', 'Renamed'],
+            ['p', _memberB],
+          ]),
+        );
+        final stored = await repository.readLists(ownerPubkey: _ownerPubkey);
+        expect(stored.single.name, 'Renamed');
+        expect(stored.single.pubkeys, containsAll(const [_memberA, _memberB]));
+      });
     });
 
     group('removePubkey', () {

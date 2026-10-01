@@ -47,8 +47,9 @@ typedef BlockedPeopleListOwnerFilter = bool Function(String ownerPubkey);
 /// no optimistic cache write is performed.
 ///
 /// Constructor injection only — the repository never resolves dependencies
-/// implicitly. All mutable state lives in the injected cache and follow store;
-/// the repository itself is effectively stateless.
+/// implicitly. Durable state lives in the injected cache and follow store;
+/// the one thing the instance holds is its in-flight write chain per list,
+/// so two instances over one cache do not order each other's writes.
 class PeopleListsRepositoryImpl implements PeopleListsRepository {
   /// Creates a repository bound to [nostrClient], [cache] and
   /// [followedListsStore].
@@ -204,6 +205,22 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     required String listId,
     required String name,
     String? description,
+  }) => _serializeListWrite(
+    ownerPubkey: ownerPubkey,
+    listId: listId,
+    () => _updateListInfo(
+      ownerPubkey: ownerPubkey,
+      listId: listId,
+      name: name,
+      description: description,
+    ),
+  );
+
+  Future<PeopleListPublishResult> _updateListInfo({
+    required String ownerPubkey,
+    required String listId,
+    required String name,
+    String? description,
   }) async {
     // A replacement built on a stale cache drops members only the relay has.
     if (!await _reconcileOwner(ownerPubkey)) {
@@ -258,6 +275,20 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     required String ownerPubkey,
     required String listId,
     required String pubkey,
+  }) => _serializeListWrite(
+    ownerPubkey: ownerPubkey,
+    listId: listId,
+    () => _addPubkey(
+      ownerPubkey: ownerPubkey,
+      listId: listId,
+      pubkey: pubkey,
+    ),
+  );
+
+  Future<PeopleListPublishResult> _addPubkey({
+    required String ownerPubkey,
+    required String listId,
+    required String pubkey,
   }) async {
     // A replacement built on a stale cache drops members only the relay has.
     if (!await _reconcileOwner(ownerPubkey)) {
@@ -298,6 +329,20 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     required String ownerPubkey,
     required String listId,
     required String pubkey,
+  }) => _serializeListWrite(
+    ownerPubkey: ownerPubkey,
+    listId: listId,
+    () => _removePubkey(
+      ownerPubkey: ownerPubkey,
+      listId: listId,
+      pubkey: pubkey,
+    ),
+  );
+
+  Future<PeopleListPublishResult> _removePubkey({
+    required String ownerPubkey,
+    required String listId,
+    required String pubkey,
   }) async {
     // A replacement built on a stale cache drops members only the relay has.
     if (!await _reconcileOwner(ownerPubkey)) {
@@ -335,6 +380,15 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
 
   @override
   Future<PeopleListPublishResult> deleteList({
+    required String ownerPubkey,
+    required String listId,
+  }) => _serializeListWrite(
+    ownerPubkey: ownerPubkey,
+    listId: listId,
+    () => _deleteList(ownerPubkey: ownerPubkey, listId: listId),
+  );
+
+  Future<PeopleListPublishResult> _deleteList({
     required String ownerPubkey,
     required String listId,
   }) async {
@@ -765,6 +819,38 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
             posted.contains(list.ownerPubkey.toLowerCase()))
           list,
     ];
+  }
+
+  /// One in-flight write per list, keyed by owner and list id.
+  ///
+  /// Every membership or info write reads the list, rebuilds its event and
+  /// publishes it, with awaits between. Two of them in flight at once build
+  /// from the same row, and the later publish drops the earlier change: a
+  /// rename saved while an add is still publishing would reach the relay
+  /// without the member. Writes to one list, its deletion included, therefore
+  /// run one after another, each starting from the row the previous one left.
+  final Map<String, Future<void>> _listWriteTails = {};
+
+  Future<T> _serializeListWrite<T>(
+    Future<T> Function() operation, {
+    required String ownerPubkey,
+    required String listId,
+  }) async {
+    final key = '$ownerPubkey:$listId';
+    final previous = _listWriteTails[key] ?? Future<void>.value();
+    final completed = Completer<void>();
+    final tail = completed.future;
+    _listWriteTails[key] = tail;
+    await previous;
+    try {
+      return await operation();
+    } finally {
+      completed.complete();
+      if (identical(_listWriteTails[key], tail)) {
+        // Map.remove returns the dropped tail; nothing waits on it here.
+        final _ = _listWriteTails.remove(key);
+      }
+    }
   }
 
   Future<PeopleListPublishResult> _publishListReplacement({
