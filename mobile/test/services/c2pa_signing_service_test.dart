@@ -472,6 +472,31 @@ void main() {
     });
 
     group('resignDerived', () {
+      test(
+        'does not contact the signer or change either file without a token',
+        () async {
+          final output = writeFile('out.mp4', const [1, 2, 3]);
+          final source = writeFile('src.mp4', const [4, 5, 6]);
+          final tokenless = C2paSigningService(
+            c2pa: mockC2pa,
+            signingToken: '',
+          );
+
+          final result = await tokenless.resignDerived(
+            outputPath: output.path,
+            sourcePath: source.path,
+            action: C2paEditActions.edited,
+          );
+
+          expect(result.success, isFalse);
+          expect(result.failureReason, C2paSigningFailureReason.missingToken);
+          expect(result.signedFilePath, output.path);
+          expect(output.readAsBytesSync(), equals([1, 2, 3]));
+          expect(source.readAsBytesSync(), equals([4, 5, 6]));
+          verifyZeroInteractions(mockC2pa);
+        },
+      );
+
       test('skips re-signing and leaves the file untouched when the source '
           'carries no manifest', () async {
         when(
