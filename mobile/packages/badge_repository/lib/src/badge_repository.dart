@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:badge_repository/src/badge_coordinate.dart';
 import 'package:badge_repository/src/nip58_badge_models.dart';
 import 'package:badge_repository/src/nip58_badge_parser.dart';
@@ -374,6 +376,8 @@ class BadgeRepository {
   /// A just-published subscription event may take a moment to appear in relay
   /// queries. Keep it until the relay supplies the same or a newer event.
   Event? _publishedSubscriptions;
+  final StreamController<void> _subscriptionChanges =
+      StreamController<void>.broadcast();
 
   static const _subscriptionsIdentifier = 'divine.badge_subscriptions';
 
@@ -563,8 +567,16 @@ class BadgeRepository {
       label: 'badge subscriptions',
       tags: tags,
     );
+    _subscriptionChanges.add(null);
     return Set.unmodifiable(current);
   }
+
+  /// Emits after this account saves a badge subscription change, so Following
+  /// can reload its merged authors without rebuilding other feeds.
+  Stream<void> get subscriptionChanges => _subscriptionChanges.stream;
+
+  /// Closes [subscriptionChanges].
+  Future<void> dispose() => _subscriptionChanges.close();
 
   Future<BadgeDashboardData> loadDashboard() async {
     final memo = _DashboardLookupMemo();

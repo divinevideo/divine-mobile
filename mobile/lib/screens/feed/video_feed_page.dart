@@ -91,9 +91,6 @@ class VideoFeedPage extends ConsumerWidget {
     final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
     final feedTuningRepository = ref.watch(feedTuningRepositoryProvider);
     final badgeRepository = ref.watch(badgeRepositoryProvider);
-    final badgeSubscriptionsRevision = ref.watch(
-      badgeSubscriptionsRevisionProvider,
-    );
     final enrichmentAttemptTracker = NostrTagEnrichmentAttemptTracker();
 
     return MultiBlocProvider(
@@ -103,7 +100,6 @@ class VideoFeedPage extends ConsumerWidget {
         contentFilterVersion,
         hashtagRepository,
         badgeRepository,
-        badgeSubscriptionsRevision,
       )),
       providers: [
         BlocProvider(
@@ -124,6 +120,7 @@ class VideoFeedPage extends ConsumerWidget {
                 feedTracker: ref.read(feedPerformanceTrackerProvider),
                 feedTuningRepository: feedTuningRepository,
                 badgeAuthors: badgeRepository.loadSubscribedHolders,
+                badgeSubscriptionChanges: badgeRepository.subscriptionChanges,
                 enrichVideos: (videos) => enrichVideosWithNostrTags(
                   videos,
                   nostrService: ref.read(nostrServiceProvider),

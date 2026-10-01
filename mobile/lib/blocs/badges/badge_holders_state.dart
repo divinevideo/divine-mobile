@@ -45,7 +45,6 @@ class BadgeHoldersState extends Equatable {
     this.holders = const [],
     this.subscriptionStatus = BadgeSubscriptionStatus.initial,
     this.isSubscribed = false,
-    this.subscriptionRevision = 0,
     this.saveFailures = 0,
   });
 
@@ -64,9 +63,6 @@ class BadgeHoldersState extends Equatable {
   /// Whether the viewer subscribes to this badge's holders.
   final bool isSubscribed;
 
-  /// Increments each time a subscription change is published.
-  final int subscriptionRevision;
-
   /// Increments each time a subscription change fails to publish.
   final int saveFailures;
 
@@ -76,7 +72,6 @@ class BadgeHoldersState extends Equatable {
     List<String>? holders,
     BadgeSubscriptionStatus? subscriptionStatus,
     bool? isSubscribed,
-    int? subscriptionRevision,
     int? saveFailures,
   }) {
     return BadgeHoldersState(
@@ -85,7 +80,6 @@ class BadgeHoldersState extends Equatable {
       holders: holders ?? this.holders,
       subscriptionStatus: subscriptionStatus ?? this.subscriptionStatus,
       isSubscribed: isSubscribed ?? this.isSubscribed,
-      subscriptionRevision: subscriptionRevision ?? this.subscriptionRevision,
       saveFailures: saveFailures ?? this.saveFailures,
     );
   }
@@ -97,7 +91,6 @@ class BadgeHoldersState extends Equatable {
     holders,
     subscriptionStatus,
     isSubscribed,
-    subscriptionRevision,
     saveFailures,
   ];
 }
