@@ -3796,11 +3796,11 @@
   },
   "videoMetadataC2paMissingTitle": "కంటెంట్ ఆధారాలు లేకుండా పోస్ట్ చేయాలా?",
   "@videoMetadataC2paMissingTitle": {
-    "description": "Title of a bottom sheet shown after rendering a video when the C2PA content-credential signature could not be created (e.g. offline). Asks whether to regenerate or post without provenance."
+    "description": "Title of a bottom sheet shown after rendering a video when the C2PA content-credential signature could not be created (e.g. offline). Asks whether to regenerate or post without the content credential. Do not say the video loses its Human-Made status: the device proof still provides it."
   },
   "videoMetadataC2paMissingBody": "ఈ వీడియోకు మేము కంటెంట్ ఆధారాలను జోడించలేకపోయాము. మళ్లీ ప్రయత్నించడానికి రీజెనరేట్ చేయండి లేదా దాన్ని అలాగే పోస్ట్ చేయండి.",
   "@videoMetadataC2paMissingBody": {
-    "description": "Body text of the bottom sheet warning that a video will be published without a C2PA content credential, meaning it will not be verifiably confirmed as human-made."
+    "description": "Body text of the bottom sheet warning that a video will be published without a C2PA content credential embedded in the file. The Human-Made badge comes from the device proof and is unaffected, so do not mention it."
   },
   "videoMetadataC2paMissingNote": "కంటెంట్ ఆధారాలకు ఇంటర్నెట్ కనెక్షన్ అవసరం.",
   "@videoMetadataC2paMissingNote": {
@@ -3815,13 +3815,13 @@
     "description": "Primary button on the missing-content-credential bottom sheet. Re-renders the video to attempt the C2PA signature again."
   },
   "videoMetadataC2paMissingSkip": "దాటవేయి",
+  "@videoMetadataC2paMissingSkip": {
+    "description": "Secondary button on the missing-content-credential bottom sheet. Dismisses the prompt and continues without a C2PA content credential, so the user can post the video without provenance."
+  },
   "videoMetadataC2paUnavailableTitle": "ఈ వెర్షన్‌లో కంటెంట్ ఆధారాలు లేవు",
   "videoMetadataC2paUnavailableBody": "ఈ Divine వెర్షన్ మీ వీడియోలలో కంటెంట్ ఆధారాలను జోడించలేదు. మీరు వాటిని ఎప్పటిలాగే పోస్ట్ చేయవచ్చు.",
   "videoMetadataC2paUnavailableNoteAndroid": "కంటెంట్ ఆధారాలను జోడించడానికి Zapstore లేదా Google Play నుండి Divineని ఇన్‌స్టాల్ చేయండి.",
   "videoMetadataC2paUnavailableNoteIos": "కంటెంట్ ఆధారాలను జోడించడానికి App Store నుండి Divineని ఇన్‌స్టాల్ చేయండి.",
-  "@videoMetadataC2paMissingSkip": {
-    "description": "Secondary button on the missing-content-credential bottom sheet. Dismisses the prompt and continues without a C2PA content credential, so the user can post the video without provenance."
-  },
   "videoMetadataGenerationFailed": "జనరేషన్ విఫలమైంది",
   "@videoMetadataGenerationFailed": {
     "description": "Warning shown over the metadata screen preview when rendering (generating) the final video failed and no clip was produced. Sits above a retry icon button."

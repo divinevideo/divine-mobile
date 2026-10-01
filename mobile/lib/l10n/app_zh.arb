@@ -3200,11 +3200,11 @@
   },
   "videoMetadataC2paMissingTitle": "不带内容凭证就发布？",
   "@videoMetadataC2paMissingTitle": {
-    "description": "Title of a bottom sheet shown after rendering a video when the C2PA content-credential signature could not be created (e.g. offline). Asks whether to regenerate or post without provenance."
+    "description": "Title of a bottom sheet shown after rendering a video when the C2PA content-credential signature could not be created (e.g. offline). Asks whether to regenerate or post without the content credential. Do not say the video loses its Human-Made status: the device proof still provides it."
   },
   "videoMetadataC2paMissingBody": "我们没能为该视频添加内容凭证。重新生成再试一次，或者就这样发布。",
   "@videoMetadataC2paMissingBody": {
-    "description": "Body text of the bottom sheet warning that a video will be published without a C2PA content credential, meaning it will not be verifiably confirmed as human-made."
+    "description": "Body text of the bottom sheet warning that a video will be published without a C2PA content credential embedded in the file. The Human-Made badge comes from the device proof and is unaffected, so do not mention it."
   },
   "videoMetadataC2paMissingNote": "添加内容凭证需要网络连接。",
   "@videoMetadataC2paMissingNote": {
@@ -3216,13 +3216,13 @@
     "description": "Primary button on the missing-content-credential bottom sheet. Re-renders the video to attempt the C2PA signature again."
   },
   "videoMetadataC2paMissingSkip": "跳过",
+  "@videoMetadataC2paMissingSkip": {
+    "description": "Secondary button on the missing-content-credential bottom sheet. Dismisses the prompt and continues without a C2PA content credential, so the user can post the video without provenance."
+  },
   "videoMetadataC2paUnavailableTitle": "此版本没有内容凭证",
   "videoMetadataC2paUnavailableBody": "这个版本的 Divine 无法在你的视频中嵌入内容凭证。你仍然可以照常发布。",
   "videoMetadataC2paUnavailableNoteAndroid": "从 Zapstore 或 Google Play 安装 Divine，即可添加内容凭证。",
   "videoMetadataC2paUnavailableNoteIos": "从 App Store 安装 Divine，即可添加内容凭证。",
-  "@videoMetadataC2paMissingSkip": {
-    "description": "Secondary button on the missing-content-credential bottom sheet. Dismisses the prompt and continues without a C2PA content credential, so the user can post the video without provenance."
-  },
   "videoMetadataGenerationFailed": "生成失败",
   "@videoMetadataGenerationFailed": {
     "description": "Warning shown over the metadata screen preview when rendering (generating) the final video failed and no clip was produced. Sits above a retry icon button."
