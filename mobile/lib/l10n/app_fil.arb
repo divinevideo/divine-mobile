@@ -3841,5 +3841,20 @@
       }
     }
   },
-  "peopleListsViewAllMembers": "Tingnan lahat"
+  "peopleListsViewAllMembers": "Tingnan lahat",
+  "listMemberNamesSeparator": ", ",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Pribado, {count}} other{{name}, {count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

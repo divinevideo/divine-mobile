@@ -4973,5 +4973,20 @@
       }
     }
   },
-  "peopleListsViewAllMembers": "Виж всички"
+  "peopleListsViewAllMembers": "Виж всички",
+  "listMemberNamesSeparator": ", ",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Частен, {count}} other{{name}, {count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

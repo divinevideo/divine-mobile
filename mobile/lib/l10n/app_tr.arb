@@ -4849,5 +4849,20 @@
       }
     }
   },
-  "peopleListsViewAllMembers": "Tümünü gör"
+  "peopleListsViewAllMembers": "Tümünü gör",
+  "listMemberNamesSeparator": ", ",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Özel, {count}} other{{name}, {count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

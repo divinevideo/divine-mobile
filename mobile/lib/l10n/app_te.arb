@@ -8388,5 +8388,20 @@
       }
     }
   },
-  "peopleListsViewAllMembers": "అన్నీ చూడండి"
+  "peopleListsViewAllMembers": "అన్నీ చూడండి",
+  "listMemberNamesSeparator": ", ",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, ప్రైవేట్, {count}} other{{name}, {count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

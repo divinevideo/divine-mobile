@@ -4849,5 +4849,20 @@
       }
     }
   },
-  "peopleListsViewAllMembers": "Vedi tutti"
+  "peopleListsViewAllMembers": "Vedi tutti",
+  "listMemberNamesSeparator": ", ",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Privata, {count}} other{{name}, {count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -4849,5 +4849,20 @@
       }
     }
   },
-  "peopleListsViewAllMembers": "すべて見る"
+  "peopleListsViewAllMembers": "すべて見る",
+  "listMemberNamesSeparator": "、",
+  "listCardSemanticLabel": "{visibility, select, private{{name}、非公開、{count}} other{{name}、{count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

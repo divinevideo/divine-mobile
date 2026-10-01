@@ -4849,5 +4849,20 @@
       }
     }
   },
-  "peopleListsViewAllMembers": "Alles bekijken"
+  "peopleListsViewAllMembers": "Alles bekijken",
+  "listMemberNamesSeparator": ", ",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Privé, {count}} other{{name}, {count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

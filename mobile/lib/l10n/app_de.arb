@@ -4849,5 +4849,20 @@
       }
     }
   },
-  "peopleListsViewAllMembers": "Alle anzeigen"
+  "peopleListsViewAllMembers": "Alle anzeigen",
+  "listMemberNamesSeparator": ", ",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Privat, {count}} other{{name}, {count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }
