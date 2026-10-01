@@ -658,14 +658,17 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
       return;
     }
 
-    // Only this branch is a CTA: with a connection the row is ordinary use.
-    unawaited(
-      logCrosspostCtaTapped(
-        ref.read(analyticsEventSinkProvider),
-        surface: CrosspostCtaSurface.shareSheet,
-        cta: CrosspostCta.connect,
-      ),
-    );
+    // A CTA tap only when the CTA was shown: with a connection the row is
+    // ordinary use, and after a failed load nothing was exposed as a CTA.
+    if (state.status == VideoCrosspostStatus.ready) {
+      unawaited(
+        logCrosspostCtaTapped(
+          ref.read(analyticsEventSinkProvider),
+          surface: CrosspostCtaSurface.shareSheet,
+          cta: CrosspostCta.connect,
+        ),
+      );
+    }
     final container = ProviderScope.containerOf(context, listen: false);
     _safePop(context);
     await openCrosspostingSetup(container);

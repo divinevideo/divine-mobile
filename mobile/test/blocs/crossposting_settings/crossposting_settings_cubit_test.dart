@@ -379,6 +379,51 @@ void main() {
         expect(analytics.events.last.parameters['result'], 'failed');
       });
 
+      test(
+        'logs abandoned when Settings closes before OAuth returns',
+        () async {
+          final callback = Completer<Uri?>();
+          final cubit = buildCubit(launcher: (_) => callback.future);
+
+          final connect = cubit.connect(CrosspostingPlatform.instagram);
+          await pumpEventQueue();
+          await cubit.close();
+          callback.complete(callbackUri);
+          await connect;
+
+          expect(
+            analytics.events.map((event) => event.name),
+            ['crosspost_connect_started', 'crosspost_connect_result'],
+          );
+          expect(analytics.events.last.parameters['result'], 'abandoned');
+        },
+      );
+
+      test(
+        'keeps the OAuth result when Settings closes during the refresh',
+        () async {
+          final refreshed = Completer<List<CrosspostingPlatformSettings>>();
+          when(
+            () => repository.loadSettings(),
+          ).thenAnswer((_) => refreshed.future);
+          final cubit = buildCubit();
+
+          final connect = cubit.connect(CrosspostingPlatform.instagram);
+          await pumpEventQueue();
+          await cubit.close();
+          refreshed.complete(initialSettings);
+          await connect;
+
+          expect(
+            analytics.events.where(
+              (event) => event.name == 'crosspost_connect_result',
+            ),
+            hasLength(1),
+          );
+          expect(analytics.events.last.parameters['result'], 'connected');
+        },
+      );
+
       test('default OAuth nonces are random URL-safe values', () {
         final first = generateCrosspostingOAuthNonce();
         final second = generateCrosspostingOAuthNonce();

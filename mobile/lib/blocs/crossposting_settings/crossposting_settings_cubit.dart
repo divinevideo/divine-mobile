@@ -189,21 +189,34 @@ class CrosspostingSettingsCubit extends Cubit<CrosspostingSettingsState>
           );
         } catch (error, stackTrace) {
           callbackError = error;
+          logTerminalResult(CrosspostConnectResult.failed);
           if (isClosed) return;
           addError(error, stackTrace);
         }
       }
 
+      // Log before the refresh so leaving Settings mid-refresh keeps the
+      // result the browser session actually produced.
+      logTerminalResult(
+        switch ((callbackError, callback, outcome)) {
+          (Object(), _, _) => CrosspostConnectResult.failed,
+          (_, null, _) => CrosspostConnectResult.cancelled,
+          (_, _, CrosspostingOAuthOutcome.connected) =>
+            CrosspostConnectResult.connected,
+          (_, _, CrosspostingOAuthOutcome.denied) =>
+            CrosspostConnectResult.denied,
+          _ => CrosspostConnectResult.failed,
+        },
+      );
+
       final entries = await _repository.loadSettings();
       if (isClosed) return;
       if (callbackError != null) {
-        logTerminalResult(CrosspostConnectResult.failed);
         _emitActionError(CrosspostingSettingsError.generic, entries: entries);
         return;
       }
 
       if (callback == null) {
-        logTerminalResult(CrosspostConnectResult.cancelled);
         emitIfOpen(
           state.copyWith(
             entries: entries,
@@ -215,14 +228,6 @@ class CrosspostingSettingsCubit extends Cubit<CrosspostingSettingsState>
         return;
       }
 
-      logTerminalResult(
-        switch (outcome!) {
-          CrosspostingOAuthOutcome.connected =>
-            CrosspostConnectResult.connected,
-          CrosspostingOAuthOutcome.denied => CrosspostConnectResult.denied,
-          CrosspostingOAuthOutcome.failed => CrosspostConnectResult.failed,
-        },
-      );
       emitIfOpen(
         state.copyWith(
           entries: entries,
@@ -236,6 +241,8 @@ class CrosspostingSettingsCubit extends Cubit<CrosspostingSettingsState>
     } catch (error, stackTrace) {
       logTerminalResult(CrosspostConnectResult.failed);
       _reportError(error, stackTrace);
+    } finally {
+      logTerminalResult(CrosspostConnectResult.abandoned);
     }
   }
 

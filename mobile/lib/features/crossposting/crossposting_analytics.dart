@@ -36,7 +36,10 @@ enum CrosspostConnectResult {
   denied('denied'),
   failed('failed'),
   cancelled('cancelled'),
-  timedOut('timed_out');
+  timedOut('timed_out'),
+
+  /// The settings screen closed before the attempt reached a result.
+  abandoned('abandoned');
 
   const CrosspostConnectResult(this.wireName);
 

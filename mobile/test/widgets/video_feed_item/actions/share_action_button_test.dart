@@ -611,6 +611,40 @@ void main() {
             equals({'surface': 'share_sheet', 'cta': 'connect'}),
           );
         });
+
+        testWidgets(
+          'Crosspost after a failed connections load logs no CTA events',
+          (tester) async {
+            final goRouter = MockGoRouter();
+            when(
+              () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+            ).thenAnswer((_) async {});
+            final sink = _RecordingAnalyticsSink();
+            final client = _MockCrosspostingApiClient();
+            when(
+              client.getConnections,
+            ).thenThrow(const CrosspostingApiException('offline'));
+
+            await pumpOwnerSheet(
+              tester,
+              goRouter: goRouter,
+              additionalOverrides: [
+                appOAuthSupportProvider.overrideWith((ref) async => true),
+                analyticsEventSinkProvider.overrideWithValue(sink),
+                crossposterApiClientProvider.overrideWithValue(client),
+              ],
+            );
+
+            await tester.tap(find.text(l10n.shareSheetCrosspost));
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 100));
+
+            verify(
+              () => goRouter.push<void>(RoutePaths.crosspostingSettings),
+            ).called(1);
+            expect(sink.events, isEmpty);
+          },
+        );
       });
 
       group('recipient selection', () {
