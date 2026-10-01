@@ -327,6 +327,54 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
   });
 
   @override
+  Future<PeopleListPublishResult> updateListInfo({
+    required String ownerPubkey,
+    required String listId,
+    required String name,
+    String? description,
+  }) => _serializeMutation(ownerPubkey, () async {
+    final title = name.trim();
+    final summary = description?.trim() ?? '';
+    if (title.isEmpty) return _refuse(listId, 'the title is empty');
+    if (!await _reconcileOwner(ownerPubkey)) {
+      return _refuse(listId, 'the owner read was inconclusive');
+    }
+    final record = await _findList(ownerPubkey: ownerPubkey, listId: listId);
+    if (record == null) return _refuse(listId, 'the list is not cached');
+    if (!record.hasPublishSource) {
+      return _refuse(
+        listId,
+        'the cached row predates source preservation, so no complete '
+        'replacement can be built from it',
+      );
+    }
+    final existing = record.list;
+    if (existing.name == title && (existing.description ?? '') == summary) {
+      return const PeopleListPublishResult.noop();
+    }
+    final updated = existing.copyWith(
+      name: title,
+      description: summary.isEmpty ? null : summary,
+      clearDescription: summary.isEmpty,
+    );
+    // The info editor preserves metadata positions as well as every untouched
+    // source tag. Publication uses the existing acknowledged publisher, which
+    // owns the monotonic revision and caches the final signed event only.
+    final payload = Nip51PeopleListCodec.encodeInfoEdit(
+      updated,
+      sourceTags: record.sourceTags!,
+      sourceContent: record.sourceContent!,
+    );
+    return _publishListReplacement(
+      ownerPubkey: ownerPubkey,
+      list: updated,
+      previous: existing,
+      sourceTags: payload.tags,
+      sourceContent: payload.content,
+    );
+  });
+
+  @override
   Future<PeopleListPublishResult> addPubkey({
     required String ownerPubkey,
     required String listId,

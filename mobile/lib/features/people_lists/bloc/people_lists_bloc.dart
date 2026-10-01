@@ -180,6 +180,13 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
             return;
           }
           await _onUpdateRequested(request, emit);
+        case final PeopleListsInfoUpdateRequested request:
+          if (request.expectedOwnerPubkey.isEmpty ||
+              request.expectedOwnerPubkey != operation.owner) {
+            operation.completion.complete(PeopleListsOperationResult.cancelled);
+            return;
+          }
+          await _onInfoUpdateRequested(request, emit);
         case final PeopleListsDeleteRequested request:
           await _onDeleteRequested(request, emit);
         case final PeopleListsPubkeyAddRequested request:
@@ -570,6 +577,40 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
     emit(_withMutation(state, mutation, status: PeopleListsStatus.submitting));
     try {
       final result = await _repository.updateList(
+        ownerPubkey: owner,
+        listId: event.listId,
+        name: event.name,
+        description: event.description,
+      );
+      if (!_resultStillApplies(mutation, owner)) return;
+      emit(
+        _withoutMutation(
+          state,
+          mutation.id,
+          failed: result.status == PeopleListPublishStatus.failed,
+          resultEventId: result.eventId,
+        ),
+      );
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
+      if (!_resultStillApplies(mutation, owner)) return;
+      emit(_withoutMutation(state, mutation.id, failed: true));
+    }
+  }
+
+  Future<void> _onInfoUpdateRequested(
+    PeopleListsInfoUpdateRequested event,
+    Emitter<PeopleListsState> emit,
+  ) async {
+    final owner = state.activeOwnerPubkey;
+    if (owner == null || owner != event.expectedOwnerPubkey) return;
+    final mutation = _buildMutation(
+      PeopleListsMutationKind.updateList,
+      listId: event.listId,
+    );
+    emit(_withMutation(state, mutation, status: PeopleListsStatus.submitting));
+    try {
+      final result = await _repository.updateListInfo(
         ownerPubkey: owner,
         listId: event.listId,
         name: event.name,

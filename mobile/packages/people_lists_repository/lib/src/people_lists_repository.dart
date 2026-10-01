@@ -53,6 +53,19 @@ abstract interface class PeopleListsRepository {
     required String description,
   });
 
+  /// Updates the list's name and optional description while preserving all
+  /// other source tags, their positions, and opaque content.
+  ///
+  /// An absent or blank [description] removes that tag. Writes share the
+  /// owner's acknowledged mutation queue with [updateList] and membership
+  /// edits. Returns [PeopleListPublishStatus.noop] when neither value changes.
+  Future<PeopleListPublishResult> updateListInfo({
+    required String ownerPubkey,
+    required String listId,
+    required String name,
+    String? description,
+  });
+
   /// Adds [pubkey] to the list identified by [listId] and publishes the
   /// replacement event.
   ///

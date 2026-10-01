@@ -15,6 +15,7 @@ import 'package:openvine/features/people_lists/bloc/people_list_follow_cubit.dar
 import 'package:openvine/features/people_lists/bloc/people_list_members_cubit.dart';
 import 'package:openvine/features/people_lists/people_lists.dart';
 import 'package:openvine/features/people_lists/view/people_list_hero_header.dart';
+import 'package:openvine/features/people_lists/view/people_list_info_sheet.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
@@ -33,7 +34,7 @@ import 'package:openvine/widgets/share_list_button.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Owner actions offered by the `...` bottom sheet.
-enum _PeopleListAction { addPeople, edit, delete, report }
+enum _PeopleListAction { editInfo, addPeople, delete, report }
 
 /// Screen that renders a single NIP-51 kind 30000 people list.
 ///
@@ -424,17 +425,18 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
       scrollable: false,
       children: [
         ListOwnerActionTile(
+          identifier: 'people_list_edit_info_option',
+          label: context.l10n.listEditInfoAction,
+          icon: DivineIconName.info,
+          action: _PeopleListAction.editInfo,
+        ),
+        ListOwnerActionTile(
           identifier: 'people_list_add_people_option',
           label: context.l10n.peopleListsAddPeopleTooltip,
           icon: DivineIconName.userPlus,
           action: _PeopleListAction.addPeople,
         ),
-        ListOwnerActionTile(
-          identifier: 'people_list_edit_option',
-          label: context.l10n.listEditInfoAction,
-          icon: DivineIconName.pencilSimple,
-          action: _PeopleListAction.edit,
-        ),
+
         ListOwnerActionTile(
           identifier: 'people_list_delete_option',
           label: context.l10n.listDeleteAction,
@@ -449,15 +451,11 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
       return;
     }
     switch (action) {
+      case _PeopleListAction.editInfo:
+        await showPeopleListInfoSheet(context, list: userList);
       case _PeopleListAction.addPeople:
         _navigateToAddPeople(userList.id);
-      case _PeopleListAction.edit:
-        runDetached(
-          context.push<void>(RoutePaths.peopleListEditForId(userList.id)),
-          'edit people list',
-          logName: 'UserListPeopleScreen',
-          category: LogCategory.ui,
-        );
+
       case _PeopleListAction.delete:
         await _confirmDeleteList(userList);
       case _PeopleListAction.report:
@@ -552,11 +550,9 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
                 switch (action) {
                   case _PeopleListAction.addPeople:
                     _navigateToAddPeople(userList.id);
-                  case _PeopleListAction.edit:
+                  case _PeopleListAction.editInfo:
                     runDetached(
-                      context.push<void>(
-                        RoutePaths.peopleListEditForId(userList.id),
-                      ),
+                      showPeopleListInfoSheet(context, list: userList),
                       'edit people list',
                       logName: 'UserListPeopleScreen',
                       category: LogCategory.ui,
@@ -1017,7 +1013,7 @@ class _PeopleListActionsMenu extends StatelessWidget {
               _PeopleListAction.addPeople => Text(
                 context.l10n.peopleListsAddPeopleTooltip,
               ),
-              _PeopleListAction.edit => Text(context.l10n.listEditInfoAction),
+              _PeopleListAction.editInfo => Text(context.l10n.listEditInfoAction),
               _PeopleListAction.delete => Text(
                 context.l10n.listDeleteAction,
                 style: TextStyle(color: context.vineColors.primaryText),
