@@ -40,8 +40,9 @@ const _largeTileFraction = 0.661;
 /// One list rendered as a gallery thumbnail card: media block on top, then
 /// a fixed-height title/description footer.
 ///
-/// The profile and search galleries share the media box, seams, badge,
-/// and footer metrics. The two variants differ only in the media block:
+/// Every surface that shows a list card instantiates this widget, so its
+/// appearance — media box, seams, badge, footer metrics — changes in one
+/// place. The two variants differ only in the media block:
 ///
 /// * [DivineListThumbnail.videos] fans out up to five video thumbnails with
 ///   a play-count badge.
@@ -66,7 +67,7 @@ class DivineListThumbnail extends StatelessWidget {
        _kind = _ListKind.videos,
        _memberPubkeys = const [],
        _resolveDescriptionMentions = true,
-       _media = _VideoFanMedia(
+       _media = DivineListMedia.videos(
          thumbnailUrls: curatedList.thumbnailUrls,
          videoCount: curatedList.videoEventIds.length,
          pending: thumbnailsPending,
@@ -89,9 +90,9 @@ class DivineListThumbnail extends StatelessWidget {
        _kind = _ListKind.people,
        _memberPubkeys = showMemberIdentities ? userList.pubkeys : const [],
        _resolveDescriptionMentions = showMemberIdentities,
-       _media = _PeopleCollageMedia(
-         memberPubkeys: showMemberIdentities ? userList.pubkeys : const [],
-         memberCount: userList.pubkeys.length,
+       _media = DivineListMedia.people(
+         memberPubkeys: userList.pubkeys,
+         showMemberIdentities: showMemberIdentities,
        );
 
   final String name;
@@ -174,6 +175,71 @@ class DivineListThumbnail extends StatelessWidget {
 
 enum _ListKind { videos, people }
 
+/// A list card's media block on its own: the video fan or the people
+/// collage, at whatever width its parent gives it, 177:120.
+///
+/// The card renders it above its footer; the list pickers render it small
+/// at the start of a row, without the count badge, since the row's own
+/// line carries the count.
+class DivineListMedia extends StatelessWidget {
+  /// The fan of up to five video thumbnails.
+  ///
+  /// [pending] says the thumbnails are still being resolved, so empty slots
+  /// a video could still fill shimmer instead of sitting flat.
+  const DivineListMedia.videos({
+    required List<String> thumbnailUrls,
+    required int videoCount,
+    bool pending = false,
+    this.showCount = true,
+    super.key,
+  }) : _thumbnailUrls = thumbnailUrls,
+       _count = videoCount,
+       _pending = pending,
+       _memberPubkeys = const [],
+       _kind = _ListKind.videos;
+
+  /// The collage of up to three member avatars.
+  ///
+  /// Set [showMemberIdentities] false for public previews that keep identities
+  /// unresolved while preserving the actual member count.
+  const DivineListMedia.people({
+    required List<String> memberPubkeys,
+    bool showMemberIdentities = true,
+    this.showCount = true,
+    super.key,
+  }) : _thumbnailUrls = const [],
+       _count = memberPubkeys.length,
+       _pending = false,
+       _memberPubkeys = showMemberIdentities ? memberPubkeys : const [],
+       _kind = _ListKind.people;
+
+  /// Whether the count badge sits in the bottom-left corner.
+  final bool showCount;
+
+  final List<String> _thumbnailUrls;
+  final int _count;
+  final bool _pending;
+  final List<String> _memberPubkeys;
+  final _ListKind _kind;
+
+  @override
+  Widget build(BuildContext context) {
+    return switch (_kind) {
+      _ListKind.videos => _VideoFanMedia(
+        thumbnailUrls: _thumbnailUrls,
+        videoCount: _count,
+        pending: _pending,
+        showCount: showCount,
+      ),
+      _ListKind.people => _PeopleCollageMedia(
+        memberPubkeys: _memberPubkeys,
+        memberCount: _count,
+        showCount: showCount,
+      ),
+    };
+  }
+}
+
 /// Overlapping portrait cards arranged left-to-right.
 ///
 /// Renders [_fanSlotCount] cards where the leftmost card has the highest
@@ -184,10 +250,12 @@ class _VideoFanMedia extends StatelessWidget {
     required this.thumbnailUrls,
     required this.videoCount,
     required this.pending,
+    required this.showCount,
   });
 
   final List<String> thumbnailUrls;
   final int videoCount;
+  final bool showCount;
 
   /// The resolver has not returned yet: empty slots that a video could
   /// still fill shimmer as bones.
@@ -208,7 +276,9 @@ class _VideoFanMedia extends StatelessWidget {
           }
           return Skeleton.keep(child: _FanSlot(imageUrl: url));
         },
-        badge: _CountBadge(icon: DivineIconName.play, count: videoCount),
+        badge: showCount
+            ? _CountBadge(icon: DivineIconName.play, count: videoCount)
+            : null,
       ),
     );
   }
@@ -315,10 +385,12 @@ class _PeopleCollageMedia extends ConsumerWidget {
   const _PeopleCollageMedia({
     required this.memberPubkeys,
     required this.memberCount,
+    required this.showCount,
   });
 
   final List<String> memberPubkeys;
   final int memberCount;
+  final bool showCount;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -357,7 +429,9 @@ class _PeopleCollageMedia extends ConsumerWidget {
             ),
           );
         },
-        badge: _CountBadge(icon: DivineIconName.users, count: memberCount),
+        badge: showCount
+            ? _CountBadge(icon: DivineIconName.users, count: memberCount)
+            : null,
       ),
     );
   }

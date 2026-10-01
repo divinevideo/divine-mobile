@@ -44,11 +44,11 @@ import 'package:openvine/utils/owner_video_cleanup_feedback.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/utils/watermark_text_resolver.dart';
-import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/crosspost_sheet.dart';
 import 'package:openvine/widgets/find_people_sheet.dart';
 import 'package:openvine/widgets/owner_video_delete_confirmation_dialog.dart';
 import 'package:openvine/widgets/save_original_progress_sheet.dart';
+import 'package:openvine/widgets/select_list_sheet/select_list_sheet.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/user_name.dart';
 import 'package:openvine/widgets/video_feed_item/actions/actions.dart';
@@ -535,13 +535,10 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
 
   void _handleAddToList() {
     _runShareDetached(
-      _presentAfterDismiss<void>((hostContext) {
-        return showDialog<void>(
-          context: hostContext,
-          builder: (context) => SelectListDialog(video: widget.video),
-        );
-      }),
-      'present add-to-list dialog',
+      _presentAfterDismiss<void>(
+        (hostContext) => showSelectListSheet(hostContext, video: widget.video),
+      ),
+      'present list picker sheet',
     );
   }
 

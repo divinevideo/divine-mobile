@@ -1,232 +1,113 @@
-// ABOUTME: Widget tests for PeopleListRow toggle affordance.
-// ABOUTME: Verifies checkbox state, theming, and event dispatch on tap.
+// ABOUTME: Widget tests for PeopleListRow: the list's collage, name and
+// ABOUTME: member count, the check while picked, and the pick toggled on tap.
 
-import 'dart:async';
-
-import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
-import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
-import 'package:openvine/features/people_lists/models/people_list_entry_point.dart';
+import 'package:openvine/features/people_lists/bloc/people_list_picks_cubit.dart';
 import 'package:openvine/features/people_lists/view/widgets/people_list_row.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/widgets/divine_list_thumbnail.dart';
+import 'package:openvine/widgets/list_picker_row.dart';
 
-class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
-    implements PeopleListsBloc {}
+import '../../../../helpers/test_provider_overrides.dart';
 
 // Full-length Nostr pubkeys — never truncate.
-const String _ownerPubkey =
-    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-const String _targetPubkey =
+const String _memberPubkey =
     'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 const String _otherPubkey =
     'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
-
 final DateTime _frozenNow = DateTime.utc(2026, 4, 20, 12);
 
-UserList _buildList({
-  required String id,
-  required String name,
-  List<String> pubkeys = const [],
-}) {
-  return UserList(
-    id: id,
-    name: name,
-    pubkeys: pubkeys,
-    createdAt: _frozenNow,
-    updatedAt: _frozenNow,
-  );
-}
+UserList _buildList({List<String> pubkeys = const []}) => UserList(
+  id: 'list-1',
+  name: 'Close Friends',
+  pubkeys: pubkeys,
+  createdAt: _frozenNow,
+  updatedAt: _frozenNow,
+);
 
-PeopleListsState _stateWith({
-  required List<UserList> lists,
-}) {
-  final reverseIndex = <String, Set<String>>{};
-  for (final list in lists) {
-    for (final pk in list.pubkeys) {
-      (reverseIndex[pk] ??= <String>{}).add(list.id);
-    }
-  }
-  return PeopleListsState(
-    status: PeopleListsStatus.ready,
-    ownerPubkey: _ownerPubkey,
-    lists: lists,
-    listIdsByPubkey: reverseIndex,
-  );
-}
+Finder _check() => find.byWidgetPredicate(
+  (widget) => widget is DivineIcon && widget.icon == DivineIconName.check,
+);
 
 void main() {
-  setUpAll(() {
-    registerFallbackValue(
-      const PeopleListsPubkeyToggleRequested(
-        listId: 'fallback',
-        pubkey:
-            '0000000000000000000000000000000000000000000000000000000000000000',
-      ),
-    );
-  });
-
   group(PeopleListRow, () {
-    late _MockPeopleListsBloc bloc;
+    final l10n = lookupAppLocalizations(const Locale('en'));
+    late PeopleListPicksCubit cubit;
 
     setUp(() {
-      bloc = _MockPeopleListsBloc();
-      when(() => bloc.submit(any()))
-          .thenAnswer((_) async => PeopleListsOperationResult.succeeded);
+      cubit = PeopleListPicksCubit(memberListIds: const {});
     });
 
-    tearDown(() async {
-      await bloc.close();
-    });
+    tearDown(() => cubit.close());
 
-    Widget buildSubject({
-      required UserList list,
-      required String pubkey,
-      PeopleListEntryPoint entryPoint = PeopleListEntryPoint.shareMenu,
-    }) {
-      return MaterialApp(
+    Widget buildSubject(UserList list) => ProviderScope(
+      overrides: getStandardTestOverrides(),
+      child: MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
-          body: BlocProvider<PeopleListsBloc>.value(
-            value: bloc,
-            child: PeopleListRow(
-              listId: list.id,
-              listName: list.name,
-              pubkey: pubkey,
-              entryPoint: entryPoint,
-            ),
+          body: BlocProvider<PeopleListPicksCubit>.value(
+            value: cubit,
+            child: PeopleListRow(list: list),
           ),
         ),
-      );
-    }
+      ),
+    );
 
-    testWidgets('shows pending and retryable failure for its own toggle', (
+    testWidgets('renders the name, the member count and the collage', (
       tester,
     ) async {
-      final list = _buildList(id: 'crew', name: 'Crew');
-      final pending = Completer<PeopleListsOperationResult>();
-      when(() => bloc.state).thenReturn(_stateWith(lists: [list]));
-      when(() => bloc.submit(any())).thenAnswer((_) => pending.future);
-      await tester.pumpWidget(buildSubject(list: list, pubkey: _targetPubkey));
-      await tester.tap(find.text('Crew'));
-      await tester.pump();
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      await tester.tap(find.text('Crew'));
-      verify(() => bloc.submit(any())).called(1);
-      pending.complete(PeopleListsOperationResult.failed);
-      await tester.pumpAndSettle();
-      expect(
-        find.text(lookupAppLocalizations(const Locale('en')).listUpdateFailed),
-        findsOneWidget,
-      );
-      when(() => bloc.submit(any()))
-          .thenAnswer((_) async => PeopleListsOperationResult.succeeded);
-      await tester.tap(find.text('Crew'));
-      await tester.pumpAndSettle();
-      expect(
-        find.text(lookupAppLocalizations(const Locale('en')).listUpdateFailed),
-        findsNothing,
-      );
-    });
-
-    testWidgets('renders list name', (tester) async {
-      final list = _buildList(id: 'list-1', name: 'Close Friends');
-      when(() => bloc.state).thenReturn(_stateWith(lists: [list]));
-
       await tester.pumpWidget(
-        buildSubject(list: list, pubkey: _targetPubkey),
+        buildSubject(_buildList(pubkeys: const [_memberPubkey])),
       );
 
       expect(find.text('Close Friends'), findsOneWidget);
+      expect(find.text(l10n.listMemberCount(1)), findsOneWidget);
+      expect(find.byType(DivineListMedia), findsOneWidget);
+      expect(find.byType(ListPickerRow), findsOneWidget);
     });
 
-    testWidgets(
-      'shows selected checkbox when pubkey is a member of the list',
-      (tester) async {
-        final list = _buildList(
-          id: 'list-1',
-          name: 'Close Friends',
-          pubkeys: [_targetPubkey],
-        );
-        when(() => bloc.state).thenReturn(_stateWith(lists: [list]));
-
-        await tester.pumpWidget(
-          buildSubject(list: list, pubkey: _targetPubkey),
-        );
-
-        final checkbox = tester.widget<DivineSpriteCheckbox>(
-          find.byType(DivineSpriteCheckbox),
-        );
-        expect(checkbox.state, equals(DivineCheckboxState.selected));
-      },
-    );
-
-    testWidgets(
-      'shows unselected checkbox when pubkey is not a member',
-      (tester) async {
-        final list = _buildList(
-          id: 'list-1',
-          name: 'Close Friends',
-          pubkeys: [_otherPubkey],
-        );
-        when(() => bloc.state).thenReturn(_stateWith(lists: [list]));
-
-        await tester.pumpWidget(
-          buildSubject(list: list, pubkey: _targetPubkey),
-        );
-
-        final checkbox = tester.widget<DivineSpriteCheckbox>(
-          find.byType(DivineSpriteCheckbox),
-        );
-        expect(checkbox.state, equals(DivineCheckboxState.unselected));
-      },
-    );
-
-    testWidgets(
-      'tapping the row dispatches $PeopleListsPubkeyToggleRequested with the full pubkey',
-      (tester) async {
-        final list = _buildList(id: 'list-42', name: 'Close Friends');
-        when(() => bloc.state).thenReturn(_stateWith(lists: [list]));
-
-        await tester.pumpWidget(
-          buildSubject(list: list, pubkey: _targetPubkey),
-        );
-
-        await tester.tap(find.byType(PeopleListRow));
-        await tester.pump();
-
-        verify(
-          () => bloc.submit(
-            const PeopleListsPubkeyToggleRequested(
-              listId: 'list-42',
-              pubkey: _targetPubkey,
-            ),
-          ),
-        ).called(1);
-      },
-    );
-
-    testWidgets('uses $VineTheme typography for the list name', (
-      tester,
-    ) async {
-      final list = _buildList(id: 'list-1', name: 'Close Friends');
-      when(() => bloc.state).thenReturn(_stateWith(lists: [list]));
-
+    testWidgets('drops the count badge the gallery card draws, since the row '
+        'says the count itself', (tester) async {
+      // Two members: the card's badge would read "2" on its own, apart from
+      // the "2 members" line.
       await tester.pumpWidget(
-        buildSubject(list: list, pubkey: _targetPubkey),
+        buildSubject(_buildList(pubkeys: const [_memberPubkey, _otherPubkey])),
       );
 
-      final textWidget = tester.widget<Text>(find.text('Close Friends'));
-      // VineTheme.titleMediumFont applies an explicit style; assert a
-      // style is set and uses the onSurface color rather than locking to
-      // the weight-suffixed family name returned by the theme.
-      expect(textWidget.style, isNotNull);
-      expect(textWidget.style?.color, equals(VineTheme.onSurface));
+      expect(find.text(l10n.listMemberCount(2)), findsOneWidget);
+      expect(find.text('2'), findsNothing);
+    });
+
+    testWidgets('shows a check while the list is picked', (tester) async {
+      cubit.toggled('list-1');
+
+      await tester.pumpWidget(buildSubject(_buildList()));
+
+      expect(_check(), findsOneWidget);
+    });
+
+    testWidgets('shows no check while the list is not picked', (tester) async {
+      await tester.pumpWidget(buildSubject(_buildList()));
+
+      expect(_check(), findsNothing);
+    });
+
+    testWidgets('tapping toggles the pick without writing anything', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildSubject(_buildList()));
+
+      await tester.tap(find.text('Close Friends'));
+      await tester.pump();
+
+      expect(cubit.state.selectedListIds, {'list-1'});
+      expect(_check(), findsOneWidget);
     });
   });
 }

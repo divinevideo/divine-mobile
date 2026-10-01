@@ -24,15 +24,17 @@ import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
+import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/inbox/widgets/moderation_identity.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
 import 'package:openvine/services/crossposting_api_client.dart';
+import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/video_sharing_service.dart';
-import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/crosspost_sheet.dart';
+import 'package:openvine/widgets/select_list_sheet/select_list_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/actions/share_action_button.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod/misc.dart' show Override;
@@ -50,6 +52,20 @@ class _MockVideoSharingService extends Mock implements VideoSharingService {}
 
 class _MockCrosspostingApiClient extends Mock
     implements CrosspostingApiClient {}
+
+class _MockCuratedListService extends Mock implements CuratedListService {}
+
+/// Set before each test; read by [_FakeCuratedListsState].
+_MockCuratedListService? _fakeListService;
+
+/// Stands in for the real notifier, whose build would sync with relays.
+class _FakeCuratedListsState extends CuratedListsState {
+  @override
+  CuratedListService? get service => _fakeListService;
+
+  @override
+  Future<List<CuratedList>> build() async => const [];
+}
 
 class _FakeVideoEvent extends Fake implements VideoEvent {}
 
@@ -422,6 +438,12 @@ void main() {
               videoSharingServiceProvider.overrideWith(
                 (ref) => mockVideoSharingService,
               ),
+              curatedListsStateProvider.overrideWith(
+                _FakeCuratedListsState.new,
+              ),
+              myListsWithThumbnailsProvider.overrideWith(
+                (ref) async => const <CuratedList>[],
+              ),
               if (goRouter != null)
                 goRouterProvider.overrideWithValue(goRouter),
               ...?additionalOverrides,
@@ -462,16 +484,17 @@ void main() {
           ).called(1);
         });
 
-        testWidgets('tapping Add to List opens the list selection dialog', (
+        testWidgets('tapping Add to List opens the list picker sheet', (
           tester,
         ) async {
+          _fakeListService = _MockCuratedListService();
+          when(() => _fakeListService!.myLists).thenReturn(const []);
           await pumpOwnerSheet(tester);
 
           await tester.tap(find.text(l10n.shareSheetAddToList));
-          await tester.pump();
-          await tester.pump(const Duration(milliseconds: 100));
+          await tester.pumpAndSettle();
 
-          expect(find.byType(SelectListDialog), findsOneWidget);
+          expect(find.byType(SelectListSheetBody), findsOneWidget);
         });
 
         testWidgets('opening Share does not request crosspost signing', (
