@@ -44,6 +44,10 @@ enum C2paSigningFailureReason {
 
   /// This build opted out of C2PA signing; nothing was attempted.
   disabled,
+
+  /// This build carries no ProofSign token, which the server requires, so
+  /// nothing was attempted.
+  missingToken,
   other,
 }
 
@@ -87,13 +91,23 @@ class C2paSigningService {
     C2pa? c2pa,
     C2paIdentityManifestService? manifestService,
     Duration? signingTimeout,
+    String? signingToken,
   }) : _c2pa = c2pa ?? C2pa(),
        _manifestService = manifestService ?? C2paIdentityManifestService(),
-       _signingTimeout = signingTimeout ?? defaultSigningTimeout;
+       _signingTimeout = signingTimeout ?? defaultSigningTimeout,
+       _signingToken = signingToken ?? signingServerToken;
 
   final C2pa _c2pa;
   final C2paIdentityManifestService _manifestService;
   final Duration _signingTimeout;
+
+  /// ProofSign bearer token; defaults to [signingServerToken].
+  final String _signingToken;
+
+  /// ProofSign rejects every request without a token, yet each attempt still
+  /// pays its network round trips — the first of a render took over ten
+  /// seconds on a real device — so a token-less build does not try at all.
+  bool get _hasToken => _signingToken.trim().isNotEmpty;
 
   static const String _videoMimeType = 'video/mp4';
 
@@ -176,6 +190,14 @@ class C2paSigningService {
           success: false,
           error: 'C2PA signing is disabled for this build',
           failureReason: C2paSigningFailureReason.disabled,
+        );
+      }
+      if (!_hasToken) {
+        return C2paSigningResult(
+          signedFilePath: videoPath,
+          success: false,
+          error: 'This build has no C2PA signing token',
+          failureReason: C2paSigningFailureReason.missingToken,
         );
       }
 
@@ -356,6 +378,15 @@ class C2paSigningService {
     required String action,
   }) async {
     try {
+      if (!_hasToken) {
+        return C2paSigningResult(
+          signedFilePath: outputPath,
+          success: false,
+          error: 'This build has no C2PA signing token',
+          failureReason: C2paSigningFailureReason.missingToken,
+        );
+      }
+
       final outputFile = File(outputPath);
       if (!outputFile.existsSync()) {
         return C2paSigningResult(
@@ -651,7 +682,7 @@ class C2paSigningService {
 
     return RemoteSigner(
       configurationUrl: signingServerEndpoint + args,
-      bearerToken: signingServerToken,
+      bearerToken: _signingToken,
     );
   }
 
