@@ -1719,8 +1719,6 @@
   "listNewPeopleList": "Yeni kişi listesi",
   "listNameLabel": "Liste Adı",
   "listDescriptionLabel": "Açıklama (opsiyonel)",
-  "listPublicList": "Herkese Açık Liste",
-  "listPublicListSubtitle": "Diğerleri bu listeyi takip edebilir ve görebilir",
   "listPrivateListSubtitle": "Videolar gizli kalır. Ad, açıklama, etiketler ve kapak görünür kalır.",
   "listVisibilityPublic": "Herkese açık",
   "listVisibilityPrivate": "Özel",
@@ -1754,7 +1752,6 @@
       }
     }
   },
-  "listCancel": "İptal",
   "listCreate": "Oluştur",
   "listCreateFailed": "Liste oluşturulamadı",
   "keyManagementTitle": "Nostr Anahtarları",
@@ -5744,4 +5741,9 @@
 "peopleListsAddPersonSemanticLabel": "{name} kişisini listeye ekle",
 "peopleListsMembershipUpdateFailed": "Liste güncellenemedi. Lütfen tekrar dene.",
 "peopleListsAddPeopleSearchHint": "Kişi ara",
-"peopleListsRemovePersonSemanticLabel": "{name} kişisini listeden kaldır"}
+"peopleListsRemovePersonSemanticLabel": "{name} kişisini listeden kaldır",
+"listMakePublicLabel": "Herkese açık yap",
+"listCollaboratorsNone": "Yok",
+"listAddCollaboratorTitle": "Ortak ekle",
+"listMakePublicSubtitle": "Başkaları bu listeyi görebilsin",
+"listCollaboratorSearchHint": "Divine'da ara..."}

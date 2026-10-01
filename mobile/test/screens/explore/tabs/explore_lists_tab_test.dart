@@ -26,8 +26,8 @@ import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/explore/tabs/explore_lists_tab.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
-import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
+import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -212,7 +212,7 @@ void main() {
         },
       );
       testWidgets(
-        'video creation opens a shared sheet during initialization failure=$failure',
+        'video creation keeps its approved sheet during initialization failure=$failure',
         (tester) async {
           if (failure) {
             _initializationError = StateError('initialization failed');
@@ -227,12 +227,9 @@ void main() {
           await tester.tap(find.text('New video list'));
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 200));
-          expect(find.byType(CreateListDialog), findsOneWidget);
+          expect(find.byType(ListInfoForm), findsOneWidget);
           expect(find.byType(VineBottomSheet), findsOneWidget);
           expect(find.byType(AlertDialog), findsNothing);
-          expect(find.text('List Name'), findsOneWidget);
-          expect(find.text('Description (optional)'), findsOneWidget);
-          expect(find.text('Public List'), findsOneWidget);
           expect(container.read(overlayVisibilityProvider).isPageOpen, isFalse);
           expect(
             container.read(overlayVisibilityProvider).isBottomSheetOpen,
@@ -246,12 +243,12 @@ void main() {
             container.read(overlayVisibilityProvider).shouldRetainPlayer,
             isTrue,
           );
-          Navigator.of(tester.element(find.byType(CreateListDialog))).pop();
+          Navigator.of(tester.element(find.byType(ListInfoForm))).pop();
           // The gallery keeps shimmering while its service is unavailable.
           // Finish only the sheet transition instead of settling that loop.
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 200));
-          expect(find.byType(CreateListDialog), findsNothing);
+          expect(find.byType(ListInfoForm), findsNothing);
           expect(
             container.read(overlayVisibilityProvider).isBottomSheetOpen,
             isFalse,
@@ -285,7 +282,7 @@ void main() {
       expect(whileOpen.isBottomSheetOpen, isTrue);
       expect(whileOpen.hasVisibleOverlay, isTrue);
       expect(whileOpen.shouldRetainPlayer, isFalse);
-      Navigator.of(tester.element(find.byType(CreateListDialog))).pop();
+      Navigator.of(tester.element(find.byType(ListInfoForm))).pop();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
       final afterClose = container.read(overlayVisibilityProvider);

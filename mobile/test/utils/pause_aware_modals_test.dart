@@ -268,6 +268,67 @@ void main() {
         expect(find.text('Pinned Body'), findsOneWidget);
       },
     );
+
+    testWidgets('puts both header actions on the sheet it shows, at the '
+        'header padding asked for', (tester) async {
+      await setSheetTestSurface(tester);
+      var leadingTaps = 0;
+      var trailingTaps = 0;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () {
+                    unawaited(
+                      context.showVideoPausingVineBottomSheet<void>(
+                        title: const Text('Actions Sheet'),
+                        headerPadding: const EdgeInsetsDirectional.only(
+                          start: 12,
+                          end: 30,
+                          top: 8,
+                        ),
+                        headerLeadingAction: DivineIconButton(
+                          icon: DivineIconName.x,
+                          semanticLabel: 'Leading action',
+                          onPressed: () => leadingTaps++,
+                        ),
+                        headerTrailingAction: DivineIconButton(
+                          icon: DivineIconName.check,
+                          semanticLabel: 'Trailing action',
+                          onPressed: () => trailingTaps++,
+                        ),
+                        children: const [Text('Actions Body')],
+                      ),
+                    );
+                  },
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.bySemanticsLabel('Leading action'));
+      await tester.tap(find.bySemanticsLabel('Trailing action'));
+
+      expect(leadingTaps, equals(1));
+      expect(trailingTaps, equals(1));
+      final header = tester.getRect(find.byType(VineBottomSheetHeader));
+      final leading = tester.getRect(find.bySemanticsLabel('Leading action'));
+      final trailing = tester.getRect(
+        find.bySemanticsLabel('Trailing action'),
+      );
+      expect(leading.left - header.left, equals(12));
+      expect(header.right - trailing.right, equals(30));
+    });
   });
 
   group('showVideoPausingSelectionMenu', () {

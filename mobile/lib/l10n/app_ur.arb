@@ -2460,8 +2460,6 @@
   "listNewPeopleList": "لوگوں کی نئی فہرست",
   "listNameLabel": "فہرست کا نام",
   "listDescriptionLabel": "تفصیل (اختیاری)",
-  "listPublicList": "عوامی فہرست",
-  "listPublicListSubtitle": "دوسرے اس فہرست کو فالو اور دیکھ سکتے ہیں",
   "listPrivateListSubtitle": "ویڈیوز نجی رہتی ہیں۔ نام، تفصیل، ٹیگز اور کور نظر آتے رہتے ہیں۔",
   "listVisibilityPublic": "عوامی",
   "listVisibilityPrivate": "نجی",
@@ -2495,7 +2493,6 @@
       }
     }
   },
-  "listCancel": "منسوخ کریں",
   "listCreate": "بنائیں",
   "listCreateFailed": "فہرست نہیں بن سکی",
   "keyManagementTitle": "Nostr کلیدیں",
@@ -6985,6 +6982,11 @@
   },
   "peopleListsMembershipUpdateFailed": "فہرست اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔",
   "peopleListsAddPeopleSearchHint": "لوگ تلاش کریں",
+  "listMakePublicSubtitle": "دوسروں کو یہ فہرست دیکھنے دیں",
+  "listMakePublicLabel": "عوامی بنائیں",
+  "listAddCollaboratorTitle": "شریک کار شامل کریں",
+  "listCollaboratorSearchHint": "Divine میں تلاش کریں...",
+  "listCollaboratorsNone": "کوئی نہیں",
   "soundRequestAction": "یہ آواز مانگیں",
   "soundRequestTitle": "کوئی آپ کی آواز استعمال کرنا چاہتا ہے",
   "soundRequestDescription": "اس ویڈیو کی آواز دوبارہ استعمال کرنے کی اجازت دیں تاکہ کوئی بھی اس سے ریمکس بنا سکے۔",

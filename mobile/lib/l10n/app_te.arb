@@ -2888,8 +2888,6 @@
   "listNewPeopleList": "కొత్త వ్యక్తుల జాబితా",
   "listNameLabel": "జాబితా పేరు",
   "listDescriptionLabel": "వివరణ (ఐచ్ఛికం)",
-  "listPublicList": "పబ్లిక్ జాబితా",
-  "listPublicListSubtitle": "ఇతరులు ఈ జాబితాను అనుసరించవచ్చు మరియు చూడవచ్చు",
   "listPrivateListSubtitle": "వీడియోలు ప్రైవేట్‌గా ఉంటాయి. పేరు, వివరణ, ట్యాగ్‌లు మరియు కవర్ కనిపించేలా ఉంటాయి.",
   "listVisibilityPublic": "పబ్లిక్",
   "listVisibilityPrivate": "ప్రైవేట్",
@@ -2923,7 +2921,6 @@
       }
     }
   },
-  "listCancel": "రద్దు",
   "listCreate": "సృష్టించు",
   "listCreateFailed": "జాబితాను రూపొందించడంలో విఫలమైంది",
   "keyManagementTitle": "Nostr కీలు",
@@ -8617,6 +8614,11 @@
   },
   "peopleListsMembershipUpdateFailed": "జాబితాను నవీకరించడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
   "peopleListsAddPeopleSearchHint": "వ్యక్తులను శోధించండి",
+  "listMakePublicSubtitle": "ఇతరులు ఈ జాబితాను చూడనివ్వండి",
+  "listMakePublicLabel": "పబ్లిక్‌గా చేయండి",
+  "listAddCollaboratorTitle": "సహకారిని జోడించండి",
+  "listCollaboratorSearchHint": "శోధన Divine...",
+  "listCollaboratorsNone": "ఏదీ లేదు",
   "soundRequestAction": "ఈ సౌండ్‌ను అడగండి",
   "soundRequestTitle": "ఎవరో మీ సౌండ్‌ను ఉపయోగించాలనుకుంటున్నారు",
   "soundRequestDescription": "ఎవరైనా రీమిక్స్ చేయగలిగేలా ఈ వీడియో సౌండ్‌ను మళ్లీ ఉపయోగించడానికి అనుమతించండి.",

@@ -1,0 +1,876 @@
+// ABOUTME: Tests for the list info sheet: the form it renders, how each kind
+// ABOUTME: of save closes or keeps it, and what the collaborators row allows.
+
+import 'dart:async';
+
+import 'package:content_blocklist_repository/content_blocklist_repository.dart';
+import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/semantics.dart';
+import 'package:flutter_riverpod/misc.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:follow_repository/follow_repository.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
+import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/list_info_sheet/list_info_collaborators_row.dart';
+import 'package:openvine/widgets/list_info_sheet/list_info_save_button.dart';
+import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
+import 'package:openvine/widgets/user_picker_sheet.dart';
+import 'package:profile_repository/profile_repository.dart';
+
+import '../../helpers/test_provider_overrides.dart';
+
+class _MockCuratedListService extends Mock implements CuratedListService {}
+
+class _MockProfileRepository extends Mock implements ProfileRepository {}
+
+class _MockFollowRepository extends Mock implements FollowRepository {}
+
+class _MockContentBlocklistRepository extends Mock
+    implements ContentBlocklistRepository {}
+
+/// Set before each test; read by [_FakeCuratedListsState].
+_MockCuratedListService? _fakeService;
+
+class _FakeCuratedListsState extends CuratedListsState {
+  @override
+  CuratedListService? get service => _fakeService;
+
+  @override
+  Future<List<CuratedList>> build() async => const [];
+}
+
+// Full-length 64-char identifiers — never truncate.
+const String _videoEventId =
+    '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+const String _authorPubkey =
+    'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789';
+const String _listId =
+    'list_created_456789abcdef0123456789abcdef0123456789abcdef012345';
+final String _collaborator = 'c' * 64;
+final String _otherCollaborator = 'd' * 64;
+
+const String _openLabel = 'Open list editor';
+
+void main() {
+  final l10n = lookupAppLocalizations(const Locale('en'));
+
+  group('showListInfoSheet', () {
+    late _MockCuratedListService service;
+    late VideoEvent video;
+
+    setUp(() {
+      service = _MockCuratedListService();
+      _fakeService = service;
+      video = VideoEvent(
+        id: _videoEventId,
+        pubkey: _authorPubkey,
+        createdAt: 1757385263,
+        content: 'Test video',
+        timestamp: DateTime.fromMillisecondsSinceEpoch(1757385263 * 1000),
+        videoUrl: 'https://example.com/video.mp4',
+        title: 'Test Video',
+      );
+    });
+
+    CuratedList list({
+      String name = 'Puppets',
+      bool isPublic = true,
+      List<String> collaborators = const [],
+    }) => CuratedList(
+      id: _listId,
+      pubkey: _authorPubkey,
+      name: name,
+      videoEventIds: const [],
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+      isPublic: isPublic,
+      isCollaborative: collaborators.isNotEmpty,
+      allowedCollaborators: collaborators,
+    );
+
+    void stubCreate(Future<CuratedList?> Function() answer) {
+      when(
+        () => service.createList(
+          name: any(named: 'name'),
+          description: any(named: 'description'),
+          isPublic: any(named: 'isPublic'),
+          isCollaborative: any(named: 'isCollaborative'),
+          allowedCollaborators: any(named: 'allowedCollaborators'),
+        ),
+      ).thenAnswer((_) => answer());
+    }
+
+    void stubUpdate(Future<bool> Function() answer) {
+      when(
+        () => service.updateList(
+          listId: any(named: 'listId'),
+          name: any(named: 'name'),
+          description: any(named: 'description'),
+          isPublic: any(named: 'isPublic'),
+          isCollaborative: any(named: 'isCollaborative'),
+          allowedCollaborators: any(named: 'allowedCollaborators'),
+        ),
+      ).thenAnswer((_) => answer());
+    }
+
+    /// An update whose relay answer the test decides when to deliver.
+    Completer<bool> stubPendingUpdate() {
+      final answer = Completer<bool>();
+      addTearDown(() {
+        if (!answer.isCompleted) answer.complete(true);
+      });
+      stubUpdate(() => answer.future);
+      return answer;
+    }
+
+    /// Opens the sheet from a button; [outcomes] collects what each visit
+    /// returned once it has closed.
+    Future<void> openSheet(
+      WidgetTester tester, {
+      VideoEvent? video,
+      CuratedList? existingList,
+      ProfileRepository? profileRepository,
+      FollowRepository? followRepository,
+      List<Override> overrides = const [],
+      Locale? locale,
+      List<ListInfoSheetOutcome>? outcomes,
+    }) async {
+      // Tall enough that the whole form fits above the fold.
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        testMaterialApp(
+          locale: locale,
+          mockProfileRepository: profileRepository,
+          mockFollowRepository: followRepository,
+          additionalOverrides: [
+            curatedListsStateProvider.overrideWith(_FakeCuratedListsState.new),
+            ...overrides,
+          ],
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: TextButton(
+                onPressed: () => runDetached(
+                  showListInfoSheet(
+                    context,
+                    video: video,
+                    existingList: existingList,
+                  ).then((outcome) => outcomes?.add(outcome)),
+                  'open list info sheet',
+                  logName: 'ListInfoSheetTest',
+                  category: LogCategory.ui,
+                ),
+                child: const Text(_openLabel),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text(_openLabel));
+      await tester.pumpAndSettle();
+    }
+
+    Finder saveButton({required bool editing}) => find.bySemanticsLabel(
+      editing ? l10n.listSave : l10n.listCreate,
+    );
+
+    /// The save button as assistive tech reads it.
+    SemanticsNode saveButtonNode({required bool editing}) => find.semantics
+        .byLabel(editing ? l10n.listSave : l10n.listCreate)
+        .evaluate()
+        .single;
+
+    DivineSwitchTile visibilityTile(WidgetTester tester) =>
+        tester.widget<DivineSwitchTile>(find.byType(DivineSwitchTile));
+
+    group('renders', () {
+      testWidgets('the create form, public and without collaborators', (
+        tester,
+      ) async {
+        await openSheet(tester);
+
+        expect(find.text(l10n.listCreateNewList), findsOneWidget);
+        expect(find.text(l10n.listNameLabel), findsOneWidget);
+        expect(find.text(l10n.listDescriptionLabel), findsOneWidget);
+        expect(find.text(l10n.metadataCollaboratorsLabel), findsOneWidget);
+        expect(find.text(l10n.listCollaboratorsNone), findsOneWidget);
+        expect(find.text(l10n.listMakePublicLabel), findsOneWidget);
+        expect(find.text(l10n.listMakePublicSubtitle), findsOneWidget);
+        expect(visibilityTile(tester).value, isTrue);
+        expect(find.bySemanticsLabel(l10n.commonClose), findsOneWidget);
+        expect(saveButton(editing: false), findsOneWidget);
+      });
+
+      testWidgets("the edit form on a private list's own values", (
+        tester,
+      ) async {
+        await openSheet(tester, existingList: list(isPublic: false));
+
+        expect(find.text(l10n.listEditInfoAction), findsOneWidget);
+        expect(find.text('Puppets'), findsOneWidget);
+        expect(find.text(l10n.listPrivateListSubtitle), findsOneWidget);
+        expect(find.text(l10n.listMakePublicSubtitle), findsNothing);
+        expect(visibilityTile(tester).value, isFalse);
+        expect(saveButton(editing: true), findsOneWidget);
+      });
+
+      testWidgets('reads its copy from the app localizations', (tester) async {
+        await openSheet(tester);
+
+        final german = lookupAppLocalizations(const Locale('de'));
+        expect(german.listCreateNewList, isNot(l10n.listCreateNewList));
+        expect(find.text(german.listCreateNewList), findsNothing);
+      });
+    });
+
+    group('interactions', () {
+      testWidgets('the visibility switch toggles and swaps its subtitle', (
+        tester,
+      ) async {
+        await openSheet(tester);
+        expect(visibilityTile(tester).value, isTrue);
+
+        await tester.tap(find.byType(DivineSwitchTile));
+        await tester.pump();
+
+        expect(visibilityTile(tester).value, isFalse);
+        expect(find.text(l10n.listPrivateListSubtitle), findsOneWidget);
+      });
+
+      testWidgets('the close button dismisses the sheet without saving', (
+        tester,
+      ) async {
+        await openSheet(tester, existingList: list());
+
+        await tester.enterText(find.byType(TextField).first, 'Marionettes');
+        await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.listEditInfoAction), findsNothing);
+        verifyZeroInteractions(service);
+      });
+
+      testWidgets('the save button reads as disabled until the list has a '
+          'name', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await openSheet(tester);
+        expect(
+          saveButtonNode(editing: false),
+          isSemantics(hasEnabledState: true, isEnabled: false),
+        );
+
+        await tester.enterText(find.byType(TextField).first, '   ');
+        await tester.pump();
+        expect(
+          saveButtonNode(editing: false),
+          isSemantics(hasEnabledState: true, isEnabled: false),
+        );
+
+        await tester.enterText(find.byType(TextField).first, 'Fresh List');
+        await tester.pump();
+        expect(
+          saveButtonNode(editing: false),
+          isSemantics(hasEnabledState: true, isEnabled: true),
+        );
+        semantics.dispose();
+      });
+    });
+
+    group('creating', () {
+      testWidgets('creates the list and closes, adding no video', (
+        tester,
+      ) async {
+        stubCreate(() async => list(name: 'Fresh List'));
+        await openSheet(tester);
+
+        await tester.enterText(find.byType(TextField).first, 'Fresh List');
+        await tester.enterText(find.byType(TextField).last, 'Brand new');
+        await tester.pump();
+        await tester.tap(saveButton(editing: false));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => service.createList(
+            name: 'Fresh List',
+            description: 'Brand new',
+          ),
+        ).called(1);
+        verifyNever(() => service.addVideoToList(any(), any()));
+        expect(find.text(l10n.listCreateNewList), findsNothing);
+      });
+
+      testWidgets('creates a private list when the switch is off', (
+        tester,
+      ) async {
+        stubCreate(() async => list(isPublic: false));
+        await openSheet(tester);
+
+        await tester.enterText(find.byType(TextField).first, 'Secret List');
+        await tester.tap(find.byType(DivineSwitchTile));
+        await tester.pump();
+        await tester.tap(saveButton(editing: false));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => service.createList(name: 'Secret List', isPublic: false),
+        ).called(1);
+      });
+
+      testWidgets('adds the video to the list it created', (tester) async {
+        stubCreate(() async => list(name: 'Video List'));
+        when(
+          () => service.addVideoToList(any(), any()),
+        ).thenAnswer((_) async => true);
+        await openSheet(tester, video: video);
+
+        await tester.enterText(find.byType(TextField).first, 'Video List');
+        await tester.pump();
+        await tester.tap(saveButton(editing: false));
+        await tester.pumpAndSettle();
+
+        verify(() => service.addVideoToList(_listId, _videoEventId)).called(1);
+        expect(find.text(l10n.listCreateNewList), findsNothing);
+      });
+
+      testWidgets('closes and hands its caller createdWithoutVideo when the '
+          'created list refused the video', (tester) async {
+        stubCreate(() async => list(name: 'Video List'));
+        when(
+          () => service.addVideoToList(any(), any()),
+        ).thenAnswer((_) async => false);
+        final outcomes = <ListInfoSheetOutcome>[];
+        await openSheet(tester, video: video, outcomes: outcomes);
+
+        await tester.enterText(find.byType(TextField).first, 'Video List');
+        await tester.pump();
+        await tester.tap(saveButton(editing: false));
+        await tester.pumpAndSettle();
+
+        // The list exists, so the sheet does not invite a second one, and
+        // the caller, not a snackbar the caller might cover, says so.
+        expect(find.text(l10n.listCreateNewList), findsNothing);
+        expect(find.byType(SnackBar), findsNothing);
+        expect(outcomes, [ListInfoSheetOutcome.createdWithoutVideo]);
+      });
+
+      testWidgets('waits for creation after closing and returns a refused '
+          'video outcome', (tester) async {
+        final created = Completer<CuratedList?>();
+        addTearDown(() {
+          if (!created.isCompleted) created.complete(null);
+        });
+        stubCreate(() => created.future);
+        when(
+          () => service.addVideoToList(any(), any()),
+        ).thenAnswer((_) async => false);
+        final outcomes = <ListInfoSheetOutcome>[];
+        await openSheet(tester, video: video, outcomes: outcomes);
+
+        await tester.enterText(find.byType(TextField).first, 'Video List');
+        await tester.pump();
+        await tester.tap(saveButton(editing: false));
+        await tester.pump();
+        await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.listCreateNewList), findsNothing);
+        expect(outcomes, isEmpty);
+
+        created.complete(list(name: 'Video List'));
+        await tester.pumpAndSettle();
+
+        verify(() => service.addVideoToList(_listId, _videoEventId)).called(1);
+        expect(outcomes, [ListInfoSheetOutcome.createdWithoutVideo]);
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('reports a creation failure after the sheet closes', (
+        tester,
+      ) async {
+        final created = Completer<CuratedList?>();
+        addTearDown(() {
+          if (!created.isCompleted) created.complete(null);
+        });
+        stubCreate(() => created.future);
+        await openSheet(tester);
+
+        await tester.enterText(find.byType(TextField).first, 'Video List');
+        await tester.pump();
+        await tester.tap(saveButton(editing: false));
+        await tester.pump();
+        await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+        await tester.pumpAndSettle();
+
+        created.complete(null);
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.listCreateFailed), findsOneWidget);
+        expect(find.text(l10n.listCreateNewList), findsNothing);
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('hands its caller saved when the created list took the '
+          'video, and dismissed when closed from the X', (tester) async {
+        stubCreate(() async => list(name: 'Video List'));
+        when(
+          () => service.addVideoToList(any(), any()),
+        ).thenAnswer((_) async => true);
+        final outcomes = <ListInfoSheetOutcome>[];
+        await openSheet(tester, video: video, outcomes: outcomes);
+
+        await tester.enterText(find.byType(TextField).first, 'Video List');
+        await tester.pump();
+        await tester.tap(saveButton(editing: false));
+        await tester.pumpAndSettle();
+        expect(outcomes, [ListInfoSheetOutcome.saved]);
+
+        await tester.tap(find.text(_openLabel));
+        await tester.pumpAndSettle();
+        await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+        await tester.pumpAndSettle();
+        expect(outcomes.last, ListInfoSheetOutcome.dismissed);
+      });
+
+      testWidgets('stays open and says so when the list cannot be created', (
+        tester,
+      ) async {
+        stubCreate(() async => null);
+        await openSheet(tester, video: video);
+
+        await tester.enterText(find.byType(TextField).first, 'Doomed List');
+        await tester.pump();
+        await tester.tap(saveButton(editing: false));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.listCreateFailed), findsOneWidget);
+        expect(find.text(l10n.listCreateNewList), findsOneWidget);
+        expect(find.text('Doomed List'), findsOneWidget);
+        verifyNever(() => service.addVideoToList(any(), any()));
+      });
+
+      testWidgets('clears the failure once the form is edited again', (
+        tester,
+      ) async {
+        stubCreate(() async => null);
+        await openSheet(tester);
+
+        await tester.enterText(find.byType(TextField).first, 'Doomed List');
+        await tester.pump();
+        await tester.tap(saveButton(editing: false));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listCreateFailed), findsOneWidget);
+
+        await tester.enterText(find.byType(TextField).first, 'Second Try');
+        await tester.pump();
+
+        expect(find.text(l10n.listCreateFailed), findsNothing);
+      });
+    });
+
+    group('editing', () {
+      testWidgets('asks before publishing a private list', (tester) async {
+        stubUpdate(() async => true);
+        await openSheet(tester, existingList: list(isPublic: false));
+
+        await tester.tap(find.byType(DivineSwitchTile));
+        await tester.pump();
+        await tester.tap(saveButton(editing: true));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.listMakePublicTitle), findsOneWidget);
+        expect(find.text(l10n.listMakePublicWarning), findsOneWidget);
+        verifyZeroInteractions(service);
+
+        await tester.tap(find.text(l10n.listContinue));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => service.updateList(
+            listId: _listId,
+            name: 'Puppets',
+            description: '',
+            isPublic: true,
+          ),
+        ).called(1);
+      });
+
+      testWidgets('asks before hiding a public list', (tester) async {
+        stubUpdate(() async => true);
+        await openSheet(tester, existingList: list());
+
+        await tester.tap(find.byType(DivineSwitchTile));
+        await tester.pump();
+        await tester.tap(saveButton(editing: true));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.listMakePrivateTitle), findsOneWidget);
+        expect(find.text(l10n.listMakePrivateWarning), findsOneWidget);
+      });
+
+      testWidgets('saves nothing when the visibility change is cancelled', (
+        tester,
+      ) async {
+        stubUpdate(() async => true);
+        await openSheet(tester, existingList: list(isPublic: false));
+
+        await tester.tap(find.byType(DivineSwitchTile));
+        await tester.pump();
+        await tester.tap(saveButton(editing: true));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.commonCancel));
+        await tester.pumpAndSettle();
+
+        verifyZeroInteractions(service);
+        expect(find.text(l10n.listEditInfoAction), findsOneWidget);
+        expect(visibilityTile(tester).value, isTrue);
+      });
+
+      testWidgets('closes on a rename before any relay has answered, then '
+          'reports the relay failure on the screen underneath', (tester) async {
+        final answer = stubPendingUpdate();
+        await openSheet(tester, existingList: list());
+
+        await tester.enterText(find.byType(TextField).first, 'Marionettes');
+        await tester.pump();
+        await tester.tap(saveButton(editing: true));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => service.updateList(
+            listId: _listId,
+            name: 'Marionettes',
+            description: '',
+            isPublic: true,
+          ),
+        ).called(1);
+        expect(find.text(l10n.listEditInfoAction), findsNothing);
+        expect(find.text(l10n.listUpdateFailed), findsNothing);
+
+        answer.complete(false);
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.listUpdateFailed), findsOneWidget);
+      });
+
+      testWidgets('reports nothing when a relay accepts the rename', (
+        tester,
+      ) async {
+        final answer = stubPendingUpdate();
+        await openSheet(tester, existingList: list());
+
+        await tester.enterText(find.byType(TextField).first, 'Marionettes');
+        await tester.pump();
+        await tester.tap(saveButton(editing: true));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listEditInfoAction), findsNothing);
+
+        answer.complete(true);
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.listUpdateFailed), findsNothing);
+        expect(find.byType(SnackBar), findsNothing);
+      });
+
+      testWidgets('waits on the relay before closing a visibility change', (
+        tester,
+      ) async {
+        final answer = stubPendingUpdate();
+        await openSheet(tester, existingList: list(isPublic: false));
+        final buttonRect = tester.getRect(find.byType(ListInfoSaveButton));
+
+        await tester.tap(find.byType(DivineSwitchTile));
+        await tester.pump();
+        await tester.tap(saveButton(editing: true));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.listContinue));
+        // The spinner that replaces the save button never settles.
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+
+        verify(
+          () => service.updateList(
+            listId: _listId,
+            name: 'Puppets',
+            description: '',
+            isPublic: true,
+          ),
+        ).called(1);
+        expect(find.text(l10n.listEditInfoAction), findsOneWidget);
+        expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+        // The spinner stands where the button stood.
+        expect(
+          tester.getRect(find.byType(ListInfoSaveButton)),
+          equals(buttonRect),
+        );
+
+        answer.complete(true);
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.listEditInfoAction), findsNothing);
+      });
+
+      testWidgets('reports a refused visibility change after the sheet '
+          'closes', (tester) async {
+        final answer = stubPendingUpdate();
+        await openSheet(tester, existingList: list(isPublic: false));
+
+        await tester.tap(find.byType(DivineSwitchTile));
+        await tester.pump();
+        await tester.tap(saveButton(editing: true));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.listContinue));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+        await tester.pumpAndSettle();
+
+        answer.complete(false);
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.listUpdateFailed), findsOneWidget);
+        expect(find.text(l10n.listEditInfoAction), findsNothing);
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('keeps a rejected visibility change open for a retry', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        final answer = stubPendingUpdate();
+        await openSheet(tester, existingList: list(isPublic: false));
+
+        await tester.enterText(find.byType(TextField).first, 'Marionettes');
+        await tester.tap(find.byType(DivineSwitchTile));
+        await tester.pump();
+        await tester.tap(saveButton(editing: true));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.listContinue));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+
+        answer.complete(false);
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.listUpdateFailed), findsOneWidget);
+        // The service leaves isPublic at its old value on a rejected publish,
+        // so the flip only survives if the form holding it is still on
+        // screen with the typed name intact.
+        expect(find.text(l10n.listEditInfoAction), findsOneWidget);
+        expect(find.text('Marionettes'), findsOneWidget);
+        expect(visibilityTile(tester).value, isTrue);
+        expect(
+          saveButtonNode(editing: true),
+          isSemantics(hasEnabledState: true, isEnabled: true),
+        );
+        semantics.dispose();
+      });
+    });
+
+    group('collaborators', () {
+      Finder collaboratorsRow() => find.byType(ListInfoCollaboratorsRow);
+
+      testWidgets('names a collaborator by their fallback name until the '
+          'profile resolves', (tester) async {
+        await openSheet(
+          tester,
+          existingList: list(collaborators: [_collaborator]),
+        );
+
+        expect(find.text(l10n.listCollaboratorsNone), findsNothing);
+        expect(
+          find.descendant(
+            of: collaboratorsRow(),
+            matching: find.text(
+              UserProfile.defaultDisplayNameFor(_collaborator),
+            ),
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets("joins the collaborators' names with the locale's own "
+          'separator', (tester) async {
+        // Japanese lists names with 、, so a Latin ", " cannot pass here.
+        final ja = lookupAppLocalizations(const Locale('ja'));
+        await openSheet(
+          tester,
+          existingList: list(
+            collaborators: [_collaborator, _otherCollaborator],
+          ),
+          locale: const Locale('ja'),
+        );
+
+        final names = [
+          UserProfile.defaultDisplayNameFor(_collaborator),
+          UserProfile.defaultDisplayNameFor(_otherCollaborator),
+        ];
+        expect(ja.listMemberNamesSeparator, isNot(', '));
+        expect(
+          find.descendant(
+            of: collaboratorsRow(),
+            matching: find.text(names.join(ja.listMemberNamesSeparator)),
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('opens the picker from a public list', (tester) async {
+        await openSheet(tester);
+
+        await tester.tap(collaboratorsRow());
+        await tester.pumpAndSettle();
+
+        final picker = tester.widget<UserPickerSheet>(
+          find.byType(UserPickerSheet),
+        );
+        expect(picker.title, equals(l10n.listAddCollaboratorTitle));
+        expect(
+          picker.filterMode,
+          equals(UserPickerFilterMode.mutualFollowsOnly),
+        );
+      });
+
+      testWidgets('shows the people picked and saves them with the list', (
+        tester,
+      ) async {
+        final mutual = UserProfile(
+          pubkey: _collaborator,
+          name: 'Mutual Friend',
+          rawData: const {'name': 'Mutual Friend'},
+          createdAt: DateTime(2026),
+          eventId: 'e' * 64,
+        );
+        final profiles = _MockProfileRepository();
+        when(
+          () => profiles.getCachedProfile(pubkey: any(named: 'pubkey')),
+        ).thenAnswer((_) async => mutual);
+        when(
+          () => profiles.getCachedProfiles(pubkeys: any(named: 'pubkeys')),
+        ).thenAnswer((_) async => [mutual]);
+        when(
+          () => profiles.watchProfile(pubkey: any(named: 'pubkey')),
+        ).thenAnswer((_) => Stream.value(mutual));
+        final follows = _MockFollowRepository();
+        when(() => follows.followingPubkeys).thenReturn([_collaborator]);
+        when(
+          () => follows.followingStream,
+        ).thenAnswer((_) => Stream.value([_collaborator]));
+        when(() => follows.isInitialized).thenReturn(true);
+        when(() => follows.followingCount).thenReturn(1);
+        when(follows.getMyFollowers).thenAnswer((_) async => [_collaborator]);
+        when(
+          follows.streamMyFollowers,
+        ).thenAnswer((_) => Stream.value([_collaborator]));
+        final blocklist = _MockContentBlocklistRepository();
+        when(() => blocklist.shouldFilterFromFeeds(any())).thenReturn(false);
+        stubCreate(() async => list(collaborators: [_collaborator]));
+
+        await openSheet(
+          tester,
+          profileRepository: profiles,
+          followRepository: follows,
+          overrides: [
+            contentBlocklistRepositoryProvider.overrideWithValue(blocklist),
+            vanishedProfilePubkeysProvider.overrideWith(
+              (ref) => Stream.value(const <String>{}),
+            ),
+          ],
+        );
+        await tester.enterText(find.byType(TextField).first, 'Shared List');
+        await tester.pump();
+
+        await tester.tap(collaboratorsRow());
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.descendant(
+            of: find.byType(UserPickerSheet),
+            matching: find.text('Mutual Friend'),
+          ),
+        );
+        await tester.pump();
+        await tester.tap(
+          find.bySemanticsLabel(l10n.userPickerConfirmSemanticLabel),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(UserPickerSheet), findsNothing);
+        expect(
+          find.descendant(
+            of: collaboratorsRow(),
+            matching: find.text('Mutual Friend'),
+          ),
+          findsOneWidget,
+        );
+
+        await tester.tap(saveButton(editing: false));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => service.createList(
+            name: 'Shared List',
+            isCollaborative: true,
+            allowedCollaborators: [_collaborator],
+          ),
+        ).called(1);
+      });
+
+      testWidgets('is inert, and shows none, while the list is private', (
+        tester,
+      ) async {
+        await openSheet(
+          tester,
+          existingList: list(collaborators: [_collaborator]),
+        );
+
+        await tester.tap(find.byType(DivineSwitchTile));
+        await tester.pump();
+
+        expect(
+          find.descendant(
+            of: collaboratorsRow(),
+            matching: find.text(l10n.listCollaboratorsNone),
+          ),
+          findsOneWidget,
+        );
+
+        await tester.tap(collaboratorsRow());
+        await tester.pumpAndSettle();
+
+        expect(find.byType(UserPickerSheet), findsNothing);
+      });
+
+      testWidgets('drops them from a list saved as private', (tester) async {
+        stubUpdate(() async => true);
+        await openSheet(
+          tester,
+          existingList: list(collaborators: [_collaborator]),
+        );
+
+        await tester.tap(find.byType(DivineSwitchTile));
+        await tester.pump();
+        await tester.tap(saveButton(editing: true));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.listContinue));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => service.updateList(
+            listId: _listId,
+            name: 'Puppets',
+            description: '',
+            isPublic: false,
+            isCollaborative: false,
+            allowedCollaborators: const [],
+          ),
+        ).called(1);
+      });
+    });
+  });
+}
