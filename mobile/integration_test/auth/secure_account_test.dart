@@ -8,6 +8,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/main.dart' as app;
 import 'package:openvine/providers/app_providers.dart';
 import 'package:patrol/patrol.dart';
@@ -17,6 +18,8 @@ import '../helpers/http_helpers.dart';
 import '../helpers/navigation_helpers.dart';
 import '../helpers/patrol_semantics.dart';
 import '../helpers/test_setup.dart';
+
+AppLocalizations get _en => lookupAppLocalizations(const Locale('en'));
 
 void main() {
   ignorePlatformSemanticsHandle();
@@ -78,23 +81,29 @@ void main() {
           await tapBottomNavTab(tester, 'profile_tab');
           await pumpUntilSettled(tester);
 
-          final foundBanner = await waitForText(
+          final foundAction = await waitForText(
             tester,
-            'Secure Your Account',
+            _en.profileSecureYourAccount,
           );
           expect(
-            foundBanner,
+            foundAction,
             isTrue,
-            reason: 'Profile should show "Secure Your Account" banner',
+            reason:
+                'Profile should offer "${_en.profileSecureYourAccount}" '
+                'under the avatar',
           );
 
-          // Tap "Register" button on the banner
-          final registerButton = find.widgetWithText(
-            ElevatedButton,
-            'Register',
+          // The prompt sits under the avatar; tapping it opens the profile
+          // actions sheet, whose primary button opens Secure Account.
+          await tester.tap(find.text(_en.profileSecureYourAccount));
+          await pumpUntilSettled(tester);
+
+          final secureButton = find.widgetWithText(
+            DivineButton,
+            _en.profileSecurePrimaryButton,
           );
-          expect(registerButton, findsOneWidget);
-          await tester.tap(registerButton);
+          expect(secureButton, findsOneWidget);
+          await tester.tap(secureButton);
           await pumpUntilSettled(tester);
 
           logPhase('Phase 2 complete: navigated to Secure Account screen');

@@ -3,11 +3,13 @@
 // ABOUTME: options screen instead of bouncing to home feed.
 // ABOUTME: Requires: local Docker stack (mise run local_up)
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/main.dart' as app;
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -18,6 +20,8 @@ import '../helpers/http_helpers.dart';
 import '../helpers/navigation_helpers.dart';
 import '../helpers/patrol_semantics.dart';
 import '../helpers/test_setup.dart';
+
+AppLocalizations get _en => lookupAppLocalizations(const Locale('en'));
 
 void main() {
   ignorePlatformSemanticsHandle();
@@ -186,8 +190,11 @@ void main() {
             reason: 'Profile should show "Session Expired" banner',
           );
 
-          // Tap the "Sign in" button on the banner
-          final signInButton = find.widgetWithText(ElevatedButton, 'Sign in');
+          // Tap "Sign in" on the session-expired sheet
+          final signInButton = find.widgetWithText(
+            DivineButton,
+            _en.profileSignInButton,
+          );
           expect(signInButton, findsOneWidget);
           await tester.tap(signInButton);
           await pumpUntilSettled(tester, maxSeconds: 10);
