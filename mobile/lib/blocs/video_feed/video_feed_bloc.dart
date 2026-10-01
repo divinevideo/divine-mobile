@@ -60,6 +60,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     EnrichVideos? enrichVideos,
     FeedTuningRepository? feedTuningRepository,
     Future<Iterable<String>> Function()? badgeAuthors,
+    Stream<void>? badgeSubscriptionChanges,
   }) : _videosRepository = videosRepository,
        _followRepository = followRepository,
        _curatedListRepository = curatedListRepository,
@@ -73,6 +74,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
        _enrichVideos = enrichVideos,
        _feedTuningRepository = feedTuningRepository,
        _badgeAuthors = badgeAuthors,
+       _badgeSubscriptionChanges = badgeSubscriptionChanges,
        _resumeManager = HomeFeedResumeManager(
          cache: homeFeedCache ?? const HomeFeedCache(),
          videosRepository: videosRepository,
@@ -95,6 +97,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     on<VideoFeedAutoRefreshRequested>(_onAutoRefreshRequested);
     on<VideoFeedFollowingListChanged>(_onFollowingListChanged);
     on<VideoFeedCuratedListsChanged>(_onCuratedListsChanged);
+    on<VideoFeedBadgeSubscriptionsChanged>(_onBadgeSubscriptionsChanged);
     on<VideoFeedBlocklistChanged>(_onBlocklistChanged);
     on<VideoFeedActiveIndexChanged>(_onActiveIndexChanged);
     on<VideoFeedEnrichmentReady>(_onEnrichmentReady);
@@ -115,6 +118,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   final EnrichVideos? _enrichVideos;
   final FeedTuningRepository? _feedTuningRepository;
   final Future<Iterable<String>> Function()? _badgeAuthors;
+  final Stream<void>? _badgeSubscriptionChanges;
+  StreamSubscription<void>? _badgeSubscriptionsSubscription;
   bool _hasBadgeAuthors = false;
   List<String>? _cachedBadgeAuthors;
   BadgeVideoPager? _badgeVideoPager;
@@ -301,6 +306,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
 
     await _followingSubscription?.cancel();
     await _curatedListsSubscription?.cancel();
+    await _badgeSubscriptionsSubscription?.cancel();
 
     // Subscribe to following list changes.
     //
@@ -332,6 +338,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         .listen((lists) {
           addIfOpen(VideoFeedCuratedListsChanged(lists));
         });
+
+    // Subscribe to this account's badge subscription changes.
+    _badgeSubscriptionsSubscription = _badgeSubscriptionChanges?.listen(
+      (_) => addIfOpen(const VideoFeedBadgeSubscriptionsChanged()),
+    );
   }
 
   @override
@@ -341,8 +352,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     _resumeManager.dispose();
     await _followingSubscription?.cancel();
     await _curatedListsSubscription?.cancel();
+    await _badgeSubscriptionsSubscription?.cancel();
     _followingSubscription = null;
     _curatedListsSubscription = null;
+    _badgeSubscriptionsSubscription = null;
     return super.close();
   }
 
@@ -695,6 +708,23 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     }
 
     // Silent refresh — keep current videos visible, replace when done.
+    final feedLoad = _feedTracker?.startFeedLoad(
+      state.source.mode.name,
+      reason: FeedLoadReason.refresh,
+    );
+    await _loadVideos(state.source, emit, feedLoad: feedLoad, skipCache: true);
+  }
+
+  /// Reloads Following after the account changes its badge subscriptions.
+  ///
+  /// A silent refresh like [_onFollowingListChanged]: the first page
+  /// re-resolves the subscribed holders and starts a new merged pager.
+  Future<void> _onBadgeSubscriptionsChanged(
+    VideoFeedBadgeSubscriptionsChanged event,
+    Emitter<VideoFeedBlocState> emit,
+  ) async {
+    if (state.source.type != VideoFeedSourceType.following) return;
+    if (state.status == VideoFeedStatus.loading) return;
     final feedLoad = _feedTracker?.startFeedLoad(
       state.source.mode.name,
       reason: FeedLoadReason.refresh,

@@ -113,7 +113,6 @@ void main() {
             coordinate: _coordinate,
             subscriptionStatus: BadgeSubscriptionStatus.ready,
             isSubscribed: true,
-            subscriptionRevision: 1,
           ),
         ],
       );

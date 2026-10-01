@@ -15,7 +15,6 @@ import 'package:dm_repository/dm_repository.dart';
 import 'package:feed_tuning_repository/feed_tuning_repository.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
@@ -56,13 +55,10 @@ import 'package:unified_logger/unified_logger.dart';
 
 part 'repository_providers.g.dart';
 
-/// Rebuilds Following after this account changes its badge subscriptions.
-final badgeSubscriptionsRevisionProvider = StateProvider<int>((ref) => 0);
-
 final badgeRepositoryProvider = Provider<BadgeRepository>((ref) {
   final authService = ref.watch(authServiceProvider);
   final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
-  return BadgeRepository(
+  final repository = BadgeRepository(
     nostrClient: ref.watch(nostrServiceProvider),
     sharedPreferences: ref.watch(sharedPreferencesProvider),
     currentPubkey: () => authService.currentPublicKeyHex,
@@ -72,6 +68,8 @@ final badgeRepositoryProvider = Provider<BadgeRepository>((ref) {
     // still takes effect on the next badge load.
     isHiddenPubkey: blocklistRepository.shouldFilterFromFeeds,
   );
+  ref.onDispose(repository.dispose);
+  return repository;
 });
 
 final FutureProviderFamily<List<ProfileBadgeViewData>, String>
