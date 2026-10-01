@@ -1618,13 +1618,12 @@
     "listCollaboratorSearchHint": "Divineを検索...",
     "listNameLabel": "リスト名",
     "listDescriptionLabel": "説明 (任意)",
-    "listPublicList": "公開リスト",
-    "listPublicListSubtitle": "みんながフォロー・閲覧できるよ",
+    "listMakePublicLabel": "公開する",
+    "listMakePublicSubtitle": "他の人もこのリストを見られます",
     "listPrivateListSubtitle": "動画は非公開のまま。名前、説明、タグ、カバーは表示されたままです。",
     "listVisibilityPublic": "公開",
     "listVisibilityPrivate": "非公開",
     "profileListsEmpty": "まだリストがないよ。まとめておきたいループでひとつ作ってみて。",
-    "listEditTitle": "リストを編集",
     "listShareAction": "リストを共有",
     "listShareFailed": "リストを共有できなかった。もう一度試してね。",
     "listSave": "保存",
@@ -1653,7 +1652,6 @@
             }
         }
     },
-    "listCancel": "キャンセル",
     "listCreate": "作成",
     "listCreateFailed": "リストの作成がうまくいかなかった",
     "keyManagementTitle": "Nostr 鍵",

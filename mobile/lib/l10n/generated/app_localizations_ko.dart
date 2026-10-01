@@ -4626,10 +4626,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get listDescriptionLabel => '설명 (선택)';
 
   @override
-  String get listPublicList => '공개 목록';
+  String get listMakePublicLabel => '공개로 설정';
 
   @override
-  String get listPublicListSubtitle => '다른 사람들이 이 목록을 팔로우하고 볼 수 있어요';
+  String get listMakePublicSubtitle => '다른 사람도 이 목록을 볼 수 있어요';
 
   @override
   String get listPrivateListSubtitle =>
@@ -4643,9 +4643,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get profileListsEmpty => '아직 목록이 없어요. 함께 모아 두고 싶은 루프로 하나 만들어 보세요.';
-
-  @override
-  String get listEditTitle => '목록 편집';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -4734,9 +4731,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String listShareSubject(String name) {
     return 'Divine의 $name';
   }
-
-  @override
-  String get listCancel => '취소';
 
   @override
   String get listCreate => '만들기';

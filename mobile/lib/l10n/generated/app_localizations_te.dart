@@ -5069,11 +5069,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String get listDescriptionLabel => 'వివరణ (ఐచ్ఛికం)';
 
   @override
-  String get listPublicList => 'పబ్లిక్ జాబితా';
+  String get listMakePublicLabel => 'పబ్లిక్‌గా చేయండి';
 
   @override
-  String get listPublicListSubtitle =>
-      'ఇతరులు ఈ జాబితాను అనుసరించవచ్చు మరియు చూడవచ్చు';
+  String get listMakePublicSubtitle => 'ఇతరులు ఈ జాబితాను చూడనివ్వండి';
 
   @override
   String get listPrivateListSubtitle =>
@@ -5088,9 +5087,6 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'ఇంకా జాబితాలు లేవు. మీరు కలిసి ఉంచాలనుకుంటున్న లూప్‌ల కోసం ఒకదాన్ని తయారు చేయండి.';
-
-  @override
-  String get listEditTitle => 'జాబితాను సవరించండి';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5182,9 +5178,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String listShareSubject(String name) {
     return 'Divineలో $name';
   }
-
-  @override
-  String get listCancel => 'రద్దు';
 
   @override
   String get listCreate => 'సృష్టించు';

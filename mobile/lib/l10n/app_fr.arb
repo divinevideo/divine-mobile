@@ -1628,13 +1628,12 @@
     "listCollaboratorSearchHint": "Rechercher dans Divine...",
     "listNameLabel": "Nom de la liste",
     "listDescriptionLabel": "Description (facultatif)",
-    "listPublicList": "Liste publique",
-    "listPublicListSubtitle": "Les autres peuvent suivre et voir cette liste",
+    "listMakePublicLabel": "Rendre publique",
+    "listMakePublicSubtitle": "Les autres peuvent voir cette liste",
     "listPrivateListSubtitle": "Les vidéos restent privées. Le nom, la description, les tags et la couverture restent visibles.",
     "listVisibilityPublic": "Publique",
     "listVisibilityPrivate": "Privée",
     "profileListsEmpty": "Pas encore de liste. Crée-en une pour les loops que tu veux garder ensemble.",
-    "listEditTitle": "Modifier la liste",
     "listShareAction": "Partager la liste",
     "listShareFailed": "Impossible de partager cette liste. Réessaie.",
     "listSave": "Enregistrer",
@@ -1663,7 +1662,6 @@
             }
         }
     },
-    "listCancel": "Annuler",
     "listCreate": "Créer",
     "listCreateFailed": "Échec de la création de la liste",
     "keyManagementTitle": "Clés Nostr",

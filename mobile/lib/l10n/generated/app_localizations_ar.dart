@@ -4867,11 +4867,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get listDescriptionLabel => 'الوصف (اختياري)';
 
   @override
-  String get listPublicList => 'قائمة عامة';
+  String get listMakePublicLabel => 'جعل القائمة عامة';
 
   @override
-  String get listPublicListSubtitle =>
-      'يمكن للآخرين متابعة هذه القائمة ورؤيتها';
+  String get listMakePublicSubtitle => 'السماح للآخرين برؤية هذه القائمة';
 
   @override
   String get listPrivateListSubtitle =>
@@ -4886,9 +4885,6 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'لا توجد قوائم بعد. أنشئ واحدة للمقاطع التي تريد جمعها معًا.';
-
-  @override
-  String get listEditTitle => 'تعديل القائمة';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -4978,9 +4974,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name على Divine';
   }
-
-  @override
-  String get listCancel => 'إلغاء';
 
   @override
   String get listCreate => 'إنشاء';

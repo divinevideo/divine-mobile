@@ -1824,13 +1824,12 @@
     "listCollaboratorSearchHint": "Търсене Divine...",
     "listNameLabel": "Име на списък",
     "listDescriptionLabel": "Описание (по избор)",
-    "listPublicList": "Публичен списък",
-    "listPublicListSubtitle": "Други могат да следват и да видят този списък",
+    "listMakePublicLabel": "Направи публичен",
+    "listMakePublicSubtitle": "Позволи на другите да виждат този списък",
     "listPrivateListSubtitle": "Видеата остават частни. Името, описанието, таговете и корицата остават видими.",
     "listVisibilityPublic": "Публичен",
     "listVisibilityPrivate": "Частен",
     "profileListsEmpty": "Още няма списъци. Направи един за луповете, които искаш да държиш заедно.",
-    "listEditTitle": "Редактирай списъка",
     "listShareAction": "Сподели списъка",
     "listShareFailed": "Списъкът не можа да бъде споделен. Опитай пак.",
     "listSave": "Запази",
@@ -1859,7 +1858,6 @@
             }
         }
     },
-    "listCancel": "Отказ",
     "listCreate": "Създай",
     "listCreateFailed": "Неуспешно създаване на списък",
     "keyManagementTitle": "Nostr Ключове",

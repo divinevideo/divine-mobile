@@ -4891,10 +4891,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get listDescriptionLabel => 'Beskrivning (valfritt)';
 
   @override
-  String get listPublicList => 'Publik lista';
+  String get listMakePublicLabel => 'Gör offentlig';
 
   @override
-  String get listPublicListSubtitle => 'Andra kan följa och se den här listan';
+  String get listMakePublicSubtitle => 'Låt andra se den här listan';
 
   @override
   String get listPrivateListSubtitle =>
@@ -4909,9 +4909,6 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'Inga listor än. Skapa en för looparna du vill hålla ihop.';
-
-  @override
-  String get listEditTitle => 'Redigera lista';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5001,9 +4998,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name på Divine';
   }
-
-  @override
-  String get listCancel => 'Avbryt';
 
   @override
   String get listCreate => 'Skapa';
