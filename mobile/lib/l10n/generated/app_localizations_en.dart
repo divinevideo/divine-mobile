@@ -4990,16 +4990,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listCollaboratorSearchHint => 'Search Divine...';
 
   @override
-  String get listNameLabel => 'List Name';
+  String get listNameLabel => 'List name';
 
   @override
   String get listDescriptionLabel => 'Description (optional)';
 
   @override
-  String get listPublicList => 'Public List';
+  String get listMakePublicLabel => 'Make public';
 
   @override
-  String get listPublicListSubtitle => 'Others can follow and see this list';
+  String get listMakePublicSubtitle => 'Let others see this list';
 
   @override
   String get listPrivateListSubtitle =>
@@ -5014,9 +5014,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'No lists yet. Make one for the loops you want to keep together.';
-
-  @override
-  String get listEditTitle => 'Edit list';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5106,9 +5103,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name on Divine';
   }
-
-  @override
-  String get listCancel => 'Cancel';
 
   @override
   String get listCreate => 'Create';

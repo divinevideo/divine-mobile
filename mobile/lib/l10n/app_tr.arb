@@ -1625,13 +1625,12 @@
     "listCollaboratorSearchHint": "Divine'da ara...",
     "listNameLabel": "Liste Adı",
     "listDescriptionLabel": "Açıklama (opsiyonel)",
-    "listPublicList": "Herkese Açık Liste",
-    "listPublicListSubtitle": "Diğerleri bu listeyi takip edebilir ve görebilir",
+    "listMakePublicLabel": "Herkese açık yap",
+    "listMakePublicSubtitle": "Başkaları bu listeyi görebilsin",
     "listPrivateListSubtitle": "Videolar gizli kalır. Ad, açıklama, etiketler ve kapak görünür kalır.",
     "listVisibilityPublic": "Herkese açık",
     "listVisibilityPrivate": "Özel",
     "profileListsEmpty": "Henüz liste yok. Bir arada tutmak istediğin döngüler için bir tane oluştur.",
-    "listEditTitle": "Listeyi düzenle",
     "listShareAction": "Listeyi paylaş",
     "listShareFailed": "Bu liste paylaşılamadı. Tekrar dene.",
     "listSave": "Kaydet",
@@ -1660,7 +1659,6 @@
             }
         }
     },
-    "listCancel": "İptal",
     "listCreate": "Oluştur",
     "listCreateFailed": "Liste oluşturulamadı",
     "keyManagementTitle": "Nostr Anahtarları",

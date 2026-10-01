@@ -2413,13 +2413,12 @@
   "listCollaboratorSearchHint": "Cari Divine...",
   "listNameLabel": "Nama Senarai",
   "listDescriptionLabel": "Keterangan (pilihan)",
-  "listPublicList": "Senarai Awam",
-  "listPublicListSubtitle": "Orang lain boleh mengikuti dan melihat senarai ini",
+  "listMakePublicLabel": "Jadikan awam",
+  "listMakePublicSubtitle": "Benarkan orang lain melihat senarai ini",
   "listPrivateListSubtitle": "Video kekal peribadi. Nama, keterangan, tag dan kulit kekal kelihatan.",
   "listVisibilityPublic": "Awam",
   "listVisibilityPrivate": "Peribadi",
   "profileListsEmpty": "Belum ada senarai. Buat satu untuk loop yang anda mahu simpan bersama.",
-  "listEditTitle": "Edit senarai",
   "listShareAction": "Kongsi senarai",
   "listShareFailed": "Senarai ini tidak dapat dikongsi. Cuba lagi.",
   "listSave": "Simpan",
@@ -2448,7 +2447,6 @@
       }
     }
   },
-  "listCancel": "Batal",
   "listCreate": "Cipta",
   "listCreateFailed": "Gagal mencipta senarai",
   "keyManagementTitle": "Kunci Nostr",

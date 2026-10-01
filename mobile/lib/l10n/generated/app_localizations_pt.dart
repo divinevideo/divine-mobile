@@ -4945,11 +4945,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get listDescriptionLabel => 'Descrição (opcional)';
 
   @override
-  String get listPublicList => 'Lista pública';
+  String get listMakePublicLabel => 'Tornar pública';
 
   @override
-  String get listPublicListSubtitle =>
-      'Outras pessoas podem seguir e ver esta lista';
+  String get listMakePublicSubtitle => 'Deixe outras pessoas verem esta lista';
 
   @override
   String get listPrivateListSubtitle =>
@@ -4964,9 +4963,6 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'Nenhuma lista ainda. Crie uma para os loops que você quer manter juntos.';
-
-  @override
-  String get listEditTitle => 'Editar lista';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5058,9 +5054,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name no Divine';
   }
-
-  @override
-  String get listCancel => 'Cancelar';
 
   @override
   String get listCreate => 'Criar';
