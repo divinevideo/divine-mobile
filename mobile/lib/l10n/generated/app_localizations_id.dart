@@ -3775,17 +3775,11 @@ class AppLocalizationsId extends AppLocalizations {
   String get peopleListsAddToList => 'Tambahkan ke daftar';
 
   @override
-  String get peopleListsSheetTitle => 'Tambahkan ke daftar';
-
-  @override
   String get peopleListsEmptyTitle => 'Belum ada daftar';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Buat daftar untuk mulai mengelompokkan orang.';
-
-  @override
-  String get peopleListsCreateList => 'Buat daftar';
 
   @override
   String get peopleListsNewListTitle => 'Daftar baru';
@@ -4802,7 +4796,7 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
-  String get listSelectList => 'Select list';
+  String get listAddToLists => 'Add to lists';
 
   @override
   String listMemberCount(int count) {

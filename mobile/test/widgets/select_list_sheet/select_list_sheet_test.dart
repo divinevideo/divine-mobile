@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
@@ -139,6 +140,10 @@ void main() {
 
     Finder saveButton() => find.bySemanticsLabel(l10n.listDone);
 
+    /// The check button as assistive tech reads it.
+    SemanticsNode saveButtonNode() =>
+        find.semantics.byLabel(l10n.listDone).evaluate().single;
+
     group('renders', () {
       testWidgets('the title, one row per list, and a check on each list '
           'that holds the video', (tester) async {
@@ -149,7 +154,7 @@ void main() {
 
         await openSheet(tester);
 
-        expect(find.text(l10n.listSelectList), findsOneWidget);
+        expect(find.text(l10n.listAddToLists), findsOneWidget);
         expect(find.text('Holds it'), findsOneWidget);
         expect(find.text('1 video • Public'), findsOneWidget);
         expect(find.text('Watch later'), findsOneWidget);
@@ -284,6 +289,31 @@ void main() {
           () => service.removeVideoFromList('list_holds_it', _videoEventId),
         ).called(1);
         expect(find.byType(SelectListSheetBody), findsNothing);
+      });
+
+      testWidgets('the check is disabled until a list is picked, and enabled '
+          'again once one is', (tester) async {
+        when(() => service.myLists).thenReturn([list('Empty')]);
+        await openSheet(tester);
+
+        expect(
+          saveButtonNode(),
+          isSemantics(hasEnabledState: true, isEnabled: false),
+        );
+
+        await tester.tap(find.text('Empty'));
+        await tester.pump();
+        expect(
+          saveButtonNode(),
+          isSemantics(hasEnabledState: true, isEnabled: true),
+        );
+
+        await tester.tap(find.text('Empty'));
+        await tester.pump();
+        expect(
+          saveButtonNode(),
+          isSemantics(hasEnabledState: true, isEnabled: false),
+        );
       });
 
       testWidgets('the check closes at once when nothing was changed', (

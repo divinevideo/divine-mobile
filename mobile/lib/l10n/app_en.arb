@@ -2453,10 +2453,8 @@
     }
   },
   "peopleListsAddToList": "Add to list",
-  "peopleListsSheetTitle": "Add to list",
   "peopleListsEmptyTitle": "No lists yet",
   "peopleListsEmptySubtitle": "Create a list to start grouping people.",
-  "peopleListsCreateList": "Create list",
   "peopleListsNewListTitle": "New list",
   "peopleListsRouteTitle": "People list",
   "@peopleListsRouteTitle": {
@@ -3106,9 +3104,9 @@
       }
     }
   },
-  "listSelectList": "Select list",
-  "@listSelectList": {
-    "description": "Title of the sheet where the viewer picks which of their video lists a video belongs to."
+  "listAddToLists": "Add to lists",
+  "@listAddToLists": {
+    "description": "Title of the sheet where the viewer picks which of their lists a video or a person belongs to."
   },
   "listMemberCount": "{count, plural, =1{{count} member} other{{count} members}}",
   "@listMemberCount": {

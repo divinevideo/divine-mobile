@@ -1446,10 +1446,8 @@
         }
     },
     "peopleListsAddToList": "Добави към списъка",
-    "peopleListsSheetTitle": "Добави към списък",
     "peopleListsEmptyTitle": "Още няма списъци",
     "peopleListsEmptySubtitle": "Създай списък, за да започнеш да групираш хора.",
-    "peopleListsCreateList": "Създаване на списък",
     "peopleListsNewListTitle": "Нов списък",
     "peopleListsRouteTitle": "Списък с хора",
     "@peopleListsRouteTitle": {

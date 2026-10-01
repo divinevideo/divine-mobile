@@ -2277,10 +2277,8 @@
     }
   },
   "peopleListsAddToList": "జాబితాకు జోడించండి",
-  "peopleListsSheetTitle": "జాబితాకు జోడించండి",
   "peopleListsEmptyTitle": "ఇంకా జాబితాలు లేవు",
   "peopleListsEmptySubtitle": "వ్యక్తులను సమూహపరచడం ప్రారంభించడానికి జాబితాను సృష్టించండి.",
-  "peopleListsCreateList": "జాబితాను సృష్టించండి",
   "peopleListsNewListTitle": "కొత్త జాబితా",
   "peopleListsRouteTitle": "వ్యక్తుల జాబితా",
   "@peopleListsRouteTitle": {

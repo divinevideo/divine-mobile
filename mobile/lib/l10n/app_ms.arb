@@ -1898,10 +1898,8 @@
     }
   },
   "peopleListsAddToList": "Tambah ke senarai",
-  "peopleListsSheetTitle": "Tambah ke senarai",
   "peopleListsEmptyTitle": "Belum ada senarai",
   "peopleListsEmptySubtitle": "Cipta senarai untuk mula mengumpulkan orang.",
-  "peopleListsCreateList": "Cipta senarai",
   "peopleListsNewListTitle": "Senarai baharu",
   "peopleListsRouteTitle": "Senarai orang",
   "@peopleListsRouteTitle": {

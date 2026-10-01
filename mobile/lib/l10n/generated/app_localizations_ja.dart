@@ -3604,16 +3604,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get peopleListsAddToList => 'リストに追加';
 
   @override
-  String get peopleListsSheetTitle => 'リストに追加';
-
-  @override
   String get peopleListsEmptyTitle => 'リストがありません';
 
   @override
   String get peopleListsEmptySubtitle => 'リストを作成して人々をグループ化しましょう。';
-
-  @override
-  String get peopleListsCreateList => 'リストを作成';
 
   @override
   String get peopleListsNewListTitle => '新しいリスト';
@@ -4583,7 +4577,7 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get listSelectList => 'Select list';
+  String get listAddToLists => 'Add to lists';
 
   @override
   String listMemberCount(int count) {

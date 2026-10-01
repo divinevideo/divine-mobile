@@ -10,6 +10,8 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
 
 /// The header's check button; needs a [SelectListCubit] above it.
+///
+/// Disabled until at least one list is picked.
 class SelectListSaveButton extends StatelessWidget {
   /// Creates the button.
   const SelectListSaveButton({super.key});
@@ -19,10 +21,13 @@ class SelectListSaveButton extends StatelessWidget {
     final isSaving = context.select(
       (SelectListCubit cubit) => cubit.state.isSaving,
     );
+    final canSubmit = context.select(
+      (SelectListCubit cubit) => cubit.state.canSubmit,
+    );
     return ListInfoCheckButton(
       semanticLabel: context.l10n.listDone,
       isSaving: isSaving,
-      onPressed: isSaving
+      onPressed: !canSubmit
           ? null
           : () => runDetached(
               context.read<SelectListCubit>().submitted(),

@@ -3849,17 +3849,11 @@ class AppLocalizationsUr extends AppLocalizations {
   String get peopleListsAddToList => 'فہرست میں شامل کریں';
 
   @override
-  String get peopleListsSheetTitle => 'فہرست میں شامل کریں';
-
-  @override
   String get peopleListsEmptyTitle => 'ابھی کوئی فہرست نہیں';
 
   @override
   String get peopleListsEmptySubtitle =>
       'لوگوں کو گروہ میں باندھنے کے لیے فہرست بنائیں۔';
-
-  @override
-  String get peopleListsCreateList => 'فہرست بنائیں';
 
   @override
   String get peopleListsNewListTitle => 'نئی فہرست';
@@ -4878,7 +4872,7 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
-  String get listSelectList => 'Select list';
+  String get listAddToLists => 'Add to lists';
 
   @override
   String listMemberCount(int count) {

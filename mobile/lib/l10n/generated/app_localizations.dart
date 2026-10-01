@@ -6577,12 +6577,6 @@ abstract class AppLocalizations {
   /// **'Add to list'**
   String get peopleListsAddToList;
 
-  /// No description provided for @peopleListsSheetTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Add to list'**
-  String get peopleListsSheetTitle;
-
   /// No description provided for @peopleListsEmptyTitle.
   ///
   /// In en, this message translates to:
@@ -6594,12 +6588,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Create a list to start grouping people.'**
   String get peopleListsEmptySubtitle;
-
-  /// No description provided for @peopleListsCreateList.
-  ///
-  /// In en, this message translates to:
-  /// **'Create list'**
-  String get peopleListsCreateList;
 
   /// No description provided for @peopleListsNewListTitle.
   ///
@@ -8311,11 +8299,11 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{{count} video} other{{count} videos}}'**
   String listVideoCount(int count);
 
-  /// Title of the sheet where the viewer picks which of their video lists a video belongs to.
+  /// Title of the sheet where the viewer picks which of their lists a video or a person belongs to.
   ///
   /// In en, this message translates to:
-  /// **'Select list'**
-  String get listSelectList;
+  /// **'Add to lists'**
+  String get listAddToLists;
 
   /// Screen-reader count spoken for a people-list card, after the list name.
   ///

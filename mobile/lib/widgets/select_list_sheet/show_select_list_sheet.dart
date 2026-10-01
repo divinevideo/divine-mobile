@@ -63,7 +63,7 @@ Future<void> showSelectListSheet(
     // The sheet's default sizes, which the people-list picker uses too: it
     // opens over the lower part of the screen and can be dragged taller.
     await context.showVideoPausingVineBottomSheet<void>(
-      title: Text(l10n.listSelectList),
+      title: Text(l10n.listAddToLists),
       headerPadding: listInfoSheetHeaderPadding,
       headerLeadingAction: DivineIconButton(
         icon: DivineIconName.x,

@@ -3823,16 +3823,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get peopleListsAddToList => 'أضف إلى القائمة';
 
   @override
-  String get peopleListsSheetTitle => 'أضف إلى القائمة';
-
-  @override
   String get peopleListsEmptyTitle => 'لا توجد قوائم بعد';
 
   @override
   String get peopleListsEmptySubtitle => 'أنشئ قائمة لبدء تجميع الأشخاص.';
-
-  @override
-  String get peopleListsCreateList => 'إنشاء قائمة';
 
   @override
   String get peopleListsNewListTitle => 'قائمة جديدة';
@@ -4842,7 +4836,7 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get listSelectList => 'Select list';
+  String get listAddToLists => 'Add to lists';
 
   @override
   String listMemberCount(int count) {

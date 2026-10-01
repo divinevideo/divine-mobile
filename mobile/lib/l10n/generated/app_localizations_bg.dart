@@ -3896,17 +3896,11 @@ class AppLocalizationsBg extends AppLocalizations {
   String get peopleListsAddToList => 'Добави към списъка';
 
   @override
-  String get peopleListsSheetTitle => 'Добави към списък';
-
-  @override
   String get peopleListsEmptyTitle => 'Още няма списъци';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Създай списък, за да започнеш да групираш хора.';
-
-  @override
-  String get peopleListsCreateList => 'Създаване на списък';
 
   @override
   String get peopleListsNewListTitle => 'Нов списък';
@@ -4922,7 +4916,7 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
-  String get listSelectList => 'Select list';
+  String get listAddToLists => 'Add to lists';
 
   @override
   String listMemberCount(int count) {

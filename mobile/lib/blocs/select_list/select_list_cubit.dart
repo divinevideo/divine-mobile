@@ -74,9 +74,10 @@ class SelectListCubit extends Cubit<SelectListState>
   /// Ends in [SelectListStatus.saved] when every list took the change, so a
   /// visit with no changes closes at once. Otherwise the lists that did take
   /// it are done, and the state ends in [SelectListStatus.failure] or
-  /// [SelectListStatus.failureListFull] with the rest still picked.
+  /// [SelectListStatus.failureListFull] with the rest still picked. Ignored
+  /// while nothing is picked, as the sheet's check is then disabled.
   Future<void> submitted() async {
-    if (state.isSaving) return;
+    if (!state.canSubmit) return;
     final toAdd = state.listIdsToAdd;
     final toRemove = state.listIdsToRemove;
     if (toAdd.isEmpty && toRemove.isEmpty) {

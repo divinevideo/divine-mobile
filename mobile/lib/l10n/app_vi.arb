@@ -1898,10 +1898,8 @@
     }
   },
   "peopleListsAddToList": "Thêm vào danh sách",
-  "peopleListsSheetTitle": "Thêm vào danh sách",
   "peopleListsEmptyTitle": "Chưa có danh sách nào",
   "peopleListsEmptySubtitle": "Tạo một danh sách để bắt đầu nhóm mọi người.",
-  "peopleListsCreateList": "Tạo danh sách",
   "peopleListsNewListTitle": "Danh sách mới",
   "peopleListsRouteTitle": "Danh sách người",
   "@peopleListsRouteTitle": {

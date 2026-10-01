@@ -3817,17 +3817,11 @@ class AppLocalizationsVi extends AppLocalizations {
   String get peopleListsAddToList => 'Thêm vào danh sách';
 
   @override
-  String get peopleListsSheetTitle => 'Thêm vào danh sách';
-
-  @override
   String get peopleListsEmptyTitle => 'Chưa có danh sách nào';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Tạo một danh sách để bắt đầu nhóm mọi người.';
-
-  @override
-  String get peopleListsCreateList => 'Tạo danh sách';
 
   @override
   String get peopleListsNewListTitle => 'Danh sách mới';
@@ -4840,7 +4834,7 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get listSelectList => 'Select list';
+  String get listAddToLists => 'Add to lists';
 
   @override
   String listMemberCount(int count) {

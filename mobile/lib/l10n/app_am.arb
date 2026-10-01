@@ -1633,10 +1633,8 @@
         }
     },
     "peopleListsAddToList": "ወደ ዝርዝር ያክሉ",
-    "peopleListsSheetTitle": "ወደ ዝርዝር ያክሉ",
     "peopleListsEmptyTitle": "እስካሁን ምንም ዝርዝሮች የሉም",
     "peopleListsEmptySubtitle": "ሰዎችን መቧደን ለመጀመር ዝርዝር ይፍጠሩ።",
-    "peopleListsCreateList": "ዝርዝር ይፍጠሩ",
     "peopleListsNewListTitle": "አዲስ ዝርዝር",
     "peopleListsRouteTitle": "የሰዎች ዝርዝር",
     "@peopleListsRouteTitle": {

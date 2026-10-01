@@ -3838,17 +3838,11 @@ class AppLocalizationsSv extends AppLocalizations {
   String get peopleListsAddToList => 'Lägg till i lista';
 
   @override
-  String get peopleListsSheetTitle => 'Lägg till i lista';
-
-  @override
   String get peopleListsEmptyTitle => 'Inga listor än';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Skapa en lista för att börja gruppera personer.';
-
-  @override
-  String get peopleListsCreateList => 'Skapa lista';
 
   @override
   String get peopleListsNewListTitle => 'Ny lista';
@@ -4866,7 +4860,7 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
-  String get listSelectList => 'Select list';
+  String get listAddToLists => 'Add to lists';
 
   @override
   String listMemberCount(int count) {

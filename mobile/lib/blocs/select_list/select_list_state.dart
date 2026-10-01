@@ -46,6 +46,10 @@ class SelectListState extends Equatable {
   /// Whether the picks are being written.
   bool get isSaving => status == SelectListStatus.saving;
 
+  /// Whether the picks can be written: at least one list is picked and no
+  /// save is running.
+  bool get canSubmit => selectedListIds.isNotEmpty && !isSaving;
+
   /// Whether the sheet has nothing left to show and can close.
   bool get canClose => status == SelectListStatus.saved;
 

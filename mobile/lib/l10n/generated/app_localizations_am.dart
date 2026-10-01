@@ -3762,16 +3762,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get peopleListsAddToList => 'ወደ ዝርዝር ያክሉ';
 
   @override
-  String get peopleListsSheetTitle => 'ወደ ዝርዝር ያክሉ';
-
-  @override
   String get peopleListsEmptyTitle => 'እስካሁን ምንም ዝርዝሮች የሉም';
 
   @override
   String get peopleListsEmptySubtitle => 'ሰዎችን መቧደን ለመጀመር ዝርዝር ይፍጠሩ።';
-
-  @override
-  String get peopleListsCreateList => 'ዝርዝር ይፍጠሩ';
 
   @override
   String get peopleListsNewListTitle => 'አዲስ ዝርዝር';
@@ -4754,7 +4748,7 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get listSelectList => 'Select list';
+  String get listAddToLists => 'Add to lists';
 
   @override
   String listMemberCount(int count) {

@@ -1898,10 +1898,8 @@
     }
   },
   "peopleListsAddToList": "加入列表",
-  "peopleListsSheetTitle": "加入列表",
   "peopleListsEmptyTitle": "还没有列表",
   "peopleListsEmptySubtitle": "创建一个列表，开始给人们分组。",
-  "peopleListsCreateList": "创建列表",
   "peopleListsNewListTitle": "新列表",
   "peopleListsRouteTitle": "人物列表",
   "@peopleListsRouteTitle": {

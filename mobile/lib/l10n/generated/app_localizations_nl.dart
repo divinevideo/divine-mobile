@@ -3860,17 +3860,11 @@ class AppLocalizationsNl extends AppLocalizations {
   String get peopleListsAddToList => 'Toevoegen aan lijst';
 
   @override
-  String get peopleListsSheetTitle => 'Toevoegen aan lijst';
-
-  @override
   String get peopleListsEmptyTitle => 'Nog geen lijsten';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Maak een lijst om mensen te groeperen.';
-
-  @override
-  String get peopleListsCreateList => 'Lijst aanmaken';
 
   @override
   String get peopleListsNewListTitle => 'Nieuwe lijst';
@@ -4891,7 +4885,7 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
-  String get listSelectList => 'Select list';
+  String get listAddToLists => 'Add to lists';
 
   @override
   String listMemberCount(int count) {

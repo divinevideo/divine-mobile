@@ -3619,16 +3619,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get peopleListsAddToList => '목록에 추가';
 
   @override
-  String get peopleListsSheetTitle => '목록에 추가';
-
-  @override
   String get peopleListsEmptyTitle => '목록이 없습니다';
 
   @override
   String get peopleListsEmptySubtitle => '목록을 만들어 사람들을 그룹화하세요.';
-
-  @override
-  String get peopleListsCreateList => '목록 만들기';
 
   @override
   String get peopleListsNewListTitle => '새 목록';
@@ -4600,7 +4594,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get listSelectList => 'Select list';
+  String get listAddToLists => 'Add to lists';
 
   @override
   String listMemberCount(int count) {

@@ -3602,16 +3602,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get peopleListsAddToList => '加入列表';
 
   @override
-  String get peopleListsSheetTitle => '加入列表';
-
-  @override
   String get peopleListsEmptyTitle => '还没有列表';
 
   @override
   String get peopleListsEmptySubtitle => '创建一个列表，开始给人们分组。';
-
-  @override
-  String get peopleListsCreateList => '创建列表';
 
   @override
   String get peopleListsNewListTitle => '新列表';
@@ -4570,7 +4564,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get listSelectList => 'Select list';
+  String get listAddToLists => 'Add to lists';
 
   @override
   String listMemberCount(int count) {

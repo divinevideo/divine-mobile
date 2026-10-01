@@ -3,6 +3,7 @@
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -293,7 +294,11 @@ void main() {
       testWidgetsWithSurfaceSize(
         'the check closes without dispatching when nothing was changed',
         (tester) async {
-          final list = _buildList(id: 'list-1', name: 'Close Friends');
+          final list = _buildList(
+            id: 'list-1',
+            name: 'Close Friends',
+            pubkeys: [_targetPubkey],
+          );
           when(() => bloc.state).thenReturn(_stateWith(lists: [list]));
 
           await openSheet(tester);
@@ -302,6 +307,37 @@ void main() {
 
           verifyNever(() => bloc.add(any()));
           expect(find.byType(AddToPeopleListsSheet), findsNothing);
+        },
+      );
+
+      testWidgetsWithSurfaceSize(
+        'the check is disabled until a list is picked, and enabled again '
+        'once one is',
+        (tester) async {
+          final list = _buildList(id: 'list-1', name: 'Close Friends');
+          when(() => bloc.state).thenReturn(_stateWith(lists: [list]));
+          SemanticsNode checkNode() =>
+              find.semantics.byLabel(l10n.listDone).evaluate().single;
+
+          await openSheet(tester);
+          expect(
+            checkNode(),
+            isSemantics(hasEnabledState: true, isEnabled: false),
+          );
+
+          await tester.tap(find.text('Close Friends'));
+          await tester.pump();
+          expect(
+            checkNode(),
+            isSemantics(hasEnabledState: true, isEnabled: true),
+          );
+
+          await tester.tap(find.text('Close Friends'));
+          await tester.pump();
+          expect(
+            checkNode(),
+            isSemantics(hasEnabledState: true, isEnabled: false),
+          );
         },
       );
 
@@ -391,7 +427,7 @@ void main() {
       );
 
       testWidgetsWithSurfaceSize(
-        'Create list button is present in the modal sheet and opens the '
+        'Create New List button is present in the modal sheet and opens the '
         'new people list sheet when tapped',
         (tester) async {
           when(() => bloc.state).thenReturn(_stateWith(lists: const []));
@@ -426,15 +462,17 @@ void main() {
           await tester.tap(find.text('open'));
           await tester.pumpAndSettle();
 
-          // The Create list button is pinned in the bottomInput slot of
-          // the VineBottomSheet.
+          // The Create New List button is pinned in the bottomInput slot of
+          // the VineBottomSheet, worded as the video picker's.
           expect(
-            find.widgetWithText(DivineButton, 'Create list'),
+            find.widgetWithText(DivineButton, l10n.listCreateNewList),
             findsOneWidget,
           );
 
           // Tap opens the new people list sheet (another modal on top).
-          await tester.tap(find.widgetWithText(DivineButton, 'Create list'));
+          await tester.tap(
+            find.widgetWithText(DivineButton, l10n.listCreateNewList),
+          );
           await tester.pumpAndSettle();
 
           // The new list sheet is shown — identified by its title key.

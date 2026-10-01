@@ -14,6 +14,7 @@ import 'package:openvine/features/people_lists/models/people_list_entry_point.da
 import 'package:openvine/features/people_lists/view/widgets/widgets.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
+import 'package:openvine/widgets/list_picker_create_button.dart';
 import 'package:openvine/widgets/profile/new_people_list_sheet.dart';
 
 /// Bottom sheet that displays the authenticated user's editable people
@@ -88,7 +89,7 @@ class AddToPeopleListsSheet extends StatefulWidget {
     try {
       await VineBottomSheet.show<void>(
         context: context,
-        title: Text(l10n.peopleListsSheetTitle),
+        title: Text(l10n.listAddToLists),
         headerPadding: listInfoSheetHeaderPadding,
         headerLeadingAction: DivineIconButton(
           icon: DivineIconName.x,
@@ -205,15 +206,19 @@ class _ApplyButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Disabled until at least one list is picked.
+    final canApply = context.select(
+      (PeopleListPicksCubit cubit) => cubit.state.selectedListIds.isNotEmpty,
+    );
     return ListInfoCheckButton(
       semanticLabel: context.l10n.listDone,
       isSaving: false,
-      onPressed: () => _apply(context),
+      onPressed: canApply ? () => _apply(context) : null,
     );
   }
 }
 
-/// Floating "Create new list" button pinned to the bottom of the sheet.
+/// The "Create New List" button pinned to the bottom of the sheet.
 class _CreateNewListButton extends StatelessWidget {
   const _CreateNewListButton({this.initialCollaborator});
 
@@ -221,22 +226,10 @@ class _CreateNewListButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        24,
-        12,
-        24,
-        12 + MediaQuery.viewPaddingOf(context).bottom,
-      ),
-      child: DivineButton(
-        label: context.l10n.peopleListsCreateList,
-        expanded: true,
-        leadingIcon: DivineIconName.listPlus,
-        type: DivineButtonType.secondary,
-        onPressed: () => showNewPeopleListSheet(
-          context,
-          initialCollaborator: initialCollaborator,
-        ),
+    return ListPickerCreateButton(
+      onPressed: () => showNewPeopleListSheet(
+        context,
+        initialCollaborator: initialCollaborator,
       ),
     );
   }

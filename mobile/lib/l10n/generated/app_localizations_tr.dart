@@ -3787,17 +3787,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get peopleListsAddToList => 'Listeye ekle';
 
   @override
-  String get peopleListsSheetTitle => 'Listeye ekle';
-
-  @override
   String get peopleListsEmptyTitle => 'Henüz liste yok';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Kişileri gruplamaya başlamak için bir liste oluştur.';
-
-  @override
-  String get peopleListsCreateList => 'Liste oluştur';
 
   @override
   String get peopleListsNewListTitle => 'Yeni liste';
@@ -4813,7 +4807,7 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get listSelectList => 'Select list';
+  String get listAddToLists => 'Add to lists';
 
   @override
   String listMemberCount(int count) {

@@ -3964,17 +3964,11 @@ class AppLocalizationsRo extends AppLocalizations {
   String get peopleListsAddToList => 'Adaugă la listă';
 
   @override
-  String get peopleListsSheetTitle => 'Adaugă la listă';
-
-  @override
   String get peopleListsEmptyTitle => 'Nicio listă încă';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Creează o listă pentru a începe să grupezi persoane.';
-
-  @override
-  String get peopleListsCreateList => 'Creează listă';
 
   @override
   String get peopleListsNewListTitle => 'Listă nouă';
@@ -5015,7 +5009,7 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get listSelectList => 'Select list';
+  String get listAddToLists => 'Add to lists';
 
   @override
   String listMemberCount(int count) {

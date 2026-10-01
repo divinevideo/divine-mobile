@@ -13,6 +13,7 @@ import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
+import 'package:openvine/widgets/list_picker_create_button.dart';
 import 'package:openvine/widgets/list_picker_row.dart';
 
 /// The picker's body; needs a [SelectListCubit] above it.
@@ -163,9 +164,6 @@ class _ListRow extends StatelessWidget {
 
 /// The "Create New List" button pinned under the rows; needs a
 /// [SelectListCubit] above it.
-///
-/// Goes in the sheet's bottom slot, which keeps it below the rows at every
-/// height the sheet is dragged to and clear of the home indicator.
 class SelectListCreateButton extends StatelessWidget {
   /// Creates the button for the picker opened on [video].
   const SelectListCreateButton({required this.video, super.key});
@@ -178,22 +176,15 @@ class SelectListCreateButton extends StatelessWidget {
     final isSaving = context.select(
       (SelectListCubit cubit) => cubit.state.isSaving,
     );
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: DivineButton(
-        label: context.l10n.listCreateNewList,
-        type: DivineButtonType.secondary,
-        leadingIcon: DivineIconName.plus,
-        expanded: true,
-        onPressed: isSaving
-            ? null
-            : () => runDetached(
-                showListInfoSheet(context, video: video),
-                'open list creation sheet',
-                logName: 'SelectListSheet',
-                category: LogCategory.ui,
-              ),
-      ),
+    return ListPickerCreateButton(
+      onPressed: isSaving
+          ? null
+          : () => runDetached(
+              showListInfoSheet(context, video: video),
+              'open list creation sheet',
+              logName: 'SelectListSheet',
+              category: LogCategory.ui,
+            ),
     );
   }
 }

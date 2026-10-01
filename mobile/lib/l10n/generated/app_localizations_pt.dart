@@ -3875,17 +3875,11 @@ class AppLocalizationsPt extends AppLocalizations {
   String get peopleListsAddToList => 'Adicionar à lista';
 
   @override
-  String get peopleListsSheetTitle => 'Adicionar à lista';
-
-  @override
   String get peopleListsEmptyTitle => 'Ainda sem listas';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Cria uma lista para começar a agrupar pessoas.';
-
-  @override
-  String get peopleListsCreateList => 'Criar lista';
 
   @override
   String get peopleListsNewListTitle => 'Nova lista';
@@ -4905,7 +4899,7 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get listSelectList => 'Select list';
+  String get listAddToLists => 'Add to lists';
 
   @override
   String listMemberCount(int count) {

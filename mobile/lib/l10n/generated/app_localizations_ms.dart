@@ -3839,17 +3839,11 @@ class AppLocalizationsMs extends AppLocalizations {
   String get peopleListsAddToList => 'Tambah ke senarai';
 
   @override
-  String get peopleListsSheetTitle => 'Tambah ke senarai';
-
-  @override
   String get peopleListsEmptyTitle => 'Belum ada senarai';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Cipta senarai untuk mula mengumpulkan orang.';
-
-  @override
-  String get peopleListsCreateList => 'Cipta senarai';
 
   @override
   String get peopleListsNewListTitle => 'Senarai baharu';
@@ -4873,7 +4867,7 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
-  String get listSelectList => 'Select list';
+  String get listAddToLists => 'Add to lists';
 
   @override
   String listMemberCount(int count) {

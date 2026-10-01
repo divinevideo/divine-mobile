@@ -3991,17 +3991,11 @@ class AppLocalizationsTe extends AppLocalizations {
   String get peopleListsAddToList => 'జాబితాకు జోడించండి';
 
   @override
-  String get peopleListsSheetTitle => 'జాబితాకు జోడించండి';
-
-  @override
   String get peopleListsEmptyTitle => 'ఇంకా జాబితాలు లేవు';
 
   @override
   String get peopleListsEmptySubtitle =>
       'వ్యక్తులను సమూహపరచడం ప్రారంభించడానికి జాబితాను సృష్టించండి.';
-
-  @override
-  String get peopleListsCreateList => 'జాబితాను సృష్టించండి';
 
   @override
   String get peopleListsNewListTitle => 'కొత్త జాబితా';
@@ -5044,7 +5038,7 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
-  String get listSelectList => 'Select list';
+  String get listAddToLists => 'Add to lists';
 
   @override
   String listMemberCount(int count) {

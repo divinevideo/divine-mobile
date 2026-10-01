@@ -3866,17 +3866,11 @@ class AppLocalizationsFil extends AppLocalizations {
   String get peopleListsAddToList => 'Idagdag sa listahan';
 
   @override
-  String get peopleListsSheetTitle => 'Idagdag sa listahan';
-
-  @override
   String get peopleListsEmptyTitle => 'Wala pang listahan';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Gumawa ng listahan para simulang igrupo ang mga tao.';
-
-  @override
-  String get peopleListsCreateList => 'Gumawa ng listahan';
 
   @override
   String get peopleListsNewListTitle => 'Bagong listahan';
@@ -4902,7 +4896,7 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
-  String get listSelectList => 'Select list';
+  String get listAddToLists => 'Add to lists';
 
   @override
   String listMemberCount(int count) {

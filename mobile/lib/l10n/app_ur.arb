@@ -1898,10 +1898,8 @@
     }
   },
   "peopleListsAddToList": "فہرست میں شامل کریں",
-  "peopleListsSheetTitle": "فہرست میں شامل کریں",
   "peopleListsEmptyTitle": "ابھی کوئی فہرست نہیں",
   "peopleListsEmptySubtitle": "لوگوں کو گروہ میں باندھنے کے لیے فہرست بنائیں۔",
-  "peopleListsCreateList": "فہرست بنائیں",
   "peopleListsNewListTitle": "نئی فہرست",
   "peopleListsRouteTitle": "لوگوں کی فہرست",
   "@peopleListsRouteTitle": {
