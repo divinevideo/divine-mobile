@@ -64,9 +64,12 @@ class BadgeVideoPager {
         if (chunk.buffer.isEmpty) continue;
         final candidate = chunk.buffer.first;
         final current = newestChunk?.buffer.first;
+        // The server orders each chunk by the event's own created_at, not the
+        // published_at that createdAt prefers; merging on any other clock
+        // lets an edited video hold back the rest of its chunk.
         if (current == null ||
-            candidate.createdAt > current.createdAt ||
-            (candidate.createdAt == current.createdAt &&
+            candidate.nostrCreatedAt > current.nostrCreatedAt ||
+            (candidate.nostrCreatedAt == current.nostrCreatedAt &&
                 candidate.id.compareTo(current.id) > 0)) {
           newestChunk = chunk;
         }
