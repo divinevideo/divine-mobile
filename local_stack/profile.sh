@@ -148,12 +148,30 @@ else
     # path, so a permission dialog would block Flutter interaction with no
     # way to dismiss it. Install first so the pre-grant has a package to
     # target even after a fresh emulator wipe or Patrol's default uninstall.
+    # It must be the debug build flutter test runs, which the debug
+    # applicationIdSuffix installs as co.openvine.app.staging. flutter
+    # install never builds and defaults to release, so build it first, for
+    # this device's ABI only, as flutter test does.
     echo "Running: flutter test ${TEST_PATH} ..." >&2
-    flutter install --device-id "$DEVICE" 2>&1 | tee "$APP_LOG"
+    case "$(adb -s "$DEVICE" shell getprop ro.product.cpu.abi | tr -d '\r')" in
+        arm64-v8a) TARGET_PLATFORM=android-arm64 ;;
+        x86_64) TARGET_PLATFORM=android-x64 ;;
+        armeabi-v7a) TARGET_PLATFORM=android-arm ;;
+        *) TARGET_PLATFORM="" ;;
+    esac
+    flutter build apk --debug ${TARGET_PLATFORM:+--target-platform "$TARGET_PLATFORM"} \
+        2>&1 | tee "$APP_LOG"
     INSTALL_EXIT="${PIPESTATUS[0]}"
     if [[ $INSTALL_EXIT -eq 0 ]]; then
-        adb -s "$DEVICE" shell pm grant co.openvine.app \
-            android.permission.POST_NOTIFICATIONS >/dev/null 2>&1 || true
+        flutter install --debug --device-id "$DEVICE" 2>&1 | tee -a "$APP_LOG"
+        INSTALL_EXIT="${PIPESTATUS[0]}"
+    fi
+    if [[ $INSTALL_EXIT -eq 0 ]]; then
+        if ! adb -s "$DEVICE" shell pm grant co.openvine.app.staging \
+            android.permission.POST_NOTIFICATIONS; then
+            echo "WARNING: could not pre-grant POST_NOTIFICATIONS to co.openvine.app.staging." >&2
+            echo "Below Android 13 that is expected; otherwise its dialog can block the run." >&2
+        fi
         flutter test "$TEST_PATH" \
             --device-id "$DEVICE" \
             --dart-define=DEFAULT_ENV=LOCAL \
