@@ -8,9 +8,11 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:people_lists_repository/src/followed_people_lists_store.dart';
+import 'package:people_lists_repository/src/followed_people_lists_write_coordinator.dart';
 import 'package:people_lists_repository/src/local_people_lists_cache.dart';
 import 'package:people_lists_repository/src/nip51_people_list_codec.dart';
 import 'package:people_lists_repository/src/people_list_publish_result.dart';
+import 'package:people_lists_repository/src/people_list_revision.dart';
 import 'package:people_lists_repository/src/people_list_search_result.dart';
 import 'package:people_lists_repository/src/people_lists_repository.dart';
 import 'package:rxdart/rxdart.dart';
@@ -46,8 +48,9 @@ typedef BlockedPeopleListOwnerFilter = bool Function(String ownerPubkey);
 /// overlap another published mutation.
 ///
 /// Constructor injection only — the repository never resolves dependencies
-/// implicitly. Durable list and follow state lives in the injected cache and
-/// follow store; following is a separate local-device operation.
+/// implicitly. List data lives in the injected cache and follow store;
+/// followed-list writes share the injected viewer coordinator with account
+/// cleanup.
 class PeopleListsRepositoryImpl implements PeopleListsRepository {
   /// Creates a repository bound to [nostrClient], [cache] and
   /// [followedListsStore].
@@ -55,6 +58,7 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     required NostrClient nostrClient,
     required LocalPeopleListsCache cache,
     required FollowedPeopleListsStore followedListsStore,
+    FollowedPeopleListsWriteCoordinator? followedListsWriteCoordinator,
     BlockedPeopleListOwnerFilter? blockFilter,
     FunnelcakeApiClient? funnelcakeApiClient,
     List<String> discoveryRelayUrls = const [],
@@ -62,6 +66,9 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
   }) : _nostrClient = nostrClient,
        _cache = cache,
        _followedListsStore = followedListsStore,
+       _followedListsWriteCoordinator =
+           followedListsWriteCoordinator ??
+           FollowedPeopleListsWriteCoordinator(),
        _blockFilter = blockFilter,
        _funnelcakeApiClient = funnelcakeApiClient,
        _discoveryRelayUrls = List.unmodifiable(discoveryRelayUrls),
@@ -74,6 +81,7 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
 
   /// Which lists each viewer follows. [_cache] only mirrors their contents.
   final FollowedPeopleListsStore _followedListsStore;
+  final FollowedPeopleListsWriteCoordinator _followedListsWriteCoordinator;
   final BlockedPeopleListOwnerFilter? _blockFilter;
   final Map<String, Future<void>> _ownerOperations = {};
 
@@ -608,7 +616,8 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
         list: list,
       );
       final existing = seen[result.addressableId];
-      if (existing != null && !_supersedes(list, existing.list)) {
+      if (existing != null &&
+          !peopleListRevisionSupersedes(list, existing.list)) {
         continue;
       }
       seen[result.addressableId] = result;
@@ -754,48 +763,54 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     required String viewerPubkey,
     required String ownerPubkey,
     required UserList list,
-  }) async {
-    // The copy first, so the follow never shows up with nothing to show.
-    await _cache.putFollowedCopy(
-      viewerPubkey: viewerPubkey,
-      ownerPubkey: ownerPubkey,
-      // Someone else's list: the copy must never offer the owner's
-      // affordances, whatever the caller resolved it as.
-      list: list.copyWith(isEditable: false),
-    );
-    try {
-      await _followedListsStore.add(
-        viewerPubkey: viewerPubkey,
-        ref: FollowedPeopleListRef(ownerPubkey: ownerPubkey, listId: list.id),
-      );
-    } on Object {
-      // The follow was not recorded, so the copy is nobody's: take it back
-      // out rather than leave it in the box until account cleanup.
-      await _removeCopyQuietly(
+  }) => _serializeFollowedListsWrite(
+    () async {
+      // The copy first, so the follow never shows up with nothing to show.
+      await _cache.putFollowedCopy(
         viewerPubkey: viewerPubkey,
         ownerPubkey: ownerPubkey,
-        listId: list.id,
+        // Someone else's list: the copy must never offer the owner's
+        // affordances, whatever the caller resolved it as.
+        list: list.copyWith(isEditable: false),
       );
-      rethrow;
-    }
-  }
+      try {
+        await _followedListsStore.add(
+          viewerPubkey: viewerPubkey,
+          ref: FollowedPeopleListRef(ownerPubkey: ownerPubkey, listId: list.id),
+        );
+      } on Object {
+        // The follow was not recorded, so the copy is nobody's: take it back
+        // out rather than leave it in the box until account cleanup.
+        await _removeCopyQuietly(
+          viewerPubkey: viewerPubkey,
+          ownerPubkey: ownerPubkey,
+          listId: list.id,
+        );
+        rethrow;
+      }
+    },
+    viewerPubkey: viewerPubkey,
+  );
 
   @override
   Future<void> unfollowList({
     required String viewerPubkey,
     required String ownerPubkey,
     required String listId,
-  }) async {
-    await _followedListsStore.remove(
-      viewerPubkey: viewerPubkey,
-      ref: FollowedPeopleListRef(ownerPubkey: ownerPubkey, listId: listId),
-    );
-    await _removeCopyQuietly(
-      viewerPubkey: viewerPubkey,
-      ownerPubkey: ownerPubkey,
-      listId: listId,
-    );
-  }
+  }) => _serializeFollowedListsWrite(
+    () async {
+      await _followedListsStore.remove(
+        viewerPubkey: viewerPubkey,
+        ref: FollowedPeopleListRef(ownerPubkey: ownerPubkey, listId: listId),
+      );
+      await _removeCopyQuietly(
+        viewerPubkey: viewerPubkey,
+        ownerPubkey: ownerPubkey,
+        listId: listId,
+      );
+    },
+    viewerPubkey: viewerPubkey,
+  );
 
   /// Removes the copy of a list no follow names.
   ///
@@ -826,9 +841,23 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
   }
 
   @override
-  Future<void> syncFollowedLists({required String viewerPubkey}) async {
+  Future<void> syncFollowedLists({
+    required String viewerPubkey,
+    bool Function()? isCancelled,
+  }) => _followedListsWriteCoordinator.refresh(
+    viewerPubkey: viewerPubkey,
+    isCancelled: isCancelled,
+    operation: (isCancelled) =>
+        _refreshFollowedLists(viewerPubkey, isCancelled),
+  );
+
+  Future<void> _refreshFollowedLists(
+    String viewerPubkey,
+    bool Function() isCancelled,
+  ) async {
+    if (isCancelled()) return;
     final refs = await _followedListsStore.read(viewerPubkey: viewerPubkey);
-    if (refs.isEmpty) return;
+    if (refs.isEmpty || isCancelled()) return;
 
     final List<Event> events;
     try {
@@ -856,6 +885,7 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
       return;
     }
 
+    if (isCancelled()) return;
     final followed = refs.toSet();
     final newest = <FollowedPeopleListRef, UserList>{};
     for (final event in events) {
@@ -867,24 +897,40 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
       );
       if (!followed.contains(ref)) continue;
       final existing = newest[ref];
-      if (existing != null && !_supersedes(list, existing)) continue;
+      if (existing != null && !peopleListRevisionSupersedes(list, existing)) {
+        continue;
+      }
       newest[ref] = list;
     }
 
     for (final MapEntry(key: ref, value: list) in newest.entries) {
-      await _cache.refreshFollowedCopy(
+      // The relay read can take seconds, long enough to unfollow in. A copy
+      // written for a list nobody follows any more would never be shown, but
+      // would stay in the box until the account's data is deleted.
+      await _serializeFollowedListsWrite(
+        () async {
+          final stillFollowed = await _followedListsStore.read(
+            viewerPubkey: viewerPubkey,
+          );
+          if (isCancelled() || !stillFollowed.contains(ref)) return;
+          await _cache.refreshFollowedCopy(
+            viewerPubkey: viewerPubkey,
+            ownerPubkey: ref.ownerPubkey,
+            list: list.copyWith(isEditable: false),
+          );
+        },
         viewerPubkey: viewerPubkey,
-        ownerPubkey: ref.ownerPubkey,
-        list: list.copyWith(isEditable: false),
       );
     }
   }
 
-  @override
-  Future<void> clearFollowedLists({required String viewerPubkey}) async {
-    await _followedListsStore.clear(viewerPubkey: viewerPubkey);
-    await _cache.clearFollowedCopies(viewerPubkey: viewerPubkey);
-  }
+  Future<T> _serializeFollowedListsWrite<T>(
+    Future<T> Function() operation, {
+    required String viewerPubkey,
+  }) => _followedListsWriteCoordinator.run(
+    viewerPubkey: viewerPubkey,
+    operation: operation,
+  );
 
   Future<PeopleListPublishResult> _publishListReplacement({
     required String ownerPubkey,
@@ -980,20 +1026,6 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
       return false;
     }
     return true;
-  }
-
-  /// Whether revision [candidate] supersedes [selected] under NIP-01
-  /// replaceable-event ordering: the later `updatedAt` wins, and a tie is
-  /// broken on the lowest event id. An absent id on either side leaves the tie
-  /// unbroken, so the already-selected revision is kept.
-  static bool _supersedes(UserList candidate, UserList selected) {
-    if (candidate.updatedAt != selected.updatedAt) {
-      return candidate.updatedAt.isAfter(selected.updatedAt);
-    }
-    final candidateId = candidate.nostrEventId;
-    final selectedId = selected.nostrEventId;
-    if (candidateId == null || selectedId == null) return false;
-    return candidateId.compareTo(selectedId) < 0;
   }
 
   static bool _isNewerRevision(
