@@ -89,16 +89,16 @@ void main() {
           container.read(goRouterProvider).go(KeyManagementScreen.path);
           await pumpUntilSettled(tester, maxSeconds: 10);
 
-          // The #182 key-management gate fails closed until the protected-minor
-          // status resolves; for this adult account it resolves to not-restricted
-          // and reveals the export section. Wait out that resolution window.
-          await waitForTextGone(tester, 'Your keys are managed by Divine');
-
           // Resolved from the ARB rather than hardcoded so this survives copy
           // changes and breaks loudly if the screen stops reading from l10n.
           final l10n = lookupAppLocalizations(const Locale('en'));
 
-          expect(find.text('Key Management'), findsOneWidget);
+          // The #182 key-management gate fails closed until the protected-minor
+          // status resolves; for this adult account it resolves to not-restricted
+          // and reveals the export section. Wait out that resolution window.
+          await waitForTextGone(tester, l10n.keyManagementRestrictedTitle);
+
+          expect(find.text(l10n.keyManagementTitle), findsOneWidget);
           // The key is reachable, just not on this device: the copy action is
           // offered for this account too, and the explanation above it says the
           // key comes from Divine's login service rather than local storage.
