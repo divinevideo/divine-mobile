@@ -21,10 +21,6 @@ import 'package:unified_logger/unified_logger.dart';
 
 enum UnsealItemTagsStatus { notSealed, unsealed, failed }
 
-// Keeps the read alive past nostr_sdk's 8s subscription silence probe and 10s
-// teardown repair floor so a repaired relay can still answer this request.
-const Duration kPublicCuratedListsRelayReadTimeout = Duration(seconds: 12);
-
 final class UnsealedItemTags {
   const UnsealedItemTags._(this.status, [this.tags]);
 
@@ -137,7 +133,7 @@ class CuratedListRelayGateway {
   /// Use [excludeIds] to skip lists already known (for pagination)
   Stream<List<CuratedList>> streamPublicListsFromRelays({
     DateTime? until,
-    int limit = 500,
+    int limit = kPublicListsRelayWindow,
     Set<String>? excludeIds,
     Duration timeout = kPublicCuratedListsRelayReadTimeout,
   }) {

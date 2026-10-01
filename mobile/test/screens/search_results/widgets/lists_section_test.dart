@@ -11,6 +11,7 @@ import 'package:openvine/screens/search_results/widgets/lists_section.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_empty_state.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
 import 'package:openvine/screens/search_results/widgets/section_header.dart';
+import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 
 import '../../../helpers/go_router.dart';
@@ -202,6 +203,7 @@ void main() {
           );
           await tester.pump();
 
+          expect(find.byType(DivineListThumbnail), findsNWidgets(2));
           expect(find.text('Crew'), findsOneWidget);
 
           await tester.tap(find.text('Crew'));
