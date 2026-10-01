@@ -397,6 +397,103 @@ void main() {
       },
     );
 
+    test('accepted holders ignore awards and revocations the issuer did not '
+        'sign', () async {
+      // The relay filters on authors, but a relay that ignores the filter
+      // must not let a stranger add holders to a curated badge or revoke
+      // real ones.
+      final coordinate = BadgeCoordinate(
+        pubkey: _pubkey(2),
+        identifier: 'daily-diviner',
+      );
+      when(() => nostrClient.readAllEvents(any())).thenAnswer((
+        invocation,
+      ) async {
+        final filter = invocation.positionalArguments.single as Filter;
+        if (filter.kinds?.contains(EventKind.badgeAward) == true) {
+          return PagedQueryResult(
+            events: [
+              _awardEvent(
+                id: _eventId(100),
+                issuerPubkey: coordinate.pubkey,
+                definitionCoordinate: coordinate.value,
+                recipients: [_pubkey(10)],
+              ),
+              _awardEvent(
+                id: _eventId(101),
+                issuerPubkey: _pubkey(3),
+                definitionCoordinate: coordinate.value,
+                recipients: [_pubkey(11)],
+              ),
+            ],
+            isComplete: true,
+            pages: 1,
+          );
+        }
+        if (filter.kinds?.contains(EventKind.eventDeletion) == true) {
+          return PagedQueryResult(
+            events: [
+              _event(
+                id: _eventId(200),
+                pubkey: _pubkey(3),
+                kind: EventKind.eventDeletion,
+                tags: [
+                  ['e', _eventId(100)],
+                ],
+              ),
+            ],
+            isComplete: true,
+            pages: 1,
+          );
+        }
+        if (filter.kinds?.contains(EventKind.profileBadges) == true) {
+          return PagedQueryResult(
+            events: [
+              for (final pubkey in filter.authors ?? const <String>[])
+                _profileBadgesEvent(
+                  id: _eventId(500 + int.parse(pubkey, radix: 16)),
+                  pubkey: pubkey,
+                  tags: [
+                    ['a', coordinate.value],
+                    [
+                      'e',
+                      _eventId(pubkey == _pubkey(10) ? 100 : 101),
+                    ],
+                  ],
+                ),
+            ],
+            isComplete: true,
+            pages: 1,
+          );
+        }
+        return const PagedQueryResult(events: [], isComplete: true, pages: 1);
+      });
+
+      expect(await repository.loadAcceptedHolders(coordinate), {_pubkey(10)});
+    });
+
+    test('Explore definitions ignore events the issuer did not sign', () async {
+      when(() => nostrClient.readAllEvents(any())).thenAnswer(
+        (_) async => PagedQueryResult(
+          events: [
+            _event(
+              id: _eventId(300),
+              pubkey: _pubkey(3),
+              kind: EventKind.badgeDefinition,
+              tags: [
+                ['d', 'lookalike'],
+                ['name', 'Lookalike'],
+              ],
+            ),
+          ],
+          isComplete: true,
+          pages: 1,
+        ),
+      );
+
+      expect(await repository.loadDefinitionsByIssuers([_pubkey(2)]), isEmpty);
+    });
+
     test('accepted holders reject an incomplete relay walk', () async {
       final coordinate = BadgeCoordinate(
         pubkey: _pubkey(2),
