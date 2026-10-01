@@ -124,10 +124,10 @@ class ServiceInitHelper {
   }
 
   /// Clean up all services in a bundle
-  static void disposeServiceBundle(ServiceBundle bundle) {
+  static Future<void> disposeServiceBundle(ServiceBundle bundle) async {
     bundle.videoEventService.dispose();
-    bundle.subscriptionManager.dispose();
-    bundle.nostrService.dispose();
+    await bundle.subscriptionManager.dispose();
+    await bundle.nostrService.dispose();
     bundle.keyContainer?.dispose();
   }
 
