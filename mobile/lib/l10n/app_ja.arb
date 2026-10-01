@@ -1655,8 +1655,6 @@
     "listNewPeopleList": "新しい人リスト",
     "listNameLabel": "リスト名",
     "listDescriptionLabel": "説明 (任意)",
-    "listPublicList": "公開リスト",
-    "listPublicListSubtitle": "みんながフォロー・閲覧できるよ",
     "listPrivateListSubtitle": "動画は非公開のまま。名前、説明、タグ、カバーは表示されたままです。",
     "listVisibilityPublic": "公開",
     "listVisibilityPrivate": "非公開",
@@ -1690,7 +1688,6 @@
             }
         }
     },
-    "listCancel": "キャンセル",
     "listCreate": "作成",
     "listCreateFailed": "リストの作成がうまくいかなかった",
     "keyManagementTitle": "Nostr 鍵",
@@ -5017,5 +5014,10 @@
     "peopleListsAddPersonSemanticLabel": "{name}をリストに追加",
     "peopleListsMembershipUpdateFailed": "リストを更新できませんでした。もう一度お試しください。",
     "peopleListsAddPeopleSearchHint": "ユーザーを検索",
-    "peopleListsRemovePersonSemanticLabel": "{name}をリストから削除"
+    "peopleListsRemovePersonSemanticLabel": "{name}をリストから削除",
+    "listMakePublicLabel": "公開する",
+    "listCollaboratorsNone": "なし",
+    "listAddCollaboratorTitle": "コラボレーターを追加",
+    "listMakePublicSubtitle": "他の人もこのリストを見られます",
+    "listCollaboratorSearchHint": "Divineを検索..."
 }

@@ -4657,12 +4657,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get listDescriptionLabel => '描述（可选）';
 
   @override
-  String get listPublicList => '公开列表';
-
-  @override
-  String get listPublicListSubtitle => '其他人可以关注并查看此列表';
-
-  @override
   String get listPrivateListSubtitle => '视频保持私密。名称、描述、标签和封面仍会显示。';
 
   @override
@@ -4768,9 +4762,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String listShareSubject(String name) {
     return 'Divine 上的 $name';
   }
-
-  @override
-  String get listCancel => '取消';
 
   @override
   String get listCreate => '创建';
@@ -12388,4 +12379,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String peopleListsAddPersonSemanticLabel(String name) {
     return '把 $name 加入列表';
   }
+
+  @override
+  String get listAddCollaboratorTitle => '添加协作者';
+
+  @override
+  String get listMakePublicLabel => '设为公开';
+
+  @override
+  String get listCollaboratorSearchHint => '搜索 Divine...';
+
+  @override
+  String get listCollaboratorsNone => '无';
+
+  @override
+  String get listMakePublicSubtitle => '让其他人看到此列表';
 }

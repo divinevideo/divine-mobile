@@ -1665,8 +1665,6 @@
     "listNewPeopleList": "Nuova lista persone",
     "listNameLabel": "Nome lista",
     "listDescriptionLabel": "Descrizione (opzionale)",
-    "listPublicList": "Lista pubblica",
-    "listPublicListSubtitle": "Altri possono seguire e vedere questa lista",
     "listPrivateListSubtitle": "I video restano privati. Nome, descrizione, tag e copertina restano visibili.",
     "listVisibilityPublic": "Pubblica",
     "listVisibilityPrivate": "Privata",
@@ -1700,7 +1698,6 @@
             }
         }
     },
-    "listCancel": "Annulla",
     "listCreate": "Crea",
     "listCreateFailed": "Impossibile creare la lista",
     "keyManagementTitle": "Chiavi Nostr",
@@ -5017,5 +5014,10 @@
     "peopleListsAddPersonSemanticLabel": "Aggiungi {name} alla lista",
     "peopleListsMembershipUpdateFailed": "Impossibile aggiornare la lista. Riprova.",
     "peopleListsAddPeopleSearchHint": "Cerca persone",
-    "peopleListsRemovePersonSemanticLabel": "Rimuovi {name} dalla lista"
+    "peopleListsRemovePersonSemanticLabel": "Rimuovi {name} dalla lista",
+    "listMakePublicLabel": "Rendi pubblica",
+    "listCollaboratorsNone": "Nessuno",
+    "listAddCollaboratorTitle": "Aggiungi un collaboratore",
+    "listMakePublicSubtitle": "Lascia che altri vedano questa lista",
+    "listCollaboratorSearchHint": "Cerca su Divine..."
 }

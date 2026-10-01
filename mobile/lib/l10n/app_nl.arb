@@ -1665,8 +1665,6 @@
     "listNewPeopleList": "Nieuwe personenlijst",
     "listNameLabel": "Lijstnaam",
     "listDescriptionLabel": "Beschrijving (optioneel)",
-    "listPublicList": "Openbare lijst",
-    "listPublicListSubtitle": "Anderen kunnen deze lijst volgen en zien",
     "listPrivateListSubtitle": "Video's blijven privé. Naam, beschrijving, tags en omslag blijven zichtbaar.",
     "listVisibilityPublic": "Openbaar",
     "listVisibilityPrivate": "Privé",
@@ -1700,7 +1698,6 @@
             }
         }
     },
-    "listCancel": "Annuleren",
     "listCreate": "Maken",
     "listCreateFailed": "Lijst maken mislukt",
     "keyManagementTitle": "Nostr-sleutels",
@@ -5017,5 +5014,10 @@
     "peopleListsAddPersonSemanticLabel": "{name} aan lijst toevoegen",
     "peopleListsMembershipUpdateFailed": "Kon de lijst niet bijwerken. Probeer het opnieuw.",
     "peopleListsAddPeopleSearchHint": "Mensen zoeken",
-    "peopleListsRemovePersonSemanticLabel": "{name} uit lijst verwijderen"
+    "peopleListsRemovePersonSemanticLabel": "{name} uit lijst verwijderen",
+    "listMakePublicLabel": "Openbaar maken",
+    "listCollaboratorsNone": "Geen",
+    "listAddCollaboratorTitle": "Medewerker toevoegen",
+    "listMakePublicSubtitle": "Laat anderen deze lijst zien",
+    "listCollaboratorSearchHint": "Zoek in Divine..."
 }

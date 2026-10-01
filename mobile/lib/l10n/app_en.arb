@@ -3191,10 +3191,8 @@
   },
   "listCreateNewList": "Create New List",
   "listNewPeopleList": "New people list",
-  "listNameLabel": "List Name",
+  "listNameLabel": "List name",
   "listDescriptionLabel": "Description (optional)",
-  "listPublicList": "Public List",
-  "listPublicListSubtitle": "Others can follow and see this list",
   "listPrivateListSubtitle": "Videos stay private. Name, description, tags, and cover stay visible.",
   "listVisibilityPublic": "Public",
   "listVisibilityPrivate": "Private",
@@ -3261,7 +3259,6 @@
       }
     }
   },
-  "listCancel": "Cancel",
   "listCreate": "Create",
   "listCreateFailed": "Failed to create list",
   "keyManagementTitle": "Nostr Keys",
@@ -9699,5 +9696,16 @@
       }
     }
   },
-  "peopleListsAddPersonSemanticLabel": "Add {name} to list"
+  "peopleListsAddPersonSemanticLabel": "Add {name} to list",
+  "listAddCollaboratorTitle": "Add a collaborator",
+  "@listMakePublicLabel": {
+    "description": "Title of the switch on the list info sheet that makes a curated list visible to others."
+  },
+  "listMakePublicLabel": "Make public",
+  "listCollaboratorSearchHint": "Search Divine...",
+  "@listMakePublicSubtitle": {
+    "description": "Supporting line under the 'Make public' switch on the list info sheet, shown while the switch is on."
+  },
+  "listCollaboratorsNone": "None",
+  "listMakePublicSubtitle": "Let others see this list"
 }

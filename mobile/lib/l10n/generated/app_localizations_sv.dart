@@ -4968,12 +4968,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get listDescriptionLabel => 'Beskrivning (valfritt)';
 
   @override
-  String get listPublicList => 'Publik lista';
-
-  @override
-  String get listPublicListSubtitle => 'Andra kan följa och se den här listan';
-
-  @override
   String get listPrivateListSubtitle =>
       'Videorna förblir privata. Namn, beskrivning, taggar och omslag förblir synliga.';
 
@@ -5082,9 +5076,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name på Divine';
   }
-
-  @override
-  String get listCancel => 'Avbryt';
 
   @override
   String get listCreate => 'Skapa';
@@ -13192,4 +13183,19 @@ class AppLocalizationsSv extends AppLocalizations {
   String peopleListsAddPersonSemanticLabel(String name) {
     return 'Lägg till $name i listan';
   }
+
+  @override
+  String get listAddCollaboratorTitle => 'Lägg till medarbetare';
+
+  @override
+  String get listMakePublicLabel => 'Gör offentlig';
+
+  @override
+  String get listCollaboratorSearchHint => 'Sök i Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Inga';
+
+  @override
+  String get listMakePublicSubtitle => 'Låt andra se den här listan';
 }

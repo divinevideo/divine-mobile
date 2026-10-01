@@ -4974,13 +4974,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get listDescriptionLabel => 'Keterangan (pilihan)';
 
   @override
-  String get listPublicList => 'Senarai Awam';
-
-  @override
-  String get listPublicListSubtitle =>
-      'Orang lain boleh mengikuti dan melihat senarai ini';
-
-  @override
   String get listPrivateListSubtitle =>
       'Video kekal peribadi. Nama, keterangan, tag dan kulit kekal kelihatan.';
 
@@ -5090,9 +5083,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name di Divine';
   }
-
-  @override
-  String get listCancel => 'Batal';
 
   @override
   String get listCreate => 'Cipta';
@@ -13188,4 +13178,20 @@ class AppLocalizationsMs extends AppLocalizations {
   String peopleListsAddPersonSemanticLabel(String name) {
     return 'Tambah $name ke senarai';
   }
+
+  @override
+  String get listAddCollaboratorTitle => 'Tambah kolaborator';
+
+  @override
+  String get listMakePublicLabel => 'Jadikan awam';
+
+  @override
+  String get listCollaboratorSearchHint => 'Cari Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Tiada';
+
+  @override
+  String get listMakePublicSubtitle =>
+      'Benarkan orang lain melihat senarai ini';
 }

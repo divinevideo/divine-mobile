@@ -1662,8 +1662,6 @@
     "listNewPeopleList": "Daftar orang baru",
     "listNameLabel": "Nama Daftar",
     "listDescriptionLabel": "Deskripsi (opsional)",
-    "listPublicList": "Daftar Publik",
-    "listPublicListSubtitle": "Orang lain bisa mengikuti dan melihat daftar ini",
     "listPrivateListSubtitle": "Videonya tetap privat. Nama, deskripsi, tag, dan sampul tetap terlihat.",
     "listVisibilityPublic": "Publik",
     "listVisibilityPrivate": "Privat",
@@ -1697,7 +1695,6 @@
             }
         }
     },
-    "listCancel": "Batal",
     "listCreate": "Buat",
     "listCreateFailed": "Gagal membuat daftar",
     "keyManagementTitle": "Kunci Nostr",
@@ -5017,5 +5014,10 @@
     "peopleListsAddPersonSemanticLabel": "Tambahkan {name} ke daftar",
     "peopleListsMembershipUpdateFailed": "Tidak bisa memperbarui daftar. Coba lagi.",
     "peopleListsAddPeopleSearchHint": "Cari orang",
-    "peopleListsRemovePersonSemanticLabel": "Hapus {name} dari daftar"
+    "peopleListsRemovePersonSemanticLabel": "Hapus {name} dari daftar",
+    "listMakePublicLabel": "Jadikan publik",
+    "listCollaboratorsNone": "Tidak ada",
+    "listAddCollaboratorTitle": "Tambah kolaborator",
+    "listMakePublicSubtitle": "Biar orang lain bisa lihat daftar ini",
+    "listCollaboratorSearchHint": "Cari di Divine..."
 }

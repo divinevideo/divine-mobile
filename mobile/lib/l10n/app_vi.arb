@@ -2431,8 +2431,6 @@
   "listNewPeopleList": "Danh sách người mới",
   "listNameLabel": "Tên danh sách",
   "listDescriptionLabel": "Mô tả (không bắt buộc)",
-  "listPublicList": "Danh sách công khai",
-  "listPublicListSubtitle": "Người khác có thể theo dõi và xem danh sách này",
   "listPrivateListSubtitle": "Video vẫn riêng tư. Tên, mô tả, thẻ và ảnh bìa vẫn hiển thị.",
   "listVisibilityPublic": "Công khai",
   "listVisibilityPrivate": "Riêng tư",
@@ -2466,7 +2464,6 @@
       }
     }
   },
-  "listCancel": "Hủy",
   "listCreate": "Tạo",
   "listCreateFailed": "Không tạo được danh sách",
   "keyManagementTitle": "Khóa Nostr",
@@ -6777,5 +6774,10 @@
     }
   },
   "peopleListsMembershipUpdateFailed": "Không cập nhật được danh sách. Vui lòng thử lại.",
-  "peopleListsAddPeopleSearchHint": "Tìm người"
+  "peopleListsAddPeopleSearchHint": "Tìm người",
+  "listMakePublicSubtitle": "Cho người khác xem danh sách này",
+  "listMakePublicLabel": "Đặt công khai",
+  "listAddCollaboratorTitle": "Thêm cộng tác viên",
+  "listCollaboratorSearchHint": "Tìm trên Divine...",
+  "listCollaboratorsNone": "Không có"
 }

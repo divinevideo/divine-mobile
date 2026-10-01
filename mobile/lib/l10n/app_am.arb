@@ -2041,8 +2041,6 @@
     "listNewPeopleList": "አዲስ ሰዎች ዝርዝር",
     "listNameLabel": "የዝርዝር ስም",
     "listDescriptionLabel": "መግለጫ (አማራጭ)",
-    "listPublicList": "የህዝብ ዝርዝር",
-    "listPublicListSubtitle": "ሌሎች ሊከተሉት እና ይህንን ዝርዝር ማየት ይችላሉ።",
     "listPrivateListSubtitle": "ቪዲዮዎቹ የግል ሆነው ይቆያሉ። ስም፣ መግለጫ፣ መለያዎች እና ሽፋን ይታያሉ።",
     "listVisibilityPublic": "ይፋዊ",
     "listVisibilityPrivate": "የግል",
@@ -2076,7 +2074,6 @@
             }
         }
     },
-    "listCancel": "ሰርዝ",
     "listCreate": "ፍጠር",
     "listCreateFailed": "ዝርዝር መፍጠር አልተሳካም።",
     "keyManagementTitle": "Nostr ቁልፎች",
@@ -5110,5 +5107,10 @@
     "peopleListsAddPersonSemanticLabel": "{name}ን ወደ ዝርዝር ያክሉ",
     "peopleListsMembershipUpdateFailed": "ዝርዝሩን ማዘመን አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
     "peopleListsAddPeopleSearchHint": "ሰዎችን ፈልግ",
-    "peopleListsRemovePersonSemanticLabel": "{name}ን ከዝርዝር ያስወግዱ"
+    "peopleListsRemovePersonSemanticLabel": "{name}ን ከዝርዝር ያስወግዱ",
+    "listMakePublicLabel": "ይፋዊ ያድርጉ",
+    "listCollaboratorsNone": "ምንም",
+    "listAddCollaboratorTitle": "ተባባሪ ጨምር",
+    "listMakePublicSubtitle": "ሌሎች ይህን ዝርዝር እንዲያዩ ይፍቀዱ",
+    "listCollaboratorSearchHint": "Divine ፈልግ..."
 }

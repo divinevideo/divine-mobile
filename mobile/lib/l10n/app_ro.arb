@@ -1665,8 +1665,6 @@
     "listNewPeopleList": "Listă nouă de persoane",
     "listNameLabel": "Numele listei",
     "listDescriptionLabel": "Descriere (opțional)",
-    "listPublicList": "Listă publică",
-    "listPublicListSubtitle": "Alții pot urmări și vedea această listă",
     "listPrivateListSubtitle": "Videoclipurile rămân private. Numele, descrierea, etichetele și coperta rămân vizibile.",
     "listVisibilityPublic": "Publică",
     "listVisibilityPrivate": "Privată",
@@ -1700,7 +1698,6 @@
             }
         }
     },
-    "listCancel": "Anulează",
     "listCreate": "Creează",
     "listCreateFailed": "N-am putut crea lista",
     "keyManagementTitle": "Chei Nostr",
@@ -5017,5 +5014,10 @@
     "peopleListsAddPersonSemanticLabel": "Adaugă pe {name} la listă",
     "peopleListsMembershipUpdateFailed": "N-am putut actualiza lista. Mai încearcă.",
     "peopleListsAddPeopleSearchHint": "Caută persoane",
-    "peopleListsRemovePersonSemanticLabel": "Elimină pe {name} din listă"
+    "peopleListsRemovePersonSemanticLabel": "Elimină pe {name} din listă",
+    "listMakePublicLabel": "Fă lista publică",
+    "listCollaboratorsNone": "Niciunul",
+    "listAddCollaboratorTitle": "Adaugă un colaborator",
+    "listMakePublicSubtitle": "Lasă-i pe alții să vadă această listă",
+    "listCollaboratorSearchHint": "Caută în Divine..."
 }

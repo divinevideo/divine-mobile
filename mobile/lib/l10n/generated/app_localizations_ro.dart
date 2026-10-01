@@ -5122,13 +5122,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get listDescriptionLabel => 'Descriere (opțional)';
 
   @override
-  String get listPublicList => 'Listă publică';
-
-  @override
-  String get listPublicListSubtitle =>
-      'Alții pot urmări și vedea această listă';
-
-  @override
   String get listPrivateListSubtitle =>
       'Videoclipurile rămân private. Numele, descrierea, etichetele și coperta rămân vizibile.';
 
@@ -5237,9 +5230,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name pe Divine';
   }
-
-  @override
-  String get listCancel => 'Anulează';
 
   @override
   String get listCreate => 'Creează';
@@ -13457,4 +13447,19 @@ class AppLocalizationsRo extends AppLocalizations {
   String peopleListsAddPersonSemanticLabel(String name) {
     return 'Adaugă pe $name la listă';
   }
+
+  @override
+  String get listAddCollaboratorTitle => 'Adaugă un colaborator';
+
+  @override
+  String get listMakePublicLabel => 'Fă lista publică';
+
+  @override
+  String get listCollaboratorSearchHint => 'Caută în Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Niciunul';
+
+  @override
+  String get listMakePublicSubtitle => 'Lasă-i pe alții să vadă această listă';
 }

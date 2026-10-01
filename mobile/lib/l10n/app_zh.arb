@@ -2431,8 +2431,6 @@
   "listNewPeopleList": "新人物列表",
   "listNameLabel": "列表名称",
   "listDescriptionLabel": "描述（可选）",
-  "listPublicList": "公开列表",
-  "listPublicListSubtitle": "其他人可以关注并查看此列表",
   "listPrivateListSubtitle": "视频保持私密。名称、描述、标签和封面仍会显示。",
   "listVisibilityPublic": "公开",
   "listVisibilityPrivate": "私密",
@@ -2466,7 +2464,6 @@
       }
     }
   },
-  "listCancel": "取消",
   "listCreate": "创建",
   "listCreateFailed": "创建列表失败",
   "keyManagementTitle": "Nostr 密钥",
@@ -6777,5 +6774,10 @@
     }
   },
   "peopleListsMembershipUpdateFailed": "无法更新列表，请重试。",
-  "peopleListsAddPeopleSearchHint": "搜索用户"
+  "peopleListsAddPeopleSearchHint": "搜索用户",
+  "listMakePublicSubtitle": "让其他人看到此列表",
+  "listMakePublicLabel": "设为公开",
+  "listAddCollaboratorTitle": "添加协作者",
+  "listCollaboratorSearchHint": "搜索 Divine...",
+  "listCollaboratorsNone": "无"
 }

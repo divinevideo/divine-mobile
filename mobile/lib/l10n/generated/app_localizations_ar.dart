@@ -4951,13 +4951,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get listDescriptionLabel => 'الوصف (اختياري)';
 
   @override
-  String get listPublicList => 'قائمة عامة';
-
-  @override
-  String get listPublicListSubtitle =>
-      'يمكن للآخرين متابعة هذه القائمة ورؤيتها';
-
-  @override
   String get listPrivateListSubtitle =>
       'تبقى مقاطع الفيديو خاصة. يبقى الاسم والوصف والوسوم والغلاف ظاهرين.';
 
@@ -5066,9 +5059,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name على Divine';
   }
-
-  @override
-  String get listCancel => 'إلغاء';
 
   @override
   String get listCreate => 'إنشاء';
@@ -13143,4 +13133,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String peopleListsAddPersonSemanticLabel(String name) {
     return 'إضافة $name إلى القائمة';
   }
+
+  @override
+  String get listAddCollaboratorTitle => 'إضافة متعاون';
+
+  @override
+  String get listMakePublicLabel => 'جعل القائمة عامة';
+
+  @override
+  String get listCollaboratorSearchHint => 'ابحث في Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'لا أحد';
+
+  @override
+  String get listMakePublicSubtitle => 'السماح للآخرين برؤية هذه القائمة';
 }

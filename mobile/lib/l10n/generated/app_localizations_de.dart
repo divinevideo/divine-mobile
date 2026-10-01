@@ -5040,13 +5040,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get listDescriptionLabel => 'Beschreibung (optional)';
 
   @override
-  String get listPublicList => 'Öffentliche Liste';
-
-  @override
-  String get listPublicListSubtitle =>
-      'Andere können folgen und diese Liste sehen';
-
-  @override
   String get listPrivateListSubtitle =>
       'Videos bleiben privat. Name, Beschreibung, Tags und Cover bleiben sichtbar.';
 
@@ -5157,9 +5150,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name auf Divine';
   }
-
-  @override
-  String get listCancel => 'Abbrechen';
 
   @override
   String get listCreate => 'Erstellen';
@@ -13350,4 +13340,19 @@ class AppLocalizationsDe extends AppLocalizations {
   String peopleListsAddPersonSemanticLabel(String name) {
     return '$name zur Liste hinzufügen';
   }
+
+  @override
+  String get listAddCollaboratorTitle => 'Mitarbeiter hinzufügen';
+
+  @override
+  String get listMakePublicLabel => 'Öffentlich machen';
+
+  @override
+  String get listCollaboratorSearchHint => 'Divine durchsuchen...';
+
+  @override
+  String get listCollaboratorsNone => 'Keine';
+
+  @override
+  String get listMakePublicSubtitle => 'Lass andere diese Liste sehen';
 }

@@ -1655,8 +1655,6 @@
     "listNewPeopleList": "قائمة أشخاص جديدة",
     "listNameLabel": "اسم القائمة",
     "listDescriptionLabel": "الوصف (اختياري)",
-    "listPublicList": "قائمة عامة",
-    "listPublicListSubtitle": "يمكن للآخرين متابعة هذه القائمة ورؤيتها",
     "listPrivateListSubtitle": "تبقى مقاطع الفيديو خاصة. يبقى الاسم والوصف والوسوم والغلاف ظاهرين.",
     "listVisibilityPublic": "عامة",
     "listVisibilityPrivate": "خاصة",
@@ -1690,7 +1688,6 @@
             }
         }
     },
-    "listCancel": "إلغاء",
     "listCreate": "إنشاء",
     "listCreateFailed": "تعذر إنشاء القائمة",
     "keyManagementTitle": "مفاتيح Nostr",
@@ -5017,5 +5014,10 @@
     "peopleListsAddPersonSemanticLabel": "إضافة {name} إلى القائمة",
     "peopleListsMembershipUpdateFailed": "تعذّر تحديث القائمة. يرجى المحاولة مجددًا.",
     "peopleListsAddPeopleSearchHint": "البحث عن أشخاص",
-    "peopleListsRemovePersonSemanticLabel": "إزالة {name} من القائمة"
+    "peopleListsRemovePersonSemanticLabel": "إزالة {name} من القائمة",
+    "listMakePublicLabel": "جعل القائمة عامة",
+    "listCollaboratorsNone": "لا أحد",
+    "listAddCollaboratorTitle": "إضافة متعاون",
+    "listMakePublicSubtitle": "السماح للآخرين برؤية هذه القائمة",
+    "listCollaboratorSearchHint": "ابحث في Divine..."
 }

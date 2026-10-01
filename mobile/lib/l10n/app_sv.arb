@@ -1665,8 +1665,6 @@
     "listNewPeopleList": "Ny personlista",
     "listNameLabel": "Listnamn",
     "listDescriptionLabel": "Beskrivning (valfritt)",
-    "listPublicList": "Publik lista",
-    "listPublicListSubtitle": "Andra kan följa och se den här listan",
     "listPrivateListSubtitle": "Videorna förblir privata. Namn, beskrivning, taggar och omslag förblir synliga.",
     "listVisibilityPublic": "Offentlig",
     "listVisibilityPrivate": "Privat",
@@ -1700,7 +1698,6 @@
             }
         }
     },
-    "listCancel": "Avbryt",
     "listCreate": "Skapa",
     "listCreateFailed": "Kunde inte skapa listan",
     "keyManagementTitle": "Nostr-nycklar",
@@ -5017,5 +5014,10 @@
     "peopleListsAddPersonSemanticLabel": "Lägg till {name} i listan",
     "peopleListsMembershipUpdateFailed": "Kunde inte uppdatera listan. Försök igen.",
     "peopleListsAddPeopleSearchHint": "Sök personer",
-    "peopleListsRemovePersonSemanticLabel": "Ta bort {name} från listan"
+    "peopleListsRemovePersonSemanticLabel": "Ta bort {name} från listan",
+    "listMakePublicLabel": "Gör offentlig",
+    "listCollaboratorsNone": "Inga",
+    "listAddCollaboratorTitle": "Lägg till medarbetare",
+    "listMakePublicSubtitle": "Låt andra se den här listan",
+    "listCollaboratorSearchHint": "Sök i Divine..."
 }

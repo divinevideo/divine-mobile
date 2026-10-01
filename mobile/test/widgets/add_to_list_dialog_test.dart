@@ -1,7 +1,5 @@
-// ABOUTME: Tests for SelectListDialog and CreateListDialog widgets
+// ABOUTME: Tests for SelectListDialog and its list creation entry point
 // ABOUTME: Verifies list selection, list item interactions, and list creation form
-
-import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,6 +10,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/widgets/add_to_list_dialog.dart';
+import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
 
 import '../helpers/test_provider_overrides.dart';
 
@@ -325,6 +324,60 @@ void main() {
       expect(find.text(l10n.listPrivateFull), findsNothing);
     });
 
+    testWidgets('shows a refused video inline after creating a list', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final created = CuratedList(
+        id: 'new-list',
+        pubkey: testVideo.pubkey,
+        name: 'New collection',
+        videoEventIds: const [],
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+      );
+      when(
+        () => mockListService.createList(
+          name: any(named: 'name'),
+          description: any(named: 'description'),
+          isPublic: any(named: 'isPublic'),
+          isCollaborative: any(named: 'isCollaborative'),
+          allowedCollaborators: any(named: 'allowedCollaborators'),
+        ),
+      ).thenAnswer((_) async => created);
+      when(
+        () => mockListService.addVideoToList(created.id, testVideo.id),
+      ).thenAnswer((_) async => false);
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.listNewList));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, created.name);
+      await tester.pump();
+      await tester.tap(find.bySemanticsLabel(l10n.listCreate));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ListInfoForm), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byType(SelectListDialog),
+          matching: find.text(l10n.listUpdateFailed),
+        ),
+        findsOneWidget,
+      );
+      verify(
+        () => mockListService.createList(
+          name: created.name,
+        ),
+      ).called(1);
+      verify(
+        () => mockListService.addVideoToList(created.id, testVideo.id),
+      ).called(1);
+    });
+
     testWidgets('renders Done button', (tester) async {
       _fakeLists = [];
 
@@ -391,651 +444,6 @@ void main() {
 
       expect(find.text('Own list'), findsOneWidget);
       expect(find.text('Followed list'), findsNothing);
-    });
-  });
-
-  group(CreateListDialog, () {
-    late VideoEvent testVideo;
-    late _MockCuratedListService mockListService;
-    final l10n = lookupAppLocalizations(const Locale('en'));
-
-    setUp(() {
-      testVideo = VideoEvent(
-        id: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-        pubkey:
-            'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
-        createdAt: 1757385263,
-        content: 'Test video',
-        timestamp: DateTime.fromMillisecondsSinceEpoch(1757385263 * 1000),
-        videoUrl: 'https://example.com/video.mp4',
-        title: 'Test Video',
-      );
-      mockListService = _MockCuratedListService();
-      _fakeService = mockListService;
-    });
-
-    CuratedList createdList(String name) => CuratedList(
-      id: 'list_created_456789abcdef0123456789abcdef0123456789abcdef012345',
-      pubkey:
-          'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
-      name: name,
-      videoEventIds: const [],
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    );
-
-    Widget buildSubject({VideoEvent? video, CuratedList? existingList}) =>
-        testProviderScope(
-          additionalOverrides: [
-            curatedListsStateProvider.overrideWith(_FakeCuratedListsState.new),
-          ],
-          child: MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: CreateListDialog(video: video, existingList: existingList),
-            ),
-          ),
-        );
-
-    /// Hosts the dialog on a real dialog route so dismissal — and the snackbar
-    /// that has to outlive it — can be asserted the way a user sees them.
-    Widget buildDialogLauncher({
-      VideoEvent? video,
-      CuratedList? existingList,
-      bool sheet = false,
-      double textScale = 1,
-    }) => testProviderScope(
-      additionalOverrides: [
-        curatedListsStateProvider.overrideWith(_FakeCuratedListsState.new),
-      ],
-      child: MaterialApp(
-        localizationsDelegates: appLocalizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaler: TextScaler.linear(textScale),
-          ),
-          child: child!,
-        ),
-        home: Builder(
-          builder: (context) => Scaffold(
-            body: TextButton(
-              onPressed: () => sheet
-                  ? VineBottomSheet.show<void>(
-                      context: context,
-                      useRootNavigator: true,
-                      scrollable: false,
-                      showHeader: false,
-                      showHeaderDivider: false,
-                      body: CreateListDialog.sheet(video: video),
-                    )
-                  : showDialog<void>(
-                      context: context,
-                      builder: (_) => CreateListDialog(
-                        video: video,
-                        existingList: existingList,
-                      ),
-                    ),
-              child: const Text('Open list editor'),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    testWidgets('renders Create New List form', (tester) async {
-      await tester.pumpWidget(buildSubject());
-
-      expect(find.text('Create New List'), findsOneWidget);
-      expect(find.text('List Name'), findsOneWidget);
-      expect(find.text('Description (optional)'), findsOneWidget);
-      expect(find.text('Public List'), findsOneWidget);
-      expect(find.text('Create'), findsOneWidget);
-      expect(find.text('Cancel'), findsOneWidget);
-    });
-
-    testWidgets('public list switch toggles', (tester) async {
-      await tester.pumpWidget(buildSubject());
-
-      // Public switch should be on by default
-      final switchWidget = tester.widget<SwitchListTile>(
-        find.byType(SwitchListTile),
-      );
-      expect(switchWidget.value, isTrue);
-
-      // Tap to toggle off
-      await tester.tap(find.byType(SwitchListTile));
-      await tester.pump();
-
-      final updatedSwitch = tester.widget<SwitchListTile>(
-        find.byType(SwitchListTile),
-      );
-      expect(updatedSwitch.value, isFalse);
-    });
-
-    testWidgets('shows subtitle text for public list switch', (tester) async {
-      await tester.pumpWidget(buildSubject());
-
-      expect(find.text('Others can follow and see this list'), findsOneWidget);
-    });
-
-    testWidgets('editing shows the current private visibility and warning', (
-      tester,
-    ) async {
-      final list = createdList('Puppets').copyWith(isPublic: false);
-
-      await tester.pumpWidget(buildSubject(existingList: list));
-
-      expect(find.text('Edit list'), findsOneWidget);
-      expect(find.text('Puppets'), findsOneWidget);
-      expect(
-        find.text(
-          'Videos stay private. Name, description, tags, and cover stay visible.',
-        ),
-        findsOneWidget,
-      );
-      expect(
-        tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
-        isFalse,
-      );
-    });
-
-    testWidgets('confirms before publishing a private list', (tester) async {
-      final list = createdList('Puppets').copyWith(isPublic: false);
-      when(
-        () => mockListService.updateListWithResult(
-          listId: any(named: 'listId'),
-          name: any(named: 'name'),
-          description: any(named: 'description'),
-          isPublic: any(named: 'isPublic'),
-        ),
-      ).thenAnswer((_) async => const CuratedListUpdateResult.saved());
-
-      await tester.pumpWidget(buildDialogLauncher(existingList: list));
-      await tester.tap(find.text('Open list editor'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byType(SwitchListTile));
-      await tester.tap(find.text('Save'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Make this list public?'), findsOneWidget);
-      verifyNever(
-        () => mockListService.updateListWithResult(
-          listId: any(named: 'listId'),
-          name: any(named: 'name'),
-          description: any(named: 'description'),
-          isPublic: any(named: 'isPublic'),
-        ),
-      );
-
-      await tester.tap(find.text('Continue'));
-      await tester.pumpAndSettle();
-
-      verify(
-        () => mockListService.updateListWithResult(
-          listId: list.id,
-          name: 'Puppets',
-          description: '',
-          isPublic: true,
-        ),
-      ).called(1);
-    });
-
-    testWidgets('dismisses a renamed list before reporting relay failure', (
-      tester,
-    ) async {
-      final list = createdList('Puppets');
-      final updateCompleter = Completer<CuratedListUpdateResult>();
-      addTearDown(() {
-        if (!updateCompleter.isCompleted) {
-          updateCompleter.complete(const CuratedListUpdateResult.saved());
-        }
-      });
-      when(
-        () => mockListService.updateListWithResult(
-          listId: any(named: 'listId'),
-          name: any(named: 'name'),
-          description: any(named: 'description'),
-          isPublic: any(named: 'isPublic'),
-        ),
-      ).thenAnswer((_) => updateCompleter.future);
-
-      await tester.pumpWidget(buildDialogLauncher(existingList: list));
-      await tester.tap(find.text('Open list editor'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField).first, 'Marionettes');
-      await tester.tap(find.text(l10n.listSave));
-      await tester.pumpAndSettle();
-
-      verify(
-        () => mockListService.updateListWithResult(
-          listId: list.id,
-          name: 'Marionettes',
-          description: '',
-          isPublic: true,
-        ),
-      ).called(1);
-      expect(find.text(l10n.listEditTitle), findsNothing);
-
-      updateCompleter.complete(const CuratedListUpdateResult.failed());
-      await tester.pumpAndSettle();
-
-      expect(find.text(l10n.listUpdateFailed), findsOneWidget);
-    });
-
-    testWidgets(
-      'waits on the relay before dismissing a visibility change',
-      (
-        tester,
-      ) async {
-        final list = createdList('Puppets').copyWith(isPublic: false);
-        final updateCompleter = Completer<CuratedListUpdateResult>();
-        addTearDown(() {
-          if (!updateCompleter.isCompleted) {
-            updateCompleter.complete(const CuratedListUpdateResult.saved());
-          }
-        });
-        when(
-          () => mockListService.updateListWithResult(
-            listId: any(named: 'listId'),
-            name: any(named: 'name'),
-            description: any(named: 'description'),
-            isPublic: any(named: 'isPublic'),
-          ),
-        ).thenAnswer((_) => updateCompleter.future);
-
-        await tester.pumpWidget(buildDialogLauncher(existingList: list));
-        await tester.tap(find.text('Open list editor'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.byType(SwitchListTile));
-        await tester.tap(find.text(l10n.listSave));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text(l10n.listContinue));
-        await tester.pumpAndSettle();
-
-        verify(
-          () => mockListService.updateListWithResult(
-            listId: list.id,
-            name: 'Puppets',
-            description: '',
-            isPublic: true,
-          ),
-        ).called(1);
-        expect(find.text(l10n.listEditTitle), findsOneWidget);
-
-        updateCompleter.complete(const CuratedListUpdateResult.saved());
-        await tester.pumpAndSettle();
-
-        expect(find.text(l10n.listEditTitle), findsNothing);
-      },
-    );
-
-    testWidgets(
-      'keeps a rejected visibility change on screen for a retry',
-      (tester) async {
-        final list = createdList('Puppets').copyWith(isPublic: false);
-        final updateCompleter = Completer<CuratedListUpdateResult>();
-        addTearDown(() {
-          if (!updateCompleter.isCompleted) {
-            updateCompleter.complete(const CuratedListUpdateResult.saved());
-          }
-        });
-        when(
-          () => mockListService.updateListWithResult(
-            listId: any(named: 'listId'),
-            name: any(named: 'name'),
-            description: any(named: 'description'),
-            isPublic: any(named: 'isPublic'),
-          ),
-        ).thenAnswer((_) => updateCompleter.future);
-
-        await tester.pumpWidget(buildDialogLauncher(existingList: list));
-        await tester.tap(find.text('Open list editor'));
-        await tester.pumpAndSettle();
-        await tester.enterText(find.byType(TextField).first, 'Marionettes');
-        await tester.tap(find.byType(SwitchListTile));
-        await tester.tap(find.text(l10n.listSave));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text(l10n.listContinue));
-        await tester.pumpAndSettle();
-
-        updateCompleter.complete(const CuratedListUpdateResult.failed());
-        await tester.pumpAndSettle();
-
-        expect(find.text(l10n.listUpdateFailed), findsOneWidget);
-
-        // The service leaves isPublic at its old value on a rejected publish
-        // (curated_list_service_crud_test.dart, "keeps a list private when
-        // publication is rejected"), so the flip only survives if the editor
-        // holding it is still on screen with the typed name intact.
-        expect(find.text(l10n.listEditTitle), findsOneWidget);
-        expect(find.text('Marionettes'), findsOneWidget);
-        expect(
-          tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
-          isTrue,
-        );
-      },
-    );
-
-    testWidgets('Create button does nothing when name is empty', (
-      tester,
-    ) async {
-      await tester.pumpWidget(buildSubject());
-
-      // Tap Create with empty name
-      await tester.tap(find.text('Create'));
-      await tester.pumpAndSettle();
-
-      // Should not call createList
-      verifyNever(
-        () => mockListService.createList(
-          name: any(named: 'name'),
-          description: any(named: 'description'),
-          isPublic: any(named: 'isPublic'),
-        ),
-      );
-    });
-
-    testWidgets('creates list and pops without adding video when no video '
-        'is provided', (tester) async {
-      when(
-        () => mockListService.createList(
-          name: any(named: 'name'),
-          description: any(named: 'description'),
-          isPublic: any(named: 'isPublic'),
-        ),
-      ).thenAnswer((_) async => createdList('Fresh List'));
-
-      await tester.pumpWidget(buildDialogLauncher());
-      await tester.tap(find.text('Open list editor'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField).first, 'Fresh List');
-      await tester.tap(find.text(l10n.listCreate));
-      await tester.pumpAndSettle();
-
-      verify(
-        () => mockListService.createList(
-          name: 'Fresh List',
-          description: any(named: 'description'),
-          isPublic: any(named: 'isPublic'),
-        ),
-      ).called(1);
-      verifyNever(() => mockListService.addVideoToList(any(), any()));
-      expect(find.text(l10n.listCreateNewList), findsNothing);
-    });
-
-    testWidgets('creates list and adds video when a video is provided', (
-      tester,
-    ) async {
-      final newList = createdList('Video List');
-      when(
-        () => mockListService.createList(
-          name: any(named: 'name'),
-          description: any(named: 'description'),
-          isPublic: any(named: 'isPublic'),
-        ),
-      ).thenAnswer((_) async => newList);
-      when(
-        () => mockListService.addVideoToList(any(), any()),
-      ).thenAnswer((_) async => true);
-
-      await tester.pumpWidget(buildDialogLauncher(video: testVideo));
-      await tester.tap(find.text('Open list editor'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField).first, 'Video List');
-      await tester.tap(find.text(l10n.listCreate));
-      await tester.pumpAndSettle();
-
-      verify(
-        () => mockListService.addVideoToList(newList.id, testVideo.id),
-      ).called(1);
-      expect(find.text(l10n.listCreateNewList), findsNothing);
-    });
-
-    testWidgets('shows failure snackbar and keeps dialog open when '
-        'createList returns null', (tester) async {
-      when(
-        () => mockListService.createList(
-          name: any(named: 'name'),
-          description: any(named: 'description'),
-          isPublic: any(named: 'isPublic'),
-        ),
-      ).thenAnswer((_) async => null);
-
-      await tester.pumpWidget(buildDialogLauncher());
-      await tester.tap(find.text('Open list editor'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField).first, 'Doomed List');
-      await tester.tap(find.text(l10n.listCreate));
-      await tester.pumpAndSettle();
-
-      expect(find.text(l10n.listCreateFailed), findsOneWidget);
-      expect(find.text(l10n.listCreateNewList), findsOneWidget);
-      verifyNever(() => mockListService.addVideoToList(any(), any()));
-    });
-
-    group('shared creation sheet', () {
-      testWidgets('keeps the public default and trims the same saved fields', (
-        tester,
-      ) async {
-        when(
-          () => mockListService.createList(
-            name: any(named: 'name'),
-            description: any(named: 'description'),
-            isPublic: any(named: 'isPublic'),
-          ),
-        ).thenAnswer((_) async => createdList('Saved list'));
-
-        await tester.pumpWidget(buildDialogLauncher(sheet: true));
-        await tester.tap(find.text('Open list editor'));
-        await tester.pumpAndSettle();
-        expect(find.byType(VineBottomSheet), findsOneWidget);
-        expect(find.byType(AlertDialog), findsNothing);
-        expect(
-          tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
-          isTrue,
-        );
-        await tester.enterText(find.byType(TextField).first, '  Saved list  ');
-        await tester.enterText(find.byType(TextField).last, '  Description  ');
-        await tester.tap(find.text(l10n.listCreate));
-        await tester.pumpAndSettle();
-
-        verify(
-          () => mockListService.createList(
-            name: 'Saved list',
-            description: 'Description',
-          ),
-        ).called(1);
-        verifyNever(() => mockListService.addVideoToList(any(), any()));
-        expect(find.byType(VineBottomSheet), findsNothing);
-      });
-
-      testWidgets('retains the name and private choice after a failed save', (
-        tester,
-      ) async {
-        var attempts = 0;
-        when(
-          () => mockListService.createList(
-            name: any(named: 'name'),
-            description: any(named: 'description'),
-            isPublic: any(named: 'isPublic'),
-          ),
-        ).thenAnswer((_) async {
-          attempts++;
-          return attempts == 1 ? null : createdList('Private draft');
-        });
-
-        await tester.pumpWidget(buildDialogLauncher(sheet: true));
-        await tester.tap(find.text('Open list editor'));
-        await tester.pumpAndSettle();
-        await tester.enterText(find.byType(TextField).first, 'Private draft');
-        await tester.tap(find.byType(SwitchListTile));
-        await tester.pump();
-        await tester.tap(find.text(l10n.listCreate));
-        await tester.pumpAndSettle();
-
-        expect(find.text(l10n.listCreateFailed), findsOneWidget);
-        expect(
-          find.ancestor(
-            of: find.text(l10n.listCreateFailed),
-            matching: find.byType(VineBottomSheet),
-          ),
-          findsOneWidget,
-        );
-        expect(find.text(l10n.listCreateFailed).hitTestable(), findsOneWidget);
-        expect(find.byType(SnackBar), findsNothing);
-        expect(find.text('Private draft'), findsOneWidget);
-        expect(
-          tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
-          isFalse,
-        );
-        await tester.tap(find.text(l10n.listCreate));
-        await tester.pumpAndSettle();
-
-        verify(
-          () => mockListService.createList(
-            name: 'Private draft',
-            isPublic: false,
-          ),
-        ).called(2);
-        expect(find.byType(VineBottomSheet), findsNothing);
-      });
-
-      testWidgets('an empty name and Cancel never save a list', (tester) async {
-        await tester.pumpWidget(buildDialogLauncher(sheet: true));
-        await tester.tap(find.text('Open list editor'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text(l10n.listCreate));
-        await tester.pumpAndSettle();
-        expect(find.byType(VineBottomSheet), findsOneWidget);
-        await tester.enterText(find.byType(TextField).first, 'Unsaved draft');
-        await tester.tap(find.text(l10n.listCancel));
-        await tester.pumpAndSettle();
-
-        verifyNever(
-          () => mockListService.createList(
-            name: any(named: 'name'),
-            description: any(named: 'description'),
-            isPublic: any(named: 'isPublic'),
-          ),
-        );
-        expect(find.byType(VineBottomSheet), findsNothing);
-        expect(find.text('Open list editor'), findsOneWidget);
-      });
-
-      testWidgets('adds an optional video after creating the list', (
-        tester,
-      ) async {
-        final newList = createdList('With video');
-        when(
-          () => mockListService.createList(
-            name: any(named: 'name'),
-            description: any(named: 'description'),
-            isPublic: any(named: 'isPublic'),
-          ),
-        ).thenAnswer((_) async => newList);
-        when(
-          () => mockListService.addVideoToList(any(), any()),
-        ).thenAnswer((_) async => true);
-
-        await tester.pumpWidget(
-          buildDialogLauncher(sheet: true, video: testVideo),
-        );
-        await tester.tap(find.text('Open list editor'));
-        await tester.pumpAndSettle();
-        await tester.enterText(find.byType(TextField).first, 'With video');
-        await tester.tap(find.text(l10n.listCreate));
-        await tester.pumpAndSettle();
-
-        verify(
-          () => mockListService.addVideoToList(newList.id, testVideo.id),
-        ).called(1);
-        expect(find.byType(VineBottomSheet), findsNothing);
-      });
-
-      testWidgets('large text can scroll every field above the keyboard', (
-        tester,
-      ) async {
-        tester.view.physicalSize = const Size(390, 844);
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.resetPhysicalSize);
-        addTearDown(tester.view.resetDevicePixelRatio);
-        addTearDown(tester.view.resetViewInsets);
-        await tester.pumpWidget(
-          buildDialogLauncher(sheet: true, textScale: 2.5),
-        );
-        await tester.tap(find.text('Open list editor'));
-        await tester.pumpAndSettle();
-        tester.view.viewInsets = const FakeViewPadding(bottom: 300);
-        await tester.pumpAndSettle();
-
-        when(
-          () => mockListService.createList(
-            name: any(named: 'name'),
-            description: any(named: 'description'),
-            isPublic: any(named: 'isPublic'),
-          ),
-        ).thenAnswer((_) async => null);
-        await tester.ensureVisible(find.byType(TextField).first);
-        await tester.pumpAndSettle();
-        await tester.enterText(
-          find.byType(TextField).first,
-          'Large text draft',
-        );
-        await tester.ensureVisible(find.byType(TextField).last);
-        await tester.pumpAndSettle();
-        await tester.enterText(find.byType(TextField).last, 'A description');
-        final privacySwitch = find.descendant(
-          of: find.byType(SwitchListTile),
-          matching: find.byType(Switch),
-        );
-        await tester.ensureVisible(privacySwitch);
-        await tester.pumpAndSettle();
-        await tester.tap(privacySwitch);
-        await tester.pump();
-        expect(
-          tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
-          isFalse,
-        );
-        await tester.tap(find.text(l10n.listCreate));
-        await tester.pumpAndSettle();
-        expect(find.text(l10n.listCreateFailed).hitTestable(), findsOneWidget);
-        expect(
-          tester.getBottomLeft(find.text(l10n.listCreateFailed)).dy,
-          lessThanOrEqualTo(844 - 300),
-        );
-        expect(
-          tester
-              .widget<TextField>(find.byType(TextField).first)
-              .controller!
-              .text,
-          'Large text draft',
-        );
-        expect(
-          tester
-              .widget<TextField>(find.byType(TextField).last)
-              .controller!
-              .text,
-          'A description',
-        );
-        expect(
-          tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
-          isFalse,
-        );
-        expect(
-          tester.getBottomLeft(find.text(l10n.listCreate)).dy,
-          lessThanOrEqualTo(844 - 300),
-        );
-        expect(
-          tester.getBottomLeft(find.text(l10n.listCancel)).dy,
-          lessThanOrEqualTo(844 - 300),
-        );
-        expect(tester.takeException(), isNull);
-        await tester.tap(find.text(l10n.listCancel));
-        await tester.pumpAndSettle();
-        expect(find.byType(VineBottomSheet), findsNothing);
-      });
     });
   });
 }

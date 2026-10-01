@@ -5052,16 +5052,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listNewPeopleList => 'New people list';
 
   @override
-  String get listNameLabel => 'List Name';
+  String get listNameLabel => 'List name';
 
   @override
   String get listDescriptionLabel => 'Description (optional)';
-
-  @override
-  String get listPublicList => 'Public List';
-
-  @override
-  String get listPublicListSubtitle => 'Others can follow and see this list';
 
   @override
   String get listPrivateListSubtitle =>
@@ -5172,9 +5166,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name on Divine';
   }
-
-  @override
-  String get listCancel => 'Cancel';
 
   @override
   String get listCreate => 'Create';
@@ -13278,4 +13269,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String peopleListsAddPersonSemanticLabel(String name) {
     return 'Add $name to list';
   }
+
+  @override
+  String get listAddCollaboratorTitle => 'Add a collaborator';
+
+  @override
+  String get listMakePublicLabel => 'Make public';
+
+  @override
+  String get listCollaboratorSearchHint => 'Search Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'None';
+
+  @override
+  String get listMakePublicSubtitle => 'Let others see this list';
 }

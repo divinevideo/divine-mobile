@@ -5027,13 +5027,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get listDescriptionLabel => 'Описание (по избор)';
 
   @override
-  String get listPublicList => 'Публичен списък';
-
-  @override
-  String get listPublicListSubtitle =>
-      'Други могат да следват и да видят този списък';
-
-  @override
   String get listPrivateListSubtitle =>
       'Видеата остават частни. Името, описанието, таговете и корицата остават видими.';
 
@@ -5144,9 +5137,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name в Divine';
   }
-
-  @override
-  String get listCancel => 'Отказ';
 
   @override
   String get listCreate => 'Създай';
@@ -13315,4 +13305,20 @@ class AppLocalizationsBg extends AppLocalizations {
   String peopleListsAddPersonSemanticLabel(String name) {
     return 'Добави $name към списъка';
   }
+
+  @override
+  String get listAddCollaboratorTitle => 'Добави сътрудник';
+
+  @override
+  String get listMakePublicLabel => 'Направи публичен';
+
+  @override
+  String get listCollaboratorSearchHint => 'Търсене Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Няма';
+
+  @override
+  String get listMakePublicSubtitle =>
+      'Позволи на другите да виждат този списък';
 }

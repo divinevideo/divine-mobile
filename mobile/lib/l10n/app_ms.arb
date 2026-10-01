@@ -2431,8 +2431,6 @@
   "listNewPeopleList": "Senarai orang baharu",
   "listNameLabel": "Nama Senarai",
   "listDescriptionLabel": "Keterangan (pilihan)",
-  "listPublicList": "Senarai Awam",
-  "listPublicListSubtitle": "Orang lain boleh mengikuti dan melihat senarai ini",
   "listPrivateListSubtitle": "Video kekal peribadi. Nama, keterangan, tag dan kulit kekal kelihatan.",
   "listVisibilityPublic": "Awam",
   "listVisibilityPrivate": "Peribadi",
@@ -2466,7 +2464,6 @@
       }
     }
   },
-  "listCancel": "Batal",
   "listCreate": "Cipta",
   "listCreateFailed": "Gagal mencipta senarai",
   "keyManagementTitle": "Kunci Nostr",
@@ -6777,5 +6774,10 @@
     }
   },
   "peopleListsMembershipUpdateFailed": "Tidak dapat mengemas kini senarai. Sila cuba lagi.",
-  "peopleListsAddPeopleSearchHint": "Cari orang"
+  "peopleListsAddPeopleSearchHint": "Cari orang",
+  "listMakePublicSubtitle": "Benarkan orang lain melihat senarai ini",
+  "listMakePublicLabel": "Jadikan awam",
+  "listAddCollaboratorTitle": "Tambah kolaborator",
+  "listCollaboratorSearchHint": "Cari Divine...",
+  "listCollaboratorsNone": "Tiada"
 }

@@ -4982,13 +4982,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get listDescriptionLabel => 'تفصیل (اختیاری)';
 
   @override
-  String get listPublicList => 'عوامی فہرست';
-
-  @override
-  String get listPublicListSubtitle =>
-      'دوسرے اس فہرست کو فالو اور دیکھ سکتے ہیں';
-
-  @override
   String get listPrivateListSubtitle =>
       'ویڈیوز نجی رہتی ہیں۔ نام، تفصیل، ٹیگز اور کور نظر آتے رہتے ہیں۔';
 
@@ -5098,9 +5091,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String listShareSubject(String name) {
     return 'Divine پر $name';
   }
-
-  @override
-  String get listCancel => 'منسوخ کریں';
 
   @override
   String get listCreate => 'بنائیں';
@@ -13181,4 +13171,19 @@ class AppLocalizationsUr extends AppLocalizations {
   String peopleListsAddPersonSemanticLabel(String name) {
     return '$name کو فہرست میں شامل کریں';
   }
+
+  @override
+  String get listAddCollaboratorTitle => 'شریک کار شامل کریں';
+
+  @override
+  String get listMakePublicLabel => 'عوامی بنائیں';
+
+  @override
+  String get listCollaboratorSearchHint => 'Divine میں تلاش کریں...';
+
+  @override
+  String get listCollaboratorsNone => 'کوئی نہیں';
+
+  @override
+  String get listMakePublicSubtitle => 'دوسروں کو یہ فہرست دیکھنے دیں';
 }

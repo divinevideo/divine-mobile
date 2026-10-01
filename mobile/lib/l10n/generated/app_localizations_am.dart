@@ -4856,12 +4856,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get listDescriptionLabel => 'መግለጫ (አማራጭ)';
 
   @override
-  String get listPublicList => 'የህዝብ ዝርዝር';
-
-  @override
-  String get listPublicListSubtitle => 'ሌሎች ሊከተሉት እና ይህንን ዝርዝር ማየት ይችላሉ።';
-
-  @override
   String get listPrivateListSubtitle =>
       'ቪዲዮዎቹ የግል ሆነው ይቆያሉ። ስም፣ መግለጫ፣ መለያዎች እና ሽፋን ይታያሉ።';
 
@@ -4970,9 +4964,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name በDivine ላይ';
   }
-
-  @override
-  String get listCancel => 'ሰርዝ';
 
   @override
   String get listCreate => 'ፍጠር';
@@ -12851,4 +12842,19 @@ class AppLocalizationsAm extends AppLocalizations {
   String peopleListsAddPersonSemanticLabel(String name) {
     return '$nameን ወደ ዝርዝር ያክሉ';
   }
+
+  @override
+  String get listAddCollaboratorTitle => 'ተባባሪ ጨምር';
+
+  @override
+  String get listMakePublicLabel => 'ይፋዊ ያድርጉ';
+
+  @override
+  String get listCollaboratorSearchHint => 'Divine ፈልግ...';
+
+  @override
+  String get listCollaboratorsNone => 'ምንም';
+
+  @override
+  String get listMakePublicSubtitle => 'ሌሎች ይህን ዝርዝር እንዲያዩ ይፍቀዱ';
 }

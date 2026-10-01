@@ -2431,8 +2431,6 @@
   "listNewPeopleList": "لوگوں کی نئی فہرست",
   "listNameLabel": "فہرست کا نام",
   "listDescriptionLabel": "تفصیل (اختیاری)",
-  "listPublicList": "عوامی فہرست",
-  "listPublicListSubtitle": "دوسرے اس فہرست کو فالو اور دیکھ سکتے ہیں",
   "listPrivateListSubtitle": "ویڈیوز نجی رہتی ہیں۔ نام، تفصیل، ٹیگز اور کور نظر آتے رہتے ہیں۔",
   "listVisibilityPublic": "عوامی",
   "listVisibilityPrivate": "نجی",
@@ -2466,7 +2464,6 @@
       }
     }
   },
-  "listCancel": "منسوخ کریں",
   "listCreate": "بنائیں",
   "listCreateFailed": "فہرست نہیں بن سکی",
   "keyManagementTitle": "Nostr کلیدیں",
@@ -6777,5 +6774,10 @@
     }
   },
   "peopleListsMembershipUpdateFailed": "فہرست اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔",
-  "peopleListsAddPeopleSearchHint": "لوگ تلاش کریں"
+  "peopleListsAddPeopleSearchHint": "لوگ تلاش کریں",
+  "listMakePublicSubtitle": "دوسروں کو یہ فہرست دیکھنے دیں",
+  "listMakePublicLabel": "عوامی بنائیں",
+  "listAddCollaboratorTitle": "شریک کار شامل کریں",
+  "listCollaboratorSearchHint": "Divine میں تلاش کریں...",
+  "listCollaboratorsNone": "کوئی نہیں"
 }

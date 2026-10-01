@@ -4941,13 +4941,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get listDescriptionLabel => 'Mô tả (không bắt buộc)';
 
   @override
-  String get listPublicList => 'Danh sách công khai';
-
-  @override
-  String get listPublicListSubtitle =>
-      'Người khác có thể theo dõi và xem danh sách này';
-
-  @override
   String get listPrivateListSubtitle =>
       'Video vẫn riêng tư. Tên, mô tả, thẻ và ảnh bìa vẫn hiển thị.';
 
@@ -5058,9 +5051,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name trên Divine';
   }
-
-  @override
-  String get listCancel => 'Hủy';
 
   @override
   String get listCreate => 'Tạo';
@@ -13130,4 +13120,19 @@ class AppLocalizationsVi extends AppLocalizations {
   String peopleListsAddPersonSemanticLabel(String name) {
     return 'Thêm $name vào danh sách';
   }
+
+  @override
+  String get listAddCollaboratorTitle => 'Thêm cộng tác viên';
+
+  @override
+  String get listMakePublicLabel => 'Đặt công khai';
+
+  @override
+  String get listCollaboratorSearchHint => 'Tìm trên Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Không có';
+
+  @override
+  String get listMakePublicSubtitle => 'Cho người khác xem danh sách này';
 }
