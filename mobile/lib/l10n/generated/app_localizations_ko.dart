@@ -5962,19 +5962,19 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoMetadataC2paMissingSkip => '건너뛰기';
 
   @override
-  String get videoMetadataC2paUnavailableTitle => '이 버전에서는 정품 인증을 할 수 없어요';
+  String get videoMetadataC2paUnavailableTitle => '이 버전에는 콘텐츠 자격 증명이 없어요';
 
   @override
   String get videoMetadataC2paUnavailableBody =>
-      '이 버전의 Divine은 콘텐츠 자격 증명을 추가할 수 없어서 동영상이 사람이 제작한 것으로 확인되지 않아요. 그래도 그대로 게시할 수 있어요.';
+      '이 버전의 Divine은 동영상에 콘텐츠 자격 증명을 넣을 수 없어요. 그래도 평소처럼 게시할 수 있어요.';
 
   @override
   String get videoMetadataC2paUnavailableNoteAndroid =>
-      '정품 인증을 받으려면 Zapstore나 Google Play에서 Divine을 설치하세요.';
+      '콘텐츠 자격 증명을 추가하려면 Zapstore나 Google Play에서 Divine을 설치하세요.';
 
   @override
   String get videoMetadataC2paUnavailableNoteIos =>
-      '정품 인증을 받으려면 App Store에서 Divine을 설치하세요.';
+      '콘텐츠 자격 증명을 추가하려면 App Store에서 Divine을 설치하세요.';
 
   @override
   String get videoMetadataGenerationFailed => '생성 실패';

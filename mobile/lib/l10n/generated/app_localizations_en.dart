@@ -6359,19 +6359,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get videoMetadataC2paUnavailableTitle =>
-      'No human-made check in this version';
+      'No content credentials in this version';
 
   @override
   String get videoMetadataC2paUnavailableBody =>
-      'This version of Divine can\'t add content credentials, so your videos won\'t be confirmed as Human-Made. You can still post them as-is.';
+      'This version of Divine can\'t embed content credentials in your videos. You can still post them as usual.';
 
   @override
   String get videoMetadataC2paUnavailableNoteAndroid =>
-      'Install Divine from Zapstore or Google Play to get the human-made check.';
+      'Install Divine from Zapstore or Google Play to add content credentials.';
 
   @override
   String get videoMetadataC2paUnavailableNoteIos =>
-      'Install Divine from the App Store to get the human-made check.';
+      'Install Divine from the App Store to add content credentials.';
 
   @override
   String get videoMetadataGenerationFailed => 'Generation failed';

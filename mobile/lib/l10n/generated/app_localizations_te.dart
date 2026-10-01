@@ -6465,19 +6465,19 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoMetadataC2paUnavailableTitle =>
-      'ఈ వెర్షన్‌లో మానవ నిర్మిత తనిఖీ లేదు';
+      'ఈ వెర్షన్‌లో కంటెంట్ ఆధారాలు లేవు';
 
   @override
   String get videoMetadataC2paUnavailableBody =>
-      'ఈ Divine వెర్షన్ కంటెంట్ ఆధారాలను జోడించలేదు, కాబట్టి మీ వీడియోలు మానవ నిర్మితమైనవిగా నిర్ధారించబడవు. మీరు వాటిని అలాగే పోస్ట్ చేయవచ్చు.';
+      'ఈ Divine వెర్షన్ మీ వీడియోలలో కంటెంట్ ఆధారాలను జోడించలేదు. మీరు వాటిని ఎప్పటిలాగే పోస్ట్ చేయవచ్చు.';
 
   @override
   String get videoMetadataC2paUnavailableNoteAndroid =>
-      'మానవ నిర్మిత తనిఖీ పొందడానికి Zapstore లేదా Google Play నుండి Divineని ఇన్‌స్టాల్ చేయండి.';
+      'కంటెంట్ ఆధారాలను జోడించడానికి Zapstore లేదా Google Play నుండి Divineని ఇన్‌స్టాల్ చేయండి.';
 
   @override
   String get videoMetadataC2paUnavailableNoteIos =>
-      'మానవ నిర్మిత తనిఖీ పొందడానికి App Store నుండి Divineని ఇన్‌స్టాల్ చేయండి.';
+      'కంటెంట్ ఆధారాలను జోడించడానికి App Store నుండి Divineని ఇన్‌స్టాల్ చేయండి.';
 
   @override
   String get videoMetadataGenerationFailed => 'జనరేషన్ విఫలమైంది';

@@ -3216,10 +3216,10 @@
     "description": "Primary button on the missing-content-credential bottom sheet. Re-renders the video to attempt the C2PA signature again."
   },
   "videoMetadataC2paMissingSkip": "Langkau",
-  "videoMetadataC2paUnavailableTitle": "Tiada semakan buatan manusia dalam versi ini",
-  "videoMetadataC2paUnavailableBody": "Versi Divine ini tidak dapat menambah kelayakan kandungan, jadi video anda tidak akan disahkan sebagai Buatan Manusia. Anda masih boleh menyiarkannya seadanya.",
-  "videoMetadataC2paUnavailableNoteAndroid": "Pasang Divine dari Zapstore atau Google Play untuk mendapatkan semakan buatan manusia.",
-  "videoMetadataC2paUnavailableNoteIos": "Pasang Divine dari App Store untuk mendapatkan semakan buatan manusia.",
+  "videoMetadataC2paUnavailableTitle": "Tiada kelayakan kandungan dalam versi ini",
+  "videoMetadataC2paUnavailableBody": "Versi Divine ini tidak dapat membenamkan kelayakan kandungan dalam video anda. Anda masih boleh menyiarkannya seperti biasa.",
+  "videoMetadataC2paUnavailableNoteAndroid": "Pasang Divine dari Zapstore atau Google Play untuk menambah kelayakan kandungan.",
+  "videoMetadataC2paUnavailableNoteIos": "Pasang Divine dari App Store untuk menambah kelayakan kandungan.",
   "@videoMetadataC2paMissingSkip": {
     "description": "Secondary button on the missing-content-credential bottom sheet. Dismisses the prompt and continues without a C2PA content credential, so the user can post the video without provenance."
   },

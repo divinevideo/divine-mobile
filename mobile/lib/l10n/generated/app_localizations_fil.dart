@@ -6306,19 +6306,19 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoMetadataC2paUnavailableTitle =>
-      'Walang human-made check sa bersyong ito';
+      'Walang content credentials sa bersyong ito';
 
   @override
   String get videoMetadataC2paUnavailableBody =>
-      'Hindi makapaglagay ng content credentials ang bersyong ito ng Divine, kaya hindi makukumpirma na gawa ng tao ang mga video mo. Puwede mo pa rin silang i-post nang ganyan.';
+      'Hindi makapaglagay ng content credentials sa mga video mo ang bersyong ito ng Divine. Puwede mo pa rin silang i-post gaya ng dati.';
 
   @override
   String get videoMetadataC2paUnavailableNoteAndroid =>
-      'I-install ang Divine mula sa Zapstore o Google Play para makuha ang human-made check.';
+      'I-install ang Divine mula sa Zapstore o Google Play para makapagdagdag ng content credentials.';
 
   @override
   String get videoMetadataC2paUnavailableNoteIos =>
-      'I-install ang Divine mula sa App Store para makuha ang human-made check.';
+      'I-install ang Divine mula sa App Store para makapagdagdag ng content credentials.';
 
   @override
   String get videoMetadataGenerationFailed => 'Nabigo ang paggawa';

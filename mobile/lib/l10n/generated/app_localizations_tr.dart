@@ -6202,19 +6202,19 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoMetadataC2paUnavailableTitle =>
-      'Bu sürümde gerçeklik doğrulaması yok';
+      'Bu sürümde içerik kimlik bilgileri yok';
 
   @override
   String get videoMetadataC2paUnavailableBody =>
-      'Divine\'ın bu sürümü içerik kimlik bilgilerini ekleyemiyor, bu nedenle videoların insan yapımı olarak doğrulanmayacak. Yine de olduğu gibi paylaşabilirsin.';
+      'Divine\'ın bu sürümü videolarına içerik kimlik bilgileri ekleyemiyor. Yine de onları her zamanki gibi paylaşabilirsin.';
 
   @override
   String get videoMetadataC2paUnavailableNoteAndroid =>
-      'Gerçeklik doğrulaması için Divine\'ı Zapstore veya Google Play\'den yükle.';
+      'İçerik kimlik bilgileri eklemek için Divine\'ı Zapstore veya Google Play\'den yükle.';
 
   @override
   String get videoMetadataC2paUnavailableNoteIos =>
-      'Gerçeklik doğrulaması için Divine\'ı App Store\'dan yükle.';
+      'İçerik kimlik bilgileri eklemek için Divine\'ı App Store\'dan yükle.';
 
   @override
   String get videoMetadataGenerationFailed => 'Oluşturma başarısız';

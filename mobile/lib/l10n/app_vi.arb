@@ -3216,10 +3216,10 @@
     "description": "Primary button on the missing-content-credential bottom sheet. Re-renders the video to attempt the C2PA signature again."
   },
   "videoMetadataC2paMissingSkip": "Bỏ qua",
-  "videoMetadataC2paUnavailableTitle": "Phiên bản này không có xác nhận do người làm",
-  "videoMetadataC2paUnavailableBody": "Phiên bản Divine này không thêm được chứng nhận nội dung, nên video của bạn sẽ không được xác nhận là Do người làm. Bạn vẫn có thể đăng nguyên trạng.",
-  "videoMetadataC2paUnavailableNoteAndroid": "Cài Divine từ Zapstore hoặc Google Play để có xác nhận do người làm.",
-  "videoMetadataC2paUnavailableNoteIos": "Cài Divine từ App Store để có xác nhận do người làm.",
+  "videoMetadataC2paUnavailableTitle": "Phiên bản này không có chứng nhận nội dung",
+  "videoMetadataC2paUnavailableBody": "Phiên bản Divine này không gắn được chứng nhận nội dung vào video của bạn. Bạn vẫn có thể đăng như bình thường.",
+  "videoMetadataC2paUnavailableNoteAndroid": "Cài Divine từ Zapstore hoặc Google Play để thêm chứng nhận nội dung.",
+  "videoMetadataC2paUnavailableNoteIos": "Cài Divine từ App Store để thêm chứng nhận nội dung.",
   "@videoMetadataC2paMissingSkip": {
     "description": "Secondary button on the missing-content-credential bottom sheet. Dismisses the prompt and continues without a C2PA content credential, so the user can post the video without provenance."
   },

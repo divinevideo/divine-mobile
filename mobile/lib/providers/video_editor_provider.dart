@@ -66,8 +66,8 @@ const bool kForceC2paPromptInDebug =
 
 /// Whether this build lacks the ProofSign token, so signing can never succeed.
 ///
-/// The metadata screen then explains where the human-made check comes from
-/// instead of offering a regenerate that is bound to fail again. A provider so
+/// The metadata screen then explains why the video carries no content
+/// credential instead of offering a regenerate that is bound to fail again. A provider so
 /// widget tests can choose the variant: tests run without the define, which
 /// makes [C2paSigningService.hasSigningToken] false there.
 final c2paSigningTokenMissingProvider = Provider<bool>(

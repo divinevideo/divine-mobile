@@ -3216,10 +3216,10 @@
     "description": "Primary button on the missing-content-credential bottom sheet. Re-renders the video to attempt the C2PA signature again."
   },
   "videoMetadataC2paMissingSkip": "跳过",
-  "videoMetadataC2paUnavailableTitle": "此版本无法进行“人类创作”验证",
-  "videoMetadataC2paUnavailableBody": "这个版本的 Divine 无法添加内容凭证，你的视频将无法被确认为“人类创作”。你仍然可以就这样发布。",
-  "videoMetadataC2paUnavailableNoteAndroid": "从 Zapstore 或 Google Play 安装 Divine，即可获得“人类创作”验证。",
-  "videoMetadataC2paUnavailableNoteIos": "从 App Store 安装 Divine，即可获得“人类创作”验证。",
+  "videoMetadataC2paUnavailableTitle": "此版本没有内容凭证",
+  "videoMetadataC2paUnavailableBody": "这个版本的 Divine 无法在你的视频中嵌入内容凭证。你仍然可以照常发布。",
+  "videoMetadataC2paUnavailableNoteAndroid": "从 Zapstore 或 Google Play 安装 Divine，即可添加内容凭证。",
+  "videoMetadataC2paUnavailableNoteIos": "从 App Store 安装 Divine，即可添加内容凭证。",
   "@videoMetadataC2paMissingSkip": {
     "description": "Secondary button on the missing-content-credential bottom sheet. Dismisses the prompt and continues without a C2PA content credential, so the user can post the video without provenance."
   },

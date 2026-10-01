@@ -6274,19 +6274,19 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoMetadataC2paUnavailableTitle =>
-      'اس ورژن میں انسانی بنائی جانچ دستیاب نہیں';
+      'اس ورژن میں مواد اسناد دستیاب نہیں';
 
   @override
   String get videoMetadataC2paUnavailableBody =>
-      'Divine کا یہ ورژن مواد اسناد شامل نہیں کر سکتا، اس لیے آپ کی ویڈیوز انسان کی بنائی ہوئی کے طور پر تصدیق نہیں ہوں گی۔ آپ پھر بھی انہیں جوں کا توں پوسٹ کر سکتے ہیں۔';
+      'Divine کا یہ ورژن آپ کی ویڈیوز میں مواد اسناد شامل نہیں کر سکتا۔ آپ پھر بھی انہیں معمول کے مطابق پوسٹ کر سکتے ہیں۔';
 
   @override
   String get videoMetadataC2paUnavailableNoteAndroid =>
-      'انسانی بنائی جانچ حاصل کرنے کے لیے Divine کو Zapstore یا Google Play سے انسٹال کریں۔';
+      'مواد اسناد شامل کرنے کے لیے Divine کو Zapstore یا Google Play سے انسٹال کریں۔';
 
   @override
   String get videoMetadataC2paUnavailableNoteIos =>
-      'انسانی بنائی جانچ حاصل کرنے کے لیے Divine کو App Store سے انسٹال کریں۔';
+      'مواد اسناد شامل کرنے کے لیے Divine کو App Store سے انسٹال کریں۔';
 
   @override
   String get videoMetadataGenerationFailed => 'بنانا ناکام';

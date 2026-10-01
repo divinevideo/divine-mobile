@@ -6197,19 +6197,19 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoMetadataC2paUnavailableTitle =>
-      'Tidak ada verifikasi keaslian di versi ini';
+      'Tidak ada kredensial konten di versi ini';
 
   @override
   String get videoMetadataC2paUnavailableBody =>
-      'Versi Divine ini tidak dapat menambahkan kredensial konten, jadi video kamu tidak akan dikonfirmasi sebagai buatan manusia. Kamu tetap bisa mempostingnya apa adanya.';
+      'Versi Divine ini tidak dapat menyematkan kredensial konten di video kamu. Kamu tetap bisa mempostingnya seperti biasa.';
 
   @override
   String get videoMetadataC2paUnavailableNoteAndroid =>
-      'Instal Divine dari Zapstore atau Google Play untuk mendapatkan verifikasi keaslian.';
+      'Instal Divine dari Zapstore atau Google Play untuk menambahkan kredensial konten.';
 
   @override
   String get videoMetadataC2paUnavailableNoteIos =>
-      'Instal Divine dari App Store untuk mendapatkan verifikasi keaslian.';
+      'Instal Divine dari App Store untuk menambahkan kredensial konten.';
 
   @override
   String get videoMetadataGenerationFailed => 'Pembuatan gagal';

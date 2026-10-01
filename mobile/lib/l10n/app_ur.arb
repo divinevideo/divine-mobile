@@ -3216,10 +3216,10 @@
     "description": "Primary button on the missing-content-credential bottom sheet. Re-renders the video to attempt the C2PA signature again."
   },
   "videoMetadataC2paMissingSkip": "چھوڑیں",
-  "videoMetadataC2paUnavailableTitle": "اس ورژن میں انسانی بنائی جانچ دستیاب نہیں",
-  "videoMetadataC2paUnavailableBody": "Divine کا یہ ورژن مواد اسناد شامل نہیں کر سکتا، اس لیے آپ کی ویڈیوز انسان کی بنائی ہوئی کے طور پر تصدیق نہیں ہوں گی۔ آپ پھر بھی انہیں جوں کا توں پوسٹ کر سکتے ہیں۔",
-  "videoMetadataC2paUnavailableNoteAndroid": "انسانی بنائی جانچ حاصل کرنے کے لیے Divine کو Zapstore یا Google Play سے انسٹال کریں۔",
-  "videoMetadataC2paUnavailableNoteIos": "انسانی بنائی جانچ حاصل کرنے کے لیے Divine کو App Store سے انسٹال کریں۔",
+  "videoMetadataC2paUnavailableTitle": "اس ورژن میں مواد اسناد دستیاب نہیں",
+  "videoMetadataC2paUnavailableBody": "Divine کا یہ ورژن آپ کی ویڈیوز میں مواد اسناد شامل نہیں کر سکتا۔ آپ پھر بھی انہیں معمول کے مطابق پوسٹ کر سکتے ہیں۔",
+  "videoMetadataC2paUnavailableNoteAndroid": "مواد اسناد شامل کرنے کے لیے Divine کو Zapstore یا Google Play سے انسٹال کریں۔",
+  "videoMetadataC2paUnavailableNoteIos": "مواد اسناد شامل کرنے کے لیے Divine کو App Store سے انسٹال کریں۔",
   "@videoMetadataC2paMissingSkip": {
     "description": "Secondary button on the missing-content-credential bottom sheet. Dismisses the prompt and continues without a C2PA content credential, so the user can post the video without provenance."
   },

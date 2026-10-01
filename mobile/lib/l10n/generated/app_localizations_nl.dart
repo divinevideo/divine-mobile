@@ -6296,19 +6296,19 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoMetadataC2paUnavailableTitle =>
-      'Geen echtheidscontrole in deze versie';
+      'Geen content credentials in deze versie';
 
   @override
   String get videoMetadataC2paUnavailableBody =>
-      'Deze versie van Divine kan geen content credentials toevoegen, dus je video\'s worden niet bevestigd als door mensen gemaakt. Je kunt ze nog steeds zo plaatsen.';
+      'Deze versie van Divine kan geen content credentials in je video\'s insluiten. Je kunt ze nog steeds gewoon plaatsen.';
 
   @override
   String get videoMetadataC2paUnavailableNoteAndroid =>
-      'Installeer Divine via Zapstore of Google Play om de echtheidscontrole te krijgen.';
+      'Installeer Divine via Zapstore of Google Play om content credentials toe te voegen.';
 
   @override
   String get videoMetadataC2paUnavailableNoteIos =>
-      'Installeer Divine via de App Store om de echtheidscontrole te krijgen.';
+      'Installeer Divine via de App Store om content credentials toe te voegen.';
 
   @override
   String get videoMetadataGenerationFailed => 'Genereren mislukt';

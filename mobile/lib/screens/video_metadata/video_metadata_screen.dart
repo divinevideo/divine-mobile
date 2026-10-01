@@ -118,7 +118,7 @@ class _VideoMetadataScreenState extends ConsumerState<VideoMetadataScreen> {
 
   /// Shown instead of [_showC2paMissingPrompt] when this build has no ProofSign
   /// token. Every re-sign would fail the same way, so there is nothing to
-  /// regenerate — say where the check comes from and carry on without it.
+  /// regenerate — say why the content credential is missing and carry on.
   Future<void> _showC2paUnavailableNotice() async {
     final l10n = context.l10n;
     final navigator = Navigator.of(context);

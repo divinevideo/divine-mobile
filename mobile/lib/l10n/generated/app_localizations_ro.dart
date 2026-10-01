@@ -6430,19 +6430,19 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoMetadataC2paUnavailableTitle =>
-      'Fără verificarea autenticității în această versiune';
+      'Fără acreditări de conținut în această versiune';
 
   @override
   String get videoMetadataC2paUnavailableBody =>
-      'Această versiune Divine nu poate adăuga acreditările de conținut, așa că videoclipurile tale nu vor fi confirmate ca fiind făcute de om. Le poți publica totuși așa cum sunt.';
+      'Această versiune Divine nu poate include acreditări de conținut în videoclipurile tale. Le poți publica totuși ca de obicei.';
 
   @override
   String get videoMetadataC2paUnavailableNoteAndroid =>
-      'Instalează Divine din Zapstore sau Google Play ca să ai verificarea autenticității.';
+      'Instalează Divine din Zapstore sau Google Play ca să adaugi acreditări de conținut.';
 
   @override
   String get videoMetadataC2paUnavailableNoteIos =>
-      'Instalează Divine din App Store ca să ai verificarea autenticității.';
+      'Instalează Divine din App Store ca să adaugi acreditări de conținut.';
 
   @override
   String get videoMetadataGenerationFailed => 'Generarea a eșuat';

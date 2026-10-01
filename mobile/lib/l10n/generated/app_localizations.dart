@@ -10753,28 +10753,28 @@ abstract class AppLocalizations {
   /// **'Skip'**
   String get videoMetadataC2paMissingSkip;
 
-  /// Title of the bottom sheet shown after rendering when this build has no access to the content credential (C2PA) signing service, e.g. a local or self-compiled build. Replaces the regenerate-or-skip prompt, because retrying can never succeed in such a build.
+  /// Title of the bottom sheet shown after rendering when this build has no access to the C2PA signing service, e.g. a local or self-compiled build, so no content credential can be embedded in the video. Replaces the regenerate-or-skip prompt, because retrying can never succeed in such a build. Do not say the video loses its Human-Made status: the device proof still provides it.
   ///
   /// In en, this message translates to:
-  /// **'No human-made check in this version'**
+  /// **'No content credentials in this version'**
   String get videoMetadataC2paUnavailableTitle;
 
-  /// Body of the bottom sheet explaining that this build of the app cannot sign videos with a C2PA content credential, so none of its videos get the Human-Made badge. Posting still works.
+  /// Body of the bottom sheet explaining that this build of the app cannot embed a C2PA content credential in its videos. Everything else, including the Human-Made badge from the device proof, still works, and posting is unaffected.
   ///
   /// In en, this message translates to:
-  /// **'This version of Divine can\'t add content credentials, so your videos won\'t be confirmed as Human-Made. You can still post them as-is.'**
+  /// **'This version of Divine can\'t embed content credentials in your videos. You can still post them as usual.'**
   String get videoMetadataC2paUnavailableBody;
 
-  /// Note under the no-content-credential bottom sheet on Android. Points to the official store builds, which can sign videos. Zapstore and Google Play are store names; keep them untranslated.
+  /// Note under the no-content-credential bottom sheet on Android. Points to the official store builds, which can embed content credentials. Zapstore and Google Play are store names; keep them untranslated.
   ///
   /// In en, this message translates to:
-  /// **'Install Divine from Zapstore or Google Play to get the human-made check.'**
+  /// **'Install Divine from Zapstore or Google Play to add content credentials.'**
   String get videoMetadataC2paUnavailableNoteAndroid;
 
-  /// Note under the no-content-credential bottom sheet on iOS. Points to the official App Store build, which can sign videos. Must not mention Google Play: App Review rejects iOS copy that names another store. App Store is a store name; keep it untranslated.
+  /// Note under the no-content-credential bottom sheet on iOS. Points to the official App Store build, which can embed content credentials. Must not mention Google Play: App Review rejects iOS copy that names another store. App Store is a store name; keep it untranslated.
   ///
   /// In en, this message translates to:
-  /// **'Install Divine from the App Store to get the human-made check.'**
+  /// **'Install Divine from the App Store to add content credentials.'**
   String get videoMetadataC2paUnavailableNoteIos;
 
   /// Warning shown over the metadata screen preview when rendering (generating) the final video failed and no clip was produced. Sits above a retry icon button.

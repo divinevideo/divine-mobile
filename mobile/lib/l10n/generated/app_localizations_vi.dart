@@ -6238,19 +6238,19 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoMetadataC2paUnavailableTitle =>
-      'Phiên bản này không có xác nhận do người làm';
+      'Phiên bản này không có chứng nhận nội dung';
 
   @override
   String get videoMetadataC2paUnavailableBody =>
-      'Phiên bản Divine này không thêm được chứng nhận nội dung, nên video của bạn sẽ không được xác nhận là Do người làm. Bạn vẫn có thể đăng nguyên trạng.';
+      'Phiên bản Divine này không gắn được chứng nhận nội dung vào video của bạn. Bạn vẫn có thể đăng như bình thường.';
 
   @override
   String get videoMetadataC2paUnavailableNoteAndroid =>
-      'Cài Divine từ Zapstore hoặc Google Play để có xác nhận do người làm.';
+      'Cài Divine từ Zapstore hoặc Google Play để thêm chứng nhận nội dung.';
 
   @override
   String get videoMetadataC2paUnavailableNoteIos =>
-      'Cài Divine từ App Store để có xác nhận do người làm.';
+      'Cài Divine từ App Store để thêm chứng nhận nội dung.';
 
   @override
   String get videoMetadataGenerationFailed => 'Tạo thất bại';
