@@ -10,7 +10,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/features/people_lists/bloc/add_people_to_list_cubit.dart';
 import 'package:openvine/features/people_lists/bloc/add_people_to_list_state.dart';
-import 'package:openvine/features/people_lists/models/people_list_candidate.dart';
 import 'package:profile_repository/profile_repository.dart';
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
@@ -89,13 +88,10 @@ void main() {
       if (!followersController.isClosed) await followersController.close();
     });
 
-    AddPeopleToListCubit createCubit({
-      List<String> existingMembers = const [],
-    }) {
+    AddPeopleToListCubit createCubit() {
       return AddPeopleToListCubit(
         followRepository: followRepository,
         profileRepository: profileRepository,
-        existingMemberPubkeys: existingMembers,
       );
     }
 
@@ -104,7 +100,6 @@ void main() {
       expect(cubit.state.status, AddPeopleToListStatus.initial);
       expect(cubit.state.candidates, isEmpty);
       expect(cubit.state.query, isEmpty);
-      expect(cubit.state.selectedPubkeys, isEmpty);
       await cubit.close();
     });
 
@@ -204,25 +199,6 @@ void main() {
           await cubit.close();
         },
       );
-
-      test('existingMemberPubkeys appear with isAlreadyInList=true', () async {
-        when(
-          () => followRepository.followingPubkeys,
-        ).thenReturn([_alicePubkey]);
-        when(
-          () => followRepository.watchMyFollowers(),
-        ).thenAnswer((_) => const Stream.empty());
-
-        final cubit = createCubit(existingMembers: [_alicePubkey]);
-        await cubit.started();
-
-        final alice = cubit.state.candidates.firstWhere(
-          (c) => c.pubkey == _alicePubkey,
-        );
-        expect(alice.isAlreadyInList, isTrue);
-
-        await cubit.close();
-      });
 
       test(
         'profile lookup failure keeps candidate with fallback labels',
@@ -430,81 +406,6 @@ void main() {
       });
     });
 
-    group('candidateToggled', () {
-      test('adds and removes pubkey from selectedPubkeys', () async {
-        when(
-          () => followRepository.followingPubkeys,
-        ).thenReturn([_alicePubkey]);
-        when(
-          () => followRepository.watchMyFollowers(),
-        ).thenAnswer((_) => const Stream.empty());
-
-        final cubit = createCubit();
-        await cubit.started();
-
-        expect(cubit.state.selectedPubkeys, isEmpty);
-        cubit.candidateToggled(_alicePubkey);
-        expect(cubit.state.selectedPubkeys, contains(_alicePubkey));
-        cubit.candidateToggled(_alicePubkey);
-        expect(cubit.state.selectedPubkeys, isNot(contains(_alicePubkey)));
-
-        await cubit.close();
-      });
-    });
-
-    group('additionsConfirmed', () {
-      Future<AddPeopleToListCubit> startedWithTwoSelected() async {
-        when(
-          () => followRepository.followingPubkeys,
-        ).thenReturn([_alicePubkey, _bobPubkey]);
-        when(
-          () => followRepository.watchMyFollowers(),
-        ).thenAnswer((_) => const Stream.empty());
-        final cubit = createCubit();
-        await cubit.started();
-        cubit
-          ..candidateToggled(_alicePubkey)
-          ..candidateToggled(_bobPubkey);
-        return cubit;
-      }
-
-      PeopleListCandidate candidateOf(
-        AddPeopleToListCubit cubit,
-        String pubkey,
-      ) => cubit.state.candidates.singleWhere((c) => c.pubkey == pubkey);
-
-      test(
-        'keeps unconfirmed people selected and not yet in the list',
-        () async {
-          final cubit = await startedWithTwoSelected();
-          // Guards the assertions below: both choices begin selected.
-          expect(cubit.state.selectedPubkeys, {_alicePubkey, _bobPubkey});
-
-          cubit.additionsConfirmed({_alicePubkey});
-
-          expect(cubit.state.selectedPubkeys, {_bobPubkey});
-          expect(candidateOf(cubit, _alicePubkey).isAlreadyInList, isTrue);
-          expect(candidateOf(cubit, _bobPubkey).isAlreadyInList, isFalse);
-
-          await cubit.close();
-        },
-      );
-
-      test('settles every person once all are confirmed', () async {
-        final cubit = await startedWithTwoSelected();
-
-        cubit.additionsConfirmed({_alicePubkey, _bobPubkey});
-
-        expect(cubit.state.selectedPubkeys, isEmpty);
-        expect(
-          cubit.state.candidates.every((c) => c.isAlreadyInList),
-          isTrue,
-        );
-
-        await cubit.close();
-      });
-    });
-
     group('retryRequested', () {
       blocTest<AddPeopleToListCubit, AddPeopleToListState>(
         're-runs the loader after a prior failure',
@@ -524,7 +425,6 @@ void main() {
         build: () => AddPeopleToListCubit(
           followRepository: followRepository,
           profileRepository: profileRepository,
-          existingMemberPubkeys: const [],
         ),
         act: (cubit) async {
           await cubit.started();

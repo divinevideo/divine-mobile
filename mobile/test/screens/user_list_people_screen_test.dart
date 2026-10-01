@@ -1353,7 +1353,11 @@ void main() {
 
       await _pumpPushedListRoute(tester, bloc: bloc, list: list);
 
-      await tester.tap(find.byTooltip(l10n.peopleListsAddPeopleTooltip));
+      await tester.tap(find.byTooltip(l10n.peopleListsActionsTooltip));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.bySemanticsIdentifier('people_list_add_people_option'),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Add people picker'), findsOneWidget);

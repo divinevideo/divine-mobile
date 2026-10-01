@@ -1964,15 +1964,6 @@
   },
   "peopleListsAddPeopleError": "Không tải được danh sách người. Vui lòng thử lại.",
   "peopleListsAddPeopleRetry": "Thử lại",
-  "peopleListsAddButton": "Thêm",
-  "peopleListsAddButtonWithCount": "Thêm {count}",
-  "@peopleListsAddButtonWithCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "peopleListsInNLists": "{count, plural, =1{Trong 1 danh sách} other{Trong {count} danh sách}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -6836,5 +6827,23 @@
   "listSearchPeopleUnavailable": "Danh sách người hiện không khả dụng.",
   "listSearchVideosUnavailable": "Danh sách video hiện không khả dụng.",
   "listPrivateConversionTooLarge": "Danh sách này quá lớn để chuyển sang riêng tư. Hãy xóa bớt một số video trước. Các chỉnh sửa của bạn vẫn ở đây và chưa được lưu.",
-  "authAccountCleanupFailed": "Không thể xóa dữ liệu của tài khoản trước. Hãy thử lại."
+  "authAccountCleanupFailed": "Không thể xóa dữ liệu của tài khoản trước. Hãy thử lại.",
+  "peopleListsAddPersonSemanticLabel": "Thêm {name} vào danh sách",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "Xóa {name} khỏi danh sách",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "Không cập nhật được danh sách. Vui lòng thử lại.",
+  "peopleListsAddPeopleSearchHint": "Tìm người"
 }

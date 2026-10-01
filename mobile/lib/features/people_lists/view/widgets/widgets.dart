@@ -3,4 +3,3 @@
 
 export 'people_list_result_notice.dart';
 export 'people_list_row.dart';
-export 'person_pickable_row.dart';

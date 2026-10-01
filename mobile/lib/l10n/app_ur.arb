@@ -1964,15 +1964,6 @@
   },
   "peopleListsAddPeopleError": "لوگ لوڈ نہیں ہو سکے۔ براہ کرم دوبارہ کوشش کریں۔",
   "peopleListsAddPeopleRetry": "دوبارہ کوشش کریں",
-  "peopleListsAddButton": "شامل کریں",
-  "peopleListsAddButtonWithCount": "{count} شامل کریں",
-  "@peopleListsAddButtonWithCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "peopleListsInNLists": "{count, plural, =1{1 فہرست میں} other{{count} فہرستوں میں}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -6836,5 +6827,23 @@
   "listSearchPeopleUnavailable": "لوگوں کی فہرستیں فی الحال دستیاب نہیں ہیں۔",
   "listSearchVideosUnavailable": "ویڈیو کی فہرستیں فی الحال دستیاب نہیں ہیں۔",
   "listPrivateConversionTooLarge": "یہ فہرست نجی بنانے کے لیے بہت بڑی ہے۔ پہلے کچھ ویڈیوز ہٹائیں۔ آپ کی تبدیلیاں یہیں موجود ہیں اور ابھی محفوظ نہیں ہوئی ہیں۔",
-  "authAccountCleanupFailed": "پچھلے اکاؤنٹ کا ڈیٹا صاف نہیں کیا جا سکا۔ دوبارہ کوشش کریں۔"
+  "authAccountCleanupFailed": "پچھلے اکاؤنٹ کا ڈیٹا صاف نہیں کیا جا سکا۔ دوبارہ کوشش کریں۔",
+  "peopleListsAddPersonSemanticLabel": "{name} کو فہرست میں شامل کریں",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "{name} کو فہرست سے ہٹائیں",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "فہرست اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔",
+  "peopleListsAddPeopleSearchHint": "لوگ تلاش کریں"
 }
