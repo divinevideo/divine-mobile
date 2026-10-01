@@ -261,6 +261,28 @@ void main() {
       },
     );
 
+    test('logs none when the failed response had an empty body', () async {
+      await captureLogs();
+      final transport = _FakeTransport(
+        emitOnEnqueue: const <BlossomBackgroundTransferEvent>[
+          BlossomBackgroundTransferEvent(
+            taskId: taskId,
+            status: BlossomBackgroundTransferStatus.failed,
+            httpStatusCode: 502,
+            responseBody: '',
+          ),
+        ],
+      );
+
+      await service(transport).uploadVideoInBackground(
+        videoFile: videoFile,
+        taskId: taskId,
+        proofManifestJson: null,
+      );
+
+      expect(failureWarnings().single.message, endsWith('response: none'));
+    });
+
     test('does not log a failure for HTTP 409 (already stored)', () async {
       await captureLogs();
       final transport = _FakeTransport(

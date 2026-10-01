@@ -2609,13 +2609,15 @@ class BlossomUploadService {
             videoId: fileHash,
           );
         }
+        final body = event.responseBody;
+        final response = body == null || body.isEmpty ? 'none' : body;
         // The result below keeps only the status, so the server's own
         // explanation would otherwise be lost: the caller silently re-uploads
         // the whole file through the resumable path.
         Log.warning(
           'Background upload failed: HTTP ${statusCode ?? 'none'}, '
           'error: ${event.error ?? 'none'}, '
-          'response: ${event.responseBody ?? 'none'}',
+          'response: $response',
           name: 'BlossomUploadService',
           category: LogCategory.video,
         );
