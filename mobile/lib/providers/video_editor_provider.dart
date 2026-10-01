@@ -742,7 +742,15 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       // field), so a captions-only change needs the same explicit compare.
       final captionMetaChanged =
           old.captionTrackFromMeta != editingParameters.captionTrackFromMeta;
-      if (diffs.isEmpty && !audioMetaChanged && !captionMetaChanged) {
+      // Video effects live in the `effects` meta key only, like captions.
+      final effectsMetaChanged = !listEquals(
+        old.videoEffectsFromCompleteMeta,
+        editingParameters.videoEffectsFromCompleteMeta,
+      );
+      if (diffs.isEmpty &&
+          !audioMetaChanged &&
+          !captionMetaChanged &&
+          !effectsMetaChanged) {
         Log.debug(
           '🎨 Editor editing parameters unchanged - skipping update',
           name: 'VideoEditorNotifier',
@@ -752,7 +760,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       }
       Log.debug(
         '🎨 Editor editing parameters changed: '
-        '${[...diffs, if (audioMetaChanged) 'audioMeta', if (captionMetaChanged) 'captionMeta'].join(", ")}',
+        '${[...diffs, if (audioMetaChanged) 'audioMeta', if (captionMetaChanged) 'captionMeta', if (effectsMetaChanged) 'effectsMeta'].join(", ")}',
         name: 'VideoEditorNotifier',
         category: LogCategory.video,
       );

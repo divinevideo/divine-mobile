@@ -138,6 +138,15 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
                 },
               ),
               _ItemButton(
+                icon: .television,
+                label: context.l10n.videoEditorEffectsLabel,
+                semanticLabel: context.l10n.videoEditorOpenEffectsSemanticLabel,
+                onTap: () {
+                  Navigator.pop(context);
+                  scope.onOpenEffects();
+                },
+              ),
+              _ItemButton(
                 icon: .slidersHorizontal,
                 label: context.l10n.videoEditorTuneLabel,
                 semanticLabel: context.l10n.videoEditorOpenTuneSemanticLabel,

@@ -14,6 +14,8 @@ import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/exceptions/video_exceptions.dart';
+import 'package:openvine/extensions/draft_content_warning_extensions.dart';
+import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:openvine/models/video_publish/video_publish_state.dart';
@@ -533,7 +535,9 @@ class VideoPublishService {
           selectedAudioEventId: draft.selectedSound?.id,
           selectedAudioRelay: draft.selectedSound?.sourceVideoRelay,
           language: languagePreferenceService?.declaredContentLanguage,
-          contentWarning: draft.contentWarning,
+          // The creator's picks plus the warnings the edit makes mandatory,
+          // so a draft posted straight from the library carries them too.
+          contentWarning: ContentLabel.toCsv(draft.effectiveContentWarnings),
           thumbnailTimestamp: draft.thumbnailTimestamp,
           replyContext: draft.videoReplyContext,
           addReplyToFeed: draft.shareReplyToFeed,

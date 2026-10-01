@@ -8609,6 +8609,53 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorTuneLabel => 'Laras';
 
   @override
+  String get videoEditorEffectsLabel => 'Kesan';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel => 'Buka penyunting kesan';
+
+  @override
+  String get videoEditorEffectNone => 'Tiada';
+
+  @override
+  String get videoEditorEffectGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => 'Pikselkan';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'Pecahan RGB';
+
+  @override
+  String get videoEditorEffectTvStatic => 'Statik';
+
+  @override
+  String get videoEditorEffectPixelPulse => 'Denyut Piksel';
+
+  @override
+  String get videoEditorEffectOldFilm => 'Filem Lama';
+
+  @override
+  String get videoEditorEffectStrobe => 'Strob';
+
+  @override
+  String get videoEditorEffectNegativeFlash => 'Kilat Negatif';
+
+  @override
+  String get videoEditorEffectVignette => 'Vignet';
+
+  @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'Satu kesan berkelip pada satu masa. Kelipan berlebihan boleh memudaratkan orang yang sensitif, jadi kami menggantikan yang satu lagi di sini.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'Satu kesan berkelip pada satu masa. Kelipan berlebihan boleh memudaratkan orang yang sensitif.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Buka penyunting pelarasan';
 
   @override
@@ -9975,6 +10022,10 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get videoMetadataContentWarningSelectAllThatApply =>
       'Pilih semua yang berkaitan';
+
+  @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Kekal aktif: video anda ada kesan berkelip';
 
   @override
   String get videoMetadataAudioReuseSubtitle =>

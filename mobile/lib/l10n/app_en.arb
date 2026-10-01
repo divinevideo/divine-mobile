@@ -5720,6 +5720,66 @@
   "videoEditorDrawLabel": "Draw",
   "videoEditorFilterLabel": "Filter",
   "videoEditorTuneLabel": "Adjust",
+  "videoEditorEffectsLabel": "Effects",
+  "@videoEditorEffectsLabel": {
+    "description": "Label of the video editor tool that adds visual effects (glitch, VHS, pixelate) to the video. Each effect can then be trimmed to part of it on the timeline."
+  },
+  "videoEditorOpenEffectsSemanticLabel": "Open effects editor",
+  "@videoEditorOpenEffectsSemanticLabel": {
+    "description": "Screen reader label of the button that opens the video effects editor."
+  },
+  "videoEditorEffectNone": "None",
+  "@videoEditorEffectNone": {
+    "description": "Name of the option that removes the video effect. Refers to 'effect', so use the matching grammatical gender."
+  },
+  "videoEditorEffectGlitch": "Glitch",
+  "@videoEditorEffectGlitch": {
+    "description": "Name of a video effect: digital distortion where the color channels split and slices of the picture jump sideways."
+  },
+  "videoEditorEffectVhs": "VHS",
+  "@videoEditorEffectVhs": {
+    "description": "Name of a video effect imitating an old VHS videotape: scanlines, grain, a rolling tracking band. VHS is a format name and usually stays as is."
+  },
+  "videoEditorEffectPixelate": "Pixelate",
+  "@videoEditorEffectPixelate": {
+    "description": "Name of a video effect that turns the picture into large square pixels."
+  },
+  "videoEditorEffectRgbSplit": "RGB Split",
+  "@videoEditorEffectRgbSplit": {
+    "description": "Name of a video effect: the red and blue color channels shift apart, punching out once a second."
+  },
+  "videoEditorEffectTvStatic": "Static",
+  "@videoEditorEffectTvStatic": {
+    "description": "Name of a video effect imitating a badly tuned TV: heavy flickering grain ('snow') and a picture that jumps now and then."
+  },
+  "videoEditorEffectPixelPulse": "Pixel Pulse",
+  "@videoEditorEffectPixelPulse": {
+    "description": "Name of a video effect: once a second the picture breaks into large square pixels and sharpens again."
+  },
+  "videoEditorEffectOldFilm": "Old Film",
+  "@videoEditorEffectOldFilm": {
+    "description": "Name of a video effect: sepia tones, film grain, a flickering exposure and darkened corners, like an old film print."
+  },
+  "videoEditorEffectStrobe": "Strobe",
+  "@videoEditorEffectStrobe": {
+    "description": "Name of a video effect: the picture flashes white twice a second, like a strobe light."
+  },
+  "videoEditorEffectNegativeFlash": "Negative Flash",
+  "@videoEditorEffectNegativeFlash": {
+    "description": "Name of a video effect: once a second the picture turns into its photographic negative for a moment."
+  },
+  "videoEditorEffectVignette": "Vignette",
+  "@videoEditorEffectVignette": {
+    "description": "Name of a video effect: the corners of the picture are darkened, drawing the eye to the center."
+  },
+  "videoEditorEffectsFlashingReplaced": "One flashing effect at a time. Too much flashing can hurt people who are sensitive to it, so we swapped out the other one here.",
+  "@videoEditorEffectsFlashingReplaced": {
+    "description": "Snack bar after a flashing video effect (strobe, negative flash) replaced another flashing effect where the two overlapped on the timeline. Explains, without technical terms, that overlapping flashes can harm people with photosensitivity."
+  },
+  "videoEditorEffectsFlashingNotDuplicated": "One flashing effect at a time. Too much flashing can hurt people who are sensitive to it.",
+  "@videoEditorEffectsFlashingNotDuplicated": {
+    "description": "Snack bar when the user tries to duplicate a flashing video effect (strobe, negative flash): the copy would flash on top of the original, so it is not duplicated. Same reason as videoEditorEffectsFlashingReplaced."
+  },
   "videoEditorOpenTuneSemanticLabel": "Open adjustments editor",
   "videoEditorTuneBrightness": "Brightness",
   "videoEditorTuneContrast": "Contrast",
@@ -6136,7 +6196,7 @@
   "videoEditorChromaKeyApplying": "Applying the color mask…",
   "videoEditorChromaKeyPreviewUnavailable": "This device can't show the live preview. Your settings still apply when you export.",
   "@videoEditorChromaKeyPreviewUnavailable": {
-    "description": "Shown in the colour-mask editor when the renderer has no shader image filter, so the preview cannot show the key applied."
+    "description": "Shown in the colour-mask editor and the video effects editor when the renderer has no shader image filter, so the preview cannot show the key or the effects applied."
   },
   "videoEditorClipVolumeLabel": "Clip {index}",
   "@videoEditorClipVolumeLabel": {
@@ -6757,6 +6817,10 @@
   "videoMetadataContentWarningLabel": "Add content warning",
   "videoMetadataSelectContentWarningsSemanticLabel": "Select content warnings",
   "videoMetadataContentWarningSelectAllThatApply": "Select all that apply",
+  "videoMetadataContentWarningRequiredByEffect": "Stays on: your video has a flashing effect",
+  "@videoMetadataContentWarningRequiredByEffect": {
+    "description": "Note under the Flashing Lights content warning, which is locked on because the video uses a flashing effect (strobe, negative flash) from the editor."
+  },
   "videoMetadataAudioReuseSubtitle": "Let others save and reuse this video's audio.",
   "publishAudioReuseDegradedWarning": "Your video is up, but the sound didn't publish. Edit the video to share it.",
   "@publishAudioReuseDegradedWarning": {

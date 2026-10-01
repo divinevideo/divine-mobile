@@ -8596,6 +8596,53 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorTuneLabel => 'Justera';
 
   @override
+  String get videoEditorEffectsLabel => 'Effekter';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel => 'Öppna effekteditor';
+
+  @override
+  String get videoEditorEffectNone => 'Ingen';
+
+  @override
+  String get videoEditorEffectGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => 'Pixla';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'RGB-delning';
+
+  @override
+  String get videoEditorEffectTvStatic => 'Brus';
+
+  @override
+  String get videoEditorEffectPixelPulse => 'Pixelpuls';
+
+  @override
+  String get videoEditorEffectOldFilm => 'Gammal film';
+
+  @override
+  String get videoEditorEffectStrobe => 'Stroboskop';
+
+  @override
+  String get videoEditorEffectNegativeFlash => 'Negativblixt';
+
+  @override
+  String get videoEditorEffectVignette => 'Vinjett';
+
+  @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'En blinkande effekt i taget. För mycket blinkande kan skada känsliga personer, så vi har ersatt den andra här.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'En blinkande effekt i taget. För mycket blinkande kan skada känsliga personer.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Öppna justeringsredigeraren';
 
   @override
@@ -9966,6 +10013,10 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get videoMetadataContentWarningSelectAllThatApply =>
       'Välj allt som gäller för ditt innehåll';
+
+  @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Förblir på: din video har en blinkande effekt';
 
   @override
   String get videoMetadataAudioReuseSubtitle =>

@@ -33,6 +33,8 @@ import 'package:pro_video_editor/pro_video_editor.dart'
         ProgressModel,
         RenderCanceledException,
         RenderEncoderException,
+        VideoEffect,
+        VideoEffectType,
         VideoQualityConfig,
         VideoRenderData,
         VideoSegment;
@@ -398,6 +400,36 @@ void main() {
         ]),
         const Size(1920, 1080),
       );
+    });
+  });
+
+  group('buildVideoEffects', () {
+    test('keeps a whole-video effect open at both ends', () {
+      final effects = VideoEditorRenderService.buildVideoEffects(
+        effects: const [VideoEffect.pixelate(intensity: 0.3)],
+        timelineMap: TransitionTimelineMap.fromClips(overlapClips),
+      );
+
+      expect(effects, const [VideoEffect.pixelate(intensity: 0.3)]);
+    });
+
+    test('maps an effect window onto the shorter output axis when an overlap '
+        'transition compresses the timeline', () {
+      final effects = VideoEditorRenderService.buildVideoEffects(
+        effects: const [
+          VideoEffect.glitch(
+            intensity: 0.8,
+            startTime: Duration.zero,
+            endTime: Duration(seconds: 4),
+          ),
+        ],
+        timelineMap: TransitionTimelineMap.fromClips(overlapClips),
+      );
+
+      expect(effects.single.type, VideoEffectType.glitch);
+      expect(effects.single.intensity, 0.8);
+      expect(effects.single.startTime, Duration.zero);
+      expect(effects.single.endTime, const Duration(milliseconds: 3600));
     });
   });
 

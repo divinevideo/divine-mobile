@@ -84,6 +84,7 @@ void main() {
     Future<void> pumpPlayer(
       WidgetTester tester, {
       required double videoAspectRatio,
+      Widget Function(Widget frame)? frameBuilder,
     }) {
       return tester.pumpWidget(
         ProviderScope(
@@ -99,6 +100,7 @@ void main() {
                   videoAspectRatio: videoAspectRatio,
                   bodySize: bodySize,
                   renderSize: widgetSize,
+                  frameBuilder: frameBuilder,
                 ),
               ),
             ),
@@ -144,6 +146,26 @@ void main() {
       expect(rect.height, 225);
       expect(rect.width, closeTo(225 * 16 / 9, 0.01));
       expect(rect.center, box.center);
+    });
+
+    testWidgets('a frame builder wraps exactly the target rect and leaves the '
+        'surface where it was', (tester) async {
+      const frameKey = Key('frame');
+      await pumpPlayer(
+        tester,
+        videoAspectRatio: 16 / 9,
+        frameBuilder: (frame) => KeyedSubtree(key: frameKey, child: frame),
+      );
+
+      final box = tester.getRect(find.byType(VideoEditorPlayer));
+      final frame = tester.getRect(find.byKey(frameKey));
+      expect(frame.size, const Size(225, 225));
+      expect(frame.center, box.center);
+
+      final surface = surfaceRect(tester);
+      expect(surface.height, 225);
+      expect(surface.width, closeTo(225 * 16 / 9, 0.01));
+      expect(surface.center, box.center);
     });
   });
 

@@ -893,8 +893,8 @@ void main() {
   });
 
   group(SubEditorType, () {
-    test('has 9 values', () {
-      expect(SubEditorType.values, hasLength(9));
+    test('has 10 values', () {
+      expect(SubEditorType.values, hasLength(10));
     });
 
     test('contains expected types', () {
@@ -905,6 +905,7 @@ void main() {
           SubEditorType.draw,
           SubEditorType.filter,
           SubEditorType.tune,
+          SubEditorType.effects,
           SubEditorType.stickers,
           SubEditorType.music,
           SubEditorType.clips,

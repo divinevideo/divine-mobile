@@ -84,6 +84,7 @@ void main() {
           onOpenMusicLibrary: () {},
           onOpenVoiceOver: () {},
           onOpenCaptions: () {},
+          onOpenEffects: () {},
           editorOverride: editor,
           child: const ClipEditorResultListeners(child: SizedBox.shrink()),
         ),

@@ -8848,6 +8848,54 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorTuneLabel => 'సర్దుబాటు';
 
   @override
+  String get videoEditorEffectsLabel => 'ఎఫెక్ట్‌లు';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel =>
+      'ఎఫెక్ట్‌ల ఎడిటర్‌ను తెరవండి';
+
+  @override
+  String get videoEditorEffectNone => 'ఏదీ లేదు';
+
+  @override
+  String get videoEditorEffectGlitch => 'గ్లిచ్';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => 'పిక్సలేట్';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'RGB విభజన';
+
+  @override
+  String get videoEditorEffectTvStatic => 'స్టాటిక్';
+
+  @override
+  String get videoEditorEffectPixelPulse => 'పిక్సెల్ పల్స్';
+
+  @override
+  String get videoEditorEffectOldFilm => 'పాత ఫిల్మ్';
+
+  @override
+  String get videoEditorEffectStrobe => 'స్ట్రోబ్';
+
+  @override
+  String get videoEditorEffectNegativeFlash => 'నెగటివ్ ఫ్లాష్';
+
+  @override
+  String get videoEditorEffectVignette => 'విగ్నెట్';
+
+  @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'ఒకసారి ఒక మెరిసే ఎఫెక్ట్ మాత్రమే. ఎక్కువ మెరుపులు సున్నితమైన వారికి హాని చేయవచ్చు, అందుకే ఇక్కడ మరొకదాన్ని మార్చాం.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'ఒకసారి ఒక మెరిసే ఎఫెక్ట్ మాత్రమే. ఎక్కువ మెరుపులు సున్నితమైన వారికి హాని చేయవచ్చు.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'సర్దుబాట్ల ఎడిటర్‌ను తెరవండి';
 
   @override
@@ -10250,6 +10298,10 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get videoMetadataContentWarningSelectAllThatApply =>
       'వర్తించే అన్నింటినీ ఎంచుకోండి';
+
+  @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'ఆన్‌లోనే ఉంటుంది: మీ వీడియోలో మెరిసే ఎఫెక్ట్ ఉంది';
 
   @override
   String get videoMetadataAudioReuseSubtitle =>

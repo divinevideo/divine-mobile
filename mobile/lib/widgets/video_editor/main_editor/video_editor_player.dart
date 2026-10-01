@@ -24,6 +24,7 @@ class VideoEditorPlayer extends StatelessWidget {
     required this.renderSize,
     this.stopMotionFrames,
     this.stopMotionPosition,
+    this.frameBuilder,
     super.key,
   });
 
@@ -46,6 +47,15 @@ class VideoEditorPlayer extends StatelessWidget {
   /// instead of free-running. Only meaningful when [stopMotionFrames] is set.
   final Duration? stopMotionPosition;
 
+  /// Wraps the visible frame: the target rect, with the surface already
+  /// clipped to it.
+  ///
+  /// The box can be larger than that rect — it is shaped like the recording —
+  /// so anything that works on the picture itself, like the video effects
+  /// preview, has to wrap this rather than the whole player to see the frame
+  /// the export renders.
+  final Widget Function(Widget frame)? frameBuilder;
+
   @override
   Widget build(BuildContext context) {
     final frames = stopMotionFrames;
@@ -67,7 +77,7 @@ class VideoEditorPlayer extends StatelessWidget {
           // Centred in the box; a file wider than it (a landscape import in
           // a portrait session) covers the target rect by overflowing the box
           // sideways, and the clipper above cuts it back to the rect.
-          return OverflowBox(
+          final surface = OverflowBox(
             minWidth: surfaceSize.width,
             maxWidth: surfaceSize.width,
             minHeight: surfaceSize.height,
@@ -91,6 +101,20 @@ class VideoEditorPlayer extends StatelessWidget {
                     // a flicker).
                     crossFadePlaceholder: true,
                   ),
+          );
+          final frameBuilder = this.frameBuilder;
+          if (frameBuilder == null) return surface;
+          // The rect is centred in the box, and the surface in the rect, so
+          // the picture lands exactly where it does without a builder.
+          return Center(
+            child: SizedBox.fromSize(
+              size: computeClipSize(
+                widgetSize: constraints.biggest,
+                bodySize: bodySize,
+                targetAspectRatio: targetAspectRatio.value,
+              ),
+              child: frameBuilder(ClipRect(child: surface)),
+            ),
           );
         },
       ),

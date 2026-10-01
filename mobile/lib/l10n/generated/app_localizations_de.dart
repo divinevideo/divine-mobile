@@ -8712,6 +8712,53 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorTuneLabel => 'Anpassen';
 
   @override
+  String get videoEditorEffectsLabel => 'Effekte';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel => 'Effekte-Editor öffnen';
+
+  @override
+  String get videoEditorEffectNone => 'Keiner';
+
+  @override
+  String get videoEditorEffectGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => 'Verpixeln';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'RGB-Split';
+
+  @override
+  String get videoEditorEffectTvStatic => 'Rauschen';
+
+  @override
+  String get videoEditorEffectPixelPulse => 'Pixelpuls';
+
+  @override
+  String get videoEditorEffectOldFilm => 'Alter Film';
+
+  @override
+  String get videoEditorEffectStrobe => 'Stroboskop';
+
+  @override
+  String get videoEditorEffectNegativeFlash => 'Negativ-Blitz';
+
+  @override
+  String get videoEditorEffectVignette => 'Vignette';
+
+  @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'Immer nur ein blinkender Effekt. Zu viel Blinken kann empfindlichen Menschen schaden, deshalb haben wir den anderen hier ersetzt.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'Immer nur ein blinkender Effekt. Zu viel Blinken kann empfindlichen Menschen schaden.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Anpassungseditor öffnen';
 
   @override
@@ -10092,6 +10139,10 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get videoMetadataContentWarningSelectAllThatApply =>
       'Wähle alles aus, was auf deinen Inhalt zutrifft';
+
+  @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Bleibt an: dein Video hat einen blinkenden Effekt';
 
   @override
   String get videoMetadataAudioReuseSubtitle =>

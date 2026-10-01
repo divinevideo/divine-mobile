@@ -8658,6 +8658,53 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorTuneLabel => 'Isaayos';
 
   @override
+  String get videoEditorEffectsLabel => 'Mga Effect';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel => 'Buksan ang effects editor';
+
+  @override
+  String get videoEditorEffectNone => 'Wala';
+
+  @override
+  String get videoEditorEffectGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => 'Pixelate';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'RGB Split';
+
+  @override
+  String get videoEditorEffectTvStatic => 'Static';
+
+  @override
+  String get videoEditorEffectPixelPulse => 'Pixel Pulse';
+
+  @override
+  String get videoEditorEffectOldFilm => 'Old Film';
+
+  @override
+  String get videoEditorEffectStrobe => 'Strobe';
+
+  @override
+  String get videoEditorEffectNegativeFlash => 'Negative Flash';
+
+  @override
+  String get videoEditorEffectVignette => 'Vignette';
+
+  @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'Isang kumikislap na effect lang sa isang pagkakataon. Puwedeng makasama ang sobrang pagkislap sa mga taong sensitibo rito, kaya pinalitan namin ang isa pa dito.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'Isang kumikislap na effect lang sa isang pagkakataon. Puwedeng makasama ang sobrang pagkislap sa mga taong sensitibo rito.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel =>
       'Buksan ang editor ng pagsasaayos';
 
@@ -10044,6 +10091,10 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get videoMetadataContentWarningSelectAllThatApply =>
       'Piliin lahat ng tumutugma sa content mo';
+
+  @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Mananatiling naka-on: may kumikislap na effect ang video mo';
 
   @override
   String get videoMetadataAudioReuseSubtitle =>

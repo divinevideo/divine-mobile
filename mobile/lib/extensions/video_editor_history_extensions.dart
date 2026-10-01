@@ -2,8 +2,10 @@ import 'package:models/models.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
+import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:path/path.dart' as p;
 import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show VideoEffect;
 
 extension VideoEditorHistoryExtensions on StateManager {
   List<AudioEvent> get audioTracks {
@@ -26,6 +28,18 @@ extension VideoEditorHistoryExtensions on StateManager {
       return null;
     }
   }
+
+  /// Restores the video effects from the current history metadata, with the
+  /// ids the timeline addresses them by; empty when the session has none. An
+  /// entry that cannot be read is skipped.
+  List<EditorVideoEffect> get videoEffectEntries => videoEffectEntriesFromMeta(
+    activeMeta[VideoEditorConstants.effectsStateHistoryKey],
+  );
+
+  /// The video effects of [videoEffectEntries], for rendering.
+  List<VideoEffect> get videoEffects => [
+    for (final entry in videoEffectEntries) entry.effect,
+  ];
 
   /// Restores timeline marker positions from the current history metadata.
   List<Duration> get timelineMarkers {
@@ -113,4 +127,35 @@ extension VideoEditorHistoryExtensions on StateManager {
     if (changed) updateActiveItems();
     return changed;
   }
+}
+
+/// Reads the video effects stored under
+/// [VideoEditorConstants.effectsStateHistoryKey].
+///
+/// A draft written by a newer app can carry an effect type this build does
+/// not know; that entry is skipped rather than failing the whole list.
+List<VideoEffect> videoEffectsFromMeta(Object? raw) => [
+  for (final entry in videoEffectEntriesFromMeta(raw)) entry.effect,
+];
+
+/// Like [videoEffectsFromMeta], with each effect's timeline id. An entry
+/// stored without one is named after its position.
+List<EditorVideoEffect> videoEffectEntriesFromMeta(Object? raw) {
+  if (raw is! List) return const [];
+  final effects = <EditorVideoEffect>[];
+  for (final (index, entry) in raw.indexed) {
+    if (entry is! Map) continue;
+    try {
+      effects.add(
+        EditorVideoEffect.fromMap(
+          Map<String, dynamic>.from(entry),
+          fallbackId: 'effect_$index',
+        ),
+      );
+    } on Object {
+      // Unknown or malformed entry; skip it.
+      continue;
+    }
+  }
+  return effects;
 }

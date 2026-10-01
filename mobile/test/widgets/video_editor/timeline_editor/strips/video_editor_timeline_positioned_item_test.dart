@@ -11,6 +11,7 @@ import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_item.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_positioned_item.dart';
 import 'package:pro_image_editor/pro_image_editor.dart' show WidgetLayer;
+import 'package:pro_video_editor/pro_video_editor.dart' show VideoEffectType;
 
 void main() {
   group(TimelineOverlayPositionedItem, () {
@@ -230,6 +231,62 @@ void main() {
         find.byType(TimelineOverlayPositionedItem),
       );
       expect(semantics.label, contains('Test sticker'));
+
+      handle.dispose();
+    });
+
+    testWidgets('announces an effect by its localized name', (tester) async {
+      // The bloc labels an effect with its type's identifier, which is not a
+      // word a screen reader should read out.
+      const item = TimelineOverlayItem(
+        id: 'effect-1',
+        type: TimelineOverlayType.effect,
+        startTime: Duration.zero,
+        endTime: Duration(seconds: 3),
+        label: 'negativeFlash',
+        effectType: VideoEffectType.negativeFlash,
+      );
+
+      final handle = tester.ensureSemantics();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Stack(
+              children: [
+                TimelineOverlayPositionedItem(
+                  item: item,
+                  isDragging: false,
+                  isSelected: false,
+                  snappedStartMs: 0,
+                  dragDeltaY: 0,
+                  rowHeight: 40,
+                  pixelsPerSecond: 100,
+                  totalDuration: const Duration(seconds: 10),
+                  clipEdgesMs: const [0, 10000],
+                  color: Colors.blue,
+                  isCollapsed: false,
+                  trimExpansion: 0,
+                  onTap: () {},
+                  onLongPressStart: () {},
+                  onLongPressMoveUpdate: (_) {},
+                  onLongPressEnd: () {},
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final semantics = tester.getSemantics(
+        find.byType(TimelineOverlayPositionedItem),
+      );
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(semantics.label, contains(l10n.videoEditorEffectNegativeFlash));
+      expect(semantics.label, isNot(contains('negativeFlash')));
 
       handle.dispose();
     });

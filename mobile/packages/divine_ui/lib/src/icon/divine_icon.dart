@@ -207,6 +207,7 @@ enum DivineIconName {
   sticker('sticker'),
   sun('sun'),
   sunDim('sun_dim'),
+  television('television'),
   textAa('text_aa'),
   textAlignCenter('text_align_center'),
   textAlignLeft('text_align_left'),

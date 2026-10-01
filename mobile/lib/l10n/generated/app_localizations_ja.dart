@@ -8179,6 +8179,53 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorTuneLabel => '調整';
 
   @override
+  String get videoEditorEffectsLabel => 'エフェクト';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel => 'エフェクトエディタを開く';
+
+  @override
+  String get videoEditorEffectNone => 'なし';
+
+  @override
+  String get videoEditorEffectGlitch => 'グリッチ';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => 'モザイク';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'RGBずれ';
+
+  @override
+  String get videoEditorEffectTvStatic => '砂嵐';
+
+  @override
+  String get videoEditorEffectPixelPulse => 'ピクセルパルス';
+
+  @override
+  String get videoEditorEffectOldFilm => '古いフィルム';
+
+  @override
+  String get videoEditorEffectStrobe => 'ストロボ';
+
+  @override
+  String get videoEditorEffectNegativeFlash => 'ネガフラッシュ';
+
+  @override
+  String get videoEditorEffectVignette => 'ビネット';
+
+  @override
+  String get videoEditorEffectsFlashingReplaced =>
+      '点滅エフェクトは一度にひとつだけ。点滅が多すぎると、敏感な人の体に負担がかかることがあるので、ここではもう一方を置き換えました。';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      '点滅エフェクトは一度にひとつだけ。点滅が多すぎると、敏感な人の体に負担がかかることがあります。';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => '調整エディターを開く';
 
   @override
@@ -9477,6 +9524,10 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get videoMetadataContentWarningSelectAllThatApply =>
       'コンテンツに該当するものをすべて選択';
+
+  @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'オンのままです：動画に点滅エフェクトがあります';
 
   @override
   String get videoMetadataAudioReuseSubtitle =>

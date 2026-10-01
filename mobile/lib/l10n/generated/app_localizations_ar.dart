@@ -8566,6 +8566,53 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorTuneLabel => 'ضبط';
 
   @override
+  String get videoEditorEffectsLabel => 'تأثيرات';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel => 'فتح محرر التأثيرات';
+
+  @override
+  String get videoEditorEffectNone => 'بلا';
+
+  @override
+  String get videoEditorEffectGlitch => 'تشويش';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => 'بكسلة';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'فصل RGB';
+
+  @override
+  String get videoEditorEffectTvStatic => 'ضوضاء';
+
+  @override
+  String get videoEditorEffectPixelPulse => 'نبض البكسل';
+
+  @override
+  String get videoEditorEffectOldFilm => 'فيلم قديم';
+
+  @override
+  String get videoEditorEffectStrobe => 'ستروب';
+
+  @override
+  String get videoEditorEffectNegativeFlash => 'وميض نيجاتيف';
+
+  @override
+  String get videoEditorEffectVignette => 'تعتيم الحواف';
+
+  @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'تأثير وامض واحد في كل مرة. الوميض الكثير قد يؤذي الأشخاص الحساسين له، لذلك استبدلنا التأثير الآخر هنا.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'تأثير وامض واحد في كل مرة. الوميض الكثير قد يؤذي الأشخاص الحساسين له.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'فتح محرر التعديلات';
 
   @override
@@ -9921,6 +9968,10 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get videoMetadataContentWarningSelectAllThatApply =>
       'اختر كل ما ينطبق على محتواك';
+
+  @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'يبقى مفعّلًا: يحتوي الفيديو على تأثير وامض';
 
   @override
   String get videoMetadataAudioReuseSubtitle =>

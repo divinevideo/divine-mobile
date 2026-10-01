@@ -9,6 +9,7 @@ import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/caption_style.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
+import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
@@ -434,6 +435,165 @@ void main() {
         meta[VideoEditorConstants.audioStateHistoryKey],
         equals([existing.toJson()]),
       );
+    });
+  });
+
+  group('video effects', () {
+    const vhs = EditorVideoEffect(
+      id: 'vhs',
+      effect: VideoEffect.vhs(intensity: 0.4),
+    );
+    const glitch = EditorVideoEffect(
+      id: 'glitch',
+      effect: VideoEffect.glitch(
+        startTime: Duration(seconds: 1),
+        endTime: Duration(seconds: 2),
+      ),
+    );
+
+    Map<String, dynamic> capturedHistoryMeta() =>
+        verify(
+              () => editor.addHistory(meta: captureAny(named: 'meta')),
+            ).captured.single
+            as Map<String, dynamic>;
+
+    test('setVideoEffectEntries writes the effects as one history entry', () {
+      when(() => stateManager.activeMeta).thenReturn({'other': 1});
+
+      editor.setVideoEffectEntries(const [vhs]);
+
+      final meta = capturedHistoryMeta();
+      expect(meta[VideoEditorConstants.effectsStateHistoryKey], [vhs.toMap()]);
+      expect(meta['other'], 1);
+    });
+
+    test('setVideoEffectEntries leaves no undo step when nothing changed', () {
+      when(() => stateManager.activeMeta).thenReturn({
+        VideoEditorConstants.effectsStateHistoryKey: [vhs.toMap()],
+      });
+
+      editor.setVideoEffectEntries(const [vhs]);
+
+      verifyNever(() => editor.addHistory(meta: any(named: 'meta')));
+    });
+
+    test('removeVideoEffect removes the key with the last effect', () {
+      when(() => stateManager.activeMeta).thenReturn({
+        VideoEditorConstants.effectsStateHistoryKey: [vhs.toMap()],
+      });
+
+      editor.removeVideoEffect('vhs');
+
+      expect(
+        capturedHistoryMeta().containsKey(
+          VideoEditorConstants.effectsStateHistoryKey,
+        ),
+        isFalse,
+      );
+    });
+
+    test('setVideoEffectTimeline retimes and reorders as one undo step', () {
+      when(() => stateManager.activeMeta).thenReturn({
+        VideoEditorConstants.effectsStateHistoryKey: [
+          vhs.toMap(),
+          glitch.toMap(),
+        ],
+      });
+
+      editor.setVideoEffectTimeline(
+        id: 'vhs',
+        startTime: const Duration(seconds: 3),
+        endTime: const Duration(seconds: 5),
+        listIndex: 1,
+      );
+
+      expect(
+        capturedHistoryMeta()[VideoEditorConstants.effectsStateHistoryKey],
+        [
+          glitch.toMap(),
+          vhs
+              .retimed(
+                startTime: const Duration(seconds: 3),
+                endTime: const Duration(seconds: 5),
+              )
+              .toMap(),
+        ],
+      );
+    });
+
+    test('setVideoEffectTimeline updates the meta in place during a drag', () {
+      final activeMeta = <String, dynamic>{
+        VideoEditorConstants.effectsStateHistoryKey: [glitch.toMap()],
+      };
+      when(() => stateManager.activeMeta).thenReturn(activeMeta);
+
+      editor.setVideoEffectTimeline(
+        id: 'glitch',
+        startTime: Duration.zero,
+        endTime: const Duration(seconds: 4),
+        skipUpdateHistory: true,
+      );
+
+      verifyNever(() => editor.addHistory(meta: any(named: 'meta')));
+      expect(
+        stateManager.videoEffectEntries.single.effect.endTime,
+        const Duration(seconds: 4),
+      );
+    });
+
+    test('separateFlashingVideoEffects cuts the other flashing effect in '
+        'place and reports it', () {
+      const strobe = EditorVideoEffect(
+        id: 'strobe',
+        effect: VideoEffect.strobe(
+          startTime: Duration.zero,
+          endTime: Duration(seconds: 4),
+        ),
+      );
+      const negative = EditorVideoEffect(
+        id: 'negative',
+        effect: VideoEffect.negativeFlash(
+          startTime: Duration(seconds: 3),
+          endTime: Duration(seconds: 6),
+        ),
+      );
+      final activeMeta = <String, dynamic>{
+        VideoEditorConstants.effectsStateHistoryKey: [
+          strobe.toMap(),
+          negative.toMap(),
+        ],
+      };
+      when(() => stateManager.activeMeta).thenReturn(activeMeta);
+
+      expect(editor.separateFlashingVideoEffects('negative'), isTrue);
+
+      verifyNever(() => editor.addHistory(meta: any(named: 'meta')));
+      expect(
+        stateManager.videoEffectEntries.map(
+          (e) => (e.id, e.effect.startTime, e.effect.endTime),
+        ),
+        [
+          ('strobe', Duration.zero, const Duration(seconds: 3)),
+          ('negative', const Duration(seconds: 3), const Duration(seconds: 6)),
+        ],
+      );
+      expect(editor.separateFlashingVideoEffects('negative'), isFalse);
+    });
+
+    test('videoEffectEntries skips an entry this build cannot read and '
+        'names one stored without an id after its position', () {
+      when(() => stateManager.activeMeta).thenReturn({
+        VideoEditorConstants.effectsStateHistoryKey: [
+          {'type': 'sparkle', 'intensity': 1},
+          vhs.effect.toMap(),
+          'not-a-map',
+        ],
+      });
+
+      expect(stateManager.videoEffectEntries, [
+        EditorVideoEffect(id: 'effect_1', effect: vhs.effect),
+      ]);
+      expect(stateManager.videoEffects, [vhs.effect]);
     });
   });
 

@@ -14597,6 +14597,96 @@ abstract class AppLocalizations {
   /// **'Adjust'**
   String get videoEditorTuneLabel;
 
+  /// Label of the video editor tool that adds visual effects (glitch, VHS, pixelate) to the video. Each effect can then be trimmed to part of it on the timeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Effects'**
+  String get videoEditorEffectsLabel;
+
+  /// Screen reader label of the button that opens the video effects editor.
+  ///
+  /// In en, this message translates to:
+  /// **'Open effects editor'**
+  String get videoEditorOpenEffectsSemanticLabel;
+
+  /// Name of the option that removes the video effect. Refers to 'effect', so use the matching grammatical gender.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get videoEditorEffectNone;
+
+  /// Name of a video effect: digital distortion where the color channels split and slices of the picture jump sideways.
+  ///
+  /// In en, this message translates to:
+  /// **'Glitch'**
+  String get videoEditorEffectGlitch;
+
+  /// Name of a video effect imitating an old VHS videotape: scanlines, grain, a rolling tracking band. VHS is a format name and usually stays as is.
+  ///
+  /// In en, this message translates to:
+  /// **'VHS'**
+  String get videoEditorEffectVhs;
+
+  /// Name of a video effect that turns the picture into large square pixels.
+  ///
+  /// In en, this message translates to:
+  /// **'Pixelate'**
+  String get videoEditorEffectPixelate;
+
+  /// Name of a video effect: the red and blue color channels shift apart, punching out once a second.
+  ///
+  /// In en, this message translates to:
+  /// **'RGB Split'**
+  String get videoEditorEffectRgbSplit;
+
+  /// Name of a video effect imitating a badly tuned TV: heavy flickering grain ('snow') and a picture that jumps now and then.
+  ///
+  /// In en, this message translates to:
+  /// **'Static'**
+  String get videoEditorEffectTvStatic;
+
+  /// Name of a video effect: once a second the picture breaks into large square pixels and sharpens again.
+  ///
+  /// In en, this message translates to:
+  /// **'Pixel Pulse'**
+  String get videoEditorEffectPixelPulse;
+
+  /// Name of a video effect: sepia tones, film grain, a flickering exposure and darkened corners, like an old film print.
+  ///
+  /// In en, this message translates to:
+  /// **'Old Film'**
+  String get videoEditorEffectOldFilm;
+
+  /// Name of a video effect: the picture flashes white twice a second, like a strobe light.
+  ///
+  /// In en, this message translates to:
+  /// **'Strobe'**
+  String get videoEditorEffectStrobe;
+
+  /// Name of a video effect: once a second the picture turns into its photographic negative for a moment.
+  ///
+  /// In en, this message translates to:
+  /// **'Negative Flash'**
+  String get videoEditorEffectNegativeFlash;
+
+  /// Name of a video effect: the corners of the picture are darkened, drawing the eye to the center.
+  ///
+  /// In en, this message translates to:
+  /// **'Vignette'**
+  String get videoEditorEffectVignette;
+
+  /// Snack bar after a flashing video effect (strobe, negative flash) replaced another flashing effect where the two overlapped on the timeline. Explains, without technical terms, that overlapping flashes can harm people with photosensitivity.
+  ///
+  /// In en, this message translates to:
+  /// **'One flashing effect at a time. Too much flashing can hurt people who are sensitive to it, so we swapped out the other one here.'**
+  String get videoEditorEffectsFlashingReplaced;
+
+  /// Snack bar when the user tries to duplicate a flashing video effect (strobe, negative flash): the copy would flash on top of the original, so it is not duplicated. Same reason as videoEditorEffectsFlashingReplaced.
+  ///
+  /// In en, this message translates to:
+  /// **'One flashing effect at a time. Too much flashing can hurt people who are sensitive to it.'**
+  String get videoEditorEffectsFlashingNotDuplicated;
+
   /// No description provided for @videoEditorOpenTuneSemanticLabel.
   ///
   /// In en, this message translates to:
@@ -15851,7 +15941,7 @@ abstract class AppLocalizations {
   /// **'Applying the color mask…'**
   String get videoEditorChromaKeyApplying;
 
-  /// Shown in the colour-mask editor when the renderer has no shader image filter, so the preview cannot show the key applied.
+  /// Shown in the colour-mask editor and the video effects editor when the renderer has no shader image filter, so the preview cannot show the key or the effects applied.
   ///
   /// In en, this message translates to:
   /// **'This device can\'t show the live preview. Your settings still apply when you export.'**
@@ -16922,6 +17012,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Select all that apply'**
   String get videoMetadataContentWarningSelectAllThatApply;
+
+  /// Note under the Flashing Lights content warning, which is locked on because the video uses a flashing effect (strobe, negative flash) from the editor.
+  ///
+  /// In en, this message translates to:
+  /// **'Stays on: your video has a flashing effect'**
+  String get videoMetadataContentWarningRequiredByEffect;
 
   /// No description provided for @videoMetadataAudioReuseSubtitle.
   ///

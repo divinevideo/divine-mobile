@@ -93,6 +93,7 @@ void main() {
                 onOpenMusicLibrary: () {},
                 onOpenVoiceOver: () {},
                 onOpenCaptions: () {},
+                onOpenEffects: () {},
                 onAddEditTextLayer: ([layer]) async => null,
                 child: const SizedBox(
                   width: 400,

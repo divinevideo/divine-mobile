@@ -15,6 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/complete_parameters_extensions.dart';
 import 'package:openvine/models/caption_mention.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
@@ -3560,6 +3561,49 @@ void main() {
         );
       },
     );
+  });
+
+  group('updateEditorEditingParameters effect-only changes', () {
+    late ProviderContainer container;
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      container = ProviderContainer(
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      );
+    });
+
+    tearDown(() {
+      container.dispose();
+    });
+
+    CompleteParameters paramsWithEffects(List<VideoEffect> effects) =>
+        CompleteParameters.fromMap(<String, dynamic>{}).copyWith(
+          meta: {
+            VideoEditorConstants.effectsStateHistoryKey: [
+              for (final effect in effects) effect.toMap(),
+            ],
+          },
+        );
+
+    test('stores parameters whose only change is the effects, so the export '
+        'renders the new effect', () {
+      final notifier = container.read(videoEditorProvider.notifier);
+
+      notifier.updateEditorEditingParameters(paramsWithEffects(const []));
+      notifier.updateEditorEditingParameters(
+        paramsWithEffects(const [VideoEffect.vhs(intensity: 0.4)]),
+      );
+
+      expect(
+        container
+            .read(videoEditorProvider)
+            .editorEditingParameters
+            ?.videoEffectsFromCompleteMeta,
+        const [VideoEffect.vhs(intensity: 0.4)],
+      );
+    });
   });
 
   group('cover thumbnail persistence', () {

@@ -8518,6 +8518,53 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorTuneLabel => 'Sesuaikan';
 
   @override
+  String get videoEditorEffectsLabel => 'Efek';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel => 'Buka editor efek';
+
+  @override
+  String get videoEditorEffectNone => 'Tidak ada';
+
+  @override
+  String get videoEditorEffectGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => 'Pikselasi';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'Pisah RGB';
+
+  @override
+  String get videoEditorEffectTvStatic => 'Statis';
+
+  @override
+  String get videoEditorEffectPixelPulse => 'Denyut Piksel';
+
+  @override
+  String get videoEditorEffectOldFilm => 'Film Lawas';
+
+  @override
+  String get videoEditorEffectStrobe => 'Strobo';
+
+  @override
+  String get videoEditorEffectNegativeFlash => 'Kilat Negatif';
+
+  @override
+  String get videoEditorEffectVignette => 'Vignet';
+
+  @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'Satu efek berkedip dalam satu waktu. Kedipan berlebihan bisa membahayakan orang yang sensitif, jadi kami mengganti efek lainnya di sini.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'Satu efek berkedip dalam satu waktu. Kedipan berlebihan bisa membahayakan orang yang sensitif.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Buka editor penyesuaian';
 
   @override
@@ -9884,6 +9931,10 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get videoMetadataContentWarningSelectAllThatApply =>
       'Pilih semua yang berlaku untuk kontenmu';
+
+  @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Tetap aktif: videomu punya efek berkedip';
 
   @override
   String get videoMetadataAudioReuseSubtitle =>

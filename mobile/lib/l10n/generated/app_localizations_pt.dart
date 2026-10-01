@@ -8666,6 +8666,53 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorTuneLabel => 'Ajustar';
 
   @override
+  String get videoEditorEffectsLabel => 'Efeitos';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel => 'Abrir editor de efeitos';
+
+  @override
+  String get videoEditorEffectNone => 'Nenhum';
+
+  @override
+  String get videoEditorEffectGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => 'Pixelar';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'Divisão RGB';
+
+  @override
+  String get videoEditorEffectTvStatic => 'Estática';
+
+  @override
+  String get videoEditorEffectPixelPulse => 'Pulso de pixels';
+
+  @override
+  String get videoEditorEffectOldFilm => 'Filme antigo';
+
+  @override
+  String get videoEditorEffectStrobe => 'Estroboscópio';
+
+  @override
+  String get videoEditorEffectNegativeFlash => 'Flash negativo';
+
+  @override
+  String get videoEditorEffectVignette => 'Vinheta';
+
+  @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'Só um efeito piscante de cada vez. Piscar demais pode fazer mal a pessoas sensíveis, por isso substituímos o outro aqui.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'Só um efeito piscante de cada vez. Piscar demais pode fazer mal a pessoas sensíveis.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Abrir editor de ajustes';
 
   @override
@@ -10043,6 +10090,10 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get videoMetadataContentWarningSelectAllThatApply =>
       'Selecione tudo que se aplica ao seu conteúdo';
+
+  @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Fica ativado: o seu vídeo tem um efeito piscante';
 
   @override
   String get videoMetadataAudioReuseSubtitle =>

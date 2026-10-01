@@ -8721,6 +8721,54 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorTuneLabel => 'Ajuster';
 
   @override
+  String get videoEditorEffectsLabel => 'Effets';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel =>
+      'Ouvrir l\'éditeur d\'effets';
+
+  @override
+  String get videoEditorEffectNone => 'Aucun';
+
+  @override
+  String get videoEditorEffectGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => 'Pixeliser';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'Décalage RGB';
+
+  @override
+  String get videoEditorEffectTvStatic => 'Neige';
+
+  @override
+  String get videoEditorEffectPixelPulse => 'Pulsation pixel';
+
+  @override
+  String get videoEditorEffectOldFilm => 'Vieux film';
+
+  @override
+  String get videoEditorEffectStrobe => 'Stroboscope';
+
+  @override
+  String get videoEditorEffectNegativeFlash => 'Flash négatif';
+
+  @override
+  String get videoEditorEffectVignette => 'Vignette';
+
+  @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'Un seul effet clignotant à la fois. Trop de clignotements peuvent faire du mal aux personnes sensibles, alors on a remplacé l\'autre ici.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'Un seul effet clignotant à la fois. Trop de clignotements peuvent faire du mal aux personnes sensibles.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Ouvrir l’éditeur de réglages';
 
   @override
@@ -10117,6 +10165,10 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get videoMetadataContentWarningSelectAllThatApply =>
       'Sélectionnez tout ce qui s\'applique à votre contenu';
+
+  @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Reste activé : ta vidéo a un effet clignotant';
 
   @override
   String get videoMetadataAudioReuseSubtitle =>

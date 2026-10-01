@@ -8113,6 +8113,53 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorTuneLabel => '调节';
 
   @override
+  String get videoEditorEffectsLabel => '特效';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel => '打开特效编辑器';
+
+  @override
+  String get videoEditorEffectNone => '无';
+
+  @override
+  String get videoEditorEffectGlitch => '故障';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => '像素化';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'RGB分离';
+
+  @override
+  String get videoEditorEffectTvStatic => '雪花';
+
+  @override
+  String get videoEditorEffectPixelPulse => '像素脉冲';
+
+  @override
+  String get videoEditorEffectOldFilm => '老电影';
+
+  @override
+  String get videoEditorEffectStrobe => '频闪';
+
+  @override
+  String get videoEditorEffectNegativeFlash => '负片闪烁';
+
+  @override
+  String get videoEditorEffectVignette => '暗角';
+
+  @override
+  String get videoEditorEffectsFlashingReplaced =>
+      '一次只能用一个闪烁效果。闪烁太多可能会伤害对闪光敏感的人，所以我们在这里替换了另一个。';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      '一次只能用一个闪烁效果。闪烁太多可能会伤害对闪光敏感的人。';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => '打开调节编辑器';
 
   @override
@@ -9383,6 +9430,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoMetadataContentWarningSelectAllThatApply => '选择所有适用项';
+
+  @override
+  String get videoMetadataContentWarningRequiredByEffect => '保持开启：你的视频含有闪烁效果';
 
   @override
   String get videoMetadataAudioReuseSubtitle => '让其他人保存并二次使用这个视频的音频。';

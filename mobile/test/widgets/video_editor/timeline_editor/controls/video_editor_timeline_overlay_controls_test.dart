@@ -15,16 +15,19 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
 import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
+import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/saved_title_style.dart';
 import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:openvine/providers/saved_title_style_repository_provider.dart';
@@ -89,6 +92,7 @@ void main() {
       _MockProImageEditorState mockEditor,
       _MockVideoEditorMainBloc mainBloc, {
       _MockClipEditorBloc? clipBloc,
+      VideoEditorEffectsCubit? effectsCubit,
       List<Override> overrides = const [],
       bool routed = false,
     }) {
@@ -99,6 +103,8 @@ void main() {
             BlocProvider<TimelineOverlayBloc>.value(value: overlayBloc),
             if (clipBloc != null)
               BlocProvider<ClipEditorBloc>.value(value: clipBloc),
+            if (effectsCubit != null)
+              BlocProvider<VideoEditorEffectsCubit>.value(value: effectsCubit),
           ],
           child: VideoEditorScope(
             editorKey: GlobalKey(),
@@ -116,6 +122,7 @@ void main() {
             onOpenMusicLibrary: () {},
             onOpenVoiceOver: () {},
             onOpenCaptions: () {},
+            onOpenEffects: () {},
             editorOverride: mockEditor,
             child: TimelineOverlayControls(item: item),
           ),
@@ -164,6 +171,7 @@ void main() {
               onOpenMusicLibrary: () {},
               onOpenVoiceOver: () {},
               onOpenCaptions: () {},
+              onOpenEffects: () {},
               child: BlocProvider<TimelineOverlayBloc>.value(
                 value: overlayBloc,
                 child: TimelineOverlayControls(item: item),
@@ -409,6 +417,26 @@ void main() {
       await tester.pumpWidget(build(item));
 
       expect(find.byType(VideoEditorTimelineControls), findsOneWidget);
+      expect(find.text(l10n.videoEditorDeleteLabel), findsOneWidget);
+      expect(find.text(l10n.videoEditorEditLabel), findsOneWidget);
+      expect(find.text(l10n.videoEditorDuplicateLabel), findsOneWidget);
+      expect(find.text(l10n.videoEditorSplitLabel), findsOneWidget);
+      expect(find.text(l10n.videoEditorDoneLabel), findsOneWidget);
+    });
+
+    testWidgets('renders delete/edit/duplicate/split/done for effect', (
+      tester,
+    ) async {
+      const item = TimelineOverlayItem(
+        id: 'effect-1',
+        type: TimelineOverlayType.effect,
+        startTime: Duration.zero,
+        endTime: Duration(seconds: 5),
+        effectType: pve.VideoEffectType.glitch,
+      );
+
+      await tester.pumpWidget(build(item));
+
       expect(find.text(l10n.videoEditorDeleteLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorEditLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorDuplicateLabel), findsOneWidget);
@@ -1674,6 +1702,154 @@ void main() {
         expect(sheet.currentStyle.background, const Color(0xFFFF7A00));
       });
 
+      group('effect', () {
+        const glitch = EditorVideoEffect(
+          id: 'effect-1',
+          effect: pve.VideoEffect.glitch(
+            intensity: 0.5,
+            startTime: Duration(seconds: 1),
+            endTime: Duration(seconds: 5),
+          ),
+        );
+        const item = TimelineOverlayItem(
+          id: 'effect-1',
+          type: TimelineOverlayType.effect,
+          startTime: Duration(seconds: 1),
+          endTime: Duration(seconds: 5),
+          effectType: pve.VideoEffectType.glitch,
+        );
+
+        setUp(() {
+          when(() => mockStateManager.activeMeta).thenReturn({
+            VideoEditorConstants.effectsStateHistoryKey: [glitch.toMap()],
+          });
+        });
+
+        List<EditorVideoEffect> committedEffects() {
+          final meta =
+              verify(
+                    () =>
+                        mockEditor.addHistory(meta: captureAny(named: 'meta')),
+                  ).captured.single
+                  as Map<String, dynamic>;
+          return videoEffectEntriesFromMeta(
+            meta[VideoEditorConstants.effectsStateHistoryKey],
+          );
+        }
+
+        testWidgets('edit opens the effects editor on that effect', (
+          tester,
+        ) async {
+          final effectsCubit = VideoEditorEffectsCubit()
+            ..syncApplied(const [glitch]);
+          addTearDown(effectsCubit.close);
+          when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+
+          await tester.pumpWidget(
+            buildWithEditor(
+              item,
+              mockEditor,
+              mainBloc,
+              effectsCubit: effectsCubit,
+            ),
+          );
+          await tester.tap(
+            find.bySemanticsLabel(
+              l10n.videoEditorEditSelectedItemSemanticLabel,
+            ),
+          );
+          await tester.pump();
+
+          verify(
+            () => mainBloc.add(
+              const VideoEditorMainOpenSubEditor(SubEditorType.effects),
+            ),
+          ).called(1);
+          expect(effectsCubit.state.editingId, 'effect-1');
+          expect(effectsCubit.state.selectedType, pve.VideoEffectType.glitch);
+        });
+
+        testWidgets('split cuts the effect at the playhead', (tester) async {
+          when(() => mainBloc.state).thenReturn(
+            const VideoEditorMainState(currentPosition: Duration(seconds: 3)),
+          );
+
+          await tester.pumpWidget(buildWithEditor(item, mockEditor, mainBloc));
+          await tester.tap(
+            find.bySemanticsLabel(
+              l10n.videoEditorSplitSelectedClipSemanticLabel,
+            ),
+          );
+          await tester.pump();
+
+          final effects = committedEffects();
+          expect(
+            effects.map((e) => (e.effect.startTime, e.effect.endTime)),
+            [
+              (const Duration(seconds: 1), const Duration(seconds: 3)),
+              (const Duration(seconds: 3), const Duration(seconds: 5)),
+            ],
+          );
+          expect(effects.map((e) => e.effect.intensity), [0.5, 0.5]);
+          expect(effects.last.id, isNot('effect-1'));
+        });
+
+        testWidgets('duplicate leaves a flashing effect alone and says why', (
+          tester,
+        ) async {
+          const strobe = EditorVideoEffect(
+            id: 'strobe-1',
+            effect: pve.VideoEffect.strobe(),
+          );
+          when(() => mockStateManager.activeMeta).thenReturn({
+            VideoEditorConstants.effectsStateHistoryKey: [strobe.toMap()],
+          });
+          when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+
+          await tester.pumpWidget(
+            buildWithEditor(
+              item.copyWith(
+                id: 'strobe-1',
+                effectType: pve.VideoEffectType.strobe,
+              ),
+              mockEditor,
+              mainBloc,
+            ),
+          );
+          await tester.tap(
+            find.bySemanticsLabel(
+              l10n.videoEditorDuplicateSelectedItemSemanticLabel,
+            ),
+          );
+          await tester.pump();
+
+          verifyNever(() => mockEditor.addHistory(meta: any(named: 'meta')));
+          expect(
+            find.text(l10n.videoEditorEffectsFlashingNotDuplicated),
+            findsOneWidget,
+          );
+        });
+
+        testWidgets('delete removes the effect and clears the selection', (
+          tester,
+        ) async {
+          when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+
+          await tester.pumpWidget(buildWithEditor(item, mockEditor, mainBloc));
+          await tester.tap(
+            find.bySemanticsLabel(
+              l10n.videoEditorDeleteSelectedItemSemanticLabel,
+            ),
+          );
+          await tester.pump();
+
+          expect(committedEffects(), isEmpty);
+          verify(
+            () => overlayBloc.add(const TimelineOverlayItemSelected(null)),
+          ).called(1);
+        });
+      });
+
       testWidgets(
         'tune edit opens the tune sub-editor seeded with the set id',
         (tester) async {
@@ -1718,6 +1894,7 @@ void main() {
                       onOpenMusicLibrary: () {},
                       onOpenVoiceOver: () {},
                       onOpenCaptions: () {},
+                      onOpenEffects: () {},
                       editorOverride: mockEditor,
                       child: const TimelineOverlayControls(item: item),
                     ),

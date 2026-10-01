@@ -8566,6 +8566,54 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorTuneLabel => 'Điều chỉnh';
 
   @override
+  String get videoEditorEffectsLabel => 'Hiệu ứng';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel =>
+      'Mở trình chỉnh sửa hiệu ứng';
+
+  @override
+  String get videoEditorEffectNone => 'Không có';
+
+  @override
+  String get videoEditorEffectGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => 'Pixel hóa';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'Tách RGB';
+
+  @override
+  String get videoEditorEffectTvStatic => 'Nhiễu';
+
+  @override
+  String get videoEditorEffectPixelPulse => 'Nhịp điểm ảnh';
+
+  @override
+  String get videoEditorEffectOldFilm => 'Phim cũ';
+
+  @override
+  String get videoEditorEffectStrobe => 'Nhấp nháy';
+
+  @override
+  String get videoEditorEffectNegativeFlash => 'Chớp âm bản';
+
+  @override
+  String get videoEditorEffectVignette => 'Làm tối viền';
+
+  @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'Mỗi lúc chỉ một hiệu ứng nhấp nháy. Nhấp nháy quá nhiều có thể gây hại cho người nhạy cảm, nên chúng mình đã thay hiệu ứng kia ở đây.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'Mỗi lúc chỉ một hiệu ứng nhấp nháy. Nhấp nháy quá nhiều có thể gây hại cho người nhạy cảm.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel =>
       'Mở trình chỉnh sửa điều chỉnh';
 
@@ -9923,6 +9971,10 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get videoMetadataContentWarningSelectAllThatApply =>
       'Chọn tất cả những gì áp dụng';
+
+  @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Luôn bật: video của bạn có hiệu ứng nhấp nháy';
 
   @override
   String get videoMetadataAudioReuseSubtitle =>

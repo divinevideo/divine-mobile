@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
@@ -16,6 +17,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
+import 'package:openvine/widgets/video_editor/effects_editor/flashing_effect_snack_bar.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_control_bar.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_clip_strip.dart';
@@ -24,6 +26,8 @@ import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timel
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_header.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_interactive_body.dart';
 import 'package:openvine/widgets/video_editor/tune_editor/tune_set_timeline_ops.dart';
+import 'package:pro_image_editor/pro_image_editor.dart'
+    show ProImageEditorState;
 
 /// Interactive timeline editor for composing video clips.
 ///
@@ -742,6 +746,19 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
           moved: true,
           skipUpdateHistory: true,
         );
+
+      case .effect:
+        // The list order is the order overlapping effects combine in, and
+        // the row order the strip stacks them in, like filters.
+        editor.setVideoEffectTimeline(
+          id: item.id,
+          startTime: startTime,
+          endTime: startTime + duration,
+          listIndex: targetIdx,
+          skipUpdateHistory: true,
+        );
+        _separateFlashingEffects(editor, item.id);
+        _syncEffectsPreview(editor);
     }
 
     context.read<TimelineOverlayBloc>().add(
@@ -870,6 +887,15 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
           endTime: endTime,
           skipUpdateHistory: true,
         );
+
+      case .effect:
+        editor.setVideoEffectTimeline(
+          id: item.id,
+          startTime: startTime,
+          endTime: endTime,
+          skipUpdateHistory: true,
+        );
+        _syncEffectsPreview(editor);
     }
 
     context.read<TimelineOverlayBloc>().add(
@@ -898,6 +924,14 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
         overlayBloc.add(TimelineOverlayTrimStarted(selectedId));
       }
     } else {
+      final trimmed = overlayBloc.state.items
+          .where((i) => i.id == overlayBloc.state.selectedItemId)
+          .firstOrNull;
+      if (trimmed?.type == .effect) {
+        final editor = VideoEditorScope.of(context).requireEditor;
+        _separateFlashingEffects(editor, trimmed!.id);
+        _syncEffectsPreview(editor);
+      }
       overlayBloc.add(const TimelineOverlayTrimEnded());
     }
   }
@@ -999,7 +1033,32 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
           moved: true,
           skipUpdateHistory: true,
         );
+
+      case .effect:
+        editor.setVideoEffectTimeline(
+          id: item.id,
+          startTime: startTime,
+          endTime: startTime + item.duration,
+          skipUpdateHistory: true,
+        );
+        _syncEffectsPreview(editor);
     }
+  }
+
+  /// Once a gesture ends, lets a flashing effect replace any other flashing
+  /// effect it now overlaps, and says why.
+  void _separateFlashingEffects(ProImageEditorState editor, String id) {
+    if (editor.separateFlashingVideoEffects(id)) {
+      showFlashingEffectReplacedSnackBar(context);
+    }
+  }
+
+  /// Shows a moved or trimmed effect's new window in the preview while the
+  /// gesture runs; the history sync that follows it only runs on release.
+  void _syncEffectsPreview(ProImageEditorState editor) {
+    context.read<VideoEditorEffectsCubit>().syncApplied(
+      editor.stateManager.videoEffectEntries,
+    );
   }
 
   void _onOverlayDragEnded() {

@@ -8406,6 +8406,53 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorTuneLabel => 'አስተካክል';
 
   @override
+  String get videoEditorEffectsLabel => 'ተፅዕኖዎች';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel => 'የተፅዕኖዎች አርታዒን ክፈት';
+
+  @override
+  String get videoEditorEffectNone => 'ምንም';
+
+  @override
+  String get videoEditorEffectGlitch => 'ግሊች';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => 'ፒክሰሌት';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'RGB መለያየት';
+
+  @override
+  String get videoEditorEffectTvStatic => 'ጫጫታ';
+
+  @override
+  String get videoEditorEffectPixelPulse => 'የፒክሰል ምት';
+
+  @override
+  String get videoEditorEffectOldFilm => 'አሮጌ ፊልም';
+
+  @override
+  String get videoEditorEffectStrobe => 'ስትሮብ';
+
+  @override
+  String get videoEditorEffectNegativeFlash => 'ኔጌቲቭ ብልጭታ';
+
+  @override
+  String get videoEditorEffectVignette => 'ቪኜት';
+
+  @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'አንድ ብልጭ ድርግም የሚል ኢፌክት በአንድ ጊዜ። ብዙ ብልጭታ ለሚነኩ ሰዎች ሊጎዳ ይችላል፣ ስለዚህ ሌላውን እዚህ ተክተነዋል።';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'አንድ ብልጭ ድርግም የሚል ኢፌክት በአንድ ጊዜ። ብዙ ብልጭታ ለሚነኩ ሰዎች ሊጎዳ ይችላል።';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'የማስተካከያ አርታዒን ክፈት';
 
   @override
@@ -9729,6 +9776,10 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get videoMetadataContentWarningSelectAllThatApply =>
       'በይዘትህ ላይ የሚመለከተውን ሁሉ ምረጥ';
+
+  @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'እንደበራ ይቆያል፦ ቪዲዮዎ ብልጭ ድርግም የሚል ኢፌክት አለው';
 
   @override
   String get videoMetadataAudioReuseSubtitle =>

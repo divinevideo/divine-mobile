@@ -8675,6 +8675,54 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorTuneLabel => 'Настройка';
 
   @override
+  String get videoEditorEffectsLabel => 'Ефекти';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel =>
+      'Отвори редактора на ефекти';
+
+  @override
+  String get videoEditorEffectNone => 'Без';
+
+  @override
+  String get videoEditorEffectGlitch => 'Глич';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => 'Пикселизация';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'RGB разделяне';
+
+  @override
+  String get videoEditorEffectTvStatic => 'Шум';
+
+  @override
+  String get videoEditorEffectPixelPulse => 'Пикселен пулс';
+
+  @override
+  String get videoEditorEffectOldFilm => 'Стар филм';
+
+  @override
+  String get videoEditorEffectStrobe => 'Стробоскоп';
+
+  @override
+  String get videoEditorEffectNegativeFlash => 'Негативна светкавица';
+
+  @override
+  String get videoEditorEffectVignette => 'Винетка';
+
+  @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'Само един мигащ ефект наведнъж. Прекаленото мигане може да навреди на чувствителни хора, затова тук заменихме другия.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'Само един мигащ ефект наведнъж. Прекаленото мигане може да навреди на чувствителни хора.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel =>
       'Отваряне на редактора за настройки';
 
@@ -10060,6 +10108,10 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get videoMetadataContentWarningSelectAllThatApply =>
       'Избери всичко, което важи за съдържанието ти';
+
+  @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Остава включено: видеото ти има мигащ ефект';
 
   @override
   String get videoMetadataAudioReuseSubtitle =>

@@ -10,6 +10,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
@@ -20,6 +21,7 @@ import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/widgets/branded_loading_scaffold.dart';
+import 'package:openvine/widgets/video_editor/effects_editor/open_effects_editor.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_overlay_actions.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline.dart';
@@ -83,6 +85,7 @@ void main() {
       VideoEditorMainBloc? mainBlocOverride,
       ClipEditorBloc? clipBlocOverride,
       ProImageEditorState? editorOverride,
+      VideoEditorEffectsCubit? effectsCubit,
       ThemeData? theme,
     }) {
       final editorKey = GlobalKey<ProImageEditorState>();
@@ -101,6 +104,7 @@ void main() {
           onOpenMusicLibrary: () {},
           onOpenVoiceOver: () {},
           onOpenCaptions: () {},
+          onOpenEffects: () {},
           originalClipAspectRatio: 9 / 16,
           bodySizeNotifier: ValueNotifier(const Size(400, 800)),
           zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
@@ -117,6 +121,10 @@ void main() {
                 value: clipBlocOverride ?? clipBloc,
               ),
               BlocProvider<VideoEditorFilterBloc>.value(value: filterBloc),
+              if (effectsCubit != null)
+                BlocProvider<VideoEditorEffectsCubit>.value(
+                  value: effectsCubit,
+                ),
             ],
             child: MaterialApp(
               theme: theme,
@@ -232,6 +240,37 @@ void main() {
 
         expect(find.byType(VideoEditorMainOverlayActions), findsOneWidget);
         expect(collapseSection().sizeFactor.value, 1);
+      },
+    );
+
+    testWidgets(
+      'pauses the video again when the effects editor closes after '
+      'starting it',
+      (tester) async {
+        final mainBloc = VideoEditorMainBloc();
+        addTearDown(mainBloc.close);
+        final effectsCubit = VideoEditorEffectsCubit();
+        addTearDown(effectsCubit.close);
+
+        await tester.pumpWidget(
+          buildWidget(
+            isLoading: true,
+            mainBlocOverride: mainBloc,
+            effectsCubit: effectsCubit,
+          ),
+        );
+        await tester.pump();
+
+        openEffectsEditor(mainBloc, effectsCubit, reduceMotion: false);
+        mainBloc.add(const VideoEditorPlaybackChanged(isPlaying: true));
+        await tester.pump();
+        expect(mainBloc.state.playbackToggleCounter, 1);
+
+        mainBloc.add(const VideoEditorMainSubEditorClosed());
+        await tester.pump();
+
+        // The second toggle pauses the video the editor started.
+        expect(mainBloc.state.playbackToggleCounter, 2);
       },
     );
 

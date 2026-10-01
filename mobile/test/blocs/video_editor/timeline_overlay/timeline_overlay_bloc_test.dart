@@ -15,8 +15,10 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show EditorVideo, VideoEffect, VideoEffectType;
 
 TimelineOverlayItem _item({
   required String id,
@@ -240,6 +242,49 @@ void main() {
             captionItems.single.startTime,
             equals(const Duration(seconds: 3)),
           );
+        },
+      );
+
+      blocTest<TimelineOverlayBloc, TimelineOverlayState>(
+        'puts each video effect on the effect strip, whole-video ones over '
+        'the whole video and overlapping ones on separate rows',
+        build: TimelineOverlayBloc.new,
+        act: (bloc) => bloc.add(
+          const TimelineOverlayItemsUpdate(
+            layers: [],
+            filters: <FilterState>[],
+            audioTracks: [],
+            totalVideoDuration: Duration(seconds: 6),
+            effects: [
+              EditorVideoEffect(id: 'vhs', effect: VideoEffect.vhs()),
+              EditorVideoEffect(
+                id: 'strobe',
+                effect: VideoEffect.strobe(
+                  startTime: Duration(seconds: 2),
+                  endTime: Duration(seconds: 9),
+                ),
+              ),
+            ],
+          ),
+        ),
+        verify: (bloc) {
+          final effects = bloc.state.items
+              .where((i) => i.type == TimelineOverlayType.effect)
+              .toList();
+          expect(effects.map((i) => i.id), ['vhs', 'strobe']);
+          expect(
+            effects.map((i) => (i.startTime, i.endTime)),
+            [
+              (Duration.zero, const Duration(seconds: 6)),
+              // Clamped to the end of the video.
+              (const Duration(seconds: 2), const Duration(seconds: 6)),
+            ],
+          );
+          expect(effects.map((i) => i.row), [0, 1]);
+          expect(effects.map((i) => i.effectType), [
+            VideoEffectType.vhs,
+            VideoEffectType.strobe,
+          ]);
         },
       );
 

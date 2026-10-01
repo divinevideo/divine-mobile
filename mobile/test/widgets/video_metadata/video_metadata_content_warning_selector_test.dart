@@ -1,14 +1,19 @@
+import 'dart:typed_data';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_content_warning_selector.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_selection_tile.dart';
+import 'package:pro_image_editor/pro_image_editor.dart' show CompleteParameters;
+import 'package:pro_video_editor/pro_video_editor.dart' show VideoEffect;
 
 import '../../helpers/go_router.dart';
 
@@ -306,6 +311,97 @@ void main() {
       );
 
       handle.dispose();
+    });
+
+    group('with a flashing video effect', () {
+      final state = VideoEditorProviderState(
+        contentWarnings: {ContentLabel.nudity},
+        editorEditingParameters: CompleteParameters(
+          meta: {
+            VideoEditorConstants.effectsStateHistoryKey: [
+              const VideoEffect.strobe().toMap(),
+            ],
+          },
+          blur: 0,
+          originalImageSize: const Size(1080, 1920),
+          temporaryDecodedImageSize: const Size(1080, 1920),
+          bodySize: const Size(400, 800),
+          editorSize: const Size(400, 800),
+          matrixFilterList: const [],
+          matrixTuneAdjustmentsList: const [],
+          startTime: null,
+          endTime: null,
+          cropWidth: null,
+          cropHeight: null,
+          rotateTurns: 0,
+          cropX: null,
+          cropY: null,
+          flipX: false,
+          flipY: false,
+          image: Uint8List(0),
+          isTransformed: false,
+          layers: const [],
+        ),
+      );
+
+      testWidgets('shows flashing lights next to the picks', (tester) async {
+        await tester.pumpWidget(buildWidget(state: state));
+
+        expect(
+          find.byWidgetPredicate(
+            (w) =>
+                w is EditableText &&
+                w.controller.text.contains(l10n.contentLabelFlashingLights) &&
+                w.controller.text.contains(l10n.contentLabelNudity),
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('locks flashing lights on and keeps it out of the picks', (
+        tester,
+      ) async {
+        addTearDown(tester.view.reset);
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1;
+
+        await tester.pumpWidget(buildWidget(state: state));
+        await tester.tap(
+          find.bySemanticsLabel(
+            l10n.videoMetadataSelectContentWarningsSemanticLabel,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(l10n.videoMetadataContentWarningRequiredByEffect),
+          findsOneWidget,
+        );
+        final checked = find.byWidgetPredicate(
+          (w) =>
+              w is DivineSpriteCheckbox &&
+              w.state == DivineCheckboxState.selected,
+        );
+        expect(checked, findsNWidgets(2));
+
+        await tester.tap(find.text(l10n.contentLabelFlashingLights));
+        await tester.pump();
+        expect(checked, findsNWidgets(2));
+
+        await tester.tap(
+          find.descendant(
+            of: find.byType(BottomSheet),
+            matching: find.byWidgetPredicate(
+              (w) => w is DivineIconButton && w.icon == DivineIconName.check,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        verify(
+          () => mockGoRouter.pop<Set<ContentLabel>>({ContentLabel.nudity}),
+        ).called(1);
+      });
     });
 
     testWidgets('tapping an option toggles its checkbox state', (tester) async {

@@ -8681,6 +8681,53 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorTuneLabel => 'Ajustar';
 
   @override
+  String get videoEditorEffectsLabel => 'Efectos';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel => 'Abrir editor de efectos';
+
+  @override
+  String get videoEditorEffectNone => 'Ninguno';
+
+  @override
+  String get videoEditorEffectGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => 'Pixelar';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'Separación RGB';
+
+  @override
+  String get videoEditorEffectTvStatic => 'Estática';
+
+  @override
+  String get videoEditorEffectPixelPulse => 'Pulso de píxeles';
+
+  @override
+  String get videoEditorEffectOldFilm => 'Película antigua';
+
+  @override
+  String get videoEditorEffectStrobe => 'Estroboscopio';
+
+  @override
+  String get videoEditorEffectNegativeFlash => 'Destello negativo';
+
+  @override
+  String get videoEditorEffectVignette => 'Viñeta';
+
+  @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'Solo un efecto parpadeante a la vez. Demasiado parpadeo puede hacer daño a las personas sensibles, así que aquí hemos reemplazado el otro.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'Solo un efecto parpadeante a la vez. Demasiado parpadeo puede hacer daño a las personas sensibles.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Abrir editor de ajustes';
 
   @override
@@ -10065,6 +10112,10 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get videoMetadataContentWarningSelectAllThatApply =>
       'Selecciona todo lo que aplique a tu contenido';
+
+  @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Se queda activado: tu video tiene un efecto parpadeante';
 
   @override
   String get videoMetadataAudioReuseSubtitle =>

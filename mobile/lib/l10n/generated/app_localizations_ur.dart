@@ -8601,6 +8601,53 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorTuneLabel => 'ایڈجسٹ';
 
   @override
+  String get videoEditorEffectsLabel => 'ایفیکٹس';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel => 'ایفیکٹس ایڈیٹر کھولیں';
+
+  @override
+  String get videoEditorEffectNone => 'کوئی نہیں';
+
+  @override
+  String get videoEditorEffectGlitch => 'گلچ';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => 'پکسلیٹ';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'RGB تقسیم';
+
+  @override
+  String get videoEditorEffectTvStatic => 'شور';
+
+  @override
+  String get videoEditorEffectPixelPulse => 'پکسل پلس';
+
+  @override
+  String get videoEditorEffectOldFilm => 'پرانی فلم';
+
+  @override
+  String get videoEditorEffectStrobe => 'اسٹروب';
+
+  @override
+  String get videoEditorEffectNegativeFlash => 'نیگیٹو فلیش';
+
+  @override
+  String get videoEditorEffectVignette => 'وِگنیٹ';
+
+  @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'ایک وقت میں صرف ایک ٹمٹماتا ایفیکٹ۔ زیادہ ٹمٹماہٹ حساس لوگوں کو نقصان پہنچا سکتی ہے، اس لیے ہم نے یہاں دوسرے کو بدل دیا۔';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'ایک وقت میں صرف ایک ٹمٹماتا ایفیکٹ۔ زیادہ ٹمٹماہٹ حساس لوگوں کو نقصان پہنچا سکتی ہے۔';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'ایڈجسٹمنٹ ایڈیٹر کھولیں';
 
   @override
@@ -9967,6 +10014,10 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get videoMetadataContentWarningSelectAllThatApply =>
       'جو لاگو ہو سب منتخب کریں';
+
+  @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'آن رہے گا: آپ کی ویڈیو میں ٹمٹماتا ایفیکٹ ہے';
 
   @override
   String get videoMetadataAudioReuseSubtitle =>

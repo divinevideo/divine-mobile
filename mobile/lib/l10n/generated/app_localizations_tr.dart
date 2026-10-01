@@ -8520,6 +8520,53 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorTuneLabel => 'Ayarla';
 
   @override
+  String get videoEditorEffectsLabel => 'Efektler';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel => 'Efekt düzenleyiciyi aç';
+
+  @override
+  String get videoEditorEffectNone => 'Yok';
+
+  @override
+  String get videoEditorEffectGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => 'Pikselleştir';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'RGB Ayrışma';
+
+  @override
+  String get videoEditorEffectTvStatic => 'Parazit';
+
+  @override
+  String get videoEditorEffectPixelPulse => 'Piksel Nabzı';
+
+  @override
+  String get videoEditorEffectOldFilm => 'Eski Film';
+
+  @override
+  String get videoEditorEffectStrobe => 'Stroboskop';
+
+  @override
+  String get videoEditorEffectNegativeFlash => 'Negatif Flaş';
+
+  @override
+  String get videoEditorEffectVignette => 'Vinyet';
+
+  @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'Aynı anda tek bir yanıp sönen efekt. Fazla yanıp sönme hassas kişilere zarar verebilir, bu yüzden buradaki diğerini değiştirdik.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'Aynı anda tek bir yanıp sönen efekt. Fazla yanıp sönme hassas kişilere zarar verebilir.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Ayarlar düzenleyicisini aç';
 
   @override
@@ -9882,6 +9929,10 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get videoMetadataContentWarningSelectAllThatApply =>
       'İçeriğinize uyanların hepsini seçin';
+
+  @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Açık kalır: videonda yanıp sönen bir efekt var';
 
   @override
   String get videoMetadataAudioReuseSubtitle =>

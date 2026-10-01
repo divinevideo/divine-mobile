@@ -8693,6 +8693,53 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorTuneLabel => 'Regola';
 
   @override
+  String get videoEditorEffectsLabel => 'Effetti';
+
+  @override
+  String get videoEditorOpenEffectsSemanticLabel => 'Apri editor effetti';
+
+  @override
+  String get videoEditorEffectNone => 'Nessuno';
+
+  @override
+  String get videoEditorEffectGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectVhs => 'VHS';
+
+  @override
+  String get videoEditorEffectPixelate => 'Pixelato';
+
+  @override
+  String get videoEditorEffectRgbSplit => 'Split RGB';
+
+  @override
+  String get videoEditorEffectTvStatic => 'Interferenze';
+
+  @override
+  String get videoEditorEffectPixelPulse => 'Pixel a impulsi';
+
+  @override
+  String get videoEditorEffectOldFilm => 'Pellicola d\'epoca';
+
+  @override
+  String get videoEditorEffectStrobe => 'Stroboscopio';
+
+  @override
+  String get videoEditorEffectNegativeFlash => 'Flash negativo';
+
+  @override
+  String get videoEditorEffectVignette => 'Vignettatura';
+
+  @override
+  String get videoEditorEffectsFlashingReplaced =>
+      'Un solo effetto lampeggiante alla volta. Troppi lampeggiamenti possono fare male alle persone sensibili, quindi qui abbiamo sostituito l\'altro.';
+
+  @override
+  String get videoEditorEffectsFlashingNotDuplicated =>
+      'Un solo effetto lampeggiante alla volta. Troppi lampeggiamenti possono fare male alle persone sensibili.';
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Apri editor regolazioni';
 
   @override
@@ -10079,6 +10126,10 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get videoMetadataContentWarningSelectAllThatApply =>
       'Seleziona tutto ciò che si applica ai tuoi contenuti';
+
+  @override
+  String get videoMetadataContentWarningRequiredByEffect =>
+      'Resta attivo: il tuo video ha un effetto lampeggiante';
 
   @override
   String get videoMetadataAudioReuseSubtitle =>

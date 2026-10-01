@@ -6,6 +6,7 @@ import 'dart:typed_data';
 
 import 'package:equatable/equatable.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show VideoEffectType;
 
 /// Whether [layer] is a draw layer that can take part in a merge.
 ///
@@ -36,6 +37,9 @@ enum TimelineOverlayType {
 
   /// Caption cue (burned-in caption layer or CC overlay cue).
   captions,
+
+  /// Video effect (glitch, VHS, old film, …) that distorts the picture.
+  effect,
 }
 
 /// The audio source for a sound overlay item.
@@ -70,6 +74,7 @@ class TimelineOverlayItem extends Equatable {
     this.audioSource,
     this.fadeIn = Duration.zero,
     this.fadeOut = Duration.zero,
+    this.effectType,
   });
 
   /// Unique identifier.
@@ -134,6 +139,11 @@ class TimelineOverlayItem extends Equatable {
   /// non-sound items and sounds that stop at full volume.
   final Duration fadeOut;
 
+  /// The look of an effect item, which its tile names in the user's language.
+  ///
+  /// `null` for non-effect items.
+  final VideoEffectType? effectType;
+
   /// Whether a sound item fades in or out at all.
   bool get hasFade => fadeIn > Duration.zero || fadeOut > Duration.zero;
 
@@ -159,6 +169,7 @@ class TimelineOverlayItem extends Equatable {
     AudioSource? audioSource,
     Duration? fadeIn,
     Duration? fadeOut,
+    VideoEffectType? effectType,
   }) {
     return TimelineOverlayItem(
       id: id ?? this.id,
@@ -176,6 +187,7 @@ class TimelineOverlayItem extends Equatable {
       audioSource: audioSource ?? this.audioSource,
       fadeIn: fadeIn ?? this.fadeIn,
       fadeOut: fadeOut ?? this.fadeOut,
+      effectType: effectType ?? this.effectType,
     );
   }
 
@@ -196,5 +208,6 @@ class TimelineOverlayItem extends Equatable {
     audioSource,
     fadeIn,
     fadeOut,
+    effectType,
   ];
 }

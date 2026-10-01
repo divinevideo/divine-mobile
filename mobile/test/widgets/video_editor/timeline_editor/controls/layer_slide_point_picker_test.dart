@@ -65,6 +65,7 @@ void main() {
             onOpenMusicLibrary: () {},
             onOpenVoiceOver: () {},
             onOpenCaptions: () {},
+            onOpenEffects: () {},
             originalClipAspectRatio: 9 / 16,
             targetClipAspectRatio: 1,
             bodySizeNotifier: bodySize,

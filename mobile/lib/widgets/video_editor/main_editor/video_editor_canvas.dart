@@ -15,6 +15,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
+import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
@@ -43,6 +44,7 @@ import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:openvine/utils/video_editor_playhead.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effects_preview.dart';
 import 'package:openvine/widgets/video_editor/main_editor/hit_test_expander.dart';
 import 'package:openvine/widgets/video_editor/main_editor/playhead_interpolator.dart';
 import 'package:openvine/widgets/video_editor/main_editor/stop_motion_playback_clock.dart';
@@ -409,6 +411,9 @@ class VideoEditorCanvas extends StatelessWidget {
         if (!didPop) {
           final scope = VideoEditorScope.of(context);
           scope.editor?.closeSubEditor();
+          // The effects editor is app-owned, so it has no route for the back
+          // gesture to pop; discard its pick the way its close button does.
+          context.read<VideoEditorEffectsCubit>().cancel();
           final bloc = context.read<VideoEditorMainBloc>();
           bloc.add(const VideoEditorMainSubEditorClosed());
         }
@@ -1377,6 +1382,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                         bodySize: widget.bodySize,
                         renderSize: widget.renderSize,
                         playTime: VideoEditorScope.of(context).playTimeNotifier,
+                        frameBuilder: (frame) =>
+                            VideoEditorEffectsPreview(child: frame),
                       ),
                       Positioned.fill(
                         child: ValueListenableBuilder<int>(
@@ -1854,7 +1861,12 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         audioTracks: editor.stateManager.audioTracks,
         timelineMarkers: editor.stateManager.timelineMarkers,
         captionTrack: editor.stateManager.captionTrack,
+        effects: editor.stateManager.videoEffectEntries,
       ),
+    );
+
+    context.read<VideoEditorEffectsCubit>().syncApplied(
+      editor.stateManager.videoEffectEntries,
     );
 
     // Reconcile the editor's current history entry with the app clip state.

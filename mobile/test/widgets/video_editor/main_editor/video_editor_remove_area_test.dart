@@ -58,6 +58,7 @@ void main() {
               onOpenMusicLibrary: () {},
               onOpenVoiceOver: () {},
               onOpenCaptions: () {},
+              onOpenEffects: () {},
               child: BlocProvider<VideoEditorMainBloc>.value(
                 value: mockBloc,
                 child: const VideoEditorRemoveArea(),

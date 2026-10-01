@@ -1,12 +1,15 @@
-// ABOUTME: Snapshot of the editor's overlays (layers, filters, tune, blur)
+// ABOUTME: Snapshot of the editor's overlays (layers, filters, tune, effects, blur)
 // ABOUTME: Windows them down to one clip's slice of the editor timeline
 
 import 'dart:ui';
 
+import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show VideoEffect;
 
 /// The overlays sitting over the composition at one moment: captured layers
-/// (text / stickers / drawings), colour filters, tune adjustments and blur.
+/// (text / stickers / drawings), colour filters, tune adjustments, video
+/// effects and blur.
 ///
 /// Overlay time windows are authored on the **editor timeline** — every clip at
 /// its full playback length, `sum(clip.playbackDuration)` — which is the same
@@ -18,6 +21,7 @@ class EditorOverlaySnapshot {
     this.capturedLayers = const [],
     this.filterStates = const [],
     this.tuneAdjustments = const [],
+    this.effects = const [],
     this.blur = 0,
     this.bodySize,
   });
@@ -31,6 +35,9 @@ class EditorOverlaySnapshot {
   /// Tune adjustments (brightness, contrast, …), each with its own window.
   final List<TuneAdjustmentMatrix> tuneAdjustments;
 
+  /// Video effects (glitch, VHS, pixelate), each with its own window.
+  final List<VideoEffect> effects;
+
   /// Blur strength applied to the whole composition. Carries no time window.
   final double blur;
 
@@ -43,7 +50,21 @@ class EditorOverlaySnapshot {
       capturedLayers.isEmpty &&
       filterStates.isEmpty &&
       tuneAdjustments.isEmpty &&
+      effects.isEmpty &&
       blur == 0;
+
+  /// A copy without the flashing effects (see [isFlashingVideoEffect]).
+  EditorOverlaySnapshot withoutFlashingEffects() => EditorOverlaySnapshot(
+    capturedLayers: capturedLayers,
+    filterStates: filterStates,
+    tuneAdjustments: tuneAdjustments,
+    effects: [
+      for (final effect in effects)
+        if (!isFlashingVideoEffect(effect.type)) effect,
+    ],
+    blur: blur,
+    bodySize: bodySize,
+  );
 
   /// Returns the overlays visible between [start] and [end] on the editor
   /// timeline, rebased so the window starts at zero.
@@ -86,6 +107,14 @@ class EditorOverlaySnapshot {
           if (_windowFor(tune.startTime, tune.endTime, start, end)
               case final w?)
             tune.copyWith(startTime: w.start, endTime: w.end),
+      ],
+      // A saved clip is a video of its own, so an effect's animation starts
+      // over with it.
+      effects: [
+        for (final effect in effects)
+          if (_windowFor(effect.startTime, effect.endTime, start, end)
+              case final w?)
+            effect.copyWith(startTime: w.start, endTime: w.end),
       ],
       blur: blur,
       bodySize: bodySize,
