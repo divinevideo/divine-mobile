@@ -459,12 +459,14 @@ class BadgeRepository {
 
   /// Every accepted holder of the badges the current account subscribes to.
   ///
-  /// Empty when signed out or subscribed to nothing. Throws when a holder set
-  /// cannot be fully loaded, like [loadAcceptedHolders].
+  /// Empty when signed out or subscribed to nothing. Throws when the
+  /// subscription list or a holder set cannot be fully loaded.
   Future<Set<String>> loadSubscribedHolders() async {
     final pubkey = _currentPubkey();
     if (pubkey == null || pubkey.isEmpty) return const {};
-    final subscriptions = await loadSubscriptions();
+    // A timed-out read must throw, not read as "subscribed to nothing", so
+    // Following falls back with a warning instead of quietly losing badges.
+    final subscriptions = await loadSubscriptions(requireComplete: true);
     final holderSets = await Future.wait(
       subscriptions.map(loadAcceptedHolders),
     );
