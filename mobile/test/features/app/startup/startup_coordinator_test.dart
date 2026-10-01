@@ -100,7 +100,7 @@ void main() {
           );
 
         var initialized = false;
-        coordinator.initialize().then((_) => initialized = true);
+        unawaited(coordinator.initialize().then((_) => initialized = true));
 
         async.elapse(const Duration(milliseconds: 200));
         expect(initialized, isTrue);
