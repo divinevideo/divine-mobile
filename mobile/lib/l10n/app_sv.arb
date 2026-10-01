@@ -3672,6 +3672,8 @@
     "videoEditorChromaKeySemanticLabel": "Ställ in en färgmask för det här klippet",
     "videoEditorChromaKeyCloseSemanticLabel": "Ignorera ändringarna av färgmasken",
     "videoEditorChromaKeyDoneSemanticLabel": "Använd färgmasken",
+    "videoEditorOpacityLabel": "Opacitet",
+    "videoEditorOpacitySemanticLabel": "Ställ in hur genomskinligt det valda klippet är",
     "videoEditorChromaKeyAutoDetect": "Hitta automatiskt",
     "videoEditorChromaKeyPresetGreen": "Grön",
     "videoEditorChromaKeyPresetBlue": "Blå",

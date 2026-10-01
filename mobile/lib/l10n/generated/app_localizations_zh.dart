@@ -8683,6 +8683,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorChromaKeyDoneSemanticLabel => '应用颜色蒙版';
 
   @override
+  String get videoEditorOpacityLabel => '不透明度';
+
+  @override
+  String get videoEditorOpacitySemanticLabel => '设置所选片段的透明程度';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => '自动识别';
 
   @override

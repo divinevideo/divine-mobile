@@ -4764,6 +4764,8 @@
   "videoEditorChromaKeySemanticLabel": "Thiết lập mặt nạ màu cho clip này",
   "videoEditorChromaKeyCloseSemanticLabel": "Bỏ các thay đổi mặt nạ màu",
   "videoEditorChromaKeyDoneSemanticLabel": "Áp dụng mặt nạ màu",
+  "videoEditorOpacityLabel": "Độ mờ",
+  "videoEditorOpacitySemanticLabel": "Đặt mức trong suốt cho clip đã chọn",
   "videoEditorChromaKeyAutoDetect": "Tự động nhận diện",
   "videoEditorChromaKeyPresetGreen": "Xanh lá",
   "videoEditorChromaKeyPresetBlue": "Xanh dương",

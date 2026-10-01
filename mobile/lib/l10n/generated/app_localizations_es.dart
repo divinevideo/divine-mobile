@@ -9287,6 +9287,13 @@ class AppLocalizationsEs extends AppLocalizations {
       'Aplicar la máscara de color';
 
   @override
+  String get videoEditorOpacityLabel => 'Opacidad';
+
+  @override
+  String get videoEditorOpacitySemanticLabel =>
+      'Ajustá qué tan transparente es el clip seleccionado';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Detectar automáticamente';
 
   @override

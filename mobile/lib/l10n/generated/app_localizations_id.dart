@@ -9116,6 +9116,13 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorChromaKeyDoneSemanticLabel => 'Terapkan masking warna';
 
   @override
+  String get videoEditorOpacityLabel => 'Opasitas';
+
+  @override
+  String get videoEditorOpacitySemanticLabel =>
+      'Atur seberapa transparan klip yang dipilih';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Deteksi otomatis';
 
   @override

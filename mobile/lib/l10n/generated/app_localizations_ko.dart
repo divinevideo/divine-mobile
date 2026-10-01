@@ -8771,6 +8771,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorChromaKeyDoneSemanticLabel => '색상 마스크 적용';
 
   @override
+  String get videoEditorOpacityLabel => '불투명도';
+
+  @override
+  String get videoEditorOpacitySemanticLabel => '선택한 클립이 비쳐 보이는 정도 설정';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => '자동 감지';
 
   @override

@@ -15677,6 +15677,18 @@ abstract class AppLocalizations {
   /// **'Apply the color mask'**
   String get videoEditorChromaKeyDoneSemanticLabel;
 
+  /// Caption of the button in the timeline controls of a clip that was detached onto the canvas, and title of the sheet it opens, for how see-through the clip is: 100% is solid, 0% is invisible. Translate as the standard term image and video editors use for a layer's opacity — not transparency, which runs the other way along the slider. Keep it short — it sits under a 52dp icon in the clip controls.
+  ///
+  /// In en, this message translates to:
+  /// **'Opacity'**
+  String get videoEditorOpacityLabel;
+
+  /// Accessibility label for the Opacity button in the timeline controls of a clip that was detached onto the canvas.
+  ///
+  /// In en, this message translates to:
+  /// **'Set how see-through the selected clip is'**
+  String get videoEditorOpacitySemanticLabel;
+
   /// No description provided for @videoEditorChromaKeyAutoDetect.
   ///
   /// In en, this message translates to:

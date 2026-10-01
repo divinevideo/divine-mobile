@@ -2664,6 +2664,8 @@
     "videoEditorChromaKeySemanticLabel": "I-set up ang color mask para sa clip na ito",
     "videoEditorChromaKeyCloseSemanticLabel": "Itapon ang mga pagbabago sa color mask",
     "videoEditorChromaKeyDoneSemanticLabel": "Ilapat ang color mask",
+    "videoEditorOpacityLabel": "Opacity",
+    "videoEditorOpacitySemanticLabel": "I-set kung gaano ka-transparent ang napiling clip",
     "videoEditorChromaKeyAutoDetect": "Auto-detect",
     "videoEditorChromaKeyPresetGreen": "Berde",
     "videoEditorChromaKeyPresetBlue": "Asul",

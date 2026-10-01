@@ -84,6 +84,7 @@ enum DivineIconName {
   dotsThreeDuo('dots_three_duo'),
   dotsThreeVertical('dots_three_vertical'),
   downloadSimple('download_simple'),
+  dropHalf('drop_half'),
   envelope('envelope'),
   envelopeSimple('envelope_simple'),
   envelopeSimplePlus('envelope_simple_plus'),

@@ -24,6 +24,8 @@ class VideoEditorTimelineControls extends StatelessWidget {
     this.onChromaKey,
     this.isChromaKeying = false,
     this.hasChromaKey = false,
+    this.onOpacity,
+    this.hasOpacity = false,
     this.onReversed,
     this.isReversed = false,
     this.onExtractAudio,
@@ -96,6 +98,13 @@ class VideoEditorTimelineControls extends StatelessWidget {
   /// Whether the active clip already carries a green screen, which
   /// highlights the action so the effect is visible from the timeline.
   final bool hasChromaKey;
+
+  /// Opens the opacity slider for a detached clip.
+  final VoidCallback? onOpacity;
+
+  /// Whether the detached clip is already see-through, which highlights the
+  /// action the way [hasChromaKey] does.
+  final bool hasOpacity;
 
   final VoidCallback? onReversed;
   final bool isReversed;
@@ -270,6 +279,15 @@ class VideoEditorTimelineControls extends StatelessWidget {
                       onPressed: isChromaKeying ? null : onChromaKey,
                       isLoading: isChromaKeying,
                       type: hasChromaKey ? .primary : .secondary,
+                    ),
+                  if (onOpacity != null)
+                    _ControlButton(
+                      icon: .dropHalf,
+                      label: context.l10n.videoEditorOpacityLabel,
+                      semanticLabel:
+                          context.l10n.videoEditorOpacitySemanticLabel,
+                      onPressed: onOpacity,
+                      type: hasOpacity ? .primary : .secondary,
                     ),
                   if (onReversed != null)
                     _ControlButton(

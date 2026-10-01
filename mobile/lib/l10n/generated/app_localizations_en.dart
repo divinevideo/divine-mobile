@@ -9293,6 +9293,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorChromaKeyDoneSemanticLabel => 'Apply the color mask';
 
   @override
+  String get videoEditorOpacityLabel => 'Opacity';
+
+  @override
+  String get videoEditorOpacitySemanticLabel =>
+      'Set how see-through the selected clip is';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Auto-detect';
 
   @override

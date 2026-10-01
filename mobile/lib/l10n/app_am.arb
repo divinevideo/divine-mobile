@@ -3790,6 +3790,8 @@
     "videoEditorChromaKeySemanticLabel": "ለዚህ ቅንጥብ የቀለም ጭንብል ማዘጋጀት",
     "videoEditorChromaKeyCloseSemanticLabel": "የቀለም ጭንብል ለውጦችን መተው",
     "videoEditorChromaKeyDoneSemanticLabel": "የቀለም ጭንብሉን መተግበር",
+    "videoEditorOpacityLabel": "ታይነት",
+    "videoEditorOpacitySemanticLabel": "የተመረጠው ቅንጥብ ምን ያህል እንደሚታይ ማዘጋጀት",
     "videoEditorChromaKeyAutoDetect": "በራስ-ሰር ለይ",
     "videoEditorChromaKeyPresetGreen": "አረንጓዴ",
     "videoEditorChromaKeyPresetBlue": "ሰማያዊ",

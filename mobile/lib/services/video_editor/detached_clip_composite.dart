@@ -24,6 +24,7 @@ class DetachedClipExportLayer {
     required this.logicalSize,
     this.sourceOffset = Duration.zero,
     this.chromaKey,
+    this.opacity = 1,
   });
 
   /// The clip's own media, with its trim, volume and speed.
@@ -45,6 +46,9 @@ class DetachedClipExportLayer {
   /// the removed area shows the track underneath — the one place a transparent
   /// key can be honoured literally, since H.264 carries no alpha of its own.
   final ClipChromaKey? chromaKey;
+
+  /// How opaque the clip is composited over the base track, from 0 to 1.
+  final double opacity;
 }
 
 /// The captured layers sorted into what renders under the detached clips, the
@@ -96,6 +100,7 @@ PartitionedLayers partitionDetachedClipLayers(
         logicalSize: item.logicalSize,
         sourceOffset: data!.sourceOffset,
         chromaKey: data.chromaKey,
+        opacity: data.opacity,
       ),
     );
   }
@@ -231,6 +236,9 @@ VideoLayer buildDetachedClipVideoLayer({
 
   return VideoLayer(
     chromaKey: item.chromaKey?.key,
+    // The whole layer fades, so a keyed clip's fill fades with it — the
+    // composition applies the opacity after the key, as the canvas does.
+    opacity: item.opacity,
     clips: [
       VideoSegment(
         video: resolvedVideo,

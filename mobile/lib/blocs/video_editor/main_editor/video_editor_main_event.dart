@@ -200,3 +200,15 @@ class VideoEditorSlidePointPlacementChanged extends VideoEditorMainEvent {
   @override
   List<Object?> get props => [isPlacing];
 }
+
+/// Shows [preview] on a detached clip's layer without touching the editor
+/// history, or ends the preview when it is `null`.
+class VideoEditorDetachedClipOpacityPreviewChanged
+    extends VideoEditorMainEvent {
+  const VideoEditorDetachedClipOpacityPreviewChanged(this.preview);
+
+  final DetachedClipOpacityPreview? preview;
+
+  @override
+  List<Object?> get props => [preview];
+}

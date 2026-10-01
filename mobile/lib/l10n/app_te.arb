@@ -5626,6 +5626,8 @@
   "videoEditorChromaKeySemanticLabel": "ఈ క్లిప్ కోసం రంగు మాస్క్‌ను సెటప్ చేయండి",
   "videoEditorChromaKeyCloseSemanticLabel": "రంగు మాస్క్ మార్పులను విస్మరించండి",
   "videoEditorChromaKeyDoneSemanticLabel": "రంగు మాస్క్‌ను వర్తింపజేయండి",
+  "videoEditorOpacityLabel": "అపారదర్శకత",
+  "videoEditorOpacitySemanticLabel": "ఎంచుకున్న క్లిప్ ఎంత పారదర్శకంగా ఉండాలో సెట్ చేయండి",
   "videoEditorChromaKeyAutoDetect": "ఆటో-డిటెక్ట్",
   "videoEditorChromaKeyPresetGreen": "ఆకుపచ్చ",
   "videoEditorChromaKeyPresetBlue": "నీలం",

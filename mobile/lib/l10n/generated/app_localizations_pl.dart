@@ -9384,6 +9384,13 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorChromaKeyDoneSemanticLabel => 'Zastosuj maskę koloru';
 
   @override
+  String get videoEditorOpacityLabel => 'Krycie';
+
+  @override
+  String get videoEditorOpacitySemanticLabel =>
+      'Ustaw, jak bardzo przezroczysty ma być wybrany klip';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Wykryj automatycznie';
 
   @override

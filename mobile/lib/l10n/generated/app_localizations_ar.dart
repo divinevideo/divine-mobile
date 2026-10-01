@@ -9160,6 +9160,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorChromaKeyDoneSemanticLabel => 'تطبيق قناع اللون';
 
   @override
+  String get videoEditorOpacityLabel => 'العتامة';
+
+  @override
+  String get videoEditorOpacitySemanticLabel => 'ضبط مدى شفافية المقطع المحدد';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'كشف تلقائي';
 
   @override

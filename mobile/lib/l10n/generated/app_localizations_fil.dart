@@ -9270,6 +9270,13 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorChromaKeyDoneSemanticLabel => 'Ilapat ang color mask';
 
   @override
+  String get videoEditorOpacityLabel => 'Opacity';
+
+  @override
+  String get videoEditorOpacitySemanticLabel =>
+      'I-set kung gaano ka-transparent ang napiling clip';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Auto-detect';
 
   @override

@@ -3672,6 +3672,8 @@
     "videoEditorChromaKeySemanticLabel": "Bu klip için renk maskesini ayarla",
     "videoEditorChromaKeyCloseSemanticLabel": "Renk maskesi değişikliklerini iptal et",
     "videoEditorChromaKeyDoneSemanticLabel": "Renk maskesini uygula",
+    "videoEditorOpacityLabel": "Opaklık",
+    "videoEditorOpacitySemanticLabel": "Seçili klibin ne kadar saydam olacağını ayarla",
     "videoEditorChromaKeyAutoDetect": "Otomatik algıla",
     "videoEditorChromaKeyPresetGreen": "Yeşil",
     "videoEditorChromaKeyPresetBlue": "Mavi",

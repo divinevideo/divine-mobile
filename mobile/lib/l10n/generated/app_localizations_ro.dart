@@ -9406,6 +9406,13 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorChromaKeyDoneSemanticLabel => 'Aplică masca de culoare';
 
   @override
+  String get videoEditorOpacityLabel => 'Opacitate';
+
+  @override
+  String get videoEditorOpacitySemanticLabel =>
+      'Setează cât de transparent e clipul selectat';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Detectare automată';
 
   @override

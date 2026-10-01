@@ -9120,6 +9120,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorChromaKeyDoneSemanticLabel => 'Renk maskesini uygula';
 
   @override
+  String get videoEditorOpacityLabel => 'Opaklık';
+
+  @override
+  String get videoEditorOpacitySemanticLabel =>
+      'Seçili klibin ne kadar saydam olacağını ayarla';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Otomatik algıla';
 
   @override

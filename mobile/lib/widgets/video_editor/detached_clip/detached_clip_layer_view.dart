@@ -317,15 +317,22 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
     final clip = _clip;
     if (clip == null) return const SizedBox.shrink();
 
+    // Both branches below are wrapped in the same fade, so it stays put in the
+    // tree when the player arrives and only the content under it changes.
+    final previewable = _mainBloc != null;
     final player = _player;
     final playhead = VideoEditorScope.maybeOf(context)?.playTimeNotifier;
     if (player == null || playhead == null) {
-      return _DetachedClipFrame(
-        clip: clip,
-        child: ChromaKeyedVideo(
-          chromaKey: _chromaKey,
-          previewTransparency: false,
-          child: _ClipThumbnail(clip: clip),
+      return _DetachedClipOpacity(
+        meta: widget.meta,
+        previewable: previewable,
+        child: _DetachedClipFrame(
+          clip: clip,
+          child: ChromaKeyedVideo(
+            chromaKey: _chromaKey,
+            previewTransparency: false,
+            child: _ClipThumbnail(clip: clip),
+          ),
         ),
       );
     }
@@ -335,46 +342,110 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
     // layer (deliberately, so it still rasterizes for export), and a texture is
     // not reliably bound by that — the video would show through at full
     // brightness where nothing should be.
-    return _WindowChangeListener(
-      enabled: _overlayBloc != null,
-      onChanged: _follow,
-      child: _VoiceOverPreviewListener(
-        enabled: _mainBloc != null,
-        onChanged: _applyMute,
-        child: _DetachedClipFrame(
-          clip: clip,
-          // The key wraps the poster as well as the surface: both show the
-          // same footage, and a poster left unkeyed would fill the removed
-          // area with the very screen the key takes out. Transparent stays
-          // transparent — the canvas underneath is the backdrop here, not a
-          // checkerboard.
-          child: ChromaKeyedVideo(
-            chromaKey: _chromaKey,
-            previewTransparency: false,
-            // The poster sits under the surface rather than beside it, so a
-            // frame the texture has not painted yet shows the clip's own
-            // still instead of a hole. The player is mounted once and kept:
-            // rebuilding it per playhead tick — 60 times a second — is what
-            // a `builder` around it would do.
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                _ClipThumbnail(clip: clip),
-                _WindowVisibility(
-                  playhead: playhead,
-                  isVisible: player.isWithinWindow,
-                  child: DivineVideoPlayer(
-                    controller: player.controller,
-                    placeholder: _resumed ? null : _ClipThumbnail(clip: clip),
-                    crossFadePlaceholder: !_resumed,
+    return _DetachedClipOpacity(
+      meta: widget.meta,
+      previewable: previewable,
+      child: _WindowChangeListener(
+        enabled: _overlayBloc != null,
+        onChanged: _follow,
+        child: _VoiceOverPreviewListener(
+          enabled: previewable,
+          onChanged: _applyMute,
+          child: _DetachedClipFrame(
+            clip: clip,
+            // The key wraps the poster as well as the surface: both show the
+            // same footage, and a poster left unkeyed would fill the removed
+            // area with the very screen the key takes out. Transparent stays
+            // transparent — the canvas underneath is the backdrop here, not a
+            // checkerboard.
+            child: ChromaKeyedVideo(
+              chromaKey: _chromaKey,
+              previewTransparency: false,
+              // The poster sits under the surface rather than beside it, so a
+              // frame the texture has not painted yet shows the clip's own
+              // still instead of a hole. The player is mounted once and kept:
+              // rebuilding it per playhead tick — 60 times a second — is what
+              // a `builder` around it would do.
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _ClipThumbnail(clip: clip),
+                  _WindowVisibility(
+                    playhead: playhead,
+                    isVisible: player.isWithinWindow,
+                    child: DivineVideoPlayer(
+                      controller: player.controller,
+                      placeholder: _resumed ? null : _ClipThumbnail(clip: clip),
+                      crossFadePlaceholder: !_resumed,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
+  }
+}
+
+/// Fades a detached clip by the opacity its [meta] stores, or by the one being
+/// previewed while its slider is dragged.
+///
+/// The engine draws a platform texture with the alpha of the opacity layer
+/// above it, on Android and iOS alike, so a partial value fades the live video
+/// too. At zero [Opacity] paints nothing, which takes the texture out instead
+/// of trusting a transparent layer to hide it (see the window comment above).
+/// A new value only updates the compositing layer; the video under it is not
+/// rebuilt or repainted.
+class _DetachedClipOpacity extends StatelessWidget {
+  const _DetachedClipOpacity({
+    required this.meta,
+    required this.previewable,
+    required this.child,
+  });
+
+  final Map<String, dynamic> meta;
+
+  /// Whether the editor's main bloc is above, which carries the preview. The
+  /// draft render path mounts the layer without it.
+  final bool previewable;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final stored = DetachedClipLayerData.opacityOf(meta);
+    if (!previewable) return Opacity(opacity: stored, child: child);
+    return _PreviewedOpacity(
+      layerId: DetachedClipLayerData.layerIdOf(meta),
+      stored: stored,
+      child: child,
+    );
+  }
+}
+
+/// [Opacity] following the editor's opacity preview for [layerId], and
+/// [stored] whenever no preview targets it.
+class _PreviewedOpacity extends StatelessWidget {
+  const _PreviewedOpacity({
+    required this.layerId,
+    required this.stored,
+    required this.child,
+  });
+
+  final String? layerId;
+  final double stored;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final previewed = context.select((VideoEditorMainBloc bloc) {
+      final preview = bloc.state.detachedClipOpacityPreview;
+      return preview != null && preview.layerId == layerId
+          ? preview.opacity
+          : null;
+    });
+    return Opacity(opacity: previewed ?? stored, child: child);
   }
 }
 

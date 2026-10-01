@@ -4764,6 +4764,8 @@
   "videoEditorChromaKeySemanticLabel": "Sediakan topeng warna untuk klip ini",
   "videoEditorChromaKeyCloseSemanticLabel": "Buang perubahan topeng warna",
   "videoEditorChromaKeyDoneSemanticLabel": "Gunakan topeng warna",
+  "videoEditorOpacityLabel": "Kelegapan",
+  "videoEditorOpacitySemanticLabel": "Tetapkan tahap lutsinar klip yang dipilih",
   "videoEditorChromaKeyAutoDetect": "Kesan automatik",
   "videoEditorChromaKeyPresetGreen": "Hijau",
   "videoEditorChromaKeyPresetBlue": "Biru",

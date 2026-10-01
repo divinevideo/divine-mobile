@@ -8991,6 +8991,13 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorChromaKeyDoneSemanticLabel => 'የቀለም ጭንብሉን መተግበር';
 
   @override
+  String get videoEditorOpacityLabel => 'ታይነት';
+
+  @override
+  String get videoEditorOpacitySemanticLabel =>
+      'የተመረጠው ቅንጥብ ምን ያህል እንደሚታይ ማዘጋጀት';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'በራስ-ሰር ለይ';
 
   @override

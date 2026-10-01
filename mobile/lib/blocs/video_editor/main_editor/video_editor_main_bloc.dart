@@ -38,6 +38,9 @@ class VideoEditorMainBloc
     on<VideoEditorTimelineVisibilityToggled>(_onTimelineVisibilityToggled);
     on<VideoEditorMarkerModeChanged>(_onMarkerModeChanged);
     on<VideoEditorSlidePointPlacementChanged>(_onSlidePointPlacementChanged);
+    on<VideoEditorDetachedClipOpacityPreviewChanged>(
+      _onDetachedClipOpacityPreviewChanged,
+    );
   }
 
   /// Updates undo/redo state based on editor capabilities.
@@ -199,5 +202,17 @@ class VideoEditorMainBloc
     Emitter<VideoEditorMainState> emit,
   ) {
     emit(state.copyWith(isPlacingSlidePoint: event.isPlacing));
+  }
+
+  void _onDetachedClipOpacityPreviewChanged(
+    VideoEditorDetachedClipOpacityPreviewChanged event,
+    Emitter<VideoEditorMainState> emit,
+  ) {
+    final preview = event.preview;
+    emit(
+      preview == null
+          ? state.copyWith(clearDetachedClipOpacityPreview: true)
+          : state.copyWith(detachedClipOpacityPreview: preview),
+    );
   }
 }

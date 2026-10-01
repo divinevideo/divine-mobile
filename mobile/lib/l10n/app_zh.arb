@@ -4764,6 +4764,8 @@
   "videoEditorChromaKeySemanticLabel": "为这个片段设置颜色蒙版",
   "videoEditorChromaKeyCloseSemanticLabel": "放弃颜色蒙版改动",
   "videoEditorChromaKeyDoneSemanticLabel": "应用颜色蒙版",
+  "videoEditorOpacityLabel": "不透明度",
+  "videoEditorOpacitySemanticLabel": "设置所选片段的透明程度",
   "videoEditorChromaKeyAutoDetect": "自动识别",
   "videoEditorChromaKeyPresetGreen": "绿色",
   "videoEditorChromaKeyPresetBlue": "蓝色",

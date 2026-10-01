@@ -227,6 +227,7 @@ void main() {
       expect(find.text(l10n.videoEditorSplitLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorTransformLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorChromaKeyLabel), findsOneWidget);
+      expect(find.text(l10n.videoEditorOpacityLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorReattachLabel), findsOneWidget);
       // A detached clip is composited as a VideoLayer, which carries no
       // animations field — offering the action would animate it in the editor
@@ -278,6 +279,7 @@ void main() {
       // Only a detached clip carries footage a key can be applied to, or a
       // clip that could go back onto the timeline.
       expect(find.text(l10n.videoEditorChromaKeyLabel), findsNothing);
+      expect(find.text(l10n.videoEditorOpacityLabel), findsNothing);
       expect(find.text(l10n.videoEditorReattachLabel), findsNothing);
     });
 
