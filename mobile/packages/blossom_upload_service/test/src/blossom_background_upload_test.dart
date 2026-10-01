@@ -354,12 +354,47 @@ void main() {
     });
 
     test(
-      'resolves the success URL from the server actually used, not the '
-      'injected default server',
+      'targets the injected default server when no custom server is stored',
       () async {
-        // With no custom server stored, the upload targets the constant Divine
-        // media host; the success URL must reflect that host, not a differing
-        // injected default (e.g. staging).
+        // A LOCAL build injects the local stack's Blossom. With nothing
+        // stored, the upload must go there, not to production media (#9660).
+        const localServer = 'http://localhost:43003';
+        final transport = _FakeTransport(
+          emitOnEnqueue: const <BlossomBackgroundTransferEvent>[
+            BlossomBackgroundTransferEvent(
+              taskId: taskId,
+              status: BlossomBackgroundTransferStatus.completed,
+              httpStatusCode: 200,
+            ),
+          ],
+        );
+        final svc = BlossomUploadService(
+          authProvider: auth,
+          defaultServerUrl: localServer,
+          backgroundTransport: transport,
+        );
+
+        final result = await svc.uploadVideoInBackground(
+          videoFile: videoFile,
+          taskId: taskId,
+          proofManifestJson: null,
+        );
+
+        expect(transport.enqueuedUrls, <String>['$localServer/upload']);
+        expect(result.success, isTrue);
+        expect(result.url, startsWith('$localServer/'));
+        expect(result.fallbackUrl, startsWith('$localServer/'));
+      },
+    );
+
+    test(
+      'resolves the success URL from the custom server actually used, not '
+      'the injected default server',
+      () async {
+        const customServer = 'https://blossom.example.com';
+        SharedPreferences.setMockInitialValues(const <String, Object>{
+          'blossom_server_url': customServer,
+        });
         final transport = _FakeTransport(
           emitOnEnqueue: const <BlossomBackgroundTransferEvent>[
             BlossomBackgroundTransferEvent(
@@ -381,10 +416,11 @@ void main() {
           proofManifestJson: null,
         );
 
+        expect(transport.enqueuedUrls, <String>['$customServer/upload']);
         expect(result.success, isTrue);
-        expect(result.url, startsWith('$server/'));
+        expect(result.url, startsWith('$customServer/'));
         expect(result.url, isNot(contains('staging')));
-        expect(result.fallbackUrl, startsWith('$server/'));
+        expect(result.fallbackUrl, startsWith('$customServer/'));
       },
     );
 

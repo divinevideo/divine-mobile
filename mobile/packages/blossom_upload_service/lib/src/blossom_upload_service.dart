@@ -672,7 +672,7 @@ class BlossomUploadService {
   ///
   /// Priority order:
   /// 1. Custom configured server (if enabled in settings)
-  /// 2. Default Divine media server
+  /// 2. The injected default server (the environment's Blossom)
   Future<List<String>> _getServerUrlsForUpload() async {
     final servers = <String>[];
 
@@ -698,12 +698,15 @@ class BlossomUploadService {
     return servers;
   }
 
-  /// Get the configured Blossom server URL
+  /// Get the configured Blossom server URL.
+  ///
+  /// Falls back to the injected `defaultServerUrl` when nothing (or an empty
+  /// string) is stored, so a LOCAL build uploads to the local stack rather
+  /// than production media (#9660).
   Future<String?> getBlossomServer() async {
     final prefs = await SharedPreferences.getInstance();
     final stored = prefs.getString(_blossomServerKey);
-    // If nothing is stored or empty string, return default.
-    if (stored == null || stored.isEmpty) return defaultBlossomServer;
+    if (stored == null || stored.isEmpty) return _defaultServerUrl;
     return stored;
   }
 
