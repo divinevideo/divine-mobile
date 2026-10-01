@@ -77,6 +77,8 @@ class _FakeSharedPreferences extends Fake implements SharedPreferences {}
 
 void main() {
   group('VideoFeedBloc', () {
+    late StreamController<void> badgeSubscriptionChanges;
+    var badgeAuthorLoads = 0;
     late _MockVideosRepository mockVideosRepository;
     late _MockFollowRepository mockFollowRepository;
     late _MockCuratedListRepository mockCuratedListRepository;
@@ -1172,6 +1174,52 @@ void main() {
         verify: (_) => verify(
           () => mockVideosRepository.createBadgeVideoPager(['badge-holder']),
         ).called(1),
+      );
+
+      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        'reloads Following when the account changes its badge subscriptions',
+        setUp: () {
+          when(() => mockFollowRepository.followingPubkeys).thenReturn([]);
+          final pager = _MockBadgeVideoPager();
+          when(
+            () => mockVideosRepository.createBadgeVideoPager(any()),
+          ).thenReturn(pager);
+          when(() => pager.loadMore(limit: 5)).thenAnswer(
+            (_) async => [createTestVideo('badge')],
+          );
+          when(() => pager.hasMore).thenReturn(false);
+        },
+        build: () {
+          badgeSubscriptionChanges = StreamController<void>.broadcast();
+          badgeAuthorLoads = 0;
+          return VideoFeedBloc(
+            videosRepository: mockVideosRepository,
+            followRepository: mockFollowRepository,
+            curatedListRepository: mockCuratedListRepository,
+            badgeAuthors: () async {
+              badgeAuthorLoads++;
+              return ['badge-holder'];
+            },
+            badgeSubscriptionChanges: badgeSubscriptionChanges.stream,
+          );
+        },
+        act: (bloc) async {
+          bloc.add(const VideoFeedStarted(mode: FeedMode.following));
+          await bloc.stream.firstWhere(
+            (state) => state.status == VideoFeedStatus.success,
+          );
+          // Let _onStarted finish and subscribe before the change arrives.
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+          badgeSubscriptionChanges.add(null);
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+          await badgeSubscriptionChanges.close();
+        },
+        verify: (_) {
+          expect(badgeAuthorLoads, 2);
+          verify(
+            () => mockVideosRepository.createBadgeVideoPager(['badge-holder']),
+          ).called(2);
+        },
       );
 
       blocTest<VideoFeedBloc, VideoFeedBlocState>(

@@ -52,7 +52,6 @@ class BadgeHoldersCubit extends Cubit<BadgeHoldersState>
         state.copyWith(
           subscriptionStatus: BadgeSubscriptionStatus.ready,
           isSubscribed: updated.contains(state.coordinate),
-          subscriptionRevision: state.subscriptionRevision + 1,
         ),
       );
     } catch (error, stackTrace) {

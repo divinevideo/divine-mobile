@@ -60,6 +60,22 @@ void main() {
       );
     });
 
+    test('announces a saved subscription change', () async {
+      // Following listens for this to reload only its own feed.
+      final coordinate = BadgeCoordinate(
+        pubkey: _pubkey(2),
+        identifier: 'daily-diviner',
+      );
+      final changes = <void>[];
+      final subscription = repository.subscriptionChanges.listen(changes.add);
+      addTearDown(subscription.cancel);
+
+      await repository.setSubscription(coordinate, subscribed: true);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(changes, hasLength(1));
+    });
+
     test('subscriptions publish a public addressable event and sync', () async {
       final coordinate = BadgeCoordinate(
         pubkey: _pubkey(2),
