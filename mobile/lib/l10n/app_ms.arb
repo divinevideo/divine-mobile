@@ -6581,5 +6581,20 @@
       }
     }
   },
-  "peopleListsViewAllMembers": "Lihat semua"
+  "peopleListsViewAllMembers": "Lihat semua",
+  "listMemberNamesSeparator": ", ",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Peribadi, {count}} other{{name}, {count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

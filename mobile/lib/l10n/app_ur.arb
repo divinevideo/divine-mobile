@@ -6581,5 +6581,20 @@
       }
     }
   },
-  "peopleListsViewAllMembers": "سب دیکھیں"
+  "peopleListsViewAllMembers": "سب دیکھیں",
+  "listMemberNamesSeparator": "، ",
+  "listCardSemanticLabel": "{visibility, select, private{{name}، نجی، {count}} other{{name}، {count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

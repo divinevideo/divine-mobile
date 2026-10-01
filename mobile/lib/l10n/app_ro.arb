@@ -4814,5 +4814,20 @@
       }
     }
   },
-  "peopleListsViewAllMembers": "Vezi toți"
+  "peopleListsViewAllMembers": "Vezi toți",
+  "listMemberNamesSeparator": ", ",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Privată, {count}} other{{name}, {count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -13142,4 +13142,19 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get peopleListsViewAllMembers => 'అన్నీ చూడండి';
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, ప్రైవేట్, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
 }
