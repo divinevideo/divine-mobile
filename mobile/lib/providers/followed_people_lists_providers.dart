@@ -24,6 +24,12 @@ final followedPeopleListsStoreProvider = Provider<FollowedPeopleListsStore>((
   return store;
 });
 
+/// Shared by repositories and the account-clear port across identity changes.
+final followedPeopleListsWriteCoordinatorProvider =
+    Provider<FollowedPeopleListsWriteCoordinator>((ref) {
+      return FollowedPeopleListsWriteCoordinator();
+    });
+
 /// Deletes the people lists [viewerPubkey] follows during account deletion:
 /// the follows, and the copies of those lists held in the local cache.
 ///
@@ -37,12 +43,20 @@ final followedPeopleListsStoreProvider = Provider<FollowedPeopleListsStore>((
 /// device, not to stop a leak.
 final followedPeopleListsClearProvider =
     Provider<Future<void> Function(String viewerPubkey)>((ref) {
-      return (viewerPubkey) async {
-        await ref
-            .read(followedPeopleListsStoreProvider)
-            .clear(viewerPubkey: viewerPubkey);
-        await LocalPeopleListsCache(
+      final coordinator = ref.watch(
+        followedPeopleListsWriteCoordinatorProvider,
+      );
+      return (viewerPubkey) {
+        final store = ref.read(followedPeopleListsStoreProvider);
+        final cache = LocalPeopleListsCache(
           openBox: () => HiveBoxOpener.open<dynamic>(HiveBoxNames.peopleLists),
-        ).clearFollowedCopies(viewerPubkey: viewerPubkey);
+        );
+        return coordinator.run(
+          viewerPubkey: viewerPubkey,
+          operation: () async {
+            await store.clear(viewerPubkey: viewerPubkey);
+            await cache.clearFollowedCopies(viewerPubkey: viewerPubkey);
+          },
+        );
       };
     });

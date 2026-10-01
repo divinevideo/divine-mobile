@@ -197,9 +197,11 @@ abstract interface class PeopleListsRepository {
   /// A relay failure is logged and leaves the stored copies as they are; a
   /// list relays no longer hold keeps its last copy. Never throws for a relay
   /// failure.
-  Future<void> syncFollowedLists({required String viewerPubkey});
-
-  /// Removes every list [viewerPubkey] follows, and the copies held for them,
-  /// for when that account's data is deleted from the device.
-  Future<void> clearFollowedLists({required String viewerPubkey});
+  /// Concurrent calls share a refresh. Results are discarded when every
+  /// caller's [isCancelled] predicate is true; relay requests remain bounded
+  /// by their read timeout.
+  Future<void> syncFollowedLists({
+    required String viewerPubkey,
+    bool Function()? isCancelled,
+  });
 }

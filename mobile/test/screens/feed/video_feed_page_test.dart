@@ -1222,6 +1222,51 @@ void main() {
       );
     });
 
+    testWidgets('a failed restored people feed still allows choosing For You', (
+      tester,
+    ) async {
+      const state = VideoFeedBlocState(
+        status: VideoFeedStatus.failure,
+        error: VideoFeedError.loadFailed,
+        source: VideoFeedSource.peopleList(
+          listId: 'crew',
+          listName: 'Unavailable Crew',
+          listOwnerPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        ),
+      );
+      when(() => videoFeedBloc.state).thenReturn(state);
+      whenListen(
+        videoFeedBloc,
+        const Stream<VideoFeedBlocState>.empty(),
+        initialState: state,
+      );
+      await tester.pumpWidget(
+        testMaterialApp(
+          home: MultiBlocProvider(
+            providers: [
+              BlocProvider<VideoFeedBloc>.value(value: videoFeedBloc),
+              BlocProvider<VideoPlaybackStatusCubit>(
+                create: (_) => VideoPlaybackStatusCubit(),
+              ),
+              BlocProvider<VideoVolumeCubit>.value(value: videoVolumeCubit),
+            ],
+            child: const VideoFeedView(),
+          ),
+        ),
+      );
+      expect(find.text('Retry'), findsOneWidget);
+      await tester.tap(find.text('Unavailable Crew'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('For You'));
+      await tester.pumpAndSettle();
+      verify(
+        () => videoFeedBloc.add(
+          const VideoFeedSourceChanged(VideoFeedSource.forYou()),
+        ),
+      ).called(1);
+      expect(find.text('Retry'), findsOneWidget);
+    });
+
     testWidgets('retry resets home index before refreshing failed feed', (
       tester,
     ) async {
