@@ -62,7 +62,8 @@ class PeopleListInfoCubit extends Cubit<PeopleListInfoState>
 
   /// Publishes the list with the name and description as they stand.
   ///
-  /// Ends in [PeopleListInfoStatus.saved] or [PeopleListInfoStatus.failure].
+  /// Returns the outcome even after this cubit closes so a dismissed sheet
+  /// can report a refused save; returns null if submission was unavailable.
   Future<PeopleListInfoStatus?> submitted() async {
     if (isClosed || !state.canSubmit) return null;
 

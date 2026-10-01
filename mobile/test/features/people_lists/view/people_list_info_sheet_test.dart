@@ -293,6 +293,34 @@ void main() {
         },
       );
 
+      testWidgets('reports a refused save after the sheet closes', (
+        tester,
+      ) async {
+        final answer = Completer<PeopleListPublishResult>();
+        addTearDown(() {
+          if (!answer.isCompleted) {
+            answer.complete(const PeopleListPublishResult.noop());
+          }
+        });
+        stubUpdate(() => answer.future);
+        await openSheet(tester);
+
+        await tester.enterText(find.byType(TextField).first, 'Punk Family');
+        await tester.pump();
+        await tester.tap(saveButton());
+        await tester.pump();
+        await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+        await tester.pumpAndSettle();
+
+        answer.complete(const PeopleListPublishResult.failed());
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.listEditInfoAction), findsNothing);
+        expect(find.text(l10n.listUpdateFailed), findsOneWidget);
+        expect(find.byType(SnackBar), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+
       testWidgets('keeps a refused save open, with the typed values', (
         tester,
       ) async {
