@@ -6310,6 +6310,22 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoMetadataC2paMissingSkip => 'Ignorar';
 
   @override
+  String get videoMetadataC2paUnavailableTitle =>
+      'Sem verificação de autenticidade nesta versão';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'Esta versão do Divine não consegue adicionar as credenciais de conteúdo, por isso seus vídeos não serão confirmados como feitos por humano. Você ainda pode publicá-los como estão.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      'Instale o Divine pela Zapstore ou pelo Google Play para ter a verificação de autenticidade.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      'Instale o Divine pela App Store para ter a verificação de autenticidade.';
+
+  @override
   String get videoMetadataGenerationFailed => 'Falha na geração';
 
   @override

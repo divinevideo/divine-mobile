@@ -5942,6 +5942,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoMetadataC2paMissingSkip => 'スキップ';
 
   @override
+  String get videoMetadataC2paUnavailableTitle => 'このバージョンでは本物確認ができません';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'このバージョンのDivineではコンテンツ認証情報を追加できないため、動画は人間が作成したものとして確認されません。このまま投稿することはできます。';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      '本物確認を利用するには、ZapstoreまたはGoogle PlayからDivineをインストールしてください。';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      '本物確認を利用するには、App StoreからDivineをインストールしてください。';
+
+  @override
   String get videoMetadataGenerationFailed => '生成に失敗しました';
 
   @override

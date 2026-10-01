@@ -6429,6 +6429,22 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoMetadataC2paMissingSkip => 'Omite';
 
   @override
+  String get videoMetadataC2paUnavailableTitle =>
+      'Fără verificarea autenticității în această versiune';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'Această versiune Divine nu poate adăuga acreditările de conținut, așa că videoclipurile tale nu vor fi confirmate ca fiind făcute de om. Le poți publica totuși așa cum sunt.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      'Instalează Divine din Zapstore sau Google Play ca să ai verificarea autenticității.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      'Instalează Divine din App Store ca să ai verificarea autenticității.';
+
+  @override
   String get videoMetadataGenerationFailed => 'Generarea a eșuat';
 
   @override

@@ -6127,6 +6127,21 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoMetadataC2paMissingSkip => 'ዝለል';
 
   @override
+  String get videoMetadataC2paUnavailableTitle => 'በዚህ ስሪት የእውነተኛነት ማረጋገጫ የለም';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'ይህ የDivine ስሪት የይዘት መታወቂያዎችን መጨመር አይችልም፣ ስለዚህ ቪዲዮዎችዎ በሰው እንደተሰሩ አይረጋገጡም። አሁንም እንዳሉ መለጠፍ ይችላሉ።';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      'የእውነተኛነት ማረጋገጫ ለማግኘት Divineን ከZapstore ወይም ከGoogle Play ይጫኑ።';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      'የእውነተኛነት ማረጋገጫ ለማግኘት Divineን ከApp Store ይጫኑ።';
+
+  @override
   String get videoMetadataGenerationFailed => 'ማመንጨት አልተሳካም';
 
   @override

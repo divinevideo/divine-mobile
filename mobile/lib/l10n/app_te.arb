@@ -3815,6 +3815,10 @@
     "description": "Primary button on the missing-content-credential bottom sheet. Re-renders the video to attempt the C2PA signature again."
   },
   "videoMetadataC2paMissingSkip": "దాటవేయి",
+  "videoMetadataC2paUnavailableTitle": "ఈ వెర్షన్‌లో మానవ నిర్మిత తనిఖీ లేదు",
+  "videoMetadataC2paUnavailableBody": "ఈ Divine వెర్షన్ కంటెంట్ ఆధారాలను జోడించలేదు, కాబట్టి మీ వీడియోలు మానవ నిర్మితమైనవిగా నిర్ధారించబడవు. మీరు వాటిని అలాగే పోస్ట్ చేయవచ్చు.",
+  "videoMetadataC2paUnavailableNoteAndroid": "మానవ నిర్మిత తనిఖీ పొందడానికి Zapstore లేదా Google Play నుండి Divineని ఇన్‌స్టాల్ చేయండి.",
+  "videoMetadataC2paUnavailableNoteIos": "మానవ నిర్మిత తనిఖీ పొందడానికి App Store నుండి Divineని ఇన్‌స్టాల్ చేయండి.",
   "@videoMetadataC2paMissingSkip": {
     "description": "Secondary button on the missing-content-credential bottom sheet. Dismisses the prompt and continues without a C2PA content credential, so the user can post the video without provenance."
   },

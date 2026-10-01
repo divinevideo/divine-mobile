@@ -6201,6 +6201,22 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoMetadataC2paMissingSkip => 'Atla';
 
   @override
+  String get videoMetadataC2paUnavailableTitle =>
+      'Bu sürümde gerçeklik doğrulaması yok';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'Divine\'ın bu sürümü içerik kimlik bilgilerini ekleyemiyor, bu nedenle videoların insan yapımı olarak doğrulanmayacak. Yine de olduğu gibi paylaşabilirsin.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      'Gerçeklik doğrulaması için Divine\'ı Zapstore veya Google Play\'den yükle.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      'Gerçeklik doğrulaması için Divine\'ı App Store\'dan yükle.';
+
+  @override
   String get videoMetadataGenerationFailed => 'Oluşturma başarısız';
 
   @override

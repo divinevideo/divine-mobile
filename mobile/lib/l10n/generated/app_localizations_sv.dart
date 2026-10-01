@@ -6260,6 +6260,22 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoMetadataC2paMissingSkip => 'Hoppa över';
 
   @override
+  String get videoMetadataC2paUnavailableTitle =>
+      'Ingen äkthetskontroll i den här versionen';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'Den här versionen av Divine kan inte lägga till innehållsuppgifter, så dina videor bekräftas inte som gjorda av människa. Du kan ändå publicera dem som de är.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      'Installera Divine från Zapstore eller Google Play för att få äkthetskontrollen.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      'Installera Divine från App Store för att få äkthetskontrollen.';
+
+  @override
   String get videoMetadataGenerationFailed => 'Genereringen misslyckades';
 
   @override

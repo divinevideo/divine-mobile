@@ -126,6 +126,14 @@ class C2paSigningService {
   /// callers gate the "sign or skip" prompt on this (#6058).
   static bool get isSigningConfigured => !_signingDisabled;
 
+  /// Whether this build carries a ProofSign bearer token.
+  ///
+  /// Every store build passes `PROOFMODE_SIGNING_SERVER_TOKEN`. Without it the
+  /// signer still reaches [signingServerEndpoint], but the server rejects every
+  /// signing request, so no video from such a build — a local `flutter run`,
+  /// or one built from source — can be confirmed as Human-Made.
+  static bool get hasSigningToken => signingServerToken.trim().isNotEmpty;
+
   /// Signs the video at [videoPath] and **replaces it with the signed bytes**.
   ///
   /// The replacement is the point of this method, not a side effect. ProofMode

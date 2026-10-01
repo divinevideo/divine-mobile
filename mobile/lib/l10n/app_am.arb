@@ -3732,6 +3732,10 @@
     "videoMetadataC2paMissingNoteServiceUnavailable": "የይዘት ማረጋገጫ አገልግሎቱ ምላሽ አልሰጠም። ይህ የአንተ ግንኙነት ችግር አይደለም።",
     "videoMetadataC2paMissingRegenerate": "እንደገና ፍጠር",
     "videoMetadataC2paMissingSkip": "ዝለል",
+    "videoMetadataC2paUnavailableTitle": "በዚህ ስሪት የእውነተኛነት ማረጋገጫ የለም",
+    "videoMetadataC2paUnavailableBody": "ይህ የDivine ስሪት የይዘት መታወቂያዎችን መጨመር አይችልም፣ ስለዚህ ቪዲዮዎችዎ በሰው እንደተሰሩ አይረጋገጡም። አሁንም እንዳሉ መለጠፍ ይችላሉ።",
+    "videoMetadataC2paUnavailableNoteAndroid": "የእውነተኛነት ማረጋገጫ ለማግኘት Divineን ከZapstore ወይም ከGoogle Play ይጫኑ።",
+    "videoMetadataC2paUnavailableNoteIos": "የእውነተኛነት ማረጋገጫ ለማግኘት Divineን ከApp Store ይጫኑ።",
     "videoMetadataGenerationFailed": "ማመንጨት አልተሳካም",
     "@videoMetadataEditCoverSuccessAnnouncement": {
         "description": "Screen-reader announcement spoken after the user confirms a new cover thumbnail and the screen is about to close. Visual users get the screen pop as feedback; this is the audio equivalent."

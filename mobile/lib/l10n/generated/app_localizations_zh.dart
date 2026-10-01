@@ -5913,6 +5913,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoMetadataC2paMissingSkip => '跳过';
 
   @override
+  String get videoMetadataC2paUnavailableTitle => '此版本无法进行“人类创作”验证';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      '这个版本的 Divine 无法添加内容凭证，你的视频将无法被确认为“人类创作”。你仍然可以就这样发布。';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      '从 Zapstore 或 Google Play 安装 Divine，即可获得“人类创作”验证。';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      '从 App Store 安装 Divine，即可获得“人类创作”验证。';
+
+  @override
   String get videoMetadataGenerationFailed => '生成失败';
 
   @override

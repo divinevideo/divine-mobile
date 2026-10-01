@@ -3738,6 +3738,10 @@
     "videoMetadataC2paMissingNoteServiceUnavailable": "Услугата за удостоверяване на съдържание не отговори. Не е заради твоята връзка.",
     "videoMetadataC2paMissingRegenerate": "Генерирай отново",
     "videoMetadataC2paMissingSkip": "Пропусни",
+    "videoMetadataC2paUnavailableTitle": "Няма проверка за автентичност в тази версия",
+    "videoMetadataC2paUnavailableBody": "Тази версия на Divine не може да добавя удостоверения за съдържанието, затова видеата ти няма да бъдат потвърдени като създадени от човек. Все пак можеш да ги публикуваш както са.",
+    "videoMetadataC2paUnavailableNoteAndroid": "Инсталирай Divine от Zapstore или Google Play, за да получиш проверката за автентичност.",
+    "videoMetadataC2paUnavailableNoteIos": "Инсталирай Divine от App Store, за да получиш проверката за автентичност.",
     "videoMetadataGenerationFailed": "Генерирането е неуспешно",
     "@videoMetadataEditCoverSuccessAnnouncement": {
         "description": "Screen-reader announcement spoken after the user confirms a new cover thumbnail and the screen is about to close. Visual users get the screen pop as feedback; this is the audio equivalent."

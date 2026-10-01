@@ -6322,6 +6322,22 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoMetadataC2paMissingSkip => 'Пропусни';
 
   @override
+  String get videoMetadataC2paUnavailableTitle =>
+      'Няма проверка за автентичност в тази версия';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'Тази версия на Divine не може да добавя удостоверения за съдържанието, затова видеата ти няма да бъдат потвърдени като създадени от човек. Все пак можеш да ги публикуваш както са.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      'Инсталирай Divine от Zapstore или Google Play, за да получиш проверката за автентичност.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      'Инсталирай Divine от App Store, за да получиш проверката за автентичност.';
+
+  @override
   String get videoMetadataGenerationFailed => 'Генерирането е неуспешно';
 
   @override

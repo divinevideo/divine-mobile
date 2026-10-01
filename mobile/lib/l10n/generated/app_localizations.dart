@@ -10753,6 +10753,30 @@ abstract class AppLocalizations {
   /// **'Skip'**
   String get videoMetadataC2paMissingSkip;
 
+  /// Title of the bottom sheet shown after rendering when this build has no access to the content credential (C2PA) signing service, e.g. a local or self-compiled build. Replaces the regenerate-or-skip prompt, because retrying can never succeed in such a build.
+  ///
+  /// In en, this message translates to:
+  /// **'No human-made check in this version'**
+  String get videoMetadataC2paUnavailableTitle;
+
+  /// Body of the bottom sheet explaining that this build of the app cannot sign videos with a C2PA content credential, so none of its videos get the Human-Made badge. Posting still works.
+  ///
+  /// In en, this message translates to:
+  /// **'This version of Divine can\'t add content credentials, so your videos won\'t be confirmed as Human-Made. You can still post them as-is.'**
+  String get videoMetadataC2paUnavailableBody;
+
+  /// Note under the no-content-credential bottom sheet on Android. Points to the official store builds, which can sign videos. Zapstore and Google Play are store names; keep them untranslated.
+  ///
+  /// In en, this message translates to:
+  /// **'Install Divine from Zapstore or Google Play to get the human-made check.'**
+  String get videoMetadataC2paUnavailableNoteAndroid;
+
+  /// Note under the no-content-credential bottom sheet on iOS. Points to the official App Store build, which can sign videos. Must not mention Google Play: App Review rejects iOS copy that names another store. App Store is a store name; keep it untranslated.
+  ///
+  /// In en, this message translates to:
+  /// **'Install Divine from the App Store to get the human-made check.'**
+  String get videoMetadataC2paUnavailableNoteIos;
+
   /// Warning shown over the metadata screen preview when rendering (generating) the final video failed and no clip was produced. Sits above a retry icon button.
   ///
   /// In en, this message translates to:

@@ -6236,6 +6236,22 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoMetadataC2paMissingSkip => 'تخطّي';
 
   @override
+  String get videoMetadataC2paUnavailableTitle =>
+      'التحقق من الأصالة غير متوفر في هذا الإصدار';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'لا يمكن لهذا الإصدار من Divine إضافة بيانات اعتماد المحتوى، لذا لن يتم تأكيد مقاطع الفيديو على أنها من صنع إنسان. لا يزال بالإمكان نشرها كما هي.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      'للحصول على التحقق من الأصالة، يلزم تثبيت Divine من Zapstore أو Google Play.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      'للحصول على التحقق من الأصالة، يلزم تثبيت Divine من App Store.';
+
+  @override
   String get videoMetadataGenerationFailed => 'فشل الإنشاء';
 
   @override

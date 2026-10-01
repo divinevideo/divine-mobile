@@ -6358,6 +6358,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoMetadataC2paMissingSkip => 'Skip';
 
   @override
+  String get videoMetadataC2paUnavailableTitle =>
+      'No human-made check in this version';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'This version of Divine can\'t add content credentials, so your videos won\'t be confirmed as Human-Made. You can still post them as-is.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      'Install Divine from Zapstore or Google Play to get the human-made check.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      'Install Divine from the App Store to get the human-made check.';
+
+  @override
   String get videoMetadataGenerationFailed => 'Generation failed';
 
   @override

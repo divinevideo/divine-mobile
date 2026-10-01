@@ -6274,6 +6274,22 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoMetadataC2paMissingSkip => 'Langkau';
 
   @override
+  String get videoMetadataC2paUnavailableTitle =>
+      'Tiada semakan buatan manusia dalam versi ini';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'Versi Divine ini tidak dapat menambah kelayakan kandungan, jadi video anda tidak akan disahkan sebagai Buatan Manusia. Anda masih boleh menyiarkannya seadanya.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      'Pasang Divine dari Zapstore atau Google Play untuk mendapatkan semakan buatan manusia.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      'Pasang Divine dari App Store untuk mendapatkan semakan buatan manusia.';
+
+  @override
   String get videoMetadataGenerationFailed => 'Penjanaan gagal';
 
   @override

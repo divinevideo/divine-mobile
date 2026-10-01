@@ -64,6 +64,16 @@ import 'package:unified_logger/unified_logger.dart';
 const bool kForceC2paPromptInDebug =
     kDebugMode && bool.fromEnvironment('DIVINE_FORCE_C2PA_PROMPT');
 
+/// Whether this build lacks the ProofSign token, so signing can never succeed.
+///
+/// The metadata screen then explains where the human-made check comes from
+/// instead of offering a regenerate that is bound to fail again. A provider so
+/// widget tests can choose the variant: tests run without the define, which
+/// makes [C2paSigningService.hasSigningToken] false there.
+final c2paSigningTokenMissingProvider = Provider<bool>(
+  (ref) => !C2paSigningService.hasSigningToken,
+);
+
 /// Result of a [VideoEditorNotifier.saveAsDraft] attempt.
 ///
 /// Replaces a bare `bool` so the UI can tell a real failure apart from a

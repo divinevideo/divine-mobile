@@ -6349,6 +6349,22 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoMetadataC2paMissingSkip => 'Überspringen';
 
   @override
+  String get videoMetadataC2paUnavailableTitle =>
+      'Kein Echtheitsnachweis in dieser Version';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'Diese Divine-Version kann keine Content Credentials hinzufügen – deine Videos werden daher nicht als von Menschen gemacht bestätigt. Posten kannst du sie trotzdem.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      'Installiere Divine über Zapstore oder Google Play, um den Echtheitsnachweis zu bekommen.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      'Installiere Divine aus dem App Store, um den Echtheitsnachweis zu bekommen.';
+
+  @override
   String get videoMetadataGenerationFailed => 'Generierung fehlgeschlagen';
 
   @override

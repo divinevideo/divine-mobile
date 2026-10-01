@@ -6196,6 +6196,22 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoMetadataC2paMissingSkip => 'Lewati';
 
   @override
+  String get videoMetadataC2paUnavailableTitle =>
+      'Tidak ada verifikasi keaslian di versi ini';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'Versi Divine ini tidak dapat menambahkan kredensial konten, jadi video kamu tidak akan dikonfirmasi sebagai buatan manusia. Kamu tetap bisa mempostingnya apa adanya.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      'Instal Divine dari Zapstore atau Google Play untuk mendapatkan verifikasi keaslian.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      'Instal Divine dari App Store untuk mendapatkan verifikasi keaslian.';
+
+  @override
   String get videoMetadataGenerationFailed => 'Pembuatan gagal';
 
   @override
