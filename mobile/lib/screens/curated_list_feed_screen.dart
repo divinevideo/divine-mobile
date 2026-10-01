@@ -764,10 +764,6 @@ class _ListAuthorAttribution extends StatelessWidget {
   }
 }
 
-/// One row of the owner actions sheet; pops the sheet with its [action].
-///
-/// A disabled row renders muted and ignores taps instead of hiding, so the
-/// owner can still see the option exists.
 /// Bottom bar in manage-posts mode: removes the selected posts.
 class _ManageRemoveBar extends StatelessWidget {
   const _ManageRemoveBar({required this.cubit});
