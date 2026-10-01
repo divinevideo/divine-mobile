@@ -156,9 +156,11 @@ void main() {
     });
 
     group('row actions', () {
+      /// Leaves [showAddToListButton] to the tile's own default when omitted,
+      /// so the default itself is what the first test pins.
       Future<void> pumpActions(
         WidgetTester tester, {
-        required bool showAddToListButton,
+        bool? showAddToListButton,
         Widget? trailing,
       }) async {
         await tester.pumpWidget(
@@ -179,12 +181,18 @@ void main() {
               ).overrideWithValue(true),
             ],
             home: Scaffold(
-              body: UserProfileTile(
-                pubkey: pubkey,
-                showFollowButton: false,
-                showAddToListButton: showAddToListButton,
-                trailing: trailing,
-              ),
+              body: showAddToListButton == null
+                  ? UserProfileTile(
+                      pubkey: pubkey,
+                      showFollowButton: false,
+                      trailing: trailing,
+                    )
+                  : UserProfileTile(
+                      pubkey: pubkey,
+                      showFollowButton: false,
+                      showAddToListButton: showAddToListButton,
+                      trailing: trailing,
+                    ),
             ),
           ),
         );
@@ -192,8 +200,9 @@ void main() {
       }
 
       testWidgets('shows the add-to-list action by default', (tester) async {
-        // The control for the case below.
-        await pumpActions(tester, showAddToListButton: true);
+        // Nothing passed: this is the constructor default every Following
+        // screen rides, and the control for the case below.
+        await pumpActions(tester);
 
         expect(findByTooltip(l10n.peopleListsAddToList), findsOneWidget);
       });
