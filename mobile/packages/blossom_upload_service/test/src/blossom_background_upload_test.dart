@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -303,6 +304,16 @@ void main() {
       );
 
       expect(failureWarnings().single.message, endsWith('response: none'));
+    });
+
+    test('names the task, blob and server in the failure warning', () async {
+      final blobHash = sha256.convert(videoFile.readAsBytesSync()).toString();
+
+      final message = await warningForResponse('{"error":"nope"}');
+
+      expect(message, contains('task $taskId'));
+      expect(message, contains('blob $blobHash'));
+      expect(message, contains('server $server'));
     });
 
     test('logs none for a response of only whitespace', () async {

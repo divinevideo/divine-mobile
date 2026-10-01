@@ -2640,7 +2640,8 @@ class BlossomUploadService {
         // explanation would otherwise be lost: the caller silently re-uploads
         // the whole file through the resumable path.
         Log.warning(
-          'Background upload failed: HTTP ${statusCode ?? 'none'}, '
+          'Background upload failed: task ${event.taskId}, blob $fileHash, '
+          'server $serverUrl, HTTP ${statusCode ?? 'none'}, '
           'error: ${event.error ?? 'none'}, '
           'response: ${response.isEmpty ? 'none' : response}',
           name: 'BlossomUploadService',
