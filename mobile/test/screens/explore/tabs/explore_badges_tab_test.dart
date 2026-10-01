@@ -58,7 +58,9 @@ void main() {
 
         await tester.pumpWidget(buildSubject());
         await tester.pump();
-        await tester.tap(find.text(l10n.badgesLoadError));
+
+        expect(find.text(l10n.badgesLoadError), findsOneWidget);
+        await tester.tap(find.text(l10n.commonRetry));
 
         verify(() => cubit.load()).called(1);
       });

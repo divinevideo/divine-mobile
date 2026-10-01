@@ -416,9 +416,9 @@ class _SubscriptionHeader extends StatelessWidget {
         switch (status) {
           BadgeSubscriptionStatus.unavailable ||
           BadgeSubscriptionStatus.initial => const SizedBox.shrink(),
-          BadgeSubscriptionStatus.failure => DivineButton(
-            onPressed: cubit.load,
-            label: context.l10n.badgesLoadError,
+          BadgeSubscriptionStatus.failure => _DetailMessage(
+            message: context.l10n.badgesLoadError,
+            onRetry: cubit.load,
           ),
           _ => DivineButton(
             label: subscribed
@@ -458,9 +458,9 @@ class _AcceptedHolderList extends StatelessWidget {
         child: Center(child: BrandedLoadingIndicator(size: 40)),
       ),
       BadgeHoldersStatus.failure => SliverToBoxAdapter(
-        child: DivineButton(
-          onPressed: context.read<BadgeHoldersCubit>().load,
-          label: context.l10n.badgesLoadError,
+        child: _DetailMessage(
+          message: context.l10n.badgesLoadError,
+          onRetry: context.read<BadgeHoldersCubit>().load,
         ),
       ),
       BadgeHoldersStatus.loaded => SliverList.builder(

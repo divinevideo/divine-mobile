@@ -54,9 +54,22 @@ class ExploreBadgesView extends StatelessWidget {
       ExploreBadgesStatus.initial || ExploreBadgesStatus.loading =>
         const Center(child: BrandedLoadingIndicator(size: 60)),
       ExploreBadgesStatus.failure => Center(
-        child: DivineButton(
-          onPressed: cubit.load,
-          label: context.l10n.badgesLoadError,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 16,
+          children: [
+            Text(
+              context.l10n.badgesLoadError,
+              textAlign: TextAlign.center,
+              style: VineTheme.titleSmallFont(
+                color: context.vineColors.primaryText,
+              ),
+            ),
+            DivineButton(
+              onPressed: cubit.load,
+              label: context.l10n.commonRetry,
+            ),
+          ],
         ),
       ),
       ExploreBadgesStatus.loaded => RefreshIndicator(
