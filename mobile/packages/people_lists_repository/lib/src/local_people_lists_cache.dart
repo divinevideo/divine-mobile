@@ -3,9 +3,12 @@
 // ABOUTME: also mirrors the public lists a viewer follows, scoped by viewer.
 
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
 import 'package:hive_ce/hive_ce.dart';
 import 'package:models/models.dart';
+import 'package:people_lists_repository/src/people_list_revision.dart';
 import 'package:people_lists_repository/src/people_list_search_result.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -63,12 +66,15 @@ class CachedPeopleListRecord {
 /// again.
 ///
 /// A public list somebody else owns, followed by a viewer, has a copy under
-/// `followed:<viewerPubkey>:<ownerPubkey>:<listId>`, kept apart from the
-/// owner's `list:` rows so following a list can never surface it among the
-/// lists that owner's account edits. A row there is only a mirror to show the
-/// list and read its members from. Whether the list is followed is recorded
-/// elsewhere, in a `FollowedPeopleListsStore`: this box is a relay mirror a
-/// cache reset may wipe, and a follow has nowhere to be rebuilt from.
+/// `followed:<viewerPubkey>:<digest>`, kept apart from the owner's `list:`
+/// rows so following a list can never surface it among the lists that owner's
+/// account edits. The digest stands for the owner and the list's `d` tag,
+/// which the row itself carries: Hive writes a String key's length in one
+/// byte, and a `d` tag is whatever its owner chose. A row there is only a
+/// mirror to show the list and read its members from. Whether the list is
+/// followed is recorded elsewhere, in a `FollowedPeopleListsStore`: this box
+/// is a relay mirror a cache reset may wipe, and a follow has nowhere to be
+/// rebuilt from.
 class LocalPeopleListsCache {
   /// Creates a cache that lazily opens the backing Hive box via [openBox].
   ///
@@ -340,8 +346,8 @@ class LocalPeopleListsCache {
   /// Stores [list] as [viewerPubkey]'s copy when none is held, or when it is
   /// a newer revision than the one held.
   ///
-  /// An equal or older revision is skipped so a relay refresh that found
-  /// nothing new does not wake every listener.
+  /// Equal timestamps prefer the lower event id, matching relay selection.
+  /// An unchanged or older revision does not wake listeners.
   ///
   /// Throws if the Hive box cannot be opened or the write fails.
   Future<void> refreshFollowedCopy({
@@ -353,7 +359,7 @@ class LocalPeopleListsCache {
     final key = _followedKey(viewerPubkey, ownerPubkey, list.id);
     final existing = box.get(key);
     final stored = existing is Map ? _decodeFollowedCopy(existing) : null;
-    if (stored != null && !list.updatedAt.isAfter(stored.list.updatedAt)) {
+    if (stored != null && !peopleListRevisionSupersedes(list, stored.list)) {
       return;
     }
     await box.put(key, _followedRow(ownerPubkey, list));
@@ -567,10 +573,11 @@ class LocalPeopleListsCache {
     String viewerPubkey,
     String ownerPubkey,
     String listId,
-  ) =>
-      '${_CacheKeys.followedPrefix}$viewerPubkey'
-      '${_CacheKeys.keySeparator}$ownerPubkey'
-      '${_CacheKeys.keySeparator}$listId';
+  ) {
+    final list = utf8.encode('$ownerPubkey${_CacheKeys.keySeparator}$listId');
+    return '${_CacheKeys.followedPrefix}$viewerPubkey'
+        '${_CacheKeys.keySeparator}${sha256.convert(list)}';
+  }
 
   /// Pubkeys are hex, so the separator after [viewerPubkey] cannot fall
   /// inside another viewer's key.

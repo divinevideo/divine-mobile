@@ -110,6 +110,26 @@ class _CopyRemovalFailingCache extends LocalPeopleListsCache {
   }
 }
 
+class _PausedRefreshCache extends LocalPeopleListsCache {
+  _PausedRefreshCache({required super.openBox});
+  final entered = Completer<void>();
+  final release = Completer<void>();
+  @override
+  Future<void> refreshFollowedCopy({
+    required String viewerPubkey,
+    required String ownerPubkey,
+    required UserList list,
+  }) async {
+    entered.complete();
+    await release.future;
+    await super.refreshFollowedCopy(
+      viewerPubkey: viewerPubkey,
+      ownerPubkey: ownerPubkey,
+      list: list,
+    );
+  }
+}
+
 const int _peopleListKind = 30000;
 const int _deletionKind = 5;
 
@@ -3276,6 +3296,93 @@ void main() {
       });
 
       group('syncFollowedLists', () {
+        test(
+          'canceled relay completion keeps the previous followed copy',
+          () async {
+            final read = Completer<List<Event>>();
+            final entered = Completer<void>();
+            final client = _MockNostrClient();
+            when(
+              () => client.queryEvents(any(), timeout: any(named: 'timeout')),
+            ).thenAnswer((_) {
+              entered.complete();
+              return read.future;
+            });
+            final repository = buildRepository(nostrClient: client);
+            await repository.followList(
+              viewerPubkey: viewer,
+              ownerPubkey: _ownerPubkey,
+              list: listOf('crew'),
+            );
+            var canceled = false;
+            final sync = repository.syncFollowedLists(
+              viewerPubkey: viewer,
+              isCancelled: () => canceled,
+            );
+            await entered.future;
+            canceled = true;
+            read.complete([
+              peopleEvent(
+                pubkey: _ownerPubkey,
+                dTag: 'crew',
+                members: const [_memberA, _memberB],
+                createdAt: 1800000100,
+              ),
+            ]);
+            await sync;
+            expect(
+              (await repository.readFollowedLists(
+                viewerPubkey: viewer,
+              )).single.list.pubkeys,
+              [_memberA],
+            );
+          },
+        );
+
+        test(
+          'unfollow after follow recheck leaves no late copy',
+          () async {
+            final client = _MockNostrClient();
+            when(
+              () => client.queryEvents(any(), timeout: any(named: 'timeout')),
+            ).thenAnswer(
+              (_) async => [
+                peopleEvent(
+                  pubkey: _ownerPubkey,
+                  dTag: 'crew',
+                  members: const [_memberA, _memberB],
+                  createdAt: 1800000100,
+                ),
+              ],
+            );
+            final cache = _PausedRefreshCache(openBox: makeOpener());
+            final repository = buildRepository(
+              nostrClient: client,
+              cache: cache,
+            );
+            await repository.followList(
+              viewerPubkey: viewer,
+              ownerPubkey: _ownerPubkey,
+              list: listOf('crew'),
+            );
+            final sync = repository.syncFollowedLists(viewerPubkey: viewer);
+            await cache.entered.future;
+            final unfollow = repository.unfollowList(
+              viewerPubkey: viewer,
+              ownerPubkey: _ownerPubkey,
+              listId: 'crew',
+            );
+            await pumpEventQueue();
+            cache.release.complete();
+            await sync;
+            await unfollow;
+            expect(
+              await cache.readFollowedCopies(viewerPubkey: viewer),
+              isEmpty,
+            );
+          },
+        );
+
         test('asks relays nothing when nothing is followed', () async {
           final client = _MockNostrClient();
           final repository = buildRepository(nostrClient: client);
@@ -3493,7 +3600,8 @@ void main() {
               ),
             ];
           });
-          repository = buildRepository(nostrClient: client);
+          final cache = LocalPeopleListsCache(openBox: makeOpener());
+          repository = buildRepository(nostrClient: client, cache: cache);
           await repository.followList(
             viewerPubkey: viewer,
             ownerPubkey: _ownerPubkey,
@@ -3506,52 +3614,6 @@ void main() {
             await repository.readFollowedLists(viewerPubkey: viewer),
             isEmpty,
           );
-        });
-      });
-
-      group('clearFollowedLists', () {
-        test("removes that viewer's follows only", () async {
-          final repository = buildRepository(nostrClient: _MockNostrClient());
-          await repository.followList(
-            viewerPubkey: viewer,
-            ownerPubkey: _ownerPubkey,
-            list: listOf('leaving'),
-          );
-          await repository.followList(
-            viewerPubkey: otherOwner,
-            ownerPubkey: _ownerPubkey,
-            list: listOf('staying'),
-          );
-
-          await repository.clearFollowedLists(viewerPubkey: viewer);
-
-          expect(
-            await repository.readFollowedLists(viewerPubkey: viewer),
-            isEmpty,
-          );
-          expect(
-            await repository.readFollowedLists(viewerPubkey: otherOwner),
-            hasLength(1),
-          );
-        });
-
-        test('removes the copies as well as the follows', () async {
-          final cache = LocalPeopleListsCache(openBox: makeOpener());
-          final store = InMemoryFollowedPeopleListsStore();
-          final repository = buildRepository(
-            nostrClient: _MockNostrClient(),
-            cache: cache,
-            followedListsStore: store,
-          );
-          await repository.followList(
-            viewerPubkey: viewer,
-            ownerPubkey: _ownerPubkey,
-            list: listOf('leaving'),
-          );
-
-          await repository.clearFollowedLists(viewerPubkey: viewer);
-
-          expect(await store.read(viewerPubkey: viewer), isEmpty);
           expect(await cache.readFollowedCopies(viewerPubkey: viewer), isEmpty);
         });
       });

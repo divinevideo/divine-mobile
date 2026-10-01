@@ -14,8 +14,9 @@ enum PeopleListFollowStatus {
   /// A follow or unfollow is being written.
   updating,
 
-  /// The last follow or unfollow could not be written, or the stored follows
-  /// could not be read. [PeopleListFollowState.isFollowing] is unchanged.
+  /// The last follow or unfollow could not be written, or the follows could
+  /// not be watched. [PeopleListFollowState.isFollowing] is the last follow
+  /// known, or the stored one when it can still be read.
   failure,
 }
 
@@ -23,6 +24,7 @@ class PeopleListFollowState extends Equatable {
   const PeopleListFollowState({
     this.status = PeopleListFollowStatus.loading,
     this.isFollowing = false,
+    this.hasReadFollowing = false,
   });
 
   final PeopleListFollowStatus status;
@@ -30,22 +32,28 @@ class PeopleListFollowState extends Equatable {
   /// Whether the viewer follows the list.
   final bool isFollowing;
 
+  /// A durable read has established the follow state for this session.
+  final bool hasReadFollowing;
+
   /// The control cannot be used while the follows are unread or a write is
   /// in flight.
   bool get isBusy =>
+      !hasReadFollowing ||
       status == PeopleListFollowStatus.loading ||
       status == PeopleListFollowStatus.updating;
 
   PeopleListFollowState copyWith({
     PeopleListFollowStatus? status,
     bool? isFollowing,
+    bool? hasReadFollowing,
   }) {
     return PeopleListFollowState(
       status: status ?? this.status,
       isFollowing: isFollowing ?? this.isFollowing,
+      hasReadFollowing: hasReadFollowing ?? this.hasReadFollowing,
     );
   }
 
   @override
-  List<Object?> get props => [status, isFollowing];
+  List<Object?> get props => [status, isFollowing, hasReadFollowing];
 }

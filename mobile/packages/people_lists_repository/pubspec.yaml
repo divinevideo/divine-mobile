@@ -8,6 +8,7 @@ environment:
   sdk: ^3.11.0
 
 dependencies:
+  crypto: ^3.0.7
   equatable: ^2.0.5
   funnelcake_api_client:
   hive_ce:
