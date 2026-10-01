@@ -119,7 +119,12 @@ class _ProfileListsContent extends StatelessWidget {
             // border and primary ink.
             type: DivineButtonType.secondary,
             expanded: true,
-            onPressed: () => showListInfoSheet(context),
+            onPressed: () => runDetached(
+              showListInfoSheet(context),
+              'open list creation sheet',
+              logName: 'ProfileListsGrid',
+              category: LogCategory.ui,
+            ),
           ),
         ),
         const SizedBox(height: 8),
