@@ -140,4 +140,66 @@ abstract interface class PeopleListsRepository {
     required String ownerPubkey,
     required String listId,
   });
+
+  /// Emits the public lists [viewerPubkey] follows, oldest follow first,
+  /// then re-emits on every follow, unfollow or refreshed copy.
+  ///
+  /// Following is local to this device, like following a video list: nothing
+  /// is published. Lists whose owner the viewer has blocked are left out, and
+  /// so is a follow whose copy is not held at the moment, until
+  /// [syncFollowedLists] brings it back.
+  Stream<List<PeopleListSearchResult>> watchFollowedLists({
+    required String viewerPubkey,
+  });
+
+  /// Reads the public lists [viewerPubkey] follows, oldest follow first,
+  /// under the same rules as [watchFollowedLists].
+  Future<List<PeopleListSearchResult>> readFollowedLists({
+    required String viewerPubkey,
+  });
+
+  /// Whether [viewerPubkey] follows the list [ownerPubkey] published as
+  /// [listId].
+  ///
+  /// This is the follow itself, so it holds while the copy is not held —
+  /// after a cache reset, until [syncFollowedLists] brings it back — and
+  /// while the owner is blocked, both of which leave the list out of
+  /// [readFollowedLists].
+  Future<bool> isFollowingList({
+    required String viewerPubkey,
+    required String ownerPubkey,
+    required String listId,
+  });
+
+  /// Follows [list], published by [ownerPubkey], on behalf of [viewerPubkey],
+  /// keeping a read-only copy so its members are known offline.
+  ///
+  /// Following a list that is already followed keeps its place.
+  Future<void> followList({
+    required String viewerPubkey,
+    required String ownerPubkey,
+    required UserList list,
+  });
+
+  /// Stops [viewerPubkey] following the list [ownerPubkey] published as
+  /// [listId]. A no-op when it is not followed.
+  Future<void> unfollowList({
+    required String viewerPubkey,
+    required String ownerPubkey,
+    required String listId,
+  });
+
+  /// Re-reads every list [viewerPubkey] follows from relays, replacing the
+  /// copies that have a newer revision and restoring the ones a cache reset
+  /// removed, so a followed list keeps up with the members its owner adds and
+  /// removes.
+  ///
+  /// A relay failure is logged and leaves the stored copies as they are; a
+  /// list relays no longer hold keeps its last copy. Never throws for a relay
+  /// failure.
+  Future<void> syncFollowedLists({required String viewerPubkey});
+
+  /// Removes every list [viewerPubkey] follows, and the copies held for them,
+  /// for when that account's data is deleted from the device.
+  Future<void> clearFollowedLists({required String viewerPubkey});
 }

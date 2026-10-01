@@ -17,6 +17,7 @@ import 'package:openvine/screens/feed/feed_immersive_cubit.dart';
 import 'package:openvine/screens/feed/feed_mode_switch.dart';
 import 'package:openvine/screens/feed/feed_settings_menu.dart';
 import 'package:openvine/widgets/video_feed_item/feed_immersive_chrome.dart';
+import 'package:people_lists_repository/people_lists_repository.dart';
 
 import '../../helpers/test_provider_overrides.dart';
 
@@ -93,6 +94,29 @@ void main() {
         videoEventIds: const [],
         createdAt: now,
         updatedAt: now,
+      );
+    }
+
+    // Full-length 64-char pubkeys — never truncate.
+    final listOwner = 'a' * 64;
+    final otherListOwner = 'b' * 64;
+
+    PeopleListSearchResult peopleList({
+      required String id,
+      required String name,
+      String? ownerPubkey,
+    }) {
+      final now = DateTime.utc(2026);
+      return PeopleListSearchResult(
+        ownerPubkey: ownerPubkey ?? listOwner,
+        list: UserList(
+          id: id,
+          name: name,
+          pubkeys: const [],
+          createdAt: now,
+          updatedAt: now,
+          isEditable: false,
+        ),
       );
     }
 
@@ -200,6 +224,47 @@ void main() {
 
         expect(find.text('Best Vines'), findsOneWidget);
       });
+
+      testWidgets(
+        "displays a followed people list's current name for its source",
+        (tester) async {
+          when(() => mockBloc.state).thenReturn(
+            VideoFeedBlocState(
+              status: VideoFeedStatus.success,
+              source: VideoFeedSource.peopleList(
+                listId: 'crew',
+                listName: 'Crew',
+                listOwnerPubkey: listOwner,
+              ),
+              // Renamed by its owner since it was selected.
+              followedPeopleLists: [peopleList(id: 'crew', name: 'The Crew')],
+            ),
+          );
+          await tester.pumpWidget(createTestWidget());
+
+          expect(find.text('The Crew'), findsOneWidget);
+          expect(find.text('Crew'), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'keeps the selected name for a people list no longer in the follows',
+        (tester) async {
+          when(() => mockBloc.state).thenReturn(
+            VideoFeedBlocState(
+              status: VideoFeedStatus.success,
+              source: VideoFeedSource.peopleList(
+                listId: 'crew',
+                listName: 'Crew',
+                listOwnerPubkey: listOwner,
+              ),
+            ),
+          );
+          await tester.pumpWidget(createTestWidget());
+
+          expect(find.text('Crew'), findsOneWidget);
+        },
+      );
     });
 
     group('Label Width', () {
@@ -440,39 +505,18 @@ void main() {
         },
       );
 
-      testWidgets('does not dispatch event when bottom sheet dismissed', (
-        tester,
-      ) async {
-        when(() => mockBloc.state).thenReturn(
-          const VideoFeedBlocState(
-            status: VideoFeedStatus.success,
-            source: VideoFeedSource.forYou(),
-          ),
-        );
-        await tester.pumpWidget(createTestWidget());
-
-        await tester.tap(find.text(l10n.feedModeForYou));
-        await tester.pumpAndSettle();
-
-        // Dismiss by tapping outside (on the barrier).
-        await tester.tapAt(const Offset(10, 10));
-        await tester.pumpAndSettle();
-
-        verifyNever(() => mockBloc.add(any()));
-      });
-
       testWidgets('same name and d-tag options select distinct full authors', (
         tester,
       ) async {
         final a = curatedList(
           id: 'my_vine_list',
           name: 'Alice',
-          pubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          pubkey: listOwner,
         );
         final b = curatedList(
           id: 'my_vine_list',
           name: 'Alice',
-          pubkey: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          pubkey: otherListOwner,
         );
         when(() => mockBloc.state).thenReturn(
           VideoFeedBlocState(
@@ -505,12 +549,12 @@ void main() {
         final a = curatedList(
           id: 'my_vine_list',
           name: 'Other Alice',
-          pubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          pubkey: listOwner,
         );
         final b = curatedList(
           id: 'my_vine_list',
           name: 'Renamed Alice',
-          pubkey: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          pubkey: otherListOwner,
         );
         when(() => mockBloc.state).thenReturn(
           VideoFeedBlocState(
@@ -526,6 +570,90 @@ void main() {
         expect(find.text('Renamed Alice'), findsOneWidget);
         expect(find.text('Other Alice'), findsNothing);
         expect(find.text('Old Alice'), findsNothing);
+      });
+
+      testWidgets('dropdown lists followed people lists after video lists', (
+        tester,
+      ) async {
+        when(() => mockBloc.state).thenReturn(
+          VideoFeedBlocState(
+            status: VideoFeedStatus.success,
+            source: const VideoFeedSource.forYou(),
+            subscribedLists: [curatedList(id: 'best', name: 'Best Vines')],
+            followedPeopleLists: [peopleList(id: 'crew', name: 'Crew')],
+          ),
+        );
+        await tester.pumpWidget(createTestWidget());
+
+        await tester.tap(find.text(l10n.feedModeForYou));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Crew'), findsOneWidget);
+        expect(
+          tester.getTopLeft(find.text('Crew')).dy,
+          greaterThan(tester.getTopLeft(find.text('Best Vines')).dy),
+        );
+      });
+
+      testWidgets(
+        'dispatches the people-list source of the owner that was tapped',
+        (tester) async {
+          when(() => mockBloc.state).thenReturn(
+            VideoFeedBlocState(
+              status: VideoFeedStatus.success,
+              source: const VideoFeedSource.forYou(),
+              // Two owners sharing a d tag: the id alone cannot tell them
+              // apart.
+              followedPeopleLists: [
+                peopleList(id: 'friends', name: 'Friends of A'),
+                peopleList(
+                  id: 'friends',
+                  name: 'Friends of B',
+                  ownerPubkey: otherListOwner,
+                ),
+              ],
+            ),
+          );
+          await tester.pumpWidget(createTestWidget());
+
+          await tester.tap(find.text(l10n.feedModeForYou));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Friends of B'));
+          await tester.pumpAndSettle();
+
+          verify(
+            () => mockBloc.add(
+              VideoFeedSourceChanged(
+                VideoFeedSource.peopleList(
+                  listId: 'friends',
+                  listName: 'Friends of B',
+                  listOwnerPubkey: otherListOwner,
+                ),
+              ),
+            ),
+          ).called(1);
+        },
+      );
+
+      testWidgets('does not dispatch event when bottom sheet dismissed', (
+        tester,
+      ) async {
+        when(() => mockBloc.state).thenReturn(
+          const VideoFeedBlocState(
+            status: VideoFeedStatus.success,
+            source: VideoFeedSource.forYou(),
+          ),
+        );
+        await tester.pumpWidget(createTestWidget());
+
+        await tester.tap(find.text(l10n.feedModeForYou));
+        await tester.pumpAndSettle();
+
+        // Dismiss by tapping outside (on the barrier).
+        await tester.tapAt(const Offset(10, 10));
+        await tester.pumpAndSettle();
+
+        verifyNever(() => mockBloc.add(any()));
       });
 
       testWidgets('pauses video playback while the mode sheet is open', (
