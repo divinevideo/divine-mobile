@@ -84,7 +84,7 @@ Future<String> _registerAndVerifyViaApi(String email, String password) async {
 void main() {
   ignorePlatformSemanticsHandle();
 
-  group('Bug #2233 -- Delete Account Flow (User Log 2)', () {
+  group('Bug 2233 -- Delete Account Flow (User Log 2)', () {
     final ts = DateTime.now().millisecondsSinceEpoch;
     final emailA = 'log2-a-$ts@test.divine.video';
     final emailB = 'log2-b-$ts@test.divine.video';

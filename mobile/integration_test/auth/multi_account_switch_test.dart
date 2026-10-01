@@ -193,7 +193,7 @@ void main() {
     );
 
     patrolTest(
-      'nsec import B after Keycast A survives reinitialize (#2936)',
+      'nsec import B after Keycast A survives reinitialize (issue 2936)',
       ($) async {
         final tester = $.tester;
 
