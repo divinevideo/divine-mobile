@@ -390,7 +390,11 @@ class BadgeRepository {
       if (!result.isComplete) {
         throw StateError('Badge definitions could not be fully loaded');
       }
-      for (final definition in _newestDefinitionPerIdentifier(result.events)) {
+      // The relay filters on authors; only the issuer's own signature counts.
+      final signed = result.events
+          .where((event) => event.pubkey == issuer)
+          .toList();
+      for (final definition in _newestDefinitionPerIdentifier(signed)) {
         definitions[definition.coordinate] = definition;
       }
     }
@@ -426,7 +430,9 @@ class BadgeRepository {
       if (!deletions.isComplete) {
         throw StateError('Badge revocations could not be fully loaded');
       }
+      // NIP-09 honors a deletion only from the original author.
       for (final deletion in deletions.events) {
+        if (deletion.pubkey != coordinate.pubkey) continue;
         for (final tag in deletion.tags) {
           if (tag.length >= 2 && tag[0] == 'e') revokedIds.add(tag[1]);
         }
@@ -434,6 +440,8 @@ class BadgeRepository {
     }
     final awarded = <String>{};
     for (final event in awardsPage.events) {
+      // An award counts only when the badge's own issuer signed it.
+      if (event.pubkey != coordinate.pubkey) continue;
       if (revokedIds.contains(event.id)) continue;
       final award = Nip58BadgeParser.parseAward(event);
       if (award?.definitionCoordinate == coordinate.value) {
