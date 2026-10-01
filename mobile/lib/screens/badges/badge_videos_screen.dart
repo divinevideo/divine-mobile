@@ -93,9 +93,22 @@ class BadgeVideosView extends ConsumerWidget {
           BadgeVideosStatus.initial || BadgeVideosStatus.loading =>
             const Center(child: BrandedLoadingIndicator(size: 60)),
           BadgeVideosStatus.failure => Center(
-            child: DivineButton(
-              onPressed: cubit.load,
-              label: context.l10n.feedFailedToLoadVideos,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 16,
+              children: [
+                Text(
+                  context.l10n.feedFailedToLoadVideos,
+                  textAlign: TextAlign.center,
+                  style: VineTheme.titleSmallFont(
+                    color: context.vineColors.primaryText,
+                  ),
+                ),
+                DivineButton(
+                  onPressed: cubit.load,
+                  label: context.l10n.commonRetry,
+                ),
+              ],
             ),
           ),
           BadgeVideosStatus.loaded => ComposableVideoGrid(
