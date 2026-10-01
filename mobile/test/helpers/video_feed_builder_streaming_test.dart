@@ -49,7 +49,10 @@ void main() {
       VideoFeedState? state;
 
       fakeAsync((async) {
-        builder.buildFeed(config: config).then((value) => state = value);
+        // fakeAsync owns completion; flushMicrotasks below runs this callback.
+        unawaited(
+          builder.buildFeed(config: config).then((value) => state = value),
+        );
         // Drains microtasks without advancing the clock, so a reintroduced
         // stability wait leaves `state` null rather than merely slow.
         async.flushMicrotasks();

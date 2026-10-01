@@ -1,6 +1,8 @@
 // ABOUTME: Tests for VideoFeedBuilder helper class that encapsulates common feed logic
 // ABOUTME: Validates debouncing, streaming return, and state management patterns
 
+import 'dart:async';
+
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -93,7 +95,10 @@ void main() {
 
         fakeAsync((async) {
           // Act
-          builder.buildFeed(config: config).then((value) => state = value);
+          // fakeAsync owns completion; flushMicrotasks below runs this callback.
+          unawaited(
+            builder.buildFeed(config: config).then((value) => state = value),
+          );
           // Drains microtasks without advancing the clock, so a reintroduced
           // stability wait leaves `state` null rather than merely slow.
           async.flushMicrotasks();
