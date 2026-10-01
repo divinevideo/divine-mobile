@@ -11,9 +11,11 @@ class BadgeVideoPager {
     required FunnelcakeApiClient client,
     required List<String> authors,
     required List<VideoEvent> Function(List<VideoStats>) transform,
+    bool Function(VideoEvent)? isVisible,
     int? before,
   }) : _client = client,
        _transform = transform,
+       _isVisible = isVisible,
        _before =
            before ?? DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000 + 1,
        _chunks = [
@@ -23,6 +25,11 @@ class BadgeVideoPager {
 
   final FunnelcakeApiClient _client;
   final List<VideoEvent> Function(List<VideoStats>) _transform;
+
+  /// Re-checked when a buffered video is served. [_transform] filters at
+  /// fetch time, and a chunk buffers up to 100 videos, so an author blocked
+  /// after the fetch would otherwise come back on a later page.
+  final bool Function(VideoEvent)? _isVisible;
   final int _before;
   final List<_AuthorChunk> _chunks;
   final Set<String> _seen = {};
@@ -76,6 +83,7 @@ class BadgeVideoPager {
       }
       if (newestChunk == null) break;
       final video = newestChunk.buffer.removeAt(0);
+      if (!(_isVisible?.call(video) ?? true)) continue;
       if (_seen.add(video.feedDedupKey)) result.add(video);
     }
     return result;
