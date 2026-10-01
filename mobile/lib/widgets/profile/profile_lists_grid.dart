@@ -19,11 +19,10 @@ import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/screens/saved_videos_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
-import 'package:openvine/utils/pause_aware_modals.dart';
-import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/curated_list_initialization_failure.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
+import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
 
 /// Independently loaded people and video lists owned by the profile viewer.
 class ProfileListsGrid extends ConsumerWidget {
@@ -152,9 +151,7 @@ class _VideoListsSection extends ConsumerWidget {
           leadingIcon: DivineIconName.plus,
           type: DivineButtonType.secondary,
           expanded: true,
-          onPressed: () => context.showVideoPausingDialog<void>(
-            builder: (_) => const CreateListDialog(),
-          ),
+          onPressed: () => showListInfoSheet(context),
         ),
         const _BookmarksEntry(),
         listsAsync.when(

@@ -20,12 +20,11 @@ import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
-import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/utils/share_list_link.dart';
-import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/follow_list_button.dart';
+import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
 import 'package:openvine/widgets/list_owner_action_tile.dart';
 import 'package:openvine/widgets/list_video_player_mode.dart';
 import 'package:openvine/widgets/report_content_dialog.dart';
@@ -576,9 +575,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
   Future<void> _editList() async {
     final list = _localList();
     if (list == null) return;
-    await context.showVideoPausingDialog<void>(
-      builder: (_) => CreateListDialog(existingList: list),
-    );
+    await showListInfoSheet(context, existingList: list);
   }
 
   Future<void> _shareList() async {

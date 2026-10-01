@@ -1859,8 +1859,6 @@
     "listNewPeopleList": "Нов списък с хора",
     "listNameLabel": "Име на списък",
     "listDescriptionLabel": "Описание (по избор)",
-    "listPublicList": "Публичен списък",
-    "listPublicListSubtitle": "Други могат да следват и да видят този списък",
     "listPrivateListSubtitle": "Видеата остават частни. Името, описанието, таговете и корицата остават видими.",
     "listVisibilityPublic": "Публичен",
     "listVisibilityPrivate": "Частен",
@@ -1894,7 +1892,6 @@
             }
         }
     },
-    "listCancel": "Отказ",
     "listCreate": "Създай",
     "listCreateFailed": "Неуспешно създаване на списък",
     "keyManagementTitle": "Nostr Ключове",
@@ -5204,5 +5201,10 @@
   "peopleListsAddPersonSemanticLabel": "Добави {name} към списъка",
   "peopleListsMembershipUpdateFailed": "Не успяхме да обновим списъка. Опитай пак.",
   "peopleListsAddPeopleSearchHint": "Търси хора",
-  "peopleListsRemovePersonSemanticLabel": "Премахни {name} от списъка"
+  "peopleListsRemovePersonSemanticLabel": "Премахни {name} от списъка",
+  "listMakePublicLabel": "Направи публичен",
+  "listCollaboratorsNone": "Няма",
+  "listAddCollaboratorTitle": "Добави сътрудник",
+  "listMakePublicSubtitle": "Позволи на другите да виждат този списък",
+  "listCollaboratorSearchHint": "Търсене Divine..."
 }
