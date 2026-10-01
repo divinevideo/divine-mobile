@@ -13,11 +13,15 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+/// A string literal in either quote style: a name that contains an
+/// apostrophe is written in double quotes.
+const _quotedLiteral = r'''(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)")''';
+
 /// The leading string literal(s) of a `group(` or `patrolTest(` call.
 final _namedCall = RegExp(
-  r"""\b(group|patrolTest)\(\s*((?:'(?:[^'\\]|\\.)*'\s*)+)""",
+  '\\b(group|patrolTest)\\(\\s*((?:$_quotedLiteral\\s*)+)',
 );
-final _literal = RegExp(r"""'((?:[^'\\]|\\.)*)'""");
+final _literal = RegExp(_quotedLiteral);
 
 void main() {
   group('Patrol suite names', () {
@@ -38,7 +42,7 @@ void main() {
           for (final call in _namedCall.allMatches(source)) {
             final name = _literal
                 .allMatches(call.group(2)!)
-                .map((literal) => literal.group(1))
+                .map((literal) => literal.group(1) ?? literal.group(2))
                 .join();
             if (name.contains('/') || name.contains('#')) {
               offenders.add('${suite.path}: ${call.group(1)}($name)');
