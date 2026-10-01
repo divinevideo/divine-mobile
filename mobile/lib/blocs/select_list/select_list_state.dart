@@ -53,11 +53,6 @@ class SelectListState extends Equatable {
   /// Whether the sheet has nothing left to show and can close.
   bool get canClose => status == SelectListStatus.saved;
 
-  /// Whether the save could not write every pick.
-  bool get hasFailed =>
-      status == SelectListStatus.failure ||
-      status == SelectListStatus.failureListFull;
-
   /// Whether the list with [listId] is picked.
   bool isSelected(String listId) => selectedListIds.contains(listId);
 
