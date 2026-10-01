@@ -117,6 +117,13 @@ void main() {
 
         expect(described.copyWith(clearDescription: true).description, isNull);
       });
+
+      test('refuses a description alongside clearDescription', () {
+        expect(
+          () => userList.copyWith(description: 'x', clearDescription: true),
+          throwsArgumentError,
+        );
+      });
     });
 
     group('Equatable', () {

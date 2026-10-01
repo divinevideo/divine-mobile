@@ -57,7 +57,9 @@ class UserList extends Equatable {
   /// Copy with the given fields replaced.
   ///
   /// [clearDescription] drops the description, which a null [description]
-  /// cannot express since null means "keep the current one".
+  /// cannot express since null means "keep the current one". Passing both a
+  /// [description] and [clearDescription] asks for two things at once and
+  /// throws an [ArgumentError] rather than quietly dropping the text.
   UserList copyWith({
     String? id,
     String? name,
@@ -70,18 +72,27 @@ class UserList extends Equatable {
     bool? isPublic,
     String? nostrEventId,
     bool? isEditable,
-  }) => UserList(
-    id: id ?? this.id,
-    name: name ?? this.name,
-    description: clearDescription ? null : description ?? this.description,
-    imageUrl: imageUrl ?? this.imageUrl,
-    pubkeys: pubkeys ?? this.pubkeys,
-    createdAt: createdAt ?? this.createdAt,
-    updatedAt: updatedAt ?? this.updatedAt,
-    isPublic: isPublic ?? this.isPublic,
-    nostrEventId: nostrEventId ?? this.nostrEventId,
-    isEditable: isEditable ?? this.isEditable,
-  );
+  }) {
+    if (clearDescription && description != null) {
+      throw ArgumentError.value(
+        description,
+        'description',
+        'cannot be set while clearDescription is true',
+      );
+    }
+    return UserList(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: clearDescription ? null : description ?? this.description,
+      imageUrl: imageUrl ?? this.imageUrl,
+      pubkeys: pubkeys ?? this.pubkeys,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      isPublic: isPublic ?? this.isPublic,
+      nostrEventId: nostrEventId ?? this.nostrEventId,
+      isEditable: isEditable ?? this.isEditable,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,
