@@ -2984,10 +2984,8 @@
     "peopleListsNoPeopleSubtitle": "Lägg till personer för att komma igång",
     "peopleListsNoVideosTitle": "Inga videor än",
     "peopleListsNoVideosSubtitle": "Videor från listmedlemmar visas här",
-    "peopleListsNoVideosAvailable": "Inga videor tillgängliga",
     "peopleListsFailedToLoadVideos": "Det gick inte att läsa in videor",
     "peopleListsVideoNotAvailable": "Video ej tillgänglig",
-    "peopleListsBackToGridTooltip": "Tillbaka till rutnät",
     "peopleListsErrorLoadingVideos": "Fel vid inläsning av videor",
     "peopleListsNoPeopleToAdd": "Inga personer tillgängliga att lägga till.",
     "peopleListsAddToListName": "Lägg till i {name}",
@@ -4821,5 +4819,35 @@
   "crosspostingAutoBody": "Varje ny loop du publicerar går till {platform} åt dig — utan extra tryck. Gäller bara loopar du publicerar efter att du slår på det här.",
   "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "Slå på automatiskt",
-  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+  "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loopar}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listMemberCount": "{count, plural, =1{{count} medlem} other{{count} medlemmar}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsLoadFailed": "Kunde inte läsa in den här listan.",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} person} other{{count} personer}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsViewAllMembers": "Visa alla"
 }

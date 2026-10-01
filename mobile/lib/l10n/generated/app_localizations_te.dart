@@ -4079,17 +4079,11 @@ class AppLocalizationsTe extends AppLocalizations {
       'జాబితా సభ్యుల నుండి వీడియోలు ఇక్కడ కనిపిస్తాయి';
 
   @override
-  String get peopleListsNoVideosAvailable => 'వీడియోలు అందుబాటులో లేవు';
-
-  @override
   String get peopleListsFailedToLoadVideos =>
       'వీడియోలను లోడ్ చేయడంలో విఫలమైంది';
 
   @override
   String get peopleListsVideoNotAvailable => 'వీడియో అందుబాటులో లేదు';
-
-  @override
-  String get peopleListsBackToGridTooltip => 'తిరిగి గ్రిడ్‌కి';
 
   @override
   String get peopleListsErrorLoadingVideos => 'వీడియోలను లోడ్ చేయడంలో లోపం';
@@ -13202,4 +13196,46 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => 'Turn on automatic';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted లూప్‌లు',
+      one: '$formatted లూప్',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count సభ్యులు',
+      one: '$count సభ్యులు',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsLoadFailed => 'ఈ జాబితాను లోడ్ చేయడం సాధ్యపడలేదు.';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count వ్యక్తులు',
+      one: '$count వ్యక్తి',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get peopleListsViewAllMembers => 'అన్నీ చూడండి';
 }

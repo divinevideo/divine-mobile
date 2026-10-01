@@ -37,4 +37,3 @@ lib/screens/settings/nip05_settings_screen.dart	2
 lib/screens/settings/nostr_settings_screen.dart	1
 lib/screens/settings/settings_screen.dart	1
 lib/screens/settings/storage/storage_management_page.dart	1
-lib/screens/user_list_people_screen.dart	2

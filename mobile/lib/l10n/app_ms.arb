@@ -1928,10 +1928,8 @@
   "peopleListsNoPeopleSubtitle": "Tambah beberapa orang untuk bermula",
   "peopleListsNoVideosTitle": "Belum ada video",
   "peopleListsNoVideosSubtitle": "Video daripada ahli senarai akan muncul di sini",
-  "peopleListsNoVideosAvailable": "Tiada video tersedia",
   "peopleListsFailedToLoadVideos": "Gagal memuatkan video",
   "peopleListsVideoNotAvailable": "Video tidak tersedia",
-  "peopleListsBackToGridTooltip": "Kembali ke grid",
   "peopleListsErrorLoadingVideos": "Ralat memuatkan video",
   "peopleListsNoPeopleToAdd": "Tiada orang tersedia untuk ditambah.",
   "peopleListsAddToListName": "Tambah ke {name}",
@@ -6588,5 +6586,35 @@
   "crosspostingAutoBody": "Setiap loop baharu yang anda siarkan dihantar ke {platform} untuk anda — tanpa ketikan tambahan. Hanya terpakai untuk loop yang anda terbitkan selepas menghidupkannya.",
   "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "Hidupkan automatik",
-  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+  "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loop}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listMemberCount": "{count, plural, =1{{count} ahli} other{{count} ahli}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsLoadFailed": "Tidak dapat memuatkan senarai ini.",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} orang} other{{count} orang}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsViewAllMembers": "Lihat semua"
 }

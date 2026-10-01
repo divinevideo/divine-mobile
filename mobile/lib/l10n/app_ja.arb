@@ -2977,10 +2977,8 @@
     "peopleListsNoPeopleSubtitle": "始めるにはユーザーを追加してください",
     "peopleListsNoVideosTitle": "まだ動画がありません",
     "peopleListsNoVideosSubtitle": "リストメンバーの動画がここに表示されます",
-    "peopleListsNoVideosAvailable": "利用可能な動画がありません",
     "peopleListsFailedToLoadVideos": "動画の読み込みに失敗しました",
     "peopleListsVideoNotAvailable": "動画は利用できません",
-    "peopleListsBackToGridTooltip": "グリッドに戻る",
     "peopleListsErrorLoadingVideos": "動画の読み込みエラー",
     "peopleListsNoPeopleToAdd": "追加できるユーザーがいません。",
     "peopleListsAddToListName": "{name}に追加",
@@ -4821,5 +4819,35 @@
   "crosspostingAutoBody": "新しく投稿するループは自動で {platform} にも届くよ — 余計なタップなし。オンにしたあとに公開したループだけが対象だよ。",
   "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "自動をオンにする",
-  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+  "listLoopsCount": "{count, plural, other{{formatted}ループ}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listMemberCount": "{count, plural, other{{count}人のメンバー}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsLoadFailed": "このリストを読み込めませんでした。",
+  "peopleListsPeopleCount": "{count, plural, other{{count}人}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsViewAllMembers": "すべて見る"
 }

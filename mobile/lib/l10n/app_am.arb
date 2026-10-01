@@ -1664,10 +1664,8 @@
     "peopleListsNoPeopleSubtitle": "ለመጀመር አንዳንድ ሰዎችን ያክሉ",
     "peopleListsNoVideosTitle": "እስካሁን ምንም ቪዲዮዎች የሉም",
     "peopleListsNoVideosSubtitle": "ከዝርዝር አባላት የመጡ ቪዲዮዎች እዚህ ይታያሉ",
-    "peopleListsNoVideosAvailable": "ምንም ቪዲዮዎች የሉም",
     "peopleListsFailedToLoadVideos": "ቪዲዮዎችን መጫን አልተሳካም።",
     "peopleListsVideoNotAvailable": "ቪዲዮ አይገኝም",
-    "peopleListsBackToGridTooltip": "ወደ ፍርግርግ ተመለስ",
     "peopleListsErrorLoadingVideos": "ቪዲዮዎችን መጫን ላይ ስህተት",
     "peopleListsNoPeopleToAdd": "ምንም የሚታከሉ ሰዎች የሉም።",
     "peopleListsAddToListName": "ወደ {name} ጨምር",
@@ -4927,5 +4925,35 @@
     "videoMetadataScheduleTooSoon": "{minutes, plural, =1{ቢያንስ {minutes} ደቂቃ ይተዉ።} other{ቢያንስ {minutes} ደቂቃ ይተዉ።}}",
     "videoMetadataScheduleTooFar": "{days, plural, =1{ይህ ከ{days} ቀን በላይ ነው። ቅርብ የሆነ ጊዜ ይምረጡ።} other{ይህ ከ{days} ቀናት በላይ ነው። ቅርብ የሆነ ጊዜ ይምረጡ።}}",
     "videoMetadataScheduleButton": "ያቅዱ",
-    "videoMetadataScheduleVideoHint": "ይህን ቪዲዮ ለ{time} ያቅዳል"
+    "videoMetadataScheduleVideoHint": "ይህን ቪዲዮ ለ{time} ያቅዳል",
+  "listLoopsCount": "{count, plural, =1{{formatted} ሉፕ} other{{formatted} ሉፖች}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listMemberCount": "{count, plural, =1{{count} አባል} other{{count} አባላት}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsLoadFailed": "ይህን ዝርዝር መጫን አልተቻለም።",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} ሰው} other{{count} ሰዎች}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsViewAllMembers": "ሁሉንም ይመልከቱ"
 }

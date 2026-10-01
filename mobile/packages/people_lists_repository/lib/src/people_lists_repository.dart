@@ -88,4 +88,14 @@ abstract interface class PeopleListsRepository {
     String query, {
     int limit = 50,
   });
+
+  /// Fetches one public kind `30000` list addressed by author + `d` tag.
+  ///
+  /// Re-checks both against each result because relay/cache filter support
+  /// can be loose, and dedup keeps the newest replaceable version. Returns
+  /// `null` when relays hold no matching decodable list.
+  Future<UserList?> fetchPublicList({
+    required String ownerPubkey,
+    required String listId,
+  });
 }

@@ -3873,16 +3873,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Liste üyelerinin videoları burada görünecek';
 
   @override
-  String get peopleListsNoVideosAvailable => 'Kullanılabilir video yok';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'Videolar yüklenemedi';
 
   @override
   String get peopleListsVideoNotAvailable => 'Video kullanılamıyor';
-
-  @override
-  String get peopleListsBackToGridTooltip => 'Izgaraya dön';
 
   @override
   String get peopleListsErrorLoadingVideos =>
@@ -12784,4 +12778,46 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => 'Otomatiği aç';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted döngü',
+      one: '$formatted döngü',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count üye',
+      one: '$count üye',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsLoadFailed => 'Bu liste yüklenemedi.';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count kişi',
+      one: '$count kişi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get peopleListsViewAllMembers => 'Tümünü gör';
 }

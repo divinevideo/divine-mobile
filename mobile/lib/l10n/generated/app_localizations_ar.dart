@@ -3908,16 +3908,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'ستظهر هنا مقاطع الفيديو من أعضاء القائمة';
 
   @override
-  String get peopleListsNoVideosAvailable => 'لا تتوفر مقاطع فيديو';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'فشل تحميل مقاطع الفيديو';
 
   @override
   String get peopleListsVideoNotAvailable => 'الفيديو غير متاح';
-
-  @override
-  String get peopleListsBackToGridTooltip => 'العودة إلى الشبكة';
 
   @override
   String get peopleListsErrorLoadingVideos => 'خطأ في تحميل مقاطع الفيديو';
@@ -12794,4 +12788,58 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => 'تفعيل التلقائي';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted تكرار',
+      many: '$formatted تكرارًا',
+      few: '$formatted تكرارات',
+      two: 'تكراران',
+      one: 'تكرار واحد',
+      zero: 'لا توجد تكرارات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count عضو',
+      many: '$count عضوًا',
+      few: '$count أعضاء',
+      two: 'عضوان',
+      one: 'عضو واحد',
+      zero: 'لا يوجد أعضاء',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsLoadFailed => 'تعذّر تحميل هذه القائمة.';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count شخص',
+      many: '$count شخصًا',
+      few: '$count أشخاص',
+      two: 'شخصان',
+      one: 'شخص واحد',
+      zero: 'لا يوجد أشخاص',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get peopleListsViewAllMembers => 'عرض الكل';
 }

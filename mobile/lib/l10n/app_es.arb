@@ -2992,10 +2992,8 @@
     "peopleListsNoPeopleSubtitle": "Añade personas para empezar",
     "peopleListsNoVideosTitle": "Aún no hay videos",
     "peopleListsNoVideosSubtitle": "Los videos de los miembros de la lista aparecerán aquí",
-    "peopleListsNoVideosAvailable": "No hay videos disponibles",
     "peopleListsFailedToLoadVideos": "Error al cargar los videos",
     "peopleListsVideoNotAvailable": "Video no disponible",
-    "peopleListsBackToGridTooltip": "Volver a la cuadrícula",
     "peopleListsErrorLoadingVideos": "Error al cargar los videos",
     "peopleListsNoPeopleToAdd": "No hay personas disponibles para añadir.",
     "peopleListsAddToListName": "Añadir a {name}",
@@ -4821,5 +4819,35 @@
   "crosspostingAutoBody": "Cada loop nuevo que publicas se envía a {platform} por ti — sin toques extra. Solo aplica a los loops que publiques después de activarlo.",
   "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "Activar automático",
-  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+  "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loops}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listMemberCount": "{count, plural, =1{{count} miembro} other{{count} miembros}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsLoadFailed": "No se pudo cargar esta lista.",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} persona} other{{count} personas}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsViewAllMembers": "Ver todos"
 }

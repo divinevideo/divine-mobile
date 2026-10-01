@@ -1477,10 +1477,8 @@
     "peopleListsNoPeopleSubtitle": "Добави някого, за да започнеш",
     "peopleListsNoVideosTitle": "Още няма видеа",
     "peopleListsNoVideosSubtitle": "Видеата от хората в списъка ще се появят тук",
-    "peopleListsNoVideosAvailable": "Няма налични видеа",
     "peopleListsFailedToLoadVideos": "Не успяхме да заредим видеата",
     "peopleListsVideoNotAvailable": "Видеото не е налично",
-    "peopleListsBackToGridTooltip": "Обратно към мрежата",
     "peopleListsErrorLoadingVideos": "Грешка при зареждане на видеа",
     "peopleListsNoPeopleToAdd": "Няма налични хора за добавяне.",
     "peopleListsAddToListName": "Добави към {name}",
@@ -4945,5 +4943,35 @@
   "crosspostingAutoBody": "Всеки нов луп, който публикуваш, се изпраща към {platform} вместо теб — без допълнителни докосвания. Важи само за луповете, които публикуваш, след като го включиш.",
   "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "Включи автоматичното",
-  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+  "listLoopsCount": "{count, plural, =1{{formatted} луп} other{{formatted} лупа}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listMemberCount": "{count, plural, =1{{count} член} other{{count} членове}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsLoadFailed": "Не успяхме да заредим този списък.",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} човек} other{{count} души}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsViewAllMembers": "Виж всички"
 }

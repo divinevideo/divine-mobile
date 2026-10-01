@@ -2256,7 +2256,6 @@
     "peopleListsAddPeopleTooltip": "Magdagdag ng tao",
     "peopleListsAddToList": "Idagdag sa listahan",
     "peopleListsAddToListName": "Idagdag sa {name}",
-    "peopleListsBackToGridTooltip": "Bumalik sa grid",
     "peopleListsCreateButton": "Gumawa",
     "peopleListsCreateList": "Gumawa ng listahan",
     "peopleListsEmptySubtitle": "Gumawa ng listahan para simulang igrupo ang mga tao.",
@@ -2273,7 +2272,6 @@
     "peopleListsNoPeopleSubtitle": "Magdagdag ng mga tao para magsimula",
     "peopleListsNoPeopleTitle": "Walang tao sa listahang ito",
     "peopleListsNoPeopleToAdd": "Walang available na tao na maidadagdag.",
-    "peopleListsNoVideosAvailable": "Walang available na video",
     "peopleListsNoVideosSubtitle": "Lalabas dito ang mga video mula sa mga miyembro ng listahan",
     "peopleListsNoVideosTitle": "Wala pang video",
     "peopleListsProfileLongPressHint": "Profile ni {name}. Long press para alisin.",
@@ -3813,5 +3811,35 @@
   "crosspostingAutoBody": "Bawat bagong loop na ipi-post mo, awtomatikong napupunta sa {platform} para sa'yo — walang dagdag na tap. Para lang ito sa mga loop na ipi-publish mo pagkatapos mong i-on ito.",
   "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "I-on ang awtomatiko",
-  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+  "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loop}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listMemberCount": "{count, plural, =1{{count} miyembro} other{{count} miyembro}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsLoadFailed": "Hindi na-load ang list na ito.",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} tao} other{{count} tao}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsViewAllMembers": "Tingnan lahat"
 }
