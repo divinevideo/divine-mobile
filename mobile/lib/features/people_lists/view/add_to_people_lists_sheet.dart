@@ -1,6 +1,7 @@
 // ABOUTME: Bottom sheet that picks which of the user's editable people lists
 // ABOUTME: hold a person; the check applies the picks through PeopleListsBloc.
 
+import 'package:collection/collection.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
@@ -196,8 +197,13 @@ class _AddToPeopleListsSheetState extends State<AddToPeopleListsSheet> {
     );
 
     return BlocListener<PeopleListsBloc, PeopleListsState>(
-      listenWhen: (previous, current) =>
-          previous.listIdsByPubkey[pubkey] != current.listIdsByPubkey[pubkey],
+      // The bloc rebuilds its index on every lists emission, so the sets are
+      // new objects each time; only their contents say whether this
+      // person's membership moved.
+      listenWhen: (previous, current) => !const SetEquality<String>().equals(
+        previous.listIdsByPubkey[pubkey] ?? const {},
+        current.listIdsByPubkey[pubkey] ?? const {},
+      ),
       listener: (context, state) => _syncPicks(state),
       child: editableLists.isEmpty
           ? const _EmptyListRows()
