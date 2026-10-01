@@ -180,7 +180,7 @@ void main() {
             ProviderScope(
               overrides: [...getStandardTestOverrides()],
               child: MaterialApp(
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                localizationsDelegates: appLocalizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 home: Scaffold(
                   body: SizedBox(
@@ -234,7 +234,7 @@ void main() {
           ProviderScope(
             overrides: [...getStandardTestOverrides()],
             child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: SizedBox(
