@@ -172,6 +172,21 @@ class _DescriptionField extends StatelessWidget {
 class _SaveButton extends StatelessWidget {
   const _SaveButton();
 
+  Future<void> _submit(BuildContext context) async {
+    final cubit = context.read<PeopleListInfoCubit>();
+    final messenger = ScaffoldMessenger.of(context);
+    final route = ModalRoute.of(context);
+    final failureMessage = context.l10n.listUpdateFailed;
+    final status = await cubit.submitted();
+    if (status == PeopleListInfoStatus.failure &&
+        route?.isCurrent == false &&
+        messenger.mounted) {
+      messenger.showSnackBar(
+        DivineSnackbarContainer.snackBar(failureMessage, error: true),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isSaving = context.select(
@@ -185,7 +200,7 @@ class _SaveButton extends StatelessWidget {
       isSaving: isSaving,
       onPressed: canSubmit
           ? () => runDetached(
-              context.read<PeopleListInfoCubit>().submitted(),
+              _submit(context),
               'save people list info',
               logName: 'PeopleListInfoSheet',
               category: LogCategory.ui,
