@@ -56,9 +56,10 @@ class PeopleListInfoCubit extends Cubit<PeopleListInfoState>
 
   /// Publishes the list with the name and description as they stand.
   ///
-  /// Ends in [PeopleListInfoStatus.saved] or [PeopleListInfoStatus.failure].
-  Future<void> submitted() async {
-    if (!state.canSubmit) return;
+  /// Returns the outcome even after this cubit closes so a dismissed sheet
+  /// can report a refused save; returns null if submission was unavailable.
+  Future<PeopleListInfoStatus?> submitted() async {
+    if (!state.canSubmit) return null;
 
     emitIfOpen(state.copyWith(status: PeopleListInfoStatus.saving));
     try {
@@ -68,18 +69,17 @@ class PeopleListInfoCubit extends Cubit<PeopleListInfoState>
         name: state.name,
         description: state.description,
       );
-      emitIfOpen(
-        state.copyWith(
-          status: result.status == PeopleListPublishStatus.failed
-              ? PeopleListInfoStatus.failure
-              : PeopleListInfoStatus.saved,
-        ),
-      );
+      final status = result.status == PeopleListPublishStatus.failed
+          ? PeopleListInfoStatus.failure
+          : PeopleListInfoStatus.saved;
+      emitIfOpen(state.copyWith(status: status));
+      return status;
     } catch (error, stackTrace) {
       // A relay or storage failure, surfaced through the status rather than
       // Crashlytics, per the reportable-error decision matrix.
       addError(error, stackTrace);
       emitIfOpen(state.copyWith(status: PeopleListInfoStatus.failure));
+      return PeopleListInfoStatus.failure;
     }
   }
 }
