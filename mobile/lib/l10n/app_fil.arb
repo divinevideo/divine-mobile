@@ -1253,13 +1253,10 @@
   "listNewPeopleList": "Bagong people list",
   "listNameLabel": "Pangalan ng Listahan",
   "listDescriptionLabel": "Description (opsyonal)",
-  "listPublicList": "Public na Listahan",
-  "listPublicListSubtitle": "Puwedeng i-follow at makita ng iba ang listahang ito",
   "listPrivateListSubtitle": "Mananatiling pribado ang mga video. Nakikita pa rin ang pangalan, description, tags, at cover.",
   "listVisibilityPublic": "Pampubliko",
   "listVisibilityPrivate": "Pribado",
   "profileListsEmpty": "Wala pang list. Gumawa ng isa para sa mga loop na gusto mong pagsama-samahin.",
-  "listEditTitle": "I-edit ang list",
   "listShareAction": "I-share ang list",
   "listShareFailed": "Hindi na-share ang list na ito. Subukan ulit.",
   "listSave": "I-save",
@@ -1288,7 +1285,6 @@
       }
     }
   },
-  "listCancel": "Kanselahin",
   "listCreate": "Gumawa",
   "listCreateFailed": "Hindi nagawa ang listahan",
   "keyManagementTitle": "Mga Nostr key",
@@ -4494,5 +4490,11 @@
     }
   },
   "peopleListsMembershipUpdateFailed": "Hindi na-update ang list. Subukan ulit.",
-  "peopleListsAddPeopleSearchHint": "Maghanap ng tao"
+  "peopleListsAddPeopleSearchHint": "Maghanap ng tao",
+  "listMakePublicSubtitle": "Hayaang makita ng iba ang list na ito",
+  "listMakePublicLabel": "Gawing public",
+  "listEditTitle": "I-edit ang list",
+  "listAddCollaboratorTitle": "Magdagdag ng collaborator",
+  "listCollaboratorSearchHint": "Maghanap sa Divine...",
+  "listCollaboratorsNone": "Wala"
 }

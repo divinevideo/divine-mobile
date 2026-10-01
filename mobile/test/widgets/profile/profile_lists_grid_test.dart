@@ -21,8 +21,8 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/screens/saved_videos_screen.dart';
 import 'package:openvine/services/curated_list_service.dart';
-import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
+import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
 import 'package:openvine/widgets/profile/profile_lists_grid.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -506,7 +506,7 @@ void main() {
     });
 
     group('navigation', () {
-      testWidgets('opens the create dialog from the create button', (
+      testWidgets('opens the create sheet from the create button', (
         tester,
       ) async {
         await tester.binding.setSurfaceSize(const Size(800, 1200));
@@ -514,13 +514,13 @@ void main() {
         await tester.pumpWidget(buildSubject());
         await tester.pumpAndSettle();
         final l10n = lookupAppLocalizations(const Locale('en'));
-        expect(find.byType(CreateListDialog), findsNothing);
+        expect(find.byType(ListInfoForm), findsNothing);
 
         await tester.tap(find.text(l10n.listNewVideoList));
         await tester.pumpAndSettle();
 
-        expect(find.byType(CreateListDialog), findsOneWidget);
-        // Main retains a type-specific creation label; the existing dialog
+        expect(find.byType(ListInfoForm), findsOneWidget);
+        // Main retains its type-specific creation label; the approved sheet
         // keeps its own title and confirmation action.
         expect(find.text(l10n.listNewVideoList), findsOneWidget);
         expect(find.text(l10n.listCreateNewList), findsOneWidget);

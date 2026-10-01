@@ -4657,12 +4657,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get listDescriptionLabel => '説明 (任意)';
 
   @override
-  String get listPublicList => '公開リスト';
-
-  @override
-  String get listPublicListSubtitle => 'みんながフォロー・閲覧できるよ';
-
-  @override
   String get listPrivateListSubtitle => '動画は非公開のまま。名前、説明、タグ、カバーは表示されたままです。';
 
   @override
@@ -4673,9 +4667,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get profileListsEmpty => 'まだリストがないよ。まとめておきたいループでひとつ作ってみて。';
-
-  @override
-  String get listEditTitle => 'リストを編集';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -4764,9 +4755,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String listShareSubject(String name) {
     return 'Divineの$name';
   }
-
-  @override
-  String get listCancel => 'キャンセル';
 
   @override
   String get listCreate => '作成';
@@ -12436,4 +12424,22 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleSearchHint => 'ユーザーを検索';
+
+  @override
+  String get listMakePublicLabel => '公開する';
+
+  @override
+  String get listMakePublicSubtitle => '他の人もこのリストを見られます';
+
+  @override
+  String get listEditTitle => 'リストを編集';
+
+  @override
+  String get listAddCollaboratorTitle => 'コラボレーターを追加';
+
+  @override
+  String get listCollaboratorSearchHint => 'Divineを検索...';
+
+  @override
+  String get listCollaboratorsNone => 'なし';
 }

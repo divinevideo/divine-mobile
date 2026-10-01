@@ -5129,13 +5129,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get listDescriptionLabel => 'వివరణ (ఐచ్ఛికం)';
 
   @override
-  String get listPublicList => 'పబ్లిక్ జాబితా';
-
-  @override
-  String get listPublicListSubtitle =>
-      'ఇతరులు ఈ జాబితాను అనుసరించవచ్చు మరియు చూడవచ్చు';
-
-  @override
   String get listPrivateListSubtitle =>
       'వీడియోలు ప్రైవేట్‌గా ఉంటాయి. పేరు, వివరణ, ట్యాగ్‌లు మరియు కవర్ కనిపించేలా ఉంటాయి.';
 
@@ -5148,9 +5141,6 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'ఇంకా జాబితాలు లేవు. మీరు కలిసి ఉంచాలనుకుంటున్న లూప్‌ల కోసం ఒకదాన్ని తయారు చేయండి.';
-
-  @override
-  String get listEditTitle => 'జాబితాను సవరించండి';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5242,9 +5232,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String listShareSubject(String name) {
     return 'Divineలో $name';
   }
-
-  @override
-  String get listCancel => 'రద్దు';
 
   @override
   String get listCreate => 'సృష్టించు';
@@ -13426,4 +13413,22 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleSearchHint => 'వ్యక్తులను శోధించండి';
+
+  @override
+  String get listMakePublicLabel => 'పబ్లిక్‌గా చేయండి';
+
+  @override
+  String get listMakePublicSubtitle => 'ఇతరులు ఈ జాబితాను చూడనివ్వండి';
+
+  @override
+  String get listEditTitle => 'జాబితాను సవరించండి';
+
+  @override
+  String get listAddCollaboratorTitle => 'సహకారిని జోడించండి';
+
+  @override
+  String get listCollaboratorSearchHint => 'శోధన Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'ఏదీ లేదు';
 }

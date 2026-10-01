@@ -16,6 +16,7 @@ import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
+import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
 import 'package:riverpod/misc.dart' show Override;
 
 import '../helpers/finders.dart';
@@ -846,6 +847,38 @@ void main() {
 
         expect(find.text(l10n.listRemoveVideosButton(0)), findsNothing);
         expect(find.text(l10n.listManageVideosAction), findsOneWidget);
+      });
+
+      testWidgets("edit list info opens the sheet on the list's own values", (
+        tester,
+      ) async {
+        stubOwnedList(name: 'Puppets', isPublic: false);
+        await tester.binding.setSurfaceSize(const Size(800, 1200));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        await tester.pumpWidget(
+          buildSubject(listId: 'owned-list', listName: 'Puppets'),
+        );
+        await tester.pump();
+        await tester.pump();
+        await openOwnerSheet(tester);
+        await tester.tap(find.text(l10n.listEditInfoAction));
+        await tester.pumpAndSettle();
+
+        final form = find.byType(ListInfoForm);
+        expect(form, findsOneWidget);
+        expect(
+          find.descendant(of: form, matching: find.text('Puppets')),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: form,
+            matching: find.text(l10n.listPrivateListSubtitle),
+          ),
+          findsOneWidget,
+        );
+        expect(find.bySemanticsLabel(l10n.listSave), findsOneWidget);
       });
 
       testWidgets('sheet hides share for a list without an author', (

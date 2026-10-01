@@ -5032,13 +5032,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get listDescriptionLabel => 'Description (facultatif)';
 
   @override
-  String get listPublicList => 'Liste publique';
-
-  @override
-  String get listPublicListSubtitle =>
-      'Les autres peuvent suivre et voir cette liste';
-
-  @override
   String get listPrivateListSubtitle =>
       'Les vidéos restent privées. Le nom, la description, les tags et la couverture restent visibles.';
 
@@ -5051,9 +5044,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'Pas encore de liste. Crée-en une pour les loops que tu veux garder ensemble.';
-
-  @override
-  String get listEditTitle => 'Modifier la liste';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5144,9 +5134,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name sur Divine';
   }
-
-  @override
-  String get listCancel => 'Annuler';
 
   @override
   String get listCreate => 'Créer';
@@ -13285,4 +13272,22 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleSearchHint => 'Rechercher des personnes';
+
+  @override
+  String get listMakePublicLabel => 'Rendre publique';
+
+  @override
+  String get listMakePublicSubtitle => 'Les autres peuvent voir cette liste';
+
+  @override
+  String get listEditTitle => 'Modifier la liste';
+
+  @override
+  String get listAddCollaboratorTitle => 'Ajouter un collaborateur';
+
+  @override
+  String get listCollaboratorSearchHint => 'Rechercher dans Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Aucun';
 }

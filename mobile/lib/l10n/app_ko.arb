@@ -1232,13 +1232,10 @@
   "listNewPeopleList": "새 사람 목록",
   "listNameLabel": "목록 이름",
   "listDescriptionLabel": "설명 (선택)",
-  "listPublicList": "공개 목록",
-  "listPublicListSubtitle": "다른 사람들이 이 목록을 팔로우하고 볼 수 있어요",
   "listPrivateListSubtitle": "동영상은 비공개로 유지돼요. 이름, 설명, 태그, 커버는 계속 보여요.",
   "listVisibilityPublic": "공개",
   "listVisibilityPrivate": "비공개",
   "profileListsEmpty": "아직 목록이 없어요. 함께 모아 두고 싶은 루프로 하나 만들어 보세요.",
-  "listEditTitle": "목록 편집",
   "listShareAction": "목록 공유",
   "listShareFailed": "이 목록을 공유하지 못했어요. 다시 시도해 주세요.",
   "listSave": "저장",
@@ -1267,7 +1264,6 @@
       }
     }
   },
-  "listCancel": "취소",
   "listCreate": "만들기",
   "listCreateFailed": "목록 만들기에 실패했어요",
   "keyManagementTitle": "Nostr 키",
@@ -5041,5 +5037,11 @@
     }
   },
   "peopleListsMembershipUpdateFailed": "목록을 업데이트하지 못했어요. 다시 시도해 주세요.",
-  "peopleListsAddPeopleSearchHint": "사람 검색"
+  "peopleListsAddPeopleSearchHint": "사람 검색",
+  "listMakePublicSubtitle": "다른 사람도 이 목록을 볼 수 있어요",
+  "listMakePublicLabel": "공개로 설정",
+  "listEditTitle": "목록 편집",
+  "listAddCollaboratorTitle": "협업자 추가",
+  "listCollaboratorSearchHint": "Divine 검색...",
+  "listCollaboratorsNone": "없음"
 }

@@ -4898,13 +4898,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get listDescriptionLabel => 'Açıklama (opsiyonel)';
 
   @override
-  String get listPublicList => 'Herkese Açık Liste';
-
-  @override
-  String get listPublicListSubtitle =>
-      'Diğerleri bu listeyi takip edebilir ve görebilir';
-
-  @override
   String get listPrivateListSubtitle =>
       'Videolar gizli kalır. Ad, açıklama, etiketler ve kapak görünür kalır.';
 
@@ -4917,9 +4910,6 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'Henüz liste yok. Bir arada tutmak istediğin döngüler için bir tane oluştur.';
-
-  @override
-  String get listEditTitle => 'Listeyi düzenle';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5009,9 +4999,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String listShareSubject(String name) {
     return 'Divine\'da $name';
   }
-
-  @override
-  String get listCancel => 'İptal';
 
   @override
   String get listCreate => 'Oluştur';
@@ -13009,4 +12996,22 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleSearchHint => 'Kişi ara';
+
+  @override
+  String get listMakePublicLabel => 'Herkese açık yap';
+
+  @override
+  String get listMakePublicSubtitle => 'Başkaları bu listeyi görebilsin';
+
+  @override
+  String get listEditTitle => 'Listeyi düzenle';
+
+  @override
+  String get listAddCollaboratorTitle => 'Ortak ekle';
+
+  @override
+  String get listCollaboratorSearchHint => 'Divine\'da ara...';
+
+  @override
+  String get listCollaboratorsNone => 'Yok';
 }

@@ -4963,13 +4963,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get listDescriptionLabel => 'تفصیل (اختیاری)';
 
   @override
-  String get listPublicList => 'عوامی فہرست';
-
-  @override
-  String get listPublicListSubtitle =>
-      'دوسرے اس فہرست کو فالو اور دیکھ سکتے ہیں';
-
-  @override
   String get listPrivateListSubtitle =>
       'ویڈیوز نجی رہتی ہیں۔ نام، تفصیل، ٹیگز اور کور نظر آتے رہتے ہیں۔';
 
@@ -4982,9 +4975,6 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'ابھی کوئی فہرست نہیں۔ جو لوپ ساتھ رکھنے ہیں، ان کے لیے ایک بنائیں۔';
-
-  @override
-  String get listEditTitle => 'فہرست میں ترمیم کریں';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5075,9 +5065,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String listShareSubject(String name) {
     return 'Divine پر $name';
   }
-
-  @override
-  String get listCancel => 'منسوخ کریں';
 
   @override
   String get listCreate => 'بنائیں';
@@ -13077,4 +13064,22 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleSearchHint => 'لوگ تلاش کریں';
+
+  @override
+  String get listMakePublicLabel => 'عوامی بنائیں';
+
+  @override
+  String get listMakePublicSubtitle => 'دوسروں کو یہ فہرست دیکھنے دیں';
+
+  @override
+  String get listEditTitle => 'فہرست میں ترمیم کریں';
+
+  @override
+  String get listAddCollaboratorTitle => 'شریک کار شامل کریں';
+
+  @override
+  String get listCollaboratorSearchHint => 'Divine میں تلاش کریں...';
+
+  @override
+  String get listCollaboratorsNone => 'کوئی نہیں';
 }

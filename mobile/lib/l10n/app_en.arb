@@ -3172,15 +3172,12 @@
   },
   "listCreateNewList": "Create New List",
   "listNewPeopleList": "New people list",
-  "listNameLabel": "List Name",
+  "listNameLabel": "List name",
   "listDescriptionLabel": "Description (optional)",
-  "listPublicList": "Public List",
-  "listPublicListSubtitle": "Others can follow and see this list",
   "listPrivateListSubtitle": "Videos stay private. Name, description, tags, and cover stay visible.",
   "listVisibilityPublic": "Public",
   "listVisibilityPrivate": "Private",
   "profileListsEmpty": "No lists yet. Make one for the loops you want to keep together.",
-  "listEditTitle": "Edit list",
   "listEditInfoAction": "Edit list info",
   "listManageVideosAction": "Manage videos",
   "listFollowButton": "Follow",
@@ -3250,7 +3247,6 @@
       }
     }
   },
-  "listCancel": "Cancel",
   "listCreate": "Create",
   "listCreateFailed": "Failed to create list",
   "keyManagementTitle": "Nostr Keys",
@@ -9544,5 +9540,17 @@
   "@peopleListsMembershipUpdateFailed": {
     "description": "Snackbar shown when adding or removing a person from a people list fails and the change is rolled back."
   },
-  "peopleListsAddPeopleSearchHint": "Search people"
+  "peopleListsAddPeopleSearchHint": "Search people",
+  "@listMakePublicSubtitle": {
+    "description": "Supporting line under the 'Make public' switch on the list info sheet, shown while the switch is on."
+  },
+  "listMakePublicLabel": "Make public",
+  "listMakePublicSubtitle": "Let others see this list",
+  "@listMakePublicLabel": {
+    "description": "Title of the switch on the list info sheet that makes a curated list visible to others."
+  },
+  "listEditTitle": "Edit list",
+  "listAddCollaboratorTitle": "Add a collaborator",
+  "listCollaboratorSearchHint": "Search Divine...",
+  "listCollaboratorsNone": "None"
 }

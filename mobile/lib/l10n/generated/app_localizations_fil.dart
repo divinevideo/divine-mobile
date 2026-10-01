@@ -4989,13 +4989,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get listDescriptionLabel => 'Description (opsyonal)';
 
   @override
-  String get listPublicList => 'Public na Listahan';
-
-  @override
-  String get listPublicListSubtitle =>
-      'Puwedeng i-follow at makita ng iba ang listahang ito';
-
-  @override
   String get listPrivateListSubtitle =>
       'Mananatiling pribado ang mga video. Nakikita pa rin ang pangalan, description, tags, at cover.';
 
@@ -5008,9 +5001,6 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'Wala pang list. Gumawa ng isa para sa mga loop na gusto mong pagsama-samahin.';
-
-  @override
-  String get listEditTitle => 'I-edit ang list';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5101,9 +5091,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name sa Divine';
   }
-
-  @override
-  String get listCancel => 'Kanselahin';
 
   @override
   String get listCreate => 'Gumawa';
@@ -13198,4 +13185,22 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleSearchHint => 'Maghanap ng tao';
+
+  @override
+  String get listMakePublicLabel => 'Gawing public';
+
+  @override
+  String get listMakePublicSubtitle => 'Hayaang makita ng iba ang list na ito';
+
+  @override
+  String get listEditTitle => 'I-edit ang list';
+
+  @override
+  String get listAddCollaboratorTitle => 'Magdagdag ng collaborator';
+
+  @override
+  String get listCollaboratorSearchHint => 'Maghanap sa Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Wala';
 }

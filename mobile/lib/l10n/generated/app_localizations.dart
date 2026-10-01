@@ -8408,7 +8408,7 @@ abstract class AppLocalizations {
   /// No description provided for @listNameLabel.
   ///
   /// In en, this message translates to:
-  /// **'List Name'**
+  /// **'List name'**
   String get listNameLabel;
 
   /// No description provided for @listDescriptionLabel.
@@ -8416,18 +8416,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Description (optional)'**
   String get listDescriptionLabel;
-
-  /// No description provided for @listPublicList.
-  ///
-  /// In en, this message translates to:
-  /// **'Public List'**
-  String get listPublicList;
-
-  /// No description provided for @listPublicListSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Others can follow and see this list'**
-  String get listPublicListSubtitle;
 
   /// No description provided for @listPrivateListSubtitle.
   ///
@@ -8452,12 +8440,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No lists yet. Make one for the loops you want to keep together.'**
   String get profileListsEmpty;
-
-  /// No description provided for @listEditTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Edit list'**
-  String get listEditTitle;
 
   /// No description provided for @listEditInfoAction.
   ///
@@ -8572,12 +8554,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{name} on Divine'**
   String listShareSubject(String name);
-
-  /// No description provided for @listCancel.
-  ///
-  /// In en, this message translates to:
-  /// **'Cancel'**
-  String get listCancel;
 
   /// No description provided for @listCreate.
   ///
@@ -21900,6 +21876,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search people'**
   String get peopleListsAddPeopleSearchHint;
+
+  /// Title of the switch on the list info sheet that makes a curated list visible to others.
+  ///
+  /// In en, this message translates to:
+  /// **'Make public'**
+  String get listMakePublicLabel;
+
+  /// Supporting line under the 'Make public' switch on the list info sheet, shown while the switch is on.
+  ///
+  /// In en, this message translates to:
+  /// **'Let others see this list'**
+  String get listMakePublicSubtitle;
+
+  /// No description provided for @listEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit list'**
+  String get listEditTitle;
+
+  /// No description provided for @listAddCollaboratorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a collaborator'**
+  String get listAddCollaboratorTitle;
+
+  /// No description provided for @listCollaboratorSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search Divine...'**
+  String get listCollaboratorSearchHint;
+
+  /// No description provided for @listCollaboratorsNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get listCollaboratorsNone;
 }
 
 class _AppLocalizationsDelegate

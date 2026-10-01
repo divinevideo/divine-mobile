@@ -1700,13 +1700,10 @@
   "listNewPeopleList": "Nueva lista de personas",
   "listNameLabel": "Nombre de la lista",
   "listDescriptionLabel": "Descripción (opcional)",
-  "listPublicList": "Lista pública",
-  "listPublicListSubtitle": "Otros pueden seguir y ver esta lista",
   "listPrivateListSubtitle": "Los videos quedan privados. El nombre, la descripción, las etiquetas y la portada siguen visibles.",
   "listVisibilityPublic": "Pública",
   "listVisibilityPrivate": "Privada",
   "profileListsEmpty": "Todavía no tenés listas. Armá una con los loops que querés tener juntos.",
-  "listEditTitle": "Editar lista",
   "listShareAction": "Compartir lista",
   "listShareFailed": "No se pudo compartir esta lista. Probá de nuevo.",
   "listSave": "Guardar",
@@ -1735,7 +1732,6 @@
       }
     }
   },
-  "listCancel": "Cancelar",
   "listCreate": "Crear",
   "listCreateFailed": "No se pudo crear la lista",
   "keyManagementTitle": "Claves de Nostr",
@@ -5495,5 +5491,11 @@
     }
   },
   "peopleListsMembershipUpdateFailed": "No se pudo actualizar la lista. Probá de nuevo.",
-  "peopleListsAddPeopleSearchHint": "Buscar personas"
+  "peopleListsAddPeopleSearchHint": "Buscar personas",
+  "listMakePublicSubtitle": "Dejá que otras personas vean esta lista",
+  "listMakePublicLabel": "Hacer pública",
+  "listEditTitle": "Editar lista",
+  "listAddCollaboratorTitle": "Añadir colaborador",
+  "listCollaboratorSearchHint": "Buscar en Divine...",
+  "listCollaboratorsNone": "Ninguno"
 }
