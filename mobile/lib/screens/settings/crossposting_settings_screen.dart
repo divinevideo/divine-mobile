@@ -12,6 +12,7 @@ import 'package:openvine/blocs/crossposting_settings/crossposting_settings_cubit
 import 'package:openvine/features/crossposting/crossposting_navigation.dart';
 import 'package:openvine/features/oauth/app_oauth_callback.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/repositories/crossposting_repository.dart';
 import 'package:openvine/router/route_paths.dart';
@@ -57,6 +58,7 @@ class CrosspostingSettingsScreen extends ConsumerWidget {
         final cubit = CrosspostingSettingsCubit(
           repository: repository,
           launchOAuth: launchOAuth,
+          analytics: ref.read(analyticsEventSinkProvider),
           nonceGenerator: nonceGenerator,
         );
         runDetached(

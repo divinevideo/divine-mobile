@@ -8,14 +8,12 @@ import 'dart:typed_data';
 
 import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
-import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:models/models.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/features/post_publish/post_publish_experiment.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -25,18 +23,13 @@ import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/providers/post_publish_providers.dart';
-import 'package:openvine/providers/shared_preferences_provider.dart';
-import 'package:openvine/providers/user_profile_providers.dart';
-import 'package:openvine/providers/video_clip_import_provider.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
-import 'package:openvine/services/video_clip_import_service.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
-import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/startup/upload_failure_listener.dart' as app;
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:riverpod/misc.dart' show Override;
@@ -55,15 +48,6 @@ class _MockAuthService extends Mock implements AuthService {}
 
 class _MockCrashReportingService extends Mock
     implements CrashReportingService {}
-
-class _MockVideoSharingService extends Mock implements VideoSharingService {}
-
-class _FakeVideoEvent extends Fake implements VideoEvent {}
-
-class _FakeBookmarksRepository extends Fake implements BookmarksRepository {}
-
-class _FakeVideoClipImportService extends Fake
-    implements VideoClipImportService {}
 
 class _FakeDraft extends Fake implements DivineVideoDraft {
   _FakeDraft(this._id);
@@ -87,8 +71,9 @@ class _MockRouteInformationProvider extends Mock
 _MockGoRouter _routerAt(String location) {
   final router = _MockGoRouter();
   final routeInformation = _MockRouteInformationProvider();
-  when(() => routeInformation.value)
-      .thenReturn(RouteInformation(uri: Uri.parse(location)));
+  when(
+    () => routeInformation.value,
+  ).thenReturn(RouteInformation(uri: Uri.parse(location)));
   when(() => router.routeInformationProvider).thenReturn(routeInformation);
   when(() => router.push<void>(any())).thenAnswer((_) async {});
   return router;
@@ -98,19 +83,6 @@ const _ownHex =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 final String _ownNpub = NostrKeyUtils.encodePubKey(_ownHex);
 String get _ownProfileLocation => RoutePaths.profileForNpub(_ownNpub);
-
-/// A minimal resolved [VideoEvent] the in-app share sheet can hydrate from.
-/// Its pubkey deliberately differs from [_ownHex] so the sheet takes the
-/// non-owner path and does not build the owner-action cubits.
-VideoEvent _resolvedVideoEvent() => VideoEvent(
-  id: 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
-  pubkey: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
-  createdAt: 1757385263,
-  content: 'Published video',
-  timestamp: DateTime.fromMillisecondsSinceEpoch(1757385263 * 1000),
-  videoUrl: 'https://example.com/video.mp4',
-  title: 'Published video',
-);
 
 class _NoOpAnalytics implements AnalyticsEventSink {
   @override
@@ -270,10 +242,6 @@ void main() {
   late _MockBackgroundPublishBloc publishBloc;
   late _MockAuthService authService;
   late StreamController<BackgroundPublishState> publishStream;
-
-  setUpAll(() {
-    registerFallbackValue(_FakeVideoEvent());
-  });
 
   setUp(() {
     publishBloc = _MockBackgroundPublishBloc();
@@ -478,8 +446,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(
         find.text(
-          lookupAppLocalizations(const Locale('en'))
-              .postPublishConfirmationView,
+          lookupAppLocalizations(
+            const Locale('en'),
+          ).postPublishConfirmationView,
         ),
       );
       await tester.pumpAndSettle();
@@ -493,7 +462,7 @@ void main() {
       verifyNever(() => router.go(any()));
     });
 
-    testWidgets('Share opens the in-app share menu when the event resolves', (
+    testWidgets('Share preserves the experiment OS-share behavior', (
       tester,
     ) async {
       stubPublishBloc(const BackgroundPublishState());
@@ -501,68 +470,6 @@ void main() {
       when(() => authService.currentPublicKeyHex).thenReturn(_ownHex);
       final experiment = await _treatmentExperiment('draft-treatment');
       final videoEventService = createMockVideoEventService();
-      when(
-        () => videoEventService.getVideoEventByAddressable(any(), any()),
-      ).thenReturn(_resolvedVideoEvent());
-
-      await tester.pumpWidget(
-        _buildHarness(
-          publishBloc: publishBloc,
-          authService: authService,
-          experiment: experiment,
-          router: _routerAt(_ownProfileLocation),
-          additionalOverrides: [
-            videoEventServiceProvider.overrideWithValue(videoEventService),
-            profileReadRepositoryProvider.overrideWithValue(
-              createMockProfileRepository(),
-            ),
-            videoSharingServiceProvider.overrideWithValue(
-              _MockVideoSharingService(),
-            ),
-            followRepositoryProvider.overrideWithValue(
-              createMockFollowRepository(),
-            ),
-            bookmarksRepositoryProvider.overrideWithValue(
-              _FakeBookmarksRepository(),
-            ),
-            videoClipImportServiceProvider.overrideWithValue(
-              _FakeVideoClipImportService(),
-            ),
-            sharedPreferencesProvider.overrideWithValue(
-              createMockSharedPreferences(),
-            ),
-            profileVanishedProvider.overrideWith((ref, pubkey) => false),
-          ],
-        ),
-      );
-
-      publishStream.add(_succeededState('draft-treatment'));
-      await tester.pumpAndSettle();
-
-      final l10n = lookupAppLocalizations(const Locale('en'));
-      await tester.tap(find.text(l10n.postPublishConfirmationShare));
-      await tester.pumpAndSettle();
-
-      expect(find.text(l10n.shareSheetMoreActions), findsOneWidget);
-      verify(
-        () => videoEventService.getVideoEventByAddressable(
-          _ownHex,
-          _publishedStableId,
-        ),
-      ).called(1);
-    });
-
-    testWidgets('Share falls back when the event cannot be resolved', (
-      tester,
-    ) async {
-      stubPublishBloc(const BackgroundPublishState());
-      when(() => authService.isAuthenticated).thenReturn(true);
-      when(() => authService.currentPublicKeyHex).thenReturn(_ownHex);
-      final experiment = await _treatmentExperiment('draft-treatment');
-      final videoEventService = createMockVideoEventService();
-      when(
-        () => videoEventService.getVideoEventByAddressable(any(), any()),
-      ).thenReturn(null);
 
       await tester.pumpWidget(
         _buildHarness(
@@ -584,6 +491,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.shareSheetMoreActions), findsNothing);
+      verifyNever(
+        () => videoEventService.getVideoEventByAddressable(any(), any()),
+      );
     });
 
     testWidgets('falls back to the snackbar once the user has moved on', (

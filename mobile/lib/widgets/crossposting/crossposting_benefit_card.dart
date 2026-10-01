@@ -15,13 +15,32 @@ import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/repositories/crossposting_repository.dart';
 
 /// Encourages a creator with no connected platform to connect one.
-class CrosspostingBenefitCard extends ConsumerWidget {
+class CrosspostingBenefitCard extends ConsumerStatefulWidget {
   const CrosspostingBenefitCard({required this.platform, super.key});
 
   final CrosspostingPlatform platform;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CrosspostingBenefitCard> createState() =>
+      _CrosspostingBenefitCardState();
+}
+
+class _CrosspostingBenefitCardState
+    extends ConsumerState<CrosspostingBenefitCard> {
+  @override
+  void initState() {
+    super.initState();
+    unawaited(
+      logCrosspostCtaShown(
+        ref.read(analyticsEventSinkProvider),
+        surface: CrosspostCtaSurface.settings,
+        cta: CrosspostCta.connect,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       child: DivineInfoCard(
@@ -29,7 +48,9 @@ class CrosspostingBenefitCard extends ConsumerWidget {
         title: context.l10n.crosspostingBenefitTitle,
         message: context.l10n.crosspostingBenefitBody,
         footer: DivineButton(
-          label: context.l10n.crosspostingBenefitConnect(platform.displayName),
+          label: context.l10n.crosspostingBenefitConnect(
+            widget.platform.displayName,
+          ),
           expanded: true,
           onPressed: () => unawaited(_connect(context, ref)),
         ),
@@ -48,6 +69,8 @@ class CrosspostingBenefitCard extends ConsumerWidget {
     final container = ProviderScope.containerOf(context, listen: false);
     if (await openCrosspostingWebSetupIfRequired(container)) return;
     if (!context.mounted) return;
-    unawaited(context.read<CrosspostingSettingsCubit>().connect(platform));
+    unawaited(
+      context.read<CrosspostingSettingsCubit>().connect(widget.platform),
+    );
   }
 }

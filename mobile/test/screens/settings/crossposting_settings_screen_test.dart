@@ -1097,15 +1097,25 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+
+      expect(sink.events, hasLength(1));
+      expect(sink.events.single.name, equals('crosspost_cta_shown'));
+      expect(
+        sink.events.single.parameters,
+        equals({'surface': 'settings', 'cta': 'connect'}),
+      );
+
       await tester.tap(
         find.text(l10n.crosspostingBenefitConnect('Instagram')),
       );
       await tester.pumpAndSettle();
 
-      expect(sink.events, hasLength(1));
-      expect(sink.events.single.name, equals('crosspost_cta_tapped'));
+      final tapEvents = sink.events
+          .where((event) => event.name == 'crosspost_cta_tapped')
+          .toList();
+      expect(tapEvents, hasLength(1));
       expect(
-        sink.events.single.parameters,
+        tapEvents.single.parameters,
         equals({'surface': 'settings', 'cta': 'connect'}),
       );
     });
@@ -1137,13 +1147,21 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+
+      expect(sink.events, hasLength(1));
+      expect(sink.events.single.name, equals('crosspost_cta_shown'));
+      expect(
+        sink.events.single.parameters,
+        equals({'surface': 'settings', 'cta': 'automatic_mode'}),
+      );
+
       await tester.tap(find.text(l10n.crosspostingAutoEnable));
       await tester.pump();
 
-      expect(sink.events, hasLength(1));
-      expect(sink.events.single.name, equals('crosspost_cta_tapped'));
+      expect(sink.events, hasLength(2));
+      expect(sink.events.last.name, equals('crosspost_cta_tapped'));
       expect(
-        sink.events.single.parameters,
+        sink.events.last.parameters,
         equals({'surface': 'settings', 'cta': 'automatic_mode'}),
       );
     });

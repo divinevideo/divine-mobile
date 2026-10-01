@@ -573,6 +573,8 @@ void main() {
           ).thenAnswer((_) async {});
 
           final sink = _RecordingAnalyticsSink();
+          final client = _MockCrosspostingApiClient();
+          when(client.getConnections).thenAnswer((_) async => const []);
 
           // Deliberately not pre-warmed: the async resolver must await the
           // support lookup and still route native on a cold read.
@@ -582,7 +584,15 @@ void main() {
             additionalOverrides: [
               appOAuthSupportProvider.overrideWith((ref) async => true),
               analyticsEventSinkProvider.overrideWithValue(sink),
+              crossposterApiClientProvider.overrideWithValue(client),
             ],
+          );
+
+          expect(sink.events, hasLength(1));
+          expect(sink.events.single.name, equals('crosspost_cta_shown'));
+          expect(
+            sink.events.single.parameters,
+            equals({'surface': 'share_sheet', 'cta': 'connect'}),
           );
 
           await tester.tap(find.text(l10n.shareSheetCrosspost));
@@ -592,10 +602,12 @@ void main() {
           verify(
             () => goRouter.push<void>(RoutePaths.crosspostingSettings),
           ).called(1);
-          expect(sink.events, hasLength(1));
-          expect(sink.events.single.name, equals('crosspost_cta_tapped'));
+          final tapEvents = sink.events
+              .where((event) => event.name == 'crosspost_cta_tapped')
+              .toList();
+          expect(tapEvents, hasLength(1));
           expect(
-            sink.events.single.parameters,
+            tapEvents.single.parameters,
             equals({'surface': 'share_sheet', 'cta': 'connect'}),
           );
         });

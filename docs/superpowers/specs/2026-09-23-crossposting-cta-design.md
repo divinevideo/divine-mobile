@@ -40,9 +40,9 @@ suppress third-party watermarks and make outbound links inert. It explicitly
 forbids adding watermarking. The app must not promise growth that the
 distribution channel cannot deliver.
 
-This design surfaces the feature with brand-aligned call-to-action copy, routes
-the post-publish moment into the in-app share menu, and encourages automatic
-mode in settings.
+This design surfaces the feature with brand-aligned call-to-action copy in
+settings and the per-video share menu, and encourages automatic mode in
+settings. It deliberately leaves the active post-publish experiment unchanged.
 
 ## Goals
 
@@ -92,17 +92,17 @@ Share menu row (own videos, zero connections):
 - Label: **Crosspost**
 - Supporting line: **Send your loops to Instagram too.**
 
-Post-publish: no new copy. The existing confirmation sheet's Share button opens
-the in-app share menu, where the Crosspost row above already lives.
+Post-publish: no new copy or behavior. The existing confirmation sheet's Share
+button continues to open the OS share sheet. Sending that button into the
+in-app menu would require a separately named experiment variant.
 
 ## Architecture
 
 ### No new connection-state provider
 
 The settings screen's `CrosspostingSettingsCubit` and the share menu's
-`VideoCrosspostCubit` already own their connection state, and the post-publish
-path reaches connections through the share menu. No new provider is introduced;
-both cubits remain the read and mutation owners for their surfaces.
+`VideoCrosspostCubit` already own their connection state. No new provider is
+introduced; both cubits remain the read and mutation owners for their surfaces.
 
 ### Platform availability in the app
 
@@ -166,30 +166,13 @@ supporting line from the copy section. Behaviour by state:
 `_handleCrosspost` in `share_action_button.dart` drops its
 `connections.isEmpty` early return and dispatches on the tri-state instead.
 
-### Post-publish Share routes into the in-app share menu
+### Post-publish Share preserves the active experiment
 
-Today the post-publish confirmation sheet's Share button opens the OS share
-sheet (`upload_failure_listener.dart:286`), because the in-app menu needs a
-hydrated `VideoEvent` and seconds after publish the event is often not
-resolvable from Funnelcake or a relay. `PublishedEventLocalEcho` already closes
-that gap by writing the signed event locally at publish time; the local read
-path just has not been used for this.
-
-New behaviour for `_onConfirmationShare`:
-
-1. Resolve the published `VideoEvent` locally by `stableId` (the `d` tag) plus
-   the current pubkey. Expose a public addressable lookup on
-   `VideoEventService` (the private `_findCachedVideoByAddressable` already does
-   the match).
-2. Retry the local lookup for a short bounded window, since the echo write is
-   best-effort and may still be in flight.
-3. On success, present the in-app share menu with
-   `ShareActionButton.showShareSheet`.
-4. On failure within the bound, fall back to the current OS share sheet, so the
-   button never dead-ends.
-
-The confirmation sheet keeps its View and Share buttons; no third button is
-added.
+The post-publish confirmation sheet's Share button continues to open the OS
+share sheet (`upload_failure_listener.dart`). Resolving the just-published
+event and opening the in-app share menu would materially change the active
+`viewShare` treatment. That work is outside this change and must use a newly
+named variant if it is pursued.
 
 ### Reconnect goes native
 
@@ -204,16 +187,13 @@ sha256 bucket on pubkey) and only the treatment arm sees the confirmation sheet.
 Routing Share into the in-app share menu changes what Share does for the
 treatment arm, which is a material change to that arm's experience.
 
-To avoid silently invalidating a running experiment:
+The product decision for this change is to preserve the treatment exactly:
 
 - Do not fold crosspost into the experiment variant. Crosspost exposure and taps
   are logged as their own events, independent of the experiment.
-- Confirm with whoever owns the post-publish experiment whether the Share
-  behaviour change requires a variant bump or a new arm before shipping. If the
-  experiment is still live and measured on share taps, treat this as a new arm
+- Keep the `viewShare` Share action on the OS share sheet.
+- If a future experiment sends Share into the in-app menu, introduce a new arm
   rather than mutating `viewShare`.
-
-This is the one open dependency that must be resolved before implementation.
 
 ## Analytics
 
@@ -260,8 +240,8 @@ Widget:
   the card's action calls `setMode(automatic)`.
 - Share menu renders the Crosspost row with zero connections and routes to
   settings; with connections it opens the crosspost sheet.
-- Post-publish Share resolves the local event and opens the in-app share menu;
-  when resolution fails it falls back to the OS share sheet.
+- Post-publish Share continues to use the OS share sheet and does not hydrate a
+  `VideoEvent` for the in-app menu.
 - Reconnect prompt navigates native rather than launching the web URL.
 
 Then `flutter analyze`, the targeted suites above, and the guard scripts that

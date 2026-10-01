@@ -181,9 +181,14 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
           eventId: widget.video.id,
         );
         _crosspostCubit = crosspostCubit;
+        final connectionsLoad = crosspostCubit.loadConnections();
         _runShareDetached(
-          crosspostCubit.loadConnections(),
+          connectionsLoad,
           'load crosspost connections',
+        );
+        _runShareDetached(
+          _logCrosspostCtaExposure(crosspostCubit, connectionsLoad),
+          'log crosspost CTA exposure',
         );
       }
     }
@@ -204,6 +209,26 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
           )
           ..add(const ShareSheetContactsLoadRequested())
           ..add(const ShareSheetBookmarkStatusRequested());
+  }
+
+  Future<void> _logCrosspostCtaExposure(
+    VideoCrosspostCubit cubit,
+    Future<void> connectionsLoad,
+  ) async {
+    await connectionsLoad;
+    if (!mounted || cubit.isClosed) return;
+
+    final state = cubit.state;
+    if (state.status != VideoCrosspostStatus.ready ||
+        state.connectedConnections.isNotEmpty) {
+      return;
+    }
+
+    await logCrosspostCtaShown(
+      ref.read(analyticsEventSinkProvider),
+      surface: CrosspostCtaSurface.shareSheet,
+      cta: CrosspostCta.connect,
+    );
   }
 
   @override

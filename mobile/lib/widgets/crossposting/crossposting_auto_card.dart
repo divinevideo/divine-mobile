@@ -14,19 +14,37 @@ import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/repositories/crossposting_repository.dart';
 
 /// Promotes automatic mode for a connected platform currently off or manual.
-class CrosspostingAutoCard extends ConsumerWidget {
+class CrosspostingAutoCard extends ConsumerStatefulWidget {
   const CrosspostingAutoCard({required this.platform, super.key});
 
   final CrosspostingPlatform platform;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CrosspostingAutoCard> createState() =>
+      _CrosspostingAutoCardState();
+}
+
+class _CrosspostingAutoCardState extends ConsumerState<CrosspostingAutoCard> {
+  @override
+  void initState() {
+    super.initState();
+    unawaited(
+      logCrosspostCtaShown(
+        ref.read(analyticsEventSinkProvider),
+        surface: CrosspostCtaSurface.settings,
+        cta: CrosspostCta.automaticMode,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       child: DivineInfoCard(
         icon: DivineIconName.arrowsClockwise,
         title: context.l10n.crosspostingAutoTitle,
-        message: context.l10n.crosspostingAutoBody(platform.displayName),
+        message: context.l10n.crosspostingAutoBody(widget.platform.displayName),
         footer: DivineButton(
           label: context.l10n.crosspostingAutoEnable,
           expanded: true,
@@ -46,7 +64,7 @@ class CrosspostingAutoCard extends ConsumerWidget {
     );
     unawaited(
       context.read<CrosspostingSettingsCubit>().setMode(
-        platform,
+        widget.platform,
         CrosspostingMode.automatic,
       ),
     );

@@ -3,6 +3,7 @@
 import 'package:analytics/analytics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/features/crossposting/crossposting_analytics.dart';
+import 'package:openvine/services/crossposting_api_client.dart';
 
 class _RecordingSink implements AnalyticsEventSink {
   final events = <({String name, Map<String, Object> parameters})>[];
@@ -45,6 +46,25 @@ class _ThrowingSink implements AnalyticsEventSink {
 }
 
 void main() {
+  group(logCrosspostCtaShown, () {
+    test('logs the event with the surface and CTA', () async {
+      final sink = _RecordingSink();
+
+      await logCrosspostCtaShown(
+        sink,
+        surface: CrosspostCtaSurface.settings,
+        cta: CrosspostCta.connect,
+      );
+
+      expect(sink.events, hasLength(1));
+      expect(sink.events.single.name, equals('crosspost_cta_shown'));
+      expect(
+        sink.events.single.parameters,
+        equals({'surface': 'settings', 'cta': 'connect'}),
+      );
+    });
+  });
+
   group(logCrosspostCtaTapped, () {
     test('logs the event with the surface and the CTA', () async {
       final sink = _RecordingSink();
@@ -86,6 +106,39 @@ void main() {
           cta: CrosspostCta.connect,
         ),
         completes,
+      );
+    });
+  });
+
+  group('connect lifecycle', () {
+    test('logs the platform when a connect starts', () async {
+      final sink = _RecordingSink();
+
+      await logCrosspostConnectStarted(
+        sink,
+        platform: CrosspostingPlatform.instagram,
+      );
+
+      expect(sink.events.single.name, equals('crosspost_connect_started'));
+      expect(
+        sink.events.single.parameters,
+        equals({'platform': 'instagram'}),
+      );
+    });
+
+    test('logs the platform and terminal result', () async {
+      final sink = _RecordingSink();
+
+      await logCrosspostConnectResult(
+        sink,
+        platform: CrosspostingPlatform.instagram,
+        result: CrosspostConnectResult.connected,
+      );
+
+      expect(sink.events.single.name, equals('crosspost_connect_result'));
+      expect(
+        sink.events.single.parameters,
+        equals({'platform': 'instagram', 'result': 'connected'}),
       );
     });
   });

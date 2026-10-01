@@ -3,10 +3,12 @@
 
 import 'dart:async';
 
+import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/crossposting_settings/crossposting_settings_cubit.dart';
+import 'package:openvine/features/crossposting/crossposting_analytics.dart';
 import 'package:openvine/repositories/crossposting_repository.dart';
 import 'package:openvine/services/crossposting_api_client.dart';
 
@@ -17,6 +19,7 @@ class _RecordingCrosspostingSettingsCubit extends CrosspostingSettingsCubit {
   _RecordingCrosspostingSettingsCubit({
     required super.repository,
     required super.launchOAuth,
+    required super.analytics,
     super.nonceGenerator,
     super.oauthCallbackTimeout,
   });
@@ -30,9 +33,32 @@ class _RecordingCrosspostingSettingsCubit extends CrosspostingSettingsCubit {
   }
 }
 
+class _RecordingAnalyticsSink implements AnalyticsEventSink {
+  final events = <({String name, Map<String, Object> parameters})>[];
+
+  @override
+  Future<void> logEvent({
+    required String name,
+    required Map<String, Object> parameters,
+  }) async {
+    events.add((name: name, parameters: parameters));
+  }
+
+  @override
+  Future<void> logScreenView({
+    required String screenName,
+    String? screenClass,
+    Map<String, Object>? parameters,
+  }) async {}
+
+  @override
+  Future<void> setUserId(String? userId) async {}
+}
+
 void main() {
   group(CrosspostingSettingsCubit, () {
     late _MockCrosspostingRepository repository;
+    late _RecordingAnalyticsSink analytics;
     late List<Uri> launchedUrls;
     late Uri? callbackUri;
 
@@ -76,6 +102,7 @@ void main() {
 
     setUp(() {
       repository = _MockCrosspostingRepository();
+      analytics = _RecordingAnalyticsSink();
       launchedUrls = [];
       callbackUri = Uri.parse(
         'https://divine.video/app/callback'
@@ -109,6 +136,7 @@ void main() {
     }) {
       return _RecordingCrosspostingSettingsCubit(
         repository: repository,
+        analytics: analytics,
         nonceGenerator: () => 'test-nonce',
         oauthCallbackTimeout:
             oauthCallbackTimeout ?? const Duration(minutes: 3),
@@ -306,6 +334,51 @@ void main() {
     });
 
     group('connect', () {
+      test('logs the connect start and terminal result', () async {
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+
+        await cubit.connect(CrosspostingPlatform.instagram);
+
+        expect(
+          analytics.events.map((event) => event.name),
+          ['crosspost_connect_started', 'crosspost_connect_result'],
+        );
+        expect(analytics.events.first.parameters, {'platform': 'instagram'});
+        expect(
+          analytics.events.last.parameters,
+          {
+            'platform': 'instagram',
+            'result': CrosspostConnectResult.connected.wireName,
+          },
+        );
+      });
+
+      test('logs cancellation as a terminal result', () async {
+        callbackUri = null;
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+
+        await cubit.connect(CrosspostingPlatform.instagram);
+
+        expect(analytics.events.last.parameters['result'], 'cancelled');
+      });
+
+      test('logs a failed start as a terminal result', () async {
+        when(
+          () => repository.startConnection(
+            any(),
+            returnUrl: any(named: 'returnUrl'),
+          ),
+        ).thenThrow(StateError('offline'));
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+
+        await cubit.connect(CrosspostingPlatform.instagram);
+
+        expect(analytics.events.last.parameters['result'], 'failed');
+      });
+
       test('default OAuth nonces are random URL-safe values', () {
         final first = generateCrosspostingOAuthNonce();
         final second = generateCrosspostingOAuthNonce();
@@ -615,6 +688,25 @@ void main() {
           expect(cubit.state.outcome, CrosspostingOAuthOutcome.connected);
         },
       );
+
+      test('logs one timeout result when the timeout refresh fails', () async {
+        when(
+          () => repository.loadSettings(),
+        ).thenThrow(StateError('offline'));
+        final cubit = buildCubit(
+          oauthCallbackTimeout: const Duration(milliseconds: 1),
+          launcher: (_) => Completer<Uri?>().future,
+        );
+        addTearDown(cubit.close);
+
+        await cubit.connect(CrosspostingPlatform.instagram);
+
+        final results = analytics.events
+            .where((event) => event.name == 'crosspost_connect_result')
+            .toList();
+        expect(results, hasLength(1));
+        expect(results.single.parameters['result'], 'timed_out');
+      });
 
       test('supports reconnecting a needs-reauth connection', () async {
         when(

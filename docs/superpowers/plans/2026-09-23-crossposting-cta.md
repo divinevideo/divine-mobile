@@ -2,11 +2,17 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Surface Divine's already-built crossposting feature with brand-aligned CTAs in settings, the per-video share menu, and the post-publish flow, and remove the web-setup hops that break the native flow.
+**Goal:** Surface Divine's already-built crossposting feature with brand-aligned CTAs in settings and the per-video share menu, and remove the web-setup hops that break the native flow.
 
-**Architecture:** Keep the existing `CrosspostingSettingsCubit` (settings) and `VideoCrosspostCubit` (share menu) as mutation owners. Add a shared client-side platform-visibility rule (hides X), replace the boolean eligibility gate with a tri-state availability provider, and add presentational CTA widgets that read those. No new data source: the post-publish Share action is routed into the existing in-app share menu by resolving the just-published `VideoEvent` from local storage.
+**Architecture:** Keep the existing `CrosspostingSettingsCubit` (settings) and `VideoCrosspostCubit` (share menu) as mutation owners. Add a shared client-side platform-visibility rule (hides X), replace the boolean eligibility gate with a tri-state availability provider, and add presentational CTA widgets that read those. The active post-publish `viewShare` experiment remains on the OS share sheet.
 
 **Tech Stack:** Flutter (Dart), flutter_bloc, flutter_riverpod, go_router, url_launcher, mocktail, `divine_ui` package, Firebase Analytics via `analytics` package.
+
+> **Implementation decision:** Task 5 below records a rejected proposal and is
+> intentionally not executed in this branch. Changing the destination of Share
+> would mutate the active `viewShare` treatment. The shipped implementation
+> preserves OS sharing and adds a regression test; any in-app destination must
+> be introduced as a separately named experiment variant.
 
 **Spec:** `docs/superpowers/specs/2026-09-23-crossposting-cta-design.md`
 
@@ -45,7 +51,7 @@ Modified:
 - `mobile/lib/widgets/video_feed_item/actions/share_sheet_more_actions.dart` — always-visible Crosspost row.
 - `mobile/lib/widgets/video_feed_item/actions/share_action_button.dart` — zero-connection dispatch.
 - `mobile/lib/widgets/crosspost_sheet.dart` — native reconnect.
-- `mobile/lib/startup/upload_failure_listener.dart` — post-publish Share into in-app menu.
+- `mobile/lib/startup/upload_failure_listener.dart` — preserve the experiment's OS-share behavior.
 - `mobile/lib/l10n/app_en.arb` (+ 21 locales) — new keys.
 
 ---
@@ -1386,7 +1392,10 @@ git commit -m "feat(l10n): translate crossposting CTA strings"
 
 ## Notes for the implementer
 
-- The post-publish Share change alters the live `viewShare` experiment arm's behaviour. Before executing Task 5, confirm with the experiment owner whether the Share destination change needs a variant bump or a new arm. If it does, split that decision into a follow-up and keep Task 5 out of this branch.
+- Task 5 is excluded from this branch: the existing `viewShare` arm keeps its
+  OS-share behavior. A future in-app destination requires a newly named arm.
 - With X hidden, the only visible platform is Instagram. If `GET /platforms` reports no visible enabled platform, the settings screen already renders `_NoPlatforms`; the benefit card is gated on `state.entries.isNotEmpty` so it cannot offer a connect that has no target.
 - The `webOnly` path opens `AppConfig.crossposterBaseUrl` (`https://crossposter.divine.video/`). The service has no per-platform deep link, so the generic setup page is the intended fallback.
-- Do not add a `crosspostingStatusProvider`; the settings screen's cubit and the share menu's cubit already own their connection state, and the post-publish path reaches connections through the share menu.
+- Do not add a `crosspostingStatusProvider`; the settings screen's cubit and
+  the share menu's cubit already own connection state for their respective
+  surfaces.

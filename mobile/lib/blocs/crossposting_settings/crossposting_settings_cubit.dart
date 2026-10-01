@@ -5,9 +5,11 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:analytics/analytics.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/features/crossposting/crossposting_analytics.dart';
 import 'package:openvine/features/oauth/app_oauth_callback.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/repositories/crossposting_repository.dart';
@@ -35,10 +37,12 @@ class CrosspostingSettingsCubit extends Cubit<CrosspostingSettingsState>
   CrosspostingSettingsCubit({
     required CrosspostingRepository repository,
     required CrosspostingOAuthLauncher launchOAuth,
+    required AnalyticsEventSink analytics,
     CrosspostingNonceGenerator nonceGenerator = generateCrosspostingOAuthNonce,
     Duration oauthCallbackTimeout = const Duration(minutes: 3),
   }) : _repository = repository,
        _launchOAuth = launchOAuth,
+       _analytics = analytics,
        _nonceGenerator = nonceGenerator,
        _oauthCallbackTimeout = oauthCallbackTimeout,
        super(CrosspostingSettingsState());
@@ -51,6 +55,7 @@ class CrosspostingSettingsCubit extends Cubit<CrosspostingSettingsState>
 
   final CrosspostingRepository _repository;
   final CrosspostingOAuthLauncher _launchOAuth;
+  final AnalyticsEventSink _analytics;
   final CrosspostingNonceGenerator _nonceGenerator;
 
   /// Bound on the wait for an OAuth browser session's callback.
@@ -126,6 +131,14 @@ class CrosspostingSettingsCubit extends Cubit<CrosspostingSettingsState>
 
   Future<void> _connect(CrosspostingPlatform platform) async {
     _beginAction(CrosspostingPlatformAction.connecting, platform);
+    unawaited(logCrosspostConnectStarted(_analytics, platform: platform));
+    var hasLoggedTerminalResult = false;
+    void logTerminalResult(CrosspostConnectResult result) {
+      if (hasLoggedTerminalResult) return;
+      hasLoggedTerminalResult = true;
+      _logConnectResult(platform, result);
+    }
+
     try {
       final nonce = _nonceGenerator();
       if (nonce.isEmpty) {
@@ -149,6 +162,7 @@ class CrosspostingSettingsCubit extends Cubit<CrosspostingSettingsState>
           start.authorizationUrl,
         ).timeout(_oauthCallbackTimeout);
       } on TimeoutException {
+        logTerminalResult(CrosspostConnectResult.timedOut);
         // The browser session produced no callback: on Android without
         // verified app links the redirect dies in the browser and the
         // session hangs. The connection may still have completed
@@ -183,11 +197,13 @@ class CrosspostingSettingsCubit extends Cubit<CrosspostingSettingsState>
       final entries = await _repository.loadSettings();
       if (isClosed) return;
       if (callbackError != null) {
+        logTerminalResult(CrosspostConnectResult.failed);
         _emitActionError(CrosspostingSettingsError.generic, entries: entries);
         return;
       }
 
       if (callback == null) {
+        logTerminalResult(CrosspostConnectResult.cancelled);
         emitIfOpen(
           state.copyWith(
             entries: entries,
@@ -199,6 +215,14 @@ class CrosspostingSettingsCubit extends Cubit<CrosspostingSettingsState>
         return;
       }
 
+      logTerminalResult(
+        switch (outcome!) {
+          CrosspostingOAuthOutcome.connected =>
+            CrosspostConnectResult.connected,
+          CrosspostingOAuthOutcome.denied => CrosspostConnectResult.denied,
+          CrosspostingOAuthOutcome.failed => CrosspostConnectResult.failed,
+        },
+      );
       emitIfOpen(
         state.copyWith(
           entries: entries,
@@ -210,8 +234,22 @@ class CrosspostingSettingsCubit extends Cubit<CrosspostingSettingsState>
         ),
       );
     } catch (error, stackTrace) {
+      logTerminalResult(CrosspostConnectResult.failed);
       _reportError(error, stackTrace);
     }
+  }
+
+  void _logConnectResult(
+    CrosspostingPlatform platform,
+    CrosspostConnectResult result,
+  ) {
+    unawaited(
+      logCrosspostConnectResult(
+        _analytics,
+        platform: platform,
+        result: result,
+      ),
+    );
   }
 
   Future<void> disconnect(CrosspostingPlatform platform) {
