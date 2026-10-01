@@ -6,6 +6,7 @@ import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockAuthProvider extends Mock implements BlossomAuthProvider {}
 
@@ -182,6 +183,46 @@ void main() {
       expect(result.statusCode, 503);
       expect(result.failureReason, BlossomUploadFailureReason.server);
     });
+
+    test(
+      'logs the HTTP status and server response of a failed upload',
+      () async {
+        // The result keeps only the status code, and the caller falls back to
+        // a full resumable re-upload, so this line is the only record of why
+        // the server rejected the OS transfer.
+        await LogCaptureService().clearAllLogs();
+        addTearDown(LogCaptureService().clearAllLogs);
+        const serverError =
+            '{"error":"user list update changed too many times"}';
+        final transport = _FakeTransport(
+          emitOnEnqueue: const <BlossomBackgroundTransferEvent>[
+            BlossomBackgroundTransferEvent(
+              taskId: taskId,
+              status: BlossomBackgroundTransferStatus.failed,
+              httpStatusCode: 500,
+              responseBody: serverError,
+            ),
+          ],
+        );
+
+        await service(transport).uploadVideoInBackground(
+          videoFile: videoFile,
+          taskId: taskId,
+          proofManifestJson: null,
+        );
+
+        final failureLogs = LogCaptureService()
+            .getRecentLogs(minLevel: LogLevel.warning)
+            .where(
+              (log) =>
+                  log.name == 'BlossomUploadService' &&
+                  log.message.startsWith('Background upload failed'),
+            );
+        expect(failureLogs, hasLength(1));
+        expect(failureLogs.single.message, contains('HTTP 500'));
+        expect(failureLogs.single.message, contains(serverError));
+      },
+    );
 
     test('treats HTTP 409 (already stored) as success with the '
         'content-addressed URL', () async {
