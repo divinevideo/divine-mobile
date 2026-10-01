@@ -44,9 +44,11 @@ class ListSearchBloc extends Bloc<ListSearchEvent, ListSearchState> {
     required CuratedListRepository curatedListRepository,
     required PeopleListsRepository peopleListsRepository,
     bool peopleListSearchEnabled = false,
+    String? viewerPubkey,
   }) : _curatedListRepository = curatedListRepository,
        _peopleListsRepository = peopleListsRepository,
        _peopleListSearchEnabled = peopleListSearchEnabled,
+       _viewerPubkey = viewerPubkey,
        super(const ListSearchState()) {
     on<ListSearchQueryChanged>(
       _onQueryChanged,
@@ -62,6 +64,9 @@ class ListSearchBloc extends Bloc<ListSearchEvent, ListSearchState> {
   final CuratedListRepository _curatedListRepository;
   final PeopleListsRepository _peopleListsRepository;
   final bool _peopleListSearchEnabled;
+
+  /// Whose own lists survive the Divine author check in people-list search.
+  final String? _viewerPubkey;
 
   Future<void> _onQueryChanged(
     ListSearchQueryChanged event,
@@ -116,7 +121,7 @@ class ListSearchBloc extends Bloc<ListSearchEvent, ListSearchState> {
         videoStream,
         if (_peopleListSearchEnabled)
           _peopleListsRepository
-              .searchPublicLists(query)
+              .searchPublicLists(query, viewerPubkey: _viewerPubkey)
               .map<_SearchResult>(_PeopleSearchResult.new),
       ];
 

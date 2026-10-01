@@ -608,15 +608,8 @@
   "featuredTabLoadFailed": "یہ مجموعہ لوڈ نہیں ہو سکا۔",
   "featuredTabRetry": "دوبارہ کوشش کریں",
   "exploreNoVideosAvailable": "کوئی ویڈیو دستیاب نہیں",
-  "exploreDiscoverLists": "فہرستیں دریافت کریں",
-  "exploreAboutLists": "فہرستوں کے بارے میں",
-  "exploreAboutListsDescription": "فہرستیں Divine مواد کو دو طریقوں سے ترتیب دینے اور منتخب کرنے میں مدد دیتی ہیں:",
   "explorePeopleLists": "لوگوں کی فہرستیں",
-  "explorePeopleListsDescription": "کریئیٹرز کے گروہوں کو فالو کریں اور ان کی تازہ ویڈیوز دیکھیں",
   "exploreVideoLists": "ویڈیو فہرستیں",
-  "exploreVideoListsDescription": "بعد میں دیکھنے کے لیے اپنی پسندیدہ ویڈیوز کی پلے لسٹیں بنائیں",
-  "exploreMyLists": "میری فہرستیں",
-  "exploreSubscribedLists": "سبسکرائب شدہ فہرستیں",
   "exploreErrorLoadingLists": "فہرستیں لوڈ کرنے میں خرابی۔ براہ کرم دوبارہ کوشش کریں۔",
   "exploreNewVideosCount": "{count, plural, =1{1 نئی ویڈیو} other{{count} نئی ویڈیوز}}",
   "@exploreNewVideosCount": {
@@ -2452,14 +2445,6 @@
       }
     }
   },
-  "listPersonCount": "{count, plural, =1{1 شخص} other{{count} لوگ}}",
-  "@listPersonCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "listByAuthorPrefix": "از ",
   "listNewList": "نئی فہرست",
   "listDone": "ہو گیا",
@@ -3207,14 +3192,6 @@
     }
   },
   "discoverListsFailedToUpdateSubscription": "سبسکرپشن اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔",
-  "discoverListsTitle": "فہرستیں دریافت کریں",
-  "discoverListsFailedToLoad": "فہرستیں لوڈ نہیں ہو سکیں",
-  "discoverListsLoading": "عوامی فہرستیں دریافت ہو رہی ہیں...",
-  "discoverListsRelayTimeout": "ریلے نے وقت پر فہرستیں واپس نہیں کیں۔ دوبارہ کوشش کریں۔",
-  "discoverListsServiceUnavailable": "سروس دستیاب نہیں ہے۔",
-  "discoverListsEmptyTitle": "کوئی عوامی فہرست نہیں ملی",
-  "discoverListsEmptySubtitle": "نئی فہرستوں کے لیے بعد میں دیکھیں",
-  "discoverListsByAuthorPrefix": "از",
   "curatedListEmptyTitle": "اس فہرست میں کوئی ویڈیو نہیں",
   "curatedListEmptySubtitle": "شروع کرنے کے لیے کچھ ویڈیوز شامل کریں",
   "curatedListLoadingVideos": "ویڈیوز لوڈ ہو رہی ہیں...",
@@ -6994,6 +6971,8 @@
   "followedHashtagsTitle": "فالو کیے گئے ہیش ٹیگز",
   "manageHashtags": "ہیش ٹیگز کا نظم کریں",
   "followedHashtagsEmpty": "کسی ہیش ٹیگ کو یہاں دیکھنے کے لیے اس کے صفحے سے فالو کریں۔",
+  "listsDiscoveryLoadingLabel": "فہرستیں لوڈ ہو رہی ہیں",
+  "listsDiscoveryEmpty": "اس بار کوئی فہرست ہاتھ نہیں آئی۔ ریفریش کے لیے کھینچیں۔",
   "soundRequestAction": "یہ آواز مانگیں",
   "soundRequestTitle": "کوئی آپ کی آواز استعمال کرنا چاہتا ہے",
   "soundRequestDescription": "اس ویڈیو کی آواز دوبارہ استعمال کرنے کی اجازت دیں تاکہ کوئی بھی اس سے ریمکس بنا سکے۔",

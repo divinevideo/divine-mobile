@@ -1008,6 +1008,140 @@ void main() {
     });
   });
 
+  group(DivineListThumbnailSkeleton, () {
+    Widget sideBySide({required Widget card, required Widget skeleton}) {
+      return ProviderScope(
+        child: MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(width: 180, child: card),
+                SizedBox(
+                  width: 180,
+                  child: Skeletonizer(ignoreContainers: true, child: skeleton),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('the video silhouette stands as tall as a video card', (
+      tester,
+    ) async {
+      // Rows stay level when placeholders give way to cards only if the
+      // silhouette reserves the same media box and footer.
+      await tester.pumpWidget(
+        sideBySide(
+          card: DivineListThumbnail.videos(
+            curatedList: createList(description: 'Two lines\nof it'),
+            onTap: () {},
+          ),
+          skeleton: const DivineListThumbnailSkeleton.videos(),
+        ),
+      );
+
+      final card = tester.getSize(find.byType(DivineListThumbnail));
+      final skeleton = tester.getSize(find.byType(DivineListThumbnailSkeleton));
+      expect(card.height, greaterThan(0));
+      expect(skeleton.height, equals(card.height));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the people silhouette stands as tall as a people card', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        sideBySide(
+          card: DivineListThumbnail.people(
+            userList: createUserList(description: 'Two lines\nof it'),
+            onTap: () {},
+          ),
+          skeleton: const DivineListThumbnailSkeleton.people(),
+        ),
+      );
+
+      final card = tester.getSize(find.byType(DivineListThumbnail));
+      final skeleton = tester.getSize(find.byType(DivineListThumbnailSkeleton));
+      expect(card.height, greaterThan(0));
+      expect(skeleton.height, equals(card.height));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the video silhouette fans out five slots', (tester) async {
+      await tester.pumpWidget(
+        sideBySide(
+          card: const SizedBox(),
+          skeleton: const DivineListThumbnailSkeleton.videos(),
+        ),
+      );
+
+      final slots = find.descendant(
+        of: find.byType(DivineListThumbnailSkeleton),
+        matching: find.byType(Positioned),
+      );
+      expect(slots, findsNWidgets(5));
+    });
+
+    testWidgets('the people silhouette tiles the three-slot collage', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        sideBySide(
+          card: const SizedBox(),
+          skeleton: const DivineListThumbnailSkeleton.people(),
+        ),
+      );
+
+      // A tile bone is a filled box that rounds an outer corner of the
+      // collage; the skeletonizer paints bones outside the frame's clip,
+      // so the four corners have to come from the tiles themselves.
+      const corner = Radius.circular(16);
+      bool isTileBone(Widget w) =>
+          w is DecoratedBox &&
+          w.decoration is BoxDecoration &&
+          (w.decoration as BoxDecoration).color != null &&
+          [
+            (w.decoration as BoxDecoration).borderRadius,
+          ].whereType<BorderRadius>().any(
+            (r) =>
+                r.topLeft == corner ||
+                r.topRight == corner ||
+                r.bottomLeft == corner ||
+                r.bottomRight == corner,
+          );
+      final tiles = find.descendant(
+        of: find.byType(DivineListThumbnailSkeleton),
+        matching: find.byWidgetPredicate(isTileBone),
+      );
+      expect(tiles, findsNWidgets(3));
+      final radii = tester
+          .widgetList<DecoratedBox>(tiles)
+          .map((w) => (w.decoration as BoxDecoration).borderRadius!)
+          .cast<BorderRadius>()
+          .toList();
+      expect(radii.where((r) => r.topLeft == corner), hasLength(1));
+      expect(radii.where((r) => r.bottomLeft == corner), hasLength(1));
+      expect(radii.where((r) => r.topRight == corner), hasLength(1));
+      expect(radii.where((r) => r.bottomRight == corner), hasLength(1));
+      // The large tile keeps the collage's Figma split.
+      final large = tester.getSize(tiles.first);
+      final media = tester.getSize(
+        find
+            .descendant(
+              of: find.byType(DivineListThumbnailSkeleton),
+              matching: find.byType(AspectRatio),
+            )
+            .first,
+      );
+      expect(large.width / media.width, closeTo(0.661, 0.01));
+    });
+  });
+
   group('pending thumbnails', () {
     Widget pending({
       required Widget child,
