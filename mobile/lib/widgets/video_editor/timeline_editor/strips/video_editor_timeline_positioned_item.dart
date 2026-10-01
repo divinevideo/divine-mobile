@@ -92,7 +92,7 @@ class TimelineOverlayPositionedItem extends StatelessWidget {
         top: y,
         width: itemWidth + trimExpansion * 2,
         child: _OverlayItemGestureWrapper(
-          semanticLabel: item.label,
+          semanticLabel: timelineOverlayItemLabel(context, item),
           // Unreachable while multi-selecting: entering the mode clears the
           // single selection, so the trim-handle variant never coexists with a
           // multi-select overlay.
@@ -122,7 +122,7 @@ class TimelineOverlayPositionedItem extends StatelessWidget {
       left: x,
       top: y,
       child: _OverlayItemGestureWrapper(
-        semanticLabel: item.label,
+        semanticLabel: timelineOverlayItemLabel(context, item),
         multiSelectState: multiSelectState,
         onTap: onTap,
         onLongPressStart: onLongPressStart,

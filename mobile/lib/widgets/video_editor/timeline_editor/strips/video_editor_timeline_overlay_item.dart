@@ -31,6 +31,15 @@ enum OverlayMultiSelectState {
   selected,
 }
 
+/// The name [item] is shown and announced by: an effect in the user's
+/// language, every other item by its own label.
+String timelineOverlayItemLabel(
+  BuildContext context,
+  TimelineOverlayItem item,
+) => item.type == .effect
+    ? videoEffectLabel(context, item.effectType)
+    : item.label;
+
 /// Visual representation of a single overlay item.
 class TimelineOverlayItemTile extends StatelessWidget {
   const TimelineOverlayItemTile({
@@ -143,9 +152,7 @@ class TimelineOverlayItemTile extends StatelessWidget {
                           : item.layer is WidgetLayer
                           ? _StickerPreview(item: item)
                           : Text(
-                              item.type == .effect
-                                  ? videoEffectLabel(context, item.effectType)
-                                  : item.label,
+                              timelineOverlayItemLabel(context, item),
                               style: VineTheme.labelMediumFont(
                                 color: foregroundColor,
                               ).copyWith(fontFamily: fontFamily),
