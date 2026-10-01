@@ -1814,6 +1814,106 @@ void main() {
         );
       }
 
+      for (final transition in ['owner roundtrip', 'feature off/on', 'none']) {
+        late Completer<PeopleListPublishResult> pending;
+        late Completer<void> started;
+        blocTest<PeopleListsBloc, PeopleListsState>(
+          transition == 'none'
+              ? 'applies a queued batch when its dispatch session stays active'
+              : 'cancels a queued batch across $transition before it starts',
+          build: buildBloc,
+          seed: seeded,
+          setUp: () {
+            pending = Completer<PeopleListPublishResult>();
+            started = Completer<void>();
+            when(
+              () => repository.addPubkey(
+                ownerPubkey: _ownerA,
+                listId: 'list-1',
+                pubkey: _memberBob,
+              ),
+            ).thenAnswer((_) {
+              started.complete();
+              return pending.future;
+            });
+            stubAdd('list-2', submitted);
+            stubRemove('list-3', submitted);
+          },
+          act: (bloc) async {
+            bloc.add(
+              const PeopleListsPicksApplied(
+                requestId: 'held',
+                ownerPubkey: _ownerA,
+                pubkey: _memberBob,
+                addListIds: {'list-1'},
+                removeListIds: {},
+              ),
+            );
+            await started.future;
+            final queuedOutcome = bloc.stream.firstWhere(
+              (state) => state.lastPicksOutcome?.requestId == 'queued',
+            );
+            bloc.add(
+              const PeopleListsPicksApplied(
+                requestId: 'queued',
+                ownerPubkey: _ownerA,
+                pubkey: _memberBob,
+                addListIds: {'list-2'},
+                removeListIds: {'list-3'},
+              ),
+            );
+            await _flush();
+            if (transition == 'owner roundtrip') {
+              bloc.add(const PeopleListsOwnerChanged(ownerPubkey: _ownerB));
+              await _flush();
+              bloc.add(const PeopleListsOwnerChanged(ownerPubkey: _ownerA));
+              await _flush();
+            } else if (transition == 'feature off/on') {
+              bloc.add(const PeopleListsEnabledChanged(enabled: false));
+              await _flush();
+              bloc.add(const PeopleListsEnabledChanged(enabled: true));
+              await _flush();
+            }
+            if (transition != 'none') {
+              bloc.add(
+                PeopleListsRepositoryListsChanged(
+                  ownerPubkey: _ownerA,
+                  lists: seeded().lists,
+                ),
+              );
+              await _flush();
+            }
+            pending.complete(submitted);
+            await queuedOutcome;
+          },
+          verify: (bloc) {
+            Future<PeopleListPublishResult> addCall() => repository.addPubkey(
+              ownerPubkey: _ownerA,
+              listId: 'list-2',
+              pubkey: _memberBob,
+            );
+            Future<PeopleListPublishResult> removeCall() =>
+                repository.removePubkey(
+                  ownerPubkey: _ownerA,
+                  listId: 'list-3',
+                  pubkey: _memberBob,
+                );
+            if (transition == 'none') {
+              verify(addCall).called(1);
+              verify(removeCall).called(1);
+            } else {
+              verifyNever(addCall);
+              verifyNever(removeCall);
+              expect(bloc.state.listIdsByPubkey[_memberBob], {'list-3'});
+            }
+            expect(bloc.state.lastPicksOutcome?.requestId, 'queued');
+            expect(bloc.state.lastPicksOutcome?.refused, 0);
+            expect(bloc.state.ownerPubkey, _ownerA);
+            expect(bloc.state.pendingMutations, isEmpty);
+          },
+        );
+      }
+
       blocTest<PeopleListsBloc, PeopleListsState>(
         'records an outcome even when every pick is a no-op',
         build: buildBloc,
