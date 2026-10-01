@@ -4780,6 +4780,25 @@ void main() {
         final url = await service.getBlossomServer();
         expect(url, equals(BlossomUploadService.defaultBlossomServer));
       });
+
+      test('returns the injected default when nothing is stored', () async {
+        service = BlossomUploadService(
+          authProvider: mockAuthProvider,
+          defaultServerUrl: 'http://localhost:43003',
+        );
+        final url = await service.getBlossomServer();
+        expect(url, equals('http://localhost:43003'));
+      });
+
+      test('returns the injected default when empty string stored', () async {
+        SharedPreferences.setMockInitialValues({'blossom_server_url': ''});
+        service = BlossomUploadService(
+          authProvider: mockAuthProvider,
+          defaultServerUrl: 'http://localhost:43003',
+        );
+        final url = await service.getBlossomServer();
+        expect(url, equals('http://localhost:43003'));
+      });
     });
 
     group('Non-third-party resumable failure rethrows', () {
