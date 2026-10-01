@@ -311,6 +311,16 @@ void main() {
         },
       );
 
+      test('treats a whitespace-only token as no token', () async {
+        final video = writeFile('video.mp4', const [0, 1, 2, 3]);
+        final blank = C2paSigningService(c2pa: mockC2pa, signingToken: ' \n');
+
+        final result = await blank.signVideoInPlace(videoPath: video.path);
+
+        expect(result.failureReason, C2paSigningFailureReason.missingToken);
+        verifyZeroInteractions(mockC2pa);
+      });
+
       test(
         'keeps the recording when the output carries no manifest (#8799)',
         () async {
