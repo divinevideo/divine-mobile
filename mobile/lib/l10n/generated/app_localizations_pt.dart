@@ -3960,14 +3960,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'Tentar novamente';
 
   @override
-  String get peopleListsAddButton => 'Adicionar';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Adicionar $count';
-  }
-
-  @override
   String peopleListsInNLists(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -12948,4 +12940,18 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get listsDiscoveryLoadingLabel => 'Carregando listas';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Adicionar $name à lista';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Não foi possível atualizar a lista. Tente de novo.';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Remover $name da lista';
+  }
 }

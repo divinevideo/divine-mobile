@@ -2976,8 +2976,6 @@
     "peopleListsAddPeopleSearchHint": "ユーザーを検索",
     "peopleListsAddPeopleError": "ユーザーを読み込めませんでした。もう一度お試しください。",
     "peopleListsAddPeopleRetry": "再試行",
-    "peopleListsAddButton": "追加",
-    "peopleListsAddButtonWithCount": "{count}人追加",
     "peopleListsInNLists": "{count, plural, other{{count}件のリストに含まれています}}",
     "peopleListsRemoveConfirmTitle": "{name}を削除しますか？",
     "peopleListsRemoveConfirmBody": "このリストから削除されます。",
@@ -4795,6 +4793,23 @@
   "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "自動をオンにする",
   "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+    "peopleListsAddPersonSemanticLabel": "{name}をリストに追加",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "{name}をリストから削除",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "リストを更新できませんでした。もう一度お試しください。",
   "listLoopsCount": "{count, plural, other{{formatted}ループ}}",
   "peopleListsPeopleCount": "{count, plural, other{{count}人}}",
   "listMemberCount": "{count, plural, other{{count}人のメンバー}}",

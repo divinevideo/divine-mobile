@@ -6733,18 +6733,6 @@ abstract class AppLocalizations {
   /// **'Try again'**
   String get peopleListsAddPeopleRetry;
 
-  /// No description provided for @peopleListsAddButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Add'**
-  String get peopleListsAddButton;
-
-  /// No description provided for @peopleListsAddButtonWithCount.
-  ///
-  /// In en, this message translates to:
-  /// **'Add {count}'**
-  String peopleListsAddButtonWithCount(int count);
-
   /// No description provided for @peopleListsInNLists.
   ///
   /// In en, this message translates to:
@@ -21548,6 +21536,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Loading lists'**
   String get listsDiscoveryLoadingLabel;
+
+  /// Screen-reader label of the row button that adds a person to the people list being edited.
+  ///
+  /// In en, this message translates to:
+  /// **'Add {name} to list'**
+  String peopleListsAddPersonSemanticLabel(String name);
+
+  /// Snackbar shown when adding or removing a person from a people list fails and the change is rolled back.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t update the list. Please try again.'**
+  String get peopleListsMembershipUpdateFailed;
+
+  /// Screen-reader label of the row button that removes a person from the people list being edited.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {name} from list'**
+  String peopleListsRemovePersonSemanticLabel(String name);
 }
 
 class _AppLocalizationsDelegate

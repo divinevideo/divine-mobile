@@ -2310,15 +2310,6 @@
   "peopleListsAddPeopleSearchHint": "వ్యక్తులను శోధించండి",
   "peopleListsAddPeopleError": "వ్యక్తులను లోడ్ చేయడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
   "peopleListsAddPeopleRetry": "మళ్లీ ప్రయత్నించండి",
-  "peopleListsAddButton": "జోడించండి",
-  "peopleListsAddButtonWithCount": "జోడించండి {count}",
-  "@peopleListsAddButtonWithCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "peopleListsInNLists": "{count, plural, =1{1 జాబితాలో} other{{count} జాబితాల్లో}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -8334,6 +8325,23 @@
     "videoMetadataScheduleTooFar": "{days, plural, =1{అది {days} రోజు కంటే ఎక్కువ దూరంలో ఉంది. దగ్గరి సమయాన్ని ఎంచుకోండి.} other{అది {days} రోజుల కంటే ఎక్కువ దూరంలో ఉంది. దగ్గరి సమయాన్ని ఎంచుకోండి.}}",
     "videoMetadataScheduleButton": "షెడ్యూల్ చేయండి",
     "videoMetadataScheduleVideoHint": "ఈ వీడియోను {time}కి షెడ్యూల్ చేస్తుంది",
+  "peopleListsAddPersonSemanticLabel": "{name}ని జాబితాకు జోడించండి",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "{name}ని జాబితా నుండి తీసివేయండి",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "జాబితాను నవీకరించడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
   "listLoopsCount": "{count, plural, =1{{formatted} లూప్} other{{formatted} లూప్‌లు}}",
   "@listLoopsCount": {
     "placeholders": {

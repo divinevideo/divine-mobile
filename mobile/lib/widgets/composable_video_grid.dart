@@ -463,7 +463,18 @@ class _VideoItem extends StatelessWidget {
           borderRadius: borderRadius,
           child: Stack(
             children: [
-              _VideoThumbnail(video: video),
+              // Per the design, a selected tile dims to half opacity over
+              // the page surface so the pending removal reads at a glance.
+              if (isSelected ?? false)
+                ColoredBox(
+                  color: context.vineColors.surface,
+                  child: Opacity(
+                    opacity: 0.5,
+                    child: _VideoThumbnail(video: video),
+                  ),
+                )
+              else
+                _VideoThumbnail(video: video),
               Positioned(
                 left: 0,
                 right: 0,
@@ -489,8 +500,8 @@ class _VideoItem extends StatelessWidget {
                 ),
               if (isSelected case final isSelected?)
                 PositionedDirectional(
-                  top: 8,
-                  end: 8,
+                  top: 10,
+                  end: 10,
                   child: _SelectionBadge(isSelected: isSelected),
                 ),
             ],
@@ -520,20 +531,32 @@ class _SelectionBadge extends StatelessWidget {
         height: 24,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: isSelected ? VineTheme.vineGreen : VineTheme.scrim15,
+          color: isSelected
+              ? VineTheme.vineGreen
+              : VineTheme.whiteText.withValues(alpha: 0.25),
           border: isSelected
               ? null
               : Border.all(color: VineTheme.whiteText, width: 2),
+          // Figma's shadow-10 pair, so the circle reads on bright frames.
+          boxShadow: const [
+            BoxShadow(
+              color: VineTheme.innerShadow,
+              offset: Offset(0.343, 0.343),
+              blurRadius: 0.514,
+            ),
+            BoxShadow(
+              color: VineTheme.innerShadow,
+              offset: Offset(0.857, 0.857),
+              blurRadius: 0.857,
+            ),
+          ],
         ),
-        child: isSelected
-            ? const Center(
-                child: DivineIcon(
-                  icon: DivineIconName.check,
-                  size: 14,
-                  color: VineTheme.whiteText,
-                ),
-              )
-            : null,
+        // The design's selected checkbox, exported as one two-tone asset
+        // (brand fill, dark ink), so it is rendered untinted.
+        child: Visibility(
+          visible: isSelected,
+          child: const DivineIcon(icon: DivineIconName.checkboxSelected),
+        ),
       ),
     );
   }

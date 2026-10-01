@@ -3935,14 +3935,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'دوبارہ کوشش کریں';
 
   @override
-  String get peopleListsAddButton => 'شامل کریں';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return '$count شامل کریں';
-  }
-
-  @override
   String peopleListsInNLists(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -12843,4 +12835,18 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get listsDiscoveryLoadingLabel => 'فہرستیں لوڈ ہو رہی ہیں';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '$name کو فہرست میں شامل کریں';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'فہرست اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '$name کو فہرست سے ہٹائیں';
+  }
 }

@@ -4051,14 +4051,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'Încearcă din nou';
 
   @override
-  String get peopleListsAddButton => 'Adaugă';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Adaugă $count';
-  }
-
-  @override
   String peopleListsInNLists(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -13114,4 +13106,18 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get listsDiscoveryLoadingLabel => 'Se încarcă listele';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Adaugă pe $name la listă';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'N-am putut actualiza lista. Mai încearcă.';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Elimină pe $name din listă';
+  }
 }

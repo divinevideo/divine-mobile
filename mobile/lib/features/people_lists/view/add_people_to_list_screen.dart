@@ -1,32 +1,35 @@
-// ABOUTME: Full-screen picker for adding multiple people to an existing list.
-// ABOUTME: Reads candidates from AddPeopleToListCubit and dispatches one add
-// ABOUTME: request per selected pubkey through PeopleListsBloc.
+// ABOUTME: Full-screen picker for adding people to an existing list, on the
+// ABOUTME: Following screen's layout: each row's button adds or removes that
+// ABOUTME: person through PeopleListsBloc at once, with no confirm step.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/features/people_lists/bloc/add_people_to_list_cubit.dart';
 import 'package:openvine/features/people_lists/bloc/add_people_to_list_state.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/models/people_list_candidate.dart';
-import 'package:openvine/features/people_lists/view/widgets/person_pickable_row.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:openvine/widgets/profile/follower_count_title.dart';
+import 'package:openvine/widgets/user_profile_tile.dart';
 
-/// Full-screen picker that lets the authenticated user batch-add candidate
-/// pubkeys to an existing people list.
+/// Full-screen picker that lets the authenticated user add people to an
+/// existing people list, one tap per person.
 ///
 /// The screen resolves the target [UserList] from the ambient
 /// [PeopleListsBloc] by [listId], and seeds candidates by scoping a fresh
-/// [AddPeopleToListCubit] to that list. Candidates are sourced from the
-/// authenticated user's following and followers sets, not passed in.
-/// Candidates already in the target list are rendered selected + disabled.
-/// Tapping the pinned "Add N" button dispatches one
-/// [PeopleListsPubkeyAddRequested] per selected pubkey, then pops.
+/// [AddPeopleToListCubit] to it. Candidates are sourced from the
+/// authenticated user's following and followers sets, not passed in. Each
+/// row carries the Following screen's add/remove button: a tap dispatches
+/// [PeopleListsPubkeyToggleRequested] and the row reads the list's
+/// membership back from the bloc, so it flips as soon as the optimistic
+/// state does and flips back if the write is rolled back.
 ///
 /// Per project rules, full Nostr pubkeys flow through the screen verbatim —
 /// they are never truncated in state, events, or navigation.
@@ -63,7 +66,6 @@ class AddPeopleToListScreen extends ConsumerWidget {
             final cubit = AddPeopleToListCubit(
               followRepository: followRepository,
               profileRepository: profileRepository,
-              existingMemberPubkeys: userList.pubkeys,
             );
             runDetached(
               cubit.started(),
@@ -86,11 +88,12 @@ class _ListNotFoundScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: context.vineColors.background,
+      backgroundColor: context.vineColors.surface,
       appBar: DiVineAppBar(
         title: context.l10n.peopleListsAddPeopleTitle,
         showBackButton: true,
-        onBackPressed: context.pop,
+        onBackPressed: () => Navigator.of(context).pop(),
+        backButtonSemanticLabel: context.l10n.commonBack,
       ),
       body: Center(
         child: Padding(
@@ -110,38 +113,63 @@ class _ListNotFoundScaffold extends StatelessWidget {
 
 /// View layer of [AddPeopleToListScreen].
 ///
-/// Reads all data from the ambient [AddPeopleToListCubit] and
-/// [PeopleListsBloc]. Holds no Riverpod references — the enclosing page
-/// owns repository lookups. Marked [visibleForTesting] so widget tests can
-/// pump the view directly with a mock cubit rather than seeding real
-/// repositories.
+/// Reads candidates from the ambient [AddPeopleToListCubit] and membership
+/// from the ambient [PeopleListsBloc]. Holds no Riverpod references — the
+/// enclosing page owns repository lookups. Marked [visibleForTesting] so
+/// widget tests can pump the view directly with a mock cubit rather than
+/// seeding real repositories.
 @visibleForTesting
 class AddPeopleToListView extends StatelessWidget {
   /// Creates the view. [userList] is the target list being edited.
   const AddPeopleToListView({required this.userList, super.key});
 
-  /// Target list shown in the app bar and used to gate already-member rows.
+  /// Target list named in the app bar and edited by every row action.
   final UserList userList;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.vineColors.background,
-      appBar: DiVineAppBar(
-        title: context.l10n.peopleListsAddToListName(userList.name),
-        showBackButton: true,
-        onBackPressed: context.pop,
-      ),
-      body: SafeArea(
-        child: Column(
+    final l10n = context.l10n;
+    return BlocListener<PeopleListsBloc, PeopleListsState>(
+      // A write that was in flight and came back as a failure has just been
+      // rolled back under the user's thumb; the row flips back on its own,
+      // this says why.
+      listenWhen: (previous, current) =>
+          previous.status == PeopleListsStatus.submitting &&
+          current.status == PeopleListsStatus.failure,
+      listener: (context, state) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.peopleListsMembershipUpdateFailed),
+          ),
+        );
+      },
+      child: Scaffold(
+        backgroundColor: context.vineColors.surface,
+        appBar: DiVineAppBar(
+          titleWidget: FollowerCountTitle<PeopleListsBloc, PeopleListsState>(
+            title: l10n.peopleListsAddToListName(userList.name),
+            selector: (state) => _memberCount(state, userList.id),
+            countLabel: (context, count) => context.l10n.listMemberCount(count),
+          ),
+          showBackButton: true,
+          onBackPressed: () => Navigator.of(context).pop(),
+          backButtonSemanticLabel: l10n.commonBack,
+        ),
+        body: Column(
           children: [
             const _SearchField(),
-            Expanded(child: _Body(userList: userList)),
-            _AddButtonBar(listId: userList.id),
+            Expanded(child: _Body(listId: userList.id)),
           ],
         ),
       ),
     );
+  }
+
+  static int _memberCount(PeopleListsState state, String listId) {
+    for (final list in state.lists) {
+      if (list.id == listId) return list.pubkeys.length;
+    }
+    return 0;
   }
 }
 
@@ -153,53 +181,31 @@ class _SearchField extends StatefulWidget {
 }
 
 class _SearchFieldState extends State<_SearchField> {
-  late final TextEditingController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController();
-    _controller.addListener(_onChanged);
-  }
+  final _controller = TextEditingController();
 
   @override
   void dispose() {
-    _controller
-      ..removeListener(_onChanged)
-      ..dispose();
+    _controller.dispose();
     super.dispose();
-  }
-
-  void _onChanged() {
-    context.read<AddPeopleToListCubit>().queryChanged(_controller.text);
   }
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      child: TextField(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: DivineSearchBar(
         controller: _controller,
-        style: VineTheme.bodyMediumFont(color: context.vineColors.onSurface),
-        decoration: InputDecoration(
-          hintText: context.l10n.peopleListsAddPeopleSearchHint,
-          prefixIcon: Padding(
-            padding: const EdgeInsets.all(12),
-            child: DivineIcon(
-              icon: DivineIconName.search,
-              color: context.vineColors.secondaryText,
-            ),
-          ),
-        ),
+        hintText: context.l10n.peopleListsAddPeopleSearchHint,
+        onChanged: context.read<AddPeopleToListCubit>().queryChanged,
       ),
     );
   }
 }
 
 class _Body extends StatelessWidget {
-  const _Body({required this.userList});
+  const _Body({required this.listId});
 
-  final UserList userList;
+  final String listId;
 
   @override
   Widget build(BuildContext context) {
@@ -211,7 +217,7 @@ class _Body extends StatelessWidget {
       AddPeopleToListStatus.initial ||
       AddPeopleToListStatus.loading => const _LoadingState(),
       AddPeopleToListStatus.failure => const _FailureState(),
-      AddPeopleToListStatus.ready => _ReadyBody(userList: userList),
+      AddPeopleToListStatus.ready => _ReadyBody(listId: listId),
     };
   }
 }
@@ -221,7 +227,7 @@ class _LoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: DivineCircularProgressIndicator());
+    return const Center(child: BrandedLoadingIndicator());
   }
 }
 
@@ -256,21 +262,37 @@ class _FailureState extends StatelessWidget {
 }
 
 class _ReadyBody extends StatelessWidget {
-  const _ReadyBody({required this.userList});
+  const _ReadyBody({required this.listId});
 
-  final UserList userList;
+  final String listId;
 
   @override
   Widget build(BuildContext context) {
-    final visible = context.select(
-      (AddPeopleToListCubit c) => c.state.visibleCandidates,
+    return BlocBuilder<AddPeopleToListCubit, AddPeopleToListState>(
+      builder: (context, state) {
+        if (state.candidates.isEmpty) {
+          return const _EmptyCandidatesState();
+        }
+        final visible = state.visibleCandidates;
+        return RefreshIndicator(
+          color: VineTheme.onPrimary,
+          backgroundColor: VineTheme.vineGreen,
+          onRefresh: context.read<AddPeopleToListCubit>().started,
+          // Wraps the no-match case too, so the pull gesture survives a
+          // query that hides every row.
+          child: visible.isEmpty
+              ? _NoMatches(query: state.query)
+              : ListView.builder(
+                  itemCount: visible.length,
+                  itemBuilder: (context, index) => _CandidateRow(
+                    candidate: visible[index],
+                    listId: listId,
+                    index: index,
+                  ),
+                ),
+        );
+      },
     );
-
-    if (visible.isEmpty) {
-      return const _EmptyCandidatesState();
-    }
-
-    return _CandidateList(userList: userList, candidates: visible);
   }
 }
 
@@ -294,75 +316,112 @@ class _EmptyCandidatesState extends StatelessWidget {
   }
 }
 
-class _CandidateList extends StatelessWidget {
-  const _CandidateList({required this.userList, required this.candidates});
+class _NoMatches extends StatelessWidget {
+  const _NoMatches({required this.query});
 
-  final UserList userList;
-  final List<PeopleListCandidate> candidates;
+  final String query;
 
   @override
   Widget build(BuildContext context) {
-    final selected = context.select(
-      (AddPeopleToListCubit c) => c.state.selectedPubkeys,
-    );
-
-    return ListView.builder(
-      padding: EdgeInsets.zero,
-      itemCount: candidates.length,
-      itemBuilder: (context, index) {
-        final candidate = candidates[index];
-        final isMember = candidate.isAlreadyInList;
-        final isSelected = isMember || selected.contains(candidate.pubkey);
-
-        return PersonPickableRow(
-          candidate: candidate,
-          isSelected: isSelected,
-          enabled: !isMember,
-          onTap: () => context.read<AddPeopleToListCubit>().candidateToggled(
-            candidate.pubkey,
+    // Scrollable rather than a bare Center so the enclosing RefreshIndicator
+    // still has a gesture to attach to when nothing matches.
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                context.l10n.searchNoResultsFound(query),
+                textAlign: TextAlign.center,
+                style: VineTheme.bodyMediumFont(
+                  color: context.vineColors.secondaryText,
+                ),
+              ),
+            ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
 
-class _AddButtonBar extends StatelessWidget {
-  const _AddButtonBar({required this.listId});
+/// One candidate, drawn by the Following screen's tile with that screen's
+/// add/remove button in place of the follow one.
+class _CandidateRow extends StatelessWidget {
+  const _CandidateRow({
+    required this.candidate,
+    required this.listId,
+    required this.index,
+  });
 
+  final PeopleListCandidate candidate;
   final String listId;
+  final int index;
 
   @override
   Widget build(BuildContext context) {
-    final selected = context.select(
-      (AddPeopleToListCubit c) => c.state.selectedPubkeys,
+    final pubkey = candidate.pubkey;
+    // Membership is the bloc's, not the cubit's: the optimistic add lands
+    // here the moment it is emitted, and a rollback takes it away again.
+    final isMember = context.select(
+      (PeopleListsBloc bloc) =>
+          bloc.state.listIdsByPubkey[pubkey]?.contains(listId) ?? false,
     );
-
-    final l10n = context.l10n;
-    final count = selected.length;
-    final label = count == 0
-        ? l10n.peopleListsAddButton
-        : l10n.peopleListsAddButtonWithCount(count);
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: DivineButton(
-        label: label,
-        expanded: true,
-        onPressed: count == 0 ? null : () => _submit(context, selected),
+    return UserProfileTile(
+      pubkey: pubkey,
+      index: index,
+      onTap: () => context.pushOtherProfile(pubkey),
+      showFollowButton: false,
+      showAddToListButton: false,
+      trailing: _MembershipButton(
+        isMember: isMember,
+        displayName:
+            candidate.displayName ?? UserProfile.defaultDisplayNameFor(pubkey),
+        onPressed: () => context.read<PeopleListsBloc>().add(
+          PeopleListsPubkeyToggleRequested(listId: listId, pubkey: pubkey),
+        ),
       ),
     );
   }
+}
 
-  void _submit(BuildContext context, Set<String> selected) {
-    final bloc = context.read<PeopleListsBloc>();
-    for (final pubkey in selected) {
-      bloc.add(
-        PeopleListsPubkeyAddRequested(listId: listId, pubkey: pubkey),
+/// The Following screen's follow/unfollow button, repurposed: green chip to
+/// add, muted outline to remove, both at the chip's size so a row does not
+/// change shape when it flips. Removal needs no confirmation here — a second
+/// tap puts the person straight back.
+class _MembershipButton extends StatelessWidget {
+  const _MembershipButton({
+    required this.isMember,
+    required this.displayName,
+    required this.onPressed,
+  });
+
+  final bool isMember;
+  final String displayName;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    if (isMember) {
+      return DivineIconButton(
+        icon: .userMinus,
+        type: .secondary,
+        size: .small,
+        semanticIdentifier: 'remove_person_from_list',
+        semanticLabel: l10n.peopleListsRemovePersonSemanticLabel(displayName),
+        onPressed: onPressed,
       );
     }
-    // Use Navigator.maybePop so the screen works even when no GoRouter is
-    // present (e.g., simple widget-test harnesses without MaterialApp.router).
-    Navigator.of(context).maybePop();
+    return DivineIconButton(
+      icon: .userPlus,
+      size: .small,
+      semanticIdentifier: 'add_person_to_list',
+      semanticLabel: l10n.peopleListsAddPersonSemanticLabel(displayName),
+      onPressed: onPressed,
+    );
   }
 }

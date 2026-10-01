@@ -2229,8 +2229,6 @@
     "notificationsEmptyTitle": "Wala pang activity",
     "notificationsViewProfileSemanticLabel": "Tingnan ang profile ni {displayName}",
     "notificationsViewProfilesSemanticLabel": "Tingnan ang mga profile",
-    "peopleListsAddButton": "Idagdag",
-    "peopleListsAddButtonWithCount": "Idagdag ang {count}",
     "peopleListsAddPeopleError": "Hindi na-load ang mga tao. Subukan ulit.",
     "peopleListsAddPeopleRetry": "Subukan ulit",
     "peopleListsAddPeopleSearchHint": "Maghanap ng tao",
@@ -3794,6 +3792,23 @@
   "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "I-on ang awtomatiko",
   "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+    "peopleListsAddPersonSemanticLabel": "Idagdag si {name} sa list",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "Alisin si {name} sa list",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "Hindi na-update ang list. Subukan ulit.",
   "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loop}}",
   "peopleListsPeopleCount": "{count, plural, =1{{count} tao} other{{count} tao}}",
   "listMemberCount": "{count, plural, =1{{count} miyembro} other{{count} miyembro}}",

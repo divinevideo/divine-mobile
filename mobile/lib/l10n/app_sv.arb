@@ -2983,8 +2983,6 @@
     "peopleListsAddPeopleSearchHint": "Sök personer",
     "peopleListsAddPeopleError": "Det gick inte att läsa in personer. Försök igen.",
     "peopleListsAddPeopleRetry": "Försök igen",
-    "peopleListsAddButton": "Lägg till",
-    "peopleListsAddButtonWithCount": "Lägg till {count}",
     "peopleListsInNLists": "{count, plural, =1{I 1 lista} other{I {count} listor}}",
     "peopleListsRemoveConfirmTitle": "Ta bort {name}?",
     "peopleListsRemoveConfirmBody": "De kommer att tas bort från den här listan.",
@@ -4795,6 +4793,23 @@
   "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "Slå på automatiskt",
   "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+    "peopleListsAddPersonSemanticLabel": "Lägg till {name} i listan",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "Ta bort {name} från listan",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "Kunde inte uppdatera listan. Försök igen.",
   "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loopar}}",
   "peopleListsPeopleCount": "{count, plural, =1{{count} person} other{{count} personer}}",
   "listMemberCount": "{count, plural, =1{{count} medlem} other{{count} medlemmar}}",

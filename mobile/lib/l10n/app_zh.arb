@@ -1934,15 +1934,6 @@
   "peopleListsAddPeopleSearchHint": "搜索用户",
   "peopleListsAddPeopleError": "加载用户失败，请重试。",
   "peopleListsAddPeopleRetry": "再试一次",
-  "peopleListsAddButton": "添加",
-  "peopleListsAddButtonWithCount": "添加 {count} 人",
-  "@peopleListsAddButtonWithCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "peopleListsInNLists": "{count, plural, =1{已在 1 个列表中} other{已在 {count} 个列表中}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -6562,6 +6553,23 @@
   "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "开启自动",
   "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+  "peopleListsAddPersonSemanticLabel": "把 {name} 加入列表",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "把 {name} 从列表移除",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "无法更新列表，请重试。",
   "listLoopsCount": "{count, plural, =1{{formatted} 次循环} other{{formatted} 次循环}}",
   "peopleListsPeopleCount": "{count, plural, =1{{count} 人} other{{count} 人}}",
   "listMemberCount": "{count, plural, =1{{count} 位成员} other{{count} 位成员}}",

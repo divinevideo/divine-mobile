@@ -3925,14 +3925,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'Försök igen';
 
   @override
-  String get peopleListsAddButton => 'Lägg till';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Lägg till $count';
-  }
-
-  @override
   String peopleListsInNLists(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -12857,4 +12849,18 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get listsDiscoveryLoadingLabel => 'Läser in listor';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Lägg till $name i listan';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Kunde inte uppdatera listan. Försök igen.';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Ta bort $name från listan';
+  }
 }

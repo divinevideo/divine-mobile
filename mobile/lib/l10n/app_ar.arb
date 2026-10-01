@@ -2976,8 +2976,6 @@
     "peopleListsAddPeopleSearchHint": "البحث عن أشخاص",
     "peopleListsAddPeopleError": "تعذر تحميل الأشخاص. يرجى المحاولة مجددًا.",
     "peopleListsAddPeopleRetry": "حاول مجددًا",
-    "peopleListsAddButton": "إضافة",
-    "peopleListsAddButtonWithCount": "إضافة {count}",
     "peopleListsInNLists": "{count, plural, zero{في صفر قوائم} one{في قائمة واحدة} two{في قائمتين} few{في {count} قوائم} many{في {count} قائمة} other{في {count} قوائم}}",
     "peopleListsRemoveConfirmTitle": "هل تريد إزالة {name}؟",
     "peopleListsRemoveConfirmBody": "سيتم إزالته/إزالتها من هذه القائمة.",
@@ -4795,6 +4793,23 @@
   "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "تفعيل التلقائي",
   "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+    "peopleListsAddPersonSemanticLabel": "إضافة {name} إلى القائمة",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "إزالة {name} من القائمة",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "تعذّر تحديث القائمة. يرجى المحاولة مجددًا.",
   "listLoopsCount": "{count, plural, zero{لا توجد تكرارات} one{تكرار واحد} two{تكراران} few{{formatted} تكرارات} many{{formatted} تكرارًا} other{{formatted} تكرار}}",
   "peopleListsPeopleCount": "{count, plural, zero{لا يوجد أشخاص} one{شخص واحد} two{شخصان} few{{count} أشخاص} many{{count} شخصًا} other{{count} شخص}}",
   "listMemberCount": "{count, plural, zero{لا يوجد أعضاء} one{عضو واحد} two{عضوان} few{{count} أعضاء} many{{count} عضوًا} other{{count} عضو}}",

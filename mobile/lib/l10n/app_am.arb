@@ -1670,15 +1670,6 @@
     "peopleListsAddPeopleSearchHint": "ሰዎችን ፈልግ",
     "peopleListsAddPeopleError": "ሰዎችን መጫን አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
     "peopleListsAddPeopleRetry": "እንደገና ይሞክሩ",
-    "peopleListsAddButton": "አክል",
-    "peopleListsAddButtonWithCount": "አክል {count}",
-    "@peopleListsAddButtonWithCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "peopleListsInNLists": "{count, plural, =1{በ{count} ዝርዝር ውስጥ} other{በ{count} ዝርዝሮች ውስጥ}}",
     "@peopleListsInNLists": {
         "placeholders": {
@@ -4901,6 +4892,23 @@
     "videoMetadataScheduleTooFar": "{days, plural, =1{ይህ ከ{days} ቀን በላይ ነው። ቅርብ የሆነ ጊዜ ይምረጡ።} other{ይህ ከ{days} ቀናት በላይ ነው። ቅርብ የሆነ ጊዜ ይምረጡ።}}",
     "videoMetadataScheduleButton": "ያቅዱ",
     "videoMetadataScheduleVideoHint": "ይህን ቪዲዮ ለ{time} ያቅዳል",
+    "peopleListsAddPersonSemanticLabel": "{name}ን ወደ ዝርዝር ያክሉ",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "{name}ን ከዝርዝር ያስወግዱ",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "ዝርዝሩን ማዘመን አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
   "listLoopsCount": "{count, plural, =1{{formatted} ሉፕ} other{{formatted} ሉፖች}}",
   "@listLoopsCount": {
     "placeholders": {

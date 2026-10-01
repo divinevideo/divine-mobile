@@ -2486,15 +2486,6 @@
   "peopleListsAddPeopleSearchHint": "Search people",
   "peopleListsAddPeopleError": "Couldn't load people. Please try again.",
   "peopleListsAddPeopleRetry": "Try again",
-  "peopleListsAddButton": "Add",
-  "peopleListsAddButtonWithCount": "Add {count}",
-  "@peopleListsAddButtonWithCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "peopleListsInNLists": "{count, plural, =1{In 1 list} other{In {count} lists}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -9166,5 +9157,27 @@
   "@listsDiscoveryLoadingLabel": {
     "description": "Screen-reader label for the shimmering placeholder cards shown while the Explore Lists gallery loads."
   },
-  "listsDiscoveryLoadingLabel": "Loading lists"
+  "listsDiscoveryLoadingLabel": "Loading lists",
+  "peopleListsAddPersonSemanticLabel": "Add {name} to list",
+  "peopleListsMembershipUpdateFailed": "Couldn't update the list. Please try again.",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "description": "Screen-reader label of the row button that removes a person from the people list being edited.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@peopleListsAddPersonSemanticLabel": {
+    "description": "Screen-reader label of the row button that adds a person to the people list being edited.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "Remove {name} from list",
+  "@peopleListsMembershipUpdateFailed": {
+    "description": "Snackbar shown when adding or removing a person from a people list fails and the change is rolled back."
+  }
 }

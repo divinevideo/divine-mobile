@@ -1483,15 +1483,6 @@
     "peopleListsAddPeopleSearchHint": "Търси хора",
     "peopleListsAddPeopleError": "Не успяхме да заредим хората. Опитай пак.",
     "peopleListsAddPeopleRetry": "Опитай пак",
-    "peopleListsAddButton": "Добави",
-    "peopleListsAddButtonWithCount": "Добави {count}",
-    "@peopleListsAddButtonWithCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "peopleListsInNLists": "{count, plural, =1{В 1 списък} other{В {count} списъка}}",
     "@peopleListsInNLists": {
         "placeholders": {
@@ -4919,6 +4910,23 @@
   "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "Включи автоматичното",
   "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+    "peopleListsAddPersonSemanticLabel": "Добави {name} към списъка",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "Премахни {name} от списъка",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "Не успяхме да обновим списъка. Опитай пак.",
   "listLoopsCount": "{count, plural, =1{{formatted} луп} other{{formatted} лупа}}",
   "peopleListsPeopleCount": "{count, plural, =1{{count} човек} other{{count} души}}",
   "listMemberCount": "{count, plural, =1{{count} член} other{{count} членове}}",

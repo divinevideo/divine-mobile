@@ -2983,8 +2983,6 @@
     "peopleListsAddPeopleSearchHint": "Szukaj osób",
     "peopleListsAddPeopleError": "Nie udało się załadować osób. Spróbuj ponownie.",
     "peopleListsAddPeopleRetry": "Spróbuj ponownie",
-    "peopleListsAddButton": "Dodaj",
-    "peopleListsAddButtonWithCount": "Dodaj {count}",
     "peopleListsInNLists": "{count, plural, =1{Na 1 liście} few{Na {count} listach} many{Na {count} listach} other{Na {count} listach}}",
     "peopleListsRemoveConfirmTitle": "Usunąć {name}?",
     "peopleListsRemoveConfirmBody": "Osoba zostanie usunięta z tej listy.",
@@ -4795,6 +4793,23 @@
   "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "Włącz automatyczne",
   "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+    "peopleListsAddPersonSemanticLabel": "Dodaj {name} do listy",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "Usuń {name} z listy",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "Nie udało się zaktualizować listy. Spróbuj ponownie.",
   "listLoopsCount": "{count, plural, =1{{formatted} pętla} few{{formatted} pętle} many{{formatted} pętli} other{{formatted} pętli}}",
   "peopleListsPeopleCount": "{count, plural, =1{{count} osoba} few{{count} osoby} many{{count} osób} other{{count} osoby}}",
   "listMemberCount": "{count, plural, =1{{count} członek} few{{count} członków} many{{count} członków} other{{count} członka}}",

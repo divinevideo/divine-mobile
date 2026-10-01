@@ -2983,8 +2983,6 @@
     "peopleListsAddPeopleSearchHint": "Mensen zoeken",
     "peopleListsAddPeopleError": "Kon mensen niet laden. Probeer het opnieuw.",
     "peopleListsAddPeopleRetry": "Opnieuw proberen",
-    "peopleListsAddButton": "Toevoegen",
-    "peopleListsAddButtonWithCount": "{count} toevoegen",
     "peopleListsInNLists": "{count, plural, =1{In 1 lijst} other{In {count} lijsten}}",
     "peopleListsRemoveConfirmTitle": "{name} verwijderen?",
     "peopleListsRemoveConfirmBody": "Ze worden uit deze lijst verwijderd.",
@@ -4795,6 +4793,23 @@
   "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "Automatisch aanzetten",
   "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+    "peopleListsAddPersonSemanticLabel": "{name} aan lijst toevoegen",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "{name} uit lijst verwijderen",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "Kon de lijst niet bijwerken. Probeer het opnieuw.",
   "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loops}}",
   "peopleListsPeopleCount": "{count, plural, =1{{count} persoon} other{{count} personen}}",
   "listMemberCount": "{count, plural, =1{{count} lid} other{{count} leden}}",

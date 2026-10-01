@@ -2983,8 +2983,6 @@
     "peopleListsAddPeopleSearchHint": "Kişi ara",
     "peopleListsAddPeopleError": "Kişiler yüklenemedi. Lütfen tekrar dene.",
     "peopleListsAddPeopleRetry": "Tekrar dene",
-    "peopleListsAddButton": "Ekle",
-    "peopleListsAddButtonWithCount": "{count} ekle",
     "peopleListsInNLists": "{count, plural, =1{1 listede} other{{count} listede}}",
     "peopleListsRemoveConfirmTitle": "{name} kaldırılsın mı?",
     "peopleListsRemoveConfirmBody": "Bu kişi listeden kaldırılacak.",
@@ -4795,6 +4793,23 @@
   "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "Otomatiği aç",
   "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+    "peopleListsAddPersonSemanticLabel": "{name} kişisini listeye ekle",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "{name} kişisini listeden kaldır",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "Liste güncellenemedi. Lütfen tekrar dene.",
   "listLoopsCount": "{count, plural, =1{{formatted} döngü} other{{formatted} döngü}}",
   "peopleListsPeopleCount": "{count, plural, =1{{count} kişi} other{{count} kişi}}",
   "listMemberCount": "{count, plural, =1{{count} üye} other{{count} üye}}",

@@ -2991,8 +2991,6 @@
     "peopleListsAddPeopleSearchHint": "Buscar personas",
     "peopleListsAddPeopleError": "No se pudo cargar la lista de personas. Inténtalo de nuevo.",
     "peopleListsAddPeopleRetry": "Intentar de nuevo",
-    "peopleListsAddButton": "Añadir",
-    "peopleListsAddButtonWithCount": "Añadir {count}",
     "peopleListsInNLists": "{count, plural, =1{En 1 lista} other{En {count} listas}}",
     "peopleListsRemoveConfirmTitle": "¿Eliminar a {name}?",
     "peopleListsRemoveConfirmBody": "Esta persona será eliminada de esta lista.",
@@ -4795,6 +4793,23 @@
   "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "Activar automático",
   "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+    "peopleListsAddPersonSemanticLabel": "Añadir a {name} a la lista",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "Eliminar a {name} de la lista",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "No se pudo actualizar la lista. Probá de nuevo.",
   "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loops}}",
   "peopleListsPeopleCount": "{count, plural, =1{{count} persona} other{{count} personas}}",
   "listMemberCount": "{count, plural, =1{{count} miembro} other{{count} miembros}}",

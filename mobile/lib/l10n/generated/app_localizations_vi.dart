@@ -3902,14 +3902,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'Thử lại';
 
   @override
-  String get peopleListsAddButton => 'Thêm';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Thêm $count';
-  }
-
-  @override
   String peopleListsInNLists(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -12799,4 +12791,18 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get listsDiscoveryLoadingLabel => 'Đang tải danh sách';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Thêm $name vào danh sách';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Không cập nhật được danh sách. Vui lòng thử lại.';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Xóa $name khỏi danh sách';
+  }
 }

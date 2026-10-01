@@ -1934,15 +1934,6 @@
   "peopleListsAddPeopleSearchHint": "لوگ تلاش کریں",
   "peopleListsAddPeopleError": "لوگ لوڈ نہیں ہو سکے۔ براہ کرم دوبارہ کوشش کریں۔",
   "peopleListsAddPeopleRetry": "دوبارہ کوشش کریں",
-  "peopleListsAddButton": "شامل کریں",
-  "peopleListsAddButtonWithCount": "{count} شامل کریں",
-  "@peopleListsAddButtonWithCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "peopleListsInNLists": "{count, plural, =1{1 فہرست میں} other{{count} فہرستوں میں}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -6562,6 +6553,23 @@
   "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "خودکار آن کریں",
   "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+  "peopleListsAddPersonSemanticLabel": "{name} کو فہرست میں شامل کریں",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "{name} کو فہرست سے ہٹائیں",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "فہرست اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔",
   "listLoopsCount": "{count, plural, =1{{formatted} لوپ} other{{formatted} لوپ}}",
   "peopleListsPeopleCount": "{count, plural, =1{{count} شخص} other{{count} لوگ}}",
   "listMemberCount": "{count, plural, =1{{count} ممبر} other{{count} ممبران}}",
