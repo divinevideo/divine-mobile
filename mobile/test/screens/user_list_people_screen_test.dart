@@ -1264,6 +1264,48 @@ void main() {
       });
     });
 
+    testWidgets('opens Edit info with the current list values', (tester) async {
+      final bloc = _MockPeopleListsBloc();
+      final repository = _MockPeopleListsRepository();
+      final list = _buildList(
+        id: 'punk-friends',
+        name: 'Punk Friends',
+      ).copyWith(description: 'The early crew');
+      whenListen(
+        bloc,
+        const Stream<PeopleListsState>.empty(),
+        initialState: PeopleListsState(
+          status: PeopleListsStatus.ready,
+          ownerPubkey: _ownerPubkey,
+          lists: [list],
+        ),
+      );
+      await tester.pumpWidget(
+        testMaterialApp(
+          additionalOverrides: [
+            peopleListsRepositoryProvider.overrideWithValue(repository),
+          ],
+          home: BlocProvider<PeopleListsBloc>.value(
+            value: bloc,
+            child: UserListPeopleScreen(listId: list.id),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(findByTooltip(l10n.peopleListsActionsTooltip));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.bySemanticsIdentifier('people_list_edit_info_option'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.listEditInfoAction), findsOneWidget);
+      final fields = tester.widgetList<TextField>(find.byType(TextField));
+      expect(fields.first.controller!.text, 'Punk Friends');
+      expect(fields.last.controller!.text, 'The early crew');
+      verifyZeroInteractions(repository);
+    });
+
     testWidgets('add people option opens the picker', (tester) async {
       final bloc = _MockPeopleListsBloc();
       final list = _buildList(id: 'punk-friends', name: 'Punk Friends');
