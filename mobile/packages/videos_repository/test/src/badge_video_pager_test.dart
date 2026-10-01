@@ -76,6 +76,59 @@ void main() {
       },
     );
 
+    test('serves concurrent loads in turn without skipping videos', () async {
+      // Following can request a page while a refresh is still loading the
+      // first one; both calls must not read the same offset.
+      final client = _Client();
+      final offsets = <int>[];
+      when(
+        () => client.getVideosByAuthors(
+          authors: any(named: 'authors'),
+          limit: any(named: 'limit'),
+          offset: any(named: 'offset'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer((invocation) async {
+        final offset = invocation.namedArguments[#offset]! as int;
+        offsets.add(offset);
+        await Future<void>.delayed(Duration.zero);
+        final videos = [
+          for (var id = offset + 1; id <= offset + 100 && id <= 300; id++)
+            _video(id, 1000 - id),
+        ];
+        return RecentVideosResponse(
+          videos: videos,
+          serverItemCount: videos.length,
+          hasMore: offset + 100 < 300,
+        );
+      });
+      final pager = BadgeVideoPager(
+        client: client,
+        authors: ['b' * 64],
+        transform: (stats) =>
+            stats.map((video) => video.toVideoEvent()).toList(),
+        before: 2000,
+      );
+
+      final pages = await Future.wait([
+        pager.loadMore(limit: 5),
+        pager.loadMore(limit: 5),
+      ]);
+      final served = [...pages[0], ...pages[1]];
+      while (pager.hasMore) {
+        served.addAll(await pager.loadMore(limit: 50));
+      }
+
+      expect(pages[0].map((v) => v.id), [
+        for (var id = 1; id <= 5; id++) _video(id, 0).id,
+      ]);
+      expect(pages[1].map((v) => v.id), [
+        for (var id = 6; id <= 10; id++) _video(id, 0).id,
+      ]);
+      expect(served, hasLength(300));
+      expect(offsets, [0, 100, 200]);
+    });
+
     test('keeps consumed videos when a later refill fails', () async {
       final client = _Client();
       var failRefill = true;
