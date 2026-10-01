@@ -448,6 +448,10 @@ class BadgeRepository {
         awarded.addAll(award!.recipientPubkeys);
       }
     }
+    // Blocked, muted and platform-blocklisted accounts stay out of the public
+    // holder list and of subscribers' Following, as in other user lists.
+    final isHiddenPubkey = _isHiddenPubkey;
+    if (isHiddenPubkey != null) awarded.removeWhere(isHiddenPubkey);
     if (awarded.isEmpty) return const {};
     final profiles = await _completeProfileBadgesByPubkeyChunked(awarded);
     return Set.unmodifiable({
