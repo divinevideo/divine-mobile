@@ -110,6 +110,22 @@ void main() {
     );
   }
 
+  // Empties the log buffer for this test and again afterwards, so one test's
+  // warnings cannot leak into another's.
+  Future<void> captureLogs() async {
+    await LogCaptureService().clearAllLogs();
+    addTearDown(LogCaptureService().clearAllLogs);
+  }
+
+  List<LogEntry> failureWarnings() => LogCaptureService()
+      .getRecentLogs(minLevel: LogLevel.warning)
+      .where(
+        (log) =>
+            log.name == 'BlossomUploadService' &&
+            log.message.startsWith('Background upload failed'),
+      )
+      .toList();
+
   group('uploadVideoInBackground', () {
     test('returns failure when no transport is configured', () async {
       final result = await service(null).uploadVideoInBackground(
@@ -190,8 +206,7 @@ void main() {
         // The result keeps only the status code, and the caller falls back to
         // a full resumable re-upload, so this line is the only record of why
         // the server rejected the OS transfer.
-        await LogCaptureService().clearAllLogs();
-        addTearDown(LogCaptureService().clearAllLogs);
+        await captureLogs();
         const serverError =
             '{"error":"user list update changed too many times"}';
         final transport = _FakeTransport(
@@ -211,18 +226,61 @@ void main() {
           proofManifestJson: null,
         );
 
-        final failureLogs = LogCaptureService()
-            .getRecentLogs(minLevel: LogLevel.warning)
-            .where(
-              (log) =>
-                  log.name == 'BlossomUploadService' &&
-                  log.message.startsWith('Background upload failed'),
-            );
-        expect(failureLogs, hasLength(1));
-        expect(failureLogs.single.message, contains('HTTP 500'));
-        expect(failureLogs.single.message, contains(serverError));
+        final warnings = failureWarnings();
+        expect(warnings, hasLength(1));
+        expect(warnings.single.level, LogLevel.warning);
+        expect(warnings.single.message, contains('HTTP 500'));
+        expect(warnings.single.message, contains(serverError));
       },
     );
+
+    test(
+      'logs the transport error of a failed upload that has no HTTP status',
+      () async {
+        await captureLogs();
+        final transport = _FakeTransport(
+          emitOnEnqueue: const <BlossomBackgroundTransferEvent>[
+            BlossomBackgroundTransferEvent(
+              taskId: taskId,
+              status: BlossomBackgroundTransferStatus.failed,
+              error: 'Connection reset by peer',
+            ),
+          ],
+        );
+
+        await service(transport).uploadVideoInBackground(
+          videoFile: videoFile,
+          taskId: taskId,
+          proofManifestJson: null,
+        );
+
+        final warning = failureWarnings().single;
+        expect(warning.message, contains('HTTP none'));
+        expect(warning.message, contains('error: Connection reset by peer'));
+        expect(warning.message, contains('response: none'));
+      },
+    );
+
+    test('does not log a failure for HTTP 409 (already stored)', () async {
+      await captureLogs();
+      final transport = _FakeTransport(
+        emitOnEnqueue: const <BlossomBackgroundTransferEvent>[
+          BlossomBackgroundTransferEvent(
+            taskId: taskId,
+            status: BlossomBackgroundTransferStatus.failed,
+            httpStatusCode: 409,
+          ),
+        ],
+      );
+
+      await service(transport).uploadVideoInBackground(
+        videoFile: videoFile,
+        taskId: taskId,
+        proofManifestJson: null,
+      );
+
+      expect(failureWarnings(), isEmpty);
+    });
 
     test('treats HTTP 409 (already stored) as success with the '
         'content-addressed URL', () async {
