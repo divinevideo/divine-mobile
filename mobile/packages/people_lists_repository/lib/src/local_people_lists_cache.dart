@@ -6,6 +6,7 @@ import 'dart:async';
 
 import 'package:hive_ce/hive_ce.dart';
 import 'package:models/models.dart';
+import 'package:people_lists_repository/src/people_list_revision.dart';
 import 'package:people_lists_repository/src/people_list_search_result.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -340,8 +341,8 @@ class LocalPeopleListsCache {
   /// Stores [list] as [viewerPubkey]'s copy when none is held, or when it is
   /// a newer revision than the one held.
   ///
-  /// An equal or older revision is skipped so a relay refresh that found
-  /// nothing new does not wake every listener.
+  /// Equal timestamps prefer the lower event id, matching relay selection.
+  /// An unchanged or older revision does not wake listeners.
   ///
   /// Throws if the Hive box cannot be opened or the write fails.
   Future<void> refreshFollowedCopy({
@@ -353,7 +354,7 @@ class LocalPeopleListsCache {
     final key = _followedKey(viewerPubkey, ownerPubkey, list.id);
     final existing = box.get(key);
     final stored = existing is Map ? _decodeFollowedCopy(existing) : null;
-    if (stored != null && !list.updatedAt.isAfter(stored.list.updatedAt)) {
+    if (stored != null && !peopleListRevisionSupersedes(list, stored.list)) {
       return;
     }
     await box.put(key, _followedRow(ownerPubkey, list));

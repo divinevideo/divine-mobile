@@ -406,9 +406,18 @@ void main() {
       late _MockPeopleListsRepository repository;
       late StreamController<List<PeopleListSearchResult>> followedController;
       late UserList discovered;
+      late bool durableFollow;
 
       setUp(() {
         repository = _MockPeopleListsRepository();
+        durableFollow = false;
+        when(
+          () => repository.isFollowingList(
+            viewerPubkey: any(named: 'viewerPubkey'),
+            ownerPubkey: any(named: 'ownerPubkey'),
+            listId: any(named: 'listId'),
+          ),
+        ).thenAnswer((_) async => durableFollow);
         followedController =
             StreamController<List<PeopleListSearchResult>>.broadcast();
         discovered = _buildList(
@@ -477,6 +486,9 @@ void main() {
         );
         await tester.pump();
         await tester.pump();
+        durableFollow = followed.any(
+          (list) => list.ownerPubkey == listOwner && list.list.id == 'crew',
+        );
         followedController.add(followed);
         await tester.pump();
         await tester.pump();
@@ -491,7 +503,9 @@ void main() {
             ownerPubkey: any(named: 'ownerPubkey'),
             list: any(named: 'list'),
           ),
-        ).thenAnswer((_) async {});
+        ).thenAnswer((_) async {
+          durableFollow = true;
+        });
         await pumpDiscovered(tester);
 
         expect(find.text(l10n.listFollowButton), findsOneWidget);
@@ -506,6 +520,7 @@ void main() {
             list: discovered,
           ),
         ).called(1);
+        expect(find.text(l10n.listFollowingButton), findsOneWidget);
       });
 
       testWidgets('unfollows a list that is already followed', (tester) async {
@@ -515,7 +530,9 @@ void main() {
             ownerPubkey: any(named: 'ownerPubkey'),
             listId: any(named: 'listId'),
           ),
-        ).thenAnswer((_) async {});
+        ).thenAnswer((_) async {
+          durableFollow = false;
+        });
         await pumpDiscovered(
           tester,
           followed: [
@@ -535,6 +552,7 @@ void main() {
             listId: 'crew',
           ),
         ).called(1);
+        expect(find.text(l10n.listFollowButton), findsOneWidget);
       });
 
       testWidgets('says so when the follow cannot be saved', (tester) async {

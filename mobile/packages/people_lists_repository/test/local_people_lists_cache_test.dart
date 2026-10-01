@@ -639,6 +639,45 @@ void main() {
       });
 
       group('refreshFollowedCopy', () {
+        for (final incomingWins in [true, false]) {
+          test(
+            'equal timestamp ${incomingWins ? 'takes' : 'keeps'} '
+            'the lower event id',
+            () async {
+              final cache = LocalPeopleListsCache(openBox: makeOpener());
+              final higher = 'f' * 64;
+              final lower = '0' * 64;
+              final stamp = DateTime.utc(2026);
+              final original = _list(
+                id: 'crew',
+                updatedAt: stamp,
+              ).copyWith(nostrEventId: incomingWins ? higher : lower);
+              final incoming = _list(
+                id: 'crew',
+                updatedAt: stamp,
+                pubkeys: const [_memberB],
+              ).copyWith(nostrEventId: incomingWins ? lower : higher);
+              await cache.putFollowedCopy(
+                viewerPubkey: _ownerA,
+                ownerPubkey: _ownerB,
+                list: original,
+              );
+
+              await cache.refreshFollowedCopy(
+                viewerPubkey: _ownerA,
+                ownerPubkey: _ownerB,
+                list: incoming,
+              );
+
+              final stored = (await cache.readFollowedCopies(
+                viewerPubkey: _ownerA,
+              )).single.list;
+              expect(stored.nostrEventId, lower);
+              expect(stored.pubkeys, incomingWins ? [_memberB] : [_memberA]);
+            },
+          );
+        }
+
         test('takes a newer revision', () async {
           final cache = LocalPeopleListsCache(openBox: makeOpener());
           await cache.putFollowedCopy(
