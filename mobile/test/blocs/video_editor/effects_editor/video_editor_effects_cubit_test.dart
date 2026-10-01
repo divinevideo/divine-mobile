@@ -113,6 +113,34 @@ void main() {
       );
 
       blocTest<VideoEditorEffectsCubit, VideoEditorEffectsState>(
+        'previews a flashing pick without the other flashing effects',
+        build: buildCubit,
+        seed: () => const VideoEditorEffectsState(
+          applied: [
+            EditorVideoEffect(
+              id: 'negative',
+              effect: VideoEffect.negativeFlash(
+                startTime: Duration(seconds: 1),
+                endTime: Duration(seconds: 2),
+              ),
+            ),
+            vignette,
+          ],
+        ),
+        act: (cubit) => cubit
+          ..startEditing()
+          ..selectType(VideoEffectType.strobe),
+        verify: (cubit) {
+          expect(cubit.state.previewEffects, [
+            vignette.effect,
+            const VideoEffect.strobe(
+              intensity: VideoEditorEffectsCubit.defaultIntensity,
+            ),
+          ]);
+        },
+      );
+
+      blocTest<VideoEditorEffectsCubit, VideoEditorEffectsState>(
         'cancel goes back to previewing the committed effects',
         build: buildCubit,
         seed: () => const VideoEditorEffectsState(applied: [vhs]),

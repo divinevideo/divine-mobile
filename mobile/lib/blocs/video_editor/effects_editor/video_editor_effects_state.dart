@@ -42,16 +42,19 @@ class VideoEditorEffectsState extends Equatable {
   ///
   /// While editing, the selection takes the edited effect's place, or joins
   /// the others as a new one. It shows over the whole video, so the pick is
-  /// visible wherever the playhead is.
+  /// visible wherever the playhead is. A flashing pick hides the other
+  /// flashing effects, which would otherwise flash along with it while the
+  /// video plays; confirming replaces them where they overlap anyway.
   List<VideoEffect> get previewEffects {
     final picked = isEditing ? selection : null;
+    final hidesFlashing = picked != null && isFlashingVideoEffect(picked.type);
     final effects = <VideoEffect>[];
     var edited = false;
     for (final entry in applied) {
       if (isEditing && entry.id == editingId) {
         edited = true;
         if (picked != null) effects.add(picked);
-      } else {
+      } else if (!hidesFlashing || !isFlashingVideoEffect(entry.effect.type)) {
         effects.add(entry.effect);
       }
     }
