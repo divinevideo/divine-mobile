@@ -193,6 +193,49 @@ void main() {
       ]);
     });
 
+    test(
+      'drops buffered videos that became hidden after they were fetched',
+      () async {
+        // Blocking someone must stop their videos on the next page, not only
+        // the next fetch: the buffer holds up to 100 videos per chunk.
+        final client = _Client();
+        when(
+          () => client.getVideosByAuthors(
+            authors: any(named: 'authors'),
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer((invocation) async {
+          final offset = invocation.namedArguments[#offset]! as int;
+          final videos = offset > 0
+              ? <VideoStats>[]
+              : [for (var id = 1; id <= 4; id++) _video(id, 1000 - id)];
+          return RecentVideosResponse(
+            videos: videos,
+            serverItemCount: videos.length,
+            hasMore: false,
+          );
+        });
+        final hidden = <String>{};
+        final pager = BadgeVideoPager(
+          client: client,
+          authors: ['a' * 64],
+          transform: (list) =>
+              list.map((video) => video.toVideoEvent()).toList(),
+          isVisible: (video) => !hidden.contains(video.pubkey),
+          before: 2000,
+        );
+
+        final first = await pager.loadMore(limit: 2);
+        hidden.add('a' * 64);
+        final second = await pager.loadMore(limit: 2);
+
+        expect(first, hasLength(2));
+        expect(second, isEmpty);
+      },
+    );
+
     test('keeps consumed videos when a later refill fails', () async {
       final client = _Client();
       var failRefill = true;

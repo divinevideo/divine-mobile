@@ -317,6 +317,9 @@ class VideosRepository {
       client: client,
       authors: unique,
       transform: (stats) => _transformVideoStats(stats, sortByCreatedAt: false),
+      isVisible: (video) =>
+          !(_blockFilter?.call(video.pubkey) ?? false) &&
+          !(_deletedFilter?.call(video) ?? false),
     );
   }
 
