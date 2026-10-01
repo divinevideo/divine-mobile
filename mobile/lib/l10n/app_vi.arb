@@ -6803,5 +6803,6 @@
   "listRecoveryReadOnly": "Một số thay đổi đã lưu trong danh sách video cần được khôi phục. Bạn có thể xem danh sách video, nhưng việc chỉnh sửa đang tạm dừng.",
   "listRecoveryPending": "Danh sách này có các thay đổi đang chờ đồng bộ.",
   "listPermissionsRecoveryPending": "Thay đổi đã được chấp nhận. Nhấn Đồng bộ ngay để hoàn tất lưu. Việc chỉnh sửa tạm dừng cho đến lúc đó.",
-  "listPrivateConversionTooLarge": "Danh sách này quá lớn để chuyển sang riêng tư. Hãy xóa bớt một số video trước. Các chỉnh sửa của bạn vẫn ở đây và chưa được lưu."
+  "listPrivateConversionTooLarge": "Danh sách này quá lớn để chuyển sang riêng tư. Hãy xóa bớt một số video trước. Các chỉnh sửa của bạn vẫn ở đây và chưa được lưu.",
+  "listAddToLists": "Thêm vào danh sách"
 }

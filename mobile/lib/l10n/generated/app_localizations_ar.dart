@@ -13073,4 +13073,7 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get listRecoveryReadOnly =>
       'تحتاج بعض التغييرات المحفوظة في قوائم الفيديو إلى استعادة. يمكن عرض قوائم الفيديو، لكن التعديل متوقف مؤقتًا.';
+
+  @override
+  String get listAddToLists => 'إضافة إلى القوائم';
 }

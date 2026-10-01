@@ -13125,4 +13125,7 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get listRecoveryReadOnly =>
       'Sesetengah perubahan yang disimpan pada senarai video perlu dipulihkan. Anda boleh melihat senarai video, tetapi penyuntingan dijeda.';
+
+  @override
+  String get listAddToLists => 'Tambah ke senarai';
 }

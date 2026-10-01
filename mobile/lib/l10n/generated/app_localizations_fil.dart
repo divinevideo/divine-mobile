@@ -13238,4 +13238,7 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get listRecoveryReadOnly =>
       'Kailangang i-recover ang ilang naka-save na pagbabago sa mga video list. Puwede mong tingnan ang mga video list, pero naka-pause ang pag-edit.';
+
+  @override
+  String get listAddToLists => 'Idagdag sa mga list';
 }

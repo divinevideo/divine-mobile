@@ -13049,4 +13049,7 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get listRecoveryReadOnly =>
       'Video listelerindeki bazı kayıtlı değişikliklerin kurtarılması gerekiyor. Video listelerini görüntüleyebilirsin, ancak düzenleme duraklatıldı.';
+
+  @override
+  String get listAddToLists => 'Listelere ekle';
 }

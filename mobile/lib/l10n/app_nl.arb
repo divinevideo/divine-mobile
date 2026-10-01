@@ -5506,5 +5506,6 @@
   "listRecoveryPending": "Deze lijst heeft wijzigingen die nog gesynchroniseerd moeten worden.",
   "listPermissionsRecoveryPending": "Je wijziging is geaccepteerd. Tik op Nu synchroniseren om het opslaan af te ronden. Bewerken is tot die tijd gepauzeerd.",
   "listRecoveryReadOnly": "Sommige opgeslagen wijzigingen in videolijsten moeten worden hersteld. Je kunt videolijsten bekijken, maar bewerken is gepauzeerd.",
-  "listPrivateConversionTooLarge": "Deze lijst is te groot om privé te maken. Verwijder eerst een paar video’s. Je wijzigingen blijven hier staan en zijn nog niet opgeslagen."
+  "listPrivateConversionTooLarge": "Deze lijst is te groot om privé te maken. Verwijder eerst een paar video’s. Je wijzigingen blijven hier staan en zijn nog niet opgeslagen.",
+  "listAddToLists": "Toevoegen aan lijsten"
 }

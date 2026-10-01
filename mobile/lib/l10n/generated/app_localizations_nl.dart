@@ -13194,4 +13194,7 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get listRecoveryReadOnly =>
       'Sommige opgeslagen wijzigingen in videolijsten moeten worden hersteld. Je kunt videolijsten bekijken, maar bewerken is gepauzeerd.';
+
+  @override
+  String get listAddToLists => 'Toevoegen aan lijsten';
 }

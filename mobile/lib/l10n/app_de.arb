@@ -5506,5 +5506,6 @@
   "listRecoveryPending": "Diese Liste hat Änderungen, die auf die Synchronisierung warten.",
   "listPermissionsRecoveryPending": "Deine Änderung wurde angenommen. Tippe auf Jetzt synchronisieren, um das Speichern abzuschließen. Bis dahin ist die Bearbeitung pausiert.",
   "listRecoveryReadOnly": "Einige gespeicherte Änderungen an Videolisten müssen wiederhergestellt werden. Du kannst Videolisten ansehen, aber die Bearbeitung ist vorübergehend pausiert.",
-  "listPrivateConversionTooLarge": "Diese Liste ist zu groß, um sie privat zu machen. Entferne zuerst einige Videos. Deine Änderungen bleiben hier erhalten und wurden noch nicht gespeichert."
+  "listPrivateConversionTooLarge": "Diese Liste ist zu groß, um sie privat zu machen. Entferne zuerst einige Videos. Deine Änderungen bleiben hier erhalten und wurden noch nicht gespeichert.",
+  "listAddToLists": "Zu Listen hinzufügen"
 }

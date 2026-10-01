@@ -1574,6 +1574,562 @@ void main() {
       });
     });
 
+    group(PeopleListsPicksApplied, () {
+      PeopleListsState seeded() => PeopleListsState(
+        status: PeopleListsStatus.ready,
+        ownerPubkey: _ownerA,
+        lists: [
+          _buildList(id: 'list-1', name: 'Friends', pubkeys: const []),
+          _buildList(id: 'list-2', name: 'Work', pubkeys: const []),
+          _buildList(
+            id: 'list-3',
+            name: 'Old',
+            pubkeys: const [_memberBob],
+          ),
+        ],
+        listIdsByPubkey: const {
+          _memberBob: {'list-3'},
+        },
+      );
+
+      void stubAdd(String listId, PeopleListPublishResult result) {
+        when(
+          () => repository.addPubkey(
+            ownerPubkey: _ownerA,
+            listId: listId,
+            pubkey: _memberBob,
+          ),
+        ).thenAnswer((_) async => result);
+      }
+
+      void stubRemove(String listId, PeopleListPublishResult result) {
+        when(
+          () => repository.removePubkey(
+            ownerPubkey: _ownerA,
+            listId: listId,
+            pubkey: _memberBob,
+          ),
+        ).thenAnswer((_) async => result);
+      }
+
+      const submitted = PeopleListPublishResult.submitted(
+        eventId:
+            '3333333333333333333333333333333333333333333333333333333333333333',
+      );
+
+      blocTest<PeopleListsBloc, PeopleListsState>(
+        'applies every add and remove in order, then records an outcome '
+        'with nothing refused',
+        build: buildBloc,
+        setUp: () {
+          stubAdd('list-1', submitted);
+          stubAdd('list-2', submitted);
+          stubRemove('list-3', submitted);
+        },
+        seed: seeded,
+        act: (bloc) => bloc.add(
+          const PeopleListsPicksApplied(
+            requestId: 'batch',
+            ownerPubkey: _ownerA,
+            pubkey: _memberBob,
+            addListIds: {'list-1', 'list-2'},
+            removeListIds: {'list-3'},
+          ),
+        ),
+        verify: (bloc) {
+          verifyInOrder([
+            () => repository.addPubkey(
+              ownerPubkey: _ownerA,
+              listId: 'list-1',
+              pubkey: _memberBob,
+            ),
+            () => repository.addPubkey(
+              ownerPubkey: _ownerA,
+              listId: 'list-2',
+              pubkey: _memberBob,
+            ),
+            () => repository.removePubkey(
+              ownerPubkey: _ownerA,
+              listId: 'list-3',
+              pubkey: _memberBob,
+            ),
+          ]);
+          expect(bloc.state.listIdsByPubkey[_memberBob], {'list-1', 'list-2'});
+          expect(bloc.state.pendingMutations, isEmpty);
+          expect(
+            bloc.state.lastPicksOutcome,
+            const PeopleListsPicksOutcome(
+              requestId: 'batch',
+              sequence: 1,
+              pubkey: _memberBob,
+              refused: 0,
+            ),
+          );
+        },
+      );
+
+      blocTest<PeopleListsBloc, PeopleListsState>(
+        'counts a later pick the relay refused, after an earlier one landed',
+        build: buildBloc,
+        setUp: () {
+          stubAdd('list-1', submitted);
+          stubAdd('list-2', const PeopleListPublishResult.failed());
+        },
+        seed: seeded,
+        act: (bloc) => bloc.add(
+          const PeopleListsPicksApplied(
+            requestId: 'batch',
+            ownerPubkey: _ownerA,
+            pubkey: _memberBob,
+            addListIds: {'list-1', 'list-2'},
+            removeListIds: {},
+          ),
+        ),
+        verify: (bloc) {
+          // The second add was rolled back; the first stands.
+          expect(bloc.state.listIdsByPubkey[_memberBob], {'list-1', 'list-3'});
+          expect(bloc.state.lastPicksOutcome?.refused, 1);
+          expect(bloc.state.lastPicksOutcome?.pubkey, _memberBob);
+        },
+      );
+
+      blocTest<PeopleListsBloc, PeopleListsState>(
+        'counts a pick whose repository call threw as refused',
+        build: buildBloc,
+        setUp: () {
+          when(
+            () => repository.removePubkey(
+              ownerPubkey: _ownerA,
+              listId: 'list-3',
+              pubkey: _memberBob,
+            ),
+          ).thenThrow(StateError('relay down'));
+        },
+        seed: seeded,
+        act: (bloc) => bloc.add(
+          const PeopleListsPicksApplied(
+            requestId: 'batch',
+            ownerPubkey: _ownerA,
+            pubkey: _memberBob,
+            addListIds: {},
+            removeListIds: {'list-3'},
+          ),
+        ),
+        errors: () => [isA<StateError>()],
+        verify: (bloc) {
+          expect(bloc.state.listIdsByPubkey[_memberBob], {'list-3'});
+          expect(bloc.state.lastPicksOutcome?.refused, 1);
+        },
+      );
+
+      blocTest<PeopleListsBloc, PeopleListsState>(
+        'numbers each outcome after the last, so a sheet can tell its own',
+        build: buildBloc,
+        setUp: () => stubAdd('list-1', submitted),
+        seed: () => seeded().copyWith(
+          lastPicksOutcome: const PeopleListsPicksOutcome(
+            requestId: 'batch',
+            sequence: 7,
+            pubkey: _memberAlice,
+            refused: 0,
+          ),
+        ),
+        act: (bloc) => bloc.add(
+          const PeopleListsPicksApplied(
+            requestId: 'batch',
+            ownerPubkey: _ownerA,
+            pubkey: _memberBob,
+            addListIds: {'list-1'},
+            removeListIds: {},
+          ),
+        ),
+        verify: (bloc) {
+          expect(bloc.state.lastPicksOutcome?.sequence, 8);
+          expect(bloc.state.lastPicksOutcome?.pubkey, _memberBob);
+        },
+      );
+
+      for (final switchOwner in [true, false]) {
+        late Completer<PeopleListPublishResult> pending;
+        late Completer<void> started;
+        blocTest<PeopleListsBloc, PeopleListsState>(
+          switchOwner
+              ? 'stops the batch when its owner changes during the first write'
+              : 'stops the batch across a feature off/on cycle during a write',
+          build: buildBloc,
+          seed: seeded,
+          setUp: () {
+            pending = Completer<PeopleListPublishResult>();
+            started = Completer<void>();
+            when(
+              () => repository.addPubkey(
+                ownerPubkey: _ownerA,
+                listId: 'list-1',
+                pubkey: _memberBob,
+              ),
+            ).thenAnswer((_) {
+              started.complete();
+              return pending.future;
+            });
+          },
+          act: (bloc) async {
+            bloc.add(
+              const PeopleListsPicksApplied(
+                requestId: 'batch',
+                ownerPubkey: _ownerA,
+                pubkey: _memberBob,
+                addListIds: {'list-1', 'list-2'},
+                removeListIds: {'list-3'},
+              ),
+            );
+            await started.future;
+            if (switchOwner) {
+              bloc.add(const PeopleListsOwnerChanged(ownerPubkey: _ownerB));
+            } else {
+              bloc.add(const PeopleListsEnabledChanged(enabled: false));
+              await _flush();
+              bloc.add(const PeopleListsEnabledChanged(enabled: true));
+            }
+            await _flush();
+            pending.complete(submitted);
+          },
+          verify: (bloc) {
+            verifyNever(
+              () => repository.addPubkey(
+                ownerPubkey: any(named: 'ownerPubkey'),
+                listId: 'list-2',
+                pubkey: _memberBob,
+              ),
+            );
+            verifyNever(
+              () => repository.removePubkey(
+                ownerPubkey: any(named: 'ownerPubkey'),
+                listId: 'list-3',
+                pubkey: _memberBob,
+              ),
+            );
+            expect(bloc.state.ownerPubkey, switchOwner ? _ownerB : _ownerA);
+            expect(bloc.state.pendingMutations, isEmpty);
+          },
+        );
+      }
+
+      blocTest<PeopleListsBloc, PeopleListsState>(
+        'records an outcome even when every pick is a no-op',
+        build: buildBloc,
+        seed: seeded,
+        act: (bloc) => bloc.add(
+          const PeopleListsPicksApplied(
+            requestId: 'batch',
+            ownerPubkey: _ownerA,
+            pubkey: _memberBob,
+            // Already a member of list-3, so the add is dropped.
+            addListIds: {'list-3'},
+            removeListIds: {},
+          ),
+        ),
+        verify: (bloc) {
+          verifyNever(
+            () => repository.addPubkey(
+              ownerPubkey: any(named: 'ownerPubkey'),
+              listId: any(named: 'listId'),
+              pubkey: any(named: 'pubkey'),
+            ),
+          );
+          expect(bloc.state.lastPicksOutcome?.refused, 0);
+        },
+      );
+    });
+
+    group('picks shared queue boundaries', () {
+      const picks = PeopleListsPicksApplied(
+        requestId: 'shared-queue',
+        ownerPubkey: _ownerA,
+        pubkey: _memberBob,
+        addListIds: {'list-1', 'list-2'},
+        removeListIds: {},
+      );
+      const info = PeopleListsInfoUpdateRequested(
+        expectedOwnerPubkey: _ownerA,
+        listId: 'list-1',
+        name: 'Edited friends',
+        description: 'Still here',
+      );
+      const submitted = PeopleListPublishResult.submitted(
+        eventId: _memberAlice,
+      );
+
+      Future<PeopleListsBloc> readyBloc() async {
+        final bloc = buildBloc(initialOwnerPubkey: _ownerA);
+        addTearDown(bloc.close);
+        bloc.add(
+          PeopleListsRepositoryListsChanged(
+            ownerPubkey: _ownerA,
+            lists: [
+              _buildList(id: 'list-1', name: 'Friends', pubkeys: const []),
+              _buildList(id: 'list-2', name: 'Work', pubkeys: const []),
+            ],
+          ),
+        );
+        await _flush();
+        return bloc;
+      }
+
+      void stubInfo(Future<PeopleListPublishResult> Function() answer) {
+        when(
+          () => repository.updateListInfo(
+            ownerPubkey: _ownerA,
+            listId: 'list-1',
+            name: 'Edited friends',
+            description: 'Still here',
+          ),
+        ).thenAnswer((_) => answer());
+      }
+
+      void stubPick(
+        String listId,
+        Future<PeopleListPublishResult> Function() answer,
+      ) {
+        when(
+          () => repository.addPubkey(
+            ownerPubkey: _ownerA,
+            listId: listId,
+            pubkey: _memberBob,
+          ),
+        ).thenAnswer((_) => answer());
+      }
+
+      void expectNoPickWrites() {
+        verifyNever(
+          () => repository.addPubkey(
+            ownerPubkey: any(named: 'ownerPubkey'),
+            listId: any(named: 'listId'),
+            pubkey: _memberBob,
+          ),
+        );
+      }
+
+      test('waits for an earlier metadata ACK before starting picks', () async {
+        final pending = Completer<PeopleListPublishResult>();
+        addTearDown(() {
+          if (!pending.isCompleted) pending.complete(submitted);
+        });
+        stubInfo(() => pending.future);
+        stubPick('list-1', () async => submitted);
+        stubPick('list-2', () async => submitted);
+        final bloc = await readyBloc();
+        final first = bloc.submit(info);
+        await _flush();
+        final batch = bloc.submit(picks);
+        await _flush();
+        expectNoPickWrites();
+        expect(bloc.state.lastPicksOutcome, isNull);
+
+        pending.complete(submitted);
+        expect(await first, PeopleListsOperationResult.succeeded);
+        expect(await batch, PeopleListsOperationResult.succeeded);
+        expect(bloc.state.lastPicksOutcome?.refused, 0);
+        expect(bloc.state.listIdsByPubkey[_memberBob], {'list-1', 'list-2'});
+      });
+
+      test(
+        'keeps a later metadata edit behind the whole picks request',
+        () async {
+          final pending = Completer<PeopleListPublishResult>();
+          addTearDown(() {
+            if (!pending.isCompleted) pending.complete(submitted);
+          });
+          stubPick('list-1', () => pending.future);
+          stubPick('list-2', () async => submitted);
+          stubInfo(() async => submitted);
+          final bloc = await readyBloc();
+          final batch = bloc.submit(picks);
+          await _flush();
+          final edit = bloc.submit(info);
+          await _flush();
+          verifyNever(
+            () => repository.updateListInfo(
+              ownerPubkey: any(named: 'ownerPubkey'),
+              listId: any(named: 'listId'),
+              name: any(named: 'name'),
+              description: any(named: 'description'),
+            ),
+          );
+
+          pending.complete(submitted);
+          expect(await batch, PeopleListsOperationResult.succeeded);
+          expect(await edit, PeopleListsOperationResult.succeeded);
+          verifyInOrder([
+            () => repository.addPubkey(
+              ownerPubkey: _ownerA,
+              listId: 'list-1',
+              pubkey: _memberBob,
+            ),
+            () => repository.addPubkey(
+              ownerPubkey: _ownerA,
+              listId: 'list-2',
+              pubkey: _memberBob,
+            ),
+            () => repository.updateListInfo(
+              ownerPubkey: _ownerA,
+              listId: 'list-1',
+              name: 'Edited friends',
+              description: 'Still here',
+            ),
+          ]);
+        },
+      );
+
+      test('aggregates refusal only after the remaining ACK settles', () async {
+        final pending = Completer<PeopleListPublishResult>();
+        addTearDown(() {
+          if (!pending.isCompleted) pending.complete(submitted);
+        });
+        stubPick('list-1', () async => const PeopleListPublishResult.failed());
+        stubPick('list-2', () => pending.future);
+        final bloc = await readyBloc();
+        var settled = false;
+        final batch = bloc.submit(picks).then((result) {
+          settled = true;
+          return result;
+        });
+        await _flush();
+        await _flush();
+        verify(
+          () => repository.addPubkey(
+            ownerPubkey: _ownerA,
+            listId: 'list-2',
+            pubkey: _memberBob,
+          ),
+        ).called(1);
+        expect(settled, isFalse);
+        expect(bloc.state.lastPicksOutcome, isNull);
+
+        pending.complete(submitted);
+        expect(await batch, PeopleListsOperationResult.failed);
+        expect(bloc.state.lastPicksOutcome?.refused, 1);
+        expect(bloc.state.listIdsByPubkey[_memberBob], {'list-2'});
+        expect(bloc.state.pendingMutations, isEmpty);
+      });
+
+      for (final boundary in [
+        'owner round trip',
+        'repository',
+        'feature',
+        'close',
+      ]) {
+        test('cancels queued picks at the $boundary boundary', () async {
+          final pending = Completer<PeopleListPublishResult>();
+          addTearDown(() {
+            if (!pending.isCompleted) pending.complete(submitted);
+          });
+          stubInfo(() => pending.future);
+          final bloc = await readyBloc();
+          final first = bloc.submit(info);
+          await _flush();
+          final batch = bloc.submit(picks);
+          await _flush();
+          final openingEpoch = bloc.mutationSessionEpoch;
+          Future<void>? closing;
+          switch (boundary) {
+            case 'owner round trip':
+              bloc.add(const PeopleListsOwnerChanged(ownerPubkey: _ownerB));
+              await _flush();
+              bloc.add(const PeopleListsOwnerChanged(ownerPubkey: _ownerA));
+            case 'repository':
+              final replacement = _MockPeopleListsRepository();
+              when(
+                () => replacement.watchLists(ownerPubkey: _ownerA),
+              ).thenAnswer((_) => const Stream.empty());
+              when(
+                () => replacement.syncOwner(ownerPubkey: _ownerA),
+              ).thenAnswer((_) async {});
+              bloc.add(PeopleListsRepositoryChanged(repository: replacement));
+            case 'feature':
+              bloc.add(const PeopleListsEnabledChanged(enabled: false));
+              await _flush();
+              bloc.add(const PeopleListsEnabledChanged(enabled: true));
+            case 'close':
+              closing = bloc.close();
+          }
+          await _flush();
+          expect(bloc.mutationSessionEpoch, greaterThan(openingEpoch));
+          expect(await first, PeopleListsOperationResult.cancelled);
+          expect(await batch, PeopleListsOperationResult.cancelled);
+          expectNoPickWrites();
+          expect(bloc.state.lastPicksOutcome, isNull);
+          pending.complete(submitted);
+          if (closing != null) await closing;
+          await _flush();
+          expectNoPickWrites();
+          expect(bloc.state.lastPicksOutcome, isNull);
+        });
+      }
+
+      test(
+        'rejects picks whose claimed owner differs from the actor',
+        () async {
+          final bloc = await readyBloc();
+          final result = await bloc.submit(
+            const PeopleListsPicksApplied(
+              requestId: 'other-owner',
+              ownerPubkey: _ownerB,
+              pubkey: _memberBob,
+              addListIds: {'list-1'},
+              removeListIds: {},
+            ),
+          );
+          expect(result, PeopleListsOperationResult.cancelled);
+          expectNoPickWrites();
+          expect(bloc.state.lastPicksOutcome, isNull);
+        },
+      );
+
+      for (final closeActor in [false, true]) {
+        test(
+          closeActor
+              ? 'close cancels active picks without later writes or stale outcome'
+              : 'repository replacement cancels active picks and their stale outcome',
+          () async {
+            final pending = Completer<PeopleListPublishResult>();
+            addTearDown(() {
+              if (!pending.isCompleted) pending.complete(submitted);
+            });
+            stubPick('list-1', () => pending.future);
+            final bloc = await readyBloc();
+            final batch = bloc.submit(picks);
+            await _flush();
+            Future<void>? closing;
+            if (closeActor) {
+              closing = bloc.close();
+            } else {
+              final replacement = _MockPeopleListsRepository();
+              when(
+                () => replacement.watchLists(ownerPubkey: _ownerA),
+              ).thenAnswer((_) => const Stream.empty());
+              when(
+                () => replacement.syncOwner(ownerPubkey: _ownerA),
+              ).thenAnswer((_) async {});
+              bloc.add(PeopleListsRepositoryChanged(repository: replacement));
+            }
+            await _flush();
+            expect(await batch, PeopleListsOperationResult.cancelled);
+            pending.complete(submitted);
+            if (closing != null) await closing;
+            await _flush();
+            verifyNever(
+              () => repository.addPubkey(
+                ownerPubkey: any(named: 'ownerPubkey'),
+                listId: 'list-2',
+                pubkey: _memberBob,
+              ),
+            );
+            expect(bloc.state.lastPicksOutcome, isNull);
+          },
+        );
+      }
+    });
+
     group('curated-lists flag lifecycle', () {
       Future<PeopleListsBloc> startedWithOwnerA() async {
         final bloc = buildBloc()..add(const PeopleListsStarted());

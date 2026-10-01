@@ -240,6 +240,45 @@ class PeopleListsPubkeyRemoveRequested extends PeopleListsMutationRequested {
   List<Object?> get props => [listId, pubkey];
 }
 
+/// Applies the add-to-lists sheet's picks for one person in one go: adds
+/// them to [addListIds] and removes them from [removeListIds], in order,
+/// then records a [PeopleListsPicksOutcome] on the state saying how many
+/// of those writes a relay refused.
+class PeopleListsPicksApplied extends PeopleListsMutationRequested {
+  /// Creates the request.
+  const PeopleListsPicksApplied({
+    required this.requestId,
+    required this.ownerPubkey,
+    required this.pubkey,
+    required this.addListIds,
+    required this.removeListIds,
+  });
+
+  /// Identifies this batch, even when another visit picks the same lists.
+  final Object requestId;
+
+  /// The authenticated owner who submitted these picks.
+  final String ownerPubkey;
+
+  /// The full hex pubkey the picks are about. Never truncated.
+  final String pubkey;
+
+  /// Ids of the lists to add the person to.
+  final Set<String> addListIds;
+
+  /// Ids of the lists to remove the person from.
+  final Set<String> removeListIds;
+
+  @override
+  List<Object?> get props => [
+    requestId,
+    ownerPubkey,
+    pubkey,
+    addListIds,
+    removeListIds,
+  ];
+}
+
 /// Toggles a pubkey's membership in a list (add if absent, remove if
 /// present).
 class PeopleListsPubkeyToggleRequested extends PeopleListsMutationRequested {

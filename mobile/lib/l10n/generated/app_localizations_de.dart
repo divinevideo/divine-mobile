@@ -13286,4 +13286,7 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get listRecoveryReadOnly =>
       'Einige gespeicherte Änderungen an Videolisten müssen wiederhergestellt werden. Du kannst Videolisten ansehen, aber die Bearbeitung ist vorübergehend pausiert.';
+
+  @override
+  String get listAddToLists => 'Zu Listen hinzufügen';
 }

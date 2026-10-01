@@ -12473,4 +12473,7 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get listRecoveryReadOnly =>
       '動画リストに保存された一部の変更には復旧が必要です。動画リストは閲覧できますが、編集は一時停止しています。';
+
+  @override
+  String get listAddToLists => 'リストに追加';
 }

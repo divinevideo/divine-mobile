@@ -6803,5 +6803,6 @@
   "listRecoveryReadOnly": "视频列表中保存的部分更改需要恢复。你可以查看视频列表，但编辑已暂停。",
   "listRecoveryPending": "此列表有等待同步的更改。",
   "listPermissionsRecoveryPending": "更改已被接受。点击立即同步以完成保存。在此之前，编辑将暂停。",
-  "listPrivateConversionTooLarge": "此列表太大，无法设为私密。请先移除一些视频。你的修改仍保留在这里，尚未保存。"
+  "listPrivateConversionTooLarge": "此列表太大，无法设为私密。请先移除一些视频。你的修改仍保留在这里，尚未保存。",
+  "listAddToLists": "加入列表"
 }

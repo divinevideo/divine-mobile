@@ -13117,4 +13117,7 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get listRecoveryReadOnly =>
       'ویڈیو فہرستوں میں محفوظ کی گئی کچھ تبدیلیوں کو بحال کرنے کی ضرورت ہے۔ آپ ویڈیو فہرستیں دیکھ سکتے ہیں، لیکن ترمیم عارضی طور پر روک دی گئی ہے۔';
+
+  @override
+  String get listAddToLists => 'فہرستوں میں شامل کریں';
 }

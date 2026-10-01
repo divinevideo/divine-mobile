@@ -21966,6 +21966,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Some saved changes to video lists need recovery. You can view video lists, but editing is paused.'**
   String get listRecoveryReadOnly;
+
+  /// Title of the sheet where the viewer picks which of their lists a video or a person belongs to.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to lists'**
+  String get listAddToLists;
 }
 
 class _AppLocalizationsDelegate

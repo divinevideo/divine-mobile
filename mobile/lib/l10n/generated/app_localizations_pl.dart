@@ -13383,4 +13383,7 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get listRecoveryReadOnly =>
       'Niektóre zapisane zmiany na listach filmów wymagają odzyskania. Możesz przeglądać listy filmów, ale edycja jest wstrzymana.';
+
+  @override
+  String get listAddToLists => 'Dodaj do list';
 }

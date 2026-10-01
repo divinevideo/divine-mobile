@@ -13068,4 +13068,7 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get listRecoveryReadOnly =>
       'Một số thay đổi đã lưu trong danh sách video cần được khôi phục. Bạn có thể xem danh sách video, nhưng việc chỉnh sửa đang tạm dừng.';
+
+  @override
+  String get listAddToLists => 'Thêm vào danh sách';
 }
