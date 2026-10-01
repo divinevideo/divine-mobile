@@ -1,5 +1,5 @@
-// ABOUTME: Grants camera and microphone access through the system dialogs,
-// ABOUTME: for Patrol suites that record on a fresh install.
+// ABOUTME: Answers Android's runtime permission dialogs for Patrol suites:
+// ABOUTME: camera and microphone, and the post-sign-in notifications prompt.
 
 import 'dart:async';
 
@@ -19,10 +19,23 @@ Future<void> grantCameraAndMicrophone(PatrolIntegrationTester $) async {
   await _acceptPermissionDialogIfShown($);
 }
 
-Future<void> _acceptPermissionDialogIfShown(PatrolIntegrationTester $) async {
+Future<void> _acceptPermissionDialogIfShown(
+  PatrolIntegrationTester $, {
+  Duration timeout = const Duration(seconds: 5),
+}) async {
   if (await $.platformAutomator.mobile.isPermissionDialogVisible(
-    timeout: const Duration(seconds: 5),
+    timeout: timeout,
   )) {
     await $.platformAutomator.mobile.grantPermissionWhenInUse();
   }
 }
+
+/// Accepts Android's notification permission dialog if it is showing.
+///
+/// After authentication the app requests POST_NOTIFICATIONS. The system
+/// dialog sits in front of the app and blocks Flutter widget interaction
+/// until it is answered. It is matched by its button id rather than by the
+/// text "Allow", which its title ("Allow `<app>` to send you notifications?")
+/// also contains.
+Future<void> dismissNotificationPermission(PatrolIntegrationTester $) =>
+    _acceptPermissionDialogIfShown($, timeout: const Duration(seconds: 3));

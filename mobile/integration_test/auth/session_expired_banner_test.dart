@@ -19,6 +19,7 @@ import '../helpers/db_helpers.dart';
 import '../helpers/http_helpers.dart';
 import '../helpers/navigation_helpers.dart';
 import '../helpers/patrol_semantics.dart';
+import '../helpers/permission_helpers.dart';
 import '../helpers/test_setup.dart';
 
 AppLocalizations get _en => lookupAppLocalizations(const Locale('en'));
@@ -180,6 +181,9 @@ void main() {
           // Phase 4: Navigate to profile, find banner, tap "Sign in"
           // ════════════════════════════════════════════════════════════
 
+          // The post-sign-in notifications prompt would otherwise sit in front
+          // of the profile sheet and swallow every tap.
+          await dismissNotificationPermission($);
           await tapBottomNavTab(tester, 'profile_tab');
           await pumpUntilSettled(tester);
 
@@ -190,13 +194,12 @@ void main() {
             reason: 'Profile should show "Session Expired" banner',
           );
 
-          // Tap "Sign in" on the session-expired sheet
-          final signInButton = find.widgetWithText(
-            DivineButton,
-            _en.profileSignInButton,
-          );
-          expect(signInButton, findsOneWidget);
-          await tester.tap(signInButton);
+          // Tap "Sign in" on the session-expired sheet. Patrol's tap waits
+          // until the button can be hit rather than tapping a sheet that is
+          // still opening.
+          await $(DivineButton)
+              .containing(_en.profileSignInButton)
+              .tap(settlePolicy: SettlePolicy.noSettle);
           await pumpUntilSettled(tester, maxSeconds: 10);
 
           logPhase('Phase 4: tapped Sign in on expired session banner');
