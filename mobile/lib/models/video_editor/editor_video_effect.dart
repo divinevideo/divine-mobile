@@ -66,21 +66,51 @@ class EditorVideoEffect extends Equatable {
 /// exported video, which an overlap transition makes shorter.
 ///
 /// A `null` start or end stays open, so a whole-video effect runs from the
-/// first output frame. The export and the live preview both time effects this
-/// way, so the preview shows what the file will.
+/// first output frame. A flashing effect starts on [flashingEffectStartGrid]
+/// instead, and is left out when no whole grid step fits before its end. The
+/// export and the live preview both time effects this way, so the preview
+/// shows what the file will.
 List<VideoEffect> videoEffectsOnOutput(
   List<VideoEffect> effects,
   TransitionTimelineMap timelineMap,
 ) {
-  return [
-    for (final effect in effects)
+  final result = <VideoEffect>[];
+  for (final effect in effects) {
+    var start = timelineMap.editorToOutputOrNull(effect.startTime);
+    final end = timelineMap.editorToOutputOrNull(effect.endTime);
+    if (start != null && isFlashingVideoEffect(effect.type)) {
+      start = _roundUp(start, flashingEffectStartGrid);
+      if (end != null && start >= end) continue;
+    }
+    result.add(
       VideoEffect(
         type: effect.type,
         intensity: effect.intensity,
-        startTime: timelineMap.editorToOutputOrNull(effect.startTime),
-        endTime: timelineMap.editorToOutputOrNull(effect.endTime),
+        startTime: start,
+        endTime: end,
       ),
-  ];
+    );
+  }
+  return result;
+}
+
+/// Where flashing effects may start in the exported video: on whole seconds.
+///
+/// An effect's animation starts with its window, and both flashing effects
+/// flash at the start of each of their cycles, which are at most a second
+/// long. A piece starting anywhere else would flash out of step with the one
+/// before it: splitting a negative flash at 1.3 s would put flashes at 1.0,
+/// 1.25, 1.3 and 1.55 s. On a shared grid, split pieces, the parts left
+/// around a replacing effect and neighbouring flashing effects stay in step,
+/// so together they flash no more than three times a second, the WCAG 2.3.1
+/// limit, whatever an overlap transition does to their windows.
+const flashingEffectStartGrid = Duration(seconds: 1);
+
+Duration _roundUp(Duration value, Duration step) {
+  final micros = step.inMicroseconds;
+  return Duration(
+    microseconds: (value.inMicroseconds + micros - 1) ~/ micros * micros,
+  );
 }
 
 /// Whether [type] flashes.
