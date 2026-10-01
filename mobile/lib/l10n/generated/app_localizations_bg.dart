@@ -6301,11 +6301,11 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingTitle =>
-      'Публикуване без проверка за автентичност?';
+      'Публикуване без удостоверения за съдържанието?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'Не успяхме да добавим удостоверения за съдържанието, затова това видео няма да бъде потвърдено като създадено от човек. Генерирайте отново, за да опитате пак, или го публикувайте както е.';
+      'Не успяхме да добавим удостоверения за съдържанието към това видео. Генерирай отново, за да опиташ пак, или го публикувай както е.';
 
   @override
   String get videoMetadataC2paMissingNote =>

@@ -6215,11 +6215,11 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingTitle =>
-      'هل تريد النشر دون التحقق من الأصالة؟';
+      'هل تريد النشر دون بيانات اعتماد المحتوى؟';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'تعذّر علينا إضافة بيانات اعتماد المحتوى، لذا لن يتم تأكيد هذا الفيديو على أنه من صنع إنسان. أعد الإنشاء للمحاولة مرة أخرى، أو انشره كما هو.';
+      'تعذّر علينا إضافة بيانات اعتماد المحتوى إلى هذا الفيديو. أعد الإنشاء للمحاولة مرة أخرى، أو انشره كما هو.';
 
   @override
   String get videoMetadataC2paMissingNote =>

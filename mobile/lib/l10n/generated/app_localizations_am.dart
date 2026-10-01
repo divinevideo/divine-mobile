@@ -6106,11 +6106,11 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoMetadataEditCoverSuccessAnnouncement => 'ሽፋን ተዘምኗል';
 
   @override
-  String get videoMetadataC2paMissingTitle => 'ያለ የእውነተኛነት ማረጋገጫ ይለጠፍ?';
+  String get videoMetadataC2paMissingTitle => 'ያለ የይዘት መታወቂያዎች ይለጠፍ?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'የይዘት መታወቂያዎችን መጨመር አልቻልንም፣ ስለዚህ ይህ ቪዲዮ በሰው እንደተሰራ አይረጋገጥም። እንደገና ለመሞከር እንደገና ይፍጠሩ ወይም እንዳለ ይለጥፉ።';
+      'ለዚህ ቪዲዮ የይዘት መታወቂያዎችን መጨመር አልቻልንም። እንደገና ለመሞከር እንደገና ይፍጠሩ ወይም እንዳለ ይለጥፉ።';
 
   @override
   String get videoMetadataC2paMissingNote =>

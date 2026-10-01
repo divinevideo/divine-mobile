@@ -6251,12 +6251,11 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoMetadataEditCoverSuccessAnnouncement => 'کور اپڈیٹ ہو گیا';
 
   @override
-  String get videoMetadataC2paMissingTitle =>
-      'انسانی بنائی جانچ کے بغیر پوسٹ کریں؟';
+  String get videoMetadataC2paMissingTitle => 'مواد اسناد کے بغیر پوسٹ کریں؟';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'ہم مواد اسناد شامل نہیں کر سکے، اس لیے یہ ویڈیو انسان کی بنائی ہوئی کے طور پر تصدیق نہیں ہو گی۔ دوبارہ بنانے کے لیے ری جنریٹ کریں، یا جوں کی توں پوسٹ کریں۔';
+      'ہم اس ویڈیو میں مواد اسناد شامل نہیں کر سکے۔ دوبارہ کوشش کرنے کے لیے ری جنریٹ کریں، یا جوں کی توں پوسٹ کریں۔';
 
   @override
   String get videoMetadataC2paMissingNote =>

@@ -6326,11 +6326,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingTitle =>
-      'Publier sans la vérification d’authenticité ?';
+      'Publier sans les Content Credentials ?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'Nous n’avons pas pu ajouter les informations d’authenticité, cette vidéo ne sera donc pas confirmée comme faite par un humain. Régénérez pour réessayer, ou publiez-la telle quelle.';
+      'Nous n’avons pas pu ajouter les Content Credentials à cette vidéo. Régénère-la pour réessayer, ou publie-la telle quelle.';
 
   @override
   String get videoMetadataC2paMissingNote =>

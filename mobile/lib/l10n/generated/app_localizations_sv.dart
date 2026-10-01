@@ -6239,11 +6239,12 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoMetadataEditCoverSuccessAnnouncement => 'Omslag uppdaterat';
 
   @override
-  String get videoMetadataC2paMissingTitle => 'Publicera utan äkthetskontroll?';
+  String get videoMetadataC2paMissingTitle =>
+      'Publicera utan innehållsuppgifter?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'Vi kunde inte lägga till innehållsuppgifter, så den här videon bekräftas inte som gjord av människa. Generera om för att försöka igen, eller publicera som den är.';
+      'Vi kunde inte lägga till innehållsuppgifter i den här videon. Generera om för att försöka igen, eller publicera som den är.';
 
   @override
   String get videoMetadataC2paMissingNote =>

@@ -6253,11 +6253,11 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingTitle =>
-      'Siarkan tanpa semakan buatan manusia?';
+      'Siarkan tanpa kelayakan kandungan?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'Kami tidak dapat menambah kelayakan kandungan, jadi video ini tidak akan disahkan sebagai Buatan Manusia. Jana semula untuk cuba lagi, atau siarkan seadanya.';
+      'Kami tidak dapat menambah kelayakan kandungan pada video ini. Jana semula untuk cuba lagi, atau siarkan seadanya.';
 
   @override
   String get videoMetadataC2paMissingNote =>

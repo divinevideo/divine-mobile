@@ -10717,16 +10717,16 @@ abstract class AppLocalizations {
   /// **'Cover updated'**
   String get videoMetadataEditCoverSuccessAnnouncement;
 
-  /// Title of a bottom sheet shown after rendering a video when the C2PA content-credential signature could not be created (e.g. offline). Asks whether to regenerate or post without provenance.
+  /// Title of a bottom sheet shown after rendering a video when the C2PA content-credential signature could not be created (e.g. offline). Asks whether to regenerate or post without the content credential. Do not say the video loses its Human-Made status: the device proof still provides it.
   ///
   /// In en, this message translates to:
-  /// **'Post without the human-made check?'**
+  /// **'Post without content credentials?'**
   String get videoMetadataC2paMissingTitle;
 
-  /// Body text of the bottom sheet warning that a video will be published without a C2PA content credential, meaning it will not be verifiably confirmed as human-made.
+  /// Body text of the bottom sheet warning that a video will be published without a C2PA content credential embedded in the file. The Human-Made badge comes from the device proof and is unaffected, so do not mention it.
   ///
   /// In en, this message translates to:
-  /// **'We couldn\'t add content credentials, so this video won\'t be confirmed as Human-Made. Regenerate to try again, or post it as-is.'**
+  /// **'We couldn\'t add content credentials to this video. Regenerate to try again, or post it as-is.'**
   String get videoMetadataC2paMissingBody;
 
   /// Small trailing note under the missing-content-credential bottom sheet, shown when the device is offline, where connectivity really is the likely cause. When the device is online, videoMetadataC2paMissingNoteServiceUnavailable is shown instead.

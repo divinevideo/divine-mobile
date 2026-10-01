@@ -6274,11 +6274,11 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingTitle =>
-      'Plaatsen zonder echtheidscontrole?';
+      'Plaatsen zonder content credentials?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'We konden geen content credentials toevoegen, dus deze video wordt niet bevestigd als door mensen gemaakt. Genereer opnieuw om het nog eens te proberen, of plaats hem zo.';
+      'We konden geen content credentials aan deze video toevoegen. Genereer opnieuw om het nog eens te proberen, of plaats hem zo.';
 
   @override
   String get videoMetadataC2paMissingNote =>

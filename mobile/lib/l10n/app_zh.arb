@@ -3198,11 +3198,11 @@
   "@videoMetadataEditCoverSuccessAnnouncement": {
     "description": "Screen-reader announcement spoken after the user confirms a new cover thumbnail and the screen is about to close. Visual users get the screen pop as feedback; this is the audio equivalent."
   },
-  "videoMetadataC2paMissingTitle": "不做“人类创作”验证就发布？",
+  "videoMetadataC2paMissingTitle": "不带内容凭证就发布？",
   "@videoMetadataC2paMissingTitle": {
     "description": "Title of a bottom sheet shown after rendering a video when the C2PA content-credential signature could not be created (e.g. offline). Asks whether to regenerate or post without provenance."
   },
-  "videoMetadataC2paMissingBody": "我们没能添加内容凭证，该视频将无法被确认为“人类创作”。重新生成再试一次，或者就这样发布。",
+  "videoMetadataC2paMissingBody": "我们没能为该视频添加内容凭证。重新生成再试一次，或者就这样发布。",
   "@videoMetadataC2paMissingBody": {
     "description": "Body text of the bottom sheet warning that a video will be published without a C2PA content credential, meaning it will not be verifiably confirmed as human-made."
   },

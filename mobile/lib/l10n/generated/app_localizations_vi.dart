@@ -6216,11 +6216,11 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingTitle =>
-      'Đăng mà không có xác nhận do người làm?';
+      'Đăng mà không có chứng nhận nội dung?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'Bọn mình không thêm được chứng nhận nội dung, nên video này sẽ không được xác nhận là Do người làm. Tạo lại để thử lần nữa, hoặc đăng nguyên trạng.';
+      'Bọn mình không thêm được chứng nhận nội dung vào video này. Tạo lại để thử lần nữa, hoặc đăng nguyên trạng.';
 
   @override
   String get videoMetadataC2paMissingNote =>

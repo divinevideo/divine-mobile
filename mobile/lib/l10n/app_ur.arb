@@ -3198,11 +3198,11 @@
   "@videoMetadataEditCoverSuccessAnnouncement": {
     "description": "Screen-reader announcement spoken after the user confirms a new cover thumbnail and the screen is about to close. Visual users get the screen pop as feedback; this is the audio equivalent."
   },
-  "videoMetadataC2paMissingTitle": "انسانی بنائی جانچ کے بغیر پوسٹ کریں؟",
+  "videoMetadataC2paMissingTitle": "مواد اسناد کے بغیر پوسٹ کریں؟",
   "@videoMetadataC2paMissingTitle": {
     "description": "Title of a bottom sheet shown after rendering a video when the C2PA content-credential signature could not be created (e.g. offline). Asks whether to regenerate or post without provenance."
   },
-  "videoMetadataC2paMissingBody": "ہم مواد اسناد شامل نہیں کر سکے، اس لیے یہ ویڈیو انسان کی بنائی ہوئی کے طور پر تصدیق نہیں ہو گی۔ دوبارہ بنانے کے لیے ری جنریٹ کریں، یا جوں کی توں پوسٹ کریں۔",
+  "videoMetadataC2paMissingBody": "ہم اس ویڈیو میں مواد اسناد شامل نہیں کر سکے۔ دوبارہ کوشش کرنے کے لیے ری جنریٹ کریں، یا جوں کی توں پوسٹ کریں۔",
   "@videoMetadataC2paMissingBody": {
     "description": "Body text of the bottom sheet warning that a video will be published without a C2PA content credential, meaning it will not be verifiably confirmed as human-made."
   },

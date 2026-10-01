@@ -3732,8 +3732,8 @@
         "description": "Snackbar message shown when saving the chosen cover thumbnail fails on the cover-edit screen. The user can dismiss and try again."
     },
     "videoMetadataEditCoverSuccessAnnouncement": "Корицата е обновена",
-    "videoMetadataC2paMissingTitle": "Публикуване без проверка за автентичност?",
-    "videoMetadataC2paMissingBody": "Не успяхме да добавим удостоверения за съдържанието, затова това видео няма да бъде потвърдено като създадено от човек. Генерирайте отново, за да опитате пак, или го публикувайте както е.",
+    "videoMetadataC2paMissingTitle": "Публикуване без удостоверения за съдържанието?",
+    "videoMetadataC2paMissingBody": "Не успяхме да добавим удостоверения за съдържанието към това видео. Генерирай отново, за да опиташ пак, или го публикувай както е.",
     "videoMetadataC2paMissingNote": "Удостоверенията за съдържание изискват интернет връзка.",
     "videoMetadataC2paMissingNoteServiceUnavailable": "Услугата за удостоверяване на съдържание не отговори. Не е заради твоята връзка.",
     "videoMetadataC2paMissingRegenerate": "Генерирай отново",

@@ -3794,11 +3794,11 @@
   "@videoMetadataEditCoverSuccessAnnouncement": {
     "description": "Screen-reader announcement spoken after the user confirms a new cover thumbnail and the screen is about to close. Visual users get the screen pop as feedback; this is the audio equivalent."
   },
-  "videoMetadataC2paMissingTitle": "మానవ నిర్మిత తనిఖీ లేకుండా పోస్ట్ చేయాలా?",
+  "videoMetadataC2paMissingTitle": "కంటెంట్ ఆధారాలు లేకుండా పోస్ట్ చేయాలా?",
   "@videoMetadataC2paMissingTitle": {
     "description": "Title of a bottom sheet shown after rendering a video when the C2PA content-credential signature could not be created (e.g. offline). Asks whether to regenerate or post without provenance."
   },
-  "videoMetadataC2paMissingBody": "మేము కంటెంట్ ఆధారాలను జోడించలేకపోయాము, కాబట్టి ఈ వీడియో మానవ నిర్మితమైనదిగా నిర్ధారించబడదు. మళ్లీ ప్రయత్నించడానికి రీజెనరేట్ చేయండి లేదా దాన్ని అలాగే పోస్ట్ చేయండి.",
+  "videoMetadataC2paMissingBody": "ఈ వీడియోకు మేము కంటెంట్ ఆధారాలను జోడించలేకపోయాము. మళ్లీ ప్రయత్నించడానికి రీజెనరేట్ చేయండి లేదా దాన్ని అలాగే పోస్ట్ చేయండి.",
   "@videoMetadataC2paMissingBody": {
     "description": "Body text of the bottom sheet warning that a video will be published without a C2PA content credential, meaning it will not be verifiably confirmed as human-made."
   },

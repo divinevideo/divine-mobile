@@ -3198,11 +3198,11 @@
   "@videoMetadataEditCoverSuccessAnnouncement": {
     "description": "Screen-reader announcement spoken after the user confirms a new cover thumbnail and the screen is about to close. Visual users get the screen pop as feedback; this is the audio equivalent."
   },
-  "videoMetadataC2paMissingTitle": "Đăng mà không có xác nhận do người làm?",
+  "videoMetadataC2paMissingTitle": "Đăng mà không có chứng nhận nội dung?",
   "@videoMetadataC2paMissingTitle": {
     "description": "Title of a bottom sheet shown after rendering a video when the C2PA content-credential signature could not be created (e.g. offline). Asks whether to regenerate or post without provenance."
   },
-  "videoMetadataC2paMissingBody": "Bọn mình không thêm được chứng nhận nội dung, nên video này sẽ không được xác nhận là Do người làm. Tạo lại để thử lần nữa, hoặc đăng nguyên trạng.",
+  "videoMetadataC2paMissingBody": "Bọn mình không thêm được chứng nhận nội dung vào video này. Tạo lại để thử lần nữa, hoặc đăng nguyên trạng.",
   "@videoMetadataC2paMissingBody": {
     "description": "Body text of the bottom sheet warning that a video will be published without a C2PA content credential, meaning it will not be verifiably confirmed as human-made."
   },

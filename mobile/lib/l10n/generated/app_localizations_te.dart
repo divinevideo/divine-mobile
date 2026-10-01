@@ -6443,11 +6443,11 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingTitle =>
-      'మానవ నిర్మిత తనిఖీ లేకుండా పోస్ట్ చేయాలా?';
+      'కంటెంట్ ఆధారాలు లేకుండా పోస్ట్ చేయాలా?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'మేము కంటెంట్ ఆధారాలను జోడించలేకపోయాము, కాబట్టి ఈ వీడియో మానవ నిర్మితమైనదిగా నిర్ధారించబడదు. మళ్లీ ప్రయత్నించడానికి రీజెనరేట్ చేయండి లేదా దాన్ని అలాగే పోస్ట్ చేయండి.';
+      'ఈ వీడియోకు మేము కంటెంట్ ఆధారాలను జోడించలేకపోయాము. మళ్లీ ప్రయత్నించడానికి రీజెనరేట్ చేయండి లేదా దాన్ని అలాగే పోస్ట్ చేయండి.';
 
   @override
   String get videoMetadataC2paMissingNote =>

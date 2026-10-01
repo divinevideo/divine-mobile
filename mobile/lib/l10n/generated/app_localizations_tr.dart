@@ -6180,11 +6180,11 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingTitle =>
-      'Gerçeklik doğrulaması olmadan paylaşılsın mı?';
+      'İçerik kimlik bilgileri olmadan paylaşılsın mı?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'İçerik kimlik bilgilerini ekleyemedik, bu nedenle bu video insan yapımı olarak doğrulanmayacak. Yeniden denemek için yeniden oluştur ya da olduğu gibi paylaş.';
+      'Bu videoya içerik kimlik bilgilerini ekleyemedik. Yeniden denemek için yeniden oluştur ya da olduğu gibi paylaş.';
 
   @override
   String get videoMetadataC2paMissingNote =>

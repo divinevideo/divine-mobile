@@ -6310,11 +6310,11 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingTitle =>
-      'Pubblicare senza la verifica di autenticità?';
+      'Pubblicare senza le credenziali di contenuto?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'Non è stato possibile aggiungere le credenziali di contenuto, quindi questo video non sarà confermato come fatto da un umano. Rigenera per riprovare oppure pubblicalo così com’è.';
+      'Non è stato possibile aggiungere le credenziali di contenuto a questo video. Rigenera per riprovare oppure pubblicalo così com’è.';
 
   @override
   String get videoMetadataC2paMissingNote =>

@@ -3726,8 +3726,8 @@
         "description": "Snackbar message shown when saving the chosen cover thumbnail fails on the cover-edit screen. The user can dismiss and try again."
     },
     "videoMetadataEditCoverSuccessAnnouncement": "ሽፋን ተዘምኗል",
-    "videoMetadataC2paMissingTitle": "ያለ የእውነተኛነት ማረጋገጫ ይለጠፍ?",
-    "videoMetadataC2paMissingBody": "የይዘት መታወቂያዎችን መጨመር አልቻልንም፣ ስለዚህ ይህ ቪዲዮ በሰው እንደተሰራ አይረጋገጥም። እንደገና ለመሞከር እንደገና ይፍጠሩ ወይም እንዳለ ይለጥፉ።",
+    "videoMetadataC2paMissingTitle": "ያለ የይዘት መታወቂያዎች ይለጠፍ?",
+    "videoMetadataC2paMissingBody": "ለዚህ ቪዲዮ የይዘት መታወቂያዎችን መጨመር አልቻልንም። እንደገና ለመሞከር እንደገና ይፍጠሩ ወይም እንዳለ ይለጥፉ።",
     "videoMetadataC2paMissingNote": "የይዘት መታወቂያዎች የበይነመረብ ግንኙነት ያስፈልጋቸዋል።",
     "videoMetadataC2paMissingNoteServiceUnavailable": "የይዘት ማረጋገጫ አገልግሎቱ ምላሽ አልሰጠም። ይህ የአንተ ግንኙነት ችግር አይደለም።",
     "videoMetadataC2paMissingRegenerate": "እንደገና ፍጠር",

@@ -6284,11 +6284,11 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingTitle =>
-      'I-post nang walang human-made check?';
+      'I-post nang walang content credentials?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'Hindi kami nakapaglagay ng content credentials, kaya hindi makukumpirma na gawa ng tao ang video na ito. I-regenerate para subukan ulit, o i-post na lang ito.';
+      'Hindi kami nakapaglagay ng content credentials sa video na ito. I-regenerate para subukan ulit, o i-post na lang ito.';
 
   @override
   String get videoMetadataC2paMissingNote =>

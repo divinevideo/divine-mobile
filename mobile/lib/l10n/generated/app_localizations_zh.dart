@@ -5893,11 +5893,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoMetadataEditCoverSuccessAnnouncement => '封面已更新';
 
   @override
-  String get videoMetadataC2paMissingTitle => '不做“人类创作”验证就发布？';
+  String get videoMetadataC2paMissingTitle => '不带内容凭证就发布？';
 
   @override
-  String get videoMetadataC2paMissingBody =>
-      '我们没能添加内容凭证，该视频将无法被确认为“人类创作”。重新生成再试一次，或者就这样发布。';
+  String get videoMetadataC2paMissingBody => '我们没能为该视频添加内容凭证。重新生成再试一次，或者就这样发布。';
 
   @override
   String get videoMetadataC2paMissingNote => '添加内容凭证需要网络连接。';

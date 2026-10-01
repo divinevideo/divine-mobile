@@ -6337,11 +6337,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingTitle =>
-      'Post without the human-made check?';
+      'Post without content credentials?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'We couldn\'t add content credentials, so this video won\'t be confirmed as Human-Made. Regenerate to try again, or post it as-is.';
+      'We couldn\'t add content credentials to this video. Regenerate to try again, or post it as-is.';
 
   @override
   String get videoMetadataC2paMissingNote =>

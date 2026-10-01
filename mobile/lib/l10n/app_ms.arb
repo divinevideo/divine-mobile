@@ -3198,11 +3198,11 @@
   "@videoMetadataEditCoverSuccessAnnouncement": {
     "description": "Screen-reader announcement spoken after the user confirms a new cover thumbnail and the screen is about to close. Visual users get the screen pop as feedback; this is the audio equivalent."
   },
-  "videoMetadataC2paMissingTitle": "Siarkan tanpa semakan buatan manusia?",
+  "videoMetadataC2paMissingTitle": "Siarkan tanpa kelayakan kandungan?",
   "@videoMetadataC2paMissingTitle": {
     "description": "Title of a bottom sheet shown after rendering a video when the C2PA content-credential signature could not be created (e.g. offline). Asks whether to regenerate or post without provenance."
   },
-  "videoMetadataC2paMissingBody": "Kami tidak dapat menambah kelayakan kandungan, jadi video ini tidak akan disahkan sebagai Buatan Manusia. Jana semula untuk cuba lagi, atau siarkan seadanya.",
+  "videoMetadataC2paMissingBody": "Kami tidak dapat menambah kelayakan kandungan pada video ini. Jana semula untuk cuba lagi, atau siarkan seadanya.",
   "@videoMetadataC2paMissingBody": {
     "description": "Body text of the bottom sheet warning that a video will be published without a C2PA content credential, meaning it will not be verifiably confirmed as human-made."
   },

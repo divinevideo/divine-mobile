@@ -4094,13 +4094,13 @@
   "@videoMetadataEditCoverSuccessAnnouncement": {
     "description": "Screen-reader announcement spoken after the user confirms a new cover thumbnail and the screen is about to close. Visual users get the screen pop as feedback; this is the audio equivalent."
   },
-  "videoMetadataC2paMissingTitle": "Post without the human-made check?",
+  "videoMetadataC2paMissingTitle": "Post without content credentials?",
   "@videoMetadataC2paMissingTitle": {
-    "description": "Title of a bottom sheet shown after rendering a video when the C2PA content-credential signature could not be created (e.g. offline). Asks whether to regenerate or post without provenance."
+    "description": "Title of a bottom sheet shown after rendering a video when the C2PA content-credential signature could not be created (e.g. offline). Asks whether to regenerate or post without the content credential. Do not say the video loses its Human-Made status: the device proof still provides it."
   },
-  "videoMetadataC2paMissingBody": "We couldn't add content credentials, so this video won't be confirmed as Human-Made. Regenerate to try again, or post it as-is.",
+  "videoMetadataC2paMissingBody": "We couldn't add content credentials to this video. Regenerate to try again, or post it as-is.",
   "@videoMetadataC2paMissingBody": {
-    "description": "Body text of the bottom sheet warning that a video will be published without a C2PA content credential, meaning it will not be verifiably confirmed as human-made."
+    "description": "Body text of the bottom sheet warning that a video will be published without a C2PA content credential embedded in the file. The Human-Made badge comes from the device proof and is unaffected, so do not mention it."
   },
   "videoMetadataC2paMissingNote": "Content credentials need an internet connection.",
   "@videoMetadataC2paMissingNote": {

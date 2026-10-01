@@ -6408,11 +6408,11 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingTitle =>
-      'Publici fără verificarea autenticității?';
+      'Publici fără acreditările de conținut?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'Nu am putut adăuga acreditările de conținut, așa că acest videoclip nu va fi confirmat ca fiind făcut de om. Regenerează pentru a încerca din nou sau publică-l așa cum este.';
+      'Nu am putut adăuga acreditările de conținut la acest videoclip. Regenerează pentru a încerca din nou sau publică-l așa cum este.';
 
   @override
   String get videoMetadataC2paMissingNote =>

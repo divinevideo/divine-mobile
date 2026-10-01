@@ -6175,11 +6175,11 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingTitle =>
-      'Posting tanpa verifikasi keaslian?';
+      'Posting tanpa kredensial konten?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'Kami tidak dapat menambahkan kredensial konten, jadi video ini tidak akan dikonfirmasi sebagai buatan manusia. Buat ulang untuk mencoba lagi, atau posting apa adanya.';
+      'Kami tidak dapat menambahkan kredensial konten ke video ini. Buat ulang untuk mencoba lagi, atau posting apa adanya.';
 
   @override
   String get videoMetadataC2paMissingNote =>
