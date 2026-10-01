@@ -1912,7 +1912,6 @@
   "peopleListsCreateButton": "创建",
   "peopleListsAddPeopleTitle": "添加成员",
   "peopleListsAddPeopleTooltip": "添加成员",
-  "peopleListsAddPeopleSemanticLabel": "把成员加入列表",
   "peopleListsListNotFoundTitle": "找不到列表",
   "peopleListsListNotFoundSubtitle": "找不到该列表，可能已被删除。",
   "peopleListsListDeletedSubtitle": "该列表可能已被删除。",
@@ -1932,18 +1931,26 @@
       }
     }
   },
-  "peopleListsAddPeopleSearchHint": "搜索用户",
-  "peopleListsAddPeopleError": "加载用户失败，请重试。",
-  "peopleListsAddPeopleRetry": "再试一次",
-  "peopleListsAddButton": "添加",
-  "peopleListsAddButtonWithCount": "添加 {count} 人",
-  "@peopleListsAddButtonWithCount": {
+  "peopleListsAddPersonSemanticLabel": "把 {name} 加入列表",
+  "@peopleListsAddPersonSemanticLabel": {
     "placeholders": {
-      "count": {
-        "type": "int"
+      "name": {
+        "type": "String"
       }
     }
   },
+  "peopleListsRemovePersonSemanticLabel": "把 {name} 从列表移除",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "无法更新列表，请重试。",
+  "peopleListsAddPeopleSearchHint": "搜索用户",
+  "peopleListsAddPeopleError": "加载用户失败，请重试。",
+  "peopleListsAddPeopleRetry": "再试一次",
   "peopleListsInNLists": "{count, plural, =1{已在 1 个列表中} other{已在 {count} 个列表中}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -6573,5 +6580,6 @@
     }
   },
   "listsDiscoveryLoadingLabel": "正在加载列表",
-  "listsDiscoveryEmpty": "这次没找到列表。下拉刷新试试。"
+  "listsDiscoveryEmpty": "这次没找到列表。下拉刷新试试。",
+  "peopleListsAddPeopleSemanticLabel": "把成员加入列表"
 }

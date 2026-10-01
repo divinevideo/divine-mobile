@@ -3851,9 +3851,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get peopleListsAddPeopleTooltip => 'Thêm người';
 
   @override
-  String get peopleListsAddPeopleSemanticLabel => 'Thêm người vào danh sách';
-
-  @override
   String get peopleListsListNotFoundTitle => 'Không tìm thấy danh sách';
 
   @override
@@ -3895,6 +3892,20 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Thêm $name vào danh sách';
+  }
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Xóa $name khỏi danh sách';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Không cập nhật được danh sách. Vui lòng thử lại.';
+
+  @override
   String get peopleListsAddPeopleSearchHint => 'Tìm người';
 
   @override
@@ -3903,14 +3914,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'Thử lại';
-
-  @override
-  String get peopleListsAddButton => 'Thêm';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Thêm $count';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -12704,4 +12707,7 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'Lần này chẳng thấy danh sách nào. Kéo để làm mới.';
+
+  @override
+  String get peopleListsAddPeopleSemanticLabel => 'Thêm người vào danh sách';
 }

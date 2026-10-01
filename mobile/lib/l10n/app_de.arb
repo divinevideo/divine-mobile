@@ -2943,7 +2943,6 @@
     "peopleListsCreateButton": "Erstellen",
     "peopleListsAddPeopleTitle": "Personen hinzufügen",
     "peopleListsAddPeopleTooltip": "Personen hinzufügen",
-    "peopleListsAddPeopleSemanticLabel": "Personen zur Liste hinzufügen",
     "peopleListsListNotFoundTitle": "Liste nicht gefunden",
     "peopleListsListNotFoundSubtitle": "Liste nicht gefunden. Sie wurde möglicherweise gelöscht.",
     "peopleListsListDeletedSubtitle": "Diese Liste wurde möglicherweise gelöscht.",
@@ -2956,11 +2955,26 @@
     "peopleListsErrorLoadingVideos": "Fehler beim Laden der Videos",
     "peopleListsNoPeopleToAdd": "Keine Personen zum Hinzufügen verfügbar.",
     "peopleListsAddToListName": "Zu {name} hinzufügen",
+    "peopleListsAddPersonSemanticLabel": "{name} zur Liste hinzufügen",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "{name} aus der Liste entfernen",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "Liste konnte nicht aktualisiert werden. Bitte versuch es nochmal.",
     "peopleListsAddPeopleSearchHint": "Personen suchen",
     "peopleListsAddPeopleError": "Personen konnten nicht geladen werden. Bitte versuche es erneut.",
     "peopleListsAddPeopleRetry": "Erneut versuchen",
-    "peopleListsAddButton": "Hinzufügen",
-    "peopleListsAddButtonWithCount": "{count} hinzufügen",
     "peopleListsInNLists": "{count, plural, =1{In 1 Liste} other{In {count} Listen}}",
     "peopleListsRemoveConfirmTitle": "{name} entfernen?",
     "peopleListsRemoveConfirmBody": "Sie werden aus dieser Liste entfernt.",
@@ -4806,5 +4820,6 @@
     }
   },
     "listsDiscoveryLoadingLabel": "Listen werden geladen",
-    "listsDiscoveryEmpty": "Diesmal sind keine Listen aufgetaucht. Zieh nach unten zum Aktualisieren."
+    "listsDiscoveryEmpty": "Diesmal sind keine Listen aufgetaucht. Zieh nach unten zum Aktualisieren.",
+    "peopleListsAddPeopleSemanticLabel": "Personen zur Liste hinzufügen"
 }

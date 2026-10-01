@@ -1460,7 +1460,6 @@
     "peopleListsCreateButton": "Създай",
     "peopleListsAddPeopleTitle": "Добави хора",
     "peopleListsAddPeopleTooltip": "Добави хора",
-    "peopleListsAddPeopleSemanticLabel": "Добави хора към списъка",
     "peopleListsListNotFoundTitle": "Списъкът не е намерен",
     "peopleListsListNotFoundSubtitle": "Списъкът не е намерен. Може да е изтрит.",
     "peopleListsListDeletedSubtitle": "Този списък може да е изтрит.",
@@ -1480,18 +1479,26 @@
             }
         }
     },
-    "peopleListsAddPeopleSearchHint": "Търси хора",
-    "peopleListsAddPeopleError": "Не успяхме да заредим хората. Опитай пак.",
-    "peopleListsAddPeopleRetry": "Опитай пак",
-    "peopleListsAddButton": "Добави",
-    "peopleListsAddButtonWithCount": "Добави {count}",
-    "@peopleListsAddButtonWithCount": {
+    "peopleListsAddPersonSemanticLabel": "Добави {name} към списъка",
+    "@peopleListsAddPersonSemanticLabel": {
         "placeholders": {
-            "count": {
-                "type": "int"
+            "name": {
+                "type": "String"
             }
         }
     },
+    "peopleListsRemovePersonSemanticLabel": "Премахни {name} от списъка",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "Не успяхме да обновим списъка. Опитай пак.",
+    "peopleListsAddPeopleSearchHint": "Търси хора",
+    "peopleListsAddPeopleError": "Не успяхме да заредим хората. Опитай пак.",
+    "peopleListsAddPeopleRetry": "Опитай пак",
     "peopleListsInNLists": "{count, plural, =1{В 1 списък} other{В {count} списъка}}",
     "@peopleListsInNLists": {
         "placeholders": {
@@ -4930,5 +4937,6 @@
     }
   },
     "listsDiscoveryLoadingLabel": "Зареждане на списъци",
-    "listsDiscoveryEmpty": "Този път не изскочи нито един списък. Дръпни надолу за обновяване."
+    "listsDiscoveryEmpty": "Този път не изскочи нито един списък. Дръпни надолу за обновяване.",
+    "peopleListsAddPeopleSemanticLabel": "Добави хора към списъка"
 }

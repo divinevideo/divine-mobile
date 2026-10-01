@@ -3795,9 +3795,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get peopleListsAddPeopleTooltip => 'ሰዎችን ጨምር';
 
   @override
-  String get peopleListsAddPeopleSemanticLabel => 'ሰዎችን ወደ ዝርዝር ያክሉ';
-
-  @override
   String get peopleListsListNotFoundTitle => 'ዝርዝር አልተገኘም።';
 
   @override
@@ -3836,6 +3833,20 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '$nameን ወደ ዝርዝር ያክሉ';
+  }
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '$nameን ከዝርዝር ያስወግዱ';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'ዝርዝሩን ማዘመን አልተቻለም። እባክዎ እንደገና ይሞክሩ።';
+
+  @override
   String get peopleListsAddPeopleSearchHint => 'ሰዎችን ፈልግ';
 
   @override
@@ -3843,14 +3854,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'እንደገና ይሞክሩ';
-
-  @override
-  String get peopleListsAddButton => 'አክል';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'አክል $count';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -12435,4 +12438,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get listsDiscoveryEmpty => 'በዚህ ጊዜ ምንም ዝርዝሮች አልተገኙም። ለማደስ ወደታች ይጎትቱ።';
+
+  @override
+  String get peopleListsAddPeopleSemanticLabel => 'ሰዎችን ወደ ዝርዝር ያክሉ';
 }

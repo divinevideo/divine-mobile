@@ -88,13 +88,10 @@ void main() {
       if (!followersController.isClosed) await followersController.close();
     });
 
-    AddPeopleToListCubit createCubit({
-      List<String> existingMembers = const [],
-    }) {
+    AddPeopleToListCubit createCubit() {
       return AddPeopleToListCubit(
         followRepository: followRepository,
         profileRepository: profileRepository,
-        existingMemberPubkeys: existingMembers,
       );
     }
 
@@ -103,7 +100,6 @@ void main() {
       expect(cubit.state.status, AddPeopleToListStatus.initial);
       expect(cubit.state.candidates, isEmpty);
       expect(cubit.state.query, isEmpty);
-      expect(cubit.state.selectedPubkeys, isEmpty);
       await cubit.close();
     });
 
@@ -203,25 +199,6 @@ void main() {
           await cubit.close();
         },
       );
-
-      test('existingMemberPubkeys appear with isAlreadyInList=true', () async {
-        when(
-          () => followRepository.followingPubkeys,
-        ).thenReturn([_alicePubkey]);
-        when(
-          () => followRepository.watchMyFollowers(),
-        ).thenAnswer((_) => const Stream.empty());
-
-        final cubit = createCubit(existingMembers: [_alicePubkey]);
-        await cubit.started();
-
-        final alice = cubit.state.candidates.firstWhere(
-          (c) => c.pubkey == _alicePubkey,
-        );
-        expect(alice.isAlreadyInList, isTrue);
-
-        await cubit.close();
-      });
 
       test(
         'profile lookup failure keeps candidate with fallback labels',
@@ -429,28 +406,6 @@ void main() {
       });
     });
 
-    group('candidateToggled', () {
-      test('adds and removes pubkey from selectedPubkeys', () async {
-        when(
-          () => followRepository.followingPubkeys,
-        ).thenReturn([_alicePubkey]);
-        when(
-          () => followRepository.watchMyFollowers(),
-        ).thenAnswer((_) => const Stream.empty());
-
-        final cubit = createCubit();
-        await cubit.started();
-
-        expect(cubit.state.selectedPubkeys, isEmpty);
-        cubit.candidateToggled(_alicePubkey);
-        expect(cubit.state.selectedPubkeys, contains(_alicePubkey));
-        cubit.candidateToggled(_alicePubkey);
-        expect(cubit.state.selectedPubkeys, isNot(contains(_alicePubkey)));
-
-        await cubit.close();
-      });
-    });
-
     group('retryRequested', () {
       blocTest<AddPeopleToListCubit, AddPeopleToListState>(
         're-runs the loader after a prior failure',
@@ -470,7 +425,6 @@ void main() {
         build: () => AddPeopleToListCubit(
           followRepository: followRepository,
           profileRepository: profileRepository,
-          existingMemberPubkeys: const [],
         ),
         act: (cubit) async {
           await cubit.started();

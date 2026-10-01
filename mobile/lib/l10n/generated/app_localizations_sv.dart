@@ -3872,9 +3872,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get peopleListsAddPeopleTooltip => 'Lägg till personer';
 
   @override
-  String get peopleListsAddPeopleSemanticLabel => 'Lägg till personer i listan';
-
-  @override
   String get peopleListsListNotFoundTitle => 'Listan hittades inte';
 
   @override
@@ -3919,6 +3916,20 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Lägg till $name i listan';
+  }
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Ta bort $name från listan';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Kunde inte uppdatera listan. Försök igen.';
+
+  @override
   String get peopleListsAddPeopleSearchHint => 'Sök personer';
 
   @override
@@ -3927,14 +3938,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'Försök igen';
-
-  @override
-  String get peopleListsAddButton => 'Lägg till';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Lägg till $count';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -12763,4 +12766,7 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'Inga listor dök upp den här gången. Dra för att uppdatera.';
+
+  @override
+  String get peopleListsAddPeopleSemanticLabel => 'Lägg till personer i listan';
 }

@@ -1912,7 +1912,6 @@
   "peopleListsCreateButton": "Cipta",
   "peopleListsAddPeopleTitle": "Tambah orang",
   "peopleListsAddPeopleTooltip": "Tambah orang",
-  "peopleListsAddPeopleSemanticLabel": "Tambah orang ke senarai",
   "peopleListsListNotFoundTitle": "Senarai tidak ditemui",
   "peopleListsListNotFoundSubtitle": "Senarai tidak ditemui. Ia mungkin telah dipadam.",
   "peopleListsListDeletedSubtitle": "Senarai ini mungkin telah dipadam.",
@@ -1932,18 +1931,26 @@
       }
     }
   },
-  "peopleListsAddPeopleSearchHint": "Cari orang",
-  "peopleListsAddPeopleError": "Tidak dapat memuatkan orang. Sila cuba lagi.",
-  "peopleListsAddPeopleRetry": "Cuba lagi",
-  "peopleListsAddButton": "Tambah",
-  "peopleListsAddButtonWithCount": "Tambah {count}",
-  "@peopleListsAddButtonWithCount": {
+  "peopleListsAddPersonSemanticLabel": "Tambah {name} ke senarai",
+  "@peopleListsAddPersonSemanticLabel": {
     "placeholders": {
-      "count": {
-        "type": "int"
+      "name": {
+        "type": "String"
       }
     }
   },
+  "peopleListsRemovePersonSemanticLabel": "Alih keluar {name} daripada senarai",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "Tidak dapat mengemas kini senarai. Sila cuba lagi.",
+  "peopleListsAddPeopleSearchHint": "Cari orang",
+  "peopleListsAddPeopleError": "Tidak dapat memuatkan orang. Sila cuba lagi.",
+  "peopleListsAddPeopleRetry": "Cuba lagi",
   "peopleListsInNLists": "{count, plural, =1{Dalam 1 senarai} other{Dalam {count} senarai}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -6573,5 +6580,6 @@
     }
   },
   "listsDiscoveryLoadingLabel": "Memuatkan senarai",
-  "listsDiscoveryEmpty": "Tiada senarai yang muncul kali ini. Tarik untuk muat semula."
+  "listsDiscoveryEmpty": "Tiada senarai yang muncul kali ini. Tarik untuk muat semula.",
+  "peopleListsAddPeopleSemanticLabel": "Tambah orang ke senarai"
 }

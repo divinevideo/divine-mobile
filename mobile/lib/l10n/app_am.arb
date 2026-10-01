@@ -1647,7 +1647,6 @@
     "peopleListsCreateButton": "ፍጠር",
     "peopleListsAddPeopleTitle": "ሰዎችን ጨምር",
     "peopleListsAddPeopleTooltip": "ሰዎችን ጨምር",
-    "peopleListsAddPeopleSemanticLabel": "ሰዎችን ወደ ዝርዝር ያክሉ",
     "peopleListsListNotFoundTitle": "ዝርዝር አልተገኘም።",
     "peopleListsListNotFoundSubtitle": "ዝርዝር አልተገኘም። ተሰርዞ ሊሆን ይችላል።",
     "peopleListsListDeletedSubtitle": "ይህ ዝርዝር ተሰርዞ ሊሆን ይችላል።",
@@ -1667,18 +1666,26 @@
             }
         }
     },
-    "peopleListsAddPeopleSearchHint": "ሰዎችን ፈልግ",
-    "peopleListsAddPeopleError": "ሰዎችን መጫን አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
-    "peopleListsAddPeopleRetry": "እንደገና ይሞክሩ",
-    "peopleListsAddButton": "አክል",
-    "peopleListsAddButtonWithCount": "አክል {count}",
-    "@peopleListsAddButtonWithCount": {
+    "peopleListsAddPersonSemanticLabel": "{name}ን ወደ ዝርዝር ያክሉ",
+    "@peopleListsAddPersonSemanticLabel": {
         "placeholders": {
-            "count": {
-                "type": "int"
+            "name": {
+                "type": "String"
             }
         }
     },
+    "peopleListsRemovePersonSemanticLabel": "{name}ን ከዝርዝር ያስወግዱ",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "ዝርዝሩን ማዘመን አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
+    "peopleListsAddPeopleSearchHint": "ሰዎችን ፈልግ",
+    "peopleListsAddPeopleError": "ሰዎችን መጫን አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
+    "peopleListsAddPeopleRetry": "እንደገና ይሞክሩ",
     "peopleListsInNLists": "{count, plural, =1{በ{count} ዝርዝር ውስጥ} other{በ{count} ዝርዝሮች ውስጥ}}",
     "@peopleListsInNLists": {
         "placeholders": {
@@ -4924,5 +4931,6 @@
     }
   },
     "listsDiscoveryLoadingLabel": "ዝርዝሮችን በመጫን ላይ",
-    "listsDiscoveryEmpty": "በዚህ ጊዜ ምንም ዝርዝሮች አልተገኙም። ለማደስ ወደታች ይጎትቱ።"
+    "listsDiscoveryEmpty": "በዚህ ጊዜ ምንም ዝርዝሮች አልተገኙም። ለማደስ ወደታች ይጎትቱ።",
+    "peopleListsAddPeopleSemanticLabel": "ሰዎችን ወደ ዝርዝር ያክሉ"
 }

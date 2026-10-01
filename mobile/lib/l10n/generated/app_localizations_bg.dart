@@ -3930,9 +3930,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get peopleListsAddPeopleTooltip => 'Добави хора';
 
   @override
-  String get peopleListsAddPeopleSemanticLabel => 'Добави хора към списъка';
-
-  @override
   String get peopleListsListNotFoundTitle => 'Списъкът не е намерен';
 
   @override
@@ -3973,6 +3970,20 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Добави $name към списъка';
+  }
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Премахни $name от списъка';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Не успяхме да обновим списъка. Опитай пак.';
+
+  @override
   String get peopleListsAddPeopleSearchHint => 'Търси хора';
 
   @override
@@ -3981,14 +3992,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'Опитай пак';
-
-  @override
-  String get peopleListsAddButton => 'Добави';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Добави $count';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -12881,4 +12884,7 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'Този път не изскочи нито един списък. Дръпни надолу за обновяване.';
+
+  @override
+  String get peopleListsAddPeopleSemanticLabel => 'Добави хора към списъка';
 }

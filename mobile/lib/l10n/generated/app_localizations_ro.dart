@@ -3998,9 +3998,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get peopleListsAddPeopleTooltip => 'Adaugă persoane';
 
   @override
-  String get peopleListsAddPeopleSemanticLabel => 'Adaugă persoane la listă';
-
-  @override
   String get peopleListsListNotFoundTitle => 'Lista nu a fost găsită';
 
   @override
@@ -4045,6 +4042,20 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Adaugă pe $name la listă';
+  }
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Elimină pe $name din listă';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'N-am putut actualiza lista. Mai încearcă.';
+
+  @override
   String get peopleListsAddPeopleSearchHint => 'Caută persoane';
 
   @override
@@ -4053,14 +4064,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'Încearcă din nou';
-
-  @override
-  String get peopleListsAddButton => 'Adaugă';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Adaugă $count';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -13020,4 +13023,7 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'De data asta n-a apărut nicio listă. Trage în jos pentru reîmprospătare.';
+
+  @override
+  String get peopleListsAddPeopleSemanticLabel => 'Adaugă persoane la listă';
 }

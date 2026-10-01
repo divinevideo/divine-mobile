@@ -3952,9 +3952,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get peopleListsAddPeopleTooltip => 'Add people';
 
   @override
-  String get peopleListsAddPeopleSemanticLabel => 'Add people to list';
-
-  @override
   String get peopleListsListNotFoundTitle => 'List not found';
 
   @override
@@ -3996,6 +3993,20 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Add $name to list';
+  }
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Remove $name from list';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Couldn\'t update the list. Please try again.';
+
+  @override
   String get peopleListsAddPeopleSearchHint => 'Search people';
 
   @override
@@ -4004,14 +4015,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'Try again';
-
-  @override
-  String get peopleListsAddButton => 'Add';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Add $count';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -12851,4 +12854,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'No lists turned up this time. Pull to refresh.';
+
+  @override
+  String get peopleListsAddPeopleSemanticLabel => 'Add people to list';
 }

@@ -2943,7 +2943,6 @@
     "peopleListsCreateButton": "Buat",
     "peopleListsAddPeopleTitle": "Tambahkan orang",
     "peopleListsAddPeopleTooltip": "Tambahkan orang",
-    "peopleListsAddPeopleSemanticLabel": "Tambahkan orang ke daftar",
     "peopleListsListNotFoundTitle": "Daftar tidak ditemukan",
     "peopleListsListNotFoundSubtitle": "Daftar tidak ditemukan. Mungkin sudah dihapus.",
     "peopleListsListDeletedSubtitle": "Daftar ini mungkin sudah dihapus.",
@@ -2956,11 +2955,26 @@
     "peopleListsErrorLoadingVideos": "Kesalahan saat memuat video",
     "peopleListsNoPeopleToAdd": "Tidak ada orang yang tersedia untuk ditambahkan.",
     "peopleListsAddToListName": "Tambahkan ke {name}",
+    "peopleListsAddPersonSemanticLabel": "Tambahkan {name} ke daftar",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "Hapus {name} dari daftar",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "Tidak bisa memperbarui daftar. Coba lagi.",
     "peopleListsAddPeopleSearchHint": "Cari orang",
     "peopleListsAddPeopleError": "Tidak dapat memuat orang. Silakan coba lagi.",
     "peopleListsAddPeopleRetry": "Coba lagi",
-    "peopleListsAddButton": "Tambah",
-    "peopleListsAddButtonWithCount": "Tambah {count}",
     "peopleListsInNLists": "{count, plural, other{Di {count} daftar}}",
     "peopleListsRemoveConfirmTitle": "Hapus {name}?",
     "peopleListsRemoveConfirmBody": "Mereka akan dihapus dari daftar ini.",
@@ -4806,5 +4820,6 @@
     }
   },
     "listsDiscoveryLoadingLabel": "Memuat daftar",
-    "listsDiscoveryEmpty": "Belum ada daftar yang muncul kali ini. Tarik untuk menyegarkan."
+    "listsDiscoveryEmpty": "Belum ada daftar yang muncul kali ini. Tarik untuk menyegarkan.",
+    "peopleListsAddPeopleSemanticLabel": "Tambahkan orang ke daftar"
 }

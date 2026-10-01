@@ -1912,7 +1912,6 @@
   "peopleListsCreateButton": "Tạo",
   "peopleListsAddPeopleTitle": "Thêm người",
   "peopleListsAddPeopleTooltip": "Thêm người",
-  "peopleListsAddPeopleSemanticLabel": "Thêm người vào danh sách",
   "peopleListsListNotFoundTitle": "Không tìm thấy danh sách",
   "peopleListsListNotFoundSubtitle": "Không tìm thấy danh sách. Có thể nó đã bị xóa.",
   "peopleListsListDeletedSubtitle": "Danh sách này có thể đã bị xóa.",
@@ -1932,18 +1931,26 @@
       }
     }
   },
-  "peopleListsAddPeopleSearchHint": "Tìm người",
-  "peopleListsAddPeopleError": "Không tải được danh sách người. Vui lòng thử lại.",
-  "peopleListsAddPeopleRetry": "Thử lại",
-  "peopleListsAddButton": "Thêm",
-  "peopleListsAddButtonWithCount": "Thêm {count}",
-  "@peopleListsAddButtonWithCount": {
+  "peopleListsAddPersonSemanticLabel": "Thêm {name} vào danh sách",
+  "@peopleListsAddPersonSemanticLabel": {
     "placeholders": {
-      "count": {
-        "type": "int"
+      "name": {
+        "type": "String"
       }
     }
   },
+  "peopleListsRemovePersonSemanticLabel": "Xóa {name} khỏi danh sách",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "Không cập nhật được danh sách. Vui lòng thử lại.",
+  "peopleListsAddPeopleSearchHint": "Tìm người",
+  "peopleListsAddPeopleError": "Không tải được danh sách người. Vui lòng thử lại.",
+  "peopleListsAddPeopleRetry": "Thử lại",
   "peopleListsInNLists": "{count, plural, =1{Trong 1 danh sách} other{Trong {count} danh sách}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -6573,5 +6580,6 @@
     }
   },
   "listsDiscoveryLoadingLabel": "Đang tải danh sách",
-  "listsDiscoveryEmpty": "Lần này chẳng thấy danh sách nào. Kéo để làm mới."
+  "listsDiscoveryEmpty": "Lần này chẳng thấy danh sách nào. Kéo để làm mới.",
+  "peopleListsAddPeopleSemanticLabel": "Thêm người vào danh sách"
 }

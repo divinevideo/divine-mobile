@@ -2936,7 +2936,6 @@
     "peopleListsCreateButton": "إنشاء",
     "peopleListsAddPeopleTitle": "إضافة أشخاص",
     "peopleListsAddPeopleTooltip": "إضافة أشخاص",
-    "peopleListsAddPeopleSemanticLabel": "أضف أشخاصًا إلى القائمة",
     "peopleListsListNotFoundTitle": "القائمة غير موجودة",
     "peopleListsListNotFoundSubtitle": "القائمة غير موجودة. ربما تم حذفها.",
     "peopleListsListDeletedSubtitle": "ربما تم حذف هذه القائمة.",
@@ -2949,11 +2948,26 @@
     "peopleListsErrorLoadingVideos": "خطأ في تحميل مقاطع الفيديو",
     "peopleListsNoPeopleToAdd": "لا يوجد أشخاص متاحون للإضافة.",
     "peopleListsAddToListName": "أضف إلى {name}",
+    "peopleListsAddPersonSemanticLabel": "إضافة {name} إلى القائمة",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "إزالة {name} من القائمة",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "تعذّر تحديث القائمة. يرجى المحاولة مجددًا.",
     "peopleListsAddPeopleSearchHint": "البحث عن أشخاص",
     "peopleListsAddPeopleError": "تعذر تحميل الأشخاص. يرجى المحاولة مجددًا.",
     "peopleListsAddPeopleRetry": "حاول مجددًا",
-    "peopleListsAddButton": "إضافة",
-    "peopleListsAddButtonWithCount": "إضافة {count}",
     "peopleListsInNLists": "{count, plural, zero{في صفر قوائم} one{في قائمة واحدة} two{في قائمتين} few{في {count} قوائم} many{في {count} قائمة} other{في {count} قوائم}}",
     "peopleListsRemoveConfirmTitle": "هل تريد إزالة {name}؟",
     "peopleListsRemoveConfirmBody": "سيتم إزالته/إزالتها من هذه القائمة.",
@@ -4806,5 +4820,6 @@
     }
   },
     "listsDiscoveryLoadingLabel": "جارٍ تحميل القوائم",
-    "listsDiscoveryEmpty": "لم تظهر أي قوائم هذه المرة. يمكن السحب للتحديث."
+    "listsDiscoveryEmpty": "لم تظهر أي قوائم هذه المرة. يمكن السحب للتحديث.",
+    "peopleListsAddPeopleSemanticLabel": "أضف أشخاصًا إلى القائمة"
 }

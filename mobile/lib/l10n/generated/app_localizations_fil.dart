@@ -3900,10 +3900,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get peopleListsAddPeopleTooltip => 'Magdagdag ng tao';
 
   @override
-  String get peopleListsAddPeopleSemanticLabel =>
-      'Magdagdag ng tao sa listahan';
-
-  @override
   String get peopleListsListNotFoundTitle => 'Hindi nakita ang listahan';
 
   @override
@@ -3948,6 +3944,20 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Idagdag si $name sa list';
+  }
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Alisin si $name sa list';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Hindi na-update ang list. Subukan ulit.';
+
+  @override
   String get peopleListsAddPeopleSearchHint => 'Maghanap ng tao';
 
   @override
@@ -3956,14 +3966,6 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'Subukan ulit';
-
-  @override
-  String get peopleListsAddButton => 'Idagdag';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Idagdag ang $count';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -12867,4 +12869,8 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'Walang lumabas na list ngayon. Hilahin pababa para mag-refresh.';
+
+  @override
+  String get peopleListsAddPeopleSemanticLabel =>
+      'Magdagdag ng tao sa listahan';
 }

@@ -2943,7 +2943,6 @@
     "peopleListsCreateButton": "Creează",
     "peopleListsAddPeopleTitle": "Adaugă persoane",
     "peopleListsAddPeopleTooltip": "Adaugă persoane",
-    "peopleListsAddPeopleSemanticLabel": "Adaugă persoane la listă",
     "peopleListsListNotFoundTitle": "Lista nu a fost găsită",
     "peopleListsListNotFoundSubtitle": "Lista nu a fost găsită. Poate a fost ștearsă.",
     "peopleListsListDeletedSubtitle": "Această listă poate a fost ștearsă.",
@@ -2956,11 +2955,26 @@
     "peopleListsErrorLoadingVideos": "Eroare la încărcarea videoclipurilor",
     "peopleListsNoPeopleToAdd": "Nicio persoană disponibilă de adăugat.",
     "peopleListsAddToListName": "Adaugă la {name}",
+    "peopleListsAddPersonSemanticLabel": "Adaugă pe {name} la listă",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "Elimină pe {name} din listă",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "N-am putut actualiza lista. Mai încearcă.",
     "peopleListsAddPeopleSearchHint": "Caută persoane",
     "peopleListsAddPeopleError": "Nu s-au putut încărca persoanele. Te rugăm să încerci din nou.",
     "peopleListsAddPeopleRetry": "Încearcă din nou",
-    "peopleListsAddButton": "Adaugă",
-    "peopleListsAddButtonWithCount": "Adaugă {count}",
     "peopleListsInNLists": "{count, plural, =1{Într-o listă} few{În {count} liste} other{În {count} liste}}",
     "peopleListsRemoveConfirmTitle": "Elimini {name}?",
     "peopleListsRemoveConfirmBody": "Va fi eliminat/ă din această listă.",
@@ -4806,5 +4820,6 @@
     }
   },
     "listsDiscoveryLoadingLabel": "Se încarcă listele",
-    "listsDiscoveryEmpty": "De data asta n-a apărut nicio listă. Trage în jos pentru reîmprospătare."
+    "listsDiscoveryEmpty": "De data asta n-a apărut nicio listă. Trage în jos pentru reîmprospătare.",
+    "peopleListsAddPeopleSemanticLabel": "Adaugă persoane la listă"
 }

@@ -2943,7 +2943,6 @@
     "peopleListsCreateButton": "Skapa",
     "peopleListsAddPeopleTitle": "Lägg till personer",
     "peopleListsAddPeopleTooltip": "Lägg till personer",
-    "peopleListsAddPeopleSemanticLabel": "Lägg till personer i listan",
     "peopleListsListNotFoundTitle": "Listan hittades inte",
     "peopleListsListNotFoundSubtitle": "Listan hittades inte. Den kan ha tagits bort.",
     "peopleListsListDeletedSubtitle": "Den här listan kan ha tagits bort.",
@@ -2956,11 +2955,26 @@
     "peopleListsErrorLoadingVideos": "Fel vid inläsning av videor",
     "peopleListsNoPeopleToAdd": "Inga personer tillgängliga att lägga till.",
     "peopleListsAddToListName": "Lägg till i {name}",
+    "peopleListsAddPersonSemanticLabel": "Lägg till {name} i listan",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "Ta bort {name} från listan",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "Kunde inte uppdatera listan. Försök igen.",
     "peopleListsAddPeopleSearchHint": "Sök personer",
     "peopleListsAddPeopleError": "Det gick inte att läsa in personer. Försök igen.",
     "peopleListsAddPeopleRetry": "Försök igen",
-    "peopleListsAddButton": "Lägg till",
-    "peopleListsAddButtonWithCount": "Lägg till {count}",
     "peopleListsInNLists": "{count, plural, =1{I 1 lista} other{I {count} listor}}",
     "peopleListsRemoveConfirmTitle": "Ta bort {name}?",
     "peopleListsRemoveConfirmBody": "De kommer att tas bort från den här listan.",
@@ -4806,5 +4820,6 @@
     }
   },
     "listsDiscoveryLoadingLabel": "Läser in listor",
-    "listsDiscoveryEmpty": "Inga listor dök upp den här gången. Dra för att uppdatera."
+    "listsDiscoveryEmpty": "Inga listor dök upp den här gången. Dra för att uppdatera.",
+    "peopleListsAddPeopleSemanticLabel": "Lägg till personer i listan"
 }

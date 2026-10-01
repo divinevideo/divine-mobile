@@ -2943,7 +2943,6 @@
     "peopleListsCreateButton": "Crea",
     "peopleListsAddPeopleTitle": "Aggiungi persone",
     "peopleListsAddPeopleTooltip": "Aggiungi persone",
-    "peopleListsAddPeopleSemanticLabel": "Aggiungi persone alla lista",
     "peopleListsListNotFoundTitle": "Lista non trovata",
     "peopleListsListNotFoundSubtitle": "Lista non trovata. Potrebbe essere stata eliminata.",
     "peopleListsListDeletedSubtitle": "Questa lista potrebbe essere stata eliminata.",
@@ -2956,11 +2955,26 @@
     "peopleListsErrorLoadingVideos": "Errore nel caricamento dei video",
     "peopleListsNoPeopleToAdd": "Nessuna persona disponibile da aggiungere.",
     "peopleListsAddToListName": "Aggiungi a {name}",
+    "peopleListsAddPersonSemanticLabel": "Aggiungi {name} alla lista",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "Rimuovi {name} dalla lista",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "Impossibile aggiornare la lista. Riprova.",
     "peopleListsAddPeopleSearchHint": "Cerca persone",
     "peopleListsAddPeopleError": "Impossibile caricare le persone. Riprova.",
     "peopleListsAddPeopleRetry": "Riprova",
-    "peopleListsAddButton": "Aggiungi",
-    "peopleListsAddButtonWithCount": "Aggiungi {count}",
     "peopleListsInNLists": "{count, plural, =1{In 1 lista} other{In {count} liste}}",
     "peopleListsRemoveConfirmTitle": "Rimuovere {name}?",
     "peopleListsRemoveConfirmBody": "Verrà rimosso/a da questa lista.",
@@ -4806,5 +4820,6 @@
     }
   },
     "listsDiscoveryLoadingLabel": "Caricamento liste",
-    "listsDiscoveryEmpty": "Stavolta non è saltata fuori nessuna lista. Trascina per aggiornare."
+    "listsDiscoveryEmpty": "Stavolta non è saltata fuori nessuna lista. Trascina per aggiornare.",
+    "peopleListsAddPeopleSemanticLabel": "Aggiungi persone alla lista"
 }

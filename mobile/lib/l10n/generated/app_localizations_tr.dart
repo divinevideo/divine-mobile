@@ -3821,9 +3821,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get peopleListsAddPeopleTooltip => 'Kişi ekle';
 
   @override
-  String get peopleListsAddPeopleSemanticLabel => 'Listeye kişi ekle';
-
-  @override
   String get peopleListsListNotFoundTitle => 'Liste bulunamadı';
 
   @override
@@ -3865,6 +3862,20 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '$name kişisini listeye ekle';
+  }
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '$name kişisini listeden kaldır';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Liste güncellenemedi. Lütfen tekrar dene.';
+
+  @override
   String get peopleListsAddPeopleSearchHint => 'Kişi ara';
 
   @override
@@ -3873,14 +3884,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'Tekrar dene';
-
-  @override
-  String get peopleListsAddButton => 'Ekle';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return '$count ekle';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -12680,4 +12683,7 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'Bu sefer hiç liste çıkmadı. Yenilemek için aşağı çek.';
+
+  @override
+  String get peopleListsAddPeopleSemanticLabel => 'Listeye kişi ekle';
 }

@@ -2205,12 +2205,26 @@
     "notificationsEmptyTitle": "Wala pang activity",
     "notificationsViewProfileSemanticLabel": "Tingnan ang profile ni {displayName}",
     "notificationsViewProfilesSemanticLabel": "Tingnan ang mga profile",
-    "peopleListsAddButton": "Idagdag",
-    "peopleListsAddButtonWithCount": "Idagdag ang {count}",
     "peopleListsAddPeopleError": "Hindi na-load ang mga tao. Subukan ulit.",
     "peopleListsAddPeopleRetry": "Subukan ulit",
+    "peopleListsAddPersonSemanticLabel": "Idagdag si {name} sa list",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "Alisin si {name} sa list",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "Hindi na-update ang list. Subukan ulit.",
     "peopleListsAddPeopleSearchHint": "Maghanap ng tao",
-    "peopleListsAddPeopleSemanticLabel": "Magdagdag ng tao sa listahan",
     "peopleListsAddPeopleTitle": "Magdagdag ng tao",
     "peopleListsAddPeopleTooltip": "Magdagdag ng tao",
     "peopleListsAddToList": "Idagdag sa listahan",
@@ -3805,5 +3819,6 @@
     }
   },
     "listsDiscoveryLoadingLabel": "Naglo-load ng mga list",
-    "listsDiscoveryEmpty": "Walang lumabas na list ngayon. Hilahin pababa para mag-refresh."
+    "listsDiscoveryEmpty": "Walang lumabas na list ngayon. Hilahin pababa para mag-refresh.",
+    "peopleListsAddPeopleSemanticLabel": "Magdagdag ng tao sa listahan"
 }

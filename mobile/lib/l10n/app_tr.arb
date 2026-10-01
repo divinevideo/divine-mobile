@@ -2943,7 +2943,6 @@
     "peopleListsCreateButton": "Oluştur",
     "peopleListsAddPeopleTitle": "Kişi ekle",
     "peopleListsAddPeopleTooltip": "Kişi ekle",
-    "peopleListsAddPeopleSemanticLabel": "Listeye kişi ekle",
     "peopleListsListNotFoundTitle": "Liste bulunamadı",
     "peopleListsListNotFoundSubtitle": "Liste bulunamadı. Silinmiş olabilir.",
     "peopleListsListDeletedSubtitle": "Bu liste silinmiş olabilir.",
@@ -2956,11 +2955,26 @@
     "peopleListsErrorLoadingVideos": "Videolar yüklenirken hata oluştu",
     "peopleListsNoPeopleToAdd": "Eklenecek kişi bulunamadı.",
     "peopleListsAddToListName": "{name} listesine ekle",
+    "peopleListsAddPersonSemanticLabel": "{name} kişisini listeye ekle",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "{name} kişisini listeden kaldır",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "Liste güncellenemedi. Lütfen tekrar dene.",
     "peopleListsAddPeopleSearchHint": "Kişi ara",
     "peopleListsAddPeopleError": "Kişiler yüklenemedi. Lütfen tekrar dene.",
     "peopleListsAddPeopleRetry": "Tekrar dene",
-    "peopleListsAddButton": "Ekle",
-    "peopleListsAddButtonWithCount": "{count} ekle",
     "peopleListsInNLists": "{count, plural, =1{1 listede} other{{count} listede}}",
     "peopleListsRemoveConfirmTitle": "{name} kaldırılsın mı?",
     "peopleListsRemoveConfirmBody": "Bu kişi listeden kaldırılacak.",
@@ -4806,5 +4820,6 @@
     }
   },
     "listsDiscoveryLoadingLabel": "Listeler yükleniyor",
-    "listsDiscoveryEmpty": "Bu sefer hiç liste çıkmadı. Yenilemek için aşağı çek."
+    "listsDiscoveryEmpty": "Bu sefer hiç liste çıkmadı. Yenilemek için aşağı çek.",
+    "peopleListsAddPeopleSemanticLabel": "Listeye kişi ekle"
 }

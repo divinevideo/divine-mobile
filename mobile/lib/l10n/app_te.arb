@@ -2291,7 +2291,6 @@
   "peopleListsCreateButton": "సృష్టించు",
   "peopleListsAddPeopleTitle": "వ్యక్తులను జోడించండి",
   "peopleListsAddPeopleTooltip": "వ్యక్తులను జోడించండి",
-  "peopleListsAddPeopleSemanticLabel": "జాబితాకు వ్యక్తులను జోడించండి",
   "peopleListsListNotFoundTitle": "జాబితా కనుగొనబడలేదు",
   "peopleListsListNotFoundSubtitle": "జాబితా కనుగొనబడలేదు. ఇది తొలగించబడి ఉండవచ్చు.",
   "peopleListsListDeletedSubtitle": "ఈ జాబితా తొలగించబడి ఉండవచ్చు.",
@@ -2311,18 +2310,26 @@
       }
     }
   },
-  "peopleListsAddPeopleSearchHint": "వ్యక్తులను శోధించండి",
-  "peopleListsAddPeopleError": "వ్యక్తులను లోడ్ చేయడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
-  "peopleListsAddPeopleRetry": "మళ్లీ ప్రయత్నించండి",
-  "peopleListsAddButton": "జోడించండి",
-  "peopleListsAddButtonWithCount": "జోడించండి {count}",
-  "@peopleListsAddButtonWithCount": {
+  "peopleListsAddPersonSemanticLabel": "{name}ని జాబితాకు జోడించండి",
+  "@peopleListsAddPersonSemanticLabel": {
     "placeholders": {
-      "count": {
-        "type": "int"
+      "name": {
+        "type": "String"
       }
     }
   },
+  "peopleListsRemovePersonSemanticLabel": "{name}ని జాబితా నుండి తీసివేయండి",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "జాబితాను నవీకరించడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
+  "peopleListsAddPeopleSearchHint": "వ్యక్తులను శోధించండి",
+  "peopleListsAddPeopleError": "వ్యక్తులను లోడ్ చేయడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
+  "peopleListsAddPeopleRetry": "మళ్లీ ప్రయత్నించండి",
   "peopleListsInNLists": "{count, plural, =1{1 జాబితాలో} other{{count} జాబితాల్లో}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -8360,5 +8367,6 @@
     }
   },
   "listsDiscoveryLoadingLabel": "జాబితాలను లోడ్ చేస్తోంది",
-  "listsDiscoveryEmpty": "ఈసారి జాబితాలు ఏవీ దొరకలేదు. రిఫ్రెష్ చేయడానికి లాగండి."
+  "listsDiscoveryEmpty": "ఈసారి జాబితాలు ఏవీ దొరకలేదు. రిఫ్రెష్ చేయడానికి లాగండి.",
+  "peopleListsAddPeopleSemanticLabel": "జాబితాకు వ్యక్తులను జోడించండి"
 }

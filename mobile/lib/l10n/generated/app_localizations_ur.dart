@@ -3883,9 +3883,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get peopleListsAddPeopleTooltip => 'لوگ شامل کریں';
 
   @override
-  String get peopleListsAddPeopleSemanticLabel => 'فہرست میں لوگ شامل کریں';
-
-  @override
   String get peopleListsListNotFoundTitle => 'فہرست نہیں ملی';
 
   @override
@@ -3929,6 +3926,20 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '$name کو فہرست میں شامل کریں';
+  }
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '$name کو فہرست سے ہٹائیں';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'فہرست اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔';
+
+  @override
   String get peopleListsAddPeopleSearchHint => 'لوگ تلاش کریں';
 
   @override
@@ -3937,14 +3948,6 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'دوبارہ کوشش کریں';
-
-  @override
-  String get peopleListsAddButton => 'شامل کریں';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return '$count شامل کریں';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -12749,4 +12752,7 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'اس بار کوئی فہرست ہاتھ نہیں آئی۔ ریفریش کے لیے کھینچیں۔';
+
+  @override
+  String get peopleListsAddPeopleSemanticLabel => 'فہرست میں لوگ شامل کریں';
 }

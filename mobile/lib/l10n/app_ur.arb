@@ -1912,7 +1912,6 @@
   "peopleListsCreateButton": "بنائیں",
   "peopleListsAddPeopleTitle": "لوگ شامل کریں",
   "peopleListsAddPeopleTooltip": "لوگ شامل کریں",
-  "peopleListsAddPeopleSemanticLabel": "فہرست میں لوگ شامل کریں",
   "peopleListsListNotFoundTitle": "فہرست نہیں ملی",
   "peopleListsListNotFoundSubtitle": "فہرست نہیں ملی۔ ممکن ہے اسے حذف کر دیا گیا ہو۔",
   "peopleListsListDeletedSubtitle": "ممکن ہے یہ فہرست حذف کر دی گئی ہو۔",
@@ -1932,18 +1931,26 @@
       }
     }
   },
-  "peopleListsAddPeopleSearchHint": "لوگ تلاش کریں",
-  "peopleListsAddPeopleError": "لوگ لوڈ نہیں ہو سکے۔ براہ کرم دوبارہ کوشش کریں۔",
-  "peopleListsAddPeopleRetry": "دوبارہ کوشش کریں",
-  "peopleListsAddButton": "شامل کریں",
-  "peopleListsAddButtonWithCount": "{count} شامل کریں",
-  "@peopleListsAddButtonWithCount": {
+  "peopleListsAddPersonSemanticLabel": "{name} کو فہرست میں شامل کریں",
+  "@peopleListsAddPersonSemanticLabel": {
     "placeholders": {
-      "count": {
-        "type": "int"
+      "name": {
+        "type": "String"
       }
     }
   },
+  "peopleListsRemovePersonSemanticLabel": "{name} کو فہرست سے ہٹائیں",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "فہرست اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔",
+  "peopleListsAddPeopleSearchHint": "لوگ تلاش کریں",
+  "peopleListsAddPeopleError": "لوگ لوڈ نہیں ہو سکے۔ براہ کرم دوبارہ کوشش کریں۔",
+  "peopleListsAddPeopleRetry": "دوبارہ کوشش کریں",
   "peopleListsInNLists": "{count, plural, =1{1 فہرست میں} other{{count} فہرستوں میں}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -6573,5 +6580,6 @@
     }
   },
   "listsDiscoveryLoadingLabel": "فہرستیں لوڈ ہو رہی ہیں",
-  "listsDiscoveryEmpty": "اس بار کوئی فہرست ہاتھ نہیں آئی۔ ریفریش کے لیے کھینچیں۔"
+  "listsDiscoveryEmpty": "اس بار کوئی فہرست ہاتھ نہیں آئی۔ ریفریش کے لیے کھینچیں۔",
+  "peopleListsAddPeopleSemanticLabel": "فہرست میں لوگ شامل کریں"
 }

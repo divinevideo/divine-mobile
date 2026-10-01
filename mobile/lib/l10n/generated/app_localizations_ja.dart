@@ -3637,9 +3637,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get peopleListsAddPeopleTooltip => 'ユーザーを追加';
 
   @override
-  String get peopleListsAddPeopleSemanticLabel => 'リストにユーザーを追加';
-
-  @override
   String get peopleListsListNotFoundTitle => 'リストが見つかりません';
 
   @override
@@ -3678,6 +3675,19 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '$nameをリストに追加';
+  }
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '$nameをリストから削除';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed => 'リストを更新できませんでした。もう一度お試しください。';
+
+  @override
   String get peopleListsAddPeopleSearchHint => 'ユーザーを検索';
 
   @override
@@ -3685,14 +3695,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => '再試行';
-
-  @override
-  String get peopleListsAddButton => '追加';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return '$count人追加';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -12137,4 +12139,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get listsDiscoveryEmpty => '今回はリストが見つかりませんでした。引っ張って更新してください。';
+
+  @override
+  String get peopleListsAddPeopleSemanticLabel => 'リストにユーザーを追加';
 }

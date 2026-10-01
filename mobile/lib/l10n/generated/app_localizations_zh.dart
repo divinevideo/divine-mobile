@@ -3635,9 +3635,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get peopleListsAddPeopleTooltip => '添加成员';
 
   @override
-  String get peopleListsAddPeopleSemanticLabel => '把成员加入列表';
-
-  @override
   String get peopleListsListNotFoundTitle => '找不到列表';
 
   @override
@@ -3676,6 +3673,19 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '把 $name 加入列表';
+  }
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '把 $name 从列表移除';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed => '无法更新列表，请重试。';
+
+  @override
   String get peopleListsAddPeopleSearchHint => '搜索用户';
 
   @override
@@ -3683,14 +3693,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => '再试一次';
-
-  @override
-  String get peopleListsAddButton => '添加';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return '添加 $count 人';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -12001,4 +12003,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get listsDiscoveryEmpty => '这次没找到列表。下拉刷新试试。';
+
+  @override
+  String get peopleListsAddPeopleSemanticLabel => '把成员加入列表';
 }

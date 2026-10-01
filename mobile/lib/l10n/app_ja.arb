@@ -2936,7 +2936,6 @@
     "peopleListsCreateButton": "作成",
     "peopleListsAddPeopleTitle": "ユーザーを追加",
     "peopleListsAddPeopleTooltip": "ユーザーを追加",
-    "peopleListsAddPeopleSemanticLabel": "リストにユーザーを追加",
     "peopleListsListNotFoundTitle": "リストが見つかりません",
     "peopleListsListNotFoundSubtitle": "リストが見つかりません。削除された可能性があります。",
     "peopleListsListDeletedSubtitle": "このリストは削除された可能性があります。",
@@ -2949,11 +2948,26 @@
     "peopleListsErrorLoadingVideos": "動画の読み込みエラー",
     "peopleListsNoPeopleToAdd": "追加できるユーザーがいません。",
     "peopleListsAddToListName": "{name}に追加",
+    "peopleListsAddPersonSemanticLabel": "{name}をリストに追加",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "{name}をリストから削除",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "リストを更新できませんでした。もう一度お試しください。",
     "peopleListsAddPeopleSearchHint": "ユーザーを検索",
     "peopleListsAddPeopleError": "ユーザーを読み込めませんでした。もう一度お試しください。",
     "peopleListsAddPeopleRetry": "再試行",
-    "peopleListsAddButton": "追加",
-    "peopleListsAddButtonWithCount": "{count}人追加",
     "peopleListsInNLists": "{count, plural, other{{count}件のリストに含まれています}}",
     "peopleListsRemoveConfirmTitle": "{name}を削除しますか？",
     "peopleListsRemoveConfirmBody": "このリストから削除されます。",
@@ -4806,5 +4820,6 @@
     }
   },
     "listsDiscoveryLoadingLabel": "リストを読み込み中",
-    "listsDiscoveryEmpty": "今回はリストが見つかりませんでした。引っ張って更新してください。"
+    "listsDiscoveryEmpty": "今回はリストが見つかりませんでした。引っ張って更新してください。",
+    "peopleListsAddPeopleSemanticLabel": "リストにユーザーを追加"
 }

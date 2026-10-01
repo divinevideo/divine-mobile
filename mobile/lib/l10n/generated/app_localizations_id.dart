@@ -3809,9 +3809,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get peopleListsAddPeopleTooltip => 'Tambahkan orang';
 
   @override
-  String get peopleListsAddPeopleSemanticLabel => 'Tambahkan orang ke daftar';
-
-  @override
   String get peopleListsListNotFoundTitle => 'Daftar tidak ditemukan';
 
   @override
@@ -3854,6 +3851,20 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Tambahkan $name ke daftar';
+  }
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Hapus $name dari daftar';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Tidak bisa memperbarui daftar. Coba lagi.';
+
+  @override
   String get peopleListsAddPeopleSearchHint => 'Cari orang';
 
   @override
@@ -3862,14 +3873,6 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'Coba lagi';
-
-  @override
-  String get peopleListsAddButton => 'Tambah';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Tambah $count';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -12666,4 +12669,7 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'Belum ada daftar yang muncul kali ini. Tarik untuk menyegarkan.';
+
+  @override
+  String get peopleListsAddPeopleSemanticLabel => 'Tambahkan orang ke daftar';
 }

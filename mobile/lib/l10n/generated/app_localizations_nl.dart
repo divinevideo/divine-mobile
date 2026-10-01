@@ -3894,9 +3894,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get peopleListsAddPeopleTooltip => 'Mensen toevoegen';
 
   @override
-  String get peopleListsAddPeopleSemanticLabel => 'Mensen aan lijst toevoegen';
-
-  @override
   String get peopleListsListNotFoundTitle => 'Lijst niet gevonden';
 
   @override
@@ -3939,6 +3936,20 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '$name aan lijst toevoegen';
+  }
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '$name uit lijst verwijderen';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Kon de lijst niet bijwerken. Probeer het opnieuw.';
+
+  @override
   String get peopleListsAddPeopleSearchHint => 'Mensen zoeken';
 
   @override
@@ -3947,14 +3958,6 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'Opnieuw proberen';
-
-  @override
-  String get peopleListsAddButton => 'Toevoegen';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return '$count toevoegen';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -12828,4 +12831,7 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'Er doken deze keer geen lijsten op. Trek omlaag om te vernieuwen.';
+
+  @override
+  String get peopleListsAddPeopleSemanticLabel => 'Mensen aan lijst toevoegen';
 }

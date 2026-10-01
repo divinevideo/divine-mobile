@@ -3856,9 +3856,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get peopleListsAddPeopleTooltip => 'إضافة أشخاص';
 
   @override
-  String get peopleListsAddPeopleSemanticLabel => 'أضف أشخاصًا إلى القائمة';
-
-  @override
   String get peopleListsListNotFoundTitle => 'القائمة غير موجودة';
 
   @override
@@ -3899,6 +3896,20 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'إضافة $name إلى القائمة';
+  }
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'إزالة $name من القائمة';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'تعذّر تحديث القائمة. يرجى المحاولة مجددًا.';
+
+  @override
   String get peopleListsAddPeopleSearchHint => 'البحث عن أشخاص';
 
   @override
@@ -3907,14 +3918,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'حاول مجددًا';
-
-  @override
-  String get peopleListsAddButton => 'إضافة';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'إضافة $count';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -12699,4 +12702,7 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'لم تظهر أي قوائم هذه المرة. يمكن السحب للتحديث.';
+
+  @override
+  String get peopleListsAddPeopleSemanticLabel => 'أضف أشخاصًا إلى القائمة';
 }
