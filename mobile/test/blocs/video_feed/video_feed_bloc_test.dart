@@ -1332,9 +1332,9 @@ void main() {
             (state) => state.status == VideoFeedStatus.success,
           );
           // Let _onStarted finish and subscribe before the change arrives.
-          await Future<void>.delayed(const Duration(milliseconds: 10));
+          await pumpEventQueue();
           badgeSubscriptionChanges.add(null);
-          await Future<void>.delayed(const Duration(milliseconds: 10));
+          await pumpEventQueue();
           await badgeSubscriptionChanges.close();
         },
         verify: (_) {
