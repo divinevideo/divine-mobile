@@ -1,5 +1,5 @@
 // ABOUTME: The list picker's rows, one per list the viewer can put the video
-// ABOUTME: in, with the failure line above them and the create button below.
+// ABOUTME: in, with the failure line above them; and its pinned create button.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -29,15 +29,8 @@ const double _checkSize = 24;
 /// Closes the sheet once the picks are saved. [scrollController] is the
 /// sheet's, so dragging the rows moves the sheet.
 class SelectListSheetBody extends StatelessWidget {
-  /// Creates the body for the picker opened on [video].
-  const SelectListSheetBody({
-    required this.video,
-    required this.scrollController,
-    super.key,
-  });
-
-  /// The video being placed in lists.
-  final VideoEvent video;
+  /// Creates the body.
+  const SelectListSheetBody({required this.scrollController, super.key});
 
   /// The sheet's scroll controller.
   final ScrollController scrollController;
@@ -52,7 +45,6 @@ class SelectListSheetBody extends StatelessWidget {
         children: [
           const _SaveFailedMessage(),
           Expanded(child: _ListRows(scrollController: scrollController)),
-          _CreateListFooter(video: video),
         ],
       ),
     );
@@ -257,9 +249,16 @@ class _ListThumbnail extends StatelessWidget {
   }
 }
 
-class _CreateListFooter extends StatelessWidget {
-  const _CreateListFooter({required this.video});
+/// The "Create New List" button pinned under the rows; needs a
+/// [SelectListCubit] above it.
+///
+/// Goes in the sheet's bottom slot, which keeps it below the rows at every
+/// height the sheet is dragged to and clear of the home indicator.
+class SelectListCreateButton extends StatelessWidget {
+  /// Creates the button for the picker opened on [video].
+  const SelectListCreateButton({required this.video, super.key});
 
+  /// The video the created list starts with.
   final VideoEvent video;
 
   @override
@@ -267,24 +266,21 @@ class _CreateListFooter extends StatelessWidget {
     final isSaving = context.select(
       (SelectListCubit cubit) => cubit.state.isSaving,
     );
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: DivineButton(
-          label: context.l10n.listCreateNewList,
-          type: DivineButtonType.secondary,
-          leadingIcon: DivineIconName.plus,
-          expanded: true,
-          onPressed: isSaving
-              ? null
-              : () => runDetached(
-                  showListInfoSheet(context, video: video),
-                  'open list creation sheet',
-                  logName: 'SelectListSheet',
-                  category: LogCategory.ui,
-                ),
-        ),
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: DivineButton(
+        label: context.l10n.listCreateNewList,
+        type: DivineButtonType.secondary,
+        leadingIcon: DivineIconName.plus,
+        expanded: true,
+        onPressed: isSaving
+            ? null
+            : () => runDetached(
+                showListInfoSheet(context, video: video),
+                'open list creation sheet',
+                logName: 'SelectListSheet',
+                category: LogCategory.ui,
+              ),
       ),
     );
   }

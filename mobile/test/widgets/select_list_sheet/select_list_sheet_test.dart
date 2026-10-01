@@ -144,6 +144,21 @@ void main() {
         expect(find.text(l10n.listCreateNewList), findsOneWidget);
       });
 
+      testWidgets('over the lower part of the screen, at the height the '
+          'people-list picker opens at', (tester) async {
+        when(() => service.myLists).thenReturn([list('Empty')]);
+
+        await openSheet(tester);
+
+        // The surface is 1200 tall with no top inset, and the sheet opens at
+        // VineBottomSheet.show's default 0.6 of that, as the people-list
+        // picker does; a full-height picker is what the design review
+        // rejected.
+        final sheet = tester.getSize(find.byType(VineBottomSheet));
+        expect(sheet.height, closeTo(720, 1));
+        expect(find.text(l10n.listCreateNewList), findsOneWidget);
+      });
+
       testWidgets('a hint when the viewer has no lists yet', (tester) async {
         await openSheet(tester);
 

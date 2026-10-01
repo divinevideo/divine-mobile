@@ -60,10 +60,9 @@ Future<void> showSelectListSheet(
   final bodyKey = GlobalKey();
 
   try {
+    // The sheet's default sizes, which the people-list picker uses too: it
+    // opens over the lower part of the screen and can be dragged taller.
     await context.showVideoPausingVineBottomSheet<void>(
-      initialChildSize: 1,
-      maxChildSize: 1,
-      minChildSize: VineTheme.bottomSheetDismissFloor,
       title: Text(l10n.listSelectList),
       headerPadding: listInfoSheetHeaderPadding,
       headerLeadingAction: DivineIconButton(
@@ -78,11 +77,9 @@ Future<void> showSelectListSheet(
       trailing: const SelectListSaveButton(),
       contentWrapper: (_, sheet) =>
           BlocProvider<SelectListCubit>.value(value: cubit, child: sheet),
-      buildScrollBody: (scrollController) => SelectListSheetBody(
-        key: bodyKey,
-        video: video,
-        scrollController: scrollController,
-      ),
+      buildScrollBody: (scrollController) =>
+          SelectListSheetBody(key: bodyKey, scrollController: scrollController),
+      bottomInput: SelectListCreateButton(video: video),
     );
   } finally {
     await cubit.close();
