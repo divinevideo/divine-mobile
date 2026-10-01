@@ -290,6 +290,26 @@ void main() {
         },
       );
 
+      test('signs with the token the service was built with', () async {
+        final video = writeFile('video.mp4', const [0, 1, 2, 3]);
+        final c2pa = _WritingC2pa(const [7, 8, 9]);
+        final service = C2paSigningService(
+          signingToken: _testSigningToken,
+          c2pa: c2pa,
+        );
+
+        await service.signVideoInPlace(videoPath: video.path);
+
+        expect(
+          c2pa.lastSigner,
+          isA<RemoteSigner>().having(
+            (signer) => signer.bearerToken,
+            'bearerToken',
+            _testSigningToken,
+          ),
+        );
+      });
+
       test(
         'does not contact the signer in a build without a token',
         () async {
@@ -738,6 +758,7 @@ class _WritingC2pa extends C2pa {
   final List<int> bytes;
   final ManifestStoreInfo? manifest;
   int readManifestCallCount = 0;
+  C2paSigner? lastSigner;
 
   @override
   Future<void> signFile({
@@ -746,6 +767,7 @@ class _WritingC2pa extends C2pa {
     required String manifestJson,
     required C2paSigner signer,
   }) async {
+    lastSigner = signer;
     File(destPath).writeAsBytesSync(bytes);
   }
 
