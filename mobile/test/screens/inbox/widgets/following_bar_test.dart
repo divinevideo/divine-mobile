@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/widgets/following_bar.dart';
 import 'package:openvine/widgets/user_avatar.dart';

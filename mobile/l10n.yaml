@@ -6,3 +6,7 @@ output-dir: lib/l10n/generated
 nullable-getter: false
 preferred-supported-locales:
   - en
+# Each locale becomes a deferred library, so the web build fetches only the
+# language in use instead of carrying all 23 in main.dart.js. Native builds and
+# tests still load synchronously: see lib/l10n/l10n.dart.
+use-deferred-loading: true

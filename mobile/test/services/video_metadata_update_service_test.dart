@@ -13,7 +13,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';

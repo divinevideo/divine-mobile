@@ -17,7 +17,7 @@ import 'package:openvine/blocs/dm/conversation_list/conversation_list_bloc.dart'
 import 'package:openvine/blocs/dm/conversation_list/protected_minor_inbox_gate.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/config/official_accounts.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:profile_repository/profile_repository.dart';
 
 class _MockDmRepository extends Mock implements DmRepository {}

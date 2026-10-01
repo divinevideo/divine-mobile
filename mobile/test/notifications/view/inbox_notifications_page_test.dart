@@ -10,7 +10,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:notification_repository/notification_repository.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
 import 'package:openvine/notifications/view/inbox_notifications_page.dart';
 import 'package:openvine/notifications/view/pending_badge_awards_view.dart';

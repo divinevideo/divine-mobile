@@ -248,7 +248,8 @@ Testing:
   `supportedLocales: AppLocalizations.supportedLocales` on its
   `MaterialApp` — the generated `AppLocalizations.localizationsDelegates`
   alone covers the framework's `MaterialLocalizations`, not `material_ui`'s
-  (#8916).
+  (#8916), and loads asynchronously because every locale is deferred for the
+  web build.
 - [ ] New public method on a strict-coverage package has a matching test
   **in the same PR**. 30 of the 58 packages under `mobile/packages/` gate
   at 100%, not just `divine_ui` — see

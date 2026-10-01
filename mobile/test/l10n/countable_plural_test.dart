@@ -4,7 +4,7 @@
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 
 /// Every countable key fixed by #3633, as a closure over the raw count.
 ///

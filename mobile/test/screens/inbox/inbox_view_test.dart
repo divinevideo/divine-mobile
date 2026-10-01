@@ -20,7 +20,7 @@ import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
 import 'package:openvine/config/official_accounts.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/app_router.dart';

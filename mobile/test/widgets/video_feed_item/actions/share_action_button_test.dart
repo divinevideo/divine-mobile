@@ -17,7 +17,7 @@ import 'package:openvine/blocs/share_sheet/share_sheet_bloc.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_cubit.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_state.dart';
 import 'package:openvine/config/official_accounts.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';

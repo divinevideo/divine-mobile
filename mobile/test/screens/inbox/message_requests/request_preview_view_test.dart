@@ -14,7 +14,7 @@ import 'package:openvine/blocs/dm/conversation/collaborator_invite_actions_cubit
 import 'package:openvine/blocs/dm/message_requests/message_request_actions_cubit.dart';
 import 'package:openvine/blocs/dm/message_requests/request_preview_cubit.dart';
 import 'package:openvine/config/official_accounts.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/collaborator_invite.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';

@@ -2,7 +2,7 @@
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/publish_error_kind_l10n.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
 

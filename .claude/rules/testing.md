@@ -743,11 +743,14 @@ MaterialApp(
 `AppLocalizations.localizationsDelegates`: gen-l10n has no notion of
 `material_ui` and emits `flutter_localizations`' `Global*` delegates, which
 satisfy the framework's `MaterialLocalizations` and not the one `material_ui`
-widgets look up (#8916). The app constant spreads the generated list and adds
+widgets look up (#8916). The app constant keeps the generated framework
+delegates, swaps in its own delegate for the app strings, and adds
 `material_ui`'s on top. A `MaterialApp` handed a non-English locale without
 them fails the test outright with "A MaterialLocalizations delegate that
 supports the <x> locale was not found"; with `en` it silently serves English
-Material strings.
+Material strings. The generated delegate also loads asynchronously, since every
+locale is deferred for the web build, while the app constant's own delegate
+resolves synchronously outside the web — see `localization.md`.
 
 Most tests should reach for `testMaterialApp(...)` from
 `test/helpers/test_provider_overrides.dart` instead of hand-rolling one —

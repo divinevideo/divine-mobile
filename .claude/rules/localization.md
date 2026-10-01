@@ -141,7 +141,8 @@ baseline.
 - **`divine_ui` package stays l10n-free** — its widgets accept string params with English defaults
 - **Plurals use ICU syntax** in ARB files, not conditional logic in Dart
 - **Translated copy follows the per-locale register and terminology decisions** in [`mobile/docs/LOCALIZATION_STYLE_GUIDE.md`](../../mobile/docs/LOCALIZATION_STYLE_GUIDE.md) — the ARB parity guard proves a key exists, not that it is written in the locale's voice
-- **Every `MaterialApp` in tests needs delegates** — use `localizationsDelegates: appLocalizationsDelegates` (from `package:openvine/l10n/l10n.dart`) and `supportedLocales: AppLocalizations.supportedLocales`. The generated `AppLocalizations.localizationsDelegates` is not enough on its own: gen-l10n emits `flutter_localizations`' delegates, which satisfy the framework's `MaterialLocalizations` and not `material_ui`'s (#8916), and a `MaterialApp` given a non-English locale without them reports a delegate-coverage error
+- **Every `MaterialApp` in tests needs delegates** — use `localizationsDelegates: appLocalizationsDelegates` (from `package:openvine/l10n/l10n.dart`) and `supportedLocales: AppLocalizations.supportedLocales`. The generated `AppLocalizations.localizationsDelegates` is not enough on its own: gen-l10n emits `flutter_localizations`' delegates, which satisfy the framework's `MaterialLocalizations` and not `material_ui`'s (#8916), and a `MaterialApp` given a non-English locale without them reports a delegate-coverage error. It also loads asynchronously, because every locale is deferred (see [Loading: deferred on the web](#loading-deferred-on-the-web)), so a widget test fed it sees an empty first frame
+- **Import `package:openvine/l10n/l10n.dart`, never `l10n/generated/app_localizations.dart`** — the generated `lookupAppLocalizations` returns a `Future`; the one `l10n.dart` exports resolves synchronously
 - **Never hardcode English strings in widget test assertions** — resolve the key from `AppLocalizations` instead, so the test survives copy changes and breaks loudly if the widget stops reading from l10n. Pick whichever lookup fits the test:
 
 ```dart
@@ -165,13 +166,23 @@ expect(
 expect(find.text('Select the audio segment for your video'), findsOneWidget);
 ```
 
+## Loading: deferred on the web
+
+`l10n.yaml` sets `use-deferred-loading: true`, so each `app_localizations_<locale>.dart` is a deferred library. The web build fetches only the language in use instead of carrying all 23 in `main.dart.js` — they were 5.6 MiB of its 22 MiB, a quarter of the file Cloudflare Pages caps at 25 MiB. English stays in the main bundle as the fallback.
+
+Deferral changes nothing outside the web. Native builds and tests compile every locale in, and `appLocalizationsDelegates` registers a delegate (`lib/l10n/l10n.dart`) that returns the locale synchronously wherever it is already available (`lib/l10n/loaded_app_localizations.dart` picks the native or web implementation). That is what keeps a `Localizations` widget painting translated text in its first frame, and `lookupAppLocalizations` and `currentAppL10n` usable without awaiting. The generated delegate and lookup always wait for the deferred library, so nothing outside `l10n.dart` may register or call them; `test/l10n/l10n_test.dart` pins that for `lib`.
+
+On the web a context-less `lookupAppLocalizations` for a locale that has not been downloaded returns English. Context-less services capture their strings when they are built, so the language must be loaded before any of them exists: startup awaits `preloadAppUiLocalizations` right after `SharedPreferences` (`app_bootstrap.dart`), and `LocaleCubit` downloads a newly chosen language before it emits it. Anything that reads strings without a `BuildContext` must run after one of those. The one gap left is a device language change while the app follows the device: until the UI has downloaded the new language, context-less reads return English.
+
+`analysis_options.yaml` excludes `**/l10n/**`, which in practice drops `lib/l10n/` from `flutter analyze lib` and CI's Analyze job (`test/l10n/` is still analyzed); analyze files there by path (`dart analyze lib/l10n/l10n.dart`).
+
 ## Key Files
 
 | File | Purpose |
 |------|---------|
 | `mobile/lib/l10n/app_en.arb` | English string definitions (source of truth) |
 | `mobile/lib/l10n/app_es.arb` | Spanish translations |
-| `mobile/lib/l10n/l10n.dart` | `context.l10n` extension |
+| `mobile/lib/l10n/l10n.dart` | `context.l10n` extension, `appLocalizationsDelegates`, synchronous `lookupAppLocalizations` |
 | `mobile/lib/l10n/generated/` | Generated code (do not edit manually) |
 | `mobile/l10n.yaml` | gen-l10n configuration |
 

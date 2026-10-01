@@ -1,7 +1,9 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/generated/app_localizations.dart' as generated;
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/resolve_app_ui_locale.dart';
 
@@ -335,6 +337,75 @@ void main() {
           reason: '$hardcodedString should be read from context.l10n.',
         );
       }
+    });
+  });
+
+  group('appLocalizationsDelegates', () {
+    final appDelegate = appLocalizationsDelegates.first;
+
+    test('loads the app strings synchronously for every locale', () {
+      // gen-l10n defers every locale, so its own delegate always waits. A
+      // Localizations widget fed that would paint an empty first frame in
+      // every native build and every widget test.
+      for (final locale in AppLocalizations.supportedLocales) {
+        expect(appDelegate.type, AppLocalizations);
+        expect(
+          appDelegate.load(locale),
+          isA<SynchronousFuture<dynamic>>(),
+          reason: '$locale should load without waiting',
+        );
+      }
+    });
+
+    test('keeps the generated framework delegates in their order', () {
+      expect(
+        appLocalizationsDelegates.sublist(1, 4),
+        orderedEquals(AppLocalizations.localizationsDelegates.skip(1)),
+      );
+    });
+
+    test('is how lib registers the app strings', () {
+      // Registering the generated delegate directly would bring back the
+      // asynchronous load outside the web.
+      final offenders = [
+        for (final file in Directory('lib').listSync(recursive: true))
+          if (file is File &&
+              file.path.endsWith('.dart') &&
+              !file.path.contains('/l10n/generated/') &&
+              !file.path.endsWith('/l10n/l10n.dart') &&
+              RegExp(
+                r'AppLocalizations\.(delegate|localizationsDelegates)\b',
+              ).hasMatch(file.readAsStringSync()))
+            file.path,
+      ];
+
+      expect(offenders, isEmpty);
+    });
+  });
+
+  group('lookupAppLocalizations', () {
+    test('resolves a locale without waiting', () async {
+      for (final locale in AppLocalizations.supportedLocales) {
+        final synchronous = lookupAppLocalizations(locale);
+        final deferred = await generated.lookupAppLocalizations(locale);
+
+        expect(synchronous.runtimeType, deferred.runtimeType);
+        expect(synchronous.localeName, deferred.localeName);
+      }
+    });
+
+    test('returns the translated strings of that locale', () {
+      expect(
+        lookupAppLocalizations(const Locale('de')).settingsTitle,
+        isNot(lookupAppLocalizations(const Locale('en')).settingsTitle),
+      );
+    });
+
+    test('rejects a locale the app does not support', () {
+      expect(
+        () => lookupAppLocalizations(const Locale('xx')),
+        throwsA(isA<FlutterError>()),
+      );
     });
   });
 }

@@ -1,6 +1,7 @@
 // ABOUTME: Tests for LocaleCubit
 // ABOUTME: Verifies load / set / clear behavior and service delegation.
 
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:bloc_test/bloc_test.dart';
@@ -71,6 +72,89 @@ void main() {
           verify(() => service.clearLocale()).called(1);
         },
       );
+    });
+
+    group('preloading the UI language', () {
+      late Completer<void> download;
+      late List<Locale?> preloaded;
+
+      setUp(() {
+        when(() => service.getLocale()).thenReturn(null);
+        download = Completer<void>();
+        preloaded = [];
+      });
+
+      LocaleCubit buildPreloading() => LocaleCubit(
+        localePreferenceService: service,
+        preloadLocale: (locale) {
+          preloaded.add(locale);
+          return download.future;
+        },
+      );
+
+      test('switches only once the new language has downloaded', () async {
+        final cubit = buildPreloading();
+        addTearDown(cubit.close);
+
+        final switched = cubit.setLocale('de');
+        await pumpEventQueue();
+
+        // A context-less service built now would still read the English
+        // fallback on the web, so the app must not be in German yet.
+        expect(preloaded, [const Locale('de')]);
+        expect(cubit.state.locale, isNull);
+
+        download.complete();
+        await switched;
+
+        expect(cubit.state.locale, const Locale('de'));
+      });
+
+      test(
+        'keeps the latest selection when an older download finishes last',
+        () async {
+          final downloads = {
+            'de': Completer<void>(),
+            'es': Completer<void>(),
+          };
+          final cubit = LocaleCubit(
+            localePreferenceService: service,
+            preloadLocale: (locale) => downloads[locale!.languageCode]!.future,
+          );
+          addTearDown(cubit.close);
+
+          final german = cubit.setLocale('de');
+          await pumpEventQueue();
+          final spanish = cubit.setLocale('es');
+          await pumpEventQueue();
+
+          downloads['es']!.complete();
+          await spanish;
+          expect(cubit.state.locale, const Locale('es'));
+
+          downloads['de']!.complete();
+          await german;
+
+          expect(cubit.state.locale, const Locale('es'));
+        },
+      );
+
+      test('preloads the device language before following it', () async {
+        when(() => service.getLocale()).thenReturn('es');
+        final cubit = buildPreloading();
+        addTearDown(cubit.close);
+
+        final cleared = cubit.clearLocale();
+        await pumpEventQueue();
+
+        expect(preloaded, [null]);
+        expect(cubit.state.locale, const Locale('es'));
+
+        download.complete();
+        await cleared;
+
+        expect(cubit.state.locale, isNull);
+      });
     });
 
     group(LocaleState, () {

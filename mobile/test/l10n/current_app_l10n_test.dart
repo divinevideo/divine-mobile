@@ -3,7 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/l10n/current_app_l10n.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/services/locale_preference_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
