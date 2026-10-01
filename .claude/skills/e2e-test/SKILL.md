@@ -260,13 +260,27 @@ for (var i = 0; i < 20; i++) {
 }
 ```
 
+### Android permission dialogs blocking UI
+
+A fresh install has no runtime permissions, and Android's permission
+dialog sits in front of the app until it is answered. After sign-in the
+app asks for notification permission; while that dialog is up, a bottom
+sheet never finishes sliding in, so taps on its buttons miss or time
+out. Patrol suites answer it with `dismissNotificationPermission($)`
+before the step it would block, and call `grantCameraAndMicrophone($)`
+before anything that records. Both match the dialog by its button id,
+not by the text "Allow", which the notification dialog's title also
+contains. Plain `testWidgets` suites cannot answer a native dialog, so
+`local_stack/profile.sh` grants them the notification permission
+before the run.
+
 ### Patrol false positives
 
 Patrol bundles every file in a target dir into one APK. When file B
 runs, file A shows up as "not requested" `[E]` markers in logcat.
 Trust only the final `✅`/`❌` lines.
 
-### Never put `/` in a patrol test name
+### Never put `/` or `#` in a patrol test name
 
 Patrol names each JUnit case `MainActivityTest#runDartTest[<dart test
 name>]`, and the AndroidX orchestrator writes a per-test output file
@@ -286,7 +300,15 @@ patrol prints `Failed: 0` — because the offending test never started
 and so was never counted. Compare `Total:` against the number of tests
 in the file when the exit code disagrees with the summary.
 
-Write `input and output`, not `input/output`.
+A `#` crashes nothing, but the orchestrator reads it as the class/method
+separator and cuts the JUnit id there, so tests whose names share the
+text before it collapse into one entry in the test report. The three
+`Bug #2233 -- …` tests in `repro_log2_delete_test.dart` reported as one.
+
+Write `input and output`, not `input/output`, and `Bug 2233`, not
+`Bug #2233`. `test/integration_test_helpers/patrol_test_names_test.dart`
+fails CI when a `group` or `patrolTest` name in a Patrol suite contains
+either character.
 
 ### Provider error caching
 
@@ -311,6 +333,7 @@ Material(color: Colors.transparent, child: TextField(...))
 - `relay_helpers.dart` — publish/query Nostr events
 - `db_helpers.dart` — Postgres (verification tokens, refresh tokens)
 - `http_helpers.dart` — Keycast API (verify email, forgot password)
+- `permission_helpers.dart` — answer Android permission dialogs through Patrol (camera and microphone, notifications)
 - `constants.dart` — ports + `appPackage`
 
 ## Debugging
