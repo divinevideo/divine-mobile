@@ -20,9 +20,12 @@ part 'supporter_providers.g.dart';
 
 /// Whether a store can bill this build for a supporter membership.
 ///
-/// Google Play Billing answers `BILLING_UNAVAILABLE` for any build Play did not
-/// install, so on Android only a [InstallSource.playStore] install qualifies;
-/// a Zapstore or GitHub APK would otherwise open Play's own error dialog.
+/// Google Play Billing answers `BILLING_UNAVAILABLE` for a release build Play
+/// did not install, so on Android a release build qualifies only as a
+/// [InstallSource.playStore] install; a Zapstore or GitHub APK would otherwise
+/// open Play's own error dialog. Debug and profile builds always qualify, so
+/// developers can test checkout: Play lets license testers buy from sideloaded
+/// builds whose package name matches the Play app, which a profile build's is.
 /// iOS always qualifies: StoreKit bills App Store and TestFlight builds, and a
 /// failed install-source lookup there reports [InstallSource.sideload], which
 /// must not hide purchases from a paying user.
@@ -30,11 +33,13 @@ bool supportsStoreBilling({
   required TargetPlatform platform,
   required InstallSource installSource,
   bool isWeb = kIsWeb,
+  bool isReleaseMode = kReleaseMode,
 }) {
   if (isWeb) return false;
   return switch (platform) {
     TargetPlatform.iOS => true,
-    TargetPlatform.android => installSource == InstallSource.playStore,
+    TargetPlatform.android =>
+      !isReleaseMode || installSource == InstallSource.playStore,
     _ => false,
   };
 }

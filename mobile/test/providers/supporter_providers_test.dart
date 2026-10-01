@@ -148,15 +148,17 @@ void main() {
 
   group('supportsStoreBilling', () {
     test(
-      'offers Google Play billing only to Play-installed Android builds',
+      'offers Google Play billing to release builds only when Play installed '
+      'them',
       () {
-        // Play Billing answers BILLING_UNAVAILABLE for any build it did not
-        // install, so a Zapstore or GitHub APK must never reach its checkout.
+        // Play Billing answers BILLING_UNAVAILABLE for a release build it did
+        // not install, so a Zapstore or GitHub APK must never reach checkout.
         expect(
           supportsStoreBilling(
             platform: TargetPlatform.android,
             installSource: InstallSource.playStore,
             isWeb: false,
+            isReleaseMode: true,
           ),
           isTrue,
         );
@@ -166,6 +168,7 @@ void main() {
               platform: TargetPlatform.android,
               installSource: source,
               isWeb: false,
+              isReleaseMode: true,
             ),
             isFalse,
             reason: '$source',
@@ -229,23 +232,36 @@ void main() {
       return container;
     }
 
-    for (final source in [InstallSource.zapstore, InstallSource.sideload]) {
-      test('uses the stub validator for a $source Android build', () {
-        final container = containerFor(source);
+    test('uses the stub validator when no store can bill this build', () {
+      final container = ProviderContainer(
+        overrides: [
+          supporterStoreBillingAvailableProvider.overrideWithValue(false),
+        ],
+      );
+      addTearDown(container.dispose);
 
-        expect(container.read(supporterStoreBillingAvailableProvider), isFalse);
-        expect(
-          container.read(entitlementValidatorProvider),
-          isA<StubEntitlementValidator>(),
-        );
-      });
-    }
+      expect(
+        container.read(entitlementValidatorProvider),
+        isA<StubEntitlementValidator>(),
+      );
+    });
 
     test('reports store billing available for a Play-installed build', () {
       final container = containerFor(InstallSource.playStore);
 
       expect(container.read(supporterStoreBillingAvailableProvider), isTrue);
     });
+
+    for (final source in [InstallSource.zapstore, InstallSource.sideload]) {
+      test('reports store billing available for a non-release $source '
+          'build', () {
+        // Tests run in debug mode. License testers can buy from sideloaded
+        // debug and profile builds, so those must reach checkout.
+        final container = containerFor(source);
+
+        expect(container.read(supporterStoreBillingAvailableProvider), isTrue);
+      });
+    }
   });
 
   group('supporterApiBaseUrl', () {
