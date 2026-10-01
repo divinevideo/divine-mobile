@@ -129,6 +129,70 @@ void main() {
       expect(offsets, [0, 100, 200]);
     });
 
+    test('merges chunks by the event time the server sorts by', () async {
+      // An edit keeps the original published_at under a new created_at. The
+      // server orders each chunk by created_at, so the merge must too, or the
+      // edited video holds its chunk's newer videos back.
+      VideoStats stats(int id, int createdAt, {int? publishedAt}) => VideoStats(
+        id: id.toRadixString(16).padLeft(64, '0'),
+        pubkey: 'c' * 64,
+        createdAt: DateTime.fromMillisecondsSinceEpoch(
+          createdAt * 1000,
+          isUtc: true,
+        ),
+        eventCreatedAt: createdAt,
+        publishedAt: publishedAt,
+        kind: 34236,
+        dTag: 'video-$id',
+        title: 'Video $id',
+        thumbnail: '',
+        videoUrl: 'https://example.com/$id.mp4',
+        reactions: 0,
+        comments: 0,
+        reposts: 0,
+        engagementScore: 0,
+      );
+      final client = _Client();
+      when(
+        () => client.getVideosByAuthors(
+          authors: any(named: 'authors'),
+          limit: any(named: 'limit'),
+          offset: any(named: 'offset'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer((invocation) async {
+        final authors = invocation.namedArguments[#authors]! as List<String>;
+        final offset = invocation.namedArguments[#offset]! as int;
+        final videos = offset > 0
+            ? <VideoStats>[]
+            : authors.length == 200
+            ? [stats(1, 9990, publishedAt: 1000), stats(2, 9980)]
+            : [stats(3, 9985), stats(4, 9970)];
+        return RecentVideosResponse(
+          videos: videos,
+          serverItemCount: videos.length,
+          hasMore: false,
+        );
+      });
+      final pager = BadgeVideoPager(
+        client: client,
+        authors: [
+          for (var i = 0; i < 201; i++) i.toRadixString(16).padLeft(64, '0'),
+        ],
+        transform: (list) => list.map((video) => video.toVideoEvent()).toList(),
+        before: 10000,
+      );
+
+      final page = await pager.loadMore(limit: 4);
+
+      expect(page.map((video) => video.id), [
+        stats(1, 0).id,
+        stats(3, 0).id,
+        stats(2, 0).id,
+        stats(4, 0).id,
+      ]);
+    });
+
     test('keeps consumed videos when a later refill fails', () async {
       final client = _Client();
       var failRefill = true;
