@@ -3975,16 +3975,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'Los videos de los miembros de la lista aparecerán aquí';
 
   @override
-  String get peopleListsNoVideosAvailable => 'No hay videos disponibles';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'Error al cargar los videos';
 
   @override
   String get peopleListsVideoNotAvailable => 'Video no disponible';
-
-  @override
-  String get peopleListsBackToGridTooltip => 'Volver a la cuadrícula';
 
   @override
   String get peopleListsErrorLoadingVideos => 'Error al cargar los videos';
@@ -12994,4 +12988,46 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => 'Activar automático';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted loops',
+      one: '$formatted loop',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count personas',
+      one: '$count persona',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count miembros',
+      one: '$count miembro',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get peopleListsViewAllMembers => 'Ver todos';
+
+  @override
+  String get peopleListsLoadFailed => 'No se pudo cargar esta lista.';
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
 }

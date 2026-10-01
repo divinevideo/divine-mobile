@@ -1928,10 +1928,8 @@
   "peopleListsNoPeopleSubtitle": "Thêm vài người để bắt đầu",
   "peopleListsNoVideosTitle": "Chưa có video nào",
   "peopleListsNoVideosSubtitle": "Video từ các thành viên trong danh sách sẽ xuất hiện ở đây",
-  "peopleListsNoVideosAvailable": "Không có video nào",
   "peopleListsFailedToLoadVideos": "Không tải được video",
   "peopleListsVideoNotAvailable": "Video không khả dụng",
-  "peopleListsBackToGridTooltip": "Quay lại lưới",
   "peopleListsErrorLoadingVideos": "Lỗi khi tải video",
   "peopleListsNoPeopleToAdd": "Không có ai để thêm.",
   "peopleListsAddToListName": "Thêm vào {name}",
@@ -6588,5 +6586,35 @@
   "crosspostingAutoBody": "Mỗi loop mới bạn đăng sẽ tự động đến {platform} thay bạn — không cần thêm thao tác. Chỉ áp dụng cho những loop bạn đăng sau khi bật tính năng này.",
   "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "Bật tự động",
-  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+  "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loop}}",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} người} other{{count} người}}",
+  "listMemberCount": "{count, plural, =1{{count} thành viên} other{{count} thành viên}}",
+  "peopleListsViewAllMembers": "Xem tất cả",
+  "peopleListsLoadFailed": "Không tải được danh sách này.",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ "
 }

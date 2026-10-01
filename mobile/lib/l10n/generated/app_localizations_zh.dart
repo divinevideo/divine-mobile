@@ -3683,16 +3683,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get peopleListsNoVideosSubtitle => '列表成员的视频会显示在这里';
 
   @override
-  String get peopleListsNoVideosAvailable => '暂无视频';
-
-  @override
   String get peopleListsFailedToLoadVideos => '视频加载失败';
 
   @override
   String get peopleListsVideoNotAvailable => '视频不可用';
-
-  @override
-  String get peopleListsBackToGridTooltip => '返回网格';
 
   @override
   String get peopleListsErrorLoadingVideos => '加载视频出错';
@@ -12098,4 +12092,46 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => '开启自动';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted 次循环',
+      one: '$formatted 次循环',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 人',
+      one: '$count 人',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 位成员',
+      one: '$count 位成员',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get peopleListsViewAllMembers => '查看全部';
+
+  @override
+  String get peopleListsLoadFailed => '无法加载此列表。';
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
 }

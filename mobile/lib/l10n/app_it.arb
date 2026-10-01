@@ -2984,10 +2984,8 @@
     "peopleListsNoPeopleSubtitle": "Aggiungi persone per iniziare",
     "peopleListsNoVideosTitle": "Ancora nessun video",
     "peopleListsNoVideosSubtitle": "I video dei membri della lista appariranno qui",
-    "peopleListsNoVideosAvailable": "Nessun video disponibile",
     "peopleListsFailedToLoadVideos": "Impossibile caricare i video",
     "peopleListsVideoNotAvailable": "Video non disponibile",
-    "peopleListsBackToGridTooltip": "Torna alla griglia",
     "peopleListsErrorLoadingVideos": "Errore nel caricamento dei video",
     "peopleListsNoPeopleToAdd": "Nessuna persona disponibile da aggiungere.",
     "peopleListsAddToListName": "Aggiungi a {name}",
@@ -4821,5 +4819,35 @@
   "crosspostingAutoBody": "Ogni nuovo loop che pubblichi va a {platform} per te — senza tap extra. Vale solo per i loop che pubblichi dopo averlo attivato.",
   "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "Attiva automatico",
-  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+  "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loop}}",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} persona} other{{count} persone}}",
+  "listMemberCount": "{count, plural, =1{{count} membro} other{{count} membri}}",
+  "peopleListsViewAllMembers": "Vedi tutti",
+  "peopleListsLoadFailed": "Impossibile caricare questa lista.",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ "
 }

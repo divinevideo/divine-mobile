@@ -3687,16 +3687,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get peopleListsNoVideosSubtitle => 'リストメンバーの動画がここに表示されます';
 
   @override
-  String get peopleListsNoVideosAvailable => '利用可能な動画がありません';
-
-  @override
   String get peopleListsFailedToLoadVideos => '動画の読み込みに失敗しました';
 
   @override
   String get peopleListsVideoNotAvailable => '動画は利用できません';
-
-  @override
-  String get peopleListsBackToGridTooltip => 'グリッドに戻る';
 
   @override
   String get peopleListsErrorLoadingVideos => '動画の読み込みエラー';
@@ -12240,4 +12234,43 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => '自動をオンにする';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formattedループ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count人',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count人のメンバー',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get peopleListsViewAllMembers => 'すべて見る';
+
+  @override
+  String get peopleListsLoadFailed => 'このリストを読み込めませんでした。';
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
 }

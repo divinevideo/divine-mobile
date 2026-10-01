@@ -2984,10 +2984,8 @@
     "peopleListsNoPeopleSubtitle": "Tambahkan orang untuk memulai",
     "peopleListsNoVideosTitle": "Belum ada video",
     "peopleListsNoVideosSubtitle": "Video dari anggota daftar akan muncul di sini",
-    "peopleListsNoVideosAvailable": "Tidak ada video tersedia",
     "peopleListsFailedToLoadVideos": "Gagal memuat video",
     "peopleListsVideoNotAvailable": "Video tidak tersedia",
-    "peopleListsBackToGridTooltip": "Kembali ke tampilan kisi",
     "peopleListsErrorLoadingVideos": "Kesalahan saat memuat video",
     "peopleListsNoPeopleToAdd": "Tidak ada orang yang tersedia untuk ditambahkan.",
     "peopleListsAddToListName": "Tambahkan ke {name}",
@@ -4821,5 +4819,35 @@
   "crosspostingAutoBody": "Setiap loop baru yang kamu posting otomatis dikirim ke {platform} untukmu — tanpa ketukan tambahan. Hanya berlaku untuk loop yang kamu publikasikan setelah mengaktifkannya.",
   "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "Aktifkan otomatis",
-  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+  "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loop}}",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} orang} other{{count} orang}}",
+  "listMemberCount": "{count, plural, =1{{count} anggota} other{{count} anggota}}",
+  "peopleListsViewAllMembers": "Lihat semua",
+  "peopleListsLoadFailed": "Tidak bisa memuat daftar ini.",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ "
 }

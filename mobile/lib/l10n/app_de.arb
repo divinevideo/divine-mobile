@@ -2984,10 +2984,8 @@
     "peopleListsNoPeopleSubtitle": "Füge Personen hinzu, um loszulegen",
     "peopleListsNoVideosTitle": "Noch keine Videos",
     "peopleListsNoVideosSubtitle": "Videos von Listenmitgliedern erscheinen hier",
-    "peopleListsNoVideosAvailable": "Keine Videos verfügbar",
     "peopleListsFailedToLoadVideos": "Videos konnten nicht geladen werden",
     "peopleListsVideoNotAvailable": "Video nicht verfügbar",
-    "peopleListsBackToGridTooltip": "Zurück zum Raster",
     "peopleListsErrorLoadingVideos": "Fehler beim Laden der Videos",
     "peopleListsNoPeopleToAdd": "Keine Personen zum Hinzufügen verfügbar.",
     "peopleListsAddToListName": "Zu {name} hinzufügen",
@@ -4821,5 +4819,35 @@
   "crosspostingAutoBody": "Jeder neue Loop, den du postest, geht für dich an {platform} — ohne zusätzliche Taps. Gilt nur für Loops, die du veröffentlichst, nachdem du es eingeschaltet hast.",
   "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "Automatik einschalten",
-  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+  "listLoopsCount": "{count, plural, =1{{formatted} Loop} other{{formatted} Loops}}",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} Person} other{{count} Personen}}",
+  "listMemberCount": "{count, plural, =1{{count} Mitglied} other{{count} Mitglieder}}",
+  "peopleListsViewAllMembers": "Alle anzeigen",
+  "peopleListsLoadFailed": "Diese Liste konnte nicht geladen werden.",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ "
 }

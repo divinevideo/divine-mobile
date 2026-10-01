@@ -819,3 +819,18 @@ Stream<List<VideoEvent>> _videoEventsByIds({
   // Yield final result
   yield foundVideos;
 }
+
+/// Resolves a discovered public people list by author + d-tag from relays.
+///
+/// The owner-scoped [PeopleListsBloc] only holds the viewer's own lists, so
+/// discovery cards and deep links to someone else's list resolve through
+/// this instead.
+@Riverpod(retry: _noAutomaticRetry)
+Future<UserList?> publicPeopleList(
+  Ref ref, {
+  required String ownerPubkey,
+  required String listId,
+}) {
+  final repository = ref.watch(peopleListsRepositoryProvider);
+  return repository.fetchPublicList(ownerPubkey: ownerPubkey, listId: listId);
+}
