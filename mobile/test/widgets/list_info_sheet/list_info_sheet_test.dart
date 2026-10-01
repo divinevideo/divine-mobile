@@ -128,6 +128,8 @@ void main() {
       return answer;
     }
 
+    /// Opens the sheet from a button; [outcomes] collects what each visit
+    /// returned once it has closed.
     Future<void> openSheet(
       WidgetTester tester, {
       VideoEvent? video,
@@ -135,6 +137,7 @@ void main() {
       ProfileRepository? profileRepository,
       FollowRepository? followRepository,
       List<Override> overrides = const [],
+      List<ListInfoSheetOutcome>? outcomes,
     }) async {
       // Tall enough that the whole form fits above the fold.
       await tester.binding.setSurfaceSize(const Size(800, 1200));
@@ -156,7 +159,7 @@ void main() {
                     context,
                     video: video,
                     existingList: existingList,
-                  ),
+                  ).then((outcome) => outcomes?.add(outcome)),
                   'open list info sheet',
                   logName: 'ListInfoSheetTest',
                   category: LogCategory.ui,
@@ -331,6 +334,49 @@ void main() {
 
         verify(() => service.addVideoToList(_listId, _videoEventId)).called(1);
         expect(find.text(l10n.listCreateNewList), findsNothing);
+      });
+
+      testWidgets('closes and hands its caller createdWithoutVideo when the '
+          'created list refused the video', (tester) async {
+        stubCreate(() async => list(name: 'Video List'));
+        when(
+          () => service.addVideoToList(any(), any()),
+        ).thenAnswer((_) async => false);
+        final outcomes = <ListInfoSheetOutcome>[];
+        await openSheet(tester, video: video, outcomes: outcomes);
+
+        await tester.enterText(find.byType(TextField).first, 'Video List');
+        await tester.pump();
+        await tester.tap(saveButton(editing: false));
+        await tester.pumpAndSettle();
+
+        // The list exists, so the sheet does not invite a second one, and
+        // the caller, not a snackbar the caller might cover, says so.
+        expect(find.text(l10n.listCreateNewList), findsNothing);
+        expect(find.byType(SnackBar), findsNothing);
+        expect(outcomes, [ListInfoSheetOutcome.createdWithoutVideo]);
+      });
+
+      testWidgets('hands its caller saved when the created list took the '
+          'video, and dismissed when closed from the X', (tester) async {
+        stubCreate(() async => list(name: 'Video List'));
+        when(
+          () => service.addVideoToList(any(), any()),
+        ).thenAnswer((_) async => true);
+        final outcomes = <ListInfoSheetOutcome>[];
+        await openSheet(tester, video: video, outcomes: outcomes);
+
+        await tester.enterText(find.byType(TextField).first, 'Video List');
+        await tester.pump();
+        await tester.tap(saveButton(editing: false));
+        await tester.pumpAndSettle();
+        expect(outcomes, [ListInfoSheetOutcome.saved]);
+
+        await tester.tap(find.text(_openLabel));
+        await tester.pumpAndSettle();
+        await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+        await tester.pumpAndSettle();
+        expect(outcomes.last, ListInfoSheetOutcome.dismissed);
       });
 
       testWidgets('stays open and says so when the list cannot be created', (

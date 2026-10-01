@@ -110,9 +110,11 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
   /// Creates the list, or saves the edits to it.
   ///
   /// Ends in [CuratedListInfoStatus.saved] or
-  /// [CuratedListInfoStatus.failure]. An edit that leaves visibility alone
-  /// passes through [CuratedListInfoStatus.savedAwaitingRelay] first and can
-  /// end in [CuratedListInfoStatus.publishFailed] instead.
+  /// [CuratedListInfoStatus.failure]. A creation whose list exists but did
+  /// not take the video ends in [CuratedListInfoStatus.createdWithoutVideo].
+  /// An edit that leaves visibility alone passes through
+  /// [CuratedListInfoStatus.savedAwaitingRelay] first and can end in
+  /// [CuratedListInfoStatus.publishFailed] instead.
   Future<void> submitted() async {
     if (!state.canSubmit) return;
 
@@ -145,10 +147,19 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
           return;
         }
         final videoEventId = _videoEventId;
-        if (videoEventId != null) {
-          await service.addVideoToList(created.id, videoEventId);
-        }
-        emitIfOpen(state.copyWith(status: CuratedListInfoStatus.saved));
+        // addVideoToList answers false for a private list with no room or a
+        // publish no relay took; the list exists either way, so the form
+        // closes and the opener hands the outcome to its caller.
+        final videoAdded =
+            videoEventId == null ||
+            await service.addVideoToList(created.id, videoEventId);
+        emitIfOpen(
+          state.copyWith(
+            status: videoAdded
+                ? CuratedListInfoStatus.saved
+                : CuratedListInfoStatus.createdWithoutVideo,
+          ),
+        );
         return;
       }
 

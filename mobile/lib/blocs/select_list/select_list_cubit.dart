@@ -120,6 +120,16 @@ class SelectListCubit extends Cubit<SelectListState>
     emitIfOpen(state.copyWith(status: status));
   }
 
+  /// Says the list the sheet's create button made refused the video.
+  ///
+  /// The create sheet closes on that, since the list exists, and this picker
+  /// is what covers the screen underneath, so the failure line shows here;
+  /// the new list's row shows whether the video is in it.
+  void createdListRefusedVideo() {
+    if (state.isSaving) return;
+    emitIfOpen(state.copyWith(status: SelectListStatus.failure));
+  }
+
   /// Follows the service's lists.
   ///
   /// A list that gained the video since the last look is picked, one that

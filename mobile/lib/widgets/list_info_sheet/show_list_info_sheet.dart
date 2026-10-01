@@ -16,6 +16,22 @@ import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_save_button.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet_layout.dart';
 
+/// How a visit to the list info sheet ended.
+enum ListInfoSheetOutcome {
+  /// The sheet was closed without a save.
+  dismissed,
+
+  /// The list was created or its edits saved.
+  saved,
+
+  /// The list was created, but the service refused to put [video] in it: a
+  /// private list with no room, or a publish no relay took (the video then
+  /// stays on this device, queued for the next sync). The list exists, so
+  /// the caller says so where the person can see it rather than inviting a
+  /// second list.
+  createdWithoutVideo,
+}
+
 /// Shows the sheet that creates a curated list, or edits [existingList].
 ///
 /// A [video] is added to the list the sheet creates.
@@ -23,8 +39,11 @@ import 'package:openvine/widgets/list_info_sheet/list_info_sheet_layout.dart';
 /// Completes once the sheet has closed and its save has settled. A rename
 /// lets the sheet close before any relay answers, so the wait covers the
 /// answer that arrives afterwards and its failure, if any, is reported on the
-/// screen the sheet was opened from.
-Future<void> showListInfoSheet(
+/// screen the sheet was opened from. A [video] the created list refused is
+/// returned as [ListInfoSheetOutcome.createdWithoutVideo] instead, because
+/// the caller may itself be a sheet that would cover a report drawn
+/// underneath, as the list picker is.
+Future<ListInfoSheetOutcome> showListInfoSheet(
   BuildContext context, {
   VideoEvent? video,
   CuratedList? existingList,
@@ -84,6 +103,16 @@ Future<void> showListInfoSheet(
         DivineSnackbarContainer.snackBar(l10n.listUpdateFailed, error: true),
       );
     }
+    return switch (settled.status) {
+      CuratedListInfoStatus.createdWithoutVideo =>
+        ListInfoSheetOutcome.createdWithoutVideo,
+      CuratedListInfoStatus.saved ||
+      CuratedListInfoStatus.savedAwaitingRelay ||
+      CuratedListInfoStatus.publishFailed => ListInfoSheetOutcome.saved,
+      CuratedListInfoStatus.editing ||
+      CuratedListInfoStatus.saving ||
+      CuratedListInfoStatus.failure => ListInfoSheetOutcome.dismissed,
+    };
   } finally {
     await cubit.close();
   }

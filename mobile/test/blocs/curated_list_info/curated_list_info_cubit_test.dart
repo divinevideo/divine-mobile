@@ -334,6 +334,27 @@ void main() {
       );
 
       blocTest<CuratedListInfoCubit, CuratedListInfoState>(
+        'closes on createdWithoutVideo when the list exists but refused the '
+        'video, rather than saved or a failure that invites a second list',
+        setUp: () {
+          stubCreate(() async => _list());
+          when(
+            () => service.addVideoToList(any(), any()),
+          ).thenAnswer((_) async => false);
+        },
+        build: () => buildCubit(videoEventId: _videoEventId),
+        seed: () => const CuratedListInfoState(name: 'Puppets'),
+        act: (cubit) => cubit.submitted(),
+        verify: (cubit) {
+          expect(
+            cubit.state.status,
+            equals(CuratedListInfoStatus.createdWithoutVideo),
+          );
+          expect(cubit.state.canClose, isTrue);
+        },
+      );
+
+      blocTest<CuratedListInfoCubit, CuratedListInfoState>(
         'fails, adding no video, when the list could not be created',
         setUp: () => stubCreate(() async => null),
         build: () => buildCubit(videoEventId: _videoEventId),

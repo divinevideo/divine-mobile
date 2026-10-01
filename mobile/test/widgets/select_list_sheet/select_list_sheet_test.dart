@@ -419,6 +419,37 @@ void main() {
         verifyNever(() => service.addVideoToList(any(), any()));
       });
 
+      testWidgets('a created list that refused the video says so inside the '
+          'picker, where a line underneath would be covered', (tester) async {
+        when(() => service.myLists).thenReturn([list('Empty')]);
+        final fresh = list('Fresh');
+        when(
+          () => service.createList(
+            name: any(named: 'name'),
+            description: any(named: 'description'),
+            isPublic: any(named: 'isPublic'),
+            isCollaborative: any(named: 'isCollaborative'),
+            allowedCollaborators: any(named: 'allowedCollaborators'),
+          ),
+        ).thenAnswer((_) async => fresh);
+        when(
+          () => service.addVideoToList(any(), any()),
+        ).thenAnswer((_) async => false);
+        await openSheet(tester);
+
+        await tester.tap(find.text(l10n.listCreateNewList));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField).first, 'Fresh');
+        await tester.pump();
+        await tester.tap(find.bySemanticsLabel(l10n.listCreate));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(ListInfoForm), findsNothing);
+        expect(find.byType(SelectListSheetBody), findsOneWidget);
+        expect(find.text(l10n.listUpdateFailed), findsOneWidget);
+        expect(find.byType(SnackBar), findsNothing);
+      });
+
       testWidgets('Create new list opens the create sheet, and the list it '
           'creates shows up picked', (tester) async {
         when(() => service.myLists).thenReturn([list('Empty')]);

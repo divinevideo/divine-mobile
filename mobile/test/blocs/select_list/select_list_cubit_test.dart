@@ -346,6 +346,48 @@ void main() {
       });
     });
 
+    group('createdListRefusedVideo', () {
+      blocTest<SelectListCubit, SelectListState>(
+        'shows the failure line, leaving the picks alone',
+        setUp: () => stubLists([_list('empty')]),
+        build: buildCubit,
+        act: (cubit) => cubit
+          ..toggled('empty')
+          ..createdListRefusedVideo(),
+        skip: 1,
+        expect: () => [
+          isA<SelectListState>()
+              .having((s) => s.status, 'status', SelectListStatus.failure)
+              .having((s) => s.selectedListIds, 'selected', {'empty'}),
+        ],
+      );
+
+      blocTest<SelectListCubit, SelectListState>(
+        'is ignored while a save runs',
+        setUp: () {
+          stubLists([_list('empty')]);
+          when(
+            () => service.addVideoToList(any(), any()),
+          ).thenAnswer((_) async => true);
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          cubit.toggled('empty');
+          final save = cubit.submitted();
+          cubit.createdListRefusedVideo();
+          await save;
+        },
+        skip: 2,
+        expect: () => [
+          isA<SelectListState>().having(
+            (s) => s.status,
+            'status',
+            SelectListStatus.saved,
+          ),
+        ],
+      );
+    });
+
     group('lists changed', () {
       test('picks a list that gained the video, such as one just created', () {
         stubLists([_list('empty')]);

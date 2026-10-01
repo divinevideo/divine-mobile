@@ -171,6 +171,15 @@ class SelectListCreateButton extends StatelessWidget {
   /// The video the created list starts with.
   final VideoEvent video;
 
+  Future<void> _create(BuildContext context) async {
+    // Read before the await: the button may be gone when the sheet closes.
+    final cubit = context.read<SelectListCubit>();
+    final outcome = await showListInfoSheet(context, video: video);
+    if (outcome == ListInfoSheetOutcome.createdWithoutVideo) {
+      cubit.createdListRefusedVideo();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isSaving = context.select(
@@ -180,7 +189,7 @@ class SelectListCreateButton extends StatelessWidget {
       onPressed: isSaving
           ? null
           : () => runDetached(
-              showListInfoSheet(context, video: video),
+              _create(context),
               'open list creation sheet',
               logName: 'SelectListSheet',
               category: LogCategory.ui,
