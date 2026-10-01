@@ -194,3 +194,20 @@ class PeopleListsPubkeyToggleRequested extends PeopleListsEvent {
   @override
   List<Object?> get props => [listId, pubkey];
 }
+
+/// Retries an inconclusive owner read without clearing cached lists.
+class PeopleListsOwnerSyncRequested extends PeopleListsEvent {
+  const PeopleListsOwnerSyncRequested();
+}
+
+/// Carries the result of a particular repository/account read session.
+class PeopleListsOwnerSyncCompleted extends PeopleListsEvent {
+  const PeopleListsOwnerSyncCompleted({
+    required this.session,
+    required this.failed,
+  });
+  final int session;
+  final bool failed;
+  @override
+  List<Object?> get props => [session, failed];
+}

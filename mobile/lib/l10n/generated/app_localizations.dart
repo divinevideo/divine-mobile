@@ -6721,12 +6721,6 @@ abstract class AppLocalizations {
   /// **'Videos from list members will appear here'**
   String get peopleListsNoVideosSubtitle;
 
-  /// No description provided for @peopleListsNoVideosAvailable.
-  ///
-  /// In en, this message translates to:
-  /// **'No videos available'**
-  String get peopleListsNoVideosAvailable;
-
   /// No description provided for @peopleListsFailedToLoadVideos.
   ///
   /// In en, this message translates to:
@@ -6738,12 +6732,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Video not available'**
   String get peopleListsVideoNotAvailable;
-
-  /// No description provided for @peopleListsBackToGridTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Back to grid'**
-  String get peopleListsBackToGridTooltip;
 
   /// No description provided for @peopleListsErrorLoadingVideos.
   ///
@@ -21710,6 +21698,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Support, legal information, and app details'**
   String get settingsHelpAboutSubtitle;
+
+  /// Loop total in a list's stats line. 'formatted' is the compact figure shown (e.g. 89.4B); 'count' is the same total as a number and only selects the plural form.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{formatted} loop} other{{formatted} loops}}'**
+  String listLoopsCount(int count, String formatted);
+
+  /// Subtitle of a people list's roster screen, under the list name.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{count} person} other{{count} people}}'**
+  String peopleListsPeopleCount(int count);
+
+  /// Screen-reader count spoken for a people-list card, after the list name.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{count} member} other{{count} members}}'**
+  String listMemberCount(int count);
+
+  /// Beside the piled member avatars on a people list; opens the full roster of the list's members.
+  ///
+  /// In en, this message translates to:
+  /// **'View all'**
+  String get peopleListsViewAllMembers;
+
+  /// No description provided for @peopleListsLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load this list.'**
+  String get peopleListsLoadFailed;
+
+  /// Joins the member, video and loop counts in a list's stats line, e.g. '33 members ∙ 88 videos ∙ 89.4B loops'. Keep the surrounding spaces unless the locale sets them differently.
+  ///
+  /// In en, this message translates to:
+  /// **' ∙ '**
+  String get listStatsSeparator;
 }
 
 class _AppLocalizationsDelegate

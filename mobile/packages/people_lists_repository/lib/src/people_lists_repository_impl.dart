@@ -13,8 +13,17 @@ import 'package:people_lists_repository/src/people_list_search_result.dart';
 import 'package:people_lists_repository/src/people_lists_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+/// A public list read could not establish whether the list exists.
+class PublicPeopleListReadUnavailableException implements Exception {
+  /// Creates a retryable failure for an unconfirmed relay read.
+  const PublicPeopleListReadUnavailableException();
+}
+
 /// Logger name for repository-level diagnostics.
 const String _logName = 'people_lists_repository.impl';
+
+/// Read budget for a public people list opened by author and list ID.
+const kPublicPeopleListsRelayReadTimeout = Duration(seconds: 12);
 
 /// Filter callback for owner-authored people-list search results.
 ///
@@ -66,7 +75,9 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
 
   @override
   Future<void> syncOwner({required String ownerPubkey}) async {
-    await _reconcileOwner(ownerPubkey);
+    if (!await _reconcileOwner(ownerPubkey)) {
+      throw const PublicPeopleListReadUnavailableException();
+    }
   }
 
   /// Refresh the cached lists for [ownerPubkey] and report whether the answer
@@ -312,12 +323,6 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
 
       final list = Nip51PeopleListCodec.decode(event);
       if (list == null) continue;
-      if (list.pubkeys.isEmpty) continue;
-
-      final nameMatches = list.name.toLowerCase().contains(lowerQuery);
-      final descriptionMatches =
-          list.description?.toLowerCase().contains(lowerQuery) ?? false;
-      if (!nameMatches && !descriptionMatches) continue;
 
       final result = PeopleListSearchResult(
         ownerPubkey: event.pubkey,
@@ -330,9 +335,98 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
       seen[result.addressableId] = result;
     }
 
-    if (seen.isNotEmpty) {
-      yield List.unmodifiable(seen.values.toList());
+    final matches = seen.values
+        .where(
+          (result) =>
+              result.list.pubkeys.isNotEmpty &&
+              (result.list.name.toLowerCase().contains(lowerQuery) ||
+                  (result.list.description?.toLowerCase().contains(
+                        lowerQuery,
+                      ) ??
+                      false)),
+        )
+        .toList();
+    if (matches.isNotEmpty) {
+      yield List.unmodifiable(matches);
     }
+  }
+
+  @override
+  Future<UserList?> fetchPublicList({
+    required String ownerPubkey,
+    required String listId,
+  }) async {
+    final results = await _queryPublicLists(
+      limit: 10,
+      logContext: 'for ${pubkeyForLogs(ownerPubkey)}/$listId',
+      author: ownerPubkey,
+      dTag: listId,
+    );
+    for (final result in results) {
+      if (result.ownerPubkey == ownerPubkey && result.list.id == listId) {
+        // Someone else's list: the members render, the owner affordances
+        // (add people, delete) must not.
+        return result.list.copyWith(isEditable: false);
+      }
+    }
+    return null;
+  }
+
+  Future<List<PeopleListSearchResult>> _queryPublicLists({
+    required int limit,
+    required String logContext,
+    String? author,
+    String? dTag,
+  }) async {
+    final List<Event> events;
+    try {
+      final read = await _nostrClient.queryEventsDetailed(
+        [
+          Filter(
+            kinds: const [Nip51PeopleListCodec.kind],
+            limit: limit,
+            authors: author == null ? null : [author],
+            d: dTag == null ? null : [dTag],
+          ),
+        ],
+        timeout: kPublicPeopleListsRelayReadTimeout,
+        requireAllRelaysSettled: true,
+      );
+      if (read.events.isEmpty && (read.timedOut || read.noRelays)) {
+        throw const PublicPeopleListReadUnavailableException();
+      }
+      events = read.events;
+    } on Object catch (error, stackTrace) {
+      Log.error(
+        'Failed to query public people lists $logContext',
+        name: _logName,
+        category: LogCategory.relay,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+
+    final seen = <String, PeopleListSearchResult>{};
+    for (final event in events) {
+      final blockFilter = _blockFilter;
+      if (blockFilter != null && blockFilter(event.pubkey)) continue;
+
+      final list = Nip51PeopleListCodec.decode(event);
+      if (list == null) continue;
+
+      final result = PeopleListSearchResult(
+        ownerPubkey: event.pubkey,
+        list: list,
+      );
+      final existing = seen[result.addressableId];
+      if (existing != null && !_supersedes(list, existing.list)) {
+        continue;
+      }
+      seen[result.addressableId] = result;
+    }
+
+    return seen.values.toList();
   }
 
   Future<PeopleListPublishResult> _publishListReplacement({

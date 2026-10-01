@@ -2523,10 +2523,8 @@
     "peopleListsNoPeopleSubtitle": "시작하려면 사람을 추가하세요",
     "peopleListsNoVideosTitle": "아직 동영상 없음",
     "peopleListsNoVideosSubtitle": "목록 구성원의 동영상이 여기에 표시됩니다",
-    "peopleListsNoVideosAvailable": "사용 가능한 동영상 없음",
     "peopleListsFailedToLoadVideos": "동영상을 불러오지 못했습니다",
     "peopleListsVideoNotAvailable": "동영상을 사용할 수 없습니다",
-    "peopleListsBackToGridTooltip": "그리드로 돌아가기",
     "peopleListsErrorLoadingVideos": "동영상 불러오기 오류",
     "peopleListsNoPeopleToAdd": "추가할 수 있는 사람이 없습니다.",
     "peopleListsAddToListName": "{name}에 추가",
@@ -4410,5 +4408,35 @@
   "settingsPrivacySafetySubtitle": "사용 데이터, 콘텐츠 관리 및 차단한 계정",
   "settingsAppPreferencesSubtitle": "화면, 언어, 저장 공간 및 고급 옵션",
   "settingsConnectionsSubtitle": "앱, 릴레이, 미디어 서버 및 권한",
-  "settingsHelpAboutSubtitle": "지원, 법률 정보 및 앱 세부 정보"
+  "settingsHelpAboutSubtitle": "지원, 법률 정보 및 앱 세부 정보",
+  "listLoopsCount": "{count, plural, other{루프 {formatted}회}}",
+  "peopleListsPeopleCount": "{count, plural, other{{count}명}}",
+  "listMemberCount": "{count, plural, other{구성원 {count}명}}",
+  "peopleListsViewAllMembers": "전체 보기",
+  "peopleListsLoadFailed": "이 목록을 불러오지 못했어요.",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ "
 }

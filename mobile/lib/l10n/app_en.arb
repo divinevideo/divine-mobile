@@ -2474,10 +2474,8 @@
   "peopleListsNoPeopleSubtitle": "Add some people to get started",
   "peopleListsNoVideosTitle": "No videos yet",
   "peopleListsNoVideosSubtitle": "Videos from list members will appear here",
-  "peopleListsNoVideosAvailable": "No videos available",
   "peopleListsFailedToLoadVideos": "Failed to load videos",
   "peopleListsVideoNotAvailable": "Video not available",
-  "peopleListsBackToGridTooltip": "Back to grid",
   "peopleListsErrorLoadingVideos": "Error loading videos",
   "peopleListsNoPeopleToAdd": "No people available to add.",
   "peopleListsAddToListName": "Add to {name}",
@@ -9147,5 +9145,44 @@
   "settingsPrivacySafetySubtitle": "Usage data, moderation, and blocked accounts",
   "settingsAppPreferencesSubtitle": "Appearance, language, storage, and advanced options",
   "settingsConnectionsSubtitle": "Apps, relays, media servers, and permissions",
-  "settingsHelpAboutSubtitle": "Support, legal information, and app details"
+  "settingsHelpAboutSubtitle": "Support, legal information, and app details",
+  "@listLoopsCount": {
+    "description": "Loop total in a list's stats line. 'formatted' is the compact figure shown (e.g. 89.4B); 'count' is the same total as a number and only selects the plural form.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loops}}",
+  "@peopleListsViewAllMembers": {
+    "description": "Beside the piled member avatars on a people list; opens the full roster of the list's members."
+  },
+  "@listStatsSeparator": {
+    "description": "Joins the member, video and loop counts in a list's stats line, e.g. '33 members ∙ 88 videos ∙ 89.4B loops'. Keep the surrounding spaces unless the locale sets them differently."
+  },
+  "peopleListsPeopleCount": "{count, plural, =1{{count} person} other{{count} people}}",
+  "listMemberCount": "{count, plural, =1{{count} member} other{{count} members}}",
+  "peopleListsViewAllMembers": "View all",
+  "peopleListsLoadFailed": "Couldn't load this list.",
+  "@listMemberCount": {
+    "description": "Screen-reader count spoken for a people-list card, after the list name.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@peopleListsPeopleCount": {
+    "description": "Subtitle of a people list's roster screen, under the list name.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ "
 }

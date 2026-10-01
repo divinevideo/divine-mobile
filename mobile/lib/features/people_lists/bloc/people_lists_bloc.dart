@@ -99,6 +99,8 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
       transformer: sequential(),
     );
     on<PeopleListsOwnerChanged>(_onOwnerChanged, transformer: sequential());
+    on<PeopleListsOwnerSyncRequested>(_onOwnerSyncRequested);
+    on<PeopleListsOwnerSyncCompleted>(_onOwnerSyncCompleted);
     on<PeopleListsRepositoryListsChanged>(_onRepositoryListsChanged);
     on<PeopleListsCreateRequested>(
       _onCreateRequested,
@@ -137,6 +139,8 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
   final Stream<PeopleListsRepository> _repositoryStream;
   final Stream<bool> _enabledStream;
   final PeopleListsClock _clock;
+
+  int _ownerReadSession = 0;
 
   StreamSubscription<String?>? _ownerSubscription;
   StreamSubscription<List<UserList>>? _listsSubscription;
@@ -337,7 +341,54 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
     // On the old repository this reached a disposed NostrClient, whose
     // queryEvents returns an empty list, so the owner's lists silently stopped
     // syncing from relays (#6480).
-    unawaited(_repository.syncOwner(ownerPubkey: newOwner));
+    _startOwnerSync(newOwner, emit);
+  }
+
+  void _startOwnerSync(String owner, Emitter<PeopleListsState> emit) {
+    final session = ++_ownerReadSession;
+    final repository = _repository;
+    emit(state.copyWith(ownerReadStatus: PeopleListsOwnerReadStatus.pending));
+    unawaited(() async {
+      var failed = false;
+      try {
+        await repository.syncOwner(ownerPubkey: owner);
+      } catch (error, stackTrace) {
+        failed = true;
+        if (!isClosed && session == _ownerReadSession) {
+          addError(error, stackTrace);
+        }
+      }
+      if (!isClosed &&
+          identical(repository, _repository) &&
+          owner == state.activeOwnerPubkey &&
+          session == _ownerReadSession) {
+        add(PeopleListsOwnerSyncCompleted(session: session, failed: failed));
+      }
+    }());
+  }
+
+  void _onOwnerSyncRequested(
+    PeopleListsOwnerSyncRequested event,
+    Emitter<PeopleListsState> emit,
+  ) {
+    final owner = state.activeOwnerPubkey;
+    if (owner != null && owner.isNotEmpty) _startOwnerSync(owner, emit);
+  }
+
+  void _onOwnerSyncCompleted(
+    PeopleListsOwnerSyncCompleted event,
+    Emitter<PeopleListsState> emit,
+  ) {
+    if (event.session != _ownerReadSession || state.activeOwnerPubkey == null) {
+      return;
+    }
+    emit(
+      state.copyWith(
+        ownerReadStatus: event.failed
+            ? PeopleListsOwnerReadStatus.failed
+            : PeopleListsOwnerReadStatus.settled,
+      ),
+    );
   }
 
   void _onRepositoryListsChanged(

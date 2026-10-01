@@ -3975,16 +3975,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Видеата от хората в списъка ще се появят тук';
 
   @override
-  String get peopleListsNoVideosAvailable => 'Няма налични видеа';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'Не успяхме да заредим видеата';
 
   @override
   String get peopleListsVideoNotAvailable => 'Видеото не е налично';
-
-  @override
-  String get peopleListsBackToGridTooltip => 'Обратно към мрежата';
 
   @override
   String get peopleListsErrorLoadingVideos => 'Грешка при зареждане на видеа';
@@ -13048,4 +13042,46 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get settingsHelpAboutSubtitle =>
       'Поддръжка, правна информация и данни за приложението';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted лупа',
+      one: '$formatted луп',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count души',
+      one: '$count човек',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count членове',
+      one: '$count член',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get peopleListsViewAllMembers => 'Виж всички';
+
+  @override
+  String get peopleListsLoadFailed => 'Не успяхме да заредим този списък.';
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
 }

@@ -2984,10 +2984,8 @@
     "peopleListsNoPeopleSubtitle": "Adiciona pessoas para começar",
     "peopleListsNoVideosTitle": "Ainda sem vídeos",
     "peopleListsNoVideosSubtitle": "Os vídeos dos membros da lista aparecerão aqui",
-    "peopleListsNoVideosAvailable": "Nenhum vídeo disponível",
     "peopleListsFailedToLoadVideos": "Falha ao carregar vídeos",
     "peopleListsVideoNotAvailable": "Vídeo não disponível",
-    "peopleListsBackToGridTooltip": "Voltar à grelha",
     "peopleListsErrorLoadingVideos": "Erro ao carregar vídeos",
     "peopleListsNoPeopleToAdd": "Nenhuma pessoa disponível para adicionar.",
     "peopleListsAddToListName": "Adicionar a {name}",
@@ -4864,5 +4862,35 @@
   "settingsPrivacySafetySubtitle": "Dados de uso, moderação e contas bloqueadas",
   "settingsAppPreferencesSubtitle": "Aparência, idioma, armazenamento e opções avançadas",
   "settingsConnectionsSubtitle": "Apps, relays, servidores de mídia e permissões",
-  "settingsHelpAboutSubtitle": "Suporte, informações legais e detalhes do app"
+  "settingsHelpAboutSubtitle": "Suporte, informações legais e detalhes do app",
+  "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loops}}",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} pessoa} other{{count} pessoas}}",
+  "listMemberCount": "{count, plural, =1{{count} membro} other{{count} membros}}",
+  "peopleListsViewAllMembers": "Ver todo mundo",
+  "peopleListsLoadFailed": "Não foi possível carregar esta lista.",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ "
 }

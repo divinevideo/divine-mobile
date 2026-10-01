@@ -22,6 +22,9 @@ enum PeopleListsStatus {
   failure,
 }
 
+/// Whether the owner relay read established absence conclusively.
+enum PeopleListsOwnerReadStatus { pending, settled, failed }
+
 /// State of [PeopleListsBloc].
 ///
 /// Holds the authenticated owner's editable people lists, a reverse index
@@ -41,6 +44,7 @@ class PeopleListsState extends Equatable {
     this.pendingMutations = const {},
     this.lastSubmittedEventId,
     this.enabled = true,
+    this.ownerReadStatus = PeopleListsOwnerReadStatus.settled,
   });
 
   /// Current status of the bloc.
@@ -52,6 +56,21 @@ class PeopleListsState extends Equatable {
 
   /// Editable people lists owned by [ownerPubkey], latest snapshot.
   final List<UserList> lists;
+
+  /// Settlement of the active owner's relay read, independently of cache.
+  final PeopleListsOwnerReadStatus ownerReadStatus;
+
+  /// Whether absence can be concluded from the current owner snapshot.
+  ///
+  /// An initial cached snapshot alone does not establish absence: the relay
+  /// read must also settle. Existing cached lists remain available during a
+  /// pending or failed read. With no active owner no snapshot is expected.
+  bool get listsKnown =>
+      activeOwnerPubkey == null ||
+      activeOwnerPubkey!.isEmpty ||
+      (ownerReadStatus == PeopleListsOwnerReadStatus.settled &&
+          status != PeopleListsStatus.initial &&
+          status != PeopleListsStatus.loading);
 
   /// Reverse membership index — full pubkey → set of list IDs that
   /// currently contain that pubkey. Pubkeys are never truncated.
@@ -91,6 +110,7 @@ class PeopleListsState extends Equatable {
     String? lastSubmittedEventId,
     bool clearLastSubmittedEventId = false,
     bool? enabled,
+    PeopleListsOwnerReadStatus? ownerReadStatus,
   }) {
     return PeopleListsState(
       status: status ?? this.status,
@@ -102,6 +122,7 @@ class PeopleListsState extends Equatable {
           ? null
           : (lastSubmittedEventId ?? this.lastSubmittedEventId),
       enabled: enabled ?? this.enabled,
+      ownerReadStatus: ownerReadStatus ?? this.ownerReadStatus,
     );
   }
 
@@ -114,5 +135,6 @@ class PeopleListsState extends Equatable {
     pendingMutations,
     lastSubmittedEventId,
     enabled,
+    ownerReadStatus,
   ];
 }

@@ -1927,10 +1927,8 @@
   "peopleListsNoPeopleSubtitle": "Tambah beberapa orang untuk bermula",
   "peopleListsNoVideosTitle": "Belum ada video",
   "peopleListsNoVideosSubtitle": "Video daripada ahli senarai akan muncul di sini",
-  "peopleListsNoVideosAvailable": "Tiada video tersedia",
   "peopleListsFailedToLoadVideos": "Gagal memuatkan video",
   "peopleListsVideoNotAvailable": "Video tidak tersedia",
-  "peopleListsBackToGridTooltip": "Kembali ke grid",
   "peopleListsErrorLoadingVideos": "Ralat memuatkan video",
   "peopleListsNoPeopleToAdd": "Tiada orang tersedia untuk ditambah.",
   "peopleListsAddToListName": "Tambah ke {name}",
@@ -6631,5 +6629,35 @@
   "settingsPrivacySafetySubtitle": "Data penggunaan, penyederhanaan dan akaun disekat",
   "settingsAppPreferencesSubtitle": "Paparan, bahasa, storan dan pilihan lanjutan",
   "settingsConnectionsSubtitle": "Aplikasi, geganti, pelayan media dan kebenaran",
-  "settingsHelpAboutSubtitle": "Sokongan, maklumat undang-undang dan butiran aplikasi"
+  "settingsHelpAboutSubtitle": "Sokongan, maklumat undang-undang dan butiran aplikasi",
+  "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loop}}",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} orang} other{{count} orang}}",
+  "listMemberCount": "{count, plural, =1{{count} ahli} other{{count} ahli}}",
+  "peopleListsViewAllMembers": "Lihat semua",
+  "peopleListsLoadFailed": "Tidak dapat memuatkan senarai ini.",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ "
 }

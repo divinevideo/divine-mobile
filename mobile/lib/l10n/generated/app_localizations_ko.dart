@@ -3690,16 +3690,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get peopleListsNoVideosSubtitle => '목록 구성원의 동영상이 여기에 표시됩니다';
 
   @override
-  String get peopleListsNoVideosAvailable => '사용 가능한 동영상 없음';
-
-  @override
   String get peopleListsFailedToLoadVideos => '동영상을 불러오지 못했습니다';
 
   @override
   String get peopleListsVideoNotAvailable => '동영상을 사용할 수 없습니다';
-
-  @override
-  String get peopleListsBackToGridTooltip => '그리드로 돌아가기';
 
   @override
   String get peopleListsErrorLoadingVideos => '동영상 불러오기 오류';
@@ -12302,4 +12296,43 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get settingsHelpAboutSubtitle => '지원, 법률 정보 및 앱 세부 정보';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '루프 $formatted회',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count명',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '구성원 $count명',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get peopleListsViewAllMembers => '전체 보기';
+
+  @override
+  String get peopleListsLoadFailed => '이 목록을 불러오지 못했어요.';
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
 }

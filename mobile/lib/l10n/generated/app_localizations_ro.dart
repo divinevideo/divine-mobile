@@ -4044,17 +4044,11 @@ class AppLocalizationsRo extends AppLocalizations {
       'Videoclipurile membrilor listei vor apărea aici';
 
   @override
-  String get peopleListsNoVideosAvailable => 'Niciun videoclip disponibil';
-
-  @override
   String get peopleListsFailedToLoadVideos =>
       'Încărcarea videoclipurilor a eșuat';
 
   @override
   String get peopleListsVideoNotAvailable => 'Videoclip indisponibil';
-
-  @override
-  String get peopleListsBackToGridTooltip => 'Înapoi la grilă';
 
   @override
   String get peopleListsErrorLoadingVideos =>
@@ -13184,4 +13178,49 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get settingsHelpAboutSubtitle =>
       'Asistență, informații legale și detalii despre aplicație';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted de bucle',
+      few: '$formatted bucle',
+      one: '$formatted buclă',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de persoane',
+      few: '$count persoane',
+      one: '$count persoană',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de membri',
+      few: '$count membri',
+      one: '$count membru',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get peopleListsViewAllMembers => 'Vezi toți';
+
+  @override
+  String get peopleListsLoadFailed => 'N-am putut încărca această listă.';
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
 }

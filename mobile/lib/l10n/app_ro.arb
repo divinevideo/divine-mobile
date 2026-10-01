@@ -2984,10 +2984,8 @@
     "peopleListsNoPeopleSubtitle": "Adaugă persoane pentru a începe",
     "peopleListsNoVideosTitle": "Niciun videoclip încă",
     "peopleListsNoVideosSubtitle": "Videoclipurile membrilor listei vor apărea aici",
-    "peopleListsNoVideosAvailable": "Niciun videoclip disponibil",
     "peopleListsFailedToLoadVideos": "Încărcarea videoclipurilor a eșuat",
     "peopleListsVideoNotAvailable": "Videoclip indisponibil",
-    "peopleListsBackToGridTooltip": "Înapoi la grilă",
     "peopleListsErrorLoadingVideos": "Eroare la încărcarea videoclipurilor",
     "peopleListsNoPeopleToAdd": "Nicio persoană disponibilă de adăugat.",
     "peopleListsAddToListName": "Adaugă la {name}",
@@ -4864,5 +4862,35 @@
   "settingsPrivacySafetySubtitle": "Date de utilizare, moderare și conturi blocate",
   "settingsAppPreferencesSubtitle": "Aspect, limbă, stocare și opțiuni avansate",
   "settingsConnectionsSubtitle": "Aplicații, relee, servere media și permisiuni",
-  "settingsHelpAboutSubtitle": "Asistență, informații legale și detalii despre aplicație"
+  "settingsHelpAboutSubtitle": "Asistență, informații legale și detalii despre aplicație",
+  "listLoopsCount": "{count, plural, =1{{formatted} buclă} few{{formatted} bucle} other{{formatted} de bucle}}",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} persoană} few{{count} persoane} other{{count} de persoane}}",
+  "listMemberCount": "{count, plural, =1{{count} membru} few{{count} membri} other{{count} de membri}}",
+  "peopleListsViewAllMembers": "Vezi toți",
+  "peopleListsLoadFailed": "N-am putut încărca această listă.",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ "
 }

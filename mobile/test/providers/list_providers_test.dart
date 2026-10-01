@@ -1151,6 +1151,45 @@ void main() {
     );
   });
 
+  group(publicPeopleListProvider, () {
+    test('resolves through the people repository', () async {
+      final repository = _MockPeopleListsRepository();
+      final crew = UserList(
+        id: 'crew',
+        name: 'Crew',
+        pubkeys: const [_ownerB],
+        createdAt: _frozenNow,
+        updatedAt: _frozenNow,
+        isEditable: false,
+      );
+      when(
+        () => repository.fetchPublicList(
+          ownerPubkey: any(named: 'ownerPubkey'),
+          listId: any(named: 'listId'),
+        ),
+      ).thenAnswer((_) async => crew);
+
+      final container = ProviderContainer(
+        overrides: [
+          peopleListsRepositoryProvider.overrideWithValue(repository),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final list = await container.read(
+        publicPeopleListProvider(
+          ownerPubkey: _ownerA,
+          listId: 'crew',
+        ).future,
+      );
+
+      expect(list, same(crew));
+      verify(
+        () => repository.fetchPublicList(ownerPubkey: _ownerA, listId: 'crew'),
+      ).called(1);
+    });
+  });
+
   group(publicCuratedListProvider, () {
     test(
       'fetches once and does not re-run when the lists state re-emits',

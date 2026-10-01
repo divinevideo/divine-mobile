@@ -2977,10 +2977,8 @@
     "peopleListsNoPeopleSubtitle": "始めるにはユーザーを追加してください",
     "peopleListsNoVideosTitle": "まだ動画がありません",
     "peopleListsNoVideosSubtitle": "リストメンバーの動画がここに表示されます",
-    "peopleListsNoVideosAvailable": "利用可能な動画がありません",
     "peopleListsFailedToLoadVideos": "動画の読み込みに失敗しました",
     "peopleListsVideoNotAvailable": "動画は利用できません",
-    "peopleListsBackToGridTooltip": "グリッドに戻る",
     "peopleListsErrorLoadingVideos": "動画の読み込みエラー",
     "peopleListsNoPeopleToAdd": "追加できるユーザーがいません。",
     "peopleListsAddToListName": "{name}に追加",
@@ -4864,5 +4862,35 @@
   "settingsPrivacySafetySubtitle": "利用データ、モデレーション、ブロックしたアカウント",
   "settingsAppPreferencesSubtitle": "外観、言語、ストレージ、詳細設定",
   "settingsConnectionsSubtitle": "アプリ、リレー、メディアサーバー、権限",
-  "settingsHelpAboutSubtitle": "サポート、法的情報、アプリの詳細"
+  "settingsHelpAboutSubtitle": "サポート、法的情報、アプリの詳細",
+  "listLoopsCount": "{count, plural, other{{formatted}ループ}}",
+  "peopleListsPeopleCount": "{count, plural, other{{count}人}}",
+  "listMemberCount": "{count, plural, other{{count}人のメンバー}}",
+  "peopleListsViewAllMembers": "すべて見る",
+  "peopleListsLoadFailed": "このリストを読み込めませんでした。",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ "
 }

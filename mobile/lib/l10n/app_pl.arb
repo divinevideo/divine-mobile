@@ -2984,10 +2984,8 @@
     "peopleListsNoPeopleSubtitle": "Dodaj osoby, aby zacząć",
     "peopleListsNoVideosTitle": "Brak filmów",
     "peopleListsNoVideosSubtitle": "Filmy od członków listy pojawią się tutaj",
-    "peopleListsNoVideosAvailable": "Brak dostępnych filmów",
     "peopleListsFailedToLoadVideos": "Nie udało się załadować filmów",
     "peopleListsVideoNotAvailable": "Film niedostępny",
-    "peopleListsBackToGridTooltip": "Powrót do siatki",
     "peopleListsErrorLoadingVideos": "Błąd podczas ładowania filmów",
     "peopleListsNoPeopleToAdd": "Brak osób dostępnych do dodania.",
     "peopleListsAddToListName": "Dodaj do {name}",
@@ -4864,5 +4862,35 @@
   "settingsPrivacySafetySubtitle": "Dane użytkowania, moderacja i zablokowane konta",
   "settingsAppPreferencesSubtitle": "Wygląd, język, pamięć i opcje zaawansowane",
   "settingsConnectionsSubtitle": "Aplikacje, przekaźniki, serwery mediów i uprawnienia",
-  "settingsHelpAboutSubtitle": "Pomoc, informacje prawne i szczegóły aplikacji"
+  "settingsHelpAboutSubtitle": "Pomoc, informacje prawne i szczegóły aplikacji",
+  "listLoopsCount": "{count, plural, =1{{formatted} pętla} few{{formatted} pętle} many{{formatted} pętli} other{{formatted} pętli}}",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} osoba} few{{count} osoby} many{{count} osób} other{{count} osoby}}",
+  "listMemberCount": "{count, plural, =1{{count} członek} few{{count} członków} many{{count} członków} other{{count} członka}}",
+  "peopleListsViewAllMembers": "Zobacz wszystkich",
+  "peopleListsLoadFailed": "Nie udało się wczytać tej listy.",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ "
 }

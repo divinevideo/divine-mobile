@@ -2301,10 +2301,8 @@
   "peopleListsNoPeopleSubtitle": "ప్రారంభించడానికి కొంతమంది వ్యక్తులను జోడించండి",
   "peopleListsNoVideosTitle": "ఇంకా వీడియోలు లేవు",
   "peopleListsNoVideosSubtitle": "జాబితా సభ్యుల నుండి వీడియోలు ఇక్కడ కనిపిస్తాయి",
-  "peopleListsNoVideosAvailable": "వీడియోలు అందుబాటులో లేవు",
   "peopleListsFailedToLoadVideos": "వీడియోలను లోడ్ చేయడంలో విఫలమైంది",
   "peopleListsVideoNotAvailable": "వీడియో అందుబాటులో లేదు",
-  "peopleListsBackToGridTooltip": "తిరిగి గ్రిడ్‌కి",
   "peopleListsErrorLoadingVideos": "వీడియోలను లోడ్ చేయడంలో లోపం",
   "peopleListsNoPeopleToAdd": "జోడించడానికి వ్యక్తులు ఎవరూ అందుబాటులో లేరు.",
   "peopleListsAddToListName": "దీనికి జోడించండి {name}",
@@ -8395,5 +8393,35 @@
   "settingsPrivacySafetySubtitle": "వినియోగ డేటా, నియంత్రణ, బ్లాక్ చేసిన ఖాతాలు",
   "settingsAppPreferencesSubtitle": "రూపం, భాష, నిల్వ, అధునాతన ఎంపికలు",
   "settingsConnectionsSubtitle": "యాప్‌లు, రిలేలు, మీడియా సర్వర్లు, అనుమతులు",
-  "settingsHelpAboutSubtitle": "సహాయం, చట్టపరమైన సమాచారం, యాప్ వివరాలు"
+  "settingsHelpAboutSubtitle": "సహాయం, చట్టపరమైన సమాచారం, యాప్ వివరాలు",
+  "listLoopsCount": "{count, plural, =1{{formatted} లూప్} other{{formatted} లూప్‌లు}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listMemberCount": "{count, plural, =1{{count} సభ్యులు} other{{count} సభ్యులు}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsLoadFailed": "ఈ జాబితాను లోడ్ చేయడం సాధ్యపడలేదు.",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} వ్యక్తి} other{{count} వ్యక్తులు}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsViewAllMembers": "అన్నీ చూడండి"
 }

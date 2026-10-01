@@ -96,6 +96,87 @@ void main() {
       );
     }
 
+    test('empty cache remains unknown until the owner read settles', () async {
+      final pending = Completer<void>();
+      when(() => repository.syncOwner(ownerPubkey: _ownerA))
+          .thenAnswer((_) => pending.future);
+      final bloc = buildBloc();
+      addTearDown(bloc.close);
+      bloc.add(const PeopleListsStarted());
+      await _flush();
+      ownerPubkeyController.add(_ownerA);
+      await _flush();
+      ownerAListsController.add([]);
+      await _flush();
+      expect(bloc.state.status, PeopleListsStatus.ready);
+      expect(bloc.state.listsKnown, isFalse);
+      expect(bloc.state.ownerReadStatus, PeopleListsOwnerReadStatus.pending);
+      pending.complete();
+      await _flush();
+      expect(bloc.state.listsKnown, isTrue);
+      expect(bloc.state.ownerReadStatus, PeopleListsOwnerReadStatus.settled);
+    });
+
+    test(
+      'inconclusive owner read is retryable without clearing a cached list',
+      () async {
+        when(() => repository.syncOwner(ownerPubkey: _ownerA))
+            .thenThrow(StateError('offline'));
+        final bloc = buildBloc();
+        addTearDown(bloc.close);
+        bloc.add(const PeopleListsStarted());
+        await _flush();
+        ownerPubkeyController.add(_ownerA);
+        await _flush();
+        final list = _buildList(
+          id: 'crew',
+          name: 'Crew',
+          pubkeys: [_memberAlice],
+        );
+        ownerAListsController.add([list]);
+        await _flush();
+        expect(bloc.state.listsKnown, isFalse);
+        expect(bloc.state.ownerReadStatus, PeopleListsOwnerReadStatus.failed);
+        expect(bloc.state.lists, [list]);
+        final retry = Completer<void>();
+        when(() => repository.syncOwner(ownerPubkey: _ownerA))
+            .thenAnswer((_) => retry.future);
+        bloc.add(const PeopleListsOwnerSyncRequested());
+        await _flush();
+        expect(bloc.state.ownerReadStatus, PeopleListsOwnerReadStatus.pending);
+        expect(bloc.state.lists, [list]);
+        retry.complete();
+        await _flush();
+        expect(bloc.state.listsKnown, isTrue);
+      },
+    );
+
+    test('late owner read cannot settle the next account', () async {
+      final first = Completer<void>();
+      final next = Completer<void>();
+      when(() => repository.syncOwner(ownerPubkey: _ownerA))
+          .thenAnswer((_) => first.future);
+      when(() => repository.syncOwner(ownerPubkey: _ownerB))
+          .thenAnswer((_) => next.future);
+      final bloc = buildBloc();
+      addTearDown(bloc.close);
+      bloc.add(const PeopleListsStarted());
+      await _flush();
+      ownerPubkeyController.add(_ownerA);
+      await _flush();
+      ownerPubkeyController.add(_ownerB);
+      await _flush();
+      ownerBListsController.add([]);
+      await _flush();
+      first.complete();
+      await _flush();
+      expect(bloc.state.ownerPubkey, _ownerB);
+      expect(bloc.state.listsKnown, isFalse);
+      next.complete();
+      await _flush();
+      expect(bloc.state.listsKnown, isTrue);
+    });
+
     test('initial state is unauthenticated with empty lists', () {
       final bloc = buildBloc();
       expect(bloc.state, equals(const PeopleListsState()));

@@ -2977,10 +2977,8 @@
     "peopleListsNoPeopleSubtitle": "أضف بعض الأشخاص للبدء",
     "peopleListsNoVideosTitle": "لا توجد مقاطع فيديو بعد",
     "peopleListsNoVideosSubtitle": "ستظهر هنا مقاطع الفيديو من أعضاء القائمة",
-    "peopleListsNoVideosAvailable": "لا تتوفر مقاطع فيديو",
     "peopleListsFailedToLoadVideos": "فشل تحميل مقاطع الفيديو",
     "peopleListsVideoNotAvailable": "الفيديو غير متاح",
-    "peopleListsBackToGridTooltip": "العودة إلى الشبكة",
     "peopleListsErrorLoadingVideos": "خطأ في تحميل مقاطع الفيديو",
     "peopleListsNoPeopleToAdd": "لا يوجد أشخاص متاحون للإضافة.",
     "peopleListsAddToListName": "أضف إلى {name}",
@@ -4864,5 +4862,35 @@
   "settingsPrivacySafetySubtitle": "بيانات الاستخدام والإشراف والحسابات المحظورة",
   "settingsAppPreferencesSubtitle": "المظهر واللغة والتخزين والخيارات المتقدمة",
   "settingsConnectionsSubtitle": "التطبيقات والمرحّلات وخوادم الوسائط والأذونات",
-  "settingsHelpAboutSubtitle": "الدعم والمعلومات القانونية وتفاصيل التطبيق"
+  "settingsHelpAboutSubtitle": "الدعم والمعلومات القانونية وتفاصيل التطبيق",
+  "listLoopsCount": "{count, plural, zero{لا توجد تكرارات} one{تكرار واحد} two{تكراران} few{{formatted} تكرارات} many{{formatted} تكرارًا} other{{formatted} تكرار}}",
+  "peopleListsPeopleCount": "{count, plural, zero{لا يوجد أشخاص} one{شخص واحد} two{شخصان} few{{count} أشخاص} many{{count} شخصًا} other{{count} شخص}}",
+  "listMemberCount": "{count, plural, zero{لا يوجد أعضاء} one{عضو واحد} two{عضوان} few{{count} أعضاء} many{{count} عضوًا} other{{count} عضو}}",
+  "peopleListsViewAllMembers": "عرض الكل",
+  "peopleListsLoadFailed": "تعذّر تحميل هذه القائمة.",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ "
 }
