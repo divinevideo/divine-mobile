@@ -188,7 +188,19 @@ class PeopleListsPicksApplied extends PeopleListsEvent {
     required this.pubkey,
     required this.addListIds,
     required this.removeListIds,
-  });
+  }) : _session = null;
+
+  PeopleListsPicksApplied._dispatched(
+    PeopleListsPicksApplied request,
+    this._session,
+  ) : requestId = request.requestId,
+      ownerPubkey = request.ownerPubkey,
+      pubkey = request.pubkey,
+      addListIds = request.addListIds,
+      removeListIds = request.removeListIds;
+
+  /// The bloc session at dispatch, before the sequential handler can wait.
+  final int? _session;
 
   /// Identifies this batch, even when another visit picks the same lists.
   final Object requestId;
@@ -212,6 +224,7 @@ class PeopleListsPicksApplied extends PeopleListsEvent {
     pubkey,
     addListIds,
     removeListIds,
+    _session,
   ];
 }
 

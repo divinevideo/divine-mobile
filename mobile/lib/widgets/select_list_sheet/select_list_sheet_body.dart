@@ -174,9 +174,17 @@ class SelectListCreateButton extends StatelessWidget {
   Future<void> _create(BuildContext context) async {
     // Read before the await: the button may be gone when the sheet closes.
     final cubit = context.read<SelectListCubit>();
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final route = ModalRoute.of(context);
+    final l10n = context.l10n;
     final outcome = await showListInfoSheet(context, video: video);
-    if (outcome == ListInfoSheetOutcome.createdWithoutVideo) {
+    if (outcome != ListInfoSheetOutcome.createdWithoutVideo) return;
+    if ((route?.isActive ?? false) && !cubit.isClosed) {
       cubit.createdListRefusedVideo();
+    } else if (messenger?.mounted ?? false) {
+      messenger!.showSnackBar(
+        DivineSnackbarContainer.snackBar(l10n.listUpdateFailed, error: true),
+      );
     }
   }
 

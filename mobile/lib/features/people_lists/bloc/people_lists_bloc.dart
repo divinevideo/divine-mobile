@@ -140,13 +140,23 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
   final Stream<bool> _enabledStream;
   final PeopleListsClock _clock;
 
-  // Stops in-flight batches when their auth/repository session ends.
+  // Stops queued and in-flight batches when their auth/repository session ends.
   int _picksSession = 0;
 
   StreamSubscription<String?>? _ownerSubscription;
   StreamSubscription<List<UserList>>? _listsSubscription;
   StreamSubscription<PeopleListsRepository>? _repositorySubscription;
   StreamSubscription<bool>? _enabledSubscription;
+
+  @override
+  void add(PeopleListsEvent event) {
+    // Capture before sequential() queues the request behind an in-flight batch.
+    super.add(
+      event is PeopleListsPicksApplied
+          ? PeopleListsPicksApplied._dispatched(event, _picksSession)
+          : event,
+    );
+  }
 
   @override
   Future<void> close() async {
@@ -517,10 +527,9 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
     PeopleListsPicksApplied event,
     Emitter<PeopleListsState> emit,
   ) async {
-    final session = _picksSession;
     bool isCurrent() =>
         state.activeOwnerPubkey == event.ownerPubkey &&
-        session == _picksSession;
+        event._session == _picksSession;
     var refused = 0;
     for (final listId in event.addListIds) {
       if (!isCurrent()) break;
