@@ -82,8 +82,9 @@ void main() {
       );
 
       test('should return immediately without waiting for stability', () {
-        // Arrange - subscribe adds videos asynchronously but buildFeed
-        // should NOT wait for them
+        // Arrange - no videos yet, the state a stability wait would hold
+        // buildFeed open for. Not awaiting subscribe is pinned separately by
+        // the streaming test's never-completing subscribe.
         final config = VideoFeedConfig(
           subscriptionType: SubscriptionType.popularNow,
           subscribe: (service) async {},
