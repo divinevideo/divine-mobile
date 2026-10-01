@@ -466,15 +466,6 @@
     "featuredTabLoadFailed": "Deze collectie kon niet worden geladen.",
     "featuredTabRetry": "Probeer opnieuw",
     "exploreNoVideosAvailable": "Geen video's beschikbaar",
-    "exploreDiscoverLists": "Lijsten ontdekken",
-    "exploreAboutLists": "Over lijsten",
-    "exploreAboutListsDescription": "Met lijsten kun je Divine-inhoud op twee manieren organiseren en samenstellen:",
-    "explorePeopleLists": "Personenlijsten",
-    "explorePeopleListsDescription": "Volg groepen makers en bekijk hun nieuwste video's",
-    "exploreVideoLists": "Videolijsten",
-    "exploreVideoListsDescription": "Maak afspeellijsten van je favoriete video's om later te bekijken",
-    "exploreMyLists": "Mijn lijsten",
-    "exploreSubscribedLists": "Gevolgde lijsten",
     "exploreErrorLoadingLists": "Fout bij laden van lijsten. Probeer het opnieuw.",
     "exploreNewVideosCount": "{count, plural, one{1 nieuwe video} other{{count} nieuwe video''s}}",
     "@exploreNewVideosCount": {
@@ -1602,7 +1593,6 @@
     "reportReceivedReviewNotice": "We versturen die automatisch zodra je verbinding hebt. Ons team bekijkt je melding en onderneemt passende actie. Je kunt updates ontvangen via directe berichten.",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "Sluiten",
-    "listAddToList": "Toevoegen aan lijst",
     "listVideoCount": "{count} video's",
     "@listVideoCount": {
         "placeholders": {
@@ -1611,25 +1601,17 @@
             }
         }
     },
-    "listNewList": "Nieuwe lijst",
+    "listAddToLists": "Toevoegen aan lijsten",
+    "listMemberCount": "{count, plural, =1{{count} lid} other{{count} leden}}",
+    "@listMemberCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "listDone": "Klaar",
     "listErrorLoading": "Fout bij laden van lijsten",
-    "listRemovedFrom": "Verwijderd uit {name}",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "Toegevoegd aan {name}",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "Nieuwe lijst maken",
     "listNewPeopleList": "Nieuwe personenlijst",
     "listCollaboratorsNone": "Geen",
@@ -1637,13 +1619,50 @@
     "listCollaboratorSearchHint": "Zoek in Divine...",
     "listNameLabel": "Lijstnaam",
     "listDescriptionLabel": "Beschrijving (optioneel)",
-    "listPublicList": "Openbare lijst",
-    "listPublicListSubtitle": "Anderen kunnen deze lijst volgen en zien",
+    "listMakePublicLabel": "Openbaar maken",
+    "listMakePublicSubtitle": "Laat anderen deze lijst zien",
     "listPrivateListSubtitle": "Video's blijven privé. Naam, beschrijving, tags en omslag blijven zichtbaar.",
     "listVisibilityPublic": "Openbaar",
     "listVisibilityPrivate": "Privé",
     "profileListsEmpty": "Nog geen lijsten. Maak er een voor de loops die je bij elkaar wilt houden.",
-    "listEditTitle": "Lijst bewerken",
+    "listMemberNamesSeparator": ", ",
+    "listCardSemanticLabel": "{visibility, select, private{{name}, Privé, {count}} other{{name}, {count}}}",
+    "@listCardSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            },
+            "visibility": {
+                "type": "String"
+            },
+            "count": {
+                "type": "String"
+            }
+        }
+    },
+    "listsDiscoveryLoadingLabel": "Lijsten laden",
+    "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loops}}",
+    "@listLoopsCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "formatted": {
+                "type": "String"
+            }
+        }
+    },
+    "listStatsSeparator": " ∙ ",
+    "peopleListsViewAllMembers": "Alles bekijken",
+    "peopleListsPeopleCount": "{count, plural, =1{{count} persoon} other{{count} personen}}",
+    "@peopleListsPeopleCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "listsDiscoveryEmpty": "Er doken deze keer geen lijsten op. Trek omlaag om te vernieuwen.",
     "listShareAction": "Lijst delen",
     "listShareFailed": "Kon deze lijst niet delen. Probeer het opnieuw.",
     "listSave": "Opslaan",
@@ -1672,7 +1691,6 @@
             }
         }
     },
-    "listCancel": "Annuleren",
     "listCreate": "Maken",
     "listCreateFailed": "Lijst maken mislukt",
     "keyManagementTitle": "Nostr-sleutels",
@@ -2925,10 +2943,8 @@
     },
     "notificationSystemUpdate": "Je hebt een nieuwe update",
     "peopleListsAddToList": "Toevoegen aan lijst",
-    "peopleListsSheetTitle": "Toevoegen aan lijst",
     "peopleListsEmptyTitle": "Nog geen lijsten",
     "peopleListsEmptySubtitle": "Maak een lijst om mensen te groeperen.",
-    "peopleListsCreateList": "Lijst aanmaken",
     "peopleListsNewListTitle": "Nieuwe lijst",
     "peopleListsRouteTitle": "Personenlijst",
     "peopleListsListNameLabel": "Lijstnaam",
@@ -2944,18 +2960,32 @@
     "peopleListsNoPeopleSubtitle": "Voeg mensen toe om te beginnen",
     "peopleListsNoVideosTitle": "Nog geen video's",
     "peopleListsNoVideosSubtitle": "Video's van lijstleden verschijnen hier",
-    "peopleListsNoVideosAvailable": "Geen video's beschikbaar",
     "peopleListsFailedToLoadVideos": "Video's laden mislukt",
     "peopleListsVideoNotAvailable": "Video niet beschikbaar",
-    "peopleListsBackToGridTooltip": "Terug naar raster",
     "peopleListsErrorLoadingVideos": "Fout bij laden van video's",
     "peopleListsNoPeopleToAdd": "Geen mensen beschikbaar om toe te voegen.",
     "peopleListsAddToListName": "Toevoegen aan {name}",
+    "peopleListsAddPersonSemanticLabel": "{name} aan lijst toevoegen",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "{name} uit lijst verwijderen",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "Kon de lijst niet bijwerken. Probeer het opnieuw.",
     "peopleListsAddPeopleSearchHint": "Mensen zoeken",
     "peopleListsAddPeopleError": "Kon mensen niet laden. Probeer het opnieuw.",
     "peopleListsAddPeopleRetry": "Opnieuw proberen",
-    "peopleListsAddButton": "Toevoegen",
-    "peopleListsAddButtonWithCount": "{count} toevoegen",
+    "peopleListsLoadFailed": "Kon deze lijst niet laden.",
     "peopleListsInNLists": "{count, plural, =1{In 1 lijst} other{In {count} lijsten}}",
     "peopleListsRemoveConfirmTitle": "{name} verwijderen?",
     "peopleListsRemoveConfirmBody": "Ze worden uit deze lijst verwijderd.",
@@ -3189,14 +3219,6 @@
     "nostrSettingsDeleteAccountSubtitle": "Stuurt verwijderverzoeken voor je content en meldt je op dit apparaat af. Relays, clients, zoekindexen en andere aangemelde apparaten kunnen kopieën bewaren.",
     "safetySettingsWhatYouSee": "WAT JIJ ZIET",
     "safetySettingsWhatYouPublish": "WAT JIJ PUBLICEERT",
-    "listPersonCount": "{count, plural, =1{1 persoon} other{{count} personen}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "Door ",
     "keyManagementYourPublicKeyLabel": "Je publieke sleutel (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -3243,14 +3265,6 @@
             }
         }
     },
-    "discoverListsTitle": "Lijsten ontdekken",
-    "discoverListsFailedToLoad": "Lijsten laden mislukt",
-    "discoverListsLoading": "Publieke lijsten worden ontdekt...",
-    "discoverListsRelayTimeout": "De relay leverde niet op tijd lijsten. Probeer het opnieuw.",
-    "discoverListsServiceUnavailable": "Service niet beschikbaar.",
-    "discoverListsEmptyTitle": "Geen publieke lijsten gevonden",
-    "discoverListsEmptySubtitle": "Kom later terug voor nieuwe lijsten",
-    "discoverListsByAuthorPrefix": "door",
     "curatedListEmptyTitle": "Geen video's in deze lijst",
     "curatedListEmptySubtitle": "Voeg wat video's toe om te beginnen",
     "curatedListLoadingVideos": "Video's laden...",

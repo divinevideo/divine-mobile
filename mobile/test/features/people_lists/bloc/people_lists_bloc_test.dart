@@ -10,8 +10,15 @@ import 'package:models/models.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 
-class _MockPeopleListsRepository extends Mock
-    implements PeopleListsRepository {}
+class _MockPeopleListsRepository extends Mock implements PeopleListsRepository {
+  _MockPeopleListsRepository() {
+    // Attaching an owner also refreshes the lists they follow. The tests about
+    // that refresh verify it; every other test only needs it to complete.
+    when(
+      () => syncFollowedLists(viewerPubkey: any(named: 'viewerPubkey')),
+    ).thenAnswer((_) async {});
+  }
+}
 
 // Full-length Nostr pubkeys — never truncate.
 const String _ownerA =
@@ -128,6 +135,22 @@ void main() {
         expect(bloc.state.lists, hasLength(1));
         expect(bloc.state.lists.first.id, equals('list-1'));
         verify(() => repository.syncOwner(ownerPubkey: _ownerA)).called(1);
+      },
+    );
+
+    blocTest<PeopleListsBloc, PeopleListsState>(
+      'refreshes the lists the new owner follows',
+      build: buildBloc,
+      act: (bloc) async {
+        bloc.add(const PeopleListsStarted());
+        await _flush();
+        ownerPubkeyController.add(_ownerA);
+        await _flush();
+      },
+      verify: (_) {
+        verify(
+          () => repository.syncFollowedLists(viewerPubkey: _ownerA),
+        ).called(1);
       },
     );
 
@@ -999,6 +1022,196 @@ void main() {
     // only gates construction. A bloc built while FeatureFlag.curatedLists was
     // on used to keep its cache subscription and keep calling syncOwner for
     // kind 30000 for the rest of the session after the flag went off.
+    group(PeopleListsPicksApplied, () {
+      PeopleListsState seeded() => PeopleListsState(
+        status: PeopleListsStatus.ready,
+        ownerPubkey: _ownerA,
+        lists: [
+          _buildList(id: 'list-1', name: 'Friends', pubkeys: const []),
+          _buildList(id: 'list-2', name: 'Work', pubkeys: const []),
+          _buildList(
+            id: 'list-3',
+            name: 'Old',
+            pubkeys: const [_memberBob],
+          ),
+        ],
+        listIdsByPubkey: const {
+          _memberBob: {'list-3'},
+        },
+      );
+
+      void stubAdd(String listId, PeopleListPublishResult result) {
+        when(
+          () => repository.addPubkey(
+            ownerPubkey: _ownerA,
+            listId: listId,
+            pubkey: _memberBob,
+          ),
+        ).thenAnswer((_) async => result);
+      }
+
+      void stubRemove(String listId, PeopleListPublishResult result) {
+        when(
+          () => repository.removePubkey(
+            ownerPubkey: _ownerA,
+            listId: listId,
+            pubkey: _memberBob,
+          ),
+        ).thenAnswer((_) async => result);
+      }
+
+      const submitted = PeopleListPublishResult.submitted(
+        eventId:
+            '3333333333333333333333333333333333333333333333333333333333333333',
+      );
+
+      blocTest<PeopleListsBloc, PeopleListsState>(
+        'applies every add and remove in order, then records an outcome '
+        'with nothing refused',
+        build: buildBloc,
+        setUp: () {
+          stubAdd('list-1', submitted);
+          stubAdd('list-2', submitted);
+          stubRemove('list-3', submitted);
+        },
+        seed: seeded,
+        act: (bloc) => bloc.add(
+          const PeopleListsPicksApplied(
+            pubkey: _memberBob,
+            addListIds: {'list-1', 'list-2'},
+            removeListIds: {'list-3'},
+          ),
+        ),
+        verify: (bloc) {
+          verifyInOrder([
+            () => repository.addPubkey(
+              ownerPubkey: _ownerA,
+              listId: 'list-1',
+              pubkey: _memberBob,
+            ),
+            () => repository.addPubkey(
+              ownerPubkey: _ownerA,
+              listId: 'list-2',
+              pubkey: _memberBob,
+            ),
+            () => repository.removePubkey(
+              ownerPubkey: _ownerA,
+              listId: 'list-3',
+              pubkey: _memberBob,
+            ),
+          ]);
+          expect(bloc.state.listIdsByPubkey[_memberBob], {'list-1', 'list-2'});
+          expect(bloc.state.pendingMutations, isEmpty);
+          expect(
+            bloc.state.lastPicksOutcome,
+            const PeopleListsPicksOutcome(
+              sequence: 1,
+              pubkey: _memberBob,
+              refused: 0,
+            ),
+          );
+        },
+      );
+
+      blocTest<PeopleListsBloc, PeopleListsState>(
+        'counts a later pick the relay refused, after an earlier one landed',
+        build: buildBloc,
+        setUp: () {
+          stubAdd('list-1', submitted);
+          stubAdd('list-2', const PeopleListPublishResult.failed());
+        },
+        seed: seeded,
+        act: (bloc) => bloc.add(
+          const PeopleListsPicksApplied(
+            pubkey: _memberBob,
+            addListIds: {'list-1', 'list-2'},
+            removeListIds: {},
+          ),
+        ),
+        verify: (bloc) {
+          // The second add was rolled back; the first stands.
+          expect(bloc.state.listIdsByPubkey[_memberBob], {'list-1', 'list-3'});
+          expect(bloc.state.lastPicksOutcome?.refused, 1);
+          expect(bloc.state.lastPicksOutcome?.pubkey, _memberBob);
+        },
+      );
+
+      blocTest<PeopleListsBloc, PeopleListsState>(
+        'counts a pick whose repository call threw as refused',
+        build: buildBloc,
+        setUp: () {
+          when(
+            () => repository.removePubkey(
+              ownerPubkey: _ownerA,
+              listId: 'list-3',
+              pubkey: _memberBob,
+            ),
+          ).thenThrow(StateError('relay down'));
+        },
+        seed: seeded,
+        act: (bloc) => bloc.add(
+          const PeopleListsPicksApplied(
+            pubkey: _memberBob,
+            addListIds: {},
+            removeListIds: {'list-3'},
+          ),
+        ),
+        errors: () => [isA<StateError>()],
+        verify: (bloc) {
+          expect(bloc.state.listIdsByPubkey[_memberBob], {'list-3'});
+          expect(bloc.state.lastPicksOutcome?.refused, 1);
+        },
+      );
+
+      blocTest<PeopleListsBloc, PeopleListsState>(
+        'numbers each outcome after the last, so a sheet can tell its own',
+        build: buildBloc,
+        setUp: () => stubAdd('list-1', submitted),
+        seed: () => seeded().copyWith(
+          lastPicksOutcome: const PeopleListsPicksOutcome(
+            sequence: 7,
+            pubkey: _memberAlice,
+            refused: 0,
+          ),
+        ),
+        act: (bloc) => bloc.add(
+          const PeopleListsPicksApplied(
+            pubkey: _memberBob,
+            addListIds: {'list-1'},
+            removeListIds: {},
+          ),
+        ),
+        verify: (bloc) {
+          expect(bloc.state.lastPicksOutcome?.sequence, 8);
+          expect(bloc.state.lastPicksOutcome?.pubkey, _memberBob);
+        },
+      );
+
+      blocTest<PeopleListsBloc, PeopleListsState>(
+        'records an outcome even when every pick is a no-op',
+        build: buildBloc,
+        seed: seeded,
+        act: (bloc) => bloc.add(
+          const PeopleListsPicksApplied(
+            pubkey: _memberBob,
+            // Already a member of list-3, so the add is dropped.
+            addListIds: {'list-3'},
+            removeListIds: {},
+          ),
+        ),
+        verify: (bloc) {
+          verifyNever(
+            () => repository.addPubkey(
+              ownerPubkey: any(named: 'ownerPubkey'),
+              listId: any(named: 'listId'),
+              pubkey: any(named: 'pubkey'),
+            ),
+          );
+          expect(bloc.state.lastPicksOutcome?.refused, 0);
+        },
+      );
+    });
+
     group('curated-lists flag lifecycle', () {
       Future<PeopleListsBloc> startedWithOwnerA() async {
         final bloc = buildBloc()..add(const PeopleListsStarted());
@@ -1062,6 +1275,11 @@ void main() {
 
         verifyNever(
           () => repository.syncOwner(ownerPubkey: any(named: 'ownerPubkey')),
+        );
+        verifyNever(
+          () => repository.syncFollowedLists(
+            viewerPubkey: any(named: 'viewerPubkey'),
+          ),
         );
         verifyNever(
           () => repository.watchLists(ownerPubkey: any(named: 'ownerPubkey')),

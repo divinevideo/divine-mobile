@@ -1349,36 +1349,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Hiç video yok';
 
   @override
-  String get exploreDiscoverLists => 'Listeleri Keşfet';
-
-  @override
-  String get exploreAboutLists => 'Listeler Hakkında';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Listeler, Divine içeriğini iki şekilde düzenlemene ve derlemene yardımcı olur:';
-
-  @override
-  String get explorePeopleLists => 'Kişi Listeleri';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'İçerik üretici gruplarını takip et ve en son videolarını gör';
-
-  @override
-  String get exploreVideoLists => 'Video Listeleri';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Sonra izlemek için favori videolarından oynatma listeleri oluştur';
-
-  @override
-  String get exploreMyLists => 'Listelerim';
-
-  @override
-  String get exploreSubscribedLists => 'Abone Olunan Listeler';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Listeler yüklenirken hata. Lütfen tekrar dene.';
 
@@ -3817,17 +3787,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get peopleListsAddToList => 'Listeye ekle';
 
   @override
-  String get peopleListsSheetTitle => 'Listeye ekle';
-
-  @override
   String get peopleListsEmptyTitle => 'Henüz liste yok';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Kişileri gruplamaya başlamak için bir liste oluştur.';
-
-  @override
-  String get peopleListsCreateList => 'Liste oluştur';
 
   @override
   String get peopleListsNewListTitle => 'Yeni liste';
@@ -3877,16 +3841,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Liste üyelerinin videoları burada görünecek';
 
   @override
-  String get peopleListsNoVideosAvailable => 'Kullanılabilir video yok';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'Videolar yüklenemedi';
 
   @override
   String get peopleListsVideoNotAvailable => 'Video kullanılamıyor';
-
-  @override
-  String get peopleListsBackToGridTooltip => 'Izgaraya dön';
 
   @override
   String get peopleListsErrorLoadingVideos =>
@@ -3901,6 +3859,20 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '$name kişisini listeye ekle';
+  }
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '$name kişisini listeden kaldır';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Liste güncellenemedi. Lütfen tekrar dene.';
+
+  @override
   String get peopleListsAddPeopleSearchHint => 'Kişi ara';
 
   @override
@@ -3911,12 +3883,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'Tekrar dene';
 
   @override
-  String get peopleListsAddButton => 'Ekle';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return '$count ekle';
-  }
+  String get peopleListsLoadFailed => 'Bu liste yüklenemedi.';
 
   @override
   String peopleListsInNLists(int count) {
@@ -4835,20 +4802,20 @@ class AppLocalizationsTr extends AppLocalizations {
   String get reportClose => 'Kapat';
 
   @override
-  String get listAddToList => 'Listeye Ekle';
-
-  @override
   String listVideoCount(int count) {
     return '$count video';
   }
 
   @override
-  String listPersonCount(int count) {
+  String get listAddToLists => 'Listelere ekle';
+
+  @override
+  String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count kişi',
-      one: '1 kişi',
+      other: '$count üye',
+      one: '$count üye',
     );
     return '$_temp0';
   }
@@ -4857,23 +4824,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get listByAuthorPrefix => 'Yazan ';
 
   @override
-  String get listNewList => 'Yeni Liste';
-
-  @override
   String get listDone => 'Bitti';
 
   @override
   String get listErrorLoading => 'Listeler yüklenirken hata';
-
-  @override
-  String listRemovedFrom(String name) {
-    return '$name listesinden kaldırıldı';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return '$name listesine eklendi';
-  }
 
   @override
   String get listCreateNewList => 'Yeni Liste Oluştur';
@@ -4897,11 +4851,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get listDescriptionLabel => 'Açıklama (opsiyonel)';
 
   @override
-  String get listPublicList => 'Herkese Açık Liste';
+  String get listMakePublicLabel => 'Herkese açık yap';
 
   @override
-  String get listPublicListSubtitle =>
-      'Diğerleri bu listeyi takip edebilir ve görebilir';
+  String get listMakePublicSubtitle => 'Başkaları bu listeyi görebilsin';
 
   @override
   String get listPrivateListSubtitle =>
@@ -4916,9 +4869,6 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'Henüz liste yok. Bir arada tutmak istediğin döngüler için bir tane oluştur.';
-
-  @override
-  String get listEditTitle => 'Listeyi düzenle';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -4967,6 +4917,56 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Özel, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Listeler yükleniyor';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted döngü',
+      one: '$formatted döngü',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsViewAllMembers => 'Tümünü gör';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count kişi',
+      one: '$count kişi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'Bu sefer hiç liste çıkmadı. Yenilemek için aşağı çek.';
+
+  @override
   String get listShareAction => 'Listeyi paylaş';
 
   @override
@@ -5008,9 +5008,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String listShareSubject(String name) {
     return 'Divine\'da $name';
   }
-
-  @override
-  String get listCancel => 'İptal';
 
   @override
   String get listCreate => 'Oluştur';
@@ -6070,32 +6067,6 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Abonelik güncellenemedi. Lütfen tekrar dene.';
-
-  @override
-  String get discoverListsTitle => 'Listeleri Keşfet';
-
-  @override
-  String get discoverListsFailedToLoad => 'Listeler yüklenemedi';
-
-  @override
-  String get discoverListsLoading => 'Herkese açık listeler keşfediliyor...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Relay listeleri zamanında döndürmedi. Tekrar dene.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Hizmet kullanılamıyor.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Herkese açık liste bulunamadı';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'Yeni listeler için sonra tekrar bak';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'yazan';
 
   @override
   String get curatedListEmptyTitle => 'Bu listede video yok';

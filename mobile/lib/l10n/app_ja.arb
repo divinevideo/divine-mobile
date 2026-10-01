@@ -466,15 +466,6 @@
     "featuredTabLoadFailed": "このコレクションを読み込めませんでした。",
     "featuredTabRetry": "もう一度試す",
     "exploreNoVideosAvailable": "動画がないよ",
-    "exploreDiscoverLists": "リストを見つけよう",
-    "exploreAboutLists": "リストについて",
-    "exploreAboutListsDescription": "リストを使うと、Divine のコンテンツを2つの方法で整理・キュレーションできるよ:",
-    "explorePeopleLists": "ピープルリスト",
-    "explorePeopleListsDescription": "クリエイターのグループをフォローして、最新の動画をチェックしよう",
-    "exploreVideoLists": "ビデオリスト",
-    "exploreVideoListsDescription": "お気に入りの動画をプレイリストにまとめて、あとで見よう",
-    "exploreMyLists": "マイリスト",
-    "exploreSubscribedLists": "購読中のリスト",
     "exploreErrorLoadingLists": "リストの読み込みに失敗。もう一回試してみて。",
     "exploreNewVideosCount": "{count, plural, other{{count}本の新着動画}}",
     "@exploreNewVideosCount": {
@@ -1592,7 +1583,6 @@
     "reportReceivedReviewNotice": "ネットにつながったら自動で送信するよ。 チームが報告を確認して、適切に対応するね。ダイレクトメッセージでアップデートが届くかも。",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "閉じる",
-    "listAddToList": "リストに追加",
     "listVideoCount": "{count}本の動画",
     "@listVideoCount": {
         "placeholders": {
@@ -1601,25 +1591,17 @@
             }
         }
     },
-    "listNewList": "新しいリスト",
+    "listAddToLists": "リストに追加",
+    "listMemberCount": "{count, plural, other{{count}人のメンバー}}",
+    "@listMemberCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "listDone": "完了",
     "listErrorLoading": "リストの読み込みに失敗",
-    "listRemovedFrom": "{name}から削除したよ",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "{name}に追加したよ",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "新しいリストを作る",
     "listNewPeopleList": "新しい人リスト",
     "listCollaboratorsNone": "なし",
@@ -1627,13 +1609,50 @@
     "listCollaboratorSearchHint": "Divineを検索...",
     "listNameLabel": "リスト名",
     "listDescriptionLabel": "説明 (任意)",
-    "listPublicList": "公開リスト",
-    "listPublicListSubtitle": "みんながフォロー・閲覧できるよ",
+    "listMakePublicLabel": "公開する",
+    "listMakePublicSubtitle": "他の人もこのリストを見られます",
     "listPrivateListSubtitle": "動画は非公開のまま。名前、説明、タグ、カバーは表示されたままです。",
     "listVisibilityPublic": "公開",
     "listVisibilityPrivate": "非公開",
     "profileListsEmpty": "まだリストがないよ。まとめておきたいループでひとつ作ってみて。",
-    "listEditTitle": "リストを編集",
+    "listMemberNamesSeparator": "、",
+    "listCardSemanticLabel": "{visibility, select, private{{name}、非公開、{count}} other{{name}、{count}}}",
+    "@listCardSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            },
+            "visibility": {
+                "type": "String"
+            },
+            "count": {
+                "type": "String"
+            }
+        }
+    },
+    "listsDiscoveryLoadingLabel": "リストを読み込み中",
+    "listLoopsCount": "{count, plural, other{{formatted}ループ}}",
+    "@listLoopsCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "formatted": {
+                "type": "String"
+            }
+        }
+    },
+    "listStatsSeparator": " ∙ ",
+    "peopleListsViewAllMembers": "すべて見る",
+    "peopleListsPeopleCount": "{count, plural, other{{count}人}}",
+    "@peopleListsPeopleCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "listsDiscoveryEmpty": "今回はリストが見つかりませんでした。引っ張って更新してください。",
     "listShareAction": "リストを共有",
     "listShareFailed": "リストを共有できなかった。もう一度試してね。",
     "listSave": "保存",
@@ -1662,7 +1681,6 @@
             }
         }
     },
-    "listCancel": "キャンセル",
     "listCreate": "作成",
     "listCreateFailed": "リストの作成がうまくいかなかった",
     "keyManagementTitle": "Nostr 鍵",
@@ -2918,10 +2936,8 @@
     },
     "notificationSystemUpdate": "新しいお知らせがあります",
     "peopleListsAddToList": "リストに追加",
-    "peopleListsSheetTitle": "リストに追加",
     "peopleListsEmptyTitle": "リストがありません",
     "peopleListsEmptySubtitle": "リストを作成して人々をグループ化しましょう。",
-    "peopleListsCreateList": "リストを作成",
     "peopleListsNewListTitle": "新しいリスト",
     "peopleListsRouteTitle": "ピープルリスト",
     "peopleListsListNameLabel": "リスト名",
@@ -2937,18 +2953,32 @@
     "peopleListsNoPeopleSubtitle": "始めるにはユーザーを追加してください",
     "peopleListsNoVideosTitle": "まだ動画がありません",
     "peopleListsNoVideosSubtitle": "リストメンバーの動画がここに表示されます",
-    "peopleListsNoVideosAvailable": "利用可能な動画がありません",
     "peopleListsFailedToLoadVideos": "動画の読み込みに失敗しました",
     "peopleListsVideoNotAvailable": "動画は利用できません",
-    "peopleListsBackToGridTooltip": "グリッドに戻る",
     "peopleListsErrorLoadingVideos": "動画の読み込みエラー",
     "peopleListsNoPeopleToAdd": "追加できるユーザーがいません。",
     "peopleListsAddToListName": "{name}に追加",
+    "peopleListsAddPersonSemanticLabel": "{name}をリストに追加",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "{name}をリストから削除",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "リストを更新できませんでした。もう一度お試しください。",
     "peopleListsAddPeopleSearchHint": "ユーザーを検索",
     "peopleListsAddPeopleError": "ユーザーを読み込めませんでした。もう一度お試しください。",
     "peopleListsAddPeopleRetry": "再試行",
-    "peopleListsAddButton": "追加",
-    "peopleListsAddButtonWithCount": "{count}人追加",
+    "peopleListsLoadFailed": "このリストを読み込めませんでした。",
     "peopleListsInNLists": "{count, plural, other{{count}件のリストに含まれています}}",
     "peopleListsRemoveConfirmTitle": "{name}を削除しますか？",
     "peopleListsRemoveConfirmBody": "このリストから削除されます。",
@@ -3189,14 +3219,6 @@
     "authConfirmPasswordRequired": "パスワードを確認してね",
     "authPasswordsDoNotMatch": "パスワードが一致しないよ",
     "authConfirmNewPasswordLabel": "新しいパスワードの確認",
-    "listPersonCount": "{count, plural, =1{1人} other{{count}人}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "作成者: ",
     "keyManagementYourPublicKeyLabel": "あなたの公開鍵 (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -3243,14 +3265,6 @@
             }
         }
     },
-    "discoverListsTitle": "リストを見つける",
-    "discoverListsFailedToLoad": "リストの読み込みに失敗",
-    "discoverListsLoading": "公開リストを探してるよ...",
-    "discoverListsRelayTimeout": "リレーが時間内にリストを返さなかったよ。もう一度試してね。",
-    "discoverListsServiceUnavailable": "サービスを利用できません。",
-    "discoverListsEmptyTitle": "公開リストが見つからなかった",
-    "discoverListsEmptySubtitle": "あとでまたチェックしてみてね",
-    "discoverListsByAuthorPrefix": "作成者:",
     "curatedListEmptyTitle": "このリストには動画がないよ",
     "curatedListEmptySubtitle": "動画を追加してみよう",
     "curatedListLoadingVideos": "動画を読み込み中...",

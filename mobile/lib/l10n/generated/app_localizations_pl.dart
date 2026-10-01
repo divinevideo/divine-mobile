@@ -1444,36 +1444,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Brak dostępnych filmów';
 
   @override
-  String get exploreDiscoverLists => 'Odkrywaj listy';
-
-  @override
-  String get exploreAboutLists => 'O listach';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Listy pomagają ci porządkować i kuratorować treści Divine na dwa sposoby:';
-
-  @override
-  String get explorePeopleLists => 'Listy osób';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'Obserwuj grupy twórców i zobacz ich najnowsze filmy';
-
-  @override
-  String get exploreVideoLists => 'Listy filmów';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Twórz playlisty ulubionych filmów do oglądania później';
-
-  @override
-  String get exploreMyLists => 'Moje listy';
-
-  @override
-  String get exploreSubscribedLists => 'Subskrybowane listy';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Błąd wczytywania list. Spróbuj ponownie.';
 
@@ -3985,17 +3955,11 @@ class AppLocalizationsPl extends AppLocalizations {
   String get peopleListsAddToList => 'Dodaj do listy';
 
   @override
-  String get peopleListsSheetTitle => 'Dodaj do listy';
-
-  @override
   String get peopleListsEmptyTitle => 'Brak list';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Utwórz listę, aby zacząć grupować osoby.';
-
-  @override
-  String get peopleListsCreateList => 'Utwórz listę';
 
   @override
   String get peopleListsNewListTitle => 'Nowa lista';
@@ -4046,16 +4010,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Filmy od członków listy pojawią się tutaj';
 
   @override
-  String get peopleListsNoVideosAvailable => 'Brak dostępnych filmów';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'Nie udało się załadować filmów';
 
   @override
   String get peopleListsVideoNotAvailable => 'Film niedostępny';
-
-  @override
-  String get peopleListsBackToGridTooltip => 'Powrót do siatki';
 
   @override
   String get peopleListsErrorLoadingVideos => 'Błąd podczas ładowania filmów';
@@ -4069,6 +4027,20 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Dodaj $name do listy';
+  }
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Usuń $name z listy';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Nie udało się zaktualizować listy. Spróbuj ponownie.';
+
+  @override
   String get peopleListsAddPeopleSearchHint => 'Szukaj osób';
 
   @override
@@ -4079,12 +4051,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'Spróbuj ponownie';
 
   @override
-  String get peopleListsAddButton => 'Dodaj';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Dodaj $count';
-  }
+  String get peopleListsLoadFailed => 'Nie udało się wczytać tej listy.';
 
   @override
   String peopleListsInNLists(int count) {
@@ -5018,9 +4985,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get reportClose => 'Zamknij';
 
   @override
-  String get listAddToList => 'Dodaj do listy';
-
-  @override
   String listVideoCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5034,14 +4998,17 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
+  String get listAddToLists => 'Dodaj do list';
+
+  @override
+  String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count osoby',
-      many: '$count osób',
-      few: '$count osoby',
-      one: '1 osoba',
+      other: '$count członka',
+      many: '$count członków',
+      few: '$count członków',
+      one: '$count członek',
     );
     return '$_temp0';
   }
@@ -5050,23 +5017,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get listByAuthorPrefix => 'Autor: ';
 
   @override
-  String get listNewList => 'Nowa lista';
-
-  @override
   String get listDone => 'Gotowe';
 
   @override
   String get listErrorLoading => 'Błąd wczytywania list';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'Usunięto z $name';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'Dodano do $name';
-  }
 
   @override
   String get listCreateNewList => 'Utwórz nową listę';
@@ -5090,11 +5044,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get listDescriptionLabel => 'Opis (opcjonalnie)';
 
   @override
-  String get listPublicList => 'Publiczna lista';
+  String get listMakePublicLabel => 'Ustaw jako publiczną';
 
   @override
-  String get listPublicListSubtitle =>
-      'Inni mogą obserwować i widzieć tę listę';
+  String get listMakePublicSubtitle => 'Pozwól innym zobaczyć tę listę';
 
   @override
   String get listPrivateListSubtitle =>
@@ -5109,9 +5062,6 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'Nie masz jeszcze list. Stwórz jedną dla pętli, które chcesz trzymać razem.';
-
-  @override
-  String get listEditTitle => 'Edytuj listę';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5160,6 +5110,60 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Prywatna, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Wczytywanie list';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted pętli',
+      many: '$formatted pętli',
+      few: '$formatted pętle',
+      one: '$formatted pętla',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsViewAllMembers => 'Zobacz wszystkich';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count osoby',
+      many: '$count osób',
+      few: '$count osoby',
+      one: '$count osoba',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'Tym razem nie pojawiła się żadna lista. Pociągnij, aby odświeżyć.';
+
+  @override
   String get listShareAction => 'Udostępnij listę';
 
   @override
@@ -5203,9 +5207,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name na Divine';
   }
-
-  @override
-  String get listCancel => 'Anuluj';
 
   @override
   String get listCreate => 'Utwórz';
@@ -6288,31 +6289,6 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Nie udało się zaktualizować subskrypcji. Spróbuj ponownie.';
-
-  @override
-  String get discoverListsTitle => 'Odkrywaj listy';
-
-  @override
-  String get discoverListsFailedToLoad => 'Nie udało się wczytać list';
-
-  @override
-  String get discoverListsLoading => 'Odkrywanie publicznych list...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Relay nie zwrócił list na czas. Spróbuj ponownie.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Usługa niedostępna.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Nie znaleziono publicznych list';
-
-  @override
-  String get discoverListsEmptySubtitle => 'Wróć później po nowe listy';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'od';
 
   @override
   String get curatedListEmptyTitle => 'Brak filmów na tej liście';

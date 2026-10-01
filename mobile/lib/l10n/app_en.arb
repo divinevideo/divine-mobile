@@ -896,15 +896,6 @@
     "description": "Retry button on the featured Explore tab's failure state."
   },
   "exploreNoVideosAvailable": "No videos available",
-  "exploreDiscoverLists": "Discover Lists",
-  "exploreAboutLists": "About Lists",
-  "exploreAboutListsDescription": "Lists help you organize and curate Divine content in two ways:",
-  "explorePeopleLists": "People Lists",
-  "explorePeopleListsDescription": "Follow groups of creators and see their latest videos",
-  "exploreVideoLists": "Video Lists",
-  "exploreVideoListsDescription": "Create playlists of your favorite videos to watch later",
-  "exploreMyLists": "My Lists",
-  "exploreSubscribedLists": "Subscribed Lists",
   "exploreErrorLoadingLists": "Error loading lists. Please try again.",
   "exploreNewVideosCount": "{count, plural, =1{1 new video} other{{count} new videos}}",
   "@exploreNewVideosCount": {
@@ -2462,10 +2453,8 @@
     }
   },
   "peopleListsAddToList": "Add to list",
-  "peopleListsSheetTitle": "Add to list",
   "peopleListsEmptyTitle": "No lists yet",
   "peopleListsEmptySubtitle": "Create a list to start grouping people.",
-  "peopleListsCreateList": "Create list",
   "peopleListsNewListTitle": "New list",
   "peopleListsRouteTitle": "People list",
   "@peopleListsRouteTitle": {
@@ -2484,10 +2473,8 @@
   "peopleListsNoPeopleSubtitle": "Add some people to get started",
   "peopleListsNoVideosTitle": "No videos yet",
   "peopleListsNoVideosSubtitle": "Videos from list members will appear here",
-  "peopleListsNoVideosAvailable": "No videos available",
   "peopleListsFailedToLoadVideos": "Failed to load videos",
   "peopleListsVideoNotAvailable": "Video not available",
-  "peopleListsBackToGridTooltip": "Back to grid",
   "peopleListsErrorLoadingVideos": "Error loading videos",
   "peopleListsNoPeopleToAdd": "No people available to add.",
   "peopleListsAddToListName": "Add to {name}",
@@ -2498,18 +2485,32 @@
       }
     }
   },
-  "peopleListsAddPeopleSearchHint": "Search people",
-  "peopleListsAddPeopleError": "Couldn't load people. Please try again.",
-  "peopleListsAddPeopleRetry": "Try again",
-  "peopleListsAddButton": "Add",
-  "peopleListsAddButtonWithCount": "Add {count}",
-  "@peopleListsAddButtonWithCount": {
+  "peopleListsAddPersonSemanticLabel": "Add {name} to list",
+  "@peopleListsAddPersonSemanticLabel": {
+    "description": "Screen-reader label of the row button that adds a person to the people list being edited.",
     "placeholders": {
-      "count": {
-        "type": "int"
+      "name": {
+        "type": "String"
       }
     }
   },
+  "peopleListsRemovePersonSemanticLabel": "Remove {name} from list",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "description": "Screen-reader label of the row button that removes a person from the people list being edited.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "Couldn't update the list. Please try again.",
+  "@peopleListsMembershipUpdateFailed": {
+    "description": "Snackbar shown when adding or removing a person from a people list fails and the change is rolled back."
+  },
+  "peopleListsAddPeopleSearchHint": "Search people",
+  "peopleListsAddPeopleError": "Couldn't load people. Please try again.",
+  "peopleListsAddPeopleRetry": "Try again",
+  "peopleListsLoadFailed": "Couldn't load this list.",
   "peopleListsInNLists": "{count, plural, =1{In 1 list} other{In {count} lists}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -3095,7 +3096,6 @@
   "reportLearnMoreAt": "Learn more at",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "Close",
-  "listAddToList": "Add to List",
   "listVideoCount": "{count, plural, =1{{count} video} other{{count} videos}}",
   "@listVideoCount": {
     "placeholders": {
@@ -3104,8 +3104,13 @@
       }
     }
   },
-  "listPersonCount": "{count, plural, =1{1 person} other{{count} people}}",
-  "@listPersonCount": {
+  "listAddToLists": "Add to lists",
+  "@listAddToLists": {
+    "description": "Title of the sheet where the viewer picks which of their lists a video or a person belongs to."
+  },
+  "listMemberCount": "{count, plural, =1{{count} member} other{{count} members}}",
+  "@listMemberCount": {
+    "description": "Screen-reader count spoken for a people-list card, after the list name.",
     "placeholders": {
       "count": {
         "type": "int"
@@ -3113,39 +3118,27 @@
     }
   },
   "listByAuthorPrefix": "By ",
-  "listNewList": "New List",
   "listDone": "Done",
   "listErrorLoading": "Error loading lists",
-  "listRemovedFrom": "Removed from {name}",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "Added to {name}",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "Create New List",
   "listNewPeopleList": "New people list",
   "listCollaboratorsNone": "None",
   "listAddCollaboratorTitle": "Add a collaborator",
   "listCollaboratorSearchHint": "Search Divine...",
-  "listNameLabel": "List Name",
+  "listNameLabel": "List name",
   "listDescriptionLabel": "Description (optional)",
-  "listPublicList": "Public List",
-  "listPublicListSubtitle": "Others can follow and see this list",
+  "listMakePublicLabel": "Make public",
+  "@listMakePublicLabel": {
+    "description": "Title of the switch on the list info sheet that makes a curated list visible to others."
+  },
+  "listMakePublicSubtitle": "Let others see this list",
+  "@listMakePublicSubtitle": {
+    "description": "Supporting line under the 'Make public' switch on the list info sheet, shown while the switch is on."
+  },
   "listPrivateListSubtitle": "Videos stay private. Name, description, tags, and cover stay visible.",
   "listVisibilityPublic": "Public",
   "listVisibilityPrivate": "Private",
   "profileListsEmpty": "No lists yet. Make one for the loops you want to keep together.",
-  "listEditTitle": "Edit list",
   "listEditInfoAction": "Edit list info",
   "listManageVideosAction": "Manage videos",
   "listFollowButton": "Follow",
@@ -3170,6 +3163,59 @@
   "@listRemoveVideosFailure": {
     "description": "Snackbar when selected videos are still in the list after a removal batch.",
     "placeholders": { "count": { "type": "int" } }
+  },
+  "listMemberNamesSeparator": ", ",
+  "@listMemberNamesSeparator": {
+    "description": "Joins the member names shown under a people list card that has no description, e.g. 'Alice, Bob, Carol'. Translate the separator: locales that do not list with a Latin comma should use their own (for example '、' or '، ')."
+  },
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Private, {count}} other{{name}, {count}}}",
+  "@listCardSemanticLabel": {
+    "description": "Screen-reader label for a list card, read as one sentence: the list's name, 'Private' when it is a device-only list, and its count as already localized by listVideoCount or listMemberCount. The order and the punctuation between them are the locale's to choose.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Weekend loops"
+      },
+      "visibility": {
+        "type": "String",
+        "example": "private"
+      },
+      "count": {
+        "type": "String",
+        "example": "3 videos"
+      }
+    }
+  },
+  "listsDiscoveryLoadingLabel": "Loading lists",
+  "@listsDiscoveryLoadingLabel": {
+    "description": "Screen-reader label for the shimmering placeholder cards shown while the Explore Lists gallery loads."
+  },
+  "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loops}}",
+  "@listLoopsCount": {
+    "description": "Loop total in a list's stats line. 'formatted' is the compact figure shown (e.g. 89.4B); 'count' is the same total as a number and only selects the plural form.",
+    "placeholders": {
+      "count": { "type": "int" },
+      "formatted": { "type": "String" }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "@listStatsSeparator": {
+    "description": "Joins the member, video and loop counts in a list's stats line, e.g. '33 members ∙ 88 videos ∙ 89.4B loops'. Keep the surrounding spaces unless the locale sets them differently."
+  },
+  "peopleListsViewAllMembers": "View all",
+  "@peopleListsViewAllMembers": {
+    "description": "Beside the piled member avatars on a people list; opens the full roster of the list's members."
+  },
+  "peopleListsPeopleCount": "{count, plural, =1{{count} person} other{{count} people}}",
+  "@peopleListsPeopleCount": {
+    "description": "Subtitle of a people list's roster screen, under the list name.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "listsDiscoveryEmpty": "No lists turned up this time. Pull to refresh.",
+  "@listsDiscoveryEmpty": {
+    "description": "Full-screen message on the Explore Lists tab when neither discovery column returned any lists."
   },
   "listShareAction": "Share list",
   "listShareFailed": "Couldn't share this list. Try again.",
@@ -3203,7 +3249,6 @@
       }
     }
   },
-  "listCancel": "Cancel",
   "listCreate": "Create",
   "listCreateFailed": "Failed to create list",
   "keyManagementTitle": "Nostr Keys",
@@ -4048,14 +4093,6 @@
     }
   },
   "discoverListsFailedToUpdateSubscription": "Failed to update subscription. Please try again.",
-  "discoverListsTitle": "Discover Lists",
-  "discoverListsFailedToLoad": "Failed to load lists",
-  "discoverListsLoading": "Discovering public lists...",
-  "discoverListsRelayTimeout": "The relay did not return lists in time. Try again.",
-  "discoverListsServiceUnavailable": "Service not available.",
-  "discoverListsEmptyTitle": "No public lists found",
-  "discoverListsEmptySubtitle": "Check back later for new lists",
-  "discoverListsByAuthorPrefix": "by",
   "curatedListEmptyTitle": "No videos in this list",
   "curatedListEmptySubtitle": "Add some videos to get started",
   "curatedListLoadingVideos": "Loading videos...",

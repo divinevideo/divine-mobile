@@ -466,15 +466,6 @@
     "featuredTabLoadFailed": "Bu koleksiyon yüklenemedi.",
     "featuredTabRetry": "Tekrar dene",
     "exploreNoVideosAvailable": "Hiç video yok",
-    "exploreDiscoverLists": "Listeleri Keşfet",
-    "exploreAboutLists": "Listeler Hakkında",
-    "exploreAboutListsDescription": "Listeler, Divine içeriğini iki şekilde düzenlemene ve derlemene yardımcı olur:",
-    "explorePeopleLists": "Kişi Listeleri",
-    "explorePeopleListsDescription": "İçerik üretici gruplarını takip et ve en son videolarını gör",
-    "exploreVideoLists": "Video Listeleri",
-    "exploreVideoListsDescription": "Sonra izlemek için favori videolarından oynatma listeleri oluştur",
-    "exploreMyLists": "Listelerim",
-    "exploreSubscribedLists": "Abone Olunan Listeler",
     "exploreErrorLoadingLists": "Listeler yüklenirken hata. Lütfen tekrar dene.",
     "exploreNewVideosCount": "{count, plural, one{1 yeni video} other{{count} yeni video}}",
     "@exploreNewVideosCount": {
@@ -1599,7 +1590,6 @@
     "reportReceivedReviewNotice": "İnternete bağlandığında otomatik olarak göndereceğiz. Ekibimiz bildirimini inceleyecek ve uygun adımı atacak. Direkt mesaj yoluyla güncelleme alabilirsin.",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "Kapat",
-    "listAddToList": "Listeye Ekle",
     "listVideoCount": "{count} video",
     "@listVideoCount": {
         "placeholders": {
@@ -1608,25 +1598,17 @@
             }
         }
     },
-    "listNewList": "Yeni Liste",
+    "listAddToLists": "Listelere ekle",
+    "listMemberCount": "{count, plural, =1{{count} üye} other{{count} üye}}",
+    "@listMemberCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "listDone": "Bitti",
     "listErrorLoading": "Listeler yüklenirken hata",
-    "listRemovedFrom": "{name} listesinden kaldırıldı",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "{name} listesine eklendi",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "Yeni Liste Oluştur",
     "listNewPeopleList": "Yeni kişi listesi",
     "listCollaboratorsNone": "Yok",
@@ -1634,13 +1616,50 @@
     "listCollaboratorSearchHint": "Divine'da ara...",
     "listNameLabel": "Liste Adı",
     "listDescriptionLabel": "Açıklama (opsiyonel)",
-    "listPublicList": "Herkese Açık Liste",
-    "listPublicListSubtitle": "Diğerleri bu listeyi takip edebilir ve görebilir",
+    "listMakePublicLabel": "Herkese açık yap",
+    "listMakePublicSubtitle": "Başkaları bu listeyi görebilsin",
     "listPrivateListSubtitle": "Videolar gizli kalır. Ad, açıklama, etiketler ve kapak görünür kalır.",
     "listVisibilityPublic": "Herkese açık",
     "listVisibilityPrivate": "Özel",
     "profileListsEmpty": "Henüz liste yok. Bir arada tutmak istediğin döngüler için bir tane oluştur.",
-    "listEditTitle": "Listeyi düzenle",
+    "listMemberNamesSeparator": ", ",
+    "listCardSemanticLabel": "{visibility, select, private{{name}, Özel, {count}} other{{name}, {count}}}",
+    "@listCardSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            },
+            "visibility": {
+                "type": "String"
+            },
+            "count": {
+                "type": "String"
+            }
+        }
+    },
+    "listsDiscoveryLoadingLabel": "Listeler yükleniyor",
+    "listLoopsCount": "{count, plural, =1{{formatted} döngü} other{{formatted} döngü}}",
+    "@listLoopsCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "formatted": {
+                "type": "String"
+            }
+        }
+    },
+    "listStatsSeparator": " ∙ ",
+    "peopleListsViewAllMembers": "Tümünü gör",
+    "peopleListsPeopleCount": "{count, plural, =1{{count} kişi} other{{count} kişi}}",
+    "@peopleListsPeopleCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "listsDiscoveryEmpty": "Bu sefer hiç liste çıkmadı. Yenilemek için aşağı çek.",
     "listShareAction": "Listeyi paylaş",
     "listShareFailed": "Bu liste paylaşılamadı. Tekrar dene.",
     "listSave": "Kaydet",
@@ -1669,7 +1688,6 @@
             }
         }
     },
-    "listCancel": "İptal",
     "listCreate": "Oluştur",
     "listCreateFailed": "Liste oluşturulamadı",
     "keyManagementTitle": "Nostr Anahtarları",
@@ -2925,10 +2943,8 @@
     },
     "notificationSystemUpdate": "Yeni bir güncellemen var",
     "peopleListsAddToList": "Listeye ekle",
-    "peopleListsSheetTitle": "Listeye ekle",
     "peopleListsEmptyTitle": "Henüz liste yok",
     "peopleListsEmptySubtitle": "Kişileri gruplamaya başlamak için bir liste oluştur.",
-    "peopleListsCreateList": "Liste oluştur",
     "peopleListsNewListTitle": "Yeni liste",
     "peopleListsRouteTitle": "Kişi listesi",
     "peopleListsListNameLabel": "Liste adı",
@@ -2944,18 +2960,32 @@
     "peopleListsNoPeopleSubtitle": "Başlamak için kişi ekle",
     "peopleListsNoVideosTitle": "Henüz video yok",
     "peopleListsNoVideosSubtitle": "Liste üyelerinin videoları burada görünecek",
-    "peopleListsNoVideosAvailable": "Kullanılabilir video yok",
     "peopleListsFailedToLoadVideos": "Videolar yüklenemedi",
     "peopleListsVideoNotAvailable": "Video kullanılamıyor",
-    "peopleListsBackToGridTooltip": "Izgaraya dön",
     "peopleListsErrorLoadingVideos": "Videolar yüklenirken hata oluştu",
     "peopleListsNoPeopleToAdd": "Eklenecek kişi bulunamadı.",
     "peopleListsAddToListName": "{name} listesine ekle",
+    "peopleListsAddPersonSemanticLabel": "{name} kişisini listeye ekle",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "{name} kişisini listeden kaldır",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "Liste güncellenemedi. Lütfen tekrar dene.",
     "peopleListsAddPeopleSearchHint": "Kişi ara",
     "peopleListsAddPeopleError": "Kişiler yüklenemedi. Lütfen tekrar dene.",
     "peopleListsAddPeopleRetry": "Tekrar dene",
-    "peopleListsAddButton": "Ekle",
-    "peopleListsAddButtonWithCount": "{count} ekle",
+    "peopleListsLoadFailed": "Bu liste yüklenemedi.",
     "peopleListsInNLists": "{count, plural, =1{1 listede} other{{count} listede}}",
     "peopleListsRemoveConfirmTitle": "{name} kaldırılsın mı?",
     "peopleListsRemoveConfirmBody": "Bu kişi listeden kaldırılacak.",
@@ -3189,14 +3219,6 @@
     "nostrSettingsDeleteAccountSubtitle": "İçeriğin için silme istekleri gönderir ve bu cihazda oturumunu kapatır. Röleler, istemciler, arama dizinleri ve oturum açmış diğer cihazlar kopyaları saklayabilir.",
     "safetySettingsWhatYouSee": "GÖRDÜKLERİN",
     "safetySettingsWhatYouPublish": "PAYLAŞTIKLARIN",
-    "listPersonCount": "{count, plural, =1{1 kişi} other{{count} kişi}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "Yazan ",
     "keyManagementYourPublicKeyLabel": "Açık anahtarın (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -3243,14 +3265,6 @@
             }
         }
     },
-    "discoverListsTitle": "Listeleri Keşfet",
-    "discoverListsFailedToLoad": "Listeler yüklenemedi",
-    "discoverListsLoading": "Herkese açık listeler keşfediliyor...",
-    "discoverListsRelayTimeout": "Relay listeleri zamanında döndürmedi. Tekrar dene.",
-    "discoverListsServiceUnavailable": "Hizmet kullanılamıyor.",
-    "discoverListsEmptyTitle": "Herkese açık liste bulunamadı",
-    "discoverListsEmptySubtitle": "Yeni listeler için sonra tekrar bak",
-    "discoverListsByAuthorPrefix": "yazan",
     "curatedListEmptyTitle": "Bu listede video yok",
     "curatedListEmptySubtitle": "Başlamak için birkaç video ekle",
     "curatedListLoadingVideos": "Videolar yükleniyor...",

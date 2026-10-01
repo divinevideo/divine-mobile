@@ -1381,36 +1381,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Tiada video tersedia';
 
   @override
-  String get exploreDiscoverLists => 'Terokai Senarai';
-
-  @override
-  String get exploreAboutLists => 'Perihal Senarai';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Senarai membantu anda menyusun dan mengurus kandungan Divine dalam dua cara:';
-
-  @override
-  String get explorePeopleLists => 'Senarai Orang';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'Ikut kumpulan pencipta dan lihat video terbaharu mereka';
-
-  @override
-  String get exploreVideoLists => 'Senarai Video';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Cipta senarai main video kegemaran anda untuk ditonton nanti';
-
-  @override
-  String get exploreMyLists => 'Senarai Saya';
-
-  @override
-  String get exploreSubscribedLists => 'Senarai Langganan';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Ralat memuatkan senarai. Sila cuba lagi.';
 
@@ -3869,17 +3839,11 @@ class AppLocalizationsMs extends AppLocalizations {
   String get peopleListsAddToList => 'Tambah ke senarai';
 
   @override
-  String get peopleListsSheetTitle => 'Tambah ke senarai';
-
-  @override
   String get peopleListsEmptyTitle => 'Belum ada senarai';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Cipta senarai untuk mula mengumpulkan orang.';
-
-  @override
-  String get peopleListsCreateList => 'Cipta senarai';
 
   @override
   String get peopleListsNewListTitle => 'Senarai baharu';
@@ -3931,16 +3895,10 @@ class AppLocalizationsMs extends AppLocalizations {
       'Video daripada ahli senarai akan muncul di sini';
 
   @override
-  String get peopleListsNoVideosAvailable => 'Tiada video tersedia';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'Gagal memuatkan video';
 
   @override
   String get peopleListsVideoNotAvailable => 'Video tidak tersedia';
-
-  @override
-  String get peopleListsBackToGridTooltip => 'Kembali ke grid';
 
   @override
   String get peopleListsErrorLoadingVideos => 'Ralat memuatkan video';
@@ -3954,6 +3912,20 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Tambah $name ke senarai';
+  }
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Alih keluar $name daripada senarai';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Tidak dapat mengemas kini senarai. Sila cuba lagi.';
+
+  @override
   String get peopleListsAddPeopleSearchHint => 'Cari orang';
 
   @override
@@ -3964,12 +3936,7 @@ class AppLocalizationsMs extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'Cuba lagi';
 
   @override
-  String get peopleListsAddButton => 'Tambah';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Tambah $count';
-  }
+  String get peopleListsLoadFailed => 'Tidak dapat memuatkan senarai ini.';
 
   @override
   String peopleListsInNLists(int count) {
@@ -4895,20 +4862,20 @@ class AppLocalizationsMs extends AppLocalizations {
   String get reportClose => 'Tutup';
 
   @override
-  String get listAddToList => 'Tambah ke Senarai';
-
-  @override
   String listVideoCount(int count) {
     return '$count video';
   }
 
   @override
-  String listPersonCount(int count) {
+  String get listAddToLists => 'Tambah ke senarai';
+
+  @override
+  String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count orang',
-      one: '1 orang',
+      other: '$count ahli',
+      one: '$count ahli',
     );
     return '$_temp0';
   }
@@ -4917,23 +4884,10 @@ class AppLocalizationsMs extends AppLocalizations {
   String get listByAuthorPrefix => 'Oleh ';
 
   @override
-  String get listNewList => 'Senarai Baharu';
-
-  @override
   String get listDone => 'Siap';
 
   @override
   String get listErrorLoading => 'Ralat memuatkan senarai';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'Dialih keluar daripada $name';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'Ditambah ke $name';
-  }
 
   @override
   String get listCreateNewList => 'Cipta Senarai Baharu';
@@ -4957,11 +4911,11 @@ class AppLocalizationsMs extends AppLocalizations {
   String get listDescriptionLabel => 'Keterangan (pilihan)';
 
   @override
-  String get listPublicList => 'Senarai Awam';
+  String get listMakePublicLabel => 'Jadikan awam';
 
   @override
-  String get listPublicListSubtitle =>
-      'Orang lain boleh mengikuti dan melihat senarai ini';
+  String get listMakePublicSubtitle =>
+      'Benarkan orang lain melihat senarai ini';
 
   @override
   String get listPrivateListSubtitle =>
@@ -4976,9 +4930,6 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'Belum ada senarai. Buat satu untuk loop yang anda mahu simpan bersama.';
-
-  @override
-  String get listEditTitle => 'Edit senarai';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5027,6 +4978,56 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Peribadi, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Memuatkan senarai';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted loop',
+      one: '$formatted loop',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsViewAllMembers => 'Lihat semua';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count orang',
+      one: '$count orang',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'Tiada senarai yang muncul kali ini. Tarik untuk muat semula.';
+
+  @override
   String get listShareAction => 'Kongsi senarai';
 
   @override
@@ -5069,9 +5070,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name di Divine';
   }
-
-  @override
-  String get listCancel => 'Batal';
 
   @override
   String get listCreate => 'Cipta';
@@ -6142,32 +6140,6 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Gagal mengemas kini langganan. Sila cuba lagi.';
-
-  @override
-  String get discoverListsTitle => 'Terokai Senarai';
-
-  @override
-  String get discoverListsFailedToLoad => 'Gagal memuatkan senarai';
-
-  @override
-  String get discoverListsLoading => 'Menemui senarai awam...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Relay tidak memulangkan senarai tepat pada masanya. Cuba lagi.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Perkhidmatan tidak tersedia.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Tiada senarai awam ditemui';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'Semak semula nanti untuk senarai baharu';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'oleh';
 
   @override
   String get curatedListEmptyTitle => 'Tiada video dalam senarai ini';

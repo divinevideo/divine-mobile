@@ -2431,60 +2431,6 @@ abstract class AppLocalizations {
   /// **'No videos available'**
   String get exploreNoVideosAvailable;
 
-  /// No description provided for @exploreDiscoverLists.
-  ///
-  /// In en, this message translates to:
-  /// **'Discover Lists'**
-  String get exploreDiscoverLists;
-
-  /// No description provided for @exploreAboutLists.
-  ///
-  /// In en, this message translates to:
-  /// **'About Lists'**
-  String get exploreAboutLists;
-
-  /// No description provided for @exploreAboutListsDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Lists help you organize and curate Divine content in two ways:'**
-  String get exploreAboutListsDescription;
-
-  /// No description provided for @explorePeopleLists.
-  ///
-  /// In en, this message translates to:
-  /// **'People Lists'**
-  String get explorePeopleLists;
-
-  /// No description provided for @explorePeopleListsDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Follow groups of creators and see their latest videos'**
-  String get explorePeopleListsDescription;
-
-  /// No description provided for @exploreVideoLists.
-  ///
-  /// In en, this message translates to:
-  /// **'Video Lists'**
-  String get exploreVideoLists;
-
-  /// No description provided for @exploreVideoListsDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Create playlists of your favorite videos to watch later'**
-  String get exploreVideoListsDescription;
-
-  /// No description provided for @exploreMyLists.
-  ///
-  /// In en, this message translates to:
-  /// **'My Lists'**
-  String get exploreMyLists;
-
-  /// No description provided for @exploreSubscribedLists.
-  ///
-  /// In en, this message translates to:
-  /// **'Subscribed Lists'**
-  String get exploreSubscribedLists;
-
   /// No description provided for @exploreErrorLoadingLists.
   ///
   /// In en, this message translates to:
@@ -6631,12 +6577,6 @@ abstract class AppLocalizations {
   /// **'Add to list'**
   String get peopleListsAddToList;
 
-  /// No description provided for @peopleListsSheetTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Add to list'**
-  String get peopleListsSheetTitle;
-
   /// No description provided for @peopleListsEmptyTitle.
   ///
   /// In en, this message translates to:
@@ -6648,12 +6588,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Create a list to start grouping people.'**
   String get peopleListsEmptySubtitle;
-
-  /// No description provided for @peopleListsCreateList.
-  ///
-  /// In en, this message translates to:
-  /// **'Create list'**
-  String get peopleListsCreateList;
 
   /// No description provided for @peopleListsNewListTitle.
   ///
@@ -6745,12 +6679,6 @@ abstract class AppLocalizations {
   /// **'Videos from list members will appear here'**
   String get peopleListsNoVideosSubtitle;
 
-  /// No description provided for @peopleListsNoVideosAvailable.
-  ///
-  /// In en, this message translates to:
-  /// **'No videos available'**
-  String get peopleListsNoVideosAvailable;
-
   /// No description provided for @peopleListsFailedToLoadVideos.
   ///
   /// In en, this message translates to:
@@ -6762,12 +6690,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Video not available'**
   String get peopleListsVideoNotAvailable;
-
-  /// No description provided for @peopleListsBackToGridTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Back to grid'**
-  String get peopleListsBackToGridTooltip;
 
   /// No description provided for @peopleListsErrorLoadingVideos.
   ///
@@ -6787,6 +6709,24 @@ abstract class AppLocalizations {
   /// **'Add to {name}'**
   String peopleListsAddToListName(String name);
 
+  /// Screen-reader label of the row button that adds a person to the people list being edited.
+  ///
+  /// In en, this message translates to:
+  /// **'Add {name} to list'**
+  String peopleListsAddPersonSemanticLabel(String name);
+
+  /// Screen-reader label of the row button that removes a person from the people list being edited.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {name} from list'**
+  String peopleListsRemovePersonSemanticLabel(String name);
+
+  /// Snackbar shown when adding or removing a person from a people list fails and the change is rolled back.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t update the list. Please try again.'**
+  String get peopleListsMembershipUpdateFailed;
+
   /// No description provided for @peopleListsAddPeopleSearchHint.
   ///
   /// In en, this message translates to:
@@ -6805,17 +6745,11 @@ abstract class AppLocalizations {
   /// **'Try again'**
   String get peopleListsAddPeopleRetry;
 
-  /// No description provided for @peopleListsAddButton.
+  /// No description provided for @peopleListsLoadFailed.
   ///
   /// In en, this message translates to:
-  /// **'Add'**
-  String get peopleListsAddButton;
-
-  /// No description provided for @peopleListsAddButtonWithCount.
-  ///
-  /// In en, this message translates to:
-  /// **'Add {count}'**
-  String peopleListsAddButtonWithCount(int count);
+  /// **'Couldn\'t load this list.'**
+  String get peopleListsLoadFailed;
 
   /// No description provided for @peopleListsInNLists.
   ///
@@ -8359,35 +8293,29 @@ abstract class AppLocalizations {
   /// **'Close'**
   String get reportClose;
 
-  /// No description provided for @listAddToList.
-  ///
-  /// In en, this message translates to:
-  /// **'Add to List'**
-  String get listAddToList;
-
   /// No description provided for @listVideoCount.
   ///
   /// In en, this message translates to:
   /// **'{count, plural, =1{{count} video} other{{count} videos}}'**
   String listVideoCount(int count);
 
-  /// No description provided for @listPersonCount.
+  /// Title of the sheet where the viewer picks which of their lists a video or a person belongs to.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{1 person} other{{count} people}}'**
-  String listPersonCount(int count);
+  /// **'Add to lists'**
+  String get listAddToLists;
+
+  /// Screen-reader count spoken for a people-list card, after the list name.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{count} member} other{{count} members}}'**
+  String listMemberCount(int count);
 
   /// No description provided for @listByAuthorPrefix.
   ///
   /// In en, this message translates to:
   /// **'By '**
   String get listByAuthorPrefix;
-
-  /// No description provided for @listNewList.
-  ///
-  /// In en, this message translates to:
-  /// **'New List'**
-  String get listNewList;
 
   /// No description provided for @listDone.
   ///
@@ -8400,18 +8328,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Error loading lists'**
   String get listErrorLoading;
-
-  /// No description provided for @listRemovedFrom.
-  ///
-  /// In en, this message translates to:
-  /// **'Removed from {name}'**
-  String listRemovedFrom(String name);
-
-  /// No description provided for @listAddedTo.
-  ///
-  /// In en, this message translates to:
-  /// **'Added to {name}'**
-  String listAddedTo(String name);
 
   /// No description provided for @listCreateNewList.
   ///
@@ -8446,7 +8362,7 @@ abstract class AppLocalizations {
   /// No description provided for @listNameLabel.
   ///
   /// In en, this message translates to:
-  /// **'List Name'**
+  /// **'List name'**
   String get listNameLabel;
 
   /// No description provided for @listDescriptionLabel.
@@ -8455,17 +8371,17 @@ abstract class AppLocalizations {
   /// **'Description (optional)'**
   String get listDescriptionLabel;
 
-  /// No description provided for @listPublicList.
+  /// Title of the switch on the list info sheet that makes a curated list visible to others.
   ///
   /// In en, this message translates to:
-  /// **'Public List'**
-  String get listPublicList;
+  /// **'Make public'**
+  String get listMakePublicLabel;
 
-  /// No description provided for @listPublicListSubtitle.
+  /// Supporting line under the 'Make public' switch on the list info sheet, shown while the switch is on.
   ///
   /// In en, this message translates to:
-  /// **'Others can follow and see this list'**
-  String get listPublicListSubtitle;
+  /// **'Let others see this list'**
+  String get listMakePublicSubtitle;
 
   /// No description provided for @listPrivateListSubtitle.
   ///
@@ -8490,12 +8406,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No lists yet. Make one for the loops you want to keep together.'**
   String get profileListsEmpty;
-
-  /// No description provided for @listEditTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Edit list'**
-  String get listEditTitle;
 
   /// No description provided for @listEditInfoAction.
   ///
@@ -8538,6 +8448,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{Couldn\'t remove 1 video. Try again.} other{Couldn\'t remove {count} videos. Try again.}}'**
   String listRemoveVideosFailure(int count);
+
+  /// Joins the member names shown under a people list card that has no description, e.g. 'Alice, Bob, Carol'. Translate the separator: locales that do not list with a Latin comma should use their own (for example '、' or '، ').
+  ///
+  /// In en, this message translates to:
+  /// **', '**
+  String get listMemberNamesSeparator;
+
+  /// Screen-reader label for a list card, read as one sentence: the list's name, 'Private' when it is a device-only list, and its count as already localized by listVideoCount or listMemberCount. The order and the punctuation between them are the locale's to choose.
+  ///
+  /// In en, this message translates to:
+  /// **'{visibility, select, private{{name}, Private, {count}} other{{name}, {count}}}'**
+  String listCardSemanticLabel(String name, String visibility, String count);
+
+  /// Screen-reader label for the shimmering placeholder cards shown while the Explore Lists gallery loads.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading lists'**
+  String get listsDiscoveryLoadingLabel;
+
+  /// Loop total in a list's stats line. 'formatted' is the compact figure shown (e.g. 89.4B); 'count' is the same total as a number and only selects the plural form.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{formatted} loop} other{{formatted} loops}}'**
+  String listLoopsCount(int count, String formatted);
+
+  /// Joins the member, video and loop counts in a list's stats line, e.g. '33 members ∙ 88 videos ∙ 89.4B loops'. Keep the surrounding spaces unless the locale sets them differently.
+  ///
+  /// In en, this message translates to:
+  /// **' ∙ '**
+  String get listStatsSeparator;
+
+  /// Beside the piled member avatars on a people list; opens the full roster of the list's members.
+  ///
+  /// In en, this message translates to:
+  /// **'View all'**
+  String get peopleListsViewAllMembers;
+
+  /// Subtitle of a people list's roster screen, under the list name.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{count} person} other{{count} people}}'**
+  String peopleListsPeopleCount(int count);
+
+  /// Full-screen message on the Explore Lists tab when neither discovery column returned any lists.
+  ///
+  /// In en, this message translates to:
+  /// **'No lists turned up this time. Pull to refresh.'**
+  String get listsDiscoveryEmpty;
 
   /// No description provided for @listShareAction.
   ///
@@ -8610,12 +8568,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{name} on Divine'**
   String listShareSubject(String name);
-
-  /// No description provided for @listCancel.
-  ///
-  /// In en, this message translates to:
-  /// **'Cancel'**
-  String get listCancel;
 
   /// No description provided for @listCreate.
   ///
@@ -10512,54 +10464,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to update subscription. Please try again.'**
   String get discoverListsFailedToUpdateSubscription;
-
-  /// No description provided for @discoverListsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Discover Lists'**
-  String get discoverListsTitle;
-
-  /// No description provided for @discoverListsFailedToLoad.
-  ///
-  /// In en, this message translates to:
-  /// **'Failed to load lists'**
-  String get discoverListsFailedToLoad;
-
-  /// No description provided for @discoverListsLoading.
-  ///
-  /// In en, this message translates to:
-  /// **'Discovering public lists...'**
-  String get discoverListsLoading;
-
-  /// No description provided for @discoverListsRelayTimeout.
-  ///
-  /// In en, this message translates to:
-  /// **'The relay did not return lists in time. Try again.'**
-  String get discoverListsRelayTimeout;
-
-  /// No description provided for @discoverListsServiceUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Service not available.'**
-  String get discoverListsServiceUnavailable;
-
-  /// No description provided for @discoverListsEmptyTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'No public lists found'**
-  String get discoverListsEmptyTitle;
-
-  /// No description provided for @discoverListsEmptySubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Check back later for new lists'**
-  String get discoverListsEmptySubtitle;
-
-  /// No description provided for @discoverListsByAuthorPrefix.
-  ///
-  /// In en, this message translates to:
-  /// **'by'**
-  String get discoverListsByAuthorPrefix;
 
   /// No description provided for @curatedListEmptyTitle.
   ///

@@ -1379,36 +1379,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get exploreNoVideosAvailable => 'ምንም ቪዲዮዎች የሉም';
 
   @override
-  String get exploreDiscoverLists => 'ዝርዝሮችን ያግኙ';
-
-  @override
-  String get exploreAboutLists => 'ስለ ዝርዝሮች';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'ዝርዝሮች የDivine ይዘትን በሁለት መንገድ እንዲያደራጁ እና እንዲያዘጋጁ ያግዝዎታል፡';
-
-  @override
-  String get explorePeopleLists => 'የሰዎች ዝርዝሮች';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'የፈጣሪዎችን ቡድኖች ይከተሉ እና የቅርብ ጊዜ ቪዲዮዎቻቸውን ይመልከቱ';
-
-  @override
-  String get exploreVideoLists => 'የቪዲዮ ዝርዝሮች';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'በኋላ ለመመልከት የሚወዷቸውን ቪዲዮዎች አጫዋች ዝርዝሮችን ይፍጠሩ';
-
-  @override
-  String get exploreMyLists => 'የእኔ ዝርዝሮች';
-
-  @override
-  String get exploreSubscribedLists => 'የተመዘገቡ ዝርዝሮች';
-
-  @override
   String get exploreErrorLoadingLists => 'ዝርዝሮችን መጫን ላይ ስህተት። እባክህ እንደገና ሞክር።';
 
   @override
@@ -3792,16 +3762,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get peopleListsAddToList => 'ወደ ዝርዝር ያክሉ';
 
   @override
-  String get peopleListsSheetTitle => 'ወደ ዝርዝር ያክሉ';
-
-  @override
   String get peopleListsEmptyTitle => 'እስካሁን ምንም ዝርዝሮች የሉም';
 
   @override
   String get peopleListsEmptySubtitle => 'ሰዎችን መቧደን ለመጀመር ዝርዝር ይፍጠሩ።';
-
-  @override
-  String get peopleListsCreateList => 'ዝርዝር ይፍጠሩ';
 
   @override
   String get peopleListsNewListTitle => 'አዲስ ዝርዝር';
@@ -3849,16 +3813,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get peopleListsNoVideosSubtitle => 'ከዝርዝር አባላት የመጡ ቪዲዮዎች እዚህ ይታያሉ';
 
   @override
-  String get peopleListsNoVideosAvailable => 'ምንም ቪዲዮዎች የሉም';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'ቪዲዮዎችን መጫን አልተሳካም።';
 
   @override
   String get peopleListsVideoNotAvailable => 'ቪዲዮ አይገኝም';
-
-  @override
-  String get peopleListsBackToGridTooltip => 'ወደ ፍርግርግ ተመለስ';
 
   @override
   String get peopleListsErrorLoadingVideos => 'ቪዲዮዎችን መጫን ላይ ስህተት';
@@ -3872,6 +3830,20 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '$nameን ወደ ዝርዝር ያክሉ';
+  }
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '$nameን ከዝርዝር ያስወግዱ';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'ዝርዝሩን ማዘመን አልተቻለም። እባክዎ እንደገና ይሞክሩ።';
+
+  @override
   String get peopleListsAddPeopleSearchHint => 'ሰዎችን ፈልግ';
 
   @override
@@ -3881,12 +3853,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'እንደገና ይሞክሩ';
 
   @override
-  String get peopleListsAddButton => 'አክል';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'አክል $count';
-  }
+  String get peopleListsLoadFailed => 'ይህን ዝርዝር መጫን አልተቻለም።';
 
   @override
   String peopleListsInNLists(int count) {
@@ -4776,20 +4743,20 @@ class AppLocalizationsAm extends AppLocalizations {
   String get reportClose => 'ገጠመ';
 
   @override
-  String get listAddToList => 'ወደ ዝርዝር ያክሉ';
-
-  @override
   String listVideoCount(int count) {
     return '$count ቪዲዮዎች';
   }
 
   @override
-  String listPersonCount(int count) {
+  String get listAddToLists => 'ወደ ዝርዝሮች ያክሉ';
+
+  @override
+  String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count ሰዎች',
-      one: '$count ሰው',
+      other: '$count አባላት',
+      one: '$count አባል',
     );
     return '$_temp0';
   }
@@ -4798,23 +4765,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get listByAuthorPrefix => 'በ';
 
   @override
-  String get listNewList => 'አዲስ ዝርዝር';
-
-  @override
   String get listDone => 'ተከናውኗል';
 
   @override
   String get listErrorLoading => 'ዝርዝሮችን መጫን ላይ ስህተት';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'ከ$name ተወግዷል';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'ወደ $name ታክሏል።';
-  }
 
   @override
   String get listCreateNewList => 'አዲስ ዝርዝር ይፍጠሩ';
@@ -4838,10 +4792,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get listDescriptionLabel => 'መግለጫ (አማራጭ)';
 
   @override
-  String get listPublicList => 'የህዝብ ዝርዝር';
+  String get listMakePublicLabel => 'ይፋዊ ያድርጉ';
 
   @override
-  String get listPublicListSubtitle => 'ሌሎች ሊከተሉት እና ይህንን ዝርዝር ማየት ይችላሉ።';
+  String get listMakePublicSubtitle => 'ሌሎች ይህን ዝርዝር እንዲያዩ ይፍቀዱ';
 
   @override
   String get listPrivateListSubtitle =>
@@ -4856,9 +4810,6 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'እስካሁን ዝርዝር የለም። አብረው እንዲቆዩ የሚፈልጓቸውን ሉፖች የሚያሰባስብ ዝርዝር ይፍጠሩ።';
-
-  @override
-  String get listEditTitle => 'ዝርዝር አርትዕ';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -4907,6 +4858,55 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String get listMemberNamesSeparator => '፣ ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name፣ የግል፣ $count',
+        'other': '$name፣ $count',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'ዝርዝሮችን በመጫን ላይ';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted ሉፖች',
+      one: '$formatted ሉፕ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsViewAllMembers => 'ሁሉንም ይመልከቱ';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ሰዎች',
+      one: '$count ሰው',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryEmpty => 'በዚህ ጊዜ ምንም ዝርዝሮች አልተገኙም። ለማደስ ወደታች ይጎትቱ።';
+
+  @override
   String get listShareAction => 'ዝርዝር አጋራ';
 
   @override
@@ -4948,9 +4948,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name በDivine ላይ';
   }
-
-  @override
-  String get listCancel => 'ሰርዝ';
 
   @override
   String get listCreate => 'ፍጠር';
@@ -5999,30 +5996,6 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'የደንበኝነት ምዝገባን ማዘመን አልተሳካም። እባክህ እንደገና ሞክር።';
-
-  @override
-  String get discoverListsTitle => 'ዝርዝሮችን ያግኙ';
-
-  @override
-  String get discoverListsFailedToLoad => 'ዝርዝሮችን መጫን አልተሳካም';
-
-  @override
-  String get discoverListsLoading => 'የህዝብ ዝርዝሮችን በመፈለግ ላይ...';
-
-  @override
-  String get discoverListsRelayTimeout => 'ሪሌው በጊዜው ዝርዝሮችን አልመለሰም። እንደገና ሞክር።';
-
-  @override
-  String get discoverListsServiceUnavailable => 'አገልግሎቱ አይገኝም።';
-
-  @override
-  String get discoverListsEmptyTitle => 'ምንም የህዝብ ዝርዝሮች አልተገኙም';
-
-  @override
-  String get discoverListsEmptySubtitle => 'ለአዳዲስ ዝርዝሮች ቆይተው ይመልከቱ';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'በ';
 
   @override
   String get curatedListEmptyTitle => 'በዚህ ዝርዝር ውስጥ ምንም ቪዲዮዎች የሉም';

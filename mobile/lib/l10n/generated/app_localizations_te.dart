@@ -1445,36 +1445,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get exploreNoVideosAvailable => 'వీడియోలు అందుబాటులో లేవు';
 
   @override
-  String get exploreDiscoverLists => 'జాబితాలను కనుగొనండి';
-
-  @override
-  String get exploreAboutLists => 'జాబితాల గురించి';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'జాబితాలు Divine కంటెంట్‌ని రెండు విధాలుగా నిర్వహించడానికి మరియు నిర్వహించడంలో మీకు సహాయపడతాయి:';
-
-  @override
-  String get explorePeopleLists => 'వ్యక్తుల జాబితాలు';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'సృష్టికర్తల సమూహాలను అనుసరించండి మరియు వారి తాజా వీడియోలను చూడండి';
-
-  @override
-  String get exploreVideoLists => 'వీడియో జాబితాలు';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'తర్వాత చూడటానికి మీకు ఇష్టమైన వీడియోల ప్లేజాబితాలను సృష్టించండి';
-
-  @override
-  String get exploreMyLists => 'నా జాబితాలు';
-
-  @override
-  String get exploreSubscribedLists => 'సభ్యత్వం పొందిన జాబితాలు';
-
-  @override
   String get exploreErrorLoadingLists =>
       'జాబితాలను లోడ్ చేయడంలో లోపం. దయచేసి మళ్లీ ప్రయత్నించండి.';
 
@@ -4021,17 +3991,11 @@ class AppLocalizationsTe extends AppLocalizations {
   String get peopleListsAddToList => 'జాబితాకు జోడించండి';
 
   @override
-  String get peopleListsSheetTitle => 'జాబితాకు జోడించండి';
-
-  @override
   String get peopleListsEmptyTitle => 'ఇంకా జాబితాలు లేవు';
 
   @override
   String get peopleListsEmptySubtitle =>
       'వ్యక్తులను సమూహపరచడం ప్రారంభించడానికి జాబితాను సృష్టించండి.';
-
-  @override
-  String get peopleListsCreateList => 'జాబితాను సృష్టించండి';
 
   @override
   String get peopleListsNewListTitle => 'కొత్త జాబితా';
@@ -4083,17 +4047,11 @@ class AppLocalizationsTe extends AppLocalizations {
       'జాబితా సభ్యుల నుండి వీడియోలు ఇక్కడ కనిపిస్తాయి';
 
   @override
-  String get peopleListsNoVideosAvailable => 'వీడియోలు అందుబాటులో లేవు';
-
-  @override
   String get peopleListsFailedToLoadVideos =>
       'వీడియోలను లోడ్ చేయడంలో విఫలమైంది';
 
   @override
   String get peopleListsVideoNotAvailable => 'వీడియో అందుబాటులో లేదు';
-
-  @override
-  String get peopleListsBackToGridTooltip => 'తిరిగి గ్రిడ్‌కి';
 
   @override
   String get peopleListsErrorLoadingVideos => 'వీడియోలను లోడ్ చేయడంలో లోపం';
@@ -4108,6 +4066,20 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '$nameని జాబితాకు జోడించండి';
+  }
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '$nameని జాబితా నుండి తీసివేయండి';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'జాబితాను నవీకరించడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.';
+
+  @override
   String get peopleListsAddPeopleSearchHint => 'వ్యక్తులను శోధించండి';
 
   @override
@@ -4118,12 +4090,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'మళ్లీ ప్రయత్నించండి';
 
   @override
-  String get peopleListsAddButton => 'జోడించండి';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'జోడించండి $count';
-  }
+  String get peopleListsLoadFailed => 'ఈ జాబితాను లోడ్ చేయడం సాధ్యపడలేదు.';
 
   @override
   String peopleListsInNLists(int count) {
@@ -5060,9 +5027,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get reportClose => 'మూసివేయండి';
 
   @override
-  String get listAddToList => 'జాబితాకు జోడించండి';
-
-  @override
   String listVideoCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5074,12 +5038,15 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
+  String get listAddToLists => 'జాబితాలకు జోడించండి';
+
+  @override
+  String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$countవ్యక్తులు',
-      one: '1 వ్యక్తి',
+      other: '$count సభ్యులు',
+      one: '$count సభ్యులు',
     );
     return '$_temp0';
   }
@@ -5088,23 +5055,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String get listByAuthorPrefix => 'ద్వారా ';
 
   @override
-  String get listNewList => 'కొత్త జాబితా';
-
-  @override
   String get listDone => 'పూర్తయింది';
 
   @override
   String get listErrorLoading => 'జాబితాలను లోడ్ చేయడంలో లోపం';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'నుండి తీసివేయబడింది $name';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'దీనికి జోడించబడింది $name';
-  }
 
   @override
   String get listCreateNewList => 'కొత్త జాబితాను సృష్టించండి';
@@ -5128,11 +5082,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String get listDescriptionLabel => 'వివరణ (ఐచ్ఛికం)';
 
   @override
-  String get listPublicList => 'పబ్లిక్ జాబితా';
+  String get listMakePublicLabel => 'పబ్లిక్‌గా చేయండి';
 
   @override
-  String get listPublicListSubtitle =>
-      'ఇతరులు ఈ జాబితాను అనుసరించవచ్చు మరియు చూడవచ్చు';
+  String get listMakePublicSubtitle => 'ఇతరులు ఈ జాబితాను చూడనివ్వండి';
 
   @override
   String get listPrivateListSubtitle =>
@@ -5147,9 +5100,6 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'ఇంకా జాబితాలు లేవు. మీరు కలిసి ఉంచాలనుకుంటున్న లూప్‌ల కోసం ఒకదాన్ని తయారు చేయండి.';
-
-  @override
-  String get listEditTitle => 'జాబితాను సవరించండి';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5198,6 +5148,56 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, ప్రైవేట్, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'జాబితాలను లోడ్ చేస్తోంది';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted లూప్‌లు',
+      one: '$formatted లూప్',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsViewAllMembers => 'అన్నీ చూడండి';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count వ్యక్తులు',
+      one: '$count వ్యక్తి',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'ఈసారి జాబితాలు ఏవీ దొరకలేదు. రిఫ్రెష్ చేయడానికి లాగండి.';
+
+  @override
   String get listShareAction => 'షేర్ జాబితా';
 
   @override
@@ -5241,9 +5241,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String listShareSubject(String name) {
     return 'Divineలో $name';
   }
-
-  @override
-  String get listCancel => 'రద్దు';
 
   @override
   String get listCreate => 'సృష్టించు';
@@ -6332,32 +6329,6 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'సభ్యత్వాన్ని నవీకరించడంలో విఫలమైంది. దయచేసి మళ్లీ ప్రయత్నించండి.';
-
-  @override
-  String get discoverListsTitle => 'జాబితాలను కనుగొనండి';
-
-  @override
-  String get discoverListsFailedToLoad => 'జాబితాలను లోడ్ చేయడంలో విఫలమైంది';
-
-  @override
-  String get discoverListsLoading => 'పబ్లిక్ జాబితాలను కనుగొంటోంది...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'రిలే సమయానికి జాబితాలను అందించలేదు. మళ్లీ ప్రయత్నించండి.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'సేవ అందుబాటులో లేదు.';
-
-  @override
-  String get discoverListsEmptyTitle => 'పబ్లిక్ జాబితాలు ఏవీ కనుగొనబడలేదు';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'కొత్త జాబితాల కోసం తర్వాత మళ్లీ తనిఖీ చేయండి';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'ద్వారా';
 
   @override
   String get curatedListEmptyTitle => 'ఈ జాబితాలో వీడియోలు లేవు';

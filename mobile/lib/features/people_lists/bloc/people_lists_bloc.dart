@@ -8,6 +8,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 
 part 'people_lists_event.dart';
@@ -120,6 +121,7 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
       _onPubkeyToggleRequested,
       transformer: sequential(),
     );
+    on<PeopleListsPicksApplied>(_onPicksApplied, transformer: sequential());
   }
 
   static DateTime _defaultClock() => DateTime.now().toUtc();
@@ -338,6 +340,15 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
     // queryEvents returns an empty list, so the owner's lists silently stopped
     // syncing from relays (#6480).
     unawaited(_repository.syncOwner(ownerPubkey: newOwner));
+
+    // The lists this viewer follows go stale the same way, as their owners
+    // add and remove members, and they feed Home's feed selector.
+    runDetached(
+      _repository.syncFollowedLists(viewerPubkey: newOwner),
+      'sync followed people lists',
+      logName: 'PeopleListsBloc',
+      category: LogCategory.relay,
+    );
   }
 
   void _onRepositoryListsChanged(
@@ -491,24 +502,64 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
     }
   }
 
+  /// Applies a sheet's picks in order and records how many were refused.
+  ///
+  /// The sheet closes as soon as it sends this, so the outcome on the state
+  /// is what tells its opener whether to say a pick was rolled back. A pick
+  /// the bloc drops as a no-op counts as applied.
+  Future<void> _onPicksApplied(
+    PeopleListsPicksApplied event,
+    Emitter<PeopleListsState> emit,
+  ) async {
+    var refused = 0;
+    for (final listId in event.addListIds) {
+      if (!await _performAdd(
+        listId: listId,
+        pubkey: event.pubkey,
+        emit: emit,
+      )) {
+        refused++;
+      }
+    }
+    for (final listId in event.removeListIds) {
+      if (!await _performRemove(
+        listId: listId,
+        pubkey: event.pubkey,
+        emit: emit,
+      )) {
+        refused++;
+      }
+    }
+    emit(
+      state.copyWith(
+        lastPicksOutcome: PeopleListsPicksOutcome(
+          sequence: (state.lastPicksOutcome?.sequence ?? 0) + 1,
+          pubkey: event.pubkey,
+          refused: refused,
+        ),
+      ),
+    );
+  }
+
   // --------------------------------------------------------------------------
   // Shared add/remove implementation
   // --------------------------------------------------------------------------
 
-  Future<void> _performAdd({
+  /// Returns false when the write was rolled back.
+  Future<bool> _performAdd({
     required String listId,
     required String pubkey,
     required Emitter<PeopleListsState> emit,
   }) async {
     final owner = state.activeOwnerPubkey;
     if (owner == null || owner.isEmpty) {
-      return;
+      return true;
     }
 
     // No-op when the pubkey is already a member.
     final currentMembers = state.listIdsByPubkey[pubkey] ?? const <String>{};
     if (currentMembers.contains(listId)) {
-      return;
+      return true;
     }
 
     final mutation = _buildMutation(
@@ -546,33 +597,36 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
         listId: listId,
         pubkey: pubkey,
       );
-      if (!_resultStillApplies(mutation, owner)) return;
+      if (!_resultStillApplies(mutation, owner)) return true;
       if (result.status == PeopleListPublishStatus.failed) {
         _emitRollback(emit, mutation.id, undo);
-        return;
+        return false;
       }
       emit(_withoutMutation(state, mutation.id, resultEventId: result.eventId));
+      return true;
     } catch (e, stackTrace) {
       addError(e, stackTrace);
-      if (!_resultStillApplies(mutation, owner)) return;
+      if (!_resultStillApplies(mutation, owner)) return true;
       _emitRollback(emit, mutation.id, undo);
+      return false;
     }
   }
 
-  Future<void> _performRemove({
+  /// Returns false when the write was rolled back.
+  Future<bool> _performRemove({
     required String listId,
     required String pubkey,
     required Emitter<PeopleListsState> emit,
   }) async {
     final owner = state.activeOwnerPubkey;
     if (owner == null || owner.isEmpty) {
-      return;
+      return true;
     }
 
     // No-op when the pubkey is not a member.
     final currentMembers = state.listIdsByPubkey[pubkey] ?? const <String>{};
     if (!currentMembers.contains(listId)) {
-      return;
+      return true;
     }
 
     final mutation = _buildMutation(
@@ -617,16 +671,18 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
         listId: listId,
         pubkey: pubkey,
       );
-      if (!_resultStillApplies(mutation, owner)) return;
+      if (!_resultStillApplies(mutation, owner)) return true;
       if (result.status == PeopleListPublishStatus.failed) {
         _emitRollback(emit, mutation.id, undo);
-        return;
+        return false;
       }
       emit(_withoutMutation(state, mutation.id, resultEventId: result.eventId));
+      return true;
     } catch (e, stackTrace) {
       addError(e, stackTrace);
-      if (!_resultStillApplies(mutation, owner)) return;
+      if (!_resultStillApplies(mutation, owner)) return true;
       _emitRollback(emit, mutation.id, undo);
+      return false;
     }
   }
 

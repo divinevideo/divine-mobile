@@ -466,15 +466,6 @@
     "featuredTabLoadFailed": "Não foi possível carregar esta coleção.",
     "featuredTabRetry": "Tentar de novo",
     "exploreNoVideosAvailable": "Nenhum vídeo disponível",
-    "exploreDiscoverLists": "Descobrir listas",
-    "exploreAboutLists": "Sobre listas",
-    "exploreAboutListsDescription": "Listas te ajudam a organizar e curar conteúdo do Divine de duas formas:",
-    "explorePeopleLists": "Listas de pessoas",
-    "explorePeopleListsDescription": "Siga grupos de criadores e veja os últimos vídeos deles",
-    "exploreVideoLists": "Listas de vídeos",
-    "exploreVideoListsDescription": "Crie playlists dos seus vídeos favoritos para assistir depois",
-    "exploreMyLists": "Minhas listas",
-    "exploreSubscribedLists": "Listas inscritas",
     "exploreErrorLoadingLists": "Erro ao carregar listas. Por favor, tente novamente.",
     "exploreNewVideosCount": "{count, plural, one{{count} vídeo novo} other{{count} vídeos novos}}",
     "@exploreNewVideosCount": {
@@ -1602,7 +1593,6 @@
     "reportReceivedReviewNotice": "Vamos enviar automaticamente quando você tiver conexão. Nossa equipe vai revisar sua denúncia e tomar as medidas adequadas. Você pode receber atualizações por mensagem direta.",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "Fechar",
-    "listAddToList": "Adicionar à lista",
     "listVideoCount": "{count} vídeos",
     "@listVideoCount": {
         "placeholders": {
@@ -1611,25 +1601,17 @@
             }
         }
     },
-    "listNewList": "Nova lista",
+    "listAddToLists": "Adicionar às listas",
+    "listMemberCount": "{count, plural, =1{{count} membro} other{{count} membros}}",
+    "@listMemberCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "listDone": "Concluído",
     "listErrorLoading": "Erro ao carregar listas",
-    "listRemovedFrom": "Removido de {name}",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "Adicionado a {name}",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "Criar nova lista",
     "listNewPeopleList": "Nova lista de pessoas",
     "listCollaboratorsNone": "Nenhum",
@@ -1637,13 +1619,50 @@
     "listCollaboratorSearchHint": "Pesquisar no Divine...",
     "listNameLabel": "Nome da lista",
     "listDescriptionLabel": "Descrição (opcional)",
-    "listPublicList": "Lista pública",
-    "listPublicListSubtitle": "Outras pessoas podem seguir e ver esta lista",
+    "listMakePublicLabel": "Tornar pública",
+    "listMakePublicSubtitle": "Deixe outras pessoas verem esta lista",
     "listPrivateListSubtitle": "Os vídeos ficam privados. Nome, descrição, tags e capa continuam visíveis.",
     "listVisibilityPublic": "Pública",
     "listVisibilityPrivate": "Privada",
     "profileListsEmpty": "Nenhuma lista ainda. Crie uma para os loops que você quer manter juntos.",
-    "listEditTitle": "Editar lista",
+    "listMemberNamesSeparator": ", ",
+    "listCardSemanticLabel": "{visibility, select, private{{name}, Privada, {count}} other{{name}, {count}}}",
+    "@listCardSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            },
+            "visibility": {
+                "type": "String"
+            },
+            "count": {
+                "type": "String"
+            }
+        }
+    },
+    "listsDiscoveryLoadingLabel": "Carregando listas",
+    "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loops}}",
+    "@listLoopsCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "formatted": {
+                "type": "String"
+            }
+        }
+    },
+    "listStatsSeparator": " ∙ ",
+    "peopleListsViewAllMembers": "Ver todo mundo",
+    "peopleListsPeopleCount": "{count, plural, =1{{count} pessoa} other{{count} pessoas}}",
+    "@peopleListsPeopleCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "listsDiscoveryEmpty": "Nenhuma lista deu as caras desta vez. Puxe para atualizar.",
     "listShareAction": "Compartilhar lista",
     "listShareFailed": "Não foi possível compartilhar esta lista. Tente de novo.",
     "listSave": "Salvar",
@@ -1672,7 +1691,6 @@
             }
         }
     },
-    "listCancel": "Cancelar",
     "listCreate": "Criar",
     "listCreateFailed": "Falha ao criar a lista",
     "keyManagementTitle": "Chaves Nostr",
@@ -2925,10 +2943,8 @@
     },
     "notificationSystemUpdate": "Você tem uma nova atualização",
     "peopleListsAddToList": "Adicionar à lista",
-    "peopleListsSheetTitle": "Adicionar à lista",
     "peopleListsEmptyTitle": "Ainda sem listas",
     "peopleListsEmptySubtitle": "Cria uma lista para começar a agrupar pessoas.",
-    "peopleListsCreateList": "Criar lista",
     "peopleListsNewListTitle": "Nova lista",
     "peopleListsRouteTitle": "Lista de pessoas",
     "peopleListsListNameLabel": "Nome da lista",
@@ -2944,18 +2960,32 @@
     "peopleListsNoPeopleSubtitle": "Adiciona pessoas para começar",
     "peopleListsNoVideosTitle": "Ainda sem vídeos",
     "peopleListsNoVideosSubtitle": "Os vídeos dos membros da lista aparecerão aqui",
-    "peopleListsNoVideosAvailable": "Nenhum vídeo disponível",
     "peopleListsFailedToLoadVideos": "Falha ao carregar vídeos",
     "peopleListsVideoNotAvailable": "Vídeo não disponível",
-    "peopleListsBackToGridTooltip": "Voltar à grelha",
     "peopleListsErrorLoadingVideos": "Erro ao carregar vídeos",
     "peopleListsNoPeopleToAdd": "Nenhuma pessoa disponível para adicionar.",
     "peopleListsAddToListName": "Adicionar a {name}",
+    "peopleListsAddPersonSemanticLabel": "Adicionar {name} à lista",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "Remover {name} da lista",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "Não foi possível atualizar a lista. Tente de novo.",
     "peopleListsAddPeopleSearchHint": "Pesquisar pessoas",
     "peopleListsAddPeopleError": "Não foi possível carregar as pessoas. Tente novamente.",
     "peopleListsAddPeopleRetry": "Tentar novamente",
-    "peopleListsAddButton": "Adicionar",
-    "peopleListsAddButtonWithCount": "Adicionar {count}",
+    "peopleListsLoadFailed": "Não foi possível carregar esta lista.",
     "peopleListsInNLists": "{count, plural, =1{Em {count} lista} other{Em {count} listas}}",
     "peopleListsRemoveConfirmTitle": "Remover {name}?",
     "peopleListsRemoveConfirmBody": "Será removido/a desta lista.",
@@ -3189,14 +3219,6 @@
     "nostrSettingsDeleteAccountSubtitle": "Envia solicitações de exclusão do seu conteúdo e desconecta você neste dispositivo. Relays, clientes, índices de busca e outros dispositivos conectados podem manter cópias.",
     "safetySettingsWhatYouSee": "O QUE VOCÊ VÊ",
     "safetySettingsWhatYouPublish": "O QUE VOCÊ PUBLICA",
-    "listPersonCount": "{count, plural, =1{{count} pessoa} other{{count} pessoas}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "Por ",
     "keyManagementYourPublicKeyLabel": "Sua chave pública (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -3243,14 +3265,6 @@
             }
         }
     },
-    "discoverListsTitle": "Descobrir listas",
-    "discoverListsFailedToLoad": "Falha ao carregar listas",
-    "discoverListsLoading": "Descobrindo listas públicas...",
-    "discoverListsRelayTimeout": "O relay não devolveu listas a tempo. Tente de novo.",
-    "discoverListsServiceUnavailable": "Serviço indisponível.",
-    "discoverListsEmptyTitle": "Nenhuma lista pública encontrada",
-    "discoverListsEmptySubtitle": "Volte mais tarde para ver novas listas",
-    "discoverListsByAuthorPrefix": "por",
     "curatedListEmptyTitle": "Sem vídeos nesta lista",
     "curatedListEmptySubtitle": "Adicione alguns vídeos pra começar",
     "curatedListLoadingVideos": "Carregando vídeos...",

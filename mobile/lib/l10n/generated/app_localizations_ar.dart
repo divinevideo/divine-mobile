@@ -1394,36 +1394,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get exploreNoVideosAvailable => 'لا توجد فيديوهات متاحة';
 
   @override
-  String get exploreDiscoverLists => 'اكتشف القوائم';
-
-  @override
-  String get exploreAboutLists => 'عن القوائم';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'القوائم تساعدك في تنظيم محتوى Divine بطريقتين:';
-
-  @override
-  String get explorePeopleLists => 'قوائم الأشخاص';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'تابع مجموعات من الصناع وشاهد أحدث فيديوهاتهم';
-
-  @override
-  String get exploreVideoLists => 'قوائم الفيديو';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'أنشئ قوائم تشغيل لفيديوهاتك المفضلة لمشاهدتها لاحقًا';
-
-  @override
-  String get exploreMyLists => 'قوائمي';
-
-  @override
-  String get exploreSubscribedLists => 'القوائم المشترك بها';
-
-  @override
   String get exploreErrorLoadingLists =>
       'خطأ في تحميل القوائم. يرجى المحاولة مرّة أخرى.';
 
@@ -3853,16 +3823,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get peopleListsAddToList => 'أضف إلى القائمة';
 
   @override
-  String get peopleListsSheetTitle => 'أضف إلى القائمة';
-
-  @override
   String get peopleListsEmptyTitle => 'لا توجد قوائم بعد';
 
   @override
   String get peopleListsEmptySubtitle => 'أنشئ قائمة لبدء تجميع الأشخاص.';
-
-  @override
-  String get peopleListsCreateList => 'إنشاء قائمة';
 
   @override
   String get peopleListsNewListTitle => 'قائمة جديدة';
@@ -3912,16 +3876,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'ستظهر هنا مقاطع الفيديو من أعضاء القائمة';
 
   @override
-  String get peopleListsNoVideosAvailable => 'لا تتوفر مقاطع فيديو';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'فشل تحميل مقاطع الفيديو';
 
   @override
   String get peopleListsVideoNotAvailable => 'الفيديو غير متاح';
-
-  @override
-  String get peopleListsBackToGridTooltip => 'العودة إلى الشبكة';
 
   @override
   String get peopleListsErrorLoadingVideos => 'خطأ في تحميل مقاطع الفيديو';
@@ -3935,6 +3893,20 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'إضافة $name إلى القائمة';
+  }
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'إزالة $name من القائمة';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'تعذّر تحديث القائمة. يرجى المحاولة مجددًا.';
+
+  @override
   String get peopleListsAddPeopleSearchHint => 'البحث عن أشخاص';
 
   @override
@@ -3945,12 +3917,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'حاول مجددًا';
 
   @override
-  String get peopleListsAddButton => 'إضافة';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'إضافة $count';
-  }
+  String get peopleListsLoadFailed => 'تعذّر تحميل هذه القائمة.';
 
   @override
   String peopleListsInNLists(int count) {
@@ -4864,24 +4831,24 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reportClose => 'إغلاق';
 
   @override
-  String get listAddToList => 'إضافة إلى قائمة';
-
-  @override
   String listVideoCount(int count) {
     return '$count مقاطع فيديو';
   }
 
   @override
-  String listPersonCount(int count) {
+  String get listAddToLists => 'إضافة إلى القوائم';
+
+  @override
+  String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count شخص',
-      many: '$count شخصًا',
-      few: '$count أشخاص',
-      two: 'شخصان',
-      one: 'شخص واحد',
-      zero: 'لا أحد',
+      other: '$count عضو',
+      many: '$count عضوًا',
+      few: '$count أعضاء',
+      two: 'عضوان',
+      one: 'عضو واحد',
+      zero: 'لا يوجد أعضاء',
     );
     return '$_temp0';
   }
@@ -4890,23 +4857,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get listByAuthorPrefix => 'بقلم ';
 
   @override
-  String get listNewList => 'قائمة جديدة';
-
-  @override
   String get listDone => 'تم';
 
   @override
   String get listErrorLoading => 'تعذر تحميل القوائم';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'تمت الإزالة من $name';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'تمت الإضافة إلى $name';
-  }
 
   @override
   String get listCreateNewList => 'إنشاء قائمة جديدة';
@@ -4930,11 +4884,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get listDescriptionLabel => 'الوصف (اختياري)';
 
   @override
-  String get listPublicList => 'قائمة عامة';
+  String get listMakePublicLabel => 'جعل القائمة عامة';
 
   @override
-  String get listPublicListSubtitle =>
-      'يمكن للآخرين متابعة هذه القائمة ورؤيتها';
+  String get listMakePublicSubtitle => 'السماح للآخرين برؤية هذه القائمة';
 
   @override
   String get listPrivateListSubtitle =>
@@ -4949,9 +4902,6 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'لا توجد قوائم بعد. أنشئ واحدة للمقاطع التي تريد جمعها معًا.';
-
-  @override
-  String get listEditTitle => 'تعديل القائمة';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5000,6 +4950,64 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get listMemberNamesSeparator => '، ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name، خاصة، $count',
+        'other': '$name، $count',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'جارٍ تحميل القوائم';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted تكرار',
+      many: '$formatted تكرارًا',
+      few: '$formatted تكرارات',
+      two: 'تكراران',
+      one: 'تكرار واحد',
+      zero: 'لا توجد تكرارات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsViewAllMembers => 'عرض الكل';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count شخص',
+      many: '$count شخصًا',
+      few: '$count أشخاص',
+      two: 'شخصان',
+      one: 'شخص واحد',
+      zero: 'لا يوجد أشخاص',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'لم تظهر أي قوائم هذه المرة. يمكن السحب للتحديث.';
+
+  @override
   String get listShareAction => 'مشاركة القائمة';
 
   @override
@@ -5041,9 +5049,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name على Divine';
   }
-
-  @override
-  String get listCancel => 'إلغاء';
 
   @override
   String get listCreate => 'إنشاء';
@@ -6105,32 +6110,6 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'فشل تحديث الاشتراك. يرجى المحاولة مرّة أخرى.';
-
-  @override
-  String get discoverListsTitle => 'اكتشف القوائم';
-
-  @override
-  String get discoverListsFailedToLoad => 'فشل تحميل القوائم';
-
-  @override
-  String get discoverListsLoading => 'جاري اكتشاف القوائم العامة...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'لم يُرجع الريلاي القوائم في الوقت المناسب. حاول مرة أخرى.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'الخدمة غير متاحة.';
-
-  @override
-  String get discoverListsEmptyTitle => 'لم يتم العثور على قوائم عامة';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'عاود التحقق لاحقًا لرؤية قوائم جديدة';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'بقلم';
 
   @override
   String get curatedListEmptyTitle => 'لا فيديوهات في هذه القائمة';

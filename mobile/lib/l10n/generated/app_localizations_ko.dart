@@ -1292,35 +1292,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exploreNoVideosAvailable => '이용 가능한 영상이 없어요';
 
   @override
-  String get exploreDiscoverLists => '리스트 둘러보기';
-
-  @override
-  String get exploreAboutLists => '리스트란?';
-
-  @override
-  String get exploreAboutListsDescription =>
-      '리스트는 Divine 콘텐츠를 두 가지 방식으로 정리하고 큐레이션할 수 있게 해줘요:';
-
-  @override
-  String get explorePeopleLists => '사람 리스트';
-
-  @override
-  String get explorePeopleListsDescription =>
-      '크리에이터 그룹을 팔로우하고 그들의 최신 영상을 확인해보세요';
-
-  @override
-  String get exploreVideoLists => '영상 리스트';
-
-  @override
-  String get exploreVideoListsDescription => '좋아하는 영상의 플레이리스트를 만들어서 나중에 다시 보세요';
-
-  @override
-  String get exploreMyLists => '내 리스트';
-
-  @override
-  String get exploreSubscribedLists => '구독 리스트';
-
-  @override
   String get exploreErrorLoadingLists => '리스트를 불러오지 못했어요. 다시 시도해보세요.';
 
   @override
@@ -3648,16 +3619,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get peopleListsAddToList => '목록에 추가';
 
   @override
-  String get peopleListsSheetTitle => '목록에 추가';
-
-  @override
   String get peopleListsEmptyTitle => '목록이 없습니다';
 
   @override
   String get peopleListsEmptySubtitle => '목록을 만들어 사람들을 그룹화하세요.';
-
-  @override
-  String get peopleListsCreateList => '목록 만들기';
 
   @override
   String get peopleListsNewListTitle => '새 목록';
@@ -3705,16 +3670,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get peopleListsNoVideosSubtitle => '목록 구성원의 동영상이 여기에 표시됩니다';
 
   @override
-  String get peopleListsNoVideosAvailable => '사용 가능한 동영상 없음';
-
-  @override
   String get peopleListsFailedToLoadVideos => '동영상을 불러오지 못했습니다';
 
   @override
   String get peopleListsVideoNotAvailable => '동영상을 사용할 수 없습니다';
-
-  @override
-  String get peopleListsBackToGridTooltip => '그리드로 돌아가기';
 
   @override
   String get peopleListsErrorLoadingVideos => '동영상 불러오기 오류';
@@ -3728,6 +3687,20 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '목록에 $name 추가';
+  }
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '목록에서 $name 삭제';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      '목록을 업데이트하지 못했어요. 다시 시도해 주세요.';
+
+  @override
   String get peopleListsAddPeopleSearchHint => '사람 검색';
 
   @override
@@ -3737,12 +3710,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get peopleListsAddPeopleRetry => '다시 시도';
 
   @override
-  String get peopleListsAddButton => '추가';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return '$count명 추가';
-  }
+  String get peopleListsLoadFailed => '이 목록을 불러오지 못했어요.';
 
   @override
   String peopleListsInNLists(int count) {
@@ -4621,20 +4589,19 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportClose => '닫기';
 
   @override
-  String get listAddToList => '목록에 추가';
-
-  @override
   String listVideoCount(int count) {
     return '영상 $count개';
   }
 
   @override
-  String listPersonCount(int count) {
+  String get listAddToLists => '목록에 추가';
+
+  @override
+  String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count명',
-      one: '1명',
+      other: '구성원 $count명',
     );
     return '$_temp0';
   }
@@ -4643,23 +4610,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get listByAuthorPrefix => '작성자: ';
 
   @override
-  String get listNewList => '새 목록';
-
-  @override
   String get listDone => '완료';
 
   @override
   String get listErrorLoading => '목록을 불러오는 중 오류 발생';
-
-  @override
-  String listRemovedFrom(String name) {
-    return '$name에서 삭제했어요';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return '$name에 추가했어요';
-  }
 
   @override
   String get listCreateNewList => '새 목록 만들기';
@@ -4683,10 +4637,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get listDescriptionLabel => '설명 (선택)';
 
   @override
-  String get listPublicList => '공개 목록';
+  String get listMakePublicLabel => '공개로 설정';
 
   @override
-  String get listPublicListSubtitle => '다른 사람들이 이 목록을 팔로우하고 볼 수 있어요';
+  String get listMakePublicSubtitle => '다른 사람도 이 목록을 볼 수 있어요';
 
   @override
   String get listPrivateListSubtitle =>
@@ -4700,9 +4654,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get profileListsEmpty => '아직 목록이 없어요. 함께 모아 두고 싶은 루프로 하나 만들어 보세요.';
-
-  @override
-  String get listEditTitle => '목록 편집';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -4751,6 +4702,53 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, 비공개, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryLoadingLabel => '목록 불러오는 중';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '루프 $formatted회',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsViewAllMembers => '전체 보기';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count명',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryEmpty => '이번엔 목록이 하나도 안 나왔어요. 당겨서 새로고침하세요.';
+
+  @override
   String get listShareAction => '목록 공유';
 
   @override
@@ -4791,9 +4789,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String listShareSubject(String name) {
     return 'Divine의 $name';
   }
-
-  @override
-  String get listCancel => '취소';
 
   @override
   String get listCreate => '만들기';
@@ -5835,30 +5830,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       '구독 업데이트에 실패했어요. 다시 시도해보세요.';
-
-  @override
-  String get discoverListsTitle => '리스트 둘러보기';
-
-  @override
-  String get discoverListsFailedToLoad => '리스트를 불러오지 못했어요';
-
-  @override
-  String get discoverListsLoading => '공개 리스트를 찾는 중...';
-
-  @override
-  String get discoverListsRelayTimeout => '릴레이가 제때 리스트를 주지 않았어요. 다시 시도해 주세요.';
-
-  @override
-  String get discoverListsServiceUnavailable => '서비스를 사용할 수 없어요.';
-
-  @override
-  String get discoverListsEmptyTitle => '공개 리스트를 찾지 못했어요';
-
-  @override
-  String get discoverListsEmptySubtitle => '새 리스트가 올라오면 다시 와봐요';
-
-  @override
-  String get discoverListsByAuthorPrefix => '작성자';
 
   @override
   String get curatedListEmptyTitle => '이 리스트에 영상이 없어요';

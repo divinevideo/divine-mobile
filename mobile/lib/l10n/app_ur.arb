@@ -586,15 +586,6 @@
   "featuredTabLoadFailed": "یہ مجموعہ لوڈ نہیں ہو سکا۔",
   "featuredTabRetry": "دوبارہ کوشش کریں",
   "exploreNoVideosAvailable": "کوئی ویڈیو دستیاب نہیں",
-  "exploreDiscoverLists": "فہرستیں دریافت کریں",
-  "exploreAboutLists": "فہرستوں کے بارے میں",
-  "exploreAboutListsDescription": "فہرستیں Divine مواد کو دو طریقوں سے ترتیب دینے اور منتخب کرنے میں مدد دیتی ہیں:",
-  "explorePeopleLists": "لوگوں کی فہرستیں",
-  "explorePeopleListsDescription": "کریئیٹرز کے گروہوں کو فالو کریں اور ان کی تازہ ویڈیوز دیکھیں",
-  "exploreVideoLists": "ویڈیو فہرستیں",
-  "exploreVideoListsDescription": "بعد میں دیکھنے کے لیے اپنی پسندیدہ ویڈیوز کی پلے لسٹیں بنائیں",
-  "exploreMyLists": "میری فہرستیں",
-  "exploreSubscribedLists": "سبسکرائب شدہ فہرستیں",
   "exploreErrorLoadingLists": "فہرستیں لوڈ کرنے میں خرابی۔ براہ کرم دوبارہ کوشش کریں۔",
   "exploreNewVideosCount": "{count, plural, =1{1 نئی ویڈیو} other{{count} نئی ویڈیوز}}",
   "@exploreNewVideosCount": {
@@ -1907,10 +1898,8 @@
     }
   },
   "peopleListsAddToList": "فہرست میں شامل کریں",
-  "peopleListsSheetTitle": "فہرست میں شامل کریں",
   "peopleListsEmptyTitle": "ابھی کوئی فہرست نہیں",
   "peopleListsEmptySubtitle": "لوگوں کو گروہ میں باندھنے کے لیے فہرست بنائیں۔",
-  "peopleListsCreateList": "فہرست بنائیں",
   "peopleListsNewListTitle": "نئی فہرست",
   "peopleListsRouteTitle": "لوگوں کی فہرست",
   "@peopleListsRouteTitle": {
@@ -1929,10 +1918,8 @@
   "peopleListsNoPeopleSubtitle": "شروع کرنے کے لیے کچھ لوگ شامل کریں",
   "peopleListsNoVideosTitle": "ابھی کوئی ویڈیو نہیں",
   "peopleListsNoVideosSubtitle": "فہرست کے ممبران کی ویڈیوز یہاں نظر آئیں گی",
-  "peopleListsNoVideosAvailable": "کوئی ویڈیو دستیاب نہیں",
   "peopleListsFailedToLoadVideos": "ویڈیوز لوڈ نہیں ہو سکیں",
   "peopleListsVideoNotAvailable": "ویڈیو دستیاب نہیں",
-  "peopleListsBackToGridTooltip": "گرڈ پر واپس",
   "peopleListsErrorLoadingVideos": "ویڈیوز لوڈ کرنے میں خرابی",
   "peopleListsNoPeopleToAdd": "شامل کرنے کے لیے کوئی لوگ دستیاب نہیں۔",
   "peopleListsAddToListName": "{name} میں شامل کریں",
@@ -1943,18 +1930,27 @@
       }
     }
   },
-  "peopleListsAddPeopleSearchHint": "لوگ تلاش کریں",
-  "peopleListsAddPeopleError": "لوگ لوڈ نہیں ہو سکے۔ براہ کرم دوبارہ کوشش کریں۔",
-  "peopleListsAddPeopleRetry": "دوبارہ کوشش کریں",
-  "peopleListsAddButton": "شامل کریں",
-  "peopleListsAddButtonWithCount": "{count} شامل کریں",
-  "@peopleListsAddButtonWithCount": {
+  "peopleListsAddPersonSemanticLabel": "{name} کو فہرست میں شامل کریں",
+  "@peopleListsAddPersonSemanticLabel": {
     "placeholders": {
-      "count": {
-        "type": "int"
+      "name": {
+        "type": "String"
       }
     }
   },
+  "peopleListsRemovePersonSemanticLabel": "{name} کو فہرست سے ہٹائیں",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "فہرست اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔",
+  "peopleListsAddPeopleSearchHint": "لوگ تلاش کریں",
+  "peopleListsAddPeopleError": "لوگ لوڈ نہیں ہو سکے۔ براہ کرم دوبارہ کوشش کریں۔",
+  "peopleListsAddPeopleRetry": "دوبارہ کوشش کریں",
+  "peopleListsLoadFailed": "یہ فہرست لوڈ نہیں ہو سکی۔",
   "peopleListsInNLists": "{count, plural, =1{1 فہرست میں} other{{count} فہرستوں میں}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -2381,7 +2377,6 @@
   "reportLearnMoreAt": "مزید جانیں",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "بند کریں",
-  "listAddToList": "فہرست میں شامل کریں",
   "listVideoCount": "{count} ویڈیوز",
   "@listVideoCount": {
     "placeholders": {
@@ -2390,8 +2385,9 @@
       }
     }
   },
-  "listPersonCount": "{count, plural, =1{1 شخص} other{{count} لوگ}}",
-  "@listPersonCount": {
+  "listAddToLists": "فہرستوں میں شامل کریں",
+  "listMemberCount": "{count, plural, =1{{count} ممبر} other{{count} ممبران}}",
+  "@listMemberCount": {
     "placeholders": {
       "count": {
         "type": "int"
@@ -2399,25 +2395,8 @@
     }
   },
   "listByAuthorPrefix": "از ",
-  "listNewList": "نئی فہرست",
   "listDone": "ہو گیا",
   "listErrorLoading": "فہرستیں لوڈ کرنے میں خرابی",
-  "listRemovedFrom": "{name} سے ہٹا دی گئی",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "{name} میں شامل کر دی گئی",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "نئی فہرست بنائیں",
   "listNewPeopleList": "لوگوں کی نئی فہرست",
   "listCollaboratorsNone": "کوئی نہیں",
@@ -2425,13 +2404,50 @@
   "listCollaboratorSearchHint": "Divine میں تلاش کریں...",
   "listNameLabel": "فہرست کا نام",
   "listDescriptionLabel": "تفصیل (اختیاری)",
-  "listPublicList": "عوامی فہرست",
-  "listPublicListSubtitle": "دوسرے اس فہرست کو فالو اور دیکھ سکتے ہیں",
+  "listMakePublicLabel": "عوامی بنائیں",
+  "listMakePublicSubtitle": "دوسروں کو یہ فہرست دیکھنے دیں",
   "listPrivateListSubtitle": "ویڈیوز نجی رہتی ہیں۔ نام، تفصیل، ٹیگز اور کور نظر آتے رہتے ہیں۔",
   "listVisibilityPublic": "عوامی",
   "listVisibilityPrivate": "نجی",
   "profileListsEmpty": "ابھی کوئی فہرست نہیں۔ جو لوپ ساتھ رکھنے ہیں، ان کے لیے ایک بنائیں۔",
-  "listEditTitle": "فہرست میں ترمیم کریں",
+  "listMemberNamesSeparator": "، ",
+  "listCardSemanticLabel": "{visibility, select, private{{name}، نجی، {count}} other{{name}، {count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "listsDiscoveryLoadingLabel": "فہرستیں لوڈ ہو رہی ہیں",
+  "listLoopsCount": "{count, plural, =1{{formatted} لوپ} other{{formatted} لوپ}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsViewAllMembers": "سب دیکھیں",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} شخص} other{{count} لوگ}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listsDiscoveryEmpty": "اس بار کوئی فہرست ہاتھ نہیں آئی۔ ریفریش کے لیے کھینچیں۔",
   "listShareAction": "فہرست شیئر کریں",
   "listShareFailed": "یہ فہرست شیئر نہیں ہو سکی۔ دوبارہ کوشش کریں۔",
   "listSave": "محفوظ کریں",
@@ -2460,7 +2476,6 @@
       }
     }
   },
-  "listCancel": "منسوخ کریں",
   "listCreate": "بنائیں",
   "listCreateFailed": "فہرست نہیں بن سکی",
   "keyManagementTitle": "Nostr کلیدیں",
@@ -3153,14 +3168,6 @@
     }
   },
   "discoverListsFailedToUpdateSubscription": "سبسکرپشن اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔",
-  "discoverListsTitle": "فہرستیں دریافت کریں",
-  "discoverListsFailedToLoad": "فہرستیں لوڈ نہیں ہو سکیں",
-  "discoverListsLoading": "عوامی فہرستیں دریافت ہو رہی ہیں...",
-  "discoverListsRelayTimeout": "ریلے نے وقت پر فہرستیں واپس نہیں کیں۔ دوبارہ کوشش کریں۔",
-  "discoverListsServiceUnavailable": "سروس دستیاب نہیں ہے۔",
-  "discoverListsEmptyTitle": "کوئی عوامی فہرست نہیں ملی",
-  "discoverListsEmptySubtitle": "نئی فہرستوں کے لیے بعد میں دیکھیں",
-  "discoverListsByAuthorPrefix": "از",
   "curatedListEmptyTitle": "اس فہرست میں کوئی ویڈیو نہیں",
   "curatedListEmptySubtitle": "شروع کرنے کے لیے کچھ ویڈیوز شامل کریں",
   "curatedListLoadingVideos": "ویڈیوز لوڈ ہو رہی ہیں...",

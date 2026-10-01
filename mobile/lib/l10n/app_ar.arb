@@ -466,15 +466,6 @@
     "featuredTabLoadFailed": "تعذّر تحميل هذه المجموعة.",
     "featuredTabRetry": "حاول مرة أخرى",
     "exploreNoVideosAvailable": "لا توجد فيديوهات متاحة",
-    "exploreDiscoverLists": "اكتشف القوائم",
-    "exploreAboutLists": "عن القوائم",
-    "exploreAboutListsDescription": "القوائم تساعدك في تنظيم محتوى Divine بطريقتين:",
-    "explorePeopleLists": "قوائم الأشخاص",
-    "explorePeopleListsDescription": "تابع مجموعات من الصناع وشاهد أحدث فيديوهاتهم",
-    "exploreVideoLists": "قوائم الفيديو",
-    "exploreVideoListsDescription": "أنشئ قوائم تشغيل لفيديوهاتك المفضلة لمشاهدتها لاحقًا",
-    "exploreMyLists": "قوائمي",
-    "exploreSubscribedLists": "القوائم المشترك بها",
     "exploreErrorLoadingLists": "خطأ في تحميل القوائم. يرجى المحاولة مرّة أخرى.",
     "exploreNewVideosCount": "{count, plural, zero{لا توجد فيديوهات جديدة} one{فيديو جديد واحد} two{فيديوان جديدان} few{{count} فيديوهات جديدة} many{{count} فيديو جديد} other{{count} فيديو جديد}}",
     "@exploreNewVideosCount": {
@@ -1592,7 +1583,6 @@
     "reportReceivedReviewNotice": "سنرسله تلقائيًا عندما تتصل بالإنترنت. سيُراجع فريقنا بلاغك ويتخذ الإجراء المناسب. قد تتلقى تحديثات عبر رسالة مباشرة.",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "إغلاق",
-    "listAddToList": "إضافة إلى قائمة",
     "listVideoCount": "{count} مقاطع فيديو",
     "@listVideoCount": {
         "placeholders": {
@@ -1601,25 +1591,17 @@
             }
         }
     },
-    "listNewList": "قائمة جديدة",
+    "listAddToLists": "إضافة إلى القوائم",
+    "listMemberCount": "{count, plural, zero{لا يوجد أعضاء} one{عضو واحد} two{عضوان} few{{count} أعضاء} many{{count} عضوًا} other{{count} عضو}}",
+    "@listMemberCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "listDone": "تم",
     "listErrorLoading": "تعذر تحميل القوائم",
-    "listRemovedFrom": "تمت الإزالة من {name}",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "تمت الإضافة إلى {name}",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "إنشاء قائمة جديدة",
     "listNewPeopleList": "قائمة أشخاص جديدة",
     "listCollaboratorsNone": "لا أحد",
@@ -1627,13 +1609,50 @@
     "listCollaboratorSearchHint": "ابحث في Divine...",
     "listNameLabel": "اسم القائمة",
     "listDescriptionLabel": "الوصف (اختياري)",
-    "listPublicList": "قائمة عامة",
-    "listPublicListSubtitle": "يمكن للآخرين متابعة هذه القائمة ورؤيتها",
+    "listMakePublicLabel": "جعل القائمة عامة",
+    "listMakePublicSubtitle": "السماح للآخرين برؤية هذه القائمة",
     "listPrivateListSubtitle": "تبقى مقاطع الفيديو خاصة. يبقى الاسم والوصف والوسوم والغلاف ظاهرين.",
     "listVisibilityPublic": "عامة",
     "listVisibilityPrivate": "خاصة",
     "profileListsEmpty": "لا توجد قوائم بعد. أنشئ واحدة للمقاطع التي تريد جمعها معًا.",
-    "listEditTitle": "تعديل القائمة",
+    "listMemberNamesSeparator": "، ",
+    "listCardSemanticLabel": "{visibility, select, private{{name}، خاصة، {count}} other{{name}، {count}}}",
+    "@listCardSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            },
+            "visibility": {
+                "type": "String"
+            },
+            "count": {
+                "type": "String"
+            }
+        }
+    },
+    "listsDiscoveryLoadingLabel": "جارٍ تحميل القوائم",
+    "listLoopsCount": "{count, plural, zero{لا توجد تكرارات} one{تكرار واحد} two{تكراران} few{{formatted} تكرارات} many{{formatted} تكرارًا} other{{formatted} تكرار}}",
+    "@listLoopsCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "formatted": {
+                "type": "String"
+            }
+        }
+    },
+    "listStatsSeparator": " ∙ ",
+    "peopleListsViewAllMembers": "عرض الكل",
+    "peopleListsPeopleCount": "{count, plural, zero{لا يوجد أشخاص} one{شخص واحد} two{شخصان} few{{count} أشخاص} many{{count} شخصًا} other{{count} شخص}}",
+    "@peopleListsPeopleCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "listsDiscoveryEmpty": "لم تظهر أي قوائم هذه المرة. يمكن السحب للتحديث.",
     "listShareAction": "مشاركة القائمة",
     "listShareFailed": "تعذّرت مشاركة هذه القائمة. حاول مرة أخرى.",
     "listSave": "حفظ",
@@ -1662,7 +1681,6 @@
             }
         }
     },
-    "listCancel": "إلغاء",
     "listCreate": "إنشاء",
     "listCreateFailed": "تعذر إنشاء القائمة",
     "keyManagementTitle": "مفاتيح Nostr",
@@ -2918,10 +2936,8 @@
     },
     "notificationSystemUpdate": "لديك تحديث جديد",
     "peopleListsAddToList": "أضف إلى القائمة",
-    "peopleListsSheetTitle": "أضف إلى القائمة",
     "peopleListsEmptyTitle": "لا توجد قوائم بعد",
     "peopleListsEmptySubtitle": "أنشئ قائمة لبدء تجميع الأشخاص.",
-    "peopleListsCreateList": "إنشاء قائمة",
     "peopleListsNewListTitle": "قائمة جديدة",
     "peopleListsRouteTitle": "قائمة الأشخاص",
     "peopleListsListNameLabel": "اسم القائمة",
@@ -2937,18 +2953,32 @@
     "peopleListsNoPeopleSubtitle": "أضف بعض الأشخاص للبدء",
     "peopleListsNoVideosTitle": "لا توجد مقاطع فيديو بعد",
     "peopleListsNoVideosSubtitle": "ستظهر هنا مقاطع الفيديو من أعضاء القائمة",
-    "peopleListsNoVideosAvailable": "لا تتوفر مقاطع فيديو",
     "peopleListsFailedToLoadVideos": "فشل تحميل مقاطع الفيديو",
     "peopleListsVideoNotAvailable": "الفيديو غير متاح",
-    "peopleListsBackToGridTooltip": "العودة إلى الشبكة",
     "peopleListsErrorLoadingVideos": "خطأ في تحميل مقاطع الفيديو",
     "peopleListsNoPeopleToAdd": "لا يوجد أشخاص متاحون للإضافة.",
     "peopleListsAddToListName": "أضف إلى {name}",
+    "peopleListsAddPersonSemanticLabel": "إضافة {name} إلى القائمة",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "إزالة {name} من القائمة",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "تعذّر تحديث القائمة. يرجى المحاولة مجددًا.",
     "peopleListsAddPeopleSearchHint": "البحث عن أشخاص",
     "peopleListsAddPeopleError": "تعذر تحميل الأشخاص. يرجى المحاولة مجددًا.",
     "peopleListsAddPeopleRetry": "حاول مجددًا",
-    "peopleListsAddButton": "إضافة",
-    "peopleListsAddButtonWithCount": "إضافة {count}",
+    "peopleListsLoadFailed": "تعذّر تحميل هذه القائمة.",
     "peopleListsInNLists": "{count, plural, zero{في صفر قوائم} one{في قائمة واحدة} two{في قائمتين} few{في {count} قوائم} many{في {count} قائمة} other{في {count} قوائم}}",
     "peopleListsRemoveConfirmTitle": "هل تريد إزالة {name}؟",
     "peopleListsRemoveConfirmBody": "سيتم إزالته/إزالتها من هذه القائمة.",
@@ -3189,14 +3219,6 @@
     "authConfirmPasswordRequired": "أكّد كلمة المرور",
     "authPasswordsDoNotMatch": "كلمتا المرور غير متطابقتين",
     "authConfirmNewPasswordLabel": "تأكيد كلمة المرور الجديدة",
-    "listPersonCount": "{count, plural, zero{لا أحد} one{شخص واحد} two{شخصان} few{{count} أشخاص} many{{count} شخصًا} other{{count} شخص}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "بقلم ",
     "keyManagementYourPublicKeyLabel": "مفتاحك العام (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -3243,14 +3265,6 @@
             }
         }
     },
-    "discoverListsTitle": "اكتشف القوائم",
-    "discoverListsFailedToLoad": "فشل تحميل القوائم",
-    "discoverListsLoading": "جاري اكتشاف القوائم العامة...",
-    "discoverListsRelayTimeout": "لم يُرجع الريلاي القوائم في الوقت المناسب. حاول مرة أخرى.",
-    "discoverListsServiceUnavailable": "الخدمة غير متاحة.",
-    "discoverListsEmptyTitle": "لم يتم العثور على قوائم عامة",
-    "discoverListsEmptySubtitle": "عاود التحقق لاحقًا لرؤية قوائم جديدة",
-    "discoverListsByAuthorPrefix": "بقلم",
     "curatedListEmptyTitle": "لا فيديوهات في هذه القائمة",
     "curatedListEmptySubtitle": "أضف بعض الفيديوهات للبدء",
     "curatedListLoadingVideos": "جاري تحميل الفيديوهات...",

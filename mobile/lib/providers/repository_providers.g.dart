@@ -208,7 +208,7 @@ final class CuratedListRepositoryProvider
 }
 
 String _$curatedListRepositoryHash() =>
-    r'33126d21cc217b4b18a7c9a2743c81eac25d4933';
+    r'07ffe6c6329c6ffda437321f23711aeab2f77ebc';
 
 /// Provider for HashtagRepository instance.
 ///
@@ -698,7 +698,7 @@ final class PeopleListsRepositoryProvider
 }
 
 String _$peopleListsRepositoryHash() =>
-    r'486b3f30391906e12735ed541fe1ba87672ed796';
+    r'bc813da06734fe19694a0127fd39de3792d68fe5';
 
 /// Repository for the reserved kind 30000 `d=notify` subscription list.
 ///

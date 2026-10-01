@@ -1394,36 +1394,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Walang available na video';
 
   @override
-  String get exploreDiscoverLists => 'Tuklasin ang mga List';
-
-  @override
-  String get exploreAboutLists => 'Tungkol sa mga List';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Tinutulungan ka ng mga list na ayusin at i-curate ang Divine content sa dalawang paraan:';
-
-  @override
-  String get explorePeopleLists => 'Mga People List';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'Sundan ang mga grupo ng creator at tingnan ang kanilang mga pinakabagong video';
-
-  @override
-  String get exploreVideoLists => 'Mga Video List';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Gumawa ng playlist ng iyong mga paboritong video para mapanood mamaya';
-
-  @override
-  String get exploreMyLists => 'Mga List Ko';
-
-  @override
-  String get exploreSubscribedLists => 'Mga Subscribed List';
-
-  @override
   String get exploreErrorLoadingLists =>
       'May error sa pag-load ng mga list. Subukan ulit.';
 
@@ -3896,17 +3866,11 @@ class AppLocalizationsFil extends AppLocalizations {
   String get peopleListsAddToList => 'Idagdag sa listahan';
 
   @override
-  String get peopleListsSheetTitle => 'Idagdag sa listahan';
-
-  @override
   String get peopleListsEmptyTitle => 'Wala pang listahan';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Gumawa ng listahan para simulang igrupo ang mga tao.';
-
-  @override
-  String get peopleListsCreateList => 'Gumawa ng listahan';
 
   @override
   String get peopleListsNewListTitle => 'Bagong listahan';
@@ -3959,16 +3923,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Lalabas dito ang mga video mula sa mga miyembro ng listahan';
 
   @override
-  String get peopleListsNoVideosAvailable => 'Walang available na video';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'Hindi na-load ang mga video';
 
   @override
   String get peopleListsVideoNotAvailable => 'Hindi available ang video';
-
-  @override
-  String get peopleListsBackToGridTooltip => 'Bumalik sa grid';
 
   @override
   String get peopleListsErrorLoadingVideos =>
@@ -3984,6 +3942,20 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Idagdag si $name sa list';
+  }
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Alisin si $name sa list';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Hindi na-update ang list. Subukan ulit.';
+
+  @override
   String get peopleListsAddPeopleSearchHint => 'Maghanap ng tao';
 
   @override
@@ -3994,12 +3966,7 @@ class AppLocalizationsFil extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'Subukan ulit';
 
   @override
-  String get peopleListsAddButton => 'Idagdag';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Idagdag ang $count';
-  }
+  String get peopleListsLoadFailed => 'Hindi na-load ang list na ito.';
 
   @override
   String peopleListsInNLists(int count) {
@@ -4924,20 +4891,20 @@ class AppLocalizationsFil extends AppLocalizations {
   String get reportClose => 'Isara';
 
   @override
-  String get listAddToList => 'Idagdag sa Listahan';
-
-  @override
   String listVideoCount(int count) {
     return '$count mga video';
   }
 
   @override
-  String listPersonCount(int count) {
+  String get listAddToLists => 'Idagdag sa mga list';
+
+  @override
+  String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count tao',
-      one: '$count tao',
+      other: '$count miyembro',
+      one: '$count miyembro',
     );
     return '$_temp0';
   }
@@ -4946,23 +4913,10 @@ class AppLocalizationsFil extends AppLocalizations {
   String get listByAuthorPrefix => 'Ni ';
 
   @override
-  String get listNewList => 'Bagong Listahan';
-
-  @override
   String get listDone => 'Tapos na';
 
   @override
   String get listErrorLoading => 'Error sa pag-load ng listahan';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'Inalis sa $name';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'Naidagdag sa $name';
-  }
 
   @override
   String get listCreateNewList => 'Gumawa ng Bagong Listahan';
@@ -4986,11 +4940,10 @@ class AppLocalizationsFil extends AppLocalizations {
   String get listDescriptionLabel => 'Description (opsyonal)';
 
   @override
-  String get listPublicList => 'Public na Listahan';
+  String get listMakePublicLabel => 'Gawing public';
 
   @override
-  String get listPublicListSubtitle =>
-      'Puwedeng i-follow at makita ng iba ang listahang ito';
+  String get listMakePublicSubtitle => 'Hayaang makita ng iba ang list na ito';
 
   @override
   String get listPrivateListSubtitle =>
@@ -5005,9 +4958,6 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'Wala pang list. Gumawa ng isa para sa mga loop na gusto mong pagsama-samahin.';
-
-  @override
-  String get listEditTitle => 'I-edit ang list';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5056,6 +5006,56 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Pribado, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Naglo-load ng mga list';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted loop',
+      one: '$formatted loop',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsViewAllMembers => 'Tingnan lahat';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tao',
+      one: '$count tao',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'Walang lumabas na list ngayon. Hilahin pababa para mag-refresh.';
+
+  @override
   String get listShareAction => 'I-share ang list';
 
   @override
@@ -5098,9 +5098,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name sa Divine';
   }
-
-  @override
-  String get listCancel => 'Kanselahin';
 
   @override
   String get listCreate => 'Gumawa';
@@ -6173,32 +6170,6 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Hindi na-update ang subscription. Subukan ulit.';
-
-  @override
-  String get discoverListsTitle => 'Tuklasin ang mga Listahan';
-
-  @override
-  String get discoverListsFailedToLoad => 'Hindi na-load ang mga listahan';
-
-  @override
-  String get discoverListsLoading => 'Naghahanap ng mga public list...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Hindi nagbalik ng mga list ang relay sa oras. Subukan ulit.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Hindi available ang serbisyo.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Walang nakitang public list';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'Bumalik mamaya para sa mga bagong listahan';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'ni';
 
   @override
   String get curatedListEmptyTitle => 'Walang video sa listahang ito';

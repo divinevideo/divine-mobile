@@ -586,15 +586,6 @@
   "featuredTabLoadFailed": "Koleksi ini tidak dapat dimuatkan.",
   "featuredTabRetry": "Cuba lagi",
   "exploreNoVideosAvailable": "Tiada video tersedia",
-  "exploreDiscoverLists": "Terokai Senarai",
-  "exploreAboutLists": "Perihal Senarai",
-  "exploreAboutListsDescription": "Senarai membantu anda menyusun dan mengurus kandungan Divine dalam dua cara:",
-  "explorePeopleLists": "Senarai Orang",
-  "explorePeopleListsDescription": "Ikut kumpulan pencipta dan lihat video terbaharu mereka",
-  "exploreVideoLists": "Senarai Video",
-  "exploreVideoListsDescription": "Cipta senarai main video kegemaran anda untuk ditonton nanti",
-  "exploreMyLists": "Senarai Saya",
-  "exploreSubscribedLists": "Senarai Langganan",
   "exploreErrorLoadingLists": "Ralat memuatkan senarai. Sila cuba lagi.",
   "exploreNewVideosCount": "{count, plural, =1{1 video baharu} other{{count} video baharu}}",
   "@exploreNewVideosCount": {
@@ -1907,10 +1898,8 @@
     }
   },
   "peopleListsAddToList": "Tambah ke senarai",
-  "peopleListsSheetTitle": "Tambah ke senarai",
   "peopleListsEmptyTitle": "Belum ada senarai",
   "peopleListsEmptySubtitle": "Cipta senarai untuk mula mengumpulkan orang.",
-  "peopleListsCreateList": "Cipta senarai",
   "peopleListsNewListTitle": "Senarai baharu",
   "peopleListsRouteTitle": "Senarai orang",
   "@peopleListsRouteTitle": {
@@ -1929,10 +1918,8 @@
   "peopleListsNoPeopleSubtitle": "Tambah beberapa orang untuk bermula",
   "peopleListsNoVideosTitle": "Belum ada video",
   "peopleListsNoVideosSubtitle": "Video daripada ahli senarai akan muncul di sini",
-  "peopleListsNoVideosAvailable": "Tiada video tersedia",
   "peopleListsFailedToLoadVideos": "Gagal memuatkan video",
   "peopleListsVideoNotAvailable": "Video tidak tersedia",
-  "peopleListsBackToGridTooltip": "Kembali ke grid",
   "peopleListsErrorLoadingVideos": "Ralat memuatkan video",
   "peopleListsNoPeopleToAdd": "Tiada orang tersedia untuk ditambah.",
   "peopleListsAddToListName": "Tambah ke {name}",
@@ -1943,18 +1930,27 @@
       }
     }
   },
-  "peopleListsAddPeopleSearchHint": "Cari orang",
-  "peopleListsAddPeopleError": "Tidak dapat memuatkan orang. Sila cuba lagi.",
-  "peopleListsAddPeopleRetry": "Cuba lagi",
-  "peopleListsAddButton": "Tambah",
-  "peopleListsAddButtonWithCount": "Tambah {count}",
-  "@peopleListsAddButtonWithCount": {
+  "peopleListsAddPersonSemanticLabel": "Tambah {name} ke senarai",
+  "@peopleListsAddPersonSemanticLabel": {
     "placeholders": {
-      "count": {
-        "type": "int"
+      "name": {
+        "type": "String"
       }
     }
   },
+  "peopleListsRemovePersonSemanticLabel": "Alih keluar {name} daripada senarai",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "Tidak dapat mengemas kini senarai. Sila cuba lagi.",
+  "peopleListsAddPeopleSearchHint": "Cari orang",
+  "peopleListsAddPeopleError": "Tidak dapat memuatkan orang. Sila cuba lagi.",
+  "peopleListsAddPeopleRetry": "Cuba lagi",
+  "peopleListsLoadFailed": "Tidak dapat memuatkan senarai ini.",
   "peopleListsInNLists": "{count, plural, =1{Dalam 1 senarai} other{Dalam {count} senarai}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -2381,7 +2377,6 @@
   "reportLearnMoreAt": "Ketahui lebih lanjut di",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "Tutup",
-  "listAddToList": "Tambah ke Senarai",
   "listVideoCount": "{count} video",
   "@listVideoCount": {
     "placeholders": {
@@ -2390,8 +2385,9 @@
       }
     }
   },
-  "listPersonCount": "{count, plural, =1{1 orang} other{{count} orang}}",
-  "@listPersonCount": {
+  "listAddToLists": "Tambah ke senarai",
+  "listMemberCount": "{count, plural, =1{{count} ahli} other{{count} ahli}}",
+  "@listMemberCount": {
     "placeholders": {
       "count": {
         "type": "int"
@@ -2399,25 +2395,8 @@
     }
   },
   "listByAuthorPrefix": "Oleh ",
-  "listNewList": "Senarai Baharu",
   "listDone": "Siap",
   "listErrorLoading": "Ralat memuatkan senarai",
-  "listRemovedFrom": "Dialih keluar daripada {name}",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "Ditambah ke {name}",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "Cipta Senarai Baharu",
   "listNewPeopleList": "Senarai orang baharu",
   "listCollaboratorsNone": "Tiada",
@@ -2425,13 +2404,50 @@
   "listCollaboratorSearchHint": "Cari Divine...",
   "listNameLabel": "Nama Senarai",
   "listDescriptionLabel": "Keterangan (pilihan)",
-  "listPublicList": "Senarai Awam",
-  "listPublicListSubtitle": "Orang lain boleh mengikuti dan melihat senarai ini",
+  "listMakePublicLabel": "Jadikan awam",
+  "listMakePublicSubtitle": "Benarkan orang lain melihat senarai ini",
   "listPrivateListSubtitle": "Video kekal peribadi. Nama, keterangan, tag dan kulit kekal kelihatan.",
   "listVisibilityPublic": "Awam",
   "listVisibilityPrivate": "Peribadi",
   "profileListsEmpty": "Belum ada senarai. Buat satu untuk loop yang anda mahu simpan bersama.",
-  "listEditTitle": "Edit senarai",
+  "listMemberNamesSeparator": ", ",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Peribadi, {count}} other{{name}, {count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "listsDiscoveryLoadingLabel": "Memuatkan senarai",
+  "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loop}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsViewAllMembers": "Lihat semua",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} orang} other{{count} orang}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listsDiscoveryEmpty": "Tiada senarai yang muncul kali ini. Tarik untuk muat semula.",
   "listShareAction": "Kongsi senarai",
   "listShareFailed": "Senarai ini tidak dapat dikongsi. Cuba lagi.",
   "listSave": "Simpan",
@@ -2460,7 +2476,6 @@
       }
     }
   },
-  "listCancel": "Batal",
   "listCreate": "Cipta",
   "listCreateFailed": "Gagal mencipta senarai",
   "keyManagementTitle": "Kunci Nostr",
@@ -3153,14 +3168,6 @@
     }
   },
   "discoverListsFailedToUpdateSubscription": "Gagal mengemas kini langganan. Sila cuba lagi.",
-  "discoverListsTitle": "Terokai Senarai",
-  "discoverListsFailedToLoad": "Gagal memuatkan senarai",
-  "discoverListsLoading": "Menemui senarai awam...",
-  "discoverListsRelayTimeout": "Relay tidak memulangkan senarai tepat pada masanya. Cuba lagi.",
-  "discoverListsServiceUnavailable": "Perkhidmatan tidak tersedia.",
-  "discoverListsEmptyTitle": "Tiada senarai awam ditemui",
-  "discoverListsEmptySubtitle": "Semak semula nanti untuk senarai baharu",
-  "discoverListsByAuthorPrefix": "oleh",
   "curatedListEmptyTitle": "Tiada video dalam senarai ini",
   "curatedListEmptySubtitle": "Tambah beberapa video untuk bermula",
   "curatedListLoadingVideos": "Memuatkan video...",
