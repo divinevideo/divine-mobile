@@ -496,7 +496,12 @@ class _ExploreCreationHeader extends ConsumerWidget {
         DivineButton(
           leadingIcon: .plus,
           label: context.l10n.listNewVideoList,
-          onPressed: () => showListInfoSheet(context),
+          onPressed: () => runDetached(
+            showListInfoSheet(context),
+            'open list creation sheet',
+            logName: 'ExploreListsTab',
+            category: LogCategory.ui,
+          ),
         ),
         const SizedBox(height: 16),
       ],
