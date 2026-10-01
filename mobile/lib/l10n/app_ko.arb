@@ -2605,8 +2605,6 @@
   "peopleListsAddToListName": "{name}에 추가",
   "peopleListsAddPeopleError": "사람을 불러올 수 없습니다. 다시 시도해 주세요.",
   "peopleListsAddPeopleRetry": "다시 시도",
-  "peopleListsAddButton": "추가",
-  "peopleListsAddButtonWithCount": "{count}명 추가",
   "peopleListsInNLists": "{count, plural, other{{count}개 목록에 포함}}",
   "peopleListsRemoveConfirmTitle": "{name}을(를) 삭제하시겠습니까?",
   "peopleListsRemoveConfirmBody": "이 목록에서 삭제됩니다.",
@@ -5025,5 +5023,23 @@
   "listsDiscoveryEmpty": "이번엔 목록이 하나도 안 나왔어요. 당겨서 새로고침하세요.",
   "listSearchPeopleUnavailable": "지금은 사용자 목록을 이용할 수 없어요.",
   "listSearchVideosUnavailable": "지금은 동영상 목록을 이용할 수 없어요.",
-  "authAccountCleanupFailed": "이전 계정의 데이터를 지울 수 없어요. 다시 시도해 주세요."
+  "authAccountCleanupFailed": "이전 계정의 데이터를 지울 수 없어요. 다시 시도해 주세요.",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsAddPersonSemanticLabel": "목록에 {name} 추가",
+  "peopleListsRemovePersonSemanticLabel": "목록에서 {name} 삭제",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "목록을 업데이트하지 못했어요. 다시 시도해 주세요.",
+  "peopleListsAddPeopleSearchHint": "사람 검색"
 }

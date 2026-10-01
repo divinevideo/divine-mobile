@@ -3908,14 +3908,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'እንደገና ይሞክሩ';
 
   @override
-  String get peopleListsAddButton => 'አክል';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'አክል $count';
-  }
-
-  @override
   String peopleListsInNLists(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -12740,4 +12732,21 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get authAccountCleanupFailed =>
       'የቀድሞውን መለያ ውሂብ ማጽዳት አልተቻለም። እንደገና ሞክር።';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '$nameን ወደ ዝርዝር ያክሉ';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'ዝርዝሩን ማዘመን አልተቻለም። እባክዎ እንደገና ይሞክሩ።';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '$nameን ከዝርዝር ያስወግዱ';
+  }
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'ሰዎችን ፈልግ';
 }

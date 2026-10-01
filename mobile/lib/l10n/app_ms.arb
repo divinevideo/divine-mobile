@@ -737,11 +737,17 @@
     "description": "Snackbar shown when tapping Verify age on an age-restricted video and the remote signer didn't respond in time (timeout). Distinct from videoErrorVerifyAgeFailed because the remedy is checking connectivity, not re-verifying age."
   },
   "videoErrorAdultContentHiddenTitle": "Kandungan dewasa dimatikan",
-  "@videoErrorAdultContentHiddenTitle": {"description": "Title of the bottom sheet shown when an age-verified viewer taps Verify age on an age-restricted video but their Content Filters keep adult content hidden."},
+  "@videoErrorAdultContentHiddenTitle": {
+    "description": "Title of the bottom sheet shown when an age-verified viewer taps Verify age on an age-restricted video but their Content Filters keep adult content hidden."
+  },
   "videoErrorAdultContentHiddenBody": "Hidupkan dalam Penapis Kandungan anda untuk menonton video ini.",
-  "@videoErrorAdultContentHiddenBody": {"description": "Body of the adult-content-hidden sheet. The remedy is switching adult content on in Content Filters, not re-verifying age."},
+  "@videoErrorAdultContentHiddenBody": {
+    "description": "Body of the adult-content-hidden sheet. The remedy is switching adult content on in Content Filters, not re-verifying age."
+  },
   "videoErrorAdultContentHiddenAction": "Buka Penapis Kandungan",
-  "@videoErrorAdultContentHiddenAction": {"description": "Primary button on the adult-content-hidden sheet; opens the Content Filters settings screen."},
+  "@videoErrorAdultContentHiddenAction": {
+    "description": "Primary button on the adult-content-hidden sheet; opens the Content Filters settings screen."
+  },
   "videoDetailLoadError": "Gagal memuatkan video",
   "videoDetailLoadErrorBody": "Ada yang tak kena dalam perjalanan. Cuba lagi.",
   "videoDetailNotFoundBody": "Mungkin ia dipadam, di luar capaian, atau disembunyikan oleh tetapan anda.",
@@ -1965,15 +1971,6 @@
   },
   "peopleListsAddPeopleError": "Tidak dapat memuatkan orang. Sila cuba lagi.",
   "peopleListsAddPeopleRetry": "Cuba lagi",
-  "peopleListsAddButton": "Tambah",
-  "peopleListsAddButtonWithCount": "Tambah {count}",
-  "@peopleListsAddButtonWithCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "peopleListsInNLists": "{count, plural, =1{Dalam 1 senarai} other{Dalam {count} senarai}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -3596,7 +3593,13 @@
   "inboxRequestsRemoveAll": "Alih keluar semua permintaan",
   "messageRequestDeclineAndRemoveButton": "Tolak dan alih keluar",
   "messageRequestDeclinedSnackbar": "Permintaan {displayName} ditolak",
-  "@messageRequestDeclinedSnackbar": {"placeholders": {"displayName": {"type": "String"}}},
+  "@messageRequestDeclinedSnackbar": {
+    "placeholders": {
+      "displayName": {
+        "type": "String"
+      }
+    }
+  },
   "messageRequestLoadFailed": "Permintaan ini tidak dapat dimuatkan.",
   "messageRequestFollowersCount": "{count} Pengikut",
   "@messageRequestFollowersCount": {
@@ -3654,7 +3657,9 @@
   },
   "deleteAccountDeleteAllContentButton": "Padam Semua Kandungan",
   "deleteAccountDeletionUnavailable": "Pemadaman akaun tidak tersedia buat masa ini. Tiada apa-apa yang dipadamkan.",
-  "@deleteAccountDeletionUnavailable": {"description": "Error shown when account deletion cannot start because the deletion coordinator is unavailable; no destructive deletion has occurred."},
+  "@deleteAccountDeletionUnavailable": {
+    "description": "Error shown when account deletion cannot start because the deletion coordinator is unavailable; no destructive deletion has occurred."
+  },
   "deleteAccountDeletionIncomplete": "Kami tidak dapat melengkapkan pemadaman akaun anda. Cuba lagi.",
   "@deleteAccountDeletionIncomplete": {
     "description": "Neutral error when account deletion could not complete and the username-burn state is uncertain (an unresolved network timeout). Makes no claim about the username; retrying resolves it."
@@ -3969,12 +3974,18 @@
   "blueskyEnabledSubtitle": "Video anda akan diterbitkan ke Bluesky",
   "blueskyDisabledSubtitle": "Video anda tidak akan diterbitkan ke Bluesky",
   "blueskyBackfillDisclosureTitle": "Video lama anda juga akan disiarkan",
-  "@blueskyBackfillDisclosureTitle": {"description": "Title for the Bluesky publishing disclosure explaining historical videos are backfilled when crossposting is enabled."},
+  "@blueskyBackfillDisclosureTitle": {
+    "description": "Title for the Bluesky publishing disclosure explaining historical videos are backfilled when crossposting is enabled."
+  },
   "blueskyBackfillDisclosureSubtitle": "Apabila anda menghidupkan ini, Divine akan mula menghantar video lama anda ke Bluesky, yang paling lama dahulu, tanpa tergesa-gesa mengejar had harian.",
-  "@blueskyBackfillDisclosureSubtitle": {"description": "Body text for the Bluesky publishing disclosure explaining that enabling crossposting starts a historical video backfill."},
+  "@blueskyBackfillDisclosureSubtitle": {
+    "description": "Body text for the Bluesky publishing disclosure explaining that enabling crossposting starts a historical video backfill."
+  },
   "blueskyHandle": "Handle Bluesky",
   "blueskyDid": "DID Bluesky",
-  "@blueskyDid": {"description": "Label for the ATProto DID shown when a Bluesky account is provisioned."},
+  "@blueskyDid": {
+    "description": "Label for the ATProto DID shown when a Bluesky account is provisioned."
+  },
   "blueskyStatus": "Status",
   "blueskyStatusReady": "Akaun diperuntukkan dan sedia",
   "blueskyStatusPending": "Peruntukan akaun sedang berjalan...",
@@ -6255,11 +6266,32 @@
   "crosspostingGenericError": "Ada sesuatu yang tidak kena. Cuba lagi.",
   "crosspostingCallbackTimeoutError": "Halaman log masuk tidak pernah membalas. Jika anda sudah selesai menyambung di sana, muat semula — akaun anda mungkin sudah dipautkan.",
   "crosspostingConnectionSuccess": "{platform} disambungkan",
-  "@crosspostingConnectionSuccess": {"description": "Snackbar after returning from a successful platform connection.", "placeholders": {"platform": {"type": "String"}}},
+  "@crosspostingConnectionSuccess": {
+    "description": "Snackbar after returning from a successful platform connection.",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
   "crosspostingConnectionFailed": "Tidak dapat menyambungkan {platform}",
-  "@crosspostingConnectionFailed": {"description": "Snackbar after returning from a failed platform connection.", "placeholders": {"platform": {"type": "String"}}},
+  "@crosspostingConnectionFailed": {
+    "description": "Snackbar after returning from a failed platform connection.",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
   "crosspostingConnectionDenied": "Sambungan dibatalkan pada {platform}",
-  "@crosspostingConnectionDenied": {"description": "Snackbar when the user denied the connection on the provider's page.", "placeholders": {"platform": {"type": "String"}}},
+  "@crosspostingConnectionDenied": {
+    "description": "Snackbar when the user denied the connection on the provider's page.",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
   "supporterTitle": "Penyokong Divine",
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."
@@ -6353,9 +6385,21 @@
   "soundSharedAs": "Dikongsi sebagai",
   "soundOwnWork": "Saya yang buat bunyi ini",
   "soundCreatorBy": "Oleh {creator}",
-  "@soundCreatorBy": {"placeholders": {"creator": {"type": "String"}}},
+  "@soundCreatorBy": {
+    "placeholders": {
+      "creator": {
+        "type": "String"
+      }
+    }
+  },
   "soundSharedBy": "Dikongsi oleh {publisher}",
-  "@soundSharedBy": {"placeholders": {"publisher": {"type": "String"}}},
+  "@soundSharedBy": {
+    "placeholders": {
+      "publisher": {
+        "type": "String"
+      }
+    }
+  },
   "soundRemixingAllowed": "Remix dibenarkan",
   "soundCreditOnly": "Kredit sahaja",
   "soundCreditTitleLabel": "Tajuk bunyi",
@@ -6601,17 +6645,39 @@
   "videoMetadataScheduleButton": "Jadualkan",
   "videoMetadataScheduleVideoHint": "Menjadualkan video ini untuk {time}",
   "crosspostingBenefitTitle": "Bawa loop anda ke merata tempat",
-  "@crosspostingBenefitTitle": {"description": "Headline of the crossposting benefit card in settings"},
+  "@crosspostingBenefitTitle": {
+    "description": "Headline of the crossposting benefit card in settings"
+  },
   "crosspostingBenefitBody": "Siarkan sekali di Divine, kongsi terus ke Instagram. Orang anda sudah ada di sana — pergi jumpa mereka. Setiap loop yang anda hantar membawa pautan kecil pulang, supaya pencipta seterusnya juga jumpa kami.",
-  "@crosspostingBenefitBody": {"description": "Body of the crossposting benefit card in settings"},
+  "@crosspostingBenefitBody": {
+    "description": "Body of the crossposting benefit card in settings"
+  },
   "crosspostingBenefitConnect": "Sambung {platform}",
-  "@crosspostingBenefitConnect": {"description": "Primary action on the crossposting benefit card", "placeholders": {"platform": {"type": "String"}}},
+  "@crosspostingBenefitConnect": {
+    "description": "Primary action on the crossposting benefit card",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
   "crosspostingAutoTitle": "Tetapkan sekali sahaja",
-  "@crosspostingAutoTitle": {"description": "Headline of the automatic crossposting encouragement card"},
+  "@crosspostingAutoTitle": {
+    "description": "Headline of the automatic crossposting encouragement card"
+  },
   "crosspostingAutoBody": "Setiap loop baharu yang anda siarkan dihantar ke {platform} untuk anda — tanpa ketikan tambahan. Hanya terpakai untuk loop yang anda terbitkan selepas menghidupkannya.",
-  "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
+  "@crosspostingAutoBody": {
+    "description": "Body of the automatic crossposting encouragement card",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
   "crosspostingAutoEnable": "Hidupkan automatik",
-  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+  "@crosspostingAutoEnable": {
+    "description": "Action that switches a platform to automatic crossposting"
+  },
   "analyticsConnectionIssue": "Analitik Pencipta tidak dapat disambungkan. Semak sambungan anda dan cuba lagi.",
   "analyticsDiagnosticsFailedSources": "Sumber yang gagal: {sources}",
   "analyticsServerUnavailable": "Analitik Pencipta sedang mengalami masalah pelayan. Cuba lagi sebentar lagi.",
@@ -6708,5 +6774,23 @@
   "listsDiscoveryEmpty": "Tiada senarai yang muncul kali ini. Tarik untuk muat semula.",
   "listSearchPeopleUnavailable": "Senarai orang tidak tersedia buat masa ini.",
   "listSearchVideosUnavailable": "Senarai video tidak tersedia buat masa ini.",
-  "authAccountCleanupFailed": "Data akaun sebelumnya tidak dapat dipadamkan. Cuba lagi."
+  "authAccountCleanupFailed": "Data akaun sebelumnya tidak dapat dipadamkan. Cuba lagi.",
+  "peopleListsAddPersonSemanticLabel": "Tambah {name} ke senarai",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "Alih keluar {name} daripada senarai",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "Tidak dapat mengemas kini senarai. Sila cuba lagi.",
+  "peopleListsAddPeopleSearchHint": "Cari orang"
 }

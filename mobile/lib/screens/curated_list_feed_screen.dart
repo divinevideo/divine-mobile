@@ -26,6 +26,7 @@ import 'package:openvine/utils/share_list_link.dart';
 import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/follow_list_button.dart';
+import 'package:openvine/widgets/list_owner_action_tile.dart';
 import 'package:openvine/widgets/list_video_player_mode.dart';
 import 'package:openvine/widgets/rounded_grid_viewport.dart';
 import 'package:openvine/widgets/share_list_button.dart';
@@ -449,13 +450,13 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
       expanded: false,
       scrollable: false,
       children: [
-        _OwnerActionTile(
+        ListOwnerActionTile(
           identifier: 'list_edit_info_option',
           label: context.l10n.listEditInfoAction,
           icon: DivineIconName.info,
           action: _CuratedListAction.editInfo,
         ),
-        _OwnerActionTile(
+        ListOwnerActionTile(
           identifier: 'list_manage_posts_option',
           label: context.l10n.listManageVideosAction,
           icon: DivineIconName.pencilSimple,
@@ -463,13 +464,13 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
           enabled: canManagePosts,
         ),
         if (isShareable)
-          _OwnerActionTile(
+          ListOwnerActionTile(
             identifier: 'list_share_option',
             label: context.l10n.listShareAction,
             icon: DivineIconName.share,
             action: _CuratedListAction.share,
           ),
-        _OwnerActionTile(
+        ListOwnerActionTile(
           identifier: 'list_delete_option',
           label: context.l10n.listDeleteAction,
           icon: DivineIconName.trash,
@@ -788,77 +789,6 @@ class _ListAuthorAttribution extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// One row of the owner actions sheet; pops the sheet with its [action].
-///
-/// A disabled row renders muted and ignores taps instead of hiding, so the
-/// owner can still see the option exists.
-class _OwnerActionTile extends StatelessWidget {
-  const _OwnerActionTile({
-    required this.identifier,
-    required this.label,
-    required this.icon,
-    required this.action,
-    this.isDestructive = false,
-    this.enabled = true,
-  });
-
-  final String identifier;
-  final String label;
-  final DivineIconName icon;
-  final _CuratedListAction action;
-  final bool isDestructive;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    // onErrorContainer, not fixed likeRed/error: the sheet surface follows
-    // the palette and the token keeps destructive contrast in both
-    // appearances (#7147, matching the comment options sheet).
-    final Color color;
-    if (!enabled) {
-      color = context.vineColors.onSurfaceMuted;
-    } else if (isDestructive) {
-      color = context.vineColors.onErrorContainer;
-    } else {
-      color = context.vineColors.onSurface;
-    }
-
-    void select() => Navigator.of(context).pop(action);
-
-    return Semantics(
-      identifier: identifier,
-      button: true,
-      enabled: enabled,
-      label: label,
-      // excludeSemantics drops the child subtree — including the
-      // GestureDetector's tap action — so the action is re-declared here.
-      onTap: enabled ? select : null,
-      excludeSemantics: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: enabled ? select : null,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            spacing: 16,
-            children: [
-              DivineIcon(icon: icon, color: color),
-              Expanded(
-                child: Text(
-                  label,
-                  style: VineTheme.titleMediumFont(color: color),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

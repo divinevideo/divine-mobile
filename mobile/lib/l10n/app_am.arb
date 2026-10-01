@@ -1793,15 +1793,6 @@
   },
   "peopleListsAddPeopleError": "ሰዎችን መጫን አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
   "peopleListsAddPeopleRetry": "እንደገና ይሞክሩ",
-  "peopleListsAddButton": "አክል",
-  "peopleListsAddButtonWithCount": "አክል {count}",
-  "@peopleListsAddButtonWithCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "peopleListsInNLists": "{count, plural, =1{በ{count} ዝርዝር ውስጥ} other{በ{count} ዝርዝሮች ውስጥ}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -5563,5 +5554,23 @@
   "listsDiscoveryEmpty": "በዚህ ጊዜ ምንም ዝርዝሮች አልተገኙም። ለማደስ ወደታች ይጎትቱ።",
   "listSearchPeopleUnavailable": "የሰዎች ዝርዝሮች በአሁኑ ጊዜ አይገኙም።",
   "listSearchVideosUnavailable": "የቪዲዮ ዝርዝሮች በአሁኑ ጊዜ አይገኙም።",
-  "authAccountCleanupFailed": "የቀድሞውን መለያ ውሂብ ማጽዳት አልተቻለም። እንደገና ሞክር።"
+  "authAccountCleanupFailed": "የቀድሞውን መለያ ውሂብ ማጽዳት አልተቻለም። እንደገና ሞክር።",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsAddPersonSemanticLabel": "{name}ን ወደ ዝርዝር ያክሉ",
+  "peopleListsRemovePersonSemanticLabel": "{name}ን ከዝርዝር ያስወግዱ",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "ዝርዝሩን ማዘመን አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
+  "peopleListsAddPeopleSearchHint": "ሰዎችን ፈልግ"
 }

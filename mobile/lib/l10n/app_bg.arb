@@ -1552,15 +1552,6 @@
   },
   "peopleListsAddPeopleError": "Не успяхме да заредим хората. Опитай пак.",
   "peopleListsAddPeopleRetry": "Опитай пак",
-  "peopleListsAddButton": "Добави",
-  "peopleListsAddButtonWithCount": "Добави {count}",
-  "@peopleListsAddButtonWithCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "peopleListsInNLists": "{count, plural, =1{В 1 списък} other{В {count} списъка}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -5603,5 +5594,23 @@
   "listsDiscoveryEmpty": "Този път не изскочи нито един списък. Дръпни надолу за обновяване.",
   "listSearchPeopleUnavailable": "Списъците с хора не са достъпни в момента.",
   "listSearchVideosUnavailable": "Списъците с видеа не са достъпни в момента.",
-  "authAccountCleanupFailed": "Данните на предишния акаунт не могат да бъдат изчистени. Опитай отново."
+  "authAccountCleanupFailed": "Данните на предишния акаунт не могат да бъдат изчистени. Опитай отново.",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsAddPersonSemanticLabel": "Добави {name} към списъка",
+  "peopleListsRemovePersonSemanticLabel": "Премахни {name} от списъка",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "Не успяхме да обновим списъка. Опитай пак.",
+  "peopleListsAddPeopleSearchHint": "Търси хора"
 }

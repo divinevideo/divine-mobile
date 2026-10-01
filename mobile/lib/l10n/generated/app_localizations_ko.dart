@@ -3757,14 +3757,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get peopleListsAddPeopleRetry => '다시 시도';
 
   @override
-  String get peopleListsAddButton => '추가';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return '$count명 추가';
-  }
-
-  @override
   String peopleListsInNLists(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -12441,4 +12433,21 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get authAccountCleanupFailed => '이전 계정의 데이터를 지울 수 없어요. 다시 시도해 주세요.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '목록에 $name 추가';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      '목록을 업데이트하지 못했어요. 다시 시도해 주세요.';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '목록에서 $name 삭제';
+  }
+
+  @override
+  String get peopleListsAddPeopleSearchHint => '사람 검색';
 }

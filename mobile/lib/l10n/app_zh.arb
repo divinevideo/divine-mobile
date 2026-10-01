@@ -737,11 +737,17 @@
     "description": "Snackbar shown when tapping Verify age on an age-restricted video and the remote signer didn't respond in time (timeout). Distinct from videoErrorVerifyAgeFailed because the remedy is checking connectivity, not re-verifying age."
   },
   "videoErrorAdultContentHiddenTitle": "成人内容已关闭",
-  "@videoErrorAdultContentHiddenTitle": {"description": "Title of the bottom sheet shown when an age-verified viewer taps Verify age on an age-restricted video but their Content Filters keep adult content hidden."},
+  "@videoErrorAdultContentHiddenTitle": {
+    "description": "Title of the bottom sheet shown when an age-verified viewer taps Verify age on an age-restricted video but their Content Filters keep adult content hidden."
+  },
   "videoErrorAdultContentHiddenBody": "在内容过滤中开启后就能看这个视频了。",
-  "@videoErrorAdultContentHiddenBody": {"description": "Body of the adult-content-hidden sheet. The remedy is switching adult content on in Content Filters, not re-verifying age."},
+  "@videoErrorAdultContentHiddenBody": {
+    "description": "Body of the adult-content-hidden sheet. The remedy is switching adult content on in Content Filters, not re-verifying age."
+  },
   "videoErrorAdultContentHiddenAction": "打开内容过滤",
-  "@videoErrorAdultContentHiddenAction": {"description": "Primary button on the adult-content-hidden sheet; opens the Content Filters settings screen."},
+  "@videoErrorAdultContentHiddenAction": {
+    "description": "Primary button on the adult-content-hidden sheet; opens the Content Filters settings screen."
+  },
   "videoDetailLoadError": "视频加载失败",
   "videoDetailLoadErrorBody": "路上出了点岔子，再试一次吧。",
   "videoDetailNotFoundBody": "可能被删了，可能够不到，也可能被你的设置隐藏了。",
@@ -1965,15 +1971,6 @@
   },
   "peopleListsAddPeopleError": "加载用户失败，请重试。",
   "peopleListsAddPeopleRetry": "再试一次",
-  "peopleListsAddButton": "添加",
-  "peopleListsAddButtonWithCount": "添加 {count} 人",
-  "@peopleListsAddButtonWithCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "peopleListsInNLists": "{count, plural, =1{已在 1 个列表中} other{已在 {count} 个列表中}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -3596,7 +3593,13 @@
   "inboxRequestsRemoveAll": "移除所有请求",
   "messageRequestDeclineAndRemoveButton": "拒绝并移除",
   "messageRequestDeclinedSnackbar": "已拒绝 {displayName} 的请求",
-  "@messageRequestDeclinedSnackbar": {"placeholders": {"displayName": {"type": "String"}}},
+  "@messageRequestDeclinedSnackbar": {
+    "placeholders": {
+      "displayName": {
+        "type": "String"
+      }
+    }
+  },
   "messageRequestLoadFailed": "无法加载此请求。",
   "messageRequestFollowersCount": "{count} 位粉丝",
   "@messageRequestFollowersCount": {
@@ -3654,7 +3657,9 @@
   },
   "deleteAccountDeleteAllContentButton": "删除所有内容",
   "deleteAccountDeletionUnavailable": "账号删除功能目前不可用。未删除任何内容。",
-  "@deleteAccountDeletionUnavailable": {"description": "Error shown when account deletion cannot start because the deletion coordinator is unavailable; no destructive deletion has occurred."},
+  "@deleteAccountDeletionUnavailable": {
+    "description": "Error shown when account deletion cannot start because the deletion coordinator is unavailable; no destructive deletion has occurred."
+  },
   "deleteAccountDeletionIncomplete": "我们没能完成账号删除，请重试。",
   "@deleteAccountDeletionIncomplete": {
     "description": "Neutral error when account deletion could not complete and the username-burn state is uncertain (an unresolved network timeout). Makes no claim about the username; retrying resolves it."
@@ -3969,12 +3974,18 @@
   "blueskyEnabledSubtitle": "你的视频将发布到 Bluesky",
   "blueskyDisabledSubtitle": "你的视频不会发布到 Bluesky",
   "blueskyBackfillDisclosureTitle": "你以前的视频也会发布",
-  "@blueskyBackfillDisclosureTitle": {"description": "Title for the Bluesky publishing disclosure explaining historical videos are backfilled when crossposting is enabled."},
+  "@blueskyBackfillDisclosureTitle": {
+    "description": "Title for the Bluesky publishing disclosure explaining historical videos are backfilled when crossposting is enabled."
+  },
   "blueskyBackfillDisclosureSubtitle": "开启后，Divine 会开始把你的旧视频发送到 Bluesky，从最早的视频开始，不会急着用完每日限额。",
-  "@blueskyBackfillDisclosureSubtitle": {"description": "Body text for the Bluesky publishing disclosure explaining that enabling crossposting starts a historical video backfill."},
+  "@blueskyBackfillDisclosureSubtitle": {
+    "description": "Body text for the Bluesky publishing disclosure explaining that enabling crossposting starts a historical video backfill."
+  },
   "blueskyHandle": "Bluesky 用户名",
   "blueskyDid": "Bluesky DID",
-  "@blueskyDid": {"description": "Label for the ATProto DID shown when a Bluesky account is provisioned."},
+  "@blueskyDid": {
+    "description": "Label for the ATProto DID shown when a Bluesky account is provisioned."
+  },
   "blueskyStatus": "状态",
   "blueskyStatusReady": "账号已就绪",
   "blueskyStatusPending": "账号配置中...",
@@ -6255,11 +6266,32 @@
   "crosspostingGenericError": "出了点问题，再试一次。",
   "crosspostingCallbackTimeoutError": "登录页面一直没有回应。如果你已经在那边连接好了，刷新一下 —— 你的账号可能已经关联了。",
   "crosspostingConnectionSuccess": "已连接 {platform}",
-  "@crosspostingConnectionSuccess": {"description": "Snackbar after returning from a successful platform connection.", "placeholders": {"platform": {"type": "String"}}},
+  "@crosspostingConnectionSuccess": {
+    "description": "Snackbar after returning from a successful platform connection.",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
   "crosspostingConnectionFailed": "无法连接 {platform}",
-  "@crosspostingConnectionFailed": {"description": "Snackbar after returning from a failed platform connection.", "placeholders": {"platform": {"type": "String"}}},
+  "@crosspostingConnectionFailed": {
+    "description": "Snackbar after returning from a failed platform connection.",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
   "crosspostingConnectionDenied": "已在 {platform} 上取消连接",
-  "@crosspostingConnectionDenied": {"description": "Snackbar when the user denied the connection on the provider's page.", "placeholders": {"platform": {"type": "String"}}},
+  "@crosspostingConnectionDenied": {
+    "description": "Snackbar when the user denied the connection on the provider's page.",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
   "supporterTitle": "Divine 支持者",
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."
@@ -6353,9 +6385,21 @@
   "soundSharedAs": "分享为",
   "soundOwnWork": "这个声音是我做的",
   "soundCreatorBy": "作者：{creator}",
-  "@soundCreatorBy": {"placeholders": {"creator": {"type": "String"}}},
+  "@soundCreatorBy": {
+    "placeholders": {
+      "creator": {
+        "type": "String"
+      }
+    }
+  },
   "soundSharedBy": "由 {publisher} 分享",
-  "@soundSharedBy": {"placeholders": {"publisher": {"type": "String"}}},
+  "@soundSharedBy": {
+    "placeholders": {
+      "publisher": {
+        "type": "String"
+      }
+    }
+  },
   "soundRemixingAllowed": "允许混剪",
   "soundCreditOnly": "仅署名",
   "soundCreditTitleLabel": "声音标题",
@@ -6601,17 +6645,39 @@
   "videoMetadataScheduleButton": "定时发布",
   "videoMetadataScheduleVideoHint": "把这条视频定时到 {time}",
   "crosspostingBenefitTitle": "把你的循环带到各处",
-  "@crosspostingBenefitTitle": {"description": "Headline of the crossposting benefit card in settings"},
+  "@crosspostingBenefitTitle": {
+    "description": "Headline of the crossposting benefit card in settings"
+  },
   "crosspostingBenefitBody": "在 Divine 发一次，直接分享到 Instagram。你的人早就在那儿了 —— 去和他们见面吧。你发出的每个循环都带着一个小小的链接回家，让下一位创作者也能找到我们。",
-  "@crosspostingBenefitBody": {"description": "Body of the crossposting benefit card in settings"},
+  "@crosspostingBenefitBody": {
+    "description": "Body of the crossposting benefit card in settings"
+  },
   "crosspostingBenefitConnect": "连接 {platform}",
-  "@crosspostingBenefitConnect": {"description": "Primary action on the crossposting benefit card", "placeholders": {"platform": {"type": "String"}}},
+  "@crosspostingBenefitConnect": {
+    "description": "Primary action on the crossposting benefit card",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
   "crosspostingAutoTitle": "设置一次即可",
-  "@crosspostingAutoTitle": {"description": "Headline of the automatic crossposting encouragement card"},
+  "@crosspostingAutoTitle": {
+    "description": "Headline of the automatic crossposting encouragement card"
+  },
   "crosspostingAutoBody": "你发布的每个新循环都会替你发到 {platform} —— 无需额外点击。仅适用于你开启之后发布的循环。",
-  "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
+  "@crosspostingAutoBody": {
+    "description": "Body of the automatic crossposting encouragement card",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
   "crosspostingAutoEnable": "开启自动",
-  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+  "@crosspostingAutoEnable": {
+    "description": "Action that switches a platform to automatic crossposting"
+  },
   "analyticsConnectionIssue": "创作者数据无法连接。检查你的网络连接后重试。",
   "analyticsDiagnosticsFailedSources": "出错的数据源：{sources}",
   "analyticsServerUnavailable": "创作者数据的服务器出了点问题。请稍后重试。",
@@ -6708,5 +6774,23 @@
   "listsDiscoveryEmpty": "这次没找到列表。下拉刷新试试。",
   "listSearchPeopleUnavailable": "人员列表暂时不可用。",
   "listSearchVideosUnavailable": "视频列表暂时不可用。",
-  "authAccountCleanupFailed": "无法清除上一个账号的数据。请重试。"
+  "authAccountCleanupFailed": "无法清除上一个账号的数据。请重试。",
+  "peopleListsAddPersonSemanticLabel": "把 {name} 加入列表",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "把 {name} 从列表移除",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "无法更新列表，请重试。",
+  "peopleListsAddPeopleSearchHint": "搜索用户"
 }

@@ -25,13 +25,14 @@ import 'package:openvine/utils/share_list_link.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/follow_list_button.dart';
+import 'package:openvine/widgets/list_owner_action_tile.dart';
 import 'package:openvine/widgets/list_video_player_mode.dart';
 import 'package:openvine/widgets/rounded_grid_viewport.dart';
 import 'package:openvine/widgets/share_list_button.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Owner actions offered by the `...` bottom sheet.
-enum _PeopleListAction { edit, delete }
+enum _PeopleListAction { addPeople, edit, delete }
 
 /// Screen that renders a single NIP-51 kind 30000 people list.
 ///
@@ -415,6 +416,52 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
     );
   }
 
+  Future<void> _showOwnerActions(UserList userList) async {
+    final action = await VineBottomSheet.show<_PeopleListAction>(
+      context: context,
+      expanded: false,
+      scrollable: false,
+      children: [
+        ListOwnerActionTile(
+          identifier: 'people_list_add_people_option',
+          label: context.l10n.peopleListsAddPeopleTooltip,
+          icon: DivineIconName.userPlus,
+          action: _PeopleListAction.addPeople,
+        ),
+        ListOwnerActionTile(
+          identifier: 'people_list_edit_option',
+          label: context.l10n.listEditInfoAction,
+          icon: DivineIconName.pencilSimple,
+          action: _PeopleListAction.edit,
+        ),
+        ListOwnerActionTile(
+          identifier: 'people_list_delete_option',
+          label: context.l10n.listDeleteAction,
+          icon: DivineIconName.trash,
+          action: _PeopleListAction.delete,
+          isDestructive: true,
+        ),
+      ],
+    );
+
+    if (!mounted || action == null) {
+      return;
+    }
+    switch (action) {
+      case _PeopleListAction.addPeople:
+        _navigateToAddPeople(userList.id);
+      case _PeopleListAction.edit:
+        runDetached(
+          context.push<void>(RoutePaths.peopleListEditForId(userList.id)),
+          'edit people list',
+          logName: 'UserListPeopleScreen',
+          category: LogCategory.ui,
+        );
+      case _PeopleListAction.delete:
+        await _confirmDeleteList(userList);
+    }
+  }
+
   Future<void> _confirmDeleteList(UserList userList) async {
     final l10n = context.l10n;
     final shouldDelete = await showDialog<bool>(
@@ -478,36 +525,12 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
         actions: [
           if (userList.isEditable)
             DiVineAppBarAction(
-              icon: SvgIconSource(DivineIconName.userPlus.assetPath),
-              tooltip: context.l10n.peopleListsAddPeopleTooltip,
-              semanticLabel: context.l10n.peopleListsAddPeopleSemanticLabel,
-              onPressed: () => _navigateToAddPeople(userList.id),
+              icon: SvgIconSource(DivineIconName.dotsThree.assetPath),
+              tooltip: context.l10n.peopleListsActionsTooltip,
+              onPressed: () => _showOwnerActions(userList),
             ),
         ],
         customActions: [
-          if (userList.isEditable)
-            _PeopleListActionsMenu(
-              onSelected: (action) {
-                switch (action) {
-                  case _PeopleListAction.edit:
-                    runDetached(
-                      context.push<void>(
-                        RoutePaths.peopleListEditForId(userList.id),
-                      ),
-                      'edit people list',
-                      logName: 'UserListPeopleScreen',
-                      category: LogCategory.ui,
-                    );
-                  case _PeopleListAction.delete:
-                    runDetached(
-                      _confirmDeleteList(userList),
-                      'confirm people list deletion',
-                      logName: 'UserListPeopleScreen',
-                      category: LogCategory.ui,
-                    );
-                }
-              },
-            ),
           if (widget.ownerPubkey case final owner? when !userList.isEditable)
             _FollowPeopleListAction(
               ownerPubkey: owner,
@@ -907,38 +930,6 @@ class _NoPeopleView extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _PeopleListActionsMenu extends StatelessWidget {
-  const _PeopleListActionsMenu({required this.onSelected});
-
-  final ValueChanged<_PeopleListAction> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<_PeopleListAction>(
-      tooltip: context.l10n.peopleListsActionsTooltip,
-      color: context.vineColors.surfaceContainer,
-      icon: DivineIcon(
-        icon: DivineIconName.dotsThreeVertical,
-        color: context.vineColors.primaryText,
-      ),
-      onSelected: onSelected,
-      itemBuilder: (context) => [
-        PopupMenuItem(
-          value: _PeopleListAction.edit,
-          child: Text(context.l10n.listEditInfoAction),
-        ),
-        PopupMenuItem(
-          value: _PeopleListAction.delete,
-          child: Text(
-            context.l10n.listDeleteAction,
-            style: TextStyle(color: context.vineColors.primaryText),
-          ),
-        ),
-      ],
     );
   }
 }

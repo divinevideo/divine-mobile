@@ -3066,8 +3066,6 @@
   "peopleListsAddToListName": "Toevoegen aan {name}",
   "peopleListsAddPeopleError": "Kon mensen niet laden. Probeer het opnieuw.",
   "peopleListsAddPeopleRetry": "Opnieuw proberen",
-  "peopleListsAddButton": "Toevoegen",
-  "peopleListsAddButtonWithCount": "{count} toevoegen",
   "peopleListsInNLists": "{count, plural, =1{In 1 lijst} other{In {count} lijsten}}",
   "peopleListsRemoveConfirmTitle": "{name} verwijderen?",
   "peopleListsRemoveConfirmBody": "Ze worden uit deze lijst verwijderd.",
@@ -5479,5 +5477,23 @@
   "listsDiscoveryEmpty": "Er doken deze keer geen lijsten op. Trek omlaag om te vernieuwen.",
   "listSearchPeopleUnavailable": "Personenlijsten zijn momenteel niet beschikbaar.",
   "listSearchVideosUnavailable": "Videolijsten zijn momenteel niet beschikbaar.",
-  "authAccountCleanupFailed": "De gegevens van het vorige account konden niet worden gewist. Probeer het opnieuw."
+  "authAccountCleanupFailed": "De gegevens van het vorige account konden niet worden gewist. Probeer het opnieuw.",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsAddPersonSemanticLabel": "{name} aan lijst toevoegen",
+  "peopleListsRemovePersonSemanticLabel": "{name} uit lijst verwijderen",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "Kon de lijst niet bijwerken. Probeer het opnieuw.",
+  "peopleListsAddPeopleSearchHint": "Mensen zoeken"
 }

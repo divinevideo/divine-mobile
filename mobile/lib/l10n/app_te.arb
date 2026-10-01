@@ -2319,15 +2319,6 @@
   },
   "peopleListsAddPeopleError": "వ్యక్తులను లోడ్ చేయడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
   "peopleListsAddPeopleRetry": "మళ్లీ ప్రయత్నించండి",
-  "peopleListsAddButton": "జోడించండి",
-  "peopleListsAddButtonWithCount": "జోడించండి {count}",
-  "@peopleListsAddButtonWithCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "peopleListsInNLists": "{count, plural, =1{1 జాబితాలో} other{{count} జాబితాల్లో}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -8452,5 +8443,23 @@
   "listsDiscoveryEmpty": "ఈసారి జాబితాలు ఏవీ దొరకలేదు. రిఫ్రెష్ చేయడానికి లాగండి.",
   "listSearchPeopleUnavailable": "ప్రస్తుతం వ్యక్తుల జాబితాలు అందుబాటులో లేవు.",
   "listSearchVideosUnavailable": "ప్రస్తుతం వీడియో జాబితాలు అందుబాటులో లేవు.",
-  "authAccountCleanupFailed": "మునుపటి ఖాతా డేటాను తొలగించలేకపోయాం. మళ్లీ ప్రయత్నించండి."
+  "authAccountCleanupFailed": "మునుపటి ఖాతా డేటాను తొలగించలేకపోయాం. మళ్లీ ప్రయత్నించండి.",
+  "peopleListsAddPersonSemanticLabel": "{name}ని జాబితాకు జోడించండి",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "{name}ని జాబితా నుండి తీసివేయండి",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "జాబితాను నవీకరించడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
+  "peopleListsAddPeopleSearchHint": "వ్యక్తులను శోధించండి"
 }
