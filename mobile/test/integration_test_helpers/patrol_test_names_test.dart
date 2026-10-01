@@ -6,7 +6,7 @@
 // the orchestrator ("File ... contains a path separator") before any test
 // runs, so the whole `patrol test` invocation reports `Total: 0`. A "#" is read
 // as the class/method separator and truncates the name, so tests that share
-// the text before it collapse into one result and one of them goes missing.
+// the text before it collapse into one result.
 // Neither shows up on iOS or in `flutter test`.
 
 import 'dart:io';
