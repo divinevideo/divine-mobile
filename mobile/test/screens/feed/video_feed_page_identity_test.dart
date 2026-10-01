@@ -18,6 +18,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 import 'package:videos_repository/videos_repository.dart';
@@ -27,6 +28,8 @@ import '../../helpers/test_provider_overrides.dart';
 class _VideosRepository extends Mock implements VideosRepository {}
 
 class _CuratedListRepository extends Mock implements CuratedListRepository {}
+
+class _PeopleListsRepository extends Mock implements PeopleListsRepository {}
 
 class _Nostr extends Mock implements NostrClient {}
 
@@ -65,9 +68,8 @@ Future<_SafetyPolicyHome> _mountSafetyPolicyHome(WidgetTester tester) async {
   final videos = _VideosRepository();
   final curated = _CuratedListRepository();
   when(curated.getSubscribedLists).thenReturn([]);
-  when(() => curated.subscriptionSnapshots).thenAnswer(
-    (_) => const Stream<CuratedListSubscriptionSnapshot>.empty(),
-  );
+  when(() => curated.subscriptionSnapshots)
+      .thenAnswer((_) => const Stream<CuratedListSubscriptionSnapshot>.empty());
   when(
     () => videos.getRecommendedVideos(
       userPubkey: any(named: 'userPubkey'),
@@ -189,6 +191,232 @@ void main() {
     });
   });
 
+  group('VideoFeedPage account and flag identity', () {
+    testWidgets(
+      'Home flag flip closes old feed, hides people sources, preserves and restores saved selection',
+      (tester) async {
+        await CacheSync.init(dao: _CacheDao());
+        final viewer = 'a' * 64;
+        final owner = 'b' * 64;
+        final member = 'c' * 64;
+        final source = VideoFeedSource.peopleList(
+          listId: 'crew',
+          listName: 'Flag Crew',
+          listOwnerPubkey: owner,
+        );
+        final selectionKey = 'selected_feed_mode_$viewer';
+        SharedPreferences.setMockInitialValues({
+          selectionKey: FeedModePreferenceStore.storageValueFor(source),
+        });
+        final prefs = await SharedPreferences.getInstance();
+        final people = _PeopleListsRepository();
+        final videos = _VideosRepository();
+        final curated = _CuratedListRepository();
+        final copies = [
+          PeopleListSearchResult(
+            ownerPubkey: owner,
+            list: UserList(
+              id: 'crew',
+              name: 'Flag Crew',
+              pubkeys: [member],
+              createdAt: DateTime.utc(2026),
+              updatedAt: DateTime.utc(2026),
+            ),
+          ),
+        ];
+        final stream =
+            StreamController<List<PeopleListSearchResult>>.broadcast();
+        addTearDown(stream.close);
+        when(() => people.readFollowedLists(viewerPubkey: viewer))
+            .thenAnswer((_) async => copies);
+        when(() => people.watchFollowedLists(viewerPubkey: viewer))
+            .thenAnswer((_) => stream.stream);
+        when(
+          () => people.isFollowingList(
+            viewerPubkey: viewer,
+            ownerPubkey: owner,
+            listId: 'crew',
+          ),
+        ).thenAnswer((_) async => true);
+        when(
+          () => people.syncFollowedLists(
+            viewerPubkey: any(named: 'viewerPubkey'),
+            isCancelled: any(named: 'isCancelled'),
+          ),
+        ).thenAnswer((_) async {});
+        when(curated.getSubscribedLists).thenReturn([]);
+        when(() => curated.subscriptionSnapshots).thenAnswer(
+          (_) => const Stream<CuratedListSubscriptionSnapshot>.empty(),
+        );
+        when(
+          () => videos.getVideosByAuthors(
+            authorPubkeys: any(named: 'authorPubkeys'),
+            until: any(named: 'until'),
+          ),
+        ).thenAnswer((_) async => []);
+        when(
+          () => videos.getRecommendedVideos(
+            userPubkey: any(named: 'userPubkey'),
+            until: any(named: 'until'),
+            skipCache: any(named: 'skipCache'),
+            revalidate: any(named: 'revalidate'),
+          ),
+        ).thenAnswer((_) async => const HomeFeedResult(videos: []));
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: const Scaffold(body: VideoFeedPage()),
+            mockSharedPreferences: prefs,
+            mockAuthService: createMockAuthService(
+              authState: AuthState.authenticated,
+              currentPublicKeyHex: viewer,
+            ),
+            mockProfileRepository: createMockProfileRepository(),
+            additionalOverrides: [
+              videosRepositoryProvider.overrideWithValue(videos),
+              curatedListRepositoryProvider.overrideWithValue(curated),
+              peopleListsRepositoryProvider.overrideWithValue(people),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+        final original = tester
+            .element(find.byType(VideoFeedView))
+            .read<VideoFeedBloc>();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(VideoFeedPage)),
+        );
+        expect(original.state.source, source);
+        expect(find.text('Flag Crew'), findsOneWidget);
+        expect(stream.hasListener, isTrue);
+        await tester.tap(find.text('Flag Crew'));
+        await tester.pumpAndSettle();
+        expect(find.text('Flag Crew'), findsNWidgets(2));
+        Navigator.of(tester.element(find.byType(VideoFeedView))).pop();
+        await tester.pumpAndSettle();
+        await container
+            .read(featureFlagServiceProvider)
+            .setFlag(FeatureFlag.curatedLists, false);
+        await tester.pumpAndSettle();
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+        final gated = tester
+            .element(find.byType(VideoFeedView))
+            .read<VideoFeedBloc>();
+        expect(identical(gated, original), isFalse);
+        expect(original.isClosed, isTrue);
+        expect(stream.hasListener, isFalse);
+        expect(gated.state.source.type, VideoFeedSourceType.forYou);
+        expect(gated.state.followedPeopleLists, isEmpty);
+        expect(find.text('Flag Crew'), findsNothing);
+        expect(find.text('For You'), findsOneWidget);
+        await tester.tap(find.text('For You'));
+        await tester.pumpAndSettle();
+        expect(find.text('Flag Crew'), findsNothing);
+        Navigator.of(tester.element(find.byType(VideoFeedView))).pop();
+        await tester.pumpAndSettle();
+        expect(
+          prefs.getString(selectionKey),
+          FeedModePreferenceStore.storageValueFor(source),
+        );
+        await container
+            .read(featureFlagServiceProvider)
+            .setFlag(FeatureFlag.curatedLists, true);
+        await tester.pumpAndSettle();
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+        final restored = tester
+            .element(find.byType(VideoFeedView))
+            .read<VideoFeedBloc>();
+        expect(identical(gated, restored), isFalse);
+        expect(gated.isClosed, isTrue);
+        expect(restored.state.source, source);
+        expect(restored.state.followedPeopleLists, copies);
+        expect(find.text('Flag Crew'), findsOneWidget);
+        expect(stream.hasListener, isTrue);
+        expect(
+          prefs.getString(selectionKey),
+          FeedModePreferenceStore.storageValueFor(source),
+        );
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+        expect(restored.isClosed, isTrue);
+        expect(stream.hasListener, isFalse);
+      },
+    );
+
+    testWidgets(
+      'Home is rebuilt for another account while people lists are off',
+      (tester) async {
+        await CacheSync.init(dao: _CacheDao());
+        final firstViewer = 'a' * 64;
+        final secondViewer = 'd' * 64;
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final videos = _VideosRepository();
+        final curated = _CuratedListRepository();
+        final authStates = StreamController<AuthState>.broadcast();
+        addTearDown(authStates.close);
+        final auth = createMockAuthService(
+          authState: AuthState.authenticated,
+          currentPublicKeyHex: firstViewer,
+        );
+        when(() => auth.authStateStream).thenAnswer((_) => authStates.stream);
+        when(curated.getSubscribedLists).thenReturn([]);
+        when(() => curated.subscriptionSnapshots).thenAnswer(
+          (_) => const Stream<CuratedListSubscriptionSnapshot>.empty(),
+        );
+        when(
+          () => videos.getRecommendedVideos(
+            userPubkey: any(named: 'userPubkey'),
+            until: any(named: 'until'),
+            skipCache: any(named: 'skipCache'),
+            revalidate: any(named: 'revalidate'),
+          ),
+        ).thenAnswer((_) async => const HomeFeedResult(videos: []));
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: const Scaffold(body: VideoFeedPage()),
+            mockSharedPreferences: prefs,
+            mockAuthService: auth,
+            mockProfileRepository: createMockProfileRepository(),
+            additionalOverrides: [
+              videosRepositoryProvider.overrideWithValue(videos),
+              curatedListRepositoryProvider.overrideWithValue(curated),
+              isFeatureEnabledProvider(FeatureFlag.curatedLists)
+                  .overrideWithValue(false),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+        final original = tester
+            .element(find.byType(VideoFeedView))
+            .read<VideoFeedBloc>();
+
+        when(() => auth.currentPublicKeyHex).thenReturn(secondViewer);
+        authStates
+          ..add(AuthState.checking)
+          ..add(AuthState.authenticated);
+        await tester.runAsync(pumpEventQueue);
+        await tester.pumpAndSettle();
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+
+        final switched = tester
+            .element(find.byType(VideoFeedView))
+            .read<VideoFeedBloc>();
+        expect(identical(switched, original), isFalse);
+        expect(original.isClosed, isTrue);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  });
+
   group('VideoFeedPage curated repository identity', () {
     group('safety policy boundary', () {
       for (final policy in _SafetyPolicy.values) {
@@ -255,42 +483,38 @@ void main() {
         );
       }
 
-      testWidgets(
-        'verification start-up notice retains Home and playback',
-        (tester) async {
-          final home = await _mountSafetyPolicyHome(tester);
-          // Start-up retires legacy keys and notifies without changing the
-          // verified state, which happens on every cold start.
-          await tester.runAsync(home.ageVerification.initialize);
-          expect(
-            home.container.read(adultContentVerificationVersionProvider),
-            1,
-          );
-          expect(home.ageVerification.isAdultContentVerified, isTrue);
-          await tester.pumpAndSettle();
-          await tester.runAsync(pumpEventQueue);
-          await tester.pump();
+      testWidgets('verification start-up notice retains Home and playback', (
+        tester,
+      ) async {
+        final home = await _mountSafetyPolicyHome(tester);
+        // Start-up retires legacy keys and notifies without changing the
+        // verified state, which happens on every cold start.
+        await tester.runAsync(home.ageVerification.initialize);
+        expect(home.container.read(adultContentVerificationVersionProvider), 1);
+        expect(home.ageVerification.isAdultContentVerified, isTrue);
+        await tester.pumpAndSettle();
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
 
-          final view = tester.element(find.byType(VideoFeedView));
-          expect(view.read<VideoFeedBloc>(), same(home.originalFeed));
-          expect(
-            view.read<VideoPlaybackStatusCubit>(),
-            same(home.originalPlayback),
-          );
-          expect(home.originalFeed.isClosed, isFalse);
-          verifyNever(
-            () => home.videos.getRecommendedVideos(
-              userPubkey: _policyViewer,
-              until: any(named: 'until'),
-              skipCache: any(named: 'skipCache'),
-              revalidate: any(named: 'revalidate'),
-            ),
-          );
-          await tester.pumpWidget(const SizedBox.shrink());
-          await tester.runAsync(pumpEventQueue);
-          await tester.pump();
-        },
-      );
+        final view = tester.element(find.byType(VideoFeedView));
+        expect(view.read<VideoFeedBloc>(), same(home.originalFeed));
+        expect(
+          view.read<VideoPlaybackStatusCubit>(),
+          same(home.originalPlayback),
+        );
+        expect(home.originalFeed.isClosed, isFalse);
+        verifyNever(
+          () => home.videos.getRecommendedVideos(
+            userPubkey: _policyViewer,
+            until: any(named: 'until'),
+            skipCache: any(named: 'skipCache'),
+            revalidate: any(named: 'revalidate'),
+          ),
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+      });
 
       testWidgets('unrelated blocklist sync retains Home and playback', (
         tester,
@@ -389,9 +613,8 @@ void main() {
           when(() => repository.hasCompleteSubscriptionSnapshot)
               .thenReturn(true);
         }
-        when(
-          () => originalRepository.getListById(originalList.authorScopedId),
-        ).thenReturn(originalList);
+        when(() => originalRepository.getListById(originalList.authorScopedId))
+            .thenReturn(originalList);
         when(
           () => replacementRepository.getListById(originalList.authorScopedId),
         ).thenReturn(null);

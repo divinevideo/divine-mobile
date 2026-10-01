@@ -25,6 +25,7 @@ import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
+import 'package:openvine/widgets/follow_list_button.dart';
 import 'package:openvine/widgets/list_video_player_mode.dart';
 import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:openvine/widgets/rounded_grid_viewport.dart';
@@ -187,8 +188,8 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
         ],
         customActions: [
           if (!isOwned)
-            _FollowListButton(
-              isSubscribed: isSubscribed,
+            FollowListButton(
+              isFollowing: isSubscribed,
               isBusy: _isTogglingSubscription,
               onPressed: _toggleSubscription,
             ),
@@ -775,35 +776,6 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
         content: Text(context.l10n.discoverListsFailedToUpdateSubscription),
         backgroundColor: VineTheme.likeRed,
       ),
-    );
-  }
-}
-
-/// Follow/Following pill shown to non-owners in the app bar.
-class _FollowListButton extends StatelessWidget {
-  const _FollowListButton({
-    required this.isSubscribed,
-    required this.isBusy,
-    required this.onPressed,
-  });
-
-  final bool isSubscribed;
-  final bool isBusy;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return DivineButton(
-      label: isSubscribed
-          ? context.l10n.listFollowingButton
-          : context.l10n.listFollowButton,
-      size: DivineButtonSize.small,
-      type: isSubscribed
-          ? DivineButtonType.secondary
-          : DivineButtonType.primary,
-      leadingIcon: isSubscribed ? DivineIconName.check : DivineIconName.plus,
-      isLoading: isBusy,
-      onPressed: isBusy ? null : onPressed,
     );
   }
 }

@@ -144,6 +144,20 @@ final class VideoFeedCuratedListsChanged extends VideoFeedEvent {
   List<Object?> get props => [subscribedLists, isAuthoritative];
 }
 
+/// The people lists the viewer follows changed.
+///
+/// Dispatched internally when `PeopleListsRepository.watchFollowedLists`
+/// emits: a follow, an unfollow, or a followed list whose members changed.
+final class VideoFeedFollowedPeopleListsChanged extends VideoFeedEvent {
+  const VideoFeedFollowedPeopleListsChanged(this.followedPeopleLists);
+
+  /// The lists now followed, oldest follow first.
+  final List<PeopleListSearchResult> followedPeopleLists;
+
+  @override
+  List<Object?> get props => [followedPeopleLists];
+}
+
 /// The active (visible) video changed as the user swipes the feed.
 ///
 /// Dispatched by the UI on each page change. The bloc records the index in

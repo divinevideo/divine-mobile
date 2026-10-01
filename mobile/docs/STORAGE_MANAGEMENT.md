@@ -106,6 +106,12 @@ Leaves alone: **the entire documents directory**. Recordings, drafts, renders,
 sounds and the leftover files above all survive a reset, which is why a large
 footprint that survives "Reset app data" is a documents-directory footprint.
 
+The people-list box stays disposable even though it mirrors the people lists
+an account follows. Only the *copies* of those lists live there, and the next
+sync refetches them; which lists are followed is kept in preferences
+(`PrefsFollowedPeopleListsStore`), which a reset does not touch. Anything that
+cannot be refetched from a relay does not belong in that box.
+
 ## Diagnosing a report
 
 1. Developer Options → Storage Footprint walks all four roots and lists the
