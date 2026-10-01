@@ -61,14 +61,21 @@ void main() {
       ).thenAnswer((_) => const Stream.empty());
 
       when(
-        () => peopleListsRepository.searchPublicLists(any()),
+        () => peopleListsRepository.searchPublicLists(
+          any(),
+          viewerPubkey: any(named: 'viewerPubkey'),
+        ),
       ).thenAnswer((_) => const Stream.empty());
     });
 
-    ListSearchBloc buildBloc({bool peopleEnabled = false}) => ListSearchBloc(
+    ListSearchBloc buildBloc({
+      bool peopleEnabled = false,
+      String? viewerPubkey,
+    }) => ListSearchBloc(
       curatedListRepository: curatedListRepository,
       peopleListsRepository: peopleListsRepository,
       peopleListSearchEnabled: peopleEnabled,
+      viewerPubkey: viewerPubkey,
     );
 
     test('initial state is $ListSearchState', () {
@@ -96,6 +103,29 @@ void main() {
               .having((s) => s.query, 'query', 'videos')
               .having((s) => s.videoResults, 'videoResults', [testCuratedList]),
         ],
+      );
+
+      blocTest<ListSearchBloc, ListSearchState>(
+        'searches people lists as the viewer',
+        setUp: () {
+          when(
+            () => peopleListsRepository.searchPublicLists(
+              'people',
+              viewerPubkey: 'a' * 64,
+            ),
+          ).thenAnswer((_) => Stream.value([testPeopleResult]));
+        },
+        build: () => buildBloc(peopleEnabled: true, viewerPubkey: 'a' * 64),
+        act: (bloc) => bloc.add(const ListSearchQueryChanged('people')),
+        wait: const Duration(milliseconds: 400),
+        verify: (_) {
+          verify(
+            () => peopleListsRepository.searchPublicLists(
+              'people',
+              viewerPubkey: 'a' * 64,
+            ),
+          ).called(1);
+        },
       );
 
       blocTest<ListSearchBloc, ListSearchState>(

@@ -1440,34 +1440,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get exploreNoVideosAvailable => 'کوئی ویڈیو دستیاب نہیں';
 
   @override
-  String get exploreDiscoverLists => 'فہرستیں دریافت کریں';
-
-  @override
-  String get exploreAboutLists => 'فہرستوں کے بارے میں';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'فہرستیں Divine مواد کو دو طریقوں سے ترتیب دینے اور منتخب کرنے میں مدد دیتی ہیں:';
-
-  @override
   String get explorePeopleLists => 'لوگوں کی فہرستیں';
 
   @override
-  String get explorePeopleListsDescription =>
-      'کریئیٹرز کے گروہوں کو فالو کریں اور ان کی تازہ ویڈیوز دیکھیں';
-
-  @override
   String get exploreVideoLists => 'ویڈیو فہرستیں';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'بعد میں دیکھنے کے لیے اپنی پسندیدہ ویڈیوز کی پلے لسٹیں بنائیں';
-
-  @override
-  String get exploreMyLists => 'میری فہرستیں';
-
-  @override
-  String get exploreSubscribedLists => 'سبسکرائب شدہ فہرستیں';
 
   @override
   String get exploreErrorLoadingLists =>
@@ -4980,17 +4956,6 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count لوگ',
-      one: '1 شخص',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => 'از ';
 
   @override
@@ -5936,11 +5901,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get inboxConversationCollabInvitePreview => 'شریک کار دعوت';
 
   @override
-  String inboxConversationPreviewSenderPrefix(String sender) {
-    return '$sender: ';
-  }
-
-  @override
   String collaboratorInviteDmBody(String title, String url) {
     return 'آپ کو $title پر تعاون کی دعوت دی گئی: $url\n\nOpen Divine to review and accept.';
   }
@@ -6204,31 +6164,6 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'سبسکرپشن اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔';
-
-  @override
-  String get discoverListsTitle => 'فہرستیں دریافت کریں';
-
-  @override
-  String get discoverListsFailedToLoad => 'فہرستیں لوڈ نہیں ہو سکیں';
-
-  @override
-  String get discoverListsLoading => 'عوامی فہرستیں دریافت ہو رہی ہیں...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'ریلے نے وقت پر فہرستیں واپس نہیں کیں۔ دوبارہ کوشش کریں۔';
-
-  @override
-  String get discoverListsServiceUnavailable => 'سروس دستیاب نہیں ہے۔';
-
-  @override
-  String get discoverListsEmptyTitle => 'کوئی عوامی فہرست نہیں ملی';
-
-  @override
-  String get discoverListsEmptySubtitle => 'نئی فہرستوں کے لیے بعد میں دیکھیں';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'از';
 
   @override
   String get curatedListEmptyTitle => 'اس فہرست میں کوئی ویڈیو نہیں';
@@ -9418,7 +9353,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'منتخب لیئر کتنی شفاف ہو، یہ طے کریں';
+      'منتخب کلپ کتنا شفاف ہو، یہ طے کریں';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'خودکار شناخت';
@@ -9873,36 +9808,6 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'لیئر اینیمیشن میں ترمیم کریں';
-
-  @override
-  String get videoEditorKeyframeAdd => 'کی فریم شامل کریں';
-
-  @override
-  String get videoEditorKeyframeRemove => 'کی فریم ہٹائیں';
-
-  @override
-  String videoEditorKeyframeMarkerSemanticLabel(String time) {
-    return '$time پر موجود کی فریم پر جائیں';
-  }
-
-  @override
-  String get videoEditorKeyframesLabel => 'کی فریمز';
-
-  @override
-  String get videoEditorKeyframesButtonSemanticLabel =>
-      'لیئر کے کی فریمز میں ترمیم کریں';
-
-  @override
-  String get videoEditorKeyframesHint =>
-      'کی فریم شامل کریں، پلے ہیڈ کو آگے پیچھے کریں، پھر لیئر کو ہلائیں، اس کا سائز بدلیں یا گھمائیں۔ لیئر ایک کی فریم سے اگلے تک سرکتی ہے۔';
-
-  @override
-  String get videoEditorKeyframeEffect => 'ایفیکٹ';
-
-  @override
-  String videoEditorKeyframeCurveSegment(String from, String to) {
-    return 'کی فریم $from سے $to تک حرکت';
-  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'آنا';
@@ -13250,91 +13155,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get subtitleMachineTranslated => 'مشینی ترجمہ';
 
   @override
-  String get ideasNeedIdeas => 'خیالات چاہییں؟';
+  String get listsDiscoveryLoadingLabel => 'فہرستیں لوڈ ہو رہی ہیں';
 
   @override
-  String get ideasHide => 'خیالات چھپائیں';
-
-  @override
-  String get ideasFromVideo => 'میری ویڈیو سے';
-
-  @override
-  String get ideasSurprise => 'مجھے حیران کریں';
-
-  @override
-  String get ideasPrepare => 'آلے پر تجاویز تیار کریں';
-
-  @override
-  String get ideasUnavailable =>
-      'ویڈیو کے خیالات ابھی دستیاب نہیں۔ مجھے حیران کریں آزمائیں۔';
-
-  @override
-  String get ideasSourceVideo => 'آپ کی ویڈیو کی بنیاد پر';
-
-  @override
-  String get ideasSourceTranscript => 'آپ کی نقل کی بنیاد پر';
-
-  @override
-  String get ideasSourcePremade => 'تھوڑی سی تحریک';
-
-  @override
-  String get ideasUseBoth => 'دونوں استعمال کریں';
-
-  @override
-  String get ideasMore => 'مزید خیالات';
-
-  @override
-  String get ideasGenerateTranscript => 'نقل تیار کریں';
-
-  @override
-  String get ideasEditTranscript => 'نقل میں ترمیم کریں';
-
-  @override
-  String get ideasTranscript => 'خیالات کے لیے نقل';
-
-  @override
-  String get ideasTranscriptionNotice =>
-      'نقل کے لیے Divine کی سروس استعمال ہوتی ہے، آلے پر پروسیسنگ متبادل ہے۔ الفاظ کی تجاویز آپ کے فون پر رہتی ہیں۔ اس سے پوسٹ میں سب ٹائٹلز شامل نہیں ہوں گے۔';
-
-  @override
-  String get ideasApplied => 'خیال شامل ہوگیا۔ اپنا رنگ دیں۔';
-
-  @override
-  String get ideasUndo => 'واپس کریں';
-
-  @override
-  String get ideasTitleOne => 'ایک چھوٹا سا لمحہ';
-
-  @override
-  String get ideasDescriptionOne => 'یہ شیئر کرنے کا دل کیا۔';
-
-  @override
-  String get ideasTitleTwo => 'یہ لیجیے';
-
-  @override
-  String get ideasDescriptionTwo => 'میرے دن کا ایک چھوٹا حصہ۔';
-
-  @override
-  String get ideasTitleThree => 'بار بار دیکھنے کے لیے';
-
-  @override
-  String get ideasDescriptionThree => 'محفوظ رکھنے والا لمحہ۔';
-
-  @override
-  String get ideasTitleFour => 'یہ میں نے بنایا';
-
-  @override
-  String get ideasDescriptionFour => 'میری طرف سے کچھ چھوٹا سا۔';
-
-  @override
-  String get ideasTitleFive => 'لمبی وضاحت کے بغیر';
-
-  @override
-  String get ideasDescriptionFive => 'بس شیئر کرنا تھا۔';
-
-  @override
-  String get ideasTitleSix => 'آج کا ایک حصہ';
-
-  @override
-  String get ideasDescriptionSix => 'یہ یہاں چھوڑ رہا ہوں۔';
+  String get listsDiscoveryEmpty =>
+      'اس بار کوئی فہرست ہاتھ نہیں آئی۔ ریفریش کے لیے کھینچیں۔';
 }

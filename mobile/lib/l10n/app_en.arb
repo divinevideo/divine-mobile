@@ -911,15 +911,8 @@
     "description": "Retry button on the featured Explore tab's failure state."
   },
   "exploreNoVideosAvailable": "No videos available",
-  "exploreDiscoverLists": "Discover Lists",
-  "exploreAboutLists": "About Lists",
-  "exploreAboutListsDescription": "Lists help you organize and curate Divine content in two ways:",
   "explorePeopleLists": "People Lists",
-  "explorePeopleListsDescription": "Follow groups of creators and see their latest videos",
   "exploreVideoLists": "Video Lists",
-  "exploreVideoListsDescription": "Create playlists of your favorite videos to watch later",
-  "exploreMyLists": "My Lists",
-  "exploreSubscribedLists": "Subscribed Lists",
   "exploreErrorLoadingLists": "Error loading lists. Please try again.",
   "exploreNewVideosCount": "{count, plural, =1{1 new video} other{{count} new videos}}",
   "@exploreNewVideosCount": {
@@ -3185,14 +3178,6 @@
       }
     }
   },
-  "listPersonCount": "{count, plural, =1{1 person} other{{count} people}}",
-  "@listPersonCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "listByAuthorPrefix": "By ",
   "listNewList": "New List",
   "listDone": "Done",
@@ -4137,14 +4122,6 @@
     }
   },
   "discoverListsFailedToUpdateSubscription": "Failed to update subscription. Please try again.",
-  "discoverListsTitle": "Discover Lists",
-  "discoverListsFailedToLoad": "Failed to load lists",
-  "discoverListsLoading": "Discovering public lists...",
-  "discoverListsRelayTimeout": "The relay did not return lists in time. Try again.",
-  "discoverListsServiceUnavailable": "Service not available.",
-  "discoverListsEmptyTitle": "No public lists found",
-  "discoverListsEmptySubtitle": "Check back later for new lists",
-  "discoverListsByAuthorPrefix": "by",
   "curatedListEmptyTitle": "No videos in this list",
   "curatedListEmptySubtitle": "Add some videos to get started",
   "curatedListLoadingVideos": "Loading videos...",
@@ -9685,5 +9662,13 @@
   },
   "@ideasDescriptionSix": {
     "description": "Inline publishing ideas: DescriptionSix"
-  }
+  },
+  "listsDiscoveryLoadingLabel": "Loading lists",
+  "@listsDiscoveryEmpty": {
+    "description": "Full-screen message on the Explore Lists tab when neither discovery column returned any lists."
+  },
+  "@listsDiscoveryLoadingLabel": {
+    "description": "Screen-reader label for the shimmering placeholder cards shown while the Explore Lists gallery loads."
+  },
+  "listsDiscoveryEmpty": "No lists turned up this time. Pull to refresh."
 }

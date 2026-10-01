@@ -1452,34 +1452,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Nenhum vídeo disponível';
 
   @override
-  String get exploreDiscoverLists => 'Descobrir listas';
-
-  @override
-  String get exploreAboutLists => 'Sobre listas';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Listas te ajudam a organizar e curar conteúdo do Divine de duas formas:';
-
-  @override
   String get explorePeopleLists => 'Listas de pessoas';
 
   @override
-  String get explorePeopleListsDescription =>
-      'Siga grupos de criadores e veja os últimos vídeos deles';
-
-  @override
   String get exploreVideoLists => 'Listas de vídeos';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Crie playlists dos seus vídeos favoritos para assistir depois';
-
-  @override
-  String get exploreMyLists => 'Minhas listas';
-
-  @override
-  String get exploreSubscribedLists => 'Listas inscritas';
 
   @override
   String get exploreErrorLoadingLists =>
@@ -5009,17 +4985,6 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count pessoas',
-      one: '$count pessoa',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => 'Por ';
 
   @override
@@ -5970,11 +5935,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get inboxConversationCollabInvitePreview => 'Convite para colaborar';
 
   @override
-  String inboxConversationPreviewSenderPrefix(String sender) {
-    return '$sender: ';
-  }
-
-  @override
   String collaboratorInviteDmBody(String title, String url) {
     return 'Você foi convidado(a) para colaborar em $title: $url\n\nOpen Divine to review and accept.';
   }
@@ -6243,32 +6203,6 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Falha ao atualizar assinatura. Por favor, tente novamente.';
-
-  @override
-  String get discoverListsTitle => 'Descobrir listas';
-
-  @override
-  String get discoverListsFailedToLoad => 'Falha ao carregar listas';
-
-  @override
-  String get discoverListsLoading => 'Descobrindo listas públicas...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'O relay não devolveu listas a tempo. Tente de novo.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Serviço indisponível.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Nenhuma lista pública encontrada';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'Volte mais tarde para ver novas listas';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'por';
 
   @override
   String get curatedListEmptyTitle => 'Sem vídeos nesta lista';
@@ -9494,7 +9428,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Ajustar a transparência da camada selecionada';
+      'Ajustar a transparência do clipe selecionado';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Detetar automaticamente';
@@ -9950,36 +9884,6 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'Editar animação da camada';
-
-  @override
-  String get videoEditorKeyframeAdd => 'Adicionar quadro-chave';
-
-  @override
-  String get videoEditorKeyframeRemove => 'Remover quadro-chave';
-
-  @override
-  String videoEditorKeyframeMarkerSemanticLabel(String time) {
-    return 'Ir para o quadro-chave em $time';
-  }
-
-  @override
-  String get videoEditorKeyframesLabel => 'Quadros-chave';
-
-  @override
-  String get videoEditorKeyframesButtonSemanticLabel =>
-      'Editar quadros-chave da camada';
-
-  @override
-  String get videoEditorKeyframesHint =>
-      'Adicione um quadro-chave, mova a cabeça de reprodução e depois mova, redimensione ou gire a camada. Ela desliza de um quadro-chave para o outro.';
-
-  @override
-  String get videoEditorKeyframeEffect => 'Efeito';
-
-  @override
-  String videoEditorKeyframeCurveSegment(String from, String to) {
-    return 'Movimento do quadro-chave $from ao $to';
-  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Entrada';
@@ -13364,91 +13268,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get subtitleMachineTranslated => 'Tradução automática';
 
   @override
-  String get ideasNeedIdeas => 'Precisa de ideias?';
+  String get listsDiscoveryLoadingLabel => 'Carregando listas';
 
   @override
-  String get ideasHide => 'Ocultar ideias';
-
-  @override
-  String get ideasFromVideo => 'Do meu vídeo';
-
-  @override
-  String get ideasSurprise => 'Surpreenda-me';
-
-  @override
-  String get ideasPrepare => 'Preparar sugestões no dispositivo';
-
-  @override
-  String get ideasUnavailable =>
-      'As ideias do vídeo não estão disponíveis agora. Tente Surpreenda-me.';
-
-  @override
-  String get ideasSourceVideo => 'Com base no seu vídeo';
-
-  @override
-  String get ideasSourceTranscript => 'Com base na sua transcrição';
-
-  @override
-  String get ideasSourcePremade => 'Um pouco de inspiração';
-
-  @override
-  String get ideasUseBoth => 'Usar ambos';
-
-  @override
-  String get ideasMore => 'Mais ideias';
-
-  @override
-  String get ideasGenerateTranscript => 'Gerar transcrição';
-
-  @override
-  String get ideasEditTranscript => 'Editar transcrição';
-
-  @override
-  String get ideasTranscript => 'Transcrição para ideias';
-
-  @override
-  String get ideasTranscriptionNotice =>
-      'A transcrição usa o serviço da Divine, com alternativa no dispositivo. As sugestões de texto ficam no seu celular. Isso não adiciona legendas à publicação.';
-
-  @override
-  String get ideasApplied => 'Ideia adicionada. Dê o seu toque.';
-
-  @override
-  String get ideasUndo => 'Desfazer';
-
-  @override
-  String get ideasTitleOne => 'Um pequeno momento';
-
-  @override
-  String get ideasDescriptionOne => 'Deu vontade de compartilhar.';
-
-  @override
-  String get ideasTitleTwo => 'Lá vai';
-
-  @override
-  String get ideasDescriptionTwo => 'Compartilhando um pedacinho do meu dia.';
-
-  @override
-  String get ideasTitleThree => 'Para ver em loop';
-
-  @override
-  String get ideasDescriptionThree => 'Um momento que vale guardar.';
-
-  @override
-  String get ideasTitleFour => 'Eu que fiz';
-
-  @override
-  String get ideasDescriptionFour => 'Um pouquinho de mim.';
-
-  @override
-  String get ideasTitleFive => 'Sem grandes explicações';
-
-  @override
-  String get ideasDescriptionFive => 'Só queria compartilhar.';
-
-  @override
-  String get ideasTitleSix => 'Um pouco de hoje';
-
-  @override
-  String get ideasDescriptionSix => 'Vou deixar isso aqui.';
+  String get listsDiscoveryEmpty =>
+      'Nenhuma lista deu as caras desta vez. Puxe para atualizar.';
 }

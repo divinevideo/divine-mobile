@@ -1404,34 +1404,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Không có video nào';
 
   @override
-  String get exploreDiscoverLists => 'Khám phá danh sách';
-
-  @override
-  String get exploreAboutLists => 'Về danh sách';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Danh sách giúp bạn sắp xếp và tuyển chọn nội dung Divine theo hai cách:';
-
-  @override
   String get explorePeopleLists => 'Danh sách người';
 
   @override
-  String get explorePeopleListsDescription =>
-      'Theo dõi nhóm nhà sáng tạo và xem video mới nhất của họ';
-
-  @override
   String get exploreVideoLists => 'Danh sách video';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Tạo danh sách phát từ những video yêu thích để xem sau';
-
-  @override
-  String get exploreMyLists => 'Danh sách của tôi';
-
-  @override
-  String get exploreSubscribedLists => 'Danh sách đã đăng ký';
 
   @override
   String get exploreErrorLoadingLists =>
@@ -4939,17 +4915,6 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count người',
-      one: '1 người',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => 'Bởi ';
 
   @override
@@ -5894,11 +5859,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get inboxConversationCollabInvitePreview => 'Lời mời cộng tác';
 
   @override
-  String inboxConversationPreviewSenderPrefix(String sender) {
-    return '$sender: ';
-  }
-
-  @override
   String collaboratorInviteDmBody(String title, String url) {
     return 'Bạn được mời cộng tác vào $title: $url\n\nOpen Divine to review and accept.';
   }
@@ -6164,33 +6124,6 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Không cập nhật được đăng ký. Vui lòng thử lại.';
-
-  @override
-  String get discoverListsTitle => 'Khám phá danh sách';
-
-  @override
-  String get discoverListsFailedToLoad => 'Không tải được danh sách';
-
-  @override
-  String get discoverListsLoading => 'Đang khám phá danh sách công khai...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Relay không trả về danh sách kịp lúc. Thử lại nhé.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Dịch vụ không khả dụng.';
-
-  @override
-  String get discoverListsEmptyTitle =>
-      'Không tìm thấy danh sách công khai nào';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'Quay lại sau để xem danh sách mới nhé';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'bởi';
 
   @override
   String get curatedListEmptyTitle => 'Chưa có video nào trong danh sách này';
@@ -9381,7 +9314,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Đặt mức trong suốt cho lớp đã chọn';
+      'Đặt mức trong suốt cho clip đã chọn';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Tự động nhận diện';
@@ -9830,36 +9763,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel => 'Sửa hiệu ứng lớp';
-
-  @override
-  String get videoEditorKeyframeAdd => 'Thêm khung hình chính';
-
-  @override
-  String get videoEditorKeyframeRemove => 'Xóa khung hình chính';
-
-  @override
-  String videoEditorKeyframeMarkerSemanticLabel(String time) {
-    return 'Đến khung hình chính tại $time';
-  }
-
-  @override
-  String get videoEditorKeyframesLabel => 'Khung hình chính';
-
-  @override
-  String get videoEditorKeyframesButtonSemanticLabel =>
-      'Chỉnh sửa khung hình chính của lớp';
-
-  @override
-  String get videoEditorKeyframesHint =>
-      'Thêm khung hình chính, di chuyển đầu phát, rồi di chuyển, đổi kích thước hoặc xoay lớp. Lớp sẽ lướt từ khung hình chính này sang khung hình chính tiếp theo.';
-
-  @override
-  String get videoEditorKeyframeEffect => 'Hiệu ứng';
-
-  @override
-  String videoEditorKeyframeCurveSegment(String from, String to) {
-    return 'Chuyển động từ khung hình chính $from đến $to';
-  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Xuất hiện';
@@ -13201,91 +13104,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get subtitleMachineTranslated => 'Bản dịch máy';
 
   @override
-  String get ideasNeedIdeas => 'Cần ý tưởng?';
+  String get listsDiscoveryLoadingLabel => 'Đang tải danh sách';
 
   @override
-  String get ideasHide => 'Ẩn ý tưởng';
-
-  @override
-  String get ideasFromVideo => 'Từ video của tôi';
-
-  @override
-  String get ideasSurprise => 'Làm tôi bất ngờ';
-
-  @override
-  String get ideasPrepare => 'Chuẩn bị gợi ý trên thiết bị';
-
-  @override
-  String get ideasUnavailable =>
-      'Chưa có ý tưởng từ video lúc này. Hãy thử Làm tôi bất ngờ.';
-
-  @override
-  String get ideasSourceVideo => 'Dựa trên video của bạn';
-
-  @override
-  String get ideasSourceTranscript => 'Dựa trên bản chép lời của bạn';
-
-  @override
-  String get ideasSourcePremade => 'Một chút cảm hứng';
-
-  @override
-  String get ideasUseBoth => 'Dùng cả hai';
-
-  @override
-  String get ideasMore => 'Thêm ý tưởng';
-
-  @override
-  String get ideasGenerateTranscript => 'Tạo bản chép lời';
-
-  @override
-  String get ideasEditTranscript => 'Sửa bản chép lời';
-
-  @override
-  String get ideasTranscript => 'Bản chép lời cho ý tưởng';
-
-  @override
-  String get ideasTranscriptionNotice =>
-      'Việc chép lời dùng dịch vụ Divine, với xử lý trên thiết bị làm phương án dự phòng. Gợi ý câu chữ nằm trên điện thoại của bạn. Việc này không thêm phụ đề vào bài đăng.';
-
-  @override
-  String get ideasApplied => 'Đã thêm ý tưởng. Hãy thêm dấu ấn của bạn.';
-
-  @override
-  String get ideasUndo => 'Hoàn tác';
-
-  @override
-  String get ideasTitleOne => 'Một khoảnh khắc nhỏ';
-
-  @override
-  String get ideasDescriptionOne => 'Muốn chia sẻ điều này.';
-
-  @override
-  String get ideasTitleTwo => 'Bắt đầu thôi';
-
-  @override
-  String get ideasDescriptionTwo => 'Một chút trong ngày của tôi.';
-
-  @override
-  String get ideasTitleThree => 'Để xem lại mãi';
-
-  @override
-  String get ideasDescriptionThree => 'Khoảnh khắc đáng giữ lại.';
-
-  @override
-  String get ideasTitleFour => 'Tôi làm đấy';
-
-  @override
-  String get ideasDescriptionFour => 'Một chút gì đó từ tôi.';
-
-  @override
-  String get ideasTitleFive => 'Không cần giải thích nhiều';
-
-  @override
-  String get ideasDescriptionFive => 'Chỉ muốn chia sẻ thôi.';
-
-  @override
-  String get ideasTitleSix => 'Một chút hôm nay';
-
-  @override
-  String get ideasDescriptionSix => 'Để điều này ở đây.';
+  String get listsDiscoveryEmpty =>
+      'Lần này chẳng thấy danh sách nào. Kéo để làm mới.';
 }

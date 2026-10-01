@@ -82,7 +82,7 @@ abstract interface class PeopleListsRepository {
     required String listId,
   });
 
-  /// Searches public kind `30000` people lists on connected relays whose
+  /// Searches public kind `30000` people lists on the discovery relays whose
   /// decoded name or description contains [query] (case-insensitive).
   ///
   /// Fetches at least 500 candidates independently of the displayed [limit].
@@ -95,7 +95,11 @@ abstract interface class PeopleListsRepository {
   ///
   /// Results are filtered so that:
   /// * lists with no `p` tag members are excluded,
-  /// * app-managed lists (`d=block`, `d=notify`) are excluded,
+  /// * app-managed lists (`d=block`, `d=notify`) and other clients'
+  ///   machinery sets are excluded,
+  /// * lists whose author has never posted on Divine are excluded, except
+  ///   [viewerPubkey]'s own — kind `30000` is every client's follow-set kind,
+  ///   so the author having posted here is what ties a list to Divine,
   /// * duplicates sharing the addressable coordinate
   ///   (`kind:ownerPubkey:d-tag`) keep the newest by `updatedAt`.
   ///
@@ -104,6 +108,22 @@ abstract interface class PeopleListsRepository {
   Stream<List<PeopleListSearchResult>> searchPublicLists(
     String query, {
     int limit = 50,
+    String? viewerPubkey,
+  });
+
+  /// Discovers public kind `30000` people lists on the discovery relays.
+  ///
+  /// The same relay query, decoding, filtering, author check, and
+  /// addressable-coordinate dedup as [searchPublicLists], without the text
+  /// match. Results come newest first by `updatedAt`. Lists authored by
+  /// [excludeAuthor] are dropped, so a discovery surface can keep the
+  /// viewer's own lists on their profile instead.
+  ///
+  /// Returns an empty list when the relay returns no events or none survive
+  /// the filters.
+  Future<List<PeopleListSearchResult>> discoverPublicLists({
+    int limit = 50,
+    String? excludeAuthor,
   });
 
   /// Fetches one public kind `30000` list addressed by author + `d` tag.

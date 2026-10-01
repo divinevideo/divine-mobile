@@ -1442,34 +1442,10 @@ class AppLocalizationsNl extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Geen video\'s beschikbaar';
 
   @override
-  String get exploreDiscoverLists => 'Lijsten ontdekken';
-
-  @override
-  String get exploreAboutLists => 'Over lijsten';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Met lijsten kun je Divine-inhoud op twee manieren organiseren en samenstellen:';
-
-  @override
   String get explorePeopleLists => 'Personenlijsten';
 
   @override
-  String get explorePeopleListsDescription =>
-      'Volg groepen makers en bekijk hun nieuwste video\'s';
-
-  @override
   String get exploreVideoLists => 'Videolijsten';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Maak afspeellijsten van je favoriete video\'s om later te bekijken';
-
-  @override
-  String get exploreMyLists => 'Mijn lijsten';
-
-  @override
-  String get exploreSubscribedLists => 'Gevolgde lijsten';
 
   @override
   String get exploreErrorLoadingLists =>
@@ -4991,17 +4967,6 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count personen',
-      one: '1 persoon',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => 'Door ';
 
   @override
@@ -5951,11 +5916,6 @@ class AppLocalizationsNl extends AppLocalizations {
       'Uitnodiging om samen te werken';
 
   @override
-  String inboxConversationPreviewSenderPrefix(String sender) {
-    return '$sender: ';
-  }
-
-  @override
   String collaboratorInviteDmBody(String title, String url) {
     return 'Je bent uitgenodigd om samen te werken aan $title: $url\n\nOpen Divine to review and accept.';
   }
@@ -6224,32 +6184,6 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Abonnement bijwerken mislukt. Probeer het opnieuw.';
-
-  @override
-  String get discoverListsTitle => 'Lijsten ontdekken';
-
-  @override
-  String get discoverListsFailedToLoad => 'Lijsten laden mislukt';
-
-  @override
-  String get discoverListsLoading => 'Publieke lijsten worden ontdekt...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'De relay leverde niet op tijd lijsten. Probeer het opnieuw.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Service niet beschikbaar.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Geen publieke lijsten gevonden';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'Kom later terug voor nieuwe lijsten';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'door';
 
   @override
   String get curatedListEmptyTitle => 'Geen video\'s in deze lijst';
@@ -9460,7 +9394,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Instellen hoe doorzichtig de geselecteerde laag is';
+      'Instellen hoe doorzichtig de geselecteerde clip is';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Automatisch detecteren';
@@ -9917,36 +9851,6 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'Laaganimatie bewerken';
-
-  @override
-  String get videoEditorKeyframeAdd => 'Keyframe toevoegen';
-
-  @override
-  String get videoEditorKeyframeRemove => 'Keyframe verwijderen';
-
-  @override
-  String videoEditorKeyframeMarkerSemanticLabel(String time) {
-    return 'Naar keyframe op $time';
-  }
-
-  @override
-  String get videoEditorKeyframesLabel => 'Keyframes';
-
-  @override
-  String get videoEditorKeyframesButtonSemanticLabel =>
-      'Keyframes van de laag bewerken';
-
-  @override
-  String get videoEditorKeyframesHint =>
-      'Voeg een keyframe toe, verplaats de afspeelkop en verschuif, schaal of draai dan de laag. Die glijdt van keyframe naar keyframe.';
-
-  @override
-  String get videoEditorKeyframeEffect => 'Effect';
-
-  @override
-  String videoEditorKeyframeCurveSegment(String from, String to) {
-    return 'Beweging van keyframe $from naar $to';
-  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Ingang';
@@ -13327,91 +13231,9 @@ class AppLocalizationsNl extends AppLocalizations {
   String get subtitleMachineTranslated => 'Automatisch vertaald';
 
   @override
-  String get ideasNeedIdeas => 'Ideeën nodig?';
+  String get listsDiscoveryLoadingLabel => 'Lijsten laden';
 
   @override
-  String get ideasHide => 'Ideeën verbergen';
-
-  @override
-  String get ideasFromVideo => 'Uit mijn video';
-
-  @override
-  String get ideasSurprise => 'Verras me';
-
-  @override
-  String get ideasPrepare => 'Suggesties op het apparaat voorbereiden';
-
-  @override
-  String get ideasUnavailable =>
-      'Video-ideeën zijn nu niet beschikbaar. Probeer Verras me.';
-
-  @override
-  String get ideasSourceVideo => 'Gebaseerd op je video';
-
-  @override
-  String get ideasSourceTranscript => 'Gebaseerd op je transcript';
-
-  @override
-  String get ideasSourcePremade => 'Een beetje inspiratie';
-
-  @override
-  String get ideasUseBoth => 'Beide gebruiken';
-
-  @override
-  String get ideasMore => 'Meer ideeën';
-
-  @override
-  String get ideasGenerateTranscript => 'Transcript maken';
-
-  @override
-  String get ideasEditTranscript => 'Transcript bewerken';
-
-  @override
-  String get ideasTranscript => 'Transcript voor ideeën';
-
-  @override
-  String get ideasTranscriptionNotice =>
-      'Transcriptie gebruikt de dienst van Divine, met verwerking op het apparaat als alternatief. Tekstsuggesties blijven op je telefoon. Dit voegt geen ondertitels toe aan je bericht.';
-
-  @override
-  String get ideasApplied => 'Idee toegevoegd. Maak het van jou.';
-
-  @override
-  String get ideasUndo => 'Ongedaan maken';
-
-  @override
-  String get ideasTitleOne => 'Een klein moment';
-
-  @override
-  String get ideasDescriptionOne => 'Dit wilde ik delen.';
-
-  @override
-  String get ideasTitleTwo => 'Daar gaan we';
-
-  @override
-  String get ideasDescriptionTwo => 'Een klein stukje van mijn dag.';
-
-  @override
-  String get ideasTitleThree => 'Voor in de loop';
-
-  @override
-  String get ideasDescriptionThree => 'Een moment om te bewaren.';
-
-  @override
-  String get ideasTitleFour => 'Zelf gemaakt';
-
-  @override
-  String get ideasDescriptionFour => 'Een kleinigheid van mij.';
-
-  @override
-  String get ideasTitleFive => 'Geen grote uitleg';
-
-  @override
-  String get ideasDescriptionFive => 'Wilde het gewoon delen.';
-
-  @override
-  String get ideasTitleSix => 'Een beetje van vandaag';
-
-  @override
-  String get ideasDescriptionSix => 'Dit laat ik hier achter.';
+  String get listsDiscoveryEmpty =>
+      'Er doken deze keer geen lijsten op. Trek omlaag om te vernieuwen.';
 }

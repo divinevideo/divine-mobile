@@ -1321,31 +1321,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get exploreNoVideosAvailable => '暂无视频';
 
   @override
-  String get exploreDiscoverLists => '发现列表';
-
-  @override
-  String get exploreAboutLists => '关于列表';
-
-  @override
-  String get exploreAboutListsDescription => '列表帮你用两种方式整理和策划 Divine 内容：';
-
-  @override
   String get explorePeopleLists => '人物列表';
 
   @override
-  String get explorePeopleListsDescription => '关注一群创作者，查看他们的最新视频';
-
-  @override
   String get exploreVideoLists => '视频列表';
-
-  @override
-  String get exploreVideoListsDescription => '把喜欢的视频做成播放列表，稍后观看';
-
-  @override
-  String get exploreMyLists => '我的列表';
-
-  @override
-  String get exploreSubscribedLists => '订阅的列表';
 
   @override
   String get exploreErrorLoadingLists => '加载列表出错，请重试。';
@@ -4652,17 +4631,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count 人',
-      one: '1 人',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => '来自 ';
 
   @override
@@ -5573,11 +5541,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get inboxConversationCollabInvitePreview => '合作邀请';
 
   @override
-  String inboxConversationPreviewSenderPrefix(String sender) {
-    return '$sender: ';
-  }
-
-  @override
   String collaboratorInviteDmBody(String title, String url) {
     return '你受邀参与合作制作 $title：$url\n\n打开 Divine 查看并接受。';
   }
@@ -5834,30 +5797,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get discoverListsFailedToUpdateSubscription => '更新订阅失败，请重试。';
-
-  @override
-  String get discoverListsTitle => '发现列表';
-
-  @override
-  String get discoverListsFailedToLoad => '列表加载失败';
-
-  @override
-  String get discoverListsLoading => '正在发现公开列表...';
-
-  @override
-  String get discoverListsRelayTimeout => '中继没有及时返回列表。再试一次。';
-
-  @override
-  String get discoverListsServiceUnavailable => '服务不可用。';
-
-  @override
-  String get discoverListsEmptyTitle => '没有找到公开列表';
-
-  @override
-  String get discoverListsEmptySubtitle => '过会儿再来看看新列表';
-
-  @override
-  String get discoverListsByAuthorPrefix => '来自';
 
   @override
   String get curatedListEmptyTitle => '该列表还没有视频';
@@ -8877,7 +8816,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorOpacityLabel => '不透明度';
 
   @override
-  String get videoEditorOpacitySemanticLabel => '设置所选图层的透明程度';
+  String get videoEditorOpacitySemanticLabel => '设置所选片段的透明程度';
 
   @override
   String get videoEditorChromaKeyAutoDetect => '自动识别';
@@ -9292,35 +9231,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel => '编辑图层动画';
-
-  @override
-  String get videoEditorKeyframeAdd => '添加关键帧';
-
-  @override
-  String get videoEditorKeyframeRemove => '移除关键帧';
-
-  @override
-  String videoEditorKeyframeMarkerSemanticLabel(String time) {
-    return '跳到 $time 的关键帧';
-  }
-
-  @override
-  String get videoEditorKeyframesLabel => '关键帧';
-
-  @override
-  String get videoEditorKeyframesButtonSemanticLabel => '编辑图层关键帧';
-
-  @override
-  String get videoEditorKeyframesHint =>
-      '添加关键帧，移动播放头，然后移动、缩放或旋转图层。图层会在关键帧之间平滑移动。';
-
-  @override
-  String get videoEditorKeyframeEffect => '效果';
-
-  @override
-  String videoEditorKeyframeCurveSegment(String from, String to) {
-    return '从关键帧 $from 到 $to 的运动';
-  }
 
   @override
   String get videoEditorLayerAnimationEnter => '入场';
@@ -12456,90 +12366,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get subtitleMachineTranslated => '机器翻译';
 
   @override
-  String get ideasNeedIdeas => '需要灵感？';
+  String get listsDiscoveryLoadingLabel => '正在加载列表';
 
   @override
-  String get ideasHide => '收起灵感';
-
-  @override
-  String get ideasFromVideo => '来自我的视频';
-
-  @override
-  String get ideasSurprise => '给我惊喜';
-
-  @override
-  String get ideasPrepare => '准备设备端建议';
-
-  @override
-  String get ideasUnavailable => '暂时无法从视频生成灵感，试试“给我惊喜”。';
-
-  @override
-  String get ideasSourceVideo => '根据你的视频';
-
-  @override
-  String get ideasSourceTranscript => '根据你的转录文本';
-
-  @override
-  String get ideasSourcePremade => '一点灵感';
-
-  @override
-  String get ideasUseBoth => '两个都用';
-
-  @override
-  String get ideasMore => '更多灵感';
-
-  @override
-  String get ideasGenerateTranscript => '生成转写文本';
-
-  @override
-  String get ideasEditTranscript => '编辑转写文本';
-
-  @override
-  String get ideasTranscript => '用于灵感的转写文本';
-
-  @override
-  String get ideasTranscriptionNotice =>
-      '转写使用 Divine 服务，不可用时在设备上处理。文案建议在手机本地生成。这不会为帖子添加字幕。';
-
-  @override
-  String get ideasApplied => '已添加灵感，改成你的风格吧。';
-
-  @override
-  String get ideasUndo => '撤销';
-
-  @override
-  String get ideasTitleOne => '小小的瞬间';
-
-  @override
-  String get ideasDescriptionOne => '就是想分享这个。';
-
-  @override
-  String get ideasTitleTwo => '来啦';
-
-  @override
-  String get ideasDescriptionTwo => '分享我一天中的小片段。';
-
-  @override
-  String get ideasTitleThree => '值得循环';
-
-  @override
-  String get ideasDescriptionThree => '值得留下的瞬间。';
-
-  @override
-  String get ideasTitleFour => '我做的';
-
-  @override
-  String get ideasDescriptionFour => '送上一点我的小创作。';
-
-  @override
-  String get ideasTitleFive => '无需太多解释';
-
-  @override
-  String get ideasDescriptionFive => '只是想分享。';
-
-  @override
-  String get ideasTitleSix => '今天的一小段';
-
-  @override
-  String get ideasDescriptionSix => '把这个留在这里。';
+  String get listsDiscoveryEmpty => '这次没找到列表。下拉刷新试试。';
 }

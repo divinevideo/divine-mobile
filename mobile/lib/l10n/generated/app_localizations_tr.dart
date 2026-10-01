@@ -1376,34 +1376,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Hiç video yok';
 
   @override
-  String get exploreDiscoverLists => 'Listeleri Keşfet';
-
-  @override
-  String get exploreAboutLists => 'Listeler Hakkında';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Listeler, Divine içeriğini iki şekilde düzenlemene ve derlemene yardımcı olur:';
-
-  @override
   String get explorePeopleLists => 'Kişi Listeleri';
 
   @override
-  String get explorePeopleListsDescription =>
-      'İçerik üretici gruplarını takip et ve en son videolarını gör';
-
-  @override
   String get exploreVideoLists => 'Video Listeleri';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Sonra izlemek için favori videolarından oynatma listeleri oluştur';
-
-  @override
-  String get exploreMyLists => 'Listelerim';
-
-  @override
-  String get exploreSubscribedLists => 'Abone Olunan Listeler';
 
   @override
   String get exploreErrorLoadingLists =>
@@ -4915,17 +4891,6 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count kişi',
-      one: '1 kişi',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => 'Yazan ';
 
   @override
@@ -5863,11 +5828,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get inboxConversationCollabInvitePreview => 'İşbirliği daveti';
 
   @override
-  String inboxConversationPreviewSenderPrefix(String sender) {
-    return '$sender: ';
-  }
-
-  @override
   String collaboratorInviteDmBody(String title, String url) {
     return '$title üzerinde işbirliği yapmaya davet edildin: $url\n\nOpen Divine to review and accept.';
   }
@@ -6132,32 +6092,6 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Abonelik güncellenemedi. Lütfen tekrar dene.';
-
-  @override
-  String get discoverListsTitle => 'Listeleri Keşfet';
-
-  @override
-  String get discoverListsFailedToLoad => 'Listeler yüklenemedi';
-
-  @override
-  String get discoverListsLoading => 'Herkese açık listeler keşfediliyor...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Relay listeleri zamanında döndürmedi. Tekrar dene.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Hizmet kullanılamıyor.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Herkese açık liste bulunamadı';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'Yeni listeler için sonra tekrar bak';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'yazan';
 
   @override
   String get curatedListEmptyTitle => 'Bu listede video yok';
@@ -9340,7 +9274,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Seçili katmanın ne kadar saydam olacağını ayarla';
+      'Seçili klibin ne kadar saydam olacağını ayarla';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Otomatik algıla';
@@ -9791,36 +9725,6 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'Katman animasyonunu düzenle';
-
-  @override
-  String get videoEditorKeyframeAdd => 'Ana kare ekle';
-
-  @override
-  String get videoEditorKeyframeRemove => 'Ana kareyi kaldır';
-
-  @override
-  String videoEditorKeyframeMarkerSemanticLabel(String time) {
-    return '$time konumundaki ana kareye git';
-  }
-
-  @override
-  String get videoEditorKeyframesLabel => 'Ana kareler';
-
-  @override
-  String get videoEditorKeyframesButtonSemanticLabel =>
-      'Katmanın ana karelerini düzenle';
-
-  @override
-  String get videoEditorKeyframesHint =>
-      'Bir ana kare ekle, oynatma kafasını kaydır, sonra katmanı taşı, boyutlandır ya da döndür. Katman ana kareden ana kareye kayar.';
-
-  @override
-  String get videoEditorKeyframeEffect => 'Efekt';
-
-  @override
-  String videoEditorKeyframeCurveSegment(String from, String to) {
-    return '$from. ana kareden $to. ana kareye hareket';
-  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Giriş';
@@ -13182,91 +13086,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get subtitleMachineTranslated => 'Makine çevirisi';
 
   @override
-  String get ideasNeedIdeas => 'Fikir mi lazım?';
+  String get listsDiscoveryLoadingLabel => 'Listeler yükleniyor';
 
   @override
-  String get ideasHide => 'Fikirleri gizle';
-
-  @override
-  String get ideasFromVideo => 'Videomdan';
-
-  @override
-  String get ideasSurprise => 'Beni şaşırt';
-
-  @override
-  String get ideasPrepare => 'Cihazdaki önerileri hazırla';
-
-  @override
-  String get ideasUnavailable =>
-      'Video fikirleri şu an kullanılamıyor. Beni şaşırt seçeneğini dene.';
-
-  @override
-  String get ideasSourceVideo => 'Videona dayanıyor';
-
-  @override
-  String get ideasSourceTranscript => 'Konuşma dökümüne dayanıyor';
-
-  @override
-  String get ideasSourcePremade => 'Biraz ilham';
-
-  @override
-  String get ideasUseBoth => 'İkisini de kullan';
-
-  @override
-  String get ideasMore => 'Daha fazla fikir';
-
-  @override
-  String get ideasGenerateTranscript => 'Döküm oluştur';
-
-  @override
-  String get ideasEditTranscript => 'Dökümü düzenle';
-
-  @override
-  String get ideasTranscript => 'Fikirler için döküm';
-
-  @override
-  String get ideasTranscriptionNotice =>
-      'Döküm için Divine hizmeti, yedek olarak da cihaz kullanılır. Metin önerileri telefonunda kalır. Bu işlem gönderine altyazı eklemez.';
-
-  @override
-  String get ideasApplied => 'Fikir eklendi. Kendi dokunuşunu kat.';
-
-  @override
-  String get ideasUndo => 'Geri al';
-
-  @override
-  String get ideasTitleOne => 'Küçük bir an';
-
-  @override
-  String get ideasDescriptionOne => 'Bunu paylaşmak istedim.';
-
-  @override
-  String get ideasTitleTwo => 'İşte geliyor';
-
-  @override
-  String get ideasDescriptionTwo => 'Günümden küçük bir parça.';
-
-  @override
-  String get ideasTitleThree => 'Döngüye değer';
-
-  @override
-  String get ideasDescriptionThree => 'Saklamaya değer bir an.';
-
-  @override
-  String get ideasTitleFour => 'Bunu ben yaptım';
-
-  @override
-  String get ideasDescriptionFour => 'Benden küçük bir şey.';
-
-  @override
-  String get ideasTitleFive => 'Uzun açıklama yok';
-
-  @override
-  String get ideasDescriptionFive => 'Sadece paylaşmak istedim.';
-
-  @override
-  String get ideasTitleSix => 'Bugünden bir parça';
-
-  @override
-  String get ideasDescriptionSix => 'Bunu buraya bırakıyorum.';
+  String get listsDiscoveryEmpty =>
+      'Bu sefer hiç liste çıkmadı. Yenilemek için aşağı çek.';
 }

@@ -1424,34 +1424,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Inga videor tillgängliga';
 
   @override
-  String get exploreDiscoverLists => 'Upptäck listor';
-
-  @override
-  String get exploreAboutLists => 'Om listor';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Listor hjälper dig organisera och kuratera Divine-innehåll på två sätt:';
-
-  @override
   String get explorePeopleLists => 'Personlistor';
 
   @override
-  String get explorePeopleListsDescription =>
-      'Följ grupper av kreatörer och se deras senaste videor';
-
-  @override
   String get exploreVideoLists => 'Videolistor';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Skapa spellistor med dina favoritvideor för att titta på senare';
-
-  @override
-  String get exploreMyLists => 'Mina listor';
-
-  @override
-  String get exploreSubscribedLists => 'Prenumererade listor';
 
   @override
   String get exploreErrorLoadingLists =>
@@ -4966,17 +4942,6 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count personer',
-      one: '1 person',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => 'Av ';
 
   @override
@@ -5919,11 +5884,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get inboxConversationCollabInvitePreview => 'Inbjudan att samarbeta';
 
   @override
-  String inboxConversationPreviewSenderPrefix(String sender) {
-    return '$sender: ';
-  }
-
-  @override
   String collaboratorInviteDmBody(String title, String url) {
     return 'Du har bjudits in att samarbeta på $title: $url\n\nOpen Divine to review and accept.';
   }
@@ -6190,31 +6150,6 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Kunde inte uppdatera prenumerationen. Försök igen.';
-
-  @override
-  String get discoverListsTitle => 'Upptäck listor';
-
-  @override
-  String get discoverListsFailedToLoad => 'Kunde inte ladda listor';
-
-  @override
-  String get discoverListsLoading => 'Söker upp publika listor...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Relayen returnerade inga listor i tid. Försök igen.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Tjänsten är inte tillgänglig.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Inga publika listor hittades';
-
-  @override
-  String get discoverListsEmptySubtitle => 'Kom tillbaka senare för nya listor';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'av';
 
   @override
   String get curatedListEmptyTitle => 'Inga videor i den här listan';
@@ -9418,7 +9353,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Ställ in hur genomskinligt det valda lagret är';
+      'Ställ in hur genomskinligt det valda klippet är';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Hitta automatiskt';
@@ -9871,36 +9806,6 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'Redigera lageranimering';
-
-  @override
-  String get videoEditorKeyframeAdd => 'Lägg till nyckelbildruta';
-
-  @override
-  String get videoEditorKeyframeRemove => 'Ta bort nyckelbildruta';
-
-  @override
-  String videoEditorKeyframeMarkerSemanticLabel(String time) {
-    return 'Gå till nyckelbildrutan vid $time';
-  }
-
-  @override
-  String get videoEditorKeyframesLabel => 'Nyckelbildrutor';
-
-  @override
-  String get videoEditorKeyframesButtonSemanticLabel =>
-      'Redigera lagrets nyckelbildrutor';
-
-  @override
-  String get videoEditorKeyframesHint =>
-      'Lägg till en nyckelbildruta, flytta uppspelningshuvudet och flytta, skala eller vrid sedan lagret. Det glider från nyckelbildruta till nyckelbildruta.';
-
-  @override
-  String get videoEditorKeyframeEffect => 'Effekt';
-
-  @override
-  String videoEditorKeyframeCurveSegment(String from, String to) {
-    return 'Rörelse från nyckelbildruta $from till $to';
-  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'In';
@@ -13261,91 +13166,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get subtitleMachineTranslated => 'Maskinöversatt';
 
   @override
-  String get ideasNeedIdeas => 'Behöver du idéer?';
+  String get listsDiscoveryLoadingLabel => 'Läser in listor';
 
   @override
-  String get ideasHide => 'Dölj idéer';
-
-  @override
-  String get ideasFromVideo => 'Från min video';
-
-  @override
-  String get ideasSurprise => 'Överraska mig';
-
-  @override
-  String get ideasPrepare => 'Förbered förslag på enheten';
-
-  @override
-  String get ideasUnavailable =>
-      'Videoidéer är inte tillgängliga just nu. Prova Överraska mig.';
-
-  @override
-  String get ideasSourceVideo => 'Baserat på din video';
-
-  @override
-  String get ideasSourceTranscript => 'Baserat på din transkription';
-
-  @override
-  String get ideasSourcePremade => 'Lite inspiration';
-
-  @override
-  String get ideasUseBoth => 'Använd båda';
-
-  @override
-  String get ideasMore => 'Fler idéer';
-
-  @override
-  String get ideasGenerateTranscript => 'Skapa transkription';
-
-  @override
-  String get ideasEditTranscript => 'Redigera transkription';
-
-  @override
-  String get ideasTranscript => 'Transkription för idéer';
-
-  @override
-  String get ideasTranscriptionNotice =>
-      'Transkriptionen använder Divines tjänst, med enheten som reserv. Textförslag stannar på din telefon. Detta lägger inte till undertexter i ditt inlägg.';
-
-  @override
-  String get ideasApplied => 'Idé tillagd. Gör den till din.';
-
-  @override
-  String get ideasUndo => 'Ångra';
-
-  @override
-  String get ideasTitleOne => 'Ett litet ögonblick';
-
-  @override
-  String get ideasDescriptionOne => 'Kände för att dela det här.';
-
-  @override
-  String get ideasTitleTwo => 'Nu kör vi';
-
-  @override
-  String get ideasDescriptionTwo => 'En liten bit av min dag.';
-
-  @override
-  String get ideasTitleThree => 'För loopen';
-
-  @override
-  String get ideasDescriptionThree => 'Ett ögonblick att spara.';
-
-  @override
-  String get ideasTitleFour => 'Jag gjorde det här';
-
-  @override
-  String get ideasDescriptionFour => 'En liten grej från mig.';
-
-  @override
-  String get ideasTitleFive => 'Ingen stor förklaring';
-
-  @override
-  String get ideasDescriptionFive => 'Ville bara dela.';
-
-  @override
-  String get ideasTitleSix => 'Lite av idag';
-
-  @override
-  String get ideasDescriptionSix => 'Lämnar det här.';
+  String get listsDiscoveryEmpty =>
+      'Inga listor dök upp den här gången. Dra för att uppdatera.';
 }

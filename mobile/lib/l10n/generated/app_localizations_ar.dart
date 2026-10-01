@@ -1425,34 +1425,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get exploreNoVideosAvailable => 'لا توجد فيديوهات متاحة';
 
   @override
-  String get exploreDiscoverLists => 'اكتشف القوائم';
-
-  @override
-  String get exploreAboutLists => 'عن القوائم';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'القوائم تساعدك في تنظيم محتوى Divine بطريقتين:';
-
-  @override
   String get explorePeopleLists => 'قوائم الأشخاص';
 
   @override
-  String get explorePeopleListsDescription =>
-      'تابع مجموعات من الصناع وشاهد أحدث فيديوهاتهم';
-
-  @override
   String get exploreVideoLists => 'قوائم الفيديو';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'أنشئ قوائم تشغيل لفيديوهاتك المفضلة لمشاهدتها لاحقًا';
-
-  @override
-  String get exploreMyLists => 'قوائمي';
-
-  @override
-  String get exploreSubscribedLists => 'القوائم المشترك بها';
 
   @override
   String get exploreErrorLoadingLists =>
@@ -4949,21 +4925,6 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count شخص',
-      many: '$count شخصًا',
-      few: '$count أشخاص',
-      two: 'شخصان',
-      one: 'شخص واحد',
-      zero: 'لا أحد',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => 'بقلم ';
 
   @override
@@ -5898,11 +5859,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get inboxConversationCollabInvitePreview => 'دعوة للتعاون';
 
   @override
-  String inboxConversationPreviewSenderPrefix(String sender) {
-    return '$sender: ';
-  }
-
-  @override
   String collaboratorInviteDmBody(String title, String url) {
     return 'تمت دعوتك للتعاون على $title: $url\n\nOpen Divine to review and accept.';
   }
@@ -6172,32 +6128,6 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'فشل تحديث الاشتراك. يرجى المحاولة مرّة أخرى.';
-
-  @override
-  String get discoverListsTitle => 'اكتشف القوائم';
-
-  @override
-  String get discoverListsFailedToLoad => 'فشل تحميل القوائم';
-
-  @override
-  String get discoverListsLoading => 'جاري اكتشاف القوائم العامة...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'لم يُرجع الريلاي القوائم في الوقت المناسب. حاول مرة أخرى.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'الخدمة غير متاحة.';
-
-  @override
-  String get discoverListsEmptyTitle => 'لم يتم العثور على قوائم عامة';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'عاود التحقق لاحقًا لرؤية قوائم جديدة';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'بقلم';
 
   @override
   String get curatedListEmptyTitle => 'لا فيديوهات في هذه القائمة';
@@ -9389,7 +9319,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorOpacityLabel => 'العتامة';
 
   @override
-  String get videoEditorOpacitySemanticLabel => 'ضبط مدى شفافية الطبقة المحددة';
+  String get videoEditorOpacitySemanticLabel => 'ضبط مدى شفافية المقطع المحدد';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'كشف تلقائي';
@@ -9838,36 +9768,6 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'تحرير حركة الطبقة';
-
-  @override
-  String get videoEditorKeyframeAdd => 'إضافة إطار رئيسي';
-
-  @override
-  String get videoEditorKeyframeRemove => 'إزالة الإطار الرئيسي';
-
-  @override
-  String videoEditorKeyframeMarkerSemanticLabel(String time) {
-    return 'الانتقال إلى الإطار الرئيسي عند $time';
-  }
-
-  @override
-  String get videoEditorKeyframesLabel => 'الإطارات الرئيسية';
-
-  @override
-  String get videoEditorKeyframesButtonSemanticLabel =>
-      'تعديل الإطارات الرئيسية للطبقة';
-
-  @override
-  String get videoEditorKeyframesHint =>
-      'إضافة إطار رئيسي، ثم تحريك رأس التشغيل، ثم تحريك الطبقة أو تغيير حجمها أو تدويرها. تنتقل الطبقة بسلاسة من إطار رئيسي إلى آخر.';
-
-  @override
-  String get videoEditorKeyframeEffect => 'التأثير';
-
-  @override
-  String videoEditorKeyframeCurveSegment(String from, String to) {
-    return 'الحركة من الإطار الرئيسي $from إلى $to';
-  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'دخول';
@@ -13219,90 +13119,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get subtitleMachineTranslated => 'ترجمة آلية';
 
   @override
-  String get ideasNeedIdeas => 'تحتاج أفكارًا؟';
+  String get listsDiscoveryLoadingLabel => 'جارٍ تحميل القوائم';
 
   @override
-  String get ideasHide => 'إخفاء الأفكار';
-
-  @override
-  String get ideasFromVideo => 'من الفيديو الخاص بي';
-
-  @override
-  String get ideasSurprise => 'فاجئني';
-
-  @override
-  String get ideasPrepare => 'تجهيز الاقتراحات على الجهاز';
-
-  @override
-  String get ideasUnavailable => 'أفكار الفيديو غير متاحة الآن. جرّب فاجئني.';
-
-  @override
-  String get ideasSourceVideo => 'بناءً على الفيديو الخاص بك';
-
-  @override
-  String get ideasSourceTranscript => 'بناءً على النص المفرّغ';
-
-  @override
-  String get ideasSourcePremade => 'القليل من الإلهام';
-
-  @override
-  String get ideasUseBoth => 'استخدام الاثنين';
-
-  @override
-  String get ideasMore => 'المزيد من الأفكار';
-
-  @override
-  String get ideasGenerateTranscript => 'إنشاء نص مفرّغ';
-
-  @override
-  String get ideasEditTranscript => 'تعديل النص المفرّغ';
-
-  @override
-  String get ideasTranscript => 'نص مفرّغ للأفكار';
-
-  @override
-  String get ideasTranscriptionNotice =>
-      'يستخدم التفريغ خدمة Divine، مع المعالجة على الجهاز كبديل. تبقى اقتراحات الصياغة على هاتفك. لن يضيف هذا ترجمات إلى منشورك.';
-
-  @override
-  String get ideasApplied => 'أُضيفت الفكرة. أضف لمستك.';
-
-  @override
-  String get ideasUndo => 'تراجع';
-
-  @override
-  String get ideasTitleOne => 'لحظة صغيرة';
-
-  @override
-  String get ideasDescriptionOne => 'أحببت مشاركة هذا.';
-
-  @override
-  String get ideasTitleTwo => 'ها نحن';
-
-  @override
-  String get ideasDescriptionTwo => 'جزء صغير من يومي.';
-
-  @override
-  String get ideasTitleThree => 'للمشاهدة المتكررة';
-
-  @override
-  String get ideasDescriptionThree => 'لحظة تستحق الاحتفاظ بها.';
-
-  @override
-  String get ideasTitleFour => 'صنعت هذا';
-
-  @override
-  String get ideasDescriptionFour => 'شيء بسيط مني.';
-
-  @override
-  String get ideasTitleFive => 'بلا شرح طويل';
-
-  @override
-  String get ideasDescriptionFive => 'أردت المشاركة فقط.';
-
-  @override
-  String get ideasTitleSix => 'القليل من اليوم';
-
-  @override
-  String get ideasDescriptionSix => 'أترك هذا هنا.';
+  String get listsDiscoveryEmpty =>
+      'لم تظهر أي قوائم هذه المرة. يمكن السحب للتحديث.';
 }

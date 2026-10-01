@@ -1315,33 +1315,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exploreNoVideosAvailable => '이용 가능한 영상이 없어요';
 
   @override
-  String get exploreDiscoverLists => '리스트 둘러보기';
-
-  @override
-  String get exploreAboutLists => '리스트란?';
-
-  @override
-  String get exploreAboutListsDescription =>
-      '리스트는 Divine 콘텐츠를 두 가지 방식으로 정리하고 큐레이션할 수 있게 해줘요:';
-
-  @override
   String get explorePeopleLists => '사람 리스트';
 
   @override
-  String get explorePeopleListsDescription =>
-      '크리에이터 그룹을 팔로우하고 그들의 최신 영상을 확인해보세요';
-
-  @override
   String get exploreVideoLists => '영상 리스트';
-
-  @override
-  String get exploreVideoListsDescription => '좋아하는 영상의 플레이리스트를 만들어서 나중에 다시 보세요';
-
-  @override
-  String get exploreMyLists => '내 리스트';
-
-  @override
-  String get exploreSubscribedLists => '구독 리스트';
 
   @override
   String get exploreErrorLoadingLists => '리스트를 불러오지 못했어요. 다시 시도해보세요.';
@@ -4692,17 +4669,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count명',
-      one: '1명',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => '작성자: ';
 
   @override
@@ -5625,11 +5591,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get inboxConversationCollabInvitePreview => '콜라보 초대';
 
   @override
-  String inboxConversationPreviewSenderPrefix(String sender) {
-    return '$sender: ';
-  }
-
-  @override
   String collaboratorInviteDmBody(String title, String url) {
     return '$title 콜라보에 초대받았어요: $url\n\nOpen Divine to review and accept.';
   }
@@ -5888,30 +5849,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       '구독 업데이트에 실패했어요. 다시 시도해보세요.';
-
-  @override
-  String get discoverListsTitle => '리스트 둘러보기';
-
-  @override
-  String get discoverListsFailedToLoad => '리스트를 불러오지 못했어요';
-
-  @override
-  String get discoverListsLoading => '공개 리스트를 찾는 중...';
-
-  @override
-  String get discoverListsRelayTimeout => '릴레이가 제때 리스트를 주지 않았어요. 다시 시도해 주세요.';
-
-  @override
-  String get discoverListsServiceUnavailable => '서비스를 사용할 수 없어요.';
-
-  @override
-  String get discoverListsEmptyTitle => '공개 리스트를 찾지 못했어요';
-
-  @override
-  String get discoverListsEmptySubtitle => '새 리스트가 올라오면 다시 와봐요';
-
-  @override
-  String get discoverListsByAuthorPrefix => '작성자';
 
   @override
   String get curatedListEmptyTitle => '이 리스트에 영상이 없어요';
@@ -8975,7 +8912,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorOpacityLabel => '불투명도';
 
   @override
-  String get videoEditorOpacitySemanticLabel => '선택한 레이어가 비쳐 보이는 정도 설정';
+  String get videoEditorOpacitySemanticLabel => '선택한 클립이 비쳐 보이는 정도 설정';
 
   @override
   String get videoEditorChromaKeyAutoDetect => '자동 감지';
@@ -9403,35 +9340,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel => '레이어 애니메이션 편집';
-
-  @override
-  String get videoEditorKeyframeAdd => '키프레임 추가';
-
-  @override
-  String get videoEditorKeyframeRemove => '키프레임 삭제';
-
-  @override
-  String videoEditorKeyframeMarkerSemanticLabel(String time) {
-    return '$time의 키프레임으로 이동';
-  }
-
-  @override
-  String get videoEditorKeyframesLabel => '키프레임';
-
-  @override
-  String get videoEditorKeyframesButtonSemanticLabel => '레이어 키프레임 편집';
-
-  @override
-  String get videoEditorKeyframesHint =>
-      '키프레임을 추가하고 재생 헤드를 옮긴 다음 레이어를 이동하거나 크기를 조절하거나 회전하세요. 레이어가 키프레임 사이를 부드럽게 움직여요.';
-
-  @override
-  String get videoEditorKeyframeEffect => '효과';
-
-  @override
-  String videoEditorKeyframeCurveSegment(String from, String to) {
-    return '키프레임 $from에서 $to까지의 움직임';
-  }
 
   @override
   String get videoEditorLayerAnimationEnter => '등장';
@@ -12619,90 +12527,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get subtitleMachineTranslated => '기계 번역';
 
   @override
-  String get ideasNeedIdeas => '아이디어가 필요해요?';
+  String get listsDiscoveryLoadingLabel => '목록 불러오는 중';
 
   @override
-  String get ideasHide => '아이디어 숨기기';
-
-  @override
-  String get ideasFromVideo => '내 동영상에서';
-
-  @override
-  String get ideasSurprise => '추천해 주세요';
-
-  @override
-  String get ideasPrepare => '기기 내 추천 준비';
-
-  @override
-  String get ideasUnavailable => '지금은 동영상 아이디어를 사용할 수 없어요. 추천해 주세요를 눌러 보세요.';
-
-  @override
-  String get ideasSourceVideo => '동영상을 바탕으로';
-
-  @override
-  String get ideasSourceTranscript => '음성 전사를 바탕으로';
-
-  @override
-  String get ideasSourcePremade => '작은 영감';
-
-  @override
-  String get ideasUseBoth => '둘 다 사용';
-
-  @override
-  String get ideasMore => '다른 아이디어';
-
-  @override
-  String get ideasGenerateTranscript => '대본 생성';
-
-  @override
-  String get ideasEditTranscript => '대본 편집';
-
-  @override
-  String get ideasTranscript => '아이디어용 대본';
-
-  @override
-  String get ideasTranscriptionNotice =>
-      '대본 생성은 Divine 서비스를 사용하며, 필요하면 기기에서 처리해요. 문구 추천은 휴대폰 안에서 이루어져요. 게시물에 자막이 추가되지는 않아요.';
-
-  @override
-  String get ideasApplied => '아이디어를 추가했어요. 나만의 느낌을 더해 보세요.';
-
-  @override
-  String get ideasUndo => '실행 취소';
-
-  @override
-  String get ideasTitleOne => '작은 순간';
-
-  @override
-  String get ideasDescriptionOne => '이걸 나누고 싶었어요.';
-
-  @override
-  String get ideasTitleTwo => '자, 시작';
-
-  @override
-  String get ideasDescriptionTwo => '내 하루의 작은 조각.';
-
-  @override
-  String get ideasTitleThree => '반복해서 보기';
-
-  @override
-  String get ideasDescriptionThree => '간직하고 싶은 순간.';
-
-  @override
-  String get ideasTitleFour => '직접 만들었어요';
-
-  @override
-  String get ideasDescriptionFour => '내가 전하는 작은 무언가.';
-
-  @override
-  String get ideasTitleFive => '긴 설명 없이';
-
-  @override
-  String get ideasDescriptionFive => '그냥 나누고 싶었어요.';
-
-  @override
-  String get ideasTitleSix => '오늘의 한 조각';
-
-  @override
-  String get ideasDescriptionSix => '여기에 남겨 둘게요.';
+  String get listsDiscoveryEmpty => '이번엔 목록이 하나도 안 나왔어요. 당겨서 새로고침하세요.';
 }

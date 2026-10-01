@@ -1452,34 +1452,10 @@ class AppLocalizationsBg extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Няма налични видеа';
 
   @override
-  String get exploreDiscoverLists => 'Открий списъци';
-
-  @override
-  String get exploreAboutLists => 'Относно списъците';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Списъците ти помагат да организираш и управляваш Divine съдържание по два начина:';
-
-  @override
   String get explorePeopleLists => 'Списъци с хора';
 
   @override
-  String get explorePeopleListsDescription =>
-      'Следвай групи от творци и виж най-новите им видеа';
-
-  @override
   String get exploreVideoLists => 'Видео списъци';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Създай плейлисти с любимите си видеа, за да ги гледаш по-късно';
-
-  @override
-  String get exploreMyLists => 'Моите списъци';
-
-  @override
-  String get exploreSubscribedLists => 'Абонирани списъци';
 
   @override
   String get exploreErrorLoadingLists =>
@@ -5025,17 +5001,6 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count души',
-      one: '1 човек',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => 'От ';
 
   @override
@@ -5984,11 +5949,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get inboxConversationCollabInvitePreview => 'Покана за сътрудник';
 
   @override
-  String inboxConversationPreviewSenderPrefix(String sender) {
-    return '$sender: ';
-  }
-
-  @override
   String collaboratorInviteDmBody(String title, String url) {
     return 'Поканени сте да си сътрудничите по $title: $url\n\nOpen Divine to review and accept.';
   }
@@ -6255,31 +6215,6 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Неуспешно актуализиране на абонамента. Опитай пак.';
-
-  @override
-  String get discoverListsTitle => 'Открий списъци';
-
-  @override
-  String get discoverListsFailedToLoad => 'Зареждането на списъците не успя';
-
-  @override
-  String get discoverListsLoading => 'Откриваме публични списъци...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Релето не върна списъци навреме. Опитай пак.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Услугата не е налична.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Не са намерени публични списъци';
-
-  @override
-  String get discoverListsEmptySubtitle => 'Върни се по-късно за нови списъци';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'от';
 
   @override
   String get curatedListEmptyTitle => 'Няма видеа в този списък';
@@ -9504,7 +9439,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Задай колко прозрачен да е избраният слой';
+      'Задай колко прозрачен да е избраният клип';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Автоматично разпознаване';
@@ -9961,36 +9896,6 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'Редактиране на анимация на слоя';
-
-  @override
-  String get videoEditorKeyframeAdd => 'Добави ключов кадър';
-
-  @override
-  String get videoEditorKeyframeRemove => 'Премахни ключовия кадър';
-
-  @override
-  String videoEditorKeyframeMarkerSemanticLabel(String time) {
-    return 'Към ключовия кадър на $time';
-  }
-
-  @override
-  String get videoEditorKeyframesLabel => 'Ключови кадри';
-
-  @override
-  String get videoEditorKeyframesButtonSemanticLabel =>
-      'Редактирай ключовите кадри на слоя';
-
-  @override
-  String get videoEditorKeyframesHint =>
-      'Добави ключов кадър, премести главата за възпроизвеждане, после премести, оразмери или завърти слоя. Той се плъзга от ключов кадър към ключов кадър.';
-
-  @override
-  String get videoEditorKeyframeEffect => 'Ефект';
-
-  @override
-  String videoEditorKeyframeCurveSegment(String from, String to) {
-    return 'Движение от ключов кадър $from до $to';
-  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Вход';
@@ -13384,91 +13289,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get subtitleMachineTranslated => 'Машинен превод';
 
   @override
-  String get ideasNeedIdeas => 'Трябват ти идеи?';
+  String get listsDiscoveryLoadingLabel => 'Зареждане на списъци';
 
   @override
-  String get ideasHide => 'Скрий идеите';
-
-  @override
-  String get ideasFromVideo => 'От моето видео';
-
-  @override
-  String get ideasSurprise => 'Изненадай ме';
-
-  @override
-  String get ideasPrepare => 'Подготви предложения на устройството';
-
-  @override
-  String get ideasUnavailable =>
-      'Идеите от видеото сега не са налични. Пробвай Изненадай ме.';
-
-  @override
-  String get ideasSourceVideo => 'Въз основа на видеото ти';
-
-  @override
-  String get ideasSourceTranscript => 'Въз основа на транскрипцията ти';
-
-  @override
-  String get ideasSourcePremade => 'Малко вдъхновение';
-
-  @override
-  String get ideasUseBoth => 'Използвай и двете';
-
-  @override
-  String get ideasMore => 'Още идеи';
-
-  @override
-  String get ideasGenerateTranscript => 'Създай транскрипция';
-
-  @override
-  String get ideasEditTranscript => 'Редактирай транскрипцията';
-
-  @override
-  String get ideasTranscript => 'Транскрипция за идеи';
-
-  @override
-  String get ideasTranscriptionNotice =>
-      'Транскрипцията използва услугата на Divine, с обработка на устройството като резервен вариант. Предложенията за текст остават на телефона ти. Това не добавя субтитри към публикацията.';
-
-  @override
-  String get ideasApplied => 'Идеята е добавена. Направи я своя.';
-
-  @override
-  String get ideasUndo => 'Отмени';
-
-  @override
-  String get ideasTitleOne => 'Малък момент';
-
-  @override
-  String get ideasDescriptionOne => 'Искаше ми се да споделя това.';
-
-  @override
-  String get ideasTitleTwo => 'Ето го';
-
-  @override
-  String get ideasDescriptionTwo => 'Малка част от деня ми.';
-
-  @override
-  String get ideasTitleThree => 'За повторение';
-
-  @override
-  String get ideasDescriptionThree => 'Момент, който си струва да запазя.';
-
-  @override
-  String get ideasTitleFour => 'Мое дело';
-
-  @override
-  String get ideasDescriptionFour => 'Нещо малко от мен.';
-
-  @override
-  String get ideasTitleFive => 'Без много обяснения';
-
-  @override
-  String get ideasDescriptionFive => 'Просто исках да споделя.';
-
-  @override
-  String get ideasTitleSix => 'Малко от днес';
-
-  @override
-  String get ideasDescriptionSix => 'Оставям това тук.';
+  String get listsDiscoveryEmpty =>
+      'Този път не изскочи нито един списък. Дръпни надолу за обновяване.';
 }

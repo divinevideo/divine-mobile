@@ -1377,34 +1377,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Tidak ada video tersedia';
 
   @override
-  String get exploreDiscoverLists => 'Temukan Daftar';
-
-  @override
-  String get exploreAboutLists => 'Tentang Daftar';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Daftar membantumu mengorganisir dan mengkurasi konten Divine dengan dua cara:';
-
-  @override
   String get explorePeopleLists => 'Daftar Orang';
 
   @override
-  String get explorePeopleListsDescription =>
-      'Ikuti grup kreator dan lihat video terbaru mereka';
-
-  @override
   String get exploreVideoLists => 'Daftar Video';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Buat playlist video favoritmu untuk ditonton nanti';
-
-  @override
-  String get exploreMyLists => 'Daftarku';
-
-  @override
-  String get exploreSubscribedLists => 'Daftar yang Dilanggan';
 
   @override
   String get exploreErrorLoadingLists =>
@@ -4900,17 +4876,6 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count orang',
-      one: '1 orang',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => 'Oleh ';
 
   @override
@@ -5853,11 +5818,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get inboxConversationCollabInvitePreview => 'Undangan kolaborasi';
 
   @override
-  String inboxConversationPreviewSenderPrefix(String sender) {
-    return '$sender: ';
-  }
-
-  @override
   String collaboratorInviteDmBody(String title, String url) {
     return 'Kamu diundang untuk berkolaborasi di $title: $url\n\nOpen Divine to review and accept.';
   }
@@ -6123,31 +6083,6 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Gagal memperbarui langganan. Silakan coba lagi.';
-
-  @override
-  String get discoverListsTitle => 'Jelajahi Daftar';
-
-  @override
-  String get discoverListsFailedToLoad => 'Gagal memuat daftar';
-
-  @override
-  String get discoverListsLoading => 'Mencari daftar publik...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Relay tidak mengembalikan daftar tepat waktu. Coba lagi.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Layanan tidak tersedia.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Tidak ada daftar publik';
-
-  @override
-  String get discoverListsEmptySubtitle => 'Cek lagi nanti untuk daftar baru';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'oleh';
 
   @override
   String get curatedListEmptyTitle => 'Belum ada video di daftar ini';
@@ -9333,7 +9268,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Atur seberapa transparan lapisan yang dipilih';
+      'Atur seberapa transparan klip yang dipilih';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Deteksi otomatis';
@@ -9786,35 +9721,6 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'Edit animasi lapisan';
-
-  @override
-  String get videoEditorKeyframeAdd => 'Tambah keyframe';
-
-  @override
-  String get videoEditorKeyframeRemove => 'Hapus keyframe';
-
-  @override
-  String videoEditorKeyframeMarkerSemanticLabel(String time) {
-    return 'Buka keyframe di $time';
-  }
-
-  @override
-  String get videoEditorKeyframesLabel => 'Keyframe';
-
-  @override
-  String get videoEditorKeyframesButtonSemanticLabel => 'Edit keyframe lapisan';
-
-  @override
-  String get videoEditorKeyframesHint =>
-      'Tambahkan keyframe, geser playhead, lalu pindahkan, ubah ukuran, atau putar lapisan. Lapisan akan meluncur dari keyframe ke keyframe.';
-
-  @override
-  String get videoEditorKeyframeEffect => 'Efek';
-
-  @override
-  String videoEditorKeyframeCurveSegment(String from, String to) {
-    return 'Gerakan dari keyframe $from ke $to';
-  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Masuk';
@@ -13161,91 +13067,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get subtitleMachineTranslated => 'Terjemahan mesin';
 
   @override
-  String get ideasNeedIdeas => 'Butuh ide?';
+  String get listsDiscoveryLoadingLabel => 'Memuat daftar';
 
   @override
-  String get ideasHide => 'Sembunyikan ide';
-
-  @override
-  String get ideasFromVideo => 'Dari video saya';
-
-  @override
-  String get ideasSurprise => 'Kejutkan saya';
-
-  @override
-  String get ideasPrepare => 'Siapkan saran di perangkat';
-
-  @override
-  String get ideasUnavailable =>
-      'Ide dari video belum tersedia. Coba Kejutkan saya.';
-
-  @override
-  String get ideasSourceVideo => 'Berdasarkan videomu';
-
-  @override
-  String get ideasSourceTranscript => 'Berdasarkan transkripmu';
-
-  @override
-  String get ideasSourcePremade => 'Sedikit inspirasi';
-
-  @override
-  String get ideasUseBoth => 'Gunakan keduanya';
-
-  @override
-  String get ideasMore => 'Ide lainnya';
-
-  @override
-  String get ideasGenerateTranscript => 'Buat transkrip';
-
-  @override
-  String get ideasEditTranscript => 'Edit transkrip';
-
-  @override
-  String get ideasTranscript => 'Transkrip untuk ide';
-
-  @override
-  String get ideasTranscriptionNotice =>
-      'Transkripsi menggunakan layanan Divine, dengan perangkat sebagai cadangan. Saran tulisan tetap di ponselmu. Ini tidak menambahkan subtitel ke postingan.';
-
-  @override
-  String get ideasApplied => 'Ide ditambahkan. Beri sentuhanmu.';
-
-  @override
-  String get ideasUndo => 'Urungkan';
-
-  @override
-  String get ideasTitleOne => 'Momen kecil';
-
-  @override
-  String get ideasDescriptionOne => 'Ingin berbagi ini.';
-
-  @override
-  String get ideasTitleTwo => 'Ini dia';
-
-  @override
-  String get ideasDescriptionTwo => 'Sedikit bagian dari hariku.';
-
-  @override
-  String get ideasTitleThree => 'Untuk diputar berulang';
-
-  @override
-  String get ideasDescriptionThree => 'Momen yang layak disimpan.';
-
-  @override
-  String get ideasTitleFour => 'Buatan saya';
-
-  @override
-  String get ideasDescriptionFour => 'Sedikit sesuatu dariku.';
-
-  @override
-  String get ideasTitleFive => 'Tanpa banyak penjelasan';
-
-  @override
-  String get ideasDescriptionFive => 'Cuma ingin berbagi.';
-
-  @override
-  String get ideasTitleSix => 'Sedikit tentang hari ini';
-
-  @override
-  String get ideasDescriptionSix => 'Kutinggalkan ini di sini.';
+  String get listsDiscoveryEmpty =>
+      'Belum ada daftar yang muncul kali ini. Tarik untuk menyegarkan.';
 }

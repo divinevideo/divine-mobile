@@ -1406,34 +1406,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get exploreNoVideosAvailable => 'ምንም ቪዲዮዎች የሉም';
 
   @override
-  String get exploreDiscoverLists => 'ዝርዝሮችን ያግኙ';
-
-  @override
-  String get exploreAboutLists => 'ስለ ዝርዝሮች';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'ዝርዝሮች የDivine ይዘትን በሁለት መንገድ እንዲያደራጁ እና እንዲያዘጋጁ ያግዝዎታል፡';
-
-  @override
   String get explorePeopleLists => 'የሰዎች ዝርዝሮች';
 
   @override
-  String get explorePeopleListsDescription =>
-      'የፈጣሪዎችን ቡድኖች ይከተሉ እና የቅርብ ጊዜ ቪዲዮዎቻቸውን ይመልከቱ';
-
-  @override
   String get exploreVideoLists => 'የቪዲዮ ዝርዝሮች';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'በኋላ ለመመልከት የሚወዷቸውን ቪዲዮዎች አጫዋች ዝርዝሮችን ይፍጠሩ';
-
-  @override
-  String get exploreMyLists => 'የእኔ ዝርዝሮች';
-
-  @override
-  String get exploreSubscribedLists => 'የተመዘገቡ ዝርዝሮች';
 
   @override
   String get exploreErrorLoadingLists => 'ዝርዝሮችን መጫን ላይ ስህተት። እባክህ እንደገና ሞክር።';
@@ -4854,17 +4830,6 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count ሰዎች',
-      one: '$count ሰው',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => 'በ';
 
   @override
@@ -5793,11 +5758,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get inboxConversationCollabInvitePreview => 'የተባባሪ ግብዣ';
 
   @override
-  String inboxConversationPreviewSenderPrefix(String sender) {
-    return '$sender: ';
-  }
-
-  @override
   String collaboratorInviteDmBody(String title, String url) {
     return 'በ$title ላይ እንድትተባበር ተጋብዘሃል፦ $url\n\nOpen Divine to review and accept.';
   }
@@ -6059,30 +6019,6 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'የደንበኝነት ምዝገባን ማዘመን አልተሳካም። እባክህ እንደገና ሞክር።';
-
-  @override
-  String get discoverListsTitle => 'ዝርዝሮችን ያግኙ';
-
-  @override
-  String get discoverListsFailedToLoad => 'ዝርዝሮችን መጫን አልተሳካም';
-
-  @override
-  String get discoverListsLoading => 'የህዝብ ዝርዝሮችን በመፈለግ ላይ...';
-
-  @override
-  String get discoverListsRelayTimeout => 'ሪሌው በጊዜው ዝርዝሮችን አልመለሰም። እንደገና ሞክር።';
-
-  @override
-  String get discoverListsServiceUnavailable => 'አገልግሎቱ አይገኝም።';
-
-  @override
-  String get discoverListsEmptyTitle => 'ምንም የህዝብ ዝርዝሮች አልተገኙም';
-
-  @override
-  String get discoverListsEmptySubtitle => 'ለአዳዲስ ዝርዝሮች ቆይተው ይመልከቱ';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'በ';
 
   @override
   String get curatedListEmptyTitle => 'በዚህ ዝርዝር ውስጥ ምንም ቪዲዮዎች የሉም';
@@ -9206,7 +9142,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'የተመረጠው ንብርብር ምን ያህል እንደሚታይ ማዘጋጀት';
+      'የተመረጠው ቅንጥብ ምን ያህል እንደሚታይ ማዘጋጀት';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'በራስ-ሰር ለይ';
@@ -9643,36 +9579,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel => 'የንብርብር እነማ አርትዕ';
-
-  @override
-  String get videoEditorKeyframeAdd => 'ቁልፍ ፍሬም አክል';
-
-  @override
-  String get videoEditorKeyframeRemove => 'ቁልፍ ፍሬም አስወግድ';
-
-  @override
-  String videoEditorKeyframeMarkerSemanticLabel(String time) {
-    return 'በ$time ወዳለው ቁልፍ ፍሬም ሂድ';
-  }
-
-  @override
-  String get videoEditorKeyframesLabel => 'ቁልፍ ፍሬሞች';
-
-  @override
-  String get videoEditorKeyframesButtonSemanticLabel =>
-      'የንብርብሩን ቁልፍ ፍሬሞች ማስተካከያ';
-
-  @override
-  String get videoEditorKeyframesHint =>
-      'ቁልፍ ፍሬም ያክሉ፣ የመጫወቻ ቦታውን ያንቀሳቅሱ፣ ከዚያ ንብርብሩን ያንቀሳቅሱ፣ መጠኑን ይቀይሩ ወይም ያሽከርክሩ። ንብርብሩ ከቁልፍ ፍሬም ወደ ቁልፍ ፍሬም ይንሸራተታል።';
-
-  @override
-  String get videoEditorKeyframeEffect => 'ውጤት';
-
-  @override
-  String videoEditorKeyframeCurveSegment(String from, String to) {
-    return 'እንቅስቃሴ ከቁልፍ ፍሬም $from እስከ $to';
-  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'መግቢያ';
@@ -12921,90 +12827,8 @@ class AppLocalizationsAm extends AppLocalizations {
   String get subtitleMachineTranslated => 'በማሽን የተተረጎመ';
 
   @override
-  String get ideasNeedIdeas => 'ሀሳብ ይፈልጋሉ?';
+  String get listsDiscoveryLoadingLabel => 'ዝርዝሮችን በመጫን ላይ';
 
   @override
-  String get ideasHide => 'ሀሳቦችን ደብቅ';
-
-  @override
-  String get ideasFromVideo => 'ከእኔ ቪዲዮ';
-
-  @override
-  String get ideasSurprise => 'አስደንቀኝ';
-
-  @override
-  String get ideasPrepare => 'በመሣሪያው ላይ ጥቆማዎችን አዘጋጅ';
-
-  @override
-  String get ideasUnavailable => 'የቪዲዮ ሀሳቦች አሁን አይገኙም። አስደንቀኝን ይሞክሩ።';
-
-  @override
-  String get ideasSourceVideo => 'በእርስዎ ቪዲዮ መሠረት';
-
-  @override
-  String get ideasSourceTranscript => 'በእርስዎ የጽሑፍ ግልባጭ መሠረት';
-
-  @override
-  String get ideasSourcePremade => 'ትንሽ መነሳሳት';
-
-  @override
-  String get ideasUseBoth => 'ሁለቱንም ተጠቀም';
-
-  @override
-  String get ideasMore => 'ተጨማሪ ሀሳቦች';
-
-  @override
-  String get ideasGenerateTranscript => 'ንግግርን ወደ ጽሑፍ ቀይር';
-
-  @override
-  String get ideasEditTranscript => 'ጽሑፉን አርትዕ';
-
-  @override
-  String get ideasTranscript => 'ለሀሳቦች የተጻፈ ንግግር';
-
-  @override
-  String get ideasTranscriptionNotice =>
-      'ንግግርን ወደ ጽሑፍ ለመቀየር የDivine አገልግሎት ይጠቀማል፤ ካልተቻለ በመሣሪያው ላይ ይሠራል። የቃላት ጥቆማዎች በስልክዎ ላይ ይቀራሉ። ይህ በልጥፍዎ ላይ ንዑስ ርዕሶችን አይጨምርም።';
-
-  @override
-  String get ideasApplied => 'ሀሳቡ ተጨምሯል። የራስዎን ቅርጽ ይስጡት።';
-
-  @override
-  String get ideasUndo => 'ቀልብስ';
-
-  @override
-  String get ideasTitleOne => 'ትንሽ ቅጽበት';
-
-  @override
-  String get ideasDescriptionOne => 'ይህን ማጋራት ፈለግሁ።';
-
-  @override
-  String get ideasTitleTwo => 'እነሆ';
-
-  @override
-  String get ideasDescriptionTwo => 'ከቀኔ ትንሽ ክፍል።';
-
-  @override
-  String get ideasTitleThree => 'ደጋግሞ ለማየት';
-
-  @override
-  String get ideasDescriptionThree => 'ሊቀመጥ የሚገባ ቅጽበት።';
-
-  @override
-  String get ideasTitleFour => 'ይህን ሠራሁ';
-
-  @override
-  String get ideasDescriptionFour => 'ከእኔ ትንሽ ነገር።';
-
-  @override
-  String get ideasTitleFive => 'ያለ ረጅም ማብራሪያ';
-
-  @override
-  String get ideasDescriptionFive => 'ማጋራት ብቻ ፈለግሁ።';
-
-  @override
-  String get ideasTitleSix => 'ከዛሬ ትንሽ';
-
-  @override
-  String get ideasDescriptionSix => 'ይህን እዚህ እተዋለሁ።';
+  String get listsDiscoveryEmpty => 'በዚህ ጊዜ ምንም ዝርዝሮች አልተገኙም። ለማደስ ወደታች ይጎትቱ።';
 }

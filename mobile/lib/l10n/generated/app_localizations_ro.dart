@@ -1481,34 +1481,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Niciun videoclip disponibil';
 
   @override
-  String get exploreDiscoverLists => 'Descoperă liste';
-
-  @override
-  String get exploreAboutLists => 'Despre liste';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Listele te ajută să organizezi și să curaâezi conținutul Divine în două feluri:';
-
-  @override
   String get explorePeopleLists => 'Liste de oameni';
 
   @override
-  String get explorePeopleListsDescription =>
-      'Urmărește grupuri de creatori și vezi cele mai noi videoclipuri ale lor';
-
-  @override
   String get exploreVideoLists => 'Liste de videoclipuri';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Creează playlisturi cu videoclipurile preferate ca să le vezi mai târziu';
-
-  @override
-  String get exploreMyLists => 'Listele mele';
-
-  @override
-  String get exploreSubscribedLists => 'Liste la care ești abonat';
 
   @override
   String get exploreErrorLoadingLists =>
@@ -5120,18 +5096,6 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count de persoane',
-      few: '$count persoane',
-      one: '1 persoană',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => 'De ';
 
   @override
@@ -6088,11 +6052,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get inboxConversationCollabInvitePreview => 'Invitație de colaborare';
 
   @override
-  String inboxConversationPreviewSenderPrefix(String sender) {
-    return '$sender: ';
-  }
-
-  @override
   String collaboratorInviteDmBody(String title, String url) {
     return 'Ai fost invitat(ă) să colaborezi la $title: $url\n\nOpen Divine to review and accept.';
   }
@@ -6362,31 +6321,6 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Nu s-a putut actualiza abonamentul. Încearcă din nou.';
-
-  @override
-  String get discoverListsTitle => 'Descoperă liste';
-
-  @override
-  String get discoverListsFailedToLoad => 'N-am putut încărca listele';
-
-  @override
-  String get discoverListsLoading => 'Se descoperă liste publice...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Releul nu a returnat liste la timp. Încearcă din nou.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Serviciul nu este disponibil.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Nicio listă publică găsită';
-
-  @override
-  String get discoverListsEmptySubtitle => 'Revino mai târziu pentru liste noi';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'de';
 
   @override
   String get curatedListEmptyTitle => 'Niciun videoclip în această listă';
@@ -9631,7 +9565,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Setează cât de transparent e stratul selectat';
+      'Setează cât de transparent e clipul selectat';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Detectare automată';
@@ -10086,36 +10020,6 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'Editează animația stratului';
-
-  @override
-  String get videoEditorKeyframeAdd => 'Adaugă cadru cheie';
-
-  @override
-  String get videoEditorKeyframeRemove => 'Elimină cadrul cheie';
-
-  @override
-  String videoEditorKeyframeMarkerSemanticLabel(String time) {
-    return 'Mergi la cadrul cheie de la $time';
-  }
-
-  @override
-  String get videoEditorKeyframesLabel => 'Cadre cheie';
-
-  @override
-  String get videoEditorKeyframesButtonSemanticLabel =>
-      'Editează cadrele cheie ale stratului';
-
-  @override
-  String get videoEditorKeyframesHint =>
-      'Adaugă un cadru cheie, mută capul de redare, apoi mută, redimensionează sau rotește stratul. Stratul alunecă de la un cadru cheie la altul.';
-
-  @override
-  String get videoEditorKeyframeEffect => 'Efect';
-
-  @override
-  String videoEditorKeyframeCurveSegment(String from, String to) {
-    return 'Mișcarea de la cadrul cheie $from la $to';
-  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Intrare';
@@ -13527,91 +13431,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get subtitleMachineTranslated => 'Traducere automată';
 
   @override
-  String get ideasNeedIdeas => 'Ai nevoie de idei?';
+  String get listsDiscoveryLoadingLabel => 'Se încarcă listele';
 
   @override
-  String get ideasHide => 'Ascunde ideile';
-
-  @override
-  String get ideasFromVideo => 'Din videoclipul meu';
-
-  @override
-  String get ideasSurprise => 'Surprinde-mă';
-
-  @override
-  String get ideasPrepare => 'Pregătește sugestiile pe dispozitiv';
-
-  @override
-  String get ideasUnavailable =>
-      'Ideile din videoclip nu sunt disponibile acum. Încearcă Surprinde-mă.';
-
-  @override
-  String get ideasSourceVideo => 'Pe baza videoclipului tău';
-
-  @override
-  String get ideasSourceTranscript => 'Pe baza transcrierii tale';
-
-  @override
-  String get ideasSourcePremade => 'Puțină inspirație';
-
-  @override
-  String get ideasUseBoth => 'Folosește ambele';
-
-  @override
-  String get ideasMore => 'Mai multe idei';
-
-  @override
-  String get ideasGenerateTranscript => 'Generează transcrierea';
-
-  @override
-  String get ideasEditTranscript => 'Editează transcrierea';
-
-  @override
-  String get ideasTranscript => 'Transcriere pentru idei';
-
-  @override
-  String get ideasTranscriptionNotice =>
-      'Transcrierea folosește serviciul Divine, cu procesare pe dispozitiv ca alternativă. Sugestiile de text rămân pe telefon. Nu se adaugă subtitrări la postare.';
-
-  @override
-  String get ideasApplied => 'Idee adăugată. Fă-o a ta.';
-
-  @override
-  String get ideasUndo => 'Anulează';
-
-  @override
-  String get ideasTitleOne => 'Un mic moment';
-
-  @override
-  String get ideasDescriptionOne => 'Am vrut să împărtășesc asta.';
-
-  @override
-  String get ideasTitleTwo => 'Iată';
-
-  @override
-  String get ideasDescriptionTwo => 'O mică parte din ziua mea.';
-
-  @override
-  String get ideasTitleThree => 'De văzut în buclă';
-
-  @override
-  String get ideasDescriptionThree => 'Un moment de păstrat.';
-
-  @override
-  String get ideasTitleFour => 'Făcut de mine';
-
-  @override
-  String get ideasDescriptionFour => 'Ceva mic din partea mea.';
-
-  @override
-  String get ideasTitleFive => 'Fără mari explicații';
-
-  @override
-  String get ideasDescriptionFive => 'Am vrut doar să împărtășesc.';
-
-  @override
-  String get ideasTitleSix => 'Un pic din ziua de azi';
-
-  @override
-  String get ideasDescriptionSix => 'Las asta aici.';
+  String get listsDiscoveryEmpty =>
+      'De data asta n-a apărut nicio listă. Trage în jos pentru reîmprospătare.';
 }
