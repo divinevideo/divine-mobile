@@ -6215,11 +6215,11 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingTitle =>
-      'هل تريد النشر دون التحقق من الأصالة؟';
+      'هل تريد النشر دون بيانات اعتماد المحتوى؟';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'تعذّر علينا إضافة بيانات اعتماد المحتوى، لذا لن يتم تأكيد هذا الفيديو على أنه من صنع إنسان. أعد الإنشاء للمحاولة مرة أخرى، أو انشره كما هو.';
+      'تعذّر علينا إضافة بيانات اعتماد المحتوى إلى هذا الفيديو. أعد الإنشاء للمحاولة مرة أخرى، أو انشره كما هو.';
 
   @override
   String get videoMetadataC2paMissingNote =>
@@ -6234,6 +6234,22 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingSkip => 'تخطّي';
+
+  @override
+  String get videoMetadataC2paUnavailableTitle =>
+      'لا تتوفر بيانات اعتماد المحتوى في هذا الإصدار';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'لا يمكن لهذا الإصدار من Divine تضمين بيانات اعتماد المحتوى في مقاطع الفيديو. لا يزال النشر ممكنًا كالمعتاد.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      'لإضافة بيانات اعتماد المحتوى، يلزم تثبيت Divine من Zapstore أو Google Play.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      'لإضافة بيانات اعتماد المحتوى، يلزم تثبيت Divine من App Store.';
 
   @override
   String get videoMetadataGenerationFailed => 'فشل الإنشاء';

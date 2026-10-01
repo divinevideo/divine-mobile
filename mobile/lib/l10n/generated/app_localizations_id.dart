@@ -6175,11 +6175,11 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingTitle =>
-      'Posting tanpa verifikasi keaslian?';
+      'Posting tanpa kredensial konten?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'Kami tidak dapat menambahkan kredensial konten, jadi video ini tidak akan dikonfirmasi sebagai buatan manusia. Buat ulang untuk mencoba lagi, atau posting apa adanya.';
+      'Kami tidak dapat menambahkan kredensial konten ke video ini. Buat ulang untuk mencoba lagi, atau posting apa adanya.';
 
   @override
   String get videoMetadataC2paMissingNote =>
@@ -6194,6 +6194,22 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingSkip => 'Lewati';
+
+  @override
+  String get videoMetadataC2paUnavailableTitle =>
+      'Tidak ada kredensial konten di versi ini';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'Versi Divine ini tidak dapat menyematkan kredensial konten di video kamu. Kamu tetap bisa mempostingnya seperti biasa.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      'Instal Divine dari Zapstore atau Google Play untuk menambahkan kredensial konten.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      'Instal Divine dari App Store untuk menambahkan kredensial konten.';
 
   @override
   String get videoMetadataGenerationFailed => 'Pembuatan gagal';

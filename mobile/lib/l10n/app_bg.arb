@@ -3748,12 +3748,16 @@
         "description": "Snackbar message shown when saving the chosen cover thumbnail fails on the cover-edit screen. The user can dismiss and try again."
     },
     "videoMetadataEditCoverSuccessAnnouncement": "Корицата е обновена",
-    "videoMetadataC2paMissingTitle": "Публикуване без проверка за автентичност?",
-    "videoMetadataC2paMissingBody": "Не успяхме да добавим удостоверения за съдържанието, затова това видео няма да бъде потвърдено като създадено от човек. Генерирайте отново, за да опитате пак, или го публикувайте както е.",
+    "videoMetadataC2paMissingTitle": "Публикуване без удостоверения за съдържанието?",
+    "videoMetadataC2paMissingBody": "Не успяхме да добавим удостоверения за съдържанието към това видео. Генерирай отново, за да опиташ пак, или го публикувай както е.",
     "videoMetadataC2paMissingNote": "Удостоверенията за съдържание изискват интернет връзка.",
     "videoMetadataC2paMissingNoteServiceUnavailable": "Услугата за удостоверяване на съдържание не отговори. Не е заради твоята връзка.",
     "videoMetadataC2paMissingRegenerate": "Генерирай отново",
     "videoMetadataC2paMissingSkip": "Пропусни",
+    "videoMetadataC2paUnavailableTitle": "Няма удостоверения за съдържанието в тази версия",
+    "videoMetadataC2paUnavailableBody": "Тази версия на Divine не може да вгражда удостоверения за съдържанието във видеата ти. Все пак можеш да ги публикуваш както обикновено.",
+    "videoMetadataC2paUnavailableNoteAndroid": "Инсталирай Divine от Zapstore или Google Play, за да добавяш удостоверения за съдържанието.",
+    "videoMetadataC2paUnavailableNoteIos": "Инсталирай Divine от App Store, за да добавяш удостоверения за съдържанието.",
     "videoMetadataGenerationFailed": "Генерирането е неуспешно",
     "@videoMetadataEditCoverSuccessAnnouncement": {
         "description": "Screen-reader announcement spoken after the user confirms a new cover thumbnail and the screen is about to close. Visual users get the screen pop as feedback; this is the audio equivalent."

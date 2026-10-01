@@ -6251,12 +6251,11 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoMetadataEditCoverSuccessAnnouncement => 'کور اپڈیٹ ہو گیا';
 
   @override
-  String get videoMetadataC2paMissingTitle =>
-      'انسانی بنائی جانچ کے بغیر پوسٹ کریں؟';
+  String get videoMetadataC2paMissingTitle => 'مواد اسناد کے بغیر پوسٹ کریں؟';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'ہم مواد اسناد شامل نہیں کر سکے، اس لیے یہ ویڈیو انسان کی بنائی ہوئی کے طور پر تصدیق نہیں ہو گی۔ دوبارہ بنانے کے لیے ری جنریٹ کریں، یا جوں کی توں پوسٹ کریں۔';
+      'ہم اس ویڈیو میں مواد اسناد شامل نہیں کر سکے۔ دوبارہ کوشش کرنے کے لیے ری جنریٹ کریں، یا جوں کی توں پوسٹ کریں۔';
 
   @override
   String get videoMetadataC2paMissingNote =>
@@ -6271,6 +6270,22 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingSkip => 'چھوڑیں';
+
+  @override
+  String get videoMetadataC2paUnavailableTitle =>
+      'اس ورژن میں مواد اسناد دستیاب نہیں';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'Divine کا یہ ورژن آپ کی ویڈیوز میں مواد اسناد شامل نہیں کر سکتا۔ آپ پھر بھی انہیں معمول کے مطابق پوسٹ کر سکتے ہیں۔';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      'مواد اسناد شامل کرنے کے لیے Divine کو Zapstore یا Google Play سے انسٹال کریں۔';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      'مواد اسناد شامل کرنے کے لیے Divine کو App Store سے انسٹال کریں۔';
 
   @override
   String get videoMetadataGenerationFailed => 'بنانا ناکام';

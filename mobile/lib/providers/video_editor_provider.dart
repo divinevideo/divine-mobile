@@ -56,13 +56,23 @@ import 'package:pro_video_editor/core/models/video/progress_model.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Debug-only escape hatch to exercise the "regenerate or post without
-/// provenance" prompt without a configured signing server. Enable with
+/// provenance" prompt without a configured signing server or token. Enable with
 /// `--dart-define=DIVINE_FORCE_C2PA_PROMPT=true`.
 ///
 /// Off by default and ignored outside debug builds, so CI, integration tests,
 /// and release are never affected (#6058).
 const bool kForceC2paPromptInDebug =
     kDebugMode && bool.fromEnvironment('DIVINE_FORCE_C2PA_PROMPT');
+
+/// Whether the metadata screen explains the missing ProofSign token instead of
+/// offering a regenerate.
+///
+/// True in a build without the token, where signing can never succeed, unless
+/// [kForceC2paPromptInDebug] asks for the regenerate prompt anyway. A provider
+/// so widget tests can pick the variant.
+final c2paSigningTokenMissingProvider = Provider<bool>(
+  (ref) => !C2paSigningService.hasSigningToken && !kForceC2paPromptInDebug,
+);
 
 /// Result of a [VideoEditorNotifier.saveAsDraft] attempt.
 ///
@@ -1582,8 +1592,8 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     }
   }
 
-  /// Clears the pending C2PA-missing prompt once the user has decided to post
-  /// without a content credential (#6058).
+  /// Clears the pending C2PA-missing prompt, or the no-token notice, once the
+  /// user has decided to post without a content credential (#6058).
   void acknowledgeC2paSigningFailure() {
     if (!state.c2paSigningFailed) return;
     state = state.copyWith(c2paSigningFailed: false);

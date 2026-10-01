@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -105,10 +106,40 @@ class _VideoMetadataScreenState extends ConsumerState<VideoMetadataScreen> {
     if (_isC2paPromptOpen) return;
     _isC2paPromptOpen = true;
     try {
-      await _showC2paMissingPrompt();
+      if (ref.read(c2paSigningTokenMissingProvider)) {
+        await _showC2paUnavailableNotice();
+      } else {
+        await _showC2paMissingPrompt();
+      }
     } finally {
       _isC2paPromptOpen = false;
     }
+  }
+
+  /// Shown instead of [_showC2paMissingPrompt] when this build has no ProofSign
+  /// token. Every re-sign would fail the same way, so there is nothing to
+  /// regenerate — say why the content credential is missing and carry on.
+  Future<void> _showC2paUnavailableNotice() async {
+    final l10n = context.l10n;
+    final navigator = Navigator.of(context);
+    await VineBottomSheetPrompt.show<void>(
+      context: context,
+      sticker: .alert,
+      title: l10n.videoMetadataC2paUnavailableTitle,
+      subtitle: l10n.videoMetadataC2paUnavailableBody,
+      // Only builds made outside our store pipeline get here, so point at the
+      // store versions, which carry the token. App Review rejects iOS copy
+      // that names Google Play, hence one note per platform.
+      additionalText: switch (defaultTargetPlatform) {
+        TargetPlatform.android => l10n.videoMetadataC2paUnavailableNoteAndroid,
+        TargetPlatform.iOS => l10n.videoMetadataC2paUnavailableNoteIos,
+        _ => null,
+      },
+      primaryButtonText: l10n.videoMetadataGotItButton,
+      onPrimaryPressed: navigator.pop,
+    );
+    if (!mounted) return;
+    ref.read(videoEditorProvider.notifier).acknowledgeC2paSigningFailure();
   }
 
   Future<void> _showC2paMissingPrompt() async {
@@ -163,7 +194,7 @@ class _VideoMetadataScreenState extends ConsumerState<VideoMetadataScreen> {
   Widget build(BuildContext context) {
     // When the render finishes without a C2PA content credential (signing
     // configured but failed), let the user regenerate or knowingly post
-    // without provenance (#6058).
+    // without provenance, or read why in a build without a token (#6058).
     ref.listen(videoEditorProvider.select((s) => s.c2paSigningFailed), (
       previous,
       next,

@@ -6284,11 +6284,11 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingTitle =>
-      'I-post nang walang human-made check?';
+      'I-post nang walang content credentials?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'Hindi kami nakapaglagay ng content credentials, kaya hindi makukumpirma na gawa ng tao ang video na ito. I-regenerate para subukan ulit, o i-post na lang ito.';
+      'Hindi kami nakapaglagay ng content credentials sa video na ito. I-regenerate para subukan ulit, o i-post na lang ito.';
 
   @override
   String get videoMetadataC2paMissingNote =>
@@ -6303,6 +6303,22 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingSkip => 'Laktawan';
+
+  @override
+  String get videoMetadataC2paUnavailableTitle =>
+      'Walang content credentials sa bersyong ito';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'Hindi makapaglagay ng content credentials sa mga video mo ang bersyong ito ng Divine. Puwede mo pa rin silang i-post gaya ng dati.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      'I-install ang Divine mula sa Zapstore o Google Play para makapagdagdag ng content credentials.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      'I-install ang Divine mula sa App Store para makapagdagdag ng content credentials.';
 
   @override
   String get videoMetadataGenerationFailed => 'Nabigo ang paggawa';

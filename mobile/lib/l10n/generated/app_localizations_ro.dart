@@ -6408,11 +6408,11 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingTitle =>
-      'Publici fără verificarea autenticității?';
+      'Publici fără acreditările de conținut?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'Nu am putut adăuga acreditările de conținut, așa că acest videoclip nu va fi confirmat ca fiind făcut de om. Regenerează pentru a încerca din nou sau publică-l așa cum este.';
+      'Nu am putut adăuga acreditările de conținut la acest videoclip. Regenerează pentru a încerca din nou sau publică-l așa cum este.';
 
   @override
   String get videoMetadataC2paMissingNote =>
@@ -6427,6 +6427,22 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingSkip => 'Omite';
+
+  @override
+  String get videoMetadataC2paUnavailableTitle =>
+      'Fără acreditări de conținut în această versiune';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'Această versiune Divine nu poate include acreditări de conținut în videoclipurile tale. Le poți publica totuși ca de obicei.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      'Instalează Divine din Zapstore sau Google Play ca să adaugi acreditări de conținut.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      'Instalează Divine din App Store ca să adaugi acreditări de conținut.';
 
   @override
   String get videoMetadataGenerationFailed => 'Generarea a eșuat';

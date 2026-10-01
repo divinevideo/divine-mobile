@@ -6337,11 +6337,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingTitle =>
-      'Post without the human-made check?';
+      'Post without content credentials?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'We couldn\'t add content credentials, so this video won\'t be confirmed as Human-Made. Regenerate to try again, or post it as-is.';
+      'We couldn\'t add content credentials to this video. Regenerate to try again, or post it as-is.';
 
   @override
   String get videoMetadataC2paMissingNote =>
@@ -6356,6 +6356,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingSkip => 'Skip';
+
+  @override
+  String get videoMetadataC2paUnavailableTitle =>
+      'No content credentials in this version';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'This version of Divine can\'t embed content credentials in your videos. You can still post them as usual.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      'Install Divine from Zapstore or Google Play to add content credentials.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      'Install Divine from the App Store to add content credentials.';
 
   @override
   String get videoMetadataGenerationFailed => 'Generation failed';

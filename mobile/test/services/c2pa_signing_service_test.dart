@@ -10,6 +10,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/services/c2pa_signing_service.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:unified_logger/unified_logger.dart';
+
+/// Any non-empty token: without one the service never reaches [C2pa].
+const _testSigningToken = 'test-signing-token';
 
 class _MockC2pa extends Mock implements C2pa {}
 
@@ -39,7 +43,10 @@ void main() {
         buildSignature: '',
       );
       mockC2pa = _MockC2pa();
-      service = C2paSigningService(c2pa: mockC2pa);
+      service = C2paSigningService(
+        signingToken: _testSigningToken,
+        c2pa: mockC2pa,
+      );
       tempDir = Directory.systemTemp.createTempSync('c2pa_resign_test_');
     });
 
@@ -115,6 +122,7 @@ void main() {
       test('returns typed failure reason when remote signing throws', () async {
         final video = writeFile('video.mp4', const [0, 1, 2, 3]);
         final failingService = C2paSigningService(
+          signingToken: _testSigningToken,
           c2pa: _FailingC2pa(
             PlatformException(
               code: 'C2PA_ERROR',
@@ -138,6 +146,7 @@ void main() {
         () async {
           final video = writeFile('video.mp4', const [0, 1, 2, 3]);
           final hangingService = C2paSigningService(
+            signingToken: _testSigningToken,
             c2pa: _HangingC2pa(),
             signingTimeout: const Duration(milliseconds: 10),
           );
@@ -162,6 +171,7 @@ void main() {
         () async {
           final video = writeFile('video.mp4', const [0, 1, 2, 3]);
           final slowService = C2paSigningService(
+            signingToken: _testSigningToken,
             c2pa: _SlowWritingC2pa(const Duration(milliseconds: 60)),
             signingTimeout: const Duration(milliseconds: 10),
           );
@@ -193,6 +203,7 @@ void main() {
         () async {
           final video = writeFile('video.mp4', const [0, 1, 2, 3]);
           final failingService = C2paSigningService(
+            signingToken: _testSigningToken,
             c2pa: _WriteThenThrowC2pa(
               const [7, 7, 7],
               PlatformException(
@@ -228,6 +239,7 @@ void main() {
         () async {
           final video = writeFile('video.mp4', const [0, 1, 2, 3]);
           final emptyOutputService = C2paSigningService(
+            signingToken: _testSigningToken,
             c2pa: _WritingC2pa(const []),
           );
 
@@ -253,7 +265,10 @@ void main() {
         () async {
           final video = writeFile('video.mp4', const [0, 1, 2, 3]);
           final c2pa = _WritingC2pa(const [7, 8, 9, 10, 11]);
-          final service = C2paSigningService(c2pa: c2pa);
+          final service = C2paSigningService(
+            signingToken: _testSigningToken,
+            c2pa: c2pa,
+          );
 
           final result = await service.signVideoInPlace(videoPath: video.path);
 
@@ -276,11 +291,63 @@ void main() {
         },
       );
 
+      test('signs with the token the service was built with', () async {
+        final video = writeFile('video.mp4', const [0, 1, 2, 3]);
+        final c2pa = _WritingC2pa(const [7, 8, 9]);
+        final service = C2paSigningService(
+          signingToken: _testSigningToken,
+          c2pa: c2pa,
+        );
+
+        await service.signVideoInPlace(videoPath: video.path);
+
+        expect(
+          c2pa.lastSigner,
+          isA<RemoteSigner>().having(
+            (signer) => signer.bearerToken,
+            'bearerToken',
+            _testSigningToken,
+          ),
+        );
+      });
+
+      test(
+        'does not contact the signer in a build without a token',
+        () async {
+          final video = writeFile('video.mp4', const [0, 1, 2, 3]);
+          final tokenless = C2paSigningService(
+            c2pa: mockC2pa,
+            signingToken: '',
+          );
+
+          final result = await tokenless.signVideoInPlace(
+            videoPath: video.path,
+          );
+
+          expect(result.success, isFalse);
+          expect(result.failureReason, C2paSigningFailureReason.missingToken);
+          expect(result.signedFilePath, video.path);
+          expect(video.readAsBytesSync(), equals([0, 1, 2, 3]));
+          verifyZeroInteractions(mockC2pa);
+        },
+      );
+
+      test('treats a whitespace-only token as no token', () async {
+        final video = writeFile('video.mp4', const [0, 1, 2, 3]);
+        final blank = C2paSigningService(c2pa: mockC2pa, signingToken: ' \n');
+
+        final result = await blank.signVideoInPlace(videoPath: video.path);
+
+        expect(result.failureReason, C2paSigningFailureReason.missingToken);
+        verifyZeroInteractions(mockC2pa);
+      });
+
       test(
         'keeps the recording when the output carries no manifest (#8799)',
         () async {
           final video = writeFile('video.mp4', const [0, 1, 2, 3]);
           final service = C2paSigningService(
+            signingToken: _testSigningToken,
             c2pa: _WritingC2pa(const [7, 8, 9], manifest: null),
           );
 
@@ -306,6 +373,7 @@ void main() {
         () async {
           final video = writeFile('video.mp4', const [0, 1, 2, 3]);
           final service = C2paSigningService(
+            signingToken: _testSigningToken,
             c2pa: _WritingC2pa(
               const [7, 8, 9],
               manifest: const ManifestStoreInfo(),
@@ -329,6 +397,7 @@ void main() {
           // hash mismatch, which is the actual evidence of breakage.
           final video = writeFile('video.mp4', const [0, 1, 2, 3]);
           final service = C2paSigningService(
+            signingToken: _testSigningToken,
             c2pa: _WritingC2pa(
               const [7, 8, 9],
               manifest: const ManifestStoreInfo(
@@ -378,6 +447,7 @@ void main() {
           expect(genuine.validationStatus, ValidationStatus.invalid);
           final video = writeFile('video.mp4', const [0, 1, 2, 3]);
           final service = C2paSigningService(
+            signingToken: _testSigningToken,
             c2pa: _WritingC2pa(const [7, 8, 9], manifest: genuine),
           );
 
@@ -395,6 +465,7 @@ void main() {
         () async {
           final video = writeFile('video.mp4', const [0, 1, 2, 3]);
           final service = C2paSigningService(
+            signingToken: _testSigningToken,
             c2pa: _UnreadableManifestC2pa(const [7, 8, 9]),
           );
 
@@ -414,6 +485,7 @@ void main() {
           // no `validation_status` key at all, e.g. with trust checks off.
           final video = writeFile('video.mp4', const [0, 1, 2, 3]);
           final service = C2paSigningService(
+            signingToken: _testSigningToken,
             c2pa: _WritingC2pa(
               const [7, 8, 9],
               manifest: const ManifestStoreInfo(
@@ -431,6 +503,56 @@ void main() {
     });
 
     group('resignDerived', () {
+      test(
+        'does not contact the signer or change either file without a token',
+        () async {
+          final output = writeFile('out.mp4', const [1, 2, 3]);
+          final source = writeFile('src.mp4', const [4, 5, 6]);
+          final tokenless = C2paSigningService(
+            c2pa: mockC2pa,
+            signingToken: '',
+          );
+
+          final result = await tokenless.resignDerived(
+            outputPath: output.path,
+            sourcePath: source.path,
+            action: C2paEditActions.edited,
+          );
+
+          expect(result.success, isFalse);
+          expect(result.failureReason, C2paSigningFailureReason.missingToken);
+          expect(result.signedFilePath, output.path);
+          expect(output.readAsBytesSync(), equals([1, 2, 3]));
+          expect(source.readAsBytesSync(), equals([4, 5, 6]));
+          verifyZeroInteractions(mockC2pa);
+        },
+      );
+
+      test(
+        'records why a derived re-sign was skipped without a token',
+        () async {
+          await LogCaptureService().clearAllLogs();
+          addTearDown(LogCaptureService().clearAllLogs);
+          final output = writeFile('out.mp4', const [1, 2, 3]);
+          final source = writeFile('src.mp4', const [4, 5, 6]);
+          final tokenless = C2paSigningService(
+            c2pa: mockC2pa,
+            signingToken: '',
+          );
+
+          await tokenless.resignDerived(
+            outputPath: output.path,
+            sourcePath: source.path,
+            action: C2paEditActions.edited,
+          );
+
+          expect(
+            LogCaptureService().getRecentLogs().map((entry) => entry.message),
+            contains(contains('no signing token')),
+          );
+        },
+      );
+
       test('skips re-signing and leaves the file untouched when the source '
           'carries no manifest', () async {
         when(
@@ -662,6 +784,7 @@ class _WritingC2pa extends C2pa {
   final List<int> bytes;
   final ManifestStoreInfo? manifest;
   int readManifestCallCount = 0;
+  C2paSigner? lastSigner;
 
   @override
   Future<void> signFile({
@@ -670,6 +793,7 @@ class _WritingC2pa extends C2pa {
     required String manifestJson,
     required C2paSigner signer,
   }) async {
+    lastSigner = signer;
     File(destPath).writeAsBytesSync(bytes);
   }
 

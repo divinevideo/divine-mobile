@@ -5942,11 +5942,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoMetadataEditCoverSuccessAnnouncement => '커버 업데이트됨';
 
   @override
-  String get videoMetadataC2paMissingTitle => '정품 인증 없이 게시할까요?';
+  String get videoMetadataC2paMissingTitle => '콘텐츠 자격 증명 없이 게시할까요?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      '콘텐츠 자격 증명을 추가할 수 없어 이 동영상은 사람이 제작한 것으로 확인되지 않습니다. 다시 시도하려면 재생성하거나 그대로 게시하세요.';
+      '이 동영상에 콘텐츠 자격 증명을 추가할 수 없었어요. 다시 시도하려면 재생성하거나 그대로 게시하세요.';
 
   @override
   String get videoMetadataC2paMissingNote => '콘텐츠 자격 증명에는 인터넷 연결이 필요합니다.';
@@ -5960,6 +5960,21 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingSkip => '건너뛰기';
+
+  @override
+  String get videoMetadataC2paUnavailableTitle => '이 버전에는 콘텐츠 자격 증명이 없어요';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      '이 버전의 Divine은 동영상에 콘텐츠 자격 증명을 넣을 수 없어요. 그래도 평소처럼 게시할 수 있어요.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      '콘텐츠 자격 증명을 추가하려면 Zapstore나 Google Play에서 Divine을 설치하세요.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      '콘텐츠 자격 증명을 추가하려면 App Store에서 Divine을 설치하세요.';
 
   @override
   String get videoMetadataGenerationFailed => '생성 실패';

@@ -30,6 +30,7 @@ import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
+import 'package:openvine/services/c2pa_signing_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
@@ -1304,6 +1305,15 @@ void main() {
           );
         },
       );
+    });
+
+    group('c2paSigningTokenMissingProvider', () {
+      test('reflects whether the build carries a signing token', () {
+        expect(
+          container.read(c2paSigningTokenMissingProvider),
+          equals(!C2paSigningService.hasSigningToken),
+        );
+      });
     });
 
     group('copyWith clearFinalRenderedClip (#6058)', () {

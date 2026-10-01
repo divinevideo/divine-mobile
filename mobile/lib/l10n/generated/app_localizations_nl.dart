@@ -6274,11 +6274,11 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingTitle =>
-      'Plaatsen zonder echtheidscontrole?';
+      'Plaatsen zonder content credentials?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'We konden geen content credentials toevoegen, dus deze video wordt niet bevestigd als door mensen gemaakt. Genereer opnieuw om het nog eens te proberen, of plaats hem zo.';
+      'We konden geen content credentials aan deze video toevoegen. Genereer opnieuw om het nog eens te proberen, of plaats hem zo.';
 
   @override
   String get videoMetadataC2paMissingNote =>
@@ -6293,6 +6293,22 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingSkip => 'Overslaan';
+
+  @override
+  String get videoMetadataC2paUnavailableTitle =>
+      'Geen content credentials in deze versie';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'Deze versie van Divine kan geen content credentials in je video\'s insluiten. Je kunt ze nog steeds gewoon plaatsen.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      'Installeer Divine via Zapstore of Google Play om content credentials toe te voegen.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      'Installeer Divine via de App Store om content credentials toe te voegen.';
 
   @override
   String get videoMetadataGenerationFailed => 'Genereren mislukt';

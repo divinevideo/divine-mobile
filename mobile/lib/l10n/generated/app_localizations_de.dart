@@ -6328,11 +6328,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoMetadataEditCoverSuccessAnnouncement => 'Cover aktualisiert';
 
   @override
-  String get videoMetadataC2paMissingTitle => 'Ohne Echtheitsnachweis posten?';
+  String get videoMetadataC2paMissingTitle =>
+      'Ohne Content Credentials posten?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'Wir konnten keine Content Credentials hinzufügen – dieses Video wird daher nicht als von Menschen gemacht bestätigt. Neu generieren, um es erneut zu versuchen, oder so posten.';
+      'Wir konnten diesem Video keine Content Credentials hinzufügen. Neu generieren, um es erneut zu versuchen, oder so posten.';
 
   @override
   String get videoMetadataC2paMissingNote =>
@@ -6347,6 +6348,22 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingSkip => 'Überspringen';
+
+  @override
+  String get videoMetadataC2paUnavailableTitle =>
+      'Keine Content Credentials in dieser Version';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'Diese Divine-Version kann keine Content Credentials in deine Videos einbetten. Posten kannst du sie trotzdem wie gewohnt.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      'Installiere Divine über Zapstore oder Google Play, um Content Credentials hinzuzufügen.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      'Installiere Divine aus dem App Store, um Content Credentials hinzuzufügen.';
 
   @override
   String get videoMetadataGenerationFailed => 'Generierung fehlgeschlagen';

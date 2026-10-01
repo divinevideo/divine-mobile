@@ -6106,11 +6106,11 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoMetadataEditCoverSuccessAnnouncement => 'ሽፋን ተዘምኗል';
 
   @override
-  String get videoMetadataC2paMissingTitle => 'ያለ የእውነተኛነት ማረጋገጫ ይለጠፍ?';
+  String get videoMetadataC2paMissingTitle => 'ያለ የይዘት መታወቂያዎች ይለጠፍ?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'የይዘት መታወቂያዎችን መጨመር አልቻልንም፣ ስለዚህ ይህ ቪዲዮ በሰው እንደተሰራ አይረጋገጥም። እንደገና ለመሞከር እንደገና ይፍጠሩ ወይም እንዳለ ይለጥፉ።';
+      'ለዚህ ቪዲዮ የይዘት መታወቂያዎችን መጨመር አልቻልንም። እንደገና ለመሞከር እንደገና ይፍጠሩ ወይም እንዳለ ይለጥፉ።';
 
   @override
   String get videoMetadataC2paMissingNote =>
@@ -6125,6 +6125,21 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingSkip => 'ዝለል';
+
+  @override
+  String get videoMetadataC2paUnavailableTitle => 'በዚህ ስሪት የይዘት መታወቂያዎች የሉም';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'ይህ የDivine ስሪት በቪዲዮዎችዎ ውስጥ የይዘት መታወቂያዎችን ማካተት አይችልም። አሁንም እንደተለመደው መለጠፍ ይችላሉ።';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      'የይዘት መታወቂያዎችን ለማከል Divineን ከZapstore ወይም ከGoogle Play ይጫኑ።';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      'የይዘት መታወቂያዎችን ለማከል Divineን ከApp Store ይጫኑ።';
 
   @override
   String get videoMetadataGenerationFailed => 'ማመንጨት አልተሳካም';

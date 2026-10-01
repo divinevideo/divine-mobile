@@ -5922,11 +5922,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoMetadataEditCoverSuccessAnnouncement => 'カバーを更新しました';
 
   @override
-  String get videoMetadataC2paMissingTitle => '本物確認なしで投稿しますか？';
+  String get videoMetadataC2paMissingTitle => 'コンテンツ認証情報なしで投稿しますか？';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'コンテンツ認証情報を追加できなかったため、この動画は人間が作成したものとして確認されません。もう一度試すには再生成するか、このまま投稿してください。';
+      'この動画にコンテンツ認証情報を追加できませんでした。もう一度試すには再生成するか、このまま投稿してください。';
 
   @override
   String get videoMetadataC2paMissingNote => 'コンテンツ認証情報にはインターネット接続が必要です。';
@@ -5940,6 +5940,21 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingSkip => 'スキップ';
+
+  @override
+  String get videoMetadataC2paUnavailableTitle => 'このバージョンではコンテンツ認証情報を追加できません';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'このバージョンのDivineでは、動画にコンテンツ認証情報を埋め込めません。いつもどおり投稿することはできます。';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      'コンテンツ認証情報を追加するには、ZapstoreまたはGoogle PlayからDivineをインストールしてください。';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      'コンテンツ認証情報を追加するには、App StoreからDivineをインストールしてください。';
 
   @override
   String get videoMetadataGenerationFailed => '生成に失敗しました';

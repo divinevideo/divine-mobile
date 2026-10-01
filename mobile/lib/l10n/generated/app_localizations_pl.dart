@@ -6398,11 +6398,11 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingTitle =>
-      'Opublikować bez weryfikacji autentyczności?';
+      'Opublikować bez poświadczeń treści?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'Nie udało się dodać poświadczeń treści, więc ten film nie zostanie potwierdzony jako stworzony przez człowieka. Wygeneruj ponownie, aby spróbować jeszcze raz, lub opublikuj bez zmian.';
+      'Nie udało się dodać poświadczeń treści do tego filmu. Wygeneruj ponownie, aby spróbować jeszcze raz, lub opublikuj bez zmian.';
 
   @override
   String get videoMetadataC2paMissingNote =>
@@ -6417,6 +6417,22 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingSkip => 'Pomiń';
+
+  @override
+  String get videoMetadataC2paUnavailableTitle =>
+      'Brak poświadczeń treści w tej wersji';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'Ta wersja Divine nie może osadzać poświadczeń treści w twoich filmach. Nadal możesz je normalnie publikować.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      'Zainstaluj Divine z Zapstore lub Google Play, aby dodawać poświadczenia treści.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      'Zainstaluj Divine z App Store, aby dodawać poświadczenia treści.';
 
   @override
   String get videoMetadataGenerationFailed => 'Generowanie nie powiodło się';

@@ -6239,11 +6239,12 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoMetadataEditCoverSuccessAnnouncement => 'Omslag uppdaterat';
 
   @override
-  String get videoMetadataC2paMissingTitle => 'Publicera utan äkthetskontroll?';
+  String get videoMetadataC2paMissingTitle =>
+      'Publicera utan innehållsuppgifter?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'Vi kunde inte lägga till innehållsuppgifter, så den här videon bekräftas inte som gjord av människa. Generera om för att försöka igen, eller publicera som den är.';
+      'Vi kunde inte lägga till innehållsuppgifter i den här videon. Generera om för att försöka igen, eller publicera som den är.';
 
   @override
   String get videoMetadataC2paMissingNote =>
@@ -6258,6 +6259,22 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingSkip => 'Hoppa över';
+
+  @override
+  String get videoMetadataC2paUnavailableTitle =>
+      'Inga innehållsuppgifter i den här versionen';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'Den här versionen av Divine kan inte bädda in innehållsuppgifter i dina videor. Du kan ändå publicera dem som vanligt.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      'Installera Divine från Zapstore eller Google Play för att lägga till innehållsuppgifter.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      'Installera Divine från App Store för att lägga till innehållsuppgifter.';
 
   @override
   String get videoMetadataGenerationFailed => 'Genereringen misslyckades';

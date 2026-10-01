@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -424,6 +425,7 @@ void main() {
         final container = ProviderContainer(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
+            c2paSigningTokenMissingProvider.overrideWithValue(false),
             connectivityCheckProvider.overrideWithValue(() async => results),
             clipManagerProvider.overrideWith(
               () => _MockClipManagerNotifier([testClip]),
@@ -491,6 +493,7 @@ void main() {
         final container = ProviderContainer(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
+            c2paSigningTokenMissingProvider.overrideWithValue(false),
             connectivityCheckProvider.overrideWithValue(
               () async => [ConnectivityResult.wifi],
             ),
@@ -565,6 +568,7 @@ void main() {
           final container = ProviderContainer(
             overrides: [
               sharedPreferencesProvider.overrideWithValue(prefs),
+              c2paSigningTokenMissingProvider.overrideWithValue(false),
               connectivityCheckProvider.overrideWithValue(
                 () async => [ConnectivityResult.wifi],
               ),
@@ -647,6 +651,7 @@ void main() {
           final container = ProviderContainer(
             overrides: [
               sharedPreferencesProvider.overrideWithValue(prefs),
+              c2paSigningTokenMissingProvider.overrideWithValue(false),
               connectivityCheckProvider.overrideWithValue(
                 () async => [ConnectivityResult.wifi],
               ),
@@ -715,6 +720,7 @@ void main() {
           final container = ProviderContainer(
             overrides: [
               sharedPreferencesProvider.overrideWithValue(prefs),
+              c2paSigningTokenMissingProvider.overrideWithValue(false),
               connectivityCheckProvider.overrideWithValue(
                 () async => [ConnectivityResult.wifi],
               ),
@@ -755,6 +761,118 @@ void main() {
           );
         },
       );
+
+      group('in a build without a signing token', () {
+        Future<ProviderContainer> pumpTokenlessSigningFailure(
+          WidgetTester tester,
+        ) async {
+          // A re-sign that never resolves would keep isProcessing true, so a
+          // notice mis-wired to retryC2paSigning cannot pass unnoticed.
+          NativeProofModeService.proofFileOverride = (
+            file, {
+            required enableAdvancedCawgEmbedding,
+            creatorBindingAssertion,
+            cawgIdentityAssertion,
+            verifiedIdentityBundle,
+            clips,
+            editorStateHistory,
+          }) => Completer<models.NativeProofData?>().future;
+          addTearDown(() => NativeProofModeService.proofFileOverride = null);
+
+          final container = ProviderContainer(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(prefs),
+              c2paSigningTokenMissingProvider.overrideWithValue(true),
+              connectivityCheckProvider.overrideWithValue(
+                () async => [ConnectivityResult.wifi],
+              ),
+              clipManagerProvider.overrideWith(
+                () => _MockClipManagerNotifier([testClip]),
+              ),
+              videoEditorProvider.overrideWith(
+                () => _MockVideoEditorNotifier(
+                  VideoEditorProviderState(finalRenderedClip: testClip),
+                ),
+              ),
+            ],
+          );
+          addTearDown(container.dispose);
+
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: container,
+              child: const MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: VideoMetadataScreen(),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          final notifier = container.read(videoEditorProvider.notifier);
+          notifier.state = notifier.state.copyWith(c2paSigningFailed: true);
+          await tester.pumpAndSettle();
+          return container;
+        }
+
+        testWidgets('explains the missing credential instead of offering a '
+            'regenerate that cannot succeed', (tester) async {
+          final container = await pumpTokenlessSigningFailure(tester);
+
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          expect(
+            find.text(l10n.videoMetadataC2paUnavailableTitle),
+            findsOneWidget,
+          );
+          expect(
+            find.text(l10n.videoMetadataC2paMissingRegenerate),
+            findsNothing,
+          );
+
+          await tester.tap(find.text(l10n.videoMetadataGotItButton));
+          await tester.pumpAndSettle();
+
+          final state = container.read(videoEditorProvider);
+          expect(
+            find.text(l10n.videoMetadataC2paUnavailableTitle),
+            findsNothing,
+          );
+          expect(
+            state.c2paSigningFailed,
+            isFalse,
+            reason: 'acknowledging the notice lets the user post without it',
+          );
+          expect(
+            state.isProcessing,
+            isFalse,
+            reason: 'every re-sign would fail the same way, so none is started',
+          );
+        });
+
+        testWidgets(
+          'points to the store build for the platform',
+          (tester) async {
+            await pumpTokenlessSigningFailure(tester);
+
+            final l10n = lookupAppLocalizations(const Locale('en'));
+            final isIos = defaultTargetPlatform == TargetPlatform.iOS;
+            expect(
+              find.text(l10n.videoMetadataC2paUnavailableNoteIos),
+              isIos ? findsOneWidget : findsNothing,
+            );
+            expect(
+              find.text(l10n.videoMetadataC2paUnavailableNoteAndroid),
+              isIos ? findsNothing : findsOneWidget,
+              reason: 'App Review rejects iOS copy that names Google Play',
+            );
+          },
+          variant: const TargetPlatformVariant({
+            TargetPlatform.android,
+            TargetPlatform.iOS,
+          }),
+        );
+      });
     });
 
     group('recorder mode switch', () {

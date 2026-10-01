@@ -6253,11 +6253,11 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingTitle =>
-      'Siarkan tanpa semakan buatan manusia?';
+      'Siarkan tanpa kelayakan kandungan?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'Kami tidak dapat menambah kelayakan kandungan, jadi video ini tidak akan disahkan sebagai Buatan Manusia. Jana semula untuk cuba lagi, atau siarkan seadanya.';
+      'Kami tidak dapat menambah kelayakan kandungan pada video ini. Jana semula untuk cuba lagi, atau siarkan seadanya.';
 
   @override
   String get videoMetadataC2paMissingNote =>
@@ -6272,6 +6272,22 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingSkip => 'Langkau';
+
+  @override
+  String get videoMetadataC2paUnavailableTitle =>
+      'Tiada kelayakan kandungan dalam versi ini';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'Versi Divine ini tidak dapat membenamkan kelayakan kandungan dalam video anda. Anda masih boleh menyiarkannya seperti biasa.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      'Pasang Divine dari Zapstore atau Google Play untuk menambah kelayakan kandungan.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      'Pasang Divine dari App Store untuk menambah kelayakan kandungan.';
 
   @override
   String get videoMetadataGenerationFailed => 'Penjanaan gagal';

@@ -6180,11 +6180,11 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingTitle =>
-      'Gerçeklik doğrulaması olmadan paylaşılsın mı?';
+      'İçerik kimlik bilgileri olmadan paylaşılsın mı?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'İçerik kimlik bilgilerini ekleyemedik, bu nedenle bu video insan yapımı olarak doğrulanmayacak. Yeniden denemek için yeniden oluştur ya da olduğu gibi paylaş.';
+      'Bu videoya içerik kimlik bilgilerini ekleyemedik. Yeniden denemek için yeniden oluştur ya da olduğu gibi paylaş.';
 
   @override
   String get videoMetadataC2paMissingNote =>
@@ -6199,6 +6199,22 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingSkip => 'Atla';
+
+  @override
+  String get videoMetadataC2paUnavailableTitle =>
+      'Bu sürümde içerik kimlik bilgileri yok';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'Divine\'ın bu sürümü videolarına içerik kimlik bilgileri ekleyemiyor. Yine de onları her zamanki gibi paylaşabilirsin.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      'İçerik kimlik bilgileri eklemek için Divine\'ı Zapstore veya Google Play\'den yükle.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      'İçerik kimlik bilgileri eklemek için Divine\'ı App Store\'dan yükle.';
 
   @override
   String get videoMetadataGenerationFailed => 'Oluşturma başarısız';

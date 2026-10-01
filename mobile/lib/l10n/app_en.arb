@@ -4094,13 +4094,13 @@
   "@videoMetadataEditCoverSuccessAnnouncement": {
     "description": "Screen-reader announcement spoken after the user confirms a new cover thumbnail and the screen is about to close. Visual users get the screen pop as feedback; this is the audio equivalent."
   },
-  "videoMetadataC2paMissingTitle": "Post without the human-made check?",
+  "videoMetadataC2paMissingTitle": "Post without content credentials?",
   "@videoMetadataC2paMissingTitle": {
-    "description": "Title of a bottom sheet shown after rendering a video when the C2PA content-credential signature could not be created (e.g. offline). Asks whether to regenerate or post without provenance."
+    "description": "Title of a bottom sheet shown after rendering a video when the C2PA content-credential signature could not be created (e.g. offline). Asks whether to regenerate or post without the content credential. Do not say the video loses its Human-Made status: the device proof still provides it."
   },
-  "videoMetadataC2paMissingBody": "We couldn't add content credentials, so this video won't be confirmed as Human-Made. Regenerate to try again, or post it as-is.",
+  "videoMetadataC2paMissingBody": "We couldn't add content credentials to this video. Regenerate to try again, or post it as-is.",
   "@videoMetadataC2paMissingBody": {
-    "description": "Body text of the bottom sheet warning that a video will be published without a C2PA content credential, meaning it will not be verifiably confirmed as human-made."
+    "description": "Body text of the bottom sheet warning that a video will be published without a C2PA content credential embedded in the file. The Human-Made badge comes from the device proof and is unaffected, so do not mention it."
   },
   "videoMetadataC2paMissingNote": "Content credentials need an internet connection.",
   "@videoMetadataC2paMissingNote": {
@@ -4117,6 +4117,22 @@
   "videoMetadataC2paMissingSkip": "Skip",
   "@videoMetadataC2paMissingSkip": {
     "description": "Secondary button on the missing-content-credential bottom sheet. Dismisses the prompt and continues without a C2PA content credential, so the user can post the video without provenance."
+  },
+  "videoMetadataC2paUnavailableTitle": "No content credentials in this version",
+  "@videoMetadataC2paUnavailableTitle": {
+    "description": "Title of the bottom sheet shown after rendering when this build has no access to the C2PA signing service, e.g. a local or self-compiled build, so no content credential can be embedded in the video. Replaces the regenerate-or-skip prompt, because retrying can never succeed in such a build. Do not say the video loses its Human-Made status: the device proof still provides it."
+  },
+  "videoMetadataC2paUnavailableBody": "This version of Divine can't embed content credentials in your videos. You can still post them as usual.",
+  "@videoMetadataC2paUnavailableBody": {
+    "description": "Body of the bottom sheet explaining that this build of the app cannot embed a C2PA content credential in its videos. Everything else, including the Human-Made badge from the device proof, still works, and posting is unaffected."
+  },
+  "videoMetadataC2paUnavailableNoteAndroid": "Install Divine from Zapstore or Google Play to add content credentials.",
+  "@videoMetadataC2paUnavailableNoteAndroid": {
+    "description": "Note under the no-content-credential bottom sheet on Android. Points to the official store builds, which can embed content credentials. Zapstore and Google Play are store names; keep them untranslated."
+  },
+  "videoMetadataC2paUnavailableNoteIos": "Install Divine from the App Store to add content credentials.",
+  "@videoMetadataC2paUnavailableNoteIos": {
+    "description": "Note under the no-content-credential bottom sheet on iOS. Points to the official App Store build, which can embed content credentials. Must not mention Google Play: App Review rejects iOS copy that names another store. App Store is a store name; keep it untranslated."
   },
   "videoMetadataGenerationFailed": "Generation failed",
   "@videoMetadataGenerationFailed": {

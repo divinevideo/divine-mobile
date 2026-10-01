@@ -6443,11 +6443,11 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingTitle =>
-      'మానవ నిర్మిత తనిఖీ లేకుండా పోస్ట్ చేయాలా?';
+      'కంటెంట్ ఆధారాలు లేకుండా పోస్ట్ చేయాలా?';
 
   @override
   String get videoMetadataC2paMissingBody =>
-      'మేము కంటెంట్ ఆధారాలను జోడించలేకపోయాము, కాబట్టి ఈ వీడియో మానవ నిర్మితమైనదిగా నిర్ధారించబడదు. మళ్లీ ప్రయత్నించడానికి రీజెనరేట్ చేయండి లేదా దాన్ని అలాగే పోస్ట్ చేయండి.';
+      'ఈ వీడియోకు మేము కంటెంట్ ఆధారాలను జోడించలేకపోయాము. మళ్లీ ప్రయత్నించడానికి రీజెనరేట్ చేయండి లేదా దాన్ని అలాగే పోస్ట్ చేయండి.';
 
   @override
   String get videoMetadataC2paMissingNote =>
@@ -6462,6 +6462,22 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoMetadataC2paMissingSkip => 'దాటవేయి';
+
+  @override
+  String get videoMetadataC2paUnavailableTitle =>
+      'ఈ వెర్షన్‌లో కంటెంట్ ఆధారాలు లేవు';
+
+  @override
+  String get videoMetadataC2paUnavailableBody =>
+      'ఈ Divine వెర్షన్ మీ వీడియోలలో కంటెంట్ ఆధారాలను జోడించలేదు. మీరు వాటిని ఎప్పటిలాగే పోస్ట్ చేయవచ్చు.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteAndroid =>
+      'కంటెంట్ ఆధారాలను జోడించడానికి Zapstore లేదా Google Play నుండి Divineని ఇన్‌స్టాల్ చేయండి.';
+
+  @override
+  String get videoMetadataC2paUnavailableNoteIos =>
+      'కంటెంట్ ఆధారాలను జోడించడానికి App Store నుండి Divineని ఇన్‌స్టాల్ చేయండి.';
 
   @override
   String get videoMetadataGenerationFailed => 'జనరేషన్ విఫలమైంది';
