@@ -126,6 +126,28 @@ void main() {
       )
       .toList();
 
+  // The warning logged when the OS upload fails with an HTTP 500 carrying
+  // [body].
+  Future<String> warningForResponse(String body) async {
+    await captureLogs();
+    final transport = _FakeTransport(
+      emitOnEnqueue: <BlossomBackgroundTransferEvent>[
+        BlossomBackgroundTransferEvent(
+          taskId: taskId,
+          status: BlossomBackgroundTransferStatus.failed,
+          httpStatusCode: 500,
+          responseBody: body,
+        ),
+      ],
+    );
+    await service(transport).uploadVideoInBackground(
+      videoFile: videoFile,
+      taskId: taskId,
+      proofManifestJson: null,
+    );
+    return failureWarnings().single.message;
+  }
+
   group('uploadVideoInBackground', () {
     test('returns failure when no transport is configured', () async {
       final result = await service(null).uploadVideoInBackground(
@@ -281,6 +303,67 @@ void main() {
       );
 
       expect(failureWarnings().single.message, endsWith('response: none'));
+    });
+
+    test('logs none for a response of only whitespace', () async {
+      final message = await warningForResponse('\r\n \t\n');
+
+      expect(message, endsWith('response: none'));
+    });
+
+    test(
+      'logs a multi-line response on one line without control characters',
+      () async {
+        // NEL splits a line and a right-to-left override rewrites how the rest
+        // of it reads; a server controls both.
+        final message = await warningForResponse(
+          '<html>\r\n<body>\tBad gateway\u0085<b>retry</b>\u202Eend\n',
+        );
+
+        expect(
+          message,
+          endsWith('response: <html> <body> Bad gateway <b>retry</b> end'),
+        );
+      },
+    );
+
+    test('logs a response of exactly 500 characters whole', () async {
+      final response = [...List.filled(4, 'x' * 99), 'x' * 100].join(' ');
+      expect(response, hasLength(500));
+
+      final message = await warningForResponse(response);
+
+      expect(message, endsWith('response: $response'));
+    });
+
+    test(
+      'cuts a longer response at the last word boundary and says so',
+      () async {
+        final words = List.filled(4, 'x' * 99).join(' ');
+        final response = '$words ${'x' * 101}';
+        expect(response, hasLength(501));
+
+        final message = await warningForResponse(response);
+
+        expect(message, endsWith('response: $words … [truncated]'));
+      },
+    );
+
+    test('never cuts through an identifier when shortening', () async {
+      // The 64-character id straddles the 500-character limit.
+      final id = '0123456789abcdef' * 4;
+      final response = '${'a ' * 240}$id tail';
+
+      final message = await warningForResponse(response);
+
+      expect(message, endsWith(' … [truncated]'));
+      expect(message, isNot(contains('0123')));
+    });
+
+    test('omits a long response that has no word boundary', () async {
+      final message = await warningForResponse('x' * 600);
+
+      expect(message, endsWith('response: [omitted: over 500 characters]'));
     });
 
     test('does not log a failure for HTTP 409 (already stored)', () async {

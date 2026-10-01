@@ -34,6 +34,32 @@ void _logUploadPhase(String phase, Duration elapsed, {String? detail}) {
   );
 }
 
+const _maxLoggedServerTextLength = 500;
+
+// C0/C1 controls and Unicode format characters: a bare CR or NEL splits the
+// log line, and a bidi override rewrites how the rest of it reads.
+final _serverTextControls = RegExp(r'[\p{Cc}\p{Cf}]', unicode: true);
+final _serverTextWhitespace = RegExp(r'\s+');
+
+/// Flattens server-controlled text to one bounded line for the log.
+///
+/// A longer text is cut at a space, never inside a word, so a hash, event id
+/// or pubkey in it is not shortened into something that looks usable.
+String _serverTextForLog(String text) {
+  final oneLine = text
+      .replaceAll(_serverTextControls, ' ')
+      .replaceAll(_serverTextWhitespace, ' ')
+      .trim();
+  if (oneLine.length <= _maxLoggedServerTextLength) return oneLine;
+
+  final prefix = oneLine.substring(0, _maxLoggedServerTextLength);
+  final boundary = prefix.lastIndexOf(' ');
+  if (boundary < 0) {
+    return '[omitted: over $_maxLoggedServerTextLength characters]';
+  }
+  return '${prefix.substring(0, boundary)} … [truncated]';
+}
+
 bool _hasTransientDioSignal(DioException error) {
   final statusCode = error.response?.statusCode;
   if (statusCode != null && statusCode >= 500) return true;
@@ -2609,15 +2635,14 @@ class BlossomUploadService {
             videoId: fileHash,
           );
         }
-        final body = event.responseBody;
-        final response = body == null || body.isEmpty ? 'none' : body;
+        final response = _serverTextForLog(event.responseBody ?? '');
         // The result below keeps only the status, so the server's own
         // explanation would otherwise be lost: the caller silently re-uploads
         // the whole file through the resumable path.
         Log.warning(
           'Background upload failed: HTTP ${statusCode ?? 'none'}, '
           'error: ${event.error ?? 'none'}, '
-          'response: $response',
+          'response: ${response.isEmpty ? 'none' : response}',
           name: 'BlossomUploadService',
           category: LogCategory.video,
         );
