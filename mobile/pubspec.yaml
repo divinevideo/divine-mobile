@@ -648,7 +648,10 @@ patrol:
   app_name: divine
   test_directory: integration_test
   android:
-    package_name: co.openvine.app
+    # Patrol drives debug builds, and the debug build type appends
+    # `.staging` (android/app/build.gradle.kts). With the release id here,
+    # openApp() cannot find the installed app.
+    package_name: co.openvine.app.staging
   ios:
     bundle_id: co.openvine.app
 
