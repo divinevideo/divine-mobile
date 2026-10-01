@@ -522,6 +522,62 @@ void main() {
       expect(await repository.loadDefinitionsByIssuers([_pubkey(2)]), isEmpty);
     });
 
+    test('accepted holders leave out accounts hidden for the viewer', () async {
+      // Blocked, muted and platform-blocklisted accounts stay out of this
+      // public list and its follow buttons, as they do in other user lists.
+      final coordinate = BadgeCoordinate(
+        pubkey: _pubkey(2),
+        identifier: 'daily-diviner',
+      );
+      final viewer = BadgeRepository(
+        nostrClient: nostrClient,
+        sharedPreferences: preferences,
+        currentPubkey: () => _pubkey(1),
+        signEvent: ({required kind, required content, required tags}) async =>
+            null,
+        isHiddenPubkey: (pubkey) => pubkey == _pubkey(11),
+      );
+      when(() => nostrClient.readAllEvents(any())).thenAnswer((
+        invocation,
+      ) async {
+        final filter = invocation.positionalArguments.single as Filter;
+        if (filter.kinds?.contains(EventKind.badgeAward) == true) {
+          return PagedQueryResult(
+            events: [
+              _awardEvent(
+                id: _eventId(100),
+                issuerPubkey: coordinate.pubkey,
+                definitionCoordinate: coordinate.value,
+                recipients: [_pubkey(10), _pubkey(11)],
+              ),
+            ],
+            isComplete: true,
+            pages: 1,
+          );
+        }
+        if (filter.kinds?.contains(EventKind.profileBadges) == true) {
+          return PagedQueryResult(
+            events: [
+              for (final pubkey in filter.authors ?? const <String>[])
+                _profileBadgesEvent(
+                  id: _eventId(500 + int.parse(pubkey, radix: 16)),
+                  pubkey: pubkey,
+                  tags: [
+                    ['a', coordinate.value],
+                    ['e', _eventId(100)],
+                  ],
+                ),
+            ],
+            isComplete: true,
+            pages: 1,
+          );
+        }
+        return const PagedQueryResult(events: [], isComplete: true, pages: 1);
+      });
+
+      expect(await viewer.loadAcceptedHolders(coordinate), {_pubkey(10)});
+    });
+
     test('accepted holders reject an incomplete relay walk', () async {
       final coordinate = BadgeCoordinate(
         pubkey: _pubkey(2),
