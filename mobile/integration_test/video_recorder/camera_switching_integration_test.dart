@@ -1,31 +1,12 @@
 // ABOUTME: Integration tests for camera switching functionality
 // ABOUTME: Tests switching between front and back cameras
 
-import 'dart:async';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/video_recorder/camera/camera_base_service.dart';
 import 'package:patrol/patrol.dart';
-import 'package:permissions_service/permissions_service.dart';
 
 import '../helpers/patrol_semantics.dart';
-
-/// Grant camera and microphone permissions via Patrol native automation.
-Future<void> _grantPermissions(PatrolIntegrationTester $) async {
-  const service = PermissionHandlerPermissionsService();
-  unawaited(service.requestCameraPermission());
-  if (await $.platformAutomator.mobile.isPermissionDialogVisible(
-    timeout: const Duration(seconds: 5),
-  )) {
-    await $.platformAutomator.mobile.grantPermissionWhenInUse();
-  }
-  unawaited(service.requestMicrophonePermission());
-  if (await $.platformAutomator.mobile.isPermissionDialogVisible(
-    timeout: const Duration(seconds: 5),
-  )) {
-    await $.platformAutomator.mobile.grantPermissionWhenInUse();
-  }
-}
+import '../helpers/permission_helpers.dart';
 
 void main() {
   ignorePlatformSemanticsHandle();
@@ -46,13 +27,13 @@ void main() {
     });
 
     patrolTest('reports camera switch capability', ($) async {
-      await _grantPermissions($);
+      await grantCameraAndMicrophone($);
       final canSwitch = cameraService.canSwitchCamera;
       expect(canSwitch, isA<bool>());
     });
 
     patrolTest('can switch camera if multiple cameras available', ($) async {
-      await _grantPermissions($);
+      await grantCameraAndMicrophone($);
       if (!cameraService.canSwitchCamera) {
         // Skip if device only has one camera
         return;
@@ -65,7 +46,7 @@ void main() {
     });
 
     patrolTest('camera remains initialized after switching', ($) async {
-      await _grantPermissions($);
+      await grantCameraAndMicrophone($);
       final tester = $.tester;
       if (!cameraService.canSwitchCamera) {
         return;
@@ -79,7 +60,7 @@ void main() {
     });
 
     patrolTest('can switch camera multiple times', ($) async {
-      await _grantPermissions($);
+      await grantCameraAndMicrophone($);
       final tester = $.tester;
       if (!cameraService.canSwitchCamera) {
         return;
@@ -96,7 +77,7 @@ void main() {
     });
 
     patrolTest('switching camera updates aspect ratio', ($) async {
-      await _grantPermissions($);
+      await grantCameraAndMicrophone($);
       final tester = $.tester;
       if (!cameraService.canSwitchCamera) {
         return;

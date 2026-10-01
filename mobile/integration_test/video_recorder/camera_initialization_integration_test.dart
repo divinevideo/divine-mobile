@@ -1,31 +1,12 @@
 // ABOUTME: Integration tests for camera initialization and setup
 // ABOUTME: Tests camera service creation, initialization, and basic properties
 
-import 'dart:async';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/video_recorder/camera/camera_base_service.dart';
 import 'package:patrol/patrol.dart';
-import 'package:permissions_service/permissions_service.dart';
 
 import '../helpers/patrol_semantics.dart';
-
-/// Grant camera and microphone permissions via Patrol native automation.
-Future<void> _grantPermissions(PatrolIntegrationTester $) async {
-  const service = PermissionHandlerPermissionsService();
-  unawaited(service.requestCameraPermission());
-  if (await $.platformAutomator.mobile.isPermissionDialogVisible(
-    timeout: const Duration(seconds: 5),
-  )) {
-    await $.platformAutomator.mobile.grantPermissionWhenInUse();
-  }
-  unawaited(service.requestMicrophonePermission());
-  if (await $.platformAutomator.mobile.isPermissionDialogVisible(
-    timeout: const Duration(seconds: 5),
-  )) {
-    await $.platformAutomator.mobile.grantPermissionWhenInUse();
-  }
-}
+import '../helpers/permission_helpers.dart';
 
 void main() {
   ignorePlatformSemanticsHandle();
@@ -45,20 +26,20 @@ void main() {
     });
 
     patrolTest('camera service can be created', ($) async {
-      await _grantPermissions($);
+      await grantCameraAndMicrophone($);
       expect(cameraService, isNotNull);
       expect(cameraService, isA<CameraService>());
     });
 
     patrolTest('camera service can be initialized', ($) async {
-      await _grantPermissions($);
+      await grantCameraAndMicrophone($);
       await cameraService.initialize();
 
       expect(cameraService.isInitialized, isTrue);
     });
 
     patrolTest('camera provides valid aspect ratio', ($) async {
-      await _grantPermissions($);
+      await grantCameraAndMicrophone($);
       await cameraService.initialize();
 
       final aspectRatio = cameraService.cameraAspectRatio;
@@ -67,7 +48,7 @@ void main() {
     });
 
     patrolTest('camera provides valid zoom limits', ($) async {
-      await _grantPermissions($);
+      await grantCameraAndMicrophone($);
       await cameraService.initialize();
 
       expect(cameraService.minZoomLevel, greaterThan(0.0));
@@ -78,28 +59,28 @@ void main() {
     });
 
     patrolTest('camera reports focus support capability', ($) async {
-      await _grantPermissions($);
+      await grantCameraAndMicrophone($);
       await cameraService.initialize();
 
       expect(cameraService.isFocusPointSupported, isA<bool>());
     });
 
     patrolTest('camera reports recording capability', ($) async {
-      await _grantPermissions($);
+      await grantCameraAndMicrophone($);
       await cameraService.initialize();
 
       expect(cameraService.canRecord, isTrue);
     });
 
     patrolTest('camera reports switch capability', ($) async {
-      await _grantPermissions($);
+      await grantCameraAndMicrophone($);
       await cameraService.initialize();
 
       expect(cameraService.canSwitchCamera, isA<bool>());
     });
 
     patrolTest('camera can be disposed after initialization', ($) async {
-      await _grantPermissions($);
+      await grantCameraAndMicrophone($);
       final tester = $.tester;
       await cameraService.initialize();
       expect(cameraService.isInitialized, isTrue);
@@ -111,7 +92,7 @@ void main() {
     });
 
     patrolTest('camera can be initialized multiple times', ($) async {
-      await _grantPermissions($);
+      await grantCameraAndMicrophone($);
       await cameraService.initialize();
       expect(cameraService.isInitialized, isTrue);
 

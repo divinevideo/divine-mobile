@@ -1,34 +1,16 @@
 // ABOUTME: Integration tests for camera control features
 // ABOUTME: Tests flash, zoom, focus point, and exposure controls
 
-import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/video_recorder/video_recorder_flash_mode.dart';
 import 'package:openvine/services/video_recorder/camera/camera_base_service.dart';
 import 'package:patrol/patrol.dart';
-import 'package:permissions_service/permissions_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/patrol_semantics.dart';
-
-/// Grant camera and microphone permissions via Patrol native automation.
-Future<void> _grantPermissions(PatrolIntegrationTester $) async {
-  const service = PermissionHandlerPermissionsService();
-  unawaited(service.requestCameraPermission());
-  if (await $.platformAutomator.mobile.isPermissionDialogVisible(
-    timeout: const Duration(seconds: 5),
-  )) {
-    await $.platformAutomator.mobile.grantPermissionWhenInUse();
-  }
-  unawaited(service.requestMicrophonePermission());
-  if (await $.platformAutomator.mobile.isPermissionDialogVisible(
-    timeout: const Duration(seconds: 5),
-  )) {
-    await $.platformAutomator.mobile.grantPermissionWhenInUse();
-  }
-}
+import '../helpers/permission_helpers.dart';
 
 void main() {
   ignorePlatformSemanticsHandle();
@@ -63,25 +45,25 @@ void main() {
 
     group('Flash Control', () {
       patrolTest('can set flash to auto', ($) async {
-        await _grantPermissions($);
+        await grantCameraAndMicrophone($);
         final success = await cameraService.setFlashMode(DivineFlashMode.auto);
         expect(success, isA<bool>());
       });
 
       patrolTest('can set flash to off', ($) async {
-        await _grantPermissions($);
+        await grantCameraAndMicrophone($);
         final success = await cameraService.setFlashMode(DivineFlashMode.off);
         expect(success, isA<bool>());
       });
 
       patrolTest('can set flash to torch', ($) async {
-        await _grantPermissions($);
+        await grantCameraAndMicrophone($);
         final success = await cameraService.setFlashMode(DivineFlashMode.torch);
         expect(success, isA<bool>());
       });
 
       patrolTest('can cycle through all flash modes', ($) async {
-        await _grantPermissions($);
+        await grantCameraAndMicrophone($);
         final tester = $.tester;
         for (final mode in DivineFlashMode.values) {
           final success = await cameraService.setFlashMode(mode);
@@ -93,7 +75,7 @@ void main() {
 
     group('Zoom Control', () {
       patrolTest('can set zoom level', ($) async {
-        await _grantPermissions($);
+        await grantCameraAndMicrophone($);
         final minZoom = cameraService.minZoomLevel;
         final maxZoom = cameraService.maxZoomLevel;
 
@@ -108,7 +90,7 @@ void main() {
       });
 
       patrolTest('can set zoom to minimum', ($) async {
-        await _grantPermissions($);
+        await grantCameraAndMicrophone($);
         final minZoom = cameraService.minZoomLevel;
         final maxZoom = cameraService.maxZoomLevel;
         final applied = await cameraService.setZoomLevel(minZoom);
@@ -118,7 +100,7 @@ void main() {
       });
 
       patrolTest('can set zoom to maximum', ($) async {
-        await _grantPermissions($);
+        await grantCameraAndMicrophone($);
         final minZoom = cameraService.minZoomLevel;
         final maxZoom = cameraService.maxZoomLevel;
         final applied = await cameraService.setZoomLevel(maxZoom);
@@ -128,7 +110,7 @@ void main() {
       });
 
       patrolTest('can smoothly transition zoom levels', ($) async {
-        await _grantPermissions($);
+        await grantCameraAndMicrophone($);
         final tester = $.tester;
         final minZoom = cameraService.minZoomLevel;
         final maxZoom = cameraService.maxZoomLevel;
@@ -144,7 +126,7 @@ void main() {
 
     group('Focus Control', () {
       patrolTest('can set focus point at center', ($) async {
-        await _grantPermissions($);
+        await grantCameraAndMicrophone($);
         final success = await cameraService.setFocusPoint(
           const Offset(0.5, 0.5),
         );
@@ -152,7 +134,7 @@ void main() {
       });
 
       patrolTest('can set focus point at corners', ($) async {
-        await _grantPermissions($);
+        await grantCameraAndMicrophone($);
         final tester = $.tester;
         final points = [
           Offset.zero, // Top-left
@@ -169,7 +151,7 @@ void main() {
       });
 
       patrolTest('can set exposure point', ($) async {
-        await _grantPermissions($);
+        await grantCameraAndMicrophone($);
         final success = await cameraService.setExposurePoint(
           const Offset(0.5, 0.5),
         );
@@ -177,7 +159,7 @@ void main() {
       });
 
       patrolTest('can set exposure at corners', ($) async {
-        await _grantPermissions($);
+        await grantCameraAndMicrophone($);
         final tester = $.tester;
         final points = [
           Offset.zero, // Top-left
@@ -196,7 +178,7 @@ void main() {
 
     group('Combined Controls', () {
       patrolTest('can change multiple settings in sequence', ($) async {
-        await _grantPermissions($);
+        await grantCameraAndMicrophone($);
         final tester = $.tester;
         await cameraService.setFlashMode(DivineFlashMode.auto);
         await tester.pump(const Duration(milliseconds: 100));
