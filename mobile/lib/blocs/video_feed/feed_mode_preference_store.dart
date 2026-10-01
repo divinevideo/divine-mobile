@@ -35,12 +35,20 @@ class FeedModePreferenceStore {
 
   /// The persisted source, or [VideoFeedSource.fromMode] of [fallbackMode] when
   /// nothing is stored.
-  VideoFeedSource restoreSource(FeedMode fallbackMode) {
+  ///
+  /// A stored people list is restored only while it is still among
+  /// [followedPeopleLists]; otherwise the feed falls back to For You, as it
+  /// does for a curated list that is no longer subscribed.
+  VideoFeedSource restoreSource(
+    FeedMode fallbackMode, {
+    List<PeopleListSearchResult> followedPeopleLists = const [],
+  }) {
     final saved = savedValue();
     if (saved == null) {
       return VideoFeedSource.fromMode(fallbackMode);
     }
-    return sourceFromValue(saved) ?? const VideoFeedSource.forYou();
+    return sourceFromValue(saved, followedPeopleLists: followedPeopleLists) ??
+        const VideoFeedSource.forYou();
   }
 
   /// The stored persistence value for the active account, migrating a legacy
@@ -75,6 +83,8 @@ class FeedModePreferenceStore {
     // A legacy list preference cannot be proven to belong to the authenticated
     // account because the curated-list bridge can briefly hold stale data
     // across account switches. Only restore list selections from scoped keys.
+    // A people list never resolves here: the legacy key predates them and
+    // [sourceFromValue] is given no followed lists to match against.
     if (migratedSource.type == VideoFeedSourceType.subscribedList) {
       return null;
     }
@@ -84,7 +94,21 @@ class FeedModePreferenceStore {
   }
 
   /// Resolves a persisted value to a [VideoFeedSource], or `null` when unknown.
-  VideoFeedSource? sourceFromValue(String saved) {
+  VideoFeedSource? sourceFromValue(
+    String saved, {
+    List<PeopleListSearchResult> followedPeopleLists = const [],
+  }) {
+    if (saved.startsWith(VideoFeedSource.peopleListPersistencePrefix)) {
+      for (final followed in followedPeopleLists) {
+        final source = VideoFeedSource.peopleList(
+          listId: followed.list.id,
+          listName: followed.list.name,
+          listOwnerPubkey: followed.ownerPubkey,
+        );
+        if (source.persistenceValue == saved) return source;
+      }
+      return null;
+    }
     if (saved.startsWith('list:')) {
       final listId = saved.substring('list:'.length);
       final list = _curatedListRepository.getListById(listId);
