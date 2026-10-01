@@ -479,6 +479,68 @@ void main() {
         expect(find.byType(SnackBar), findsNothing);
       });
 
+      for (final dismissPicker in [false, true]) {
+        testWidgets(
+          dismissPicker
+              ? 'a created list that refuses the video after both sheets '
+                    'close reports the failure underneath once'
+              : 'a created list that refuses the video after creation closes '
+                    'reports the failure inside the remaining picker',
+          (tester) async {
+            final answer = Completer<bool>();
+            when(() => service.myLists).thenReturn([list('Empty')]);
+            when(
+              () => service.createList(
+                name: any(named: 'name'),
+                description: any(named: 'description'),
+                isPublic: any(named: 'isPublic'),
+                isCollaborative: any(named: 'isCollaborative'),
+                allowedCollaborators: any(named: 'allowedCollaborators'),
+              ),
+            ).thenAnswer((_) async => list('Fresh'));
+            when(() => service.addVideoToList(any(), any()))
+                .thenAnswer((_) => answer.future);
+            await openSheet(tester);
+            await tester.tap(find.text(l10n.listCreateNewList));
+            await tester.pumpAndSettle();
+            await tester.enterText(find.byType(TextField).first, 'Fresh');
+            await tester.pump();
+            await tester.tap(find.bySemanticsLabel(l10n.listCreate));
+            await tester.pump();
+            verify(
+              () => service.addVideoToList('list_fresh', _videoEventId),
+            ).called(1);
+
+            await tester.tap(find.bySemanticsLabel(l10n.commonClose).last);
+            await tester.pumpAndSettle();
+            expect(find.byType(ListInfoForm), findsNothing);
+            if (dismissPicker) {
+              await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+              await tester.pumpAndSettle();
+            }
+
+            answer.complete(false);
+            await tester.pumpAndSettle();
+
+            expect(find.text(l10n.listUpdateFailed), findsOneWidget);
+            expect(
+              find.byType(SelectListSheetBody),
+              dismissPicker ? findsNothing : findsOneWidget,
+            );
+            expect(
+              find.byType(SnackBar),
+              dismissPicker ? findsOneWidget : findsNothing,
+            );
+            expect(tester.takeException(), isNull);
+            if (dismissPicker) {
+              await tester.pump(const Duration(seconds: 10));
+              await tester.pumpAndSettle();
+              expect(find.byType(SnackBar), findsNothing);
+            }
+          },
+        );
+      }
+
       testWidgets('Create new list opens the create sheet, and the list it '
           'creates shows up picked', (tester) async {
         when(() => service.myLists).thenReturn([list('Empty')]);
