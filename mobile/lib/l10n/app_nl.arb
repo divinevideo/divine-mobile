@@ -488,15 +488,8 @@
     "featuredTabLoadFailed": "Deze collectie kon niet worden geladen.",
     "featuredTabRetry": "Probeer opnieuw",
     "exploreNoVideosAvailable": "Geen video's beschikbaar",
-    "exploreDiscoverLists": "Lijsten ontdekken",
-    "exploreAboutLists": "Over lijsten",
-    "exploreAboutListsDescription": "Met lijsten kun je Divine-inhoud op twee manieren organiseren en samenstellen:",
     "explorePeopleLists": "Personenlijsten",
-    "explorePeopleListsDescription": "Volg groepen makers en bekijk hun nieuwste video's",
     "exploreVideoLists": "Videolijsten",
-    "exploreVideoListsDescription": "Maak afspeellijsten van je favoriete video's om later te bekijken",
-    "exploreMyLists": "Mijn lijsten",
-    "exploreSubscribedLists": "Gevolgde lijsten",
     "exploreErrorLoadingLists": "Fout bij laden van lijsten. Probeer het opnieuw.",
     "exploreNewVideosCount": "{count, plural, one{1 nieuwe video} other{{count} nieuwe video''s}}",
     "@exploreNewVideosCount": {
@@ -3344,14 +3337,6 @@
     "nostrSettingsCouldNotRemoveKeys": "Dit account kon niet van dit apparaat verwijderd worden. Probeer het opnieuw.",
     "nostrSettingsDeleteAccount": "Account en data verwijderen",
     "nostrSettingsDeleteAccountSubtitle": "Stuurt verwijderverzoeken voor je content en meldt je op dit apparaat af. Relays, clients, zoekindexen en andere aangemelde apparaten kunnen kopieën bewaren.",
-    "listPersonCount": "{count, plural, =1{1 persoon} other{{count} personen}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "Door ",
     "keyManagementYourPublicKeyLabel": "Je publieke sleutel (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -3398,14 +3383,6 @@
             }
         }
     },
-    "discoverListsTitle": "Lijsten ontdekken",
-    "discoverListsFailedToLoad": "Lijsten laden mislukt",
-    "discoverListsLoading": "Publieke lijsten worden ontdekt...",
-    "discoverListsRelayTimeout": "De relay leverde niet op tijd lijsten. Probeer het opnieuw.",
-    "discoverListsServiceUnavailable": "Service niet beschikbaar.",
-    "discoverListsEmptyTitle": "Geen publieke lijsten gevonden",
-    "discoverListsEmptySubtitle": "Kom later terug voor nieuwe lijsten",
-    "discoverListsByAuthorPrefix": "door",
     "curatedListEmptyTitle": "Geen video's in deze lijst",
     "curatedListEmptySubtitle": "Voeg wat video's toe om te beginnen",
     "curatedListLoadingVideos": "Video's laden...",
@@ -5089,5 +5066,7 @@
   "messagesNoRooms": "Nog geen kamers",
   "followedHashtagsTitle": "Gevolgde hashtags",
   "manageHashtags": "Hashtags beheren",
-  "followedHashtagsEmpty": "Volg een hashtag op de bijbehorende pagina om die hier te vinden."
+  "followedHashtagsEmpty": "Volg een hashtag op de bijbehorende pagina om die hier te vinden.",
+  "listsDiscoveryEmpty": "Er doken deze keer geen lijsten op. Trek omlaag om te vernieuwen.",
+  "listsDiscoveryLoadingLabel": "Lijsten laden"
 }

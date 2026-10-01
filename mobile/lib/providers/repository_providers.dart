@@ -633,6 +633,8 @@ PeopleListsRepository peopleListsRepository(Ref ref) {
     nostrClient: nostrClient,
     cache: cache,
     blockFilter: createBlockedAuthorFilter(ref),
+    funnelcakeApiClient: ref.watch(funnelcakeApiClientProvider),
+    discoveryRelayUrls: [ref.watch(currentEnvironmentProvider).relayUrl],
   );
 }
 

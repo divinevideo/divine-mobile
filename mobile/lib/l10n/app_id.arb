@@ -488,15 +488,8 @@
     "featuredTabLoadFailed": "Koleksi ini gagal dimuat.",
     "featuredTabRetry": "Coba lagi",
     "exploreNoVideosAvailable": "Tidak ada video tersedia",
-    "exploreDiscoverLists": "Temukan Daftar",
-    "exploreAboutLists": "Tentang Daftar",
-    "exploreAboutListsDescription": "Daftar membantumu mengorganisir dan mengkurasi konten Divine dengan dua cara:",
     "explorePeopleLists": "Daftar Orang",
-    "explorePeopleListsDescription": "Ikuti grup kreator dan lihat video terbaru mereka",
     "exploreVideoLists": "Daftar Video",
-    "exploreVideoListsDescription": "Buat playlist video favoritmu untuk ditonton nanti",
-    "exploreMyLists": "Daftarku",
-    "exploreSubscribedLists": "Daftar yang Dilanggan",
     "exploreErrorLoadingLists": "Gagal memuat daftar. Silakan coba lagi.",
     "exploreNewVideosCount": "{count, plural, other{{count} video baru}}",
     "@exploreNewVideosCount": {
@@ -3344,14 +3337,6 @@
     "nostrSettingsCouldNotRemoveKeys": "Gagal menghapus akun ini dari perangkat ini. Coba lagi.",
     "nostrSettingsDeleteAccount": "Hapus Akun dan Data",
     "nostrSettingsDeleteAccountSubtitle": "Mengirim permintaan penghapusan untuk kontenmu dan mengeluarkanmu dari akun di perangkat ini. Relay, klien, indeks pencarian, dan perangkat lain yang masih masuk mungkin menyimpan salinan.",
-    "listPersonCount": "{count, plural, =1{1 orang} other{{count} orang}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "Oleh ",
     "keyManagementYourPublicKeyLabel": "Kunci publikmu (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -3398,14 +3383,6 @@
             }
         }
     },
-    "discoverListsTitle": "Jelajahi Daftar",
-    "discoverListsFailedToLoad": "Gagal memuat daftar",
-    "discoverListsLoading": "Mencari daftar publik...",
-    "discoverListsRelayTimeout": "Relay tidak mengembalikan daftar tepat waktu. Coba lagi.",
-    "discoverListsServiceUnavailable": "Layanan tidak tersedia.",
-    "discoverListsEmptyTitle": "Tidak ada daftar publik",
-    "discoverListsEmptySubtitle": "Cek lagi nanti untuk daftar baru",
-    "discoverListsByAuthorPrefix": "oleh",
     "curatedListEmptyTitle": "Belum ada video di daftar ini",
     "curatedListEmptySubtitle": "Tambahkan beberapa video untuk memulai",
     "curatedListLoadingVideos": "Memuat video...",
@@ -5089,5 +5066,7 @@
   "messagesNoRooms": "Belum ada ruang",
   "followedHashtagsTitle": "Tagar yang diikuti",
   "manageHashtags": "Kelola tagar",
-  "followedHashtagsEmpty": "Ikuti tagar dari halamannya untuk menemukannya di sini."
+  "followedHashtagsEmpty": "Ikuti tagar dari halamannya untuk menemukannya di sini.",
+  "listsDiscoveryEmpty": "Belum ada daftar yang muncul kali ini. Tarik untuk menyegarkan.",
+  "listsDiscoveryLoadingLabel": "Memuat daftar"
 }
