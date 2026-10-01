@@ -3,11 +3,13 @@
 
 import 'dart:ui';
 
+import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show VideoEffect;
 
 /// The overlays sitting over the composition at one moment: captured layers
-/// (text / stickers / drawings), colour filters, tune adjustments and blur.
+/// (text / stickers / drawings), colour filters, tune adjustments, video
+/// effects and blur.
 ///
 /// Overlay time windows are authored on the **editor timeline** — every clip at
 /// its full playback length, `sum(clip.playbackDuration)` — which is the same
@@ -50,6 +52,19 @@ class EditorOverlaySnapshot {
       tuneAdjustments.isEmpty &&
       effects.isEmpty &&
       blur == 0;
+
+  /// A copy without the flashing effects (see [isFlashingVideoEffect]).
+  EditorOverlaySnapshot withoutFlashingEffects() => EditorOverlaySnapshot(
+    capturedLayers: capturedLayers,
+    filterStates: filterStates,
+    tuneAdjustments: tuneAdjustments,
+    effects: [
+      for (final effect in effects)
+        if (!isFlashingVideoEffect(effect.type)) effect,
+    ],
+    blur: blur,
+    bodySize: bodySize,
+  );
 
   /// Returns the overlays visible between [start] and [end] on the editor
   /// timeline, rebased so the window starts at zero.

@@ -35,11 +35,12 @@ class VideoEditorClipLibrarySaveService {
   /// is an intermediate clip the user can still trim, not a final export — the
   /// same reasoning as `VideoEditorMergeService.mergeClips`.
   ///
-  /// [overlays] are the layers/filters/tune/blur that were over *this clip*,
-  /// already windowed and rebased to start at zero by
+  /// [overlays] are the layers/filters/tune/effects/blur that were over *this
+  /// clip*, already windowed and rebased to start at zero by
   /// [EditorOverlaySnapshot.windowedTo]. They get baked into the output too, so
-  /// the saved clip looks the way it looked on the timeline. Pass `null` (or an
-  /// empty snapshot) to render the bare video. Only *visual* overlays are baked
+  /// the saved clip looks the way it looked on the timeline, except for
+  /// flashing effects, which are left out. Pass `null` (or an empty snapshot)
+  /// to render the bare video. Only *visual* overlays are baked
   /// — session audio (background music, voice-over) spans the whole project
   /// timeline and is deliberately not carried onto a single saved clip.
   ///
@@ -73,7 +74,10 @@ class VideoEditorClipLibrarySaveService {
       usePersistentStorage: true,
       taskId: renderId,
       maxOutputDuration: null,
-      parameters: _renderParameters(overlays),
+      // A library clip keeps no record of the effects baked into it, so a
+      // video reusing it could neither require the Flashing Lights warning
+      // nor keep a second flashing effect off it.
+      parameters: _renderParameters(overlays?.withoutFlashingEffects()),
     );
 
     if (outputPath == null) return null;

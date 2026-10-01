@@ -7,6 +7,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio, ClipSourceCredit;
+import 'package:openvine/extensions/complete_parameters_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
 import 'package:openvine/services/video_editor/video_editor_clip_library_save_service.dart';
@@ -279,6 +280,71 @@ void main() {
       expect(forwardedParameters!.filterStates, hasLength(1));
       expect(forwardedParameters!.blur, equals(4));
     });
+
+    test('bakes the effects over the clip, except flashing ones', () async {
+      CompleteParameters? forwardedParameters;
+      VideoEditorRenderService.renderVideoOverride =
+          ({
+            required clips,
+            required usePersistentStorage,
+            aspectRatio,
+            parameters,
+            taskId,
+            maxOutputDuration,
+          }) async {
+            forwardedParameters = parameters;
+            return '/documents/divine_1.mp4';
+          };
+
+      await VideoEditorClipLibrarySaveService.flattenClipForLibrary(
+        clip: _createClip(),
+        renderId: 'save-1',
+        overlays: const EditorOverlaySnapshot(
+          effects: [
+            VideoEffect.vhs(intensity: 0.5),
+            VideoEffect.strobe(),
+            VideoEffect.negativeFlash(),
+          ],
+        ),
+      );
+
+      // A saved clip carries no record of its effects, so a flashing one
+      // baked in would escape the Flashing Lights warning of every video
+      // that reuses it.
+      expect(forwardedParameters, isNotNull);
+      expect(forwardedParameters!.videoEffectsFromCompleteMeta, const [
+        VideoEffect.vhs(intensity: 0.5),
+      ]);
+    });
+
+    test(
+      'sends no parameters when only flashing effects are over the clip',
+      () async {
+        var parametersWereSent = true;
+        VideoEditorRenderService.renderVideoOverride =
+            ({
+              required clips,
+              required usePersistentStorage,
+              aspectRatio,
+              parameters,
+              taskId,
+              maxOutputDuration,
+            }) async {
+              parametersWereSent = parameters != null;
+              return '/documents/divine_1.mp4';
+            };
+
+        await VideoEditorClipLibrarySaveService.flattenClipForLibrary(
+          clip: _createClip(),
+          renderId: 'save-1',
+          overlays: const EditorOverlaySnapshot(
+            effects: [VideoEffect.strobe()],
+          ),
+        );
+
+        expect(parametersWereSent, isFalse);
+      },
+    );
 
     test('sends no parameters when there are no overlays', () async {
       var parametersWereSent = true;
