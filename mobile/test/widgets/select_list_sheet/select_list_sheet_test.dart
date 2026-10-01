@@ -156,9 +156,17 @@ void main() {
 
         expect(find.text(l10n.listAddToLists), findsOneWidget);
         expect(find.text('Holds it'), findsOneWidget);
-        expect(find.text('1 video • Public'), findsOneWidget);
+        expect(
+          find.text('${l10n.listVideoCount(1)} • ${l10n.listVisibilityPublic}'),
+          findsOneWidget,
+        );
         expect(find.text('Watch later'), findsOneWidget);
-        expect(find.text('0 videos • Private'), findsOneWidget);
+        expect(
+          find.text(
+            '${l10n.listVideoCount(0)} • ${l10n.listVisibilityPrivate}',
+          ),
+          findsOneWidget,
+        );
         expect(rowChecks(), findsOneWidget);
         expect(find.text(l10n.listCreateNewList), findsOneWidget);
       });
@@ -203,14 +211,30 @@ void main() {
           find.byType(PassiveAuthThumbnailImage),
         );
         expect(image.url, 'https://example.com/t');
-        // The row's own line carries the count, so the fan drops its badge.
-        expect(find.text('0 videos • Public'), findsNWidgets(2));
+        expect(find.byType(ListSkeletonizer), findsWidgets);
         expect(
           tester
               .widgetList<ListSkeletonizer>(find.byType(ListSkeletonizer))
               .map((skeleton) => skeleton.enabled),
           everyElement(isFalse),
         );
+      });
+
+      testWidgets("a row's fan drops the count badge the gallery card draws, "
+          "since the row's own line carries the count", (tester) async {
+        // Three videos: the card's badge would read "3" on its own, apart
+        // from the "3 videos" the row's line says.
+        when(() => service.myLists).thenReturn([
+          list('Three', videoEventIds: const ['v1', 'v2', 'v3']),
+        ]);
+
+        await openSheet(tester);
+
+        expect(
+          find.text('${l10n.listVideoCount(3)} • ${l10n.listVisibilityPublic}'),
+          findsOneWidget,
+        );
+        expect(find.text('3'), findsNothing);
       });
 
       testWidgets('fans shimmer while the thumbnails are still resolving', (

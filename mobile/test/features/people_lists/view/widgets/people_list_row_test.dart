@@ -18,6 +18,8 @@ import '../../../../helpers/test_provider_overrides.dart';
 // Full-length Nostr pubkeys — never truncate.
 const String _memberPubkey =
     'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+const String _otherPubkey =
+    'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
 final DateTime _frozenNow = DateTime.utc(2026, 4, 20, 12);
 
 UserList _buildList({List<String> pubkeys = const []}) => UserList(
@@ -68,6 +70,18 @@ void main() {
       expect(find.text(l10n.listMemberCount(1)), findsOneWidget);
       expect(find.byType(DivineListMedia), findsOneWidget);
       expect(find.byType(ListPickerRow), findsOneWidget);
+    });
+
+    testWidgets('drops the count badge the gallery card draws, since the row '
+        'says the count itself', (tester) async {
+      // Two members: the card's badge would read "2" on its own, apart from
+      // the "2 members" line.
+      await tester.pumpWidget(
+        buildSubject(_buildList(pubkeys: const [_memberPubkey, _otherPubkey])),
+      );
+
+      expect(find.text(l10n.listMemberCount(2)), findsOneWidget);
+      expect(find.text('2'), findsNothing);
     });
 
     testWidgets('shows a check while the list is picked', (tester) async {
