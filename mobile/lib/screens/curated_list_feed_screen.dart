@@ -22,12 +22,13 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
-import 'package:openvine/utils/share_sheet.dart';
+import 'package:openvine/utils/share_list_link.dart';
 import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/follow_list_button.dart';
 import 'package:openvine/widgets/list_video_player_mode.dart';
 import 'package:openvine/widgets/rounded_grid_viewport.dart';
+import 'package:openvine/widgets/share_list_button.dart';
 import 'package:openvine/widgets/user_name.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -178,23 +179,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
               isBusy: _isTogglingSubscription,
               onPressed: _toggleSubscription,
             ),
-          if (!isOwned && isShareable)
-            DivineAppBarIconButton(
-              icon: SvgIconSource(DivineIconName.shareFat.assetPath),
-              onPressed: _shareList,
-              tooltip: context.l10n.listShareAction,
-              semanticLabel: context.l10n.listShareAction,
-              // Match the bar's own action chrome (the back button): green
-              // glyph on the bordered surface container.
-              backgroundColor: context.vineColors.surfaceContainer,
-              borderSide: BorderSide(
-                color: context.vineColors.outlineMuted,
-                width: 2,
-              ),
-              iconColor: context.vineColors.isLight
-                  ? VineTheme.primaryAccessible
-                  : VineTheme.primary,
-            ),
+          if (!isOwned && isShareable) ShareListButton(onPressed: _shareList),
         ],
       );
     }
@@ -508,27 +493,14 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     final authorPubkey = list?.pubkey;
     if (list == null || !list.isPublic || authorPubkey == null) return;
 
-    final path = CuratedListByAuthorScreen.pathFor(
-      pubkey: authorPubkey,
-      listId: list.id,
+    await shareListLink(
+      context,
+      name: list.name,
+      path: CuratedListByAuthorScreen.pathFor(
+        pubkey: authorPubkey,
+        listId: list.id,
+      ),
     );
-    final url = 'https://divine.video$path';
-    try {
-      await showShareSheet(
-        context,
-        ShareParams(
-          text: context.l10n.listShareText(list.name, url),
-          subject: context.l10n.listShareSubject(list.name),
-        ),
-      );
-    } catch (e) {
-      Log.error('Failed to share list: $e', category: LogCategory.ui);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(context.l10n.listShareFailed)));
-      }
-    }
   }
 
   Future<void> _confirmDeleteList() async {
