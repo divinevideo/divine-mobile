@@ -121,6 +121,16 @@ final class VideoFeedFollowingListChanged extends VideoFeedEvent {
 /// Dispatched internally when the [CuratedListRepository.subscribedListsStream]
 /// emits updated lists. Triggers a refresh of the home feed so list videos
 /// are merged in.
+/// The account saved a change to its badge subscriptions.
+///
+/// Following reloads its merged authors; other sources are unaffected.
+final class VideoFeedBadgeSubscriptionsChanged extends VideoFeedEvent {
+  const VideoFeedBadgeSubscriptionsChanged();
+
+  @override
+  List<Object?> get props => [];
+}
+
 final class VideoFeedCuratedListsChanged extends VideoFeedEvent {
   const VideoFeedCuratedListsChanged([this.subscribedLists = const []]);
 

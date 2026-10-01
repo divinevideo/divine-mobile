@@ -373,12 +373,6 @@ class _AcceptedHolders extends ConsumerWidget {
         listeners: [
           BlocListener<BadgeHoldersCubit, BadgeHoldersState>(
             listenWhen: (previous, current) =>
-                previous.subscriptionRevision != current.subscriptionRevision,
-            listener: (_, _) =>
-                ref.read(badgeSubscriptionsRevisionProvider.notifier).state++,
-          ),
-          BlocListener<BadgeHoldersCubit, BadgeHoldersState>(
-            listenWhen: (previous, current) =>
                 previous.saveFailures != current.saveFailures,
             listener: (context, _) =>
                 ScaffoldMessenger.of(context).showSnackBar(
