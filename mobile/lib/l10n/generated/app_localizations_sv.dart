@@ -9198,6 +9198,13 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorChromaKeyDoneSemanticLabel => 'Använd färgmasken';
 
   @override
+  String get videoEditorOpacityLabel => 'Opacitet';
+
+  @override
+  String get videoEditorOpacitySemanticLabel =>
+      'Ställ in hur genomskinligt det valda klippet är';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Hitta automatiskt';
 
   @override

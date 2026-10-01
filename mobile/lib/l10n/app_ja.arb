@@ -3672,6 +3672,8 @@
     "videoEditorChromaKeySemanticLabel": "このクリップのカラーマスクを設定",
     "videoEditorChromaKeyCloseSemanticLabel": "カラーマスクの変更を破棄",
     "videoEditorChromaKeyDoneSemanticLabel": "カラーマスクを適用",
+    "videoEditorOpacityLabel": "不透明度",
+    "videoEditorOpacitySemanticLabel": "選択したクリップの透け具合を設定",
     "videoEditorChromaKeyAutoDetect": "自動検出",
     "videoEditorChromaKeyPresetGreen": "グリーン",
     "videoEditorChromaKeyPresetBlue": "ブルー",

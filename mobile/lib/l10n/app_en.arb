@@ -6078,6 +6078,14 @@
   "videoEditorChromaKeySemanticLabel": "Set up a color mask for this clip",
   "videoEditorChromaKeyCloseSemanticLabel": "Discard color mask changes",
   "videoEditorChromaKeyDoneSemanticLabel": "Apply the color mask",
+  "videoEditorOpacityLabel": "Opacity",
+  "@videoEditorOpacityLabel": {
+    "description": "Caption of the button in the timeline controls of a clip that was detached onto the canvas, and title of the sheet it opens, for how see-through the clip is: 100% is solid, 0% is invisible. Translate as the standard term image and video editors use for a layer's opacity — not transparency, which runs the other way along the slider. Keep it short — it sits under a 52dp icon in the clip controls."
+  },
+  "videoEditorOpacitySemanticLabel": "Set how see-through the selected clip is",
+  "@videoEditorOpacitySemanticLabel": {
+    "description": "Accessibility label for the Opacity button in the timeline controls of a clip that was detached onto the canvas."
+  },
   "videoEditorChromaKeyAutoDetect": "Auto-detect",
   "videoEditorChromaKeyPresetGreen": "Green",
   "videoEditorChromaKeyPresetBlue": "Blue",

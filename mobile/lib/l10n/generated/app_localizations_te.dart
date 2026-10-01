@@ -9462,6 +9462,13 @@ class AppLocalizationsTe extends AppLocalizations {
       'రంగు మాస్క్‌ను వర్తింపజేయండి';
 
   @override
+  String get videoEditorOpacityLabel => 'అపారదర్శకత';
+
+  @override
+  String get videoEditorOpacitySemanticLabel =>
+      'ఎంచుకున్న క్లిప్ ఎంత పారదర్శకంగా ఉండాలో సెట్ చేయండి';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'ఆటో-డిటెక్ట్';
 
   @override

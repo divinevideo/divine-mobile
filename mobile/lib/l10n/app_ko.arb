@@ -3218,6 +3218,8 @@
     "videoEditorChromaKeySemanticLabel": "이 클립의 색상 마스크 설정",
     "videoEditorChromaKeyCloseSemanticLabel": "색상 마스크 변경 사항 취소",
     "videoEditorChromaKeyDoneSemanticLabel": "색상 마스크 적용",
+    "videoEditorOpacityLabel": "불투명도",
+    "videoEditorOpacitySemanticLabel": "선택한 클립이 비쳐 보이는 정도 설정",
     "videoEditorChromaKeyAutoDetect": "자동 감지",
     "videoEditorChromaKeyPresetGreen": "초록",
     "videoEditorChromaKeyPresetBlue": "파랑",

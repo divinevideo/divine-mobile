@@ -552,6 +552,37 @@ void main() {
       );
     });
 
+    group(VideoEditorDetachedClipOpacityPreviewChanged, () {
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'shows the dragged opacity on its layer',
+        build: buildBloc,
+        act: (bloc) => bloc.add(
+          const VideoEditorDetachedClipOpacityPreviewChanged((
+            layerId: 'layer-1',
+            opacity: 0.4,
+          )),
+        ),
+        expect: () => [
+          const VideoEditorMainState(
+            detachedClipOpacityPreview: (layerId: 'layer-1', opacity: 0.4),
+          ),
+        ],
+      );
+
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'ends the preview and leaves the rest of the editor state alone',
+        build: buildBloc,
+        seed: () => const VideoEditorMainState(
+          isPlaying: true,
+          detachedClipOpacityPreview: (layerId: 'layer-1', opacity: 0.4),
+        ),
+        act: (bloc) => bloc.add(
+          const VideoEditorDetachedClipOpacityPreviewChanged(null),
+        ),
+        expect: () => [const VideoEditorMainState(isPlaying: true)],
+      );
+    });
+
     group(VideoEditorReorderingChanged, () {
       blocTest<VideoEditorMainBloc, VideoEditorMainState>(
         'emits state with isReordering true',

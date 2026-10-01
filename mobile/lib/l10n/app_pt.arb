@@ -3672,6 +3672,8 @@
     "videoEditorChromaKeySemanticLabel": "Configurar uma máscara de cor para este clipe",
     "videoEditorChromaKeyCloseSemanticLabel": "Descartar as alterações da máscara de cor",
     "videoEditorChromaKeyDoneSemanticLabel": "Aplicar a máscara de cor",
+    "videoEditorOpacityLabel": "Opacidade",
+    "videoEditorOpacitySemanticLabel": "Ajustar a transparência do clipe selecionado",
     "videoEditorChromaKeyAutoDetect": "Detetar automaticamente",
     "videoEditorChromaKeyPresetGreen": "Verde",
     "videoEditorChromaKeyPresetBlue": "Azul",

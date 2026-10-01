@@ -4764,6 +4764,8 @@
   "videoEditorChromaKeySemanticLabel": "اس کلپ کے لیے کلر ماسک سیٹ کریں",
   "videoEditorChromaKeyCloseSemanticLabel": "کلر ماسک کی تبدیلیاں رد کریں",
   "videoEditorChromaKeyDoneSemanticLabel": "کلر ماسک لاگو کریں",
+  "videoEditorOpacityLabel": "غیر شفافیت",
+  "videoEditorOpacitySemanticLabel": "منتخب کلپ کتنا شفاف ہو، یہ طے کریں",
   "videoEditorChromaKeyAutoDetect": "خودکار شناخت",
   "videoEditorChromaKeyPresetGreen": "سبز",
   "videoEditorChromaKeyPresetBlue": "نیلا",

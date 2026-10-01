@@ -3672,6 +3672,8 @@
     "videoEditorChromaKeySemanticLabel": "ضبط قناع اللون لهذا المقطع",
     "videoEditorChromaKeyCloseSemanticLabel": "تجاهل تغييرات قناع اللون",
     "videoEditorChromaKeyDoneSemanticLabel": "تطبيق قناع اللون",
+    "videoEditorOpacityLabel": "العتامة",
+    "videoEditorOpacitySemanticLabel": "ضبط مدى شفافية المقطع المحدد",
     "videoEditorChromaKeyAutoDetect": "كشف تلقائي",
     "videoEditorChromaKeyPresetGreen": "أخضر",
     "videoEditorChromaKeyPresetBlue": "أزرق",

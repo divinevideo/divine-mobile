@@ -3672,6 +3672,8 @@
     "videoEditorChromaKeySemanticLabel": "Kleurmasker voor deze clip instellen",
     "videoEditorChromaKeyCloseSemanticLabel": "Kleurmaskerwijzigingen verwerpen",
     "videoEditorChromaKeyDoneSemanticLabel": "Kleurmasker toepassen",
+    "videoEditorOpacityLabel": "Dekking",
+    "videoEditorOpacitySemanticLabel": "Instellen hoe doorzichtig de geselecteerde clip is",
     "videoEditorChromaKeyAutoDetect": "Automatisch detecteren",
     "videoEditorChromaKeyPresetGreen": "Groen",
     "videoEditorChromaKeyPresetBlue": "Blauw",

@@ -51,6 +51,15 @@ const String detachedClipLayerSourceOffsetKey = 'sourceOffsetUs';
 /// composition, and both read the same values from here.
 const String detachedClipLayerChromaKeyKey = 'chromaKey';
 
+/// Key under which the layer's opacity is written, from 0 (invisible) to 1.
+/// Absent when the layer is fully opaque, which is what every layer written
+/// before opacity existed means.
+///
+/// Like the green screen, a setting rather than a re-render: the export hands
+/// it to the clip's `VideoLayer`, which fades the clip over whatever is
+/// underneath, and the canvas fades its preview by the same amount.
+const String detachedClipLayerOpacityKey = 'opacity';
+
 /// Key under which the id of the placeholder clip that took the detached
 /// clip's slot is written. Absent when the gap was closed instead.
 ///
@@ -72,6 +81,7 @@ class DetachedClipLayerData {
     required this.layerId,
     this.sourceOffset = Duration.zero,
     this.chromaKey,
+    this.opacity = 1,
     this.placeholderClipId,
   });
 
@@ -91,6 +101,9 @@ class DetachedClipLayerData {
   /// of whatever the file holds — see [detachedClipLayerChromaKeyKey].
   final ClipChromaKey? chromaKey;
 
+  /// How opaque the layer is, from 0 to 1 — see [detachedClipLayerOpacityKey].
+  final double opacity;
+
   /// Id of the placeholder clip holding the slot this clip left, or `null`
   /// when the gap was closed — see [detachedClipLayerPlaceholderIdKey].
   final String? placeholderClipId;
@@ -106,6 +119,7 @@ class DetachedClipLayerData {
     detachedClipLayerIdKey: layerId,
     detachedClipLayerSourceOffsetKey: sourceOffset.inMicroseconds,
     if (chromaKey case final key?) detachedClipLayerChromaKeyKey: key.toJson(),
+    if (opacity < 1) detachedClipLayerOpacityKey: opacity,
     detachedClipLayerPlaceholderIdKey: ?placeholderClipId,
   };
 
@@ -142,6 +156,7 @@ class DetachedClipLayerData {
           documentsPath,
           useOriginalPath: useOriginalPath,
         ),
+        opacity: opacityOf(meta),
         placeholderClipId: placeholderClipIdOf(meta),
       );
     } on FormatException {
@@ -197,6 +212,34 @@ class DetachedClipLayerData {
     if (chromaKey != null) {
       copy[detachedClipLayerChromaKeyKey] = chromaKey.toJson();
     }
+    return copy;
+  }
+
+  /// How opaque the layer [meta] describes is, from 0 to 1.
+  ///
+  /// Reads the map alone, so the canvas can fade the layer in the frame it is
+  /// mounted in. Anything that is not a number reads as fully opaque — the
+  /// value layers had before opacity existed — and anything outside 0 to 1 is
+  /// clamped, since the export rejects it.
+  static double opacityOf(Map<String, dynamic>? meta) {
+    if (!isDetachedClipMeta(meta)) return 1;
+    final raw = meta![detachedClipLayerOpacityKey];
+    if (raw is! num || raw.isNaN) return 1;
+    return raw.clamp(0, 1).toDouble();
+  }
+
+  /// [meta] with its opacity set to [opacity], which is clamped to 0 to 1.
+  ///
+  /// A fully opaque layer drops the key rather than storing 1, so the meta
+  /// reads exactly like a layer that was never faded.
+  static Map<String, dynamic>? withOpacity(
+    Map<String, dynamic>? meta,
+    double opacity,
+  ) {
+    if (!isDetachedClipMeta(meta)) return null;
+    final value = opacity.clamp(0.0, 1.0);
+    final copy = {...meta!}..remove(detachedClipLayerOpacityKey);
+    if (value < 1) copy[detachedClipLayerOpacityKey] = value;
     return copy;
   }
 

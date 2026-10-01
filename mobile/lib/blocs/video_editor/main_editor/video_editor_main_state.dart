@@ -1,5 +1,9 @@
 part of 'video_editor_main_bloc.dart';
 
+/// An opacity shown on a detached clip's layer while it is being adjusted,
+/// before it is written to the editor history.
+typedef DetachedClipOpacityPreview = ({String layerId, double opacity});
+
 /// State for the video editor main screen.
 class VideoEditorMainState extends Equatable {
   const VideoEditorMainState({
@@ -23,6 +27,7 @@ class VideoEditorMainState extends Equatable {
     this.isTimelineHiddenByUser = false,
     this.isMarkerMode = false,
     this.isPlacingSlidePoint = false,
+    this.detachedClipOpacityPreview,
   });
 
   /// Whether the undo action is available.
@@ -100,6 +105,14 @@ class VideoEditorMainState extends Equatable {
   /// video fills the screen and every part of it can be tapped.
   final bool isPlacingSlidePoint;
 
+  /// The opacity a detached clip shows while its slider is being dragged, or
+  /// `null` when no clip is being adjusted.
+  ///
+  /// Kept out of the layer until the change is confirmed: writing every slider
+  /// step to the editor history would turn one adjustment into dozens of undo
+  /// steps, and cancelling has to put the layer back exactly as it was.
+  final DetachedClipOpacityPreview? detachedClipOpacityPreview;
+
   /// Whether the voice-over recorder is open over the editor.
   ///
   /// The preview keeps playing beneath its translucent route so the take can
@@ -114,7 +127,8 @@ class VideoEditorMainState extends Equatable {
 
   /// Creates a copy with the given fields replaced.
   ///
-  /// Use [clearOpenSubEditor] to explicitly close the sub-editor.
+  /// Use [clearOpenSubEditor] to explicitly close the sub-editor and
+  /// [clearDetachedClipOpacityPreview] to end an opacity preview.
   VideoEditorMainState copyWith({
     bool? canUndo,
     bool? canRedo,
@@ -137,6 +151,8 @@ class VideoEditorMainState extends Equatable {
     bool? isTimelineHiddenByUser,
     bool? isMarkerMode,
     bool? isPlacingSlidePoint,
+    DetachedClipOpacityPreview? detachedClipOpacityPreview,
+    bool clearDetachedClipOpacityPreview = false,
   }) {
     return VideoEditorMainState(
       canUndo: canUndo ?? this.canUndo,
@@ -167,6 +183,9 @@ class VideoEditorMainState extends Equatable {
           isTimelineHiddenByUser ?? this.isTimelineHiddenByUser,
       isMarkerMode: isMarkerMode ?? this.isMarkerMode,
       isPlacingSlidePoint: isPlacingSlidePoint ?? this.isPlacingSlidePoint,
+      detachedClipOpacityPreview: clearDetachedClipOpacityPreview
+          ? null
+          : (detachedClipOpacityPreview ?? this.detachedClipOpacityPreview),
     );
   }
 
@@ -192,5 +211,6 @@ class VideoEditorMainState extends Equatable {
     isTimelineHiddenByUser,
     isMarkerMode,
     isPlacingSlidePoint,
+    detachedClipOpacityPreview,
   ];
 }

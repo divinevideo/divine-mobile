@@ -16,6 +16,7 @@ import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:openvine/screens/video_editor/video_audio_editor_timing_screen.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_chroma_key.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
+import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_opacity.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_reattach.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_transform.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
@@ -124,6 +125,13 @@ class _LayerOverlayControls extends StatelessWidget {
           DetachedClipLayerData.hasChromaKey(
             DetachedClipLayerData.metaOf(layer),
           ),
+      // Opacity, for a detached clip only: the export composites it as a
+      // `VideoLayer` of its own, which fades it over the track underneath.
+      onOpacity: isDetachedClip ? () => _editOpacity(context: context) : null,
+      hasOpacity:
+          isDetachedClip &&
+          DetachedClipLayerData.opacityOf(DetachedClipLayerData.metaOf(layer)) <
+              1,
       // Animations are off for a detached clip: the export composites it as a
       // `VideoLayer`, and neither that nor the `VideoSegment` under it carries
       // an `animations` field the way a rasterized `ImageLayer` does. Offering
@@ -178,6 +186,12 @@ class _LayerOverlayControls extends StatelessWidget {
     final layer = _liveLayer(context);
     if (layer == null) return;
     await editDetachedClipChromaKey(context, layer);
+  }
+
+  Future<void> _editOpacity({required BuildContext context}) async {
+    final layer = _liveLayer(context);
+    if (layer == null) return;
+    await editDetachedClipOpacity(context, layer, item: item);
   }
 
   Future<void> _animateLayer({required BuildContext context}) async {

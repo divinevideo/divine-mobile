@@ -3796,6 +3796,8 @@
     "videoEditorChromaKeySemanticLabel": "Настрой цветова маска за този клип",
     "videoEditorChromaKeyCloseSemanticLabel": "Отхвърли промените по цветовата маска",
     "videoEditorChromaKeyDoneSemanticLabel": "Приложи цветовата маска",
+    "videoEditorOpacityLabel": "Непрозрачност",
+    "videoEditorOpacitySemanticLabel": "Задай колко прозрачен да е избраният клип",
     "videoEditorChromaKeyAutoDetect": "Автоматично разпознаване",
     "videoEditorChromaKeyPresetGreen": "Зелено",
     "videoEditorChromaKeyPresetBlue": "Синьо",

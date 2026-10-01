@@ -328,6 +328,82 @@ void main() {
       expect(preview.previewTransparency, isFalse);
       await disposeLayerView(tester);
     });
+
+    group('opacity', () {
+      double shownOpacity(WidgetTester tester) => tester
+          .widget<Opacity>(
+            find
+                .descendant(
+                  of: find.byType(DetachedClipLayerView),
+                  matching: find.byType(Opacity),
+                )
+                .first,
+          )
+          .opacity;
+
+      testWidgets('fades the layer by the opacity its meta stores', (
+        tester,
+      ) async {
+        final meta = DetachedClipLayerData(
+          clip: _clip(),
+          layerId: 'layer-1',
+          opacity: 0.6,
+        ).toMeta();
+
+        await tester.pumpWidget(
+          _app(_layerHost(DetachedClipLayerView(meta: meta))),
+        );
+
+        expect(shownOpacity(tester), 0.6);
+        await disposeLayerView(tester);
+      });
+
+      testWidgets('follows a dragged opacity for its own layer only', (
+        tester,
+      ) async {
+        final editor = VideoEditorMainBloc();
+        addTearDown(editor.close);
+        final meta = DetachedClipLayerData(
+          clip: _clip(),
+          layerId: 'layer-1',
+        ).toMeta();
+
+        await tester.pumpWidget(
+          _app(
+            BlocProvider<VideoEditorMainBloc>.value(
+              value: editor,
+              child: _layerHost(DetachedClipLayerView(meta: meta)),
+            ),
+          ),
+        );
+        expect(shownOpacity(tester), 1);
+
+        editor.add(
+          const VideoEditorDetachedClipOpacityPreviewChanged((
+            layerId: 'other',
+            opacity: 0.2,
+          )),
+        );
+        await tester.pumpAndSettle();
+        expect(shownOpacity(tester), 1);
+
+        editor.add(
+          const VideoEditorDetachedClipOpacityPreviewChanged((
+            layerId: 'layer-1',
+            opacity: 0.3,
+          )),
+        );
+        await tester.pumpAndSettle();
+        expect(shownOpacity(tester), 0.3);
+
+        // Ending the preview without a write — a cancel — puts the stored
+        // value back.
+        editor.add(const VideoEditorDetachedClipOpacityPreviewChanged(null));
+        await tester.pumpAndSettle();
+        expect(shownOpacity(tester), 1);
+        await disposeLayerView(tester);
+      });
+    });
   });
 
   group('VoiceOverPreview mute wiring', () {

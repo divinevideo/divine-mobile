@@ -9163,6 +9163,13 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorChromaKeyDoneSemanticLabel => 'Áp dụng mặt nạ màu';
 
   @override
+  String get videoEditorOpacityLabel => 'Độ mờ';
+
+  @override
+  String get videoEditorOpacitySemanticLabel =>
+      'Đặt mức trong suốt cho clip đã chọn';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Tự động nhận diện';
 
   @override

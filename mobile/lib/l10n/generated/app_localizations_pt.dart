@@ -9270,6 +9270,13 @@ class AppLocalizationsPt extends AppLocalizations {
       'Aplicar a máscara de cor';
 
   @override
+  String get videoEditorOpacityLabel => 'Opacidade';
+
+  @override
+  String get videoEditorOpacitySemanticLabel =>
+      'Ajustar a transparência do clipe selecionado';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Detetar automaticamente';
 
   @override

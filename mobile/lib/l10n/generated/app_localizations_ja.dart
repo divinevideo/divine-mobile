@@ -8757,6 +8757,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorChromaKeyDoneSemanticLabel => 'カラーマスクを適用';
 
   @override
+  String get videoEditorOpacityLabel => '不透明度';
+
+  @override
+  String get videoEditorOpacitySemanticLabel => '選択したクリップの透け具合を設定';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => '自動検出';
 
   @override

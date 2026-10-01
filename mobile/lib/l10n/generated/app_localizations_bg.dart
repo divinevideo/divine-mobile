@@ -9280,6 +9280,13 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorChromaKeyDoneSemanticLabel => 'Приложи цветовата маска';
 
   @override
+  String get videoEditorOpacityLabel => 'Непрозрачност';
+
+  @override
+  String get videoEditorOpacitySemanticLabel =>
+      'Задай колко прозрачен да е избраният клип';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Автоматично разпознаване';
 
   @override

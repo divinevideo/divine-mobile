@@ -3672,6 +3672,8 @@
     "videoEditorChromaKeySemanticLabel": "Farbmaske für diesen Clip einrichten",
     "videoEditorChromaKeyCloseSemanticLabel": "Farbmasken-Änderungen verwerfen",
     "videoEditorChromaKeyDoneSemanticLabel": "Farbmaske anwenden",
+    "videoEditorOpacityLabel": "Deckkraft",
+    "videoEditorOpacitySemanticLabel": "Festlegen, wie durchsichtig der ausgewählte Clip ist",
     "videoEditorChromaKeyAutoDetect": "Automatisch erkennen",
     "videoEditorChromaKeyPresetGreen": "Grün",
     "videoEditorChromaKeyPresetBlue": "Blau",

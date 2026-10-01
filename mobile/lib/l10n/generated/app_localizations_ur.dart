@@ -9198,6 +9198,13 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorChromaKeyDoneSemanticLabel => 'کلر ماسک لاگو کریں';
 
   @override
+  String get videoEditorOpacityLabel => 'غیر شفافیت';
+
+  @override
+  String get videoEditorOpacitySemanticLabel =>
+      'منتخب کلپ کتنا شفاف ہو، یہ طے کریں';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'خودکار شناخت';
 
   @override

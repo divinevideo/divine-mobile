@@ -318,6 +318,92 @@ void main() {
       });
     });
 
+    group('opacity', () {
+      test('round-trips through the meta', () {
+        final meta = DetachedClipLayerData(
+          clip: _clip(),
+          layerId: 'layer-1',
+          opacity: 0.4,
+        ).toMeta();
+
+        expect(DetachedClipLayerData.opacityOf(meta), 0.4);
+        expect(DetachedClipLayerData.fromMeta(meta, '/docs')!.opacity, 0.4);
+      });
+
+      test('reads a layer without the key as fully opaque', () {
+        // Every layer saved before opacity existed has no key, and a solid
+        // layer still writes none, so its meta stays exactly as it was.
+        final meta = DetachedClipLayerData(
+          clip: _clip(),
+          layerId: 'layer-1',
+        ).toMeta();
+
+        expect(meta, isNot(contains(detachedClipLayerOpacityKey)));
+        expect(DetachedClipLayerData.opacityOf(meta), 1);
+        expect(DetachedClipLayerData.fromMeta(meta, '/docs')!.opacity, 1);
+      });
+
+      test('keeps a stored value inside the range the export accepts', () {
+        final meta = DetachedClipLayerData(
+          clip: _clip(),
+          layerId: 'layer-1',
+        ).toMeta();
+
+        // `VideoLayer` asserts 0 to 1, so a damaged draft must not reach it.
+        expect(
+          DetachedClipLayerData.opacityOf({
+            ...meta,
+            detachedClipLayerOpacityKey: 1.7,
+          }),
+          1,
+        );
+        expect(
+          DetachedClipLayerData.opacityOf({
+            ...meta,
+            detachedClipLayerOpacityKey: -0.2,
+          }),
+          0,
+        );
+        expect(
+          DetachedClipLayerData.opacityOf({
+            ...meta,
+            detachedClipLayerOpacityKey: 'half',
+          }),
+          1,
+        );
+      });
+
+      test('withOpacity sets the value and leaves the rest of the layer', () {
+        final meta = DetachedClipLayerData(
+          clip: _clip(),
+          layerId: 'layer-1',
+          sourceOffset: const Duration(seconds: 2),
+        ).toMeta();
+
+        final faded = DetachedClipLayerData.withOpacity(meta, 0.25);
+
+        expect(DetachedClipLayerData.opacityOf(faded), 0.25);
+        expect(DetachedClipLayerData.layerIdOf(faded), 'layer-1');
+        expect(
+          DetachedClipLayerData.sourceOffsetOf(faded),
+          const Duration(seconds: 2),
+        );
+        expect(
+          faded![detachedClipLayerClipKey],
+          meta[detachedClipLayerClipKey],
+        );
+
+        // Back to solid drops the key, so the layer reads like one that was
+        // never faded.
+        final solid = DetachedClipLayerData.withOpacity(faded, 1);
+        expect(solid, isNot(contains(detachedClipLayerOpacityKey)));
+        expect(
+          DetachedClipLayerData.withOpacity({'kind': 'sticker'}, 0.5),
+          isNull,
+        );
+      });
+    });
+
     group('withClip', () {
       test("swaps the footage and keeps the layer's own settings", () {
         final meta = DetachedClipLayerData(

@@ -3672,6 +3672,8 @@
     "videoEditorChromaKeySemanticLabel": "Configurează o mască de culoare pentru acest clip",
     "videoEditorChromaKeyCloseSemanticLabel": "Renunță la modificările măștii de culoare",
     "videoEditorChromaKeyDoneSemanticLabel": "Aplică masca de culoare",
+    "videoEditorOpacityLabel": "Opacitate",
+    "videoEditorOpacitySemanticLabel": "Setează cât de transparent e clipul selectat",
     "videoEditorChromaKeyAutoDetect": "Detectare automată",
     "videoEditorChromaKeyPresetGreen": "Verde",
     "videoEditorChromaKeyPresetBlue": "Albastru",

@@ -9209,6 +9209,13 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorChromaKeyDoneSemanticLabel => 'Gunakan topeng warna';
 
   @override
+  String get videoEditorOpacityLabel => 'Kelegapan';
+
+  @override
+  String get videoEditorOpacitySemanticLabel =>
+      'Tetapkan tahap lutsinar klip yang dipilih';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Kesan automatik';
 
   @override

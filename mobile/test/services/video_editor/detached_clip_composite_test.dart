@@ -43,12 +43,14 @@ WidgetLayer _detachedLayer(
   Duration? startTime,
   Duration? endTime,
   ClipChromaKey? chromaKey,
+  double opacity = 1,
   double rotation = 0,
 }) {
   final meta = DetachedClipLayerData(
     clip: clip,
     layerId: 'layer-1',
     chromaKey: chromaKey,
+    opacity: opacity,
   ).toMeta();
   return WidgetLayer(
     widget: const SizedBox.shrink(),
@@ -577,6 +579,26 @@ void main() {
       );
 
       expect(layer.chromaKey, isNull);
+    });
+
+    test('fades the layer by the opacity its meta carries', () {
+      final partitioned = partitionDetachedClipLayers([
+        _exported(_detachedLayer(_clip(), opacity: 0.35)),
+      ], '/docs');
+
+      final layer = buildDetachedClipVideoLayer(
+        item: partitioned.detached.single,
+        resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
+        bodySize: bodySize,
+        videoSize: videoSize,
+        targetAspectRatio: targetAspectRatio,
+        timelineMap: identityMap,
+        speedFlattened: false,
+      );
+
+      // On the layer, so the composition fades the clip over the track
+      // underneath rather than over black.
+      expect(layer.opacity, 0.35);
     });
 
     test('never carries a playback speed the composition would reject', () {
