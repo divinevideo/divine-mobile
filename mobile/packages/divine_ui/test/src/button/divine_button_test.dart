@@ -2,6 +2,7 @@ import 'dart:ui' show SemanticsAction;
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -943,6 +944,36 @@ void main() {
         );
         expect(text.maxLines, equals(1));
         expect(text.overflow, equals(TextOverflow.ellipsis));
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('wraps a long label up to maxLines instead of cutting it', (
+        tester,
+      ) async {
+        const label = 'Divine Supporter CHF 5.70 / month';
+        Future<RenderParagraph> pumpWithMaxLines(int maxLines) async {
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: Center(
+                  child: SizedBox(
+                    width: 300,
+                    child: DivineButton(
+                      label: label,
+                      expanded: true,
+                      maxLines: maxLines,
+                      onPressed: () {},
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+          return tester.renderObject<RenderParagraph>(find.text(label));
+        }
+
+        expect((await pumpWithMaxLines(1)).didExceedMaxLines, isTrue);
+        expect((await pumpWithMaxLines(4)).didExceedMaxLines, isFalse);
         expect(tester.takeException(), isNull);
       });
 

@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:iap_repository/src/entitlement_validator.dart';
 import 'package:iap_repository/src/exceptions.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import 'package:models/models.dart';
 
 /// The store product IDs Divine treats as supporter tiers, each with the
@@ -222,12 +223,19 @@ class InAppPurchaseValidator implements EntitlementValidator {
 
   SupporterTier _tierFromProduct(ProductDetails product) => SupporterTier(
     productId: product.id,
-    title: product.title,
+    title: _planName(product),
     price: product.price,
     currencyCode: product.currencyCode,
     description: product.description,
     billingPeriod: supporterProducts[product.id],
   );
+
+  /// Google Play appends the app name to a product's title ("Divine Supporter
+  /// (Divine)"); its `name` is the plan alone. StoreKit titles carry no suffix.
+  String _planName(ProductDetails product) =>
+      product is GooglePlayProductDetails
+      ? product.productDetails.name
+      : product.title;
 
   @override
   Future<SupporterEntitlement> purchase(

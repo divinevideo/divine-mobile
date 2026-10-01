@@ -8,6 +8,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iap_repository/iap_repository.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:in_app_purchase_android/billing_client_wrappers.dart';
+import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 
@@ -128,6 +130,34 @@ void main() {
         expect(tiers.single.title, 'Divine Supporter');
         expect(tiers.single.price, r'$4.99');
         expect(tiers.single.currencyCode, 'USD');
+      });
+
+      test('names a Google Play tier without the app-name suffix', () async {
+        final product = GooglePlayProductDetails.fromProductDetails(
+          const ProductDetailsWrapper(
+            description: 'Keep Divine running',
+            name: 'Divine Supporter',
+            oneTimePurchaseOfferDetails: OneTimePurchaseOfferDetailsWrapper(
+              formattedPrice: 'CHF 5.70',
+              priceAmountMicros: 5700000,
+              priceCurrencyCode: 'CHF',
+            ),
+            productId: 'divine.supporter.monthly',
+            productType: ProductType.inapp,
+            title: 'Divine Supporter (Divine)',
+          ),
+        ).single;
+        when(store.isAvailable).thenAnswer((_) async => true);
+        when(() => store.queryProductDetails(any())).thenAnswer(
+          (_) async => ProductDetailsResponse(
+            productDetails: [product],
+            notFoundIDs: [],
+          ),
+        );
+
+        final tiers = await validator.fetchProducts();
+
+        expect(tiers.single.title, 'Divine Supporter');
       });
 
       test('returns empty when no products found', () async {
