@@ -1264,6 +1264,155 @@ void main() {
       );
     });
 
+    group('fetchPublicList', () {
+      const secondOwner =
+          '4444444444444444444444444444444444444444444444444444444444444444';
+
+      Event peopleEvent({
+        required String pubkey,
+        required String dTag,
+        required String title,
+        int? createdAt,
+      }) {
+        return Event(
+          pubkey,
+          _peopleListKind,
+          [
+            ['d', dTag],
+            ['title', title],
+            ['p', secondOwner],
+          ],
+          '',
+          createdAt: createdAt,
+        );
+      }
+
+      for (final newestFirst in [false, true]) {
+        test(
+          'latest empty public list replaces stale members ($newestFirst)',
+          () async {
+            final older = peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'crew',
+              title: 'Crew',
+              createdAt: 1,
+            );
+            final latest = Event(
+              _ownerPubkey,
+              _peopleListKind,
+              [
+                ['d', 'crew'],
+                ['title', 'Crew'],
+              ],
+              '',
+              createdAt: 2,
+            );
+            final client = _MockNostrClient();
+            when(
+              () => client.queryEvents(any(), timeout: any(named: 'timeout')),
+            ).thenAnswer(
+              (_) async => newestFirst ? [latest, older] : [older, latest],
+            );
+            final repository = buildRepository(nostrClient: client);
+            final list = await repository.fetchPublicList(
+              ownerPubkey: _ownerPubkey,
+              listId: 'crew',
+            );
+            expect(list, isNotNull);
+            expect(list!.pubkeys, isEmpty);
+            expect(list.isEditable, isFalse);
+            expect(
+              list.updatedAt,
+              DateTime.fromMillisecondsSinceEpoch(2000, isUtc: true),
+            );
+          },
+        );
+      }
+
+      test('queries by author and d tag and returns the match', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(pubkey: _ownerPubkey, dTag: 'crew', title: 'Crew'),
+          ],
+        );
+
+        final repository = buildRepository(nostrClient: client);
+
+        final list = await repository.fetchPublicList(
+          ownerPubkey: _ownerPubkey,
+          listId: 'crew',
+        );
+
+        expect(list, isNotNull);
+        expect(list!.name, equals('Crew'));
+        // Someone else's list must not surface owner affordances.
+        expect(list.isEditable, isFalse);
+
+        final capturedFilters = verify(
+          () => client.queryEvents(
+            captureAny(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).captured.cast<List<Filter>>();
+        final filter = capturedFilters.single.single;
+        expect(filter.authors, equals([_ownerPubkey]));
+        expect(filter.d, equals(['crew']));
+      });
+
+      test('ignores a same-d list from another author', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(pubkey: secondOwner, dTag: 'crew', title: 'Impostor'),
+          ],
+        );
+
+        final repository = buildRepository(nostrClient: client);
+
+        final list = await repository.fetchPublicList(
+          ownerPubkey: _ownerPubkey,
+          listId: 'crew',
+        );
+
+        expect(list, isNull);
+      });
+
+      test('returns null when relays hold nothing', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer((_) async => const []);
+
+        final repository = buildRepository(nostrClient: client);
+
+        expect(
+          await repository.fetchPublicList(
+            ownerPubkey: _ownerPubkey,
+            listId: 'crew',
+          ),
+          isNull,
+        );
+      });
+    });
+
     group('searchPublicLists', () {
       // Second owner pubkey for multi-owner deduplication tests.
       const secondOwner =

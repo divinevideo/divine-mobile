@@ -2953,10 +2953,8 @@
     "peopleListsNoPeopleSubtitle": "始めるにはユーザーを追加してください",
     "peopleListsNoVideosTitle": "まだ動画がありません",
     "peopleListsNoVideosSubtitle": "リストメンバーの動画がここに表示されます",
-    "peopleListsNoVideosAvailable": "利用可能な動画がありません",
     "peopleListsFailedToLoadVideos": "動画の読み込みに失敗しました",
     "peopleListsVideoNotAvailable": "動画は利用できません",
-    "peopleListsBackToGridTooltip": "グリッドに戻る",
     "peopleListsErrorLoadingVideos": "動画の読み込みエラー",
     "peopleListsNoPeopleToAdd": "追加できるユーザーがいません。",
     "peopleListsAddToListName": "{name}に追加",
@@ -4786,5 +4784,35 @@
     "videoMetadataScheduleTooSoon": "{minutes, plural, other{{minutes}分以上あけてください。}}",
     "videoMetadataScheduleTooFar": "{days, plural, other{{days}日より先です。もっと近い時間を選んでください。}}",
     "videoMetadataScheduleButton": "予約する",
-    "videoMetadataScheduleVideoHint": "この動画を{time}に予約します"
+    "videoMetadataScheduleVideoHint": "この動画を{time}に予約します",
+  "listLoopsCount": "{count, plural, other{{formatted}ループ}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listMemberCount": "{count, plural, other{{count}人のメンバー}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsLoadFailed": "このリストを読み込めませんでした。",
+  "peopleListsPeopleCount": "{count, plural, other{{count}人}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsViewAllMembers": "すべて見る"
 }

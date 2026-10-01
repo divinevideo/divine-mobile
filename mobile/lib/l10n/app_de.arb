@@ -2960,10 +2960,8 @@
     "peopleListsNoPeopleSubtitle": "Füge Personen hinzu, um loszulegen",
     "peopleListsNoVideosTitle": "Noch keine Videos",
     "peopleListsNoVideosSubtitle": "Videos von Listenmitgliedern erscheinen hier",
-    "peopleListsNoVideosAvailable": "Keine Videos verfügbar",
     "peopleListsFailedToLoadVideos": "Videos konnten nicht geladen werden",
     "peopleListsVideoNotAvailable": "Video nicht verfügbar",
-    "peopleListsBackToGridTooltip": "Zurück zum Raster",
     "peopleListsErrorLoadingVideos": "Fehler beim Laden der Videos",
     "peopleListsNoPeopleToAdd": "Keine Personen zum Hinzufügen verfügbar.",
     "peopleListsAddToListName": "Zu {name} hinzufügen",
@@ -4786,5 +4784,35 @@
     "videoMetadataScheduleTooSoon": "{minutes, plural, =1{Lass mindestens {minutes} Minute Vorlauf.} other{Lass mindestens {minutes} Minuten Vorlauf.}}",
     "videoMetadataScheduleTooFar": "{days, plural, =1{Das ist mehr als {days} Tag entfernt. Wähl was Früheres.} other{Das ist mehr als {days} Tage entfernt. Wähl was Früheres.}}",
     "videoMetadataScheduleButton": "Planen",
-    "videoMetadataScheduleVideoHint": "Plant dieses Video für {time}"
+    "videoMetadataScheduleVideoHint": "Plant dieses Video für {time}",
+  "listLoopsCount": "{count, plural, =1{{formatted} Loop} other{{formatted} Loops}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listMemberCount": "{count, plural, =1{{count} Mitglied} other{{count} Mitglieder}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsLoadFailed": "Diese Liste konnte nicht geladen werden.",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} Person} other{{count} Personen}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsViewAllMembers": "Alle anzeigen"
 }

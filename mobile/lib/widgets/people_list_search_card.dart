@@ -130,6 +130,7 @@ class _AvatarCollage extends StatelessWidget {
                       width: cellSize,
                       height: cellSize,
                       child: _AvatarCell(
+                        size: cellSize,
                         pubkey: i < pubkeys.length ? pubkeys[i] : null,
                         tone:
                             UserAvatarPlaceholderTone.values[(i + 1) %
@@ -154,8 +155,9 @@ class _AvatarCollage extends StatelessWidget {
 
 /// A single avatar cell in the collage.
 class _AvatarCell extends StatelessWidget {
-  const _AvatarCell({required this.tone, this.pubkey});
+  const _AvatarCell({required this.size, required this.tone, this.pubkey});
 
+  final double size;
   final UserAvatarPlaceholderTone tone;
   final String? pubkey;
 
@@ -165,7 +167,7 @@ class _AvatarCell extends StatelessWidget {
     // The avatar widget handles placeholder rendering when imageUrl is null.
     return UserAvatar(
       name: pubkey,
-      size: double.infinity,
+      size: size,
       placeholderTone: tone,
     );
   }

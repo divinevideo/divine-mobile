@@ -3941,16 +3941,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'فہرست کے ممبران کی ویڈیوز یہاں نظر آئیں گی';
 
   @override
-  String get peopleListsNoVideosAvailable => 'کوئی ویڈیو دستیاب نہیں';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'ویڈیوز لوڈ نہیں ہو سکیں';
 
   @override
   String get peopleListsVideoNotAvailable => 'ویڈیو دستیاب نہیں';
-
-  @override
-  String get peopleListsBackToGridTooltip => 'گرڈ پر واپس';
 
   @override
   String get peopleListsErrorLoadingVideos => 'ویڈیوز لوڈ کرنے میں خرابی';
@@ -12757,4 +12751,46 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get soundUploadRetrySaveAction => 'آوازوں میں دوبارہ محفوظ کریں';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted لوپ',
+      one: '$formatted لوپ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ممبران',
+      one: '$count ممبر',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsLoadFailed => 'یہ فہرست لوڈ نہیں ہو سکی۔';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count لوگ',
+      one: '$count شخص',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get peopleListsViewAllMembers => 'سب دیکھیں';
 }

@@ -1477,10 +1477,8 @@
     "peopleListsNoPeopleSubtitle": "Добави някого, за да започнеш",
     "peopleListsNoVideosTitle": "Още няма видеа",
     "peopleListsNoVideosSubtitle": "Видеата от хората в списъка ще се появят тук",
-    "peopleListsNoVideosAvailable": "Няма налични видеа",
     "peopleListsFailedToLoadVideos": "Не успяхме да заредим видеата",
     "peopleListsVideoNotAvailable": "Видеото не е налично",
-    "peopleListsBackToGridTooltip": "Обратно към мрежата",
     "peopleListsErrorLoadingVideos": "Грешка при зареждане на видеа",
     "peopleListsNoPeopleToAdd": "Няма налични хора за добавяне.",
     "peopleListsAddToListName": "Добави към {name}",
@@ -4910,5 +4908,35 @@
     "videoMetadataScheduleTooSoon": "{minutes, plural, =1{Остави поне {minutes} минута.} other{Остави поне {minutes} минути.}}",
     "videoMetadataScheduleTooFar": "{days, plural, =1{Това е след повече от {days} ден. Избери по-близък момент.} other{Това е след повече от {days} дни. Избери по-близък момент.}}",
     "videoMetadataScheduleButton": "Насрочи",
-    "videoMetadataScheduleVideoHint": "Насрочва това видео за {time}"
+    "videoMetadataScheduleVideoHint": "Насрочва това видео за {time}",
+  "listLoopsCount": "{count, plural, =1{{formatted} луп} other{{formatted} лупа}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listMemberCount": "{count, plural, =1{{count} член} other{{count} членове}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsLoadFailed": "Не успяхме да заредим този списък.",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} човек} other{{count} души}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsViewAllMembers": "Виж всички"
 }

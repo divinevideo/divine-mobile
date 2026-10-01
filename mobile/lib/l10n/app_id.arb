@@ -2960,10 +2960,8 @@
     "peopleListsNoPeopleSubtitle": "Tambahkan orang untuk memulai",
     "peopleListsNoVideosTitle": "Belum ada video",
     "peopleListsNoVideosSubtitle": "Video dari anggota daftar akan muncul di sini",
-    "peopleListsNoVideosAvailable": "Tidak ada video tersedia",
     "peopleListsFailedToLoadVideos": "Gagal memuat video",
     "peopleListsVideoNotAvailable": "Video tidak tersedia",
-    "peopleListsBackToGridTooltip": "Kembali ke tampilan kisi",
     "peopleListsErrorLoadingVideos": "Kesalahan saat memuat video",
     "peopleListsNoPeopleToAdd": "Tidak ada orang yang tersedia untuk ditambahkan.",
     "peopleListsAddToListName": "Tambahkan ke {name}",
@@ -4786,5 +4784,35 @@
     "videoMetadataScheduleTooSoon": "{minutes, plural, other{Kasih jarak minimal {minutes} menit.}}",
     "videoMetadataScheduleTooFar": "{days, plural, other{Itu lebih dari {days} hari lagi. Pilih yang lebih dekat.}}",
     "videoMetadataScheduleButton": "Jadwalkan",
-    "videoMetadataScheduleVideoHint": "Menjadwalkan video ini untuk {time}"
+    "videoMetadataScheduleVideoHint": "Menjadwalkan video ini untuk {time}",
+  "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loop}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listMemberCount": "{count, plural, =1{{count} anggota} other{{count} anggota}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsLoadFailed": "Tidak bisa memuat daftar ini.",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} orang} other{{count} orang}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsViewAllMembers": "Lihat semua"
 }

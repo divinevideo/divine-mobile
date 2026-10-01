@@ -3908,16 +3908,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Video từ các thành viên trong danh sách sẽ xuất hiện ở đây';
 
   @override
-  String get peopleListsNoVideosAvailable => 'Không có video nào';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'Không tải được video';
 
   @override
   String get peopleListsVideoNotAvailable => 'Video không khả dụng';
-
-  @override
-  String get peopleListsBackToGridTooltip => 'Quay lại lưới';
 
   @override
   String get peopleListsErrorLoadingVideos => 'Lỗi khi tải video';
@@ -12714,4 +12708,46 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get soundUploadRetrySaveAction => 'Thử lưu lại vào Âm thanh';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted loop',
+      one: '$formatted loop',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count thành viên',
+      one: '$count thành viên',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsLoadFailed => 'Không tải được danh sách này.';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count người',
+      one: '$count người',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get peopleListsViewAllMembers => 'Xem tất cả';
 }

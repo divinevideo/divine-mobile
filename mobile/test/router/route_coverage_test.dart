@@ -513,6 +513,14 @@ void main() {
         expect(parseKnownRoute('/unknown-route'), isNull);
       });
 
+      test('people list roster is a known normalizable route', () {
+        // Registered with the normalizer, so the route is modeled rather
+        // than passed through as unknown.
+        final context = parseKnownRoute('/people-lists/list%3A123/members');
+        expect(context?.type, RouteType.peopleListRoster);
+        expect(context?.listId, 'list:123');
+      });
+
       test('Negative index is normalized to 0', () {
         final context = parseRoute(VideoFeedPage.pathForIndex(-5));
         expect(context.type, RouteType.home);
@@ -607,6 +615,7 @@ void main() {
       'people list create': CreatePeopleListPage.path,
       'people list members': '/people-lists/list%3A123',
       'people list add people': '/people-lists/list%3A123/add-people',
+      'people list roster': '/people-lists/list%3A123/members',
     };
 
     for (final entry in roundTripCases.entries) {
@@ -660,6 +669,7 @@ void main() {
         RouteType.peopleListCreate: CreatePeopleListPage.path,
         RouteType.peopleListMembers: '/people-lists/list%3A123',
         RouteType.peopleListAddPeople: '/people-lists/list%3A123/add-people',
+        RouteType.peopleListRoster: '/people-lists/list%3A123/members',
       };
 
       for (final entry in routeTypeExamples.entries) {

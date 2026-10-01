@@ -2953,10 +2953,8 @@
     "peopleListsNoPeopleSubtitle": "أضف بعض الأشخاص للبدء",
     "peopleListsNoVideosTitle": "لا توجد مقاطع فيديو بعد",
     "peopleListsNoVideosSubtitle": "ستظهر هنا مقاطع الفيديو من أعضاء القائمة",
-    "peopleListsNoVideosAvailable": "لا تتوفر مقاطع فيديو",
     "peopleListsFailedToLoadVideos": "فشل تحميل مقاطع الفيديو",
     "peopleListsVideoNotAvailable": "الفيديو غير متاح",
-    "peopleListsBackToGridTooltip": "العودة إلى الشبكة",
     "peopleListsErrorLoadingVideos": "خطأ في تحميل مقاطع الفيديو",
     "peopleListsNoPeopleToAdd": "لا يوجد أشخاص متاحون للإضافة.",
     "peopleListsAddToListName": "أضف إلى {name}",
@@ -4786,5 +4784,35 @@
     "videoMetadataScheduleTooSoon": "{minutes, plural, =1{ترك دقيقة واحدة على الأقل.} =2{ترك دقيقتين على الأقل.} few{ترك {minutes} دقائق على الأقل.} other{ترك {minutes} دقيقة على الأقل.}}",
     "videoMetadataScheduleTooFar": "{days, plural, =1{هذا بعد أكثر من يوم واحد. اختيار وقت أقرب.} =2{هذا بعد أكثر من يومين. اختيار وقت أقرب.} few{هذا بعد أكثر من {days} أيام. اختيار وقت أقرب.} other{هذا بعد أكثر من {days} يومًا. اختيار وقت أقرب.}}",
     "videoMetadataScheduleButton": "جدولة",
-    "videoMetadataScheduleVideoHint": "جدولة هذا الفيديو في {time}"
+    "videoMetadataScheduleVideoHint": "جدولة هذا الفيديو في {time}",
+  "listLoopsCount": "{count, plural, zero{لا توجد تكرارات} one{تكرار واحد} two{تكراران} few{{formatted} تكرارات} many{{formatted} تكرارًا} other{{formatted} تكرار}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listMemberCount": "{count, plural, zero{لا يوجد أعضاء} one{عضو واحد} two{عضوان} few{{count} أعضاء} many{{count} عضوًا} other{{count} عضو}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsLoadFailed": "تعذّر تحميل هذه القائمة.",
+  "peopleListsPeopleCount": "{count, plural, zero{لا يوجد أشخاص} one{شخص واحد} two{شخصان} few{{count} أشخاص} many{{count} شخصًا} other{{count} شخص}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsViewAllMembers": "عرض الكل"
 }

@@ -4046,16 +4046,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Filmy od członków listy pojawią się tutaj';
 
   @override
-  String get peopleListsNoVideosAvailable => 'Brak dostępnych filmów';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'Nie udało się załadować filmów';
 
   @override
   String get peopleListsVideoNotAvailable => 'Film niedostępny';
-
-  @override
-  String get peopleListsBackToGridTooltip => 'Powrót do siatki';
 
   @override
   String get peopleListsErrorLoadingVideos => 'Błąd podczas ładowania filmów';
@@ -13014,4 +13008,52 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get soundUploadRetrySaveAction =>
       'Spróbuj ponownie zapisać w Dźwiękach';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted pętli',
+      many: '$formatted pętli',
+      few: '$formatted pętle',
+      one: '$formatted pętla',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count członka',
+      many: '$count członków',
+      few: '$count członków',
+      one: '$count członek',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsLoadFailed => 'Nie udało się wczytać tej listy.';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count osoby',
+      many: '$count osób',
+      few: '$count osoby',
+      one: '$count osoba',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get peopleListsViewAllMembers => 'Zobacz wszystkich';
 }

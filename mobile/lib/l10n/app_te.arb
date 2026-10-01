@@ -2308,10 +2308,8 @@
   "peopleListsNoPeopleSubtitle": "ప్రారంభించడానికి కొంతమంది వ్యక్తులను జోడించండి",
   "peopleListsNoVideosTitle": "ఇంకా వీడియోలు లేవు",
   "peopleListsNoVideosSubtitle": "జాబితా సభ్యుల నుండి వీడియోలు ఇక్కడ కనిపిస్తాయి",
-  "peopleListsNoVideosAvailable": "వీడియోలు అందుబాటులో లేవు",
   "peopleListsFailedToLoadVideos": "వీడియోలను లోడ్ చేయడంలో విఫలమైంది",
   "peopleListsVideoNotAvailable": "వీడియో అందుబాటులో లేదు",
-  "peopleListsBackToGridTooltip": "తిరిగి గ్రిడ్‌కి",
   "peopleListsErrorLoadingVideos": "వీడియోలను లోడ్ చేయడంలో లోపం",
   "peopleListsNoPeopleToAdd": "జోడించడానికి వ్యక్తులు ఎవరూ అందుబాటులో లేరు.",
   "peopleListsAddToListName": "దీనికి జోడించండి {name}",
@@ -8340,5 +8338,35 @@
     "videoMetadataScheduleTooSoon": "{minutes, plural, =1{కనీసం {minutes} నిమిషం ఇవ్వండి.} other{కనీసం {minutes} నిమిషాలు ఇవ్వండి.}}",
     "videoMetadataScheduleTooFar": "{days, plural, =1{అది {days} రోజు కంటే ఎక్కువ దూరంలో ఉంది. దగ్గరి సమయాన్ని ఎంచుకోండి.} other{అది {days} రోజుల కంటే ఎక్కువ దూరంలో ఉంది. దగ్గరి సమయాన్ని ఎంచుకోండి.}}",
     "videoMetadataScheduleButton": "షెడ్యూల్ చేయండి",
-    "videoMetadataScheduleVideoHint": "ఈ వీడియోను {time}కి షెడ్యూల్ చేస్తుంది"
+    "videoMetadataScheduleVideoHint": "ఈ వీడియోను {time}కి షెడ్యూల్ చేస్తుంది",
+  "listLoopsCount": "{count, plural, =1{{formatted} లూప్} other{{formatted} లూప్‌లు}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listMemberCount": "{count, plural, =1{{count} సభ్యులు} other{{count} సభ్యులు}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsLoadFailed": "ఈ జాబితాను లోడ్ చేయడం సాధ్యపడలేదు.",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} వ్యక్తి} other{{count} వ్యక్తులు}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsViewAllMembers": "అన్నీ చూడండి"
 }

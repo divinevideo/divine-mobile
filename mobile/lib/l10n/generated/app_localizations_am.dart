@@ -3849,16 +3849,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get peopleListsNoVideosSubtitle => 'ከዝርዝር አባላት የመጡ ቪዲዮዎች እዚህ ይታያሉ';
 
   @override
-  String get peopleListsNoVideosAvailable => 'ምንም ቪዲዮዎች የሉም';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'ቪዲዮዎችን መጫን አልተሳካም።';
 
   @override
   String get peopleListsVideoNotAvailable => 'ቪዲዮ አይገኝም';
-
-  @override
-  String get peopleListsBackToGridTooltip => 'ወደ ፍርግርግ ተመለስ';
 
   @override
   String get peopleListsErrorLoadingVideos => 'ቪዲዮዎችን መጫን ላይ ስህተት';
@@ -12443,4 +12437,46 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get soundUploadRetrySaveAction => 'ወደ ድምፆች እንደገና ያስቀምጡ';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted ሉፖች',
+      one: '$formatted ሉፕ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count አባላት',
+      one: '$count አባል',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsLoadFailed => 'ይህን ዝርዝር መጫን አልተቻለም።';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ሰዎች',
+      one: '$count ሰው',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get peopleListsViewAllMembers => 'ሁሉንም ይመልከቱ';
 }

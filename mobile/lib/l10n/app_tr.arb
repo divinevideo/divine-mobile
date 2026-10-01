@@ -2960,10 +2960,8 @@
     "peopleListsNoPeopleSubtitle": "Başlamak için kişi ekle",
     "peopleListsNoVideosTitle": "Henüz video yok",
     "peopleListsNoVideosSubtitle": "Liste üyelerinin videoları burada görünecek",
-    "peopleListsNoVideosAvailable": "Kullanılabilir video yok",
     "peopleListsFailedToLoadVideos": "Videolar yüklenemedi",
     "peopleListsVideoNotAvailable": "Video kullanılamıyor",
-    "peopleListsBackToGridTooltip": "Izgaraya dön",
     "peopleListsErrorLoadingVideos": "Videolar yüklenirken hata oluştu",
     "peopleListsNoPeopleToAdd": "Eklenecek kişi bulunamadı.",
     "peopleListsAddToListName": "{name} listesine ekle",
@@ -4786,5 +4784,35 @@
     "videoMetadataScheduleTooSoon": "{minutes, plural, other{En az {minutes} dakika bırak.}}",
     "videoMetadataScheduleTooFar": "{days, plural, other{Bu {days} günden uzak. Daha yakın bir şey seç.}}",
     "videoMetadataScheduleButton": "Zamanla",
-    "videoMetadataScheduleVideoHint": "Bu videoyu {time} için zamanlar"
+    "videoMetadataScheduleVideoHint": "Bu videoyu {time} için zamanlar",
+  "listLoopsCount": "{count, plural, =1{{formatted} döngü} other{{formatted} döngü}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listMemberCount": "{count, plural, =1{{count} üye} other{{count} üye}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsLoadFailed": "Bu liste yüklenemedi.",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} kişi} other{{count} kişi}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsViewAllMembers": "Tümünü gör"
 }
