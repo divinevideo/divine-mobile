@@ -40,14 +40,20 @@ DOCKER_LOG="${TMPDIR}/docker.log"
 APP_LOG="${TMPDIR}/app.log"
 LOGCAT_LOG="${TMPDIR}/logcat.log"
 
+# The docker CLI can outlive a SIGTERM while its compose plugin child keeps
+# following logs, and then `wait` never returns. Signal the child as well.
+stop_capture() {
+    pkill -TERM -P "$1" 2>/dev/null || true
+    kill "$1" 2>/dev/null || true
+    wait "$1" 2>/dev/null || true
+}
+
 cleanup() {
     if [[ -n "${DOCKER_PID:-}" ]] && kill -0 "$DOCKER_PID" 2>/dev/null; then
-        kill "$DOCKER_PID" 2>/dev/null || true
-        wait "$DOCKER_PID" 2>/dev/null || true
+        stop_capture "$DOCKER_PID"
     fi
     if [[ -n "${LOGCAT_PID:-}" ]] && kill -0 "$LOGCAT_PID" 2>/dev/null; then
-        kill "$LOGCAT_PID" 2>/dev/null || true
-        wait "$LOGCAT_PID" 2>/dev/null || true
+        stop_capture "$LOGCAT_PID"
     fi
     rm -rf "$TMPDIR"
 }
@@ -184,11 +190,9 @@ fi
 set -e
 
 # --- Stop docker log and logcat capture ---
-kill "$DOCKER_PID" 2>/dev/null || true
-wait "$DOCKER_PID" 2>/dev/null || true
+stop_capture "$DOCKER_PID"
 unset DOCKER_PID
-kill "$LOGCAT_PID" 2>/dev/null || true
-wait "$LOGCAT_PID" 2>/dev/null || true
+stop_capture "$LOGCAT_PID"
 unset LOGCAT_PID
 
 # --- Merge logs ---

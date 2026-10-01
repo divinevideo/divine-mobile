@@ -295,6 +295,10 @@ assert_line_before 'flutter install --debug --device-id "$DEVICE"' 'android.perm
   "profile runner should grant notification permission only after the app exists"
 assert_contains 'pm grant co.openvine.app.staging' "${SCRIPT_DIR}/profile.sh" \
   "profile runner should pre-grant the debug package that flutter test installs"
+assert_contains 'pkill -TERM -P "$1"' "${SCRIPT_DIR}/profile.sh" \
+  "profile runner should signal the compose plugin, which can outlive the docker CLI's SIGTERM"
+assert_contains 'stop_capture "$DOCKER_PID"' "${SCRIPT_DIR}/profile.sh" \
+  "profile runner should stop docker log capture through stop_capture"
 
 cat > "${tmp_dir}/bin/uname" <<'STUB'
 #!/usr/bin/env bash
