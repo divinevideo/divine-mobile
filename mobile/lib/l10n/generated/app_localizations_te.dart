@@ -4067,17 +4067,17 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String peopleListsAddPersonSemanticLabel(String name) {
-    return 'Add $name to list';
+    return '$nameని జాబితాకు జోడించండి';
   }
 
   @override
   String peopleListsRemovePersonSemanticLabel(String name) {
-    return 'Remove $name from list';
+    return '$nameని జాబితా నుండి తీసివేయండి';
   }
 
   @override
   String get peopleListsMembershipUpdateFailed =>
-      'Couldn\'t update the list. Please try again.';
+      'జాబితాను నవీకరించడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.';
 
   @override
   String get peopleListsAddPeopleSearchHint => 'వ్యక్తులను శోధించండి';
@@ -4090,7 +4090,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'మళ్లీ ప్రయత్నించండి';
 
   @override
-  String get peopleListsLoadFailed => 'Couldn\'t load this list.';
+  String get peopleListsLoadFailed => 'ఈ జాబితాను లోడ్ చేయడం సాధ్యపడలేదు.';
 
   @override
   String peopleListsInNLists(int count) {
@@ -5038,15 +5038,15 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
-  String get listAddToLists => 'Add to lists';
+  String get listAddToLists => 'జాబితాలకు జోడించండి';
 
   @override
   String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count members',
-      one: '$count member',
+      other: '$count సభ్యులు',
+      one: '$count సభ్యులు',
     );
     return '$_temp0';
   }
@@ -5082,10 +5082,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String get listDescriptionLabel => 'వివరణ (ఐచ్ఛికం)';
 
   @override
-  String get listMakePublicLabel => 'Make public';
+  String get listMakePublicLabel => 'పబ్లిక్‌గా చేయండి';
 
   @override
-  String get listMakePublicSubtitle => 'Let others see this list';
+  String get listMakePublicSubtitle => 'ఇతరులు ఈ జాబితాను చూడనివ్వండి';
 
   @override
   String get listPrivateListSubtitle =>
@@ -5155,7 +5155,7 @@ class AppLocalizationsTe extends AppLocalizations {
     String _temp0 = intl.Intl.selectLogic(
       visibility,
       {
-        'private': '$name, Private, $count',
+        'private': '$name, ప్రైవేట్, $count',
         'other': '$name, $count',
       },
     );
@@ -5163,15 +5163,15 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
-  String get listsDiscoveryLoadingLabel => 'Loading lists';
+  String get listsDiscoveryLoadingLabel => 'జాబితాలను లోడ్ చేస్తోంది';
 
   @override
   String listLoopsCount(int count, String formatted) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$formatted loops',
-      one: '$formatted loop',
+      other: '$formatted లూప్‌లు',
+      one: '$formatted లూప్',
     );
     return '$_temp0';
   }
@@ -5180,22 +5180,22 @@ class AppLocalizationsTe extends AppLocalizations {
   String get listStatsSeparator => ' ∙ ';
 
   @override
-  String get peopleListsViewAllMembers => 'View all';
+  String get peopleListsViewAllMembers => 'అన్నీ చూడండి';
 
   @override
   String peopleListsPeopleCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count people',
-      one: '$count person',
+      other: '$count వ్యక్తులు',
+      one: '$count వ్యక్తి',
     );
     return '$_temp0';
   }
 
   @override
   String get listsDiscoveryEmpty =>
-      'No lists turned up this time. Pull to refresh.';
+      'ఈసారి జాబితాలు ఏవీ దొరకలేదు. రిఫ్రెష్ చేయడానికి లాగండి.';
 
   @override
   String get listShareAction => 'షేర్ జాబితా';

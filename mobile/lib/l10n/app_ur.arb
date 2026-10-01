@@ -1930,9 +1930,27 @@
       }
     }
   },
+  "peopleListsAddPersonSemanticLabel": "{name} کو فہرست میں شامل کریں",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "{name} کو فہرست سے ہٹائیں",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "فہرست اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔",
   "peopleListsAddPeopleSearchHint": "لوگ تلاش کریں",
   "peopleListsAddPeopleError": "لوگ لوڈ نہیں ہو سکے۔ براہ کرم دوبارہ کوشش کریں۔",
   "peopleListsAddPeopleRetry": "دوبارہ کوشش کریں",
+  "peopleListsLoadFailed": "یہ فہرست لوڈ نہیں ہو سکی۔",
   "peopleListsInNLists": "{count, plural, =1{1 فہرست میں} other{{count} فہرستوں میں}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -2367,6 +2385,15 @@
       }
     }
   },
+  "listAddToLists": "فہرستوں میں شامل کریں",
+  "listMemberCount": "{count, plural, =1{{count} ممبر} other{{count} ممبران}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "listByAuthorPrefix": "از ",
   "listDone": "ہو گیا",
   "listErrorLoading": "فہرستیں لوڈ کرنے میں خرابی",
@@ -2377,10 +2404,50 @@
   "listCollaboratorSearchHint": "Divine میں تلاش کریں...",
   "listNameLabel": "فہرست کا نام",
   "listDescriptionLabel": "تفصیل (اختیاری)",
+  "listMakePublicLabel": "عوامی بنائیں",
+  "listMakePublicSubtitle": "دوسروں کو یہ فہرست دیکھنے دیں",
   "listPrivateListSubtitle": "ویڈیوز نجی رہتی ہیں۔ نام، تفصیل، ٹیگز اور کور نظر آتے رہتے ہیں۔",
   "listVisibilityPublic": "عوامی",
   "listVisibilityPrivate": "نجی",
   "profileListsEmpty": "ابھی کوئی فہرست نہیں۔ جو لوپ ساتھ رکھنے ہیں، ان کے لیے ایک بنائیں۔",
+  "listMemberNamesSeparator": "، ",
+  "listCardSemanticLabel": "{visibility, select, private{{name}، نجی، {count}} other{{name}، {count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "listsDiscoveryLoadingLabel": "فہرستیں لوڈ ہو رہی ہیں",
+  "listLoopsCount": "{count, plural, =1{{formatted} لوپ} other{{formatted} لوپ}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsViewAllMembers": "سب دیکھیں",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} شخص} other{{count} لوگ}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listsDiscoveryEmpty": "اس بار کوئی فہرست ہاتھ نہیں آئی۔ ریفریش کے لیے کھینچیں۔",
   "listShareAction": "فہرست شیئر کریں",
   "listShareFailed": "یہ فہرست شیئر نہیں ہو سکی۔ دوبارہ کوشش کریں۔",
   "listSave": "محفوظ کریں",

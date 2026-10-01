@@ -3831,17 +3831,17 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String peopleListsAddPersonSemanticLabel(String name) {
-    return 'Add $name to list';
+    return '$nameን ወደ ዝርዝር ያክሉ';
   }
 
   @override
   String peopleListsRemovePersonSemanticLabel(String name) {
-    return 'Remove $name from list';
+    return '$nameን ከዝርዝር ያስወግዱ';
   }
 
   @override
   String get peopleListsMembershipUpdateFailed =>
-      'Couldn\'t update the list. Please try again.';
+      'ዝርዝሩን ማዘመን አልተቻለም። እባክዎ እንደገና ይሞክሩ።';
 
   @override
   String get peopleListsAddPeopleSearchHint => 'ሰዎችን ፈልግ';
@@ -3853,7 +3853,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'እንደገና ይሞክሩ';
 
   @override
-  String get peopleListsLoadFailed => 'Couldn\'t load this list.';
+  String get peopleListsLoadFailed => 'ይህን ዝርዝር መጫን አልተቻለም።';
 
   @override
   String peopleListsInNLists(int count) {
@@ -4748,15 +4748,15 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get listAddToLists => 'Add to lists';
+  String get listAddToLists => 'ወደ ዝርዝሮች ያክሉ';
 
   @override
   String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count members',
-      one: '$count member',
+      other: '$count አባላት',
+      one: '$count አባል',
     );
     return '$_temp0';
   }
@@ -4792,10 +4792,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get listDescriptionLabel => 'መግለጫ (አማራጭ)';
 
   @override
-  String get listMakePublicLabel => 'Make public';
+  String get listMakePublicLabel => 'ይፋዊ ያድርጉ';
 
   @override
-  String get listMakePublicSubtitle => 'Let others see this list';
+  String get listMakePublicSubtitle => 'ሌሎች ይህን ዝርዝር እንዲያዩ ይፍቀዱ';
 
   @override
   String get listPrivateListSubtitle =>
@@ -4858,30 +4858,30 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get listMemberNamesSeparator => ', ';
+  String get listMemberNamesSeparator => '፣ ';
 
   @override
   String listCardSemanticLabel(String name, String visibility, String count) {
     String _temp0 = intl.Intl.selectLogic(
       visibility,
       {
-        'private': '$name, Private, $count',
-        'other': '$name, $count',
+        'private': '$name፣ የግል፣ $count',
+        'other': '$name፣ $count',
       },
     );
     return '$_temp0';
   }
 
   @override
-  String get listsDiscoveryLoadingLabel => 'Loading lists';
+  String get listsDiscoveryLoadingLabel => 'ዝርዝሮችን በመጫን ላይ';
 
   @override
   String listLoopsCount(int count, String formatted) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$formatted loops',
-      one: '$formatted loop',
+      other: '$formatted ሉፖች',
+      one: '$formatted ሉፕ',
     );
     return '$_temp0';
   }
@@ -4890,22 +4890,21 @@ class AppLocalizationsAm extends AppLocalizations {
   String get listStatsSeparator => ' ∙ ';
 
   @override
-  String get peopleListsViewAllMembers => 'View all';
+  String get peopleListsViewAllMembers => 'ሁሉንም ይመልከቱ';
 
   @override
   String peopleListsPeopleCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count people',
-      one: '$count person',
+      other: '$count ሰዎች',
+      one: '$count ሰው',
     );
     return '$_temp0';
   }
 
   @override
-  String get listsDiscoveryEmpty =>
-      'No lists turned up this time. Pull to refresh.';
+  String get listsDiscoveryEmpty => 'በዚህ ጊዜ ምንም ዝርዝሮች አልተገኙም። ለማደስ ወደታች ይጎትቱ።';
 
   @override
   String get listShareAction => 'ዝርዝር አጋራ';

@@ -1591,6 +1591,15 @@
             }
         }
     },
+    "listAddToLists": "إضافة إلى القوائم",
+    "listMemberCount": "{count, plural, zero{لا يوجد أعضاء} one{عضو واحد} two{عضوان} few{{count} أعضاء} many{{count} عضوًا} other{{count} عضو}}",
+    "@listMemberCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "listDone": "تم",
     "listErrorLoading": "تعذر تحميل القوائم",
     "listCreateNewList": "إنشاء قائمة جديدة",
@@ -1600,10 +1609,50 @@
     "listCollaboratorSearchHint": "ابحث في Divine...",
     "listNameLabel": "اسم القائمة",
     "listDescriptionLabel": "الوصف (اختياري)",
+    "listMakePublicLabel": "جعل القائمة عامة",
+    "listMakePublicSubtitle": "السماح للآخرين برؤية هذه القائمة",
     "listPrivateListSubtitle": "تبقى مقاطع الفيديو خاصة. يبقى الاسم والوصف والوسوم والغلاف ظاهرين.",
     "listVisibilityPublic": "عامة",
     "listVisibilityPrivate": "خاصة",
     "profileListsEmpty": "لا توجد قوائم بعد. أنشئ واحدة للمقاطع التي تريد جمعها معًا.",
+    "listMemberNamesSeparator": "، ",
+    "listCardSemanticLabel": "{visibility, select, private{{name}، خاصة، {count}} other{{name}، {count}}}",
+    "@listCardSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            },
+            "visibility": {
+                "type": "String"
+            },
+            "count": {
+                "type": "String"
+            }
+        }
+    },
+    "listsDiscoveryLoadingLabel": "جارٍ تحميل القوائم",
+    "listLoopsCount": "{count, plural, zero{لا توجد تكرارات} one{تكرار واحد} two{تكراران} few{{formatted} تكرارات} many{{formatted} تكرارًا} other{{formatted} تكرار}}",
+    "@listLoopsCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "formatted": {
+                "type": "String"
+            }
+        }
+    },
+    "listStatsSeparator": " ∙ ",
+    "peopleListsViewAllMembers": "عرض الكل",
+    "peopleListsPeopleCount": "{count, plural, zero{لا يوجد أشخاص} one{شخص واحد} two{شخصان} few{{count} أشخاص} many{{count} شخصًا} other{{count} شخص}}",
+    "@peopleListsPeopleCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "listsDiscoveryEmpty": "لم تظهر أي قوائم هذه المرة. يمكن السحب للتحديث.",
     "listShareAction": "مشاركة القائمة",
     "listShareFailed": "تعذّرت مشاركة هذه القائمة. حاول مرة أخرى.",
     "listSave": "حفظ",
@@ -2909,9 +2958,27 @@
     "peopleListsErrorLoadingVideos": "خطأ في تحميل مقاطع الفيديو",
     "peopleListsNoPeopleToAdd": "لا يوجد أشخاص متاحون للإضافة.",
     "peopleListsAddToListName": "أضف إلى {name}",
+    "peopleListsAddPersonSemanticLabel": "إضافة {name} إلى القائمة",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "إزالة {name} من القائمة",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "تعذّر تحديث القائمة. يرجى المحاولة مجددًا.",
     "peopleListsAddPeopleSearchHint": "البحث عن أشخاص",
     "peopleListsAddPeopleError": "تعذر تحميل الأشخاص. يرجى المحاولة مجددًا.",
     "peopleListsAddPeopleRetry": "حاول مجددًا",
+    "peopleListsLoadFailed": "تعذّر تحميل هذه القائمة.",
     "peopleListsInNLists": "{count, plural, zero{في صفر قوائم} one{في قائمة واحدة} two{في قائمتين} few{في {count} قوائم} many{في {count} قائمة} other{في {count} قوائم}}",
     "peopleListsRemoveConfirmTitle": "هل تريد إزالة {name}؟",
     "peopleListsRemoveConfirmBody": "سيتم إزالته/إزالتها من هذه القائمة.",

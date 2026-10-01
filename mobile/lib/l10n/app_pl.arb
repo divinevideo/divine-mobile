@@ -1601,6 +1601,15 @@
             }
         }
     },
+    "listAddToLists": "Dodaj do list",
+    "listMemberCount": "{count, plural, =1{{count} członek} few{{count} członków} many{{count} członków} other{{count} członka}}",
+    "@listMemberCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "listDone": "Gotowe",
     "listErrorLoading": "Błąd wczytywania list",
     "listCreateNewList": "Utwórz nową listę",
@@ -1610,10 +1619,50 @@
     "listCollaboratorSearchHint": "Szukaj w Divine...",
     "listNameLabel": "Nazwa listy",
     "listDescriptionLabel": "Opis (opcjonalnie)",
+    "listMakePublicLabel": "Ustaw jako publiczną",
+    "listMakePublicSubtitle": "Pozwól innym zobaczyć tę listę",
     "listPrivateListSubtitle": "Filmy zostają prywatne. Nazwa, opis, tagi i okładka pozostają widoczne.",
     "listVisibilityPublic": "Publiczna",
     "listVisibilityPrivate": "Prywatna",
     "profileListsEmpty": "Nie masz jeszcze list. Stwórz jedną dla pętli, które chcesz trzymać razem.",
+    "listMemberNamesSeparator": ", ",
+    "listCardSemanticLabel": "{visibility, select, private{{name}, Prywatna, {count}} other{{name}, {count}}}",
+    "@listCardSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            },
+            "visibility": {
+                "type": "String"
+            },
+            "count": {
+                "type": "String"
+            }
+        }
+    },
+    "listsDiscoveryLoadingLabel": "Wczytywanie list",
+    "listLoopsCount": "{count, plural, =1{{formatted} pętla} few{{formatted} pętle} many{{formatted} pętli} other{{formatted} pętli}}",
+    "@listLoopsCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "formatted": {
+                "type": "String"
+            }
+        }
+    },
+    "listStatsSeparator": " ∙ ",
+    "peopleListsViewAllMembers": "Zobacz wszystkich",
+    "peopleListsPeopleCount": "{count, plural, =1{{count} osoba} few{{count} osoby} many{{count} osób} other{{count} osoby}}",
+    "@peopleListsPeopleCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "listsDiscoveryEmpty": "Tym razem nie pojawiła się żadna lista. Pociągnij, aby odświeżyć.",
     "listShareAction": "Udostępnij listę",
     "listShareFailed": "Nie udało się udostępnić tej listy. Spróbuj ponownie.",
     "listSave": "Zapisz",
@@ -2916,9 +2965,27 @@
     "peopleListsErrorLoadingVideos": "Błąd podczas ładowania filmów",
     "peopleListsNoPeopleToAdd": "Brak osób dostępnych do dodania.",
     "peopleListsAddToListName": "Dodaj do {name}",
+    "peopleListsAddPersonSemanticLabel": "Dodaj {name} do listy",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "Usuń {name} z listy",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "Nie udało się zaktualizować listy. Spróbuj ponownie.",
     "peopleListsAddPeopleSearchHint": "Szukaj osób",
     "peopleListsAddPeopleError": "Nie udało się załadować osób. Spróbuj ponownie.",
     "peopleListsAddPeopleRetry": "Spróbuj ponownie",
+    "peopleListsLoadFailed": "Nie udało się wczytać tej listy.",
     "peopleListsInNLists": "{count, plural, =1{Na 1 liście} few{Na {count} listach} many{Na {count} listach} other{Na {count} listach}}",
     "peopleListsRemoveConfirmTitle": "Usunąć {name}?",
     "peopleListsRemoveConfirmBody": "Osoba zostanie usunięta z tej listy.",

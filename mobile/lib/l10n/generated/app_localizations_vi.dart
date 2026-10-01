@@ -3890,17 +3890,17 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String peopleListsAddPersonSemanticLabel(String name) {
-    return 'Add $name to list';
+    return 'Thêm $name vào danh sách';
   }
 
   @override
   String peopleListsRemovePersonSemanticLabel(String name) {
-    return 'Remove $name from list';
+    return 'Xóa $name khỏi danh sách';
   }
 
   @override
   String get peopleListsMembershipUpdateFailed =>
-      'Couldn\'t update the list. Please try again.';
+      'Không cập nhật được danh sách. Vui lòng thử lại.';
 
   @override
   String get peopleListsAddPeopleSearchHint => 'Tìm người';
@@ -3913,7 +3913,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'Thử lại';
 
   @override
-  String get peopleListsLoadFailed => 'Couldn\'t load this list.';
+  String get peopleListsLoadFailed => 'Không tải được danh sách này.';
 
   @override
   String peopleListsInNLists(int count) {
@@ -4834,15 +4834,15 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get listAddToLists => 'Add to lists';
+  String get listAddToLists => 'Thêm vào danh sách';
 
   @override
   String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count members',
-      one: '$count member',
+      other: '$count thành viên',
+      one: '$count thành viên',
     );
     return '$_temp0';
   }
@@ -4878,10 +4878,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get listDescriptionLabel => 'Mô tả (không bắt buộc)';
 
   @override
-  String get listMakePublicLabel => 'Make public';
+  String get listMakePublicLabel => 'Đặt công khai';
 
   @override
-  String get listMakePublicSubtitle => 'Let others see this list';
+  String get listMakePublicSubtitle => 'Cho người khác xem danh sách này';
 
   @override
   String get listPrivateListSubtitle =>
@@ -4951,7 +4951,7 @@ class AppLocalizationsVi extends AppLocalizations {
     String _temp0 = intl.Intl.selectLogic(
       visibility,
       {
-        'private': '$name, Private, $count',
+        'private': '$name, Riêng tư, $count',
         'other': '$name, $count',
       },
     );
@@ -4959,14 +4959,14 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get listsDiscoveryLoadingLabel => 'Loading lists';
+  String get listsDiscoveryLoadingLabel => 'Đang tải danh sách';
 
   @override
   String listLoopsCount(int count, String formatted) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$formatted loops',
+      other: '$formatted loop',
       one: '$formatted loop',
     );
     return '$_temp0';
@@ -4976,22 +4976,22 @@ class AppLocalizationsVi extends AppLocalizations {
   String get listStatsSeparator => ' ∙ ';
 
   @override
-  String get peopleListsViewAllMembers => 'View all';
+  String get peopleListsViewAllMembers => 'Xem tất cả';
 
   @override
   String peopleListsPeopleCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count people',
-      one: '$count person',
+      other: '$count người',
+      one: '$count người',
     );
     return '$_temp0';
   }
 
   @override
   String get listsDiscoveryEmpty =>
-      'No lists turned up this time. Pull to refresh.';
+      'Lần này chẳng thấy danh sách nào. Kéo để làm mới.';
 
   @override
   String get listShareAction => 'Chia sẻ danh sách';

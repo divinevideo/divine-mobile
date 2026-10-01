@@ -1665,9 +1665,27 @@
             }
         }
     },
+    "peopleListsAddPersonSemanticLabel": "{name}ን ወደ ዝርዝር ያክሉ",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "{name}ን ከዝርዝር ያስወግዱ",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "ዝርዝሩን ማዘመን አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
     "peopleListsAddPeopleSearchHint": "ሰዎችን ፈልግ",
     "peopleListsAddPeopleError": "ሰዎችን መጫን አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
     "peopleListsAddPeopleRetry": "እንደገና ይሞክሩ",
+    "peopleListsLoadFailed": "ይህን ዝርዝር መጫን አልተቻለም።",
     "peopleListsInNLists": "{count, plural, =1{በ{count} ዝርዝር ውስጥ} other{በ{count} ዝርዝሮች ውስጥ}}",
     "@peopleListsInNLists": {
         "placeholders": {
@@ -1982,6 +2000,15 @@
             }
         }
     },
+    "listAddToLists": "ወደ ዝርዝሮች ያክሉ",
+    "listMemberCount": "{count, plural, =1{{count} አባል} other{{count} አባላት}}",
+    "@listMemberCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "listByAuthorPrefix": "በ",
     "listDone": "ተከናውኗል",
     "listErrorLoading": "ዝርዝሮችን መጫን ላይ ስህተት",
@@ -1992,10 +2019,50 @@
     "listCollaboratorSearchHint": "Divine ፈልግ...",
     "listNameLabel": "የዝርዝር ስም",
     "listDescriptionLabel": "መግለጫ (አማራጭ)",
+    "listMakePublicLabel": "ይፋዊ ያድርጉ",
+    "listMakePublicSubtitle": "ሌሎች ይህን ዝርዝር እንዲያዩ ይፍቀዱ",
     "listPrivateListSubtitle": "ቪዲዮዎቹ የግል ሆነው ይቆያሉ። ስም፣ መግለጫ፣ መለያዎች እና ሽፋን ይታያሉ።",
     "listVisibilityPublic": "ይፋዊ",
     "listVisibilityPrivate": "የግል",
     "profileListsEmpty": "እስካሁን ዝርዝር የለም። አብረው እንዲቆዩ የሚፈልጓቸውን ሉፖች የሚያሰባስብ ዝርዝር ይፍጠሩ።",
+    "listMemberNamesSeparator": "፣ ",
+    "listCardSemanticLabel": "{visibility, select, private{{name}፣ የግል፣ {count}} other{{name}፣ {count}}}",
+    "@listCardSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            },
+            "visibility": {
+                "type": "String"
+            },
+            "count": {
+                "type": "String"
+            }
+        }
+    },
+    "listsDiscoveryLoadingLabel": "ዝርዝሮችን በመጫን ላይ",
+    "listLoopsCount": "{count, plural, =1{{formatted} ሉፕ} other{{formatted} ሉፖች}}",
+    "@listLoopsCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "formatted": {
+                "type": "String"
+            }
+        }
+    },
+    "listStatsSeparator": " ∙ ",
+    "peopleListsViewAllMembers": "ሁሉንም ይመልከቱ",
+    "peopleListsPeopleCount": "{count, plural, =1{{count} ሰው} other{{count} ሰዎች}}",
+    "@peopleListsPeopleCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "listsDiscoveryEmpty": "በዚህ ጊዜ ምንም ዝርዝሮች አልተገኙም። ለማደስ ወደታች ይጎትቱ።",
     "listShareAction": "ዝርዝር አጋራ",
     "listShareFailed": "ይህን ዝርዝር ማጋራት አልተቻለም። እንደገና ይሞክሩ።",
     "listSave": "አስቀምጥ",

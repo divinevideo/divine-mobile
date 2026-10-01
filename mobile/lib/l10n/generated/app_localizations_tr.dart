@@ -3860,17 +3860,17 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String peopleListsAddPersonSemanticLabel(String name) {
-    return 'Add $name to list';
+    return '$name kişisini listeye ekle';
   }
 
   @override
   String peopleListsRemovePersonSemanticLabel(String name) {
-    return 'Remove $name from list';
+    return '$name kişisini listeden kaldır';
   }
 
   @override
   String get peopleListsMembershipUpdateFailed =>
-      'Couldn\'t update the list. Please try again.';
+      'Liste güncellenemedi. Lütfen tekrar dene.';
 
   @override
   String get peopleListsAddPeopleSearchHint => 'Kişi ara';
@@ -3883,7 +3883,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'Tekrar dene';
 
   @override
-  String get peopleListsLoadFailed => 'Couldn\'t load this list.';
+  String get peopleListsLoadFailed => 'Bu liste yüklenemedi.';
 
   @override
   String peopleListsInNLists(int count) {
@@ -4807,15 +4807,15 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get listAddToLists => 'Add to lists';
+  String get listAddToLists => 'Listelere ekle';
 
   @override
   String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count members',
-      one: '$count member',
+      other: '$count üye',
+      one: '$count üye',
     );
     return '$_temp0';
   }
@@ -4851,10 +4851,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get listDescriptionLabel => 'Açıklama (opsiyonel)';
 
   @override
-  String get listMakePublicLabel => 'Make public';
+  String get listMakePublicLabel => 'Herkese açık yap';
 
   @override
-  String get listMakePublicSubtitle => 'Let others see this list';
+  String get listMakePublicSubtitle => 'Başkaları bu listeyi görebilsin';
 
   @override
   String get listPrivateListSubtitle =>
@@ -4924,7 +4924,7 @@ class AppLocalizationsTr extends AppLocalizations {
     String _temp0 = intl.Intl.selectLogic(
       visibility,
       {
-        'private': '$name, Private, $count',
+        'private': '$name, Özel, $count',
         'other': '$name, $count',
       },
     );
@@ -4932,15 +4932,15 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get listsDiscoveryLoadingLabel => 'Loading lists';
+  String get listsDiscoveryLoadingLabel => 'Listeler yükleniyor';
 
   @override
   String listLoopsCount(int count, String formatted) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$formatted loops',
-      one: '$formatted loop',
+      other: '$formatted döngü',
+      one: '$formatted döngü',
     );
     return '$_temp0';
   }
@@ -4949,22 +4949,22 @@ class AppLocalizationsTr extends AppLocalizations {
   String get listStatsSeparator => ' ∙ ';
 
   @override
-  String get peopleListsViewAllMembers => 'View all';
+  String get peopleListsViewAllMembers => 'Tümünü gör';
 
   @override
   String peopleListsPeopleCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count people',
-      one: '$count person',
+      other: '$count kişi',
+      one: '$count kişi',
     );
     return '$_temp0';
   }
 
   @override
   String get listsDiscoveryEmpty =>
-      'No lists turned up this time. Pull to refresh.';
+      'Bu sefer hiç liste çıkmadı. Yenilemek için aşağı çek.';
 
   @override
   String get listShareAction => 'Listeyi paylaş';

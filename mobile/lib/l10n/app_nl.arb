@@ -1601,6 +1601,15 @@
             }
         }
     },
+    "listAddToLists": "Toevoegen aan lijsten",
+    "listMemberCount": "{count, plural, =1{{count} lid} other{{count} leden}}",
+    "@listMemberCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "listDone": "Klaar",
     "listErrorLoading": "Fout bij laden van lijsten",
     "listCreateNewList": "Nieuwe lijst maken",
@@ -1610,10 +1619,50 @@
     "listCollaboratorSearchHint": "Zoek in Divine...",
     "listNameLabel": "Lijstnaam",
     "listDescriptionLabel": "Beschrijving (optioneel)",
+    "listMakePublicLabel": "Openbaar maken",
+    "listMakePublicSubtitle": "Laat anderen deze lijst zien",
     "listPrivateListSubtitle": "Video's blijven privé. Naam, beschrijving, tags en omslag blijven zichtbaar.",
     "listVisibilityPublic": "Openbaar",
     "listVisibilityPrivate": "Privé",
     "profileListsEmpty": "Nog geen lijsten. Maak er een voor de loops die je bij elkaar wilt houden.",
+    "listMemberNamesSeparator": ", ",
+    "listCardSemanticLabel": "{visibility, select, private{{name}, Privé, {count}} other{{name}, {count}}}",
+    "@listCardSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            },
+            "visibility": {
+                "type": "String"
+            },
+            "count": {
+                "type": "String"
+            }
+        }
+    },
+    "listsDiscoveryLoadingLabel": "Lijsten laden",
+    "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loops}}",
+    "@listLoopsCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "formatted": {
+                "type": "String"
+            }
+        }
+    },
+    "listStatsSeparator": " ∙ ",
+    "peopleListsViewAllMembers": "Alles bekijken",
+    "peopleListsPeopleCount": "{count, plural, =1{{count} persoon} other{{count} personen}}",
+    "@peopleListsPeopleCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "listsDiscoveryEmpty": "Er doken deze keer geen lijsten op. Trek omlaag om te vernieuwen.",
     "listShareAction": "Lijst delen",
     "listShareFailed": "Kon deze lijst niet delen. Probeer het opnieuw.",
     "listSave": "Opslaan",
@@ -2916,9 +2965,27 @@
     "peopleListsErrorLoadingVideos": "Fout bij laden van video's",
     "peopleListsNoPeopleToAdd": "Geen mensen beschikbaar om toe te voegen.",
     "peopleListsAddToListName": "Toevoegen aan {name}",
+    "peopleListsAddPersonSemanticLabel": "{name} aan lijst toevoegen",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "{name} uit lijst verwijderen",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "Kon de lijst niet bijwerken. Probeer het opnieuw.",
     "peopleListsAddPeopleSearchHint": "Mensen zoeken",
     "peopleListsAddPeopleError": "Kon mensen niet laden. Probeer het opnieuw.",
     "peopleListsAddPeopleRetry": "Opnieuw proberen",
+    "peopleListsLoadFailed": "Kon deze lijst niet laden.",
     "peopleListsInNLists": "{count, plural, =1{In 1 lijst} other{In {count} lijsten}}",
     "peopleListsRemoveConfirmTitle": "{name} verwijderen?",
     "peopleListsRemoveConfirmBody": "Ze worden uit deze lijst verwijderd.",

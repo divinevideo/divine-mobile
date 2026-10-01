@@ -3671,17 +3671,16 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String peopleListsAddPersonSemanticLabel(String name) {
-    return 'Add $name to list';
+    return '把 $name 加入列表';
   }
 
   @override
   String peopleListsRemovePersonSemanticLabel(String name) {
-    return 'Remove $name from list';
+    return '把 $name 从列表移除';
   }
 
   @override
-  String get peopleListsMembershipUpdateFailed =>
-      'Couldn\'t update the list. Please try again.';
+  String get peopleListsMembershipUpdateFailed => '无法更新列表，请重试。';
 
   @override
   String get peopleListsAddPeopleSearchHint => '搜索用户';
@@ -3693,7 +3692,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get peopleListsAddPeopleRetry => '再试一次';
 
   @override
-  String get peopleListsLoadFailed => 'Couldn\'t load this list.';
+  String get peopleListsLoadFailed => '无法加载此列表。';
 
   @override
   String peopleListsInNLists(int count) {
@@ -4564,15 +4563,15 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get listAddToLists => 'Add to lists';
+  String get listAddToLists => '加入列表';
 
   @override
   String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count members',
-      one: '$count member',
+      other: '$count 位成员',
+      one: '$count 位成员',
     );
     return '$_temp0';
   }
@@ -4608,10 +4607,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get listDescriptionLabel => '描述（可选）';
 
   @override
-  String get listMakePublicLabel => 'Make public';
+  String get listMakePublicLabel => '设为公开';
 
   @override
-  String get listMakePublicSubtitle => 'Let others see this list';
+  String get listMakePublicSubtitle => '让其他人看到此列表';
 
   @override
   String get listPrivateListSubtitle => '视频保持私密。名称、描述、标签和封面仍会显示。';
@@ -4672,30 +4671,30 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get listMemberNamesSeparator => ', ';
+  String get listMemberNamesSeparator => '、';
 
   @override
   String listCardSemanticLabel(String name, String visibility, String count) {
     String _temp0 = intl.Intl.selectLogic(
       visibility,
       {
-        'private': '$name, Private, $count',
-        'other': '$name, $count',
+        'private': '$name，私密，$count',
+        'other': '$name，$count',
       },
     );
     return '$_temp0';
   }
 
   @override
-  String get listsDiscoveryLoadingLabel => 'Loading lists';
+  String get listsDiscoveryLoadingLabel => '正在加载列表';
 
   @override
   String listLoopsCount(int count, String formatted) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$formatted loops',
-      one: '$formatted loop',
+      other: '$formatted 次循环',
+      one: '$formatted 次循环',
     );
     return '$_temp0';
   }
@@ -4704,22 +4703,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get listStatsSeparator => ' ∙ ';
 
   @override
-  String get peopleListsViewAllMembers => 'View all';
+  String get peopleListsViewAllMembers => '查看全部';
 
   @override
   String peopleListsPeopleCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count people',
-      one: '$count person',
+      other: '$count 人',
+      one: '$count 人',
     );
     return '$_temp0';
   }
 
   @override
-  String get listsDiscoveryEmpty =>
-      'No lists turned up this time. Pull to refresh.';
+  String get listsDiscoveryEmpty => '这次没找到列表。下拉刷新试试。';
 
   @override
   String get listShareAction => '分享列表';

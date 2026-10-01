@@ -1598,6 +1598,15 @@
             }
         }
     },
+    "listAddToLists": "Listelere ekle",
+    "listMemberCount": "{count, plural, =1{{count} üye} other{{count} üye}}",
+    "@listMemberCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "listDone": "Bitti",
     "listErrorLoading": "Listeler yüklenirken hata",
     "listCreateNewList": "Yeni Liste Oluştur",
@@ -1607,10 +1616,50 @@
     "listCollaboratorSearchHint": "Divine'da ara...",
     "listNameLabel": "Liste Adı",
     "listDescriptionLabel": "Açıklama (opsiyonel)",
+    "listMakePublicLabel": "Herkese açık yap",
+    "listMakePublicSubtitle": "Başkaları bu listeyi görebilsin",
     "listPrivateListSubtitle": "Videolar gizli kalır. Ad, açıklama, etiketler ve kapak görünür kalır.",
     "listVisibilityPublic": "Herkese açık",
     "listVisibilityPrivate": "Özel",
     "profileListsEmpty": "Henüz liste yok. Bir arada tutmak istediğin döngüler için bir tane oluştur.",
+    "listMemberNamesSeparator": ", ",
+    "listCardSemanticLabel": "{visibility, select, private{{name}, Özel, {count}} other{{name}, {count}}}",
+    "@listCardSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            },
+            "visibility": {
+                "type": "String"
+            },
+            "count": {
+                "type": "String"
+            }
+        }
+    },
+    "listsDiscoveryLoadingLabel": "Listeler yükleniyor",
+    "listLoopsCount": "{count, plural, =1{{formatted} döngü} other{{formatted} döngü}}",
+    "@listLoopsCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "formatted": {
+                "type": "String"
+            }
+        }
+    },
+    "listStatsSeparator": " ∙ ",
+    "peopleListsViewAllMembers": "Tümünü gör",
+    "peopleListsPeopleCount": "{count, plural, =1{{count} kişi} other{{count} kişi}}",
+    "@peopleListsPeopleCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "listsDiscoveryEmpty": "Bu sefer hiç liste çıkmadı. Yenilemek için aşağı çek.",
     "listShareAction": "Listeyi paylaş",
     "listShareFailed": "Bu liste paylaşılamadı. Tekrar dene.",
     "listSave": "Kaydet",
@@ -2916,9 +2965,27 @@
     "peopleListsErrorLoadingVideos": "Videolar yüklenirken hata oluştu",
     "peopleListsNoPeopleToAdd": "Eklenecek kişi bulunamadı.",
     "peopleListsAddToListName": "{name} listesine ekle",
+    "peopleListsAddPersonSemanticLabel": "{name} kişisini listeye ekle",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "{name} kişisini listeden kaldır",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "Liste güncellenemedi. Lütfen tekrar dene.",
     "peopleListsAddPeopleSearchHint": "Kişi ara",
     "peopleListsAddPeopleError": "Kişiler yüklenemedi. Lütfen tekrar dene.",
     "peopleListsAddPeopleRetry": "Tekrar dene",
+    "peopleListsLoadFailed": "Bu liste yüklenemedi.",
     "peopleListsInNLists": "{count, plural, =1{1 listede} other{{count} listede}}",
     "peopleListsRemoveConfirmTitle": "{name} kaldırılsın mı?",
     "peopleListsRemoveConfirmBody": "Bu kişi listeden kaldırılacak.",

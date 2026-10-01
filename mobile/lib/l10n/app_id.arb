@@ -1598,6 +1598,15 @@
             }
         }
     },
+    "listAddToLists": "Tambahkan ke daftar",
+    "listMemberCount": "{count, plural, =1{{count} anggota} other{{count} anggota}}",
+    "@listMemberCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "listDone": "Selesai",
     "listErrorLoading": "Kesalahan memuat daftar",
     "listCreateNewList": "Buat Daftar Baru",
@@ -1607,10 +1616,50 @@
     "listCollaboratorSearchHint": "Cari di Divine...",
     "listNameLabel": "Nama Daftar",
     "listDescriptionLabel": "Deskripsi (opsional)",
+    "listMakePublicLabel": "Jadikan publik",
+    "listMakePublicSubtitle": "Biar orang lain bisa lihat daftar ini",
     "listPrivateListSubtitle": "Videonya tetap privat. Nama, deskripsi, tag, dan sampul tetap terlihat.",
     "listVisibilityPublic": "Publik",
     "listVisibilityPrivate": "Privat",
     "profileListsEmpty": "Belum ada daftar. Bikin satu untuk loop yang mau kamu simpan bareng.",
+    "listMemberNamesSeparator": ", ",
+    "listCardSemanticLabel": "{visibility, select, private{{name}, Privat, {count}} other{{name}, {count}}}",
+    "@listCardSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            },
+            "visibility": {
+                "type": "String"
+            },
+            "count": {
+                "type": "String"
+            }
+        }
+    },
+    "listsDiscoveryLoadingLabel": "Memuat daftar",
+    "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loop}}",
+    "@listLoopsCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "formatted": {
+                "type": "String"
+            }
+        }
+    },
+    "listStatsSeparator": " ∙ ",
+    "peopleListsViewAllMembers": "Lihat semua",
+    "peopleListsPeopleCount": "{count, plural, =1{{count} orang} other{{count} orang}}",
+    "@peopleListsPeopleCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "listsDiscoveryEmpty": "Belum ada daftar yang muncul kali ini. Tarik untuk menyegarkan.",
     "listShareAction": "Bagikan daftar",
     "listShareFailed": "Daftar ini gagal dibagikan. Coba lagi.",
     "listSave": "Simpan",
@@ -2916,9 +2965,27 @@
     "peopleListsErrorLoadingVideos": "Kesalahan saat memuat video",
     "peopleListsNoPeopleToAdd": "Tidak ada orang yang tersedia untuk ditambahkan.",
     "peopleListsAddToListName": "Tambahkan ke {name}",
+    "peopleListsAddPersonSemanticLabel": "Tambahkan {name} ke daftar",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "Hapus {name} dari daftar",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "Tidak bisa memperbarui daftar. Coba lagi.",
     "peopleListsAddPeopleSearchHint": "Cari orang",
     "peopleListsAddPeopleError": "Tidak dapat memuat orang. Silakan coba lagi.",
     "peopleListsAddPeopleRetry": "Coba lagi",
+    "peopleListsLoadFailed": "Tidak bisa memuat daftar ini.",
     "peopleListsInNLists": "{count, plural, other{Di {count} daftar}}",
     "peopleListsRemoveConfirmTitle": "Hapus {name}?",
     "peopleListsRemoveConfirmBody": "Mereka akan dihapus dari daftar ini.",

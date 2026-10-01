@@ -1601,6 +1601,15 @@
             }
         }
     },
+    "listAddToLists": "Adaugă la liste",
+    "listMemberCount": "{count, plural, =1{{count} membru} few{{count} membri} other{{count} de membri}}",
+    "@listMemberCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "listDone": "Gata",
     "listErrorLoading": "Eroare la încărcarea listelor",
     "listCreateNewList": "Creează o listă nouă",
@@ -1610,10 +1619,50 @@
     "listCollaboratorSearchHint": "Caută în Divine...",
     "listNameLabel": "Numele listei",
     "listDescriptionLabel": "Descriere (opțional)",
+    "listMakePublicLabel": "Fă lista publică",
+    "listMakePublicSubtitle": "Lasă-i pe alții să vadă această listă",
     "listPrivateListSubtitle": "Videoclipurile rămân private. Numele, descrierea, etichetele și coperta rămân vizibile.",
     "listVisibilityPublic": "Publică",
     "listVisibilityPrivate": "Privată",
     "profileListsEmpty": "Încă n-ai liste. Fă una pentru buclele pe care vrei să le ții împreună.",
+    "listMemberNamesSeparator": ", ",
+    "listCardSemanticLabel": "{visibility, select, private{{name}, Privată, {count}} other{{name}, {count}}}",
+    "@listCardSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            },
+            "visibility": {
+                "type": "String"
+            },
+            "count": {
+                "type": "String"
+            }
+        }
+    },
+    "listsDiscoveryLoadingLabel": "Se încarcă listele",
+    "listLoopsCount": "{count, plural, =1{{formatted} buclă} few{{formatted} bucle} other{{formatted} de bucle}}",
+    "@listLoopsCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "formatted": {
+                "type": "String"
+            }
+        }
+    },
+    "listStatsSeparator": " ∙ ",
+    "peopleListsViewAllMembers": "Vezi toți",
+    "peopleListsPeopleCount": "{count, plural, =1{{count} persoană} few{{count} persoane} other{{count} de persoane}}",
+    "@peopleListsPeopleCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "listsDiscoveryEmpty": "De data asta n-a apărut nicio listă. Trage în jos pentru reîmprospătare.",
     "listShareAction": "Distribuie lista",
     "listShareFailed": "N-am putut distribui lista. Mai încearcă.",
     "listSave": "Salvează",
@@ -2916,9 +2965,27 @@
     "peopleListsErrorLoadingVideos": "Eroare la încărcarea videoclipurilor",
     "peopleListsNoPeopleToAdd": "Nicio persoană disponibilă de adăugat.",
     "peopleListsAddToListName": "Adaugă la {name}",
+    "peopleListsAddPersonSemanticLabel": "Adaugă pe {name} la listă",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "Elimină pe {name} din listă",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "N-am putut actualiza lista. Mai încearcă.",
     "peopleListsAddPeopleSearchHint": "Caută persoane",
     "peopleListsAddPeopleError": "Nu s-au putut încărca persoanele. Te rugăm să încerci din nou.",
     "peopleListsAddPeopleRetry": "Încearcă din nou",
+    "peopleListsLoadFailed": "N-am putut încărca această listă.",
     "peopleListsInNLists": "{count, plural, =1{Într-o listă} few{În {count} liste} other{În {count} liste}}",
     "peopleListsRemoveConfirmTitle": "Elimini {name}?",
     "peopleListsRemoveConfirmBody": "Va fi eliminat/ă din această listă.",

@@ -3949,17 +3949,17 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String peopleListsAddPersonSemanticLabel(String name) {
-    return 'Add $name to list';
+    return 'Adicionar $name à lista';
   }
 
   @override
   String peopleListsRemovePersonSemanticLabel(String name) {
-    return 'Remove $name from list';
+    return 'Remover $name da lista';
   }
 
   @override
   String get peopleListsMembershipUpdateFailed =>
-      'Couldn\'t update the list. Please try again.';
+      'Não foi possível atualizar a lista. Tente de novo.';
 
   @override
   String get peopleListsAddPeopleSearchHint => 'Pesquisar pessoas';
@@ -3972,7 +3972,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'Tentar novamente';
 
   @override
-  String get peopleListsLoadFailed => 'Couldn\'t load this list.';
+  String get peopleListsLoadFailed => 'Não foi possível carregar esta lista.';
 
   @override
   String peopleListsInNLists(int count) {
@@ -4899,15 +4899,15 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get listAddToLists => 'Add to lists';
+  String get listAddToLists => 'Adicionar às listas';
 
   @override
   String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count members',
-      one: '$count member',
+      other: '$count membros',
+      one: '$count membro',
     );
     return '$_temp0';
   }
@@ -4943,10 +4943,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get listDescriptionLabel => 'Descrição (opcional)';
 
   @override
-  String get listMakePublicLabel => 'Make public';
+  String get listMakePublicLabel => 'Tornar pública';
 
   @override
-  String get listMakePublicSubtitle => 'Let others see this list';
+  String get listMakePublicSubtitle => 'Deixe outras pessoas verem esta lista';
 
   @override
   String get listPrivateListSubtitle =>
@@ -5016,7 +5016,7 @@ class AppLocalizationsPt extends AppLocalizations {
     String _temp0 = intl.Intl.selectLogic(
       visibility,
       {
-        'private': '$name, Private, $count',
+        'private': '$name, Privada, $count',
         'other': '$name, $count',
       },
     );
@@ -5024,7 +5024,7 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get listsDiscoveryLoadingLabel => 'Loading lists';
+  String get listsDiscoveryLoadingLabel => 'Carregando listas';
 
   @override
   String listLoopsCount(int count, String formatted) {
@@ -5041,22 +5041,22 @@ class AppLocalizationsPt extends AppLocalizations {
   String get listStatsSeparator => ' ∙ ';
 
   @override
-  String get peopleListsViewAllMembers => 'View all';
+  String get peopleListsViewAllMembers => 'Ver todo mundo';
 
   @override
   String peopleListsPeopleCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count people',
-      one: '$count person',
+      other: '$count pessoas',
+      one: '$count pessoa',
     );
     return '$_temp0';
   }
 
   @override
   String get listsDiscoveryEmpty =>
-      'No lists turned up this time. Pull to refresh.';
+      'Nenhuma lista deu as caras desta vez. Puxe para atualizar.';
 
   @override
   String get listShareAction => 'Compartilhar lista';

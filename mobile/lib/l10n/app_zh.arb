@@ -1930,9 +1930,27 @@
       }
     }
   },
+  "peopleListsAddPersonSemanticLabel": "把 {name} 加入列表",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "把 {name} 从列表移除",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "无法更新列表，请重试。",
   "peopleListsAddPeopleSearchHint": "搜索用户",
   "peopleListsAddPeopleError": "加载用户失败，请重试。",
   "peopleListsAddPeopleRetry": "再试一次",
+  "peopleListsLoadFailed": "无法加载此列表。",
   "peopleListsInNLists": "{count, plural, =1{已在 1 个列表中} other{已在 {count} 个列表中}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -2367,6 +2385,15 @@
       }
     }
   },
+  "listAddToLists": "加入列表",
+  "listMemberCount": "{count, plural, =1{{count} 位成员} other{{count} 位成员}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "listByAuthorPrefix": "来自 ",
   "listDone": "完成",
   "listErrorLoading": "加载列表出错",
@@ -2377,10 +2404,50 @@
   "listCollaboratorSearchHint": "搜索 Divine...",
   "listNameLabel": "列表名称",
   "listDescriptionLabel": "描述（可选）",
+  "listMakePublicLabel": "设为公开",
+  "listMakePublicSubtitle": "让其他人看到此列表",
   "listPrivateListSubtitle": "视频保持私密。名称、描述、标签和封面仍会显示。",
   "listVisibilityPublic": "公开",
   "listVisibilityPrivate": "私密",
   "profileListsEmpty": "还没有列表。为想放在一起的循环建一个吧。",
+  "listMemberNamesSeparator": "、",
+  "listCardSemanticLabel": "{visibility, select, private{{name}，私密，{count}} other{{name}，{count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "listsDiscoveryLoadingLabel": "正在加载列表",
+  "listLoopsCount": "{count, plural, =1{{formatted} 次循环} other{{formatted} 次循环}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsViewAllMembers": "查看全部",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} 人} other{{count} 人}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listsDiscoveryEmpty": "这次没找到列表。下拉刷新试试。",
   "listShareAction": "分享列表",
   "listShareFailed": "无法分享此列表，请重试。",
   "listSave": "保存",

@@ -3968,17 +3968,17 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String peopleListsAddPersonSemanticLabel(String name) {
-    return 'Add $name to list';
+    return 'Добави $name към списъка';
   }
 
   @override
   String peopleListsRemovePersonSemanticLabel(String name) {
-    return 'Remove $name from list';
+    return 'Премахни $name от списъка';
   }
 
   @override
   String get peopleListsMembershipUpdateFailed =>
-      'Couldn\'t update the list. Please try again.';
+      'Не успяхме да обновим списъка. Опитай пак.';
 
   @override
   String get peopleListsAddPeopleSearchHint => 'Търси хора';
@@ -3991,7 +3991,7 @@ class AppLocalizationsBg extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'Опитай пак';
 
   @override
-  String get peopleListsLoadFailed => 'Couldn\'t load this list.';
+  String get peopleListsLoadFailed => 'Не успяхме да заредим този списък.';
 
   @override
   String peopleListsInNLists(int count) {
@@ -4916,15 +4916,15 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
-  String get listAddToLists => 'Add to lists';
+  String get listAddToLists => 'Добави към списъци';
 
   @override
   String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count members',
-      one: '$count member',
+      other: '$count членове',
+      one: '$count член',
     );
     return '$_temp0';
   }
@@ -4960,10 +4960,11 @@ class AppLocalizationsBg extends AppLocalizations {
   String get listDescriptionLabel => 'Описание (по избор)';
 
   @override
-  String get listMakePublicLabel => 'Make public';
+  String get listMakePublicLabel => 'Направи публичен';
 
   @override
-  String get listMakePublicSubtitle => 'Let others see this list';
+  String get listMakePublicSubtitle =>
+      'Позволи на другите да виждат този списък';
 
   @override
   String get listPrivateListSubtitle =>
@@ -5033,7 +5034,7 @@ class AppLocalizationsBg extends AppLocalizations {
     String _temp0 = intl.Intl.selectLogic(
       visibility,
       {
-        'private': '$name, Private, $count',
+        'private': '$name, Частен, $count',
         'other': '$name, $count',
       },
     );
@@ -5041,15 +5042,15 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
-  String get listsDiscoveryLoadingLabel => 'Loading lists';
+  String get listsDiscoveryLoadingLabel => 'Зареждане на списъци';
 
   @override
   String listLoopsCount(int count, String formatted) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$formatted loops',
-      one: '$formatted loop',
+      other: '$formatted лупа',
+      one: '$formatted луп',
     );
     return '$_temp0';
   }
@@ -5058,22 +5059,22 @@ class AppLocalizationsBg extends AppLocalizations {
   String get listStatsSeparator => ' ∙ ';
 
   @override
-  String get peopleListsViewAllMembers => 'View all';
+  String get peopleListsViewAllMembers => 'Виж всички';
 
   @override
   String peopleListsPeopleCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count people',
-      one: '$count person',
+      other: '$count души',
+      one: '$count човек',
     );
     return '$_temp0';
   }
 
   @override
   String get listsDiscoveryEmpty =>
-      'No lists turned up this time. Pull to refresh.';
+      'Този път не изскочи нито един списък. Дръпни надолу за обновяване.';
 
   @override
   String get listShareAction => 'Сподели списъка';

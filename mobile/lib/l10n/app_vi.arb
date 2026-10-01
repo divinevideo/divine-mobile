@@ -1930,9 +1930,27 @@
       }
     }
   },
+  "peopleListsAddPersonSemanticLabel": "Thêm {name} vào danh sách",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "Xóa {name} khỏi danh sách",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "Không cập nhật được danh sách. Vui lòng thử lại.",
   "peopleListsAddPeopleSearchHint": "Tìm người",
   "peopleListsAddPeopleError": "Không tải được danh sách người. Vui lòng thử lại.",
   "peopleListsAddPeopleRetry": "Thử lại",
+  "peopleListsLoadFailed": "Không tải được danh sách này.",
   "peopleListsInNLists": "{count, plural, =1{Trong 1 danh sách} other{Trong {count} danh sách}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -2367,6 +2385,15 @@
       }
     }
   },
+  "listAddToLists": "Thêm vào danh sách",
+  "listMemberCount": "{count, plural, =1{{count} thành viên} other{{count} thành viên}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "listByAuthorPrefix": "Bởi ",
   "listDone": "Xong",
   "listErrorLoading": "Lỗi khi tải danh sách",
@@ -2377,10 +2404,50 @@
   "listCollaboratorSearchHint": "Tìm trên Divine...",
   "listNameLabel": "Tên danh sách",
   "listDescriptionLabel": "Mô tả (không bắt buộc)",
+  "listMakePublicLabel": "Đặt công khai",
+  "listMakePublicSubtitle": "Cho người khác xem danh sách này",
   "listPrivateListSubtitle": "Video vẫn riêng tư. Tên, mô tả, thẻ và ảnh bìa vẫn hiển thị.",
   "listVisibilityPublic": "Công khai",
   "listVisibilityPrivate": "Riêng tư",
   "profileListsEmpty": "Chưa có danh sách nào. Tạo một cái cho những loop bạn muốn để chung.",
+  "listMemberNamesSeparator": ", ",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Riêng tư, {count}} other{{name}, {count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "listsDiscoveryLoadingLabel": "Đang tải danh sách",
+  "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loop}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsViewAllMembers": "Xem tất cả",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} người} other{{count} người}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listsDiscoveryEmpty": "Lần này chẳng thấy danh sách nào. Kéo để làm mới.",
   "listShareAction": "Chia sẻ danh sách",
   "listShareFailed": "Không chia sẻ được danh sách này. Thử lại nhé.",
   "listSave": "Lưu",

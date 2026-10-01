@@ -1137,6 +1137,15 @@
             }
         }
     },
+    "listAddToLists": "목록에 추가",
+    "listMemberCount": "{count, plural, other{구성원 {count}명}}",
+    "@listMemberCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "listDone": "완료",
     "listErrorLoading": "목록을 불러오는 중 오류 발생",
     "listCreateNewList": "새 목록 만들기",
@@ -1146,10 +1155,50 @@
     "listCollaboratorSearchHint": "Divine 검색...",
     "listNameLabel": "목록 이름",
     "listDescriptionLabel": "설명 (선택)",
+    "listMakePublicLabel": "공개로 설정",
+    "listMakePublicSubtitle": "다른 사람도 이 목록을 볼 수 있어요",
     "listPrivateListSubtitle": "동영상은 비공개로 유지돼요. 이름, 설명, 태그, 커버는 계속 보여요.",
     "listVisibilityPublic": "공개",
     "listVisibilityPrivate": "비공개",
     "profileListsEmpty": "아직 목록이 없어요. 함께 모아 두고 싶은 루프로 하나 만들어 보세요.",
+    "listMemberNamesSeparator": ", ",
+    "listCardSemanticLabel": "{visibility, select, private{{name}, 비공개, {count}} other{{name}, {count}}}",
+    "@listCardSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            },
+            "visibility": {
+                "type": "String"
+            },
+            "count": {
+                "type": "String"
+            }
+        }
+    },
+    "listsDiscoveryLoadingLabel": "목록 불러오는 중",
+    "listLoopsCount": "{count, plural, other{루프 {formatted}회}}",
+    "@listLoopsCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "formatted": {
+                "type": "String"
+            }
+        }
+    },
+    "listStatsSeparator": " ∙ ",
+    "peopleListsViewAllMembers": "전체 보기",
+    "peopleListsPeopleCount": "{count, plural, other{{count}명}}",
+    "@peopleListsPeopleCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "listsDiscoveryEmpty": "이번엔 목록이 하나도 안 나왔어요. 당겨서 새로고침하세요.",
     "listShareAction": "목록 공유",
     "listShareFailed": "이 목록을 공유하지 못했어요. 다시 시도해 주세요.",
     "listSave": "저장",
@@ -2455,9 +2504,27 @@
     "peopleListsErrorLoadingVideos": "동영상 불러오기 오류",
     "peopleListsNoPeopleToAdd": "추가할 수 있는 사람이 없습니다.",
     "peopleListsAddToListName": "{name}에 추가",
+    "peopleListsAddPersonSemanticLabel": "목록에 {name} 추가",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "목록에서 {name} 삭제",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "목록을 업데이트하지 못했어요. 다시 시도해 주세요.",
     "peopleListsAddPeopleSearchHint": "사람 검색",
     "peopleListsAddPeopleError": "사람을 불러올 수 없습니다. 다시 시도해 주세요.",
     "peopleListsAddPeopleRetry": "다시 시도",
+    "peopleListsLoadFailed": "이 목록을 불러오지 못했어요.",
     "peopleListsInNLists": "{count, plural, other{{count}개 목록에 포함}}",
     "peopleListsRemoveConfirmTitle": "{name}을(를) 삭제하시겠습니까?",
     "peopleListsRemoveConfirmBody": "이 목록에서 삭제됩니다.",

@@ -566,32 +566,6 @@ const _knownUntranslatedDebt = <String>{
   // stays accurate in every locale rather than being machine-translated.
   'bugReportImageInsertionRejected',
   'featureRequestImageInsertionRejected',
-  'listsDiscoveryEmpty',
-  'listsDiscoveryLoadingLabel',
-  'listMemberNamesSeparator',
-  'listCardSemanticLabel',
-  'listLoopsCount',
-  'listStatsSeparator',
-  'peopleListsViewAllMembers',
-  'peopleListsPeopleCount',
-  // List-card screen-reader count and the discovered-list load failure
-  // (#8540). Deferred to the next human translation pass rather than
-  // machine-translated: the count has to agree with each locale's plural
-  // rules and the failure copy has to match that locale's other
-  // connection-error wording.
-  'listMemberCount',
-  'peopleListsLoadFailed',
-  // The list info sheet's visibility switch (#8540), deferred to the same
-  // pass.
-  'listMakePublicLabel',
-  'listMakePublicSubtitle',
-  // The list pickers' title (#8540), deferred to the same pass.
-  'listAddToLists',
-  // The people-list picker's row actions and its update-failure copy
-  // (#8540), deferred to the same pass.
-  'peopleListsAddPersonSemanticLabel',
-  'peopleListsRemovePersonSemanticLabel',
-  'peopleListsMembershipUpdateFailed',
   // Deletion prep-failure copy (feature #6126). Deferred to the l10n
   // translation-debt pass (#7632) rather than machine-translating a
   // safety-critical "nothing was deleted" message. Mirror the translated

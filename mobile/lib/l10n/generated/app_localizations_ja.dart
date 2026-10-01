@@ -3673,17 +3673,16 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String peopleListsAddPersonSemanticLabel(String name) {
-    return 'Add $name to list';
+    return '$nameをリストに追加';
   }
 
   @override
   String peopleListsRemovePersonSemanticLabel(String name) {
-    return 'Remove $name from list';
+    return '$nameをリストから削除';
   }
 
   @override
-  String get peopleListsMembershipUpdateFailed =>
-      'Couldn\'t update the list. Please try again.';
+  String get peopleListsMembershipUpdateFailed => 'リストを更新できませんでした。もう一度お試しください。';
 
   @override
   String get peopleListsAddPeopleSearchHint => 'ユーザーを検索';
@@ -3695,7 +3694,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get peopleListsAddPeopleRetry => '再試行';
 
   @override
-  String get peopleListsLoadFailed => 'Couldn\'t load this list.';
+  String get peopleListsLoadFailed => 'このリストを読み込めませんでした。';
 
   @override
   String peopleListsInNLists(int count) {
@@ -4577,15 +4576,14 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get listAddToLists => 'Add to lists';
+  String get listAddToLists => 'リストに追加';
 
   @override
   String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count members',
-      one: '$count member',
+      other: '$count人のメンバー',
     );
     return '$_temp0';
   }
@@ -4621,10 +4619,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get listDescriptionLabel => '説明 (任意)';
 
   @override
-  String get listMakePublicLabel => 'Make public';
+  String get listMakePublicLabel => '公開する';
 
   @override
-  String get listMakePublicSubtitle => 'Let others see this list';
+  String get listMakePublicSubtitle => '他の人もこのリストを見られます';
 
   @override
   String get listPrivateListSubtitle => '動画は非公開のまま。名前、説明、タグ、カバーは表示されたままです。';
@@ -4685,30 +4683,29 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get listMemberNamesSeparator => ', ';
+  String get listMemberNamesSeparator => '、';
 
   @override
   String listCardSemanticLabel(String name, String visibility, String count) {
     String _temp0 = intl.Intl.selectLogic(
       visibility,
       {
-        'private': '$name, Private, $count',
-        'other': '$name, $count',
+        'private': '$name、非公開、$count',
+        'other': '$name、$count',
       },
     );
     return '$_temp0';
   }
 
   @override
-  String get listsDiscoveryLoadingLabel => 'Loading lists';
+  String get listsDiscoveryLoadingLabel => 'リストを読み込み中';
 
   @override
   String listLoopsCount(int count, String formatted) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$formatted loops',
-      one: '$formatted loop',
+      other: '$formattedループ',
     );
     return '$_temp0';
   }
@@ -4717,22 +4714,20 @@ class AppLocalizationsJa extends AppLocalizations {
   String get listStatsSeparator => ' ∙ ';
 
   @override
-  String get peopleListsViewAllMembers => 'View all';
+  String get peopleListsViewAllMembers => 'すべて見る';
 
   @override
   String peopleListsPeopleCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count people',
-      one: '$count person',
+      other: '$count人',
     );
     return '$_temp0';
   }
 
   @override
-  String get listsDiscoveryEmpty =>
-      'No lists turned up this time. Pull to refresh.';
+  String get listsDiscoveryEmpty => '今回はリストが見つかりませんでした。引っ張って更新してください。';
 
   @override
   String get listShareAction => 'リストを共有';

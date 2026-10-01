@@ -3688,17 +3688,17 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String peopleListsAddPersonSemanticLabel(String name) {
-    return 'Add $name to list';
+    return '목록에 $name 추가';
   }
 
   @override
   String peopleListsRemovePersonSemanticLabel(String name) {
-    return 'Remove $name from list';
+    return '목록에서 $name 삭제';
   }
 
   @override
   String get peopleListsMembershipUpdateFailed =>
-      'Couldn\'t update the list. Please try again.';
+      '목록을 업데이트하지 못했어요. 다시 시도해 주세요.';
 
   @override
   String get peopleListsAddPeopleSearchHint => '사람 검색';
@@ -3710,7 +3710,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get peopleListsAddPeopleRetry => '다시 시도';
 
   @override
-  String get peopleListsLoadFailed => 'Couldn\'t load this list.';
+  String get peopleListsLoadFailed => '이 목록을 불러오지 못했어요.';
 
   @override
   String peopleListsInNLists(int count) {
@@ -4594,15 +4594,14 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get listAddToLists => 'Add to lists';
+  String get listAddToLists => '목록에 추가';
 
   @override
   String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count members',
-      one: '$count member',
+      other: '구성원 $count명',
     );
     return '$_temp0';
   }
@@ -4638,10 +4637,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get listDescriptionLabel => '설명 (선택)';
 
   @override
-  String get listMakePublicLabel => 'Make public';
+  String get listMakePublicLabel => '공개로 설정';
 
   @override
-  String get listMakePublicSubtitle => 'Let others see this list';
+  String get listMakePublicSubtitle => '다른 사람도 이 목록을 볼 수 있어요';
 
   @override
   String get listPrivateListSubtitle =>
@@ -4710,7 +4709,7 @@ class AppLocalizationsKo extends AppLocalizations {
     String _temp0 = intl.Intl.selectLogic(
       visibility,
       {
-        'private': '$name, Private, $count',
+        'private': '$name, 비공개, $count',
         'other': '$name, $count',
       },
     );
@@ -4718,15 +4717,14 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get listsDiscoveryLoadingLabel => 'Loading lists';
+  String get listsDiscoveryLoadingLabel => '목록 불러오는 중';
 
   @override
   String listLoopsCount(int count, String formatted) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$formatted loops',
-      one: '$formatted loop',
+      other: '루프 $formatted회',
     );
     return '$_temp0';
   }
@@ -4735,22 +4733,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get listStatsSeparator => ' ∙ ';
 
   @override
-  String get peopleListsViewAllMembers => 'View all';
+  String get peopleListsViewAllMembers => '전체 보기';
 
   @override
   String peopleListsPeopleCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count people',
-      one: '$count person',
+      other: '$count명',
     );
     return '$_temp0';
   }
 
   @override
-  String get listsDiscoveryEmpty =>
-      'No lists turned up this time. Pull to refresh.';
+  String get listsDiscoveryEmpty => '이번엔 목록이 하나도 안 나왔어요. 당겨서 새로고침하세요.';
 
   @override
   String get listShareAction => '목록 공유';

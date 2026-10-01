@@ -1601,6 +1601,15 @@
             }
         }
     },
+    "listAddToLists": "Lägg till i listor",
+    "listMemberCount": "{count, plural, =1{{count} medlem} other{{count} medlemmar}}",
+    "@listMemberCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "listDone": "Klar",
     "listErrorLoading": "Fel vid inläsning av listor",
     "listCreateNewList": "Skapa ny lista",
@@ -1610,10 +1619,50 @@
     "listCollaboratorSearchHint": "Sök i Divine...",
     "listNameLabel": "Listnamn",
     "listDescriptionLabel": "Beskrivning (valfritt)",
+    "listMakePublicLabel": "Gör offentlig",
+    "listMakePublicSubtitle": "Låt andra se den här listan",
     "listPrivateListSubtitle": "Videorna förblir privata. Namn, beskrivning, taggar och omslag förblir synliga.",
     "listVisibilityPublic": "Offentlig",
     "listVisibilityPrivate": "Privat",
     "profileListsEmpty": "Inga listor än. Skapa en för looparna du vill hålla ihop.",
+    "listMemberNamesSeparator": ", ",
+    "listCardSemanticLabel": "{visibility, select, private{{name}, Privat, {count}} other{{name}, {count}}}",
+    "@listCardSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            },
+            "visibility": {
+                "type": "String"
+            },
+            "count": {
+                "type": "String"
+            }
+        }
+    },
+    "listsDiscoveryLoadingLabel": "Läser in listor",
+    "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loopar}}",
+    "@listLoopsCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "formatted": {
+                "type": "String"
+            }
+        }
+    },
+    "listStatsSeparator": " ∙ ",
+    "peopleListsViewAllMembers": "Visa alla",
+    "peopleListsPeopleCount": "{count, plural, =1{{count} person} other{{count} personer}}",
+    "@peopleListsPeopleCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "listsDiscoveryEmpty": "Inga listor dök upp den här gången. Dra för att uppdatera.",
     "listShareAction": "Dela lista",
     "listShareFailed": "Kunde inte dela listan. Försök igen.",
     "listSave": "Spara",
@@ -2916,9 +2965,27 @@
     "peopleListsErrorLoadingVideos": "Fel vid inläsning av videor",
     "peopleListsNoPeopleToAdd": "Inga personer tillgängliga att lägga till.",
     "peopleListsAddToListName": "Lägg till i {name}",
+    "peopleListsAddPersonSemanticLabel": "Lägg till {name} i listan",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "Ta bort {name} från listan",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "Kunde inte uppdatera listan. Försök igen.",
     "peopleListsAddPeopleSearchHint": "Sök personer",
     "peopleListsAddPeopleError": "Det gick inte att läsa in personer. Försök igen.",
     "peopleListsAddPeopleRetry": "Försök igen",
+    "peopleListsLoadFailed": "Kunde inte läsa in den här listan.",
     "peopleListsInNLists": "{count, plural, =1{I 1 lista} other{I {count} listor}}",
     "peopleListsRemoveConfirmTitle": "Ta bort {name}?",
     "peopleListsRemoveConfirmBody": "De kommer att tas bort från den här listan.",

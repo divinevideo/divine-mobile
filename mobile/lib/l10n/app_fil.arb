@@ -1172,6 +1172,15 @@
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "Isara",
     "listVideoCount": "{count} mga video",
+    "listAddToLists": "Idagdag sa mga list",
+    "listMemberCount": "{count, plural, =1{{count} miyembro} other{{count} miyembro}}",
+    "@listMemberCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "listDone": "Tapos na",
     "listErrorLoading": "Error sa pag-load ng listahan",
     "listCreateNewList": "Gumawa ng Bagong Listahan",
@@ -1181,10 +1190,50 @@
     "listCollaboratorSearchHint": "Maghanap sa Divine...",
     "listNameLabel": "Pangalan ng Listahan",
     "listDescriptionLabel": "Description (opsyonal)",
+    "listMakePublicLabel": "Gawing public",
+    "listMakePublicSubtitle": "Hayaang makita ng iba ang list na ito",
     "listPrivateListSubtitle": "Mananatiling pribado ang mga video. Nakikita pa rin ang pangalan, description, tags, at cover.",
     "listVisibilityPublic": "Pampubliko",
     "listVisibilityPrivate": "Pribado",
     "profileListsEmpty": "Wala pang list. Gumawa ng isa para sa mga loop na gusto mong pagsama-samahin.",
+    "listMemberNamesSeparator": ", ",
+    "listCardSemanticLabel": "{visibility, select, private{{name}, Pribado, {count}} other{{name}, {count}}}",
+    "@listCardSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            },
+            "visibility": {
+                "type": "String"
+            },
+            "count": {
+                "type": "String"
+            }
+        }
+    },
+    "listsDiscoveryLoadingLabel": "Naglo-load ng mga list",
+    "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loop}}",
+    "@listLoopsCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "formatted": {
+                "type": "String"
+            }
+        }
+    },
+    "listStatsSeparator": " ∙ ",
+    "peopleListsViewAllMembers": "Tingnan lahat",
+    "peopleListsPeopleCount": "{count, plural, =1{{count} tao} other{{count} tao}}",
+    "@peopleListsPeopleCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "listsDiscoveryEmpty": "Walang lumabas na list ngayon. Hilahin pababa para mag-refresh.",
     "listShareAction": "I-share ang list",
     "listShareFailed": "Hindi na-share ang list na ito. Subukan ulit.",
     "listSave": "I-save",
@@ -2179,12 +2228,30 @@
     "notificationsViewProfilesSemanticLabel": "Tingnan ang mga profile",
     "peopleListsAddPeopleError": "Hindi na-load ang mga tao. Subukan ulit.",
     "peopleListsAddPeopleRetry": "Subukan ulit",
+    "peopleListsLoadFailed": "Hindi na-load ang list na ito.",
     "peopleListsAddPeopleSearchHint": "Maghanap ng tao",
     "peopleListsAddPeopleSemanticLabel": "Magdagdag ng tao sa listahan",
     "peopleListsAddPeopleTitle": "Magdagdag ng tao",
     "peopleListsAddPeopleTooltip": "Magdagdag ng tao",
     "peopleListsAddToList": "Idagdag sa listahan",
     "peopleListsAddToListName": "Idagdag sa {name}",
+    "peopleListsAddPersonSemanticLabel": "Idagdag si {name} sa list",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "Alisin si {name} sa list",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "Hindi na-update ang list. Subukan ulit.",
     "peopleListsCreateButton": "Gumawa",
     "peopleListsEmptySubtitle": "Gumawa ng listahan para simulang igrupo ang mga tao.",
     "peopleListsEmptyTitle": "Wala pang listahan",

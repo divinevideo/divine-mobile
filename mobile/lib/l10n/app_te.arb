@@ -2309,9 +2309,27 @@
       }
     }
   },
+  "peopleListsAddPersonSemanticLabel": "{name}ని జాబితాకు జోడించండి",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "{name}ని జాబితా నుండి తీసివేయండి",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "జాబితాను నవీకరించడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
   "peopleListsAddPeopleSearchHint": "వ్యక్తులను శోధించండి",
   "peopleListsAddPeopleError": "వ్యక్తులను లోడ్ చేయడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
   "peopleListsAddPeopleRetry": "మళ్లీ ప్రయత్నించండి",
+  "peopleListsLoadFailed": "ఈ జాబితాను లోడ్ చేయడం సాధ్యపడలేదు.",
   "peopleListsInNLists": "{count, plural, =1{1 జాబితాలో} other{{count} జాబితాల్లో}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -2854,6 +2872,15 @@
       }
     }
   },
+  "listAddToLists": "జాబితాలకు జోడించండి",
+  "listMemberCount": "{count, plural, =1{{count} సభ్యులు} other{{count} సభ్యులు}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "listByAuthorPrefix": "ద్వారా ",
   "listDone": "పూర్తయింది",
   "listErrorLoading": "జాబితాలను లోడ్ చేయడంలో లోపం",
@@ -2864,10 +2891,50 @@
   "listCollaboratorSearchHint": "శోధన Divine...",
   "listNameLabel": "జాబితా పేరు",
   "listDescriptionLabel": "వివరణ (ఐచ్ఛికం)",
+  "listMakePublicLabel": "పబ్లిక్‌గా చేయండి",
+  "listMakePublicSubtitle": "ఇతరులు ఈ జాబితాను చూడనివ్వండి",
   "listPrivateListSubtitle": "వీడియోలు ప్రైవేట్‌గా ఉంటాయి. పేరు, వివరణ, ట్యాగ్‌లు మరియు కవర్ కనిపించేలా ఉంటాయి.",
   "listVisibilityPublic": "పబ్లిక్",
   "listVisibilityPrivate": "ప్రైవేట్",
   "profileListsEmpty": "ఇంకా జాబితాలు లేవు. మీరు కలిసి ఉంచాలనుకుంటున్న లూప్‌ల కోసం ఒకదాన్ని తయారు చేయండి.",
+  "listMemberNamesSeparator": ", ",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, ప్రైవేట్, {count}} other{{name}, {count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "listsDiscoveryLoadingLabel": "జాబితాలను లోడ్ చేస్తోంది",
+  "listLoopsCount": "{count, plural, =1{{formatted} లూప్} other{{formatted} లూప్‌లు}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsViewAllMembers": "అన్నీ చూడండి",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} వ్యక్తి} other{{count} వ్యక్తులు}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listsDiscoveryEmpty": "ఈసారి జాబితాలు ఏవీ దొరకలేదు. రిఫ్రెష్ చేయడానికి లాగండి.",
   "listShareAction": "షేర్ జాబితా",
   "listShareFailed": "ఈ జాబితాను భాగస్వామ్యం చేయడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించండి.",
   "listSave": "సేవ్ చేయండి",

@@ -3924,17 +3924,17 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String peopleListsAddPersonSemanticLabel(String name) {
-    return 'Add $name to list';
+    return '$name کو فہرست میں شامل کریں';
   }
 
   @override
   String peopleListsRemovePersonSemanticLabel(String name) {
-    return 'Remove $name from list';
+    return '$name کو فہرست سے ہٹائیں';
   }
 
   @override
   String get peopleListsMembershipUpdateFailed =>
-      'Couldn\'t update the list. Please try again.';
+      'فہرست اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔';
 
   @override
   String get peopleListsAddPeopleSearchHint => 'لوگ تلاش کریں';
@@ -3947,7 +3947,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'دوبارہ کوشش کریں';
 
   @override
-  String get peopleListsLoadFailed => 'Couldn\'t load this list.';
+  String get peopleListsLoadFailed => 'یہ فہرست لوڈ نہیں ہو سکی۔';
 
   @override
   String peopleListsInNLists(int count) {
@@ -4872,15 +4872,15 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
-  String get listAddToLists => 'Add to lists';
+  String get listAddToLists => 'فہرستوں میں شامل کریں';
 
   @override
   String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count members',
-      one: '$count member',
+      other: '$count ممبران',
+      one: '$count ممبر',
     );
     return '$_temp0';
   }
@@ -4916,10 +4916,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get listDescriptionLabel => 'تفصیل (اختیاری)';
 
   @override
-  String get listMakePublicLabel => 'Make public';
+  String get listMakePublicLabel => 'عوامی بنائیں';
 
   @override
-  String get listMakePublicSubtitle => 'Let others see this list';
+  String get listMakePublicSubtitle => 'دوسروں کو یہ فہرست دیکھنے دیں';
 
   @override
   String get listPrivateListSubtitle =>
@@ -4982,30 +4982,30 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
-  String get listMemberNamesSeparator => ', ';
+  String get listMemberNamesSeparator => '، ';
 
   @override
   String listCardSemanticLabel(String name, String visibility, String count) {
     String _temp0 = intl.Intl.selectLogic(
       visibility,
       {
-        'private': '$name, Private, $count',
-        'other': '$name, $count',
+        'private': '$name، نجی، $count',
+        'other': '$name، $count',
       },
     );
     return '$_temp0';
   }
 
   @override
-  String get listsDiscoveryLoadingLabel => 'Loading lists';
+  String get listsDiscoveryLoadingLabel => 'فہرستیں لوڈ ہو رہی ہیں';
 
   @override
   String listLoopsCount(int count, String formatted) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$formatted loops',
-      one: '$formatted loop',
+      other: '$formatted لوپ',
+      one: '$formatted لوپ',
     );
     return '$_temp0';
   }
@@ -5014,22 +5014,22 @@ class AppLocalizationsUr extends AppLocalizations {
   String get listStatsSeparator => ' ∙ ';
 
   @override
-  String get peopleListsViewAllMembers => 'View all';
+  String get peopleListsViewAllMembers => 'سب دیکھیں';
 
   @override
   String peopleListsPeopleCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count people',
-      one: '$count person',
+      other: '$count لوگ',
+      one: '$count شخص',
     );
     return '$_temp0';
   }
 
   @override
   String get listsDiscoveryEmpty =>
-      'No lists turned up this time. Pull to refresh.';
+      'اس بار کوئی فہرست ہاتھ نہیں آئی۔ ریفریش کے لیے کھینچیں۔';
 
   @override
   String get listShareAction => 'فہرست شیئر کریں';

@@ -1930,9 +1930,27 @@
       }
     }
   },
+  "peopleListsAddPersonSemanticLabel": "Tambah {name} ke senarai",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "Alih keluar {name} daripada senarai",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "Tidak dapat mengemas kini senarai. Sila cuba lagi.",
   "peopleListsAddPeopleSearchHint": "Cari orang",
   "peopleListsAddPeopleError": "Tidak dapat memuatkan orang. Sila cuba lagi.",
   "peopleListsAddPeopleRetry": "Cuba lagi",
+  "peopleListsLoadFailed": "Tidak dapat memuatkan senarai ini.",
   "peopleListsInNLists": "{count, plural, =1{Dalam 1 senarai} other{Dalam {count} senarai}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -2367,6 +2385,15 @@
       }
     }
   },
+  "listAddToLists": "Tambah ke senarai",
+  "listMemberCount": "{count, plural, =1{{count} ahli} other{{count} ahli}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "listByAuthorPrefix": "Oleh ",
   "listDone": "Siap",
   "listErrorLoading": "Ralat memuatkan senarai",
@@ -2377,10 +2404,50 @@
   "listCollaboratorSearchHint": "Cari Divine...",
   "listNameLabel": "Nama Senarai",
   "listDescriptionLabel": "Keterangan (pilihan)",
+  "listMakePublicLabel": "Jadikan awam",
+  "listMakePublicSubtitle": "Benarkan orang lain melihat senarai ini",
   "listPrivateListSubtitle": "Video kekal peribadi. Nama, keterangan, tag dan kulit kekal kelihatan.",
   "listVisibilityPublic": "Awam",
   "listVisibilityPrivate": "Peribadi",
   "profileListsEmpty": "Belum ada senarai. Buat satu untuk loop yang anda mahu simpan bersama.",
+  "listMemberNamesSeparator": ", ",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Peribadi, {count}} other{{name}, {count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "listsDiscoveryLoadingLabel": "Memuatkan senarai",
+  "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loop}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsViewAllMembers": "Lihat semua",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} orang} other{{count} orang}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listsDiscoveryEmpty": "Tiada senarai yang muncul kali ini. Tarik untuk muat semula.",
   "listShareAction": "Kongsi senarai",
   "listShareFailed": "Senarai ini tidak dapat dikongsi. Cuba lagi.",
   "listSave": "Simpan",

@@ -1478,9 +1478,27 @@
             }
         }
     },
+    "peopleListsAddPersonSemanticLabel": "Добави {name} към списъка",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "Премахни {name} от списъка",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "Не успяхме да обновим списъка. Опитай пак.",
     "peopleListsAddPeopleSearchHint": "Търси хора",
     "peopleListsAddPeopleError": "Не успяхме да заредим хората. Опитай пак.",
     "peopleListsAddPeopleRetry": "Опитай пак",
+    "peopleListsLoadFailed": "Не успяхме да заредим този списък.",
     "peopleListsInNLists": "{count, plural, =1{В 1 списък} other{В {count} списъка}}",
     "@peopleListsInNLists": {
         "placeholders": {
@@ -1795,6 +1813,15 @@
             }
         }
     },
+    "listAddToLists": "Добави към списъци",
+    "listMemberCount": "{count, plural, =1{{count} член} other{{count} членове}}",
+    "@listMemberCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "listDone": "Готово",
     "listErrorLoading": "Грешка при зареждане на списъците",
     "listCreateNewList": "Създаване на нов списък",
@@ -1804,10 +1831,50 @@
     "listCollaboratorSearchHint": "Търсене Divine...",
     "listNameLabel": "Име на списък",
     "listDescriptionLabel": "Описание (по избор)",
+    "listMakePublicLabel": "Направи публичен",
+    "listMakePublicSubtitle": "Позволи на другите да виждат този списък",
     "listPrivateListSubtitle": "Видеата остават частни. Името, описанието, таговете и корицата остават видими.",
     "listVisibilityPublic": "Публичен",
     "listVisibilityPrivate": "Частен",
     "profileListsEmpty": "Още няма списъци. Направи един за луповете, които искаш да държиш заедно.",
+    "listMemberNamesSeparator": ", ",
+    "listCardSemanticLabel": "{visibility, select, private{{name}, Частен, {count}} other{{name}, {count}}}",
+    "@listCardSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            },
+            "visibility": {
+                "type": "String"
+            },
+            "count": {
+                "type": "String"
+            }
+        }
+    },
+    "listsDiscoveryLoadingLabel": "Зареждане на списъци",
+    "listLoopsCount": "{count, plural, =1{{formatted} луп} other{{formatted} лупа}}",
+    "@listLoopsCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "formatted": {
+                "type": "String"
+            }
+        }
+    },
+    "listStatsSeparator": " ∙ ",
+    "peopleListsViewAllMembers": "Виж всички",
+    "peopleListsPeopleCount": "{count, plural, =1{{count} човек} other{{count} души}}",
+    "@peopleListsPeopleCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "listsDiscoveryEmpty": "Този път не изскочи нито един списък. Дръпни надолу за обновяване.",
     "listShareAction": "Сподели списъка",
     "listShareFailed": "Списъкът не можа да бъде споделен. Опитай пак.",
     "listSave": "Запази",

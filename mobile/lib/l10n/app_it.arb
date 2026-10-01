@@ -1601,6 +1601,15 @@
             }
         }
     },
+    "listAddToLists": "Aggiungi alle liste",
+    "listMemberCount": "{count, plural, =1{{count} membro} other{{count} membri}}",
+    "@listMemberCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "listDone": "Fatto",
     "listErrorLoading": "Errore nel caricamento delle liste",
     "listCreateNewList": "Crea nuova lista",
@@ -1610,10 +1619,50 @@
     "listCollaboratorSearchHint": "Cerca su Divine...",
     "listNameLabel": "Nome lista",
     "listDescriptionLabel": "Descrizione (opzionale)",
+    "listMakePublicLabel": "Rendi pubblica",
+    "listMakePublicSubtitle": "Lascia che altri vedano questa lista",
     "listPrivateListSubtitle": "I video restano privati. Nome, descrizione, tag e copertina restano visibili.",
     "listVisibilityPublic": "Pubblica",
     "listVisibilityPrivate": "Privata",
     "profileListsEmpty": "Ancora nessuna lista. Creane una per i loop che vuoi tenere insieme.",
+    "listMemberNamesSeparator": ", ",
+    "listCardSemanticLabel": "{visibility, select, private{{name}, Privata, {count}} other{{name}, {count}}}",
+    "@listCardSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            },
+            "visibility": {
+                "type": "String"
+            },
+            "count": {
+                "type": "String"
+            }
+        }
+    },
+    "listsDiscoveryLoadingLabel": "Caricamento liste",
+    "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loop}}",
+    "@listLoopsCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "formatted": {
+                "type": "String"
+            }
+        }
+    },
+    "listStatsSeparator": " ∙ ",
+    "peopleListsViewAllMembers": "Vedi tutti",
+    "peopleListsPeopleCount": "{count, plural, =1{{count} persona} other{{count} persone}}",
+    "@peopleListsPeopleCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "listsDiscoveryEmpty": "Stavolta non è saltata fuori nessuna lista. Trascina per aggiornare.",
     "listShareAction": "Condividi lista",
     "listShareFailed": "Impossibile condividere questa lista. Riprova.",
     "listSave": "Salva",
@@ -2916,9 +2965,27 @@
     "peopleListsErrorLoadingVideos": "Errore nel caricamento dei video",
     "peopleListsNoPeopleToAdd": "Nessuna persona disponibile da aggiungere.",
     "peopleListsAddToListName": "Aggiungi a {name}",
+    "peopleListsAddPersonSemanticLabel": "Aggiungi {name} alla lista",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "Rimuovi {name} dalla lista",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "Impossibile aggiornare la lista. Riprova.",
     "peopleListsAddPeopleSearchHint": "Cerca persone",
     "peopleListsAddPeopleError": "Impossibile caricare le persone. Riprova.",
     "peopleListsAddPeopleRetry": "Riprova",
+    "peopleListsLoadFailed": "Impossibile caricare questa lista.",
     "peopleListsInNLists": "{count, plural, =1{In 1 lista} other{In {count} liste}}",
     "peopleListsRemoveConfirmTitle": "Rimuovere {name}?",
     "peopleListsRemoveConfirmBody": "Verrà rimosso/a da questa lista.",
