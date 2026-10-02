@@ -7,7 +7,8 @@ import 'package:sound_service/sound_service.dart';
 
 /// The [VoiceOverEffectService] the voice-effect sheet processes takes with.
 ///
-/// Stateless and safe to share: every call works on its own files.
+/// Safe to share: every call works on its own files, and calls that need the
+/// same take decoded wait for one decode.
 final voiceOverEffectServiceProvider = Provider<VoiceOverEffectService>(
   (ref) => VoiceOverEffectService(),
 );

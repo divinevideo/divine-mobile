@@ -83,6 +83,11 @@ class VoiceOverEffectService {
   final VoiceOverWavDecoder _decodeToWav;
   final Future<Directory> Function() _temporaryDirectory;
 
+  /// Decodes still running, by take path. Auditions and a bake started before
+  /// the first decode of a take finishes wait for it instead of decoding the
+  /// take into the same file a second time.
+  final Map<String, Future<File>> _decoding = {};
+
   static const _decodedDirName = 'voice_over_decoded';
   static const _auditionDirName = 'voice_over_audition';
 
@@ -214,6 +219,18 @@ class VoiceOverEffectService {
   ///
   /// Throws a [VoiceOverEffectException] when the take cannot be decoded.
   Future<File> _decoded(String takePath) async {
+    final running = _decoding[takePath];
+    if (running != null) return running;
+    final decoding = _decode(takePath);
+    _decoding[takePath] = decoding;
+    try {
+      return await decoding;
+    } finally {
+      final _ = _decoding.remove(takePath);
+    }
+  }
+
+  Future<File> _decode(String takePath) async {
     final temporary = await _temporaryDirectory();
     final name = p.basenameWithoutExtension(takePath);
     final decoded = File(p.join(temporary.path, _decodedDirName, '$name.wav'));

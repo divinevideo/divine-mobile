@@ -80,6 +80,31 @@ void main() {
         expect(takes.listSync(), hasLength(1));
       });
 
+      test('shares the first decode of a take with a bake started while it '
+          'runs', () async {
+        final effects = service();
+
+        // A preset tapped and Done tapped before the take was ever decoded.
+        final (audition, kept) = await (
+          effects.renderAudition(
+            takePath: takePath,
+            effect: robot,
+            noiseReduction: false,
+          ),
+          effects.process(
+            takePath: takePath,
+            effect: robot,
+            noiseReduction: false,
+          ),
+        ).wait;
+
+        expect(decodes, 1);
+        for (final path in [audition, kept.path]) {
+          final audio = decodeWav(File(path).readAsBytesSync());
+          expect(audio.samples, hasLength(_sampleRate ~/ 2));
+        }
+      });
+
       test('throws when the take will not decode', () async {
         await expectLater(
           service(failDecode: true).renderAudition(
@@ -89,6 +114,39 @@ void main() {
           ),
           throwsA(isA<VoiceOverEffectException>()),
         );
+      });
+
+      test('decodes again when the creator tries again after a failed '
+          'decode', () async {
+        var failNext = true;
+        final effects = VoiceOverEffectService(
+          temporaryDirectory: () async => temporary,
+          decodeToWav: (input, output) async {
+            decodes++;
+            if (failNext) {
+              failNext = false;
+              throw const FileSystemException('decode failed');
+            }
+            await File(output).writeAsBytes(_decodedTake());
+          },
+        );
+        await expectLater(
+          effects.renderAudition(
+            takePath: takePath,
+            effect: robot,
+            noiseReduction: false,
+          ),
+          throwsA(isA<VoiceOverEffectException>()),
+        );
+
+        final audition = await effects.renderAudition(
+          takePath: takePath,
+          effect: robot,
+          noiseReduction: false,
+        );
+
+        expect(decodes, 2);
+        expect(File(audition).existsSync(), isTrue);
       });
     });
 
