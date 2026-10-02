@@ -1436,12 +1436,14 @@ class NostrClient {
   /// [maxPages] and [pageTimeout] as the only ceiling. The walk stops
   /// [PagedQueryResult.isComplete] `false` with what it collected when a page
   /// does not settle.
+  /// [tempRelays] also lets public reads run before account relays initialize.
   Future<PagedQueryResult> readAllEvents(
     Filter filter, {
     int pageSize = 500,
     int maxPages = 50,
     Duration pageTimeout = const Duration(seconds: 10),
     Duration? timeout = const Duration(minutes: 2),
+    List<String>? tempRelays,
   }) async {
     final startedAt = clock.now();
     final deadline = timeout == null ? null : startedAt.add(timeout);
@@ -1518,6 +1520,7 @@ class NostrClient {
         maxPages: maxPages,
         pageTimeout: pageTimeout,
         deadline: deadline,
+        tempRelays: tempRelays,
       );
       // Relay-supplied events are held to the filter here as they are on
       // every other read leg. How the walk went is the pager's own account of
