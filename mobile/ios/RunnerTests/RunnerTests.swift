@@ -1,4 +1,5 @@
 import XCTest
+import AVFoundation
 import WebKit
 import background_uploader
 import divine_camera
@@ -370,13 +371,17 @@ private final class FakeTextureRegistry: NSObject, FlutterTextureRegistry {
 }
 
 /// Records every send, so a test can prove a teardown path never talks to
-/// the engine.
+/// the engine, and keeps the handlers the plugin installs, so a test can talk
+/// to a player the way its Dart controller does.
 private final class FakeBinaryMessenger: NSObject, FlutterBinaryMessenger {
   private var nextConnection: FlutterBinaryMessengerConnection = 1
   private(set) var sentChannels: [String] = []
+  private(set) var sentMessages: [(channel: String, message: Data?)] = []
+  private(set) var handlers: [String: FlutterBinaryMessageHandler] = [:]
 
   func send(onChannel channel: String, message: Data?) {
     sentChannels.append(channel)
+    sentMessages.append((channel, message))
   }
 
   func send(
@@ -385,12 +390,14 @@ private final class FakeBinaryMessenger: NSObject, FlutterBinaryMessenger {
     binaryReply callback: FlutterBinaryReply?
   ) {
     sentChannels.append(channel)
+    sentMessages.append((channel, message))
   }
 
   func setMessageHandlerOnChannel(
     _ channel: String,
     binaryMessageHandler handler: FlutterBinaryMessageHandler?
   ) -> FlutterBinaryMessengerConnection {
+    handlers[channel] = handler
     defer { nextConnection += 1 }
     return nextConnection
   }
@@ -858,6 +865,162 @@ final class DivineVideoPlayerEngineTeardownTests: XCTestCase {
     XCTAssertEqual(try registeredPlayers(plugin), before + 1)
     XCTAssertEqual(otherRegistrar.fakeTextures.unregistered, [otherTextureId])
     XCTAssertEqual(registrar.fakeTextures.unregistered, [])
+  }
+}
+
+/// A non-looping player that has played to its end has to come back from a
+/// seek the way the Android one does. The editor's detached clips are exactly
+/// such players, driven by seeks: on iOS they froze once they had run out,
+/// because the queue player dropped the finished item and every later seek
+/// failed.
+final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
+  private static let playerId = Int.max - 50
+  private static let channel = "divine_video_player/player_\(playerId)"
+  private static let codec = FlutterStandardMethodCodec.sharedInstance()
+
+  private var registrar: FakePluginRegistrar!
+  private var plugin: DivineVideoPlayerPlugin!
+  private var clipURL: URL!
+
+  override func setUpWithError() throws {
+    try super.setUpWithError()
+    registrar = FakePluginRegistrar()
+    registrar.viewController = UIViewController()
+    DivineVideoPlayerPlugin.register(with: registrar)
+    plugin = try XCTUnwrap(registrar.published as? DivineVideoPlayerPlugin)
+    plugin.handle(
+      FlutterMethodCall(
+        methodName: "create",
+        arguments: ["id": Self.playerId, "useTexture": true]
+      )
+    ) { _ in }
+    _ = try invoke("listen", on: "\(Self.channel)/events")
+
+    clipURL = FileManager.default.temporaryDirectory
+      .appendingPathComponent("playback_end_\(UUID().uuidString).mp4")
+    try Self.writeClip(to: clipURL, frames: 30)
+    _ = try invoke("setClips", ["clips": [["uri": clipURL.path, "startMs": 0]]])
+    try waitForState("the clip loads") { $0["status"] as? String == "paused" }
+  }
+
+  override func tearDown() {
+    plugin?.handle(
+      FlutterMethodCall(methodName: "dispose", arguments: ["id": Self.playerId])
+    ) { _ in }
+    plugin?.detachFromEngine(for: registrar)
+    if let clipURL { try? FileManager.default.removeItem(at: clipURL) }
+    plugin = nil
+    registrar = nil
+    super.tearDown()
+  }
+
+  func testSeekFromTheEndPlaysOnWhilePlaybackIsRequested() throws {
+    _ = try invoke("play")
+    try waitForState("the clip plays to its end") { $0["status"] as? String == "completed" }
+
+    _ = try invoke("seekTo", ["positionMs": 0])
+
+    try waitForState("the seek starts the clip over") {
+      $0["status"] as? String == "playing" && ($0["positionMs"] as? Int ?? 0) > 100
+    }
+  }
+
+  func testSeekFromTheEndStaysPausedOnceItWasPaused() throws {
+    _ = try invoke("play")
+    try waitForState("the clip plays to its end") { $0["status"] as? String == "completed" }
+    _ = try invoke("pause")
+
+    _ = try invoke("seekTo", ["positionMs": 0])
+
+    try waitForState("the seek leaves the end, paused") { $0["status"] as? String == "paused" }
+    RunLoop.main.run(until: Date().addingTimeInterval(0.5))
+    let state = try XCTUnwrap(latestState())
+    XCTAssertEqual(state["status"] as? String, "paused")
+    XCTAssertEqual(state["positionMs"] as? Int, 0, "a paused seek must not start playback")
+  }
+
+  /// Calls [method] the way the Dart controller does and waits for its answer.
+  @discardableResult
+  private func invoke(
+    _ method: String,
+    _ arguments: Any? = nil,
+    on channel: String = DivineVideoPlayerPlaybackEndTests.channel
+  ) throws -> Any? {
+    let handler = try XCTUnwrap(registrar.fakeMessenger.handlers[channel], "no handler on \(channel)")
+    let answered = expectation(description: "\(method) answered")
+    var answer: Any?
+    handler(Self.codec.encode(FlutterMethodCall(methodName: method, arguments: arguments))) { reply in
+      answer = reply.flatMap { Self.codec.decodeEnvelope($0) }
+      answered.fulfill()
+    }
+    wait(for: [answered], timeout: 10)
+    if let error = answer as? FlutterError {
+      XCTFail("\(method) failed: \(error.code) \(error.message ?? "")")
+    }
+    return answer
+  }
+
+  /// The last state the player sent to Dart.
+  private func latestState() -> [String: Any]? {
+    let events = "\(Self.channel)/events"
+    return registrar.fakeMessenger.sentMessages.reversed().lazy
+      .filter { $0.channel == events }
+      .compactMap { $0.message.flatMap { Self.codec.decodeEnvelope($0) } as? [String: Any] }
+      .first
+  }
+
+  private func waitForState(
+    _ description: String,
+    timeout: TimeInterval = 10,
+    _ matches: ([String: Any]) -> Bool
+  ) throws {
+    let deadline = Date().addingTimeInterval(timeout)
+    while Date() < deadline {
+      if let state = latestState(), matches(state) { return }
+      RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+    }
+    throw StateTimeout(description: "timed out waiting until \(description); last state: \(latestState() ?? [:])")
+  }
+
+  private struct StateTimeout: Error, CustomStringConvertible {
+    let description: String
+  }
+
+  /// Writes a 30 fps H.264 clip of [frames] grey frames.
+  private static func writeClip(to url: URL, frames: Int) throws {
+    let writer = try AVAssetWriter(outputURL: url, fileType: .mp4)
+    let input = AVAssetWriterInput(
+      mediaType: .video,
+      outputSettings: [
+        AVVideoCodecKey: AVVideoCodecType.h264,
+        AVVideoWidthKey: 64,
+        AVVideoHeightKey: 64,
+      ]
+    )
+    let adaptor = AVAssetWriterInputPixelBufferAdaptor(
+      assetWriterInput: input,
+      sourcePixelBufferAttributes: nil
+    )
+    writer.add(input)
+    XCTAssertTrue(writer.startWriting())
+    writer.startSession(atSourceTime: .zero)
+    for index in 0..<frames {
+      var buffer: CVPixelBuffer?
+      CVPixelBufferCreate(nil, 64, 64, kCVPixelFormatType_32BGRA, nil, &buffer)
+      let frame = try XCTUnwrap(buffer)
+      CVPixelBufferLockBaseAddress(frame, [])
+      memset(CVPixelBufferGetBaseAddress(frame)!, 0x80, CVPixelBufferGetDataSize(frame))
+      CVPixelBufferUnlockBaseAddress(frame, [])
+      while !input.isReadyForMoreMediaData {
+        RunLoop.main.run(until: Date().addingTimeInterval(0.01))
+      }
+      adaptor.append(frame, withPresentationTime: CMTime(value: CMTimeValue(index), timescale: 30))
+    }
+    input.markAsFinished()
+    let finished = DispatchSemaphore(value: 0)
+    writer.finishWriting { finished.signal() }
+    finished.wait()
+    XCTAssertEqual(writer.status, .completed, "\(writer.error.map { "\($0)" } ?? "")")
   }
 }
 
