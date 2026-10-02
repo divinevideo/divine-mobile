@@ -86,7 +86,7 @@ that run only:
 |---|---|
 | `flutter run`, `flutter test`, `flutter drive` typed directly | add `--no-enable-impeller` |
 | A debug APK installed with `adb` (`mise run local_install`) | launch it with `adb shell am start -S --ez enable-impeller false -n co.openvine.app.staging/co.openvine.app.MainActivity`; `-S` stops a running copy first, because the extra is only read when the app process starts |
-| `patrol test` | no flag exists; boot the emulator with `-gpu host`, which `mise run emulator` already does |
+| `patrol test`, and the `mise` tasks that run Flutter for you (`e2e_test`, `local_android`) | no flag reaches the app: Patrol launches it with no intent extras and the tasks pass fixed arguments. Put the `EnableImpeller` `<meta-data>` entry with `android:value="false"` back in `mobile/android/app/src/debug/AndroidManifest.xml` for the run and do not commit it |
 
 The flag and the intent extra are the same switch: `flutter run` passes
 `--no-enable-impeller` to the app as that extra. The engine prints
