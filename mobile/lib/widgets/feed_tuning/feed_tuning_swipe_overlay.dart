@@ -47,6 +47,7 @@ class _FeedTuningSwipeOverlayState extends State<FeedTuningSwipeOverlay> {
   double _dragExtent = 0;
   bool _passedThreshold = false;
   Timer? _pointerSignalResetTimer;
+  final Set<int> _downPointers = <int>{};
   int? _activeDragPointer;
   Offset _dragOffset = Offset.zero;
   _DragIntent _dragIntent = _DragIntent.undecided;
@@ -71,6 +72,13 @@ class _FeedTuningSwipeOverlayState extends State<FeedTuningSwipeOverlay> {
   }
 
   void _onPointerDown(PointerDownEvent event) {
+    _downPointers.add(event.pointer);
+    // A second finger makes the touch a pinch rather than a swipe: drop the
+    // drag in progress and ignore the fingers left until every one lifts.
+    if (_downPointers.length > 1) {
+      _reset();
+      return;
+    }
     if (_activeDragPointer != null) return;
     if (_isPlatformBackGestureStart(event.position)) return;
     _activeDragPointer = event.pointer;
@@ -84,11 +92,13 @@ class _FeedTuningSwipeOverlayState extends State<FeedTuningSwipeOverlay> {
   }
 
   void _onPointerUp(PointerUpEvent event) {
+    _downPointers.remove(event.pointer);
     if (event.pointer != _activeDragPointer) return;
     _onDragEnd();
   }
 
   void _onPointerCancel(PointerCancelEvent event) {
+    _downPointers.remove(event.pointer);
     if (event.pointer != _activeDragPointer) return;
     _reset();
   }

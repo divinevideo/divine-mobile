@@ -31,10 +31,10 @@ abstract class HapticService {
   /// Haptic feedback when a layer snaps to a helper line.
   static Future<void> snapFeedback() => lightImpact();
 
-  /// Haptic feedback when a press-and-hold enters immersive viewing.
+  /// Haptic feedback when a press-and-hold or a pinch enters immersive viewing.
   ///
-  /// The gesture hides the chrome rather than showing anything new, so this
-  /// is the only confirmation that the hold registered.
+  /// Both gestures hide the chrome rather than showing anything new, so this
+  /// is the only confirmation that the gesture registered.
   static Future<void> immersiveModeFeedback() => lightImpact();
 
   /// Haptic feedback when entering a destructive zone.

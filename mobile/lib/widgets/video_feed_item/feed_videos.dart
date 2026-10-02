@@ -656,10 +656,34 @@ class __OverlayState extends ConsumerState<_Overlay> {
   /// unrelated pointer can't clear a hold we never started.
   bool _isHoldingForImmersive = false;
 
-  /// Pointers currently down over this item. The peek ends only when the last
-  /// one lifts, so an incidental second finger (a resting thumb, a pinch
-  /// attempt) can't restore the chrome while the hold finger is still down.
-  final Set<int> _immersivePointers = <int>{};
+  /// Pointers currently down over this item, with each one's latest local
+  /// position. The peek ends only when the last one lifts, so an incidental
+  /// second finger (a resting thumb, a pinch attempt) can't restore the chrome
+  /// while the hold finger is still down; the positions measure a pinch.
+  final Map<int, Offset> _immersivePointers = <int, Offset>{};
+
+  /// Separation between the two pinch fingers when the second one landed, in
+  /// logical pixels. `null` until at least two pointers are down, and again
+  /// once the pinch has toggled the pin so one continuous pinch cannot fire
+  /// repeatedly. A pinch is measured against this so only a real spread or
+  /// squeeze toggles the pin, not the incidental placement of two fingers.
+  double? _pinchBaselineDistance;
+
+  /// Whether *this* item pinned the chrome. Mirrors
+  /// [_isHoldingForImmersive] so a pin can be cleared without un-pinning a
+  /// state another item owns.
+  bool _isPinnedForImmersive = false;
+
+  /// Whether the touch in progress, or the one that just ended, ever had two
+  /// fingers down. A tap recognizer follows its first finger through a second
+  /// one landing, so a pinch whose first finger stayed inside touch slop still
+  /// ends as a tap; that tap must not act on the pin, playback or a like.
+  bool _touchWasMultiTouch = false;
+
+  /// How far the pinch fingers must spread or squeeze from their landing
+  /// separation before the pin toggles. Large enough to ignore a two-finger
+  /// scroll settling, small enough to feel deliberate.
+  static const double _pinchToggleDistance = 64;
 
   @override
   void initState() {
@@ -672,6 +696,14 @@ class __OverlayState extends ConsumerState<_Overlay> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.video.id != widget.video.id) {
       _prefetchCommunityLabels();
+      // A pin belongs to the video it was made on, not to the item's index.
+      _clearPinnedImmersive();
+    }
+    // Swiping away from this item must not leave the next video's chrome
+    // pinned hidden — the cubit is shared across the feed page, so the pin is
+    // released by the item that owns it as that item deactivates.
+    if (oldWidget.isActive && !widget.isActive) {
+      _clearPinnedImmersive();
     }
   }
 
@@ -701,10 +733,13 @@ class __OverlayState extends ConsumerState<_Overlay> {
   void dispose() {
     // An item can be torn down mid-hold (feed rebuild, route replacement).
     // The cubit outlives this overlay, so the flag has to come down here or
-    // the surface would be left with permanently hidden chrome.
+    // the surface would be left with permanently hidden chrome. The pin has
+    // the same failure mode — a pinned item disposed without clearing would
+    // pin every later video too.
+    _clearPinnedImmersive();
     _exitImmersive();
     // [didUpdateWidget] re-points this State at a different video, so the
-    // pointer set must not outlive the item that filled it.
+    // pointers must not outlive the item that filled them.
     _immersivePointers.clear();
     _heartTrigger.dispose();
     super.dispose();
@@ -720,8 +755,8 @@ class __OverlayState extends ConsumerState<_Overlay> {
     cubit.enter();
   }
 
-  /// Drops a lifted/cancelled pointer and, once none remain, brings the chrome
-  /// back.
+  /// Drops a lifted/cancelled pointer, resets any in-progress pinch once the
+  /// gesture is no longer multi-touch, and, with none left, ends the hold.
   ///
   /// Driven off the raw [Listener] rather than the gesture callbacks.
   /// `LongPressGestureRecognizer` does not report `onLongPressEnd` for a
@@ -733,11 +768,86 @@ class __OverlayState extends ConsumerState<_Overlay> {
   /// so this stays the reliable exit.
   void _handleImmersivePointerEnd(int pointer) {
     _immersivePointers.remove(pointer);
+    if (_immersivePointers.length < 2) {
+      _pinchBaselineDistance = null;
+    } else if (_pinchBaselineDistance != null) {
+      // A third finger was down, so the measured pair may now be a different
+      // one. Re-measure from here rather than compare against the old pair.
+      _pinchBaselineDistance = _pinchDistance();
+    }
     if (_immersivePointers.isEmpty) _exitImmersive();
   }
 
-  /// Brings the chrome back. Idempotent — the no-op guard lets [dispose] and
-  /// the last-pointer-up path both call it unconditionally.
+  /// Records a down pointer and seeds the pinch baseline once two are down.
+  void _handleImmersivePointerDown(PointerDownEvent event) {
+    // No pointers means nothing is down, so any hold this item still believes
+    // it owns is stale — its terminal event was lost (a touch dropped on
+    // backgrounding, a platform view taking over). Without this the item could
+    // never peek again.
+    if (_immersivePointers.isEmpty) {
+      _touchWasMultiTouch = false;
+      _exitImmersive();
+    }
+    _immersivePointers[event.pointer] = event.localPosition;
+    if (_immersivePointers.length > 1) _touchWasMultiTouch = true;
+    if (_immersivePointers.length == 2) {
+      _pinchBaselineDistance = _pinchDistance();
+    }
+  }
+
+  /// Tracks pointer movement and toggles the pin when a two-finger pinch
+  /// spreads or squeezes past [_pinchToggleDistance].
+  ///
+  /// Measured from the landing separation, not an absolute distance, so a
+  /// two-finger scroll whose fingers drift keeps roughly the same separation
+  /// and never trips it. Only the first crossing per gesture toggles; the next
+  /// pair of fingers is measured afresh.
+  void _handleImmersivePointerMove(PointerMoveEvent event) {
+    if (!_immersivePointers.containsKey(event.pointer)) return;
+    _immersivePointers[event.pointer] = event.localPosition;
+    final baseline = _pinchBaselineDistance;
+    // A page swipe can deactivate this item while its fingers are still down;
+    // a pin set from it would belong to no visible item.
+    if (baseline == null || !widget.isActive) return;
+    if ((_pinchDistance() - baseline).abs() < _pinchToggleDistance) return;
+    _pinchBaselineDistance = null;
+    _togglePinnedImmersive();
+  }
+
+  /// Separation between the first two down pointers, in logical pixels.
+  double _pinchDistance() {
+    final points = _immersivePointers.values.toList(growable: false);
+    return (points[0] - points[1]).distance;
+  }
+
+  /// Toggles the persistent pin. A second pinch restores the chrome, as does
+  /// tapping the video.
+  void _togglePinnedImmersive() {
+    if (_isPinnedForImmersive) {
+      _clearPinnedImmersive();
+      return;
+    }
+    final cubit = _immersiveCubit;
+    if (cubit == null || cubit.isClosed) return;
+    _isPinnedForImmersive = true;
+    // Confirms the pinch registered — the gesture has no other affordance.
+    unawaited(HapticService.immersiveModeFeedback());
+    cubit.pin();
+  }
+
+  /// Clears a pin this item owns. Idempotent, so [dispose], the swipe-away
+  /// path, and tap-to-restore can all call it unconditionally.
+  void _clearPinnedImmersive() {
+    if (!_isPinnedForImmersive) return;
+    _isPinnedForImmersive = false;
+    final cubit = _immersiveCubit;
+    if (cubit == null || cubit.isClosed) return;
+    cubit.unpin();
+  }
+
+  /// Ends a hold, which brings the chrome back unless a pin keeps it hidden.
+  /// Idempotent — the no-op guard lets [dispose] and the last-pointer-up path
+  /// both call it unconditionally.
   void _exitImmersive() {
     if (!_isHoldingForImmersive) return;
     _isHoldingForImmersive = false;
@@ -768,6 +878,9 @@ class __OverlayState extends ConsumerState<_Overlay> {
     TapDownDetails details, {
     required bool isOwnVideo,
   }) {
+    // Fires while the previous touch's flag is still set, so a tap that lands
+    // within the double-tap window of a pinch cannot read as a double tap.
+    if (_touchWasMultiTouch) return;
     final contentWarningBlocking =
         shouldShowContentWarningOverlay(
           contentWarningLabels: widget.video.contentWarningLabels,
@@ -797,7 +910,22 @@ class __OverlayState extends ConsumerState<_Overlay> {
     );
   }
 
+  /// Restores pinned chrome on a tap while the player cannot yet play or pause.
+  void _handleRestoreTap() {
+    if (_touchWasMultiTouch) return;
+    _clearPinnedImmersive();
+  }
+
   void _handlePlayerTap() {
+    if (_touchWasMultiTouch) return;
+    // A tap while pinned restores the chrome instead of toggling playback.
+    // Otherwise the first tap after a pinch both un-hid the controls and
+    // paused the video, so the viewer could not bring the UI back without
+    // also changing playback — the exit gesture has to be the tap alone.
+    if (_isPinnedForImmersive) {
+      _clearPinnedImmersive();
+      return;
+    }
     final controller = widget.controller;
     if (controller == null) return;
     switch (resolvePlayerTapAction(controller.state.status)) {
@@ -938,7 +1066,6 @@ class __OverlayState extends ConsumerState<_Overlay> {
     final isVerifyingAge = context.select(
       (VideoPlaybackStatusCubit cubit) => cubit.state.isVerifying(video.id),
     );
-
     final isReady =
         widget.controller != null &&
         widget.controller?.state.isFirstFrameRendered == true &&
@@ -949,6 +1076,14 @@ class __OverlayState extends ConsumerState<_Overlay> {
       showContentWarningOverlay: showContentWarningOverlay,
       isReady: isReady,
     );
+
+    // Only the interactive subtree holds a surface that can restore a pin, and
+    // the cubit cannot change mid-build, so the pin comes down after the frame.
+    if (mode is! _OverlayInteractiveMode && _isPinnedForImmersive) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _clearPinnedImmersive();
+      });
+    }
 
     switch (mode) {
       case _OverlayForbiddenMode():
@@ -1063,20 +1198,18 @@ class __OverlayState extends ConsumerState<_Overlay> {
                           // reports a miss), so the pointer events would never
                           // arrive.
                           behavior: HitTestBehavior.translucent,
-                          onPointerDown: (event) {
-                            // An empty set means nothing is down, so any hold
-                            // this item still believes it owns is stale — its
-                            // terminal event was lost (a touch dropped on
-                            // backgrounding, a platform view taking over).
-                            // Without this the item could never peek again.
-                            if (_immersivePointers.isEmpty) _exitImmersive();
-                            _immersivePointers.add(event.pointer);
-                          },
+                          // The raw pointer stream also owns the pinch that
+                          // toggles the persistent pin. A ScaleGestureRecognizer
+                          // would join the gesture arena and compete with the
+                          // PageView's vertical drag, breaking feed swiping;
+                          // measuring the raw pointers never enters the arena.
+                          onPointerDown: _handleImmersivePointerDown,
+                          onPointerMove: _handleImmersivePointerMove,
                           onPointerUp: (event) =>
                               _handleImmersivePointerEnd(event.pointer),
                           onPointerCancel: (event) =>
                               _handleImmersivePointerEnd(event.pointer),
-                          child: PlayerGestureSurface(
+                          child: _PinAwareGestureSurface(
                             interactiveReady: interactiveReady,
                             isOwnVideo: isOwnVideo,
                             onTap: _handlePlayerTap,
@@ -1086,6 +1219,7 @@ class __OverlayState extends ConsumerState<_Overlay> {
                               isOwnVideo: isOwnVideo,
                             ),
                             onLongPressStart: _enterImmersive,
+                            onRestoreChrome: _handleRestoreTap,
                           ),
                         ),
                       ),
@@ -1117,8 +1251,9 @@ class __OverlayState extends ConsumerState<_Overlay> {
                           // design: the hold reveals the frame the UI covers,
                           // and the caption is an overlay over that same frame,
                           // so keeping it up would re-cover exactly what the
-                          // peek exposes. It is gone only while the viewer
-                          // holds, and returns the instant they release.
+                          // peek exposes. It is gone while the viewer holds,
+                          // returns the instant they release, and stays gone
+                          // while a pinch keeps the chrome pinned hidden.
                           subtitleLayer:
                               video.hasSubtitles && widget.controller != null
                               ? _SubtitleLayer(
@@ -1140,6 +1275,42 @@ class __OverlayState extends ConsumerState<_Overlay> {
           ),
         );
     }
+  }
+}
+
+/// [PlayerGestureSurface] that offers the restore tap only while the chrome is
+/// pinned. It watches the pin itself, so a pin rebuilds this surface alone
+/// rather than the whole item.
+class _PinAwareGestureSurface extends StatelessWidget {
+  const _PinAwareGestureSurface({
+    required this.interactiveReady,
+    required this.isOwnVideo,
+    required this.onTap,
+    required this.onDoubleTapDown,
+    required this.onLongPressStart,
+    required this.onRestoreChrome,
+  });
+
+  final bool interactiveReady;
+  final bool isOwnVideo;
+  final VoidCallback onTap;
+  final void Function(TapDownDetails details) onDoubleTapDown;
+  final VoidCallback onLongPressStart;
+  final VoidCallback onRestoreChrome;
+
+  @override
+  Widget build(BuildContext context) {
+    final isChromePinned = context.select<FeedImmersiveCubit?, bool>(
+      (cubit) => cubit?.state.isPinned ?? false,
+    );
+    return PlayerGestureSurface(
+      interactiveReady: interactiveReady,
+      isOwnVideo: isOwnVideo,
+      onTap: onTap,
+      onDoubleTapDown: onDoubleTapDown,
+      onLongPressStart: onLongPressStart,
+      onRestoreChrome: isChromePinned ? onRestoreChrome : null,
+    );
   }
 }
 

@@ -183,9 +183,9 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
   /// can observe/read it.
   final FeedAutoAdvanceCubit _autoAdvanceCubit = FeedAutoAdvanceCubit();
 
-  /// Feed-scoped immersive (hold-to-peek) state. Owned here so it sits above
-  /// both [FeedVideos] — which raises it on a long press — and
-  /// [FeedModeSwitch], which fades out against it.
+  /// Feed-scoped immersive (hold-to-peek and pinch-to-pin) state. Owned here
+  /// so it sits above both [FeedVideos] — which raises it on a long press or a
+  /// pinch — and [FeedModeSwitch], which fades out against it.
   final FeedImmersiveCubit _immersiveCubit = FeedImmersiveCubit();
 
   @override

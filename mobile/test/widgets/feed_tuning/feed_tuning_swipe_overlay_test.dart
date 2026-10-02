@@ -147,6 +147,53 @@ void main() {
       await tester.pumpAndSettle();
     });
 
+    testWidgets('a two-finger spread does not tune', (tester) async {
+      final tuned = await pumpOverlay(tester);
+      final center = tester.getCenter(find.byType(FeedTuningSwipeOverlay));
+
+      final first = await tester.startGesture(
+        center - const Offset(20, 0),
+        pointer: 1,
+      );
+      final second = await tester.startGesture(
+        center + const Offset(20, 0),
+        pointer: 2,
+      );
+      await first.moveBy(const Offset(-120, 0));
+      await second.moveBy(const Offset(120, 0));
+      await first.up();
+      await second.up();
+      await tester.pumpAndSettle();
+
+      expect(tuned, isEmpty);
+    });
+
+    testWidgets('the finger left after a second one lifts does not tune, and '
+        'the next touch does', (tester) async {
+      final tuned = await pumpOverlay(tester);
+      final center = tester.getCenter(find.byType(FeedTuningSwipeOverlay));
+
+      final first = await tester.startGesture(center, pointer: 1);
+      final second = await tester.startGesture(
+        center + const Offset(0, 100),
+        pointer: 2,
+      );
+      await second.up();
+      await first.moveBy(const Offset(200, 0));
+      await first.up();
+      await tester.pumpAndSettle();
+
+      expect(tuned, isEmpty);
+
+      await tester.drag(
+        find.byType(FeedTuningSwipeOverlay),
+        const Offset(200, 0),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tuned, [FeedTuningDirection.more]);
+    });
+
     testWidgets('exposes more/less as custom semantic actions', (tester) async {
       final handle = tester.ensureSemantics();
       await pumpOverlay(tester);
