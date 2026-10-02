@@ -300,5 +300,38 @@ void main() {
         () => mainBloc.add(any(that: isA<VideoEditorSeekRequested>())),
       );
     });
+
+    testWidgets("leaves the playhead alone on the clip's last frame", (
+      tester,
+    ) async {
+      // The window is closed at both ends, so the clip is still drawn with
+      // the playhead exactly on its end. Trimming that end leaves it there.
+      when(() => mainBloc.state).thenReturn(
+        const VideoEditorMainState(currentPosition: Duration(seconds: 6)),
+      );
+
+      await pump(tester, _detachedLayer());
+
+      verifyNever(
+        () => mainBloc.add(any(that: isA<VideoEditorSeekRequested>())),
+      );
+    });
+
+    testWidgets("moves the playhead back from past the clip's end", (
+      tester,
+    ) async {
+      when(() => mainBloc.state).thenReturn(
+        const VideoEditorMainState(
+          currentPosition: Duration(seconds: 6, milliseconds: 1),
+        ),
+      );
+
+      await pump(tester, _detachedLayer());
+
+      verify(
+        () =>
+            mainBloc.add(const VideoEditorSeekRequested(Duration(seconds: 2))),
+      ).called(1);
+    });
   });
 }
