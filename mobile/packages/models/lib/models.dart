@@ -61,3 +61,4 @@ export 'src/video_stats.dart';
 export 'src/video_url_resolver.dart';
 export 'src/video_views_response.dart';
 export 'src/vine_sound.dart';
+export 'src/voice_effect.dart';
