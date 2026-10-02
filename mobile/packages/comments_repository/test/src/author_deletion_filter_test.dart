@@ -368,5 +368,117 @@ void main() {
         expect(deletionLookups.single.authors, equals([authorPubkey]));
       });
     });
+
+    group('watchCommentDeletions', () {
+      late StreamController<Event> relayStream;
+      late List<Filter> subscribedFilters;
+      String? subscribedId;
+      const nowMillis = 1000000000;
+
+      setUp(() {
+        relayStream = StreamController<Event>.broadcast();
+        addTearDown(relayStream.close);
+        subscribedFilters = [];
+        subscribedId = null;
+        when(
+          () => nostrClient.subscribe(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+          ),
+        ).thenAnswer((invocation) {
+          subscribedFilters =
+              invocation.positionalArguments.first as List<Filter>;
+          subscribedId = invocation.namedArguments[#subscriptionId] as String?;
+          return relayStream.stream;
+        });
+        when(() => nostrClient.unsubscribe(any())).thenAnswer((_) async {});
+        repository = CommentsRepository(
+          nostrClient: nostrClient,
+          clock: () => DateTime.fromMillisecondsSinceEpoch(nowMillis),
+        );
+      });
+
+      test('subscribes to comment deletion requests from a minute ago', () {
+        repository.watchCommentDeletions(rootEventId: rootEventId);
+
+        final filter = subscribedFilters.single;
+        expect(filter.kinds, equals([EventKind.eventDeletion]));
+        expect(filter.k, equals([_commentKind.toString()]));
+        expect(filter.since, equals(nowMillis ~/ 1000 - 60));
+        expect(subscribedId, startsWith('comment_deletions_watch'));
+      });
+
+      test('also watches video-reply deletions when video replies are on', () {
+        repository.watchCommentDeletions(
+          rootEventId: rootEventId,
+          includeVideoReplies: true,
+        );
+
+        expect(
+          subscribedFilters.single.k,
+          equals([_commentKind.toString(), _rootEventKind.toString()]),
+        );
+      });
+
+      test('emits one deletion per named comment', () async {
+        final received = <CommentDeletion>[];
+        final subscription = repository
+            .watchCommentDeletions(rootEventId: rootEventId)
+            .listen(received.add);
+        addTearDown(subscription.cancel);
+
+        relayStream.add(
+          deletionRequest(
+            by: authorPubkey,
+            ids: [deletedId, keptId],
+            extraTags: [
+              [
+                'client',
+                'Divine',
+                '31990:$rootAuthorPubkey:divine-mobile',
+                'wss://relay.example.com',
+              ],
+            ],
+          ),
+        );
+        await pumpEventQueue();
+
+        expect(
+          received,
+          equals([
+            const CommentDeletion(
+              commentId: deletedId,
+              requesterPubkey: authorPubkey,
+            ),
+            const CommentDeletion(
+              commentId: keptId,
+              requesterPubkey: authorPubkey,
+            ),
+          ]),
+        );
+      });
+
+      test('drops events that are not deletion requests', () async {
+        final received = <CommentDeletion>[];
+        final subscription = repository
+            .watchCommentDeletions(rootEventId: rootEventId)
+            .listen(received.add);
+        addTearDown(subscription.cancel);
+
+        relayStream.add(relayComment(deletedId));
+        await pumpEventQueue();
+
+        expect(received, isEmpty);
+      });
+
+      test('stopWatchingComments closes the deletion subscription', () async {
+        repository.watchCommentDeletions(rootEventId: rootEventId);
+        expect(subscribedId, isNotNull);
+
+        await repository.stopWatchingComments();
+
+        verify(() => nostrClient.unsubscribe(subscribedId!)).called(1);
+      });
+    });
   });
 }

@@ -143,6 +143,13 @@ class CommentsRepository {
   /// Subscription ID for the active comment watch, if any.
   String? _watchSubscriptionId;
 
+  /// Subscription ID for the active comment-deletion watch, if any.
+  String? _deletionWatchSubscriptionId;
+
+  /// How far before now the live deletion watch starts, so a request published
+  /// while the first page was loading is still seen.
+  static const _liveDeletionLookback = Duration(minutes: 1);
+
   /// Default page size for author comment queries.
   static const _authorCommentsLimit = 50;
 
@@ -807,14 +814,74 @@ class CommentsRepository {
     }
   }
 
-  /// Stops watching for new comments.
+  /// Watches for NIP-09 deletion requests of comments, live.
   ///
-  /// Closes the persistent Nostr subscription opened by [watchComments].
+  /// Emits one [CommentDeletion] per `e` tag of each request whose `k` tag
+  /// names a comment (kind 1111, and kind 34236 when [includeVideoReplies]),
+  /// published from a minute before now. The stream carries no author check:
+  /// hide a comment only when [CommentDeletion.appliesTo] holds. A request
+  /// without a `k` tag is not seen here; [findAuthorDeletedComments] still
+  /// finds it.
+  ///
+  /// Call [stopWatchingComments] to close the subscription.
+  ///
+  /// Throws [WatchCommentsFailedException] if the subscription fails.
+  Stream<CommentDeletion> watchCommentDeletions({
+    required String rootEventId,
+    bool includeVideoReplies = false,
+  }) {
+    try {
+      final since = _now().subtract(_liveDeletionLookback);
+      _deletionWatchSubscriptionId = scopedSubscriptionId(
+        'comment_deletions_watch',
+        rootEventId,
+      );
+      return _nostrClient
+          .subscribe(
+            [
+              Filter(
+                kinds: const [_deletionKind],
+                k: [
+                  _commentKind.toString(),
+                  if (includeVideoReplies) EventKind.videoVertical.toString(),
+                ],
+                since: since.millisecondsSinceEpoch ~/ 1000,
+              ),
+            ],
+            subscriptionId: _deletionWatchSubscriptionId,
+          )
+          .where((event) => event.kind == _deletionKind)
+          .expand(
+            (request) => [
+              for (final tag in request.tags)
+                if (tag.length >= 2 && tag[0] == 'e')
+                  CommentDeletion(
+                    commentId: tag[1],
+                    requesterPubkey: request.pubkey,
+                  ),
+            ],
+          );
+    } on Exception catch (e) {
+      throw WatchCommentsFailedException(
+        'Failed to watch comment deletions: $e',
+      );
+    }
+  }
+
+  /// Stops watching for new comments and comment deletions.
+  ///
+  /// Closes the persistent Nostr subscriptions opened by [watchComments] and
+  /// [watchCommentDeletions].
   Future<void> stopWatchingComments() async {
     final id = _watchSubscriptionId;
     if (id != null) {
       await _nostrClient.unsubscribe(id);
       _watchSubscriptionId = null;
+    }
+    final deletionId = _deletionWatchSubscriptionId;
+    if (deletionId != null) {
+      await _nostrClient.unsubscribe(deletionId);
+      _deletionWatchSubscriptionId = null;
     }
   }
 
