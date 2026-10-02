@@ -13,105 +13,107 @@ import 'package:openvine/widgets/profile/profile_header_widget.dart';
 const _surfaceKey = ValueKey<String>('light-mode-surface');
 
 void main() {
-  testWidgets('shared controls in light mode', (tester) async {
-    await _pumpLightSurface(
-      tester,
-      size: const Size(390, 220),
-      child: _sharedControls,
-    );
-    await expectLater(
-      find.byKey(_surfaceKey),
-      matchesGoldenFile('goldens/light_shared_controls.png'),
-    );
-  }, tags: ['golden']);
+  group('light-mode surfaces', () {
+    testWidgets('shared controls in light mode', (tester) async {
+      await _pumpLightSurface(
+        tester,
+        size: const Size(390, 220),
+        child: _sharedControls,
+      );
+      await expectLater(
+        find.byKey(_surfaceKey),
+        matchesGoldenFile('goldens/light_shared_controls.png'),
+      );
+    }, tags: ['golden']);
 
-  testWidgets('shared controls with enlarged text in light mode', (
-    tester,
-  ) async {
-    await _pumpLightSurface(
+    testWidgets('shared controls with enlarged text in light mode', (
       tester,
-      size: const Size(390, 260),
-      textScale: 1.5,
-      child: _sharedControls,
-    );
-    await expectLater(
-      find.byKey(_surfaceKey),
-      matchesGoldenFile('goldens/light_shared_controls_large_text.png'),
-    );
-  }, tags: ['golden']);
+    ) async {
+      await _pumpLightSurface(
+        tester,
+        size: const Size(390, 260),
+        textScale: 1.5,
+        child: _sharedControls,
+      );
+      await expectLater(
+        find.byKey(_surfaceKey),
+        matchesGoldenFile('goldens/light_shared_controls_large_text.png'),
+      );
+    }, tags: ['golden']);
 
-  testWidgets('Explore chrome in light mode', (tester) async {
-    const tabs = ExploreTabsState(classicsAvailable: true);
-    await _pumpLightSurface(
-      tester,
-      size: const Size(390, 180),
-      child: DefaultTabController(
-        length: tabs.tabCount,
-        initialIndex: tabs.newVideosIndex,
-        child: Builder(
-          builder: (context) => Column(
-            children: [
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child: DivineSearchBar(hintText: 'Search...', readOnly: true),
-              ),
-              ColoredBox(
-                color: context.vineColors.surface,
-                child: ExploreTabBar(
-                  controller: DefaultTabController.of(context),
-                  tabsState: tabs,
-                  onTap: _noopTab,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-    await expectLater(
-      find.byKey(_surfaceKey),
-      matchesGoldenFile('goldens/light_explore_chrome.png'),
-    );
-  }, tags: ['golden']);
-
-  testWidgets('Profile keeps a custom banner color in light mode', (
-    tester,
-  ) async {
-    await _pumpLightSurface(
-      tester,
-      size: const Size(390, 340),
-      child: const Column(
-        children: [
-          ProfileBanner(profileColor: Color(0xFF8568FF), height: 220),
-          Padding(
-            padding: EdgeInsets.all(16),
-            child: Row(
-              spacing: 8,
+    testWidgets('Explore chrome in light mode', (tester) async {
+      const tabs = ExploreTabsState(classicsAvailable: true);
+      await _pumpLightSurface(
+        tester,
+        size: const Size(390, 180),
+        child: DefaultTabController(
+          length: tabs.tabCount,
+          initialIndex: tabs.newVideosIndex,
+          child: Builder(
+            builder: (context) => Column(
               children: [
-                Expanded(
-                  child: DivineButton(
-                    label: 'My Library',
-                    type: DivineButtonType.secondary,
-                    onPressed: _noop,
-                  ),
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: DivineSearchBar(hintText: 'Search...', readOnly: true),
                 ),
-                DivineIconButton(
-                  icon: DivineIconName.shareFat,
-                  type: DivineIconButtonType.secondary,
-                  semanticLabel: 'Share',
-                  onPressed: _noop,
+                ColoredBox(
+                  color: context.vineColors.surface,
+                  child: ExploreTabBar(
+                    controller: DefaultTabController.of(context),
+                    tabsState: tabs,
+                    onTap: _noopTab,
+                  ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
-    );
-    await expectLater(
-      find.byKey(_surfaceKey),
-      matchesGoldenFile('goldens/light_profile_chrome.png'),
-    );
-  }, tags: ['golden']);
+        ),
+      );
+      await expectLater(
+        find.byKey(_surfaceKey),
+        matchesGoldenFile('goldens/light_explore_chrome.png'),
+      );
+    }, tags: ['golden']);
+
+    testWidgets('Profile keeps a custom banner color in light mode', (
+      tester,
+    ) async {
+      await _pumpLightSurface(
+        tester,
+        size: const Size(390, 340),
+        child: const Column(
+          children: [
+            ProfileBanner(profileColor: Color(0xFF8568FF), height: 220),
+            Padding(
+              padding: EdgeInsets.all(16),
+              child: Row(
+                spacing: 8,
+                children: [
+                  Expanded(
+                    child: DivineButton(
+                      label: 'My Library',
+                      type: DivineButtonType.secondary,
+                      onPressed: _noop,
+                    ),
+                  ),
+                  DivineIconButton(
+                    icon: DivineIconName.shareFat,
+                    type: DivineIconButtonType.secondary,
+                    semanticLabel: 'Share',
+                    onPressed: _noop,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+      await expectLater(
+        find.byKey(_surfaceKey),
+        matchesGoldenFile('goldens/light_profile_chrome.png'),
+      );
+    }, tags: ['golden']);
+  });
 }
 
 void _noop() {}
