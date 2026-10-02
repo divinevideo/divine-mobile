@@ -111,7 +111,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     emit(
       state.copyWith(
         status: CommentsStatus.loading,
-        newCommentCount: 0,
+        newCommentIds: const {},
         isBackfillComplete: false,
       ),
     );
@@ -338,9 +338,9 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         status: CommentsStatus.success,
         commentsById: updated,
         replyCountsByCommentId: computeReplyCounts(updated),
-        newCommentCount: state.isBackfillComplete && !isReplacingPlaceholder
-            ? state.newCommentCount + 1
-            : state.newCommentCount,
+        newCommentIds: state.isBackfillComplete && !isReplacingPlaceholder
+            ? {...state.newCommentIds, comment.id}
+            : state.newCommentIds,
       ),
     );
   }
@@ -367,7 +367,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     NewCommentsAcknowledged event,
     Emitter<CommentsListState> emit,
   ) {
-    emit(state.copyWith(newCommentCount: 0));
+    emit(state.copyWith(newCommentIds: const {}));
   }
 
   void _emitStore(
@@ -378,6 +378,8 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
       state.copyWith(
         commentsById: updated,
         replyCountsByCommentId: computeReplyCounts(updated),
+        // The pill counts only new comments that are still listed.
+        newCommentIds: state.newCommentIds.where(updated.containsKey).toSet(),
       ),
     );
   }

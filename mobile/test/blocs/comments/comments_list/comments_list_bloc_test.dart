@@ -765,7 +765,9 @@ void main() {
       blocTest<CommentsListBloc, CommentsListState>(
         'resets newCommentCount to 0',
         build: createBloc,
-        seed: () => const CommentsListState(newCommentCount: 5),
+        seed: () => const CommentsListState(
+          newCommentIds: {'c1', 'c2', 'c3', 'c4', 'c5'},
+        ),
         act: (b) => b.add(const NewCommentsAcknowledged()),
         expect: () => [
           isA<CommentsListState>().having(
@@ -988,6 +990,27 @@ void main() {
           expect(b.state.commentsById.containsKey(validId('c2')), isTrue);
         },
       );
+
+      blocTest<CommentsListBloc, CommentsListState>(
+        'CommentsRemovedByAuthorFromStore stops counting their new comments',
+        build: createBloc,
+        seed: () {
+          final blocked = makeComment(
+            validId('c1'),
+            authorPubkey: validId('blocked'),
+          );
+          final other = makeComment(
+            validId('c2'),
+            authorPubkey: validId('other'),
+          );
+          return CommentsListState(
+            commentsById: {blocked.id: blocked, other.id: other},
+            newCommentIds: {blocked.id, other.id},
+          );
+        },
+        act: (b) => b.add(CommentsRemovedByAuthorFromStore(validId('blocked'))),
+        verify: (b) => expect(b.state.newCommentCount, equals(1)),
+      );
     });
 
     group('threadedCommentsWith', () {
@@ -1194,6 +1217,24 @@ void main() {
       );
 
       blocTest<CommentsListBloc, CommentsListState>(
+        'stops counting a new comment its author deleted',
+        build: createBloc,
+        seed: () => CommentsListState(
+          commentsById: {authored.id: authored, other.id: other},
+          newCommentIds: {authored.id, other.id},
+        ),
+        act: (b) => b.add(
+          CommentDeletionReceived(
+            CommentDeletion(
+              commentId: authored.id,
+              requesterPubkey: validId('a1'),
+            ),
+          ),
+        ),
+        verify: (b) => expect(b.state.newCommentCount, equals(1)),
+      );
+
+      blocTest<CommentsListBloc, CommentsListState>(
         'keeps a comment when someone else signed the deletion',
         build: createBloc,
         seed: () => CommentsListState(commentsById: {authored.id: authored}),
@@ -1371,6 +1412,23 @@ void main() {
     group('author deletions found after a backfill', () {
       final kept = makeComment(validId('kept'));
       final backfilled = makeComment(validId('backfilled'));
+
+      blocTest<CommentsListBloc, CommentsListState>(
+        'stops counting a new comment the check finds deleted',
+        setUp: () {
+          when(
+            () => mockCommentsRepository.findAuthorDeletedComments(any()),
+          ).thenAnswer((_) async => {backfilled.id});
+        },
+        build: createBloc,
+        seed: () => CommentsListState(
+          status: CommentsStatus.success,
+          commentsById: {kept.id: kept, backfilled.id: backfilled},
+          newCommentIds: {kept.id, backfilled.id},
+        ),
+        act: (b) => b.add(const CommentsInitialBackfillCompleted()),
+        verify: (b) => expect(b.state.newCommentCount, equals(1)),
+      );
 
       blocTest<CommentsListBloc, CommentsListState>(
         'removes a backfilled comment its author deleted',
