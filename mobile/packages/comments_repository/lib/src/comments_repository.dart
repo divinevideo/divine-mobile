@@ -167,6 +167,9 @@ class CommentsRepository {
   /// local cache answer at once; past this, the comments stay as shown.
   static const _deletionLookupTimeout = Duration(seconds: 2);
 
+  /// How long [deleteComment] waits for relays to accept a deletion request.
+  static const _deletionPublishTimeout = Duration(seconds: 5);
+
   /// The most comments [_deletionRequesters] remembers requests for; the
   /// oldest are forgotten first. A forgotten request is still found by
   /// [findAuthorDeletedComments].
@@ -726,7 +729,10 @@ class CommentsRepository {
   ///   subsequent metadata edit.
   /// - [reason]: Optional reason for the deletion
   ///
-  /// Throws [DeleteCommentFailedException] if broadcasting fails.
+  /// The comment is treated as deleted only once a relay accepts the request.
+  ///
+  /// Throws [DeleteCommentFailedException] if no relay accepts the request
+  /// within five seconds, or if publishing it fails.
   Future<void> deleteComment({
     required String commentId,
     String? rootEventId,
@@ -747,10 +753,15 @@ class CommentsRepository {
         reason ?? '',
       );
 
-      final sentEvent = await _nostrClient.publishEvent(event);
-      if (sentEvent is! PublishSuccess) {
-        throw const DeleteCommentFailedException(
-          'Failed to publish deletion request',
+      // A request no relay accepted would hide the comment for its author
+      // alone, so wait for the relays' answer before treating it as deleted.
+      final outcome = await _nostrClient.publishEventAwaitOk(
+        event,
+        timeout: _deletionPublishTimeout,
+      );
+      if (outcome.failed) {
+        throw DeleteCommentFailedException(
+          'No relay accepted the deletion request: ${outcome.summary}',
         );
       }
 

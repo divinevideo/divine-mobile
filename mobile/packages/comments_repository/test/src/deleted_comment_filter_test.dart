@@ -53,6 +53,19 @@ void main() {
         return PublishSuccess(event: event);
       });
       when(
+        () => nostrClient.publishEventAwaitOk(
+          any(),
+          timeout: any(named: 'timeout'),
+        ),
+      ).thenAnswer(
+        (inv) async => PublishOutcome(
+          eventId: (inv.positionalArguments.first as Event).id,
+          acceptedBy: const ['wss://relay.test'],
+          rejectedBy: const {},
+          noResponseFrom: const [],
+        ),
+      );
+      when(
         () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => <Event>[]);
       when(() => funnelcakeClient.isAvailable).thenReturn(false);
