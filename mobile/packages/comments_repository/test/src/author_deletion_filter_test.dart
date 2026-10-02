@@ -255,6 +255,47 @@ void main() {
         },
       );
 
+      test('looks up at most 50 comments per query', () async {
+        final comments = [
+          for (var i = 0; i < 120; i++)
+            comment(i.toRadixString(16).padLeft(64, '0')),
+        ];
+
+        await repository.findAuthorDeletedComments(comments);
+
+        expect(
+          deletionLookups.map((filter) => filter.e!.length),
+          equals([50, 50, 20]),
+        );
+        expect(
+          deletionLookups.expand((filter) => filter.e!).toSet(),
+          hasLength(120),
+        );
+      });
+
+      test('keeps what one batch found when another batch fails', () async {
+        final comments = [
+          for (var i = 0; i < 60; i++)
+            comment(i.toRadixString(16).padLeft(64, '0')),
+        ];
+        final lastId = comments.last.id;
+        when(() => nostrClient.queryEvents(any())).thenAnswer((
+          invocation,
+        ) async {
+          final filters = invocation.positionalArguments.first as List<Filter>;
+          if (filters.first.e!.contains(lastId)) {
+            return [
+              deletionRequest(by: authorPubkey, ids: [lastId]),
+            ];
+          }
+          throw Exception('relay closed the connection');
+        });
+
+        final deleted = await repository.findAuthorDeletedComments(comments);
+
+        expect(deleted, equals({lastId}));
+      });
+
       test('does not look anything up for no comments', () async {
         final deleted = await repository.findAuthorDeletedComments([]);
 

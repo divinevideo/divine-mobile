@@ -345,11 +345,22 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     );
   }
 
-  void _onInitialBackfillCompleted(
+  /// Marks the backfill complete, then checks every listed comment for its
+  /// author's deletion request.
+  ///
+  /// The backfill can bring comments the first page lacked, such as a race-lost
+  /// deletion's comment a CDN-cached REST page has not caught up with (#7048).
+  /// A replay after a reconnect completes the backfill again, which also
+  /// catches a request the relay was slow to serve.
+  Future<void> _onInitialBackfillCompleted(
     CommentsInitialBackfillCompleted event,
     Emitter<CommentsListState> emit,
-  ) {
+  ) async {
     emit(state.copyWith(isBackfillComplete: true));
+    await _removeAuthorDeletedComments([
+      for (final comment in state.commentsById.values)
+        if (!comment.id.startsWith(commentPlaceholderIdPrefix)) comment,
+    ], emit);
   }
 
   void _onNewCommentsAcknowledged(

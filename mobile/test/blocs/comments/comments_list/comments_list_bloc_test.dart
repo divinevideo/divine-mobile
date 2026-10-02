@@ -1364,5 +1364,98 @@ void main() {
         },
       );
     });
+
+    // The comment watch backfills stored comments the first page may lack: a
+    // CDN-cached REST page can be minutes behind the relay.
+    group('author deletions found after a backfill', () {
+      final kept = makeComment(validId('kept'));
+      final backfilled = makeComment(validId('backfilled'));
+
+      blocTest<CommentsListBloc, CommentsListState>(
+        'removes a backfilled comment its author deleted',
+        setUp: () {
+          when(
+            () => mockCommentsRepository.findAuthorDeletedComments(any()),
+          ).thenAnswer((_) async => {backfilled.id});
+        },
+        build: createBloc,
+        seed: () => CommentsListState(
+          status: CommentsStatus.success,
+          commentsById: {kept.id: kept, backfilled.id: backfilled},
+        ),
+        act: (b) => b.add(const CommentsInitialBackfillCompleted()),
+        verify: (b) {
+          expect(b.state.commentsById.keys, equals([kept.id]));
+          expect(b.state.isBackfillComplete, isTrue);
+          final checked =
+              verify(
+                    () => mockCommentsRepository.findAuthorDeletedComments(
+                      captureAny(),
+                    ),
+                  ).captured.single
+                  as Iterable<Comment>;
+          expect(
+            checked.map((c) => c.id),
+            unorderedEquals([kept.id, backfilled.id]),
+          );
+        },
+      );
+
+      blocTest<CommentsListBloc, CommentsListState>(
+        'checks again when a replay completes the backfill again',
+        setUp: () {
+          var lookups = 0;
+          when(
+            () => mockCommentsRepository.findAuthorDeletedComments(any()),
+          ).thenAnswer(
+            (_) async => ++lookups == 1 ? <String>{} : {backfilled.id},
+          );
+        },
+        build: createBloc,
+        seed: () => CommentsListState(
+          status: CommentsStatus.success,
+          commentsById: {kept.id: kept, backfilled.id: backfilled},
+        ),
+        act: (b) async {
+          b.add(const CommentsInitialBackfillCompleted());
+          await pumpEventQueue();
+          expect(b.state.commentsById, hasLength(2));
+          b.add(const CommentsInitialBackfillCompleted());
+        },
+        verify: (b) {
+          expect(b.state.commentsById.keys, equals([kept.id]));
+        },
+      );
+
+      blocTest<CommentsListBloc, CommentsListState>(
+        'does not look up a comment that is still being posted',
+        build: createBloc,
+        seed: () {
+          final placeholder = Comment(
+            id: '${commentPlaceholderIdPrefix}1',
+            content: 'uploading',
+            authorPubkey: validId('me'),
+            createdAt: DateTime.now(),
+            rootEventId: validId('root'),
+            rootAuthorPubkey: validId('author'),
+          );
+          return CommentsListState(
+            status: CommentsStatus.success,
+            commentsById: {kept.id: kept, placeholder.id: placeholder},
+          );
+        },
+        act: (b) => b.add(const CommentsInitialBackfillCompleted()),
+        verify: (b) {
+          final checked =
+              verify(
+                    () => mockCommentsRepository.findAuthorDeletedComments(
+                      captureAny(),
+                    ),
+                  ).captured.single
+                  as Iterable<Comment>;
+          expect(checked.map((c) => c.id), equals([kept.id]));
+        },
+      );
+    });
   });
 }

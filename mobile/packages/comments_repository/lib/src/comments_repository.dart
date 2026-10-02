@@ -159,6 +159,10 @@ class CommentsRepository {
   /// while the first page was loading is still seen.
   static const _liveDeletionLookback = Duration(minutes: 1);
 
+  /// The most comments one deletion lookup names, so checking a long thread
+  /// does not become one oversized relay filter.
+  static const _deletionLookupBatchSize = 50;
+
   /// Default page size for author comment queries.
   static const _authorCommentsLimit = 50;
 
@@ -986,8 +990,9 @@ class CommentsRepository {
   /// someone else's comment changes nothing.
   ///
   /// [loadComments] does not wait for this lookup, so a page paints before a
-  /// relay answers; call this once the page is shown. Fails open: returns an
-  /// empty set when the lookup errors.
+  /// relay answers; call this once the page is shown. Asks about at most 50
+  /// comments per relay query. Fails open: a query that errors hides nothing
+  /// from its comments.
   Future<Set<String>> findAuthorDeletedComments(
     Iterable<Comment> comments,
   ) async {
@@ -998,13 +1003,32 @@ class CommentsRepository {
     };
     if (authorById.isEmpty) return const <String>{};
 
+    final ids = authorById.keys.toList();
+    final found = await Future.wait([
+      for (var start = 0; start < ids.length; start += _deletionLookupBatchSize)
+        _findAuthorDeletedIn(
+          ids.skip(start).take(_deletionLookupBatchSize).toList(),
+          authorById,
+        ),
+    ]);
+    final deleted = {for (final batch in found) ...batch};
+    _deletedCommentIds.addAll(deleted);
+    return deleted;
+  }
+
+  /// Looks up deletion requests for one batch of [ids], whose authors are in
+  /// [authorById]. Fails open: an unanswered batch hides none of its comments.
+  Future<Set<String>> _findAuthorDeletedIn(
+    List<String> ids,
+    Map<String, String> authorById,
+  ) async {
     final List<Event> requests;
     try {
       requests = await _nostrClient.queryEvents([
         Filter(
           kinds: const [_deletionKind],
-          authors: authorById.values.toSet().toList(),
-          e: authorById.keys.toList(),
+          authors: {for (final id in ids) authorById[id]!}.toList(),
+          e: ids,
         ),
       ]);
     } on Exception {
@@ -1021,7 +1045,6 @@ class CommentsRepository {
         if (authorById[tag[1]] == requester) deleted.add(tag[1]);
       }
     }
-    _deletedCommentIds.addAll(deleted);
     return deleted;
   }
 
