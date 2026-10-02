@@ -2506,6 +2506,7 @@
   "videoEditorEffectKaleidoscope": "Caleidoscopio",
   "videoEditorEffectSplitScreen": "Pantalla dividida",
   "videoEditorEffectWave": "Onda",
+  "videoEditorEffectGlow": "Resplandor",
   "videoEditorEffectsFlashingReplaced": "Solo un efecto parpadeante a la vez. Demasiado parpadeo puede hacer daño a las personas sensibles, así que aquí hemos reemplazado el otro.",
   "videoEditorEffectsFlashingNotDuplicated": "Solo un efecto parpadeante a la vez. Demasiado parpadeo puede hacer daño a las personas sensibles.",
   "videoEditorOpenTuneSemanticLabel": "Abrir editor de ajustes",

@@ -177,4 +177,5 @@ String videoEffectLabel(
   VideoEffectType.kaleidoscope => context.l10n.videoEditorEffectKaleidoscope,
   VideoEffectType.splitScreen => context.l10n.videoEditorEffectSplitScreen,
   VideoEffectType.wave => context.l10n.videoEditorEffectWave,
+  VideoEffectType.glow => context.l10n.videoEditorEffectGlow,
 };

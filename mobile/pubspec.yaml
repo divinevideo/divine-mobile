@@ -389,9 +389,10 @@ dependencies:
   # extra Flutter-specific native SQLite providers can make plain SQLite win.
   sqlite3: ^3.3.3
   audio_session: ^0.2.2
-  # 2.22.0 is the first release with the shake, zoom pulse, mirror,
-  # kaleidoscope, split screen and wave effects (#9706, #9707), and 2.21.0 the
-  # first with block glitch, film grain, signal interference and CRT (#9705).
+  # 2.22.0 is the first release with the glow effect (#9709), and 2.21.0 the
+  # first with block glitch, film grain, signal interference, CRT (#9705),
+  # shake, zoom pulse, mirror, kaleidoscope, split screen and wave (#9706,
+  # #9707).
   # Self-enforcing: the effect label switch names every `VideoEffectType`,
   # and those values do not exist before them, so a relaxed floor is a compile
   # error.

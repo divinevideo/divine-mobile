@@ -8761,6 +8761,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEffectWave => 'Вълна';
 
   @override
+  String get videoEditorEffectGlow => 'Сияние';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Само един мигащ ефект наведнъж. Прекаленото мигане може да навреди на чувствителни хора, затова тук заменихме другия.';
 

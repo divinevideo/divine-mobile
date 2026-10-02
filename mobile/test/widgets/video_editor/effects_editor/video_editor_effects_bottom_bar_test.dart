@@ -55,6 +55,7 @@ void main() {
         l10n.videoEditorEffectKaleidoscope,
         l10n.videoEditorEffectSplitScreen,
         l10n.videoEditorEffectWave,
+        l10n.videoEditorEffectGlow,
       ]) {
         await tester.scrollUntilVisible(
           find.text(label),

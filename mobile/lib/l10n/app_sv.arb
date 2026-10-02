@@ -2498,6 +2498,7 @@
   "videoEditorEffectKaleidoscope": "Kalejdoskop",
   "videoEditorEffectSplitScreen": "Delad skärm",
   "videoEditorEffectWave": "Våg",
+  "videoEditorEffectGlow": "Glöd",
   "videoEditorEffectsFlashingReplaced": "En blinkande effekt i taget. För mycket blinkande kan skada känsliga personer, så vi har ersatt den andra här.",
   "videoEditorEffectsFlashingNotDuplicated": "En blinkande effekt i taget. För mycket blinkande kan skada känsliga personer.",
   "videoEditorOpenTuneSemanticLabel": "Öppna justeringsredigeraren",

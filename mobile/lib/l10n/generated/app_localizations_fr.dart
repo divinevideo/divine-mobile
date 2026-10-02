@@ -8807,6 +8807,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorEffectWave => 'Vague';
 
   @override
+  String get videoEditorEffectGlow => 'Lueur';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Un seul effet clignotant à la fois. Trop de clignotements peuvent faire du mal aux personnes sensibles, alors on a remplacé l\'autre ici.';
 

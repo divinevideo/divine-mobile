@@ -8778,6 +8778,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorEffectWave => 'Onda';
 
   @override
+  String get videoEditorEffectGlow => 'Bagliore';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Un solo effetto lampeggiante alla volta. Troppi lampeggiamenti possono fare male alle persone sensibili, quindi qui abbiamo sostituito l\'altro.';
 

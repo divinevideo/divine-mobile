@@ -8694,6 +8694,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorEffectWave => 'Gelombang';
 
   @override
+  String get videoEditorEffectGlow => 'Sinaran';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Satu kesan berkelip pada satu masa. Kelipan berlebihan boleh memudaratkan orang yang sensitif, jadi kami menggantikan yang satu lagi di sini.';
 

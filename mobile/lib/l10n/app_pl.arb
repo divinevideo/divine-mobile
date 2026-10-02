@@ -2498,6 +2498,7 @@
   "videoEditorEffectKaleidoscope": "Kalejdoskop",
   "videoEditorEffectSplitScreen": "Podzielony ekran",
   "videoEditorEffectWave": "Fala",
+  "videoEditorEffectGlow": "Poświata",
   "videoEditorEffectsFlashingReplaced": "Tylko jeden migający efekt naraz. Zbyt dużo migania może szkodzić osobom wrażliwym, więc zastąpiliśmy tutaj ten drugi.",
   "videoEditorEffectsFlashingNotDuplicated": "Tylko jeden migający efekt naraz. Zbyt dużo migania może szkodzić osobom wrażliwym.",
   "videoEditorOpenTuneSemanticLabel": "Otwórz edytor korekt",

@@ -14759,6 +14759,12 @@ abstract class AppLocalizations {
   /// **'Wave'**
   String get videoEditorEffectWave;
 
+  /// Name of a video effect: the bright areas of the picture bloom softly into their surroundings, like stage lights or a sunset. Must read differently from the Brightness adjustment (videoEditorTuneBrightness).
+  ///
+  /// In en, this message translates to:
+  /// **'Glow'**
+  String get videoEditorEffectGlow;
+
   /// Snack bar after a flashing video effect (strobe, negative flash) replaced another flashing effect where the two overlapped on the timeline. Explains, without technical terms, that overlapping flashes can harm people with photosensitivity.
   ///
   /// In en, this message translates to:

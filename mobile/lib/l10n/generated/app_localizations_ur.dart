@@ -8685,6 +8685,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectWave => 'لہر';
 
   @override
+  String get videoEditorEffectGlow => 'دمک';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'ایک وقت میں صرف ایک ٹمٹماتا ایفیکٹ۔ زیادہ ٹمٹماہٹ حساس لوگوں کو نقصان پہنچا سکتی ہے، اس لیے ہم نے یہاں دوسرے کو بدل دیا۔';
 

@@ -8751,6 +8751,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorEffectWave => 'Onda';
 
   @override
+  String get videoEditorEffectGlow => 'Fulgor';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Só um efeito piscante de cada vez. Piscar demais pode fazer mal a pessoas sensíveis, por isso substituímos o outro aqui.';
 

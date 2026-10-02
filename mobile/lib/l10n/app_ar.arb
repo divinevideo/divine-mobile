@@ -2453,6 +2453,7 @@
   "videoEditorEffectKaleidoscope": "مشكال",
   "videoEditorEffectSplitScreen": "شاشة مقسّمة",
   "videoEditorEffectWave": "موجة",
+  "videoEditorEffectGlow": "توهج",
   "videoEditorEffectsFlashingReplaced": "تأثير وامض واحد في كل مرة. الوميض الكثير قد يؤذي الأشخاص الحساسين له، لذلك استبدلنا التأثير الآخر هنا.",
   "videoEditorEffectsFlashingNotDuplicated": "تأثير وامض واحد في كل مرة. الوميض الكثير قد يؤذي الأشخاص الحساسين له.",
   "videoEditorOpenTuneSemanticLabel": "فتح محرر التعديلات",

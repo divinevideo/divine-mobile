@@ -2754,6 +2754,7 @@
   "videoEditorEffectKaleidoscope": "Калейдоскоп",
   "videoEditorEffectSplitScreen": "Разделен екран",
   "videoEditorEffectWave": "Вълна",
+  "videoEditorEffectGlow": "Сияние",
   "videoEditorEffectsFlashingReplaced": "Само един мигащ ефект наведнъж. Прекаленото мигане може да навреди на чувствителни хора, затова тук заменихме другия.",
   "videoEditorEffectsFlashingNotDuplicated": "Само един мигащ ефект наведнъж. Прекаленото мигане може да навреди на чувствителни хора.",
   "videoEditorOpenTuneSemanticLabel": "Отваряне на редактора за настройки",
