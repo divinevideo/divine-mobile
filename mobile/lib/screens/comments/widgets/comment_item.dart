@@ -272,7 +272,10 @@ class _CommentItemState extends ConsumerState<CommentItem> {
       );
     }
 
-    if (result == null || !mounted) return;
+    // Not gated on [mounted]: the author can delete the comment while the
+    // sheet is open, which removes its row, and a report, block or delete
+    // chosen then must still reach the sheet-level blocs captured above.
+    if (result == null) return;
 
     switch (result) {
       case CommentDeleteResult():
@@ -289,6 +292,8 @@ class _CommentItemState extends ConsumerState<CommentItem> {
       case CommentBlockUserResult(:final authorPubkey):
         reactionsBloc.add(CommentBlockUserRequested(authorPubkey));
       case CommentEditResult(:final commentId, :final content):
+        // Editing a comment whose row is gone has nothing to edit.
+        if (!mounted) return;
         composerBloc.add(
           CommentEditModeEntered(
             commentId: commentId,
