@@ -26,6 +26,10 @@ void main() {
       return hexSuffix.padLeft(64, '0');
     }
 
+    setUpAll(() {
+      registerFallbackValue(<Comment>[]);
+    });
+
     setUp(() {
       mockCommentsRepository = _MockCommentsRepository();
       when(
@@ -37,6 +41,15 @@ void main() {
           onEose: any(named: 'onEose'),
         ),
       ).thenAnswer((_) => const Stream<Comment>.empty());
+      when(
+        () => mockCommentsRepository.watchCommentDeletions(
+          rootEventId: any(named: 'rootEventId'),
+          includeVideoReplies: any(named: 'includeVideoReplies'),
+        ),
+      ).thenAnswer((_) => const Stream<CommentDeletion>.empty());
+      when(
+        () => mockCommentsRepository.findAuthorDeletedComments(any()),
+      ).thenAnswer((_) async => <String>{});
       when(
         () => mockCommentsRepository.stopWatchingComments(),
       ).thenAnswer((_) async {});
@@ -1146,6 +1159,208 @@ void main() {
           }, returnsNormally);
 
           await streamController.close();
+        },
+      );
+    });
+
+    // A comment its author deleted can still be served by every read source
+    // while the relay has not applied the deletion (#7048).
+    group('CommentDeletionReceived', () {
+      final authored = makeComment(validId('c1'), authorPubkey: validId('a1'));
+      final other = makeComment(validId('c2'));
+
+      blocTest<CommentsListBloc, CommentsListState>(
+        'removes a comment its author deleted',
+        build: createBloc,
+        seed: () => CommentsListState(
+          commentsById: {authored.id: authored, other.id: other},
+        ),
+        act: (b) => b.add(
+          CommentDeletionReceived(
+            CommentDeletion(
+              commentId: authored.id,
+              requesterPubkey: validId('a1'),
+            ),
+          ),
+        ),
+        expect: () => [
+          isA<CommentsListState>().having(
+            (s) => s.commentsById.keys,
+            'ids',
+            [other.id],
+          ),
+        ],
+      );
+
+      blocTest<CommentsListBloc, CommentsListState>(
+        'keeps a comment when someone else signed the deletion',
+        build: createBloc,
+        seed: () => CommentsListState(commentsById: {authored.id: authored}),
+        act: (b) => b.add(
+          CommentDeletionReceived(
+            CommentDeletion(
+              commentId: authored.id,
+              requesterPubkey: validId('someone-else'),
+            ),
+          ),
+        ),
+        expect: () => <CommentsListState>[],
+      );
+
+      blocTest<CommentsListBloc, CommentsListState>(
+        'ignores a deletion of a comment that is not loaded',
+        build: createBloc,
+        seed: () => CommentsListState(commentsById: {authored.id: authored}),
+        act: (b) => b.add(
+          CommentDeletionReceived(
+            CommentDeletion(
+              commentId: validId('missing'),
+              requesterPubkey: validId('a1'),
+            ),
+          ),
+        ),
+        expect: () => <CommentsListState>[],
+      );
+    });
+
+    group('live comment deletions', () {
+      late StreamController<CommentDeletion> deletions;
+      final authored = makeComment(validId('c1'), authorPubkey: validId('a1'));
+
+      setUp(() {
+        deletions = StreamController<CommentDeletion>.broadcast();
+        addTearDown(deletions.close);
+        when(
+          () => mockCommentsRepository.watchCommentDeletions(
+            rootEventId: any(named: 'rootEventId'),
+            includeVideoReplies: any(named: 'includeVideoReplies'),
+          ),
+        ).thenAnswer((_) => deletions.stream);
+        when(
+          () => mockCommentsRepository.loadComments(
+            rootEventId: any(named: 'rootEventId'),
+            rootEventKind: any(named: 'rootEventKind'),
+            rootAddressableId: any(named: 'rootAddressableId'),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer(
+          (_) async => CommentThread(
+            rootEventId: validId('root'),
+            comments: [authored],
+            totalCount: 1,
+            commentCache: {authored.id: authored},
+          ),
+        );
+      });
+
+      test('removes a comment when its author deletes it live', () async {
+        final bloc = createBloc()..add(const CommentsLoadRequested());
+        addTearDown(bloc.close);
+        await pumpEventQueue();
+        expect(bloc.state.commentsById.keys, equals([authored.id]));
+
+        deletions.add(
+          CommentDeletion(
+            commentId: authored.id,
+            requesterPubkey: validId('a1'),
+          ),
+        );
+        await pumpEventQueue();
+
+        expect(bloc.state.commentsById, isEmpty);
+      });
+
+      test('stops watching deletions when closed', () async {
+        final bloc = createBloc()..add(const CommentsLoadRequested());
+        await pumpEventQueue();
+        expect(deletions.hasListener, isTrue);
+
+        await bloc.close();
+
+        expect(deletions.hasListener, isFalse);
+      });
+    });
+
+    group('author deletions found after loading', () {
+      final deleted = makeComment(validId('deleted'));
+      final kept = makeComment(validId('kept'));
+
+      blocTest<CommentsListBloc, CommentsListState>(
+        'removes them once the first page shows',
+        setUp: () {
+          when(
+            () => mockCommentsRepository.loadComments(
+              rootEventId: any(named: 'rootEventId'),
+              rootEventKind: any(named: 'rootEventKind'),
+              rootAddressableId: any(named: 'rootAddressableId'),
+              limit: any(named: 'limit'),
+            ),
+          ).thenAnswer(
+            (_) async => CommentThread(
+              rootEventId: validId('root'),
+              comments: [deleted, kept],
+              totalCount: 2,
+              commentCache: {deleted.id: deleted, kept.id: kept},
+            ),
+          );
+          when(
+            () => mockCommentsRepository.findAuthorDeletedComments(any()),
+          ).thenAnswer((_) async => {deleted.id});
+        },
+        build: createBloc,
+        act: (b) => b.add(const CommentsLoadRequested()),
+        expect: () => [
+          isA<CommentsListState>().having(
+            (s) => s.status,
+            'status',
+            CommentsStatus.loading,
+          ),
+          isA<CommentsListState>()
+              .having((s) => s.status, 'status', CommentsStatus.success)
+              .having(
+                (s) => s.commentsById.keys,
+                'ids',
+                unorderedEquals([deleted.id, kept.id]),
+              ),
+          isA<CommentsListState>().having(
+            (s) => s.commentsById.keys,
+            'ids',
+            [kept.id],
+          ),
+        ],
+      );
+
+      blocTest<CommentsListBloc, CommentsListState>(
+        'removes them from a page loaded with load more',
+        setUp: () {
+          when(
+            () => mockCommentsRepository.loadComments(
+              rootEventId: any(named: 'rootEventId'),
+              rootEventKind: any(named: 'rootEventKind'),
+              rootAddressableId: any(named: 'rootAddressableId'),
+              limit: any(named: 'limit'),
+              before: any(named: 'before'),
+            ),
+          ).thenAnswer(
+            (_) async => CommentThread(
+              rootEventId: validId('root'),
+              comments: [deleted],
+              totalCount: 1,
+              commentCache: {deleted.id: deleted},
+            ),
+          );
+          when(
+            () => mockCommentsRepository.findAuthorDeletedComments(any()),
+          ).thenAnswer((_) async => {deleted.id});
+        },
+        build: createBloc,
+        seed: () => CommentsListState(
+          status: CommentsStatus.success,
+          commentsById: {kept.id: kept},
+        ),
+        act: (b) => b.add(const CommentsLoadMoreRequested()),
+        verify: (b) {
+          expect(b.state.commentsById.keys, equals([kept.id]));
         },
       );
     });

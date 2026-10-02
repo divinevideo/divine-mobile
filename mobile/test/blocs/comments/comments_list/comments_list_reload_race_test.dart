@@ -59,6 +59,12 @@ void main() {
         controllers.add(controller);
         return controller.stream;
       });
+      when(
+        () => repo.watchCommentDeletions(
+          rootEventId: any(named: 'rootEventId'),
+          includeVideoReplies: any(named: 'includeVideoReplies'),
+        ),
+      ).thenAnswer((_) => const Stream<CommentDeletion>.empty());
       addTearDown(() async {
         for (final controller in controllers) {
           if (!controller.isClosed) await controller.close();

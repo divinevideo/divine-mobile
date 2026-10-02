@@ -102,6 +102,14 @@ final class CommentRemovedFromStore extends CommentsListEvent {
   final String commentId;
 }
 
+/// A live NIP-09 deletion request named a comment. The comment is removed only
+/// when the request applies to it, that is when its author signed it.
+final class CommentDeletionReceived extends CommentsListEvent {
+  const CommentDeletionReceived(this.deletion);
+
+  final CommentDeletion deletion;
+}
+
 /// Remove every comment authored by [authorPubkey] (post-block cleanup).
 final class CommentsRemovedByAuthorFromStore extends CommentsListEvent {
   const CommentsRemovedByAuthorFromStore(this.authorPubkey);

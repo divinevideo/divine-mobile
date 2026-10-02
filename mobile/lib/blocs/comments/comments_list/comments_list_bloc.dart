@@ -55,6 +55,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     on<CommentReplacedInStore>(_onCommentReplacedInStore);
     on<CommentRemovedFromStore>(_onCommentRemovedFromStore);
     on<CommentsRemovedByAuthorFromStore>(_onCommentsRemovedByAuthorFromStore);
+    on<CommentDeletionReceived>(_onCommentDeletionReceived);
   }
 
   /// Page size for comment loading.
@@ -72,6 +73,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
   final CommentsRepository _commentsRepository;
   final bool _includeVideoReplies;
   StreamSubscription<Comment>? _commentStreamSubscription;
+  StreamSubscription<CommentDeletion>? _commentDeletionSubscription;
 
   /// Records a [CommentsRepositoryException] in the unified log (matrix-NO,
   /// stays out of Crashlytics — see `rules/error_handling.md`).
@@ -143,6 +145,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         ),
       );
       await _startWatchingComments();
+      await _removeAuthorDeletedComments(thread.comments, emit);
     } on CommentsRepositoryException catch (e, stackTrace) {
       // *FailedException + relay timeouts are matrix-NO (API/domain +
       // Network/IO). addError logs without flagging Reportable so they stay
@@ -232,6 +235,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
           replyCountsByCommentId: computeReplyCounts(allCommentsById),
         ),
       );
+      await _removeAuthorDeletedComments(thread.comments, emit);
     } on CommentsRepositoryException catch (e, stackTrace) {
       _logRepoFailure(e, stackTrace, 'Error loading more comments');
       emit(
@@ -462,6 +466,38 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     );
   }
 
+  void _onCommentDeletionReceived(
+    CommentDeletionReceived event,
+    Emitter<CommentsListState> emit,
+  ) {
+    final comment = state.commentsById[event.deletion.commentId];
+    if (comment == null || !event.deletion.appliesTo(comment)) return;
+    _emitStore(
+      emit,
+      Map<String, Comment>.from(state.commentsById)..remove(comment.id),
+    );
+  }
+
+  /// Removes the [comments] whose author asked for their deletion.
+  ///
+  /// Runs after the page is on screen: a relay can still serve a comment its
+  /// author deleted (#7048), and the lookup that finds it waits on a relay.
+  Future<void> _removeAuthorDeletedComments(
+    List<Comment> comments,
+    Emitter<CommentsListState> emit,
+  ) async {
+    if (comments.isEmpty) return;
+    final deleted = await _commentsRepository.findAuthorDeletedComments(
+      comments,
+    );
+    if (deleted.isEmpty) return;
+    _emitStore(
+      emit,
+      Map<String, Comment>.from(state.commentsById)
+        ..removeWhere((id, _) => deleted.contains(id)),
+    );
+  }
+
   /// Starts the real-time comment subscription.
   ///
   /// Called from [_onLoadRequested] after the initial load so the REST-backed
@@ -476,6 +512,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     // subscription assigned over and never cancelled. Pinned by
     // comments_list_reload_race_test.dart.
     unawaited(_commentStreamSubscription?.cancel());
+    unawaited(_commentDeletionSubscription?.cancel());
 
     try {
       final stream = _commentsRepository.watchComments(
@@ -502,6 +539,24 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
           );
         },
       );
+
+      _commentDeletionSubscription = _commentsRepository
+          .watchCommentDeletions(
+            rootEventId: state.rootEventId,
+            includeVideoReplies: _includeVideoReplies,
+          )
+          .listen(
+            (deletion) {
+              if (!isClosed) add(CommentDeletionReceived(deletion));
+            },
+            onError: (Object e) {
+              Log.warning(
+                'Comment deletion watch error: $e',
+                name: 'CommentsListBloc',
+                category: LogCategory.ui,
+              );
+            },
+          );
     } on CommentsRepositoryException catch (e, stackTrace) {
       _logRepoFailure(e, stackTrace, 'Failed to start watching comments');
     } catch (e, stackTrace) {
@@ -517,6 +572,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
   @override
   Future<void> close() async {
     await _commentStreamSubscription?.cancel();
+    await _commentDeletionSubscription?.cancel();
     await _commentsRepository.stopWatchingComments();
     return super.close();
   }
