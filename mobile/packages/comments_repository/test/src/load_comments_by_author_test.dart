@@ -26,6 +26,7 @@ void main() {
 
     setUpAll(() {
       registerFallbackValue(<Filter>[]);
+      registerFallbackValue(Duration.zero);
     });
 
     setUp(() {
@@ -36,7 +37,8 @@ void main() {
 
     test('returns empty list when no comments found', () async {
       when(
-        () => mockNostrClient.queryEvents(any()),
+        () =>
+            mockNostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => []);
 
       final result = await repository.loadCommentsByAuthor(
@@ -48,7 +50,8 @@ void main() {
 
     test('queries text comments only by default', () async {
       when(
-        () => mockNostrClient.queryEvents(any()),
+        () =>
+            mockNostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => []);
 
       await repository.loadCommentsByAuthor(
@@ -70,7 +73,8 @@ void main() {
 
     test('includes video replies when includeVideoReplies is true', () async {
       when(
-        () => mockNostrClient.queryEvents(any()),
+        () =>
+            mockNostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => []);
 
       await repository.loadCommentsByAuthor(
@@ -89,7 +93,8 @@ void main() {
 
     test('applies pagination cursor via until parameter', () async {
       when(
-        () => mockNostrClient.queryEvents(any()),
+        () =>
+            mockNostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => []);
 
       final before = DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000);
@@ -118,7 +123,8 @@ void main() {
       );
 
       when(
-        () => mockNostrClient.queryEvents(any()),
+        () =>
+            mockNostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => [event]);
 
       final result = await repository.loadCommentsByAuthor(
@@ -153,7 +159,8 @@ void main() {
       );
 
       when(
-        () => mockNostrClient.queryEvents(any()),
+        () =>
+            mockNostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => [event]);
 
       final result = await repository.loadCommentsByAuthor(
@@ -214,7 +221,10 @@ void main() {
         );
 
         when(
-          () => mockNostrClient.queryEvents(any()),
+          () => mockNostrClient.queryEvents(
+            any(),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer(
           (_) async => [olderTextComment, videoComment, textComment],
         );
@@ -255,7 +265,8 @@ void main() {
       );
 
       when(
-        () => mockNostrClient.queryEvents(any()),
+        () =>
+            mockNostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => [malformedEvent, validEvent]);
 
       final result = await repository.loadCommentsByAuthor(
@@ -279,7 +290,8 @@ void main() {
       )..id = 'malformed2';
 
       when(
-        () => mockNostrClient.queryEvents(any()),
+        () =>
+            mockNostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => [malformedEvent]);
 
       final result = await repository.loadCommentsByAuthor(
@@ -299,7 +311,8 @@ void main() {
       )..id = 'malformed3';
 
       when(
-        () => mockNostrClient.queryEvents(any()),
+        () =>
+            mockNostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => [malformedEvent]);
 
       final result = await repository.loadCommentsByAuthor(
@@ -313,7 +326,10 @@ void main() {
       'throws LoadCommentsByAuthorFailedException on query failure',
       () async {
         when(
-          () => mockNostrClient.queryEvents(any()),
+          () => mockNostrClient.queryEvents(
+            any(),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenThrow(Exception('Network error'));
 
         expect(

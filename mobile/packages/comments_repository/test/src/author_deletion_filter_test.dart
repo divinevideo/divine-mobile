@@ -42,6 +42,7 @@ void main() {
 
     setUpAll(() {
       registerFallbackValue(<Filter>[]);
+      registerFallbackValue(Duration.zero);
       registerFallbackValue(Event(authorPubkey, _commentKind, const [], ''));
     });
 
@@ -53,7 +54,9 @@ void main() {
       deletionLookups = [];
       // Comment reads get relayComments; the kind-5 lookup gets
       // deletionRequests and is recorded so a test can inspect its filter.
-      when(() => nostrClient.queryEvents(any())).thenAnswer((invocation) async {
+      when(
+        () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+      ).thenAnswer((invocation) async {
         final filters = invocation.positionalArguments.first as List<Filter>;
         if (filters.first.kinds?.contains(EventKind.eventDeletion) ?? false) {
           deletionLookups.add(filters.first);
@@ -209,7 +212,9 @@ void main() {
       });
 
       test('returns nothing when the lookup fails', () async {
-        when(() => nostrClient.queryEvents(any())).thenAnswer((_) async {
+        when(
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer((_) async {
           throw TimeoutException('no relay answered the deletion lookup');
         });
 
@@ -280,7 +285,9 @@ void main() {
             comment(i.toRadixString(16).padLeft(64, '0')),
         ];
         final lastId = comments.last.id;
-        when(() => nostrClient.queryEvents(any())).thenAnswer((
+        when(
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer((
           invocation,
         ) async {
           final filters = invocation.positionalArguments.first as List<Filter>;
@@ -315,7 +322,9 @@ void main() {
       test('asks about one batch at a time', () async {
         var inFlight = 0;
         var mostInFlight = 0;
-        when(() => nostrClient.queryEvents(any())).thenAnswer((_) async {
+        when(
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer((_) async {
           inFlight++;
           if (inFlight > mostInFlight) mostInFlight = inFlight;
           await pumpEventQueue();
@@ -342,6 +351,17 @@ void main() {
 
         expect(deleted, equals({deletedId}));
         expect(deletionLookups.single.authors, equals([authorPubkey]));
+      });
+
+      test('waits at most two seconds for relays', () async {
+        await repository.findAuthorDeletedComments([comment(deletedId)]);
+
+        verify(
+          () => nostrClient.queryEvents(
+            any(),
+            timeout: const Duration(seconds: 2),
+          ),
+        ).called(1);
       });
 
       test('does not look anything up for no comments', () async {

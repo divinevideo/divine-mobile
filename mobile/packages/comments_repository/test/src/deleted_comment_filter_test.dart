@@ -40,6 +40,7 @@ void main() {
 
     setUpAll(() {
       registerFallbackValue(<Filter>[]);
+      registerFallbackValue(Duration.zero);
       registerFallbackValue(_FakeEvent());
     });
 
@@ -52,7 +53,7 @@ void main() {
         return PublishSuccess(event: event);
       });
       when(
-        () => nostrClient.queryEvents(any()),
+        () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => <Event>[]);
       when(() => funnelcakeClient.isAvailable).thenReturn(false);
       repository = CommentsRepository(
@@ -162,7 +163,7 @@ void main() {
 
       test('drops a deleted comment a relay still returns', () async {
         when(
-          () => nostrClient.queryEvents(any()),
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
         ).thenAnswer(
           (_) async => [relayComment(deletedId), relayComment(keptId)],
         );
@@ -209,7 +210,7 @@ void main() {
     group('loadCommentsByAuthor', () {
       test('drops a deleted comment a relay still returns', () async {
         when(
-          () => nostrClient.queryEvents(any()),
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
         ).thenAnswer(
           (_) async => [relayComment(deletedId), relayComment(keptId)],
         );

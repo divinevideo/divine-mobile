@@ -163,6 +163,10 @@ class CommentsRepository {
   /// does not become one oversized relay filter.
   static const _deletionLookupBatchSize = 50;
 
+  /// How long one deletion lookup waits for relays. Requests already in the
+  /// local cache answer at once; past this, the comments stay as shown.
+  static const _deletionLookupTimeout = Duration(seconds: 2);
+
   /// The most comments [_deletionRequesters] remembers requests for; the
   /// oldest are forgotten first. A forgotten request is still found by
   /// [findAuthorDeletedComments].
@@ -1045,7 +1049,7 @@ class CommentsRepository {
           authors: {for (final id in ids) authorById[id]!}.toList(),
           e: ids,
         ),
-      ]);
+      ], timeout: _deletionLookupTimeout);
     } on Exception {
       // Fail open: without an answer the comments stay as their source sent.
       return const <String>{};
