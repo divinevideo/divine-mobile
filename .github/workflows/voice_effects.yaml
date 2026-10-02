@@ -1,0 +1,27 @@
+# ABOUTME: CI workflow for the voice_effects package.
+# ABOUTME: Runs tests, formatting, and analysis only when voice_effects files change.
+
+name: Voice Effects CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/packages/voice_effects/**"
+      - ".github/workflows/voice_effects.yaml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "mobile/packages/voice_effects/**"
+      - ".github/workflows/voice_effects.yaml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@v1
+    with:
+      working_directory: "mobile/packages/voice_effects"
+      flutter_version: "3.47.2"

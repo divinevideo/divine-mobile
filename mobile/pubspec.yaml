@@ -85,6 +85,7 @@ workspace:
   - packages/verifier_client
   - packages/video_event_cache
   - packages/videos_repository
+  - packages/voice_effects
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -325,6 +326,9 @@ dependencies:
 
   # Time Formatter - Locale-aware timestamp formatting
   time_formatter:
+
+  # Voice Effects - offline voice-over processing (pitch, robot, echo, denoise)
+  voice_effects:
 
   # Divine UI - Shared UI components
   divine_ui:
