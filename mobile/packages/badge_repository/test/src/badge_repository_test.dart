@@ -260,6 +260,43 @@ void main() {
       );
     });
 
+    test('reads curated definitions from the public relay', () async {
+      final publicRepository = BadgeRepository(
+        nostrClient: nostrClient,
+        sharedPreferences: preferences,
+        currentPubkey: () => null,
+        signEvent: ({required kind, required content, required tags}) async =>
+            null,
+        definitionRelayUrl: 'wss://relay.example',
+      );
+      when(
+        () => nostrClient.readAllEvents(
+          any(),
+          tempRelays: ['wss://relay.example'],
+        ),
+      ).thenAnswer(
+        (_) async => PagedQueryResult(
+          events: [
+            _definitionEvent(pubkey: _pubkey(2), dTag: 'daily', name: 'Daily'),
+          ],
+          isComplete: true,
+          pages: 1,
+        ),
+      );
+
+      final definitions = await publicRepository.loadDefinitionsByIssuers([
+        _pubkey(2),
+      ]);
+
+      expect(definitions.single.dTag, 'daily');
+      verify(
+        () => nostrClient.readAllEvents(
+          any(),
+          tempRelays: ['wss://relay.example'],
+        ),
+      ).called(1);
+    });
+
     group('loadSubscribedHolders', () {
       test('is empty without a signed-in account', () async {
         final signedOut = BadgeRepository(
