@@ -8166,6 +8166,39 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorEffectVignette => '暗角';
 
   @override
+  String get videoEditorEffectBlockGlitch => '方块故障';
+
+  @override
+  String get videoEditorEffectFilmGrain => '胶片颗粒';
+
+  @override
+  String get videoEditorEffectSignalInterference => '信号干扰';
+
+  @override
+  String get videoEditorEffectCrt => 'CRT';
+
+  @override
+  String get videoEditorEffectShake => '抖动';
+
+  @override
+  String get videoEditorEffectZoomPulse => '缩放脉冲';
+
+  @override
+  String get videoEditorEffectMirror => '镜像';
+
+  @override
+  String get videoEditorEffectKaleidoscope => '万花筒';
+
+  @override
+  String get videoEditorEffectSplitScreen => '分屏';
+
+  @override
+  String get videoEditorEffectWave => '波浪';
+
+  @override
+  String get videoEditorEffectGlow => '辉光';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       '一次只能用一个闪烁效果。闪烁太多可能会伤害对闪光敏感的人，所以我们在这里替换了另一个。';
 

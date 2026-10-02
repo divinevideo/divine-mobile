@@ -8695,6 +8695,39 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorEffectVignette => 'Vignet';
 
   @override
+  String get videoEditorEffectBlockGlitch => 'Blokglitch';
+
+  @override
+  String get videoEditorEffectFilmGrain => 'Filmkorrel';
+
+  @override
+  String get videoEditorEffectSignalInterference => 'Storing';
+
+  @override
+  String get videoEditorEffectCrt => 'CRT';
+
+  @override
+  String get videoEditorEffectShake => 'Schudden';
+
+  @override
+  String get videoEditorEffectZoomPulse => 'Zoompuls';
+
+  @override
+  String get videoEditorEffectMirror => 'Spiegel';
+
+  @override
+  String get videoEditorEffectKaleidoscope => 'Caleidoscoop';
+
+  @override
+  String get videoEditorEffectSplitScreen => 'Gesplitst scherm';
+
+  @override
+  String get videoEditorEffectWave => 'Golf';
+
+  @override
+  String get videoEditorEffectGlow => 'Gloed';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Eén knipperend effect tegelijk. Te veel knipperen kan schadelijk zijn voor mensen die er gevoelig voor zijn, dus hebben we het andere hier vervangen.';
 

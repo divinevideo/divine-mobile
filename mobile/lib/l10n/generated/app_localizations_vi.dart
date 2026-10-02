@@ -8622,6 +8622,39 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectVignette => 'Làm tối viền';
 
   @override
+  String get videoEditorEffectBlockGlitch => 'Glitch khối';
+
+  @override
+  String get videoEditorEffectFilmGrain => 'Hạt phim';
+
+  @override
+  String get videoEditorEffectSignalInterference => 'Nhiễu sóng';
+
+  @override
+  String get videoEditorEffectCrt => 'CRT';
+
+  @override
+  String get videoEditorEffectShake => 'Rung lắc';
+
+  @override
+  String get videoEditorEffectZoomPulse => 'Phóng to nhịp';
+
+  @override
+  String get videoEditorEffectMirror => 'Gương';
+
+  @override
+  String get videoEditorEffectKaleidoscope => 'Kính vạn hoa';
+
+  @override
+  String get videoEditorEffectSplitScreen => 'Chia màn hình';
+
+  @override
+  String get videoEditorEffectWave => 'Sóng';
+
+  @override
+  String get videoEditorEffectGlow => 'Phát sáng';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Mỗi lúc chỉ một hiệu ứng nhấp nháy. Nhấp nháy quá nhiều có thể gây hại cho người nhạy cảm, nên chúng mình đã thay hiệu ứng kia ở đây.';
 

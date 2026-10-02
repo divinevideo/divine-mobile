@@ -14699,6 +14699,72 @@ abstract class AppLocalizations {
   /// **'Vignette'**
   String get videoEditorEffectVignette;
 
+  /// Name of a video effect imitating a damaged video stream ('datamosh'): in short bursts the picture breaks into coarse square blocks, slices slip sideways and the colors split apart. Keep it short; 'glitch' is usually kept as is, like the Glitch effect.
+  ///
+  /// In en, this message translates to:
+  /// **'Block Glitch'**
+  String get videoEditorEffectBlockGlitch;
+
+  /// Name of a video effect: fine, calm grain over the whole picture, like the grain of analog film.
+  ///
+  /// In en, this message translates to:
+  /// **'Film Grain'**
+  String get videoEditorEffectFilmGrain;
+
+  /// Name of a video effect imitating a disturbed TV or radio signal: thin slices of the picture flicker and shift sideways, with bursts of noise. Must read differently from the Static effect (videoEditorEffectTvStatic). Keep it short.
+  ///
+  /// In en, this message translates to:
+  /// **'Interference'**
+  String get videoEditorEffectSignalInterference;
+
+  /// Name of a video effect imitating an old CRT (cathode-ray tube) monitor: strong scanlines and a slight color fringe. CRT is usually kept as is; use the local everyday word for a tube screen only where it is as short.
+  ///
+  /// In en, this message translates to:
+  /// **'CRT'**
+  String get videoEditorEffectCrt;
+
+  /// Name of a video effect: the picture jitters in every direction, like a handheld camera shaking on a bass hit.
+  ///
+  /// In en, this message translates to:
+  /// **'Shake'**
+  String get videoEditorEffectShake;
+
+  /// Name of a video effect: the picture zooms in suddenly twice a second, like a beat, and eases back out. Keep it short.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom Pulse'**
+  String get videoEditorEffectZoomPulse;
+
+  /// Name of a video effect: the right half of the picture is a mirror image of the left half, so the picture is symmetric.
+  ///
+  /// In en, this message translates to:
+  /// **'Mirror'**
+  String get videoEditorEffectMirror;
+
+  /// Name of a video effect: the picture is mirrored into four symmetric parts, like a kaleidoscope.
+  ///
+  /// In en, this message translates to:
+  /// **'Kaleidoscope'**
+  String get videoEditorEffectKaleidoscope;
+
+  /// Name of a video effect: the picture is shown four times, in a 2-by-2 grid.
+  ///
+  /// In en, this message translates to:
+  /// **'Split Screen'**
+  String get videoEditorEffectSplitScreen;
+
+  /// Name of a video effect: the picture ripples, its rows bending sideways along a moving wave, like heat haze or a view through water.
+  ///
+  /// In en, this message translates to:
+  /// **'Wave'**
+  String get videoEditorEffectWave;
+
+  /// Name of a video effect: the bright areas of the picture bloom softly into their surroundings, like stage lights or a sunset. Must read differently from the Brightness adjustment (videoEditorTuneBrightness).
+  ///
+  /// In en, this message translates to:
+  /// **'Glow'**
+  String get videoEditorEffectGlow;
+
   /// Snack bar after a flashing video effect (strobe, negative flash) replaced another flashing effect where the two overlapped on the timeline. Explains, without technical terms, that overlapping flashes can harm people with photosensitivity.
   ///
   /// In en, this message translates to:

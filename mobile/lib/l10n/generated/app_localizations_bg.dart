@@ -8731,6 +8731,39 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEffectVignette => 'Винетка';
 
   @override
+  String get videoEditorEffectBlockGlitch => 'Блоков глич';
+
+  @override
+  String get videoEditorEffectFilmGrain => 'Филмово зърно';
+
+  @override
+  String get videoEditorEffectSignalInterference => 'Смущения';
+
+  @override
+  String get videoEditorEffectCrt => 'CRT';
+
+  @override
+  String get videoEditorEffectShake => 'Тресене';
+
+  @override
+  String get videoEditorEffectZoomPulse => 'Пулсиращ зум';
+
+  @override
+  String get videoEditorEffectMirror => 'Огледало';
+
+  @override
+  String get videoEditorEffectKaleidoscope => 'Калейдоскоп';
+
+  @override
+  String get videoEditorEffectSplitScreen => 'Разделен екран';
+
+  @override
+  String get videoEditorEffectWave => 'Вълна';
+
+  @override
+  String get videoEditorEffectGlow => 'Сияние';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Само един мигащ ефект наведнъж. Прекаленото мигане може да навреди на чувствителни хора, затова тук заменихме другия.';
 

@@ -45,6 +45,17 @@ void main() {
         l10n.videoEditorEffectTvStatic,
         l10n.videoEditorEffectPixelate,
         l10n.videoEditorEffectPixelPulse,
+        l10n.videoEditorEffectBlockGlitch,
+        l10n.videoEditorEffectFilmGrain,
+        l10n.videoEditorEffectSignalInterference,
+        l10n.videoEditorEffectCrt,
+        l10n.videoEditorEffectShake,
+        l10n.videoEditorEffectZoomPulse,
+        l10n.videoEditorEffectMirror,
+        l10n.videoEditorEffectKaleidoscope,
+        l10n.videoEditorEffectSplitScreen,
+        l10n.videoEditorEffectWave,
+        l10n.videoEditorEffectGlow,
       ]) {
         await tester.scrollUntilVisible(
           find.text(label),

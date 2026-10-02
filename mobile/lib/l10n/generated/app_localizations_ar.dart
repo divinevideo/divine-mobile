@@ -8621,6 +8621,39 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorEffectVignette => 'تعتيم الحواف';
 
   @override
+  String get videoEditorEffectBlockGlitch => 'تشويش مربعات';
+
+  @override
+  String get videoEditorEffectFilmGrain => 'حبيبات الفيلم';
+
+  @override
+  String get videoEditorEffectSignalInterference => 'تداخل الإشارة';
+
+  @override
+  String get videoEditorEffectCrt => 'شاشة CRT';
+
+  @override
+  String get videoEditorEffectShake => 'اهتزاز';
+
+  @override
+  String get videoEditorEffectZoomPulse => 'نبض التكبير';
+
+  @override
+  String get videoEditorEffectMirror => 'مرآة';
+
+  @override
+  String get videoEditorEffectKaleidoscope => 'مشكال';
+
+  @override
+  String get videoEditorEffectSplitScreen => 'شاشة مقسّمة';
+
+  @override
+  String get videoEditorEffectWave => 'موجة';
+
+  @override
+  String get videoEditorEffectGlow => 'توهج';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'تأثير وامض واحد في كل مرة. الوميض الكثير قد يؤذي الأشخاص الحساسين له، لذلك استبدلنا التأثير الآخر هنا.';
 

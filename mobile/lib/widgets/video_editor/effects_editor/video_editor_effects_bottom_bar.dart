@@ -151,18 +151,31 @@ class _EffectItem extends StatelessWidget {
 }
 
 /// The localized name of [type], or of "no effect" for `null`.
-String videoEffectLabel(BuildContext context, VideoEffectType? type) =>
-    switch (type) {
-      null => context.l10n.videoEditorEffectNone,
-      VideoEffectType.glitch => context.l10n.videoEditorEffectGlitch,
-      VideoEffectType.rgbSplit => context.l10n.videoEditorEffectRgbSplit,
-      VideoEffectType.vhs => context.l10n.videoEditorEffectVhs,
-      VideoEffectType.tvStatic => context.l10n.videoEditorEffectTvStatic,
-      VideoEffectType.oldFilm => context.l10n.videoEditorEffectOldFilm,
-      VideoEffectType.pixelate => context.l10n.videoEditorEffectPixelate,
-      VideoEffectType.pixelPulse => context.l10n.videoEditorEffectPixelPulse,
-      VideoEffectType.strobe => context.l10n.videoEditorEffectStrobe,
-      VideoEffectType.negativeFlash =>
-        context.l10n.videoEditorEffectNegativeFlash,
-      VideoEffectType.vignette => context.l10n.videoEditorEffectVignette,
-    };
+String videoEffectLabel(
+  BuildContext context,
+  VideoEffectType? type,
+) => switch (type) {
+  null => context.l10n.videoEditorEffectNone,
+  VideoEffectType.glitch => context.l10n.videoEditorEffectGlitch,
+  VideoEffectType.rgbSplit => context.l10n.videoEditorEffectRgbSplit,
+  VideoEffectType.vhs => context.l10n.videoEditorEffectVhs,
+  VideoEffectType.tvStatic => context.l10n.videoEditorEffectTvStatic,
+  VideoEffectType.oldFilm => context.l10n.videoEditorEffectOldFilm,
+  VideoEffectType.pixelate => context.l10n.videoEditorEffectPixelate,
+  VideoEffectType.pixelPulse => context.l10n.videoEditorEffectPixelPulse,
+  VideoEffectType.strobe => context.l10n.videoEditorEffectStrobe,
+  VideoEffectType.negativeFlash => context.l10n.videoEditorEffectNegativeFlash,
+  VideoEffectType.vignette => context.l10n.videoEditorEffectVignette,
+  VideoEffectType.blockGlitch => context.l10n.videoEditorEffectBlockGlitch,
+  VideoEffectType.filmGrain => context.l10n.videoEditorEffectFilmGrain,
+  VideoEffectType.signalInterference =>
+    context.l10n.videoEditorEffectSignalInterference,
+  VideoEffectType.crt => context.l10n.videoEditorEffectCrt,
+  VideoEffectType.shake => context.l10n.videoEditorEffectShake,
+  VideoEffectType.zoomPulse => context.l10n.videoEditorEffectZoomPulse,
+  VideoEffectType.mirror => context.l10n.videoEditorEffectMirror,
+  VideoEffectType.kaleidoscope => context.l10n.videoEditorEffectKaleidoscope,
+  VideoEffectType.splitScreen => context.l10n.videoEditorEffectSplitScreen,
+  VideoEffectType.wave => context.l10n.videoEditorEffectWave,
+  VideoEffectType.glow => context.l10n.videoEditorEffectGlow,
+};

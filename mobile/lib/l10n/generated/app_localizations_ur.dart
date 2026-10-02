@@ -8655,6 +8655,39 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectVignette => 'وِگنیٹ';
 
   @override
+  String get videoEditorEffectBlockGlitch => 'بلاک گلچ';
+
+  @override
+  String get videoEditorEffectFilmGrain => 'فلم گرین';
+
+  @override
+  String get videoEditorEffectSignalInterference => 'سگنل میں خلل';
+
+  @override
+  String get videoEditorEffectCrt => 'CRT';
+
+  @override
+  String get videoEditorEffectShake => 'جھٹکا';
+
+  @override
+  String get videoEditorEffectZoomPulse => 'زوم پلس';
+
+  @override
+  String get videoEditorEffectMirror => 'آئینہ';
+
+  @override
+  String get videoEditorEffectKaleidoscope => 'کیلیڈوسکوپ';
+
+  @override
+  String get videoEditorEffectSplitScreen => 'اسپلٹ اسکرین';
+
+  @override
+  String get videoEditorEffectWave => 'لہر';
+
+  @override
+  String get videoEditorEffectGlow => 'دمک';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'ایک وقت میں صرف ایک ٹمٹماتا ایفیکٹ۔ زیادہ ٹمٹماہٹ حساس لوگوں کو نقصان پہنچا سکتی ہے، اس لیے ہم نے یہاں دوسرے کو بدل دیا۔';
 

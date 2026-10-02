@@ -8851,6 +8851,39 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorEffectVignette => 'Vinietă';
 
   @override
+  String get videoEditorEffectBlockGlitch => 'Glitch pe blocuri';
+
+  @override
+  String get videoEditorEffectFilmGrain => 'Granulație de film';
+
+  @override
+  String get videoEditorEffectSignalInterference => 'Interferențe';
+
+  @override
+  String get videoEditorEffectCrt => 'CRT';
+
+  @override
+  String get videoEditorEffectShake => 'Tremurat';
+
+  @override
+  String get videoEditorEffectZoomPulse => 'Zoom pulsat';
+
+  @override
+  String get videoEditorEffectMirror => 'Oglindă';
+
+  @override
+  String get videoEditorEffectKaleidoscope => 'Caleidoscop';
+
+  @override
+  String get videoEditorEffectSplitScreen => 'Ecran împărțit';
+
+  @override
+  String get videoEditorEffectWave => 'Val';
+
+  @override
+  String get videoEditorEffectGlow => 'Strălucire';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Un singur efect intermitent odată. Prea multe clipiri pot face rău persoanelor sensibile, așa că l-am înlocuit aici pe celălalt.';
 

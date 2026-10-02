@@ -8460,6 +8460,39 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectVignette => 'ቪኜት';
 
   @override
+  String get videoEditorEffectBlockGlitch => 'ብሎክ ግሊች';
+
+  @override
+  String get videoEditorEffectFilmGrain => 'የፊልም ጥራጥሬ';
+
+  @override
+  String get videoEditorEffectSignalInterference => 'የሲግናል መቆራረጥ';
+
+  @override
+  String get videoEditorEffectCrt => 'CRT';
+
+  @override
+  String get videoEditorEffectShake => 'መንቀጥቀጥ';
+
+  @override
+  String get videoEditorEffectZoomPulse => 'የማጉላት ምት';
+
+  @override
+  String get videoEditorEffectMirror => 'መስታወት';
+
+  @override
+  String get videoEditorEffectKaleidoscope => 'ካላይዶስኮፕ';
+
+  @override
+  String get videoEditorEffectSplitScreen => 'የተከፈለ ስክሪን';
+
+  @override
+  String get videoEditorEffectWave => 'ሞገድ';
+
+  @override
+  String get videoEditorEffectGlow => 'ፍካት';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'አንድ ብልጭ ድርግም የሚል ኢፌክት በአንድ ጊዜ። ብዙ ብልጭታ ለሚነኩ ሰዎች ሊጎዳ ይችላል፣ ስለዚህ ሌላውን እዚህ ተክተነዋል።';
 

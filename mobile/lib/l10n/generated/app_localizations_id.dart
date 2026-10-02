@@ -8573,6 +8573,39 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorEffectVignette => 'Vignet';
 
   @override
+  String get videoEditorEffectBlockGlitch => 'Glitch Blok';
+
+  @override
+  String get videoEditorEffectFilmGrain => 'Butiran Film';
+
+  @override
+  String get videoEditorEffectSignalInterference => 'Interferensi';
+
+  @override
+  String get videoEditorEffectCrt => 'CRT';
+
+  @override
+  String get videoEditorEffectShake => 'Guncang';
+
+  @override
+  String get videoEditorEffectZoomPulse => 'Denyut Zoom';
+
+  @override
+  String get videoEditorEffectMirror => 'Cermin';
+
+  @override
+  String get videoEditorEffectKaleidoscope => 'Kaleidoskop';
+
+  @override
+  String get videoEditorEffectSplitScreen => 'Layar Terbagi';
+
+  @override
+  String get videoEditorEffectWave => 'Gelombang';
+
+  @override
+  String get videoEditorEffectGlow => 'Pendar';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Satu efek berkedip dalam satu waktu. Kedipan berlebihan bisa membahayakan orang yang sensitif, jadi kami mengganti efek lainnya di sini.';
 

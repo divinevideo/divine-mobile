@@ -8575,6 +8575,39 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorEffectVignette => 'Vinyet';
 
   @override
+  String get videoEditorEffectBlockGlitch => 'Blok Glitch';
+
+  @override
+  String get videoEditorEffectFilmGrain => 'Film Greni';
+
+  @override
+  String get videoEditorEffectSignalInterference => 'Sinyal Bozulması';
+
+  @override
+  String get videoEditorEffectCrt => 'CRT';
+
+  @override
+  String get videoEditorEffectShake => 'Sarsıntı';
+
+  @override
+  String get videoEditorEffectZoomPulse => 'Zoom Nabzı';
+
+  @override
+  String get videoEditorEffectMirror => 'Ayna';
+
+  @override
+  String get videoEditorEffectKaleidoscope => 'Kaleydoskop';
+
+  @override
+  String get videoEditorEffectSplitScreen => 'Bölünmüş Ekran';
+
+  @override
+  String get videoEditorEffectWave => 'Dalga';
+
+  @override
+  String get videoEditorEffectGlow => 'Parıltı';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Aynı anda tek bir yanıp sönen efekt. Fazla yanıp sönme hassas kişilere zarar verebilir, bu yüzden buradaki diğerini değiştirdik.';
 

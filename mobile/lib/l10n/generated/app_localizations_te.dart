@@ -8904,6 +8904,39 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectVignette => 'విగ్నెట్';
 
   @override
+  String get videoEditorEffectBlockGlitch => 'బ్లాక్ గ్లిచ్';
+
+  @override
+  String get videoEditorEffectFilmGrain => 'ఫిల్మ్ గ్రెయిన్';
+
+  @override
+  String get videoEditorEffectSignalInterference => 'సిగ్నల్ అంతరాయం';
+
+  @override
+  String get videoEditorEffectCrt => 'CRT';
+
+  @override
+  String get videoEditorEffectShake => 'షేక్';
+
+  @override
+  String get videoEditorEffectZoomPulse => 'జూమ్ పల్స్';
+
+  @override
+  String get videoEditorEffectMirror => 'అద్దం';
+
+  @override
+  String get videoEditorEffectKaleidoscope => 'కలైడోస్కోప్';
+
+  @override
+  String get videoEditorEffectSplitScreen => 'స్ప్లిట్ స్క్రీన్';
+
+  @override
+  String get videoEditorEffectWave => 'వేవ్';
+
+  @override
+  String get videoEditorEffectGlow => 'మెరుపు';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'ఒకసారి ఒక మెరిసే ఎఫెక్ట్ మాత్రమే. ఎక్కువ మెరుపులు సున్నితమైన వారికి హాని చేయవచ్చు, అందుకే ఇక్కడ మరొకదాన్ని మార్చాం.';
 

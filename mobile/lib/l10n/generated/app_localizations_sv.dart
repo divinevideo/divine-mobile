@@ -8652,6 +8652,39 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorEffectVignette => 'Vinjett';
 
   @override
+  String get videoEditorEffectBlockGlitch => 'Blockglitch';
+
+  @override
+  String get videoEditorEffectFilmGrain => 'Filmkorn';
+
+  @override
+  String get videoEditorEffectSignalInterference => 'Störningar';
+
+  @override
+  String get videoEditorEffectCrt => 'CRT';
+
+  @override
+  String get videoEditorEffectShake => 'Skak';
+
+  @override
+  String get videoEditorEffectZoomPulse => 'Zoompuls';
+
+  @override
+  String get videoEditorEffectMirror => 'Spegel';
+
+  @override
+  String get videoEditorEffectKaleidoscope => 'Kalejdoskop';
+
+  @override
+  String get videoEditorEffectSplitScreen => 'Delad skärm';
+
+  @override
+  String get videoEditorEffectWave => 'Våg';
+
+  @override
+  String get videoEditorEffectGlow => 'Glöd';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'En blinkande effekt i taget. För mycket blinkande kan skada känsliga personer, så vi har ersatt den andra här.';
 

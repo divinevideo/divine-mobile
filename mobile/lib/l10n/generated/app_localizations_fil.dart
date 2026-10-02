@@ -8713,6 +8713,39 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorEffectVignette => 'Vignette';
 
   @override
+  String get videoEditorEffectBlockGlitch => 'Block Glitch';
+
+  @override
+  String get videoEditorEffectFilmGrain => 'Film Grain';
+
+  @override
+  String get videoEditorEffectSignalInterference => 'Interference';
+
+  @override
+  String get videoEditorEffectCrt => 'CRT';
+
+  @override
+  String get videoEditorEffectShake => 'Shake';
+
+  @override
+  String get videoEditorEffectZoomPulse => 'Zoom Pulse';
+
+  @override
+  String get videoEditorEffectMirror => 'Mirror';
+
+  @override
+  String get videoEditorEffectKaleidoscope => 'Kaleidoscope';
+
+  @override
+  String get videoEditorEffectSplitScreen => 'Split Screen';
+
+  @override
+  String get videoEditorEffectWave => 'Wave';
+
+  @override
+  String get videoEditorEffectGlow => 'Glow';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Isang kumikislap na effect lang sa isang pagkakataon. Puwedeng makasama ang sobrang pagkislap sa mga taong sensitibo rito, kaya pinalitan namin ang isa pa dito.';
 
