@@ -90,12 +90,12 @@ void main() {
       tags: commentTags(),
     );
 
-    Event relayComment(String id) => Event(
+    Event relayComment(String id, {int createdAt = 1000}) => Event(
       authorPubkey,
       _commentKind,
       commentTags(),
       'relay',
-      createdAt: 1000,
+      createdAt: createdAt,
     )..id = id;
 
     Comment comment(String id, {String author = authorPubkey}) => Comment(
@@ -469,12 +469,78 @@ void main() {
           deletionRequest(by: authorPubkey, ids: [deletedId]),
         ];
 
-        final comments = await repository.loadCommentsByAuthor(
+        final page = await repository.loadCommentsByAuthor(
           authorPubkey: authorPubkey,
         );
 
-        expect(comments.map((comment) => comment.id), equals([keptId]));
+        expect(page.comments.map((comment) => comment.id), equals([keptId]));
         expect(deletionLookups.single.authors, equals([authorPubkey]));
+      });
+
+      test(
+        'continues from the oldest fetched comment when a full page held a '
+        'deleted one',
+        () async {
+          relayComments = [
+            relayComment(keptId, createdAt: 2000),
+            relayComment(deletedId),
+          ];
+          deletionRequests = [
+            deletionRequest(by: authorPubkey, ids: [deletedId]),
+          ];
+
+          final page = await repository.loadCommentsByAuthor(
+            authorPubkey: authorPubkey,
+            limit: 2,
+          );
+
+          expect(
+            page.comments.map((comment) => comment.id),
+            equals([keptId]),
+          );
+          expect(page.hasMore, isTrue);
+          expect(
+            page.nextCursor,
+            equals(
+              DateTime.fromMillisecondsSinceEpoch(1000 * 1000, isUtc: true),
+            ),
+          );
+        },
+      );
+
+      test(
+        'continues past a full page whose comments were all deleted',
+        () async {
+          relayComments = [relayComment(deletedId)];
+          deletionRequests = [
+            deletionRequest(by: authorPubkey, ids: [deletedId]),
+          ];
+
+          final page = await repository.loadCommentsByAuthor(
+            authorPubkey: authorPubkey,
+            limit: 1,
+          );
+
+          expect(page.comments, isEmpty);
+          expect(
+            page.nextCursor,
+            equals(
+              DateTime.fromMillisecondsSinceEpoch(1000 * 1000, isUtc: true),
+            ),
+          );
+        },
+      );
+
+      test('ends when the relay returned less than a full page', () async {
+        relayComments = [relayComment(keptId)];
+
+        final page = await repository.loadCommentsByAuthor(
+          authorPubkey: authorPubkey,
+          limit: 2,
+        );
+
+        expect(page.hasMore, isFalse);
+        expect(page.nextCursor, isNull);
       });
     });
 
@@ -688,12 +754,12 @@ void main() {
           relayComments = [relayComment(deletedId), relayComment(keptId)];
           await seeDeletionRequest(by: authorPubkey, commentId: deletedId);
 
-          final comments = await repository.loadCommentsByAuthor(
+          final page = await repository.loadCommentsByAuthor(
             authorPubkey: authorPubkey,
           );
 
           expect(deletionLookups, hasLength(1));
-          expect(comments.map((comment) => comment.id), equals([keptId]));
+          expect(page.comments.map((comment) => comment.id), equals([keptId]));
         },
       );
 

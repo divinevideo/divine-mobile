@@ -41,9 +41,9 @@ void main() {
             mockNostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => []);
 
-      final result = await repository.loadCommentsByAuthor(
+      final result = (await repository.loadCommentsByAuthor(
         authorPubkey: testAuthorPubkey,
-      );
+      )).comments;
 
       expect(result, isEmpty);
     });
@@ -127,10 +127,10 @@ void main() {
             mockNostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => [event]);
 
-      final result = await repository.loadCommentsByAuthor(
+      final result = (await repository.loadCommentsByAuthor(
         authorPubkey: testAuthorPubkey,
         includeVideoReplies: true,
-      );
+      )).comments;
 
       expect(result, hasLength(1));
       expect(result.first.content, equals('Great video!'));
@@ -163,10 +163,10 @@ void main() {
             mockNostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => [event]);
 
-      final result = await repository.loadCommentsByAuthor(
+      final result = (await repository.loadCommentsByAuthor(
         authorPubkey: testAuthorPubkey,
         includeVideoReplies: true,
-      );
+      )).comments;
 
       expect(result, hasLength(1));
       expect(result.first.hasVideo, isTrue);
@@ -229,10 +229,10 @@ void main() {
           (_) async => [olderTextComment, videoComment, textComment],
         );
 
-        final result = await repository.loadCommentsByAuthor(
+        final result = (await repository.loadCommentsByAuthor(
           authorPubkey: testAuthorPubkey,
           includeVideoReplies: true,
-        );
+        )).comments;
 
         expect(result, hasLength(3));
         // Newest first
@@ -269,9 +269,9 @@ void main() {
             mockNostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => [malformedEvent, validEvent]);
 
-      final result = await repository.loadCommentsByAuthor(
+      final result = (await repository.loadCommentsByAuthor(
         authorPubkey: testAuthorPubkey,
-      );
+      )).comments;
 
       expect(result, hasLength(1));
       expect(result.first.id, equals('valid1'));
@@ -294,9 +294,9 @@ void main() {
             mockNostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => [malformedEvent]);
 
-      final result = await repository.loadCommentsByAuthor(
+      final result = (await repository.loadCommentsByAuthor(
         authorPubkey: testAuthorPubkey,
-      );
+      )).comments;
 
       expect(result, isEmpty);
     });
@@ -315,9 +315,9 @@ void main() {
             mockNostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => [malformedEvent]);
 
-      final result = await repository.loadCommentsByAuthor(
+      final result = (await repository.loadCommentsByAuthor(
         authorPubkey: testAuthorPubkey,
-      );
+      )).comments;
 
       expect(result, isEmpty);
     });

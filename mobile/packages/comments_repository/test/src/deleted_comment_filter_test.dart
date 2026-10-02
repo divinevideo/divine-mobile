@@ -217,14 +217,17 @@ void main() {
         final beforeDelete = await repository.loadCommentsByAuthor(
           authorPubkey: userPubkey,
         );
-        expect(beforeDelete.map((comment) => comment.id), contains(deletedId));
+        expect(
+          beforeDelete.comments.map((comment) => comment.id),
+          contains(deletedId),
+        );
 
         await deleteOne(deletedId);
-        final comments = await repository.loadCommentsByAuthor(
+        final page = await repository.loadCommentsByAuthor(
           authorPubkey: userPubkey,
         );
 
-        expect(comments.map((comment) => comment.id), equals([keptId]));
+        expect(page.comments.map((comment) => comment.id), equals([keptId]));
       });
     });
   });

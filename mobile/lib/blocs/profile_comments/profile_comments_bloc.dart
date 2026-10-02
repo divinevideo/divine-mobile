@@ -13,9 +13,6 @@ import 'package:openvine/blocs/profile_shared/profile_tab_sync_completion.dart';
 part 'profile_comments_event.dart';
 part 'profile_comments_state.dart';
 
-/// Number of comments to load per page.
-const _pageSize = 50;
-
 /// BLoC that loads and paginates a user's comments (text + video replies).
 class ProfileCommentsBloc
     extends Bloc<ProfileCommentsEvent, ProfileCommentsState> {
@@ -67,23 +64,22 @@ class ProfileCommentsBloc
     emit(state.copyWith(status: ProfileCommentsStatus.loading));
 
     try {
-      final comments = await _commentsRepository.loadCommentsByAuthor(
+      final page = await _commentsRepository.loadCommentsByAuthor(
         authorPubkey: _targetUserPubkey,
         includeVideoReplies: _includeVideoReplies,
       );
+      final comments = page.comments;
 
       final videoReplies = comments.where((c) => c.hasVideo).toList();
       final textComments = comments.where((c) => !c.hasVideo).toList();
-
-      final cursor = comments.isNotEmpty ? comments.last.createdAt : null;
 
       emit(
         state.copyWith(
           status: ProfileCommentsStatus.success,
           videoReplies: videoReplies,
           textComments: textComments,
-          hasMoreContent: comments.length >= _pageSize,
-          paginationCursor: cursor,
+          hasMoreContent: page.hasMore,
+          paginationCursor: page.nextCursor,
         ),
       );
     } catch (e, stackTrace) {
@@ -111,11 +107,12 @@ class ProfileCommentsBloc
         const Duration(seconds: 1),
       );
 
-      final comments = await _commentsRepository.loadCommentsByAuthor(
+      final page = await _commentsRepository.loadCommentsByAuthor(
         authorPubkey: _targetUserPubkey,
         before: before,
         includeVideoReplies: _includeVideoReplies,
       );
+      final comments = page.comments;
 
       final newVideoReplies = comments.where((c) => c.hasVideo).toList();
       final newTextComments = comments.where((c) => !c.hasVideo).toList();
@@ -132,17 +129,13 @@ class ProfileCommentsBloc
           .where((c) => !existingIds.contains(c.id))
           .toList();
 
-      final cursor = comments.isNotEmpty
-          ? comments.last.createdAt
-          : state.paginationCursor;
-
       emit(
         state.copyWith(
           videoReplies: [...state.videoReplies, ...uniqueVideoReplies],
           textComments: [...state.textComments, ...uniqueTextComments],
           isLoadingMore: false,
-          hasMoreContent: comments.length >= _pageSize,
-          paginationCursor: cursor,
+          hasMoreContent: page.hasMore,
+          paginationCursor: page.nextCursor,
         ),
       );
     } catch (e) {

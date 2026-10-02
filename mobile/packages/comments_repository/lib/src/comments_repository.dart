@@ -929,8 +929,9 @@ class CommentsRepository {
 
   /// Loads comments authored by a specific user across all videos.
   ///
-  /// Returns a list of comments sorted newest first.
-  /// Supports cursor-based pagination via [before].
+  /// Returns a page of comments sorted newest first, without the ones their
+  /// author deleted. Supports cursor-based pagination via [before]: pass the
+  /// page's [AuthorCommentsPage.nextCursor] to continue.
   ///
   /// By default this returns text comments only. Callers that render a
   /// dedicated video-replies surface should opt in with
@@ -939,7 +940,7 @@ class CommentsRepository {
   /// Throws:
   ///
   /// * [LoadCommentsByAuthorFailedException] if the query fails.
-  Future<List<Comment>> loadCommentsByAuthor({
+  Future<AuthorCommentsPage> loadCommentsByAuthor({
     required String authorPubkey,
     int limit = _authorCommentsLimit,
     DateTime? before,
@@ -964,10 +965,23 @@ class CommentsRepository {
           .toList();
       await findAuthorDeletedComments(comments);
 
-      return comments
-          .where((comment) => !_isDeleted(comment.id, comment.authorPubkey))
-          .toList()
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      final kept =
+          comments
+              .where(
+                (comment) => !_isDeleted(comment.id, comment.authorPubkey),
+              )
+              .toList()
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      // The relay's limit applies to the events it returned, not the ones
+      // kept, so page on those.
+      final nextCursor = events.isEmpty || events.length < limit
+          ? null
+          : events
+                .map((event) => event.createdAtDateTime)
+                .reduce((a, b) => a.isBefore(b) ? a : b);
+
+      return AuthorCommentsPage(comments: kept, nextCursor: nextCursor);
     } on Exception catch (e) {
       throw LoadCommentsByAuthorFailedException(e.toString());
     }
