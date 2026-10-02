@@ -140,6 +140,15 @@ class CommentsRepository {
   /// viewer; bounded by how many deleted comments one session sees.
   final Set<String> _deletedCommentIds = {};
 
+  /// Pubkeys whose deletion requests [watchCommentDeletions] saw, by the
+  /// comment id each request names.
+  ///
+  /// A request hides a comment only when the comment's author made it, and the
+  /// comment can arrive after the request: a reconnect replays stored requests
+  /// in no set order, and a second relay can deliver one first. Bounded by the
+  /// requests one session's deletion watches see.
+  final Map<String, Set<String>> _deletionRequesters = {};
+
   /// Subscription ID for the active comment watch, if any.
   String? _watchSubscriptionId;
 
@@ -803,7 +812,7 @@ class CommentsRepository {
 
       final filter = _blockFilter;
       return eventStream
-          .where((event) => !_deletedCommentIds.contains(event.id))
+          .where((event) => !_isDeleted(event.id, event.pubkey))
           .where((event) => seenIds.add(event.id))
           .map((event) => _eventToComment(event, rootEventId, rootEventKind))
           .where((comment) => comment != null)
@@ -860,13 +869,27 @@ class CommentsRepository {
                     requesterPubkey: request.pubkey,
                   ),
             ],
-          );
+          )
+          .map(_rememberDeletionRequest);
     } on Exception catch (e) {
       throw WatchCommentsFailedException(
         'Failed to watch comment deletions: $e',
       );
     }
   }
+
+  CommentDeletion _rememberDeletionRequest(CommentDeletion deletion) {
+    _deletionRequesters
+        .putIfAbsent(deletion.commentId, () => <String>{})
+        .add(deletion.requesterPubkey.toLowerCase());
+    return deletion;
+  }
+
+  /// Whether the comment [commentId] by [authorPubkey] is hidden as deleted.
+  bool _isDeleted(String commentId, String authorPubkey) =>
+      _deletedCommentIds.contains(commentId) ||
+      (_deletionRequesters[commentId]?.contains(authorPubkey.toLowerCase()) ??
+          false);
 
   /// Stops watching for new comments and comment deletions.
   ///
@@ -923,7 +946,7 @@ class CommentsRepository {
       await findAuthorDeletedComments(comments);
 
       return comments
-          .where((comment) => !_deletedCommentIds.contains(comment.id))
+          .where((comment) => !_isDeleted(comment.id, comment.authorPubkey))
           .toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     } on Exception catch (e) {
@@ -1002,13 +1025,15 @@ class CommentsRepository {
     return deleted;
   }
 
-  /// Drops comments in [_deletedCommentIds] from [thread], lowering
+  /// Drops comments hidden as deleted from [thread], lowering
   /// [CommentThread.totalCount] by the number dropped since the source
   /// counted them too.
   CommentThread _dropDeletedComments(CommentThread thread) {
-    if (_deletedCommentIds.isEmpty) return thread;
+    if (_deletedCommentIds.isEmpty && _deletionRequesters.isEmpty) {
+      return thread;
+    }
     final kept = thread.comments
-        .where((c) => !_deletedCommentIds.contains(c.id))
+        .where((c) => !_isDeleted(c.id, c.authorPubkey))
         .toList();
     final dropped = thread.comments.length - kept.length;
     if (dropped == 0) return thread;

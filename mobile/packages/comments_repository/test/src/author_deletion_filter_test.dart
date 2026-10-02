@@ -480,5 +480,101 @@ void main() {
         verify(() => nostrClient.unsubscribe(subscribedId!)).called(1);
       });
     });
+
+    // A relay that replays stored events after a reconnect, or a second relay,
+    // can deliver the request before the comment it names.
+    group('deletion requests seen before their comment', () {
+      late StreamController<Event> deletionStream;
+      late StreamController<Event> commentStream;
+
+      setUp(() {
+        deletionStream = StreamController<Event>.broadcast();
+        commentStream = StreamController<Event>.broadcast();
+        addTearDown(deletionStream.close);
+        addTearDown(commentStream.close);
+        when(
+          () => nostrClient.subscribe(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+          ),
+        ).thenAnswer((invocation) {
+          final id = invocation.namedArguments[#subscriptionId] as String?;
+          return (id ?? '').startsWith('comment_deletions_watch')
+              ? deletionStream.stream
+              : commentStream.stream;
+        });
+      });
+
+      Future<void> seeDeletionRequest({
+        required String by,
+        required String commentId,
+      }) async {
+        final subscription = repository
+            .watchCommentDeletions(rootEventId: rootEventId)
+            .listen((_) {});
+        addTearDown(subscription.cancel);
+        deletionStream.add(deletionRequest(by: by, ids: [commentId]));
+        await pumpEventQueue();
+      }
+
+      Future<List<String>> watchArrivals(List<Event> comments) async {
+        final received = <String>[];
+        final subscription = repository
+            .watchComments(
+              rootEventId: rootEventId,
+              rootEventKind: _rootEventKind,
+            )
+            .listen((comment) => received.add(comment.id));
+        addTearDown(subscription.cancel);
+        comments.forEach(commentStream.add);
+        await pumpEventQueue();
+        return received;
+      }
+
+      test('hides a live comment whose author asked first', () async {
+        await seeDeletionRequest(by: authorPubkey, commentId: deletedId);
+
+        final received = await watchArrivals([
+          relayComment(deletedId),
+          relayComment(keptId),
+        ]);
+
+        expect(received, equals([keptId]));
+      });
+
+      test('keeps a live comment when someone else asked first', () async {
+        await seeDeletionRequest(by: otherPubkey, commentId: deletedId);
+
+        final received = await watchArrivals([relayComment(deletedId)]);
+
+        expect(received, equals([deletedId]));
+      });
+
+      test('hides a loaded comment whose author asked first', () async {
+        stubRest([restComment(deletedId), restComment(keptId)]);
+        await seeDeletionRequest(by: authorPubkey, commentId: deletedId);
+
+        final thread = await load();
+
+        expect(thread.commentCache.keys, equals([keptId]));
+        expect(thread.totalCount, equals(1));
+      });
+
+      test(
+        'hides an author-page comment whose author asked first, even when '
+        'the lookup finds nothing',
+        () async {
+          relayComments = [relayComment(deletedId), relayComment(keptId)];
+          await seeDeletionRequest(by: authorPubkey, commentId: deletedId);
+
+          final comments = await repository.loadCommentsByAuthor(
+            authorPubkey: authorPubkey,
+          );
+
+          expect(deletionLookups, hasLength(1));
+          expect(comments.map((comment) => comment.id), equals([keptId]));
+        },
+      );
+    });
   });
 }
