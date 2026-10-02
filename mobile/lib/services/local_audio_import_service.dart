@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:models/models.dart' show AudioEvent;
+import 'package:openvine/utils/audio_mime_type.dart';
 import 'package:openvine/utils/draft_audio_path_resolver.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -82,8 +83,7 @@ class LocalAudioImportService {
       throw const LocalAudioImportException('Audio file could not be opened.');
     }
 
-    final extension = p.extension(displayName).toLowerCase();
-    final mimeType = _mimeTypeForExtension(extension);
+    final mimeType = audioMimeTypeForPath(displayName);
     if (mimeType == null) {
       throw const LocalAudioImportException(
         'That audio file type is not supported.',
@@ -152,16 +152,6 @@ class LocalAudioImportService {
     );
     return metadata.duration;
   }
-
-  static String? _mimeTypeForExtension(String extension) => switch (extension) {
-    '.aac' => 'audio/aac',
-    '.m4a' => 'audio/mp4',
-    '.mp3' => 'audio/mpeg',
-    '.wav' => 'audio/wav',
-    '.weba' => 'audio/webm',
-    '.webm' => 'audio/webm',
-    _ => null,
-  };
 
   static String _titleFromDisplayName(String displayName) {
     final withoutExtension = p.basenameWithoutExtension(displayName).trim();

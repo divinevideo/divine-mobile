@@ -2,7 +2,7 @@
 // ABOUTME: Validates imported audio + voice-over paths are collected for cleanup
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:models/models.dart' show AudioEvent;
+import 'package:models/models.dart' show AudioEvent, VoiceEffect;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/draft_local_audio_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -88,6 +88,21 @@ void main() {
       );
 
       expect(draft.localAudioFilePaths, {path});
+    });
+
+    test('collects both files of a voice-over with an effect', () {
+      const original = '/docs/voice_over_recordings/voice_over_1.m4a';
+      const processed = '/docs/voice_over_recordings/voice_over_1_robot.wav';
+      final draft = _draft(
+        editorStateHistory: _historyWithAudio([
+          _localImport('local_import_voice_over_1', processed).copyWith(
+            originalUrl: original,
+            voiceEffect: const VoiceEffect(robot: 100),
+          ),
+        ]),
+      );
+
+      expect(draft.localAudioFilePaths, {processed, original});
     });
 
     test('collects local audio held in legacy selectedSound', () {

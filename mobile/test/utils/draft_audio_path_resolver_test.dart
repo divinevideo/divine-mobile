@@ -176,6 +176,22 @@ void main() {
       expect(portable['url'], 'draft_audio_imports/d1/song.m4a');
     });
 
+    test('rewrites the recorded take behind a processed voice-over', () {
+      final json = _audioJson(
+        '$_oldDocs/voice_over_recordings/voice_over_1_robot.wav',
+      )..['originalUrl'] = '$_oldDocs/voice_over_recordings/voice_over_1.m4a';
+
+      final portable = toPortableAudioPaths(json);
+      final resolved = resolveAudioPaths(portable, _newDocs);
+
+      expect(portable['url'], 'voice_over_recordings/voice_over_1_robot.wav');
+      expect(portable['originalUrl'], 'voice_over_recordings/voice_over_1.m4a');
+      expect(
+        resolved['originalUrl'],
+        '$_newDocs/voice_over_recordings/voice_over_1.m4a',
+      );
+    });
+
     test('leaves published and bundled sounds untouched', () {
       final json = <String, dynamic>{
         'meta': {
