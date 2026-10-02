@@ -400,6 +400,7 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     _addExactTagCondition('E', filter.uppercaseE, conditions, variables);
     _addExactTagCondition('A', filter.uppercaseA, conditions, variables);
     _addExactTagCondition('K', filter.uppercaseK, conditions, variables);
+    _addExactTagCondition('k', filter.k, conditions, variables);
     _addExactTagCondition('m', filter.m, conditions, variables);
 
     // Content search filter (NIP-50 style, case insensitive)
