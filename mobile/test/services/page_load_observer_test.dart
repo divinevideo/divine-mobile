@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:analytics/analytics.dart';
 import 'package:firebase_core_platform_interface/firebase_core_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -136,9 +138,13 @@ void main() {
             body: Builder(
               builder: (context) => ElevatedButton(
                 onPressed: () {
-                  showDialog<void>(
-                    context: context,
-                    builder: (_) => const AlertDialog(content: Text('Dialog')),
+                  unawaited(
+                    showDialog<void>(
+                      context: context,
+                      builder: (_) => const AlertDialog(
+                        content: Text('Dialog'),
+                      ),
+                    ),
                   );
                 },
                 child: const Text('Open Dialog'),
