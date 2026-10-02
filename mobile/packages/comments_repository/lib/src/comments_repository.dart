@@ -145,8 +145,8 @@ class CommentsRepository {
   ///
   /// A request hides a comment only when the comment's author made it, and the
   /// comment can arrive after the request: a reconnect replays stored requests
-  /// in no set order, and a second relay can deliver one first. Bounded by the
-  /// requests one session's deletion watches see.
+  /// in no set order, and a second relay can deliver one first. Holds at most
+  /// [_maxRememberedDeletionRequests] comments, oldest forgotten first.
   final Map<String, Set<String>> _deletionRequesters = {};
 
   /// Subscription ID for the active comment watch, if any.
@@ -162,6 +162,11 @@ class CommentsRepository {
   /// The most comments one deletion lookup names, so checking a long thread
   /// does not become one oversized relay filter.
   static const _deletionLookupBatchSize = 50;
+
+  /// The most comments [_deletionRequesters] remembers requests for; the
+  /// oldest are forgotten first. A forgotten request is still found by
+  /// [findAuthorDeletedComments].
+  static const _maxRememberedDeletionRequests = 2000;
 
   /// Default page size for author comment queries.
   static const _authorCommentsLimit = 50;
@@ -673,7 +678,8 @@ class CommentsRepository {
       ..removeWhere(
         (p) => now.difference(p.postedAt) > _recentlyPostedRetention,
       )
-      ..removeWhere((p) => thread.commentCache.containsKey(p.comment.id));
+      ..removeWhere((p) => thread.commentCache.containsKey(p.comment.id))
+      ..removeWhere((p) => _isDeleted(p.comment.id, p.comment.authorPubkey));
 
     if (pending.isEmpty) {
       _recentlyPostedComments.remove(rootEventId);
@@ -862,6 +868,7 @@ class CommentsRepository {
               ),
             ],
             subscriptionId: _deletionWatchSubscriptionId,
+            handleDeletionRequests: false,
           )
           .where((event) => event.kind == _deletionKind)
           .expand(
@@ -883,9 +890,13 @@ class CommentsRepository {
   }
 
   CommentDeletion _rememberDeletionRequest(CommentDeletion deletion) {
-    _deletionRequesters
-        .putIfAbsent(deletion.commentId, () => <String>{})
-        .add(deletion.requesterPubkey.toLowerCase());
+    final requesters =
+        _deletionRequesters.remove(deletion.commentId) ?? <String>{};
+    _deletionRequesters[deletion.commentId] = requesters
+      ..add(deletion.requesterPubkey.toLowerCase());
+    while (_deletionRequesters.length > _maxRememberedDeletionRequests) {
+      _deletionRequesters.remove(_deletionRequesters.keys.first);
+    }
     return deletion;
   }
 
@@ -980,8 +991,9 @@ class CommentsRepository {
   }
 
   /// Returns the ids of [comments] whose own author published a NIP-09
-  /// deletion request naming them, and hides those comments from every later
-  /// read and from [watchComments].
+  /// deletion request naming them, including ones found earlier, and hides
+  /// those comments from every later read and from [watchComments]. Only
+  /// comments not already known to be deleted are looked up.
   ///
   /// A relay that receives the request before it has indexed the comment goes
   /// on serving the comment until a later batch, and so does every read source
@@ -991,28 +1003,31 @@ class CommentsRepository {
   ///
   /// [loadComments] does not wait for this lookup, so a page paints before a
   /// relay answers; call this once the page is shown. Asks about at most 50
-  /// comments per relay query. Fails open: a query that errors hides nothing
-  /// from its comments.
+  /// comments per relay query, one query at a time. Fails open: a query that
+  /// errors hides nothing from its comments.
   Future<Set<String>> findAuthorDeletedComments(
     Iterable<Comment> comments,
   ) async {
-    final authorById = <String, String>{
-      for (final comment in comments)
-        if (!_deletedCommentIds.contains(comment.id))
-          comment.id: comment.authorPubkey.toLowerCase(),
-    };
-    if (authorById.isEmpty) return const <String>{};
+    final deleted = <String>{};
+    final authorById = <String, String>{};
+    for (final comment in comments) {
+      if (_isDeleted(comment.id, comment.authorPubkey)) {
+        deleted.add(comment.id);
+      } else {
+        authorById[comment.id] = comment.authorPubkey.toLowerCase();
+      }
+    }
 
+    // One batch at a time: the lookups share the client's small query pool.
     final ids = authorById.keys.toList();
-    final found = await Future.wait([
-      for (var start = 0; start < ids.length; start += _deletionLookupBatchSize)
-        _findAuthorDeletedIn(
-          ids.skip(start).take(_deletionLookupBatchSize).toList(),
-          authorById,
-        ),
-    ]);
-    final deleted = {for (final batch in found) ...batch};
-    _deletedCommentIds.addAll(deleted);
+    for (var start = 0; start < ids.length; start += _deletionLookupBatchSize) {
+      final found = await _findAuthorDeletedIn(
+        ids.skip(start).take(_deletionLookupBatchSize).toList(),
+        authorById,
+      );
+      _deletedCommentIds.addAll(found);
+      deleted.addAll(found);
+    }
     return deleted;
   }
 

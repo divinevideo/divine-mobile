@@ -60,6 +60,18 @@ void main() {
 
         expect(deletion.appliesTo(comment()), isTrue);
       });
+
+      test('matches a comment author written in another case', () {
+        const deletion = CommentDeletion(
+          commentId: commentId,
+          requesterPubkey: authorPubkey,
+        );
+
+        expect(
+          deletion.appliesTo(comment(author: authorPubkey.toUpperCase())),
+          isTrue,
+        );
+      });
     });
 
     test('deletions by different requesters are not equal', () {

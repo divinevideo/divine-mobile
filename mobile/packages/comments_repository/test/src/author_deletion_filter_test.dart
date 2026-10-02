@@ -42,6 +42,7 @@ void main() {
 
     setUpAll(() {
       registerFallbackValue(<Filter>[]);
+      registerFallbackValue(Event(authorPubkey, _commentKind, const [], ''));
     });
 
     setUp(() {
@@ -296,6 +297,53 @@ void main() {
         expect(deleted, equals({lastId}));
       });
 
+      test('still reports a comment it found deleted before', () async {
+        deletionRequests = [
+          deletionRequest(by: authorPubkey, ids: [deletedId]),
+        ];
+        await repository.findAuthorDeletedComments([comment(deletedId)]);
+        deletionRequests = [];
+
+        final deleted = await repository.findAuthorDeletedComments([
+          comment(deletedId),
+          comment(keptId),
+        ]);
+
+        expect(deleted, equals({deletedId}));
+      });
+
+      test('asks about one batch at a time', () async {
+        var inFlight = 0;
+        var mostInFlight = 0;
+        when(() => nostrClient.queryEvents(any())).thenAnswer((_) async {
+          inFlight++;
+          if (inFlight > mostInFlight) mostInFlight = inFlight;
+          await pumpEventQueue();
+          inFlight--;
+          return <Event>[];
+        });
+
+        await repository.findAuthorDeletedComments([
+          for (var i = 0; i < 120; i++)
+            comment(i.toRadixString(16).padLeft(64, '0')),
+        ]);
+
+        expect(mostInFlight, equals(1));
+      });
+
+      test('matches a comment author written in another case', () async {
+        deletionRequests = [
+          deletionRequest(by: authorPubkey, ids: [deletedId]),
+        ];
+
+        final deleted = await repository.findAuthorDeletedComments([
+          comment(deletedId, author: authorPubkey.toUpperCase()),
+        ]);
+
+        expect(deleted, equals({deletedId}));
+        expect(deletionLookups.single.authors, equals([authorPubkey]));
+      });
+
       test('does not look anything up for no comments', () async {
         final deleted = await repository.findAuthorDeletedComments([]);
 
@@ -414,6 +462,7 @@ void main() {
       late StreamController<Event> relayStream;
       late List<Filter> subscribedFilters;
       String? subscribedId;
+      bool? subscribedHandlesDeletions;
       const nowMillis = 1000000000;
 
       setUp(() {
@@ -421,15 +470,19 @@ void main() {
         addTearDown(relayStream.close);
         subscribedFilters = [];
         subscribedId = null;
+        subscribedHandlesDeletions = null;
         when(
           () => nostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            handleDeletionRequests: any(named: 'handleDeletionRequests'),
           ),
         ).thenAnswer((invocation) {
           subscribedFilters =
               invocation.positionalArguments.first as List<Filter>;
           subscribedId = invocation.namedArguments[#subscriptionId] as String?;
+          subscribedHandlesDeletions =
+              invocation.namedArguments[#handleDeletionRequests] as bool?;
           return relayStream.stream;
         });
         when(() => nostrClient.unsubscribe(any())).thenAnswer((_) async {});
@@ -447,6 +500,12 @@ void main() {
         expect(filter.k, equals([_commentKind.toString()]));
         expect(filter.since, equals(nowMillis ~/ 1000 - 60));
         expect(subscribedId, startsWith('comment_deletions_watch'));
+      });
+
+      test("keeps other accounts' requests out of the shared event cache", () {
+        repository.watchCommentDeletions(rootEventId: rootEventId);
+
+        expect(subscribedHandlesDeletions, isFalse);
       });
 
       test('also watches video-reply deletions when video replies are on', () {
@@ -537,6 +596,7 @@ void main() {
           () => nostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            handleDeletionRequests: any(named: 'handleDeletionRequests'),
           ),
         ).thenAnswer((invocation) {
           final id = invocation.namedArguments[#subscriptionId] as String?;
@@ -616,6 +676,90 @@ void main() {
           expect(comments.map((comment) => comment.id), equals([keptId]));
         },
       );
+
+      test('matches a requester written in another case', () async {
+        await seeDeletionRequest(
+          by: authorPubkey.toUpperCase(),
+          commentId: deletedId,
+        );
+
+        final received = await watchArrivals([relayComment(deletedId)]);
+
+        expect(received, isEmpty);
+      });
+
+      test('matches a comment author written in another case', () async {
+        stubRest([
+          VideoComment(
+            id: deletedId,
+            pubkey: authorPubkey.toUpperCase(),
+            createdAt: 1000,
+            kind: _commentKind,
+            content: 'rest',
+            sig: 'sig',
+            tags: commentTags(),
+          ),
+        ]);
+        await seeDeletionRequest(by: authorPubkey, commentId: deletedId);
+
+        final thread = await load();
+
+        expect(thread.commentCache, isEmpty);
+      });
+
+      test('forgets the oldest of more than 2000 requests', () async {
+        String id(int i) => i.toRadixString(16).padLeft(64, '0');
+        final subscription = repository
+            .watchCommentDeletions(rootEventId: rootEventId)
+            .listen((_) {});
+        addTearDown(subscription.cancel);
+        for (var i = 0; i <= 2000; i++) {
+          deletionStream.add(deletionRequest(by: authorPubkey, ids: [id(i)]));
+        }
+        await pumpEventQueue();
+
+        final received = await watchArrivals([
+          relayComment(id(0)),
+          relayComment(id(2000)),
+        ]);
+
+        expect(received, equals([id(0)]));
+      });
+    });
+
+    // A comment posted on this device and deleted from another one is still
+    // in the just-posted list that keeps it visible while REST catches up.
+    group('a just-posted comment deleted from another device', () {
+      test('stays hidden when the page reloads', () async {
+        when(() => nostrClient.publicKey).thenReturn(authorPubkey);
+        when(() => nostrClient.publishEvent(any())).thenAnswer((
+          invocation,
+        ) async {
+          final event = invocation.positionalArguments.first as Event
+            ..id = deletedId;
+          return PublishSuccess(event: event);
+        });
+        await repository.postComment(
+          content: 'posted here, deleted elsewhere',
+          rootEventId: rootEventId,
+          rootEventKind: _rootEventKind,
+          rootEventAuthorPubkey: rootAuthorPubkey,
+        );
+        deletionRequests = [
+          deletionRequest(by: authorPubkey, ids: [deletedId]),
+        ];
+        // The first page has not caught up, so the comment shows from the
+        // just-posted list, and the lookup finds its author's request.
+        final firstPage = await load();
+        expect(firstPage.commentCache.keys, equals([deletedId]));
+        await repository.findAuthorDeletedComments(firstPage.comments);
+        relayComments = [relayComment(deletedId)];
+
+        final thread = await load();
+
+        expect(thread.commentCache, isEmpty);
+        expect(thread.totalCount, equals(0));
+      });
     });
   });
 }
