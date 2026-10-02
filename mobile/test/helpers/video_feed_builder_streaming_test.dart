@@ -47,13 +47,20 @@ void main() {
       );
 
       VideoFeedState? state;
+      Object? error;
 
       fakeAsync((async) {
-        builder.buildFeed(config: config).then((value) => state = value);
-        // Drains microtasks without advancing the clock, so a reintroduced
-        // stability wait leaves `state` null rather than merely slow.
+        unawaited(
+          builder
+              .buildFeed(config: config)
+              .then((value) => state = value, onError: (Object e) => error = e),
+        );
+        // fakeAsync owns this future: flushMicrotasks drains it without
+        // advancing the clock, so a reintroduced stability wait leaves
+        // `state` null rather than merely slow.
         async.flushMicrotasks();
 
+        expect(error, isNull);
         expect(state, isNotNull, reason: 'buildFeed awaited a timer');
         expect(state!.videos.length, 2);
         expect(state!.isInitialLoad, isFalse);

@@ -1,6 +1,8 @@
 // ABOUTME: Tests for VideoFeedBuilder helper class that encapsulates common feed logic
 // ABOUTME: Validates debouncing, streaming return, and state management patterns
 
+import 'dart:async';
+
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -80,8 +82,9 @@ void main() {
       );
 
       test('should return immediately without waiting for stability', () {
-        // Arrange - subscribe adds videos asynchronously but buildFeed
-        // should NOT wait for them
+        // Arrange - no videos yet, the state a stability wait would hold
+        // buildFeed open for. Not awaiting subscribe is pinned separately by
+        // the streaming test's never-completing subscribe.
         final config = VideoFeedConfig(
           subscriptionType: SubscriptionType.popularNow,
           subscribe: (service) async {},
@@ -90,15 +93,25 @@ void main() {
         );
 
         VideoFeedState? state;
+        Object? error;
 
         fakeAsync((async) {
           // Act
-          builder.buildFeed(config: config).then((value) => state = value);
-          // Drains microtasks without advancing the clock, so a reintroduced
-          // stability wait leaves `state` null rather than merely slow.
+          unawaited(
+            builder
+                .buildFeed(config: config)
+                .then(
+                  (value) => state = value,
+                  onError: (Object e) => error = e,
+                ),
+          );
+          // fakeAsync owns this future: flushMicrotasks drains it without
+          // advancing the clock, so a reintroduced stability wait leaves
+          // `state` null rather than merely slow.
           async.flushMicrotasks();
 
           // Assert - resolved with no elapsed time at all
+          expect(error, isNull);
           expect(state, isNotNull, reason: 'buildFeed awaited a timer');
           expect(state!.videos, isEmpty);
           expect(state!.isInitialLoad, isTrue);
