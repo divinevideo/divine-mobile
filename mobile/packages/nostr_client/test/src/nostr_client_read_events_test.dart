@@ -163,9 +163,15 @@ NostrClient _clientOver(
   required List<String> connectedRelays,
   AppDbClient? dbClient,
   RelayDiagnosticsSink? diagnosticsSink,
+  bool Function(String url)? isRelayAllowed,
 }) {
   final relayManager = _MockRelayManager();
   when(() => relayManager.connectedRelays).thenReturn(connectedRelays);
+  when(() => relayManager.isRelayAllowed(any())).thenAnswer(
+    (invocation) =>
+        isRelayAllowed?.call(invocation.positionalArguments.single as String) ??
+        true,
+  );
   when(() => relayManager.diagnosticsSink).thenReturn(diagnosticsSink);
   when(relayManager.dispose).thenAnswer((_) async {});
   when(relayManager.retryDisconnectedRelays).thenAnswer((_) async {});
@@ -1045,6 +1051,24 @@ void main() {
         expect(nostr.seenTempRelays, ['wss://relay.example']);
       },
     );
+
+    test('drops a public relay outside the environment', () async {
+      final nostr = _StubPagerNostr(
+        const PagedQueryResult(events: [], isComplete: true, pages: 1),
+      );
+      final client = _clientOver(
+        nostr,
+        connectedRelays: [],
+        isRelayAllowed: (url) => url == 'wss://relay.example',
+      );
+
+      await client.readAllEvents(
+        _textNotes(),
+        tempRelays: ['wss://relay.example', 'wss://elsewhere.example'],
+      );
+
+      expect(nostr.seenTempRelays, ['wss://relay.example']);
+    });
 
     test('walks two pages and stops on the empty page', () async {
       final nostr = _newNostr();
