@@ -379,6 +379,36 @@ void main() {
         verify(() => player.dispose()).called(1);
         verify(() => service.clearAuditions()).called(1);
       });
+
+      test(
+        'drops an audition that finishes rendering as the sheet closes',
+        () async {
+          final rendering = Completer<String>();
+          final disposing = Completer<void>();
+          when(
+            () => service.renderAudition(
+              takePath: any(named: 'takePath'),
+              effect: any(named: 'effect'),
+              noiseReduction: any(named: 'noiseReduction'),
+            ),
+          ).thenAnswer((_) => rendering.future);
+          when(() => player.dispose()).thenAnswer((_) => disposing.future);
+          final bloc = build(_recording())
+            ..add(const VoiceOverEffectSettingsChanged(effect: _robot));
+          await pumpEventQueue();
+
+          final closing = bloc.close();
+          await pumpEventQueue();
+          rendering.complete('/tmp/audition_1.wav');
+          await pumpEventQueue();
+          disposing.complete();
+          await closing;
+
+          verifyNever(() => player.setClip(any()));
+          verify(() => service.discardAudition('/tmp/audition_1.wav'))
+              .called(1);
+        },
+      );
     });
   });
 }

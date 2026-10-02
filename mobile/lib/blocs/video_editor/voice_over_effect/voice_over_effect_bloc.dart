@@ -218,8 +218,11 @@ class VoiceOverEffectBloc
   @override
   Future<void> close() async {
     await _loopSubscription.cancel();
+    // Closed first, so an audition still rendering finds its handler done and
+    // discards itself, instead of playing on the released player or landing
+    // after the auditions were cleared.
+    await super.close();
     await _player.dispose();
     await _service.clearAuditions();
-    return super.close();
   }
 }
