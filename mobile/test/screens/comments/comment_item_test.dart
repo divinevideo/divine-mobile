@@ -259,84 +259,86 @@ void main() {
     verifyNever(() => mocks.reactions.add(any()));
   });
 
-  testWidgets(
-    'sends a block chosen after the comment left the list while the options '
-    'sheet was open',
-    (tester) async {
-      // An author's deletion can now remove their comment from an open sheet
-      // while the viewer is choosing to report or block them; that choice must
-      // still reach the reactions bloc, which outlives the comment's row.
-      final mocks = buildMocks();
-      final shown = ValueNotifier<bool>(true);
-      addTearDown(shown.dispose);
-      final comment = CommentBuilder()
-          .withAuthorPubkey(_testHexPubkey)
-          .withRootEventId(_testRootEventId)
-          .withRootAuthorPubkey(_testRootAuthorPubkey)
-          .withContent('harassing reply')
-          .build();
+  group('interactions', () {
+    testWidgets(
+      'sends a block chosen after the comment left the list while the options '
+      'sheet was open',
+      (tester) async {
+        // An author's deletion can now remove their comment from an open sheet
+        // while the viewer is choosing to report or block them; that choice must
+        // still reach the reactions bloc, which outlives the comment's row.
+        final mocks = buildMocks();
+        final shown = ValueNotifier<bool>(true);
+        addTearDown(shown.dispose);
+        final comment = CommentBuilder()
+            .withAuthorPubkey(_testHexPubkey)
+            .withRootEventId(_testRootEventId)
+            .withRootAuthorPubkey(_testRootAuthorPubkey)
+            .withContent('harassing reply')
+            .build();
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            nostrServiceProvider.overrideWithValue(const _FakeNostrClient()),
-          ],
-          child: MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: MultiBlocProvider(
-                providers: [
-                  BlocProvider<CommentComposerBloc>.value(
-                    value: mocks.composer,
-                  ),
-                  BlocProvider<CommentReactionsBloc>.value(
-                    value: mocks.reactions,
-                  ),
-                ],
-                child: ValueListenableBuilder<bool>(
-                  valueListenable: shown,
-                  builder: (context, isShown, _) => SingleChildScrollView(
-                    child: isShown
-                        ? CommentItem(
-                            key: ValueKey('comment_${comment.id}'),
-                            comment: comment,
-                          )
-                        : const SizedBox.shrink(),
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              nostrServiceProvider.overrideWithValue(const _FakeNostrClient()),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: MultiBlocProvider(
+                  providers: [
+                    BlocProvider<CommentComposerBloc>.value(
+                      value: mocks.composer,
+                    ),
+                    BlocProvider<CommentReactionsBloc>.value(
+                      value: mocks.reactions,
+                    ),
+                  ],
+                  child: ValueListenableBuilder<bool>(
+                    valueListenable: shown,
+                    builder: (context, isShown, _) => SingleChildScrollView(
+                      child: isShown
+                          ? CommentItem(
+                              key: ValueKey('comment_${comment.id}'),
+                              comment: comment,
+                            )
+                          : const SizedBox.shrink(),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      );
-      await tester.pump();
+        );
+        await tester.pump();
 
-      await tester.longPress(find.byType(CommentItem));
-      await tester.pumpAndSettle();
-      final l10n = lookupAppLocalizations(const Locale('en'));
-      expect(find.text(l10n.commentOptionsTitle), findsOneWidget);
+        await tester.longPress(find.byType(CommentItem));
+        await tester.pumpAndSettle();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.commentOptionsTitle), findsOneWidget);
 
-      shown.value = false;
-      await tester.pump();
-      expect(find.byType(CommentItem), findsNothing);
+        shown.value = false;
+        await tester.pump();
+        expect(find.byType(CommentItem), findsNothing);
 
-      await tester.tap(find.text(l10n.contentWarningBlockUserTooltip));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.contentWarningBlockUserTooltip));
+        await tester.pumpAndSettle();
 
-      verify(
-        () => mocks.reactions.add(
-          any(
-            that: isA<CommentBlockUserRequested>().having(
-              (event) => event.authorPubkey,
-              'authorPubkey',
-              _testHexPubkey,
+        verify(
+          () => mocks.reactions.add(
+            any(
+              that: isA<CommentBlockUserRequested>().having(
+                (event) => event.authorPubkey,
+                'authorPubkey',
+                _testHexPubkey,
+              ),
             ),
           ),
-        ),
-      ).called(1);
-    },
-  );
+        ).called(1);
+      },
+    );
+  });
 
   testWidgets('opens video comments with hydrated route data', (tester) async {
     final mocks = buildMocks();
