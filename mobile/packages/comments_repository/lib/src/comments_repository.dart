@@ -172,6 +172,12 @@ class CommentsRepository {
   /// [findAuthorDeletedComments].
   static const _maxRememberedDeletionRequests = 2000;
 
+  /// The most requesters [_deletionRequesters] keeps for one comment; the
+  /// oldest are dropped first. Only the comment's author can count, and
+  /// [findAuthorDeletedComments] still finds an author's request a flood of
+  /// others pushed out.
+  static const _maxRequestersPerComment = 8;
+
   /// Default page size for author comment queries.
   static const _authorCommentsLimit = 50;
 
@@ -894,10 +900,15 @@ class CommentsRepository {
   }
 
   CommentDeletion _rememberDeletionRequest(CommentDeletion deletion) {
+    final requester = deletion.requesterPubkey.toLowerCase();
     final requesters =
-        _deletionRequesters.remove(deletion.commentId) ?? <String>{};
-    _deletionRequesters[deletion.commentId] = requesters
-      ..add(deletion.requesterPubkey.toLowerCase());
+        (_deletionRequesters.remove(deletion.commentId) ?? <String>{})
+          ..remove(requester)
+          ..add(requester);
+    while (requesters.length > _maxRequestersPerComment) {
+      requesters.remove(requesters.first);
+    }
+    _deletionRequesters[deletion.commentId] = requesters;
     while (_deletionRequesters.length > _maxRememberedDeletionRequests) {
       _deletionRequesters.remove(_deletionRequesters.keys.first);
     }

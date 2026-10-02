@@ -793,6 +793,45 @@ void main() {
         expect(thread.commentCache, isEmpty);
       });
 
+      test('keeps at most 8 requesters per comment, oldest first', () async {
+        String key(int i) => (i + 1).toRadixString(16).padLeft(64, '0');
+        final subscription = repository
+            .watchCommentDeletions(rootEventId: rootEventId)
+            .listen((_) {});
+        addTearDown(subscription.cancel);
+        // The author asks first; eight other keys then name the same comment.
+        deletionStream.add(deletionRequest(by: authorPubkey, ids: [deletedId]));
+        for (var i = 0; i < 8; i++) {
+          deletionStream.add(deletionRequest(by: key(i), ids: [deletedId]));
+        }
+        await pumpEventQueue();
+
+        final received = await watchArrivals([relayComment(deletedId)]);
+
+        expect(received, equals([deletedId]));
+      });
+
+      test('keeps an author who asks again among the eight newest', () async {
+        String key(int i) => (i + 1).toRadixString(16).padLeft(64, '0');
+        final subscription = repository
+            .watchCommentDeletions(rootEventId: rootEventId)
+            .listen((_) {});
+        addTearDown(subscription.cancel);
+        deletionStream.add(deletionRequest(by: authorPubkey, ids: [deletedId]));
+        for (var i = 0; i < 7; i++) {
+          deletionStream.add(deletionRequest(by: key(i), ids: [deletedId]));
+        }
+        // Asking again makes the author the newest of the eight kept.
+        deletionStream
+          ..add(deletionRequest(by: authorPubkey, ids: [deletedId]))
+          ..add(deletionRequest(by: key(7), ids: [deletedId]));
+        await pumpEventQueue();
+
+        final received = await watchArrivals([relayComment(deletedId)]);
+
+        expect(received, isEmpty);
+      });
+
       test('forgets the oldest of more than 2000 requests', () async {
         String id(int i) => i.toRadixString(16).padLeft(64, '0');
         final subscription = repository
