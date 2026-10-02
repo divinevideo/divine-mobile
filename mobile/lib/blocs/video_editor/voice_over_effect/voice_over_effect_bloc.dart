@@ -86,7 +86,7 @@ class VoiceOverEffectBloc
     VoiceOverEffectSettingsChanged event,
     Emitter<VoiceOverEffectState> emit,
   ) async {
-    if (state.isApplying || state.status == VoiceOverEffectStatus.done) return;
+    if (_isFinishing) return;
     final effect = event.effect ?? state.effect;
     final noiseReduction = event.noiseReduction ?? state.noiseReduction;
     emit(
@@ -110,7 +110,7 @@ class VoiceOverEffectBloc
             );
       // A newer setting, the creator confirming, or the sheet closing has
       // overtaken this one while it rendered.
-      if (emit.isDone || state.isApplying) {
+      if (emit.isDone || _isFinishing) {
         if (audition != takePath) await _service.discardAudition(audition);
         return;
       }
@@ -140,16 +140,19 @@ class VoiceOverEffectBloc
     VoiceOverEffectApplyRequested event,
     Emitter<VoiceOverEffectState> emit,
   ) async {
-    if (state.isApplying || state.status == VoiceOverEffectStatus.done) return;
-    await _stopAudition();
+    if (_isFinishing) return;
     final track = state.track;
     final takePath = track.originalLocalFilePath;
+    // The status changes before the audition stops, so one that finishes
+    // rendering meanwhile sees it and discards itself instead of playing on.
     if (!state.hasChanges || takePath == null) {
       emit(state.copyWith(status: VoiceOverEffectStatus.done));
+      await _stopAudition();
       return;
     }
 
     emit(state.copyWith(status: VoiceOverEffectStatus.applying));
+    await _stopAudition();
     try {
       final processed = await _service.process(
         takePath: takePath,
@@ -197,8 +200,12 @@ class VoiceOverEffectBloc
     await _player.play();
   }
 
+  /// Whether the creator confirmed, after which no setting is taken or heard.
+  bool get _isFinishing =>
+      state.isApplying || state.status == VoiceOverEffectStatus.done;
+
   Future<void> _restartAudition() async {
-    if (isClosed || state.isApplying) return;
+    if (isClosed || _isFinishing) return;
     await _player.seek(Duration.zero);
     await _player.play();
   }

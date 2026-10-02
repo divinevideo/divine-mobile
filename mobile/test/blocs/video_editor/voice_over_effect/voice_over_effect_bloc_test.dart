@@ -370,6 +370,42 @@ void main() {
         },
         errors: () => [isA<VoiceOverEffectException>()],
       );
+
+      test('drops an audition that finishes rendering while Done stops the '
+          'player', () async {
+        final rendering = Completer<String>();
+        final stopping = Completer<void>();
+        when(
+          () => service.renderAudition(
+            takePath: any(named: 'takePath'),
+            effect: any(named: 'effect'),
+            noiseReduction: any(named: 'noiseReduction'),
+          ),
+        ).thenAnswer((_) => rendering.future);
+        when(() => player.stop()).thenAnswer((_) => stopping.future);
+        when(
+          () => service.process(
+            takePath: _take,
+            effect: _robot,
+            noiseReduction: false,
+          ),
+        ).thenAnswer((_) async => (path: _robotTake, mimeType: 'audio/wav'));
+        final bloc = build(_recording())
+          ..add(const VoiceOverEffectSettingsChanged(effect: _robot));
+        addTearDown(bloc.close);
+        await pumpEventQueue();
+
+        bloc.add(const VoiceOverEffectApplyRequested());
+        await pumpEventQueue();
+        rendering.complete('/tmp/audition_1.wav');
+        await pumpEventQueue();
+        stopping.complete();
+        await pumpEventQueue();
+
+        expect(bloc.state.status, VoiceOverEffectStatus.done);
+        verifyNever(() => player.setClip(any()));
+        verify(() => service.discardAudition('/tmp/audition_1.wav')).called(1);
+      });
     });
 
     group('close', () {
