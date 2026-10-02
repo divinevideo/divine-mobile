@@ -9625,6 +9625,49 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'Fade out';
 
   @override
+  String get videoEditorVoiceEffectLabel => 'Boses';
+
+  @override
+  String get videoEditorVoiceEffectSemanticLabel =>
+      'Baguhin kung paano tumunog ang napiling recording';
+
+  @override
+  String get videoEditorVoiceEffectSheetTitle => 'Voice effects';
+
+  @override
+  String get videoEditorVoiceEffectOriginal => 'Original';
+
+  @override
+  String get videoEditorVoiceEffectHighPitch => 'Chipmunk';
+
+  @override
+  String get videoEditorVoiceEffectLowPitch => 'Malalim';
+
+  @override
+  String get videoEditorVoiceEffectRobot => 'Robot';
+
+  @override
+  String get videoEditorVoiceEffectEcho => 'Echo';
+
+  @override
+  String get videoEditorVoiceEffectPitch => 'Pitch';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReduction =>
+      'Bawasan ang background noise';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReductionSubtitle =>
+      'Inaalis ang hiss, ingay ng bentilador at ingay ng kuwarto';
+
+  @override
+  String get videoEditorVoiceEffectApplying => 'Ina-apply ang voice effect';
+
+  @override
+  String get videoEditorVoiceEffectFailed =>
+      'Hindi mabago ang boses. Subukan ulit.';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Transisyon';
 
   @override

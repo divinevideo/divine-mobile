@@ -1,11 +1,13 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
+import 'package:openvine/blocs/video_editor/voice_over/voice_over_cubit.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/extensions/tune_adjustment_matrix_extensions.dart';
@@ -29,6 +31,7 @@ import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_edi
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_layer_animation_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_saved_title_styles_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_controls.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_voice_effect_sheet.dart';
 import 'package:openvine/widgets/video_editor/tune_editor/open_tune_editor.dart';
 import 'package:pro_image_editor/core/models/layers/layer.dart';
 import 'package:pro_image_editor/features/filter_editor/types/filter_state.dart';
@@ -638,11 +641,24 @@ class _SoundOverlayControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Only recorded voice-over takes can change voice; music and clip audio
+    // are left as they are.
+    final isVoiceOver = item.id.startsWith(VoiceOverCubit.voiceOverIdPrefix);
+    final hasVoiceEffect = context.select(
+      (TimelineOverlayBloc bloc) =>
+          bloc.state.audioTracks
+              .where((track) => track.id == item.id)
+              .firstOrNull
+              ?.hasVoiceProcessing ??
+          false,
+    );
     return VideoEditorTimelineControls(
       onDelete: () => _removeSound(context: context),
       onEdit: () => _editSound(context: context),
       onFade: () => _fadeSound(context: context),
       hasFade: item.hasFade,
+      onVoiceEffect: isVoiceOver ? () => _changeVoice(context: context) : null,
+      hasVoiceEffect: hasVoiceEffect,
       onDuplicated: () => _duplicateSound(context: context),
       onSplit: () => _splitSound(context: context),
       onDone: () => TimelineOverlayControls._deselect(context),
@@ -727,6 +743,66 @@ class _SoundOverlayControls extends StatelessWidget {
             .map((e) => e.toJson())
             .toList(),
       },
+    );
+  }
+
+  Future<void> _changeVoice({required BuildContext context}) async {
+    final editor = VideoEditorScope.of(context).editor;
+    if (editor == null) return;
+
+    final sound = editor.stateManager.audioTracks
+        .where((t) => t.id == item.id)
+        .firstOrNull;
+    if (sound == null) return;
+
+    // The sheet loops the take on its own player; the preview playing on
+    // underneath would drown it out.
+    final mainBloc = context.read<VideoEditorMainBloc>();
+    final wasPlaying = mainBloc.state.isPlaying;
+    if (wasPlaying) {
+      mainBloc.add(const VideoEditorExternalPauseRequested(isPaused: true));
+    }
+    final processed = await VineBottomSheet.show<AudioEvent>(
+      context: context,
+      expanded: false,
+      scrollable: false,
+      isScrollControlled: true,
+      body: VideoEditorVoiceEffectSheet(track: sound),
+    );
+    if (wasPlaying) {
+      mainBloc.add(const VideoEditorExternalPauseRequested(isPaused: false));
+    }
+    if (processed == null || !context.mounted) return;
+
+    // Re-read the tracks after the async gap, and carry only the processed
+    // file over: the track's timing is whatever it is now.
+    final tracks = editor.stateManager.audioTracks;
+    if (!tracks.any((t) => t.id == item.id)) return;
+    editor.addHistory(
+      meta: {
+        ...editor.stateManager.activeMeta,
+        VideoEditorConstants.audioStateHistoryKey: tracks
+            .map(
+              (t) => t.id == item.id
+                  ? t.copyWith(
+                      id: processed.id,
+                      url: processed.url,
+                      mimeType: processed.mimeType,
+                      voiceEffect: processed.voiceEffect,
+                      noiseReduction: processed.noiseReduction,
+                      originalUrl: processed.originalUrl,
+                      clearOriginalUrl: processed.originalUrl == null,
+                    )
+                  : t,
+            )
+            .map((e) => e.toJson())
+            .toList(),
+      },
+    );
+    // The processed track has a new id; keep it selected so its controls
+    // stay open.
+    context.read<TimelineOverlayBloc>().add(
+      TimelineOverlayItemSelected(processed.id),
     );
   }
 

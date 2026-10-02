@@ -9561,6 +9561,49 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'Keluar perlahan';
 
   @override
+  String get videoEditorVoiceEffectLabel => 'Suara';
+
+  @override
+  String get videoEditorVoiceEffectSemanticLabel =>
+      'Tukar bunyi rakaman yang dipilih';
+
+  @override
+  String get videoEditorVoiceEffectSheetTitle => 'Kesan vokal';
+
+  @override
+  String get videoEditorVoiceEffectOriginal => 'Asal';
+
+  @override
+  String get videoEditorVoiceEffectHighPitch => 'Tupai';
+
+  @override
+  String get videoEditorVoiceEffectLowPitch => 'Garau';
+
+  @override
+  String get videoEditorVoiceEffectRobot => 'Robot';
+
+  @override
+  String get videoEditorVoiceEffectEcho => 'Gema';
+
+  @override
+  String get videoEditorVoiceEffectPitch => 'Nada';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReduction =>
+      'Kurangkan bunyi bising latar';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReductionSubtitle =>
+      'Membuang desisan, bunyi kipas dan bunyi bilik';
+
+  @override
+  String get videoEditorVoiceEffectApplying => 'Menggunakan kesan vokal';
+
+  @override
+  String get videoEditorVoiceEffectFailed =>
+      'Tidak dapat menukar suara. Cuba lagi.';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Peralihan';
 
   @override

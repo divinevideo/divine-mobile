@@ -9643,6 +9643,48 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'Fundido de salida';
 
   @override
+  String get videoEditorVoiceEffectLabel => 'Voz';
+
+  @override
+  String get videoEditorVoiceEffectSemanticLabel =>
+      'Cambiá cómo suena la grabación seleccionada';
+
+  @override
+  String get videoEditorVoiceEffectSheetTitle => 'Efectos de voz';
+
+  @override
+  String get videoEditorVoiceEffectOriginal => 'Original';
+
+  @override
+  String get videoEditorVoiceEffectHighPitch => 'Ardilla';
+
+  @override
+  String get videoEditorVoiceEffectLowPitch => 'Grave';
+
+  @override
+  String get videoEditorVoiceEffectRobot => 'Robot';
+
+  @override
+  String get videoEditorVoiceEffectEcho => 'Eco';
+
+  @override
+  String get videoEditorVoiceEffectPitch => 'Tono';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReduction => 'Reducir ruido de fondo';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReductionSubtitle =>
+      'Quita el siseo, los ventiladores y el ruido del ambiente';
+
+  @override
+  String get videoEditorVoiceEffectApplying => 'Aplicando el efecto de voz';
+
+  @override
+  String get videoEditorVoiceEffectFailed =>
+      'No se pudo cambiar la voz. Probá de nuevo.';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Transición';
 
   @override

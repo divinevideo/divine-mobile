@@ -9826,6 +9826,50 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'ఫేడ్ అవుట్';
 
   @override
+  String get videoEditorVoiceEffectLabel => 'వాయిస్';
+
+  @override
+  String get videoEditorVoiceEffectSemanticLabel =>
+      'ఎంచుకున్న రికార్డింగ్ ఎలా వినిపిస్తుందో మార్చండి';
+
+  @override
+  String get videoEditorVoiceEffectSheetTitle => 'వాయిస్ ఎఫెక్ట్‌లు';
+
+  @override
+  String get videoEditorVoiceEffectOriginal => 'ఒరిజినల్';
+
+  @override
+  String get videoEditorVoiceEffectHighPitch => 'చిప్‌మంక్';
+
+  @override
+  String get videoEditorVoiceEffectLowPitch => 'గంభీరం';
+
+  @override
+  String get videoEditorVoiceEffectRobot => 'రోబోట్';
+
+  @override
+  String get videoEditorVoiceEffectEcho => 'ప్రతిధ్వని';
+
+  @override
+  String get videoEditorVoiceEffectPitch => 'పిచ్';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReduction =>
+      'నేపథ్య శబ్దాన్ని తగ్గించండి';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReductionSubtitle =>
+      'హిస్, ఫ్యాన్‌లు, గది శబ్దాన్ని తొలగిస్తుంది';
+
+  @override
+  String get videoEditorVoiceEffectApplying =>
+      'వాయిస్ ఎఫెక్ట్ వర్తింపజేస్తోంది';
+
+  @override
+  String get videoEditorVoiceEffectFailed =>
+      'వాయిస్‌ను మార్చడం సాధ్యం కాలేదు. మళ్లీ ప్రయత్నించండి.';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'పరివర్తన';
 
   @override

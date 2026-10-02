@@ -9086,6 +9086,46 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'フェードアウト';
 
   @override
+  String get videoEditorVoiceEffectLabel => 'ボイス';
+
+  @override
+  String get videoEditorVoiceEffectSemanticLabel => '選択した録音の声を変更';
+
+  @override
+  String get videoEditorVoiceEffectSheetTitle => 'ボイスエフェクト';
+
+  @override
+  String get videoEditorVoiceEffectOriginal => 'オリジナル';
+
+  @override
+  String get videoEditorVoiceEffectHighPitch => 'ヘリウム';
+
+  @override
+  String get videoEditorVoiceEffectLowPitch => '低い声';
+
+  @override
+  String get videoEditorVoiceEffectRobot => 'ロボット';
+
+  @override
+  String get videoEditorVoiceEffectEcho => 'エコー';
+
+  @override
+  String get videoEditorVoiceEffectPitch => 'ピッチ';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReduction => '背景ノイズを軽減';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReductionSubtitle =>
+      'ヒスノイズ、ファンの音、室内のノイズを除去します';
+
+  @override
+  String get videoEditorVoiceEffectApplying => 'ボイスエフェクトを適用中';
+
+  @override
+  String get videoEditorVoiceEffectFailed => '声を変更できませんでした。もう一度お試しください。';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'トランジション';
 
   @override

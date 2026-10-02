@@ -9598,6 +9598,49 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'Uitfaden';
 
   @override
+  String get videoEditorVoiceEffectLabel => 'Stem';
+
+  @override
+  String get videoEditorVoiceEffectSemanticLabel =>
+      'Verander hoe de geselecteerde opname klinkt';
+
+  @override
+  String get videoEditorVoiceEffectSheetTitle => 'Stemeffecten';
+
+  @override
+  String get videoEditorVoiceEffectOriginal => 'Origineel';
+
+  @override
+  String get videoEditorVoiceEffectHighPitch => 'Helium';
+
+  @override
+  String get videoEditorVoiceEffectLowPitch => 'Diep';
+
+  @override
+  String get videoEditorVoiceEffectRobot => 'Robot';
+
+  @override
+  String get videoEditorVoiceEffectEcho => 'Echo';
+
+  @override
+  String get videoEditorVoiceEffectPitch => 'Toonhoogte';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReduction =>
+      'Achtergrondgeluid verminderen';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReductionSubtitle =>
+      'Haalt geruis, ventilatoren en kamergeluid weg';
+
+  @override
+  String get videoEditorVoiceEffectApplying => 'Stemeffect toepassen';
+
+  @override
+  String get videoEditorVoiceEffectFailed =>
+      'Stem kon niet worden veranderd. Probeer het opnieuw.';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Overgang';
 
   @override

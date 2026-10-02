@@ -9508,6 +9508,47 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'خفض تدريجي';
 
   @override
+  String get videoEditorVoiceEffectLabel => 'الصوت';
+
+  @override
+  String get videoEditorVoiceEffectSemanticLabel => 'تغيير صوت التسجيل المحدد';
+
+  @override
+  String get videoEditorVoiceEffectSheetTitle => 'مؤثرات صوتية';
+
+  @override
+  String get videoEditorVoiceEffectOriginal => 'الأصلي';
+
+  @override
+  String get videoEditorVoiceEffectHighPitch => 'سنجاب';
+
+  @override
+  String get videoEditorVoiceEffectLowPitch => 'عميق';
+
+  @override
+  String get videoEditorVoiceEffectRobot => 'روبوت';
+
+  @override
+  String get videoEditorVoiceEffectEcho => 'صدى';
+
+  @override
+  String get videoEditorVoiceEffectPitch => 'طبقة الصوت';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReduction => 'تقليل ضوضاء الخلفية';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReductionSubtitle =>
+      'يزيل الطنين وصوت المراوح وضوضاء الغرفة';
+
+  @override
+  String get videoEditorVoiceEffectApplying => 'جارٍ تطبيق المؤثر الصوتي';
+
+  @override
+  String get videoEditorVoiceEffectFailed =>
+      'تعذّر تغيير الصوت. يُرجى المحاولة مرة أخرى.';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'انتقال';
 
   @override

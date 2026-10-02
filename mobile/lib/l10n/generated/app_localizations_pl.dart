@@ -9741,6 +9741,48 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'Wyciszanie';
 
   @override
+  String get videoEditorVoiceEffectLabel => 'Głos';
+
+  @override
+  String get videoEditorVoiceEffectSemanticLabel =>
+      'Zmień brzmienie wybranego nagrania';
+
+  @override
+  String get videoEditorVoiceEffectSheetTitle => 'Efekty głosu';
+
+  @override
+  String get videoEditorVoiceEffectOriginal => 'Oryginał';
+
+  @override
+  String get videoEditorVoiceEffectHighPitch => 'Wiewiórka';
+
+  @override
+  String get videoEditorVoiceEffectLowPitch => 'Niski';
+
+  @override
+  String get videoEditorVoiceEffectRobot => 'Robot';
+
+  @override
+  String get videoEditorVoiceEffectEcho => 'Echo';
+
+  @override
+  String get videoEditorVoiceEffectPitch => 'Wysokość';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReduction => 'Ogranicz szum tła';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReductionSubtitle =>
+      'Usuwa szum, wentylatory i hałas pomieszczenia';
+
+  @override
+  String get videoEditorVoiceEffectApplying => 'Nakładanie efektu głosu';
+
+  @override
+  String get videoEditorVoiceEffectFailed =>
+      'Nie udało się zmienić głosu. Spróbuj ponownie.';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Przejście';
 
   @override

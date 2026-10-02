@@ -9761,6 +9761,48 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'Ieșire treptată';
 
   @override
+  String get videoEditorVoiceEffectLabel => 'Voce';
+
+  @override
+  String get videoEditorVoiceEffectSemanticLabel =>
+      'Schimbă cum sună înregistrarea selectată';
+
+  @override
+  String get videoEditorVoiceEffectSheetTitle => 'Efecte de voce';
+
+  @override
+  String get videoEditorVoiceEffectOriginal => 'Original';
+
+  @override
+  String get videoEditorVoiceEffectHighPitch => 'Veveriță';
+
+  @override
+  String get videoEditorVoiceEffectLowPitch => 'Grav';
+
+  @override
+  String get videoEditorVoiceEffectRobot => 'Robot';
+
+  @override
+  String get videoEditorVoiceEffectEcho => 'Ecou';
+
+  @override
+  String get videoEditorVoiceEffectPitch => 'Înălțime';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReduction => 'Redu zgomotul de fundal';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReductionSubtitle =>
+      'Elimină fâșâitul, ventilatoarele și zgomotul din cameră';
+
+  @override
+  String get videoEditorVoiceEffectApplying => 'Se aplică efectul de voce';
+
+  @override
+  String get videoEditorVoiceEffectFailed =>
+      'Vocea nu a putut fi schimbată. Încearcă din nou.';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Tranziție';
 
   @override

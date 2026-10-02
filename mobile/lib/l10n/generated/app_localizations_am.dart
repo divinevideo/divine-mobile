@@ -9330,6 +9330,48 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'ቀስ ብሎ መውጣት';
 
   @override
+  String get videoEditorVoiceEffectLabel => 'ድምፅ';
+
+  @override
+  String get videoEditorVoiceEffectSemanticLabel =>
+      'የተመረጠው ቀረጻ ድምፅ እንዴት እንደሚሰማ ይቀይሩ';
+
+  @override
+  String get videoEditorVoiceEffectSheetTitle => 'የድምፅ ተፅዕኖዎች';
+
+  @override
+  String get videoEditorVoiceEffectOriginal => 'ዋናው';
+
+  @override
+  String get videoEditorVoiceEffectHighPitch => 'ቀጭን ድምፅ';
+
+  @override
+  String get videoEditorVoiceEffectLowPitch => 'ወፍራም ድምፅ';
+
+  @override
+  String get videoEditorVoiceEffectRobot => 'ሮቦት';
+
+  @override
+  String get videoEditorVoiceEffectEcho => 'ማሚቶ';
+
+  @override
+  String get videoEditorVoiceEffectPitch => 'የድምፅ ከፍታ';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReduction => 'የጀርባ ጫጫታን ይቀንሱ';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReductionSubtitle =>
+      'ፉጨትን፣ የማራገቢያ እና የክፍል ጫጫታን ያስወግዳል';
+
+  @override
+  String get videoEditorVoiceEffectApplying => 'የድምፅ ተፅዕኖ በመተግበር ላይ';
+
+  @override
+  String get videoEditorVoiceEffectFailed =>
+      'ድምፁን መቀየር አልተቻለም። እባክዎ እንደገና ይሞክሩ።';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'ሽግግር';
 
   @override

@@ -19,6 +19,7 @@ import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
+import 'package:openvine/blocs/video_editor/voice_over/voice_over_cubit.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/extensions/video_editor_history_extensions.dart';
@@ -31,19 +32,23 @@ import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/saved_title_style.dart';
 import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:openvine/providers/saved_title_style_repository_provider.dart';
+import 'package:openvine/providers/voice_over_effect_providers.dart';
 import 'package:openvine/repositories/saved_title_style_repository.dart';
+import 'package:openvine/services/video_editor/voice_over_effect_service.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_audio_fade_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_layer_animation_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_saved_title_styles_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_overlay_controls.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_voice_effect_sheet.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' as pve;
 import 'package:pro_video_editor/pro_video_editor.dart'
     show ChromaKey, EditorVideo;
 import 'package:riverpod/misc.dart' show Override;
+import 'package:sound_service/sound_service.dart';
 
 import '../../../../mocks/mock_path_provider_platform.dart';
 
@@ -69,6 +74,11 @@ class _MockStateManager extends Mock implements StateManager {}
 class _MockSavedTitleStyleRepository extends Mock
     implements SavedTitleStyleRepository {}
 
+class _MockVoiceOverEffectService extends Mock
+    implements VoiceOverEffectService {}
+
+class _MockAudioClipPlayer extends Mock implements AudioClipPlayer {}
+
 void main() {
   group(TimelineOverlayControls, () {
     late _MockTimelineOverlayBloc overlayBloc;
@@ -77,6 +87,7 @@ void main() {
     setUpAll(() {
       registerFallbackValue(const TimelineOverlayItemSelected(null));
       registerFallbackValue(const ClipEditorEditingStopped());
+      registerFallbackValue(const AudioSourceConfig.file(''));
     });
 
     setUp(() {
@@ -402,6 +413,66 @@ void main() {
         build(plain.copyWith(fadeOut: const Duration(seconds: 1))),
       );
       expect(fadeButton().type, DivineIconButtonType.primary);
+    });
+
+    group('voice change', () {
+      const recordingId = '${VoiceOverCubit.voiceOverIdPrefix}_1-100-0';
+      const recording = TimelineOverlayItem(
+        id: recordingId,
+        type: TimelineOverlayType.sound,
+        startTime: Duration.zero,
+        endTime: Duration(seconds: 4),
+      );
+
+      DivineIconButton voiceButton(WidgetTester tester) =>
+          tester.widget<DivineIconButton>(
+            find.byWidgetPredicate(
+              (w) =>
+                  w is DivineIconButton &&
+                  w.semanticLabel == l10n.videoEditorVoiceEffectSemanticLabel,
+            ),
+          );
+
+      testWidgets('is offered for a voice-over recording only', (tester) async {
+        const music = TimelineOverlayItem(
+          id: 'sound-1',
+          type: TimelineOverlayType.sound,
+          startTime: Duration.zero,
+          endTime: Duration(seconds: 4),
+        );
+
+        await tester.pumpWidget(build(music));
+        expect(find.text(l10n.videoEditorVoiceEffectLabel), findsNothing);
+
+        await tester.pumpWidget(build(recording));
+        expect(find.text(l10n.videoEditorVoiceEffectLabel), findsOneWidget);
+      });
+
+      testWidgets('is highlighted once the recording plays with an effect', (
+        tester,
+      ) async {
+        final take = AudioEvent(
+          id: recordingId,
+          pubkey: 'local_import',
+          createdAt: 0,
+          url: '/docs/voice_over_recordings/voice_over_1.m4a',
+        );
+        when(
+          () => overlayBloc.state,
+        ).thenReturn(TimelineOverlayState(audioTracks: [take]));
+        await tester.pumpWidget(build(recording));
+        expect(voiceButton(tester).type, DivineIconButtonType.secondary);
+
+        when(() => overlayBloc.state).thenReturn(
+          TimelineOverlayState(
+            audioTracks: [
+              take.copyWith(voiceEffect: const VoiceEffect(echo: 80)),
+            ],
+          ),
+        );
+        await tester.pumpWidget(build(recording.copyWith(label: 'rebuilt')));
+        expect(voiceButton(tester).type, DivineIconButtonType.primary);
+      });
     });
 
     testWidgets('renders delete/edit/duplicate/split/done for tune', (
@@ -1471,6 +1542,143 @@ void main() {
             equals(const Duration(milliseconds: 1500)),
           );
           expect(tracks[1].hasFade, isFalse);
+        },
+      );
+
+      testWidgets(
+        'a voice picked in the voice sheet puts the processed take on the '
+        'timeline under a new id and keeps it selected',
+        (tester) async {
+          const take = '/docs/voice_over_recordings/voice_over_1.m4a';
+          const robotTake =
+              '/docs/voice_over_recordings/voice_over_1_p0_r100_e0.wav';
+          const robot = VoiceEffect(robot: 100);
+          final service = _MockVoiceOverEffectService();
+          when(
+            () => service.renderAudition(
+              takePath: take,
+              effect: robot,
+              noiseReduction: false,
+            ),
+          ).thenAnswer((_) async => '/tmp/audition.wav');
+          when(() => service.discardAudition(any())).thenAnswer((_) async {});
+          when(service.clearAuditions).thenAnswer((_) async {});
+          when(
+            () => service.process(
+              takePath: take,
+              effect: robot,
+              noiseReduction: false,
+            ),
+          ).thenAnswer((_) async => (path: robotTake, mimeType: 'audio/wav'));
+          final player = _MockAudioClipPlayer();
+          when(
+            () => player.completionStream,
+          ).thenAnswer((_) => const Stream<void>.empty());
+          when(() => player.setClip(any())).thenAnswer((_) async {});
+          when(player.play).thenAnswer((_) async {});
+          when(player.stop).thenAnswer((_) async {});
+          when(player.dispose).thenAnswer((_) async {});
+          final track = AudioEvent(
+            id: '${VoiceOverCubit.voiceOverIdPrefix}_1-100-0',
+            pubkey: 'local_import',
+            createdAt: 0,
+            url: take,
+            mimeType: 'audio/mp4',
+            startTime: const Duration(seconds: 1),
+            endTime: const Duration(seconds: 4),
+          );
+          final other = AudioEvent(id: 'sound-2', pubkey: 'pub', createdAt: 0);
+          when(() => mockStateManager.activeMeta).thenReturn({
+            VideoEditorConstants.audioStateHistoryKey: [
+              track.toJson(),
+              other.toJson(),
+            ],
+          });
+          // Playing, so the sheet's audition has to quiet the preview.
+          when(
+            () => mainBloc.state,
+          ).thenReturn(const VideoEditorMainState(isPlaying: true));
+
+          final item = TimelineOverlayItem(
+            id: track.id,
+            type: TimelineOverlayType.sound,
+            startTime: const Duration(seconds: 1),
+            endTime: const Duration(seconds: 4),
+          );
+          await tester.pumpWidget(
+            buildWithEditor(
+              item,
+              mockEditor,
+              mainBloc,
+              routed: true,
+              overrides: [
+                voiceOverEffectServiceProvider.overrideWithValue(service),
+                voiceOverAuditionPlayerFactoryProvider.overrideWithValue(
+                  () => player,
+                ),
+              ],
+            ),
+          );
+
+          await tester.tap(
+            find.bySemanticsLabel(l10n.videoEditorVoiceEffectSemanticLabel),
+          );
+          await tester.pumpAndSettle();
+          verify(
+            () => mainBloc.add(
+              const VideoEditorExternalPauseRequested(isPaused: true),
+            ),
+          ).called(1);
+          // The preset chip comes before the slider of the same name.
+          await tester.tap(
+            find
+                .descendant(
+                  of: find.byType(VideoEditorVoiceEffectSheet),
+                  matching: find.text(l10n.videoEditorVoiceEffectRobot),
+                )
+                .first,
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(
+            find.descendant(
+              of: find.byType(VideoEditorVoiceEffectSheet),
+              matching: find.byWidgetPredicate(
+                (w) => w is DivineIconButton && w.icon == DivineIconName.check,
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          final meta =
+              verify(
+                    () =>
+                        mockEditor.addHistory(meta: captureAny(named: 'meta')),
+                  ).captured.single
+                  as Map<String, dynamic>;
+          final tracks =
+              (meta[VideoEditorConstants.audioStateHistoryKey] as List<dynamic>)
+                  .cast<Map<String, dynamic>>()
+                  .map(AudioEvent.fromJson)
+                  .toList();
+
+          final processed = tracks[0];
+          expect(processed.id, isNot(track.id));
+          expect(processed.id, startsWith(track.id));
+          expect(processed.url, robotTake);
+          expect(processed.mimeType, 'audio/wav');
+          expect(processed.originalUrl, take);
+          expect(processed.voiceEffect, robot);
+          expect(processed.startTime, const Duration(seconds: 1));
+          expect(processed.endTime, const Duration(seconds: 4));
+          expect(tracks[1].id, other.id);
+          verify(
+            () => overlayBloc.add(TimelineOverlayItemSelected(processed.id)),
+          ).called(1);
+          verify(
+            () => mainBloc.add(
+              const VideoEditorExternalPauseRequested(isPaused: false),
+            ),
+          ).called(1);
         },
       );
 

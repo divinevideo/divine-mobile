@@ -9676,6 +9676,49 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'Ausblenden';
 
   @override
+  String get videoEditorVoiceEffectLabel => 'Stimme';
+
+  @override
+  String get videoEditorVoiceEffectSemanticLabel =>
+      'Ändern, wie die ausgewählte Aufnahme klingt';
+
+  @override
+  String get videoEditorVoiceEffectSheetTitle => 'Stimmeffekte';
+
+  @override
+  String get videoEditorVoiceEffectOriginal => 'Original';
+
+  @override
+  String get videoEditorVoiceEffectHighPitch => 'Helium';
+
+  @override
+  String get videoEditorVoiceEffectLowPitch => 'Tief';
+
+  @override
+  String get videoEditorVoiceEffectRobot => 'Roboter';
+
+  @override
+  String get videoEditorVoiceEffectEcho => 'Echo';
+
+  @override
+  String get videoEditorVoiceEffectPitch => 'Tonhöhe';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReduction =>
+      'Hintergrundrauschen reduzieren';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReductionSubtitle =>
+      'Entfernt Rauschen, Lüfter- und Raumgeräusche';
+
+  @override
+  String get videoEditorVoiceEffectApplying => 'Stimmeffekt wird angewendet';
+
+  @override
+  String get videoEditorVoiceEffectFailed =>
+      'Stimme konnte nicht geändert werden. Versuch es nochmal.';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Übergang';
 
   @override

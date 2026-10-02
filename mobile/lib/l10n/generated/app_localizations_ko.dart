@@ -9103,6 +9103,46 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorFadeOutLabel => '페이드 아웃';
 
   @override
+  String get videoEditorVoiceEffectLabel => '음성';
+
+  @override
+  String get videoEditorVoiceEffectSemanticLabel => '선택한 녹음의 목소리 바꾸기';
+
+  @override
+  String get videoEditorVoiceEffectSheetTitle => '음성 효과';
+
+  @override
+  String get videoEditorVoiceEffectOriginal => '원본';
+
+  @override
+  String get videoEditorVoiceEffectHighPitch => '다람쥐';
+
+  @override
+  String get videoEditorVoiceEffectLowPitch => '저음';
+
+  @override
+  String get videoEditorVoiceEffectRobot => '로봇';
+
+  @override
+  String get videoEditorVoiceEffectEcho => '에코';
+
+  @override
+  String get videoEditorVoiceEffectPitch => '피치';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReduction => '배경 소음 줄이기';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReductionSubtitle =>
+      '히스 노이즈, 팬 소리, 실내 소음을 없애요';
+
+  @override
+  String get videoEditorVoiceEffectApplying => '음성 효과 적용 중';
+
+  @override
+  String get videoEditorVoiceEffectFailed => '목소리를 바꾸지 못했어요. 다시 시도해 주세요.';
+
+  @override
   String get videoEditorTransitionSheetTitle => '전환';
 
   @override
