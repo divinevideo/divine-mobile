@@ -163,7 +163,7 @@ void main() {
       );
     });
 
-    test('should provide rate limit status', () {
+    test('should provide rate limit status', () async {
       // Arrange
       const endpoint = '/v1/media/ready-events';
 
@@ -175,7 +175,7 @@ void main() {
 
       // Make some requests
       for (var i = 0; i < 30; i++) {
-        rateLimiter.checkLimit(endpoint);
+        await rateLimiter.checkLimit(endpoint);
       }
 
       // Check updated status
