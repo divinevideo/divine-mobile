@@ -62,7 +62,7 @@ class CrosspostingRepository {
 
     return [
       for (final platformInfo in platforms)
-        if (platformInfo.enabled)
+        if (platformInfo.enabled && platformInfo.platform.isVisibleInApp)
           _settingsFor(platformInfo, connections, preferences),
     ];
   }

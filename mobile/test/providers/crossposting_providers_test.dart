@@ -64,66 +64,236 @@ void main() {
     verify(secondClient.close).called(1);
   });
 
-  group('crosspostingEligibleProvider', () {
+  group('isCrosspostingAccountEligible', () {
+    test('is true for an authenticated, registered account with a key', () {
+      expect(
+        isCrosspostingAccountEligible(
+          authState: AuthState.authenticated,
+          publicKeyHex: 'a' * 64,
+          isRegistered: true,
+        ),
+        isTrue,
+      );
+    });
+
+    test('is false when signed out', () {
+      expect(
+        isCrosspostingAccountEligible(
+          authState: AuthState.unauthenticated,
+          publicKeyHex: 'a' * 64,
+          isRegistered: true,
+        ),
+        isFalse,
+      );
+    });
+
+    test('is false when the public key is not known yet', () {
+      expect(
+        isCrosspostingAccountEligible(
+          authState: AuthState.authenticated,
+          publicKeyHex: null,
+          isRegistered: true,
+        ),
+        isFalse,
+      );
+    });
+
+    test('is false when the account is not registered', () {
+      expect(
+        isCrosspostingAccountEligible(
+          authState: AuthState.authenticated,
+          publicKeyHex: 'a' * 64,
+          isRegistered: false,
+        ),
+        isFalse,
+      );
+    });
+  });
+
+  group('crosspostingAvailabilityFor', () {
+    test('is native for an eligible account with OAuth support', () {
+      expect(
+        crosspostingAvailabilityFor(
+          accountEligible: true,
+          oauthSupported: true,
+        ),
+        CrosspostingAvailability.native,
+      );
+    });
+
+    test('is webOnly for an eligible account without OAuth support', () {
+      expect(
+        crosspostingAvailabilityFor(
+          accountEligible: true,
+          oauthSupported: false,
+        ),
+        CrosspostingAvailability.webOnly,
+      );
+    });
+
+    test('is unavailable for an ineligible account regardless of OAuth', () {
+      expect(
+        crosspostingAvailabilityFor(
+          accountEligible: false,
+          oauthSupported: true,
+        ),
+        CrosspostingAvailability.unavailable,
+      );
+    });
+  });
+
+  group('crosspostingAvailabilityProvider', () {
     ProviderContainer buildContainer({
-      required bool oauthSupported,
+      bool oauthSupported = true,
       bool resolveSupport = true,
+      bool authenticated = true,
+      bool registered = true,
     }) {
       final auth = _MockAuthService();
       when(() => auth.currentPublicKeyHex).thenReturn('a' * 64);
-      when(() => auth.isRegistered).thenReturn(true);
+      when(() => auth.isRegistered).thenReturn(registered);
       return ProviderContainer(
         overrides: [
-          currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+          currentAuthStateProvider.overrideWithValue(
+            authenticated ? AuthState.authenticated : AuthState.unauthenticated,
+          ),
           authServiceProvider.overrideWithValue(auth),
           appOAuthSupportProvider.overrideWith((ref) async {
-            if (!resolveSupport) {
-              // Never settle: models the window before the device lookup
-              // completes.
-              return Completer<bool>().future;
-            }
+            if (!resolveSupport) return Completer<bool>().future;
             return oauthSupported;
           }),
         ],
       );
     }
 
-    test(
-      'an eligible account is visible when the platform supports OAuth',
-      () async {
-        final container = buildContainer(oauthSupported: true);
-        addTearDown(container.dispose);
-
-        await container.read(appOAuthSupportProvider.future);
-
-        expect(container.read(crosspostingEligibleProvider), isTrue);
-      },
-    );
-
-    test('an eligible account is hidden when the platform does not support '
-        'the OAuth callback', () async {
-      // iOS 16.0-17.3: the flow exists but offering it fails mid-session.
-      final container = buildContainer(oauthSupported: false);
+    test('is native when authenticated and OAuth is supported', () async {
+      final container = buildContainer();
       addTearDown(container.dispose);
-
-      // Load-bearing: assert after the lookup settles, so this cannot pass
-      // for the unresolved-loading reason below.
       await container.read(appOAuthSupportProvider.future);
 
-      expect(container.read(crosspostingEligibleProvider), isFalse);
+      expect(
+        container.read(crosspostingAvailabilityProvider),
+        CrosspostingAvailability.native,
+      );
     });
 
-    test(
-      'stays hidden while the platform support lookup is unresolved',
-      () async {
-        final container = buildContainer(
-          oauthSupported: true,
-          resolveSupport: false,
-        );
-        addTearDown(container.dispose);
+    test('is webOnly when OAuth is unsupported', () async {
+      final container = buildContainer(oauthSupported: false);
+      addTearDown(container.dispose);
+      await container.read(appOAuthSupportProvider.future);
 
-        expect(container.read(crosspostingEligibleProvider), isFalse);
-      },
-    );
+      expect(
+        container.read(crosspostingAvailabilityProvider),
+        CrosspostingAvailability.webOnly,
+      );
+    });
+
+    test('is webOnly while the support lookup is unresolved', () async {
+      final container = buildContainer(resolveSupport: false);
+      addTearDown(container.dispose);
+
+      expect(
+        container.read(crosspostingAvailabilityProvider),
+        CrosspostingAvailability.webOnly,
+      );
+    });
+
+    test('is unavailable when signed out', () async {
+      final container = buildContainer(authenticated: false);
+      addTearDown(container.dispose);
+
+      expect(
+        container.read(crosspostingAvailabilityProvider),
+        CrosspostingAvailability.unavailable,
+      );
+    });
+
+    test('is unavailable when the account is not registered', () async {
+      final container = buildContainer(registered: false);
+      addTearDown(container.dispose);
+
+      expect(
+        container.read(crosspostingAvailabilityProvider),
+        CrosspostingAvailability.unavailable,
+      );
+    });
+  });
+
+  group('resolveCrosspostingAvailability', () {
+    ProviderContainer buildContainer({
+      Future<bool>? support,
+      bool authenticated = true,
+      bool registered = true,
+    }) {
+      final auth = _MockAuthService();
+      when(() => auth.currentPublicKeyHex).thenReturn('a' * 64);
+      when(() => auth.isRegistered).thenReturn(registered);
+      return ProviderContainer(
+        overrides: [
+          currentAuthStateProvider.overrideWithValue(
+            authenticated ? AuthState.authenticated : AuthState.unauthenticated,
+          ),
+          authServiceProvider.overrideWithValue(auth),
+          appOAuthSupportProvider.overrideWith((ref) async {
+            if (support != null) return support;
+            return true;
+          }),
+        ],
+      );
+    }
+
+    test('is unavailable when signed out', () async {
+      final container = buildContainer(authenticated: false);
+      addTearDown(container.dispose);
+
+      expect(
+        await resolveCrosspostingAvailability(container),
+        CrosspostingAvailability.unavailable,
+      );
+    });
+
+    test('does not wait on the support lookup when signed out', () async {
+      final container = buildContainer(
+        support: Completer<bool>().future,
+        authenticated: false,
+      );
+      addTearDown(container.dispose);
+
+      expect(
+        await resolveCrosspostingAvailability(container),
+        CrosspostingAvailability.unavailable,
+      );
+    });
+
+    test('is unavailable when the account is not registered', () async {
+      final container = buildContainer(registered: false);
+      addTearDown(container.dispose);
+
+      expect(
+        await resolveCrosspostingAvailability(container),
+        CrosspostingAvailability.unavailable,
+      );
+    });
+
+    test('waits for an unresolved support lookup that resolves true', () async {
+      final completer = Completer<bool>();
+      final container = buildContainer(support: completer.future);
+      addTearDown(container.dispose);
+
+      final pending = resolveCrosspostingAvailability(container);
+      completer.complete(true);
+
+      expect(await pending, CrosspostingAvailability.native);
+    });
+
+    test('is webOnly when support resolves false', () async {
+      final container = buildContainer(support: Future.value(false));
+      addTearDown(container.dispose);
+
+      expect(
+        await resolveCrosspostingAvailability(container),
+        CrosspostingAvailability.webOnly,
+      );
+    });
   });
 }

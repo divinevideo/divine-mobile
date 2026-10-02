@@ -49,6 +49,27 @@ class CrosspostingSettingsState extends Equatable {
   /// Whether any mutation currently owns the global operation gate.
   bool get hasPendingAction => pendingAction != null;
 
+  /// Whether there are platforms and none of them is connected yet.
+  bool get allPlatformsDisconnected =>
+      entries.isNotEmpty && entries.every((entry) => !entry.isConnected);
+
+  /// The platform the benefit card pitches, or `null` when it is hidden.
+  CrosspostingPlatform? get benefitCardPlatform =>
+      allPlatformsDisconnected ? entries.first.platform : null;
+
+  /// The first connected platform that could switch to automatic crossposting
+  /// but has not, or `null` when the automatic-mode card is hidden.
+  CrosspostingPlatform? get automaticModeCardPlatform {
+    for (final entry in entries) {
+      if (entry.isConnected &&
+          entry.supportsAutomatic &&
+          entry.mode != CrosspostingMode.automatic) {
+        return entry.platform;
+      }
+    }
+    return null;
+  }
+
   CrosspostingSettingsState copyWith({
     CrosspostingSettingsStatus? status,
     List<CrosspostingPlatformSettings>? entries,

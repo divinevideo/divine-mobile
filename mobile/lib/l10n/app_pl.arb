@@ -4786,5 +4786,17 @@
     "videoMetadataScheduleTooSoon": "{minutes, plural, =1{Zostaw co najmniej {minutes} minutę.} few{Zostaw co najmniej {minutes} minuty.} many{Zostaw co najmniej {minutes} minut.} other{Zostaw co najmniej {minutes} minuty.}}",
     "videoMetadataScheduleTooFar": "{days, plural, =1{To ponad {days} dzień od teraz. Wybierz coś bliższego.} few{To ponad {days} dni od teraz. Wybierz coś bliższego.} many{To ponad {days} dni od teraz. Wybierz coś bliższego.} other{To ponad {days} dnia od teraz. Wybierz coś bliższego.}}",
     "videoMetadataScheduleButton": "Zaplanuj",
-    "videoMetadataScheduleVideoHint": "Planuje ten film na {time}"
+    "videoMetadataScheduleVideoHint": "Planuje ten film na {time}",
+  "crosspostingBenefitTitle": "Zabierz swoje loopy wszędzie",
+  "@crosspostingBenefitTitle": {"description": "Headline of the crossposting benefit card in settings"},
+  "crosspostingBenefitBody": "Opublikuj raz na Divine i udostępnij prosto na Instagram. Twoi ludzie już tam są — idź ich poznać. Każdy wysłany loop niesie ze sobą mały link do domu, żeby następny twórca też nas znalazł.",
+  "@crosspostingBenefitBody": {"description": "Body of the crossposting benefit card in settings"},
+  "crosspostingBenefitConnect": "Połącz {platform}",
+  "@crosspostingBenefitConnect": {"description": "Primary action on the crossposting benefit card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoTitle": "Ustaw raz",
+  "@crosspostingAutoTitle": {"description": "Headline of the automatic crossposting encouragement card"},
+  "crosspostingAutoBody": "Każdy nowy loop, który opublikujesz, trafia za ciebie na {platform} — bez dodatkowych kliknięć. Dotyczy tylko loopów opublikowanych po włączeniu tej opcji.",
+  "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoEnable": "Włącz automatyczne",
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
 }

@@ -39,7 +39,9 @@ class GeneralSettingsScreen extends ConsumerWidget {
     final showBluesky = ref.watch(
       isFeatureEnabledProvider(FeatureFlag.blueskyPublishing),
     );
-    final showCrossposting = ref.watch(crosspostingEligibleProvider);
+    final showCrossposting =
+        ref.watch(crosspostingAvailabilityProvider) !=
+        CrosspostingAvailability.unavailable;
     // Only a Divine-login account has an email and password to change; every
     // other identity signs with a key and has no credentials on file.
     final showAccountCredentials =

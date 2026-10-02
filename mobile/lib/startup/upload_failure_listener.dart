@@ -290,10 +290,9 @@ void _onConfirmationShare(
   String stableId,
 ) {
   unawaited(container.read(postPublishExperimentProvider).shareTapped(offer));
-  // The platform sheet rather than the in-app one: that needs a hydrated
-  // VideoEvent, and seconds after publish the event is often not yet
-  // resolvable from Funnelcake or any relay. The rich sheet stays one tap
-  // away on the video detail screen.
+  // Preserve the OS-share behavior assigned to the active `viewShare`
+  // experiment arm. Moving this action into the in-app share menu changes the
+  // treatment and must be introduced as a separately named variant.
   unawaited(
     showShareSheet(
       context,

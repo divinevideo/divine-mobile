@@ -70,6 +70,13 @@ enum CrosspostingPlatform {
     }
     return null;
   }
+
+  /// Whether this build offers the platform at all.
+  ///
+  /// X's OAuth connect has never completed end to end while the service still
+  /// reports it enabled, so offering it would dead-end the user. Remove this
+  /// exclusion once the server-side X OAuth fix lands (#9455).
+  bool get isVisibleInApp => this != CrosspostingPlatform.x;
 }
 
 /// Connection state of an external platform account.

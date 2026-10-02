@@ -68,8 +68,9 @@ class _MockRouteInformationProvider extends Mock
 _MockGoRouter _routerAt(String location) {
   final router = _MockGoRouter();
   final routeInformation = _MockRouteInformationProvider();
-  when(() => routeInformation.value)
-      .thenReturn(RouteInformation(uri: Uri.parse(location)));
+  when(
+    () => routeInformation.value,
+  ).thenReturn(RouteInformation(uri: Uri.parse(location)));
   when(() => router.routeInformationProvider).thenReturn(routeInformation);
   when(() => router.push<void>(any())).thenAnswer((_) async {});
   return router;
@@ -440,8 +441,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(
         find.text(
-          lookupAppLocalizations(const Locale('en'))
-              .postPublishConfirmationView,
+          lookupAppLocalizations(
+            const Locale('en'),
+          ).postPublishConfirmationView,
         ),
       );
       await tester.pumpAndSettle();
@@ -453,6 +455,33 @@ void main() {
             router.push<void>(RoutePaths.videoDetailForId(_publishedStableId)),
       ).called(1);
       verifyNever(() => router.go(any()));
+    });
+
+    testWidgets('Share preserves the experiment OS-share behavior', (
+      tester,
+    ) async {
+      stubPublishBloc(const BackgroundPublishState());
+      when(() => authService.isAuthenticated).thenReturn(true);
+      when(() => authService.currentPublicKeyHex).thenReturn(_ownHex);
+      final experiment = await _treatmentExperiment('draft-treatment');
+
+      await tester.pumpWidget(
+        _buildHarness(
+          publishBloc: publishBloc,
+          authService: authService,
+          experiment: experiment,
+          router: _routerAt(_ownProfileLocation),
+        ),
+      );
+
+      publishStream.add(_succeededState('draft-treatment'));
+      await tester.pumpAndSettle();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.tap(find.text(l10n.postPublishConfirmationShare));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.shareSheetMoreActions), findsNothing);
     });
 
     testWidgets('falls back to the snackbar once the user has moved on', (
