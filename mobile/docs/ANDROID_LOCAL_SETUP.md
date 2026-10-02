@@ -94,6 +94,10 @@ The flag and the intent extra are the same switch: `flutter run` passes
 to remove it, so treat it as a diagnostic step rather than a setting, and file
 an issue for an emulator that needs it.
 
+`--enable-software-rendering` is not supported with Impeller (the engine refuses
+the pair with "Impeller does not support software rendering"), so pass
+`--no-enable-impeller --enable-software-rendering` together.
+
 ## Running Gradle directly
 
 The wrapper is tracked, so `./gradlew` exists in a fresh clone or worktree with
