@@ -340,6 +340,7 @@ class BadgeRepository {
     BadgeHiddenPubkeyReader? isHiddenPubkey,
     void Function(String owner, Future<void> Function() close)?
     onAccountCreated,
+    String? definitionRelayUrl,
   }) : _nostrClient = nostrClient,
        _currentPubkey = currentPubkey,
        _signEvent = signEvent,
@@ -349,7 +350,8 @@ class BadgeRepository {
          preferences: sharedPreferences,
          signer: signer,
          onAccountCreated: onAccountCreated,
-       );
+       ),
+       _definitionRelayUrl = definitionRelayUrl;
 
   final NostrClient _nostrClient;
   final BadgeCurrentPubkeyReader _currentPubkey;
@@ -359,6 +361,9 @@ class BadgeRepository {
   /// Null leaves awards unfiltered, which is what an anonymous or test
   /// repository wants — there is no blocklist to consult.
   final BadgeHiddenPubkeyReader? _isHiddenPubkey;
+
+  /// Relay used for public definitions when no account has initialized relays.
+  final String? _definitionRelayUrl;
 
   /// The profile badge list this repository last published, and whose it is.
   ///
@@ -399,6 +404,7 @@ class BadgeRepository {
       if (!isBadgePubkey(issuer)) continue;
       final result = await _nostrClient.readAllEvents(
         Filter(authors: [issuer], kinds: [EventKind.badgeDefinition]),
+        tempRelays: _definitionRelayUrl == null ? null : [_definitionRelayUrl],
       );
       if (!result.isComplete) {
         throw StateError('Badge definitions could not be fully loaded');
