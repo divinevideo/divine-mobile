@@ -60,7 +60,7 @@ def parse_docker_logs(path: Path) -> tuple[list[dict], str]:
     """
     entries = []
     date_prefix = ''
-    for line in path.read_text().splitlines():
+    for line in path.read_text(errors="replace").splitlines():
         if not line.strip():
             continue
         m = DOCKER_RE.match(line)
@@ -87,7 +87,7 @@ def parse_app_logs(path: Path, date_prefix: str) -> list[dict]:
     timestamps like [11:06:55.268] into full ISO 8601 timestamps.
     """
     entries = []
-    for line in path.read_text().splitlines():
+    for line in path.read_text(errors="replace").splitlines():
         if not line.strip():
             continue
         m = APP_TS_FULL_RE.match(line)
@@ -132,7 +132,7 @@ def _parse_iso(ts_str: str) -> datetime:
 def parse_logcat_logs(path: Path) -> list[dict]:
     """Parse Android logcat output (captured with -v UTC -v year)."""
     entries = []
-    for line in path.read_text().splitlines():
+    for line in path.read_text(errors="replace").splitlines():
         if not line.strip():
             continue
         m = LOGCAT_RE.match(line)

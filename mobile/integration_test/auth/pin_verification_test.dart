@@ -73,7 +73,7 @@ void main() {
           // to exercise the startup restore path.
           logPhase('Cold start: relaunching app.main()');
           launchAppGuarded(app.main);
-          await tester.pumpAndSettle(const Duration(seconds: 3));
+          await pumpUntilSettled(tester, maxSeconds: 3);
 
           // 4. The app should restore to the verification screen with the PIN
           // field visible and still polling — not Welcome.
@@ -106,7 +106,7 @@ void main() {
           // restored deviceCode/verifier (proves the persisted record still
           // exchanges).
           await tester.enterText(_pinField(), knownPin);
-          await tester.pumpAndSettle();
+          await pumpUntilSettled(tester, maxSeconds: 1);
           await tester.tap(
             find.widgetWithText(DivineButton, _en.authVerificationPinSubmit),
           );
@@ -160,7 +160,7 @@ void main() {
 
           logPhase('Cold start: relaunching app.main()');
           launchAppGuarded(app.main);
-          await tester.pumpAndSettle(const Duration(seconds: 3));
+          await pumpUntilSettled(tester, maxSeconds: 3);
           expect(
             await waitForText(tester, _en.authCompleteRegistration),
             isTrue,
@@ -169,7 +169,7 @@ void main() {
 
           // Tap the escape hatch -> back to Welcome.
           await tester.tap(_closeButton());
-          await tester.pumpAndSettle(const Duration(seconds: 1));
+          await pumpUntilSettled(tester, maxSeconds: 1);
           expect(
             await waitForText(tester, _en.authCreateNewAccount),
             isTrue,
@@ -184,7 +184,7 @@ void main() {
           // The record must be cleared: a second cold start must NOT restore.
           logPhase('Cold start 2: should NOT restore (record cleared)');
           launchAppGuarded(app.main);
-          await tester.pumpAndSettle(const Duration(seconds: 3));
+          await pumpUntilSettled(tester, maxSeconds: 3);
           expect(
             await waitForText(tester, _en.authCreateNewAccount),
             isTrue,

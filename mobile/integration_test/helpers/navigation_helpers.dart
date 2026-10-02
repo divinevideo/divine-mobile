@@ -8,17 +8,31 @@ import 'package:openvine/l10n/l10n.dart';
 
 AppLocalizations get _en => lookupAppLocalizations(const Locale('en'));
 
+/// The first of [candidates] that is on screen, or the first candidate when
+/// none is, so a failed `expect` names the label a fresh install shows.
+Finder _firstShown(List<Finder> candidates) => candidates.firstWhere(
+  (finder) => finder.evaluate().isNotEmpty,
+  orElse: () => candidates.first,
+);
+
 /// Navigate from the welcome screen to the create account screen.
 ///
 /// The welcome screen has a passive terms notice — no checkboxes needed.
-/// Taps "Create a new Divine account" to reach the registration screen.
+/// Taps the create-account button to reach the registration screen. A device
+/// where an account has signed in before shows the returning-user layout,
+/// which labels that button more briefly, so either label is accepted.
 /// Waits for the form to appear.
 Future<void> navigateToCreateAccount(WidgetTester tester) async {
-  final createButton = find.text(_en.authCreateNewAccount);
+  final createButton = _firstShown([
+    find.text(_en.authCreateNewAccount),
+    find.text(_en.authCreateNewAccountShort),
+  ]);
   expect(
     createButton,
     findsOneWidget,
-    reason: 'Welcome screen should show "${_en.authCreateNewAccount}"',
+    reason:
+        'Welcome screen should show "${_en.authCreateNewAccount}", or '
+        '"${_en.authCreateNewAccountShort}" for a returning user',
   );
   await tester.tap(createButton);
   await tester.pumpAndSettle(const Duration(seconds: 1));
@@ -37,13 +51,20 @@ Future<void> navigateToCreateAccount(WidgetTester tester) async {
 
 /// Navigate from the welcome screen to the login options screen.
 ///
-/// Taps the localized sign-in CTA to reach the sign-in screen.
+/// Taps the localized sign-in CTA to reach the sign-in screen. The
+/// returning-user layout offers the same destination as "use another
+/// account", so either label is accepted.
 Future<void> navigateToLoginOptions(WidgetTester tester) async {
-  final signInButton = find.text(_en.authSignInDifferentAccount);
+  final signInButton = _firstShown([
+    find.text(_en.authSignInDifferentAccount),
+    find.text(_en.authUseAnotherAccount),
+  ]);
   expect(
     signInButton,
     findsOneWidget,
-    reason: 'Welcome screen should show "${_en.authSignInDifferentAccount}"',
+    reason:
+        'Welcome screen should show "${_en.authSignInDifferentAccount}", or '
+        '"${_en.authUseAnotherAccount}" for a returning user',
   );
   await tester.tap(signInButton);
   await tester.pumpAndSettle(const Duration(seconds: 1));

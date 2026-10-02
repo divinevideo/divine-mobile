@@ -3,11 +3,13 @@
 // ABOUTME: options screen instead of bouncing to home feed.
 // ABOUTME: Requires: local Docker stack (mise run local_up)
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/main.dart' as app;
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -17,7 +19,10 @@ import '../helpers/db_helpers.dart';
 import '../helpers/http_helpers.dart';
 import '../helpers/navigation_helpers.dart';
 import '../helpers/patrol_semantics.dart';
+import '../helpers/permission_helpers.dart';
 import '../helpers/test_setup.dart';
+
+AppLocalizations get _en => lookupAppLocalizations(const Locale('en'));
 
 void main() {
   ignorePlatformSemanticsHandle();
@@ -176,6 +181,9 @@ void main() {
           // Phase 4: Navigate to profile, find banner, tap "Sign in"
           // ════════════════════════════════════════════════════════════
 
+          // The post-sign-in notifications prompt would otherwise sit in front
+          // of the profile sheet and swallow every tap.
+          await dismissNotificationPermission($);
           await tapBottomNavTab(tester, 'profile_tab');
           await pumpUntilSettled(tester);
 
@@ -186,10 +194,12 @@ void main() {
             reason: 'Profile should show "Session Expired" banner',
           );
 
-          // Tap the "Sign in" button on the banner
-          final signInButton = find.widgetWithText(ElevatedButton, 'Sign in');
-          expect(signInButton, findsOneWidget);
-          await tester.tap(signInButton);
+          // Tap "Sign in" on the session-expired sheet. Patrol's tap waits
+          // until the button can be hit rather than tapping a sheet that is
+          // still opening.
+          await $(DivineButton)
+              .containing(_en.profileSignInButton)
+              .tap(settlePolicy: SettlePolicy.noSettle);
           await pumpUntilSettled(tester, maxSeconds: 10);
 
           logPhase('Phase 4: tapped Sign in on expired session banner');

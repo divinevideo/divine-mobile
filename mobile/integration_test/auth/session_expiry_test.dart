@@ -10,6 +10,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/main.dart' as app;
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/providers/deep_link_listeners.dart';
+import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:patrol/patrol.dart';
 
@@ -179,10 +180,11 @@ void main() {
           // ════════════════════════════════════════════════════════════
 
           // User should be on the welcome screen since they're
-          // unauthenticated. Look for the welcome screen indicators.
+          // unauthenticated. This device has signed in, so it shows the
+          // returning-user layout, which has no "Sign in" label.
           final foundWelcome = await waitForWidget(
             tester,
-            find.textContaining('Sign in'),
+            find.byType(WelcomeScreen),
           );
           expect(
             foundWelcome,

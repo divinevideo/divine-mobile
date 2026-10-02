@@ -16,6 +16,7 @@ import 'package:openvine/main.dart' as app;
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/widgets/vine_bottom_nav.dart';
 import 'package:patrol/patrol.dart';
 
 import '../helpers/constants.dart';
@@ -84,7 +85,7 @@ Future<String> _registerAndVerifyViaApi(String email, String password) async {
 void main() {
   ignorePlatformSemanticsHandle();
 
-  group('Bug #2233 -- Delete Account Flow (User Log 2)', () {
+  group('Bug 2233 -- Delete Account Flow (User Log 2)', () {
     final ts = DateTime.now().millisecondsSinceEpoch;
     final emailA = 'log2-a-$ts@test.divine.video';
     final emailB = 'log2-b-$ts@test.divine.video';
@@ -162,7 +163,7 @@ void main() {
             tester,
             find.byWidgetPredicate(
               (widget) =>
-                  widget is BottomNavigationBar ||
+                  widget is VineBottomNav ||
                   (widget is Text &&
                       (widget.data == 'Popular' || widget.data == 'Trending')),
             ),
@@ -341,7 +342,7 @@ void main() {
             tester,
             find.byWidgetPredicate(
               (widget) =>
-                  widget is BottomNavigationBar ||
+                  widget is VineBottomNav ||
                   (widget is Text &&
                       (widget.data == 'Popular' || widget.data == 'Trending')),
             ),

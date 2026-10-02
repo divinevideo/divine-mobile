@@ -285,10 +285,20 @@ assert_contains 'flutter test "$TEST_PATH"' "${SCRIPT_DIR}/profile.sh" \
   "profile runner should send plain integration_test suites through flutter test"
 assert_contains '--device-id "$DEVICE"' "${SCRIPT_DIR}/profile.sh" \
   "profile runner should pass the detected device to flutter test"
-assert_contains 'flutter install --device-id "$DEVICE"' "${SCRIPT_DIR}/profile.sh" \
-  "profile runner should install before pre-granting notification permission"
-assert_line_before 'flutter install --device-id "$DEVICE"' 'android.permission.POST_NOTIFICATIONS' "${SCRIPT_DIR}/profile.sh" \
+assert_contains 'flutter build apk --debug' "${SCRIPT_DIR}/profile.sh" \
+  "profile runner should build the debug APK that flutter test runs, since flutter install never builds"
+assert_contains 'flutter install --debug --device-id "$DEVICE"' "${SCRIPT_DIR}/profile.sh" \
+  "profile runner should install the debug build, not flutter install's release default"
+assert_line_before 'flutter build apk --debug' 'flutter install --debug --device-id "$DEVICE"' "${SCRIPT_DIR}/profile.sh" \
+  "profile runner should build the debug APK before installing it"
+assert_line_before 'flutter install --debug --device-id "$DEVICE"' 'android.permission.POST_NOTIFICATIONS' "${SCRIPT_DIR}/profile.sh" \
   "profile runner should grant notification permission only after the app exists"
+assert_contains 'pm grant co.openvine.app.staging' "${SCRIPT_DIR}/profile.sh" \
+  "profile runner should pre-grant the debug package that flutter test installs"
+assert_contains 'pkill -TERM -P "$1"' "${SCRIPT_DIR}/profile.sh" \
+  "profile runner should signal the compose plugin, which can outlive the docker CLI's SIGTERM"
+assert_contains 'stop_capture "$DOCKER_PID"' "${SCRIPT_DIR}/profile.sh" \
+  "profile runner should stop docker log capture through stop_capture"
 
 cat > "${tmp_dir}/bin/uname" <<'STUB'
 #!/usr/bin/env bash

@@ -3,11 +3,11 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/main.dart' as app;
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/providers/deep_link_listeners.dart';
 import 'package:openvine/screens/key_management_screen.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -84,21 +84,21 @@ void main() {
                 'Standard Keycast registration does not store an nsec locally',
           );
 
-          GoRouter.of(tester.element(find.byType(MaterialApp))).go(
-            KeyManagementScreen.path,
-          );
+          // The router lives below MaterialApp, so GoRouter.of() cannot find
+          // it from the MaterialApp element; read it from the container.
+          container.read(goRouterProvider).go(KeyManagementScreen.path);
           await pumpUntilSettled(tester, maxSeconds: 10);
-
-          // The #182 key-management gate fails closed until the protected-minor
-          // status resolves; for this adult account it resolves to not-restricted
-          // and reveals the export section. Wait out that resolution window.
-          await waitForTextGone(tester, 'Your keys are managed by Divine');
 
           // Resolved from the ARB rather than hardcoded so this survives copy
           // changes and breaks loudly if the screen stops reading from l10n.
           final l10n = lookupAppLocalizations(const Locale('en'));
 
-          expect(find.text('Key Management'), findsOneWidget);
+          // The #182 key-management gate fails closed until the protected-minor
+          // status resolves; for this adult account it resolves to not-restricted
+          // and reveals the export section. Wait out that resolution window.
+          await waitForTextGone(tester, l10n.keyManagementRestrictedTitle);
+
+          expect(find.text(l10n.keyManagementTitle), findsOneWidget);
           // The key is reachable, just not on this device: the copy action is
           // offered for this account too, and the explanation above it says the
           // key comes from Divine's login service rather than local storage.

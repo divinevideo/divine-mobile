@@ -11,6 +11,7 @@ import 'package:openvine/main.dart' as app;
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/providers/deep_link_listeners.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/widgets/vine_bottom_nav.dart';
 import 'package:patrol/patrol.dart';
 
 import '../helpers/db_helpers.dart';
@@ -82,7 +83,7 @@ void main() {
 
           // Assert: landed on main app
           final hasMainApp =
-              find.byType(BottomNavigationBar).evaluate().isNotEmpty ||
+              find.byType(VineBottomNav).evaluate().isNotEmpty ||
               find.text('Popular').evaluate().isNotEmpty ||
               find.text('Trending').evaluate().isNotEmpty;
           expect(hasMainApp, isTrue, reason: 'Should land on main app');

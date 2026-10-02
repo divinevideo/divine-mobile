@@ -56,8 +56,8 @@ Future<void> seedKnownPin(
           Sql.named(
             'UPDATE oauth_codes '
             'SET pin_hash = @pinHash, pin_attempts = 0 '
-            'WHERE id = ('
-            '  SELECT id FROM oauth_codes '
+            'WHERE code = ('
+            '  SELECT code FROM oauth_codes '
             '  WHERE pending_email = @email '
             '  ORDER BY created_at DESC '
             '  LIMIT 1)',

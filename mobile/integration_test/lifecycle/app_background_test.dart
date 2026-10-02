@@ -12,7 +12,7 @@ import '../helpers/test_setup.dart';
 void main() {
   ignorePlatformSemanticsHandle();
 
-  group('App Background / State Restoration', () {
+  group('App Background and State Restoration', () {
     patrolTest(
       'app state is preserved after backgrounding and reopening',
       ($) async {

@@ -12,6 +12,7 @@ import 'package:openvine/main.dart' as app;
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/providers/deep_link_listeners.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
+import 'package:openvine/widgets/vine_bottom_nav.dart';
 import 'package:patrol/patrol.dart';
 
 import '../../test/helpers/finders.dart';
@@ -108,10 +109,7 @@ void main() {
           await pumpUntilSettled(tester);
 
           // Assert: we landed on the main app
-          final hasBottomNav = find
-              .byType(BottomNavigationBar)
-              .evaluate()
-              .isNotEmpty;
+          final hasBottomNav = find.byType(VineBottomNav).evaluate().isNotEmpty;
           final hasExploreContent =
               find.text('Popular').evaluate().isNotEmpty ||
               find.text('Trending').evaluate().isNotEmpty;
@@ -290,7 +288,7 @@ void main() {
             tester,
             find.byWidgetPredicate(
               (widget) =>
-                  widget is BottomNavigationBar ||
+                  widget is VineBottomNav ||
                   (widget is Text &&
                       (widget.data == 'Popular' || widget.data == 'Trending')),
             ),

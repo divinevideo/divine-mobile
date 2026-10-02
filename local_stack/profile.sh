@@ -40,14 +40,20 @@ DOCKER_LOG="${TMPDIR}/docker.log"
 APP_LOG="${TMPDIR}/app.log"
 LOGCAT_LOG="${TMPDIR}/logcat.log"
 
+# The docker CLI can outlive a SIGTERM while its compose plugin child keeps
+# following logs, and then `wait` never returns. Signal the child as well.
+stop_capture() {
+    pkill -TERM -P "$1" 2>/dev/null || true
+    kill "$1" 2>/dev/null || true
+    wait "$1" 2>/dev/null || true
+}
+
 cleanup() {
     if [[ -n "${DOCKER_PID:-}" ]] && kill -0 "$DOCKER_PID" 2>/dev/null; then
-        kill "$DOCKER_PID" 2>/dev/null || true
-        wait "$DOCKER_PID" 2>/dev/null || true
+        stop_capture "$DOCKER_PID"
     fi
     if [[ -n "${LOGCAT_PID:-}" ]] && kill -0 "$LOGCAT_PID" 2>/dev/null; then
-        kill "$LOGCAT_PID" 2>/dev/null || true
-        wait "$LOGCAT_PID" 2>/dev/null || true
+        stop_capture "$LOGCAT_PID"
     fi
     rm -rf "$TMPDIR"
 }
@@ -148,12 +154,30 @@ else
     # path, so a permission dialog would block Flutter interaction with no
     # way to dismiss it. Install first so the pre-grant has a package to
     # target even after a fresh emulator wipe or Patrol's default uninstall.
+    # It must be the debug build flutter test runs, which the debug
+    # applicationIdSuffix installs as co.openvine.app.staging. flutter
+    # install never builds and defaults to release, so build it first, for
+    # this device's ABI only, as flutter test does.
     echo "Running: flutter test ${TEST_PATH} ..." >&2
-    flutter install --device-id "$DEVICE" 2>&1 | tee "$APP_LOG"
+    case "$(adb -s "$DEVICE" shell getprop ro.product.cpu.abi | tr -d '\r')" in
+        arm64-v8a) TARGET_PLATFORM=android-arm64 ;;
+        x86_64) TARGET_PLATFORM=android-x64 ;;
+        armeabi-v7a) TARGET_PLATFORM=android-arm ;;
+        *) TARGET_PLATFORM="" ;;
+    esac
+    flutter build apk --debug ${TARGET_PLATFORM:+--target-platform "$TARGET_PLATFORM"} \
+        2>&1 | tee "$APP_LOG"
     INSTALL_EXIT="${PIPESTATUS[0]}"
     if [[ $INSTALL_EXIT -eq 0 ]]; then
-        adb -s "$DEVICE" shell pm grant co.openvine.app \
-            android.permission.POST_NOTIFICATIONS >/dev/null 2>&1 || true
+        flutter install --debug --device-id "$DEVICE" 2>&1 | tee -a "$APP_LOG"
+        INSTALL_EXIT="${PIPESTATUS[0]}"
+    fi
+    if [[ $INSTALL_EXIT -eq 0 ]]; then
+        if ! adb -s "$DEVICE" shell pm grant co.openvine.app.staging \
+            android.permission.POST_NOTIFICATIONS; then
+            echo "WARNING: could not pre-grant POST_NOTIFICATIONS to co.openvine.app.staging." >&2
+            echo "Below Android 13 that is expected; otherwise its dialog can block the run." >&2
+        fi
         flutter test "$TEST_PATH" \
             --device-id "$DEVICE" \
             --dart-define=DEFAULT_ENV=LOCAL \
@@ -166,11 +190,9 @@ fi
 set -e
 
 # --- Stop docker log and logcat capture ---
-kill "$DOCKER_PID" 2>/dev/null || true
-wait "$DOCKER_PID" 2>/dev/null || true
+stop_capture "$DOCKER_PID"
 unset DOCKER_PID
-kill "$LOGCAT_PID" 2>/dev/null || true
-wait "$LOGCAT_PID" 2>/dev/null || true
+stop_capture "$LOGCAT_PID"
 unset LOGCAT_PID
 
 # --- Merge logs ---

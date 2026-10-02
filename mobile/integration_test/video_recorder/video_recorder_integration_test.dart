@@ -1,8 +1,6 @@
 // ABOUTME: Integration tests for video recording functionality
 // ABOUTME: Tests start/stop recording, video file creation, and recording state
 
-import 'dart:async';
-
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,6 +13,7 @@ import 'package:patrol/patrol.dart';
 import 'package:permissions_service/permissions_service.dart';
 
 import '../helpers/patrol_semantics.dart';
+import '../helpers/permission_helpers.dart';
 
 /// Helper widget that wraps VideoRecorderScreen with required providers
 Widget _buildTestWidget() {
@@ -26,23 +25,6 @@ Widget _buildTestWidget() {
       child: const MaterialApp(home: VideoRecorderScreen()),
     ),
   );
-}
-
-/// Grant camera and microphone permissions via Patrol native automation.
-Future<void> _grantPermissions(PatrolIntegrationTester $) async {
-  const service = PermissionHandlerPermissionsService();
-  unawaited(service.requestCameraPermission());
-  if (await $.platformAutomator.mobile.isPermissionDialogVisible(
-    timeout: const Duration(seconds: 5),
-  )) {
-    await $.platformAutomator.mobile.grantPermissionWhenInUse();
-  }
-  unawaited(service.requestMicrophonePermission());
-  if (await $.platformAutomator.mobile.isPermissionDialogVisible(
-    timeout: const Duration(seconds: 5),
-  )) {
-    await $.platformAutomator.mobile.grantPermissionWhenInUse();
-  }
 }
 
 void main() {
@@ -73,7 +55,7 @@ void main() {
     });
 
     patrolTest('can start recording', ($) async {
-      await _grantPermissions($);
+      await grantCameraAndMicrophone($);
       final tester = $.tester;
       expect(cameraService.canRecord, isTrue);
 
@@ -84,7 +66,7 @@ void main() {
     });
 
     patrolTest('can stop recording after starting', ($) async {
-      await _grantPermissions($);
+      await grantCameraAndMicrophone($);
       final tester = $.tester;
       await cameraService.startRecording();
 
@@ -98,7 +80,7 @@ void main() {
     });
 
     patrolTest('can start and stop multiple recordings', ($) async {
-      await _grantPermissions($);
+      await grantCameraAndMicrophone($);
       final tester = $.tester;
       for (var i = 0; i < 3; i++) {
         await cameraService.startRecording();
@@ -115,7 +97,7 @@ void main() {
     });
 
     patrolTest('stopping without starting does not crash', ($) async {
-      await _grantPermissions($);
+      await grantCameraAndMicrophone($);
       // Should handle gracefully
       final video = await cameraService.stopRecording();
 
@@ -126,7 +108,7 @@ void main() {
 
   group('Video Recorder Widget Tests', () {
     patrolTest('pinch to zoom changes zoom level', ($) async {
-      await _grantPermissions($);
+      await grantCameraAndMicrophone($);
       final tester = $.tester;
       await tester.pumpWidget(_buildTestWidget());
 
@@ -169,7 +151,7 @@ void main() {
     });
 
     patrolTest('long press on record button starts recording', ($) async {
-      await _grantPermissions($);
+      await grantCameraAndMicrophone($);
       final tester = $.tester;
       await tester.pumpWidget(_buildTestWidget());
 
@@ -224,7 +206,7 @@ void main() {
     });
 
     patrolTest('long press move zooms during recording', ($) async {
-      await _grantPermissions($);
+      await grantCameraAndMicrophone($);
       final tester = $.tester;
       await tester.pumpWidget(_buildTestWidget());
 

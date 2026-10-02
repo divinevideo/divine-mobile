@@ -1,34 +1,16 @@
 // ABOUTME: Integration tests for single-photo (stop-motion) capture
 // ABOUTME: Tests that capturePhoto writes real JPEG frames to disk on device
 
-import 'dart:async';
 import 'dart:io';
 
 import 'package:divine_camera/divine_camera.dart' show PhotoCaptureResult;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/video_recorder/camera/camera_base_service.dart';
 import 'package:patrol/patrol.dart';
-import 'package:permissions_service/permissions_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/patrol_semantics.dart';
-
-/// Grant camera and microphone permissions via Patrol native automation.
-Future<void> _grantPermissions(PatrolIntegrationTester $) async {
-  const service = PermissionHandlerPermissionsService();
-  unawaited(service.requestCameraPermission());
-  if (await $.platformAutomator.mobile.isPermissionDialogVisible(
-    timeout: const Duration(seconds: 5),
-  )) {
-    await $.platformAutomator.mobile.grantPermissionWhenInUse();
-  }
-  unawaited(service.requestMicrophonePermission());
-  if (await $.platformAutomator.mobile.isPermissionDialogVisible(
-    timeout: const Duration(seconds: 5),
-  )) {
-    await $.platformAutomator.mobile.grantPermissionWhenInUse();
-  }
-}
+import '../helpers/permission_helpers.dart';
 
 void main() {
   ignorePlatformSemanticsHandle();
@@ -61,7 +43,7 @@ void main() {
     });
 
     patrolTest('captures a single photo and writes a JPEG to disk', ($) async {
-      await _grantPermissions($);
+      await grantCameraAndMicrophone($);
       await cameraService.initialize();
 
       final result = await cameraService.capturePhoto();
@@ -75,7 +57,7 @@ void main() {
     });
 
     patrolTest('captures multiple frames in sequence (stop-motion)', ($) async {
-      await _grantPermissions($);
+      await grantCameraAndMicrophone($);
       await cameraService.initialize();
       final tester = $.tester;
 
@@ -100,7 +82,7 @@ void main() {
     patrolTest('writes the photo into the provided output directory', (
       $,
     ) async {
-      await _grantPermissions($);
+      await grantCameraAndMicrophone($);
       await cameraService.initialize();
 
       final dir = await Directory.systemTemp.createTemp('stop_motion_frames');

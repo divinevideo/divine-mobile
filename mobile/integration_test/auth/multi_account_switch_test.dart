@@ -16,23 +16,8 @@ import '../helpers/db_helpers.dart';
 import '../helpers/http_helpers.dart';
 import '../helpers/navigation_helpers.dart';
 import '../helpers/patrol_semantics.dart';
+import '../helpers/permission_helpers.dart';
 import '../helpers/test_setup.dart';
-
-/// Dismiss the Android notification permission dialog if it appears.
-///
-/// After authentication the app requests POST_NOTIFICATIONS. This is a
-/// native system dialog that blocks Flutter widget interaction.
-Future<void> dismissNotificationPermission(PatrolIntegrationTester $) async {
-  try {
-    final allow = $.platformAutomator.tap(
-      Selector(textContains: 'Allow'),
-      timeout: const Duration(seconds: 3),
-    );
-    await allow;
-  } catch (_) {
-    // Dialog didn't appear — permission already granted or not requested.
-  }
-}
 
 void main() {
   ignorePlatformSemanticsHandle();
@@ -193,7 +178,7 @@ void main() {
     );
 
     patrolTest(
-      'nsec import B after Keycast A survives reinitialize (#2936)',
+      'nsec import B after Keycast A survives reinitialize (issue 2936)',
       ($) async {
         final tester = $.tester;
 

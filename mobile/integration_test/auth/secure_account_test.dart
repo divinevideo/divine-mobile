@@ -8,6 +8,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/main.dart' as app;
 import 'package:openvine/providers/app_providers.dart';
 import 'package:patrol/patrol.dart';
@@ -16,7 +17,10 @@ import '../helpers/db_helpers.dart';
 import '../helpers/http_helpers.dart';
 import '../helpers/navigation_helpers.dart';
 import '../helpers/patrol_semantics.dart';
+import '../helpers/permission_helpers.dart';
 import '../helpers/test_setup.dart';
+
+AppLocalizations get _en => lookupAppLocalizations(const Locale('en'));
 
 void main() {
   ignorePlatformSemanticsHandle();
@@ -75,26 +79,34 @@ void main() {
           // Phase 2: Navigate to profile and find Secure Account banner
           // ════════════════════════════════════════════════════════════
 
+          // The post-sign-in notifications prompt would otherwise sit in front
+          // of the profile sheet and swallow every tap.
+          await dismissNotificationPermission($);
           await tapBottomNavTab(tester, 'profile_tab');
           await pumpUntilSettled(tester);
 
-          final foundBanner = await waitForText(
+          final foundAction = await waitForText(
             tester,
-            'Secure Your Account',
+            _en.profileSecureYourAccount,
           );
           expect(
-            foundBanner,
+            foundAction,
             isTrue,
-            reason: 'Profile should show "Secure Your Account" banner',
+            reason:
+                'Profile should offer "${_en.profileSecureYourAccount}" '
+                'under the avatar',
           );
 
-          // Tap "Register" button on the banner
-          final registerButton = find.widgetWithText(
-            ElevatedButton,
-            'Register',
-          );
-          expect(registerButton, findsOneWidget);
-          await tester.tap(registerButton);
+          // The prompt sits under the avatar; tapping it opens the profile
+          // actions sheet, whose primary button opens Secure Account.
+          await tester.tap(find.text(_en.profileSecureYourAccount));
+          await pumpUntilSettled(tester);
+
+          // Patrol's tap waits until the button can be hit rather than tapping
+          // a sheet that is still opening.
+          await $(DivineButton)
+              .containing(_en.profileSecurePrimaryButton)
+              .tap(settlePolicy: SettlePolicy.noSettle);
           await pumpUntilSettled(tester);
 
           logPhase('Phase 2 complete: navigated to Secure Account screen');
