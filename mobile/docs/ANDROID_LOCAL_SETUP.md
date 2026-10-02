@@ -55,6 +55,36 @@ directly, or open `mobile/android` in Android Studio.
 
    The "Android toolchain" row must be green before an Android build will work.
 
+## Debug builds render with Impeller
+
+Debug builds use the renderer that ships: Impeller, on Vulkan where the device
+supports it and on OpenGLES otherwise. `main/AndroidManifest.xml` records why
+release builds use it. Until October 2026 the debug manifest forced Skia, so a
+debug build on a real phone showed "preview unavailable" for the video editor's
+chroma-key and effects previews unless the run passed `--enable-impeller`.
+
+Emulators need nothing special. The engine never selects Vulkan on an Android
+emulator; it renders with Impeller OpenGLES instead. That holds on SwiftShader
+(`-gpu swiftshader_indirect`), the software GPU an emulator falls back to on a
+headless CI host or a machine without native Vulkan, which is the setup the
+Skia opt-out was added for in #1928. On Flutter 3.47.2 that setup starts the
+app, and the feed frame-timing and time-to-first-frame integration tests pass
+on it.
+
+If an emulator still fails to render, turn Impeller off for that run only:
+
+| How the app starts | Opt-out for one run |
+|---|---|
+| `flutter run`, `flutter test`, `flutter drive` | add `--no-enable-impeller` |
+| A debug APK installed with `adb` (`mise run local_install`) | launch it with `adb shell am start --ez enable-impeller false -n co.openvine.app.staging/co.openvine.app.MainActivity` |
+| `patrol test` | no flag exists; boot the emulator with `-gpu host`, which `mise run emulator` already does |
+
+The flag and the intent extra are the same switch: `flutter run` passes
+`--no-enable-impeller` to the app as that extra. The engine prints
+`[Action Required]: Impeller opt-out deprecated` whenever it is used and plans
+to remove it, so treat it as a diagnostic step rather than a setting, and file
+an issue for an emulator that needs it.
+
 ## Running Gradle directly
 
 The wrapper is tracked, so `./gradlew` exists in a fresh clone or worktree with
