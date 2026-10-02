@@ -9,33 +9,49 @@ import 'shared_channel_override.dart';
 
 /// Helper class for initializing services in test environment
 class ServiceInitHelper {
-  /// Initialize test environment with platform channel mocks
+  static const _preferencesChannel = MethodChannel(
+    'plugins.flutter.io/shared_preferences',
+  );
+  static const _connectivityChannel = MethodChannel(
+    'dev.fluttercommunity.plus/connectivity',
+  );
+
+  /// Initialize test environment with platform channel mocks.
+  ///
+  /// Must be called from a running test, `setUp`, or `setUpAll`: every mock it
+  /// installs is removed again with [addTearDown]. From a `setUpAll` that
+  /// cleanup runs once, after the group's last test.
   static void initializeTestEnvironment() {
     TestWidgetsFlutterBinding.ensureInitialized();
 
     // Mock SharedPreferences for tests
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-          const MethodChannel('plugins.flutter.io/shared_preferences'),
-          (MethodCall methodCall) async {
-            if (methodCall.method == 'getAll') {
-              return <String, Object>{}; // Return empty preferences
-            }
-            return null;
-          },
-        );
+        .setMockMethodCallHandler(_preferencesChannel, (
+          MethodCall methodCall,
+        ) async {
+          if (methodCall.method == 'getAll') {
+            return <String, Object>{};
+          }
+          return null;
+        });
 
     // Mock connectivity plugin
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-          const MethodChannel('dev.fluttercommunity.plus/connectivity'),
-          (MethodCall methodCall) async {
-            if (methodCall.method == 'check') {
-              return 'wifi'; // Always return connected
-            }
-            return null;
-          },
-        );
+        .setMockMethodCallHandler(_connectivityChannel, (
+          MethodCall methodCall,
+        ) async {
+          if (methodCall.method == 'check') {
+            // Always connected. connectivity_plus reads the reply as a list.
+            return <String>['wifi'];
+          }
+          return null;
+        });
+
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        ..setMockMethodCallHandler(_preferencesChannel, null)
+        ..setMockMethodCallHandler(_connectivityChannel, null);
+    });
 
     // Mock flutter_secure_storage plugin — shared channel, so route through the
     // sanctioned override: the heal-and-blame tearDown leaves it in place for the
