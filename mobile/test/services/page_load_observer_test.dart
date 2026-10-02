@@ -156,6 +156,8 @@ void main() {
 
       final baselineScreenViewCount = sink.screenViews.length;
       final baselineEventCount = sink.events.length;
+      expect(baselineScreenViewCount, greaterThan(0));
+      expect(baselineEventCount, greaterThan(0));
 
       await tester.tap(find.text('Open Dialog'));
       await tester.pumpAndSettle();
