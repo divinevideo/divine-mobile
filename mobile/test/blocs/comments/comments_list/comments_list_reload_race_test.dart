@@ -109,5 +109,90 @@ void main() {
             'the screen is gone',
       );
     });
+
+    test('closing the bloc leaves no deletion subscription listening', () async {
+      final repo = _MockCommentsRepository();
+      final controllers = <StreamController<CommentDeletion>>[];
+      // Holds the first deletion teardown open, the window in which a second
+      // reload overlaps the one that started it.
+      final firstCancelGate = Completer<void>();
+      var cancelCalls = 0;
+
+      when(repo.stopWatchingComments).thenAnswer((_) async {});
+      when(
+        () => repo.loadComments(
+          rootEventId: any(named: 'rootEventId'),
+          rootEventKind: any(named: 'rootEventKind'),
+          rootAddressableId: any(named: 'rootAddressableId'),
+          limit: any(named: 'limit'),
+          includeVideoReplies: any(named: 'includeVideoReplies'),
+        ),
+      ).thenAnswer((_) async => CommentThread.empty(_validId('root')));
+      when(
+        () => repo.watchComments(
+          rootEventId: any(named: 'rootEventId'),
+          rootEventKind: any(named: 'rootEventKind'),
+          rootAddressableId: any(named: 'rootAddressableId'),
+          since: any(named: 'since'),
+          onEose: any(named: 'onEose'),
+          includeVideoReplies: any(named: 'includeVideoReplies'),
+        ),
+      ).thenAnswer((_) => const Stream<Comment>.empty());
+      when(
+        () => repo.watchCommentDeletions(
+          rootEventId: any(named: 'rootEventId'),
+          includeVideoReplies: any(named: 'includeVideoReplies'),
+        ),
+      ).thenAnswer((_) {
+        late StreamController<CommentDeletion> controller;
+        controller = StreamController<CommentDeletion>(
+          onCancel: () {
+            cancelCalls += 1;
+            if (cancelCalls == 1) return firstCancelGate.future;
+            return null;
+          },
+        );
+        controllers.add(controller);
+        return controller.stream;
+      });
+      addTearDown(() async {
+        for (final controller in controllers) {
+          if (!controller.isClosed) await controller.close();
+        }
+      });
+
+      final bloc = CommentsListBloc(
+        commentsRepository: repo,
+        rootEventId: _validId('root'),
+        rootEventKind: 34236,
+        rootAuthorPubkey: _validId('author'),
+      );
+
+      bloc.add(const CommentsLoadRequested());
+      await pumpEventQueue();
+      bloc.add(const CommentsLoadRequested());
+      await pumpEventQueue();
+      bloc.add(const CommentsLoadRequested());
+      await pumpEventQueue();
+
+      firstCancelGate.complete();
+      await pumpEventQueue();
+
+      await bloc.close();
+      await pumpEventQueue();
+
+      expect(controllers, hasLength(greaterThan(1)));
+      expect(
+        [
+          for (var i = 0; i < controllers.length; i++)
+            if (controllers[i].hasListener && !controllers[i].isClosed) i,
+        ],
+        isEmpty,
+        reason:
+            'every deletion subscription the bloc opened must be torn down by '
+            'close(); a surviving one keeps applying deletions after the '
+            'screen is gone',
+      );
+    });
   });
 }

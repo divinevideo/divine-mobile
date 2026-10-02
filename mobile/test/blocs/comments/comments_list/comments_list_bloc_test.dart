@@ -12,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/comments/comments_list/comments_list_bloc.dart';
 import 'package:openvine/blocs/comments/comments_list/comments_list_helpers.dart';
+import 'package:openvine/observability/reportable_error.dart';
 
 class _MockCommentsRepository extends Mock implements CommentsRepository {}
 
@@ -1425,6 +1426,71 @@ void main() {
         verify: (b) {
           expect(b.state.commentsById.keys, equals([kept.id]));
         },
+      );
+
+      blocTest<CommentsListBloc, CommentsListState>(
+        'reports a check that throws and still completes the backfill',
+        setUp: () {
+          when(
+            () => mockCommentsRepository.findAuthorDeletedComments(any()),
+          ).thenThrow(StateError('client disposed'));
+        },
+        build: createBloc,
+        seed: () => CommentsListState(
+          status: CommentsStatus.success,
+          commentsById: {kept.id: kept},
+        ),
+        act: (b) => b.add(const CommentsInitialBackfillCompleted()),
+        verify: (b) {
+          expect(b.state.isBackfillComplete, isTrue);
+          expect(b.state.commentsById.keys, equals([kept.id]));
+        },
+        errors: () => [
+          isA<Reportable<Object>>().having(
+            (r) => r.unwrap(),
+            'unwrap',
+            isA<StateError>(),
+          ),
+        ],
+      );
+
+      blocTest<CommentsListBloc, CommentsListState>(
+        'keeps a page loaded with load more when the check throws',
+        setUp: () {
+          when(
+            () => mockCommentsRepository.loadComments(
+              rootEventId: any(named: 'rootEventId'),
+              rootEventKind: any(named: 'rootEventKind'),
+              rootAddressableId: any(named: 'rootAddressableId'),
+              limit: any(named: 'limit'),
+              before: any(named: 'before'),
+            ),
+          ).thenAnswer(
+            (_) async => CommentThread(
+              rootEventId: validId('root'),
+              comments: [backfilled],
+              totalCount: 1,
+              commentCache: {backfilled.id: backfilled},
+            ),
+          );
+          when(
+            () => mockCommentsRepository.findAuthorDeletedComments(any()),
+          ).thenThrow(StateError('client disposed'));
+        },
+        build: createBloc,
+        seed: () => CommentsListState(
+          status: CommentsStatus.success,
+          commentsById: {kept.id: kept},
+        ),
+        act: (b) => b.add(const CommentsLoadMoreRequested()),
+        verify: (b) {
+          expect(b.state.error, isNull);
+          expect(
+            b.state.commentsById.keys,
+            unorderedEquals([kept.id, backfilled.id]),
+          );
+        },
+        errors: () => [isA<Reportable<Object>>()],
       );
 
       blocTest<CommentsListBloc, CommentsListState>(

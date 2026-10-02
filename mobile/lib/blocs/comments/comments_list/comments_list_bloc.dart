@@ -498,9 +498,20 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     Emitter<CommentsListState> emit,
   ) async {
     if (comments.isEmpty) return;
-    final deleted = await _commentsRepository.findAuthorDeletedComments(
-      comments,
-    );
+    final Set<String> deleted;
+    try {
+      deleted = await _commentsRepository.findAuthorDeletedComments(comments);
+    } catch (e, stackTrace) {
+      // The repository already absorbs lookup failures, so this is a defect;
+      // report it without changing what the load itself reported.
+      _logUnexpectedFailure(
+        e,
+        stackTrace,
+        CommentsListBlocReportableSites.removeAuthorDeletedComments,
+        'Comment deletion check failed',
+      );
+      return;
+    }
     if (deleted.isEmpty) return;
     _emitStore(
       emit,

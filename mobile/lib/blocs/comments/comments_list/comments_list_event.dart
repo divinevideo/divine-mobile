@@ -30,7 +30,10 @@ final class NewCommentReceived extends CommentsListEvent {
   final Comment comment;
 }
 
-/// The initial relay backfill reached EOSE; subsequent events are live.
+/// The relay backfill reached EOSE; subsequent events are live.
+///
+/// Fires again each time the subscription is replayed, after a reconnect or
+/// AUTH, once the relay has re-sent its stored comments.
 final class CommentsInitialBackfillCompleted extends CommentsListEvent {
   const CommentsInitialBackfillCompleted();
 }
