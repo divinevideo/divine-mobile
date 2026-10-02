@@ -20,9 +20,10 @@ part 'voice_over_effect_state.dart';
 /// voice-over [VoiceOverEffectState.track], and bakes the pick into the take
 /// once they confirm.
 ///
-/// Every setting is rendered and looped over the stretch of the take the
-/// track plays on the timeline, so it is heard before it is kept. A newer
-/// setting cancels the rendering of an older one.
+/// Every setting is looped over the stretch of the take the track plays on
+/// the timeline, so it is heard before it is kept. Any setting but the take as
+/// recorded and the one the track already plays is rendered first, and a
+/// newer setting cancels the rendering of an older one.
 ///
 /// The baked track lands in [VoiceOverEffectState.result] under a new id:
 /// timeline waveforms and the preview's audio are keyed by track id, and
@@ -96,22 +97,32 @@ class VoiceOverEffectBloc
         status: VoiceOverEffectStatus.editing,
       ),
     );
-    final takePath = state.track.originalLocalFilePath;
+    final track = state.track;
+    final takePath = track.originalLocalFilePath;
     if (!event.audition || takePath == null) return;
 
     try {
-      // The take as recorded needs no rendering.
-      final audition = effect.isNone && !noiseReduction
-          ? takePath
-          : await _service.renderAudition(
-              takePath: takePath,
-              effect: effect,
-              noiseReduction: noiseReduction,
-            );
+      // The file the track already plays, and the take as recorded, need no
+      // rendering.
+      final String audition;
+      var rendered = false;
+      if (effect == track.voiceEffect &&
+          noiseReduction == track.noiseReduction) {
+        audition = track.localFilePath!;
+      } else if (effect.isNone && !noiseReduction) {
+        audition = takePath;
+      } else {
+        audition = await _service.renderAudition(
+          takePath: takePath,
+          effect: effect,
+          noiseReduction: noiseReduction,
+        );
+        rendered = true;
+      }
       // A newer setting, the creator confirming, or the sheet closing has
       // overtaken this one while it rendered.
       if (emit.isDone || _isFinishing) {
-        if (audition != takePath) await _service.discardAudition(audition);
+        if (rendered) await _service.discardAudition(audition);
         return;
       }
       await _loop(audition);

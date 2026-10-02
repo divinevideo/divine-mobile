@@ -111,6 +111,25 @@ void main() {
       );
 
       blocTest<VoiceOverEffectBloc, VoiceOverEffectState>(
+        'loops the file a processed track already plays without rendering it',
+        build: () => build(_robotRecording()),
+        act: (bloc) => bloc.add(const VoiceOverEffectSettingsChanged()),
+        verify: (_) {
+          final config =
+              verify(() => player.setClip(captureAny())).captured.single
+                  as AudioSourceConfig;
+          expect(config.uri, _robotTake);
+          verifyNever(
+            () => service.renderAudition(
+              takePath: any(named: 'takePath'),
+              effect: any(named: 'effect'),
+              noiseReduction: any(named: 'noiseReduction'),
+            ),
+          );
+        },
+      );
+
+      blocTest<VoiceOverEffectBloc, VoiceOverEffectState>(
         'renders a picked preset and loops it',
         setUp: () => stubAudition('/tmp/audition_1.wav'),
         build: () => build(_recording()),
