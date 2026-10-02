@@ -454,6 +454,10 @@ dependencies:
   # 14.5.0 adds the text outline that text and caption styles draw.
   # 14.6.0 adds TextLayer.highlights and ExportedLayer.frames, which karaoke
   # captions light their words and export their timed overlays through.
+  # 14.6.1 records the editor's body size in the exported state history, which
+  # a draft saved by backing out sizes its overlays against when it renders.
+  # 14.6.2 stops a layer hidden outside its time range from taking touches
+  # meant for the visible layer under it (#9736).
   pro_image_editor: ^14.6.2
   sensors_plus: ^7.0.0
   stream_transform: ^2.1.1
