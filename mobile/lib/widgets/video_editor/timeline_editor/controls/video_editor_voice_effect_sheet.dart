@@ -27,6 +27,20 @@ class VideoEditorVoiceEffectSheet extends ConsumerWidget {
   /// Creates the sheet for [track].
   const VideoEditorVoiceEffectSheet({required this.track, super.key});
 
+  /// Opens the sheet with cancellation controlled by its saving state.
+  static Future<AudioEvent?> show({
+    required BuildContext context,
+    required AudioEvent track,
+  }) => VineBottomSheet.show<AudioEvent>(
+    context: context,
+    expanded: false,
+    scrollable: false,
+    isScrollControlled: true,
+    // Modal drag dismissal bypasses PopScope, unlike back and barrier taps.
+    enableDrag: false,
+    body: VideoEditorVoiceEffectSheet(track: track),
+  );
+
   /// The voice-over track as it is on the timeline.
   final AudioEvent track;
 
@@ -51,45 +65,51 @@ class VideoEditorVoiceEffectView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocListener(
-      listeners: [
-        BlocListener<VoiceOverEffectBloc, VoiceOverEffectState>(
-          listenWhen: (previous, current) =>
-              previous.status != current.status &&
-              current.status == VoiceOverEffectStatus.done,
-          listener: (context, state) => context.pop<AudioEvent>(state.result),
-        ),
-        // The failure text is red under the controls, which a screen-reader
-        // user would never find; say it.
-        BlocListener<VoiceOverEffectBloc, VoiceOverEffectState>(
-          listenWhen: (previous, current) =>
-              previous.status != current.status &&
-              current.status == VoiceOverEffectStatus.failure,
-          listener: (context, _) => SemanticsService.sendAnnouncement(
-            View.of(context),
-            context.l10n.videoEditorVoiceEffectFailed,
-            Directionality.of(context),
+    final isApplying = context.select(
+      (VoiceOverEffectBloc bloc) => bloc.state.isApplying,
+    );
+    return PopScope(
+      canPop: !isApplying,
+      child: MultiBlocListener(
+        listeners: [
+          BlocListener<VoiceOverEffectBloc, VoiceOverEffectState>(
+            listenWhen: (previous, current) =>
+                previous.status != current.status &&
+                current.status == VoiceOverEffectStatus.done,
+            listener: (context, state) => context.pop<AudioEvent>(state.result),
           ),
-        ),
-      ],
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const _Header(),
-          Divider(
-            height: 2,
-            thickness: 2,
-            color: context.vineColors.surfaceContainer,
+          // The failure text is red under the controls, which a screen-reader
+          // user would never find; say it.
+          BlocListener<VoiceOverEffectBloc, VoiceOverEffectState>(
+            listenWhen: (previous, current) =>
+                previous.status != current.status &&
+                current.status == VoiceOverEffectStatus.failure,
+            listener: (context, _) => SemanticsService.sendAnnouncement(
+              View.of(context),
+              context.l10n.videoEditorVoiceEffectFailed,
+              Directionality.of(context),
+            ),
           ),
-          const SizedBox(height: 16),
-          const _PresetRow(),
-          const SizedBox(height: 16),
-          const _EffectSliders(),
-          const SizedBox(height: 8),
-          const _NoiseReductionTile(),
-          const _FailureMessage(),
-          const SizedBox(height: 16),
         ],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const _Header(),
+            Divider(
+              height: 2,
+              thickness: 2,
+              color: context.vineColors.surfaceContainer,
+            ),
+            const SizedBox(height: 16),
+            const _PresetRow(),
+            const SizedBox(height: 16),
+            const _EffectSliders(),
+            const SizedBox(height: 8),
+            const _NoiseReductionTile(),
+            const _FailureMessage(),
+            const SizedBox(height: 16),
+          ],
+        ),
       ),
     );
   }
@@ -115,7 +135,7 @@ class _Header extends StatelessWidget {
             type: DivineIconButtonType.secondary,
             size: DivineIconButtonSize.small,
             semanticLabel: l10n.commonCancel,
-            onPressed: () => context.pop<AudioEvent>(),
+            onPressed: isApplying ? null : () => context.pop<AudioEvent>(),
           ),
           Flexible(
             child: Text(
@@ -157,6 +177,9 @@ class _PresetRow extends StatelessWidget {
     final selected = context.select(
       (VoiceOverEffectBloc bloc) => bloc.state.preset,
     );
+    final isApplying = context.select(
+      (VoiceOverEffectBloc bloc) => bloc.state.isApplying,
+    );
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -167,9 +190,11 @@ class _PresetRow extends StatelessWidget {
             _PresetChip(
               preset: preset,
               selected: preset == selected,
-              onTap: () => context.read<VoiceOverEffectBloc>().add(
-                VoiceOverEffectSettingsChanged(effect: preset.effect),
-              ),
+              onTap: isApplying
+                  ? null
+                  : () => context.read<VoiceOverEffectBloc>().add(
+                      VoiceOverEffectSettingsChanged(effect: preset.effect),
+                    ),
             ),
         ],
       ),
@@ -186,7 +211,7 @@ class _PresetChip extends StatelessWidget {
 
   final VoiceOverEffectPreset preset;
   final bool selected;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -302,6 +327,9 @@ class _EffectSlider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isApplying = context.select(
+      (VoiceOverEffectBloc bloc) => bloc.state.isApplying,
+    );
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
@@ -332,8 +360,12 @@ class _EffectSlider extends StatelessWidget {
             max: max.toDouble(),
             divisions: (max - min) ~/ step,
             semanticLabel: label,
-            onChanged: (value) => _change(context, value, audition: false),
-            onChangeEnd: (value) => _change(context, value, audition: true),
+            onChanged: isApplying
+                ? null
+                : (value) => _change(context, value, audition: false),
+            onChangeEnd: isApplying
+                ? null
+                : (value) => _change(context, value, audition: true),
           ),
         ],
       ),

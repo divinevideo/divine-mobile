@@ -1,7 +1,6 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
@@ -762,12 +761,9 @@ class _SoundOverlayControls extends StatelessWidget {
     if (wasPlaying) {
       mainBloc.add(const VideoEditorExternalPauseRequested(isPaused: true));
     }
-    final processed = await VineBottomSheet.show<AudioEvent>(
+    final processed = await VideoEditorVoiceEffectSheet.show(
       context: context,
-      expanded: false,
-      scrollable: false,
-      isScrollControlled: true,
-      body: VideoEditorVoiceEffectSheet(track: sound),
+      track: sound,
     );
     if (wasPlaying) {
       mainBloc.add(const VideoEditorExternalPauseRequested(isPaused: false));

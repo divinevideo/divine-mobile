@@ -14,6 +14,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/voice_over_effect_providers.dart';
 import 'package:openvine/services/video_editor/voice_over_effect_service.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/animation_picker_components.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_voice_effect_sheet.dart';
 import 'package:sound_service/sound_service.dart';
 
@@ -57,19 +58,15 @@ class _Harness {
             builder: (context, state) => Scaffold(
               body: TextButton(
                 onPressed: () async {
-                  result = await context.push<AudioEvent>('/voice');
+                  result = await VideoEditorVoiceEffectSheet.show(
+                    context: context,
+                    track: track,
+                  );
                   popped = true;
                 },
                 child: const Text('open'),
               ),
             ),
-            routes: [
-              GoRoute(
-                path: 'voice',
-                builder: (context, state) =>
-                    Scaffold(body: VideoEditorVoiceEffectSheet(track: track)),
-              ),
-            ],
           ),
         ],
       ),
@@ -262,6 +259,68 @@ void main() {
         expect(harness.result?.voiceEffect, const VoiceEffect(pitch: -5));
         expect(harness.result?.noiseReduction, isTrue);
         expect(harness.result?.originalUrl, _take);
+      });
+
+      testWidgets('can cancel with the barrier before saving', (tester) async {
+        await open(tester);
+
+        // The fixed-height sheet leaves this corner inside the modal barrier.
+        await tester.tapAt(const Offset(5, 5));
+        await tester.pumpAndSettle();
+
+        expect(harness.popped, isTrue);
+        expect(harness.result, isNull);
+      });
+
+      testWidgets('cannot cancel or change settings while saving', (
+        tester,
+      ) async {
+        final processing = Completer<ProcessedVoiceOverTake>();
+        when(
+          () => service.process(
+            takePath: any(named: 'takePath'),
+            effect: any(named: 'effect'),
+            noiseReduction: any(named: 'noiseReduction'),
+          ),
+        ).thenAnswer((_) => processing.future);
+        await open(tester);
+        await tester.tap(preset(l10n.videoEditorVoiceEffectLowPitch));
+        await tester.pumpAndSettle();
+        await tapDone(tester);
+        await tester.pump();
+
+        final cancel = tester.widget<DivineIconButton>(
+          find.byWidgetPredicate(
+            (w) =>
+                w is DivineIconButton && w.semanticLabel == l10n.commonCancel,
+          ),
+        );
+        expect(cancel.onPressed, isNull);
+        for (final control in tester.widgetList<DivineSlider>(
+          find.byType(DivineSlider),
+        )) {
+          expect(control.onChanged, isNull);
+          expect(control.onChangeEnd, isNull);
+        }
+        for (final chip in tester.widgetList<AnimationPickerChip>(
+          find.byType(AnimationPickerChip),
+        )) {
+          expect(chip.onTap, isNull);
+        }
+        // The fixed-height sheet leaves this corner inside the modal barrier.
+        await tester.tapAt(const Offset(5, 5));
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(harness.popped, isFalse);
+        await tester.drag(find.byType(BottomSheet), const Offset(0, 500));
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(harness.popped, isFalse);
+        await tester.binding.handlePopRoute();
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(harness.popped, isFalse);
+
+        processing.complete((path: _processedTake, mimeType: 'audio/wav'));
+        await tester.pumpAndSettle();
+        expect(harness.result?.url, _processedTake);
       });
 
       testWidgets('pops nothing when the pick is what the track plays', (

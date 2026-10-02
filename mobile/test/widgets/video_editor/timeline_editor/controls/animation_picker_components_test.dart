@@ -12,6 +12,7 @@ void main() {
     Future<void> pumpChip(
       WidgetTester tester, {
       required bool selected,
+      bool enabled = true,
       ThemeData? theme,
     }) async {
       await tester.pumpWidget(
@@ -22,7 +23,7 @@ void main() {
           home: Scaffold(
             body: AnimationPickerChip(
               selected: selected,
-              onTap: () {},
+              onTap: enabled ? () {} : null,
               semanticLabel: 'Curve 1',
               child: const SizedBox(width: 28, height: 18),
             ),
@@ -72,6 +73,34 @@ void main() {
         );
       },
     );
+
+    testWidgets('marks an unavailable chip as disabled for screen readers', (
+      tester,
+    ) async {
+      await pumpChip(tester, selected: false, enabled: false);
+
+      expect(
+        tester.getSemantics(find.bySemanticsLabel('Curve 1')),
+        isSemantics(
+          label: 'Curve 1',
+          isButton: true,
+          isSelected: false,
+          hasEnabledState: true,
+          isEnabled: false,
+        ),
+      );
+      expect(
+        tester
+            .widget<Opacity>(
+              find.descendant(
+                of: find.byType(AnimationPickerChip),
+                matching: find.byType(Opacity),
+              ),
+            )
+            .opacity,
+        0.5,
+      );
+    });
 
     testWidgets('keeps the accent border in dark mode', (tester) async {
       await pumpChip(tester, selected: true, theme: VineTheme.theme);
