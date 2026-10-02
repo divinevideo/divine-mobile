@@ -6,6 +6,7 @@ import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/support_contact/support_contact_cubit.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
@@ -17,7 +18,7 @@ import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart
 import 'package:openvine/screens/minor_account_review_parent_contact_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_support_screen.dart';
-import 'package:openvine/screens/settings/support_center_screen.dart';
+import 'package:openvine/widgets/support_contact_action.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -48,10 +49,14 @@ class MinorAccountReviewScreen extends ConsumerWidget {
 
   const MinorAccountReviewScreen({
     this.entryPoint = MinorAccountReviewEntryPoint.moderation,
+    this.openSupportMessages,
+    this.composeEmail,
     super.key,
   });
 
   final MinorAccountReviewEntryPoint entryPoint;
+  final OpenSupportMessages? openSupportMessages;
+  final ComposeSupportEmail? composeEmail;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -70,7 +75,11 @@ class MinorAccountReviewScreen extends ConsumerWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640),
             child: statusAsync.when(
-              data: (status) => _LoadedView(status: status),
+              data: (status) => _LoadedView(
+                status: status,
+                openSupportMessages: openSupportMessages,
+                composeEmail: composeEmail,
+              ),
               loading: () =>
                   const Center(child: PartialCircleSpinner(progress: 0.33)),
               error: (error, _) {
@@ -226,9 +235,15 @@ class MinorAccountReviewLoadingScreen extends StatelessWidget {
 }
 
 class _LoadedView extends ConsumerWidget {
-  const _LoadedView({required this.status});
+  const _LoadedView({
+    required this.status,
+    this.openSupportMessages,
+    this.composeEmail,
+  });
 
   final MinorAccountReviewStatus status;
+  final OpenSupportMessages? openSupportMessages;
+  final ComposeSupportEmail? composeEmail;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -242,7 +257,11 @@ class _LoadedView extends ConsumerWidget {
         : l10n.minorAccountReviewDefaultBody;
     final supportEmail = reviewCase?.supportEmail ?? AppConstants.supportEmail;
     final caseId = reviewCase?.id;
+    // One decision drives both the appeal copy and where its button goes, so
+    // the two cannot disagree.
+    final isUnder13Path = reviewCase?.isUnder13Path == true;
     final primaryAction = _primaryAction(reviewCase, l10n);
+    final primaryOpensParentSupport = isUnder13Path && primaryAction != null;
     final infoCard = _infoCardForCase(reviewCase, supportEmail, l10n);
     final responseClockCard = reviewCase == null
         ? null
@@ -337,18 +356,21 @@ class _LoadedView extends ConsumerWidget {
         ],
         _InfoCard(
           title: l10n.minorAccountReviewAppealTitle,
-          body: reviewCase?.isUnder13Path == true
+          body: isUnder13Path
               ? l10n.minorAccountReviewAppealUnder13Body
               : l10n.minorAccountReviewAppealTeenBody,
         ),
         const SizedBox(height: 12),
-        DivineButton(
-          label: l10n.supportContactSupport,
-          leadingIcon: DivineIconName.headphones,
-          expanded: true,
-          onPressed: () => context.push(SupportCenterScreen.path),
-        ),
-        const SizedBox(height: 12),
+        // On the under-13 path a primary action already opens parent support,
+        // so a second button to the same screen would only add a choice.
+        if (!primaryOpensParentSupport) ...[
+          _AppealSupportButton(
+            isUnder13Path: isUnder13Path,
+            openSupportMessages: openSupportMessages,
+            composeEmail: composeEmail,
+          ),
+          const SizedBox(height: 12),
+        ],
         DivineButton(
           label: l10n.minorAccountReviewOpenModerationMessage,
           type: DivineButtonType.secondary,
@@ -441,38 +463,35 @@ class _LoadedView extends ConsumerWidget {
       return null;
     }
 
-    // No primary action for a case with nothing left for the user to do.
-    // Support Center is already offered unconditionally below, directly under
-    // the reconsideration card (#8239); returning it here as well rendered the
-    // same button twice — as primary above the card and again beneath it — in
-    // `openReported`, `cleared`, `deniedClosed` and `unknown`.
+    // No primary action for a case with nothing left for the user to do. A
+    // support contact is already offered below the reconsideration card
+    // (#8239), so a primary one here would duplicate it in `openReported`,
+    // `cleared`, `deniedClosed` and `unknown`.
     if (!reviewCase.needsUserAction) {
       return null;
     }
 
-    return _MinorReviewPrimaryAction(
-      label: reviewCase.isUnder13Path
-          ? l10n.minorAccountReviewParentSupportInstructions
-          : l10n.minorAccountReviewContinue,
-      onPressed: (context) => _continueToNextStep(context, reviewCase),
-    );
-  }
-
-  void _continueToNextStep(BuildContext context, MinorReviewCase reviewCase) {
     if (reviewCase.isUnder13Path) {
-      context.push(MinorAccountReviewUnder13SupportScreen.path);
-      return;
+      return _MinorReviewPrimaryAction(
+        label: l10n.minorAccountReviewParentSupportInstructions,
+        onPressed: (context) =>
+            context.push(MinorAccountReviewUnder13SupportScreen.path),
+      );
     }
 
-    switch (reviewCase.allowedResolution) {
-      case MinorReviewResolutionType.parentVideoOrEmail:
-        context.push(MinorAccountReviewParentContactScreen.path);
-      case MinorReviewResolutionType.supportEmailOnly:
-        context.push(MinorAccountReviewUnder13SupportScreen.path);
-      case MinorReviewResolutionType.supportReviewOnly:
-      case MinorReviewResolutionType.unknown:
-        context.push(SupportCenterScreen.path);
+    // Only the parent-contact resolution has a next step of its own. For any
+    // other, including support review and an unrecognised value, the next step
+    // is asking support, which the appeal button below the reconsideration
+    // card already opens.
+    if (!reviewCase.allowsParentVideoOrEmail) {
+      return null;
     }
+
+    return _MinorReviewPrimaryAction(
+      label: l10n.minorAccountReviewContinue,
+      onPressed: (context) =>
+          context.push(MinorAccountReviewParentContactScreen.path),
+    );
   }
 }
 
@@ -492,6 +511,64 @@ Future<void> _openExternalPage(
       context.l10n.supportCouldNotOpenPage(pageName),
     ),
   );
+}
+
+/// The reconsideration card's contact action.
+///
+/// Outside the under-13 path this opens private support directly, falling back
+/// to email, as Account Status does. The under-13 path goes to the
+/// parent-support screen instead: a support conversation is filed against the
+/// signed-in account, and that path is built around a parent or guardian
+/// making contact, not the child.
+class _AppealSupportButton extends StatelessWidget {
+  const _AppealSupportButton({
+    required this.isUnder13Path,
+    this.openSupportMessages,
+    this.composeEmail,
+  });
+
+  final bool isUnder13Path;
+  final OpenSupportMessages? openSupportMessages;
+  final ComposeSupportEmail? composeEmail;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isUnder13Path) {
+      return _ContactSupportButton(
+        onPressed: () =>
+            context.push(MinorAccountReviewUnder13SupportScreen.path),
+      );
+    }
+    return SupportContactAction(
+      openSupportMessages: openSupportMessages,
+      composeEmail: composeEmail,
+      builder: (context, isOpening, openSupport) =>
+          _ContactSupportButton(isLoading: isOpening, onPressed: openSupport),
+    );
+  }
+}
+
+/// The appeal's "Contact Support" button, shared by both paths so they cannot
+/// drift apart in label, icon or layout.
+class _ContactSupportButton extends StatelessWidget {
+  const _ContactSupportButton({
+    required this.onPressed,
+    this.isLoading = false,
+  });
+
+  final VoidCallback onPressed;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    return DivineButton(
+      label: context.l10n.supportContactSupport,
+      leadingIcon: DivineIconName.headphones,
+      expanded: true,
+      isLoading: isLoading,
+      onPressed: onPressed,
+    );
+  }
 }
 
 class _MinorReviewInfoCardCopy {
