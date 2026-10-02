@@ -34,6 +34,32 @@ void _logUploadPhase(String phase, Duration elapsed, {String? detail}) {
   );
 }
 
+const _maxLoggedServerTextLength = 500;
+
+// C0/C1 controls and Unicode format characters: a bare CR or NEL splits the
+// log line, and a bidi override rewrites how the rest of it reads.
+final _serverTextControls = RegExp(r'[\p{Cc}\p{Cf}]', unicode: true);
+final _serverTextWhitespace = RegExp(r'\s+');
+
+/// Flattens server-controlled text to one bounded line for the log.
+///
+/// A longer text is cut at a space, never inside a word, so a hash, event id
+/// or pubkey in it is not shortened into something that looks usable.
+String _serverTextForLog(String text) {
+  final oneLine = text
+      .replaceAll(_serverTextControls, ' ')
+      .replaceAll(_serverTextWhitespace, ' ')
+      .trim();
+  if (oneLine.length <= _maxLoggedServerTextLength) return oneLine;
+
+  final prefix = oneLine.substring(0, _maxLoggedServerTextLength);
+  final boundary = prefix.lastIndexOf(' ');
+  if (boundary < 0) {
+    return '[omitted: over $_maxLoggedServerTextLength characters]';
+  }
+  return '${prefix.substring(0, boundary)} … [truncated]';
+}
+
 bool _hasTransientDioSignal(DioException error) {
   final statusCode = error.response?.statusCode;
   if (statusCode != null && statusCode >= 500) return true;
@@ -2265,8 +2291,9 @@ class BlossomUploadService {
 
       // Startup reconciliation: if the OS already finished this upload while
       // the app was dead, its terminal event was buffered by the transport.
-      // Claim it and skip re-uploading the whole file. A failed/cancelled
-      // buffered event is simply discarded so this retry proceeds normally.
+      // Claim it and skip re-uploading the whole file. A failed buffered event
+      // is logged and a cancelled one is dropped; either way this retry
+      // proceeds normally.
       final buffered = await transport.takeBufferedTerminalEvent(taskId);
       if (buffered != null &&
           buffered.status == BlossomBackgroundTransferStatus.completed) {
@@ -2283,6 +2310,14 @@ class BlossomUploadService {
           await stopTraceOnce(_outcomeReused);
           return result;
         }
+      }
+      if (buffered != null &&
+          buffered.status == BlossomBackgroundTransferStatus.failed) {
+        _logBackgroundFailure(
+          buffered,
+          fileHash: fileHash,
+          serverUrl: serverUrl,
+        );
       }
 
       final uploadUrl = '$serverUrl/upload';
@@ -2609,6 +2644,8 @@ class BlossomUploadService {
             videoId: fileHash,
           );
         }
+        // The result below drops the response body, so log it here.
+        _logBackgroundFailure(event, fileHash: fileHash, serverUrl: serverUrl);
         return BlossomUploadResult(
           success: false,
           statusCode: statusCode,
@@ -2622,6 +2659,22 @@ class BlossomUploadService {
                   : BlossomUploadFailureReason.unknown),
         );
     }
+  }
+
+  void _logBackgroundFailure(
+    BlossomBackgroundTransferEvent event, {
+    required String fileHash,
+    required String serverUrl,
+  }) {
+    final response = _serverTextForLog(event.responseBody ?? '');
+    Log.warning(
+      'Background upload failed: task ${event.taskId}, blob $fileHash, '
+      'server $serverUrl, HTTP ${event.httpStatusCode ?? 'none'}, '
+      'error: ${event.error ?? 'none'}, '
+      'response: ${response.isEmpty ? 'none' : response}',
+      name: 'BlossomUploadService',
+      category: LogCategory.video,
+    );
   }
 
   Map<String, dynamic>? _tryDecodeJsonMap(String body) {

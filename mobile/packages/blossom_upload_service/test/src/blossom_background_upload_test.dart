@@ -3,9 +3,11 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockAuthProvider extends Mock implements BlossomAuthProvider {}
 
@@ -109,6 +111,44 @@ void main() {
     );
   }
 
+  // Empties the log buffer for this test and again afterwards, so one test's
+  // warnings cannot leak into another's.
+  Future<void> captureLogs() async {
+    await LogCaptureService().clearAllLogs();
+    addTearDown(LogCaptureService().clearAllLogs);
+  }
+
+  List<LogEntry> failureWarnings() => LogCaptureService()
+      .getRecentLogs(minLevel: LogLevel.warning)
+      .where(
+        (log) =>
+            log.name == 'BlossomUploadService' &&
+            log.message.startsWith('Background upload failed'),
+      )
+      .toList();
+
+  // The warning logged when the OS upload fails with an HTTP 500 carrying
+  // [body].
+  Future<String> warningForResponse(String body) async {
+    await captureLogs();
+    final transport = _FakeTransport(
+      emitOnEnqueue: <BlossomBackgroundTransferEvent>[
+        BlossomBackgroundTransferEvent(
+          taskId: taskId,
+          status: BlossomBackgroundTransferStatus.failed,
+          httpStatusCode: 500,
+          responseBody: body,
+        ),
+      ],
+    );
+    await service(transport).uploadVideoInBackground(
+      videoFile: videoFile,
+      taskId: taskId,
+      proofManifestJson: null,
+    );
+    return failureWarnings().single.message;
+  }
+
   group('uploadVideoInBackground', () {
     test('returns failure when no transport is configured', () async {
       final result = await service(null).uploadVideoInBackground(
@@ -181,6 +221,180 @@ void main() {
       expect(result.success, isFalse);
       expect(result.statusCode, 503);
       expect(result.failureReason, BlossomUploadFailureReason.server);
+    });
+
+    test(
+      'logs the HTTP status and server response of a failed upload',
+      () async {
+        // The failed result drops the response body, so this warning is the
+        // only place the server's explanation is recorded.
+        await captureLogs();
+        const serverError =
+            '{"error":"user list update changed too many times"}';
+        final transport = _FakeTransport(
+          emitOnEnqueue: const <BlossomBackgroundTransferEvent>[
+            BlossomBackgroundTransferEvent(
+              taskId: taskId,
+              status: BlossomBackgroundTransferStatus.failed,
+              httpStatusCode: 500,
+              responseBody: serverError,
+            ),
+          ],
+        );
+
+        await service(transport).uploadVideoInBackground(
+          videoFile: videoFile,
+          taskId: taskId,
+          proofManifestJson: null,
+        );
+
+        final warnings = failureWarnings();
+        expect(warnings, hasLength(1));
+        expect(warnings.single.level, LogLevel.warning);
+        expect(warnings.single.message, contains('HTTP 500'));
+        expect(warnings.single.message, contains(serverError));
+      },
+    );
+
+    test(
+      'logs the transport error of a failed upload that has no HTTP status',
+      () async {
+        await captureLogs();
+        final transport = _FakeTransport(
+          emitOnEnqueue: const <BlossomBackgroundTransferEvent>[
+            BlossomBackgroundTransferEvent(
+              taskId: taskId,
+              status: BlossomBackgroundTransferStatus.failed,
+              error: 'Connection reset by peer',
+            ),
+          ],
+        );
+
+        await service(transport).uploadVideoInBackground(
+          videoFile: videoFile,
+          taskId: taskId,
+          proofManifestJson: null,
+        );
+
+        final warning = failureWarnings().single;
+        expect(warning.message, contains('HTTP none'));
+        expect(warning.message, contains('error: Connection reset by peer'));
+        expect(warning.message, contains('response: none'));
+      },
+    );
+
+    test('logs none when the failed response had an empty body', () async {
+      await captureLogs();
+      final transport = _FakeTransport(
+        emitOnEnqueue: const <BlossomBackgroundTransferEvent>[
+          BlossomBackgroundTransferEvent(
+            taskId: taskId,
+            status: BlossomBackgroundTransferStatus.failed,
+            httpStatusCode: 502,
+            responseBody: '',
+          ),
+        ],
+      );
+
+      await service(transport).uploadVideoInBackground(
+        videoFile: videoFile,
+        taskId: taskId,
+        proofManifestJson: null,
+      );
+
+      expect(failureWarnings().single.message, endsWith('response: none'));
+    });
+
+    test('names the task, blob and server in the failure warning', () async {
+      final blobHash = sha256.convert(videoFile.readAsBytesSync()).toString();
+
+      final message = await warningForResponse('{"error":"nope"}');
+
+      expect(message, contains('task $taskId'));
+      expect(message, contains('blob $blobHash'));
+      expect(message, contains('server $server'));
+    });
+
+    test('logs none for a response of only whitespace', () async {
+      final message = await warningForResponse('\r\n \t\n');
+
+      expect(message, endsWith('response: none'));
+    });
+
+    test(
+      'logs a multi-line response on one line without control characters',
+      () async {
+        // NEL splits a line and a right-to-left override rewrites how the rest
+        // of it reads; a server controls both.
+        final message = await warningForResponse(
+          '<html>\r\n<body>\tBad gateway\u0085<b>retry</b>\u202Eend\n',
+        );
+
+        expect(
+          message,
+          endsWith('response: <html> <body> Bad gateway <b>retry</b> end'),
+        );
+      },
+    );
+
+    test('logs a response of exactly 500 characters whole', () async {
+      final response = [...List.filled(4, 'x' * 99), 'x' * 100].join(' ');
+      expect(response, hasLength(500));
+
+      final message = await warningForResponse(response);
+
+      expect(message, endsWith('response: $response'));
+    });
+
+    test(
+      'cuts a longer response at the last word boundary and says so',
+      () async {
+        final words = List.filled(4, 'x' * 99).join(' ');
+        final response = '$words ${'x' * 101}';
+        expect(response, hasLength(501));
+
+        final message = await warningForResponse(response);
+
+        expect(message, endsWith('response: $words … [truncated]'));
+      },
+    );
+
+    test('never cuts through an identifier when shortening', () async {
+      // The 64-character id straddles the 500-character limit.
+      final id = '0123456789abcdef' * 4;
+      final response = '${'a ' * 240}$id tail';
+
+      final message = await warningForResponse(response);
+
+      expect(message, endsWith(' … [truncated]'));
+      expect(message, isNot(contains('0123')));
+    });
+
+    test('omits a long response that has no word boundary', () async {
+      final message = await warningForResponse('x' * 600);
+
+      expect(message, endsWith('response: [omitted: over 500 characters]'));
+    });
+
+    test('does not log a failure for HTTP 409 (already stored)', () async {
+      await captureLogs();
+      final transport = _FakeTransport(
+        emitOnEnqueue: const <BlossomBackgroundTransferEvent>[
+          BlossomBackgroundTransferEvent(
+            taskId: taskId,
+            status: BlossomBackgroundTransferStatus.failed,
+            httpStatusCode: 409,
+          ),
+        ],
+      );
+
+      await service(transport).uploadVideoInBackground(
+        videoFile: videoFile,
+        taskId: taskId,
+        proofManifestJson: null,
+      );
+
+      expect(failureWarnings(), isEmpty);
     });
 
     test('treats HTTP 409 (already stored) as success with the '
@@ -601,5 +815,69 @@ void main() {
         expect(transport.enqueued, <String>[taskId], reason: 're-uploaded');
       },
     );
+
+    test(
+      'logs the status and response of a buffered failed terminal',
+      () async {
+        await captureLogs();
+        final transport = _FakeTransport(
+          bufferedTerminals: <String, BlossomBackgroundTransferEvent>{
+            taskId: const BlossomBackgroundTransferEvent(
+              taskId: taskId,
+              status: BlossomBackgroundTransferStatus.failed,
+              httpStatusCode: 500,
+              responseBody: '{"error":"kv write failed"}',
+            ),
+          },
+          emitOnEnqueue: const <BlossomBackgroundTransferEvent>[
+            BlossomBackgroundTransferEvent(
+              taskId: taskId,
+              status: BlossomBackgroundTransferStatus.completed,
+              httpStatusCode: 200,
+            ),
+          ],
+        );
+
+        await service(transport).uploadVideoInBackground(
+          videoFile: videoFile,
+          taskId: taskId,
+          proofManifestJson: null,
+        );
+
+        final warning = failureWarnings().single;
+        expect(warning.message, contains('HTTP 500'));
+        expect(
+          warning.message,
+          endsWith('response: {"error":"kv write failed"}'),
+        );
+      },
+    );
+
+    test('does not log a failure for a buffered cancelled terminal', () async {
+      await captureLogs();
+      final transport = _FakeTransport(
+        bufferedTerminals: <String, BlossomBackgroundTransferEvent>{
+          taskId: const BlossomBackgroundTransferEvent(
+            taskId: taskId,
+            status: BlossomBackgroundTransferStatus.cancelled,
+          ),
+        },
+        emitOnEnqueue: const <BlossomBackgroundTransferEvent>[
+          BlossomBackgroundTransferEvent(
+            taskId: taskId,
+            status: BlossomBackgroundTransferStatus.completed,
+            httpStatusCode: 200,
+          ),
+        ],
+      );
+
+      await service(transport).uploadVideoInBackground(
+        videoFile: videoFile,
+        taskId: taskId,
+        proofManifestJson: null,
+      );
+
+      expect(failureWarnings(), isEmpty);
+    });
   });
 }
