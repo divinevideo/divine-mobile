@@ -38,6 +38,7 @@ void main() {
     setUpAll(() {
       registerFallbackValue(<Filter>[]);
       registerFallbackValue(FakeEvent());
+      registerFallbackValue(Duration.zero);
     });
 
     setUp(() {
@@ -2331,9 +2332,18 @@ void main() {
           when(() => mockNostrClient.countEvents(any())).thenAnswer(
             (_) async => const CountResult(count: 7),
           );
-          when(() => mockNostrClient.publishEvent(any())).thenAnswer(
-            (inv) async =>
-                PublishSuccess(event: inv.positionalArguments.first as Event),
+          when(
+            () => mockNostrClient.publishEventAwaitOk(
+              any(),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer(
+            (inv) async => PublishOutcome(
+              eventId: (inv.positionalArguments.first as Event).id,
+              acceptedBy: const ['wss://relay.test'],
+              rejectedBy: const {},
+              noResponseFrom: const [],
+            ),
           );
 
           await repository.getCommentsCount(
@@ -2362,26 +2372,62 @@ void main() {
     group('deleteComment', () {
       const testCommentId =
           'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+      const refusingRelay = {'wss://relay.test': 'blocked: not allowed'};
+
+      /// Answers every deletion request: the relays in [acceptedBy] accept it
+      /// and the ones in [rejectedBy] refuse it, with their reason.
+      void answerDeletionRequests({
+        List<String> acceptedBy = const ['wss://relay.test'],
+        Map<String, String> rejectedBy = const {},
+      }) {
+        when(
+          () => mockNostrClient.publishEventAwaitOk(
+            any(),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (inv) async => PublishOutcome(
+            eventId: (inv.positionalArguments.first as Event).id,
+            acceptedBy: acceptedBy,
+            rejectedBy: rejectedBy,
+            noResponseFrom: const [],
+          ),
+        );
+      }
+
+      /// The one deletion request the repository sent.
+      Event sentDeletionRequest() =>
+          verify(
+                () => mockNostrClient.publishEventAwaitOk(
+                  captureAny(),
+                  timeout: any(named: 'timeout'),
+                ),
+              ).captured.single
+              as Event;
+
+      void stubPostedCommentId(String id) {
+        when(() => mockNostrClient.publishEvent(any())).thenAnswer((
+          inv,
+        ) async {
+          final event = inv.positionalArguments.first as Event..id = id;
+          return PublishSuccess(event: event);
+        });
+      }
+
+      setUp(answerDeletionRequests);
 
       test('publishes deletion event with correct tags', () async {
-        Event? capturedEvent;
-
-        when(() => mockNostrClient.publishEvent(any())).thenAnswer((inv) async {
-          capturedEvent = inv.positionalArguments.first as Event;
-          return PublishSuccess(event: capturedEvent!);
-        });
-
         await repository.deleteComment(commentId: testCommentId);
 
-        expect(capturedEvent, isNotNull);
-        expect(capturedEvent!.kind, equals(_deletionKind));
+        final capturedEvent = sentDeletionRequest();
+        expect(capturedEvent.kind, equals(_deletionKind));
 
         // Check NIP-09 deletion tags
-        final eTags = capturedEvent!.tags
+        final eTags = capturedEvent.tags
             .cast<List<dynamic>>()
             .where((t) => t[0] == 'e')
             .toList();
-        final kTags = capturedEvent!.tags
+        final kTags = capturedEvent.tags
             .cast<List<dynamic>>()
             .where((t) => t[0] == 'k')
             .toList();
@@ -2393,59 +2439,62 @@ void main() {
       });
 
       test('publishes deletion event with reason when provided', () async {
-        Event? capturedEvent;
-
-        when(() => mockNostrClient.publishEvent(any())).thenAnswer((inv) async {
-          capturedEvent = inv.positionalArguments.first as Event;
-          return PublishSuccess(event: capturedEvent!);
-        });
-
         await repository.deleteComment(
           commentId: testCommentId,
           reason: 'Spam content',
         );
 
-        expect(capturedEvent, isNotNull);
-        expect(capturedEvent!.content, equals('Spam content'));
+        expect(sentDeletionRequest().content, equals('Spam content'));
       });
 
       test(
         'publishes deletion event with empty content when no reason',
         () async {
-          Event? capturedEvent;
-
-          when(() => mockNostrClient.publishEvent(any())).thenAnswer((
-            inv,
-          ) async {
-            capturedEvent = inv.positionalArguments.first as Event;
-            return PublishSuccess(event: capturedEvent!);
-          });
-
           await repository.deleteComment(commentId: testCommentId);
 
-          expect(capturedEvent, isNotNull);
-          expect(capturedEvent!.content, isEmpty);
+          expect(sentDeletionRequest().content, isEmpty);
         },
       );
 
+      test('waits at most five seconds for relays to answer', () async {
+        await repository.deleteComment(commentId: testCommentId);
+
+        verify(
+          () => mockNostrClient.publishEventAwaitOk(
+            any(),
+            timeout: const Duration(seconds: 5),
+          ),
+        ).called(1);
+      });
+
       test(
-        'throws DeleteCommentFailedException when publish does not return '
-        'PublishSuccess',
+        'throws DeleteCommentFailedException naming the refusal when no relay '
+        'accepts the request',
         () async {
-          when(
-            () => mockNostrClient.publishEvent(any()),
-          ).thenAnswer((_) async => const PublishFailed());
+          answerDeletionRequests(
+            acceptedBy: const [],
+            rejectedBy: refusingRelay,
+          );
 
           expect(
             () => repository.deleteComment(commentId: testCommentId),
-            throwsA(isA<DeleteCommentFailedException>()),
+            throwsA(
+              isA<DeleteCommentFailedException>().having(
+                (e) => e.message,
+                'message',
+                contains('blocked: not allowed'),
+              ),
+            ),
           );
         },
       );
 
       test('throws DeleteCommentFailedException on exception', () async {
         when(
-          () => mockNostrClient.publishEvent(any()),
+          () => mockNostrClient.publishEventAwaitOk(
+            any(),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenThrow(Exception('Network error'));
 
         expect(
@@ -2455,9 +2504,12 @@ void main() {
       });
 
       test('rethrows DeleteCommentFailedException', () async {
-        when(() => mockNostrClient.publishEvent(any())).thenThrow(
-          const DeleteCommentFailedException('Custom error'),
-        );
+        when(
+          () => mockNostrClient.publishEventAwaitOk(
+            any(),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenThrow(const DeleteCommentFailedException('Custom error'));
 
         expect(
           () => repository.deleteComment(commentId: testCommentId),
@@ -2475,10 +2527,6 @@ void main() {
         when(() => mockNostrClient.countEvents(any())).thenAnswer(
           (_) async => const CountResult(count: 10),
         );
-        when(() => mockNostrClient.publishEvent(any())).thenAnswer(
-          (inv) async =>
-              PublishSuccess(event: inv.positionalArguments.first as Event),
-        );
 
         await repository.getCommentsCount(testRootEventId);
         await repository.deleteComment(
@@ -2491,13 +2539,34 @@ void main() {
         verify(() => mockNostrClient.countEvents(any())).called(1);
       });
 
+      test(
+        'leaves the cached count alone when no relay accepts the request',
+        () async {
+          when(() => mockNostrClient.countEvents(any())).thenAnswer(
+            (_) async => const CountResult(count: 10),
+          );
+          answerDeletionRequests(
+            acceptedBy: const [],
+            rejectedBy: refusingRelay,
+          );
+
+          await repository.getCommentsCount(testRootEventId);
+          await expectLater(
+            repository.deleteComment(
+              commentId: testCommentId,
+              rootEventId: testRootEventId,
+            ),
+            throwsA(isA<DeleteCommentFailedException>()),
+          );
+          final cached = await repository.getCommentsCount(testRootEventId);
+
+          expect(cached, equals(10));
+        },
+      );
+
       test('does not decrement when rootEventId is omitted', () async {
         when(() => mockNostrClient.countEvents(any())).thenAnswer(
           (_) async => const CountResult(count: 10),
-        );
-        when(() => mockNostrClient.publishEvent(any())).thenAnswer(
-          (inv) async =>
-              PublishSuccess(event: inv.positionalArguments.first as Event),
         );
 
         await repository.getCommentsCount(testRootEventId);
@@ -2510,15 +2579,7 @@ void main() {
       test(
         'does not restore a recently posted comment after deletion',
         () async {
-          when(() => mockNostrClient.publishEvent(any())).thenAnswer((
-            inv,
-          ) async {
-            final event = inv.positionalArguments.first as Event;
-            event.id = event.kind == _commentKind
-                ? 'recently-posted-comment'
-                : 'comment-deletion';
-            return PublishSuccess(event: event);
-          });
+          stubPostedCommentId('recently-posted-comment');
           when(
             () => mockNostrClient.queryEvents(any()),
           ).thenAnswer((_) async => <Event>[]);
@@ -2550,6 +2611,72 @@ void main() {
       );
 
       test(
+        'keeps the comment visible when no relay accepts the request',
+        () async {
+          stubPostedCommentId('recently-posted-comment');
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
+          answerDeletionRequests(
+            acceptedBy: const [],
+            rejectedBy: refusingRelay,
+          );
+
+          final posted = await repository.postComment(
+            content: 'Original text',
+            rootEventId: testRootEventId,
+            rootEventKind: _testRootEventKind,
+            rootEventAuthorPubkey: testRootAuthorPubkey,
+          );
+          await expectLater(
+            repository.deleteComment(
+              commentId: posted.id,
+              rootEventId: testRootEventId,
+            ),
+            throwsA(isA<DeleteCommentFailedException>()),
+          );
+
+          final loaded = await repository.loadComments(
+            rootEventId: testRootEventId,
+            rootEventKind: _testRootEventKind,
+          );
+
+          expect(loaded.commentCache.keys, equals([posted.id]));
+        },
+      );
+
+      test(
+        'hides the comment when one relay accepts and another refuses',
+        () async {
+          stubPostedCommentId('recently-posted-comment');
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
+          answerDeletionRequests(
+            rejectedBy: const {'wss://other.test': 'blocked: not allowed'},
+          );
+
+          final posted = await repository.postComment(
+            content: 'Original text',
+            rootEventId: testRootEventId,
+            rootEventKind: _testRootEventKind,
+            rootEventAuthorPubkey: testRootAuthorPubkey,
+          );
+          await repository.deleteComment(
+            commentId: posted.id,
+            rootEventId: testRootEventId,
+          );
+
+          final loaded = await repository.loadComments(
+            rootEventId: testRootEventId,
+            rootEventKind: _testRootEventKind,
+          );
+
+          expect(loaded.comments, isEmpty);
+        },
+      );
+
+      test(
         'keeps other recently posted comments when deleting without a root '
         'event id',
         () async {
@@ -2557,13 +2684,8 @@ void main() {
           when(() => mockNostrClient.publishEvent(any())).thenAnswer((
             inv,
           ) async {
-            final event = inv.positionalArguments.first as Event;
-            if (event.kind == _commentKind) {
-              postedCommentCount++;
-              event.id = 'posted-comment-$postedCommentCount';
-            } else {
-              event.id = 'comment-deletion';
-            }
+            final event = inv.positionalArguments.first as Event
+              ..id = 'posted-comment-${++postedCommentCount}';
             return PublishSuccess(event: event);
           });
           when(
@@ -2596,13 +2718,8 @@ void main() {
       test('keeps only edited text after deleting and reposting', () async {
         var postedCommentCount = 0;
         when(() => mockNostrClient.publishEvent(any())).thenAnswer((inv) async {
-          final event = inv.positionalArguments.first as Event;
-          if (event.kind == _commentKind) {
-            postedCommentCount++;
-            event.id = 'posted-comment-$postedCommentCount';
-          } else {
-            event.id = 'comment-deletion';
-          }
+          final event = inv.positionalArguments.first as Event
+            ..id = 'posted-comment-${++postedCommentCount}';
           return PublishSuccess(event: event);
         });
         when(

@@ -942,6 +942,54 @@ void main() {
           verifyNever(() => mockNostrEventsDao.deleteEventsByIds(any()));
         });
       });
+
+      group('deletion requests', () {
+        test('keeps a published deletion request in the local cache', () async {
+          final mockDbClient = _MockAppDbClient();
+          final mockDatabase = _MockAppDatabase();
+          final mockNostrEventsDao = _MockNostrEventsDao();
+          when(() => mockDbClient.database).thenReturn(mockDatabase);
+          when(
+            () => mockDatabase.nostrEventsDao,
+          ).thenReturn(mockNostrEventsDao);
+          when(
+            () => mockNostrEventsDao.deleteEventsByIds(any()),
+          ).thenAnswer((_) async => 1);
+          when(
+            () => mockNostrEventsDao.upsertEvent(any()),
+          ).thenAnswer((_) async {});
+          final clientWithCache = NostrClient.forTesting(
+            nostr: mockNostr,
+            relayManager: mockRelayManager,
+            dbClient: mockDbClient,
+          );
+          final deleteEvent = Event(
+            testPublicKey,
+            EventKind.eventDeletion,
+            [
+              ['e', 'target_event_id'],
+              ['k', '1111'],
+            ],
+            '',
+            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          )..sig = 'test_sig';
+          when(
+            () => mockRelayManager.connectedRelays,
+          ).thenReturn(['wss://relay1.example.com']);
+          when(
+            () => mockNostr.sendEvent(
+              any(),
+              tempRelays: any(named: 'tempRelays'),
+              targetRelays: any(named: 'targetRelays'),
+            ),
+          ).thenAnswer((_) async => deleteEvent);
+
+          final result = await clientWithCache.publishEvent(deleteEvent);
+
+          expect(result, isA<PublishSuccess>());
+          verify(() => mockNostrEventsDao.upsertEvent(deleteEvent)).called(1);
+        });
+      });
     });
 
     group('publishEventAwaitOk', () {
@@ -1169,6 +1217,79 @@ void main() {
           ).called(1);
         },
       );
+
+      group('deletion request caching', () {
+        late _MockNostrEventsDao mockNostrEventsDao;
+        late NostrClient clientWithCache;
+        late Event deleteEvent;
+
+        setUp(() {
+          final mockDbClient = _MockAppDbClient();
+          final mockDatabase = _MockAppDatabase();
+          mockNostrEventsDao = _MockNostrEventsDao();
+          when(() => mockDbClient.database).thenReturn(mockDatabase);
+          when(
+            () => mockDatabase.nostrEventsDao,
+          ).thenReturn(mockNostrEventsDao);
+          when(
+            () => mockNostrEventsDao.deleteEventsByIds(any()),
+          ).thenAnswer((_) async => 1);
+          when(
+            () => mockNostrEventsDao.upsertEvent(any()),
+          ).thenAnswer((_) async {});
+          clientWithCache = NostrClient.forTesting(
+            nostr: mockNostr,
+            relayManager: mockRelayManager,
+            dbClient: mockDbClient,
+          );
+          deleteEvent = Event(
+            testPublicKey,
+            EventKind.eventDeletion,
+            [
+              ['e', 'target_event_id'],
+              ['k', '1111'],
+            ],
+            '',
+            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          )..sig = 'test_sig';
+          when(
+            () => mockRelayManager.connectedRelays,
+          ).thenReturn(['wss://relay.test']);
+        });
+
+        void stubRelayAnswer(PublishOutcome outcome) {
+          when(
+            () => mockNostr.sendEventAwaitOk(
+              any(),
+              tempRelays: any(named: 'tempRelays'),
+              targetRelays: any(named: 'targetRelays'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((_) async => outcome);
+        }
+
+        test('keeps a confirmed deletion request in the local cache', () async {
+          stubRelayAnswer(accepted(deleteEvent.id));
+
+          final outcome = await clientWithCache.publishEventAwaitOk(
+            deleteEvent,
+          );
+
+          expect(outcome.confirmed, isTrue);
+          verify(() => mockNostrEventsDao.upsertEvent(deleteEvent)).called(1);
+        });
+
+        test('does not keep a rejected deletion request', () async {
+          stubRelayAnswer(rejected(deleteEvent.id));
+
+          final outcome = await clientWithCache.publishEventAwaitOk(
+            deleteEvent,
+          );
+
+          expect(outcome.failed, isTrue);
+          verifyNever(() => mockNostrEventsDao.upsertEvent(any()));
+        });
+      });
 
       test(
         'removes addressable target events from cache after confirmed deletion',
@@ -2004,8 +2125,12 @@ void main() {
       late NostrClient clientWithCache;
 
       /// Subscribes and returns the relay callback the SDK was handed, so a
-      /// test can deliver events exactly as a relay would.
-      void Function(Event) subscribeAndCaptureRelayCallback() {
+      /// test can deliver events exactly as a relay would. Events the
+      /// subscription emits are added to [received] when given.
+      void Function(Event) subscribeAndCaptureRelayCallback({
+        bool handleDeletionRequests = true,
+        List<Event>? received,
+      }) {
         when(
           () => mockNostr.subscribe(
             any(),
@@ -2020,9 +2145,16 @@ void main() {
           ),
         ).thenReturn('test-sub-id');
 
-        clientWithCache.subscribe([
-          Filter(kinds: [addressableShortVideoKind], limit: 10),
-        ]);
+        final stream = clientWithCache.subscribe(
+          [
+            Filter(kinds: [addressableShortVideoKind], limit: 10),
+          ],
+          handleDeletionRequests: handleDeletionRequests,
+        );
+        if (received != null) {
+          final subscription = stream.listen(received.add);
+          addTearDown(subscription.cancel);
+        }
 
         final captured = verify(
           () => mockNostr.subscribe(
@@ -2184,6 +2316,71 @@ void main() {
 
           onEvent(video);
 
+          verify(() => mockNostrEventsDao.upsertEvent(video)).called(1);
+        },
+      );
+
+      test(
+        'removes from the cache only the events the request signer wrote',
+        () async {
+          final mine = videoEvent(id: 'a' * 64);
+          final theirs = videoEvent(id: 'b' * 64, pubkey: 'f' * 64);
+          when(
+            () => mockNostrEventsDao.getEventsByFilter(
+              any(),
+              sortBy: any(named: 'sortBy'),
+            ),
+          ).thenAnswer((invocation) async {
+            final filter = invocation.positionalArguments.first as Filter;
+            return [
+              for (final event in [mine, theirs])
+                if ((filter.ids?.contains(event.id) ?? true) &&
+                    (filter.authors?.contains(event.pubkey) ?? true))
+                  event,
+            ];
+          });
+          final onEvent = subscribeAndCaptureRelayCallback();
+
+          onEvent(
+            deletionEvent([
+              ['e', mine.id],
+              ['e', theirs.id],
+            ]),
+          );
+          await pumpEventQueue();
+
+          verify(
+            () => mockNostrEventsDao.deleteEventsByIds([mine.id]),
+          ).called(1);
+          verifyNever(
+            () => mockNostrEventsDao.deleteEventsByIds(
+              any(that: contains(theirs.id)),
+            ),
+          );
+        },
+      );
+
+      test(
+        'leaves the cache alone for a subscription that opts out of '
+        'deletion requests',
+        () async {
+          final received = <Event>[];
+          final onEvent = subscribeAndCaptureRelayCallback(
+            handleDeletionRequests: false,
+            received: received,
+          );
+          final video = videoEvent(id: 'a' * 64);
+          final request = deletionEvent([
+            ['e', video.id],
+          ]);
+
+          onEvent(request);
+          await pumpEventQueue();
+          onEvent(video);
+          await pumpEventQueue();
+
+          expect(received, contains(request));
+          verifyNever(() => mockNostrEventsDao.deleteEventsByIds(any()));
           verify(() => mockNostrEventsDao.upsertEvent(video)).called(1);
         },
       );

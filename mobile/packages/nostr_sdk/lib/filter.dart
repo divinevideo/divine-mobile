@@ -31,6 +31,10 @@ class Filter {
   /// Format: `kind:pubkey:d-tag`
   List<String>? a;
 
+  /// a list of kinds referenced in a lowercase "k" tag — the target kind on a
+  /// NIP-09 deletion request, or the parent kind on a NIP-22 comment
+  List<String>? k;
+
   /// a list of event ids that are referenced in an uppercase "E" tag (NIP-22 root scope)
   List<String>? uppercaseE;
 
@@ -67,6 +71,7 @@ class Filter {
     this.h,
     this.d,
     this.a,
+    this.k,
     this.uppercaseE,
     this.uppercaseA,
     this.uppercaseK,
@@ -90,6 +95,7 @@ class Filter {
     h = json['#h'] == null ? null : List<String>.from(json['#h']);
     d = json['#d'] == null ? null : List<String>.from(json['#d']);
     a = json['#a'] == null ? null : List<String>.from(json['#a']);
+    k = json['#k'] == null ? null : List<String>.from(json['#k']);
     uppercaseE = json['#E'] == null ? null : List<String>.from(json['#E']);
     uppercaseA = json['#A'] == null ? null : List<String>.from(json['#A']);
     uppercaseK = json['#K'] == null ? null : List<String>.from(json['#K']);
@@ -129,6 +135,9 @@ class Filter {
     }
     if (a != null) {
       data['#a'] = a;
+    }
+    if (k != null) {
+      data['#k'] = k;
     }
     if (uppercaseE != null) {
       data['#E'] = uppercaseE;
@@ -184,35 +193,38 @@ class Filter {
     List<String> hs = [];
     List<String> ds = [];
     List<String> as_ = [];
+    List<String> ks = [];
     List<String> uppercaseEs = [];
     List<String> uppercaseAs = [];
     List<String> uppercaseKs = [];
     List<String> ms = [];
     for (var tag in event.tags) {
       if (tag.length > 1) {
-        var k = tag[0];
-        var v = tag[1];
+        var name = tag[0];
+        var value = tag[1];
 
-        if (k == "e") {
-          es.add(v);
-        } else if (k == "p") {
-          ps.add(v);
-        } else if (k == "t") {
-          ts.add(v);
-        } else if (k == "h") {
-          hs.add(v);
-        } else if (k == "d") {
-          ds.add(v);
-        } else if (k == "a") {
-          as_.add(v);
-        } else if (k == "E") {
-          uppercaseEs.add(v);
-        } else if (k == "A") {
-          uppercaseAs.add(v);
-        } else if (k == "K") {
-          uppercaseKs.add(v);
-        } else if (k == "m") {
-          ms.add(v);
+        if (name == "e") {
+          es.add(value);
+        } else if (name == "p") {
+          ps.add(value);
+        } else if (name == "t") {
+          ts.add(value);
+        } else if (name == "h") {
+          hs.add(value);
+        } else if (name == "d") {
+          ds.add(value);
+        } else if (name == "a") {
+          as_.add(value);
+        } else if (name == "k") {
+          ks.add(value);
+        } else if (name == "E") {
+          uppercaseEs.add(value);
+        } else if (name == "A") {
+          uppercaseAs.add(value);
+        } else if (name == "K") {
+          uppercaseKs.add(value);
+        } else if (name == "m") {
+          ms.add(value);
         }
       }
     }
@@ -256,6 +268,13 @@ class Filter {
           return a!.contains(v);
         })))) {
       // filter query a but as don't contains a.
+      return false;
+    }
+    if (k != null &&
+        (!(ks.any((v) {
+          return k!.contains(v);
+        })))) {
+      // filter query k but ks don't contains k.
       return false;
     }
     if (uppercaseE != null &&

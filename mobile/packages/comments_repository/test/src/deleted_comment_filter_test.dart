@@ -40,6 +40,7 @@ void main() {
 
     setUpAll(() {
       registerFallbackValue(<Filter>[]);
+      registerFallbackValue(Duration.zero);
       registerFallbackValue(_FakeEvent());
     });
 
@@ -52,7 +53,20 @@ void main() {
         return PublishSuccess(event: event);
       });
       when(
-        () => nostrClient.queryEvents(any()),
+        () => nostrClient.publishEventAwaitOk(
+          any(),
+          timeout: any(named: 'timeout'),
+        ),
+      ).thenAnswer(
+        (inv) async => PublishOutcome(
+          eventId: (inv.positionalArguments.first as Event).id,
+          acceptedBy: const ['wss://relay.test'],
+          rejectedBy: const {},
+          noResponseFrom: const [],
+        ),
+      );
+      when(
+        () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => <Event>[]);
       when(() => funnelcakeClient.isAvailable).thenReturn(false);
       repository = CommentsRepository(
@@ -162,7 +176,7 @@ void main() {
 
       test('drops a deleted comment a relay still returns', () async {
         when(
-          () => nostrClient.queryEvents(any()),
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
         ).thenAnswer(
           (_) async => [relayComment(deletedId), relayComment(keptId)],
         );
@@ -209,21 +223,24 @@ void main() {
     group('loadCommentsByAuthor', () {
       test('drops a deleted comment a relay still returns', () async {
         when(
-          () => nostrClient.queryEvents(any()),
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
         ).thenAnswer(
           (_) async => [relayComment(deletedId), relayComment(keptId)],
         );
         final beforeDelete = await repository.loadCommentsByAuthor(
           authorPubkey: userPubkey,
         );
-        expect(beforeDelete.map((comment) => comment.id), contains(deletedId));
+        expect(
+          beforeDelete.comments.map((comment) => comment.id),
+          contains(deletedId),
+        );
 
         await deleteOne(deletedId);
-        final comments = await repository.loadCommentsByAuthor(
+        final page = await repository.loadCommentsByAuthor(
           authorPubkey: userPubkey,
         );
 
-        expect(comments.map((comment) => comment.id), equals([keptId]));
+        expect(page.comments.map((comment) => comment.id), equals([keptId]));
       });
     });
   });

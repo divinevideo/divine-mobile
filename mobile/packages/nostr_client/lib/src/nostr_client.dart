@@ -209,6 +209,10 @@ class NostrClient {
   /// Upper bound on remembered NIP-09 tombstones, per set.
   static const int _maxTrackedTombstones = 2000;
 
+  /// Ids one cache lookup names when checking who signed a deletion
+  /// request's targets, keeping each query well under SQLite's variable limit.
+  static const int _cachedIdLookupBatchSize = 500;
+
   /// `pubkey:event-id` pairs removed by an observed or published Kind 5.
   ///
   /// Keyed by the *deletion author* so a forged `e` tag cannot suppress
@@ -323,9 +327,14 @@ class NostrClient {
   /// from the local database.
   ///
   /// Extracts event IDs from `e` tags and addressable coordinates from `a`
-  /// tags, then deletes matching cached events.
-  ///
-  Future<void> _handleDeletionEvent(Event deletionEvent) async {
+  /// tags, then deletes matching cached events. A request [publishedHere]
+  /// names this client's own events and removes them by id. A request a relay
+  /// delivered can come from any account and name any id, so it removes only
+  /// cached events its own signer wrote.
+  Future<void> _handleDeletionEvent(
+    Event deletionEvent, {
+    bool publishedHere = false,
+  }) async {
     if (deletionEvent.kind != EventKind.eventDeletion) return;
 
     final targetEventIds = <String>[];
@@ -359,6 +368,7 @@ class NostrClient {
       addressableIds: targetAddressableIds,
       deletionPubkey: deletionEvent.pubkey,
       deletionCreatedAt: deletionEvent.createdAt,
+      publishedHere: publishedHere,
     );
   }
 
@@ -448,11 +458,14 @@ class NostrClient {
     required List<AId> addressableIds,
     required String deletionPubkey,
     required int deletionCreatedAt,
+    required bool publishedHere,
   }) async {
     final dao = _nostrEventsDao;
     if (dao == null) return;
 
-    final idsToDelete = eventIds.toSet();
+    final idsToDelete = publishedHere
+        ? eventIds.toSet()
+        : await _cachedEventIdsSignedBy(dao, eventIds, deletionPubkey);
     for (final addressableId in addressableIds) {
       if (addressableId.pubkey != deletionPubkey) continue;
 
@@ -471,13 +484,35 @@ class NostrClient {
     await dao.deleteEventsByIds(idsToDelete.toList());
   }
 
+  /// The ids among [eventIds] of cached events that [pubkey] signed.
+  Future<Set<String>> _cachedEventIdsSignedBy(
+    NostrEventsDao dao,
+    List<String> eventIds,
+    String pubkey,
+  ) async {
+    final ids = eventIds.toSet().toList();
+    final signed = <String>{};
+    for (var start = 0; start < ids.length; start += _cachedIdLookupBatchSize) {
+      final batch = ids.skip(start).take(_cachedIdLookupBatchSize).toList();
+      final events = await dao.getEventsByFilter(
+        Filter(ids: batch, authors: [pubkey], limit: batch.length),
+      );
+      signed.addAll(events.map((event) => event.id));
+    }
+    return signed;
+  }
+
   Future<void> _handleDeletionEventAfterPublish(Event deletionEvent) async {
     try {
-      await _handleDeletionEvent(deletionEvent);
+      await _handleDeletionEvent(deletionEvent, publishedHere: true);
     } on Object {
       // Cache cleanup is best effort after a relay accepted the deletion.
       // Local DAO failures must not change the publish outcome.
     }
+    // Keep the request itself. A relay can go on serving the target until it
+    // applies the request (#7048), and a reader that enforces NIP-09 finds
+    // this copy offline and after a restart.
+    _cacheEvent(deletionEvent);
   }
 
   /// Tracks whether dispose() has been called
@@ -682,6 +717,8 @@ class NostrClient {
   /// - Replaceable events (0, 3, 10000-39999): Cache on success only
   ///   (upsert deletes old record, so rollback would lose data)
   /// - Deletion events (Kind 5): Removes target events from cache on success
+  ///   and keeps the request itself, so a NIP-09 reader finds it before a
+  ///   relay serves it back
   ///
   /// Returns a [PublishResult] describing the outcome:
   /// - [PublishSuccess] — the event was broadcast to at least one relay.
@@ -1722,6 +1759,11 @@ class NostrClient {
   /// Set [closeOnEose] for bounded reads. Their stream closes after every
   /// serving relay reports EOSE, and the relay subscription is released.
   ///
+  /// A NIP-09 deletion request (kind 5) the subscription delivers removes the
+  /// cached events its own signer wrote. Clear [handleDeletionRequests] for a
+  /// subscription that reaches every account's requests: the caller still
+  /// receives them, and they leave the shared cache alone.
+  ///
   /// The stream emits a [RelaySubscriptionRefusedException] if every serving
   /// relay ends the REQ with `CLOSED`.
   Stream<Event> subscribe(
@@ -1733,6 +1775,7 @@ class NostrClient {
     bool sendAfterAuth = false,
     void Function()? onEose,
     bool closeOnEose = false,
+    bool handleDeletionRequests = true,
   }) {
     final effectiveTempRelays = _allowedRelays(tempRelays);
     final effectiveTargetRelays = _allowedRelays(targetRelays);
@@ -1779,7 +1822,9 @@ class NostrClient {
       (event) {
         // Handle NIP-09 deletion events by removing target events from DB
         if (event.kind == EventKind.eventDeletion) {
-          unawaited(_handleDeletionEvent(event).catchError((Object _) {}));
+          if (handleDeletionRequests) {
+            unawaited(_handleDeletionEvent(event).catchError((Object _) {}));
+          }
         } else if (!_shouldSkipAutoCache(event)) {
           // Auto-cache non-deletion events (fire-and-forget)
           try {

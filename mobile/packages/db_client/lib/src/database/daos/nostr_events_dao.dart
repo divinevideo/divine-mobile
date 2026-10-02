@@ -330,6 +330,7 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
   /// - uppercaseE: List of root event IDs (E tags)
   /// - uppercaseA: List of root addressable event references (A tags)
   /// - uppercaseK: List of root event kind values (K tags)
+  /// - k: List of referenced event kind values (k tags, NIP-09 deletions)
   /// - m: List of MIME types (m tags, NIP-94 file metadata)
   /// - search: Full-text search in content (NIP-50)
   /// - since: Minimum created_at timestamp (Unix seconds)
@@ -400,6 +401,7 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     _addExactTagCondition('E', filter.uppercaseE, conditions, variables);
     _addExactTagCondition('A', filter.uppercaseA, conditions, variables);
     _addExactTagCondition('K', filter.uppercaseK, conditions, variables);
+    _addExactTagCondition('k', filter.k, conditions, variables);
     _addExactTagCondition('m', filter.m, conditions, variables);
 
     // Content search filter (NIP-50 style, case insensitive)

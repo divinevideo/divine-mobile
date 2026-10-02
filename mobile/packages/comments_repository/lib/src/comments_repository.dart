@@ -129,18 +129,57 @@ class CommentsRepository {
   /// another client) cannot linger locally indefinitely.
   static const _recentlyPostedRetention = Duration(minutes: 10);
 
-  /// Ids of comments deleted through [deleteComment], hidden from every read.
+  /// Ids of comments deleted through [deleteComment], or found deleted by
+  /// their author's NIP-09 request, hidden from every read.
   ///
   /// A published NIP-09 deletion reaches read sources late: a relay that has
   /// not stored the comment yet applies it only in a later sweep, and the
   /// edge-cached REST list is not purged. Until then they still return the
   /// comment, so an edit showed the old text beside the new (#9643). Kept
   /// across [clearCommentCountCache] because a deletion holds for every
-  /// viewer; bounded by how many comments are deleted in one session.
+  /// viewer; bounded by how many deleted comments one session sees.
   final Set<String> _deletedCommentIds = {};
+
+  /// Pubkeys whose deletion requests [watchCommentDeletions] saw, by the
+  /// comment id each request names.
+  ///
+  /// A request hides a comment only when the comment's author made it, and the
+  /// comment can arrive after the request: a reconnect replays stored requests
+  /// in no set order, and a second relay can deliver one first. Holds at most
+  /// [_maxRememberedDeletionRequests] comments, oldest forgotten first.
+  final Map<String, Set<String>> _deletionRequesters = {};
 
   /// Subscription ID for the active comment watch, if any.
   String? _watchSubscriptionId;
+
+  /// Subscription ID for the active comment-deletion watch, if any.
+  String? _deletionWatchSubscriptionId;
+
+  /// How far before now the live deletion watch starts, so a request published
+  /// while the first page was loading is still seen.
+  static const _liveDeletionLookback = Duration(minutes: 1);
+
+  /// The most comments one deletion lookup names, so checking a long thread
+  /// does not become one oversized relay filter.
+  static const _deletionLookupBatchSize = 50;
+
+  /// How long one deletion lookup waits for relays. Requests already in the
+  /// local cache answer at once; past this, the comments stay as shown.
+  static const _deletionLookupTimeout = Duration(seconds: 2);
+
+  /// How long [deleteComment] waits for relays to accept a deletion request.
+  static const _deletionPublishTimeout = Duration(seconds: 5);
+
+  /// The most comments [_deletionRequesters] remembers requests for; the
+  /// oldest are forgotten first. A forgotten request is still found by
+  /// [findAuthorDeletedComments].
+  static const _maxRememberedDeletionRequests = 2000;
+
+  /// The most requesters [_deletionRequesters] keeps for one comment; the
+  /// oldest are dropped first. Only the comment's author can count, and
+  /// [findAuthorDeletedComments] still finds an author's request a flood of
+  /// others pushed out.
+  static const _maxRequestersPerComment = 8;
 
   /// Default page size for author comment queries.
   static const _authorCommentsLimit = 50;
@@ -652,7 +691,8 @@ class CommentsRepository {
       ..removeWhere(
         (p) => now.difference(p.postedAt) > _recentlyPostedRetention,
       )
-      ..removeWhere((p) => thread.commentCache.containsKey(p.comment.id));
+      ..removeWhere((p) => thread.commentCache.containsKey(p.comment.id))
+      ..removeWhere((p) => _isDeleted(p.comment.id, p.comment.authorPubkey));
 
     if (pending.isEmpty) {
       _recentlyPostedComments.remove(rootEventId);
@@ -689,7 +729,10 @@ class CommentsRepository {
   ///   subsequent metadata edit.
   /// - [reason]: Optional reason for the deletion
   ///
-  /// Throws [DeleteCommentFailedException] if broadcasting fails.
+  /// The comment is treated as deleted only once a relay accepts the request.
+  ///
+  /// Throws [DeleteCommentFailedException] if no relay accepts the request
+  /// within five seconds, or if publishing it fails.
   Future<void> deleteComment({
     required String commentId,
     String? rootEventId,
@@ -710,10 +753,15 @@ class CommentsRepository {
         reason ?? '',
       );
 
-      final sentEvent = await _nostrClient.publishEvent(event);
-      if (sentEvent is! PublishSuccess) {
-        throw const DeleteCommentFailedException(
-          'Failed to publish deletion request',
+      // A request no relay accepted would hide the comment for its author
+      // alone, so wait for the relays' answer before treating it as deleted.
+      final outcome = await _nostrClient.publishEventAwaitOk(
+        event,
+        timeout: _deletionPublishTimeout,
+      );
+      if (outcome.failed) {
+        throw DeleteCommentFailedException(
+          'No relay accepted the deletion request: ${outcome.summary}',
         );
       }
 
@@ -795,7 +843,7 @@ class CommentsRepository {
 
       final filter = _blockFilter;
       return eventStream
-          .where((event) => !_deletedCommentIds.contains(event.id))
+          .where((event) => !_isDeleted(event.id, event.pubkey))
           .where((event) => seenIds.add(event.id))
           .map((event) => _eventToComment(event, rootEventId, rootEventKind))
           .where((comment) => comment != null)
@@ -806,21 +854,106 @@ class CommentsRepository {
     }
   }
 
-  /// Stops watching for new comments.
+  /// Watches for NIP-09 deletion requests of comments, live.
   ///
-  /// Closes the persistent Nostr subscription opened by [watchComments].
+  /// Emits one [CommentDeletion] per `e` tag of each request whose `k` tag
+  /// names a comment (kind 1111, and kind 34236 when [includeVideoReplies]),
+  /// published from a minute before now. The stream carries no author check:
+  /// hide a comment only when [CommentDeletion.appliesTo] holds. A request
+  /// without a `k` tag is not seen here; [findAuthorDeletedComments] still
+  /// finds it.
+  ///
+  /// Call [stopWatchingComments] to close the subscription.
+  ///
+  /// Throws [WatchCommentsFailedException] if the subscription fails.
+  Stream<CommentDeletion> watchCommentDeletions({
+    required String rootEventId,
+    bool includeVideoReplies = false,
+  }) {
+    try {
+      final since = _now().subtract(_liveDeletionLookback);
+      _deletionWatchSubscriptionId = scopedSubscriptionId(
+        'comment_deletions_watch',
+        rootEventId,
+      );
+      return _nostrClient
+          .subscribe(
+            [
+              Filter(
+                kinds: const [_deletionKind],
+                k: [
+                  _commentKind.toString(),
+                  if (includeVideoReplies) EventKind.videoVertical.toString(),
+                ],
+                since: since.millisecondsSinceEpoch ~/ 1000,
+              ),
+            ],
+            subscriptionId: _deletionWatchSubscriptionId,
+            handleDeletionRequests: false,
+          )
+          .where((event) => event.kind == _deletionKind)
+          .expand(
+            (request) => [
+              for (final tag in request.tags)
+                if (tag.length >= 2 && tag[0] == 'e')
+                  CommentDeletion(
+                    commentId: tag[1],
+                    requesterPubkey: request.pubkey,
+                  ),
+            ],
+          )
+          .map(_rememberDeletionRequest);
+    } on Exception catch (e) {
+      throw WatchCommentsFailedException(
+        'Failed to watch comment deletions: $e',
+      );
+    }
+  }
+
+  CommentDeletion _rememberDeletionRequest(CommentDeletion deletion) {
+    final requester = deletion.requesterPubkey.toLowerCase();
+    final requesters =
+        (_deletionRequesters.remove(deletion.commentId) ?? <String>{})
+          ..remove(requester)
+          ..add(requester);
+    while (requesters.length > _maxRequestersPerComment) {
+      requesters.remove(requesters.first);
+    }
+    _deletionRequesters[deletion.commentId] = requesters;
+    while (_deletionRequesters.length > _maxRememberedDeletionRequests) {
+      _deletionRequesters.remove(_deletionRequesters.keys.first);
+    }
+    return deletion;
+  }
+
+  /// Whether the comment [commentId] by [authorPubkey] is hidden as deleted.
+  bool _isDeleted(String commentId, String authorPubkey) =>
+      _deletedCommentIds.contains(commentId) ||
+      (_deletionRequesters[commentId]?.contains(authorPubkey.toLowerCase()) ??
+          false);
+
+  /// Stops watching for new comments and comment deletions.
+  ///
+  /// Closes the persistent Nostr subscriptions opened by [watchComments] and
+  /// [watchCommentDeletions].
   Future<void> stopWatchingComments() async {
     final id = _watchSubscriptionId;
     if (id != null) {
       await _nostrClient.unsubscribe(id);
       _watchSubscriptionId = null;
     }
+    final deletionId = _deletionWatchSubscriptionId;
+    if (deletionId != null) {
+      await _nostrClient.unsubscribe(deletionId);
+      _deletionWatchSubscriptionId = null;
+    }
   }
 
   /// Loads comments authored by a specific user across all videos.
   ///
-  /// Returns a list of comments sorted newest first.
-  /// Supports cursor-based pagination via [before].
+  /// Returns a page of comments sorted newest first, without the ones their
+  /// author deleted. Supports cursor-based pagination via [before]: pass the
+  /// page's [AuthorCommentsPage.nextCursor] to continue.
   ///
   /// By default this returns text comments only. Callers that render a
   /// dedicated video-replies surface should opt in with
@@ -829,7 +962,7 @@ class CommentsRepository {
   /// Throws:
   ///
   /// * [LoadCommentsByAuthorFailedException] if the query fails.
-  Future<List<Comment>> loadCommentsByAuthor({
+  Future<AuthorCommentsPage> loadCommentsByAuthor({
     required String authorPubkey,
     int limit = _authorCommentsLimit,
     DateTime? before,
@@ -848,16 +981,29 @@ class CommentsRepository {
       );
 
       final events = await _nostrClient.queryEvents([filter]);
+      final comments = events
+          .map(_eventToCommentFromRawEvent)
+          .whereType<Comment>()
+          .toList();
+      await findAuthorDeletedComments(comments);
 
-      final comments =
-          events
-              .where((event) => !_deletedCommentIds.contains(event.id))
-              .map(_eventToCommentFromRawEvent)
-              .whereType<Comment>()
+      final kept =
+          comments
+              .where(
+                (comment) => !_isDeleted(comment.id, comment.authorPubkey),
+              )
               .toList()
             ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-      return comments;
+      // The relay's limit applies to the events it returned, not the ones
+      // kept, so page on those.
+      final nextCursor = events.isEmpty || events.length < limit
+          ? null
+          : events
+                .map((event) => event.createdAtDateTime)
+                .reduce((a, b) => a.isBefore(b) ? a : b);
+
+      return AuthorCommentsPage(comments: kept, nextCursor: nextCursor);
     } on Exception catch (e) {
       throw LoadCommentsByAuthorFailedException(e.toString());
     }
@@ -884,13 +1030,88 @@ class CommentsRepository {
     );
   }
 
-  /// Drops comments in [_deletedCommentIds] from [thread], lowering
+  /// Returns the ids of [comments] whose own author published a NIP-09
+  /// deletion request naming them, including ones found earlier, and hides
+  /// those comments from every later read and from [watchComments]. Only
+  /// comments not already known to be deleted are looked up.
+  ///
+  /// A relay that receives the request before it has indexed the comment goes
+  /// on serving the comment until a later batch, and so does every read source
+  /// built on it (#7048). NIP-09 has the client hide the comment, and requires
+  /// the request's pubkey to match the comment's first, so a request naming
+  /// someone else's comment changes nothing.
+  ///
+  /// [loadComments] does not wait for this lookup, so a page paints before a
+  /// relay answers; call this once the page is shown. Asks about at most 50
+  /// comments per relay query, one query at a time. Fails open: a query that
+  /// errors hides nothing from its comments.
+  Future<Set<String>> findAuthorDeletedComments(
+    Iterable<Comment> comments,
+  ) async {
+    final deleted = <String>{};
+    final authorById = <String, String>{};
+    for (final comment in comments) {
+      if (_isDeleted(comment.id, comment.authorPubkey)) {
+        deleted.add(comment.id);
+      } else {
+        authorById[comment.id] = comment.authorPubkey.toLowerCase();
+      }
+    }
+
+    // One batch at a time: the lookups share the client's small query pool.
+    final ids = authorById.keys.toList();
+    for (var start = 0; start < ids.length; start += _deletionLookupBatchSize) {
+      final found = await _findAuthorDeletedIn(
+        ids.skip(start).take(_deletionLookupBatchSize).toList(),
+        authorById,
+      );
+      _deletedCommentIds.addAll(found);
+      deleted.addAll(found);
+    }
+    return deleted;
+  }
+
+  /// Looks up deletion requests for one batch of [ids], whose authors are in
+  /// [authorById]. Fails open: an unanswered batch hides none of its comments.
+  Future<Set<String>> _findAuthorDeletedIn(
+    List<String> ids,
+    Map<String, String> authorById,
+  ) async {
+    final List<Event> requests;
+    try {
+      requests = await _nostrClient.queryEvents([
+        Filter(
+          kinds: const [_deletionKind],
+          authors: {for (final id in ids) authorById[id]!}.toList(),
+          e: ids,
+        ),
+      ], timeout: _deletionLookupTimeout);
+    } on Exception {
+      // Fail open: without an answer the comments stay as their source sent.
+      return const <String>{};
+    }
+
+    final deleted = <String>{};
+    for (final request in requests) {
+      if (request.kind != _deletionKind) continue;
+      final requester = request.pubkey.toLowerCase();
+      for (final tag in request.tags) {
+        if (tag.length < 2 || tag[0] != 'e') continue;
+        if (authorById[tag[1]] == requester) deleted.add(tag[1]);
+      }
+    }
+    return deleted;
+  }
+
+  /// Drops comments hidden as deleted from [thread], lowering
   /// [CommentThread.totalCount] by the number dropped since the source
   /// counted them too.
   CommentThread _dropDeletedComments(CommentThread thread) {
-    if (_deletedCommentIds.isEmpty) return thread;
+    if (_deletedCommentIds.isEmpty && _deletionRequesters.isEmpty) {
+      return thread;
+    }
     final kept = thread.comments
-        .where((c) => !_deletedCommentIds.contains(c.id))
+        .where((c) => !_isDeleted(c.id, c.authorPubkey))
         .toList();
     final dropped = thread.comments.length - kept.length;
     if (dropped == 0) return thread;

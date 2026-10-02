@@ -118,11 +118,13 @@ void main() {
               includeVideoReplies: true,
             ),
           ).thenAnswer(
-            (_) async => [
-              createVideoComment(id: 'v1', createdAtSeconds: 1700001000),
-              createTextComment(id: 't1', createdAtSeconds: 1700000500),
-              createTextComment(id: 't2', createdAtSeconds: 1700000000),
-            ],
+            (_) async => AuthorCommentsPage(
+              comments: [
+                createVideoComment(id: 'v1', createdAtSeconds: 1700001000),
+                createTextComment(id: 't1', createdAtSeconds: 1700000500),
+                createTextComment(id: 't2', createdAtSeconds: 1700000000),
+              ],
+            ),
           );
           return createBloc();
         },
@@ -150,7 +152,7 @@ void main() {
               limit: any(named: 'limit'),
               includeVideoReplies: true,
             ),
-          ).thenAnswer((_) async => []);
+          ).thenAnswer((_) async => const AuthorCommentsPage(comments: []));
           return createBloc();
         },
         act: (bloc) => bloc.add(const ProfileCommentsSyncRequested()),
@@ -207,9 +209,11 @@ void main() {
               includeVideoReplies: includeVideoReplies,
             ),
           ).thenAnswer(
-            (_) async => [
-              createTextComment(id: 't1', createdAtSeconds: 1700000500),
-            ],
+            (_) async => AuthorCommentsPage(
+              comments: [
+                createTextComment(id: 't1', createdAtSeconds: 1700000500),
+              ],
+            ),
           );
           return createBloc(includeVideoReplies: includeVideoReplies);
         },
@@ -236,9 +240,10 @@ void main() {
       );
 
       blocTest<ProfileCommentsBloc, ProfileCommentsState>(
-        'sets hasMoreContent to true when page is full',
+        'keeps paging from the repository cursor when deleted comments '
+        'shortened the page',
         build: () {
-          // Return exactly 50 comments (page size)
+          // A full page from the relay with one comment its author deleted.
           when(
             () => mockCommentsRepository.loadCommentsByAuthor(
               authorPubkey: any(named: 'authorPubkey'),
@@ -246,11 +251,16 @@ void main() {
               includeVideoReplies: true,
             ),
           ).thenAnswer(
-            (_) async => List.generate(
-              50,
-              (i) => createTextComment(
-                id: 'c$i',
-                createdAtSeconds: 1700000000 - i,
+            (_) async => AuthorCommentsPage(
+              comments: List.generate(
+                49,
+                (i) => createTextComment(
+                  id: 'c$i',
+                  createdAtSeconds: 1700000000 - i,
+                ),
+              ),
+              nextCursor: DateTime.fromMillisecondsSinceEpoch(
+                1699999900 * 1000,
               ),
             ),
           );
@@ -263,16 +273,18 @@ void main() {
             'status',
             ProfileCommentsStatus.loading,
           ),
-          isA<ProfileCommentsState>().having(
-            (s) => s.hasMoreContent,
-            'hasMoreContent',
-            isTrue,
-          ),
+          isA<ProfileCommentsState>()
+              .having((s) => s.hasMoreContent, 'hasMoreContent', isTrue)
+              .having(
+                (s) => s.paginationCursor,
+                'paginationCursor',
+                DateTime.fromMillisecondsSinceEpoch(1699999900 * 1000),
+              ),
         ],
       );
 
       test('a sync arriving while another is in flight still runs', () async {
-        final inFlight = Completer<List<Comment>>();
+        final inFlight = Completer<AuthorCommentsPage>();
         var calls = 0;
         when(
           () => mockCommentsRepository.loadCommentsByAuthor(
@@ -282,7 +294,9 @@ void main() {
           ),
         ).thenAnswer((_) {
           calls++;
-          return calls == 1 ? inFlight.future : Future.value(const <Comment>[]);
+          return calls == 1
+              ? inFlight.future
+              : Future.value(const AuthorCommentsPage(comments: []));
         });
         final bloc = createBloc();
         addTearDown(bloc.close);
@@ -297,7 +311,7 @@ void main() {
         // return without doing anything — including without completing.
         final secondSync = Completer<void>();
         bloc.add(ProfileCommentsSyncRequested(completer: secondSync));
-        inFlight.complete(const []);
+        inFlight.complete(const AuthorCommentsPage(comments: []));
 
         await Future.wait([firstSync.future, secondSync.future]).timeout(
           const Duration(seconds: 1),
@@ -331,10 +345,12 @@ void main() {
               includeVideoReplies: true,
             ),
           ).thenAnswer(
-            (_) async => [
-              createVideoComment(id: 'v2', createdAtSeconds: 1699999500),
-              createTextComment(id: 't3', createdAtSeconds: 1699999000),
-            ],
+            (_) async => AuthorCommentsPage(
+              comments: [
+                createVideoComment(id: 'v2', createdAtSeconds: 1699999500),
+                createTextComment(id: 't3', createdAtSeconds: 1699999000),
+              ],
+            ),
           );
           return createBloc();
         },
@@ -369,12 +385,14 @@ void main() {
               includeVideoReplies: true,
             ),
           ).thenAnswer(
-            (_) async => [
-              // Duplicate of existing
-              createTextComment(id: 't2', createdAtSeconds: 1700000000),
-              // New
-              createTextComment(id: 't3', createdAtSeconds: 1699999000),
-            ],
+            (_) async => AuthorCommentsPage(
+              comments: [
+                // Duplicate of existing
+                createTextComment(id: 't2', createdAtSeconds: 1700000000),
+                // New
+                createTextComment(id: 't3', createdAtSeconds: 1699999000),
+              ],
+            ),
           );
           return createBloc();
         },
@@ -394,6 +412,50 @@ void main() {
           isA<ProfileCommentsState>()
               .having((s) => s.textComments.length, 'textComments.length', 3)
               .having((s) => s.isLoadingMore, 'isLoadingMore', isFalse),
+        ],
+      );
+
+      blocTest<ProfileCommentsBloc, ProfileCommentsState>(
+        'moves past a page whose comments were all deleted',
+        build: () {
+          when(
+            () => mockCommentsRepository.loadCommentsByAuthor(
+              authorPubkey: any(named: 'authorPubkey'),
+              limit: any(named: 'limit'),
+              before: any(named: 'before'),
+              includeVideoReplies: true,
+            ),
+          ).thenAnswer(
+            (_) async => AuthorCommentsPage(
+              comments: const [],
+              nextCursor: DateTime.fromMillisecondsSinceEpoch(
+                1699990000 * 1000,
+              ),
+            ),
+          );
+          return createBloc();
+        },
+        seed: () => ProfileCommentsState(
+          status: ProfileCommentsStatus.success,
+          videoReplies: seedVideoReplies,
+          textComments: seedTextComments,
+          paginationCursor: seedCursor,
+        ),
+        act: (bloc) => bloc.add(const ProfileCommentsLoadMoreRequested()),
+        expect: () => [
+          isA<ProfileCommentsState>().having(
+            (s) => s.isLoadingMore,
+            'isLoadingMore',
+            isTrue,
+          ),
+          isA<ProfileCommentsState>()
+              .having((s) => s.isLoadingMore, 'isLoadingMore', isFalse)
+              .having((s) => s.hasMoreContent, 'hasMoreContent', isTrue)
+              .having(
+                (s) => s.paginationCursor,
+                'paginationCursor',
+                DateTime.fromMillisecondsSinceEpoch(1699990000 * 1000),
+              ),
         ],
       );
 
@@ -479,9 +541,11 @@ void main() {
               includeVideoReplies: includeVideoReplies,
             ),
           ).thenAnswer(
-            (_) async => [
-              createTextComment(id: 't3', createdAtSeconds: 1699999000),
-            ],
+            (_) async => AuthorCommentsPage(
+              comments: [
+                createTextComment(id: 't3', createdAtSeconds: 1699999000),
+              ],
+            ),
           );
           return createBloc(includeVideoReplies: includeVideoReplies);
         },

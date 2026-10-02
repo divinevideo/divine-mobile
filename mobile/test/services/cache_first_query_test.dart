@@ -42,6 +42,7 @@ class MockNostrServiceWithDelay implements NostrClient {
     bool sendAfterAuth = false,
     void Function()? onEose,
     bool closeOnEose = false,
+    bool handleDeletionRequests = true,
   }) {
     // Simulate relay delay: call onEose after 100ms. Tracked as a cancellable
     // Timer so dispose() stops it firing onEose on a torn-down service.

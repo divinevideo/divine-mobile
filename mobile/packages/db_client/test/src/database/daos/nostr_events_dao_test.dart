@@ -29,13 +29,8 @@ void main() {
     String content = 'test content',
     int? createdAt,
   }) {
-    final event = Event(
-      pubkey,
-      kind,
-      tags ?? [],
-      content,
-      createdAt: createdAt,
-    )..sig = 'testsig$testPubkey';
+    final event = Event(pubkey, kind, tags ?? [], content, createdAt: createdAt)
+      ..sig = 'testsig$testPubkey';
     return event;
   }
 
@@ -260,22 +255,16 @@ void main() {
         await dao.upsertEventsBatch(events);
 
         // Video events should have metrics
-        final metrics1 = await appDbClient.getVideoMetrics(
-          events[0].id,
-        );
+        final metrics1 = await appDbClient.getVideoMetrics(events[0].id);
         expect(metrics1, isNotNull);
         expect(metrics1!.loopCount, equals(100));
 
-        final metrics2 = await appDbClient.getVideoMetrics(
-          events[1].id,
-        );
+        final metrics2 = await appDbClient.getVideoMetrics(events[1].id);
         expect(metrics2, isNotNull);
         expect(metrics2!.loopCount, equals(200));
 
         // Non-video event should not have metrics
-        final metrics3 = await appDbClient.getVideoMetrics(
-          events[2].id,
-        );
+        final metrics3 = await appDbClient.getVideoMetrics(events[2].id);
         expect(metrics3, isNull);
       });
     });
@@ -525,10 +514,7 @@ void main() {
       });
 
       test('search is case insensitive', () async {
-        final event1 = createEvent(
-          content: 'Hello WORLD',
-          createdAt: 1000,
-        );
+        final event1 = createEvent(content: 'Hello WORLD', createdAt: 1000);
 
         await dao.upsertEvent(event1);
 
@@ -903,6 +889,35 @@ void main() {
         expect(results.first.id, equals(commentOnVideo.id));
       });
 
+      test('filters by lowercase k tags (NIP-09 target kind)', () async {
+        final commentDeletion = createEvent(
+          kind: 5,
+          tags: [
+            ['e', 'comment_event_id'],
+            ['k', '1111'],
+          ],
+          content: '',
+          createdAt: 1000,
+        );
+        // An uppercase K with the same value must not match a k filter.
+        final videoDeletion = createEvent(
+          kind: 5,
+          tags: [
+            ['e', 'video_event_id'],
+            ['k', '34236'],
+            ['K', '1111'],
+          ],
+          content: '',
+          createdAt: 2000,
+        );
+
+        await dao.upsertEventsBatch([commentDeletion, videoDeletion]);
+
+        final results = await dao.getEventsByFilter(Filter(k: ['1111']));
+
+        expect(results.map((event) => event.id), [commentDeletion.id]);
+      });
+
       test('filters by m tags (NIP-94 file MIME type)', () async {
         final audioFile = createEvent(
           kind: 1063,
@@ -967,9 +982,11 @@ void main() {
             createdAt: 3000,
           );
 
-          await dao.upsertEventsBatch(
-            [commentWithA, commentOtherA, lowercaseAEvent],
-          );
+          await dao.upsertEventsBatch([
+            commentWithA,
+            commentOtherA,
+            lowercaseAEvent,
+          ]);
 
           final results = await dao.getEventsByFilter(
             Filter(uppercaseA: [addressableId]),
@@ -1158,10 +1175,7 @@ void main() {
       });
 
       test('returns correct profile for specific pubkey', () async {
-        final profile1 = createEvent(
-          kind: 0,
-          content: '{"name":"user1"}',
-        );
+        final profile1 = createEvent(kind: 0, content: '{"name":"user1"}');
         final profile2 = createEvent(
           pubkey: testPubkey2,
           kind: 0,
@@ -1431,14 +1445,8 @@ void main() {
       test(
         'regular events (kind 1): multiple events with same pubkey allowed',
         () async {
-          final note1 = createEvent(
-            content: 'note 1',
-            createdAt: 1000,
-          );
-          final note2 = createEvent(
-            content: 'note 2',
-            createdAt: 2000,
-          );
+          final note1 = createEvent(content: 'note 1', createdAt: 1000);
+          final note2 = createEvent(content: 'note 2', createdAt: 2000);
 
           await dao.upsertEvent(note1);
           await dao.upsertEvent(note2);
@@ -1459,10 +1467,7 @@ void main() {
           content: '{"name":"new"}',
           createdAt: 2000,
         );
-        final regularNote = createEvent(
-          content: 'note',
-          createdAt: 1500,
-        );
+        final regularNote = createEvent(content: 'note', createdAt: 1500);
 
         await dao.upsertEventsBatch([oldProfile, newProfile, regularNote]);
 
@@ -1492,26 +1497,23 @@ void main() {
         expect(await dao.getEventById(newProfile.id), isNotNull);
       });
 
-      test(
-        'upsert collapses duplicate standard-replaceable versions left by '
-        'cacheEventsBatch when a newer version arrives',
-        () async {
-          // event_router routes every non-parameterized kind to
-          // cacheEventsBatch, so several rows per (pubkey, kind) is the normal
-          // case for kind 0 and kind 3 — the same precondition the kind 30023
-          // tests below rely on.
-          final v1 = createEvent(kind: 0, content: 'v1', createdAt: 1000);
-          final v2 = createEvent(kind: 0, content: 'v2', createdAt: 2000);
-          await dao.cacheEventsBatch([v1, v2]);
+      test('upsert collapses duplicate standard-replaceable versions left by '
+          'cacheEventsBatch when a newer version arrives', () async {
+        // event_router routes every non-parameterized kind to
+        // cacheEventsBatch, so several rows per (pubkey, kind) is the normal
+        // case for kind 0 and kind 3 — the same precondition the kind 30023
+        // tests below rely on.
+        final v1 = createEvent(kind: 0, content: 'v1', createdAt: 1000);
+        final v2 = createEvent(kind: 0, content: 'v2', createdAt: 2000);
+        await dao.cacheEventsBatch([v1, v2]);
 
-          final v3 = createEvent(kind: 0, content: 'v3', createdAt: 3000);
-          await dao.upsertEvent(v3);
+        final v3 = createEvent(kind: 0, content: 'v3', createdAt: 3000);
+        await dao.upsertEvent(v3);
 
-          final results = await dao.getEventsByFilter(Filter(kinds: [0]));
-          expect(results, hasLength(1));
-          expect(results.first.content, equals('v3'));
-        },
-      );
+        final results = await dao.getEventsByFilter(Filter(kinds: [0]));
+        expect(results, hasLength(1));
+        expect(results.first.content, equals('v3'));
+      });
 
       test(
         'upsert collapses duplicate contact lists left by cacheEventsBatch',
@@ -1563,170 +1565,155 @@ void main() {
         },
       );
 
-      test(
-        'kind 30023 without d-tag: newer replaces older via empty-string '
-        'identifier (NIP-01 default)',
-        () async {
-          final oldArticle = createEvent(
-            kind: 30023,
-            content: 'old content',
-            createdAt: 1000,
-          );
-          final newArticle = createEvent(
-            kind: 30023,
-            content: 'new content',
-            createdAt: 2000,
-          );
+      test('kind 30023 without d-tag: newer replaces older via empty-string '
+          'identifier (NIP-01 default)', () async {
+        final oldArticle = createEvent(
+          kind: 30023,
+          content: 'old content',
+          createdAt: 1000,
+        );
+        final newArticle = createEvent(
+          kind: 30023,
+          content: 'new content',
+          createdAt: 2000,
+        );
 
-          await dao.upsertEvent(oldArticle);
-          await dao.upsertEvent(newArticle);
+        await dao.upsertEvent(oldArticle);
+        await dao.upsertEvent(newArticle);
 
-          final results = await dao.getEventsByFilter(Filter(kinds: [30023]));
-          expect(results, hasLength(1));
-          expect(results.first.content, equals('new content'));
-        },
-      );
+        final results = await dao.getEventsByFilter(Filter(kinds: [30023]));
+        expect(results, hasLength(1));
+        expect(results.first.content, equals('new content'));
+      });
 
-      test(
-        'upsert collapses duplicate versions left by cacheEventsBatch when '
-        'a newer version arrives',
-        () async {
-          final v1 = createEvent(
-            kind: 30023,
-            tags: [
-              ['d', 'my-article'],
-            ],
-            content: 'v1',
-            createdAt: 1000,
-          );
-          final v2 = createEvent(
-            kind: 30023,
-            tags: [
-              ['d', 'my-article'],
-            ],
-            content: 'v2',
-            createdAt: 2000,
-          );
-          // Raw ingestion keeps both versions side by side.
-          await dao.cacheEventsBatch([v1, v2]);
-
-          final v3 = createEvent(
-            kind: 30023,
-            tags: [
-              ['d', 'my-article'],
-            ],
-            content: 'v3',
-            createdAt: 3000,
-          );
-          await dao.upsertEvent(v3);
-
-          final results = await dao.getEventsByFilter(Filter(kinds: [30023]));
-          expect(results, hasLength(1));
-          expect(results.first.content, equals('v3'));
-        },
-      );
-
-      test(
-        'upsert compares against the newest cached duplicate, not an '
-        'arbitrary one',
-        () async {
-          final v1 = createEvent(
-            kind: 30023,
-            tags: [
-              ['d', 'my-article'],
-            ],
-            content: 'v1',
-            createdAt: 1000,
-          );
-          final v3 = createEvent(
-            kind: 30023,
-            tags: [
-              ['d', 'my-article'],
-            ],
-            content: 'v3',
-            createdAt: 3000,
-          );
-          await dao.cacheEventsBatch([v1, v3]);
-
-          // Older than v3 — must be rejected even though v1 is older.
-          final v2 = createEvent(
-            kind: 30023,
-            tags: [
-              ['d', 'my-article'],
-            ],
-            content: 'v2',
-            createdAt: 2000,
-          );
-          await dao.upsertEvent(v2);
-
-          expect(await dao.getEventById(v2.id), isNull);
-          expect(await dao.getEventById(v3.id), isNotNull);
-        },
-      );
-
-      test(
-        'concurrent parameterized-replaceable upserts keep only the newest '
-        'event',
-        () async {
-          final tags = [
+      test('upsert collapses duplicate versions left by cacheEventsBatch when '
+          'a newer version arrives', () async {
+        final v1 = createEvent(
+          kind: 30023,
+          tags: [
             ['d', 'my-article'],
-          ];
-          final v1 = createEvent(
-            kind: 30023,
-            tags: tags,
-            content: 'v1',
-            createdAt: 1000,
-          );
-          await dao.upsertEvent(v1);
+          ],
+          content: 'v1',
+          createdAt: 1000,
+        );
+        final v2 = createEvent(
+          kind: 30023,
+          tags: [
+            ['d', 'my-article'],
+          ],
+          content: 'v2',
+          createdAt: 2000,
+        );
+        // Raw ingestion keeps both versions side by side.
+        await dao.cacheEventsBatch([v1, v2]);
 
-          final v3 = createEvent(
-            kind: 30023,
-            tags: tags,
-            content: 'v3',
-            createdAt: 3000,
-          );
-          final v2 = createEvent(
-            kind: 30023,
-            tags: tags,
-            content: 'v2',
-            createdAt: 2000,
-          );
-          await Future.wait([dao.upsertEvent(v3), dao.upsertEvent(v2)]);
+        final v3 = createEvent(
+          kind: 30023,
+          tags: [
+            ['d', 'my-article'],
+          ],
+          content: 'v3',
+          createdAt: 3000,
+        );
+        await dao.upsertEvent(v3);
 
-          final results = await dao.getEventsByFilter(Filter(kinds: [30023]));
-          expect(results, hasLength(1));
-          expect(results.single.id, v3.id);
-        },
-      );
+        final results = await dao.getEventsByFilter(Filter(kinds: [30023]));
+        expect(results, hasLength(1));
+        expect(results.first.content, equals('v3'));
+      });
 
-      test(
-        'upsert stores the denormalized d_tag column used for the indexed '
-        'lookup',
-        () async {
-          final article = createEvent(
-            kind: 30023,
-            tags: [
-              ['d', 'my-article'],
-            ],
-            content: 'content',
-            createdAt: 1000,
-          );
-          final note = createEvent(createdAt: 1000);
+      test('upsert compares against the newest cached duplicate, not an '
+          'arbitrary one', () async {
+        final v1 = createEvent(
+          kind: 30023,
+          tags: [
+            ['d', 'my-article'],
+          ],
+          content: 'v1',
+          createdAt: 1000,
+        );
+        final v3 = createEvent(
+          kind: 30023,
+          tags: [
+            ['d', 'my-article'],
+          ],
+          content: 'v3',
+          createdAt: 3000,
+        );
+        await dao.cacheEventsBatch([v1, v3]);
 
-          await dao.upsertEvent(article);
-          await dao.upsertEvent(note);
+        // Older than v3 — must be rejected even though v1 is older.
+        final v2 = createEvent(
+          kind: 30023,
+          tags: [
+            ['d', 'my-article'],
+          ],
+          content: 'v2',
+          createdAt: 2000,
+        );
+        await dao.upsertEvent(v2);
 
-          final rows = await database
-              .customSelect('SELECT id, d_tag FROM event')
-              .get();
-          final dTagsById = {
-            for (final row in rows)
-              row.read<String>('id'): row.readNullable<String>('d_tag'),
-          };
-          expect(dTagsById[article.id], equals('my-article'));
-          expect(dTagsById[note.id], isNull);
-        },
-      );
+        expect(await dao.getEventById(v2.id), isNull);
+        expect(await dao.getEventById(v3.id), isNotNull);
+      });
+
+      test('concurrent parameterized-replaceable upserts keep only the newest '
+          'event', () async {
+        final tags = [
+          ['d', 'my-article'],
+        ];
+        final v1 = createEvent(
+          kind: 30023,
+          tags: tags,
+          content: 'v1',
+          createdAt: 1000,
+        );
+        await dao.upsertEvent(v1);
+
+        final v3 = createEvent(
+          kind: 30023,
+          tags: tags,
+          content: 'v3',
+          createdAt: 3000,
+        );
+        final v2 = createEvent(
+          kind: 30023,
+          tags: tags,
+          content: 'v2',
+          createdAt: 2000,
+        );
+        await Future.wait([dao.upsertEvent(v3), dao.upsertEvent(v2)]);
+
+        final results = await dao.getEventsByFilter(Filter(kinds: [30023]));
+        expect(results, hasLength(1));
+        expect(results.single.id, v3.id);
+      });
+
+      test('upsert stores the denormalized d_tag column used for the indexed '
+          'lookup', () async {
+        final article = createEvent(
+          kind: 30023,
+          tags: [
+            ['d', 'my-article'],
+          ],
+          content: 'content',
+          createdAt: 1000,
+        );
+        final note = createEvent(createdAt: 1000);
+
+        await dao.upsertEvent(article);
+        await dao.upsertEvent(note);
+
+        final rows = await database
+            .customSelect('SELECT id, d_tag FROM event')
+            .get();
+        final dTagsById = {
+          for (final row in rows)
+            row.read<String>('id'): row.readNullable<String>('d_tag'),
+        };
+        expect(dTagsById[article.id], equals('my-article'));
+        expect(dTagsById[note.id], isNull);
+      });
 
       test(
         'upsert MAX(created_at) lookup uses the covering d_tag index',

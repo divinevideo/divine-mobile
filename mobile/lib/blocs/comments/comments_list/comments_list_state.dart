@@ -74,7 +74,7 @@ final class CommentsListState extends Equatable {
     this.hasMoreContent = true,
     this.sortMode = CommentsSortMode.newest,
     this.replyCountsByCommentId = const {},
-    this.newCommentCount = 0,
+    this.newCommentIds = const {},
     this.isBackfillComplete = false,
     this.scrollToCommentId,
   });
@@ -109,9 +109,12 @@ final class CommentsListState extends Equatable {
   /// Current sort mode for the comments list.
   final CommentsSortMode sortMode;
 
-  /// Number of new comments received from the real-time subscription that the
-  /// user has not yet acknowledged (scrolled to top / tapped the pill).
-  final int newCommentCount;
+  /// Comments received from the real-time subscription that the user has not
+  /// yet acknowledged (scrolled to top / tapped the pill).
+  final Set<String> newCommentIds;
+
+  /// How many new comments the pill shows; see [newCommentIds].
+  int get newCommentCount => newCommentIds.length;
 
   /// `true` once the initial relay backfill has reached EOSE; subsequent
   /// stream events represent live (post-backfill) comments and bump the
@@ -245,7 +248,7 @@ final class CommentsListState extends Equatable {
     bool? hasMoreContent,
     CommentsSortMode? sortMode,
     Map<String, int>? replyCountsByCommentId,
-    int? newCommentCount,
+    Set<String>? newCommentIds,
     bool? isBackfillComplete,
     String? scrollToCommentId,
     bool clearError = false,
@@ -268,7 +271,7 @@ final class CommentsListState extends Equatable {
       sortMode: sortMode ?? this.sortMode,
       replyCountsByCommentId:
           replyCountsByCommentId ?? this.replyCountsByCommentId,
-      newCommentCount: newCommentCount ?? this.newCommentCount,
+      newCommentIds: newCommentIds ?? this.newCommentIds,
       isBackfillComplete: isBackfillComplete ?? this.isBackfillComplete,
       scrollToCommentId: clearScrollTo
           ? null
@@ -289,7 +292,7 @@ final class CommentsListState extends Equatable {
     hasMoreContent,
     sortMode,
     replyCountsByCommentId,
-    newCommentCount,
+    newCommentIds,
     isBackfillComplete,
     scrollToCommentId,
   ];

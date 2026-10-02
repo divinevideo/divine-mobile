@@ -26,6 +26,7 @@ void main() {
 
     setUpAll(() {
       registerFallbackValue(<Filter>[]);
+      registerFallbackValue(Duration.zero);
     });
 
     setUp(() {
@@ -36,19 +37,21 @@ void main() {
 
     test('returns empty list when no comments found', () async {
       when(
-        () => mockNostrClient.queryEvents(any()),
+        () =>
+            mockNostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => []);
 
-      final result = await repository.loadCommentsByAuthor(
+      final result = (await repository.loadCommentsByAuthor(
         authorPubkey: testAuthorPubkey,
-      );
+      )).comments;
 
       expect(result, isEmpty);
     });
 
     test('queries text comments only by default', () async {
       when(
-        () => mockNostrClient.queryEvents(any()),
+        () =>
+            mockNostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => []);
 
       await repository.loadCommentsByAuthor(
@@ -70,7 +73,8 @@ void main() {
 
     test('includes video replies when includeVideoReplies is true', () async {
       when(
-        () => mockNostrClient.queryEvents(any()),
+        () =>
+            mockNostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => []);
 
       await repository.loadCommentsByAuthor(
@@ -89,7 +93,8 @@ void main() {
 
     test('applies pagination cursor via until parameter', () async {
       when(
-        () => mockNostrClient.queryEvents(any()),
+        () =>
+            mockNostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => []);
 
       final before = DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000);
@@ -118,13 +123,14 @@ void main() {
       );
 
       when(
-        () => mockNostrClient.queryEvents(any()),
+        () =>
+            mockNostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => [event]);
 
-      final result = await repository.loadCommentsByAuthor(
+      final result = (await repository.loadCommentsByAuthor(
         authorPubkey: testAuthorPubkey,
         includeVideoReplies: true,
-      );
+      )).comments;
 
       expect(result, hasLength(1));
       expect(result.first.content, equals('Great video!'));
@@ -153,13 +159,14 @@ void main() {
       );
 
       when(
-        () => mockNostrClient.queryEvents(any()),
+        () =>
+            mockNostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => [event]);
 
-      final result = await repository.loadCommentsByAuthor(
+      final result = (await repository.loadCommentsByAuthor(
         authorPubkey: testAuthorPubkey,
         includeVideoReplies: true,
-      );
+      )).comments;
 
       expect(result, hasLength(1));
       expect(result.first.hasVideo, isTrue);
@@ -214,15 +221,18 @@ void main() {
         );
 
         when(
-          () => mockNostrClient.queryEvents(any()),
+          () => mockNostrClient.queryEvents(
+            any(),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer(
           (_) async => [olderTextComment, videoComment, textComment],
         );
 
-        final result = await repository.loadCommentsByAuthor(
+        final result = (await repository.loadCommentsByAuthor(
           authorPubkey: testAuthorPubkey,
           includeVideoReplies: true,
-        );
+        )).comments;
 
         expect(result, hasLength(3));
         // Newest first
@@ -255,12 +265,13 @@ void main() {
       );
 
       when(
-        () => mockNostrClient.queryEvents(any()),
+        () =>
+            mockNostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => [malformedEvent, validEvent]);
 
-      final result = await repository.loadCommentsByAuthor(
+      final result = (await repository.loadCommentsByAuthor(
         authorPubkey: testAuthorPubkey,
-      );
+      )).comments;
 
       expect(result, hasLength(1));
       expect(result.first.id, equals('valid1'));
@@ -279,12 +290,13 @@ void main() {
       )..id = 'malformed2';
 
       when(
-        () => mockNostrClient.queryEvents(any()),
+        () =>
+            mockNostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => [malformedEvent]);
 
-      final result = await repository.loadCommentsByAuthor(
+      final result = (await repository.loadCommentsByAuthor(
         authorPubkey: testAuthorPubkey,
-      );
+      )).comments;
 
       expect(result, isEmpty);
     });
@@ -299,12 +311,13 @@ void main() {
       )..id = 'malformed3';
 
       when(
-        () => mockNostrClient.queryEvents(any()),
+        () =>
+            mockNostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
       ).thenAnswer((_) async => [malformedEvent]);
 
-      final result = await repository.loadCommentsByAuthor(
+      final result = (await repository.loadCommentsByAuthor(
         authorPubkey: testAuthorPubkey,
-      );
+      )).comments;
 
       expect(result, isEmpty);
     });
@@ -313,7 +326,10 @@ void main() {
       'throws LoadCommentsByAuthorFailedException on query failure',
       () async {
         when(
-          () => mockNostrClient.queryEvents(any()),
+          () => mockNostrClient.queryEvents(
+            any(),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenThrow(Exception('Network error'));
 
         expect(
