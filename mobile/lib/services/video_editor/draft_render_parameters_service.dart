@@ -147,12 +147,8 @@ class DraftRenderParametersService {
     // parameters at all. The exported history carries the size those layers
     // were laid out against, so it is the fallback; both the capture and the
     // render read whichever one we settle on, so they stay consistent either
-    // way. `safeParseSize` yields `Size.zero` for a history that carries no
-    // size, which is no more usable than none at all.
-    final historySize = history?.lastRenderedImgSize;
-    final bodySize =
-        base.bodySize ??
-        (historySize != null && !historySize.isEmpty ? historySize : null);
+    // way.
+    final bodySize = base.bodySize ?? _historyBodySize(history);
 
     final capturedLayers = entry == null
         ? const <ExportedLayer>[]
@@ -236,6 +232,19 @@ class DraftRenderParametersService {
         'The editor state history could not be read: $error',
       );
     }
+  }
+
+  /// The editor body [history]'s layers were laid out against, or `null` when
+  /// it records none (`safeParseSize` yields `Size.zero` for an absent size).
+  ///
+  /// A history exported before `editorBodySize` existed carries only
+  /// `lastRenderedImgSize`, which keeps the shape the session opened with and
+  /// so stops matching the body once the first clip changes shape.
+  Size? _historyBodySize(ImportStateHistory? history) {
+    if (history == null) return null;
+    if (!history.editorBodySize.isEmpty) return history.editorBodySize;
+    final rendered = history.lastRenderedImgSize;
+    return rendered.isEmpty ? null : rendered;
   }
 
   /// Returns the entry the user last had active, or `null` for an editor
