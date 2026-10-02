@@ -5788,6 +5788,46 @@
   "@videoEditorEffectVignette": {
     "description": "Name of a video effect: the corners of the picture are darkened, drawing the eye to the center."
   },
+  "videoEditorEffectBlockGlitch": "Block Glitch",
+  "@videoEditorEffectBlockGlitch": {
+    "description": "Name of a video effect imitating a damaged video stream ('datamosh'): in short bursts the picture breaks into coarse square blocks, slices slip sideways and the colors split apart. Keep it short; 'glitch' is usually kept as is, like the Glitch effect."
+  },
+  "videoEditorEffectFilmGrain": "Film Grain",
+  "@videoEditorEffectFilmGrain": {
+    "description": "Name of a video effect: fine, calm grain over the whole picture, like the grain of analog film."
+  },
+  "videoEditorEffectSignalInterference": "Interference",
+  "@videoEditorEffectSignalInterference": {
+    "description": "Name of a video effect imitating a disturbed TV or radio signal: thin slices of the picture flicker and shift sideways, with bursts of noise. Must read differently from the Static effect (videoEditorEffectTvStatic). Keep it short."
+  },
+  "videoEditorEffectCrt": "CRT",
+  "@videoEditorEffectCrt": {
+    "description": "Name of a video effect imitating an old CRT (cathode-ray tube) monitor: strong scanlines and a slight color fringe. CRT is usually kept as is; use the local everyday word for a tube screen only where it is as short."
+  },
+  "videoEditorEffectShake": "Shake",
+  "@videoEditorEffectShake": {
+    "description": "Name of a video effect: the picture jitters in every direction, like a handheld camera shaking on a bass hit."
+  },
+  "videoEditorEffectZoomPulse": "Zoom Pulse",
+  "@videoEditorEffectZoomPulse": {
+    "description": "Name of a video effect: the picture zooms in suddenly twice a second, like a beat, and eases back out. Keep it short."
+  },
+  "videoEditorEffectMirror": "Mirror",
+  "@videoEditorEffectMirror": {
+    "description": "Name of a video effect: the right half of the picture is a mirror image of the left half, so the picture is symmetric."
+  },
+  "videoEditorEffectKaleidoscope": "Kaleidoscope",
+  "@videoEditorEffectKaleidoscope": {
+    "description": "Name of a video effect: the picture is mirrored into four symmetric parts, like a kaleidoscope."
+  },
+  "videoEditorEffectSplitScreen": "Split Screen",
+  "@videoEditorEffectSplitScreen": {
+    "description": "Name of a video effect: the picture is shown four times, in a 2-by-2 grid."
+  },
+  "videoEditorEffectWave": "Wave",
+  "@videoEditorEffectWave": {
+    "description": "Name of a video effect: the picture ripples, its rows bending sideways along a moving wave, like heat haze or a view through water."
+  },
   "videoEditorEffectsFlashingReplaced": "One flashing effect at a time. Too much flashing can hurt people who are sensitive to it, so we swapped out the other one here.",
   "@videoEditorEffectsFlashingReplaced": {
     "description": "Snack bar after a flashing video effect (strobe, negative flash) replaced another flashing effect where the two overlapped on the timeline. Explains, without technical terms, that overlapping flashes can harm people with photosensitivity."

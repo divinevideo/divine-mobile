@@ -8736,6 +8736,36 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorEffectVignette => 'Viñeta';
 
   @override
+  String get videoEditorEffectBlockGlitch => 'Glitch de bloques';
+
+  @override
+  String get videoEditorEffectFilmGrain => 'Grano de película';
+
+  @override
+  String get videoEditorEffectSignalInterference => 'Interferencia';
+
+  @override
+  String get videoEditorEffectCrt => 'CRT';
+
+  @override
+  String get videoEditorEffectShake => 'Sacudida';
+
+  @override
+  String get videoEditorEffectZoomPulse => 'Pulso de zoom';
+
+  @override
+  String get videoEditorEffectMirror => 'Espejo';
+
+  @override
+  String get videoEditorEffectKaleidoscope => 'Caleidoscopio';
+
+  @override
+  String get videoEditorEffectSplitScreen => 'Pantalla dividida';
+
+  @override
+  String get videoEditorEffectWave => 'Onda';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Solo un efecto parpadeante a la vez. Demasiado parpadeo puede hacer daño a las personas sensibles, así que aquí hemos reemplazado el otro.';
 

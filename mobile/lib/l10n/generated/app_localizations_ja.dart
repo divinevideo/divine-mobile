@@ -8233,6 +8233,36 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectVignette => 'ビネット';
 
   @override
+  String get videoEditorEffectBlockGlitch => 'ブロックグリッチ';
+
+  @override
+  String get videoEditorEffectFilmGrain => 'フィルムグレイン';
+
+  @override
+  String get videoEditorEffectSignalInterference => '電波障害';
+
+  @override
+  String get videoEditorEffectCrt => 'ブラウン管';
+
+  @override
+  String get videoEditorEffectShake => 'シェイク';
+
+  @override
+  String get videoEditorEffectZoomPulse => 'ズームパルス';
+
+  @override
+  String get videoEditorEffectMirror => 'ミラー';
+
+  @override
+  String get videoEditorEffectKaleidoscope => '万華鏡';
+
+  @override
+  String get videoEditorEffectSplitScreen => '分割画面';
+
+  @override
+  String get videoEditorEffectWave => 'ウェーブ';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       '点滅エフェクトは一度にひとつだけ。点滅が多すぎると、敏感な人の体に負担がかかることがあるので、ここではもう一方を置き換えました。';
 

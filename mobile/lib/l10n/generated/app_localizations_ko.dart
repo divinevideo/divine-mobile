@@ -8248,6 +8248,36 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectVignette => '비네트';
 
   @override
+  String get videoEditorEffectBlockGlitch => '블록 글리치';
+
+  @override
+  String get videoEditorEffectFilmGrain => '필름 그레인';
+
+  @override
+  String get videoEditorEffectSignalInterference => '신호 간섭';
+
+  @override
+  String get videoEditorEffectCrt => 'CRT';
+
+  @override
+  String get videoEditorEffectShake => '흔들림';
+
+  @override
+  String get videoEditorEffectZoomPulse => '줌 펄스';
+
+  @override
+  String get videoEditorEffectMirror => '미러';
+
+  @override
+  String get videoEditorEffectKaleidoscope => '만화경';
+
+  @override
+  String get videoEditorEffectSplitScreen => '분할 화면';
+
+  @override
+  String get videoEditorEffectWave => '웨이브';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       '깜빡이는 효과는 한 번에 하나만 쓸 수 있어요. 깜빡임이 너무 많으면 민감한 사람에게 해로울 수 있어서 여기서는 다른 효과를 바꿨어요.';
 

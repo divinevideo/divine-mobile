@@ -8721,6 +8721,36 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorEffectVignette => 'Vinheta';
 
   @override
+  String get videoEditorEffectBlockGlitch => 'Glitch em blocos';
+
+  @override
+  String get videoEditorEffectFilmGrain => 'Grão de filme';
+
+  @override
+  String get videoEditorEffectSignalInterference => 'Interferência';
+
+  @override
+  String get videoEditorEffectCrt => 'CRT';
+
+  @override
+  String get videoEditorEffectShake => 'Tremor';
+
+  @override
+  String get videoEditorEffectZoomPulse => 'Pulso de zoom';
+
+  @override
+  String get videoEditorEffectMirror => 'Espelho';
+
+  @override
+  String get videoEditorEffectKaleidoscope => 'Caleidoscópio';
+
+  @override
+  String get videoEditorEffectSplitScreen => 'Tela dividida';
+
+  @override
+  String get videoEditorEffectWave => 'Onda';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Só um efeito piscante de cada vez. Piscar demais pode fazer mal a pessoas sensíveis, por isso substituímos o outro aqui.';
 
