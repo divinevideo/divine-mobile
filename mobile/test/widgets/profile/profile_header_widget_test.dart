@@ -1167,7 +1167,7 @@ void main() {
       // A profile with no banner image and no profileColor — the default —
       // gets ProfileBanner's palette gradient (containerLow -> surface), and
       // the banner scrim is fully transparent at this height. A fixed light
-      // glyph on the 15% scrim over #EDF3EF is ~1.5:1.
+      // glyph on the 15% scrim over containerLow is ~1.5:1.
       final gear = tester.widget<DivineIcon>(
         find.descendant(
           of: find.byWidgetPredicate(
