@@ -35,6 +35,7 @@ class _StreamingNostrService implements NostrClient {
     bool sendAfterAuth = false,
     void Function()? onEose,
     bool closeOnEose = false,
+    bool handleDeletionRequests = true,
   }) {
     if (onEose != null) {
       unawaited(Future.microtask(onEose));

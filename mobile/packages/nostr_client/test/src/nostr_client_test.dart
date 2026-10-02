@@ -2125,8 +2125,12 @@ void main() {
       late NostrClient clientWithCache;
 
       /// Subscribes and returns the relay callback the SDK was handed, so a
-      /// test can deliver events exactly as a relay would.
-      void Function(Event) subscribeAndCaptureRelayCallback() {
+      /// test can deliver events exactly as a relay would. Events the
+      /// subscription emits are added to [received] when given.
+      void Function(Event) subscribeAndCaptureRelayCallback({
+        bool handleDeletionRequests = true,
+        List<Event>? received,
+      }) {
         when(
           () => mockNostr.subscribe(
             any(),
@@ -2141,9 +2145,16 @@ void main() {
           ),
         ).thenReturn('test-sub-id');
 
-        clientWithCache.subscribe([
-          Filter(kinds: [addressableShortVideoKind], limit: 10),
-        ]);
+        final stream = clientWithCache.subscribe(
+          [
+            Filter(kinds: [addressableShortVideoKind], limit: 10),
+          ],
+          handleDeletionRequests: handleDeletionRequests,
+        );
+        if (received != null) {
+          final subscription = stream.listen(received.add);
+          addTearDown(subscription.cancel);
+        }
 
         final captured = verify(
           () => mockNostr.subscribe(
@@ -2305,6 +2316,71 @@ void main() {
 
           onEvent(video);
 
+          verify(() => mockNostrEventsDao.upsertEvent(video)).called(1);
+        },
+      );
+
+      test(
+        'removes from the cache only the events the request signer wrote',
+        () async {
+          final mine = videoEvent(id: 'a' * 64);
+          final theirs = videoEvent(id: 'b' * 64, pubkey: 'f' * 64);
+          when(
+            () => mockNostrEventsDao.getEventsByFilter(
+              any(),
+              sortBy: any(named: 'sortBy'),
+            ),
+          ).thenAnswer((invocation) async {
+            final filter = invocation.positionalArguments.first as Filter;
+            return [
+              for (final event in [mine, theirs])
+                if ((filter.ids?.contains(event.id) ?? true) &&
+                    (filter.authors?.contains(event.pubkey) ?? true))
+                  event,
+            ];
+          });
+          final onEvent = subscribeAndCaptureRelayCallback();
+
+          onEvent(
+            deletionEvent([
+              ['e', mine.id],
+              ['e', theirs.id],
+            ]),
+          );
+          await pumpEventQueue();
+
+          verify(
+            () => mockNostrEventsDao.deleteEventsByIds([mine.id]),
+          ).called(1);
+          verifyNever(
+            () => mockNostrEventsDao.deleteEventsByIds(
+              any(that: contains(theirs.id)),
+            ),
+          );
+        },
+      );
+
+      test(
+        'leaves the cache alone for a subscription that opts out of '
+        'deletion requests',
+        () async {
+          final received = <Event>[];
+          final onEvent = subscribeAndCaptureRelayCallback(
+            handleDeletionRequests: false,
+            received: received,
+          );
+          final video = videoEvent(id: 'a' * 64);
+          final request = deletionEvent([
+            ['e', video.id],
+          ]);
+
+          onEvent(request);
+          await pumpEventQueue();
+          onEvent(video);
+          await pumpEventQueue();
+
+          expect(received, contains(request));
+          verifyNever(() => mockNostrEventsDao.deleteEventsByIds(any()));
           verify(() => mockNostrEventsDao.upsertEvent(video)).called(1);
         },
       );

@@ -37,6 +37,7 @@ class MockNostrService implements NostrClient {
     bool sendAfterAuth = false,
     void Function()? onEose,
     bool closeOnEose = false,
+    bool handleDeletionRequests = true,
   }) {
     _subscriptionFilters.addAll(filters);
 
