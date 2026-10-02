@@ -241,6 +241,63 @@ void main() {
         },
       );
 
+      test(
+        'records the audition without waiting for playback to end',
+        () async {
+          stubAudition('/tmp/audition_1.wav');
+          final playing = Completer<void>();
+          when(() => player.play()).thenAnswer((_) => playing.future);
+          final bloc = build(_recording())
+            ..add(const VoiceOverEffectSettingsChanged(effect: _robot));
+          addTearDown(bloc.close);
+          await pumpEventQueue();
+
+          expect(bloc.state.auditionPath, '/tmp/audition_1.wav');
+          expect(playing.isCompleted, isFalse);
+          playing.complete();
+        },
+      );
+
+      test(
+        'does not discard the newer audition when an older load finishes',
+        () async {
+          final oldLoading = Completer<void>();
+          var count = 0;
+          when(
+            () => service.renderAudition(
+              takePath: any(named: 'takePath'),
+              effect: any(named: 'effect'),
+              noiseReduction: any(named: 'noiseReduction'),
+            ),
+          ).thenAnswer((_) async => '/tmp/audition_${++count}.wav');
+          when(() => player.setClip(any())).thenAnswer((invocation) {
+            final config =
+                invocation.positionalArguments.single as AudioSourceConfig;
+            return config.uri == '/tmp/audition_1.wav'
+                ? oldLoading.future
+                : Future<void>.value();
+          });
+          final bloc = build(_recording())
+            ..add(const VoiceOverEffectSettingsChanged(effect: _robot));
+          addTearDown(bloc.close);
+          await pumpEventQueue();
+          bloc.add(
+            const VoiceOverEffectSettingsChanged(effect: VoiceEffect(echo: 80)),
+          );
+          await pumpEventQueue();
+          expect(bloc.state.auditionPath, '/tmp/audition_2.wav');
+
+          oldLoading.complete();
+          await pumpEventQueue();
+
+          expect(bloc.state.auditionPath, '/tmp/audition_2.wav');
+          verify(() => player.play()).called(1);
+          verify(() => service.discardAudition('/tmp/audition_1.wav'))
+              .called(1);
+          verifyNever(() => service.discardAudition('/tmp/audition_2.wav'));
+        },
+      );
+
       blocTest<VoiceOverEffectBloc, VoiceOverEffectState>(
         'reports a take it cannot render',
         setUp: () => when(
@@ -390,6 +447,101 @@ void main() {
         errors: () => [isA<VoiceOverEffectException>()],
       );
 
+      test(
+        'does not play an audition that finishes loading after Done',
+        () async {
+          stubAudition('/tmp/audition_1.wav');
+          final loading = Completer<void>();
+          final processing = Completer<ProcessedVoiceOverTake>();
+          when(() => player.setClip(any())).thenAnswer((_) => loading.future);
+          when(
+            () => service.process(
+              takePath: _take,
+              effect: _robot,
+              noiseReduction: false,
+            ),
+          ).thenAnswer((_) => processing.future);
+          final bloc = build(_recording())
+            ..add(const VoiceOverEffectSettingsChanged(effect: _robot));
+          addTearDown(bloc.close);
+          await pumpEventQueue();
+
+          bloc.add(const VoiceOverEffectApplyRequested());
+          await pumpEventQueue();
+          expect(bloc.state.isApplying, isTrue);
+          verify(() => player.stop()).called(1);
+          loading.complete();
+          await pumpEventQueue();
+
+          verifyNever(() => player.play());
+          verify(() => service.discardAudition('/tmp/audition_1.wav'))
+              .called(1);
+          processing.complete((path: _robotTake, mimeType: 'audio/wav'));
+          await pumpEventQueue();
+          expect(bloc.state.result?.url, _robotTake);
+        },
+      );
+
+      test(
+        'does not restart after Done overtakes a pending loop seek',
+        () async {
+          final seeking = Completer<void>();
+          final processing = Completer<ProcessedVoiceOverTake>();
+          stubAudition('/tmp/audition_1.wav');
+          when(() => player.seek(any())).thenAnswer((_) => seeking.future);
+          when(
+            () => service.process(
+              takePath: any(named: 'takePath'),
+              effect: any(named: 'effect'),
+              noiseReduction: any(named: 'noiseReduction'),
+            ),
+          ).thenAnswer((_) => processing.future);
+          final bloc = build(_recording())
+            ..add(const VoiceOverEffectSettingsChanged(effect: _robot));
+          addTearDown(bloc.close);
+          await pumpEventQueue();
+          completions.add(null);
+          await pumpEventQueue();
+          verify(() => player.seek(Duration.zero)).called(1);
+
+          bloc.add(const VoiceOverEffectApplyRequested());
+          await pumpEventQueue();
+          expect(bloc.state.isApplying, isTrue);
+          seeking.complete();
+          await pumpEventQueue();
+
+          verify(() => player.play()).called(1);
+          processing.complete((path: _robotTake, mimeType: 'audio/wav'));
+          await pumpEventQueue();
+        },
+      );
+
+      blocTest<VoiceOverEffectBloc, VoiceOverEffectState>(
+        'resumes the picked audition when saving fails',
+        setUp: () {
+          stubAudition('/tmp/audition_1.wav');
+          when(
+            () => service.process(
+              takePath: any(named: 'takePath'),
+              effect: any(named: 'effect'),
+              noiseReduction: any(named: 'noiseReduction'),
+            ),
+          ).thenThrow(const VoiceOverEffectException('write failed'));
+        },
+        build: () => build(_recording()),
+        act: (bloc) async {
+          bloc.add(const VoiceOverEffectSettingsChanged(effect: _robot));
+          await pumpEventQueue();
+          bloc.add(const VoiceOverEffectApplyRequested());
+        },
+        verify: (bloc) {
+          expect(bloc.state.status, VoiceOverEffectStatus.failure);
+          expect(bloc.state.auditionPath, '/tmp/audition_1.wav');
+          verify(() => player.play()).called(2);
+        },
+        errors: () => [isA<VoiceOverEffectException>()],
+      );
+
       test('drops an audition that finishes rendering while Done stops the '
           'player', () async {
         final rendering = Completer<String>();
@@ -428,6 +580,26 @@ void main() {
     });
 
     group('close', () {
+      test(
+        'does not play an audition that finishes loading after close',
+        () async {
+          stubAudition('/tmp/audition_1.wav');
+          final loading = Completer<void>();
+          when(() => player.setClip(any())).thenAnswer((_) => loading.future);
+          final bloc = build(_recording())
+            ..add(const VoiceOverEffectSettingsChanged(effect: _robot));
+          await pumpEventQueue();
+
+          await bloc.close();
+          loading.complete();
+          await pumpEventQueue();
+
+          verifyNever(() => player.play());
+          verify(() => service.discardAudition('/tmp/audition_1.wav'))
+              .called(1);
+        },
+      );
+
       test('releases the player and every audition', () async {
         await build(_recording()).close();
 

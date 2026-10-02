@@ -33,17 +33,15 @@ class VoiceOverEffectBloc
     extends Bloc<VoiceOverEffectEvent, VoiceOverEffectState> {
   /// Creates the bloc for [track], starting from its current setting.
   ///
-  /// [service] and [player] default to real instances so the UI can construct
-  /// the bloc without importing the service layer; tests inject fakes. The
-  /// bloc owns [player] and disposes it on close. [clock] stamps the baked
-  /// track's id.
+  /// The bloc owns [player] and disposes it on close. [clock] stamps the
+  /// baked track's id.
   VoiceOverEffectBloc({
     required AudioEvent track,
-    VoiceOverEffectService? service,
-    AudioClipPlayer? player,
+    required VoiceOverEffectService service,
+    required AudioClipPlayer player,
     DateTime Function()? clock,
-  }) : _service = service ?? VoiceOverEffectService(),
-       _player = player ?? AudioClipPlayer(),
+  }) : _service = service,
+       _player = player,
        _clock = clock ?? DateTime.now,
        super(
          VoiceOverEffectState(
@@ -125,7 +123,11 @@ class VoiceOverEffectBloc
         if (rendered) await _service.discardAudition(audition);
         return;
       }
-      await _loop(audition);
+      final started = await _loop(audition, isCancelled: () => emit.isDone);
+      if (!started || emit.isDone || _isFinishing) {
+        if (rendered) await _service.discardAudition(audition);
+        return;
+      }
       final previous = state.auditionPath;
       emit(state.copyWith(auditionPath: audition));
       if (previous != null && previous != audition) {
@@ -191,11 +193,20 @@ class VoiceOverEffectBloc
       // stays open on a failure status and the creator can try again.
       addError(e, stackTrace);
       emit(state.copyWith(status: VoiceOverEffectStatus.failure));
+      runDetached(
+        _restartAudition(),
+        'resume voice-effect audition after a failed save',
+        logName: _logName,
+        category: LogCategory.video,
+      );
     }
   }
 
   /// Loops [path] over the stretch of the take the track plays.
-  Future<void> _loop(String path) async {
+  Future<bool> _loop(
+    String path, {
+    required bool Function() isCancelled,
+  }) async {
     final track = state.track;
     final end = track.endTime;
     final length = end == null || end <= track.startTime
@@ -208,7 +219,16 @@ class VoiceOverEffectBloc
         end: length == null ? null : track.startOffset + length,
       ),
     );
-    await _player.play();
+    if (isCancelled() || isClosed || _isFinishing) return false;
+    // play completes when playback stops, not when it starts. Keep the
+    // audition in state immediately so switching settings can reclaim it.
+    runDetached(
+      _player.play(),
+      'play voice-effect audition',
+      logName: _logName,
+      category: LogCategory.video,
+    );
+    return true;
   }
 
   /// Whether the creator confirmed, after which no setting is taken or heard.
@@ -216,8 +236,9 @@ class VoiceOverEffectBloc
       state.isApplying || state.status == VoiceOverEffectStatus.done;
 
   Future<void> _restartAudition() async {
-    if (isClosed || _isFinishing) return;
+    if (isClosed || _isFinishing || state.auditionPath == null) return;
     await _player.seek(Duration.zero);
+    if (isClosed || _isFinishing) return;
     await _player.play();
   }
 
