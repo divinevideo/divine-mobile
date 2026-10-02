@@ -84,7 +84,7 @@ that run only:
 
 | How the app starts | Opt-out for one run |
 |---|---|
-| `flutter run`, `flutter test`, `flutter drive` | add `--no-enable-impeller` |
+| `flutter run`, `flutter test`, `flutter drive` typed directly | add `--no-enable-impeller` |
 | A debug APK installed with `adb` (`mise run local_install`) | launch it with `adb shell am start --ez enable-impeller false -n co.openvine.app.staging/co.openvine.app.MainActivity` |
 | `patrol test` | no flag exists; boot the emulator with `-gpu host`, which `mise run emulator` already does |
 
