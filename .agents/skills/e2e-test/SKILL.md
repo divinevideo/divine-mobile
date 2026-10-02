@@ -167,7 +167,7 @@ mise run emulator_wipe      # -wipe-data (storage exhausted)
 ```
 
 Override AVD: `AVD_NAME=<name> mise run emulator`. Always uses
-`-gpu host` — swiftshader can't render media_kit frames.
+`-gpu host`.
 
 Debug builds render with Impeller, as release does. On an emulator the
 engine picks Impeller OpenGLES, never Vulkan. If an emulator vanishes or
