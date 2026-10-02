@@ -308,7 +308,9 @@ text before it collapse into one entry in the test report. The three
 Write `input and output`, not `input/output`, and `Bug 2233`, not
 `Bug #2233`. `test/integration_test_helpers/patrol_test_names_test.dart`
 fails CI when a `group` or `patrolTest` name in a Patrol suite contains
-either character.
+either character. It reads names from source, so it also fails a name
+that is not a plain string literal: a variable, an interpolation, a raw
+string or a concatenation.
 
 ### Provider error caching
 
