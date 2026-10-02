@@ -86,13 +86,34 @@ that run only:
 |---|---|
 | `flutter run`, `flutter test`, `flutter drive` typed directly | add `--no-enable-impeller` |
 | A debug APK installed with `adb` (`mise run local_install`) | launch it with `adb shell am start -S --ez enable-impeller false -n co.openvine.app.staging/co.openvine.app.MainActivity`; `-S` stops a running copy first, because the extra is only read when the app process starts |
-| `patrol test`, and the `mise` tasks that run Flutter for you (`e2e_test`, `local_android`) | no flag reaches the app: Patrol launches it with no intent extras and the tasks pass fixed arguments. Put the `EnableImpeller` `<meta-data>` entry with `android:value="false"` back in `mobile/android/app/src/debug/AndroidManifest.xml` for the run and do not commit it |
+| `patrol test`, Maestro, and the `mise` tasks that run Flutter for you (`e2e_test`, `local_android`) | no flag reaches the app: Patrol and Maestro launch it with no intent extras and the tasks pass fixed arguments. Build with the opt-out instead: prefix the command with `ORG_GRADLE_PROJECT_divineDisableImpeller=true` (see below) |
 
 The flag and the intent extra are the same switch: `flutter run` passes
 `--no-enable-impeller` to the app as that extra. The engine prints
 `[Action Required]: Impeller opt-out deprecated` whenever it is used and plans
 to remove it, so treat it as a diagnostic step rather than a setting, and file
 an issue for an emulator that needs it.
+
+### Build-time opt-out
+
+Setting the Gradle property `divineDisableImpeller` to `true` merges
+`mobile/android/app/impeller_opt_out/AndroidManifest.xml`, which holds
+`EnableImpeller=false`, into debug builds only. Gradle reads any environment
+variable named `ORG_GRADLE_PROJECT_<property>`, so the switch reaches every
+command that builds through Gradle, including `patrol test`:
+
+```bash
+ORG_GRADLE_PROJECT_divineDisableImpeller=true mise run e2e_test
+```
+
+It changes the APK, not the run, so build again after setting or clearing it.
+Codemagic's emulator lanes (`perf-feed-ttff`, `perf-feed-frame`,
+`e2e-smoke-android`) set it, because they run x86_64 Linux emulators on a
+software GPU, the setup flutter/flutter#192736 describes;
+`.github/scripts/tests/test_codemagic_shorebird_config.py` fails a new emulator
+lane that leaves it out. Never set it for a build meant for a real device. The
+committed debug manifest stays free of the entry, and
+`mobile/test/android/debug_manifest_impeller_test.dart` fails if one comes back.
 
 `--enable-software-rendering` is not supported with Impeller (the engine refuses
 the pair with "Impeller does not support software rendering"), so pass

@@ -173,11 +173,10 @@ Debug builds render with Impeller, as release does. On an emulator the
 engine picks Impeller OpenGLES, never Vulkan. If an emulator vanishes or
 cannot render, `e2e_test` cannot pass a flag: it calls `patrol test` or
 `flutter test` with fixed arguments, and Patrol launches the app without
-intent extras. Put the `EnableImpeller` `<meta-data>` entry with
-`android:value="false"` back in
-`mobile/android/app/src/debug/AndroidManifest.xml` for the run and do not
-commit it. `mobile/docs/ANDROID_LOCAL_SETUP.md` ("Debug builds render with
-Impeller") lists the flags for `flutter run` and `adb`.
+intent extras. Build with the opt-out instead:
+`ORG_GRADLE_PROJECT_divineDisableImpeller=true mise run e2e_test ...`.
+`mobile/docs/ANDROID_LOCAL_SETUP.md` ("Debug builds render with
+Impeller") lists it with the flags for `flutter run` and `adb`.
 
 Skip the per-run reinstall with `PATROL_NO_UNINSTALL=true mise run
 e2e_test ...` when iterating fast and the APK hasn't changed.

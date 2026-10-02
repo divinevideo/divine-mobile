@@ -1530,6 +1530,11 @@ workflows:
     environment:
       flutter: 3.47.2
       java: 17
+      vars:
+        # Debug builds render with Impeller, which kills x86_64 Linux emulators
+        # on a software GL stack (flutter/flutter#192736). Opt this lane's
+        # build out at build time; see mobile/android/app/build.gradle.kts.
+        ORG_GRADLE_PROJECT_divineDisableImpeller: "true"
     cache:
       cache_paths:
         - $HOME/.gradle/caches
@@ -1623,6 +1628,11 @@ workflows:
     environment:
       flutter: 3.47.2
       java: 17
+      vars:
+        # Debug builds render with Impeller, which kills x86_64 Linux emulators
+        # on a software GL stack (flutter/flutter#192736). Opt this lane's
+        # build out at build time; see mobile/android/app/build.gradle.kts.
+        ORG_GRADLE_PROJECT_divineDisableImpeller: "true"
     cache:
       cache_paths:
         - $HOME/.gradle/caches
@@ -1732,6 +1742,10 @@ workflows:
         # on every dispatched Android run. The contract test pins the two
         # values as equal so they cannot drift.
         QA_VIDEO_EVENT_ID: dd6ba512d5c3ed9490db9cd15986fb5c88347cb4aeeef6220331e8b06ca3c510
+        # Impeller kills x86_64 Linux emulators on a software GL stack
+        # (flutter/flutter#192736), and Maestro cannot pass a per-run flag, so
+        # the debug APK opts out at build time (app/build.gradle.kts).
+        ORG_GRADLE_PROJECT_divineDisableImpeller: "true"
     cache:
       cache_paths:
         - $HOME/.gradle/caches

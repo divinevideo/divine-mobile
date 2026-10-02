@@ -18,8 +18,9 @@
          stack. If an emulator vanishes or fails to render, pass the
          `no-enable-impeller` flag to `flutter run` for that run (spelled
          with the usual double dash; it cannot be written literally inside
-         an XML comment). mobile/docs/ANDROID_LOCAL_SETUP.md lists the same
-         switch for other ways of starting the app. -->
+         an XML comment). Runners that cannot pass it (Patrol, Maestro, CI
+         emulator lanes) build with the Gradle property divineDisableImpeller
+         instead; mobile/docs/ANDROID_LOCAL_SETUP.md explains both. -->
     <application
         android:label="Divine Staging"
         tools:replace="android:label">

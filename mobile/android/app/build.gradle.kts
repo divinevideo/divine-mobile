@@ -122,6 +122,23 @@ flutter {
     source = "../.."
 }
 
+// Build-time Impeller opt-out for debug builds, for emulators that die under
+// Impeller OpenGLES (flutter/flutter#192736) when the runner cannot pass
+// `--no-enable-impeller` (Patrol, Maestro). Enable with the Gradle property
+// `divineDisableImpeller=true`, e.g. ORG_GRADLE_PROJECT_divineDisableImpeller.
+val disableImpellerInDebug =
+    providers.gradleProperty("divineDisableImpeller").orNull == "true"
+
+androidComponents {
+    onVariants(selector().withBuildType("debug")) { variant ->
+        if (disableImpellerInDebug) {
+            variant.sources.manifests.addStaticManifestFile(
+                "impeller_opt_out/AndroidManifest.xml",
+            )
+        }
+    }
+}
+
 configurations.all {
     // Exclude older BouncyCastle jdk15to18 versions to avoid conflicts with c2pa's jdk18on versions
     exclude(group = "org.bouncycastle", module = "bcprov-jdk15to18")
