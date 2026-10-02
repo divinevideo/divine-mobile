@@ -129,14 +129,15 @@ class CommentsRepository {
   /// another client) cannot linger locally indefinitely.
   static const _recentlyPostedRetention = Duration(minutes: 10);
 
-  /// Ids of comments deleted through [deleteComment], hidden from every read.
+  /// Ids of comments deleted through [deleteComment], or found deleted by
+  /// their author's NIP-09 request, hidden from every read.
   ///
   /// A published NIP-09 deletion reaches read sources late: a relay that has
   /// not stored the comment yet applies it only in a later sweep, and the
   /// edge-cached REST list is not purged. Until then they still return the
   /// comment, so an edit showed the old text beside the new (#9643). Kept
   /// across [clearCommentCountCache] because a deletion holds for every
-  /// viewer; bounded by how many comments are deleted in one session.
+  /// viewer; bounded by how many deleted comments one session sees.
   final Set<String> _deletedCommentIds = {};
 
   /// Subscription ID for the active comment watch, if any.
@@ -848,16 +849,16 @@ class CommentsRepository {
       );
 
       final events = await _nostrClient.queryEvents([filter]);
+      final comments = events
+          .map(_eventToCommentFromRawEvent)
+          .whereType<Comment>()
+          .toList();
+      await findAuthorDeletedComments(comments);
 
-      final comments =
-          events
-              .where((event) => !_deletedCommentIds.contains(event.id))
-              .map(_eventToCommentFromRawEvent)
-              .whereType<Comment>()
-              .toList()
-            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-      return comments;
+      return comments
+          .where((comment) => !_deletedCommentIds.contains(comment.id))
+          .toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     } on Exception catch (e) {
       throw LoadCommentsByAuthorFailedException(e.toString());
     }
@@ -882,6 +883,56 @@ class CommentsRepository {
         for (final c in filtered) c.id: c,
       }),
     );
+  }
+
+  /// Returns the ids of [comments] whose own author published a NIP-09
+  /// deletion request naming them, and hides those comments from every later
+  /// read and from [watchComments].
+  ///
+  /// A relay that receives the request before it has indexed the comment goes
+  /// on serving the comment until a later batch, and so does every read source
+  /// built on it (#7048). NIP-09 has the client hide the comment, and requires
+  /// the request's pubkey to match the comment's first, so a request naming
+  /// someone else's comment changes nothing.
+  ///
+  /// [loadComments] does not wait for this lookup, so a page paints before a
+  /// relay answers; call this once the page is shown. Fails open: returns an
+  /// empty set when the lookup errors.
+  Future<Set<String>> findAuthorDeletedComments(
+    Iterable<Comment> comments,
+  ) async {
+    final authorById = <String, String>{
+      for (final comment in comments)
+        if (!_deletedCommentIds.contains(comment.id))
+          comment.id: comment.authorPubkey.toLowerCase(),
+    };
+    if (authorById.isEmpty) return const <String>{};
+
+    final List<Event> requests;
+    try {
+      requests = await _nostrClient.queryEvents([
+        Filter(
+          kinds: const [_deletionKind],
+          authors: authorById.values.toSet().toList(),
+          e: authorById.keys.toList(),
+        ),
+      ]);
+    } on Exception {
+      // Fail open: without an answer the comments stay as their source sent.
+      return const <String>{};
+    }
+
+    final deleted = <String>{};
+    for (final request in requests) {
+      if (request.kind != _deletionKind) continue;
+      final requester = request.pubkey.toLowerCase();
+      for (final tag in request.tags) {
+        if (tag.length < 2 || tag[0] != 'e') continue;
+        if (authorById[tag[1]] == requester) deleted.add(tag[1]);
+      }
+    }
+    _deletedCommentIds.addAll(deleted);
+    return deleted;
   }
 
   /// Drops comments in [_deletedCommentIds] from [thread], lowering
