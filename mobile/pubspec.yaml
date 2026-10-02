@@ -454,7 +454,7 @@ dependencies:
   # 14.5.0 adds the text outline that text and caption styles draw.
   # 14.6.0 adds TextLayer.highlights and ExportedLayer.frames, which karaoke
   # captions light their words and export their timed overlays through.
-  pro_image_editor: ^14.6.0
+  pro_image_editor: ^14.6.2
   sensors_plus: ^7.0.0
   stream_transform: ^2.1.1
   flutter_staggered_grid_view: ^0.7.0
