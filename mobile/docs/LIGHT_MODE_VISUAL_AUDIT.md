@@ -13,6 +13,7 @@ and editor chrome use fixed media colors and remain separate.
 | Explore | A gray panel wrapped the tabs and video grid; the bright-green selected indicator was weak on white. | Put the grid on white and use dark green for the light-mode indicator. |
 | Profile | The grid and badge outlines were too soft; tabs used the same low-contrast green indicator. | Put the grid on white and strengthen the badge outline and tab indicator. Keep the person's banner image or chosen color. |
 | Inbox and notifications | Inbox uses the shared raised surface; notification tabs and retry links used fixed brand green on light surfaces. | Quiet the shared surface; use adaptive positive ink for those foregrounds. |
+| Icons without a set color | The supporter chips on profiles, the account-recovery avatar, and a Developer Options caret drew the icon asset's own white fill, which disappears on light surfaces. | Give them primary-text ink, which resolves to the same white in dark mode. |
 | Home, library, Settings, dialogs, sheets | Their main adaptive surfaces and body text already use semantic tokens. Remaining fixed whites and greens checked here belong to video, media illustration, filled actions, or status treatment. | Let the shared palette and control changes flow through these surfaces without replacing fixed media colors. |
 
 Measured light-mode pairs after the changes: inactive nav icons on white

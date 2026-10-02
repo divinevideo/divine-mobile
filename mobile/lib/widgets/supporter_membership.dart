@@ -106,9 +106,10 @@ class PublicSupporterBadge extends ConsumerWidget {
             ? Material(
                 type: MaterialType.transparency,
                 child: Chip(
-                  avatar: const DivineIcon(
+                  avatar: DivineIcon(
                     icon: DivineIconName.heart,
                     size: 16,
+                    color: context.vineColors.primaryText,
                   ),
                   label: Text(context.l10n.supporterBadgeLabel),
                 ),
@@ -135,7 +136,11 @@ class _MembershipEntry extends StatelessWidget {
     type: MaterialType.transparency,
     child: compact
         ? ActionChip(
-            avatar: const DivineIcon(icon: DivineIconName.heart, size: 16),
+            avatar: DivineIcon(
+              icon: DivineIconName.heart,
+              size: 16,
+              color: context.vineColors.primaryText,
+            ),
             label: Text(label),
             onPressed: () => context.push(SupporterScreen.path),
           )
