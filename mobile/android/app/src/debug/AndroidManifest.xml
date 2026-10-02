@@ -12,13 +12,14 @@
          made every debug build render with Skia, which hid the Impeller-only
          editor previews (chroma key, video effects) on real devices.
 
-         Emulators do not need the opt-out either. The engine never selects
-         Vulkan on an emulator and renders with Impeller OpenGLES instead,
-         which works on SwiftShader. If an emulator ever fails to render,
-         pass the `no-enable-impeller` flag to `flutter run` for that run
-         (spelled with the usual double dash; it cannot be written literally
-         inside an XML comment). mobile/docs/ANDROID_LOCAL_SETUP.md lists the
-         same switch for other ways of starting the app. -->
+         Emulators render with Impeller OpenGLES, never Vulkan. That works on
+         SwiftShader with an API 30 emulator, but flutter/flutter#192736
+         reports emulators dying on x86_64 Linux hosts with a software GL
+         stack. If an emulator vanishes or fails to render, pass the
+         `no-enable-impeller` flag to `flutter run` for that run (spelled
+         with the usual double dash; it cannot be written literally inside
+         an XML comment). mobile/docs/ANDROID_LOCAL_SETUP.md lists the same
+         switch for other ways of starting the app. -->
     <application
         android:label="Divine Staging"
         tools:replace="android:label">

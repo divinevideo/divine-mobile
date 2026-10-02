@@ -66,15 +66,21 @@ October 2026 the debug manifest forced Skia on every device, so a debug build on
 a real phone showed "This device can't show the live preview" for those previews
 unless the run passed `--enable-impeller`.
 
-Emulators need nothing special. The engine never selects Vulkan on an Android
-emulator; it renders with Impeller OpenGLES instead. That holds on SwiftShader
-(`-gpu swiftshader_indirect`), the software GPU an emulator falls back to on a
-headless CI host or a machine without native Vulkan, which is the setup the
-Skia opt-out was added for in #1928. On Flutter 3.47.2 that setup starts the
-app, and the feed frame-timing and time-to-first-frame integration tests pass
-on it.
+Emulators render with Impeller OpenGLES: the engine never selects Vulkan on an
+Android emulator. That worked on SwiftShader (`-gpu swiftshader_indirect`), the
+software GPU an emulator falls back to on a headless CI host or a machine
+without native Vulkan, which is the setup the Skia opt-out was added for in
+#1928. On Flutter 3.47.2 an API 30 emulator on that GPU mode starts the app and
+passes the feed frame-timing and time-to-first-frame integration tests.
 
-If an emulator still fails to render, turn Impeller off for that run only:
+It is not known to work everywhere. flutter/flutter#192736 reports the host
+emulator process dying about a second after Impeller selects OpenGLES on x86_64
+Linux hosts that render with a software GL stack, from Flutter 3.44 on, which
+includes the 3.47.2 this repo pins. If feed video renders black on an emulator,
+see the OpenGLES note in `main/AndroidManifest.xml`.
+
+If an emulator vanishes, renders black or fails to render, turn Impeller off for
+that run only:
 
 | How the app starts | Opt-out for one run |
 |---|---|
