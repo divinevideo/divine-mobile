@@ -478,6 +478,10 @@ class NostrClient {
       // Cache cleanup is best effort after a relay accepted the deletion.
       // Local DAO failures must not change the publish outcome.
     }
+    // Keep the request itself. A relay can go on serving the target until it
+    // applies the request (#7048), and a reader that enforces NIP-09 finds
+    // this copy offline and after a restart.
+    _cacheEvent(deletionEvent);
   }
 
   /// Tracks whether dispose() has been called
