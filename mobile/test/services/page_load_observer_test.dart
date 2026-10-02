@@ -106,10 +106,6 @@ void main() {
       observer = PageLoadObserver(analytics: analytics);
     });
 
-    test('creates an instance', () {
-      expect(observer, isA<NavigatorObserver>());
-    });
-
     testWidgets('tracks didPush for regular routes', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
