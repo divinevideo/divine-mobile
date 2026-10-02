@@ -17,6 +17,8 @@ and editor chrome use fixed media colors and remain separate.
 | Home, library, Settings, dialogs, sheets | Their main adaptive surfaces and body text already use semantic tokens. Remaining fixed whites and greens checked here belong to video, media illustration, filled actions, or status treatment. | Let the shared palette and control changes flow through these surfaces without replacing fixed media colors. |
 
 Measured light-mode pairs after the changes: inactive nav icons on white
-**5.24:1**; muted labels on the neutral control fill **4.53:1**; control
-outline on that fill **3.04:1**; selected indicator on white **8.70:1**.
-Text must clear 4.5:1 and meaningful icon or control boundaries 3:1.
+**5.24:1**; muted labels on `surfaceContainer`, the darkest neutral fill
+they sit on, **4.53:1**; control outlines on that fill **3.04:1** (**4.70:1**
+and **3.16:1** on the lighter `controlFill`); selected indicator on white
+**8.70:1**. Text must clear 4.5:1 and meaningful icon or control boundaries
+3:1.
