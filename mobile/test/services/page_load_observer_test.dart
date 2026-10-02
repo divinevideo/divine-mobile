@@ -94,16 +94,16 @@ void main() {
 
   group(PageLoadObserver, () {
     late _RecordingAnalyticsEventSink sink;
+    late ScreenAnalyticsService analytics;
     late PageLoadObserver observer;
 
     setUp(() {
       sink = _RecordingAnalyticsEventSink();
-      observer = PageLoadObserver(
-        analytics: ScreenAnalyticsService(
-          history: PageLoadHistory(),
-          sink: sink,
-        ),
+      analytics = ScreenAnalyticsService(
+        history: PageLoadHistory(),
+        sink: sink,
       );
+      observer = PageLoadObserver(analytics: analytics);
     });
 
     test('creates an instance', () {
@@ -126,6 +126,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Test'), findsOneWidget);
+      expect(
+        sink.events
+            .where((event) => event.name == 'screen_load')
+            .map((event) => event.parameters[AnalyticsParam.screenName]),
+        contains('test'),
+      );
     });
 
     testWidgets('skips popup routes without crashing', (tester) async {
@@ -190,11 +196,13 @@ void main() {
       final context = tester.element(find.text('Home'));
       Navigator.of(context).pushNamed('/test');
       await tester.pumpAndSettle();
+      expect(analytics.activeSessionCount, equals(2));
 
       await tester.tap(find.text('Go Back'));
       await tester.pumpAndSettle();
 
       expect(find.text('Home'), findsOneWidget);
+      expect(analytics.activeSessionCount, equals(1));
     });
 
     testWidgets('logs semantic screen view for named routes', (tester) async {
