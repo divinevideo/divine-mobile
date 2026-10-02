@@ -1470,9 +1470,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'መግለጫ ጽሑፎች ጠፍተዋል';
 
   @override
-  String get videoSettingsCaptionsOffForVideo => 'ለዚህ ቪዲዮ የጽሑፍ መግለጫዎች ጠፍተዋል';
-
-  @override
   String get contentWarningLabel => 'የይዘት ማስጠንቀቂያ';
 
   @override

@@ -30,15 +30,12 @@ import 'package:openvine/widgets/video_feed_item/feed_playback_toggles_pill.dart
 /// below the button's bottom-right corner with three scrim-toggled
 /// controls: playback mode (auto-advance), audio mute, and closed captions.
 ///
-/// The popover content is the shared [FeedPlaybackTogglesPill] widget. Feed
-/// surfaces should pass [videoId] when they have current-video context so the
-/// captions toggle stays scoped to that video instead of mutating Settings.
+/// The popover content is the shared [FeedPlaybackTogglesPill] widget.
 /// Pass [video] only on surfaces that should expose owner edit/delete actions.
 class FeedSettingsMenu extends ConsumerStatefulWidget {
-  const FeedSettingsMenu({super.key, this.video, this.videoId});
+  const FeedSettingsMenu({super.key, this.video});
 
   final VideoEvent? video;
-  final String? videoId;
 
   @override
   ConsumerState<FeedSettingsMenu> createState() => _FeedSettingsMenuState();
@@ -176,7 +173,6 @@ class _FeedSettingsMenuState extends ConsumerState<FeedSettingsMenu> {
                         OwnerVideoCleanupStatus.inProgress,
                 onEditVideo: _editVideo,
                 onDeleteVideo: _confirmDeleteVideo,
-                videoId: widget.videoId ?? widget.video?.id,
               );
             },
           ),
@@ -209,7 +205,6 @@ class _FeedSettingsOverlay extends StatelessWidget {
     required this.isDeleting,
     required this.onEditVideo,
     required this.onDeleteVideo,
-    required this.videoId,
   });
 
   final LayerLink link;
@@ -218,7 +213,6 @@ class _FeedSettingsOverlay extends StatelessWidget {
   final bool isDeleting;
   final VoidCallback onEditVideo;
   final VoidCallback onDeleteVideo;
-  final String? videoId;
 
   @override
   Widget build(BuildContext context) {
@@ -260,10 +254,7 @@ class _FeedSettingsOverlay extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                   ],
-                  FeedPlaybackTogglesPill(
-                    videoId: videoId,
-                    onAutoAdvanceToggled: onClose,
-                  ),
+                  FeedPlaybackTogglesPill(onAutoAdvanceToggled: onClose),
                 ],
               ),
             ),

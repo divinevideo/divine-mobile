@@ -1538,10 +1538,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'శీర్షికలు ఆఫ్';
 
   @override
-  String get videoSettingsCaptionsOffForVideo =>
-      'ఈ వీడియోకు శీర్షికలు ఆఫ్ చేయబడ్డాయి';
-
-  @override
   String get contentWarningLabel => 'కంటెంట్ హెచ్చరిక';
 
   @override

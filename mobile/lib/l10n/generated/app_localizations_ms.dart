@@ -1474,10 +1474,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Sarikata dimatikan';
 
   @override
-  String get videoSettingsCaptionsOffForVideo =>
-      'Sari kata dimatikan untuk video ini';
-
-  @override
   String get contentWarningLabel => 'Amaran Kandungan';
 
   @override

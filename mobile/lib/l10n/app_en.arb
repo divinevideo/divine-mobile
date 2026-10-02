@@ -958,10 +958,6 @@
   "@videoSettingsCaptionsOff": {
     "description": "Snackbar confirming that captions were just turned off from the playback-settings pill."
   },
-  "videoSettingsCaptionsOffForVideo": "Captions off for this video",
-  "@videoSettingsCaptionsOffForVideo": {
-    "description": "Snackbar confirming that captions were just turned off for the current video from the playback-settings pill."
-  },
   "contentWarningLabel": "Content Warning",
   "contentWarningNudity": "Nudity",
   "contentWarningSexualContent": "Sexual Content",

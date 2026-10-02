@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -5,12 +7,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
 import 'package:openvine/blocs/video_volume/video_volume_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/subtitle_providers.dart';
 import 'package:openvine/screens/feed/feed_auto_advance_cubit.dart';
 import 'package:openvine/widgets/video_feed_item/feed_playback_toggles_pill.dart';
+import 'package:openvine/widgets/video_feed_item/subtitle_overlay.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers/test_provider_overrides.dart';
@@ -41,12 +45,10 @@ void main() {
       bool reducedMotion = false,
       bool provideAutoAdvance = true,
       ThemeData? theme,
-      String? videoId,
       VoidCallback? onAutoAdvanceToggled,
     }) {
       Widget pill = Scaffold(
         body: FeedPlaybackTogglesPill(
-          videoId: videoId,
           onAutoAdvanceToggled: onAutoAdvanceToggled,
         ),
       );
@@ -133,7 +135,7 @@ void main() {
       },
     );
 
-    testWidgets('tapping the captions toggle flips subtitle visibility', (
+    testWidgets('tapping the captions toggle turns captions off globally', (
       tester,
     ) async {
       final container = ProviderContainer(
@@ -169,34 +171,38 @@ void main() {
       );
       await tester.pump();
       expect(container.read(subtitleVisibilityProvider), isFalse);
+      verify(
+        () => mockPrefs.setBool('subtitle_visibility_enabled', false),
+      ).called(1);
 
       expect(find.text(l10n.videoSettingsCaptionsOff), findsOneWidget);
     });
 
-    testWidgets('scoped captions toggle leaves global preference untouched', (
+    testWidgets('captions turned off stay off on the next video', (
       tester,
     ) async {
-      const videoId =
-          'a1b2c3d4e5f6789012345678901234567890abcdef123456789012345678901234';
-      const otherVideoId =
-          'b2c3d4e5f6789012345678901234567890abcdef123456789012345678901234a1';
-      final container = ProviderContainer(
-        overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
-      );
-      addTearDown(container.dispose);
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final positions = StreamController<Duration>.broadcast();
+      addTearDown(positions.close);
+      final nextVideo = VideoEvent(
+        id: 'b2c3d4e5f6789012345678901234567890abcdef123456789012345678901234a1',
+        pubkey: 'd4e5f6789012345678901234567890abcdef123456789012345678901234a1b2c3',
+        createdAt: 1700000000,
+        content: 'Next video',
+        timestamp: DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),
+        videoUrl: 'https://example.com/next.mp4',
+        textTrackContent: '''
+WEBVTT
 
-      expect(container.read(subtitleVisibilityProvider), isTrue);
-      expect(
-        container.read(subtitleVisibilityForVideoProvider(videoId)),
-        isTrue,
-      );
-      expect(
-        container.read(subtitleVisibilityForVideoProvider(otherVideoId)),
-        isTrue,
+1
+00:00:00.100 --> 00:00:01.000
+Next caption
+''',
       );
 
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
+      Widget buildFeed(ProviderContainer container, {required bool showNext}) {
+        return UncontrolledProviderScope(
           container: container,
           child: MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
@@ -208,41 +214,60 @@ void main() {
                 ),
                 BlocProvider<VideoVolumeCubit>.value(value: volumeCubit),
               ],
-              child: const Scaffold(
-                body: FeedPlaybackTogglesPill(videoId: videoId),
+              child: Scaffold(
+                body: Column(
+                  children: [
+                    const FeedPlaybackTogglesPill(),
+                    if (showNext)
+                      SubtitleCueStreamPill(
+                        video: nextVideo,
+                        positionStream: positions.stream,
+                        initialPosition: const Duration(milliseconds: 300),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      );
+        );
+      }
 
+      final container = ProviderContainer(
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(buildFeed(container, showNext: false));
       await tester.tap(
         find.bySemanticsLabel(l10n.videoSettingsCaptionsDisable),
       );
       await tester.pump();
 
-      expect(container.read(subtitleVisibilityProvider), isTrue);
+      await tester.pumpWidget(buildFeed(container, showNext: true));
+      await tester.pump();
+      expect(find.text('Next caption'), findsNothing);
+
+      final restarted = ProviderContainer(
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      );
+      addTearDown(restarted.dispose);
+      await tester.pumpWidget(buildFeed(restarted, showNext: true));
+      await tester.pump();
+      expect(find.text('Next caption'), findsNothing);
       expect(
-        container.read(subtitleVisibilityForVideoProvider(videoId)),
-        isFalse,
+        find.bySemanticsLabel(l10n.videoSettingsCaptionsEnable),
+        findsOneWidget,
       );
-      expect(
-        container.read(subtitleVisibilityForVideoProvider(otherVideoId)),
-        isTrue,
-      );
-      verifyNever(
-        () => mockPrefs.setBool('subtitle_visibility_enabled', any()),
-      );
-      expect(find.text(l10n.videoSettingsCaptionsOffForVideo), findsOneWidget);
+
+      // Unmount, then outlast the confirmation snackbar and the auto-dispose
+      // tasks queued by swapping containers, so no timer is left pending.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 5));
     });
 
-    testWidgets('scoped captions enable persists the global preference', (
+    testWidgets('turning captions on persists the global preference', (
       tester,
     ) async {
-      const videoId =
-          'a1b2c3d4e5f6789012345678901234567890abcdef123456789012345678901234';
-      const otherVideoId =
-          'b2c3d4e5f6789012345678901234567890abcdef123456789012345678901234a1';
       when(
         () => mockPrefs.getBool('subtitle_visibility_enabled'),
       ).thenReturn(false);
@@ -264,9 +289,7 @@ void main() {
                 ),
                 BlocProvider<VideoVolumeCubit>.value(value: volumeCubit),
               ],
-              child: const Scaffold(
-                body: FeedPlaybackTogglesPill(videoId: videoId),
-              ),
+              child: const Scaffold(body: FeedPlaybackTogglesPill()),
             ),
           ),
         ),
@@ -278,64 +301,9 @@ void main() {
       await tester.pump();
 
       expect(container.read(subtitleVisibilityProvider), isTrue);
-      expect(
-        container.read(subtitleVisibilityForVideoProvider(videoId)),
-        isTrue,
-      );
-      expect(
-        container.read(subtitleVisibilityForVideoProvider(otherVideoId)),
-        isTrue,
-      );
       verify(
         () => mockPrefs.setBool('subtitle_visibility_enabled', true),
       ).called(1);
-      expect(find.text(l10n.videoSettingsCaptionsOn), findsOneWidget);
-    });
-
-    testWidgets('scoped captions enable clears its disabled override', (
-      tester,
-    ) async {
-      const videoId =
-          'a1b2c3d4e5f6789012345678901234567890abcdef123456789012345678901234';
-      final container = ProviderContainer(
-        overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
-      );
-      addTearDown(container.dispose);
-      container
-          .read(subtitleVisibilityOverrideProvider.notifier)
-          .setForVideo(videoId, false);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: MultiBlocProvider(
-              providers: [
-                BlocProvider<FeedAutoAdvanceCubit>.value(
-                  value: autoAdvanceCubit,
-                ),
-                BlocProvider<VideoVolumeCubit>.value(value: volumeCubit),
-              ],
-              child: const Scaffold(
-                body: FeedPlaybackTogglesPill(videoId: videoId),
-              ),
-            ),
-          ),
-        ),
-      );
-
-      await tester.tap(
-        find.bySemanticsLabel(l10n.videoSettingsCaptionsEnable),
-      );
-      await tester.pump();
-
-      expect(container.read(subtitleVisibilityProvider), isTrue);
-      expect(container.read(subtitleVisibilityOverrideProvider), isNull);
-      verifyNever(
-        () => mockPrefs.setBool('subtitle_visibility_enabled', any()),
-      );
       expect(find.text(l10n.videoSettingsCaptionsOn), findsOneWidget);
     });
 

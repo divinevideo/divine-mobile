@@ -1380,9 +1380,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoSettingsCaptionsOff => '자막 꺼짐';
 
   @override
-  String get videoSettingsCaptionsOffForVideo => '이 영상의 자막을 껐어요';
-
-  @override
   String get contentWarningLabel => '콘텐츠 경고';
 
   @override

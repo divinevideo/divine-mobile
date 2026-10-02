@@ -1516,10 +1516,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Legendas desativadas';
 
   @override
-  String get videoSettingsCaptionsOffForVideo =>
-      'Legendas desativadas para este vídeo';
-
-  @override
   String get contentWarningLabel => 'Aviso de conteúdo';
 
   @override
