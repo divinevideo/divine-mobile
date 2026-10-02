@@ -33,6 +33,10 @@ class ExploreTabBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.vineColors;
+    final tabSurface = colors.isLight
+        ? colors.surface
+        : colors.surfaceContainerHigh;
     // Material is required for TabBar ink splashes; PointerInterceptor ensures
     // tabs receive taps on web.
     return PointerInterceptor(
@@ -46,7 +50,9 @@ class ExploreTabBar extends StatelessWidget {
               isScrollable: true,
               tabAlignment: TabAlignment.start,
               padding: const EdgeInsetsDirectional.only(start: 16),
-              indicatorColor: VineTheme.tabIndicatorGreen,
+              indicatorColor: context.vineColors.isLight
+                  ? context.vineColors.accentPositive
+                  : VineTheme.tabIndicatorGreen,
               indicatorWeight: 4,
               indicatorSize: TabBarIndicatorSize.tab,
               dividerColor: VineTheme.transparent,
@@ -85,12 +91,7 @@ class ExploreTabBar extends StatelessWidget {
                       // Both stops are the same surface at different alpha.
                       // Fading to a hardcoded transparent *black* instead
                       // muddies the midpoint once the surface is light.
-                      colors: [
-                        context.vineColors.surfaceContainerHigh,
-                        context.vineColors.surfaceContainerHigh.withValues(
-                          alpha: 0,
-                        ),
-                      ],
+                      colors: [tabSurface, tabSurface.withValues(alpha: 0)],
                     ),
                   ),
                 ),

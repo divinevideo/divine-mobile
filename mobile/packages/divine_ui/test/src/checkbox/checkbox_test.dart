@@ -386,14 +386,14 @@ void main() {
       setUp(() => VineThemeColors.debugFallbackCount = 0);
       tearDown(() => VineThemeColors.debugFallbackCount = 0);
 
-      testWidgets('uses light outlineMuted border when unselected', (
+      testWidgets('uses readable light outline when unselected', (
         tester,
       ) async {
         await tester.pumpWidget(
           buildTestWidget(onChanged: (_) {}, theme: VineTheme.lightTheme),
         );
 
-        expect(borderColor(tester), VineTheme.lightColors.outlineMuted);
+        expect(borderColor(tester), VineTheme.lightColors.outline);
         expect(VineThemeColors.debugFallbackCount, 0);
       });
 

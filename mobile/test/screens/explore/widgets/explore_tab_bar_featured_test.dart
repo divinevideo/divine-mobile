@@ -79,6 +79,19 @@ void main() {
       expect(find.byType(Tab), findsNWidgets(4));
     });
 
+    testWidgets('light tab selection uses a dark green indicator', (
+      tester,
+    ) async {
+      await pumpBar(
+        tester,
+        const ExploreTabsState(),
+        theme: VineTheme.lightTheme,
+      );
+      final bar = tester.widget<TabBar>(find.byType(TabBar));
+      expect(bar.indicatorColor, VineTheme.lightColors.accentPositive);
+      expect(bar.unselectedLabelColor, VineTheme.lightColors.onSurfaceMuted);
+    });
+
     testWidgets('renders the configured label as a tab', (tester) async {
       await pumpBar(tester, ExploreTabsState(featuredTab: _featured()));
 

@@ -552,7 +552,9 @@ class _FailureBody extends StatelessWidget {
             onPressed: onRetry,
             child: Text(
               context.l10n.notificationsRetry,
-              style: VineTheme.labelLargeFont(color: VineTheme.vineGreen),
+              style: VineTheme.labelLargeFont(
+                color: context.vineColors.accentPositive,
+              ),
             ),
           ),
         ],
@@ -732,7 +734,9 @@ class _RefreshErrorBanner extends StatelessWidget {
                   // so the refresh-error banner ships in every locale
                   // without adding a duplicate English-only key.
                   context.l10n.notificationsRetry,
-                  style: VineTheme.labelLargeFont(color: VineTheme.vineGreen),
+                  style: VineTheme.labelLargeFont(
+                    color: context.vineColors.accentPositive,
+                  ),
                 ),
               ),
             ],

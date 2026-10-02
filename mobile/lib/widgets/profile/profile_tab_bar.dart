@@ -128,7 +128,9 @@ class _ProfileTabBarState extends State<ProfileTabBar> {
           controller: widget.controller,
           isScrollable: scrollable,
           tabAlignment: scrollable ? TabAlignment.start : TabAlignment.fill,
-          indicatorColor: VineTheme.tabIndicatorGreen,
+          indicatorColor: context.vineColors.isLight
+              ? context.vineColors.accentPositive
+              : VineTheme.tabIndicatorGreen,
           indicatorWeight: 4,
           indicatorSize: TabBarIndicatorSize.tab,
           dividerColor: VineTheme.transparent,

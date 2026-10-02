@@ -312,8 +312,9 @@ class _DivineIconButtonContent extends StatelessWidget {
   /// resolved palette so padding geometry does not need a [BuildContext].
   bool get _hasBorder => type == DivineIconButtonType.secondary;
 
-  Color? _borderColor(VineThemeColors colors) =>
-      _hasBorder ? colors.outlineMuted : null;
+  Color? _borderColor(VineThemeColors colors) => _hasBorder
+      ? (colors.isLight ? colors.outline : colors.outlineMuted)
+      : null;
 
   List<BoxShadow>? _boxShadow(VineThemeColors colors) {
     if (!showShadow) {

@@ -46,7 +46,9 @@ class DivineSwitch extends StatelessWidget {
       activeTrackColor: VineTheme.primary,
       inactiveThumbColor: colors.onSurfaceMuted,
       inactiveTrackColor: colors.surfaceContainerHigh,
-      trackOutlineColor: WidgetStatePropertyAll(colors.outlineMuted),
+      trackOutlineColor: WidgetStatePropertyAll(
+        colors.isLight ? colors.outline : colors.outlineMuted,
+      ),
     );
     if (semanticLabel == null) return toggle;
     return Semantics(label: semanticLabel, child: toggle);

@@ -338,7 +338,9 @@ class _InboxTabBar extends StatelessWidget {
         isScrollable: true,
         tabAlignment: TabAlignment.start,
         padding: const EdgeInsetsDirectional.only(start: 16),
-        indicatorColor: VineTheme.tabIndicatorGreen,
+        indicatorColor: context.vineColors.isLight
+            ? context.vineColors.accentPositive
+            : VineTheme.tabIndicatorGreen,
         indicatorWeight: 4,
         indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: VineTheme.transparent,
@@ -418,7 +420,7 @@ class _InboxBanner extends StatelessWidget {
                 ),
                 child: DivineIcon(
                   icon: icon,
-                  color: context.vineColors.background,
+                  color: VineTheme.onPrimary,
                 ),
               ),
               Expanded(

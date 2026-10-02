@@ -186,6 +186,8 @@ class DivineRowCheckbox extends StatelessWidget {
               border: Border.all(
                 color: isSelected
                     ? context.vineColors.accentPositive
+                    : context.vineColors.isLight
+                    ? context.vineColors.outline
                     : context.vineColors.outlineMuted,
               ),
               borderRadius: BorderRadius.circular(20),

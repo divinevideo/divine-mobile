@@ -24,7 +24,7 @@ const double _kIndicatorInset = 4;
 /// A segmented toggle that switches between Messages and Notifications.
 ///
 /// Matches the Figma design: rounded container with `surfaceContainer` bg,
-/// `outlineMuted` 2px border, 20px radius. A single `primary` indicator pill
+/// 2px adaptive outline, 20px radius. A single `primary` indicator pill
 /// animates between the two segments; the active label uses `onPrimaryButton`
 /// text, the inactive one `onSurfaceMuted`. The pill slide and label fade run
 /// over [kInboxTabTransitionDuration] — the same duration that drives the
@@ -50,7 +50,12 @@ class InboxSegmentedToggle extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: context.vineColors.surfaceContainer,
-        border: Border.all(color: context.vineColors.outlineMuted, width: 2),
+        border: Border.all(
+          color: context.vineColors.isLight
+              ? context.vineColors.outline
+              : context.vineColors.outlineMuted,
+          width: 2,
+        ),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Stack(

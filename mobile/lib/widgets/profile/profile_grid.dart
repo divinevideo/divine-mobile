@@ -746,7 +746,9 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
           BlocProvider<ProfileSavedVideosBloc>.value(value: savedVideosBloc),
       ],
       child: ColoredBox(
-        color: context.vineColors.surfaceContainerHigh,
+        color: context.vineColors.isLight
+            ? context.vineColors.surface
+            : context.vineColors.surfaceContainerHigh,
         child: TabBarView(
           controller: tabController,
           children: [for (final kind in _tabKinds) _gridForKind(kind)],

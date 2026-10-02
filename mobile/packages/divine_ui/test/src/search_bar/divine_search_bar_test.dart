@@ -17,9 +17,10 @@ void main() {
       ValueChanged<String>? onChanged,
       ValueChanged<String>? onSubmitted,
       String? semanticIdentifier,
+      ThemeData? theme,
     }) {
       return MaterialApp(
-        theme: VineTheme.theme,
+        theme: theme ?? VineTheme.theme,
         home: Scaffold(
           body: Center(
             child: SizedBox(
@@ -46,6 +47,21 @@ void main() {
       await tester.pumpWidget(buildTestWidget());
 
       expect(find.text('Find something cool...'), findsOneWidget);
+    });
+
+    testWidgets('light search field has a neutral fill and visible outline', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildTestWidget(theme: VineTheme.lightTheme));
+
+      final decoration = tester
+          .widget<TextField>(find.byType(TextField))
+          .decoration!;
+      expect(decoration.fillColor, VineTheme.lightColors.iconButton);
+      final enabled = decoration.enabledBorder! as OutlineInputBorder;
+      expect(enabled.borderSide.color, VineTheme.lightColors.outline);
+      final focused = decoration.focusedBorder! as OutlineInputBorder;
+      expect(focused.borderSide.color, VineTheme.lightColors.accentPositive);
     });
 
     testWidgets('exposes semanticIdentifier without hiding the hint', (

@@ -419,7 +419,7 @@ class _ProfileBadgeChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(radius),
           side: BorderSide(
             color: context.vineColors.isLight
-                ? context.vineColors.outlineMuted
+                ? context.vineColors.outline
                 : VineTheme.neutral10,
           ),
         ),
