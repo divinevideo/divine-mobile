@@ -57,11 +57,14 @@ directly, or open `mobile/android` in Android Studio.
 
 ## Debug builds render with Impeller
 
-Debug builds use the renderer that ships: Impeller, on Vulkan where the device
-supports it and on OpenGLES otherwise. `main/AndroidManifest.xml` records why
-release builds use it. Until October 2026 the debug manifest forced Skia, so a
-debug build on a real phone showed "preview unavailable" for the video editor's
-chroma-key and effects previews unless the run passed `--enable-impeller`.
+Debug builds use the renderer that ships. On API 29 and newer that is Impeller,
+on Vulkan where the device supports it and on OpenGLES otherwise.
+`main/AndroidManifest.xml` records why release builds use it. Below API 29 (the
+app's minimum is 28) the engine uses Skia, which has no `ImageFilter.shader`, so
+the video editor's chroma-key and effects previews stay unavailable there. Until
+October 2026 the debug manifest forced Skia on every device, so a debug build on
+a real phone showed "This device can't show the live preview" for those previews
+unless the run passed `--enable-impeller`.
 
 Emulators need nothing special. The engine never selects Vulkan on an Android
 emulator; it renders with Impeller OpenGLES instead. That holds on SwiftShader
