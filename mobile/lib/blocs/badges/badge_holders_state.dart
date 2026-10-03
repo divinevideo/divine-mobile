@@ -8,6 +8,9 @@ enum BadgeHoldersStatus {
   /// The holders are loading.
   loading,
 
+  /// Locally indexed holders are visible while relay reconciliation continues.
+  preview,
+
   /// The holders loaded.
   loaded,
 
@@ -54,7 +57,8 @@ class BadgeHoldersState extends Equatable {
   /// Loading status of [holders].
   final BadgeHoldersStatus holdersStatus;
 
-  /// Pubkeys of every holder who currently accepts the badge.
+  /// Pubkeys of the holders known so far; complete only when [holdersStatus]
+  /// is [BadgeHoldersStatus.loaded].
   final List<String> holders;
 
   /// Status of the viewer's subscription.

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:badge_repository/badge_repository.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -37,6 +39,34 @@ void main() {
     );
 
     group('load', () {
+      test('ignores a stale preview page after final holders load', () async {
+        final previewPager = _MockBadgeVideoPager();
+        final finalPager = _MockBadgeVideoPager();
+        final previewResult = Completer<List<VideoEvent>>();
+        when(
+          () => videosRepository.createBadgeVideoPager({'preview'}),
+        ).thenReturn(previewPager);
+        when(
+          () => videosRepository.createBadgeVideoPager({'final'}),
+        ).thenReturn(finalPager);
+        when(previewPager.loadMore).thenAnswer(
+          (_) => previewResult.future,
+        );
+        when(finalPager.loadMore).thenAnswer(
+          (_) async => [_video('final')],
+        );
+        when(() => finalPager.hasMore).thenReturn(false);
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+
+        final previewLoad = cubit.loadForHolders({'preview'});
+        await cubit.loadForHolders({'final'});
+        previewResult.complete([_video('preview')]);
+        await previewLoad;
+
+        expect(cubit.state.videos.map((video) => video.id), ['final']);
+      });
+
       blocTest<BadgeVideosCubit, BadgeVideosState>(
         'uses a supplied holder snapshot without reading the badge again',
         setUp: () {
