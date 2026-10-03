@@ -135,6 +135,16 @@ class _MockAudioPlaybackService extends Mock implements AudioPlaybackService {}
 class _MockCountdownSoundService extends Mock
     implements CountdownSoundService {}
 
+Future<void> _atRecorderState(
+  VideoRecorderBloc bloc,
+  bool Function(VideoRecorderBlocState) matches,
+  void Function() trigger,
+) async {
+  final reached = bloc.stream.firstWhere(matches);
+  trigger();
+  await reached;
+}
+
 void main() {
   late _MockCameraService cameraService;
   late _MockClipManager clipManager;
@@ -186,7 +196,9 @@ void main() {
     clipManager = _MockClipManager();
     videoEditor = _MockVideoEditor();
     prefs = _MockSharedPreferences();
+  });
 
+  void stubRecorderDefaults() {
     // Sensible defaults that keep the bloc's core handlers from
     // throwing on noSuchMethod when not explicitly stubbed by a test.
     when(() => cameraService.canRecord).thenReturn(true);
@@ -237,7 +249,7 @@ void main() {
     when(() => prefs.setString(any(), any())).thenAnswer((_) async => true);
     when(() => prefs.getBool(any())).thenReturn(null);
     when(() => prefs.setBool(any(), any())).thenAnswer((_) async => true);
-  });
+  }
 
   /// Builds a bloc with all dependencies wired to the mocks.
   VideoRecorderBloc buildBloc({
@@ -259,6 +271,7 @@ void main() {
 
   group(VideoRecorderBloc, () {
     test('initial state has all defaults zeroed', () {
+      stubRecorderDefaults();
       final bloc = buildBloc();
       addTearDown(bloc.close);
 
@@ -272,6 +285,7 @@ void main() {
     });
 
     test('exposes camera-service delegating getters', () {
+      stubRecorderDefaults();
       final bloc = buildBloc();
       addTearDown(bloc.close);
 
@@ -281,12 +295,13 @@ void main() {
     });
 
     group('showZoomIndicator', () {
+      setUp(stubRecorderDefaults);
       test('shows the zoom ruler when a two-pointer pinch starts', () async {
         final bloc = buildBloc();
         addTearDown(bloc.close);
 
         bloc.add(VideoRecorderScaleStarted(ScaleStartDetails(pointerCount: 2)));
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(bloc.state.showZoomIndicator, isTrue);
       });
@@ -299,7 +314,7 @@ void main() {
         bloc.add(
           VideoRecorderScaleUpdated(ScaleUpdateDetails(pointerCount: 1)),
         );
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(bloc.state.showZoomIndicator, isFalse);
       });
@@ -316,11 +331,11 @@ void main() {
           bloc.add(
             VideoRecorderScaleStarted(ScaleStartDetails(pointerCount: 1)),
           );
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(
             VideoRecorderScaleUpdated(ScaleUpdateDetails(pointerCount: 2)),
           );
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
 
           expect(bloc.state.showZoomIndicator, isTrue);
         },
@@ -334,7 +349,7 @@ void main() {
         addTearDown(bloc.close);
 
         bloc.add(const VideoRecorderZoomLevelSet(2));
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(bloc.state.showZoomIndicator, isTrue);
       });
@@ -365,16 +380,17 @@ void main() {
     });
 
     group('isPinchActive', () {
+      setUp(stubRecorderDefaults);
       test('is set while a preview scale gesture is in progress', () async {
         final bloc = buildBloc();
         addTearDown(bloc.close);
 
         bloc.add(VideoRecorderScaleStarted(ScaleStartDetails(pointerCount: 1)));
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         expect(bloc.state.isPinchActive, isTrue);
 
         bloc.add(const VideoRecorderScaleEnded());
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         expect(bloc.state.isPinchActive, isFalse);
       });
 
@@ -434,6 +450,7 @@ void main() {
     });
 
     group('pinch-to-zoom snap', () {
+      setUp(stubRecorderDefaults);
       test('pinching down across the 1× detent snaps zoom to 1.0', () async {
         when(
           () => cameraService.setZoomLevel(any()),
@@ -446,13 +463,13 @@ void main() {
         // well + detent should lock it to 1×.
         bloc.emit(const VideoRecorderBlocState(zoomLevel: 1.5));
         bloc.add(VideoRecorderScaleStarted(ScaleStartDetails()));
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         // 1.5 × 0.9 = 1.35 (still above the detent).
         bloc.add(VideoRecorderScaleUpdated(ScaleUpdateDetails(scale: 0.9)));
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         // 1.5 × 0.66 = 0.99 (within the snap tolerance of 1.0).
         bloc.add(VideoRecorderScaleUpdated(ScaleUpdateDetails(scale: 0.66)));
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(bloc.state.snappedTo1x, isTrue);
         expect(bloc.state.zoomLevel, closeTo(1.0, 0.02));
@@ -469,15 +486,16 @@ void main() {
         // the range the gesture starts — uniform sensitivity.
         bloc.emit(const VideoRecorderBlocState(zoomLevel: 2));
         bloc.add(VideoRecorderScaleStarted(ScaleStartDetails()));
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         bloc.add(VideoRecorderScaleUpdated(ScaleUpdateDetails(scale: 1.5)));
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(bloc.state.zoomLevel, closeTo(3.0, 0.01));
       });
     });
 
     group('VideoRecorderZoomedByLongPress', () {
+      setUp(stubRecorderDefaults);
       // minZoomLevel = 0.5, maxZoomLevel = 5, base = 1.0 (default),
       // maxDragDistance = 240. Up is negative dy.
       setUp(() {
@@ -558,6 +576,7 @@ void main() {
     });
 
     group('VideoRecorderLongPressZoomStarted', () {
+      setUp(stubRecorderDefaults);
       setUp(() {
         when(
           () => cameraService.setZoomLevel(any()),
@@ -601,6 +620,7 @@ void main() {
     });
 
     group('VideoRecorderFlashToggled', () {
+      setUp(stubRecorderDefaults);
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'cycles off → torch → auto → off and persists each new mode',
         setUp: () {
@@ -612,9 +632,9 @@ void main() {
           ..emit(const VideoRecorderBlocState(flashMode: DivineFlashMode.off)),
         act: (bloc) async {
           bloc.add(const VideoRecorderFlashToggled());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(const VideoRecorderFlashToggled());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(const VideoRecorderFlashToggled());
         },
         // off → torch → auto → off. Third state asserts flashMode: off
@@ -640,6 +660,7 @@ void main() {
     });
 
     group('VideoRecorderCameraSwitched', () {
+      setUp(stubRecorderDefaults);
       late Completer<bool> switchGate;
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
@@ -730,9 +751,9 @@ void main() {
           bloc
             ..add(const VideoRecorderCameraSwitched())
             ..add(const VideoRecorderCameraSwitched());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           switchGate.complete(true);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         },
         // Only the first tap's emit pair — a rapid double-tap must not queue
         // a second rebind that would just toggle straight back.
@@ -753,6 +774,7 @@ void main() {
     });
 
     group('VideoRecorderStabilizationModeSet', () {
+      setUp(stubRecorderDefaults);
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'persists the new mode when the camera accepts it',
         setUp: () {
@@ -938,12 +960,13 @@ void main() {
     });
 
     group('VideoRecorderAspectRatioToggled', () {
+      setUp(stubRecorderDefaults);
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'flips vertical → square → vertical',
         build: buildBloc,
         act: (bloc) async {
           bloc.add(const VideoRecorderAspectRatioToggled());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(const VideoRecorderAspectRatioToggled());
         },
         expect: () => [
@@ -954,14 +977,15 @@ void main() {
     });
 
     group('VideoRecorderTimerCycled', () {
+      setUp(stubRecorderDefaults);
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'cycles off → three → ten → off',
         build: buildBloc,
         act: (bloc) async {
           bloc.add(const VideoRecorderTimerCycled());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(const VideoRecorderTimerCycled());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(const VideoRecorderTimerCycled());
         },
         expect: () => [
@@ -987,12 +1011,13 @@ void main() {
     });
 
     group('VideoRecorderGridLinesToggled', () {
+      setUp(stubRecorderDefaults);
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'toggles showGridLines',
         build: buildBloc,
         act: (bloc) async {
           bloc.add(const VideoRecorderGridLinesToggled());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(const VideoRecorderGridLinesToggled());
         },
         expect: () => [
@@ -1006,7 +1031,7 @@ void main() {
         build: buildBloc,
         act: (bloc) async {
           bloc.add(const VideoRecorderGridLinesToggled());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(const VideoRecorderGridLinesToggled());
         },
         verify: (_) {
@@ -1038,6 +1063,7 @@ void main() {
     });
 
     group('VideoRecorderShowLastClipOverlayToggled', () {
+      setUp(stubRecorderDefaults);
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'toggles showLastClipOverlay',
         build: buildBloc,
@@ -1048,6 +1074,7 @@ void main() {
     });
 
     group('VideoRecorderZoomLevelSet', () {
+      setUp(stubRecorderDefaults);
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'emits new zoom level when in bounds and camera accepts',
         setUp: () {
@@ -1187,6 +1214,7 @@ void main() {
     });
 
     group('VideoRecorderFocusPointSet', () {
+      setUp(stubRecorderDefaults);
       test(
         'emits focusPoint then resets to zero after the auto-hide timer',
         () {
@@ -1212,6 +1240,7 @@ void main() {
     });
 
     group('VideoRecorderRecordingToggleRequested', () {
+      setUp(stubRecorderDefaults);
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'when idle, dispatches RecordingStartRequested',
         setUp: () {
@@ -1248,6 +1277,7 @@ void main() {
     });
 
     group('sound playback source selection', () {
+      setUp(stubRecorderDefaults);
       late _MockAudioPlaybackService audioService;
 
       setUp(() {
@@ -1323,6 +1353,7 @@ void main() {
     });
 
     group('RecordingStartRequested → flags-in-state migration', () {
+      setUp(stubRecorderDefaults);
       test('reports analytics only after native recording succeeds', () async {
         final reportedModes = <VideoRecorderMode>[];
         when(
@@ -1487,6 +1518,7 @@ void main() {
     });
 
     group('RecordingStartRequested → countdown mic release (#4539)', () {
+      setUp(stubRecorderDefaults);
       late _MockCountdownSoundService countdownSounds;
 
       setUp(() {
@@ -1608,6 +1640,7 @@ void main() {
     });
 
     group('RecordingStopRequested → start-cancel fast path', () {
+      setUp(stubRecorderDefaults);
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'when called during startRecording, sets pendingStopAfterStart '
         'without touching the camera service',
@@ -1652,6 +1685,7 @@ void main() {
     });
 
     group('RecordingStopRequested → failure recovery', () {
+      setUp(stubRecorderDefaults);
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'resets to idle when the native stop throws, so isStoppingRecording '
         'is never latched true and future stops are not permanently blocked',
@@ -1821,7 +1855,7 @@ void main() {
           ),
         act: (bloc) async {
           bloc.add(const VideoRecorderRecordingStopRequested());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           // Re-arm to recording; the second stop must reach the native call
           // rather than bail on a latched isStoppingRecording guard.
           bloc.emit(
@@ -1849,6 +1883,7 @@ void main() {
     });
 
     group('RecordingStopRequested → immediate stop feedback', () {
+      setUp(stubRecorderDefaults);
       late Completer<EditorVideo?> nativeStop;
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
@@ -1896,6 +1931,7 @@ void main() {
     });
 
     group('native auto-stop callback', () {
+      setUp(stubRecorderDefaults);
       test(
         'processes a recovered clip outside recording-limit modes (#9210)',
         () async {
@@ -1963,6 +1999,7 @@ void main() {
       );
 
       group('when nothing was captured', () {
+        setUp(stubRecorderDefaults);
         late void Function(EditorVideo? video) autoStopCallback;
 
         VideoRecorderBloc buildBlocCapturingAutoStop() => buildBloc(
@@ -2034,6 +2071,7 @@ void main() {
     });
 
     group('native screen flash callback', () {
+      setUp(stubRecorderDefaults);
       late ValueChanged<bool> screenFlashCallback;
       late void Function({bool? forceCameraRebuild}) updateStateCallback;
 
@@ -2091,28 +2129,37 @@ void main() {
     });
 
     group('sequential() transformer contract', () {
+      setUp(stubRecorderDefaults);
+      late Completer<bool> nativeStart;
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'queued RecordingStartRequested events process FIFO, not '
         'concurrently — the second start is rejected by the in-flight '
         'guard (isStartingRecording=true) instead of racing it',
         setUp: () {
+          nativeStart = Completer<bool>();
           when(
             () => cameraService.startRecording(
               maxDuration: any(named: 'maxDuration'),
             ),
-          ).thenAnswer((_) async {
-            // Simulate a slow native start so the second event would
-            // otherwise overlap if the transformer were concurrent.
-            await Future<void>.delayed(const Duration(milliseconds: 50));
-            return true;
-          });
+          ).thenAnswer((_) => nativeStart.future);
         },
         build: buildBloc,
         act: (bloc) async {
           bloc.add(const VideoRecorderRecordingStartRequested());
+          await untilCalled(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          );
           bloc.add(const VideoRecorderRecordingStartRequested());
+          await pumpEventQueue();
+          await _atRecorderState(
+            bloc,
+            (state) => state.recordingState == VideoRecorderState.recording,
+            () => nativeStart.complete(true),
+          );
+          await pumpEventQueue();
         },
-        wait: const Duration(milliseconds: 200),
         verify: (_) {
           // Sequential: both events ran in order. The second one saw
           // recordingState=recording and short-circuited (no camera
@@ -2194,6 +2241,7 @@ void main() {
     });
 
     group('detached enrichment', () {
+      setUp(stubRecorderDefaults);
       late Directory docsDir;
       late File recordingFile;
       late ProVideoEditor originalProVideoEditor;
@@ -2546,6 +2594,7 @@ void main() {
     });
 
     group('VideoRecorderCameraPausedForNavigation → recording lock', () {
+      setUp(stubRecorderDefaults);
       late Completer<bool> startGate;
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
@@ -2668,6 +2717,7 @@ void main() {
     });
 
     group('VideoRecorderRecordingLockedForNavigation → recording lock', () {
+      setUp(stubRecorderDefaults);
       late Completer<bool> startGate;
       late File orphanFile;
       late _GatedWakelockPlatform gatedWakelock;
@@ -2839,6 +2889,7 @@ void main() {
     });
 
     group('VideoRecorderAppLifecycleChanged', () {
+      setUp(stubRecorderDefaults);
       const initialized = VideoRecorderBlocState(
         isCameraInitialized: true,
         canRecord: true,
@@ -2941,6 +2992,7 @@ void main() {
     });
 
     group('VideoRecorderResetRequested', () {
+      setUp(stubRecorderDefaults);
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'restores the default state object',
         build: () => buildBloc()
@@ -2957,6 +3009,7 @@ void main() {
     });
 
     group('VideoRecorderRecorderModeSet', () {
+      setUp(stubRecorderDefaults);
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'capture → classic flips defaults and clears clips + editor',
         build: () => buildBloc()
@@ -3072,6 +3125,7 @@ void main() {
         },
       );
       group('stabilization', () {
+        setUp(stubRecorderDefaults);
         setUp(() {
           when(
             () => prefs.getString('camera_last_used_stabilization'),
@@ -3188,6 +3242,7 @@ void main() {
     });
 
     group('VideoRecorderInitializeRequested', () {
+      setUp(stubRecorderDefaults);
       setUp(() {
         when(
           () => cameraService.initialize(
@@ -3206,6 +3261,7 @@ void main() {
       });
 
       group('remote record trigger', () {
+        setUp(stubRecorderDefaults);
         void Function()? trigger;
 
         setUp(() {
@@ -3259,6 +3315,7 @@ void main() {
       });
 
       group('opening into the Upload tab', () {
+        setUp(stubRecorderDefaults);
         test('pauses the camera once it has started', () async {
           final bloc = buildBloc();
           addTearDown(bloc.close);
@@ -3300,6 +3357,7 @@ void main() {
       });
 
       group('camera_startup trace', () {
+        setUp(stubRecorderDefaults);
         // Telemetry-only: a regression here mislabels a Firebase sample, not a
         // user-facing bug — a touch belt-and-suspenders, kept so the outcome
         // mapping can't silently rot.
@@ -3548,6 +3606,7 @@ void main() {
       );
 
       group('stabilization mode', () {
+        setUp(stubRecorderDefaults);
         DivineVideoStabilizationMode? initializedWith() =>
             verify(
                   () => cameraService.initialize(
@@ -3711,6 +3770,7 @@ void main() {
       });
 
       group('recorderMode', () {
+        setUp(stubRecorderDefaults);
         // Stateful stand-in for the persisted last-used mode, so a re-init
         // reads back what an earlier init persisted.
         String? persistedMode;
@@ -3816,6 +3876,7 @@ void main() {
       });
 
       group('autoStartRecording', () {
+        setUp(stubRecorderDefaults);
         setUp(() {
           when(
             () => cameraService.startRecording(
@@ -3882,6 +3943,7 @@ void main() {
     });
 
     group('close()', () {
+      setUp(stubRecorderDefaults);
       test('disposes camera service exactly once', () async {
         final bloc = buildBloc();
         await bloc.close();
@@ -3907,6 +3969,7 @@ void main() {
     });
 
     group('stop-motion', () {
+      setUp(stubRecorderDefaults);
       // Ingest and eager-persist filter unreadable stills via existsSync, so
       // the frame paths used here must be real, non-empty files.
       late Directory frameDir;
@@ -4000,8 +4063,10 @@ void main() {
         seed: () => const VideoRecorderBlocState(
           recorderMode: VideoRecorderMode.stopMotion,
         ),
-        act: (bloc) => bloc.add(const VideoRecorderStopMotionFrameCaptured()),
-        wait: const Duration(milliseconds: 20),
+        act: (bloc) async {
+          bloc.add(const VideoRecorderStopMotionFrameCaptured());
+          await pumpEventQueue();
+        },
         verify: (bloc) {
           verify(() => cameraService.capturePhoto()).called(1);
           expect(bloc.state.stopMotionFrames, [framePath]);
@@ -4028,8 +4093,10 @@ void main() {
           recorderMode: VideoRecorderMode.stopMotion,
           stopMotionStatus: StopMotionStatus.ready,
         ),
-        act: (bloc) => bloc.add(const VideoRecorderStopMotionFrameCaptured()),
-        wait: const Duration(milliseconds: 20),
+        act: (bloc) async {
+          bloc.add(const VideoRecorderStopMotionFrameCaptured());
+          await pumpEventQueue();
+        },
         verify: (bloc) {
           // The after-await guard deletes such a still anyway; the top guard
           // short-circuits the native capture in the ~1-frame ready window.
@@ -4068,11 +4135,17 @@ void main() {
           stopMotionStatus: StopMotionStatus.ready,
         ),
         act: (bloc) async {
-          bloc.add(const VideoRecorderInitializeRequested());
-          await Future<void>.delayed(const Duration(milliseconds: 10));
-          bloc.add(const VideoRecorderStopMotionFrameCaptured());
+          await _atRecorderState(
+            bloc,
+            (state) => state.isCameraInitialized,
+            () => bloc.add(const VideoRecorderInitializeRequested()),
+          );
+          await _atRecorderState(
+            bloc,
+            (state) => state.stopMotionFrames.isNotEmpty,
+            () => bloc.add(const VideoRecorderStopMotionFrameCaptured()),
+          );
         },
-        wait: const Duration(milliseconds: 40),
         verify: (bloc) {
           // Without the reset the top guard would swallow this tap (leftover
           // `ready`): no capture, empty frames. With it, a fresh session
@@ -4191,9 +4264,9 @@ void main() {
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'the shutter tick fires before the captured frame lands',
         setUp: () {
-          // Simulate the slow native capture: the blink must not wait for it.
+          captureGate = Completer<void>();
           when(() => cameraService.capturePhoto()).thenAnswer((_) async {
-            await Future<void>.delayed(const Duration(milliseconds: 10));
+            await captureGate.future;
             return PhotoCaptureResult(filePath: framePath);
           });
         },
@@ -4201,8 +4274,19 @@ void main() {
         seed: () => const VideoRecorderBlocState(
           recorderMode: VideoRecorderMode.stopMotion,
         ),
-        act: (bloc) => bloc.add(const VideoRecorderStopMotionFrameCaptured()),
-        wait: const Duration(milliseconds: 50),
+        act: (bloc) async {
+          await _atRecorderState(
+            bloc,
+            (state) => state.stopMotionShutterTick == 1,
+            () => bloc.add(const VideoRecorderStopMotionFrameCaptured()),
+          );
+          expect(bloc.state.stopMotionFrames, isEmpty);
+          await _atRecorderState(
+            bloc,
+            (state) => state.stopMotionFrames.isNotEmpty,
+            captureGate.complete,
+          );
+        },
         expect: () => [
           isA<VideoRecorderBlocState>()
               .having(
@@ -4225,8 +4309,10 @@ void main() {
         seed: () => const VideoRecorderBlocState(
           recorderMode: VideoRecorderMode.stopMotion,
         ),
-        act: (bloc) => bloc.add(const VideoRecorderStopMotionFrameCaptured()),
-        wait: const Duration(milliseconds: 20),
+        act: (bloc) async {
+          bloc.add(const VideoRecorderStopMotionFrameCaptured());
+          await pumpEventQueue();
+        },
         verify: (bloc) {
           final captured = verify(
             () => clipManager.saveStopMotionSessionToLibrary(
@@ -4253,8 +4339,10 @@ void main() {
         seed: () => const VideoRecorderBlocState(
           recorderMode: VideoRecorderMode.stopMotion,
         ),
-        act: (bloc) => bloc.add(const VideoRecorderRecordingToggleRequested()),
-        wait: const Duration(milliseconds: 20),
+        act: (bloc) async {
+          bloc.add(const VideoRecorderRecordingToggleRequested());
+          await pumpEventQueue();
+        },
         verify: (bloc) {
           verify(() => cameraService.capturePhoto()).called(1);
           expect(bloc.state.stopMotionFrames, hasLength(1));
@@ -4337,8 +4425,10 @@ void main() {
           recorderMode: VideoRecorderMode.stopMotion,
           stopMotionFrames: [frameAPath, frameBPath],
         ),
-        act: (bloc) => bloc.add(const VideoRecorderStopMotionFrameUndone()),
-        wait: const Duration(milliseconds: 20),
+        act: (bloc) async {
+          bloc.add(const VideoRecorderStopMotionFrameUndone());
+          await pumpEventQueue();
+        },
         verify: (bloc) {
           expect(bloc.state.stopMotionFrames, [frameAPath]);
           final captured = verify(
@@ -4366,8 +4456,10 @@ void main() {
           recorderMode: VideoRecorderMode.stopMotion,
           stopMotionFrames: [frameAPath],
         ),
-        act: (bloc) => bloc.add(const VideoRecorderStopMotionFrameUndone()),
-        wait: const Duration(milliseconds: 20),
+        act: (bloc) async {
+          bloc.add(const VideoRecorderStopMotionFrameUndone());
+          await pumpEventQueue();
+        },
         verify: (bloc) {
           expect(bloc.state.stopMotionFrames, isEmpty);
           verify(
@@ -4389,6 +4481,9 @@ void main() {
 
       test('undo removal waits for the in-flight eager save', () async {
         final calls = <String>[];
+        final saving = Completer<void>();
+        final releaseSave = Completer<void>();
+        final removed = Completer<void>();
         when(
           () => clipManager.saveStopMotionSessionToLibrary(
             id: any(named: 'id'),
@@ -4401,7 +4496,8 @@ void main() {
           ),
         ).thenAnswer((_) async {
           calls.add('save-start');
-          await Future<void>.delayed(const Duration(milliseconds: 20));
+          saving.complete();
+          await releaseSave.future;
           calls.add('save-end');
           return true;
         });
@@ -4409,6 +4505,7 @@ void main() {
           () => clipManager.removeStopMotionSessionFromLibrary(any()),
         ).thenAnswer((_) async {
           calls.add('remove');
+          removed.complete();
         });
 
         final bloc = buildBloc();
@@ -4425,15 +4522,19 @@ void main() {
         );
         bloc.add(const VideoRecorderStopMotionFrameCaptured());
         await captured;
-        await Future<void>.delayed(Duration.zero);
+        await saving.future;
         expect(calls, ['save-start']);
 
-        bloc.add(const VideoRecorderStopMotionFrameUndone());
-        await Future<void>.delayed(Duration.zero);
+        await _atRecorderState(
+          bloc,
+          (state) => state.stopMotionFrames.isEmpty,
+          () => bloc.add(const VideoRecorderStopMotionFrameUndone()),
+        );
 
         expect(calls, ['save-start']);
 
-        await Future<void>.delayed(const Duration(milliseconds: 40));
+        releaseSave.complete();
+        await removed.future;
         await bloc.close();
 
         expect(calls, ['save-start', 'save-end', 'remove']);
@@ -4446,10 +4547,12 @@ void main() {
           recorderMode: VideoRecorderMode.stopMotion,
           stopMotionFrames: [frameAPath, frameBPath],
         ),
-        act: (bloc) => bloc.add(
-          const VideoRecorderRecorderModeSet(VideoRecorderMode.classic),
-        ),
-        wait: const Duration(milliseconds: 20),
+        act: (bloc) async {
+          bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.classic),
+          );
+          await pumpEventQueue();
+        },
         verify: (bloc) {
           expect(bloc.state.stopMotionFrames, isEmpty);
           // Files deleted AND the eager-saved row removed — no orphan.
@@ -4466,8 +4569,10 @@ void main() {
           recorderMode: VideoRecorderMode.stopMotion,
           stopMotionFrames: [frameAPath, frameBPath],
         ),
-        act: (bloc) => bloc.add(const VideoRecorderResetRequested()),
-        wait: const Duration(milliseconds: 20),
+        act: (bloc) async {
+          bloc.add(const VideoRecorderResetRequested());
+          await pumpEventQueue();
+        },
         verify: (bloc) {
           expect(bloc.state.stopMotionFrames, isEmpty);
           verify(
@@ -4654,7 +4759,7 @@ void main() {
         ),
         act: (bloc) async {
           bloc.add(const VideoRecorderStopMotionAssembleRequested());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(const VideoRecorderStopMotionAssembleRequested());
         },
         errors: () => [isA<Exception>(), isA<Exception>()],
