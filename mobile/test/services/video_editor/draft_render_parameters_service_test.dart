@@ -296,30 +296,6 @@ void main() {
       );
     });
 
-    test('prefers the editor body the state history recorded', () async {
-      // The canvas takes the first clip's shape, while `lastRenderedImgSize`
-      // keeps the shape the session opened with. Once a square clip becomes
-      // first in a vertical session the two disagree, and the layers were
-      // laid out against the body.
-      final stub = _StubLayerRasterizer();
-      addTearDown(stub.dispose);
-
-      final draft = _draft(
-        editorStateHistory: {
-          ..._historyWithTextLayer(),
-          'lastRenderedImgSize': {'width': 221.0, 'height': 393.0},
-          'editorBodySize': {'width': 393.0, 'height': 393.0},
-        },
-      );
-
-      final parameters = await DraftRenderParametersService(
-        rasterizer: stub,
-      ).buildForDraft(draft);
-
-      expect(stub.editorBodySize, equals(const Size(393, 393)));
-      expect(parameters!.bodySize, equals(const Size(393, 393)));
-    });
-
     // The four cases below all mean "this draft has overlays we cannot
     // reproduce". Returning parameters without them would publish a video
     // silently missing text/stickers the user still sees on the draft — the

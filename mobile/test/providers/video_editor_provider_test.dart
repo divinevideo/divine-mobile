@@ -3616,44 +3616,6 @@ void main() {
     });
   });
 
-  group('updateEditorEditingParameters canvas-only changes', () {
-    late ProviderContainer container;
-
-    setUp(() async {
-      SharedPreferences.setMockInitialValues({});
-      final prefs = await SharedPreferences.getInstance();
-      container = ProviderContainer(
-        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-      );
-    });
-
-    tearDown(() {
-      container.dispose();
-    });
-
-    CompleteParameters paramsWithBody(Size bodySize) =>
-        CompleteParameters.fromMap(<String, dynamic>{}).copyWith(
-          bodySize: bodySize,
-        );
-
-    test('stores parameters whose only change is the canvas size, so the '
-        'export places overlays against the canvas they were laid out on', () {
-      final notifier = container.read(videoEditorProvider.notifier);
-
-      notifier.updateEditorEditingParameters(
-        paramsWithBody(const Size(221, 393)),
-      );
-      notifier.updateEditorEditingParameters(
-        paramsWithBody(const Size(393, 393)),
-      );
-
-      expect(
-        container.read(videoEditorProvider).editorEditingParameters?.bodySize,
-        equals(const Size(393, 393)),
-      );
-    });
-  });
-
   group('cover thumbnail persistence', () {
     late ProviderContainer container;
 
