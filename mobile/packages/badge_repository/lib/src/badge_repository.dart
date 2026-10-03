@@ -471,6 +471,18 @@ class BadgeRepository {
     });
   }
 
+  /// [pubkeys] without the accounts this viewer hides, in their given order.
+  ///
+  /// Applies the same filter as [loadAcceptedHolders], for holder sets that
+  /// come from somewhere other than a relay walk.
+  List<String> withoutHiddenPubkeys(Iterable<String> pubkeys) {
+    final isHiddenPubkey = _isHiddenPubkey;
+    return [
+      for (final pubkey in pubkeys)
+        if (isHiddenPubkey == null || !isHiddenPubkey(pubkey)) pubkey,
+    ];
+  }
+
   /// Every accepted holder of the badges the current account subscribes to.
   ///
   /// Empty when signed out or subscribed to nothing. Throws when the
