@@ -2,7 +2,6 @@
 // ABOUTME: Hero header + masonry grid, owner actions sheet, manage-posts mode
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -18,7 +17,6 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/curated_list_by_author_screen.dart';
-import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -27,6 +25,8 @@ import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
+import 'package:openvine/widgets/list_video_player_mode.dart';
+import 'package:openvine/widgets/rounded_grid_viewport.dart';
 import 'package:openvine/widgets/user_name.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -115,7 +115,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     final useFrozenIds = widget.videoIds != null && localList == null;
     final videosAsync = useFrozenIds
         ? ref.watch(videoEventsByIdsProvider(widget.videoIds!))
-        : ref.watch(curatedListVideoEventsProvider(widget.listId));
+        : ref.watch(curatedListVideoEventsProvider(_cacheListId));
 
     // Managing posts needs loaded, non-empty content: an empty list has
     // nothing to remove and an error view has no posts to manage.
@@ -128,12 +128,12 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     final service = ref.read(curatedListsStateProvider.notifier).service;
     final isOwned =
         serviceAsync.whenOrNull(
-          data: (_) => service?.isOwnedList(widget.listId),
+          data: (_) => service?.isOwnedList(_cacheListId),
         ) ??
         false;
     final isSubscribed =
         serviceAsync.whenOrNull(
-          data: (_) => service?.isSubscribedToList(widget.listId),
+          data: (_) => service?.isSubscribedToList(_cacheListId),
         ) ??
         false;
     final list = localList ?? widget.discoveredList;
@@ -219,11 +219,13 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
 
           // If in video mode, show fullscreen video player
           if (_activeVideoIndex != null) {
-            return _ListVideoPlayerMode(
+            return ListVideoPlayerMode(
               videos: videos,
               activeIndex: _activeVideoIndex!,
               listName: widget.listName,
               onExit: _exitVideoMode,
+              unavailableMessage: context.l10n.curatedListVideoNotAvailable,
+              trafficSource: ViewTrafficSource.search,
             );
           }
 
@@ -235,7 +237,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
             >(
               bloc: cubit,
               selector: (state) => state.selectedVideoIds,
-              builder: (context, selectedVideoIds) => _RoundedGridViewport(
+              builder: (context, selectedVideoIds) => RoundedGridViewport(
                 child: ComposableVideoGrid(
                   videos: videos,
                   useMasonryLayout: true,
@@ -256,7 +258,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
             );
           }
 
-          return _RoundedGridViewport(
+          return RoundedGridViewport(
             child: ComposableVideoGrid(
               videos: videos,
               useMasonryLayout: true,
@@ -397,8 +399,8 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
   /// tile on screen.
   void _refreshListVideos() {
     ref
-      ..invalidate(curatedListVideosProvider(widget.listId))
-      ..invalidate(curatedListVideoEventsProvider(widget.listId));
+      ..invalidate(curatedListVideosProvider(_cacheListId))
+      ..invalidate(curatedListVideoEventsProvider(_cacheListId));
     // The discovered-list path watches the frozen-ids provider instead, and
     // Retry after a fetch error has to re-run that one.
     if (widget.videoIds case final ids?) {
@@ -431,10 +433,24 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     _exitManageMode();
   }
 
+  /// Keep existing local IDs usable, but never let another author's same
+  /// d-tag satisfy an author-scoped route. New discovered records are cached
+  /// under their coordinate so following them cannot select a colliding list.
+  String get _cacheListId {
+    final author = widget.authorPubkey;
+    if (author == null) return widget.listId;
+    final local = ref
+        .read(curatedListsStateProvider.notifier)
+        .service
+        ?.getListById(widget.listId);
+    if (local?.pubkey == author) return widget.listId;
+    return '$author:${widget.listId}';
+  }
+
   CuratedList? _localList() => ref
       .read(curatedListsStateProvider.notifier)
       .service
-      ?.getListById(widget.listId);
+      ?.getListById(_cacheListId);
 
   Future<void> _showOwnerActions({required bool canManagePosts}) async {
     final list = _localList();
@@ -625,8 +641,8 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     });
 
     try {
-      if (service.isSubscribedToList(widget.listId)) {
-        await service.unsubscribeFromList(widget.listId);
+      if (service.isSubscribedToList(_cacheListId)) {
+        await service.unsubscribeFromList(_cacheListId);
         Log.info(
           'Unsubscribed from list: ${widget.listName}',
           category: LogCategory.ui,
@@ -636,7 +652,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
         // description or image, and whatever subscribes here is what the
         // cache serves from then on.
         final list =
-            service.getListById(widget.listId) ??
+            _localList() ??
             widget.discoveredList ??
             CuratedList(
               id: widget.listId,
@@ -646,7 +662,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
               createdAt: DateTime.now(),
               updatedAt: DateTime.now(),
             );
-        await service.subscribeToList(widget.listId, list);
+        await service.subscribeToList(_cacheListId, list);
         Log.info(
           'Subscribed to list: ${widget.listName}',
           category: LogCategory.ui,
@@ -672,27 +688,6 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
         });
       }
     }
-  }
-}
-
-/// Clips the scrolling grid region's top corners, so content sliding under
-/// the app bar keeps the same rounded seam the design's radius cap draws.
-///
-/// Complements [ComposableVideoGrid.topOuterRadius]: that rounds the grid
-/// block itself at rest, this rounds the viewport while scrolled.
-class _RoundedGridViewport extends StatelessWidget {
-  const _RoundedGridViewport({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(
-        top: Radius.circular(VineTheme.shellInnerCornerRadius),
-      ),
-      child: child,
-    );
   }
 }
 
@@ -938,55 +933,6 @@ class _ManageRemoveBar extends StatelessWidget {
               );
             },
           ),
-    );
-  }
-}
-
-/// Fullscreen playback mode for a tapped grid tile.
-class _ListVideoPlayerMode extends StatelessWidget {
-  const _ListVideoPlayerMode({
-    required this.videos,
-    required this.activeIndex,
-    required this.listName,
-    required this.onExit,
-  });
-
-  final List<VideoEvent> videos;
-  final int activeIndex;
-  final String listName;
-  final VoidCallback onExit;
-
-  @override
-  Widget build(BuildContext context) {
-    if (videos.isEmpty || activeIndex >= videos.length) {
-      return Center(
-        child: Text(
-          context.l10n.curatedListVideoNotAvailable,
-          style: VineTheme.bodyMediumFont(
-            color: context.vineColors.secondaryText,
-          ),
-        ),
-      );
-    }
-
-    // Embedded as this screen's "video mode": both the feed's own app-bar back
-    // button ([onBack]) and the system back gesture ([PopScope]) return to the
-    // grid instead of popping the whole route, so the user sees a single back
-    // button and hardware back stays consistent with it.
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        onExit();
-      },
-      child: PooledFullscreenVideoFeedScreen(
-        source: VideoListViewSource(videos),
-        feedRepository: StaticFeedRepository(),
-        initialIndex: activeIndex,
-        contextTitle: listName,
-        trafficSource: ViewTrafficSource.search,
-        onBack: onExit,
-      ),
     );
   }
 }

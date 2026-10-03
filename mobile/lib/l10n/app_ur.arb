@@ -586,15 +586,6 @@
   "featuredTabLoadFailed": "یہ مجموعہ لوڈ نہیں ہو سکا۔",
   "featuredTabRetry": "دوبارہ کوشش کریں",
   "exploreNoVideosAvailable": "کوئی ویڈیو دستیاب نہیں",
-  "exploreDiscoverLists": "فہرستیں دریافت کریں",
-  "exploreAboutLists": "فہرستوں کے بارے میں",
-  "exploreAboutListsDescription": "فہرستیں Divine مواد کو دو طریقوں سے ترتیب دینے اور منتخب کرنے میں مدد دیتی ہیں:",
-  "explorePeopleLists": "لوگوں کی فہرستیں",
-  "explorePeopleListsDescription": "کریئیٹرز کے گروہوں کو فالو کریں اور ان کی تازہ ویڈیوز دیکھیں",
-  "exploreVideoLists": "ویڈیو فہرستیں",
-  "exploreVideoListsDescription": "بعد میں دیکھنے کے لیے اپنی پسندیدہ ویڈیوز کی پلے لسٹیں بنائیں",
-  "exploreMyLists": "میری فہرستیں",
-  "exploreSubscribedLists": "سبسکرائب شدہ فہرستیں",
   "exploreErrorLoadingLists": "فہرستیں لوڈ کرنے میں خرابی۔ براہ کرم دوبارہ کوشش کریں۔",
   "exploreNewVideosCount": "{count, plural, =1{1 نئی ویڈیو} other{{count} نئی ویڈیوز}}",
   "@exploreNewVideosCount": {
@@ -1928,10 +1919,8 @@
   "peopleListsNoPeopleSubtitle": "شروع کرنے کے لیے کچھ لوگ شامل کریں",
   "peopleListsNoVideosTitle": "ابھی کوئی ویڈیو نہیں",
   "peopleListsNoVideosSubtitle": "فہرست کے ممبران کی ویڈیوز یہاں نظر آئیں گی",
-  "peopleListsNoVideosAvailable": "کوئی ویڈیو دستیاب نہیں",
   "peopleListsFailedToLoadVideos": "ویڈیوز لوڈ نہیں ہو سکیں",
   "peopleListsVideoNotAvailable": "ویڈیو دستیاب نہیں",
-  "peopleListsBackToGridTooltip": "گرڈ پر واپس",
   "peopleListsErrorLoadingVideos": "ویڈیوز لوڈ کرنے میں خرابی",
   "peopleListsNoPeopleToAdd": "شامل کرنے کے لیے کوئی لوگ دستیاب نہیں۔",
   "peopleListsAddToListName": "{name} میں شامل کریں",
@@ -2383,14 +2372,6 @@
   "listAddToList": "فہرست میں شامل کریں",
   "listVideoCount": "{count} ویڈیوز",
   "@listVideoCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "listPersonCount": "{count, plural, =1{1 شخص} other{{count} لوگ}}",
-  "@listPersonCount": {
     "placeholders": {
       "count": {
         "type": "int"
@@ -3152,14 +3133,6 @@
     }
   },
   "discoverListsFailedToUpdateSubscription": "سبسکرپشن اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔",
-  "discoverListsTitle": "فہرستیں دریافت کریں",
-  "discoverListsFailedToLoad": "فہرستیں لوڈ نہیں ہو سکیں",
-  "discoverListsLoading": "عوامی فہرستیں دریافت ہو رہی ہیں...",
-  "discoverListsRelayTimeout": "ریلے نے وقت پر فہرستیں واپس نہیں کیں۔ دوبارہ کوشش کریں۔",
-  "discoverListsServiceUnavailable": "سروس دستیاب نہیں ہے۔",
-  "discoverListsEmptyTitle": "کوئی عوامی فہرست نہیں ملی",
-  "discoverListsEmptySubtitle": "نئی فہرستوں کے لیے بعد میں دیکھیں",
-  "discoverListsByAuthorPrefix": "از",
   "curatedListEmptyTitle": "اس فہرست میں کوئی ویڈیو نہیں",
   "curatedListEmptySubtitle": "شروع کرنے کے لیے کچھ ویڈیوز شامل کریں",
   "curatedListLoadingVideos": "ویڈیوز لوڈ ہو رہی ہیں...",
@@ -6588,5 +6561,52 @@
   "crosspostingAutoBody": "آپ کا ہر نیا لوپ آپ کی طرف سے {platform} پر چلا جاتا ہے — بغیر کسی اضافی ٹیپ کے۔ صرف اُن لوپس پر لاگو ہوتا ہے جو آپ اسے آن کرنے کے بعد شائع کریں۔",
   "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "خودکار آن کریں",
-  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+  "listLoopsCount": "{count, plural, =1{{formatted} لوپ} other{{formatted} لوپ}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listMemberCount": "{count, plural, =1{{count} ممبر} other{{count} ممبران}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsLoadFailed": "یہ فہرست لوڈ نہیں ہو سکی۔",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} شخص} other{{count} لوگ}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsViewAllMembers": "سب دیکھیں",
+  "listMemberNamesSeparator": "، ",
+  "listCardSemanticLabel": "{visibility, select, private{{name}، نجی، {count}} other{{name}، {count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "listsDiscoveryLoadingLabel": "فہرستیں لوڈ ہو رہی ہیں",
+  "listsDiscoveryEmpty": "اس بار کوئی فہرست ہاتھ نہیں آئی۔ ریفریش کے لیے کھینچیں۔"
 }

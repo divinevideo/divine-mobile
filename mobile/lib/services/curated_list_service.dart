@@ -127,7 +127,7 @@ class CuratedListService extends ChangeNotifier {
   /// Get all subscribed lists
   List<CuratedList> get subscribedLists {
     return _lists
-        .where((list) => _subscribedListIds.contains(list.id))
+        .where((list) => isSubscribedToList(list.authorScopedId))
         .toList();
   }
 
@@ -211,7 +211,7 @@ class CuratedListService extends ChangeNotifier {
   }
 
   /// Check if default list exists
-  bool hasDefaultList() => _lists.any((list) => list.id == defaultListId);
+  bool hasDefaultList() => getDefaultList() != null;
 
   bool _wasDefaultListDeleted() {
     return _prefs.getBool(defaultListDeletedStorageKey) ?? false;
@@ -257,13 +257,7 @@ class CuratedListService extends ChangeNotifier {
   }
 
   /// Get the default "My List" for quick adding
-  CuratedList? getDefaultList() {
-    try {
-      return _lists.firstWhere((list) => list.id == defaultListId);
-    } catch (e) {
-      return null;
-    }
-  }
+  CuratedList? getDefaultList() => _cacheIndex.findOwned(defaultListId);
 
   /// Create a new curated list with enhanced playlist features
   Future<CuratedList?> createList({
@@ -402,7 +396,9 @@ class CuratedListService extends ChangeNotifier {
       return false;
     }
 
-    final listIndex = _lists.indexWhere((list) => list.id == updatedList.id);
+    final listIndex = _lists.indexWhere(
+      (list) => list.authorScopedId == updatedList.authorScopedId,
+    );
     if (listIndex == -1) return false;
 
     _lists[listIndex] = updatedList;
@@ -411,7 +407,7 @@ class CuratedListService extends ChangeNotifier {
     if (_authService.isAuthenticated &&
         !await _publishListToNostr(updatedList)) {
       final currentIndex = _lists.indexWhere(
-        (list) => list.id == updatedList.id,
+        (list) => list.authorScopedId == updatedList.authorScopedId,
       );
       if (currentIndex != -1) {
         // Unconfirmed publishing queues network failures for reconnect. Keep
@@ -438,7 +434,7 @@ class CuratedListService extends ChangeNotifier {
 
   Future<bool> _addVideoToList(String listId, String videoEventId) async {
     try {
-      final listIndex = _lists.indexWhere((list) => list.id == listId);
+      final listIndex = _listIndex(listId);
       if (listIndex == -1) {
         Log.warning(
           'List not found: $listId',
@@ -496,7 +492,7 @@ class CuratedListService extends ChangeNotifier {
 
   Future<bool> _removeVideoFromList(String listId, String videoEventId) async {
     try {
-      final listIndex = _lists.indexWhere((list) => list.id == listId);
+      final listIndex = _listIndex(listId);
       if (listIndex == -1) {
         Log.warning(
           'List not found: $listId',
@@ -537,7 +533,7 @@ class CuratedListService extends ChangeNotifier {
 
   /// Check if video is in a specific list
   bool isVideoInList(String listId, String videoEventId) {
-    final list = _lists.where((l) => l.id == listId).firstOrNull;
+    final list = getListById(listId);
     return list?.videoEventIds.contains(videoEventId) ?? false;
   }
 
@@ -545,14 +541,18 @@ class CuratedListService extends ChangeNotifier {
   bool isVideoInDefaultList(String videoEventId) =>
       isVideoInList(defaultListId, videoEventId);
 
-  /// Get list by ID
-  CuratedList? getListById(String listId) {
-    try {
-      return _lists.firstWhere((list) => list.id == listId);
-    } catch (e) {
-      return null;
-    }
-  }
+  CuratedListCacheIndex get _cacheIndex => CuratedListCacheIndex(
+    _lists,
+    ownerPubkey: _authService.currentPublicKeyHex,
+  );
+
+  /// Gets a local list by its legacy ID or its author-scoped ID.
+  ///
+  /// Public list routes use the author-scoped ID when a d-tag collides with
+  /// another account's list. Never fall back to a bare d-tag for that lookup.
+  CuratedList? getListById(String listId) => _cacheIndex.find(listId);
+
+  int _listIndex(String listId) => _cacheIndex.indexOf(listId);
 
   /// Update list metadata with enhanced playlist features.
   ///
@@ -602,7 +602,7 @@ class CuratedListService extends ChangeNotifier {
     PlayOrder? playOrder,
   }) async {
     try {
-      final listIndex = _lists.indexWhere((list) => list.id == listId);
+      final listIndex = _listIndex(listId);
       if (listIndex == -1) {
         return false;
       }
@@ -670,7 +670,7 @@ class CuratedListService extends ChangeNotifier {
         // plaintext copy is still what every relay serves and the list must
         // keep saying public until the user retries.
         if (!visibilityChanged) {
-          final currentIndex = _lists.indexWhere((l) => l.id == listId);
+          final currentIndex = _listIndex(listId);
           if (currentIndex != -1) {
             _lists[currentIndex] = _lists[currentIndex].copyWith(
               pendingRepublish: true,
@@ -691,7 +691,7 @@ class CuratedListService extends ChangeNotifier {
       // the signed-out case still owes a write, and it must re-resolve the
       // index — [listIndex] was captured before the publish awaits above.
       if (!_authService.isAuthenticated) {
-        final currentIndex = _lists.indexWhere((list) => list.id == listId);
+        final currentIndex = _listIndex(listId);
         if (currentIndex == -1) {
           return false;
         }
@@ -727,7 +727,7 @@ class CuratedListService extends ChangeNotifier {
 
   Future<bool> _deleteOwnedList(String listId) async {
     try {
-      final listIndex = _lists.indexWhere((list) => list.id == listId);
+      final listIndex = _listIndex(listId);
       if (listIndex == -1) {
         return false;
       }
@@ -789,7 +789,7 @@ class CuratedListService extends ChangeNotifier {
   /// removing an earlier list in the meantime shifts the index, so a
   /// positional remove would drop the wrong one.
   Future<void> _removeListAndSubscription(String listId) async {
-    _lists.removeWhere((list) => list.id == listId);
+    _lists.remove(getListById(listId));
     _subscribedListIds.remove(listId);
     await _saveLists();
     await _saveSubscribedListIds();
@@ -808,7 +808,7 @@ class CuratedListService extends ChangeNotifier {
 
   Future<bool> _reorderVideos(String listId, List<String> newOrder) async {
     try {
-      final listIndex = _lists.indexWhere((list) => list.id == listId);
+      final listIndex = _listIndex(listId);
       if (listIndex == -1) {
         Log.warning(
           'List not found: $listId',
@@ -888,7 +888,7 @@ class CuratedListService extends ChangeNotifier {
 
   Future<bool> _addCollaborator(String listId, String pubkey) async {
     try {
-      final listIndex = _lists.indexWhere((list) => list.id == listId);
+      final listIndex = _listIndex(listId);
       if (listIndex == -1) {
         return false;
       }
@@ -947,7 +947,7 @@ class CuratedListService extends ChangeNotifier {
 
   Future<bool> _removeCollaborator(String listId, String pubkey) async {
     try {
-      final listIndex = _lists.indexWhere((list) => list.id == listId);
+      final listIndex = _listIndex(listId);
       if (listIndex == -1) {
         return false;
       }
@@ -1039,7 +1039,6 @@ class CuratedListService extends ChangeNotifier {
 
   // === SUBSCRIPTION MANAGEMENT ===
 
-  /// Subscribe to a curated list to follow its updates
   /// Subscribe to a curated list (saves list data for offline access)
   Future<bool> subscribeToList(String listId, [CuratedList? listData]) async {
     try {
@@ -1068,7 +1067,7 @@ class CuratedListService extends ChangeNotifier {
       }
 
       // Check if already subscribed
-      if (_subscribedListIds.contains(listId)) {
+      if (isSubscribedToList(listId)) {
         Log.debug(
           'Already subscribed to list: ${list.name}',
           name: 'CuratedListService',
@@ -1113,7 +1112,8 @@ class CuratedListService extends ChangeNotifier {
   Future<bool> unsubscribeFromList(String listId) async {
     try {
       // Check if subscribed
-      if (!_subscribedListIds.contains(listId)) {
+      final subscriptionId = _subscriptionId(listId);
+      if (!_subscribedListIds.contains(subscriptionId)) {
         Log.debug(
           'Not subscribed to list: $listId',
           name: 'CuratedListService',
@@ -1126,7 +1126,7 @@ class CuratedListService extends ChangeNotifier {
       final listName = list?.name ?? listId;
 
       // Remove from subscribed lists
-      _subscribedListIds.remove(listId);
+      _subscribedListIds.remove(subscriptionId);
       await _saveSubscribedListIds();
 
       Log.info(
@@ -1136,7 +1136,7 @@ class CuratedListService extends ChangeNotifier {
       );
 
       // Remove list from video cache
-      _onListUnsubscribed?.call(listId);
+      _onListUnsubscribed?.call(subscriptionId);
 
       return true;
     } catch (e) {
@@ -1151,8 +1151,12 @@ class CuratedListService extends ChangeNotifier {
 
   /// Check if user is subscribed to a list
   bool isSubscribedToList(String listId) {
-    return _subscribedListIds.contains(listId);
+    return _subscribedListIds.contains(_subscriptionId(listId));
   }
+
+  /// Accept legacy subscription IDs only when they resolve to this author.
+  String _subscriptionId(String listId) =>
+      _cacheIndex.subscriptionId(listId, _subscribedListIds);
 
   /// Check whether the current user owns a locally cached curated list.
   bool isOwnedList(String listId) {
@@ -1308,7 +1312,9 @@ class CuratedListService extends ChangeNotifier {
       // is local-first, but visibility is a statement about what the relays
       // hold, so [updateList] leaves it at its old value and this write is
       // what commits the change once a relay has accepted it.
-      final listIndex = _lists.indexWhere((l) => l.id == list.id);
+      final listIndex = _lists.indexWhere(
+        (l) => l.authorScopedId == list.authorScopedId,
+      );
       if (listIndex != -1) {
         _lists[listIndex] = _lists[listIndex].copyWith(
           nostrEventId: event.id,
@@ -1567,29 +1573,16 @@ class CuratedListService extends ChangeNotifier {
 
   /// Process list events received from relays
   Future<void> _processReceivedListEvents(List<Event> events) async {
-    // Group events by 'd' tag to handle replaceable events
-    final eventsByDTag = <String, Event>{};
-
-    for (final event in events) {
-      final dTag = CuratedListConverter.extractDTag(event);
-      if (dTag != null) {
-        // Keep only the latest event for each 'd' tag
-        final existingEvent = eventsByDTag[dTag];
-        if (existingEvent == null ||
-            event.createdAt > existingEvent.createdAt) {
-          eventsByDTag[dTag] = event;
-        }
-      }
-    }
+    final latest = CuratedListConverter.latestRevisions(events);
 
     Log.debug(
-      'Processing ${eventsByDTag.length} unique lists from relays',
+      'Processing ${latest.length} unique lists from relays',
       name: 'CuratedListService',
       category: LogCategory.system,
     );
 
     // Process each unique list
-    for (final event in eventsByDTag.values) {
+    for (final event in latest) {
       await _processListEvent(event);
     }
 
@@ -1637,7 +1630,7 @@ class CuratedListService extends ChangeNotifier {
         if (current.pubkey == null &&
             !_subscribedListIds.contains(current.id)) {
           final currentId = current.id;
-          final currentIndex = _lists.indexWhere((l) => l.id == currentId);
+          final currentIndex = _listIndex(currentId);
           if (currentIndex == -1) return;
           current = current.copyWith(pubkey: currentOwner);
           _lists[currentIndex] = current;
@@ -1688,12 +1681,19 @@ class CuratedListService extends ChangeNotifier {
       }
 
       // Check if we already have this list locally
-      final existingListIndex = _lists.indexWhere((list) => list.id == dTag);
+      final ownerPubkey = _relayGateway.currentAuthenticatedPubkey();
+      final existingListIndex = _lists.indexWhere(
+        (list) =>
+            list.id == dTag &&
+            (list.pubkey == event.pubkey ||
+                (list.pubkey == null &&
+                    event.pubkey == ownerPubkey &&
+                    !isSubscribedToList(list.id))),
+      );
 
       if (existingListIndex != -1) {
         // Update existing list if relay version is newer
         final existingList = _lists[existingListIndex];
-        final ownerPubkey = _relayGateway.currentAuthenticatedPubkey();
         final isSameOwner =
             existingList.pubkey == event.pubkey ||
             (existingList.pubkey == null &&
@@ -1813,7 +1813,7 @@ class CuratedListService extends ChangeNotifier {
   /// See [CuratedListRelayGateway.streamPublicListsFromRelays].
   Stream<List<CuratedList>> streamPublicListsFromRelays({
     DateTime? until,
-    int limit = 500,
+    int limit = kPublicListsRelayWindow,
     Set<String>? excludeIds,
     Duration timeout = kPublicCuratedListsRelayReadTimeout,
   }) => _relayGateway.streamPublicListsFromRelays(

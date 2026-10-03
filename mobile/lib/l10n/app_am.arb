@@ -558,15 +558,6 @@
             }
         }
     },
-    "exploreDiscoverLists": "ዝርዝሮችን ያግኙ",
-    "exploreAboutLists": "ስለ ዝርዝሮች",
-    "exploreAboutListsDescription": "ዝርዝሮች የDivine ይዘትን በሁለት መንገድ እንዲያደራጁ እና እንዲያዘጋጁ ያግዝዎታል፡",
-    "explorePeopleLists": "የሰዎች ዝርዝሮች",
-    "explorePeopleListsDescription": "የፈጣሪዎችን ቡድኖች ይከተሉ እና የቅርብ ጊዜ ቪዲዮዎቻቸውን ይመልከቱ",
-    "exploreVideoLists": "የቪዲዮ ዝርዝሮች",
-    "exploreVideoListsDescription": "በኋላ ለመመልከት የሚወዷቸውን ቪዲዮዎች አጫዋች ዝርዝሮችን ይፍጠሩ",
-    "exploreMyLists": "የእኔ ዝርዝሮች",
-    "exploreSubscribedLists": "የተመዘገቡ ዝርዝሮች",
     "exploreErrorLoadingLists": "ዝርዝሮችን መጫን ላይ ስህተት። እባክህ እንደገና ሞክር።",
     "exploreNewVideosCount": "{count, plural, =1{{count} አዲስ ቪዲዮ} other{{count} አዳዲስ ቪዲዮዎች}}",
     "@exploreNewVideosCount": {
@@ -1664,10 +1655,8 @@
     "peopleListsNoPeopleSubtitle": "ለመጀመር አንዳንድ ሰዎችን ያክሉ",
     "peopleListsNoVideosTitle": "እስካሁን ምንም ቪዲዮዎች የሉም",
     "peopleListsNoVideosSubtitle": "ከዝርዝር አባላት የመጡ ቪዲዮዎች እዚህ ይታያሉ",
-    "peopleListsNoVideosAvailable": "ምንም ቪዲዮዎች የሉም",
     "peopleListsFailedToLoadVideos": "ቪዲዮዎችን መጫን አልተሳካም።",
     "peopleListsVideoNotAvailable": "ቪዲዮ አይገኝም",
-    "peopleListsBackToGridTooltip": "ወደ ፍርግርግ ተመለስ",
     "peopleListsErrorLoadingVideos": "ቪዲዮዎችን መጫን ላይ ስህተት",
     "peopleListsNoPeopleToAdd": "ምንም የሚታከሉ ሰዎች የሉም።",
     "peopleListsAddToListName": "ወደ {name} ጨምር",
@@ -1999,14 +1988,6 @@
     "listAddToList": "ወደ ዝርዝር ያክሉ",
     "listVideoCount": "{count} ቪዲዮዎች",
     "@listVideoCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
-    "listPersonCount": "{count, plural, =1{{count} ሰው} other{{count} ሰዎች}}",
-    "@listPersonCount": {
         "placeholders": {
             "count": {
                 "type": "int"
@@ -2429,14 +2410,6 @@
         }
     },
     "discoverListsFailedToUpdateSubscription": "የደንበኝነት ምዝገባን ማዘመን አልተሳካም። እባክህ እንደገና ሞክር።",
-    "discoverListsTitle": "ዝርዝሮችን ያግኙ",
-    "discoverListsFailedToLoad": "ዝርዝሮችን መጫን አልተሳካም",
-    "discoverListsLoading": "የህዝብ ዝርዝሮችን በመፈለግ ላይ...",
-    "discoverListsRelayTimeout": "ሪሌው በጊዜው ዝርዝሮችን አልመለሰም። እንደገና ሞክር።",
-    "discoverListsServiceUnavailable": "አገልግሎቱ አይገኝም።",
-    "discoverListsEmptyTitle": "ምንም የህዝብ ዝርዝሮች አልተገኙም",
-    "discoverListsEmptySubtitle": "ለአዳዲስ ዝርዝሮች ቆይተው ይመልከቱ",
-    "discoverListsByAuthorPrefix": "በ",
     "curatedListEmptyTitle": "በዚህ ዝርዝር ውስጥ ምንም ቪዲዮዎች የሉም",
     "curatedListEmptySubtitle": "ለመጀመር ቪዲዮዎችን ያክሉ",
     "curatedListLoadingVideos": "ቪዲዮዎችን በመጫን ላይ...",
@@ -4927,5 +4900,52 @@
     "videoMetadataScheduleTooSoon": "{minutes, plural, =1{ቢያንስ {minutes} ደቂቃ ይተዉ።} other{ቢያንስ {minutes} ደቂቃ ይተዉ።}}",
     "videoMetadataScheduleTooFar": "{days, plural, =1{ይህ ከ{days} ቀን በላይ ነው። ቅርብ የሆነ ጊዜ ይምረጡ።} other{ይህ ከ{days} ቀናት በላይ ነው። ቅርብ የሆነ ጊዜ ይምረጡ።}}",
     "videoMetadataScheduleButton": "ያቅዱ",
-    "videoMetadataScheduleVideoHint": "ይህን ቪዲዮ ለ{time} ያቅዳል"
+    "videoMetadataScheduleVideoHint": "ይህን ቪዲዮ ለ{time} ያቅዳል",
+  "listLoopsCount": "{count, plural, =1{{formatted} ሉፕ} other{{formatted} ሉፖች}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listMemberCount": "{count, plural, =1{{count} አባል} other{{count} አባላት}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsLoadFailed": "ይህን ዝርዝር መጫን አልተቻለም።",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} ሰው} other{{count} ሰዎች}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsViewAllMembers": "ሁሉንም ይመልከቱ",
+  "listMemberNamesSeparator": "፣ ",
+  "listCardSemanticLabel": "{visibility, select, private{{name}፣ የግል፣ {count}} other{{name}፣ {count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+    "listsDiscoveryLoadingLabel": "ዝርዝሮችን በመጫን ላይ",
+    "listsDiscoveryEmpty": "በዚህ ጊዜ ምንም ዝርዝሮች አልተገኙም። ለማደስ ወደታች ይጎትቱ።"
 }

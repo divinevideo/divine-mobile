@@ -466,15 +466,6 @@
     "featuredTabLoadFailed": "Koleksi ini gagal dimuat.",
     "featuredTabRetry": "Coba lagi",
     "exploreNoVideosAvailable": "Tidak ada video tersedia",
-    "exploreDiscoverLists": "Temukan Daftar",
-    "exploreAboutLists": "Tentang Daftar",
-    "exploreAboutListsDescription": "Daftar membantumu mengorganisir dan mengkurasi konten Divine dengan dua cara:",
-    "explorePeopleLists": "Daftar Orang",
-    "explorePeopleListsDescription": "Ikuti grup kreator dan lihat video terbaru mereka",
-    "exploreVideoLists": "Daftar Video",
-    "exploreVideoListsDescription": "Buat playlist video favoritmu untuk ditonton nanti",
-    "exploreMyLists": "Daftarku",
-    "exploreSubscribedLists": "Daftar yang Dilanggan",
     "exploreErrorLoadingLists": "Gagal memuat daftar. Silakan coba lagi.",
     "exploreNewVideosCount": "{count, plural, other{{count} video baru}}",
     "@exploreNewVideosCount": {
@@ -2984,10 +2975,8 @@
     "peopleListsNoPeopleSubtitle": "Tambahkan orang untuk memulai",
     "peopleListsNoVideosTitle": "Belum ada video",
     "peopleListsNoVideosSubtitle": "Video dari anggota daftar akan muncul di sini",
-    "peopleListsNoVideosAvailable": "Tidak ada video tersedia",
     "peopleListsFailedToLoadVideos": "Gagal memuat video",
     "peopleListsVideoNotAvailable": "Video tidak tersedia",
-    "peopleListsBackToGridTooltip": "Kembali ke tampilan kisi",
     "peopleListsErrorLoadingVideos": "Kesalahan saat memuat video",
     "peopleListsNoPeopleToAdd": "Tidak ada orang yang tersedia untuk ditambahkan.",
     "peopleListsAddToListName": "Tambahkan ke {name}",
@@ -3229,14 +3218,6 @@
     "nostrSettingsDeleteAccountSubtitle": "Mengirim permintaan penghapusan untuk kontenmu dan mengeluarkanmu dari akun di perangkat ini. Relay, klien, indeks pencarian, dan perangkat lain yang masih masuk mungkin menyimpan salinan.",
     "safetySettingsWhatYouSee": "YANG KAMU LIHAT",
     "safetySettingsWhatYouPublish": "YANG KAMU PUBLIKASIKAN",
-    "listPersonCount": "{count, plural, =1{1 orang} other{{count} orang}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "Oleh ",
     "keyManagementYourPublicKeyLabel": "Kunci publikmu (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -3283,14 +3264,6 @@
             }
         }
     },
-    "discoverListsTitle": "Jelajahi Daftar",
-    "discoverListsFailedToLoad": "Gagal memuat daftar",
-    "discoverListsLoading": "Mencari daftar publik...",
-    "discoverListsRelayTimeout": "Relay tidak mengembalikan daftar tepat waktu. Coba lagi.",
-    "discoverListsServiceUnavailable": "Layanan tidak tersedia.",
-    "discoverListsEmptyTitle": "Tidak ada daftar publik",
-    "discoverListsEmptySubtitle": "Cek lagi nanti untuk daftar baru",
-    "discoverListsByAuthorPrefix": "oleh",
     "curatedListEmptyTitle": "Belum ada video di daftar ini",
     "curatedListEmptySubtitle": "Tambahkan beberapa video untuk memulai",
     "curatedListLoadingVideos": "Memuat video...",
@@ -4821,5 +4794,52 @@
   "crosspostingAutoBody": "Setiap loop baru yang kamu posting otomatis dikirim ke {platform} untukmu — tanpa ketukan tambahan. Hanya berlaku untuk loop yang kamu publikasikan setelah mengaktifkannya.",
   "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "Aktifkan otomatis",
-  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+  "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loop}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listMemberCount": "{count, plural, =1{{count} anggota} other{{count} anggota}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsLoadFailed": "Tidak bisa memuat daftar ini.",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} orang} other{{count} orang}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsViewAllMembers": "Lihat semua",
+  "listMemberNamesSeparator": ", ",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Privat, {count}} other{{name}, {count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+    "listsDiscoveryLoadingLabel": "Memuat daftar",
+    "listsDiscoveryEmpty": "Belum ada daftar yang muncul kali ini. Tarik untuk menyegarkan."
 }

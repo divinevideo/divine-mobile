@@ -1298,33 +1298,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get exploreNoVideosAvailable => '暂无视频';
 
   @override
-  String get exploreDiscoverLists => '发现列表';
-
-  @override
-  String get exploreAboutLists => '关于列表';
-
-  @override
-  String get exploreAboutListsDescription => '列表帮你用两种方式整理和策划 Divine 内容：';
-
-  @override
-  String get explorePeopleLists => '人物列表';
-
-  @override
-  String get explorePeopleListsDescription => '关注一群创作者，查看他们的最新视频';
-
-  @override
-  String get exploreVideoLists => '视频列表';
-
-  @override
-  String get exploreVideoListsDescription => '把喜欢的视频做成播放列表，稍后观看';
-
-  @override
-  String get exploreMyLists => '我的列表';
-
-  @override
-  String get exploreSubscribedLists => '订阅的列表';
-
-  @override
   String get exploreErrorLoadingLists => '加载列表出错，请重试。';
 
   @override
@@ -3683,16 +3656,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get peopleListsNoVideosSubtitle => '列表成员的视频会显示在这里';
 
   @override
-  String get peopleListsNoVideosAvailable => '暂无视频';
-
-  @override
   String get peopleListsFailedToLoadVideos => '视频加载失败';
 
   @override
   String get peopleListsVideoNotAvailable => '视频不可用';
-
-  @override
-  String get peopleListsBackToGridTooltip => '返回网格';
 
   @override
   String get peopleListsErrorLoadingVideos => '加载视频出错';
@@ -4591,17 +4558,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String listVideoCount(int count) {
     return '$count 个视频';
-  }
-
-  @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count 人',
-      one: '1 人',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -5786,30 +5742,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get discoverListsFailedToUpdateSubscription => '更新订阅失败，请重试。';
-
-  @override
-  String get discoverListsTitle => '发现列表';
-
-  @override
-  String get discoverListsFailedToLoad => '列表加载失败';
-
-  @override
-  String get discoverListsLoading => '正在发现公开列表...';
-
-  @override
-  String get discoverListsRelayTimeout => '中继没有及时返回列表。再试一次。';
-
-  @override
-  String get discoverListsServiceUnavailable => '服务不可用。';
-
-  @override
-  String get discoverListsEmptyTitle => '没有找到公开列表';
-
-  @override
-  String get discoverListsEmptySubtitle => '过会儿再来看看新列表';
-
-  @override
-  String get discoverListsByAuthorPrefix => '来自';
 
   @override
   String get curatedListEmptyTitle => '该列表还没有视频';
@@ -12098,4 +12030,67 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => '开启自动';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted 次循环',
+      one: '$formatted 次循环',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 位成员',
+      one: '$count 位成员',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsLoadFailed => '无法加载此列表。';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 人',
+      one: '$count 人',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get peopleListsViewAllMembers => '查看全部';
+
+  @override
+  String get listMemberNamesSeparator => '、';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name，私密，$count',
+        'other': '$name，$count',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryLoadingLabel => '正在加载列表';
+
+  @override
+  String get listsDiscoveryEmpty => '这次没找到列表。下拉刷新试试。';
 }
