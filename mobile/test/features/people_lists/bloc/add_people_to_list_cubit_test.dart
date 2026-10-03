@@ -103,6 +103,39 @@ void main() {
       await cubit.close();
     });
 
+    test(
+      'keeps candidates ready while restarting live subscriptions',
+      () async {
+        final cancellation = Completer<void>();
+        final originalFollowing = StreamController<List<String>>(
+          onCancel: () => cancellation.future,
+        );
+        when(() => followRepository.followingPubkeys)
+            .thenReturn([_alicePubkey]);
+        when(
+          () => followRepository.followingStream,
+        ).thenAnswer((_) => originalFollowing.stream);
+        final cubit = createCubit();
+        await cubit.started();
+        expect(cubit.state.status, AddPeopleToListStatus.ready);
+        expect(cubit.state.candidates.single.pubkey, _alicePubkey);
+        when(
+          () => followRepository.followingStream,
+        ).thenAnswer((_) => followingController.stream);
+
+        final refreshing = cubit.started();
+        try {
+          expect(cubit.state.status, AddPeopleToListStatus.ready);
+          expect(cubit.state.candidates.single.pubkey, _alicePubkey);
+        } finally {
+          cancellation.complete();
+          await refreshing;
+          await cubit.close();
+          await originalFollowing.close();
+        }
+      },
+    );
+
     group('started', () {
       test(
         'emits following-only candidates with isFollowing=true, '

@@ -48,9 +48,12 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
   final Map<String, PeopleListCandidate> _candidatesByPubkey = {};
 
   /// Load candidates. Emits [AddPeopleToListStatus.ready] on success and
-  /// [AddPeopleToListStatus.failure] on error.
+  /// [AddPeopleToListStatus.failure] on error. Keeps ready candidates visible
+  /// while refreshing the live subscriptions.
   Future<void> started() async {
-    emitIfOpen(state.copyWith(status: AddPeopleToListStatus.loading));
+    if (state.status != AddPeopleToListStatus.ready) {
+      emitIfOpen(state.copyWith(status: AddPeopleToListStatus.loading));
+    }
     try {
       _candidatesByPubkey.clear();
 
