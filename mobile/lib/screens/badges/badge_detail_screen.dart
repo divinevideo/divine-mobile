@@ -388,11 +388,27 @@ class _AcceptedHolders extends ConsumerWidget {
         ),
         BlocProvider(
           key: ValueKey((badgeRepository, videosRepository, coordinate)),
-          create: (_) => BadgeVideosCubit(
-            badgeRepository: badgeRepository,
-            videosRepository: videosRepository,
-            coordinate: coordinate,
-          ),
+          // Eager, so a re-key after the holders loaded (a filter toggle
+          // rebuilds videosRepository) reloads here; the listener below only
+          // sees the holders' first load.
+          lazy: false,
+          create: (context) {
+            final cubit = BadgeVideosCubit(
+              badgeRepository: badgeRepository,
+              videosRepository: videosRepository,
+              coordinate: coordinate,
+            );
+            final holders = context.read<BadgeHoldersCubit>().state;
+            if (holders.holdersStatus == BadgeHoldersStatus.loaded) {
+              runDetached(
+                cubit.loadForHolders(holders.holders.toSet()),
+                'reload badge holder videos',
+                logName: 'BadgeDetailScreen',
+                category: LogCategory.ui,
+              );
+            }
+            return cubit;
+          },
         ),
         BlocProvider(
           key: ValueKey((followRepository, blocklistRepository)),
