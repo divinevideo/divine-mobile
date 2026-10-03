@@ -4,6 +4,41 @@ Tests reduce bugs, encourage clean code, and give confidence when shipping — b
 
 ---
 
+## Settle scrolling before interacting
+
+Use `scrollUntilTappable` from `test/helpers/scroll.dart` when a widget test
+scrolls to a target and then taps, drags, long-presses, or reads its screen
+coordinates. `tester.scrollUntilVisible` finishes with `ensureVisible` without
+pumping the final frame, so an immediate interaction can use stale layout.
+
+Bare scrolls followed only by assertions or `tester.widget(...)` reads remain
+allowed. Those reads do not settle layout: if an interaction follows later,
+await a pump on the same tester first. An awaited zero-duration `tester.pump()`
+is appropriate when preserving the test clock matters; use `pumpAndSettle()`
+when animations need to finish.
+
+`check_bare_scroll_interaction.sh` (#7278) freezes unsettled interactions at
+zero across `test`, `integration_test` and package tests, including helper
+files. Its Dart AST detector follows direct same-file local/top-level helper
+calls in order, respects lexical scope and tester parameters, and preserves
+pending scrolls across assertions and conditional paths. A pump in an uncalled
+callback, on another tester, or in only one continuing branch does not clear
+the signal. Apart from the shared `scrollUntilTappable` contract, imported
+helpers and dynamic calls are outside its syntax-only scope; review those paths
+using the same rule. There is no inline exemption.
+
+Run from the repository root:
+
+```bash
+bash mobile/scripts/check_bare_scroll_interaction.sh
+```
+
+For individual sites, run from `mobile/`:
+
+```bash
+dart scripts/lib/bare_scroll_interaction_detector.dart test integration_test packages --path-prefix . --detail
+```
+
 ## A Test Must Be Able to Fail
 
 A passing test should be evidence that the feature works. If the test would still pass with the feature broken, it tests nothing — delete it rather than bank it as coverage.
