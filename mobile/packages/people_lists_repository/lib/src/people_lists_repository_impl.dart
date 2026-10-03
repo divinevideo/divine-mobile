@@ -1,5 +1,5 @@
 // ABOUTME: NostrClient-backed implementation of PeopleListsRepository.
-// ABOUTME: Treats publishEvent non-null return as submitted, never confirmed.
+// ABOUTME: Treats PublishSuccess as submitted and preserves full source events.
 
 import 'dart:async';
 
@@ -34,15 +34,15 @@ typedef BlockedPeopleListOwnerFilter = bool Function(String ownerPubkey);
 /// Concrete [PeopleListsRepository] backed by a [NostrClient] and a
 /// [LocalPeopleListsCache].
 ///
-/// Submission semantics: a non-null return from [NostrClient.publishEvent]
+/// Submission semantics: [PublishSuccess] from [NostrClient.publishEvent]
 /// means the event was signed and submitted to at least one relay socket. The
-/// repository does not wait for a relay `OK`. On a null return or thrown
-/// error, the operation is reported as [PeopleListPublishStatus.failed] and
+/// repository does not wait for a relay `OK`. Any other result or thrown
+/// error is reported as [PeopleListPublishStatus.failed] and
 /// no optimistic cache write is performed.
 ///
 /// Constructor injection only — the repository never resolves dependencies
-/// implicitly. All mutable state lives in the injected cache and follow store;
-/// the repository itself is effectively stateless.
+/// implicitly. List data lives in the injected cache and follow store;
+/// per-list write chains serialize overlapping edits.
 class PeopleListsRepositoryImpl implements PeopleListsRepository {
   /// Creates a repository bound to [nostrClient], [cache] and
   /// [followedListsStore].
@@ -80,6 +80,9 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
   /// pool, since it cannot be noise.
   final List<String> _discoveryRelayUrls;
 
+  /// Membership, info and deletion writes to one list must run in order.
+  final Map<String, Future<void>> _listWriteTails = {};
+
   @override
   Stream<List<UserList>> watchLists({required String ownerPubkey}) {
     return _cache.watchLists(ownerPubkey: ownerPubkey);
@@ -116,7 +119,8 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
   /// `requireAllRelaysSettled` so a relay abandoned by the settle window
   /// arrives as a timeout rather than as an empty answer.
   ///
-  /// [addPubkey] and [removePubkey] report an inconclusive answer as
+  /// [addPubkey], [removePubkey] and [updateListInfo] report an inconclusive
+  /// answer as
   /// [PeopleListPublishResult.failed] rather than publishing over it — the
   /// bloc rolls its optimistic update back on that, and unlike a block or a
   /// follow there is no local-only meaning to preserve here: the list *is*
@@ -193,7 +197,92 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
   }
 
   @override
+  Future<PeopleListPublishResult> updateListInfo({
+    required String ownerPubkey,
+    required String listId,
+    required String name,
+    String? description,
+  }) => _serializeListWrite(
+    ownerPubkey: ownerPubkey,
+    listId: listId,
+    () => _updateListInfo(
+      ownerPubkey: ownerPubkey,
+      listId: listId,
+      name: name,
+      description: description,
+    ),
+  );
+
+  Future<PeopleListPublishResult> _updateListInfo({
+    required String ownerPubkey,
+    required String listId,
+    required String name,
+    String? description,
+  }) async {
+    // A replacement built on a stale cache drops members only the relay has.
+    if (!await _reconcileOwner(ownerPubkey)) {
+      return const PeopleListPublishResult.failed();
+    }
+    final record = await _findList(ownerPubkey: ownerPubkey, listId: listId);
+    if (record == null) {
+      return const PeopleListPublishResult.failed();
+    }
+    final existing = record.list;
+    final trimmedName = name.trim();
+    final trimmedDescription = description?.trim();
+    final nextDescription =
+        trimmedDescription == null || trimmedDescription.isEmpty
+        ? null
+        : trimmedDescription;
+    if (existing.name == trimmedName &&
+        existing.description == nextDescription) {
+      return const PeopleListPublishResult.noop();
+    }
+    final sourceTags = record.sourceTags;
+    final sourceContent = record.sourceContent;
+    if (sourceTags == null || sourceContent == null) {
+      Log.warning(
+        'Cannot edit the info of people list $listId: the cached row '
+        'predates source preservation, so no complete replacement '
+        'can be built from it',
+        name: _logName,
+        category: LogCategory.relay,
+      );
+      return const PeopleListPublishResult.failed();
+    }
+    final updated = existing.copyWith(
+      name: trimmedName,
+      description: nextDescription,
+      clearDescription: nextDescription == null,
+      updatedAt: DateTime.now().toUtc(),
+    );
+    return _publishReplacement(
+      ownerPubkey: ownerPubkey,
+      list: updated,
+      encode: () => Nip51PeopleListCodec.encodeInfoEdit(
+        updated,
+        sourceTags: sourceTags,
+        sourceContent: sourceContent,
+      ),
+    );
+  }
+
+  @override
   Future<PeopleListPublishResult> addPubkey({
+    required String ownerPubkey,
+    required String listId,
+    required String pubkey,
+  }) => _serializeListWrite(
+    ownerPubkey: ownerPubkey,
+    listId: listId,
+    () => _addPubkey(
+      ownerPubkey: ownerPubkey,
+      listId: listId,
+      pubkey: pubkey,
+    ),
+  );
+
+  Future<PeopleListPublishResult> _addPubkey({
     required String ownerPubkey,
     required String listId,
     required String pubkey,
@@ -237,6 +326,20 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     required String ownerPubkey,
     required String listId,
     required String pubkey,
+  }) => _serializeListWrite(
+    ownerPubkey: ownerPubkey,
+    listId: listId,
+    () => _removePubkey(
+      ownerPubkey: ownerPubkey,
+      listId: listId,
+      pubkey: pubkey,
+    ),
+  );
+
+  Future<PeopleListPublishResult> _removePubkey({
+    required String ownerPubkey,
+    required String listId,
+    required String pubkey,
   }) async {
     // A replacement built on a stale cache drops members only the relay has.
     if (!await _reconcileOwner(ownerPubkey)) {
@@ -274,6 +377,15 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
 
   @override
   Future<PeopleListPublishResult> deleteList({
+    required String ownerPubkey,
+    required String listId,
+  }) => _serializeListWrite(
+    ownerPubkey: ownerPubkey,
+    listId: listId,
+    () => _deleteList(ownerPubkey: ownerPubkey, listId: listId),
+  );
+
+  Future<PeopleListPublishResult> _deleteList({
     required String ownerPubkey,
     required String listId,
   }) async {
@@ -713,21 +825,54 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     await _cache.clearFollowedCopies(viewerPubkey: viewerPubkey);
   }
 
+  Future<T> _serializeListWrite<T>(
+    Future<T> Function() operation, {
+    required String ownerPubkey,
+    required String listId,
+  }) async {
+    final key = '$ownerPubkey:$listId';
+    final previous = _listWriteTails[key] ?? Future<void>.value();
+    final completed = Completer<void>();
+    final tail = completed.future;
+    _listWriteTails[key] = tail;
+    await previous;
+    try {
+      return await operation();
+    } finally {
+      completed.complete();
+      if (identical(_listWriteTails[key], tail)) {
+        // Map.remove returns the dropped tail; nothing waits on it here.
+        final _ = _listWriteTails.remove(key);
+      }
+    }
+  }
+
   Future<PeopleListPublishResult> _publishListReplacement({
     required String ownerPubkey,
     required UserList list,
     List<List<String>>? sourceTags,
     String? sourceContent,
+  }) => _publishReplacement(
+    ownerPubkey: ownerPubkey,
+    list: list,
+    encode: () => Nip51PeopleListCodec.encode(
+      list,
+      sourceTags: sourceTags,
+      sourceContent: sourceContent,
+    ),
+  );
+
+  /// Publishes the event [encode] builds for [list] and caches what was sent.
+  Future<PeopleListPublishResult> _publishReplacement({
+    required String ownerPubkey,
+    required UserList list,
+    required PeopleListEventPayload Function() encode,
   }) async {
     try {
       // encode throws ArgumentError on a malformed or mismatched source, so
       // it belongs inside the catch: callers only ever see the documented
       // failure result, never a raw programming-invariant throw.
-      final payload = Nip51PeopleListCodec.encode(
-        list,
-        sourceTags: sourceTags,
-        sourceContent: sourceContent,
-      );
+      final payload = encode();
       final event = Event(
         ownerPubkey,
         payload.kind,

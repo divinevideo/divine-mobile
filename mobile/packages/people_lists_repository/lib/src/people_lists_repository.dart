@@ -39,6 +39,21 @@ abstract interface class PeopleListsRepository {
     Iterable<String> initialPubkeys = const [],
   });
 
+  /// Renames the list identified by [listId] to [name], gives it
+  /// [description], and publishes the replacement event.
+  ///
+  /// An absent or blank [description] removes the list's description.
+  /// Members and everything else the list's event carries stay as they are.
+  ///
+  /// Returns a [PeopleListPublishResult] with status
+  /// [PeopleListPublishStatus.noop] when neither value changes.
+  Future<PeopleListPublishResult> updateListInfo({
+    required String ownerPubkey,
+    required String listId,
+    required String name,
+    String? description,
+  });
+
   /// Adds [pubkey] to the list identified by [listId] and publishes the
   /// replacement event.
   ///
