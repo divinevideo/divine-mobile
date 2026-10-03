@@ -1,5 +1,5 @@
 // ABOUTME: Tests for DraftLocalAudioPaths.localAudioFilePaths extraction
-// ABOUTME: Validates imported audio + voice-over paths are collected for cleanup
+// ABOUTME: Validates imported, voice-over and voice-effect paths are collected
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' show AudioEvent, VoiceEffect;
@@ -103,6 +103,34 @@ void main() {
       );
 
       expect(draft.localAudioFilePaths, {processed, original});
+    });
+
+    test('collects only the processed copy of a sound with an effect that '
+        'is not draft-local', () {
+      const bundledCopy = '/docs/voice_effect_audio/chime_p8_r0_e0.wav';
+      const remoteCopy = '/docs/voice_effect_audio/remote_p0_r100_e0.wav';
+      final draft = _draft(
+        editorStateHistory: _historyWithAudio([
+          AudioEvent(
+            id: 'bundled_chime',
+            pubkey: AudioEvent.bundledMarker,
+            createdAt: 0,
+            url: bundledCopy,
+            voiceEffect: const VoiceEffect(pitch: 8),
+            originalUrl: 'asset://sounds/chime.mp3',
+          ),
+        ]),
+        selectedSound: AudioEvent(
+          id: 'remote-sound-id',
+          pubkey: _testPubkey,
+          createdAt: 1700000000,
+          url: remoteCopy,
+          voiceEffect: const VoiceEffect(robot: 100),
+          originalUrl: 'https://cdn.example.com/audio.mp3',
+        ),
+      );
+
+      expect(draft.localAudioFilePaths, {bundledCopy, remoteCopy});
     });
 
     test('collects local audio held in legacy selectedSound', () {

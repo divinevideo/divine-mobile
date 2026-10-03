@@ -205,6 +205,35 @@ void main() {
       expect(identical(resolveAudioPaths(json, _newDocs), json), isTrue);
     });
 
+    test('rewrites the processed copy a published or bundled sound plays, '
+        'not the address it came from', () {
+      const remote = 'https://cdn.example/voice_over_recordings/take.m4a';
+      const asset = 'asset://sounds/beat.mp3';
+      final json = <String, dynamic>{
+        'meta': {
+          'audio': [
+            _audioJson(
+              '$_oldDocs/voice_effect_audio/a_p0_r100_e0.wav',
+              id: 'nostr-event-id',
+            )..['originalUrl'] = remote,
+            _audioJson(
+              '$_oldDocs/voice_effect_audio/b_p8_r0_e0.wav',
+              id: 'bundled_beat',
+            )..['originalUrl'] = asset,
+          ],
+        },
+      };
+
+      final resolved = resolveAudioPaths(toPortableAudioPaths(json), _newDocs);
+      final audio = (resolved['meta']! as Map)['audio']! as List;
+
+      expect(audio.map((e) => (e as Map)['url']), [
+        '$_newDocs/voice_effect_audio/a_p0_r100_e0.wav',
+        '$_newDocs/voice_effect_audio/b_p8_r0_e0.wav',
+      ]);
+      expect(audio.map((e) => (e as Map)['originalUrl']), [remote, asset]);
+    });
+
     test('leaves a remote sound whose url contains an audio root', () {
       // The id gate is the only thing protecting this: the url carries a
       // voice_over_recordings segment, so without the local-import check it
@@ -292,6 +321,10 @@ void main() {
       );
       expect(
         isDraftLocalAudioPath('$_newDocs/extracted_clip_audio/clip_1.m4a'),
+        isTrue,
+      );
+      expect(
+        isDraftLocalAudioPath('$_newDocs/voice_effect_audio/a_p0_r100_e0.wav'),
         isTrue,
       );
       expect(isDraftLocalAudioPath('draft_audio_imports/d1/song.m4a'), isTrue);
