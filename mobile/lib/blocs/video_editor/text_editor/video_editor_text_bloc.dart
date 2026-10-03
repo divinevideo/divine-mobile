@@ -25,7 +25,6 @@ class VideoEditorTextBloc
     on<VideoEditorTextAlignmentChanged>(_onAlignmentChanged);
     on<VideoEditorTextColorSelected>(_onColorSelected);
     on<VideoEditorTextBackgroundStyleChanged>(_onBackgroundStyleChanged);
-    on<VideoEditorTextFontSizeChanged>(_onFontSizeChanged);
     on<VideoEditorTextReset>(_onReset);
     on<VideoEditorTextFontSelectorToggled>(_onFontSelectorToggled);
     on<VideoEditorTextColorPickerToggled>(_onColorPickerToggled);
@@ -88,14 +87,6 @@ class VideoEditorTextBloc
     Emitter<VideoEditorTextState> emit,
   ) {
     emit(state.copyWith(backgroundStyle: event.backgroundStyle));
-  }
-
-  /// Updates the font size.
-  void _onFontSizeChanged(
-    VideoEditorTextFontSizeChanged event,
-    Emitter<VideoEditorTextState> emit,
-  ) {
-    emit(state.copyWith(fontSize: event.fontSize));
   }
 
   /// Resets the text editor state.
@@ -166,7 +157,6 @@ class VideoEditorTextBloc
   ) {
     emit(
       state.copyWith(
-        fontSize: 0.5,
         showFontSelector: false,
         showColorPicker: false,
         showEffectsPanel: false,
@@ -190,7 +180,6 @@ class VideoEditorTextBloc
         alignment: event.alignment,
         color: event.color,
         backgroundStyle: event.backgroundStyle,
-        fontSize: event.fontSize,
         selectedFontIndex: event.selectedFontIndex,
         effects: event.effects,
       ),

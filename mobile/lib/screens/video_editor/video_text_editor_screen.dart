@@ -74,19 +74,10 @@ class _VideoTextEditorScreenState extends State<VideoTextEditorScreen> {
         alignment: layer.align,
         color: primaryColor,
         backgroundStyle: layer.colorMode,
-        fontSize: _normalizeFontScale(layer.fontScale),
         selectedFontIndex: max(0, fontIndex),
         effects: TextEffects.of(layer),
       ),
     );
-  }
-
-  /// Converts font scale to normalized value (0.0-1.0).
-  double _normalizeFontScale(double fontScale) {
-    return ((fontScale - VideoEditorConstants.minFontScale) /
-            (VideoEditorConstants.maxFontScale -
-                VideoEditorConstants.minFontScale))
-        .clamp(0.0, 1.0);
   }
 
   @override
@@ -214,26 +205,16 @@ class _TextEditor extends StatelessWidget {
     };
   }
 
-  /// Converts normalized font size (0.0-1.0) to font scale.
-  static double _getFontScale(double normalizedValue) {
-    return VideoEditorConstants.minFontScale +
-        (normalizedValue *
-            (VideoEditorConstants.maxFontScale -
-                VideoEditorConstants.minFontScale));
-  }
-
   @override
   Widget build(BuildContext context) {
     final (
       alignment,
-      fontSize,
       backgroundStyle,
       color,
       selectedFontIndex,
     ) = context.select(
       (VideoEditorTextBloc bloc) => (
         bloc.state.alignment,
-        bloc.state.fontSize,
         bloc.state.backgroundStyle,
         bloc.state.color,
         bloc.state.selectedFontIndex,
@@ -273,16 +254,13 @@ class _TextEditor extends StatelessWidget {
             style: const TextEditorStyle(
               background: Colors.transparent,
               inputCursorColor: VineTheme.whiteText,
-              inputTextFieldPadding: .only(top: 96, left: 16, right: 48),
+              inputTextFieldPadding: .only(top: 96, left: 16, right: 16),
               // Preview the text's own shadow while typing.
               inputShadows: null,
             ),
             safeArea: const EditorSafeArea.none(),
             enableAutocorrect: false,
             resizeToAvoidBottomInset: false,
-            minFontScale: VideoEditorConstants.minFontScale,
-            maxFontScale: VideoEditorConstants.maxFontScale,
-            initFontScale: _getFontScale(fontSize),
             initialBackgroundColorMode: backgroundStyle,
             initialTextAlign: alignment,
             initialPrimaryColor: color,

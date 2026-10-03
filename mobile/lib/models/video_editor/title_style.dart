@@ -29,7 +29,7 @@ import 'package:pro_video_editor/pro_video_editor.dart' as pve;
 ///
 /// Position, rotation and pinch scale are deliberately not part of it: a
 /// saved style is a look, and the next title lands wherever the user puts it.
-/// The font-size slider ([fontScale]) is, because it is styling.
+/// The font scale ([fontScale]) is, because it is styling.
 class TitleStyle extends Equatable {
   /// Creates a style.
   const TitleStyle({
@@ -127,7 +127,7 @@ class TitleStyle extends Equatable {
   /// Text alignment within the layer.
   final TextAlign align;
 
-  /// Multiplier on the editor's base font size — the font-size slider.
+  /// Multiplier on the editor's base font size.
   final double fontScale;
 
   /// The outline and shadow drawn around the text.

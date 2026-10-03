@@ -1,5 +1,5 @@
 // ABOUTME: Top overlay controls for the text editor screen.
-// ABOUTME: Displays close/done buttons and vertical font size slider.
+// ABOUTME: Displays close/done buttons.
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
@@ -7,12 +7,11 @@ import 'package:openvine/blocs/video_editor/text_editor/video_editor_text_bloc.d
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_text_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
-import 'package:openvine/widgets/video_editor/video_editor_vertical_slider.dart';
 
 /// Top overlay controls for the text editor screen.
 ///
-/// Displays close and done buttons at the top, plus a vertical slider for
-/// font size on the right side.
+/// Displays close and done buttons at the top. Text has no size control here:
+/// it is resized by pinching it on the editor canvas.
 ///
 /// Note: The style bar, font selector and color picker panels are rendered
 /// outside the editor in the parent screen to maintain correct editor sizing.
@@ -55,57 +54,7 @@ class VideoEditorTextOverlayControls extends StatelessWidget {
             onDone: () => VideoTextEditorScope.of(context).editor.done(),
           ),
         ),
-
-        // Vertical slider for font size on the right side
-        Align(
-          alignment: .centerRight,
-          child: Padding(
-            padding: .fromLTRB(
-              0,
-              64 + MediaQuery.viewPaddingOf(context).top,
-              10,
-              16,
-            ),
-            child: const _FontSizeSlider(),
-          ),
-        ),
       ],
-    );
-  }
-}
-
-/// Vertical slider for adjusting font size.
-///
-/// Syncs the font scale with both the BLoC and the TextEditorState.
-class _FontSizeSlider extends StatelessWidget {
-  const _FontSizeSlider();
-
-  @override
-  Widget build(BuildContext context) {
-    final fontSize = context.select<VideoEditorTextBloc, double>(
-      (bloc) => bloc.state.fontSize,
-    );
-
-    return VideoEditorVerticalSlider(
-      value: fontSize,
-      onChanged: (normalizedValue) {
-        final textEditor = VideoTextEditorScope.of(context).editor;
-        final textEditorConfigs = textEditor.configs.textEditor;
-
-        // Convert normalized value (0-1) to font scale range
-        final fontScaleRange =
-            textEditorConfigs.maxFontScale - textEditorConfigs.minFontScale;
-        final fontScale =
-            textEditorConfigs.minFontScale + (normalizedValue * fontScaleRange);
-
-        // Sync with TextEditor
-        textEditor.fontScale = fontScale;
-
-        // Update BLoC state
-        context.read<VideoEditorTextBloc>().add(
-          VideoEditorTextFontSizeChanged(normalizedValue),
-        );
-      },
     );
   }
 }

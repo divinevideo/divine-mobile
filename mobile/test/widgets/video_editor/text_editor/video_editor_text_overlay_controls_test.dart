@@ -1,7 +1,5 @@
 // ABOUTME: Tests for VideoEditorTextOverlayControls widget.
-// ABOUTME: Validates top bar buttons (Close, Done) and font size slider.
-
-import 'dart:async';
+// ABOUTME: Validates top bar buttons (Close, Done) and the absent size slider.
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -12,6 +10,7 @@ import 'package:openvine/blocs/video_editor/text_editor/video_editor_text_bloc.d
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_overlay_controls.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_text_editor_scope.dart';
+import 'package:openvine/widgets/video_editor/video_editor_vertical_slider.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 class MockVideoEditorTextBloc
@@ -23,10 +22,6 @@ class MockTextEditorState extends Mock implements TextEditorState {
   String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) =>
       'MockTextEditorState';
 }
-
-class MockTextEditorConfigs extends Mock implements TextEditorConfigs {}
-
-class MockProImageEditorConfigs extends Mock implements ProImageEditorConfigs {}
 
 class MockTextEditorKey extends Mock implements GlobalKey<TextEditorState> {}
 
@@ -41,34 +36,22 @@ void main() {
     l10n.videoEditorTextLabel,
   );
 
-  setUpAll(() {
-    registerFallbackValue(const VideoEditorTextFontSizeChanged(0.5));
-  });
-
   group('VideoEditorTextOverlayControls', () {
     late MockVideoEditorTextBloc mockBloc;
     late MockTextEditorKey mockKey;
     late MockTextEditorState mockEditor;
-    late MockProImageEditorConfigs mockConfigs;
-    late MockTextEditorConfigs mockTextEditorConfigs;
     late FocusNode focusNode;
 
     setUp(() {
       mockBloc = MockVideoEditorTextBloc();
       mockKey = MockTextEditorKey();
       mockEditor = MockTextEditorState();
-      mockConfigs = MockProImageEditorConfigs();
-      mockTextEditorConfigs = MockTextEditorConfigs();
       focusNode = FocusNode();
 
       when(() => mockBloc.state).thenReturn(const VideoEditorTextState());
       when(() => mockBloc.stream).thenAnswer((_) => const Stream.empty());
       when(() => mockKey.currentState).thenReturn(mockEditor);
       when(() => mockEditor.focusNode).thenReturn(focusNode);
-      when(() => mockEditor.configs).thenReturn(mockConfigs);
-      when(() => mockConfigs.textEditor).thenReturn(mockTextEditorConfigs);
-      when(() => mockTextEditorConfigs.minFontScale).thenReturn(0.5);
-      when(() => mockTextEditorConfigs.maxFontScale).thenReturn(3.0);
     });
 
     tearDown(() {
@@ -203,21 +186,12 @@ void main() {
         expect(topAlign, isNotEmpty);
       });
 
-      testWidgets('slider is aligned to center right', (tester) async {
+      testWidgets('does not render a font size slider', (tester) async {
         await tester.pumpWidget(buildWidget());
         await tester.pump();
 
-        final aligns = tester.widgetList<Align>(
-          find.descendant(
-            of: find.byType(VideoEditorTextOverlayControls),
-            matching: find.byType(Align),
-          ),
-        );
-
-        final rightAlign = aligns.where(
-          (a) => a.alignment == Alignment.centerRight,
-        );
-        expect(rightAlign, isNotEmpty);
+        // Text is resized by pinching it on the canvas instead.
+        expect(find.byType(VideoEditorVerticalSlider), findsNothing);
       });
     });
 
@@ -258,31 +232,6 @@ void main() {
           ),
         );
         expect(safeArea.bottom, isFalse);
-      });
-    });
-
-    group('State updates', () {
-      testWidgets('rebuilds when fontSize changes', (tester) async {
-        final controller = StreamController<VideoEditorTextState>.broadcast();
-
-        when(() => mockBloc.state).thenReturn(const VideoEditorTextState());
-        when(() => mockBloc.stream).thenAnswer((_) => controller.stream);
-
-        await tester.pumpWidget(buildWidget());
-        await tester.pump();
-
-        // Emit new state with different font size
-        when(
-          () => mockBloc.state,
-        ).thenReturn(const VideoEditorTextState(fontSize: 0.8));
-        controller.add(const VideoEditorTextState(fontSize: 0.8));
-
-        await tester.pump();
-
-        // Widget should have rebuilt
-        expect(mockBloc.state.fontSize, 0.8);
-
-        await controller.close();
       });
     });
   });
