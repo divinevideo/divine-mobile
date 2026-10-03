@@ -19,6 +19,11 @@
 # Dart-AST detectors (heaviest first)
 # ---------------------------------------------------------------------------
 
+# Issue #7278. Frozen at ZERO: bare scrollUntilVisible followed by an interaction
+# or coordinate read without a completed pump, including same-file helpers.
+# Scroll-only assertions are allowed; see .claude/rules/testing.md.
+🧪 Verify scrolls settle before viewport interactions (#7278)	-	bash scripts/check_bare_scroll_interaction.sh
+
 # Issue #3372. Freezes at ZERO the per-file count of Nostr identifiers
 # shortened on the way into a log/debug sink, across mobile/lib,
 # mobile/packages, mobile/test and mobile/integration_test. A truncated id
