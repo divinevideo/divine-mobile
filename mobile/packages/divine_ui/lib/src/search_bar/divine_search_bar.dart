@@ -92,8 +92,25 @@ class DivineSearchBar extends StatelessWidget {
             fillColor: colors.iconButton,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(20),
-              borderSide: BorderSide.none,
+              borderSide: colors.isLight
+                  ? BorderSide(color: colors.outline)
+                  : BorderSide.none,
             ),
+            enabledBorder: colors.isLight
+                ? OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    borderSide: BorderSide(color: colors.outline),
+                  )
+                : null,
+            focusedBorder: colors.isLight
+                ? OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    borderSide: BorderSide(
+                      color: colors.accentPositive,
+                      width: 2,
+                    ),
+                  )
+                : null,
             contentPadding: const EdgeInsets.symmetric(horizontal: 16),
             prefixIconConstraints: const BoxConstraints(),
             prefixIcon: _PrefixIcon(isLoading: isLoading),

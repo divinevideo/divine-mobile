@@ -72,15 +72,16 @@ void main() {
       );
     }
 
-    Future<void> pumpSubject(WidgetTester tester) async {
+    Future<void> pumpSubject(WidgetTester tester, {ThemeData? theme}) async {
       await tester.pumpWidget(
         withBadgeProviders(
           testProviderScope(
             mockAuthService: mockAuth,
-            child: const MaterialApp(
+            child: MaterialApp(
+              theme: theme,
               localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
-              home: Scaffold(body: VineBottomNav(currentIndex: 0)),
+              home: const Scaffold(body: VineBottomNav(currentIndex: 0)),
             ),
           ),
         ),
@@ -209,6 +210,23 @@ void main() {
         );
       },
     );
+
+    testWidgets('light navigation keeps inactive icons readable', (
+      tester,
+    ) async {
+      await pumpSubject(tester, theme: VineTheme.lightTheme);
+
+      final inactive = tester.widget<ShadowedDivineIcon>(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is ShadowedDivineIcon &&
+              widget.icon == DivineIconName.search,
+        ),
+      );
+      expect(inactive.color, VineTheme.lightColors.onNavMuted);
+      expect(inactive.color.a, 1);
+      expect(inactive.shadows, isEmpty);
+    });
 
     testWidgets(
       'shows the refresh arrow when mounted while a home retap refresh is '

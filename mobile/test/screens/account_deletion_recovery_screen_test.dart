@@ -27,6 +27,7 @@ const _recoverable = AccountDeletionAttempt(
 Widget _app(
   AccountDeletionRecoveryCubit cubit, {
   Stream<AccountDeletionRecoveryState>? states,
+  ThemeData? theme,
 }) {
   if (states != null) whenListen(cubit, states);
   final router = GoRouter(
@@ -54,6 +55,7 @@ Widget _app(
     ],
   );
   return MaterialApp.router(
+    theme: theme,
     localizationsDelegates: appLocalizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     routerConfig: router,
@@ -97,6 +99,30 @@ void main() {
         findsNothing,
       );
     });
+
+    for (final (mode, theme, colors) in [
+      ('light', VineTheme.lightTheme, VineTheme.lightColors),
+      ('dark', VineTheme.theme, VineTheme.darkColors),
+    ]) {
+      testWidgets('account glyph uses $mode primary text', (tester) async {
+        when(() => cubit.state).thenReturn(
+          const AccountDeletionRecoveryState(
+            status: AccountDeletionRecoveryStatus.restorable,
+            attempt: _recoverable,
+          ),
+        );
+        await tester.pumpWidget(_app(cubit, theme: theme));
+
+        final glyph = tester.widget<DivineIcon>(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineIcon &&
+                widget.icon == DivineIconName.userCircle,
+          ),
+        );
+        expect(glyph.color, equals(colors.primaryText));
+      });
+    }
 
     testWidgets('preparing attempt without username offers cancellation', (
       tester,

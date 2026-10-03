@@ -91,6 +91,8 @@ const _bodyPairs = <(String, String)>[
   ('mutedText', 'background'),
   ('mutedText', 'card'),
   ('mutedText', 'surface'),
+  ('onSurfaceMuted', 'surface'),
+  ('onSurfaceMuted', 'surfaceContainer'),
   // `accentWarning` labels the copy next to its icon ("Reconnect needed"), not
   // just the icon, so it is held to the body ratio rather than the 3:1 floor.
   ('accentWarning', 'background'),
@@ -178,6 +180,25 @@ void main() {
             reason: '$foreground on $background',
           );
         }
+      });
+
+      test('light navigation and control outlines clear the icon floor', () {
+        const colors = VineTheme.lightColors;
+        expect(
+          _contrast(colors.onNavMuted, colors.nav),
+          greaterThanOrEqualTo(3),
+        );
+        for (final surface in [
+          colors.surface,
+          colors.background,
+          colors.surfaceContainer,
+        ]) {
+          expect(_contrast(colors.outline, surface), greaterThanOrEqualTo(3));
+        }
+        expect(
+          _contrast(colors.controlOutline, colors.controlFill),
+          greaterThanOrEqualTo(3),
+        );
       });
     });
 

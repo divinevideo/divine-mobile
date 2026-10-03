@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -77,6 +78,44 @@ void main() {
       final l10n = lookupAppLocalizations(const Locale('en'));
       expect(find.text(l10n.supporterTileSubtitle), findsOneWidget);
     });
+
+    // DivineIcon ignores the chip's IconTheme and would otherwise keep the
+    // asset's white fill, which disappears on the light chip.
+    for (final (mode, theme, colors) in [
+      ('light', VineTheme.lightTheme, VineTheme.lightColors),
+      ('dark', VineTheme.theme, VineTheme.darkColors),
+    ]) {
+      testWidgets('compact entry tints its heart with $mode primary text', (
+        tester,
+      ) async {
+        final auth = _MockAuth();
+        when(() => auth.isAuthenticated).thenReturn(false);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              authServiceProvider.overrideWithValue(auth),
+              currentAuthStateProvider.overrideWithValue(
+                AuthState.unauthenticated,
+              ),
+            ],
+            child: MaterialApp(
+              theme: theme,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: const Scaffold(body: SupporterMembership(compact: true)),
+            ),
+          ),
+        );
+
+        final heart = tester.widget<DivineIcon>(
+          find.descendant(
+            of: find.byType(ActionChip),
+            matching: find.byType(DivineIcon),
+          ),
+        );
+        expect(heart.color, equals(colors.primaryText));
+      });
+    }
 
     testWidgets('account switch ignores an old in-flight membership response', (
       tester,
@@ -278,6 +317,56 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Supporter'), visible ? findsOneWidget : findsNothing);
         expect(signatures, 0);
+        await tester.pumpWidget(const SizedBox.shrink());
+      });
+    }
+
+    for (final (mode, theme, colors) in [
+      ('light', VineTheme.lightTheme, VineTheme.lightColors),
+      ('dark', VineTheme.theme, VineTheme.darkColors),
+    ]) {
+      testWidgets('badge tints its heart with $mode primary text', (
+        tester,
+      ) async {
+        final client = SupporterApiClient(
+          baseUri: Uri.parse('https://supporters.test'),
+          authHeaderProvider: ({
+            required url,
+            required method,
+            payload,
+          }) async => null,
+          httpClient: MockClient(
+            (_) async => http.Response(
+              jsonEncode({
+                'supporters': [
+                  {'pubkey': pubkey, 'haloVisible': true},
+                ],
+              }),
+              200,
+            ),
+          ),
+        );
+        addTearDown(client.dispose);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [supporterApiClientProvider.overrideWithValue(client)],
+            child: MaterialApp(
+              theme: theme,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: const Scaffold(body: PublicSupporterBadge(pubkey: pubkey)),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final heart = tester.widget<DivineIcon>(
+          find.descendant(
+            of: find.byType(Chip),
+            matching: find.byType(DivineIcon),
+          ),
+        );
+        expect(heart.color, equals(colors.primaryText));
         await tester.pumpWidget(const SizedBox.shrink());
       });
     }

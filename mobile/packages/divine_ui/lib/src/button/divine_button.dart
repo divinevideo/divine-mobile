@@ -325,8 +325,9 @@ class _DivineButtonContent extends StatelessWidget {
     DivineButtonType.error => VineTheme.onErrorContainer,
   };
 
-  Color? _borderColor(VineThemeColors colors) =>
-      _hasBorder ? colors.outlineMuted : null;
+  Color? _borderColor(VineThemeColors colors) => _hasBorder
+      ? (colors.isLight ? colors.outline : colors.outlineMuted)
+      : null;
 
   TextStyle _textStyle(VineThemeColors colors) {
     final foreground = _foregroundColor(colors);
