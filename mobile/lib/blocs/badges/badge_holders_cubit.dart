@@ -76,7 +76,10 @@ class BadgeHoldersCubit extends Cubit<BadgeHoldersState>
 
   Future<void> _loadPreview(int generation) async {
     try {
-      final holders = await _loadIndexedPreview!(state.coordinate);
+      // The index does not know this viewer's blocks and mutes.
+      final holders = _repository.withoutHiddenPubkeys(
+        await _loadIndexedPreview!(state.coordinate),
+      );
       if (generation != _loadGeneration ||
           state.holdersStatus != BadgeHoldersStatus.loading ||
           holders.isEmpty) {
