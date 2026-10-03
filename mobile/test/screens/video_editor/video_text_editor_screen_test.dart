@@ -473,13 +473,14 @@ void main() {
     });
 
     group('Font scale', () {
-      testWidgets('starts new text at the initial font scale', (tester) async {
+      testWidgets('starts new text unscaled', (tester) async {
         await tester.pumpWidget(buildWidget());
         await tester.pump();
 
+        // At the base font size; pinching on the canvas resizes it later.
         expect(
           tester.state<TextEditorState>(find.byType(TextEditor)).fontScale,
-          VideoEditorConstants.initialFontScale,
+          1,
         );
       });
 

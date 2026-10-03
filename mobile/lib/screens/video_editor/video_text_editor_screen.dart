@@ -261,8 +261,6 @@ class _TextEditor extends StatelessWidget {
             safeArea: const EditorSafeArea.none(),
             enableAutocorrect: false,
             resizeToAvoidBottomInset: false,
-            // New text only; an edited layer keeps its own font scale.
-            initFontScale: VideoEditorConstants.initialFontScale,
             initialBackgroundColorMode: backgroundStyle,
             initialTextAlign: alignment,
             initialPrimaryColor: color,
