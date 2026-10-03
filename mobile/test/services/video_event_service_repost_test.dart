@@ -24,7 +24,7 @@ const _repostId =
 const _videoUrl = 'https://example.com/video.mp4';
 const _dTag = 'original-video';
 
-Event _originalEvent({String hashtag = 'nostr'}) {
+Event _originalEvent() {
   return Event(
     _authorPubkey,
     NIP71VideoKinds.addressableShortVideo,
@@ -33,7 +33,7 @@ Event _originalEvent({String hashtag = 'nostr'}) {
       ['url', _videoUrl],
       ['m', 'video/mp4'],
       ['title', 'Original Video'],
-      ['t', hashtag],
+      ['t', 'nostr'],
     ],
     'Original video content',
     createdAt: 1000,
@@ -92,7 +92,6 @@ void main() {
       queryFilters = [];
       queryResults = [];
       when(() => client.isInitialized).thenReturn(true);
-      when(() => client.isDisposed).thenReturn(false);
       when(() => client.connectedRelayCount).thenReturn(1);
       when(
         () => client.subscribe(
