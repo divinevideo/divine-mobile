@@ -41,6 +41,19 @@ class _VideoEventsPool extends VideoEvents {
   }
 }
 
+/// Holds the repository a test's container serves, so the test can replace it
+/// the way a filter change or an account switch rebuilds it.
+class _ActiveRepository extends Notifier<VideosRepository> {
+  _ActiveRepository(this._initial);
+
+  final VideosRepository _initial;
+
+  @override
+  VideosRepository build() => _initial;
+
+  void replace(VideosRepository repository) => state = repository;
+}
+
 class _MockVideoEventService extends Mock implements VideoEventService {}
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -102,8 +115,14 @@ void main() {
         '0000000000000000000000000000000000000000000000000000000000000bba';
     late _MockVideosRepository videosRepository;
 
+    List<VideoEvent> passThrough(Invocation invocation) =>
+        invocation.positionalArguments.single as List<VideoEvent>;
+
     setUp(() {
       videosRepository = _MockVideosRepository();
+      when(
+        () => videosRepository.applyContentPreferences(any()),
+      ).thenAnswer(passThrough);
     });
 
     ProviderContainer buildContainer({List<VideoEvent> pooled = const []}) {
@@ -118,7 +137,8 @@ void main() {
     }
 
     /// Lets the pool emit, then collects every state the provider emits for
-    /// [members] until the event queue drains.
+    /// [members]. Returns once the event queue drains; the list keeps
+    /// collecting until the test ends.
     Future<List<AsyncValue<List<VideoEvent>>>> collect(
       ProviderContainer container,
       List<String> members,
@@ -271,6 +291,83 @@ void main() {
         );
       },
     );
+
+    test(
+      'drops the videos of a member blocked while the list is open',
+      () async {
+        // A block only bumps the blocklist version, and the pool can still
+        // hold the blocked member's videos when the list re-runs.
+        final blocked = <String>{};
+        bool visible(VideoEvent video) => !blocked.contains(video.pubkey);
+        when(
+          () => videosRepository.applyContentPreferences(any()),
+        ).thenAnswer(
+          (invocation) => passThrough(invocation).where(visible).toList(),
+        );
+        final pooledMember = _video(
+          id: pooledId,
+          pubkey: _ownerA,
+          createdAt: 100,
+        );
+        final fetchedMember = _video(
+          id: fetchedId,
+          pubkey: _ownerB,
+          createdAt: 200,
+        );
+        when(
+          () => videosRepository.getVideosByAuthors(
+            authorPubkeys: any(named: 'authorPubkeys'),
+          ),
+        ).thenAnswer((_) async => [fetchedMember].where(visible).toList());
+        final container = buildContainer(pooled: [pooledMember]);
+        final states = await collect(container, [_ownerA, _ownerB]);
+        expect(idsOf(states).last, equals([fetchedId, pooledId]));
+
+        blocked.add(_ownerA);
+        container.read(blocklistVersionProvider.notifier).increment();
+        await pumpEventQueue();
+
+        expect(idsOf(states).last, equals([fetchedId]));
+      },
+    );
+
+    test('refetches through the repository when it is rebuilt', () async {
+      // A filter change or an account switch rebuilds the repository.
+      const beforeId =
+          '0000000000000000000000000000000000000000000000000000000000000bbb';
+      const afterId =
+          '0000000000000000000000000000000000000000000000000000000000000bbc';
+      final rebuilt = _MockVideosRepository();
+      when(() => rebuilt.applyContentPreferences(any()))
+          .thenAnswer(passThrough);
+      when(
+        () => videosRepository.getVideosByAuthors(
+          authorPubkeys: any(named: 'authorPubkeys'),
+        ),
+      ).thenAnswer((_) async => [_video(id: beforeId, pubkey: _ownerA)]);
+      when(
+        () => rebuilt.getVideosByAuthors(
+          authorPubkeys: any(named: 'authorPubkeys'),
+        ),
+      ).thenAnswer((_) async => [_video(id: afterId, pubkey: _ownerA)]);
+      final active = NotifierProvider<_ActiveRepository, VideosRepository>(
+        () => _ActiveRepository(videosRepository),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          videosRepositoryProvider.overrideWith((ref) => ref.watch(active)),
+          videoEventsProvider.overrideWith(() => _VideoEventsPool(const [])),
+        ],
+      );
+      addTearDown(container.dispose);
+      final states = await collect(container, [_ownerA]);
+      expect(idsOf(states).last, equals([beforeId]));
+
+      container.read(active.notifier).replace(rebuilt);
+      await pumpEventQueue();
+
+      expect(idsOf(states).last, equals([afterId]));
+    });
 
     test(
       'keeps the pooled videos when the fetch fails after the first paint',

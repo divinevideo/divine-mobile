@@ -180,6 +180,10 @@ void main() {
         ),
       );
       final repository = _MockVideosRepository();
+      when(() => repository.applyContentPreferences(any())).thenAnswer(
+        (invocation) =>
+            invocation.positionalArguments.single as List<VideoEvent>,
+      );
       const error = RelayReadUnavailableException('the read timed out');
       when(
         () => repository.getVideosByAuthors(authorPubkeys: list.pubkeys),
