@@ -8,10 +8,13 @@ set -e
 
 # Buffer stdin before running any subprocess that might consume it. Git supplies
 # one update per line; neither HEAD nor @{upstream} identifies all pushed refs.
+# A terminal means a manual run: there are no updates, and reading would wait.
 PUSH_UPDATES=()
-while IFS= read -r update; do
-    PUSH_UPDATES+=("$update")
-done
+if [ ! -t 0 ]; then
+    while IFS= read -r update; do
+        PUSH_UPDATES+=("$update")
+    done
+fi
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT/mobile"

@@ -8,6 +8,7 @@ rebase) cannot help, so the third case is covered here explicitly.
 """
 
 import os
+import pty
 import shutil
 import subprocess
 import tempfile
@@ -303,6 +304,23 @@ class PrePushBehaviourTest(unittest.TestCase):
     def test_empty_stdin_keeps_strict_check(self):
         self.make_conflict()
         self.assertEqual(self.run_hook("").returncode, 1)
+
+    def test_manual_run_from_a_terminal_keeps_strict_check_without_waiting(self):
+        self.make_conflict()
+        primary, secondary = pty.openpty()
+        self.addCleanup(os.close, primary)
+        try:
+            # Nothing ever types into the terminal, so a hook that reads its
+            # stdin here hangs until the timeout fails the test.
+            result = subprocess.run(
+                ["bash", str(self.prepare_hook()), "origin", "unused"],
+                cwd=self.repo, stdin=secondary, capture_output=True, text=True,
+                timeout=60,
+            )
+        finally:
+            os.close(secondary)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("Resolve conflicts before pushing", result.stdout)
 
 
 class InstallHooksWiringTest(unittest.TestCase):
