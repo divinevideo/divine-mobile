@@ -4,6 +4,7 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 
 AppLocalizations get _en => lookupAppLocalizations(const Locale('en'));
@@ -18,21 +19,26 @@ Finder _firstShown(List<Finder> candidates) => candidates.firstWhere(
 /// Navigate from the welcome screen to the create account screen.
 ///
 /// The welcome screen has a passive terms notice — no checkboxes needed.
-/// Taps the create-account button to reach the registration screen. A device
-/// where an account has signed in before shows the returning-user layout,
-/// which labels that button more briefly, so either label is accepted.
-/// Waits for the form to appear.
+/// Waits for and taps the shared semantic identifier used by both welcome
+/// layouts, then waits for the registration form to appear.
 Future<void> navigateToCreateAccount(WidgetTester tester) async {
-  final createButton = _firstShown([
-    find.text(_en.authCreateNewAccount),
-    find.text(_en.authCreateNewAccountShort),
-  ]);
+  final createButton = find.bySemanticsIdentifier(
+    SemanticIds.authCreateAccountButton,
+  );
+  final foundButton = await waitForWidget(
+    tester,
+    createButton,
+    maxSeconds: 10,
+  );
+  expect(
+    foundButton,
+    isTrue,
+    reason: 'Welcome create-account button not found',
+  );
   expect(
     createButton,
     findsOneWidget,
-    reason:
-        'Welcome screen should show "${_en.authCreateNewAccount}", or '
-        '"${_en.authCreateNewAccountShort}" for a returning user',
+    reason: 'Welcome screen should have one create-account button',
   );
   await tester.tap(createButton);
   await tester.pumpAndSettle(const Duration(seconds: 1));
