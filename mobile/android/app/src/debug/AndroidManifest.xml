@@ -6,26 +6,24 @@
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
-    <!-- Disable Impeller in debug builds. Impeller's Vulkan backend crashes
-         the Android emulator when using SwiftShader software rendering
-         (headless CI / AMD iGPU without native Vulkan). Skia works fine.
+    <!-- There is deliberately no `EnableImpeller` entry here: debug builds
+         render with the engine default, the same backend release and profile
+         builds ship with (see main/AndroidManifest.xml). Setting it to false
+         made every debug build render with Skia, which hid the Impeller-only
+         editor previews (chroma key, video effects) on real devices.
 
-         This is an emulator workaround, not a product decision - release and
-         profile builds render with Impeller (see main/AndroidManifest.xml).
-         Anything that needs Impeller on a real device in debug (notably the
-         video editor's live chroma-key preview, which uses the Impeller-only
-         `ui.ImageFilter.shader`) must override it per run, by passing the
-         `enable-impeller` flag to `flutter run` (spelled with the usual
-         double dash; it cannot be written literally inside an XML comment).
-         Without that override a debug build on a device shows the unkeyed
-         preview; the exported video is unaffected either way. -->
+         Emulators render with Impeller OpenGLES, never Vulkan. That works on
+         SwiftShader with an API 30 emulator, but flutter/flutter#192736
+         reports emulators dying on x86_64 Linux hosts with a software GL
+         stack. If an emulator vanishes or fails to render, pass the
+         `no-enable-impeller` flag to `flutter run` for that run (spelled
+         with the usual double dash; it cannot be written literally inside
+         an XML comment). Runners that cannot pass it (Patrol, Maestro, CI
+         emulator lanes) build with the Gradle property divineDisableImpeller
+         instead; mobile/docs/ANDROID_LOCAL_SETUP.md explains both. -->
     <application
         android:label="Divine Staging"
         tools:replace="android:label">
-        <meta-data
-            android:name="io.flutter.embedding.android.EnableImpeller"
-            android:value="false" />
-
         <!-- Keep debug builds out of the production Firebase Performance
              dataset (#7123).
 

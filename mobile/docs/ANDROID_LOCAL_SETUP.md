@@ -55,6 +55,70 @@ directly, or open `mobile/android` in Android Studio.
 
    The "Android toolchain" row must be green before an Android build will work.
 
+## Debug builds render with Impeller
+
+Debug builds use the renderer that ships. On API 29 and newer that is Impeller,
+on Vulkan where the device supports it and on OpenGLES otherwise.
+`main/AndroidManifest.xml` records why release builds use it. Below API 29 (the
+app's minimum is 28) the engine uses Skia, which has no `ImageFilter.shader`, so
+the video editor's chroma-key and effects previews stay unavailable there. Until
+October 2026 the debug manifest forced Skia on every device, so a debug build on
+a real phone showed "This device can't show the live preview" for those previews
+unless the run passed `--enable-impeller`.
+
+Emulators render with Impeller OpenGLES: the engine never selects Vulkan on an
+Android emulator. That worked on SwiftShader (`-gpu swiftshader_indirect`), the
+software GPU an emulator falls back to on a headless CI host or a machine
+without native Vulkan, which is the setup the Skia opt-out was added for in
+#1928. On Flutter 3.47.2 an API 30 emulator on that GPU mode starts the app and
+passes the feed frame-timing and time-to-first-frame integration tests.
+
+It is not known to work everywhere. flutter/flutter#192736 reports the host
+emulator process dying about a second after Impeller selects OpenGLES on x86_64
+Linux hosts that render with a software GL stack, from Flutter 3.44 on, which
+includes the 3.47.2 this repo pins. If feed video renders black on an emulator,
+see the OpenGLES note in `main/AndroidManifest.xml`.
+
+If an emulator vanishes, renders black or fails to render, turn Impeller off for
+that run only:
+
+| How the app starts | Opt-out for one run |
+|---|---|
+| `flutter run`, `flutter test`, `flutter drive` typed directly | add `--no-enable-impeller` |
+| A debug APK installed with `adb` (`mise run local_install`) | launch it with `adb shell am start -S --ez enable-impeller false -n co.openvine.app.staging/co.openvine.app.MainActivity`; `-S` stops a running copy first, because the extra is only read when the app process starts |
+| `patrol test`, Maestro, and the `mise` tasks that run Flutter for you (`e2e_test`, `local_android`) | no flag reaches the app: Patrol and Maestro launch it with no intent extras and the tasks pass fixed arguments. Build with the opt-out instead: prefix the command with `ORG_GRADLE_PROJECT_divineDisableImpeller=true` (see below) |
+
+The flag and the intent extra are the same switch: `flutter run` passes
+`--no-enable-impeller` to the app as that extra. The engine prints
+`[Action Required]: Impeller opt-out deprecated` whenever it is used and plans
+to remove it, so treat it as a diagnostic step rather than a setting, and file
+an issue for an emulator that needs it.
+
+### Build-time opt-out
+
+Setting the Gradle property `divineDisableImpeller` to `true` merges
+`mobile/android/app/impeller_opt_out/AndroidManifest.xml`, which holds
+`EnableImpeller=false`, into debug builds only. Gradle reads any environment
+variable named `ORG_GRADLE_PROJECT_<property>`, so the switch reaches every
+command that builds through Gradle, including `patrol test`:
+
+```bash
+ORG_GRADLE_PROJECT_divineDisableImpeller=true mise run e2e_test
+```
+
+It changes the APK, not the run, so build again after setting or clearing it.
+Codemagic's emulator lanes (`perf-feed-ttff`, `perf-feed-frame`,
+`e2e-smoke-android`) set it, because they run x86_64 Linux emulators on a
+software GPU, the setup flutter/flutter#192736 describes;
+`.github/scripts/tests/test_codemagic_shorebird_config.py` fails a new emulator
+lane that leaves it out. Never set it for a build meant for a real device. The
+committed debug manifest stays free of the entry, and
+`mobile/test/android/debug_manifest_impeller_test.dart` fails if one comes back.
+
+`--enable-software-rendering` is not supported with Impeller (the engine refuses
+the pair with "Impeller does not support software rendering"), so pass
+`--no-enable-impeller --enable-software-rendering` together.
+
 ## Running Gradle directly
 
 The wrapper is tracked, so `./gradlew` exists in a fresh clone or worktree with

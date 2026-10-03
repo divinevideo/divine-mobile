@@ -167,7 +167,16 @@ mise run emulator_wipe      # -wipe-data (storage exhausted)
 ```
 
 Override AVD: `AVD_NAME=<name> mise run emulator`. Always uses
-`-gpu host` — swiftshader can't render media_kit frames.
+`-gpu host`.
+
+Debug builds render with Impeller, as release does. On an emulator the
+engine picks Impeller OpenGLES, never Vulkan. If an emulator vanishes or
+cannot render, `e2e_test` cannot pass a flag: it calls `patrol test` or
+`flutter test` with fixed arguments, and Patrol launches the app without
+intent extras. Build with the opt-out instead:
+`ORG_GRADLE_PROJECT_divineDisableImpeller=true mise run e2e_test ...`.
+`mobile/docs/ANDROID_LOCAL_SETUP.md` ("Debug builds render with
+Impeller") lists it with the flags for `flutter run` and `adb`.
 
 Skip the per-run reinstall with `PATROL_NO_UNINSTALL=true mise run
 e2e_test ...` when iterating fast and the APK hasn't changed.

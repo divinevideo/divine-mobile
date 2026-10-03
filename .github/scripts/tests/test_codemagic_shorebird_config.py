@@ -30,6 +30,13 @@ PATCH_SOURCE_PATH = (
     / "scripts"
     / "shorebird_patch_source.rb"
 )
+APP_GRADLE_PATH = (
+    Path(__file__).resolve().parents[3]
+    / "mobile"
+    / "android"
+    / "app"
+    / "build.gradle.kts"
+)
 CAPTION_GENERATOR_GRADLE_PATH = (
     Path(__file__).resolve().parents[3]
     / "mobile"
@@ -203,6 +210,32 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertNotIn("feed_ttff_test.dart", runner)
         self.assertNotIn("local_stack", runner)
         self.assertNotIn("GHCR", runner)
+
+    def test_android_emulator_lanes_build_with_the_impeller_opt_out(self) -> None:
+        # Debug builds render with Impeller, which kills x86_64 Linux emulators
+        # on a software GL stack (flutter/flutter#192736). Every lane that
+        # boots one must build with the opt-out read by app/build.gradle.kts.
+        self.assertIn(
+            'gradleProperty("divineDisableImpeller")', APP_GRADLE_PATH.read_text()
+        )
+        workflows = self._resolved_config()["workflows"]
+        emulator_lanes = [
+            name
+            for name, workflow in workflows.items()
+            if any(
+                isinstance(step, dict) and step.get("name") == "Launch Android emulator"
+                for step in workflow.get("scripts", [])
+            )
+        ]
+        for expected in ("perf-feed-ttff", "perf-feed-frame", "e2e-smoke-android"):
+            self.assertIn(expected, emulator_lanes)
+        for name in emulator_lanes:
+            with self.subTest(workflow=name):
+                variables = workflows[name]["environment"].get("vars", {})
+                self.assertEqual(
+                    "true",
+                    variables.get("ORG_GRADLE_PROJECT_divineDisableImpeller"),
+                )
 
     def test_android_e2e_excludes_unbounded_maestro_artifacts(self) -> None:
         workflow = self._resolved_config()["workflows"]["e2e-smoke-android"]

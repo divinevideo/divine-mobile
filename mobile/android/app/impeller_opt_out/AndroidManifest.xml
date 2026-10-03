@@ -1,0 +1,12 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Merged into debug builds only when the Gradle property
+         `divineDisableImpeller` is true (see app/build.gradle.kts). It exists
+         for emulators that cannot run Impeller and for runners that cannot
+         pass a per-run flag (Patrol, Maestro, CI emulator lanes). Debug
+         builds otherwise render with the engine default, like release. -->
+    <application>
+        <meta-data
+            android:name="io.flutter.embedding.android.EnableImpeller"
+            android:value="false" />
+    </application>
+</manifest>
