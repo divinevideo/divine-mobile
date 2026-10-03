@@ -384,6 +384,7 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView>
     measureHeaderHeight();
 
     return videosAsync.when(
+      skipLoadingOnRefresh: videosAsync.hasValue,
       data: (videos) {
         if (videos.isEmpty) {
           return Center(
@@ -475,30 +476,9 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView>
       loading: () => const Center(
         child: DivineCircularProgressIndicator(color: VineTheme.vineGreen),
       ),
-      error: (error, stack) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const DivineIcon(
-              icon: DivineIconName.warningCircle,
-              size: 64,
-              color: VineTheme.likeRed,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              l10n.peopleListsFailedToLoadVideos,
-              style: const TextStyle(color: VineTheme.likeRed, fontSize: 18),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              error.toString(),
-              style: TextStyle(
-                color: context.vineColors.secondaryText,
-                fontSize: 12,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+      error: (error, stack) => _MemberVideosError(
+        onRetry: () => ref.invalidate(
+          userListMemberVideosProvider(userList.pubkeys),
         ),
       ),
     );
@@ -634,6 +614,40 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView>
         child: Text(
           l10n.peopleListsErrorLoadingVideos,
           style: const TextStyle(color: VineTheme.likeRed),
+        ),
+      ),
+    );
+  }
+}
+
+class _MemberVideosError extends StatelessWidget {
+  const _MemberVideosError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 16,
+          children: [
+            DivineIcon(
+              icon: DivineIconName.warningCircle,
+              size: 64,
+              color: context.vineColors.accentWarning,
+            ),
+            Text(
+              context.l10n.peopleListsFailedToLoadVideos,
+              textAlign: TextAlign.center,
+              style: VineTheme.titleSmallFont(
+                color: context.vineColors.primaryText,
+              ),
+            ),
+            DivineButton(label: context.l10n.commonRetry, onPressed: onRetry),
+          ],
         ),
       ),
     );
