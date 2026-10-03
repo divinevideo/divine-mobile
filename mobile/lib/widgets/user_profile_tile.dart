@@ -25,7 +25,10 @@ import 'package:openvine/widgets/vanished_account_identity.dart';
 /// Uses callback mode for follow button behavior - the parent widget
 /// controls the follow state via [isFollowing] and [onToggleFollow].
 ///
-/// Set [showFollowButton] to false to hide the follow button entirely.
+/// Set [showFollowButton] to false to hide the follow button entirely, and
+/// [showAddToListButton] to false to hide the add-to-list action even where
+/// the profile-list features flag would show it. [trailing] renders after
+/// both, for a surface whose row action is neither of them.
 class UserProfileTile extends ConsumerWidget {
   const UserProfileTile({
     required this.pubkey,
@@ -37,6 +40,8 @@ class UserProfileTile extends ConsumerWidget {
     this.index,
     this.addToListEntryPoint = PeopleListEntryPoint.followersList,
     this.padding = const EdgeInsets.all(16),
+    this.showAddToListButton = true,
+    this.trailing,
   });
 
   /// The public key of the user to display.
@@ -71,6 +76,13 @@ class UserProfileTile extends ConsumerWidget {
   /// zero start inset so the avatar is not indented twice.
   final EdgeInsetsGeometry padding;
 
+  /// Whether the add-to-list action may render at all. The people-list
+  /// picker sets this to false: its own row action already edits a list.
+  final bool showAddToListButton;
+
+  /// An action rendered at the end of the row, after the follow button slot.
+  final Widget? trailing;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(userProfileReactiveProvider(pubkey)).value;
@@ -90,7 +102,10 @@ class UserProfileTile extends ConsumerWidget {
       isFeatureEnabledProvider(FeatureFlag.curatedLists),
     );
     final showAddToList =
-        profileListFeaturesEnabled && curatedListsEnabled && !isCurrentUser;
+        showAddToListButton &&
+        profileListFeaturesEnabled &&
+        curatedListsEnabled &&
+        !isCurrentUser;
 
     final displayName = vanishedAccountName(
       context,
@@ -207,6 +222,10 @@ class UserProfileTile extends ConsumerWidget {
                   displayName: displayName,
                   index: index,
                 ),
+              ],
+              if (trailing case final trailing?) ...[
+                const SizedBox(width: 12),
+                trailing,
               ],
             ],
           ),

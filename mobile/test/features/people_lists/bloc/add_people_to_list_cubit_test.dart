@@ -1,5 +1,5 @@
 // ABOUTME: Unit tests for AddPeopleToListCubit.
-// ABOUTME: Covers candidate loading, sort order, filtering, toggling, and retry.
+// ABOUTME: Covers candidate loading, sort order, filtering, refresh, and retry.
 
 import 'dart:async';
 
@@ -88,13 +88,10 @@ void main() {
       if (!followersController.isClosed) await followersController.close();
     });
 
-    AddPeopleToListCubit createCubit({
-      List<String> existingMembers = const [],
-    }) {
+    AddPeopleToListCubit createCubit() {
       return AddPeopleToListCubit(
         followRepository: followRepository,
         profileRepository: profileRepository,
-        existingMemberPubkeys: existingMembers,
       );
     }
 
@@ -103,9 +100,41 @@ void main() {
       expect(cubit.state.status, AddPeopleToListStatus.initial);
       expect(cubit.state.candidates, isEmpty);
       expect(cubit.state.query, isEmpty);
-      expect(cubit.state.selectedPubkeys, isEmpty);
       await cubit.close();
     });
+
+    test(
+      'keeps candidates ready while restarting live subscriptions',
+      () async {
+        final cancellation = Completer<void>();
+        final originalFollowing = StreamController<List<String>>(
+          onCancel: () => cancellation.future,
+        );
+        when(() => followRepository.followingPubkeys)
+            .thenReturn([_alicePubkey]);
+        when(
+          () => followRepository.followingStream,
+        ).thenAnswer((_) => originalFollowing.stream);
+        final cubit = createCubit();
+        await cubit.started();
+        expect(cubit.state.status, AddPeopleToListStatus.ready);
+        expect(cubit.state.candidates.single.pubkey, _alicePubkey);
+        when(
+          () => followRepository.followingStream,
+        ).thenAnswer((_) => followingController.stream);
+
+        final refreshing = cubit.started();
+        try {
+          expect(cubit.state.status, AddPeopleToListStatus.ready);
+          expect(cubit.state.candidates.single.pubkey, _alicePubkey);
+        } finally {
+          cancellation.complete();
+          await refreshing;
+          await cubit.close();
+          await originalFollowing.close();
+        }
+      },
+    );
 
     group('started', () {
       test(
@@ -204,25 +233,6 @@ void main() {
         },
       );
 
-      test('existingMemberPubkeys appear with isAlreadyInList=true', () async {
-        when(
-          () => followRepository.followingPubkeys,
-        ).thenReturn([_alicePubkey]);
-        when(
-          () => followRepository.watchMyFollowers(),
-        ).thenAnswer((_) => const Stream.empty());
-
-        final cubit = createCubit(existingMembers: [_alicePubkey]);
-        await cubit.started();
-
-        final alice = cubit.state.candidates.firstWhere(
-          (c) => c.pubkey == _alicePubkey,
-        );
-        expect(alice.isAlreadyInList, isTrue);
-
-        await cubit.close();
-      });
-
       test(
         'profile lookup failure keeps candidate with fallback labels',
         () async {
@@ -320,6 +330,91 @@ void main() {
           await _flush();
 
           expect(cubit.isClosed, isTrue);
+        },
+      );
+    });
+
+    group('followers fetch in flight', () {
+      late Completer<FollowersSnapshot> inFlight;
+
+      setUp(() {
+        inFlight = Completer<FollowersSnapshot>();
+        var subscriptions = 0;
+        Stream<FollowersSnapshot> watchMyFollowers() async* {
+          final first = ++subscriptions == 1;
+          yield const FollowersSnapshot(pubkeys: [_bobPubkey], count: 1);
+          if (first) yield await inFlight.future;
+        }
+
+        when(() => followRepository.followingPubkeys)
+            .thenReturn([_alicePubkey]);
+        when(() => followRepository.followingStream)
+            .thenAnswer((_) => Stream.value([_alicePubkey]));
+        when(() => followRepository.watchMyFollowers())
+            .thenAnswer((_) => watchMyFollowers());
+      });
+
+      test(
+        'refresh keeps follower candidates before the old fetch settles',
+        () async {
+          final cubit = createCubit();
+          await cubit.started();
+          await _flush();
+          final refresh = cubit.started();
+          try {
+            await _flush();
+            expect(cubit.state.status, AddPeopleToListStatus.ready);
+            expect(
+              cubit.state.candidates.map((c) => c.pubkey),
+              containsAll([_alicePubkey, _bobPubkey]),
+            );
+          } finally {
+            inFlight.complete(
+              const FollowersSnapshot(pubkeys: [_bobPubkey], count: 1),
+            );
+            await refresh;
+            await cubit.close();
+          }
+        },
+      );
+
+      test('refresh stays ready when the replaced fetch fails', () async {
+        final cubit = createCubit();
+        await cubit.started();
+        await _flush();
+        final refresh = cubit.started();
+        await _flush();
+        inFlight.completeError(StateError('every follower source failed'));
+        await refresh;
+        await _flush();
+        try {
+          expect(cubit.state.status, AddPeopleToListStatus.ready);
+          expect(
+            cubit.state.candidates.map((c) => c.pubkey),
+            containsAll([_alicePubkey, _bobPubkey]),
+          );
+        } finally {
+          await cubit.close();
+        }
+      });
+
+      test(
+        'close finishes before the fetch and handles its later failure',
+        () async {
+          final cubit = createCubit();
+          await cubit.started();
+          await _flush();
+          var closed = false;
+          final closing = cubit.close().then((_) => closed = true);
+          try {
+            await _flush();
+            expect(closed, isTrue);
+            expect(cubit.isClosed, isTrue);
+          } finally {
+            inFlight.completeError(StateError('every follower source failed'));
+            await closing;
+            await _flush();
+          }
         },
       );
     });
@@ -429,28 +524,6 @@ void main() {
       });
     });
 
-    group('candidateToggled', () {
-      test('adds and removes pubkey from selectedPubkeys', () async {
-        when(
-          () => followRepository.followingPubkeys,
-        ).thenReturn([_alicePubkey]);
-        when(
-          () => followRepository.watchMyFollowers(),
-        ).thenAnswer((_) => const Stream.empty());
-
-        final cubit = createCubit();
-        await cubit.started();
-
-        expect(cubit.state.selectedPubkeys, isEmpty);
-        cubit.candidateToggled(_alicePubkey);
-        expect(cubit.state.selectedPubkeys, contains(_alicePubkey));
-        cubit.candidateToggled(_alicePubkey);
-        expect(cubit.state.selectedPubkeys, isNot(contains(_alicePubkey)));
-
-        await cubit.close();
-      });
-    });
-
     group('retryRequested', () {
       blocTest<AddPeopleToListCubit, AddPeopleToListState>(
         're-runs the loader after a prior failure',
@@ -470,7 +543,6 @@ void main() {
         build: () => AddPeopleToListCubit(
           followRepository: followRepository,
           profileRepository: profileRepository,
-          existingMemberPubkeys: const [],
         ),
         act: (cubit) async {
           await cubit.started();

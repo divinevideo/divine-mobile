@@ -1423,36 +1423,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Няма налични видеа';
 
   @override
-  String get exploreDiscoverLists => 'Открий списъци';
-
-  @override
-  String get exploreAboutLists => 'Относно списъците';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Списъците ти помагат да организираш и управляваш Divine съдържание по два начина:';
-
-  @override
-  String get explorePeopleLists => 'Списъци с хора';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'Следвай групи от творци и виж най-новите им видеа';
-
-  @override
-  String get exploreVideoLists => 'Видео списъци';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Създай плейлисти с любимите си видеа, за да ги гледаш по-късно';
-
-  @override
-  String get exploreMyLists => 'Моите списъци';
-
-  @override
-  String get exploreSubscribedLists => 'Абонирани списъци';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Грешка при зареждане на списъците. Опитай пак.';
 
@@ -3982,16 +3952,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Видеата от хората в списъка ще се появят тук';
 
   @override
-  String get peopleListsNoVideosAvailable => 'Няма налични видеа';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'Не успяхме да заредим видеата';
 
   @override
   String get peopleListsVideoNotAvailable => 'Видеото не е налично';
-
-  @override
-  String get peopleListsBackToGridTooltip => 'Обратно към мрежата';
 
   @override
   String get peopleListsErrorLoadingVideos => 'Грешка при зареждане на видеа';
@@ -4013,14 +3977,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'Опитай пак';
-
-  @override
-  String get peopleListsAddButton => 'Добави';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Добави $count';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -4945,17 +4901,6 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String listVideoCount(int count) {
     return '$count видеа';
-  }
-
-  @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count души',
-      one: '1 човек',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -6188,31 +6133,6 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Неуспешно актуализиране на абонамента. Опитай пак.';
-
-  @override
-  String get discoverListsTitle => 'Открий списъци';
-
-  @override
-  String get discoverListsFailedToLoad => 'Зареждането на списъците не успя';
-
-  @override
-  String get discoverListsLoading => 'Откриваме публични списъци...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Релето не върна списъци навреме. Опитай пак.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Услугата не е налична.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Не са намерени публични списъци';
-
-  @override
-  String get discoverListsEmptySubtitle => 'Върни се по-късно за нови списъци';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'от';
 
   @override
   String get curatedListEmptyTitle => 'Няма видеа в този списък';
@@ -12983,4 +12903,82 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => 'Включи автоматичното';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted лупа',
+      one: '$formatted луп',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count души',
+      one: '$count човек',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count членове',
+      one: '$count член',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get peopleListsViewAllMembers => 'Виж всички';
+
+  @override
+  String get peopleListsLoadFailed => 'Не успяхме да заредим този списък.';
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Частен, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'Този път не изскочи нито един списък. Дръпни надолу за обновяване.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Зареждане на списъци';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Добави $name към списъка';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Не успяхме да обновим списъка. Опитай пак.';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Премахни $name от списъка';
+  }
 }

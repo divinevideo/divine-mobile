@@ -30,8 +30,12 @@ class FollowerCountTitle<B extends StateStreamable<S>, S>
   const FollowerCountTitle({
     required this.title,
     required this.selector,
+    this.countLabel = _usersLabel,
     super.key,
   });
+
+  static String _usersLabel(BuildContext context, int count) =>
+      context.l10n.profileFollowerCountUsers(count);
 
   /// The main title text to display.
   final String title;
@@ -40,6 +44,10 @@ class FollowerCountTitle<B extends StateStreamable<S>, S>
   ///
   /// Should return 0 when the data is not yet loaded.
   final int Function(S state) selector;
+
+  /// Renders the count line. Defaults to "N users"; a list screen passes
+  /// its own noun, such as "N members".
+  final String Function(BuildContext context, int count) countLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +65,7 @@ class FollowerCountTitle<B extends StateStreamable<S>, S>
               ),
             ),
             Text(
-              context.l10n.profileFollowerCountUsers(count),
+              countLabel(context, count),
               style: VineTheme.bodySmallFont(
                 color: context.vineColors.onSurfaceVariant,
               ),

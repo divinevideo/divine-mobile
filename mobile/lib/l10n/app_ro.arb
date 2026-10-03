@@ -466,15 +466,6 @@
     "featuredTabLoadFailed": "Nu am putut încărca această colecție.",
     "featuredTabRetry": "Încearcă din nou",
     "exploreNoVideosAvailable": "Niciun videoclip disponibil",
-    "exploreDiscoverLists": "Descoperă liste",
-    "exploreAboutLists": "Despre liste",
-    "exploreAboutListsDescription": "Listele te ajută să organizezi și să curaâezi conținutul Divine în două feluri:",
-    "explorePeopleLists": "Liste de oameni",
-    "explorePeopleListsDescription": "Urmărește grupuri de creatori și vezi cele mai noi videoclipuri ale lor",
-    "exploreVideoLists": "Liste de videoclipuri",
-    "exploreVideoListsDescription": "Creează playlisturi cu videoclipurile preferate ca să le vezi mai târziu",
-    "exploreMyLists": "Listele mele",
-    "exploreSubscribedLists": "Liste la care ești abonat",
     "exploreErrorLoadingLists": "Eroare la încărcarea listelor. Încearcă din nou.",
     "exploreNewVideosCount": "{count, plural, =1{1 videoclip nou} other{{count} videoclipuri noi}}",
     "@exploreNewVideosCount": {
@@ -2984,18 +2975,14 @@
     "peopleListsNoPeopleSubtitle": "Adaugă persoane pentru a începe",
     "peopleListsNoVideosTitle": "Niciun videoclip încă",
     "peopleListsNoVideosSubtitle": "Videoclipurile membrilor listei vor apărea aici",
-    "peopleListsNoVideosAvailable": "Niciun videoclip disponibil",
     "peopleListsFailedToLoadVideos": "Încărcarea videoclipurilor a eșuat",
     "peopleListsVideoNotAvailable": "Videoclip indisponibil",
-    "peopleListsBackToGridTooltip": "Înapoi la grilă",
     "peopleListsErrorLoadingVideos": "Eroare la încărcarea videoclipurilor",
     "peopleListsNoPeopleToAdd": "Nicio persoană disponibilă de adăugat.",
     "peopleListsAddToListName": "Adaugă la {name}",
     "peopleListsAddPeopleSearchHint": "Caută persoane",
     "peopleListsAddPeopleError": "Nu s-au putut încărca persoanele. Te rugăm să încerci din nou.",
     "peopleListsAddPeopleRetry": "Încearcă din nou",
-    "peopleListsAddButton": "Adaugă",
-    "peopleListsAddButtonWithCount": "Adaugă {count}",
     "peopleListsInNLists": "{count, plural, =1{Într-o listă} few{În {count} liste} other{În {count} liste}}",
     "peopleListsRemoveConfirmTitle": "Elimini {name}?",
     "peopleListsRemoveConfirmBody": "Va fi eliminat/ă din această listă.",
@@ -3229,14 +3216,6 @@
     "nostrSettingsDeleteAccountSubtitle": "Trimite cereri de ștergere pentru conținutul tău și te deconectează pe acest dispozitiv. Relay-urile, clienții, indexurile de căutare și alte dispozitive conectate pot păstra copii.",
     "safetySettingsWhatYouSee": "CE VEZI",
     "safetySettingsWhatYouPublish": "CE PUBLICI",
-    "listPersonCount": "{count, plural, =1{1 persoană} few{{count} persoane} other{{count} de persoane}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "De ",
     "keyManagementYourPublicKeyLabel": "Cheia ta publică (npub)",
     "@keyManagementYourPublicKeyLabel": {
@@ -3283,14 +3262,6 @@
             }
         }
     },
-    "discoverListsTitle": "Descoperă liste",
-    "discoverListsFailedToLoad": "N-am putut încărca listele",
-    "discoverListsLoading": "Se descoperă liste publice...",
-    "discoverListsRelayTimeout": "Releul nu a returnat liste la timp. Încearcă din nou.",
-    "discoverListsServiceUnavailable": "Serviciul nu este disponibil.",
-    "discoverListsEmptyTitle": "Nicio listă publică găsită",
-    "discoverListsEmptySubtitle": "Revino mai târziu pentru liste noi",
-    "discoverListsByAuthorPrefix": "de",
     "curatedListEmptyTitle": "Niciun videoclip în această listă",
     "curatedListEmptySubtitle": "Adaugă câteva videoclipuri ca să începi",
     "curatedListLoadingVideos": "Se încarcă videoclipurile...",
@@ -4821,5 +4792,69 @@
   "crosspostingAutoBody": "Fiecare buclă nouă pe care o postezi merge la {platform} pentru tine — fără atingere extra. Se aplică doar buclelor pe care le publici după ce activezi asta.",
   "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "Activează automat",
-  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+    "peopleListsAddPersonSemanticLabel": "Adaugă pe {name} la listă",
+    "@peopleListsAddPersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsRemovePersonSemanticLabel": "Elimină pe {name} din listă",
+    "@peopleListsRemovePersonSemanticLabel": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "peopleListsMembershipUpdateFailed": "N-am putut actualiza lista. Mai încearcă.",
+  "listLoopsCount": "{count, plural, =1{{formatted} buclă} few{{formatted} bucle} other{{formatted} de bucle}}",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} persoană} few{{count} persoane} other{{count} de persoane}}",
+  "listMemberCount": "{count, plural, =1{{count} membru} few{{count} membri} other{{count} de membri}}",
+  "peopleListsViewAllMembers": "Vezi toți",
+  "peopleListsLoadFailed": "N-am putut încărca această listă.",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Privată, {count}} other{{name}, {count}}}",
+  "listMemberNamesSeparator": ", ",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+    "listsDiscoveryLoadingLabel": "Se încarcă listele",
+    "listsDiscoveryEmpty": "De data asta n-a apărut nicio listă. Trage în jos pentru reîmprospătare."
 }

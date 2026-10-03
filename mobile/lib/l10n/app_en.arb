@@ -896,15 +896,6 @@
     "description": "Retry button on the featured Explore tab's failure state."
   },
   "exploreNoVideosAvailable": "No videos available",
-  "exploreDiscoverLists": "Discover Lists",
-  "exploreAboutLists": "About Lists",
-  "exploreAboutListsDescription": "Lists help you organize and curate Divine content in two ways:",
-  "explorePeopleLists": "People Lists",
-  "explorePeopleListsDescription": "Follow groups of creators and see their latest videos",
-  "exploreVideoLists": "Video Lists",
-  "exploreVideoListsDescription": "Create playlists of your favorite videos to watch later",
-  "exploreMyLists": "My Lists",
-  "exploreSubscribedLists": "Subscribed Lists",
   "exploreErrorLoadingLists": "Error loading lists. Please try again.",
   "exploreNewVideosCount": "{count, plural, =1{1 new video} other{{count} new videos}}",
   "@exploreNewVideosCount": {
@@ -2480,10 +2471,8 @@
   "peopleListsNoPeopleSubtitle": "Add some people to get started",
   "peopleListsNoVideosTitle": "No videos yet",
   "peopleListsNoVideosSubtitle": "Videos from list members will appear here",
-  "peopleListsNoVideosAvailable": "No videos available",
   "peopleListsFailedToLoadVideos": "Failed to load videos",
   "peopleListsVideoNotAvailable": "Video not available",
-  "peopleListsBackToGridTooltip": "Back to grid",
   "peopleListsErrorLoadingVideos": "Error loading videos",
   "peopleListsNoPeopleToAdd": "No people available to add.",
   "peopleListsAddToListName": "Add to {name}",
@@ -2497,15 +2486,6 @@
   "peopleListsAddPeopleSearchHint": "Search people",
   "peopleListsAddPeopleError": "Couldn't load people. Please try again.",
   "peopleListsAddPeopleRetry": "Try again",
-  "peopleListsAddButton": "Add",
-  "peopleListsAddButtonWithCount": "Add {count}",
-  "@peopleListsAddButtonWithCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "peopleListsInNLists": "{count, plural, =1{In 1 list} other{In {count} lists}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -3094,14 +3074,6 @@
   "listAddToList": "Add to List",
   "listVideoCount": "{count, plural, =1{{count} video} other{{count} videos}}",
   "@listVideoCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "listPersonCount": "{count, plural, =1{1 person} other{{count} people}}",
-  "@listPersonCount": {
     "placeholders": {
       "count": {
         "type": "int"
@@ -4044,14 +4016,6 @@
     }
   },
   "discoverListsFailedToUpdateSubscription": "Failed to update subscription. Please try again.",
-  "discoverListsTitle": "Discover Lists",
-  "discoverListsFailedToLoad": "Failed to load lists",
-  "discoverListsLoading": "Discovering public lists...",
-  "discoverListsRelayTimeout": "The relay did not return lists in time. Try again.",
-  "discoverListsServiceUnavailable": "Service not available.",
-  "discoverListsEmptyTitle": "No public lists found",
-  "discoverListsEmptySubtitle": "Check back later for new lists",
-  "discoverListsByAuthorPrefix": "by",
   "curatedListEmptyTitle": "No videos in this list",
   "curatedListEmptySubtitle": "Add some videos to get started",
   "curatedListLoadingVideos": "Loading videos...",
@@ -9124,5 +9088,96 @@
   "crosspostingAutoEnable": "Turn on automatic",
   "@crosspostingAutoEnable": {
     "description": "Action that switches a platform to automatic crossposting"
+  },
+  "@listLoopsCount": {
+    "description": "Loop total in a list's stats line. 'formatted' is the compact figure shown (e.g. 89.4B); 'count' is the same total as a number and only selects the plural form.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loops}}",
+  "@peopleListsViewAllMembers": {
+    "description": "Beside the piled member avatars on a people list; opens the full roster of the list's members."
+  },
+  "@listStatsSeparator": {
+    "description": "Joins the member, video and loop counts in a list's stats line, e.g. '33 members ∙ 88 videos ∙ 89.4B loops'. Keep the surrounding spaces unless the locale sets them differently."
+  },
+  "peopleListsPeopleCount": "{count, plural, =1{{count} person} other{{count} people}}",
+  "listMemberCount": "{count, plural, =1{{count} member} other{{count} members}}",
+  "peopleListsViewAllMembers": "View all",
+  "peopleListsLoadFailed": "Couldn't load this list.",
+  "@listMemberCount": {
+    "description": "Screen-reader count spoken for a people-list card, after the list name.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@peopleListsPeopleCount": {
+    "description": "Subtitle of a people list's roster screen, under the list name.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "@listMemberNamesSeparator": {
+    "description": "Joins the member names shown under a people list card that has no description, e.g. 'Alice, Bob, Carol'. Translate the separator: locales that do not list with a Latin comma should use their own (for example '、' or '، ')."
+  },
+  "listMemberNamesSeparator": ", ",
+  "@listCardSemanticLabel": {
+    "description": "Screen-reader label for a list card, read as one sentence: the list's name, 'Private' when it is a device-only list, and its count as already localized by listVideoCount or listMemberCount. The order and the punctuation between them are the locale's to choose.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Weekend loops"
+      },
+      "visibility": {
+        "type": "String",
+        "example": "private"
+      },
+      "count": {
+        "type": "String",
+        "example": "3 videos"
+      }
+    }
+  },
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Private, {count}} other{{name}, {count}}}",
+  "@listsDiscoveryEmpty": {
+    "description": "Full-screen message on the Explore Lists tab when neither discovery column returned any lists."
+  },
+  "listsDiscoveryEmpty": "No lists turned up this time. Pull to refresh.",
+  "@listsDiscoveryLoadingLabel": {
+    "description": "Screen-reader label for the shimmering placeholder cards shown while the Explore Lists gallery loads."
+  },
+  "listsDiscoveryLoadingLabel": "Loading lists",
+  "peopleListsAddPersonSemanticLabel": "Add {name} to list",
+  "peopleListsMembershipUpdateFailed": "Couldn't update the list. Please try again.",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "description": "Screen-reader label of the row button that removes a person from the people list being edited.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@peopleListsAddPersonSemanticLabel": {
+    "description": "Screen-reader label of the row button that adds a person to the people list being edited.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "Remove {name} from list",
+  "@peopleListsMembershipUpdateFailed": {
+    "description": "Snackbar shown when adding or removing a person from a people list fails and the change is rolled back."
   }
 }

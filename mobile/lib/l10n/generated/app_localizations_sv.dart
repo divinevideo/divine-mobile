@@ -1396,36 +1396,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Inga videor tillgängliga';
 
   @override
-  String get exploreDiscoverLists => 'Upptäck listor';
-
-  @override
-  String get exploreAboutLists => 'Om listor';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Listor hjälper dig organisera och kuratera Divine-innehåll på två sätt:';
-
-  @override
-  String get explorePeopleLists => 'Personlistor';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'Följ grupper av kreatörer och se deras senaste videor';
-
-  @override
-  String get exploreVideoLists => 'Videolistor';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Skapa spellistor med dina favoritvideor för att titta på senare';
-
-  @override
-  String get exploreMyLists => 'Mina listor';
-
-  @override
-  String get exploreSubscribedLists => 'Prenumererade listor';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Fel vid inläsning av listor. Försök igen.';
 
@@ -3926,17 +3896,11 @@ class AppLocalizationsSv extends AppLocalizations {
       'Videor från listmedlemmar visas här';
 
   @override
-  String get peopleListsNoVideosAvailable => 'Inga videor tillgängliga';
-
-  @override
   String get peopleListsFailedToLoadVideos =>
       'Det gick inte att läsa in videor';
 
   @override
   String get peopleListsVideoNotAvailable => 'Video ej tillgänglig';
-
-  @override
-  String get peopleListsBackToGridTooltip => 'Tillbaka till rutnät';
 
   @override
   String get peopleListsErrorLoadingVideos => 'Fel vid inläsning av videor';
@@ -3959,14 +3923,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'Försök igen';
-
-  @override
-  String get peopleListsAddButton => 'Lägg till';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Lägg till $count';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -4889,17 +4845,6 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String listVideoCount(int count) {
     return '$count videor';
-  }
-
-  @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count personer',
-      one: '1 person',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -6126,31 +6071,6 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Kunde inte uppdatera prenumerationen. Försök igen.';
-
-  @override
-  String get discoverListsTitle => 'Upptäck listor';
-
-  @override
-  String get discoverListsFailedToLoad => 'Kunde inte ladda listor';
-
-  @override
-  String get discoverListsLoading => 'Söker upp publika listor...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Relayen returnerade inga listor i tid. Försök igen.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Tjänsten är inte tillgänglig.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Inga publika listor hittades';
-
-  @override
-  String get discoverListsEmptySubtitle => 'Kom tillbaka senare för nya listor';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'av';
 
   @override
   String get curatedListEmptyTitle => 'Inga videor i den här listan';
@@ -12865,4 +12785,82 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => 'Slå på automatiskt';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted loopar',
+      one: '$formatted loop',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count personer',
+      one: '$count person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count medlemmar',
+      one: '$count medlem',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get peopleListsViewAllMembers => 'Visa alla';
+
+  @override
+  String get peopleListsLoadFailed => 'Kunde inte läsa in den här listan.';
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Privat, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'Inga listor dök upp den här gången. Dra för att uppdatera.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Läser in listor';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Lägg till $name i listan';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Kunde inte uppdatera listan. Försök igen.';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Ta bort $name från listan';
+  }
 }

@@ -1439,36 +1439,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Aucune vidéo disponible';
 
   @override
-  String get exploreDiscoverLists => 'Découvrir les listes';
-
-  @override
-  String get exploreAboutLists => 'À propos des listes';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Les listes t\'aident à organiser et curater le contenu Divine de deux façons :';
-
-  @override
-  String get explorePeopleLists => 'Listes de personnes';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'Suis des groupes de créateurs et vois leurs dernières vidéos';
-
-  @override
-  String get exploreVideoLists => 'Listes de vidéos';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Crée des playlists de tes vidéos préférées à regarder plus tard';
-
-  @override
-  String get exploreMyLists => 'Mes listes';
-
-  @override
-  String get exploreSubscribedLists => 'Listes abonnées';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Erreur de chargement des listes. Réessaie.';
 
@@ -3993,17 +3963,11 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les vidéos des membres de la liste apparaîtront ici';
 
   @override
-  String get peopleListsNoVideosAvailable => 'Aucune vidéo disponible';
-
-  @override
   String get peopleListsFailedToLoadVideos =>
       'Impossible de charger les vidéos';
 
   @override
   String get peopleListsVideoNotAvailable => 'Vidéo non disponible';
-
-  @override
-  String get peopleListsBackToGridTooltip => 'Retour à la grille';
 
   @override
   String get peopleListsErrorLoadingVideos =>
@@ -4027,14 +3991,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'Réessayer';
-
-  @override
-  String get peopleListsAddButton => 'Ajouter';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Ajouter $count';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -4964,17 +4920,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String listVideoCount(int count) {
     return '$count vidéos';
-  }
-
-  @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count personnes',
-      one: '$count personne',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -6211,32 +6156,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Impossible de mettre à jour l\'abonnement. Réessaie.';
-
-  @override
-  String get discoverListsTitle => 'Découvrir des listes';
-
-  @override
-  String get discoverListsFailedToLoad => 'Échec du chargement des listes';
-
-  @override
-  String get discoverListsLoading => 'Recherche de listes publiques...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Le relais n\'a pas renvoyé de listes à temps. Réessaie.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Service indisponible.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Aucune liste publique trouvée';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'Reviens plus tard pour de nouvelles listes';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'par';
 
   @override
   String get curatedListEmptyTitle => 'Aucune vidéo dans cette liste';
@@ -13051,4 +12970,82 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => 'Activer l\'automatique';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted loops',
+      one: '$formatted loop',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count personnes',
+      one: '$count personne',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count membres',
+      one: '$count membre',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get peopleListsViewAllMembers => 'Voir tout';
+
+  @override
+  String get peopleListsLoadFailed => 'Impossible de charger cette liste.';
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Privée, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'Aucune liste cette fois-ci. Tire pour actualiser.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Chargement des listes';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Ajouter $name à la liste';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Impossible de mettre à jour la liste. Réessaie.';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Retirer $name de la liste';
+  }
 }

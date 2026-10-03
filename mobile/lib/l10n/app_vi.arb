@@ -586,15 +586,6 @@
   "featuredTabLoadFailed": "Không tải được bộ sưu tập này.",
   "featuredTabRetry": "Thử lại",
   "exploreNoVideosAvailable": "Không có video nào",
-  "exploreDiscoverLists": "Khám phá danh sách",
-  "exploreAboutLists": "Về danh sách",
-  "exploreAboutListsDescription": "Danh sách giúp bạn sắp xếp và tuyển chọn nội dung Divine theo hai cách:",
-  "explorePeopleLists": "Danh sách người",
-  "explorePeopleListsDescription": "Theo dõi nhóm nhà sáng tạo và xem video mới nhất của họ",
-  "exploreVideoLists": "Danh sách video",
-  "exploreVideoListsDescription": "Tạo danh sách phát từ những video yêu thích để xem sau",
-  "exploreMyLists": "Danh sách của tôi",
-  "exploreSubscribedLists": "Danh sách đã đăng ký",
   "exploreErrorLoadingLists": "Lỗi khi tải danh sách. Vui lòng thử lại.",
   "exploreNewVideosCount": "{count, plural, =1{1 video mới} other{{count} video mới}}",
   "@exploreNewVideosCount": {
@@ -1928,10 +1919,8 @@
   "peopleListsNoPeopleSubtitle": "Thêm vài người để bắt đầu",
   "peopleListsNoVideosTitle": "Chưa có video nào",
   "peopleListsNoVideosSubtitle": "Video từ các thành viên trong danh sách sẽ xuất hiện ở đây",
-  "peopleListsNoVideosAvailable": "Không có video nào",
   "peopleListsFailedToLoadVideos": "Không tải được video",
   "peopleListsVideoNotAvailable": "Video không khả dụng",
-  "peopleListsBackToGridTooltip": "Quay lại lưới",
   "peopleListsErrorLoadingVideos": "Lỗi khi tải video",
   "peopleListsNoPeopleToAdd": "Không có ai để thêm.",
   "peopleListsAddToListName": "Thêm vào {name}",
@@ -1945,15 +1934,6 @@
   "peopleListsAddPeopleSearchHint": "Tìm người",
   "peopleListsAddPeopleError": "Không tải được danh sách người. Vui lòng thử lại.",
   "peopleListsAddPeopleRetry": "Thử lại",
-  "peopleListsAddButton": "Thêm",
-  "peopleListsAddButtonWithCount": "Thêm {count}",
-  "@peopleListsAddButtonWithCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "peopleListsInNLists": "{count, plural, =1{Trong 1 danh sách} other{Trong {count} danh sách}}",
   "@peopleListsInNLists": {
     "placeholders": {
@@ -2383,14 +2363,6 @@
   "listAddToList": "Thêm vào danh sách",
   "listVideoCount": "{count} video",
   "@listVideoCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "listPersonCount": "{count, plural, =1{1 người} other{{count} người}}",
-  "@listPersonCount": {
     "placeholders": {
       "count": {
         "type": "int"
@@ -3152,14 +3124,6 @@
     }
   },
   "discoverListsFailedToUpdateSubscription": "Không cập nhật được đăng ký. Vui lòng thử lại.",
-  "discoverListsTitle": "Khám phá danh sách",
-  "discoverListsFailedToLoad": "Không tải được danh sách",
-  "discoverListsLoading": "Đang khám phá danh sách công khai...",
-  "discoverListsRelayTimeout": "Relay không trả về danh sách kịp lúc. Thử lại nhé.",
-  "discoverListsServiceUnavailable": "Dịch vụ không khả dụng.",
-  "discoverListsEmptyTitle": "Không tìm thấy danh sách công khai nào",
-  "discoverListsEmptySubtitle": "Quay lại sau để xem danh sách mới nhé",
-  "discoverListsByAuthorPrefix": "bởi",
   "curatedListEmptyTitle": "Chưa có video nào trong danh sách này",
   "curatedListEmptySubtitle": "Thêm vài video để bắt đầu",
   "curatedListLoadingVideos": "Đang tải video...",
@@ -6588,5 +6552,69 @@
   "crosspostingAutoBody": "Mỗi loop mới bạn đăng sẽ tự động đến {platform} thay bạn — không cần thêm thao tác. Chỉ áp dụng cho những loop bạn đăng sau khi bật tính năng này.",
   "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "Bật tự động",
-  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+  "peopleListsAddPersonSemanticLabel": "Thêm {name} vào danh sách",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "Xóa {name} khỏi danh sách",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "Không cập nhật được danh sách. Vui lòng thử lại.",
+  "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loop}}",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} người} other{{count} người}}",
+  "listMemberCount": "{count, plural, =1{{count} thành viên} other{{count} thành viên}}",
+  "peopleListsViewAllMembers": "Xem tất cả",
+  "peopleListsLoadFailed": "Không tải được danh sách này.",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Riêng tư, {count}} other{{name}, {count}}}",
+  "listMemberNamesSeparator": ", ",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "listsDiscoveryLoadingLabel": "Đang tải danh sách",
+  "listsDiscoveryEmpty": "Lần này chẳng thấy danh sách nào. Kéo để làm mới."
 }

@@ -1413,36 +1413,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get exploreNoVideosAvailable => 'کوئی ویڈیو دستیاب نہیں';
 
   @override
-  String get exploreDiscoverLists => 'فہرستیں دریافت کریں';
-
-  @override
-  String get exploreAboutLists => 'فہرستوں کے بارے میں';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'فہرستیں Divine مواد کو دو طریقوں سے ترتیب دینے اور منتخب کرنے میں مدد دیتی ہیں:';
-
-  @override
-  String get explorePeopleLists => 'لوگوں کی فہرستیں';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'کریئیٹرز کے گروہوں کو فالو کریں اور ان کی تازہ ویڈیوز دیکھیں';
-
-  @override
-  String get exploreVideoLists => 'ویڈیو فہرستیں';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'بعد میں دیکھنے کے لیے اپنی پسندیدہ ویڈیوز کی پلے لسٹیں بنائیں';
-
-  @override
-  String get exploreMyLists => 'میری فہرستیں';
-
-  @override
-  String get exploreSubscribedLists => 'سبسکرائب شدہ فہرستیں';
-
-  @override
   String get exploreErrorLoadingLists =>
       'فہرستیں لوڈ کرنے میں خرابی۔ براہ کرم دوبارہ کوشش کریں۔';
 
@@ -3937,16 +3907,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'فہرست کے ممبران کی ویڈیوز یہاں نظر آئیں گی';
 
   @override
-  String get peopleListsNoVideosAvailable => 'کوئی ویڈیو دستیاب نہیں';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'ویڈیوز لوڈ نہیں ہو سکیں';
 
   @override
   String get peopleListsVideoNotAvailable => 'ویڈیو دستیاب نہیں';
-
-  @override
-  String get peopleListsBackToGridTooltip => 'گرڈ پر واپس';
 
   @override
   String get peopleListsErrorLoadingVideos => 'ویڈیوز لوڈ کرنے میں خرابی';
@@ -3969,14 +3933,6 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'دوبارہ کوشش کریں';
-
-  @override
-  String get peopleListsAddButton => 'شامل کریں';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return '$count شامل کریں';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -4901,17 +4857,6 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String listVideoCount(int count) {
     return '$count ویڈیوز';
-  }
-
-  @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count لوگ',
-      one: '1 شخص',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -6138,31 +6083,6 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'سبسکرپشن اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔';
-
-  @override
-  String get discoverListsTitle => 'فہرستیں دریافت کریں';
-
-  @override
-  String get discoverListsFailedToLoad => 'فہرستیں لوڈ نہیں ہو سکیں';
-
-  @override
-  String get discoverListsLoading => 'عوامی فہرستیں دریافت ہو رہی ہیں...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'ریلے نے وقت پر فہرستیں واپس نہیں کیں۔ دوبارہ کوشش کریں۔';
-
-  @override
-  String get discoverListsServiceUnavailable => 'سروس دستیاب نہیں ہے۔';
-
-  @override
-  String get discoverListsEmptyTitle => 'کوئی عوامی فہرست نہیں ملی';
-
-  @override
-  String get discoverListsEmptySubtitle => 'نئی فہرستوں کے لیے بعد میں دیکھیں';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'از';
 
   @override
   String get curatedListEmptyTitle => 'اس فہرست میں کوئی ویڈیو نہیں';
@@ -12851,4 +12771,82 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => 'خودکار آن کریں';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted لوپ',
+      one: '$formatted لوپ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count لوگ',
+      one: '$count شخص',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ممبران',
+      one: '$count ممبر',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get peopleListsViewAllMembers => 'سب دیکھیں';
+
+  @override
+  String get peopleListsLoadFailed => 'یہ فہرست لوڈ نہیں ہو سکی۔';
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listMemberNamesSeparator => '، ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name، نجی، $count',
+        'other': '$name، $count',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'اس بار کوئی فہرست ہاتھ نہیں آئی۔ ریفریش کے لیے کھینچیں۔';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'فہرستیں لوڈ ہو رہی ہیں';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '$name کو فہرست میں شامل کریں';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'فہرست اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '$name کو فہرست سے ہٹائیں';
+  }
 }
