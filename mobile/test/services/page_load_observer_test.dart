@@ -1,11 +1,9 @@
 import 'dart:async';
 
 import 'package:analytics/analytics.dart';
-import 'package:firebase_core_platform_interface/firebase_core_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 class _RecordingAnalyticsEventSink implements AnalyticsEventSink {
   final events = <({String name, Map<String, Object> parameters})>[];
@@ -43,54 +41,8 @@ class _RecordingAnalyticsEventSink implements AnalyticsEventSink {
   }
 }
 
-class _FakeFirebaseCore extends Fake
-    with MockPlatformInterfaceMixin
-    implements FirebasePlatform {
-  @override
-  FirebaseAppPlatform app([String name = defaultFirebaseAppName]) {
-    return _FakeFirebaseApp();
-  }
-
-  @override
-  Future<FirebaseAppPlatform> initializeApp({
-    String? name,
-    FirebaseOptions? options,
-  }) async {
-    return _FakeFirebaseApp();
-  }
-
-  @override
-  List<FirebaseAppPlatform> get apps => [_FakeFirebaseApp()];
-}
-
-class _FakeFirebaseApp extends Fake
-    with MockPlatformInterfaceMixin
-    implements FirebaseAppPlatform {
-  @override
-  String get name => defaultFirebaseAppName;
-
-  @override
-  FirebaseOptions get options => const FirebaseOptions(
-    apiKey: 'test-api-key',
-    appId: 'test-app-id',
-    messagingSenderId: 'test-sender-id',
-    projectId: 'test-project-id',
-  );
-}
-
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
-  late FirebasePlatform originalFirebasePlatform;
-
-  setUpAll(() {
-    originalFirebasePlatform = FirebasePlatform.instance;
-    FirebasePlatform.instance = _FakeFirebaseCore();
-  });
-
-  tearDownAll(() {
-    FirebasePlatform.instance = originalFirebasePlatform;
-  });
 
   group(PageLoadObserver, () {
     late _RecordingAnalyticsEventSink sink;
