@@ -51,11 +51,14 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
   /// [AddPeopleToListStatus.failure] on error. Keeps ready candidates visible
   /// while refreshing the live subscriptions.
   Future<void> started() async {
+    if (isClosed) return;
     if (state.status != AddPeopleToListStatus.ready) {
       emitIfOpen(state.copyWith(status: AddPeopleToListStatus.loading));
     }
     try {
-      _candidatesByPubkey.clear();
+      if (state.status != AddPeopleToListStatus.ready) {
+        _candidatesByPubkey.clear();
+      }
 
       // 1. Seed from cached following list so candidates appear immediately.
       final initialFollowing = _followRepository.followingPubkeys;
@@ -66,7 +69,7 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
       // 2. Subscribe to the following stream for live updates. The stream
       // replays the current value for late subscribers (BehaviorSubject),
       // so later follow/unfollow deltas flow through the same sink.
-      await _followingSub?.cancel();
+      unawaited(_followingSub?.cancel().catchError(_onStreamError));
       _followingSub = _followRepository.followingStream.listen(
         _applyFollowingDelta,
         onError: _onStreamError,
@@ -74,8 +77,8 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
 
       // 3. Subscribe to my-followers stream. watchMyFollowers() yields
       // cached data instantly (when available) and then fresh data from
-      // network sources.
-      await _followerSub?.cancel();
+      // network sources. Cancellation can wait for an in-flight fetch.
+      unawaited(_followerSub?.cancel().catchError(_onStreamError));
       _followerSub = _followRepository.watchMyFollowers().listen(
         _applyFollowerDelta,
         onError: _onStreamError,
@@ -108,9 +111,9 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
   }
 
   @override
-  Future<void> close() async {
-    await _followingSub?.cancel();
-    await _followerSub?.cancel();
+  Future<void> close() {
+    unawaited(_followingSub?.cancel().catchError(_onStreamError));
+    unawaited(_followerSub?.cancel().catchError(_onStreamError));
     return super.close();
   }
 
