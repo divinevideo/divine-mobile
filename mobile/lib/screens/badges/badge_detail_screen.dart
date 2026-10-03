@@ -497,6 +497,9 @@ class _AcceptedHolderList extends StatefulWidget {
 }
 
 class _AcceptedHolderListState extends State<_AcceptedHolderList> {
+  /// Holders shown before "Show more", so the video grid stays in reach.
+  static const _collapsedHolderCount = 6;
+
   bool _showAll = false;
 
   @override
@@ -519,7 +522,9 @@ class _AcceptedHolderListState extends State<_AcceptedHolderList> {
       BadgeHoldersStatus.loaded => SliverMainAxisGroup(
         slivers: [
           SliverList.builder(
-            itemCount: _showAll ? holders.length : holders.length.clamp(0, 6),
+            itemCount: _showAll
+                ? holders.length
+                : holders.length.clamp(0, _collapsedHolderCount),
             itemBuilder: (context, index) {
               final holder = holders[index];
               return BlocSelector<MyFollowingBloc, MyFollowingState, bool>(
@@ -535,7 +540,7 @@ class _AcceptedHolderListState extends State<_AcceptedHolderList> {
               );
             },
           ),
-          if (!_showAll && holders.length > 6)
+          if (!_showAll && holders.length > _collapsedHolderCount)
             SliverToBoxAdapter(
               child: Align(
                 alignment: Alignment.centerLeft,
@@ -616,6 +621,7 @@ class _BadgeVideoGrid extends ConsumerWidget {
             itemBuilder: (context, index) {
               final video = state.videos[index];
               return Semantics(
+                label: context.l10n.profileVideoThumbnailLabel(index + 1),
                 button: true,
                 child: GestureDetector(
                   onTap: () => unawaited(
