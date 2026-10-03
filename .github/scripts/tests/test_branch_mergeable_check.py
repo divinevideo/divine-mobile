@@ -114,7 +114,7 @@ class CheckBranchMergeableTest(unittest.TestCase):
         git(self.repo, "commit", "-qm", "rename file")
         self.assertEqual(self.run_check(pushed_from=baseline).returncode, 1)
 
-    def test_unusual_conflict_paths_are_compared_exactly(self):
+    def test_unusual_conflict_paths_block_only_when_the_push_touches_them(self):
         for name in ("space name.txt", "tab\tname.txt", "line\nname.txt", "quote\"name.txt"):
             with self.subTest(name=name):
                 # Each subcase needs independent history.
@@ -122,6 +122,13 @@ class CheckBranchMergeableTest(unittest.TestCase):
                 if git(self.repo, "branch", "--list", "feature").stdout.strip():
                     git(self.repo, "branch", "-D", "feature")
                 baseline = self.make_conflict(name)
+                # Blocking alone cannot tell a match from a listing that came
+                # back empty, which blocks too; the push that avoids the path
+                # has to get through.
+                commit(self.repo, "unrelated.txt", "review fix\n")
+                allowed = self.run_check(pushed_from=baseline)
+                self.assertEqual(allowed.returncode, 0, allowed.stdout + allowed.stderr)
+                self.assertIn("outside the pushed changes", allowed.stdout)
                 commit(self.repo, name, "changed again\n")
                 self.assertEqual(self.run_check(pushed_from=baseline).returncode, 1)
 
