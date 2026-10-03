@@ -57,10 +57,10 @@ class VideoEditorTimelineControls extends StatelessWidget {
   /// the action so the fade is visible from the timeline.
   final bool hasFade;
 
-  /// Opens the voice effect sheet. Voice-over sounds only.
+  /// Opens the voice effect sheet. Sounds only.
   final VoidCallback? onVoiceEffect;
 
-  /// Whether the selected voice-over plays with an effect or noise reduction,
+  /// Whether the selected sound plays with an effect or noise reduction,
   /// which highlights the action so the effect is visible from the timeline.
   final bool hasVoiceEffect;
   final VoidCallback? onDuplicated;

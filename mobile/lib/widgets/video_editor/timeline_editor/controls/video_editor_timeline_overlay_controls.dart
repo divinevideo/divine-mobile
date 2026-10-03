@@ -6,7 +6,6 @@ import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
-import 'package:openvine/blocs/video_editor/voice_over/voice_over_cubit.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/extensions/tune_adjustment_matrix_extensions.dart';
@@ -640,23 +639,27 @@ class _SoundOverlayControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Only recorded voice-over takes can change voice; music and clip audio
-    // are left as they are.
-    final isVoiceOver = item.id.startsWith(VoiceOverCubit.voiceOverIdPrefix);
-    final hasVoiceEffect = context.select(
-      (TimelineOverlayBloc bloc) =>
-          bloc.state.audioTracks
-              .where((track) => track.id == item.id)
-              .firstOrNull
-              ?.hasVoiceProcessing ??
-          false,
+    // Every sound with audio to process can change voice: voice-overs,
+    // music, bundled, published and imported sounds and extracted clip audio.
+    final (canChangeVoice, hasVoiceEffect) = context.select(
+      (TimelineOverlayBloc bloc) {
+        final track = bloc.state.audioTracks
+            .where((track) => track.id == item.id)
+            .firstOrNull;
+        return (
+          track?.originalSource != null,
+          track?.hasVoiceProcessing ?? false,
+        );
+      },
     );
     return VideoEditorTimelineControls(
       onDelete: () => _removeSound(context: context),
       onEdit: () => _editSound(context: context),
       onFade: () => _fadeSound(context: context),
       hasFade: item.hasFade,
-      onVoiceEffect: isVoiceOver ? () => _changeVoice(context: context) : null,
+      onVoiceEffect: canChangeVoice
+          ? () => _changeVoice(context: context)
+          : null,
       hasVoiceEffect: hasVoiceEffect,
       onDuplicated: () => _duplicateSound(context: context),
       onSplit: () => _splitSound(context: context),
@@ -784,10 +787,13 @@ class _SoundOverlayControls extends StatelessWidget {
                       id: processed.id,
                       url: processed.url,
                       mimeType: processed.mimeType,
+                      clearMimeType: processed.mimeType == null,
                       voiceEffect: processed.voiceEffect,
                       noiseReduction: processed.noiseReduction,
                       originalUrl: processed.originalUrl,
                       clearOriginalUrl: processed.originalUrl == null,
+                      originalMimeType: processed.originalMimeType,
+                      clearOriginalMimeType: processed.originalMimeType == null,
                     )
                   : t,
             )

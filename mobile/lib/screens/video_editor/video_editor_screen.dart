@@ -948,14 +948,9 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     final tagged = sound.duration ?? 0;
     if (tagged > 0) return tagged;
 
-    final path = sound.isBundled ? sound.assetPath : sound.url;
-    if (path == null || path.isEmpty) return 0;
+    final source = _editorVideoFor(sound);
+    if (source == null) return 0;
     try {
-      final source = sound.isBundled
-          ? EditorVideo.asset(path)
-          : path.startsWith('/')
-          ? EditorVideo.file(path)
-          : EditorVideo.network(path);
       final metadata = await ProVideoEditor.instance.getMetadata(source);
       return metadata.duration.inMilliseconds / 1000.0;
     } catch (e, s) {
@@ -1037,15 +1032,10 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   /// (see [_healMissingAudioDurations]) would otherwise reach the painter with
   /// no basis and draw the entire file squeezed into the visible bar.
   Future<void> _extractWaveform(AudioEvent audio) async {
-    final path = audio.isBundled ? audio.assetPath : audio.url;
-    if (path == null) return;
+    final video = _editorVideoFor(audio);
+    if (video == null) return;
 
     try {
-      final video = audio.isBundled
-          ? EditorVideo.asset(path)
-          : path.startsWith('/')
-          ? EditorVideo.file(path)
-          : EditorVideo.network(path);
       final data = await ProVideoEditor.instance.getWaveform(
         WaveformConfigs(video: video),
       );
@@ -1204,4 +1194,19 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       ),
     );
   }
+}
+
+/// The source [ProVideoEditor] probes [sound] from, or `null` when it has
+/// none.
+///
+/// Goes through [AudioEvent.resolvedSource], so a sound with a voice effect
+/// is probed from its processed file whatever kind of sound it is.
+EditorVideo? _editorVideoFor(AudioEvent sound) {
+  final source = sound.resolvedSource;
+  if (source == null) return null;
+  return switch (source.kind) {
+    AudioSourceKind.asset => EditorVideo.asset(source.path),
+    AudioSourceKind.file => EditorVideo.file(source.path),
+    AudioSourceKind.network => EditorVideo.network(source.path),
+  };
 }

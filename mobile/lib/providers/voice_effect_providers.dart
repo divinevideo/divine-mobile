@@ -2,20 +2,20 @@
 // ABOUTME: and bakes voice effects, and a player for looping auditions.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/services/video_editor/voice_over_effect_service.dart';
+import 'package:openvine/services/video_editor/voice_effect_service.dart';
 import 'package:sound_service/sound_service.dart';
 
-/// The [VoiceOverEffectService] the voice-effect sheet processes takes with.
+/// The [VoiceEffectService] the voice-effect sheet processes sounds with.
 ///
 /// Safe to share: every call works on its own files, and calls that need the
-/// same take decoded wait for one decode.
-final voiceOverEffectServiceProvider = Provider<VoiceOverEffectService>(
-  (ref) => VoiceOverEffectService(),
+/// same sound decoded wait for one decode.
+final voiceEffectServiceProvider = Provider<VoiceEffectService>(
+  (ref) => VoiceEffectService(),
 );
 
 /// Creates the player a voice-effect sheet loops its auditions on.
 ///
 /// A factory rather than a player, because each sheet owns and disposes its
 /// own.
-final voiceOverAuditionPlayerFactoryProvider =
+final voiceEffectAuditionPlayerFactoryProvider =
     Provider<AudioClipPlayer Function()>((ref) => AudioClipPlayer.new);

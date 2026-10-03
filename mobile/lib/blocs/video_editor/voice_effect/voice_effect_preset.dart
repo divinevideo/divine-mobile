@@ -7,7 +7,7 @@ import 'package:models/models.dart' show VoiceEffect;
 ///
 /// The settings are the product's tuning: far enough to be the joke, not so
 /// far that the words get lost.
-enum VoiceOverEffectPreset {
+enum VoiceEffectPreset {
   /// The voice as recorded.
   original(VoiceEffect.none),
 
@@ -23,14 +23,14 @@ enum VoiceOverEffectPreset {
   /// Repeats bouncing back from a big room.
   echo(VoiceEffect(echo: 80));
 
-  const VoiceOverEffectPreset(this.effect);
+  const VoiceEffectPreset(this.effect);
 
   /// The setting this preset picks.
   final VoiceEffect effect;
 
   /// The preset whose setting is [effect], or `null` for a setting made with
   /// the sliders that no preset matches.
-  static VoiceOverEffectPreset? matching(VoiceEffect effect) {
+  static VoiceEffectPreset? matching(VoiceEffect effect) {
     for (final preset in values) {
       if (preset.effect == effect) return preset;
     }
