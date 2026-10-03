@@ -1628,13 +1628,12 @@
     "listCollaboratorSearchHint": "Caută în Divine...",
     "listNameLabel": "Numele listei",
     "listDescriptionLabel": "Descriere (opțional)",
-    "listPublicList": "Listă publică",
-    "listPublicListSubtitle": "Alții pot urmări și vedea această listă",
+    "listMakePublicLabel": "Fă lista publică",
+    "listMakePublicSubtitle": "Lasă-i pe alții să vadă această listă",
     "listPrivateListSubtitle": "Videoclipurile rămân private. Numele, descrierea, etichetele și coperta rămân vizibile.",
     "listVisibilityPublic": "Publică",
     "listVisibilityPrivate": "Privată",
     "profileListsEmpty": "Încă n-ai liste. Fă una pentru buclele pe care vrei să le ții împreună.",
-    "listEditTitle": "Editează lista",
     "listShareAction": "Distribuie lista",
     "listShareFailed": "N-am putut distribui lista. Mai încearcă.",
     "listSave": "Salvează",
@@ -1663,7 +1662,6 @@
             }
         }
     },
-    "listCancel": "Anulează",
     "listCreate": "Creează",
     "listCreateFailed": "N-am putut crea lista",
     "keyManagementTitle": "Chei Nostr",

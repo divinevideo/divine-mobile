@@ -1618,13 +1618,12 @@
     "listCollaboratorSearchHint": "ابحث في Divine...",
     "listNameLabel": "اسم القائمة",
     "listDescriptionLabel": "الوصف (اختياري)",
-    "listPublicList": "قائمة عامة",
-    "listPublicListSubtitle": "يمكن للآخرين متابعة هذه القائمة ورؤيتها",
+    "listMakePublicLabel": "جعل القائمة عامة",
+    "listMakePublicSubtitle": "السماح للآخرين برؤية هذه القائمة",
     "listPrivateListSubtitle": "تبقى مقاطع الفيديو خاصة. يبقى الاسم والوصف والوسوم والغلاف ظاهرين.",
     "listVisibilityPublic": "عامة",
     "listVisibilityPrivate": "خاصة",
     "profileListsEmpty": "لا توجد قوائم بعد. أنشئ واحدة للمقاطع التي تريد جمعها معًا.",
-    "listEditTitle": "تعديل القائمة",
     "listShareAction": "مشاركة القائمة",
     "listShareFailed": "تعذّرت مشاركة هذه القائمة. حاول مرة أخرى.",
     "listSave": "حفظ",
@@ -1653,7 +1652,6 @@
             }
         }
     },
-    "listCancel": "إلغاء",
     "listCreate": "إنشاء",
     "listCreateFailed": "تعذر إنشاء القائمة",
     "keyManagementTitle": "مفاتيح Nostr",

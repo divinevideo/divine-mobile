@@ -4794,10 +4794,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get listDescriptionLabel => 'መግለጫ (አማራጭ)';
 
   @override
-  String get listPublicList => 'የህዝብ ዝርዝር';
+  String get listMakePublicLabel => 'ይፋዊ ያድርጉ';
 
   @override
-  String get listPublicListSubtitle => 'ሌሎች ሊከተሉት እና ይህንን ዝርዝር ማየት ይችላሉ።';
+  String get listMakePublicSubtitle => 'ሌሎች ይህን ዝርዝር እንዲያዩ ይፍቀዱ';
 
   @override
   String get listPrivateListSubtitle =>
@@ -4812,9 +4812,6 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'እስካሁን ዝርዝር የለም። አብረው እንዲቆዩ የሚፈልጓቸውን ሉፖች የሚያሰባስብ ዝርዝር ይፍጠሩ።';
-
-  @override
-  String get listEditTitle => 'ዝርዝር አርትዕ';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -4904,9 +4901,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name በDivine ላይ';
   }
-
-  @override
-  String get listCancel => 'ሰርዝ';
 
   @override
   String get listCreate => 'ፍጠር';

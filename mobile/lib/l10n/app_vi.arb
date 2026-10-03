@@ -2413,13 +2413,12 @@
   "listCollaboratorSearchHint": "Tìm trên Divine...",
   "listNameLabel": "Tên danh sách",
   "listDescriptionLabel": "Mô tả (không bắt buộc)",
-  "listPublicList": "Danh sách công khai",
-  "listPublicListSubtitle": "Người khác có thể theo dõi và xem danh sách này",
+  "listMakePublicLabel": "Đặt công khai",
+  "listMakePublicSubtitle": "Cho người khác xem danh sách này",
   "listPrivateListSubtitle": "Video vẫn riêng tư. Tên, mô tả, thẻ và ảnh bìa vẫn hiển thị.",
   "listVisibilityPublic": "Công khai",
   "listVisibilityPrivate": "Riêng tư",
   "profileListsEmpty": "Chưa có danh sách nào. Tạo một cái cho những loop bạn muốn để chung.",
-  "listEditTitle": "Sửa danh sách",
   "listShareAction": "Chia sẻ danh sách",
   "listShareFailed": "Không chia sẻ được danh sách này. Thử lại nhé.",
   "listSave": "Lưu",
@@ -2448,7 +2447,6 @@
       }
     }
   },
-  "listCancel": "Hủy",
   "listCreate": "Tạo",
   "listCreateFailed": "Không tạo được danh sách",
   "keyManagementTitle": "Khóa Nostr",

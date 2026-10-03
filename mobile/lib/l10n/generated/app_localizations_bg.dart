@@ -4962,11 +4962,11 @@ class AppLocalizationsBg extends AppLocalizations {
   String get listDescriptionLabel => 'Описание (по избор)';
 
   @override
-  String get listPublicList => 'Публичен списък';
+  String get listMakePublicLabel => 'Направи публичен';
 
   @override
-  String get listPublicListSubtitle =>
-      'Други могат да следват и да видят този списък';
+  String get listMakePublicSubtitle =>
+      'Позволи на другите да виждат този списък';
 
   @override
   String get listPrivateListSubtitle =>
@@ -4981,9 +4981,6 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get profileListsEmpty =>
       'Още няма списъци. Направи един за луповете, които искаш да държиш заедно.';
-
-  @override
-  String get listEditTitle => 'Редактирай списъка';
 
   @override
   String get listEditInfoAction => 'Edit list info';
@@ -5075,9 +5072,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name в Divine';
   }
-
-  @override
-  String get listCancel => 'Отказ';
 
   @override
   String get listCreate => 'Създай';

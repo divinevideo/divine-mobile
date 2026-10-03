@@ -18,8 +18,8 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/screens/saved_videos_screen.dart';
 import 'package:openvine/services/curated_list_service.dart';
-import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
+import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
 import 'package:openvine/widgets/profile/profile_lists_grid.dart';
 
 import '../../helpers/test_provider_overrides.dart';
@@ -184,7 +184,7 @@ void main() {
     });
 
     group('navigation', () {
-      testWidgets('opens the create dialog from the create button', (
+      testWidgets('opens the create sheet from the create button', (
         tester,
       ) async {
         await tester.binding.setSurfaceSize(const Size(800, 1200));
@@ -192,13 +192,13 @@ void main() {
         await tester.pumpWidget(buildSubject());
         await tester.pumpAndSettle();
         final l10n = lookupAppLocalizations(const Locale('en'));
-        expect(find.byType(CreateListDialog), findsNothing);
+        expect(find.byType(ListInfoForm), findsNothing);
 
         await tester.tap(find.text(l10n.listCreateNewList));
         await tester.pumpAndSettle();
 
-        expect(find.byType(CreateListDialog), findsOneWidget);
-        // Once on the button underneath, once as the dialog's title.
+        expect(find.byType(ListInfoForm), findsOneWidget);
+        // Once on the button underneath, once as the sheet's title.
         expect(find.text(l10n.listCreateNewList), findsNWidgets(2));
         expect(find.bySemanticsLabel(l10n.listCreate), findsOneWidget);
       });
