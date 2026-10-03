@@ -655,6 +655,22 @@ abstract class AppLocalizations {
   /// **'Keep feeds in the classic square format'**
   String get generalSettingsVideoShapeSquareOnlySubtitle;
 
+  /// The creator's total loop count on the video overlay, naming the creator shown above it. compactCount is the formatted number; count selects the plural form.
+  ///
+  /// In en, this message translates to:
+  /// **'{compactCount} {authorName}\'s {count, plural, =1{loop} other{loops}}'**
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  );
+
+  /// The current video's loop count on the video overlay. compactCount is the formatted number; count selects the plural form.
+  ///
+  /// In en, this message translates to:
+  /// **'{compactCount} this video\'s {count, plural, =1{loop} other{loops}}'**
+  String videoOverlayVideoLoops(String compactCount, int count);
+
   /// No description provided for @generalSettingsShowTotalLoops.
   ///
   /// In en, this message translates to:

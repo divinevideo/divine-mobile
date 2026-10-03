@@ -137,6 +137,8 @@
   "appearanceSettingsSystem": "Theo hệ thống",
   "appearanceSettingsLight": "Sáng",
   "appearanceSettingsDark": "Tối",
+  "videoOverlayTotalLoops": "{count, plural, other{{compactCount} lượt lặp của {authorName}}}",
+  "videoOverlayVideoLoops": "video này lặp {compactCount} {count, plural, other{lượt}}",
   "generalSettingsClosedCaptions": "Phụ đề",
   "generalSettingsClosedCaptionsSubtitle": "Hiện phụ đề khi video có sẵn",
   "generalSettingsVideoShapeSquareOnly": "Chỉ video vuông",

@@ -354,6 +354,32 @@ class AppLocalizationsSv extends AppLocalizations {
       'Behåll flöden i klassiskt kvadratiskt format';
 
   @override
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'loopar',
+      one: 'loop',
+    );
+    return '$compactCount $_temp0 av $authorName';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'loopar',
+      one: 'loop',
+    );
+    return '$compactCount $_temp0 i den här videon';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'Show total loops';
 
   @override

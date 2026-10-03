@@ -368,6 +368,30 @@ class AppLocalizationsUr extends AppLocalizations {
       'فیڈز کو کلاسک چوکور فارمیٹ میں رکھیں';
 
   @override
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$authorName کے $compactCount لوپس',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'لوپس',
+    );
+    return 'اس ویڈیو کے $compactCount $_temp0';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'Show total loops';
 
   @override

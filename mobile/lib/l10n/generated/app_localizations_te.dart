@@ -374,6 +374,32 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఫీడ్‌లను క్లాసిక్ స్క్వేర్ ఫార్మాట్‌లో ఉంచండి';
 
   @override
+  String videoOverlayTotalLoops(
+    String compactCount,
+    int count,
+    String authorName,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'లూప్‌లు',
+      one: 'లూప్',
+    );
+    return '$authorName $compactCount $_temp0';
+  }
+
+  @override
+  String videoOverlayVideoLoops(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'లూప్‌లు',
+      one: 'లూప్',
+    );
+    return 'ఈ వీడియోకు $compactCount $_temp0';
+  }
+
+  @override
   String get generalSettingsShowTotalLoops => 'Show total loops';
 
   @override
