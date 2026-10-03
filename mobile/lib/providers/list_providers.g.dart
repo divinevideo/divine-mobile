@@ -327,6 +327,11 @@ final class CuratedListVideosFamily extends $Family
 /// Only an [Exception] is absorbed that way: an [Error] is a bug and
 /// surfaces whatever is pooled.
 ///
+/// It re-runs when the blocklist changes, as the other list providers here
+/// do (#5104), and when the repository is rebuilt for a filter change or an
+/// account switch. The pool is read, not watched: every pool emission would
+/// otherwise cost a relay round trip.
+///
 /// The body is a plain function so every `Ref` read happens synchronously
 /// during `build` — see [_LiveDeps] for why an `async*` body cannot
 /// touch `Ref`.
@@ -346,6 +351,11 @@ final userListMemberVideosProvider = UserListMemberVideosFamily._();
 /// so a network failure never reads as "no videos yet" or as endless loading.
 /// Only an [Exception] is absorbed that way: an [Error] is a bug and
 /// surfaces whatever is pooled.
+///
+/// It re-runs when the blocklist changes, as the other list providers here
+/// do (#5104), and when the repository is rebuilt for a filter change or an
+/// account switch. The pool is read, not watched: every pool emission would
+/// otherwise cost a relay round trip.
 ///
 /// The body is a plain function so every `Ref` read happens synchronously
 /// during `build` — see [_LiveDeps] for why an `async*` body cannot
@@ -371,6 +381,11 @@ final class UserListMemberVideosProvider
   /// so a network failure never reads as "no videos yet" or as endless loading.
   /// Only an [Exception] is absorbed that way: an [Error] is a bug and
   /// surfaces whatever is pooled.
+  ///
+  /// It re-runs when the blocklist changes, as the other list providers here
+  /// do (#5104), and when the repository is rebuilt for a filter change or an
+  /// account switch. The pool is read, not watched: every pool emission would
+  /// otherwise cost a relay round trip.
   ///
   /// The body is a plain function so every `Ref` read happens synchronously
   /// during `build` — see [_LiveDeps] for why an `async*` body cannot
@@ -420,7 +435,7 @@ final class UserListMemberVideosProvider
 }
 
 String _$userListMemberVideosHash() =>
-    r'e216e4fae32f67daeecb59a6d4075c69037b7223';
+    r'b068fe5ec5c5c18725e9338fc42b2bd058f91636';
 
 /// Provider for the videos published by the members of a user list.
 ///
@@ -434,6 +449,11 @@ String _$userListMemberVideosHash() =>
 /// so a network failure never reads as "no videos yet" or as endless loading.
 /// Only an [Exception] is absorbed that way: an [Error] is a bug and
 /// surfaces whatever is pooled.
+///
+/// It re-runs when the blocklist changes, as the other list providers here
+/// do (#5104), and when the repository is rebuilt for a filter change or an
+/// account switch. The pool is read, not watched: every pool emission would
+/// otherwise cost a relay round trip.
 ///
 /// The body is a plain function so every `Ref` read happens synchronously
 /// during `build` — see [_LiveDeps] for why an `async*` body cannot
@@ -462,6 +482,11 @@ final class UserListMemberVideosFamily extends $Family
   /// so a network failure never reads as "no videos yet" or as endless loading.
   /// Only an [Exception] is absorbed that way: an [Error] is a bug and
   /// surfaces whatever is pooled.
+  ///
+  /// It re-runs when the blocklist changes, as the other list providers here
+  /// do (#5104), and when the repository is rebuilt for a filter change or an
+  /// account switch. The pool is read, not watched: every pool emission would
+  /// otherwise cost a relay round trip.
   ///
   /// The body is a plain function so every `Ref` read happens synchronously
   /// during `build` — see [_LiveDeps] for why an `async*` body cannot

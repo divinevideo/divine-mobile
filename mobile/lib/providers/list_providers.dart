@@ -215,13 +215,19 @@ Duration? _noAutomaticRetry(int retryCount, Object error) => null;
 /// Only an [Exception] is absorbed that way: an [Error] is a bug and
 /// surfaces whatever is pooled.
 ///
+/// It re-runs when the blocklist changes, as the other list providers here
+/// do (#5104), and when the repository is rebuilt for a filter change or an
+/// account switch. The pool is read, not watched: every pool emission would
+/// otherwise cost a relay round trip.
+///
 /// The body is a plain function so every `Ref` read happens synchronously
 /// during `build` — see [_LiveDeps] for why an `async*` body cannot
 /// touch `Ref`.
 @Riverpod(retry: _noAutomaticRetry)
 Stream<List<VideoEvent>> userListMemberVideos(Ref ref, List<String> pubkeys) {
+  ref.watch(blocklistVersionProvider);
+  final repository = ref.watch(videosRepositoryProvider);
   final pooled = ref.read(videoEventsProvider).value ?? const <VideoEvent>[];
-  final repository = ref.read(videosRepositoryProvider);
   return _userListMemberVideos(repository, pooled, pubkeys);
 }
 
@@ -231,10 +237,14 @@ Stream<List<VideoEvent>> _userListMemberVideos(
   List<String> pubkeys,
 ) async* {
   final members = pubkeys.toSet();
-  final seeded = _newestFirst([
-    for (final video in pooled)
-      if (members.contains(video.pubkey)) video,
-  ]);
+  // A re-run can read the pool before it drops what the change hid, and the
+  // merge below keeps every pooled video, so filter it again here.
+  final seeded = _newestFirst(
+    repository.applyContentPreferences([
+      for (final video in pooled)
+        if (members.contains(video.pubkey)) video,
+    ]),
+  );
   if (seeded.isNotEmpty) yield seeded;
 
   final List<VideoEvent> fetched;
