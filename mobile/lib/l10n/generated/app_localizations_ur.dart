@@ -139,11 +139,11 @@ class AppLocalizationsUr extends AppLocalizations {
       'مکمل رسائی بحال کرنے کے لیے دوبارہ سائن ان کریں';
 
   @override
-  String get settingsAccountRestoreFailed => 'Account Restore Failed';
+  String get settingsAccountRestoreFailed => 'اکاؤنٹ بحال نہیں ہو سکا';
 
   @override
   String get settingsAccountRestoreFailedSwitchMessage =>
-      'We couldn\'t unlock that account on this device. Signing back into it means signing out of the one you\'re on now.';
+      'ہم اس ڈیوائس پر اس اکاؤنٹ کو اَن لاک نہیں کر سکے۔ اس میں دوبارہ سائن ان کرنے کا مطلب موجودہ اکاؤنٹ سے سائن آؤٹ ہونا ہے۔';
 
   @override
   String get settingsCreatorAnalytics => 'کریئیٹر تجزیات';
@@ -4143,7 +4143,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get authAccountRestoreFailed =>
-      'We couldn\'t unlock that account on this device. Sign in again.';
+      'ہم اس ڈیوائس پر اس اکاؤنٹ کو اَن لاک نہیں کر سکے۔ دوبارہ سائن ان کریں۔';
 
   @override
   String get authSignInFailed =>

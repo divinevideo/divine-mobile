@@ -139,11 +139,12 @@ class AppLocalizationsPt extends AppLocalizations {
       'Entre novamente para recuperar o acesso completo';
 
   @override
-  String get settingsAccountRestoreFailed => 'Account Restore Failed';
+  String get settingsAccountRestoreFailed =>
+      'Não foi possível restaurar a conta';
 
   @override
   String get settingsAccountRestoreFailedSwitchMessage =>
-      'We couldn\'t unlock that account on this device. Signing back into it means signing out of the one you\'re on now.';
+      'Não conseguimos desbloquear essa conta neste dispositivo. Entrar nela de novo significa sair da conta que você está usando agora.';
 
   @override
   String get settingsCreatorAnalytics => 'Estatísticas de criador';
@@ -4166,7 +4167,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get authAccountRestoreFailed =>
-      'We couldn\'t unlock that account on this device. Sign in again.';
+      'Não conseguimos desbloquear essa conta neste dispositivo. Entre novamente.';
 
   @override
   String get authSignInFailed => 'Falha ao entrar. Tente novamente.';

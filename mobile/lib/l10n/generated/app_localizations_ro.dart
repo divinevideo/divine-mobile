@@ -144,11 +144,11 @@ class AppLocalizationsRo extends AppLocalizations {
       'Autentifică-te din nou ca să recapeți acces complet';
 
   @override
-  String get settingsAccountRestoreFailed => 'Account Restore Failed';
+  String get settingsAccountRestoreFailed => 'Restaurarea contului a eșuat';
 
   @override
   String get settingsAccountRestoreFailedSwitchMessage =>
-      'We couldn\'t unlock that account on this device. Signing back into it means signing out of the one you\'re on now.';
+      'Nu am putut debloca acel cont pe acest dispozitiv. Autentificarea din nou în el înseamnă deconectarea din contul pe care îl folosești acum.';
 
   @override
   String get settingsCreatorAnalytics => 'Statistici pentru creatori';
@@ -4267,7 +4267,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get authAccountRestoreFailed =>
-      'We couldn\'t unlock that account on this device. Sign in again.';
+      'Nu am putut debloca acel cont pe acest dispozitiv. Autentifică-te din nou.';
 
   @override
   String get authSignInFailed => 'N-am putut autentifica. Încearcă din nou.';

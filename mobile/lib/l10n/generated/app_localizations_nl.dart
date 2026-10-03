@@ -138,11 +138,11 @@ class AppLocalizationsNl extends AppLocalizations {
       'Log opnieuw in om volledige toegang te herstellen';
 
   @override
-  String get settingsAccountRestoreFailed => 'Account Restore Failed';
+  String get settingsAccountRestoreFailed => 'Account herstellen mislukt';
 
   @override
   String get settingsAccountRestoreFailedSwitchMessage =>
-      'We couldn\'t unlock that account on this device. Signing back into it means signing out of the one you\'re on now.';
+      'We konden dat account niet ontgrendelen op dit apparaat. Er opnieuw op inloggen betekent uitloggen bij het account waar je nu op zit.';
 
   @override
   String get settingsCreatorAnalytics => 'Creator-statistieken';
@@ -4152,7 +4152,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get authAccountRestoreFailed =>
-      'We couldn\'t unlock that account on this device. Sign in again.';
+      'We konden dat account niet ontgrendelen op dit apparaat. Log opnieuw in.';
 
   @override
   String get authSignInFailed => 'Inloggen mislukt. Probeer het opnieuw.';

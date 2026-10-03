@@ -108,11 +108,11 @@ class AppLocalizationsVi extends AppLocalizations {
       'Đăng nhập lại để khôi phục toàn bộ quyền truy cập';
 
   @override
-  String get settingsAccountRestoreFailed => 'Account Restore Failed';
+  String get settingsAccountRestoreFailed => 'Không thể khôi phục tài khoản';
 
   @override
   String get settingsAccountRestoreFailedSwitchMessage =>
-      'We couldn\'t unlock that account on this device. Signing back into it means signing out of the one you\'re on now.';
+      'Chúng mình không thể mở khóa tài khoản đó trên thiết bị này. Đăng nhập lại vào đó nghĩa là bạn sẽ đăng xuất khỏi tài khoản đang dùng.';
 
   @override
   String get settingsCreatorAnalytics => 'Phân tích nhà sáng tạo';
@@ -4108,7 +4108,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get authAccountRestoreFailed =>
-      'We couldn\'t unlock that account on this device. Sign in again.';
+      'Chúng mình không thể mở khóa tài khoản đó trên thiết bị này. Đăng nhập lại.';
 
   @override
   String get authSignInFailed => 'Đăng nhập thất bại. Vui lòng thử lại.';

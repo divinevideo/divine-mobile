@@ -106,11 +106,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get settingsSessionExpiredSubtitle => '다시 로그인해서 전체 접근 권한을 복구해보세요';
 
   @override
-  String get settingsAccountRestoreFailed => 'Account Restore Failed';
+  String get settingsAccountRestoreFailed => '계정 복원 실패';
 
   @override
   String get settingsAccountRestoreFailedSwitchMessage =>
-      'We couldn\'t unlock that account on this device. Signing back into it means signing out of the one you\'re on now.';
+      '이 기기에서 그 계정의 잠금을 해제하지 못했어요. 다시 로그인하면 지금 사용 중인 계정에서 로그아웃돼요.';
 
   @override
   String get settingsCreatorAnalytics => '크리에이터 분석';
@@ -3896,7 +3896,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get authAccountRestoreFailed =>
-      'We couldn\'t unlock that account on this device. Sign in again.';
+      '이 기기에서 그 계정의 잠금을 해제하지 못했어요. 다시 로그인해 주세요.';
 
   @override
   String get authSignInFailed => '로그인에 실패했어요. 다시 시도해주세요.';
