@@ -259,6 +259,49 @@ void main() {
       }
     });
 
+    for (final language in ['es', 'ar', 'ko', 'te']) {
+      testWidgets('$language announces the sponsored collection', (
+        tester,
+      ) async {
+        final locale = Locale(language);
+        final expected = lookupAppLocalizations(
+          locale,
+        ).exploreFeaturedSponsoredPillSemanticLabel('Skate Week');
+        final english = _l10n.exploreFeaturedSponsoredPillSemanticLabel(
+          'Skate Week',
+        );
+        final handle = tester.ensureSemantics();
+        try {
+          await pumpBar(
+            tester,
+            ExploreTabsState(
+              featuredTab: _featured(
+                disclosureLabel: const {'default': 'Acme Bikes'},
+              ),
+            ),
+            locale: locale,
+          );
+
+          expect(expected, isNot(english));
+          expect(
+            find.bySemanticsLabel(RegExp(RegExp.escape(expected))),
+            findsWidgets,
+          );
+          expect(
+            find.bySemanticsLabel(RegExp(RegExp.escape(english))),
+            findsNothing,
+          );
+          expect(
+            _pillTextColor(tester, 'Skate Week'),
+            equals(VineTheme.darkColors.accentChipPink.onContainer),
+          );
+          expect(tester.takeException(), isNull);
+        } finally {
+          handle.dispose();
+        }
+      });
+    }
+
     testWidgets('truncates an overlong pill harder than the label', (
       tester,
     ) async {

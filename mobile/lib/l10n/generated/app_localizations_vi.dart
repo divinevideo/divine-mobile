@@ -1354,12 +1354,12 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String exploreFeaturedSponsoredBy(String sponsor) {
-    return 'Sponsored by $sponsor';
+    return 'Được tài trợ bởi $sponsor';
   }
 
   @override
   String exploreFeaturedSponsoredPillSemanticLabel(String name) {
-    return '$name, sponsored';
+    return '$name, được tài trợ';
   }
 
   @override

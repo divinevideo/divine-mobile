@@ -108,8 +108,9 @@ void main() {
       ).thenAnswer((_) async => null);
     });
 
-    Widget buildSubject({FeaturedTabConfig? config}) {
+    Widget buildSubject({FeaturedTabConfig? config, Locale? locale}) {
       return testMaterialApp(
+        locale: locale,
         additionalOverrides: [
           featuredTabsRepositoryProvider.overrideWithValue(featuredRepository),
           feedRepositoryProvider.overrideWithValue(feedRepository),
@@ -123,6 +124,43 @@ void main() {
           ),
         ),
       );
+    }
+
+    for (final language in ['es', 'ar', 'ko', 'te']) {
+      testWidgets('$language discloses a sponsor from the default config', (
+        tester,
+      ) async {
+        final locale = Locale(language);
+        final expected = lookupAppLocalizations(
+          locale,
+        ).exploreFeaturedSponsoredBy('Acme Bikes');
+        final handle = tester.ensureSemantics();
+        try {
+          await tester.pumpWidget(
+            buildSubject(config: _sponsoredConfig(), locale: locale),
+          );
+          await tester.pumpAndSettle();
+
+          expect(expected, isNot(_sponsoredLine('Acme Bikes')));
+          expect(find.text(expected), findsOneWidget);
+          expect(find.text(_sponsoredLine('Acme Bikes')), findsNothing);
+          expect(find.bySemanticsLabel(expected), findsOneWidget);
+
+          await tester.tap(find.byType(VideoThumbnailWidget).first);
+          await tester.pump();
+          final args =
+              verify(
+                    () => router.push<Object?>(
+                      any(),
+                      extra: captureAny(named: 'extra'),
+                    ),
+                  ).captured.single
+                  as PooledFullscreenVideoFeedArgs;
+          expect(args.sponsorName, 'Acme Bikes');
+        } finally {
+          handle.dispose();
+        }
+      });
     }
 
     testWidgets('opens the curated snapshot with config attribution', (
