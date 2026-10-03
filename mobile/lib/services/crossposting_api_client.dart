@@ -6,14 +6,11 @@ import 'dart:convert';
 
 import 'package:equatable/equatable.dart';
 import 'package:http/http.dart' as http;
-import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:openvine/config/app_config.dart';
 import 'package:openvine/models/crosspost_models.dart';
+import 'package:openvine/services/nip98_auth_service.dart';
 
 export 'package:openvine/models/crosspost_models.dart';
-
-/// Reads an account-bound Divine OAuth access token.
-typedef CrosspostingAccessTokenReader = Future<String?> Function();
 
 T? _optionalJsonField<T>(
   Map<String, dynamic> json,
@@ -242,7 +239,8 @@ class CrosspostingApiException implements Exception {
   }
 
   /// Deliberately omits [message] and [cause]: the message can carry a
-  /// connection URL and the cause a bearer token, and this text reaches logs.
+  /// connection URL and the cause transport detail, and this text reaches
+  /// logs.
   /// Pinned by "diagnostic text omits raw messages and transport causes".
   @override
   String toString() =>
@@ -253,14 +251,17 @@ class CrosspostingApiException implements Exception {
 /// Client for the Divine crossposter service
 /// (https://crossposter.divine.video).
 ///
-/// All endpoints authenticate with the same Divine/Keycast bearer token the
-/// app already holds for login.divine.video.
+/// Every request carries a NIP-98 `Authorization: Nostr ...` header signed by
+/// the active account's signer, so any login type works and no credential
+/// that can sign other events leaves the device.
 class CrosspostingApiClient {
   CrosspostingApiClient({
-    required CrosspostingAccessTokenReader accessTokenReader,
+    required Nip98AuthService nip98AuthService,
+    required String? ownerPubkey,
     String baseUrl = defaultBaseUrl,
     http.Client? httpClient,
-  }) : _accessTokenReader = accessTokenReader,
+  }) : _nip98AuthService = nip98AuthService,
+       _ownerPubkey = ownerPubkey,
        _baseUrl = baseUrl,
        _httpClient = httpClient ?? http.Client();
 
@@ -276,34 +277,44 @@ class CrosspostingApiClient {
     'crossposter.divine.video',
   };
 
-  final CrosspostingAccessTokenReader _accessTokenReader;
+  final Nip98AuthService _nip98AuthService;
+  final String? _ownerPubkey;
   final String _baseUrl;
   final http.Client _httpClient;
 
   /// Releases resources held by the HTTP client.
   void close() => _httpClient.close();
 
-  Future<Map<String, String>> _authHeaders() async {
-    final String? token;
-    try {
-      token = await _accessTokenReader();
-    } on OAuthNetworkException catch (error) {
-      throw CrosspostingApiException(
-        'Not authenticated',
-        statusCode: 401,
-        code: 'unauthorized',
-        cause: error,
-      );
-    }
-    if (token == null) {
-      throw const CrosspostingApiException(
-        'Not authenticated',
-        statusCode: 401,
-        code: 'unauthorized',
-      );
+  static const _unauthorized = CrosspostingApiException(
+    'Not authenticated',
+    statusCode: 401,
+    code: 'unauthorized',
+  );
+
+  /// Signs [method] [uri] with [body] as the exact bytes that will be sent.
+  ///
+  /// A fresh event is signed per request: the server allows 60 s of clock
+  /// skew, and a cached token can already be 45 s old. The signed event must
+  /// belong to [_ownerPubkey], so a client bound to one account never sends a
+  /// request signed by another after a mid-flight account switch.
+  Future<Map<String, String>> _authHeaders(
+    HttpMethod method,
+    Uri uri, {
+    String? body,
+  }) async {
+    final owner = _ownerPubkey;
+    if (owner == null || owner.isEmpty) throw _unauthorized;
+    final token = await _nip98AuthService.createAuthToken(
+      url: uri.toString(),
+      method: method,
+      payload: body,
+      reuseCached: false,
+    );
+    if (token == null || token.signedEvent.pubkey != owner) {
+      throw _unauthorized;
     }
     return {
-      'Authorization': 'Bearer $token',
+      'Authorization': token.authorizationHeader,
       'Content-Type': 'application/json',
     };
   }
@@ -503,8 +514,8 @@ class CrosspostingApiClient {
   }
 
   Future<Map<String, dynamic>> _get(String path) async {
-    final headers = await _authHeaders();
     final uri = Uri.parse('$_baseUrl$path');
+    final headers = await _authHeaders(HttpMethod.get, uri);
     final response = await _request(
       () => _httpClient.get(uri, headers: headers),
     );
@@ -517,9 +528,18 @@ class CrosspostingApiClient {
     Map<String, dynamic>? body,
     bool allowEmpty = true,
   }) async {
-    final headers = await _authHeaders();
     final uri = Uri.parse('$_baseUrl$path');
     final encodedBody = body == null ? null : jsonEncode(body);
+    final headers = await _authHeaders(
+      switch (method) {
+        'POST' => HttpMethod.post,
+        'PUT' => HttpMethod.put,
+        'DELETE' => HttpMethod.delete,
+        _ => throw ArgumentError.value(method, 'method'),
+      },
+      uri,
+      body: encodedBody,
+    );
     final response = await switch (method) {
       'POST' => _request(
         () => _httpClient.post(uri, headers: headers, body: encodedBody),
