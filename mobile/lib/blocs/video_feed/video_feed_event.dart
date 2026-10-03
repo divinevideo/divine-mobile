@@ -116,6 +116,16 @@ final class VideoFeedFollowingListChanged extends VideoFeedEvent {
   List<Object?> get props => [followingPubkeys];
 }
 
+/// The account saved a change to its badge subscriptions.
+///
+/// Following reloads its merged authors; other sources are unaffected.
+final class VideoFeedBadgeSubscriptionsChanged extends VideoFeedEvent {
+  const VideoFeedBadgeSubscriptionsChanged();
+
+  @override
+  List<Object?> get props => [];
+}
+
 /// The subscribed curated lists changed.
 ///
 /// Dispatched internally when the [CuratedListRepository.subscribedListsStream]

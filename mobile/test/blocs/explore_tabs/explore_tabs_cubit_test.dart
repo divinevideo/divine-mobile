@@ -53,8 +53,9 @@ void main() {
         'popular',
         'categories',
         'lists',
+        'badges',
       ]);
-      expect(cubit.state.tabCount, 4);
+      expect(cubit.state.tabCount, 5);
     });
 
     blocTest<ExploreTabsCubit, ExploreTabsState>(
@@ -66,7 +67,7 @@ void main() {
         appsAvailable: true,
       ),
       expect: () => [
-        isA<ExploreTabsState>().having((s) => s.tabCount, 'tabCount', 7).having(
+        isA<ExploreTabsState>().having((s) => s.tabCount, 'tabCount', 8).having(
           (s) => s.tabNames,
           'tabNames',
           const [
@@ -76,6 +77,7 @@ void main() {
             'categories',
             'for_you',
             'lists',
+            'badges',
             'apps',
           ],
         ),

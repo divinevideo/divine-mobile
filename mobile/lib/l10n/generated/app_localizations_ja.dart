@@ -9734,6 +9734,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get badgesTitle => 'バッジ';
 
   @override
+  String get badgeSubscribeAction => 'バッジを購読';
+
+  @override
+  String get badgeSubscribedAction => '購読中';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'バッジを承認した人';
+
+  @override
   String get badgesLoadError => 'バッジの読み込みに失敗';
 
   @override

@@ -10233,6 +10233,15 @@ class AppLocalizationsSv extends AppLocalizations {
   String get badgesTitle => 'Märken';
 
   @override
+  String get badgeSubscribeAction => 'Prenumerera på märket';
+
+  @override
+  String get badgeSubscribedAction => 'Prenumererar';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'Personer som godkänt märket';
+
+  @override
   String get badgesLoadError => 'Kunde inte ladda märken';
 
   @override

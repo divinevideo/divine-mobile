@@ -147,6 +147,7 @@ void main() {
 
     setUpAll(() {
       registerFallbackValue(<Filter>[]);
+      registerFallbackValue(<String>[]);
       registerFallbackValue(LeaderboardPeriod.week);
       registerFallbackValue(PopularVideosVariant.classic);
       registerFallbackValue(VideoSearchSort.trending);
@@ -154,6 +155,70 @@ void main() {
 
     test('can be instantiated', () {
       expect(repository, isNotNull);
+    });
+
+    group('createBadgeVideoPager', () {
+      test('requires an available multi-author API', () {
+        expect(
+          () => repository.createBadgeVideoPager(['holder']),
+          throwsA(isA<FunnelcakeNotConfiguredException>()),
+        );
+        final client = MockFunnelcakeApiClient();
+        when(() => client.isAvailable).thenReturn(false);
+        final withClient = VideosRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: client,
+        );
+        expect(
+          () => withClient.createBadgeVideoPager(['holder']),
+          throwsA(isA<FunnelcakeNotConfiguredException>()),
+        );
+      });
+
+      test('sorts unique authors and transforms the returned video', () async {
+        final client = MockFunnelcakeApiClient();
+        when(() => client.isAvailable).thenReturn(true);
+        final stats = _createVideoStats(
+          id: 'badge-video',
+          pubkey: 'holder-a',
+          dTag: 'badge-video',
+          videoUrl: 'https://example.com/badge-video.mp4',
+        );
+        when(
+          () => client.getVideosByAuthors(
+            authors: any(named: 'authors'),
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer(
+          (_) async => RecentVideosResponse(
+            videos: [stats],
+            serverItemCount: 1,
+            hasMore: false,
+          ),
+        );
+        final withClient = VideosRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: client,
+        );
+        final pager = withClient.createBadgeVideoPager([
+          'holder-b',
+          'holder-a',
+          'holder-a',
+        ]);
+
+        final videos = await pager.loadMore(limit: 1);
+
+        expect(videos.single.id, stats.id);
+        verify(
+          () => client.getVideosByAuthors(
+            authors: ['holder-a', 'holder-b'],
+            limit: 100,
+            before: any(named: 'before'),
+          ),
+        ).called(1);
+      });
     });
 
     group('refreshAudioReusePolicy', () {

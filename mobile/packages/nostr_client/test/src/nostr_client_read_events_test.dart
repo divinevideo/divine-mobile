@@ -26,6 +26,7 @@ class _StubPagerNostr extends Mock implements Nostr {
 
   /// The deadline the client handed the pager, null until it has walked.
   DateTime? seenDeadline;
+  List<String>? seenTempRelays;
 
   @override
   Future<PagedQueryResult> readAllEvents(
@@ -38,6 +39,7 @@ class _StubPagerNostr extends Mock implements Nostr {
     List<int> relayTypes = RelayType.all,
   }) async {
     seenDeadline = deadline;
+    seenTempRelays = tempRelays;
     return walk;
   }
 }
@@ -161,9 +163,15 @@ NostrClient _clientOver(
   required List<String> connectedRelays,
   AppDbClient? dbClient,
   RelayDiagnosticsSink? diagnosticsSink,
+  bool Function(String url)? isRelayAllowed,
 }) {
   final relayManager = _MockRelayManager();
   when(() => relayManager.connectedRelays).thenReturn(connectedRelays);
+  when(() => relayManager.isRelayAllowed(any())).thenAnswer(
+    (invocation) =>
+        isRelayAllowed?.call(invocation.positionalArguments.single as String) ??
+        true,
+  );
   when(() => relayManager.diagnosticsSink).thenReturn(diagnosticsSink);
   when(relayManager.dispose).thenAnswer((_) async {});
   when(relayManager.retryDisconnectedRelays).thenAnswer((_) async {});
@@ -1026,6 +1034,42 @@ void main() {
   });
 
   group('NostrClient.readAllEvents', () {
+    test(
+      'passes a public relay to the pager without connected relays',
+      () async {
+        final nostr = _StubPagerNostr(
+          const PagedQueryResult(events: [], isComplete: true, pages: 1),
+        );
+        final client = _clientOver(nostr, connectedRelays: []);
+
+        final result = await client.readAllEvents(
+          _textNotes(),
+          tempRelays: ['wss://relay.example'],
+        );
+
+        expect(result.isComplete, isTrue);
+        expect(nostr.seenTempRelays, ['wss://relay.example']);
+      },
+    );
+
+    test('drops a public relay outside the environment', () async {
+      final nostr = _StubPagerNostr(
+        const PagedQueryResult(events: [], isComplete: true, pages: 1),
+      );
+      final client = _clientOver(
+        nostr,
+        connectedRelays: [],
+        isRelayAllowed: (url) => url == 'wss://relay.example',
+      );
+
+      await client.readAllEvents(
+        _textNotes(),
+        tempRelays: ['wss://relay.example', 'wss://elsewhere.example'],
+      );
+
+      expect(nostr.seenTempRelays, ['wss://relay.example']);
+    });
+
     test('walks two pages and stops on the empty page', () async {
       final nostr = _newNostr();
       final relay = _ScriptedRelay('wss://pages.example');

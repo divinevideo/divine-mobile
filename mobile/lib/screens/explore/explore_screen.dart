@@ -26,6 +26,7 @@ class ExploreScreen extends ConsumerWidget {
     exploreCategoriesTabName,
     exploreForYouTabName,
     exploreListsTabName,
+    exploreBadgesTabName,
     exploreAppsTabName,
   };
 
@@ -40,7 +41,7 @@ class ExploreScreen extends ConsumerWidget {
 
   /// Path for selecting a specific tab by name (grid mode).
   /// Valid URL slugs: 'classics', 'new', 'popular', 'categories',
-  /// 'for-you', 'lists', 'apps'.
+  /// 'for-you', 'lists', 'badges', 'apps'.
   static const pathTabSubpath = '/explore/tab/:name';
 
   /// Build path for grid mode or specific index.

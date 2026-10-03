@@ -42,6 +42,7 @@ void main() {
           'Categories',
           'For You',
           'Lists',
+          'Badges',
           'Integrated Apps',
         ],
       );
@@ -65,6 +66,7 @@ void main() {
           'Categories',
           'For You',
           'Lists',
+          'Badges',
           'Integrated Apps',
         ],
       );

@@ -58,16 +58,19 @@ part 'repository_providers.g.dart';
 final badgeRepositoryProvider = Provider<BadgeRepository>((ref) {
   final authService = ref.watch(authServiceProvider);
   final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
-  return BadgeRepository(
+  final repository = BadgeRepository(
     nostrClient: ref.watch(nostrServiceProvider),
     sharedPreferences: ref.watch(sharedPreferencesProvider),
     currentPubkey: () => authService.currentPublicKeyHex,
     signEvent: authService.createAndSignEvent,
+    definitionRelayUrl: ref.watch(currentEnvironmentProvider).relayUrl,
     // Read through the repository rather than a snapshot: the hide buckets
     // are mutated in place, so a block made after this provider was built
     // still takes effect on the next badge load.
     isHiddenPubkey: blocklistRepository.shouldFilterFromFeeds,
   );
+  ref.onDispose(repository.dispose);
+  return repository;
 });
 
 final FutureProviderFamily<List<ProfileBadgeViewData>, String>
