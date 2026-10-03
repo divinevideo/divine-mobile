@@ -265,9 +265,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsContentSafetyTitle => '内容与安全';
 
   @override
-  String get settingsPrivacyTitle => '隐私';
-
-  @override
   String get settingsPrivacySubtitle => '选择你分享哪些使用数据';
 
   @override
@@ -2668,12 +2665,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get notificationSettingsAboutDescription =>
       '通知由 Nostr 协议驱动。实时更新取决于你与 Nostr 中继的连接，部分通知可能会有延迟。';
-
-  @override
-  String get safetySettingsWhatYouSee => '你看到的内容';
-
-  @override
-  String get safetySettingsWhatYouPublish => '你发布的内容';
 
   @override
   String get safetySettingsShowDivineHostedOnly => '只显示 Divine 托管的视频';
@@ -12098,4 +12089,58 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => '开启自动';
+
+  @override
+  String get settingsAccountTitle => '账号';
+
+  @override
+  String get settingsWhatYouSeeTitle => '你看到的内容';
+
+  @override
+  String get settingsCreateShareTitle => '创作与分享';
+
+  @override
+  String get settingsPrivacySafetyTitle => '隐私与安全';
+
+  @override
+  String get settingsAppPreferencesTitle => '应用偏好设置';
+
+  @override
+  String get settingsConnectionsTitle => '连接';
+
+  @override
+  String get settingsHelpAboutTitle => '帮助与关于 Divine';
+
+  @override
+  String get settingsCreatorToolsSection => '创作者工具';
+
+  @override
+  String get settingsNostrNetworkSection => 'Nostr 网络';
+
+  @override
+  String get settingsAboutDivineSection => '关于 Divine';
+
+  @override
+  String get settingsAdvancedSection => '高级';
+
+  @override
+  String get settingsAccountSubtitle => '登录、身份、密钥和账号数据';
+
+  @override
+  String get settingsWhatYouSeeSubtitle => '语言、字幕、视频布局和过滤器';
+
+  @override
+  String get settingsCreateShareSubtitle => '录制、发布和创作者工具';
+
+  @override
+  String get settingsPrivacySafetySubtitle => '使用数据、内容审核和已屏蔽账号';
+
+  @override
+  String get settingsAppPreferencesSubtitle => '外观、语言、存储和高级选项';
+
+  @override
+  String get settingsConnectionsSubtitle => '应用、转发器、媒体服务器和权限';
+
+  @override
+  String get settingsHelpAboutSubtitle => '支持、法律信息和应用详情';
 }

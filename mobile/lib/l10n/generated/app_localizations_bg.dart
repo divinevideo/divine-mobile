@@ -308,9 +308,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get settingsContentSafetyTitle => 'Съдържание и безопасност';
 
   @override
-  String get settingsPrivacyTitle => 'Поверителност';
-
-  @override
   String get settingsPrivacySubtitle =>
       'Избери какви данни за ползване споделяш';
 
@@ -2889,12 +2886,6 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get notificationSettingsAboutDescription =>
       'Известията се захранват от Nostr. Обновяването в реално време зависи от връзката ти с Nostr релета. Някои известия може да закъсняват.';
-
-  @override
-  String get safetySettingsWhatYouSee => 'КАКВО ВИЖДАШ';
-
-  @override
-  String get safetySettingsWhatYouPublish => 'КАКВО ПУБЛИКУВАШ';
 
   @override
   String get safetySettingsShowDivineHostedOnly =>
@@ -12983,4 +12974,65 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => 'Включи автоматичното';
+
+  @override
+  String get settingsAccountTitle => 'Акаунт';
+
+  @override
+  String get settingsWhatYouSeeTitle => 'Какво виждате';
+
+  @override
+  String get settingsCreateShareTitle => 'Създаване и споделяне';
+
+  @override
+  String get settingsPrivacySafetyTitle => 'Поверителност и безопасност';
+
+  @override
+  String get settingsAppPreferencesTitle => 'Настройки на приложението';
+
+  @override
+  String get settingsConnectionsTitle => 'Връзки';
+
+  @override
+  String get settingsHelpAboutTitle => 'Помощ и за Divine';
+
+  @override
+  String get settingsCreatorToolsSection => 'Инструменти за творци';
+
+  @override
+  String get settingsNostrNetworkSection => 'Мрежа Nostr';
+
+  @override
+  String get settingsAboutDivineSection => 'За Divine';
+
+  @override
+  String get settingsAdvancedSection => 'Разширени';
+
+  @override
+  String get settingsAccountSubtitle =>
+      'Вход, самоличност, ключове и данни за акаунта';
+
+  @override
+  String get settingsWhatYouSeeSubtitle =>
+      'Език, субтитри, оформление на видео и филтри';
+
+  @override
+  String get settingsCreateShareSubtitle =>
+      'Записване, публикуване и инструменти за творци';
+
+  @override
+  String get settingsPrivacySafetySubtitle =>
+      'Данни за употреба, модериране и блокирани акаунти';
+
+  @override
+  String get settingsAppPreferencesSubtitle =>
+      'Външен вид, език, хранилище и разширени опции';
+
+  @override
+  String get settingsConnectionsSubtitle =>
+      'Приложения, релета, медийни сървъри и разрешения';
+
+  @override
+  String get settingsHelpAboutSubtitle =>
+      'Поддръжка, правна информация и данни за приложението';
 }

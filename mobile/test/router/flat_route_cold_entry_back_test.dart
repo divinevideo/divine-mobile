@@ -4,6 +4,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/settings/monetization_links_settings_screen.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
 import 'package:openvine/screens/settings/support_center_screen.dart';
@@ -24,6 +25,13 @@ const _flatMultiSegmentPaths = <String>[
   MonetizationLinksSettingsScreen.path,
   BugReportScreen.path,
   FeatureRequestScreen.path,
+  RoutePaths.settingsAccount,
+  RoutePaths.settingsAppPreferences,
+  RoutePaths.settingsViewing,
+  RoutePaths.settingsCreating,
+  RoutePaths.settingsConnections,
+  RoutePaths.settingsNostrNetwork,
+  RoutePaths.settingsHelpAbout,
 ];
 
 void main() {

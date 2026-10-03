@@ -304,9 +304,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get settingsContentSafetyTitle => 'Inhoud & veiligheid';
 
   @override
-  String get settingsPrivacyTitle => 'Privacy';
-
-  @override
   String get settingsPrivacySubtitle => 'Kies welke gebruiksgegevens je deelt';
 
   @override
@@ -2857,12 +2854,6 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get notificationSettingsAboutDescription =>
       'Meldingen werken via het Nostr-protocol. Realtime updates hangen af van je verbinding met Nostr-relays. Sommige meldingen kunnen vertraging hebben.';
-
-  @override
-  String get safetySettingsWhatYouSee => 'WAT JIJ ZIET';
-
-  @override
-  String get safetySettingsWhatYouPublish => 'WAT JIJ PUBLICEERT';
 
   @override
   String get safetySettingsShowDivineHostedOnly =>
@@ -12932,4 +12923,65 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => 'Automatisch aanzetten';
+
+  @override
+  String get settingsAccountTitle => 'Account';
+
+  @override
+  String get settingsWhatYouSeeTitle => 'Wat je ziet';
+
+  @override
+  String get settingsCreateShareTitle => 'Maken en delen';
+
+  @override
+  String get settingsPrivacySafetyTitle => 'Privacy en veiligheid';
+
+  @override
+  String get settingsAppPreferencesTitle => 'Appvoorkeuren';
+
+  @override
+  String get settingsConnectionsTitle => 'Verbindingen';
+
+  @override
+  String get settingsHelpAboutTitle => 'Hulp en over Divine';
+
+  @override
+  String get settingsCreatorToolsSection => 'Tools voor makers';
+
+  @override
+  String get settingsNostrNetworkSection => 'Nostr-netwerk';
+
+  @override
+  String get settingsAboutDivineSection => 'Over Divine';
+
+  @override
+  String get settingsAdvancedSection => 'Geavanceerd';
+
+  @override
+  String get settingsAccountSubtitle =>
+      'Inloggen, identiteit, sleutels en accountgegevens';
+
+  @override
+  String get settingsWhatYouSeeSubtitle =>
+      'Taal, ondertiteling, video-indeling en filters';
+
+  @override
+  String get settingsCreateShareSubtitle =>
+      'Opnemen, publiceren en tools voor makers';
+
+  @override
+  String get settingsPrivacySafetySubtitle =>
+      'Gebruiksgegevens, moderatie en geblokkeerde accounts';
+
+  @override
+  String get settingsAppPreferencesSubtitle =>
+      'Weergave, taal, opslag en geavanceerde opties';
+
+  @override
+  String get settingsConnectionsSubtitle =>
+      'Apps, relays, mediaservers en machtigingen';
+
+  @override
+  String get settingsHelpAboutSubtitle =>
+      'Ondersteuning, juridische informatie en appgegevens';
 }

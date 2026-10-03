@@ -52,6 +52,7 @@ void main() {
 
     Widget buildSubject({
       bool advancedRelaySettingsEnabled = false,
+      bool networkOnly = false,
       AuthState authState = AuthState.authenticated,
     }) {
       final router = GoRouter(
@@ -59,7 +60,8 @@ void main() {
         routes: [
           GoRoute(
             path: NostrSettingsScreen.path,
-            builder: (context, state) => const NostrSettingsScreen(),
+            builder: (context, state) =>
+                NostrSettingsScreen(networkOnly: networkOnly),
           ),
           GoRoute(
             path: WelcomeScreen.path,
@@ -89,6 +91,7 @@ void main() {
     Future<void> pumpSubject(
       WidgetTester tester, {
       bool advancedRelaySettingsEnabled = false,
+      bool networkOnly = false,
       AuthState authState = AuthState.authenticated,
     }) async {
       await tester.binding.setSurfaceSize(const Size(900, 1200));
@@ -96,6 +99,7 @@ void main() {
       await tester.pumpWidget(
         buildSubject(
           advancedRelaySettingsEnabled: advancedRelaySettingsEnabled,
+          networkOnly: networkOnly,
           authState: authState,
         ),
       );
@@ -108,6 +112,15 @@ void main() {
 
       expect(find.text(l10n.nostrSettingsRelays), findsNothing);
       expect(find.text(l10n.nostrSettingsRelayDiagnostics), findsNothing);
+    });
+
+    testWidgets('Connections shows network controls without account actions', (
+      tester,
+    ) async {
+      await pumpSubject(tester, networkOnly: true);
+      expect(find.text(l10n.nostrSettingsMediaServers), findsOneWidget);
+      expect(find.text(l10n.nostrSettingsKeyManagement), findsNothing);
+      expect(find.text(l10n.nostrSettingsDeleteAccount), findsNothing);
     });
 
     testWidgets('shows Relays and Relay Diagnostics tiles when '
@@ -152,6 +165,25 @@ void main() {
 
       expect(find.text(l10n.nostrSettingsMoveAccount), findsNothing);
       expect(find.text(l10n.nostrSettingsMoveAccountSubtitle), findsNothing);
+    });
+
+    testWidgets('hides client attribution when signed out', (tester) async {
+      await pumpSubject(tester, authState: AuthState.unauthenticated);
+
+      expect(
+        find.text(l10n.nostrSettingsSignatureVerification),
+        findsOneWidget,
+      );
+      expect(find.text(l10n.nostrSettingsClientAttribution), findsNothing);
+    });
+
+    testWidgets('network-only view keeps client attribution when signed in', (
+      tester,
+    ) async {
+      await pumpSubject(tester, networkOnly: true);
+
+      expect(find.text(l10n.nostrSettingsClientAttribution), findsOneWidget);
+      expect(find.text(l10n.nostrSettingsMoveAccount), findsNothing);
     });
 
     testWidgets('opens account portability flow in external browser', (

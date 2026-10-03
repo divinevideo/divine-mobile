@@ -34,21 +34,22 @@ onFlowComplete:
 # Verify that a signed-in user can reach key management and back up their
 # private key to the clipboard.
 #Steps:
-# 1. Open Settings, then Nostr Settings
+# 1. Open Settings, then Account
 # 2. Open Key Management and verify the Nostr Keys screen
 # 3. Copy the private key and verify the confirmation
 # 4. Overwrite the clipboard with the public key
 
-# 1. Settings -> Nostr Settings
+# 1. Settings -> Account
 - runFlow: ../utils/openSettings.yaml
 - tapOn:
-    id: "nostr_settings_tile"
+    id: "settings_account_tile"
 
-# 2. Targeted by id because this row moved off the Settings root and its copy
-# is localized and expected to evolve independently of the journey.
-- extendedWaitUntil:
-    visible:
+# 2. Targeted by id because this row has moved between Settings screens and
+# its copy is localized and expected to evolve independently of the journey.
+- scrollUntilVisible:
+    element:
       id: "key_management_tile"
+    direction: DOWN
     timeout: 30000
 - tapOn:
     id: "key_management_tile"

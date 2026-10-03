@@ -243,9 +243,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get settingsContentSafetyTitle => 'İçerik ve Güvenlik';
 
   @override
-  String get settingsPrivacyTitle => 'Gizlilik';
-
-  @override
   String get settingsPrivacySubtitle =>
       'Hangi kullanım verilerini paylaştığını seç';
 
@@ -2784,12 +2781,6 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get notificationSettingsAboutDescription =>
       'Bildirimler Nostr protokolüyle desteklenir. Gerçek zamanlı güncellemeler Nostr rölelerine olan bağlantına bağlıdır. Bazı bildirimler gecikebilir.';
-
-  @override
-  String get safetySettingsWhatYouSee => 'GÖRDÜKLERİN';
-
-  @override
-  String get safetySettingsWhatYouPublish => 'PAYLAŞTIKLARIN';
 
   @override
   String get safetySettingsShowDivineHostedOnly =>
@@ -12784,4 +12775,65 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => 'Otomatiği aç';
+
+  @override
+  String get settingsAccountTitle => 'Hesap';
+
+  @override
+  String get settingsWhatYouSeeTitle => 'Gördüklerin';
+
+  @override
+  String get settingsCreateShareTitle => 'Oluştur ve paylaş';
+
+  @override
+  String get settingsPrivacySafetyTitle => 'Gizlilik ve güvenlik';
+
+  @override
+  String get settingsAppPreferencesTitle => 'Uygulama tercihleri';
+
+  @override
+  String get settingsConnectionsTitle => 'Bağlantılar';
+
+  @override
+  String get settingsHelpAboutTitle => 'Yardım ve Divine hakkında';
+
+  @override
+  String get settingsCreatorToolsSection => 'İçerik üretici araçları';
+
+  @override
+  String get settingsNostrNetworkSection => 'Nostr ağı';
+
+  @override
+  String get settingsAboutDivineSection => 'Divine hakkında';
+
+  @override
+  String get settingsAdvancedSection => 'Gelişmiş';
+
+  @override
+  String get settingsAccountSubtitle =>
+      'Giriş, kimlik, anahtarlar ve hesap verileri';
+
+  @override
+  String get settingsWhatYouSeeSubtitle =>
+      'Dil, altyazılar, video düzeni ve filtreler';
+
+  @override
+  String get settingsCreateShareSubtitle =>
+      'Kayıt, yayınlama ve içerik üretici araçları';
+
+  @override
+  String get settingsPrivacySafetySubtitle =>
+      'Kullanım verileri, moderasyon ve engellenen hesaplar';
+
+  @override
+  String get settingsAppPreferencesSubtitle =>
+      'Görünüm, dil, depolama ve gelişmiş seçenekler';
+
+  @override
+  String get settingsConnectionsSubtitle =>
+      'Uygulamalar, aktarıcılar, medya sunucuları ve izinler';
+
+  @override
+  String get settingsHelpAboutSubtitle =>
+      'Destek, yasal bilgiler ve uygulama ayrıntıları';
 }

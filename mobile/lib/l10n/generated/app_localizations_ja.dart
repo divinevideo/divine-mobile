@@ -235,9 +235,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsContentSafetyTitle => 'コンテンツと安全';
 
   @override
-  String get settingsPrivacyTitle => 'プライバシー';
-
-  @override
   String get settingsPrivacySubtitle => '共有する利用データを選択できます';
 
   @override
@@ -2655,12 +2652,6 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get notificationSettingsAboutDescription =>
       '通知は Nostr プロトコルで動いてるよ。リアルタイム更新は Nostr リレーへの接続に依存するから、遅れることもあるよ。';
-
-  @override
-  String get safetySettingsWhatYouSee => 'あなたが見るもの';
-
-  @override
-  String get safetySettingsWhatYouPublish => 'あなたが公開するもの';
 
   @override
   String get safetySettingsShowDivineHostedOnly => 'Divine ホスト動画だけ表示';
@@ -12240,4 +12231,58 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => '自動をオンにする';
+
+  @override
+  String get settingsAccountTitle => 'アカウント';
+
+  @override
+  String get settingsWhatYouSeeTitle => '表示する内容';
+
+  @override
+  String get settingsCreateShareTitle => '作成と共有';
+
+  @override
+  String get settingsPrivacySafetyTitle => 'プライバシーと安全';
+
+  @override
+  String get settingsAppPreferencesTitle => 'アプリの設定';
+
+  @override
+  String get settingsConnectionsTitle => '接続';
+
+  @override
+  String get settingsHelpAboutTitle => 'ヘルプとDivineについて';
+
+  @override
+  String get settingsCreatorToolsSection => 'クリエイターツール';
+
+  @override
+  String get settingsNostrNetworkSection => 'Nostrネットワーク';
+
+  @override
+  String get settingsAboutDivineSection => 'Divineについて';
+
+  @override
+  String get settingsAdvancedSection => '詳細設定';
+
+  @override
+  String get settingsAccountSubtitle => 'ログイン、本人情報、鍵、アカウントデータ';
+
+  @override
+  String get settingsWhatYouSeeSubtitle => '言語、字幕、動画表示、フィルター';
+
+  @override
+  String get settingsCreateShareSubtitle => '録画、投稿、クリエイターツール';
+
+  @override
+  String get settingsPrivacySafetySubtitle => '利用データ、モデレーション、ブロックしたアカウント';
+
+  @override
+  String get settingsAppPreferencesSubtitle => '外観、言語、ストレージ、詳細設定';
+
+  @override
+  String get settingsConnectionsSubtitle => 'アプリ、リレー、メディアサーバー、権限';
+
+  @override
+  String get settingsHelpAboutSubtitle => 'サポート、法的情報、アプリの詳細';
 }

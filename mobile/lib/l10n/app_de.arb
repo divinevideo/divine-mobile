@@ -3006,7 +3006,6 @@
     "peopleListsViewProfileHint": "Profil von {name} anzeigen",
     "settingsGeneralTitle": "Allgemeine Einstellungen",
     "settingsContentSafetyTitle": "Inhalte & Sicherheit",
-    "settingsPrivacyTitle": "Datenschutz",
     "settingsPrivacySubtitle": "Wähle, welche Nutzungsdaten du teilst",
     "privacySettingsAnalyticsSection": "ANALYTICS",
     "privacySettingsShareUsage": "Nutzungsdaten teilen",
@@ -3227,8 +3226,6 @@
     "nostrSettingsCouldNotRemoveKeys": "Dieses Konto konnte nicht von diesem Gerät entfernt werden. Versuch es nochmal.",
     "nostrSettingsDeleteAccount": "Konto und Daten löschen",
     "nostrSettingsDeleteAccountSubtitle": "Sendet Löschanfragen für deine Inhalte und meldet dich auf diesem Gerät ab. Relays, Clients, Suchindizes und andere angemeldete Geräte behalten möglicherweise Kopien.",
-    "safetySettingsWhatYouSee": "WAS DU SIEHST",
-    "safetySettingsWhatYouPublish": "WAS DU VERÖFFENTLICHST",
     "listPersonCount": "{count, plural, =1{1 Person} other{{count} Personen}}",
     "@listPersonCount": {
         "placeholders": {
@@ -4821,5 +4818,23 @@
   "crosspostingAutoBody": "Jeder neue Loop, den du postest, geht für dich an {platform} — ohne zusätzliche Taps. Gilt nur für Loops, die du veröffentlichst, nachdem du es eingeschaltet hast.",
   "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "Automatik einschalten",
-  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
+  "settingsAccountTitle": "Konto",
+  "settingsWhatYouSeeTitle": "Was du siehst",
+  "settingsCreateShareTitle": "Erstellen und teilen",
+  "settingsPrivacySafetyTitle": "Datenschutz und Sicherheit",
+  "settingsAppPreferencesTitle": "App-Einstellungen",
+  "settingsConnectionsTitle": "Verbindungen",
+  "settingsHelpAboutTitle": "Hilfe und über Divine",
+  "settingsCreatorToolsSection": "Creator-Tools",
+  "settingsNostrNetworkSection": "Nostr-Netzwerk",
+  "settingsAboutDivineSection": "Über Divine",
+  "settingsAdvancedSection": "Erweitert",
+  "settingsAccountSubtitle": "Anmeldung, Identität, Schlüssel und Kontodaten",
+  "settingsWhatYouSeeSubtitle": "Sprache, Untertitel, Videoformat und Filter",
+  "settingsCreateShareSubtitle": "Aufnehmen, Veröffentlichen und Creator-Tools",
+  "settingsPrivacySafetySubtitle": "Nutzungsdaten, Moderation und blockierte Konten",
+  "settingsAppPreferencesSubtitle": "Darstellung, Sprache, Speicher und erweiterte Optionen",
+  "settingsConnectionsSubtitle": "Apps, Relays, Medienserver und Berechtigungen",
+  "settingsHelpAboutSubtitle": "Support, Rechtliches und App-Informationen"
 }

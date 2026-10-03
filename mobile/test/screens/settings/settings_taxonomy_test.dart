@@ -1,5 +1,5 @@
 // ABOUTME: Widget tests for the Settings information architecture.
-// ABOUTME: Verifies General Settings and Content & Safety replace split content/moderation rows.
+// ABOUTME: Verifies task destinations, localization, and key moved controls.
 
 import 'package:app_update_repository/app_update_repository.dart';
 import 'package:bloc_test/bloc_test.dart';
@@ -21,10 +21,9 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
-import 'package:openvine/providers/subtitle_providers.dart';
 import 'package:openvine/screens/content_filters_screen.dart';
 import 'package:openvine/screens/safety_settings_screen.dart';
-import 'package:openvine/screens/settings/general_settings_screen.dart';
+import 'package:openvine/screens/settings/settings_categories_screen.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
 import 'package:openvine/services/account_label_service.dart';
 import 'package:openvine/services/age_verification_service.dart';
@@ -116,17 +115,15 @@ void main() {
     when(() => authService.isAuthenticated).thenReturn(false);
     when(() => authService.isRegistered).thenReturn(false);
     when(() => authService.isAnonymous).thenReturn(false);
-    when(
-      () => authService.authenticationSource,
-    ).thenReturn(AuthenticationSource.automatic);
+    when(() => authService.authenticationSource)
+        .thenReturn(AuthenticationSource.automatic);
     when(() => authService.hasExpiredOAuthSession).thenReturn(false);
     when(() => authService.getKnownAccounts()).thenAnswer((_) async => []);
     when(() => authService.currentPublicKeyHex).thenReturn(null);
 
     when(() => audioSharingService.isAudioSharingEnabled).thenReturn(false);
-    when(
-      () => audioSharingService.setAudioSharingEnabled(any()),
-    ).thenAnswer((_) async {});
+    when(() => audioSharingService.setAudioSharingEnabled(any()))
+        .thenAnswer((_) async {});
     when(() => languageService.contentLanguage).thenReturn('en');
     when(() => languageService.isCustomLanguageSet).thenReturn(false);
     when(() => accountLabelService.accountLabels).thenReturn(<ContentLabel>{});
@@ -135,20 +132,16 @@ void main() {
     when(() => ageVerificationService.isAdultContentVerified).thenReturn(false);
     when(() => contentFilterService.initialize()).thenAnswer((_) async {});
     for (final label in ContentLabel.values) {
-      when(
-        () => contentFilterService.getPreference(label),
-      ).thenReturn(ContentFilterPreference.warn);
+      when(() => contentFilterService.getPreference(label))
+          .thenReturn(ContentFilterPreference.warn);
     }
-    when(
-      () => contentFilterService.lockAdultCategories(),
-    ).thenAnswer((_) async {});
-    when(
-      () => moderationLabelService.isDivineLabelerSubscribed,
-    ).thenReturn(true);
+    when(() => contentFilterService.lockAdultCategories())
+        .thenAnswer((_) async {});
+    when(() => moderationLabelService.isDivineLabelerSubscribed)
+        .thenReturn(true);
     when(() => moderationLabelService.ensureLoaded()).thenAnswer((_) async {});
-    when(
-      () => moderationLabelService.isFollowingModerationEnabled,
-    ).thenReturn(false);
+    when(() => moderationLabelService.isFollowingModerationEnabled)
+        .thenReturn(false);
     when(() => moderationLabelService.customLabelers).thenReturn(<String>{});
     when(
       () => moderationLabelService.setFollowingModerationEnabled(
@@ -157,9 +150,8 @@ void main() {
       ),
     ).thenAnswer((_) async {});
     when(() => followRepository.followingPubkeys).thenReturn(<String>[]);
-    when(
-      () => followRepository.followingStream,
-    ).thenAnswer((_) => const Stream<List<String>>.empty());
+    when(() => followRepository.followingStream)
+        .thenAnswer((_) => const Stream<List<String>>.empty());
   });
 
   List<Override> baseOverrides() => [
@@ -215,7 +207,7 @@ void main() {
   }
 
   group(SettingsScreen, () {
-    testWidgets('Settings hub uses General Settings and Content & Safety', (
+    testWidgets('Settings hub shows task destinations', (
       tester,
     ) async {
       final appUpdateBloc = _MockAppUpdateBloc();
@@ -232,16 +224,22 @@ void main() {
           const SettingsScreen(),
           appUpdateBloc: appUpdateBloc,
           overrides: [
-            isFeatureEnabledProvider(
-              FeatureFlag.blueskyPublishing,
-            ).overrideWithValue(true),
+            isFeatureEnabledProvider(FeatureFlag.blueskyPublishing)
+                .overrideWithValue(true),
           ],
         ),
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('General Settings'), findsOneWidget);
-      expect(find.text('Content & Safety'), findsOneWidget);
+      expect(find.text('Account'), findsOneWidget);
+      expect(find.text('What you see'), findsOneWidget);
+      expect(find.text('Create & share'), findsOneWidget);
+      expect(find.text('Privacy & safety'), findsOneWidget);
+      expect(find.text('App preferences'), findsOneWidget);
+      expect(find.text('Connections'), findsOneWidget);
+      expect(find.text('Help & About Divine'), findsOneWidget);
+      expect(find.text('General Settings'), findsNothing);
+      expect(find.text('Content & Safety'), findsNothing);
       expect(find.text('Content Preferences'), findsNothing);
       expect(find.text('Moderation Controls'), findsNothing);
       expect(find.text('Bluesky Publishing'), findsNothing);
@@ -257,7 +255,7 @@ void main() {
       expect(updateAvailable, findsOneWidget);
     });
 
-    testWidgets('Settings hub offers a Privacy row', (tester) async {
+    testWidgets('Settings hub offers a Privacy & safety row', (tester) async {
       await setStandardSurface(tester);
       await tester.pumpWidget(wrap(const SettingsScreen()));
       await tester.pumpAndSettle();
@@ -266,23 +264,22 @@ void main() {
       // losing this row hides consent from the user entirely.
       final l10n = lookupAppLocalizations(const Locale('en'));
       await tester.scrollUntilVisible(
-        find.text(l10n.settingsPrivacyTitle),
+        find.text(l10n.settingsPrivacySafetyTitle),
         120,
         scrollable: find.byType(Scrollable),
       );
-      expect(find.text(l10n.settingsPrivacyTitle), findsOneWidget);
-      expect(find.text(l10n.settingsPrivacySubtitle), findsOneWidget);
+      expect(find.text(l10n.settingsPrivacySafetyTitle), findsOneWidget);
     });
 
     testWidgets('exposes the Experimental Features row to automation', (
       tester,
     ) async {
       // The E2E account-switching journey enters the feature-flag screen
-      // through this row. It sits far enough down the hub that whether it is
+      // through this row. It sits far enough down App preferences that whether it is
       // laid out at all depends on the surface height, so scroll to it rather
       // than assuming a viewport tall enough to build it.
       await setStandardSurface(tester);
-      await tester.pumpWidget(wrap(const SettingsScreen()));
+      await tester.pumpWidget(wrap(const AppPreferencesSettingsScreen()));
       await tester.pumpAndSettle();
 
       final row = find.bySemanticsIdentifier(
@@ -302,8 +299,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('አጠቃላይ ቅንብሮች'), findsOneWidget);
-      expect(find.text('ይዘት እና ደህንነት'), findsOneWidget);
+      expect(find.text('መለያ'), findsOneWidget);
+      expect(find.text('ግላዊነት እና ደህንነት'), findsOneWidget);
       expect(find.text('General Settings'), findsNothing);
       expect(find.text('Content & Safety'), findsNothing);
 
@@ -312,21 +309,19 @@ void main() {
 
       await tester.pumpWidget(
         wrap(
-          const GeneralSettingsScreen(),
+          const AppPreferencesSettingsScreen(),
           locale: const Locale('am'),
           overrides: [
-            isFeatureEnabledProvider(
-              FeatureFlag.blueskyPublishing,
-            ).overrideWithValue(true),
+            isFeatureEnabledProvider(FeatureFlag.blueskyPublishing)
+                .overrideWithValue(true),
           ],
         ),
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('አጠቃላይ ቅንብሮች'), findsOneWidget);
-      expect(find.text('ውህደቶች'), findsOneWidget);
-      expect(find.text('የተዘጉ መግለጫዎች'), findsOneWidget);
-      expect(find.text('ካሬ ቪዲዮዎች ብቻ'), findsOneWidget);
+      expect(find.text('የመተግበሪያ ምርጫዎች'), findsOneWidget);
+      expect(find.text('መተግበሪያ'), findsOneWidget);
+      expect(find.text('የመተግበሪያ ቋንቋ'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
@@ -337,127 +332,58 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('ይዘት እና ደህንነት'), findsOneWidget);
-      expect(find.text('የሚያዩት'), findsOneWidget);
-      await tester.scrollUntilVisible(
-        find.text('የሚያትሙት'),
-        300,
-        scrollable: find.byType(Scrollable),
-      );
-      expect(find.text('የሚያትሙት'), findsOneWidget);
+      expect(find.text('የዕድሜ ማረጋገጫ'), findsOneWidget);
+      expect(find.text('ሞደሬሽን'), findsOneWidget);
     });
   });
 
-  group(GeneralSettingsScreen, () {
-    testWidgets('General Settings contains integrations and viewing defaults', (
+  group('Task settings destinations', () {
+    testWidgets('Help and About keeps support and legal easy to find', (
       tester,
     ) async {
       await setStandardSurface(tester);
-      await tester.pumpWidget(
-        wrap(
-          const GeneralSettingsScreen(),
-          overrides: [
-            isFeatureEnabledProvider(
-              FeatureFlag.blueskyPublishing,
-            ).overrideWithValue(true),
-          ],
-        ),
-      );
+      await tester.pumpWidget(wrap(const HelpAboutSettingsScreen()));
       await tester.pumpAndSettle();
-
-      expect(find.text('General Settings'), findsOneWidget);
-      await tester.scrollUntilVisible(
-        find.text('Bluesky Publishing'),
-        120,
-        scrollable: find.byType(Scrollable),
-      );
-      expect(find.text('Bluesky Publishing'), findsOneWidget);
-      expect(find.text('Closed Captions'), findsOneWidget);
-      expect(find.text('Square videos only'), findsOneWidget);
-      expect(find.text('App Language'), findsOneWidget);
-      await tester.scrollUntilVisible(
-        find.text('Make my audio available for reuse'),
-        120,
-        scrollable: find.byType(Scrollable),
-      );
-      expect(find.text('Make my audio available for reuse'), findsOneWidget);
-      final l10n = lookupAppLocalizations(const Locale('en'));
-      await tester.scrollUntilVisible(
-        find.text(l10n.generalSettingsHoldToRecord),
-        120,
-        scrollable: find.byType(Scrollable),
-      );
-      expect(find.text(l10n.generalSettingsHoldToRecord), findsOneWidget);
-
-      final captionsToggle = find.byWidgetPredicate(
-        (widget) =>
-            widget is DivineSwitchTile && widget.title == 'Closed Captions',
-      );
-      expect(captionsToggle, findsOneWidget);
-      expect(
-        ProviderScope.containerOf(
-          tester.element(find.byType(GeneralSettingsScreen)),
-        ).read(subtitleVisibilityProvider),
-        isTrue,
-      );
-
-      // The scroll above targeted a different row, so bring the toggle itself
-      // back into view — and pump — before reading its centre.
-      await scrollUntilTappable(
-        tester,
-        captionsToggle,
-        120,
-        scrollable: find.byType(Scrollable),
-      );
-      await tester.tap(captionsToggle);
-      await tester.pumpAndSettle();
-
-      expect(
-        ProviderScope.containerOf(
-          tester.element(find.byType(GeneralSettingsScreen)),
-        ).read(subtitleVisibilityProvider),
-        isFalse,
-      );
+      expect(find.text('Support Center'), findsWidgets);
+      expect(find.text('Share Divine with your friends'), findsOneWidget);
+      expect(find.text('Legal'), findsOneWidget);
     });
 
-    testWidgets('General Settings always shows Appearance', (tester) async {
+    testWidgets('What you see contains viewing controls', (tester) async {
       await setStandardSurface(tester);
-      // No override: the row used to be gated on FeatureFlag.lightMode. It is
-      // unconditional now, so pumping with the default provider set must still
-      // find it.
-      await tester.pumpWidget(wrap(const GeneralSettingsScreen()));
+      await tester.pumpWidget(wrap(const ViewingSettingsScreen()));
       await tester.pumpAndSettle();
+      expect(find.text('Closed Captions'), findsOneWidget);
+      expect(find.text('Square videos only'), findsOneWidget);
+      expect(find.text('Content Language'), findsOneWidget);
+      expect(find.text('Content Filters'), findsOneWidget);
+    });
 
-      await tester.scrollUntilVisible(
-        find.text('Appearance'),
-        120,
-        scrollable: find.byType(Scrollable),
-      );
-
+    testWidgets('App preferences contains appearance and language', (
+      tester,
+    ) async {
+      await setStandardSurface(tester);
+      await tester.pumpWidget(wrap(const AppPreferencesSettingsScreen()));
+      await tester.pumpAndSettle();
+      expect(find.text('App preferences'), findsOneWidget);
+      expect(find.text('App Language'), findsOneWidget);
       expect(find.text('Appearance'), findsOneWidget);
-      expect(
-        find.text('Choose how Divine looks on this device'),
-        findsOneWidget,
-      );
+      expect(find.text('Closed Captions'), findsNothing);
     });
   });
 
   group('Content & Safety', () {
-    testWidgets('Content & Safety exposes content filters and account labels', (
+    testWidgets('Safety controls retain age and moderation options', (
       tester,
     ) async {
       await setStandardSurface(tester);
       await tester.pumpWidget(wrap(const SafetySettingsScreen()));
       await tester.pumpAndSettle();
-
       expect(find.text('Content & Safety'), findsOneWidget);
-      expect(find.text('Content Filters'), findsOneWidget);
       expect(find.text('Only show Divine-hosted videos'), findsOneWidget);
       expect(find.text('Divine'), findsOneWidget);
-
-      await tester.drag(find.byType(ListView), const Offset(0, -500));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Account Labels'), findsOneWidget);
+      expect(find.text('Content Filters'), findsNothing);
+      expect(find.text('Account Labels'), findsNothing);
     });
 
     testWidgets(

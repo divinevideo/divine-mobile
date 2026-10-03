@@ -305,9 +305,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get settingsContentSafetyTitle => 'ይዘት እና ደህንነት';
 
   @override
-  String get settingsPrivacyTitle => 'ግላዊነት';
-
-  @override
   String get settingsPrivacySubtitle => 'የትኞቹን የአጠቃቀም ውሂብ እንደሚያጋሩ ይምረጡ';
 
   @override
@@ -2787,12 +2784,6 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get notificationSettingsAboutDescription =>
       'ማሳወቂያዎች የተጎላበተው በNostr ፕሮቶኮል ነው። የቅጽበታዊ ዝማኔዎች ከNostr ቅብብሎሽ ጋር ባለዎት ግንኙነት ይወሰናል። አንዳንድ ማሳወቂያዎች መዘግየቶች ሊኖራቸው ይችላል።';
-
-  @override
-  String get safetySettingsWhatYouSee => 'የሚያዩት';
-
-  @override
-  String get safetySettingsWhatYouPublish => 'የሚያትሙት';
 
   @override
   String get safetySettingsShowDivineHostedOnly =>
@@ -12537,4 +12528,60 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => 'Turn on automatic';
+
+  @override
+  String get settingsAccountTitle => 'መለያ';
+
+  @override
+  String get settingsWhatYouSeeTitle => 'የሚያዩት';
+
+  @override
+  String get settingsCreateShareTitle => 'ይፍጠሩ እና ያጋሩ';
+
+  @override
+  String get settingsPrivacySafetyTitle => 'ግላዊነት እና ደህንነት';
+
+  @override
+  String get settingsAppPreferencesTitle => 'የመተግበሪያ ምርጫዎች';
+
+  @override
+  String get settingsConnectionsTitle => 'ግንኙነቶች';
+
+  @override
+  String get settingsHelpAboutTitle => 'እገዛ እና ስለ Divine';
+
+  @override
+  String get settingsCreatorToolsSection => 'የፈጣሪ መሣሪያዎች';
+
+  @override
+  String get settingsNostrNetworkSection => 'Nostr አውታረ መረብ';
+
+  @override
+  String get settingsAboutDivineSection => 'ስለ Divine';
+
+  @override
+  String get settingsAdvancedSection => 'የላቀ';
+
+  @override
+  String get settingsAccountSubtitle => 'መግቢያ፣ ማንነት፣ ቁልፎች እና የመለያ ውሂብ';
+
+  @override
+  String get settingsWhatYouSeeSubtitle =>
+      'ቋንቋ፣ ንዑስ ርዕሶች፣ የቪዲዮ አቀማመጥ እና ማጣሪያዎች';
+
+  @override
+  String get settingsCreateShareSubtitle => 'ቀረጻ፣ ማተም እና የፈጣሪ መሣሪያዎች';
+
+  @override
+  String get settingsPrivacySafetySubtitle => 'የአጠቃቀም ውሂብ፣ ሞደሬሽን እና የታገዱ መለያዎች';
+
+  @override
+  String get settingsAppPreferencesSubtitle => 'መልክ፣ ቋንቋ፣ ማከማቻ እና የላቁ አማራጮች';
+
+  @override
+  String get settingsConnectionsSubtitle =>
+      'መተግበሪያዎች፣ ሬሌዎች፣ የሚዲያ አገልጋዮች እና ፈቃዶች';
+
+  @override
+  String get settingsHelpAboutSubtitle => 'ድጋፍ፣ ሕጋዊ መረጃ እና የመተግበሪያ ዝርዝሮች';
 }

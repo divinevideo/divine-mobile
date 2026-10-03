@@ -235,13 +235,9 @@
   "settingsAppLanguageUseDeviceLanguage": "Use device language",
   "settingsGeneralTitle": "General Settings",
   "settingsContentSafetyTitle": "Content & Safety",
-  "settingsPrivacyTitle": "Privacy",
-  "@settingsPrivacyTitle": {
-    "description": "Settings hub row and app bar title for the Privacy screen, which holds the analytics consent control."
-  },
   "settingsPrivacySubtitle": "Choose what usage data you share",
   "@settingsPrivacySubtitle": {
-    "description": "Supporting copy on the Settings hub row that opens the Privacy screen."
+    "description": "Explanatory copy under the Analytics section of the Privacy & safety screen."
   },
   "privacySettingsAnalyticsSection": "ANALYTICS",
   "@privacySettingsAnalyticsSection": {
@@ -1884,8 +1880,6 @@
   "notificationSettingsResetToDefaults": "Settings reset to defaults",
   "notificationSettingsAbout": "About Notifications",
   "notificationSettingsAboutDescription": "Notifications are powered by the Nostr protocol. Real-time updates depend on your connection to Nostr relays. Some notifications may have delays.",
-  "safetySettingsWhatYouSee": "WHAT YOU SEE",
-  "safetySettingsWhatYouPublish": "WHAT YOU PUBLISH",
   "safetySettingsShowDivineHostedOnly": "Only show Divine-hosted videos",
   "safetySettingsShowDivineHostedOnlySubtitle": "Hide videos served from other media hosts",
   "safetySettingsModeration": "MODERATION",
@@ -9124,5 +9118,23 @@
   "crosspostingAutoEnable": "Turn on automatic",
   "@crosspostingAutoEnable": {
     "description": "Action that switches a platform to automatic crossposting"
-  }
+  },
+  "settingsAccountTitle": "Account",
+  "settingsWhatYouSeeTitle": "What you see",
+  "settingsCreateShareTitle": "Create & share",
+  "settingsPrivacySafetyTitle": "Privacy & safety",
+  "settingsAppPreferencesTitle": "App preferences",
+  "settingsConnectionsTitle": "Connections",
+  "settingsHelpAboutTitle": "Help & About Divine",
+  "settingsCreatorToolsSection": "Creator tools",
+  "settingsNostrNetworkSection": "Nostr network",
+  "settingsAboutDivineSection": "About Divine",
+  "settingsAdvancedSection": "Advanced",
+  "settingsAccountSubtitle": "Sign-in, identity, keys, and account data",
+  "settingsWhatYouSeeSubtitle": "Language, captions, video layout, and filters",
+  "settingsCreateShareSubtitle": "Recording, publishing, and creator tools",
+  "settingsPrivacySafetySubtitle": "Usage data, moderation, and blocked accounts",
+  "settingsAppPreferencesSubtitle": "Appearance, language, storage, and advanced options",
+  "settingsConnectionsSubtitle": "Apps, relays, media servers, and permissions",
+  "settingsHelpAboutSubtitle": "Support, legal information, and app details"
 }
