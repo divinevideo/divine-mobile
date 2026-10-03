@@ -79,10 +79,14 @@ class SearchResultsPage extends ConsumerWidget {
     final peopleListSearchEnabled = ref.watch(
       isFeatureEnabledProvider(FeatureFlag.profileListFeatures),
     );
+    // The viewer's own lists survive the Divine author check even before they
+    // have posted anything, so an account switch must rebuild list search.
+    ref.watch(currentAuthStateProvider);
+    final viewerPubkey = ref.watch(authServiceProvider).currentPublicKeyHex;
 
     return MultiBlocProvider(
-      // Recreate the search blocs when an auth-sensitive repository or flag
-      // changes so no bloc remains bound to stale dependencies.
+      // Recreate the search blocs when an auth-sensitive repository, flag or
+      // the viewer changes so no bloc remains bound to stale dependencies.
       // See `.claude/rules/state_management.md`.
       key: ValueKey((
         profileRepository,
@@ -91,6 +95,7 @@ class SearchResultsPage extends ConsumerWidget {
         curatedListRepository,
         peopleListsRepository,
         peopleListSearchEnabled,
+        viewerPubkey,
       )),
       providers: [
         BlocProvider(
@@ -112,11 +117,7 @@ class SearchResultsPage extends ConsumerWidget {
             curatedListRepository: curatedListRepository,
             peopleListsRepository: peopleListsRepository,
             peopleListSearchEnabled: peopleListSearchEnabled,
-            // The viewer's own lists survive the Divine author check even
-            // before they have posted anything. Read alongside the
-            // auth-sensitive repositories the key above tracks, so an account
-            // switch rebuilds the bloc with the new viewer.
-            viewerPubkey: ref.watch(authServiceProvider).currentPublicKeyHex,
+            viewerPubkey: viewerPubkey,
           ),
         ),
       ],

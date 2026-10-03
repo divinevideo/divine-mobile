@@ -21,6 +21,25 @@ const Set<int> _nip71AddressableVideoKinds = {
 /// - Metadata tags: title, description, image, thumbnail, playorder
 /// - Collaboration tags: collaborative, collaborator
 abstract final class CuratedListConverter {
+  /// Selects the newest revision of each author's d-tag before decoding.
+  /// Equal timestamps use the lowest event ID, as for Nostr replaceable events.
+  static List<Event> latestRevisions(List<Event> events) {
+    final latest = <String, Event>{};
+    for (final event in events) {
+      final dTag = extractDTag(event);
+      if (dTag == null) continue;
+      final coordinate = '${event.pubkey}:$dTag';
+      final previous = latest[coordinate];
+      if (previous == null ||
+          event.createdAt > previous.createdAt ||
+          (event.createdAt == previous.createdAt &&
+              event.id.compareTo(previous.id) < 0)) {
+        latest[coordinate] = event;
+      }
+    }
+    return latest.values.toList();
+  }
+
   /// Parses a Nostr [Event] into a [CuratedList].
   ///
   /// Returns `null` if the event cannot be parsed (e.g. missing d-tag).

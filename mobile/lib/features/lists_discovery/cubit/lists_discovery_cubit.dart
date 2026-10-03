@@ -37,55 +37,30 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
     required CuratedListRepository curatedListRepository,
     required PeopleListsRepository peopleListsRepository,
     required String? viewerPubkey,
+    ListsDiscoveryState? seed,
   }) : _curatedListService = curatedListService,
        _curatedListRepository = curatedListRepository,
        _peopleListsRepository = peopleListsRepository,
        _viewerPubkey = viewerPubkey,
-       super(const ListsDiscoveryState());
+       _isSeeded = seed != null,
+       super(seed ?? const ListsDiscoveryState());
 
   final CuratedListService _curatedListService;
   final CuratedListRepository _curatedListRepository;
   final PeopleListsRepository _peopleListsRepository;
   final String? _viewerPubkey;
+  final bool _isSeeded;
 
   StreamSubscription<List<CuratedList>>? _videoSubscription;
-  int _peopleLoadGeneration = 0;
-  bool _isScreenshotMode = false;
 
   /// Settles when the video stream errors, completes, or the cubit closes —
   /// cancellation fires no onDone, so [close] must release this latch or a
   /// pending [load] future would dangle forever.
   Completer<void>? _videoStreamSettled;
 
-  /// Seeds both columns with fixed data and skips relay loading entirely.
-  ///
-  /// Screenshot mode only (see `app_bootstrap`): marketing captures need
-  /// deterministic, on-brand lists, and the live discovery feed cannot
-  /// promise either.
-  void seedForScreenshots({
-    required List<CuratedList> videoLists,
-    List<PeopleListSearchResult> peopleLists = const [],
-  }) {
-    _isScreenshotMode = true;
-    _peopleLoadGeneration++;
-    final settled = _videoStreamSettled;
-    _videoStreamSettled = null;
-    if (settled != null && !settled.isCompleted) settled.complete();
-    unawaited(_videoSubscription?.cancel());
-    _videoSubscription = null;
-    emitIfOpen(
-      ListsDiscoveryState(
-        videoStatus: ListsDiscoveryColumnStatus.success,
-        peopleStatus: ListsDiscoveryColumnStatus.success,
-        videoLists: videoLists,
-        peopleLists: peopleLists,
-      ),
-    );
-  }
-
   /// Loads both columns. Safe to call again to refresh.
   Future<void> load() {
-    if (_isScreenshotMode || isClosed) return Future.value();
+    if (_isSeeded || isClosed) return Future.value();
     return Future.wait([_loadVideoLists(), _loadPeopleLists()]);
   }
 
@@ -212,16 +187,19 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
       _viewerPubkey != null && list.pubkey == _viewerPubkey;
 
   Future<void> _loadPeopleLists() async {
-    final generation = ++_peopleLoadGeneration;
+    final generation = state.peopleLoadGeneration + 1;
     emitIfOpen(
-      state.copyWith(peopleStatus: ListsDiscoveryColumnStatus.loading),
+      state.copyWith(
+        peopleStatus: ListsDiscoveryColumnStatus.loading,
+        peopleLoadGeneration: generation,
+      ),
     );
     try {
       final lists = await _peopleListsRepository.discoverPublicLists(
         limit: kPublicListsRelayWindow,
         excludeAuthor: _viewerPubkey,
       );
-      if (isClosed || generation != _peopleLoadGeneration) return;
+      if (isClosed || generation != state.peopleLoadGeneration) return;
       emitIfOpen(
         state.copyWith(
           peopleStatus: ListsDiscoveryColumnStatus.success,
@@ -231,7 +209,7 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
         ),
       );
     } catch (error, stackTrace) {
-      if (isClosed || generation != _peopleLoadGeneration) return;
+      if (isClosed || generation != state.peopleLoadGeneration) return;
       addError(error, stackTrace);
       emitIfOpen(
         state.copyWith(peopleStatus: ListsDiscoveryColumnStatus.failure),
@@ -241,7 +219,10 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
 
   @override
   Future<void> close() async {
+    // Retire this load before releasing it so it cannot start hydration while
+    // subscription cancellation is still awaiting completion.
     final settled = _videoStreamSettled;
+    _videoStreamSettled = null;
     if (settled != null && !settled.isCompleted) settled.complete();
     await _videoSubscription?.cancel();
     return super.close();

@@ -9,13 +9,13 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/config/screenshot_mode.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/lists_discovery/cubit/lists_discovery_cubit.dart';
 import 'package:openvine/features/lists_discovery/lists_discovery_screenshot_fixtures.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
-import 'package:openvine/router/routes/route_extras.dart';
-import 'package:openvine/screens/curated_list_feed_screen.dart';
+import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:people_lists_repository/people_lists_repository.dart'
@@ -28,14 +28,24 @@ import 'package:unified_logger/unified_logger.dart';
 /// and repositories into the [ListsDiscoveryCubit], re-keyed on their
 /// identities so an auth flip rebuilds the cubit against the fresh
 /// dependencies.
-class ExploreListsTab extends ConsumerWidget {
+class ExploreListsTab extends ConsumerStatefulWidget {
   /// Creates the Lists tab.
   const ExploreListsTab({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Readiness gate: the service is null until the curated-lists state
-    // finishes its cold-start load.
+  ConsumerState<ExploreListsTab> createState() => _ExploreListsTabState();
+}
+
+class _ExploreListsTabState extends ConsumerState<ExploreListsTab>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    // The state creates its service before awaiting initialization. Watching
+    // the state re-keys discovery when a new service becomes available.
     ref.watch(curatedListsStateProvider);
     final service = ref.watch(curatedListsStateProvider.notifier).service;
     final curatedRepository = ref.watch(curatedListRepositoryProvider);
@@ -60,14 +70,17 @@ class ExploreListsTab extends ConsumerWidget {
           curatedListRepository: curatedRepository,
           peopleListsRepository: peopleRepository,
           viewerPubkey: viewerPubkey,
+          seed: ScreenshotMode.enabled
+              ? ListsDiscoveryState(
+                  videoStatus: ListsDiscoveryColumnStatus.success,
+                  peopleStatus: ListsDiscoveryColumnStatus.success,
+                  videoLists: screenshotDiscoverListsFixtures(),
+                )
+              : null,
         );
         // Screenshot mode: deterministic fixtures instead of live relay
         // discovery, same pattern as the classics row in app_bootstrap.
-        if (ScreenshotMode.enabled) {
-          cubit.seedForScreenshots(
-            videoLists: screenshotDiscoverListsFixtures(),
-          );
-        } else {
+        if (!ScreenshotMode.enabled) {
           runDetached(
             cubit.load(),
             'load list discovery',
@@ -159,32 +172,36 @@ class _VideoListsColumn extends StatelessWidget {
       placeholder: const DivineListThumbnailSkeleton.videos(),
       isColumnEmpty: lists.isEmpty,
       children: [
-        for (final list in lists)
-          DivineListThumbnail.videos(
+        for (final (index, list) in lists.indexed)
+          Semantics(
             // The stream re-sorts on every emit, so cards can change slots;
             // the key keeps each card's image state with its list.
             key: ValueKey(list.authorScopedId),
-            curatedList: list,
-            thumbnailsPending: thumbnailsPending,
-            onTap: () {
-              Log.info(
-                'Opening discovered video list: ${list.id}',
-                category: LogCategory.ui,
-              );
-              runDetached(
-                context.push<void>(
-                  CuratedListFeedScreen.pathForId(list.id),
-                  extra: CuratedListRouteExtra(
-                    listName: list.name,
-                    videoIds: list.videoEventIds,
-                    authorPubkey: list.pubkey,
+            identifier: SemanticIds.listCard(index),
+            container: true,
+            child: DivineListThumbnail.videos(
+              curatedList: list,
+              thumbnailsPending: thumbnailsPending,
+              onTap: () {
+                final author = list.pubkey;
+                if (author == null) return;
+                Log.info(
+                  'Opening discovered video list: ${list.id}',
+                  category: LogCategory.ui,
+                );
+                runDetached(
+                  context.push<void>(
+                    CuratedListByAuthorScreen.pathFor(
+                      pubkey: author,
+                      listId: list.id,
+                    ),
                   ),
-                ),
-                'open discovered list',
-                logName: 'VideoListsColumn',
-                category: LogCategory.ui,
-              );
-            },
+                  'open discovered list',
+                  logName: 'VideoListsColumn',
+                  category: LogCategory.ui,
+                );
+              },
+            ),
           ),
       ],
     );
@@ -301,8 +318,8 @@ class _LoadingColumn extends StatelessWidget {
   }
 }
 
-/// Both columns as silhouettes under one shimmer, for the moment before the
-/// curated-list service is ready and there is no cubit to render from.
+/// Both columns as silhouettes under one shimmer when no curated-list
+/// service is available to create the cubit.
 class _LoadingGallery extends StatelessWidget {
   const _LoadingGallery();
 
