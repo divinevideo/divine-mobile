@@ -123,7 +123,6 @@ extension CompleteParametersEquality on CompleteParameters {
       if (flipX != other.flipX) 'flipX',
       if (flipY != other.flipY) 'flipY',
       if (isTransformed != other.isTransformed) 'isTransformed',
-      if (bodySize != other.bodySize) 'bodySize',
       if (!listEquals(audioTracks, other.audioTracks)) 'audioTracks',
       if (!listEquals(layers, other.layers)) 'layers',
       if (!listEquals(videoClips, other.videoClips)) 'videoClips',

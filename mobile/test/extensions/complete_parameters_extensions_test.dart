@@ -29,14 +29,13 @@ CompleteParameters _makeParams({
   List<VideoClip>? videoClips,
   List<AudioTrack>? audioTracks,
   Map<String, dynamic>? meta,
-  Size bodySize = const Size(400, 800),
 }) {
   return CompleteParameters(
     meta: meta ?? const {},
     blur: blur,
     originalImageSize: const Size(1080, 1920),
     temporaryDecodedImageSize: const Size(1080, 1920),
-    bodySize: bodySize,
+    bodySize: const Size(400, 800),
     editorSize: const Size(400, 800),
     matrixFilterList: matrixFilterList ?? const [],
     matrixTuneAdjustmentsList: matrixTuneAdjustmentsList ?? const [],
@@ -216,6 +215,15 @@ void main() {
     });
 
     group('diff', () {
+      test('ignores a body-only resize with unchanged image and layers', () {
+        final first = _makeParams().copyWith(bodySize: const Size(221, 393));
+        final resized = first.copyWith(bodySize: const Size(393, 393));
+
+        expect(first.bodySize, isNot(resized.bodySize));
+        expect(first.diff(resized), isEmpty);
+        expect(first.deepEquals(resized), isTrue);
+      });
+
       test('returns empty list for equal instances', () {
         final a = _makeParams(blur: 5, flipX: true);
         final b = _makeParams(blur: 5, flipX: true);
@@ -237,14 +245,6 @@ void main() {
         final a = _makeParams(blur: 1, flipX: true, rotateTurns: 1);
         final b = _makeParams(blur: 2, rotateTurns: 3);
         expect(a.diff(b), containsAll(['blur', 'flipX', 'rotateTurns']));
-      });
-
-      test('reports bodySize when the editor canvas differs', () {
-        // Overlays are placed against the canvas, so the same layers on a
-        // canvas of another shape are a different picture.
-        final a = _makeParams(bodySize: const Size(221, 393));
-        final b = _makeParams(bodySize: const Size(393, 393));
-        expect(a.diff(b), equals(['bodySize']));
       });
 
       test('reports image when bytes differ', () {
