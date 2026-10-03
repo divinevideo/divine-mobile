@@ -1185,7 +1185,7 @@ class FunnelcakeApiClient {
     if (!isAvailable) throw const FunnelcakeNotConfiguredException();
     final uri = Uri.parse(
       '$_baseUrl/api/badges/${Uri.encodeComponent(creatorPubkey)}/${Uri.encodeComponent(dTag)}/holders',
-    ).replace(queryParameters: {'limit': '50'});
+    ).replace(queryParameters: {'limit': '10'});
     try {
       final response = await _get(uri);
       if (response.statusCode != 200) {
