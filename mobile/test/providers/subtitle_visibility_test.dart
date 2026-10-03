@@ -40,12 +40,14 @@ void main() {
       expect(state, isFalse);
     });
 
-    test('toggle persists disabling captions globally', () {
+    test('toggle persists disabling captions globally', () async {
       final notifier = container.read(subtitleVisibilityProvider.notifier);
-      notifier.toggle();
+      final pendingWrite = notifier.toggle();
 
+      // Read before awaiting: the state must flip before the write completes.
       final state = container.read(subtitleVisibilityProvider);
       expect(state, isFalse);
+      await pendingWrite;
       expect(prefs.getBool('subtitle_visibility_enabled'), isFalse);
     });
 
@@ -57,9 +59,10 @@ void main() {
       );
 
       final notifier = container.read(subtitleVisibilityProvider.notifier);
-      notifier.toggle();
+      final pendingWrite = notifier.toggle();
       final state = container.read(subtitleVisibilityProvider);
       expect(state, isTrue);
+      await pendingWrite;
       expect(prefs.getBool('subtitle_visibility_enabled'), isTrue);
     });
   });
