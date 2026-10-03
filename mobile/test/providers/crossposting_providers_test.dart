@@ -195,6 +195,7 @@ void main() {
     }) {
       final auth = _MockAuthService();
       when(() => auth.currentPublicKeyHex).thenReturn('a' * 64);
+      when(() => auth.isRegistered).thenReturn(false);
       when(() => auth.canPublishNostrWritesNow).thenReturn(canSign);
       when(() => auth.authRpcCapability)
           .thenReturn(AuthRpcCapability.unavailable);
@@ -219,6 +220,56 @@ void main() {
       addTearDown(container.dispose);
       await container.read(appOAuthSupportProvider.future);
 
+      expect(
+        container.read(crosspostingAvailabilityProvider),
+        CrosspostingAvailability.native,
+      );
+    });
+
+    test(
+      'a signer-ready local-key account needs no Divine registration',
+      () async {
+        final container = buildContainer();
+        addTearDown(container.dispose);
+        await container.read(appOAuthSupportProvider.future);
+
+        expect(
+          container.read(crosspostingAvailabilityProvider),
+          CrosspostingAvailability.native,
+        );
+      },
+    );
+
+    test('becomes available when a remote signer becomes ready', () async {
+      final auth = _MockAuthService();
+      final capability = StreamController<AuthRpcCapability>.broadcast();
+      addTearDown(capability.close);
+      var canSign = false;
+      when(() => auth.currentPublicKeyHex).thenReturn('a' * 64);
+      when(() => auth.canPublishNostrWritesNow).thenAnswer((_) => canSign);
+      when(
+        () => auth.authRpcCapability,
+      ).thenReturn(AuthRpcCapability.unavailable);
+      when(
+        () => auth.authRpcCapabilityStream,
+      ).thenAnswer((_) => capability.stream);
+      final container = ProviderContainer(
+        overrides: [
+          currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+          authServiceProvider.overrideWithValue(auth),
+          appOAuthSupportProvider.overrideWith((ref) async => true),
+        ],
+      );
+      addTearDown(container.dispose);
+      await container.read(appOAuthSupportProvider.future);
+      expect(
+        container.read(crosspostingAvailabilityProvider),
+        CrosspostingAvailability.unavailable,
+      );
+
+      canSign = true;
+      capability.add(AuthRpcCapability.rpcReady);
+      await pumpEventQueue();
       expect(
         container.read(crosspostingAvailabilityProvider),
         CrosspostingAvailability.native,
