@@ -834,7 +834,7 @@ void main() {
             'art/day',
             'holders',
           ]);
-          expect(uri.queryParameters['limit'], '50');
+          expect(uri.queryParameters['limit'], '10');
           expect(holders, [testPubkey]);
         },
       );
