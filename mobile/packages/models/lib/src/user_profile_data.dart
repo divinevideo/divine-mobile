@@ -3,6 +3,7 @@
 // ABOUTME: returned by getUserProfile and getBulkProfiles.
 
 import 'package:meta/meta.dart';
+import 'package:models/src/engagement_count_parser.dart';
 
 // ---------------------------------------------------------------------------
 // Shared numeric parse helpers used by all sub-models below.
@@ -214,19 +215,32 @@ class ProfileEngagementData {
     required this.totalReactions,
     required this.totalLoops,
     required this.totalViews,
+    this.archivedLoops,
   });
 
   factory ProfileEngagementData.fromJson(Map<String, dynamic> json) {
     return ProfileEngagementData(
       totalReactions: parseIntSafe(json['total_reactions']),
       totalLoops: parseDoubleSafe(json['total_loops']),
-      totalViews: parseIntSafe(json['total_views']),
+      totalViews: tryParseEngagementCount(json['total_views']),
+      archivedLoops: tryParseEngagementCount(json['archived_loops']),
     );
   }
 
   final int totalReactions;
   final double totalLoops;
-  final int totalViews;
+
+  /// Divine-era views across the creator's videos.
+  ///
+  /// `null` means the view lookup failed. A reported `0` is a real zero.
+  final int? totalViews;
+
+  /// Sum of the archived Vine loop counts across the creator's videos.
+  ///
+  /// `null` when funnelcake did not report it: an older backend without the
+  /// field, or one that could not compute it. `0` means the creator genuinely
+  /// has no archived loops.
+  final int? archivedLoops;
 
   @override
   bool operator ==(Object other) {
@@ -234,14 +248,17 @@ class ProfileEngagementData {
     return other is ProfileEngagementData &&
         other.totalReactions == totalReactions &&
         other.totalLoops == totalLoops &&
-        other.totalViews == totalViews;
+        other.totalViews == totalViews &&
+        other.archivedLoops == archivedLoops;
   }
 
   @override
-  int get hashCode => Object.hash(totalReactions, totalLoops, totalViews);
+  int get hashCode =>
+      Object.hash(totalReactions, totalLoops, totalViews, archivedLoops);
 
   @override
   String toString() =>
       'ProfileEngagementData(totalReactions: $totalReactions, '
-      'totalLoops: $totalLoops, totalViews: $totalViews)';
+      'totalLoops: $totalLoops, totalViews: $totalViews, '
+      'archivedLoops: $archivedLoops)';
 }

@@ -58,7 +58,7 @@ abstract interface class ProfileReader {
   /// was injected.
   Stream<ProfileStats?> watchProfileStats({required String pubkey});
 
-  /// Returns fresh cached stats with a known lifetime view total for [pubkey],
+  /// Returns fresh cached stats with a known lifetime loop total for [pubkey],
   /// or `null` when no such row is cached.
   ///
   /// This is a one-shot local read. Expired rows return `null` without being
