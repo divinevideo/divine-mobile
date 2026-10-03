@@ -1,8 +1,11 @@
-// ABOUTME: Badge detail page: artwork, description, awardees, the owner's
-// ABOUTME: award/edit/revoke actions, and accept or remove for the own award.
+// ABOUTME: Badge detail page: badge artwork, accepted holders, and their videos.
+// ABOUTME: Owners can also award, edit, and revoke from this page.
+
+import 'dart:async';
 
 import 'package:badge_repository/badge_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter/semantics.dart' show SemanticsService;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,21 +13,25 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/badges/badge_detail_cubit.dart';
 import 'package:openvine/blocs/badges/badge_holders_cubit.dart';
+import 'package:openvine/blocs/badges/badge_videos_cubit.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/feed_repository_provider.dart';
 import 'package:openvine/screens/badges/badge_award_screen.dart';
 import 'package:openvine/screens/badges/badge_delete_confirmation_sheet.dart';
 import 'package:openvine/screens/badges/badge_editor_screen.dart';
 import 'package:openvine/screens/badges/badge_revoke_confirmation_sheet.dart';
-import 'package:openvine/screens/badges/badge_videos_screen.dart';
 import 'package:openvine/screens/badges/badges_screen.dart';
 import 'package:openvine/screens/badges/widgets/badge_recipient_row.dart';
+import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
+import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -251,12 +258,6 @@ class _BadgeDetailBody extends StatelessWidget {
                               ),
                             ),
                           _BadgeActions(state: state),
-                          DivineButton(
-                            label: l10n.profileVideosLabel,
-                            onPressed: () => context.push<void>(
-                              BadgeVideosScreen.pathFor(state.coordinate),
-                            ),
-                          ),
                         ],
                       ),
                     ),
@@ -264,21 +265,32 @@ class _BadgeDetailBody extends StatelessWidget {
                       key: ObjectKey(detail),
                       coordinate: state.coordinate,
                     ),
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 20),
-                        child: Text(
-                          l10n.badgeDetailRecipientsTitle,
-                          style: VineTheme.titleSmallFont(
-                            color: context.vineColors.primaryText,
+                    if (!detail.isOwner)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 20),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: DivineButton(
+                              label: l10n.badgeDetailBlockClaimantsAction,
+                              type: DivineButtonType.link,
+                              size: DivineButtonSize.small,
+                              isLoading:
+                                  state.actionStatus ==
+                                  BadgeDetailActionStatus.blockingClaimants,
+                              onPressed: state.isBusy
+                                  ? null
+                                  : () => _BadgeActions._openBlockClaimants(
+                                      context,
+                                    ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    if (detail.recipients.isEmpty)
+                    if (detail.isOwner && detail.recipients.isEmpty)
                       SliverToBoxAdapter(
                         child: Padding(
-                          padding: const EdgeInsets.only(top: 8),
+                          padding: const EdgeInsets.only(top: 20),
                           child: Text(
                             l10n.badgeDetailNoRecipients,
                             style: VineTheme.bodySmallFont(
@@ -287,7 +299,18 @@ class _BadgeDetailBody extends StatelessWidget {
                           ),
                         ),
                       )
-                    else
+                    else if (detail.isOwner) ...[
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 20),
+                          child: Text(
+                            l10n.badgeDetailRecipientsTitle,
+                            style: VineTheme.titleSmallFont(
+                              color: context.vineColors.primaryText,
+                            ),
+                          ),
+                        ),
+                      ),
                       // Lazily built: a popular badge can carry a long
                       // awardee list, and every row resolves a profile.
                       SliverList.builder(
@@ -305,6 +328,7 @@ class _BadgeDetailBody extends StatelessWidget {
                           );
                         },
                       ),
+                    ],
                   ],
                 ),
               ),
@@ -341,6 +365,7 @@ class _AcceptedHolders extends ConsumerWidget {
     final badgeRepository = ref.watch(badgeRepositoryProvider);
     final followRepository = ref.watch(followRepositoryProvider);
     final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
+    final videosRepository = ref.watch(videosRepositoryProvider);
     final signedIn = ref.watch(authServiceProvider).currentPublicKeyHex != null;
     return MultiBlocProvider(
       providers: [
@@ -360,6 +385,14 @@ class _AcceptedHolders extends ConsumerWidget {
             );
             return cubit;
           },
+        ),
+        BlocProvider(
+          key: ValueKey((badgeRepository, videosRepository, coordinate)),
+          create: (_) => BadgeVideosCubit(
+            badgeRepository: badgeRepository,
+            videosRepository: videosRepository,
+            coordinate: coordinate,
+          ),
         ),
         BlocProvider(
           key: ValueKey((followRepository, blocklistRepository)),
@@ -382,11 +415,26 @@ class _AcceptedHolders extends ConsumerWidget {
                   ),
                 ),
           ),
+          BlocListener<BadgeHoldersCubit, BadgeHoldersState>(
+            listenWhen: (previous, current) =>
+                previous.holdersStatus != BadgeHoldersStatus.loaded &&
+                current.holdersStatus == BadgeHoldersStatus.loaded,
+            listener: (context, state) => runDetached(
+              context.read<BadgeVideosCubit>().loadForHolders(
+                state.holders.toSet(),
+              ),
+              'load badge holder videos',
+              logName: 'BadgeDetailScreen',
+              category: LogCategory.ui,
+            ),
+          ),
         ],
-        child: const SliverMainAxisGroup(
+        child: SliverMainAxisGroup(
           slivers: [
-            SliverToBoxAdapter(child: _SubscriptionHeader()),
-            _AcceptedHolderList(),
+            const SliverToBoxAdapter(child: _HoldersHeader()),
+            const _AcceptedHolderList(),
+            _BadgeVideoGrid(coordinate: coordinate),
+            const SliverToBoxAdapter(child: _SubscriptionAction()),
           ],
         ),
       ),
@@ -394,8 +442,21 @@ class _AcceptedHolders extends ConsumerWidget {
   }
 }
 
-class _SubscriptionHeader extends StatelessWidget {
-  const _SubscriptionHeader();
+class _HoldersHeader extends StatelessWidget {
+  const _HoldersHeader();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 20),
+    child: Text(
+      context.l10n.badgeAcceptedHoldersTitle,
+      style: VineTheme.titleSmallFont(color: context.vineColors.primaryText),
+    ),
+  );
+}
+
+class _SubscriptionAction extends StatelessWidget {
+  const _SubscriptionAction();
 
   @override
   Widget build(BuildContext context) {
@@ -404,41 +465,39 @@ class _SubscriptionHeader extends StatelessWidget {
           (cubit.state.subscriptionStatus, cubit.state.isSubscribed),
     );
     final cubit = context.read<BadgeHoldersCubit>();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        switch (status) {
-          BadgeSubscriptionStatus.unavailable ||
-          BadgeSubscriptionStatus.initial => const SizedBox.shrink(),
-          BadgeSubscriptionStatus.failure => _DetailMessage(
-            message: context.l10n.badgesLoadError,
-            onRetry: cubit.load,
-          ),
-          _ => DivineButton(
-            label: subscribed
-                ? context.l10n.badgeSubscribedAction
-                : context.l10n.badgeSubscribeAction,
-            onPressed: status == BadgeSubscriptionStatus.ready
-                ? cubit.toggleSubscription
-                : null,
-          ),
-        },
-        Padding(
-          padding: const EdgeInsets.only(top: 20),
-          child: Text(
-            context.l10n.badgeAcceptedHoldersTitle,
-            style: VineTheme.titleSmallFont(
-              color: context.vineColors.primaryText,
-            ),
-          ),
+    return switch (status) {
+      BadgeSubscriptionStatus.unavailable ||
+      BadgeSubscriptionStatus.initial => const SizedBox.shrink(),
+      BadgeSubscriptionStatus.failure => _DetailMessage(
+        message: context.l10n.badgesLoadError,
+        onRetry: cubit.load,
+      ),
+      _ => Align(
+        alignment: Alignment.centerLeft,
+        child: DivineButton(
+          label: subscribed
+              ? context.l10n.badgeSubscribedAction
+              : context.l10n.badgeSubscribeAction,
+          type: DivineButtonType.link,
+          size: DivineButtonSize.small,
+          onPressed: status == BadgeSubscriptionStatus.ready
+              ? cubit.toggleSubscription
+              : null,
         ),
-      ],
-    );
+      ),
+    };
   }
 }
 
-class _AcceptedHolderList extends StatelessWidget {
+class _AcceptedHolderList extends StatefulWidget {
   const _AcceptedHolderList();
+
+  @override
+  State<_AcceptedHolderList> createState() => _AcceptedHolderListState();
+}
+
+class _AcceptedHolderListState extends State<_AcceptedHolderList> {
+  bool _showAll = false;
 
   @override
   Widget build(BuildContext context) {
@@ -457,24 +516,144 @@ class _AcceptedHolderList extends StatelessWidget {
           onRetry: context.read<BadgeHoldersCubit>().load,
         ),
       ),
-      BadgeHoldersStatus.loaded => SliverList.builder(
-        itemCount: holders.length,
-        itemBuilder: (context, index) {
-          final holder = holders[index];
-          return BlocSelector<MyFollowingBloc, MyFollowingState, bool>(
-            selector: (state) => state.isFollowing(holder),
-            builder: (context, isFollowing) => UserProfileTile(
-              pubkey: holder,
-              isFollowing: isFollowing,
-              onToggleFollow: () => context.read<MyFollowingBloc>().add(
-                MyFollowingToggleRequested(holder),
+      BadgeHoldersStatus.loaded => SliverMainAxisGroup(
+        slivers: [
+          SliverList.builder(
+            itemCount: _showAll ? holders.length : holders.length.clamp(0, 6),
+            itemBuilder: (context, index) {
+              final holder = holders[index];
+              return BlocSelector<MyFollowingBloc, MyFollowingState, bool>(
+                selector: (state) => state.isFollowing(holder),
+                builder: (context, isFollowing) => UserProfileTile(
+                  pubkey: holder,
+                  isFollowing: isFollowing,
+                  onToggleFollow: () => context.read<MyFollowingBloc>().add(
+                    MyFollowingToggleRequested(holder),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(0, 12, 16, 12),
+                ),
+              );
+            },
+          ),
+          if (!_showAll && holders.length > 6)
+            SliverToBoxAdapter(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: DivineButton(
+                  label: context.l10n.profileShowMore,
+                  type: DivineButtonType.link,
+                  size: DivineButtonSize.small,
+                  onPressed: () => setState(() => _showAll = true),
+                ),
               ),
-              padding: const EdgeInsets.fromLTRB(0, 12, 16, 12),
             ),
-          );
-        },
+        ],
       ),
     };
+  }
+}
+
+class _BadgeVideoGrid extends ConsumerWidget {
+  const _BadgeVideoGrid({required this.coordinate});
+
+  final BadgeCoordinate coordinate;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final holdersStatus = context.select(
+      (BadgeHoldersCubit cubit) => cubit.state.holdersStatus,
+    );
+    if (holdersStatus != BadgeHoldersStatus.loaded) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+    final state = context.watch<BadgeVideosCubit>().state;
+    final cubit = context.read<BadgeVideosCubit>();
+    return SliverMainAxisGroup(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 24, bottom: 12),
+            child: Text(
+              context.l10n.profileVideosLabel,
+              style: VineTheme.titleSmallFont(
+                color: context.vineColors.primaryText,
+              ),
+            ),
+          ),
+        ),
+        switch (state.status) {
+          BadgeVideosStatus.initial => const SliverToBoxAdapter(
+            child: SizedBox.shrink(),
+          ),
+          BadgeVideosStatus.loading => const SliverToBoxAdapter(
+            child: Center(child: BrandedLoadingIndicator(size: 40)),
+          ),
+          BadgeVideosStatus.failure => SliverToBoxAdapter(
+            child: _DetailMessage(
+              message: context.l10n.feedFailedToLoadVideos,
+              onRetry: () => cubit.loadForHolders(
+                context.read<BadgeHoldersCubit>().state.holders.toSet(),
+              ),
+            ),
+          ),
+          BadgeVideosStatus.loaded when state.videos.isEmpty =>
+            SliverToBoxAdapter(
+              child: Text(
+                context.l10n.exploreNoVideosAvailable,
+                style: VineTheme.bodySmallFont(
+                  color: context.vineColors.onSurfaceVariant,
+                ),
+              ),
+            ),
+          BadgeVideosStatus.loaded => SliverGrid.builder(
+            itemCount: state.videos.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 4,
+              mainAxisSpacing: 4,
+              childAspectRatio: 0.75,
+            ),
+            itemBuilder: (context, index) {
+              final video = state.videos[index];
+              return Semantics(
+                button: true,
+                child: GestureDetector(
+                  onTap: () => unawaited(
+                    context.push(
+                      PooledFullscreenVideoFeedScreen.pathForVideoId(video.id),
+                      extra: PooledFullscreenVideoFeedArgs(
+                        source: VideoListViewSource(state.videos),
+                        feedRepository: ref.read(feedRepositoryProvider),
+                        initialIndex: index,
+                        initialVideoId: video.id,
+                        trafficSource: ViewTrafficSource.discoveryBadges,
+                        sourceDetail: coordinate.value,
+                      ),
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: VideoThumbnailWidget(video: video),
+                  ),
+                ),
+              );
+            },
+          ),
+        },
+        if (state.status == BadgeVideosStatus.loaded && state.hasMore)
+          SliverToBoxAdapter(
+            child: Center(
+              child: DivineButton(
+                label: context.l10n.profileShowMore,
+                type: DivineButtonType.link,
+                size: DivineButtonSize.small,
+                isLoading: state.isLoadingMore,
+                onPressed: state.isLoadingMore ? null : cubit.loadMore,
+              ),
+            ),
+          ),
+      ],
+    );
   }
 }
 
@@ -538,22 +717,23 @@ class _BadgeArtwork extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fallback = DecoratedBox(
-      decoration: const BoxDecoration(
+    const fallback = DecoratedBox(
+      decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: VineTheme.vineGreen,
       ),
       child: Center(
-        child: Text(
-          'B',
-          style: VineTheme.titleLargeFont(color: VineTheme.primaryDarkGreen),
+        child: DivineIcon(
+          icon: DivineIconName.sparkle,
+          color: VineTheme.primaryDarkGreen,
+          size: 56,
         ),
       ),
     );
 
     return SizedBox(
-      width: 132,
-      height: 132,
+      width: 156,
+      height: 156,
       child: imageUrl == null || imageUrl!.isEmpty
           ? fallback
           : ClipOval(
@@ -605,15 +785,6 @@ class _BadgeActions extends StatelessWidget {
                   state.actionStatus == BadgeDetailActionStatus.accepting,
               onPressed: state.isBusy ? null : cubit.acceptAward,
             ),
-        if (!detail.isOwner)
-          DivineButton(
-            label: l10n.badgeDetailBlockClaimantsAction,
-            type: DivineButtonType.secondary,
-            leadingIcon: DivineIconName.prohibit,
-            isLoading:
-                state.actionStatus == BadgeDetailActionStatus.blockingClaimants,
-            onPressed: state.isBusy ? null : () => _openBlockClaimants(context),
-          ),
       ],
     );
   }

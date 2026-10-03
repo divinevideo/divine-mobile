@@ -81,11 +81,13 @@ void main() {
 
     /// Scrolls the awardee list into view and opens the revoke sheet.
     ///
-    /// The badge hero fills the default test viewport, so a recipient row is
-    /// built into the sliver's cache extent but never laid out — which keeps
-    /// it out of the semantics tree, where `bySemanticsLabel` reads from.
+    /// Management rows follow the holder video feed and are built lazily.
     Future<void> tapRevoke(WidgetTester tester) async {
-      await tester.ensureVisible(find.byType(BadgeRecipientRow));
+      await tester.scrollUntilVisible(
+        find.byType(BadgeRecipientRow),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.bySemanticsLabel(l10n.badgeDetailRevokeAction));
       await tester.pumpAndSettle();
@@ -458,9 +460,7 @@ void main() {
 
       await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byType(BadgeRecipientRow));
-      await tester.pumpAndSettle();
-
+      expect(find.byType(BadgeRecipientRow), findsNothing);
       expect(find.bySemanticsLabel(l10n.badgeDetailRevokeAction), findsNothing);
     });
 

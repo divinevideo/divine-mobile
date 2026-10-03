@@ -34,6 +34,26 @@ class BadgeVideosCubit extends Cubit<BadgeVideosState>
     emit(state.copyWith(status: BadgeVideosStatus.loading));
     try {
       final holders = await _badgeRepository.loadAcceptedHolders(_coordinate);
+      await loadForHolders(holders);
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
+      emitIfOpen(state.copyWith(status: BadgeVideosStatus.failure));
+    }
+  }
+
+  /// Loads videos from a holder set already resolved by the detail page.
+  ///
+  /// Reusing that snapshot avoids a second walk over awards, deletions, and
+  /// profile badges when the video grid follows the holder list on one page.
+  Future<void> loadForHolders(Set<String> holders) async {
+    if (isClosed) return;
+    emit(state.copyWith(status: BadgeVideosStatus.loading));
+    if (holders.isEmpty) {
+      _pager = null;
+      emitIfOpen(const BadgeVideosState(status: BadgeVideosStatus.loaded));
+      return;
+    }
+    try {
       final pager = _videosRepository.createBadgeVideoPager(holders);
       final videos = await pager.loadMore();
       if (isClosed) return;
