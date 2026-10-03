@@ -236,6 +236,43 @@ void main() {
     );
 
     test(
+      'replaces a pooled revision of an edited video with the fetched one',
+      () async {
+        // An edit republishes the video under a new event id and the same
+        // d-tag, and the pool can still hold the revision before it.
+        final previous = _video(
+          id: pooledId,
+          pubkey: _ownerA,
+          dTag: 'clip',
+          createdAt: 100,
+        ).copyWith(addressableDTag: 'clip');
+        final edited = _video(
+          id: fetchedId,
+          pubkey: _ownerA,
+          dTag: 'clip',
+          createdAt: 200,
+        ).copyWith(addressableDTag: 'clip');
+        when(
+          () => videosRepository.getVideosByAuthors(
+            authorPubkeys: any(named: 'authorPubkeys'),
+          ),
+        ).thenAnswer((_) async => [edited]);
+
+        final states = await collect(buildContainer(pooled: [previous]), [
+          _ownerA,
+        ]);
+
+        expect(
+          idsOf(states),
+          equals([
+            [pooledId],
+            [fetchedId],
+          ]),
+        );
+      },
+    );
+
+    test(
       'keeps the pooled videos when the fetch fails after the first paint',
       () async {
         final pooledMember = _video(
