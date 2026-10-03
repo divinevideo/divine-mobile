@@ -7,6 +7,8 @@ with main!". On a shallow clone that message is wrong and its advice (merge or
 rebase) cannot help, so the third case is covered here explicitly.
 """
 
+import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -44,10 +46,13 @@ class CheckBranchMergeableTest(unittest.TestCase):
         git(self.repo, "branch", "base")
         self.addCleanup(self._tmp.cleanup)
 
-    def run_check(self, base="base"):
+    def run_check(self, base="base", pushed_from=None, tip=None, env=None):
         return subprocess.run(
-            ["bash", str(SCRIPT), base],
+            ["bash", str(SCRIPT), base]
+            + ([pushed_from] if pushed_from else [])
+            + ([tip] if tip else []),
             cwd=self.repo,
+            env=env,
             capture_output=True,
             text=True,
         )
@@ -73,6 +78,80 @@ class CheckBranchMergeableTest(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn("merge conflicts", result.stdout)
         self.assertIn("git rebase", result.stdout)
+
+    def make_conflict(self, name="shared.txt"):
+        if name != "shared.txt":
+            commit(self.repo, name, "base\n")
+            git(self.repo, "branch", "-f", "base")
+        git(self.repo, "checkout", "-q", "-b", "feature")
+        commit(self.repo, name, "feature edit\n")
+        baseline = git(self.repo, "rev-parse", "HEAD").stdout.strip()
+        git(self.repo, "checkout", "-q", "base")
+        commit(self.repo, name, "base edit\n")
+        git(self.repo, "checkout", "-q", "feature")
+        return baseline
+
+    def test_unrelated_push_warns_and_passes(self):
+        baseline = self.make_conflict()
+        commit(self.repo, "unrelated.txt", "review fix\n")
+        result = self.run_check(pushed_from=baseline)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("shared.txt", result.stdout)
+        self.assertIn("before merging", result.stdout)
+
+    def test_push_touching_conflict_blocks(self):
+        baseline = self.make_conflict()
+        commit(self.repo, "shared.txt", "another feature edit\n")
+        self.assertEqual(self.run_check(pushed_from=baseline).returncode, 1)
+
+    def test_missing_push_baseline_blocks(self):
+        self.make_conflict()
+        self.assertEqual(self.run_check(pushed_from="missing").returncode, 1)
+
+    def test_rename_of_conflicted_path_blocks(self):
+        baseline = self.make_conflict()
+        git(self.repo, "mv", "shared.txt", "renamed.txt")
+        git(self.repo, "commit", "-qm", "rename file")
+        self.assertEqual(self.run_check(pushed_from=baseline).returncode, 1)
+
+    def test_unusual_conflict_paths_are_compared_exactly(self):
+        for name in ("space name.txt", "tab\tname.txt", "line\nname.txt", "quote\"name.txt"):
+            with self.subTest(name=name):
+                # Each subcase needs independent history.
+                git(self.repo, "checkout", "-q", "main")
+                if git(self.repo, "branch", "--list", "feature").stdout.strip():
+                    git(self.repo, "branch", "-D", "feature")
+                baseline = self.make_conflict(name)
+                commit(self.repo, name, "changed again\n")
+                self.assertEqual(self.run_check(pushed_from=baseline).returncode, 1)
+
+    def test_explicit_tip_is_checked_instead_of_head(self):
+        baseline = self.make_conflict()
+        commit(self.repo, "unrelated.txt", "review fix\n")
+        tip = git(self.repo, "rev-parse", "HEAD").stdout.strip()
+        git(self.repo, "checkout", "-q", "main")
+        result = self.run_check(pushed_from=baseline, tip=tip)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("before merging", result.stdout)
+
+    def test_path_extraction_failures_keep_conflicts_blocking(self):
+        baseline = self.make_conflict()
+        commit(self.repo, "unrelated.txt", "review fix\n")
+        bindir = Path(self._tmp.name) / "bin"
+        bindir.mkdir()
+        real_git = shutil.which("git")
+        wrapper = bindir / "git"
+        for operation in ("diff", "--name-only"):
+            with self.subTest(operation=operation):
+                wrapper.write_text(
+                    "#!/bin/bash\n"
+                    f'for arg in "$@"; do if [ "$arg" = "{operation}" ]; then exit 128; fi; done\n'
+                    f'exec "{real_git}" "$@"\n'
+                )
+                wrapper.chmod(0o755)
+                env = dict(os.environ, PATH=f"{bindir}:{os.environ['PATH']}")
+                result = self.run_check(pushed_from=baseline, env=env)
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
 
     def test_unrelated_histories_warn_but_do_not_report_a_conflict(self):
         # An orphan branch shares no ancestor with base, which is the shape a
@@ -128,6 +207,66 @@ class CheckBranchMergeableTest(unittest.TestCase):
         self.assertIn("does not resolve to a", result.stdout)
         self.assertIn("Continuing", result.stdout)
         self.assertNotIn("Branch has merge conflicts", result.stdout)
+
+
+class PrePushBehaviourTest(unittest.TestCase):
+    setUp = CheckBranchMergeableTest.setUp
+    make_conflict = CheckBranchMergeableTest.make_conflict
+
+    def prepare_hook(self):
+        root = SCRIPT.parents[1]
+        (self.repo / "mobile").mkdir(exist_ok=True)
+        (self.repo / "scripts").mkdir(exist_ok=True)
+        shutil.copyfile(SCRIPT, self.repo / "scripts/check_branch_mergeable.sh")
+        git(self.repo, "update-ref", "refs/remotes/origin/main", "base")
+        return root / "scripts/hooks/pre-push"
+
+    def update(self, remote_sha, local_sha="HEAD", remote_ref="refs/heads/feature"):
+        local_sha = git(self.repo, "rev-parse", local_sha).stdout.strip()
+        return f"refs/heads/feature {local_sha} {remote_ref} {remote_sha}\n"
+
+    def run_hook(self, updates):
+        return subprocess.run(
+            ["bash", str(self.prepare_hook()), "origin", "unused"],
+            cwd=self.repo, input=updates, capture_output=True, text=True,
+        )
+
+    def test_remote_sha_baseline_allows_unrelated_fix_without_upstream(self):
+        baseline = self.make_conflict()
+        commit(self.repo, "unrelated.txt", "review fix\n")
+        result = self.run_hook(self.update(baseline))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("before merging", result.stdout)
+
+    def test_multiple_updates_check_every_tip_even_when_head_is_main(self):
+        baseline = self.make_conflict()
+        commit(self.repo, "unrelated.txt", "review fix\n")
+        allowed = self.update(baseline)
+        commit(self.repo, "shared.txt", "conflicting fix\n")
+        blocked = self.update(baseline, remote_ref="refs/heads/other")
+        git(self.repo, "checkout", "-q", "main")
+        result = self.run_hook(allowed + blocked)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("before merging", result.stdout)
+        self.assertIn("Resolve conflicts before pushing", result.stdout)
+
+    def test_new_or_unavailable_remote_baseline_blocks(self):
+        self.make_conflict()
+        commit(self.repo, "unrelated.txt", "review fix\n")
+        for baseline in ("0" * 40, "f" * 40):
+            with self.subTest(baseline=baseline):
+                self.assertEqual(self.run_hook(self.update(baseline)).returncode, 1)
+
+    def test_deletions_and_tags_do_not_check_conflicted_head(self):
+        baseline = self.make_conflict()
+        updates = f"(delete) {'0' * 40} refs/heads/old {baseline}\n"
+        updates += self.update("0" * 40, remote_ref="refs/tags/v1")
+        result = self.run_hook(updates)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_empty_stdin_keeps_strict_check(self):
+        self.make_conflict()
+        self.assertEqual(self.run_hook("").returncode, 1)
 
 
 class InstallHooksWiringTest(unittest.TestCase):

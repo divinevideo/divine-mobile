@@ -31,7 +31,7 @@ When a developer reports CI failures on format, analyze, or codegen that they di
 - build_runner codegen verification (if codegen inputs changed)
 
 **Pre-push**:
-- Merge conflict check against `origin/main` (`scripts/check_branch_mergeable.sh`)
+- Merge conflict check against `origin/main` for each pushed branch tip (`scripts/check_branch_mergeable.sh`): known remote SHA baselines allow pushes outside conflicted paths with a warning; pushes touching a conflicted file, new branches, and unavailable baselines still block on genuine conflicts. Deletions and tags are skipped.
 - `flutter analyze lib test integration_test`
 - build_runner codegen verification
 - Runs tests for changed files
@@ -59,4 +59,14 @@ tail`) reports the *pipe's* status, so a failed fetch looks like success.
 An unanswerable check now warns and continues rather than blocking, since it is
 not evidence of a conflict and GitHub reports mergeability on the pull request.
 The surrounding hook already takes that stance for a failed `git fetch`.
-Genuine conflicts still block.
+Genuine conflicts block unless a known remote SHA baseline shows the push
+changes no conflicted paths. Paths are compared exactly, including both sides
+of a rename; changing an unrelated section of a conflicted file still blocks.
+The hook reads every ref update from Git's stdin and checks its local SHA,
+so it also handles multi-branch pushes and branches other than HEAD. A manual
+invocation without stdin retains the strict HEAD check.
+
+The warning permits an authorized reviewer to push a narrowly scoped review
+fix onto an existing conflicted branch under `agent_workflow.md`. Conflicts
+still need resolution before merging or final handoff. The hook does not
+establish reviewer authority; the existing takeover gates still apply.

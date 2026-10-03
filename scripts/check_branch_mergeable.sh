@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 #
-# Reports whether HEAD merges into a base ref without conflicts.
+# Reports whether a pushed tip merges into a base ref without conflicts.
+# Usage: check_branch_mergeable.sh [base-ref [pushed-from [pushed-tip]]]
+# A known push baseline permits changes outside conflicted paths, with a warning.
 #
-#   exit 0 — merges cleanly, or the question could not be answered
-#   exit 1 — genuine merge conflicts
+#   exit 0 — clean, conflict outside pushed paths, or merge could not be computed
+#   exit 1 — invalid pushed tip, or conflicts touched by push/no usable baseline
 #
 # `git merge-tree --write-tree` answers with three distinct exit codes: 0 for a
 # clean merge, 1 for conflicts, and 128 for a fatal error. Treating "not 0" as
@@ -24,7 +26,14 @@
 set -uo pipefail
 
 BASE_REF="${1:-origin/main}"
+PUSHED_FROM="${2:-}"
+PUSHED_TIP="${3:-HEAD}"
 REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+if ! git -C "$REPO_ROOT" rev-parse --verify --quiet "${PUSHED_TIP}^{commit}" >/dev/null; then
+    echo "Cannot resolve pushed tip: $PUSHED_TIP"
+    exit 1
+fi
 
 # A base ref that does not resolve at all — origin/main renamed, deleted, or
 # never fetched — is a fourth unanswerable case merge-tree does not surface as
@@ -40,7 +49,7 @@ if ! git -C "$REPO_ROOT" rev-parse --verify --quiet "${BASE_REF}^{commit}" >/dev
     exit 0
 fi
 
-stderr=$(git -C "$REPO_ROOT" merge-tree --write-tree "$BASE_REF" HEAD 2>&1 >/dev/null)
+stderr=$(git -C "$REPO_ROOT" merge-tree --write-tree "$BASE_REF" "$PUSHED_TIP" 2>&1 >/dev/null)
 status=$?
 
 case "$status" in
@@ -48,12 +57,40 @@ case "$status" in
         echo "No merge conflicts with ${BASE_REF#origin/}"
         ;;
     1)
+        # Files hold NUL-delimited output: shell variables cannot preserve NULs.
+        # Extraction failures keep the genuine-conflict failure below.
+        if [ -n "$PUSHED_FROM" ] && git -C "$REPO_ROOT" rev-parse --verify --quiet "${PUSHED_FROM}^{commit}" >/dev/null; then
+            paths_dir=$(mktemp -d) || exit 1
+            trap 'rm -rf "$paths_dir"' EXIT
+            git -C "$REPO_ROOT" merge-tree --write-tree --name-only --no-messages -z "$BASE_REF" "$PUSHED_TIP" > "$paths_dir/conflicts"
+            paths_status=$?
+            if [ "$paths_status" -eq 1 ] && git -C "$REPO_ROOT" diff --no-renames --name-only -z "$PUSHED_FROM" "$PUSHED_TIP" > "$paths_dir/pushed"; then
+                conflicts=()
+                overlap=false
+                # The first NUL-delimited field is the merge tree OID.
+                {
+                    IFS= read -r -d '' tree_oid
+                    while IFS= read -r -d '' path; do
+                        conflicts+=("$path")
+                        while IFS= read -r -d '' pushed_path; do
+                            if [ "$path" = "$pushed_path" ]; then overlap=true; fi
+                        done < "$paths_dir/pushed"
+                    done
+                } < "$paths_dir/conflicts"
+                if [ "${#conflicts[@]}" -gt 0 ] && [ "$overlap" = false ]; then
+                    echo "Warning: branch has merge conflicts with ${BASE_REF#origin/}, outside the pushed changes:"
+                    printf '  %q\n' "${conflicts[@]}"
+                    echo "Continuing; resolve these conflicts before merging or final handoff."
+                    exit 0
+                fi
+            fi
+        fi
         echo ""
         echo "Branch has merge conflicts with ${BASE_REF#origin/}!"
         echo ""
         echo "Resolve conflicts before pushing:"
         echo "  git fetch origin ${BASE_REF#origin/}"
-        echo "  git rebase $BASE_REF   # or: git merge $BASE_REF"
+        echo "  git rebase $BASE_REF"
         exit 1
         ;;
     *)

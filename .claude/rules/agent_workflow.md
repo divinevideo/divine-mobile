@@ -204,7 +204,8 @@ value.
 **Forbidden:**
 
 - Publishing a new branch, making a final handoff push, or pushing a
-  branch with GitHub-reported merge conflicts without first running
+  branch with GitHub-reported merge conflicts (except the authorized reviewer
+  exception below) without first running
   `git fetch origin && git rebase origin/main`.
 - `git push --force` without `--lease`. `--force-with-lease` is
   mandatory on rebased feature branches so a concurrent push from a
@@ -212,9 +213,14 @@ value.
 - Merging `main` into a feature branch instead of rebasing — produces
   noisy "Merge branch 'main' into..." commits and a non-linear history.
 
-The PR-review exception only applies when GitHub reports no merge
-conflicts and the push is narrowly for review feedback. If either stops
-being true, rebase onto fresh `origin/main`.
+An authorized reviewer may also push a narrowly scoped review fix onto an
+existing conflicted branch when the hook can compare the actual pushed tip
+against its known remote SHA and none of the pushed paths are conflicted.
+Missing baselines and changes to any conflicted file still block. This is a
+per-file check, including both paths of a rename, not a per-section check.
+Resolve conflicts by rebasing before final handoff or merge; this exception
+does not permit publishing a new conflicted branch. Otherwise, rebase onto
+fresh `origin/main`.
 
 ---
 
@@ -415,7 +421,7 @@ step 1.
 - If this push requires a rebase under the workflow rules above, verify
   the rebase onto `origin/main` did not break anything.
 - If this is a PR-review fix without a rebase, verify GitHub reports no
-  merge conflicts before relying on that exception.
+  merge conflicts or the authorized reviewer exception above applies.
 - If anything is red, do not push. Fix it.
 
 ### After every push
