@@ -3838,17 +3838,11 @@ class AppLocalizationsSv extends AppLocalizations {
   String get peopleListsAddToList => 'Lägg till i lista';
 
   @override
-  String get peopleListsSheetTitle => 'Lägg till i lista';
-
-  @override
   String get peopleListsEmptyTitle => 'Inga listor än';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Skapa en lista för att börja gruppera personer.';
-
-  @override
-  String get peopleListsCreateList => 'Skapa lista';
 
   @override
   String get peopleListsNewListTitle => 'Ny lista';
@@ -4855,9 +4849,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get reportClose => 'Stäng';
 
   @override
-  String get listAddToList => 'Lägg till i lista';
-
-  @override
   String listVideoCount(int count) {
     return '$count videor';
   }
@@ -4866,23 +4857,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get listByAuthorPrefix => 'Av ';
 
   @override
-  String get listNewList => 'Ny lista';
-
-  @override
   String get listDone => 'Klar';
 
   @override
   String get listErrorLoading => 'Fel vid inläsning av listor';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'Borttagen från $name';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'Tillagd i $name';
-  }
 
   @override
   String get listCreateNewList => 'Skapa ny lista';
@@ -12763,4 +12741,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleSemanticLabel => 'Lägg till personer i listan';
+
+  @override
+  String get listAddToLists => 'Lägg till i listor';
 }

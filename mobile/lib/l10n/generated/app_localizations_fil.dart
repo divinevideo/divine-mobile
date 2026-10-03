@@ -3866,17 +3866,11 @@ class AppLocalizationsFil extends AppLocalizations {
   String get peopleListsAddToList => 'Idagdag sa listahan';
 
   @override
-  String get peopleListsSheetTitle => 'Idagdag sa listahan';
-
-  @override
   String get peopleListsEmptyTitle => 'Wala pang listahan';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Gumawa ng listahan para simulang igrupo ang mga tao.';
-
-  @override
-  String get peopleListsCreateList => 'Gumawa ng listahan';
 
   @override
   String get peopleListsNewListTitle => 'Bagong listahan';
@@ -4890,9 +4884,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get reportClose => 'Isara';
 
   @override
-  String get listAddToList => 'Idagdag sa Listahan';
-
-  @override
   String listVideoCount(int count) {
     return '$count mga video';
   }
@@ -4901,23 +4892,10 @@ class AppLocalizationsFil extends AppLocalizations {
   String get listByAuthorPrefix => 'Ni ';
 
   @override
-  String get listNewList => 'Bagong Listahan';
-
-  @override
   String get listDone => 'Tapos na';
 
   @override
   String get listErrorLoading => 'Error sa pag-load ng listahan';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'Inalis sa $name';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'Naidagdag sa $name';
-  }
 
   @override
   String get listCreateNewList => 'Gumawa ng Bagong Listahan';
@@ -12866,4 +12844,7 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get peopleListsAddPeopleSemanticLabel =>
       'Magdagdag ng tao sa listahan';
+
+  @override
+  String get listAddToLists => 'Idagdag sa mga list';
 }

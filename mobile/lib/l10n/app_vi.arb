@@ -1898,10 +1898,8 @@
     }
   },
   "peopleListsAddToList": "Thêm vào danh sách",
-  "peopleListsSheetTitle": "Thêm vào danh sách",
   "peopleListsEmptyTitle": "Chưa có danh sách nào",
   "peopleListsEmptySubtitle": "Tạo một danh sách để bắt đầu nhóm mọi người.",
-  "peopleListsCreateList": "Tạo danh sách",
   "peopleListsNewListTitle": "Danh sách mới",
   "peopleListsRouteTitle": "Danh sách người",
   "@peopleListsRouteTitle": {
@@ -2377,7 +2375,6 @@
   "reportLearnMoreAt": "Tìm hiểu thêm tại",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "Đóng",
-  "listAddToList": "Thêm vào danh sách",
   "listVideoCount": "{count} video",
   "@listVideoCount": {
     "placeholders": {
@@ -2387,25 +2384,8 @@
     }
   },
   "listByAuthorPrefix": "Bởi ",
-  "listNewList": "Danh sách mới",
   "listDone": "Xong",
   "listErrorLoading": "Lỗi khi tải danh sách",
-  "listRemovedFrom": "Đã xóa khỏi {name}",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "Đã thêm vào {name}",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "Tạo danh sách mới",
   "listNewPeopleList": "Danh sách người mới",
   "listCollaboratorsNone": "Không có",
@@ -6579,5 +6559,6 @@
   },
   "listsDiscoveryLoadingLabel": "Đang tải danh sách",
   "listsDiscoveryEmpty": "Lần này chẳng thấy danh sách nào. Kéo để làm mới.",
-  "peopleListsAddPeopleSemanticLabel": "Thêm người vào danh sách"
+  "peopleListsAddPeopleSemanticLabel": "Thêm người vào danh sách",
+  "listAddToLists": "Thêm vào danh sách"
 }

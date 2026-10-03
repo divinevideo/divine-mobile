@@ -1583,7 +1583,6 @@
     "reportReceivedReviewNotice": "ネットにつながったら自動で送信するよ。 チームが報告を確認して、適切に対応するね。ダイレクトメッセージでアップデートが届くかも。",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "閉じる",
-    "listAddToList": "リストに追加",
     "listVideoCount": "{count}本の動画",
     "@listVideoCount": {
         "placeholders": {
@@ -1592,25 +1591,8 @@
             }
         }
     },
-    "listNewList": "新しいリスト",
     "listDone": "完了",
     "listErrorLoading": "リストの読み込みに失敗",
-    "listRemovedFrom": "{name}から削除したよ",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "{name}に追加したよ",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "新しいリストを作る",
     "listNewPeopleList": "新しい人リスト",
     "listCollaboratorsNone": "なし",
@@ -2923,10 +2905,8 @@
     },
     "notificationSystemUpdate": "新しいお知らせがあります",
     "peopleListsAddToList": "リストに追加",
-    "peopleListsSheetTitle": "リストに追加",
     "peopleListsEmptyTitle": "リストがありません",
     "peopleListsEmptySubtitle": "リストを作成して人々をグループ化しましょう。",
-    "peopleListsCreateList": "リストを作成",
     "peopleListsNewListTitle": "新しいリスト",
     "peopleListsRouteTitle": "ピープルリスト",
     "peopleListsListNameLabel": "リスト名",
@@ -4819,5 +4799,6 @@
   },
     "listsDiscoveryLoadingLabel": "リストを読み込み中",
     "listsDiscoveryEmpty": "今回はリストが見つかりませんでした。引っ張って更新してください。",
-    "peopleListsAddPeopleSemanticLabel": "リストにユーザーを追加"
+    "peopleListsAddPeopleSemanticLabel": "リストにユーザーを追加",
+    "listAddToLists": "リストに追加"
 }

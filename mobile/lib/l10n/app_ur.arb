@@ -1898,10 +1898,8 @@
     }
   },
   "peopleListsAddToList": "فہرست میں شامل کریں",
-  "peopleListsSheetTitle": "فہرست میں شامل کریں",
   "peopleListsEmptyTitle": "ابھی کوئی فہرست نہیں",
   "peopleListsEmptySubtitle": "لوگوں کو گروہ میں باندھنے کے لیے فہرست بنائیں۔",
-  "peopleListsCreateList": "فہرست بنائیں",
   "peopleListsNewListTitle": "نئی فہرست",
   "peopleListsRouteTitle": "لوگوں کی فہرست",
   "@peopleListsRouteTitle": {
@@ -2377,7 +2375,6 @@
   "reportLearnMoreAt": "مزید جانیں",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "بند کریں",
-  "listAddToList": "فہرست میں شامل کریں",
   "listVideoCount": "{count} ویڈیوز",
   "@listVideoCount": {
     "placeholders": {
@@ -2387,25 +2384,8 @@
     }
   },
   "listByAuthorPrefix": "از ",
-  "listNewList": "نئی فہرست",
   "listDone": "ہو گیا",
   "listErrorLoading": "فہرستیں لوڈ کرنے میں خرابی",
-  "listRemovedFrom": "{name} سے ہٹا دی گئی",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "{name} میں شامل کر دی گئی",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "نئی فہرست بنائیں",
   "listNewPeopleList": "لوگوں کی نئی فہرست",
   "listCollaboratorsNone": "کوئی نہیں",
@@ -6579,5 +6559,6 @@
   },
   "listsDiscoveryLoadingLabel": "فہرستیں لوڈ ہو رہی ہیں",
   "listsDiscoveryEmpty": "اس بار کوئی فہرست ہاتھ نہیں آئی۔ ریفریش کے لیے کھینچیں۔",
-  "peopleListsAddPeopleSemanticLabel": "فہرست میں لوگ شامل کریں"
+  "peopleListsAddPeopleSemanticLabel": "فہرست میں لوگ شامل کریں",
+  "listAddToLists": "فہرستوں میں شامل کریں"
 }

@@ -3991,17 +3991,11 @@ class AppLocalizationsTe extends AppLocalizations {
   String get peopleListsAddToList => 'జాబితాకు జోడించండి';
 
   @override
-  String get peopleListsSheetTitle => 'జాబితాకు జోడించండి';
-
-  @override
   String get peopleListsEmptyTitle => 'ఇంకా జాబితాలు లేవు';
 
   @override
   String get peopleListsEmptySubtitle =>
       'వ్యక్తులను సమూహపరచడం ప్రారంభించడానికి జాబితాను సృష్టించండి.';
-
-  @override
-  String get peopleListsCreateList => 'జాబితాను సృష్టించండి';
 
   @override
   String get peopleListsNewListTitle => 'కొత్త జాబితా';
@@ -5026,9 +5020,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get reportClose => 'మూసివేయండి';
 
   @override
-  String get listAddToList => 'జాబితాకు జోడించండి';
-
-  @override
   String listVideoCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5043,23 +5034,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String get listByAuthorPrefix => 'ద్వారా ';
 
   @override
-  String get listNewList => 'కొత్త జాబితా';
-
-  @override
   String get listDone => 'పూర్తయింది';
 
   @override
   String get listErrorLoading => 'జాబితాలను లోడ్ చేయడంలో లోపం';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'నుండి తీసివేయబడింది $name';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'దీనికి జోడించబడింది $name';
-  }
 
   @override
   String get listCreateNewList => 'కొత్త జాబితాను సృష్టించండి';
@@ -13096,4 +13074,7 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get peopleListsAddPeopleSemanticLabel =>
       'జాబితాకు వ్యక్తులను జోడించండి';
+
+  @override
+  String get listAddToLists => 'జాబితాలకు జోడించండి';
 }
