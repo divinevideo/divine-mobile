@@ -297,6 +297,32 @@ void main() {
       ).called(1);
     });
 
+    group('withoutHiddenPubkeys', () {
+      test('drops hidden accounts and keeps the order', () {
+        final filtering = BadgeRepository(
+          nostrClient: nostrClient,
+          sharedPreferences: preferences,
+          currentPubkey: () => _pubkey(1),
+          signEvent: ({required kind, required content, required tags}) async =>
+              null,
+          isHiddenPubkey: (pubkey) => pubkey == _pubkey(11),
+        );
+
+        expect(
+          filtering.withoutHiddenPubkeys([
+            _pubkey(12),
+            _pubkey(11),
+            _pubkey(10),
+          ]),
+          [_pubkey(12), _pubkey(10)],
+        );
+      });
+
+      test('keeps every account without a hidden-account reader', () {
+        expect(repository.withoutHiddenPubkeys([_pubkey(10)]), [_pubkey(10)]);
+      });
+    });
+
     group('loadSubscribedHolders', () {
       test('is empty without a signed-in account', () async {
         final signedOut = BadgeRepository(
