@@ -36,6 +36,7 @@ const _otherOwnerReactionId =
     '4444444444444444444444444444444444444444444444444444444444444444';
 const _otherTargetMessageId =
     '5555555555555555555555555555555555555555555555555555555555555555';
+const _recipients = '["$_targetAuthor","$_reactorB"]';
 
 void main() {
   late AppDatabase database;
@@ -71,6 +72,7 @@ void main() {
       String emoji = '🔥',
       int createdAt = 1_700_000_000,
       String targetMessageId = _targetMessageId,
+      String? recipientPubkeys,
     }) {
       return dao.insertOwnReactionSuperseding(
         placeholderId: id,
@@ -82,6 +84,7 @@ void main() {
         createdAt: createdAt,
         ownerPubkey: ownerPubkey,
         rumorEventJson: '{"id":"$id"}',
+        recipientPubkeys: recipientPubkeys,
       );
     }
 
@@ -869,7 +872,7 @@ void main() {
       expect(rowsB.map((row) => row.emoji), equals(['😂']));
     });
 
-    test('getRumorJson and hasGiftWrap are owner scoped', () async {
+    test('getById and hasGiftWrap are owner scoped', () async {
       await insertPending();
       await dao.upsertIncoming(
         id: _sentId,
@@ -883,14 +886,9 @@ void main() {
         ownerPubkey: _ownerA,
       );
 
-      expect(
-        await dao.getRumorJson(id: _pendingId, ownerPubkey: _ownerA),
-        contains(_pendingId),
-      );
-      expect(
-        await dao.getRumorJson(id: _pendingId, ownerPubkey: _ownerB),
-        isNull,
-      );
+      final ownRow = await dao.getById(id: _pendingId, ownerPubkey: _ownerA);
+      expect(ownRow!.rumorEventJson, contains(_pendingId));
+      expect(await dao.getById(id: _pendingId, ownerPubkey: _ownerB), isNull);
       expect(
         await dao.hasGiftWrap(giftWrapId: _giftWrapId, ownerPubkey: _ownerA),
         isTrue,
@@ -983,6 +981,31 @@ void main() {
           reason: 'only the named target moves',
         );
       });
+
+      test(
+        'forgets the recipients worked out for the conversation it leaves',
+        () async {
+          await insertPending(recipientPubkeys: '["$_targetAuthor"]');
+          expect(
+            (await dao.getById(
+              id: _pendingId,
+              ownerPubkey: _ownerA,
+            ))!.recipientPubkeys,
+            isNotNull,
+            reason: 'precondition: the row holds a set before it moves',
+          );
+
+          await dao.reassignForTargetMessages(
+            targetMessageIds: const [_targetMessageId],
+            toConversationId: _otherConversationId,
+            ownerPubkey: _ownerA,
+          );
+
+          final row = await dao.getById(id: _pendingId, ownerPubkey: _ownerA);
+          expect(row!.conversationId, equals(_otherConversationId));
+          expect(row.recipientPubkeys, isNull);
+        },
+      );
 
       test("will not move another owner's reaction", () async {
         await insertPending(id: _otherOwnerReactionId, ownerPubkey: _ownerB);
@@ -1260,5 +1283,286 @@ void main() {
         );
       },
     );
+
+    group('upsertIncoming of an own queued reaction', () {
+      /// The reaction's own self-wrap echo, filing it under [conversationId].
+      Future<void> echoUnder(String conversationId) => dao.upsertIncoming(
+        id: _pendingId,
+        conversationId: conversationId,
+        targetMessageId: _targetMessageId,
+        targetMessageAuthor: _targetAuthor,
+        reactorPubkey: _reactorA,
+        emoji: '🔥',
+        createdAt: 1_700_000_000,
+        giftWrapId: _giftWrapId,
+        ownerPubkey: _ownerA,
+      );
+
+      test(
+        'keeps the conversation it was queued in when it has no recipients',
+        () async {
+          await insertPending();
+
+          await echoUnder(_otherConversationId);
+
+          final row = await dao.getById(id: _pendingId, ownerPubkey: _ownerA);
+          expect(row!.conversationId, equals(_conversationId));
+          expect(row.giftWrapId, equals(_giftWrapId));
+        },
+      );
+
+      test('follows the message when it has stored recipients', () async {
+        await insertPending(recipientPubkeys: '["$_targetAuthor"]');
+
+        await echoUnder(_otherConversationId);
+
+        final row = await dao.getById(id: _pendingId, ownerPubkey: _ownerA);
+        expect(row!.conversationId, equals(_otherConversationId));
+      });
+
+      test('follows the message once it has been sent', () async {
+        await insertPending();
+        await dao.swapPlaceholderId(
+          placeholderId: _pendingId,
+          realRumorId: _pendingId,
+          ownerPubkey: _ownerA,
+        );
+
+        await echoUnder(_otherConversationId);
+
+        final row = await dao.getById(id: _pendingId, ownerPubkey: _ownerA);
+        expect(row!.recipientPubkeys, isNull);
+        expect(row.conversationId, equals(_otherConversationId));
+      });
+    });
+
+    group('insertOwnReactionSuperseding recipients', () {
+      test(
+        'a queued reaction keeps the recipients it was queued with',
+        () async {
+          await insertPending(recipientPubkeys: _recipients);
+
+          final row = await dao.getById(id: _pendingId, ownerPubkey: _ownerA);
+          expect(row!.recipientPubkeys, equals(_recipients));
+        },
+      );
+
+      test(
+        're-reacting onto a removed row stores the recipients given this time',
+        () async {
+          await insertPending();
+          await dao.markOwnDeletionPending(
+            id: _pendingId,
+            ownerPubkey: _ownerA,
+            deletionRumorJson: '{"kind":5}',
+          );
+
+          await insertPending(recipientPubkeys: _recipients);
+
+          final row = await dao.getById(id: _pendingId, ownerPubkey: _ownerA);
+          expect(row!.isDeleted, isFalse);
+          expect(row.recipientPubkeys, equals(_recipients));
+        },
+      );
+
+      test(
+        're-reacting onto a removed row without recipients keeps the ones it '
+        'holds',
+        () async {
+          await insertPending(recipientPubkeys: _recipients);
+          await dao.markOwnDeletionPending(
+            id: _pendingId,
+            ownerPubkey: _ownerA,
+            deletionRumorJson: '{"kind":5}',
+          );
+
+          await insertPending();
+
+          final row = await dao.getById(id: _pendingId, ownerPubkey: _ownerA);
+          expect(row!.isDeleted, isFalse);
+          expect(row.recipientPubkeys, equals(_recipients));
+        },
+      );
+    });
+
+    group('setRecipientPubkeysIfMissing', () {
+      test(
+        'fills a row that has none and leaves a stored set alone',
+        () async {
+          const other = '["$_reactorB"]';
+          await insertPending();
+          await insertPending(
+            id: _sentId,
+            targetMessageId: _otherTargetMessageId,
+            recipientPubkeys: _recipients,
+          );
+
+          final filled = await dao.setRecipientPubkeysIfMissing(
+            id: _pendingId,
+            ownerPubkey: _ownerA,
+            conversationId: _conversationId,
+            recipientPubkeys: other,
+          );
+          final kept = await dao.setRecipientPubkeysIfMissing(
+            id: _sentId,
+            ownerPubkey: _ownerA,
+            conversationId: _conversationId,
+            recipientPubkeys: other,
+          );
+
+          expect(filled, equals(1));
+          expect(kept, equals(0));
+          expect(
+            (await dao.getById(
+              id: _pendingId,
+              ownerPubkey: _ownerA,
+            ))!.recipientPubkeys,
+            equals(other),
+          );
+          expect(
+            (await dao.getById(
+              id: _sentId,
+              ownerPubkey: _ownerA,
+            ))!.recipientPubkeys,
+            equals(_recipients),
+          );
+        },
+      );
+
+      test('writes only the row it names', () async {
+        await insertPending();
+        await insertPending(
+          id: _sentId,
+          targetMessageId: _otherTargetMessageId,
+        );
+
+        await dao.setRecipientPubkeysIfMissing(
+          id: _pendingId,
+          ownerPubkey: _ownerA,
+          conversationId: _conversationId,
+          recipientPubkeys: _recipients,
+        );
+
+        expect(
+          (await dao.getById(
+            id: _pendingId,
+            ownerPubkey: _ownerA,
+          ))!.recipientPubkeys,
+          equals(_recipients),
+        );
+        expect(
+          (await dao.getById(
+            id: _sentId,
+            ownerPubkey: _ownerA,
+          ))!.recipientPubkeys,
+          isNull,
+        );
+      });
+
+      test("leaves another owner's row", () async {
+        await insertPending(ownerPubkey: _ownerB, reactorPubkey: _ownerB);
+
+        final written = await dao.setRecipientPubkeysIfMissing(
+          id: _pendingId,
+          ownerPubkey: _ownerA,
+          conversationId: _conversationId,
+          recipientPubkeys: _recipients,
+        );
+
+        expect(written, equals(0));
+        expect(
+          (await dao.getById(
+            id: _pendingId,
+            ownerPubkey: _ownerB,
+          ))!.recipientPubkeys,
+          isNull,
+        );
+      });
+
+      test(
+        'leaves a row that has left the conversation the set was worked out '
+        'for',
+        () async {
+          await insertPending();
+          await dao.reassignForTargetMessages(
+            targetMessageIds: const [_targetMessageId],
+            toConversationId: _otherConversationId,
+            ownerPubkey: _ownerA,
+          );
+
+          final forTheOldConversation = await dao.setRecipientPubkeysIfMissing(
+            id: _pendingId,
+            ownerPubkey: _ownerA,
+            conversationId: _conversationId,
+            recipientPubkeys: _recipients,
+          );
+          final forTheNewConversation = await dao.setRecipientPubkeysIfMissing(
+            id: _pendingId,
+            ownerPubkey: _ownerA,
+            conversationId: _otherConversationId,
+            recipientPubkeys: _recipients,
+          );
+
+          expect(forTheOldConversation, equals(0));
+          expect(forTheNewConversation, equals(1));
+        },
+      );
+    });
+
+    group('getOwnQueuedRowsMissingRecipients', () {
+      test(
+        "lists only this owner's unsent rows that have no recipients",
+        () async {
+          final removalId = '6' * 64;
+          final withRecipientsId = '7' * 64;
+          final incomingId = '8' * 64;
+          final target2 = '9' * 64;
+          final target3 = 'a1' * 32;
+          final target4 = 'b2' * 32;
+
+          // Listed: a queued add and a queued removal, neither with recipients.
+          await insertPending();
+          await insertPending(id: removalId, targetMessageId: target2);
+          await dao.markOwnDeletionPending(
+            id: removalId,
+            ownerPubkey: _ownerA,
+            deletionRumorJson: '{"kind":5}',
+          );
+          // Not listed: already has recipients.
+          await insertPending(
+            id: withRecipientsId,
+            targetMessageId: target3,
+            recipientPubkeys: _recipients,
+          );
+          // Not listed: sent, so there is nothing left to send.
+          await insertPending(id: _sentId, targetMessageId: target4);
+          await dao.swapPlaceholderId(
+            placeholderId: _sentId,
+            realRumorId: _sentId,
+            ownerPubkey: _ownerA,
+          );
+          // Not listed: a row carrying a rumor, reacted by somebody else.
+          await insertPending(
+            id: incomingId,
+            reactorPubkey: _reactorB,
+            emoji: '😂',
+          );
+          // Not listed: another account's row, even one this owner reacted.
+          await insertPending(
+            id: _otherOwnerReactionId,
+            ownerPubkey: _ownerB,
+          );
+
+          final rows = await dao.getOwnQueuedRowsMissingRecipients(
+            ownerPubkey: _ownerA,
+          );
+
+          expect(
+            rows.map((row) => row.id),
+            unorderedEquals([_pendingId, removalId]),
+          );
+        },
+      );
+    });
   });
 }

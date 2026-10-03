@@ -4,7 +4,7 @@ This document describes how to manage database migrations for the `db_client` pa
 
 ## Current Schema Version
 
-**Version: 19** (see `app_database.dart`).
+**Version: 20** (see `app_database.dart`).
 
 Version 2 is the legacy-normalization baseline. Earlier releases kept Drift's
 user-version at 1 while startup repair SQL added tables, columns, indexes, and
@@ -135,6 +135,24 @@ This removal is not backward-compatible with a v18 binary: v18 startup cleanup
 still calls `HashtagStatsDao.deleteExpired()`, which fails when the v19 database
 no longer has the table. Do not open a v19 database with an older build when
 testing an app rollback; use a separate database for the older build.
+
+Version 20 adds `dm_message_reactions.recipient_pubkeys` (#7880), the
+gift-wrap recipient set of a queued DM reaction: a JSON list of every
+participant in the conversation except the owner, normally captured when the
+reaction is queued, otherwise by a later retry or the post-auth backfill. The
+retry sweep and the kind-5 removal used to work that set out again from
+`conversations` each time they ran, and an account switch deletes those rows
+while keeping the queue, so a queued group reaction was re-sent to one member
+and recorded as delivered. Pre-existing rows stay NULL: nothing on such a row
+says who it was for, and `DmReactionsRepository` establishes that before it
+sends the row again instead of guessing. One case it cannot tell apart: an
+older build moved a queued group reaction under the 1:1 with the message's
+author when its own echo arrived before the message did, and such a row looks
+like a 1:1 reaction, so it goes to that author alone. The step checks `to` as
+well as `from`, like the v19 removal: migration tests validate intermediate
+versions, and a column added to an existing table shows up there as an extra
+one. It is idempotent and part of the guarded `beforeOpen` recovery chain,
+with the column in the repair probe.
 
 Going forward, schema changes must be versioned Drift migrations. Do not add new
 tables, columns, indexes, or schema backfills to `beforeOpen`; that hook is only

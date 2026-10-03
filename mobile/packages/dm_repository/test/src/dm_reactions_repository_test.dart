@@ -27,8 +27,14 @@ const _ownerPubkey =
     '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 const _otherPubkey =
     'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210';
-const _conversationId =
-    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+
+/// The 1:1 between the owner and the other account. A real conversation id,
+/// because with no conversation row to read the repository only accepts
+/// recipients it can prove from one.
+final String _conversationId = DmRepository.computeConversationId([
+  _ownerPubkey,
+  _otherPubkey,
+]);
 const _targetMessageId =
     'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 const _reactionRumorId =
@@ -103,7 +109,7 @@ void main() {
 
     DmReactionRow makeRow({
       String id = _reactionRumorId,
-      String conversationId = _conversationId,
+      String? conversationId,
       String reactorPubkey = _ownerPubkey,
       String emoji = '🔥',
       String? giftWrapId,
@@ -113,10 +119,11 @@ void main() {
       String targetAuthor = _otherPubkey,
       String targetMessageId = _targetMessageId,
       int createdAt = 1_700_000_000,
+      String? recipientPubkeys,
     }) {
       return DmReactionRow(
         id: id,
-        conversationId: conversationId,
+        conversationId: conversationId ?? _conversationId,
         targetMessageId: targetMessageId,
         targetMessageAuthor: targetAuthor,
         reactorPubkey: reactorPubkey,
@@ -127,6 +134,21 @@ void main() {
         isDeleted: isDeleted,
         rumorEventJson: rumorEventJson,
         publishStatus: publishStatus,
+        recipientPubkeys: recipientPubkeys,
+      );
+    }
+
+    /// Stubs the queue row a retry or removal acts on: an own reaction sent to
+    /// the other account.
+    void stubQueuedRow({String? rumorEventJson, String? publishStatus}) {
+      when(
+        () => mockDao.getById(id: _reactionRumorId, ownerPubkey: _ownerPubkey),
+      ).thenAnswer(
+        (_) async => makeRow(
+          rumorEventJson: rumorEventJson,
+          publishStatus: publishStatus,
+          recipientPubkeys: jsonEncode([_otherPubkey]),
+        ),
       );
     }
 
@@ -135,10 +157,8 @@ void main() {
       mockMessageService = _MockNip17MessageService();
       reporterSites = <String>[];
 
-      // Default: no row for getById. removeOwn/retry look the reacted row up
-      // to resolve the conversation's wrap-recipient set; with no
-      // ConversationsDao wired (1:1 path), the resolver falls back to
-      // [targetMessageAuthor]. Per-test stubs override this where needed.
+      // Default: no row for getById. Tests that retry or remove a reaction
+      // stub the row they act on.
       when(
         () => mockDao.getById(
           id: any(named: 'id'),
@@ -342,6 +362,7 @@ void main() {
             createdAt: rumor.createdAt,
             ownerPubkey: _ownerPubkey,
             rumorEventJson: jsonEncode(rumor.toJson()),
+            recipientPubkeys: jsonEncode([_otherPubkey]),
           ),
         ).thenAnswer((_) async => <String>[]);
         when(
@@ -385,6 +406,7 @@ void main() {
             createdAt: rumor.createdAt,
             ownerPubkey: _ownerPubkey,
             rumorEventJson: jsonEncode(rumor.toJson()),
+            recipientPubkeys: jsonEncode([_otherPubkey]),
           ),
         ).called(1);
         verify(
@@ -442,6 +464,7 @@ void main() {
             createdAt: any(named: 'createdAt'),
             ownerPubkey: any(named: 'ownerPubkey'),
             rumorEventJson: any(named: 'rumorEventJson'),
+            recipientPubkeys: any(named: 'recipientPubkeys'),
           ),
         ).thenAnswer((_) async => <String>[priorReactionId]);
         when(
@@ -526,6 +549,664 @@ void main() {
       },
     );
 
+    group('publish superseding a prior reaction it cannot fully read', () {
+      const priorReactionId =
+          '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
+      late Event rumor;
+      late Event deletionRumor;
+
+      setUp(() {
+        rumor = reactionRumor();
+        deletionRumor = reactionRumor(
+          id: _giftWrapId,
+          content: '',
+          kind: EventKind.eventDeletion,
+          tags: [
+            ['e', priorReactionId],
+            ['k', EventKind.reaction.toString()],
+          ],
+        );
+      });
+
+      /// Stubs an emoji swap whose new reaction reaches the other account and
+      /// supersedes [priorReactionId].
+      void stubSwap() {
+        when(
+          () => mockMessageService.buildRumor(
+            recipientPubkey: _otherPubkey,
+            content: '🔥',
+            eventKind: EventKind.reaction,
+            additionalTags: any(named: 'additionalTags'),
+          ),
+        ).thenReturn(rumor);
+        when(
+          () => mockDao.insertOwnReactionSuperseding(
+            placeholderId: any(named: 'placeholderId'),
+            conversationId: any(named: 'conversationId'),
+            targetMessageId: any(named: 'targetMessageId'),
+            targetMessageAuthor: any(named: 'targetMessageAuthor'),
+            reactorPubkey: any(named: 'reactorPubkey'),
+            emoji: any(named: 'emoji'),
+            createdAt: any(named: 'createdAt'),
+            ownerPubkey: any(named: 'ownerPubkey'),
+            rumorEventJson: any(named: 'rumorEventJson'),
+            recipientPubkeys: any(named: 'recipientPubkeys'),
+          ),
+        ).thenAnswer((_) async => <String>[priorReactionId]);
+        when(
+          () => mockMessageService.buildRumor(
+            recipientPubkey: any(named: 'recipientPubkey'),
+            content: '',
+            eventKind: EventKind.eventDeletion,
+            additionalTags: any(named: 'additionalTags'),
+          ),
+        ).thenReturn(deletionRumor);
+        when(
+          () => mockDao.markOwnDeletionPending(
+            id: priorReactionId,
+            ownerPubkey: _ownerPubkey,
+            deletionRumorJson: any(named: 'deletionRumorJson'),
+          ),
+        ).thenAnswer((_) async {});
+        when(
+          () => mockMessageService.sendRumor(
+            rumorEvent: any(named: 'rumorEvent'),
+            recipientPubkey: _otherPubkey,
+            awaitRecipientOk: any(named: 'awaitRecipientOk'),
+          ),
+        ).thenAnswer(
+          (_) async => NIP17SendResult.success(
+            rumorEventId: rumor.id,
+            messageEventId: _giftWrapId,
+            recipientPubkey: _otherPubkey,
+          ),
+        );
+        when(
+          () => mockDao.swapPlaceholderId(
+            placeholderId: any(named: 'placeholderId'),
+            realRumorId: any(named: 'realRumorId'),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer((_) async {});
+      }
+
+      Future<DmReactionPublishResult> swap(DmReactionsRepository repository) {
+        return repository.publish(
+          conversationId: _conversationId,
+          targetMessageId: _targetMessageId,
+          targetMessageAuthor: _otherPubkey,
+          emoji: '🔥',
+        );
+      }
+
+      /// The prior's removal is recorded for the retry sweep, and not sent.
+      void verifyRemovalHeld() {
+        verify(
+          () => mockDao.markOwnDeletionPending(
+            id: priorReactionId,
+            ownerPubkey: _ownerPubkey,
+            deletionRumorJson: any(named: 'deletionRumorJson'),
+          ),
+        ).called(1);
+        verifyNever(
+          () => mockMessageService.sendRumor(
+            rumorEvent: deletionRumor,
+            recipientPubkey: any(named: 'recipientPubkey'),
+            awaitRecipientOk: any(named: 'awaitRecipientOk'),
+          ),
+        );
+      }
+
+      test(
+        'holds its removal, and reports, when its row fails to read',
+        () async {
+          stubSwap();
+          when(
+            () =>
+                mockDao.getById(id: priorReactionId, ownerPubkey: _ownerPubkey),
+          ).thenThrow(StateError('database is locked'));
+
+          final result = await swap(createRepository());
+          await pumpEventQueue();
+
+          expect(result.success, isTrue);
+          expect(
+            reporterSites,
+            equals([
+              DmReactionsRepositoryReportableSites.publishSupersedeRecipients,
+            ]),
+          );
+          verifyRemovalHeld();
+        },
+      );
+
+      test(
+        'holds its removal, and records no recipients for it, when the '
+        'conversation it came from fails to read',
+        () async {
+          final priorConversationId = '9' * 64;
+          stubSwap();
+          when(
+            () =>
+                mockDao.getById(id: priorReactionId, ownerPubkey: _ownerPubkey),
+          ).thenAnswer(
+            (_) async => makeRow(
+              id: priorReactionId,
+              conversationId: priorConversationId,
+              publishStatus: 'sent',
+            ),
+          );
+          final mockConversationsDao = _MockConversationsDao();
+          when(
+            () => mockConversationsDao.getConversation(
+              _conversationId,
+              ownerPubkey: _ownerPubkey,
+            ),
+          ).thenAnswer((_) async => null);
+          when(
+            () => mockConversationsDao.getConversation(
+              priorConversationId,
+              ownerPubkey: _ownerPubkey,
+            ),
+          ).thenThrow(StateError('database is locked'));
+
+          final result = await swap(
+            createRepository(conversationsDao: mockConversationsDao),
+          );
+          await pumpEventQueue();
+
+          expect(result.success, isTrue);
+          expect(
+            reporterSites,
+            equals([
+              DmReactionsRepositoryReportableSites
+                  .wrapRecipientsConversationRead,
+            ]),
+          );
+          verifyRemovalHeld();
+          verifyNever(
+            () => mockDao.setRecipientPubkeysIfMissing(
+              id: any(named: 'id'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+              conversationId: any(named: 'conversationId'),
+              recipientPubkeys: any(named: 'recipientPubkeys'),
+            ),
+          );
+        },
+      );
+
+      test(
+        'holds its removal, and records no recipients for it, when the message '
+        'it reacts to fails to read',
+        () async {
+          final priorConversationId = '9' * 64;
+          stubSwap();
+          when(
+            () =>
+                mockDao.getById(id: priorReactionId, ownerPubkey: _ownerPubkey),
+          ).thenAnswer(
+            (_) async => makeRow(
+              id: priorReactionId,
+              conversationId: priorConversationId,
+              publishStatus: 'sent',
+            ),
+          );
+          final mockConversationsDao = _MockConversationsDao();
+          when(
+            () => mockConversationsDao.getConversation(
+              any(),
+              ownerPubkey: _ownerPubkey,
+            ),
+          ).thenAnswer((_) async => null);
+          final mockMessagesDao = _MockDirectMessagesDao();
+          when(
+            () => mockMessagesDao.getMessageById(
+              _targetMessageId,
+              ownerPubkey: _ownerPubkey,
+            ),
+          ).thenThrow(StateError('database is locked'));
+
+          final result = await swap(
+            createRepository(
+              conversationsDao: mockConversationsDao,
+              directMessagesDao: mockMessagesDao,
+            ),
+          );
+          await pumpEventQueue();
+
+          expect(result.success, isTrue);
+          expect(
+            reporterSites,
+            equals([
+              DmReactionsRepositoryReportableSites
+                  .wrapRecipientsTargetMessageRead,
+            ]),
+          );
+          verifyRemovalHeld();
+          verifyNever(
+            () => mockDao.setRecipientPubkeysIfMissing(
+              id: any(named: 'id'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+              conversationId: any(named: 'conversationId'),
+              recipientPubkeys: any(named: 'recipientPubkeys'),
+            ),
+          );
+        },
+      );
+
+      test(
+        'sends its removal to everyone it may have reached, and records them, '
+        'when its conversation fails to read but its 1:1 can still be proven',
+        () async {
+          final thirdPubkey = '3' * 64;
+          final groupConversationId = DmRepository.computeConversationId([
+            _ownerPubkey,
+            _otherPubkey,
+            thirdPubkey,
+          ]);
+          stubSwap();
+          when(
+            () => mockMessageService.sendRumor(
+              rumorEvent: any(named: 'rumorEvent'),
+              recipientPubkey: thirdPubkey,
+              awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            ),
+          ).thenAnswer(
+            (_) async => NIP17SendResult.success(
+              rumorEventId: rumor.id,
+              messageEventId: _giftWrapId,
+              recipientPubkey: thirdPubkey,
+            ),
+          );
+          when(
+            () => mockDao.markDeletionSent(
+              id: priorReactionId,
+              ownerPubkey: _ownerPubkey,
+            ),
+          ).thenAnswer((_) async {});
+          when(
+            () =>
+                mockDao.getById(id: priorReactionId, ownerPubkey: _ownerPubkey),
+          ).thenAnswer(
+            (_) async => makeRow(id: priorReactionId, publishStatus: 'sent'),
+          );
+          when(
+            () => mockDao.setRecipientPubkeysIfMissing(
+              id: any(named: 'id'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+              conversationId: any(named: 'conversationId'),
+              recipientPubkeys: any(named: 'recipientPubkeys'),
+            ),
+          ).thenAnswer((_) async => 1);
+          final mockConversationsDao = _MockConversationsDao();
+          when(
+            () => mockConversationsDao.getConversation(
+              groupConversationId,
+              ownerPubkey: _ownerPubkey,
+            ),
+          ).thenAnswer(
+            (_) async => ConversationRow(
+              id: groupConversationId,
+              participantPubkeys: jsonEncode([
+                _ownerPubkey,
+                _otherPubkey,
+                thirdPubkey,
+              ]),
+              isGroup: true,
+              isRead: true,
+              currentUserHasSent: true,
+              createdAt: 1700000000,
+              ownerPubkey: _ownerPubkey,
+            ),
+          );
+          when(
+            () => mockConversationsDao.getConversation(
+              _conversationId,
+              ownerPubkey: _ownerPubkey,
+            ),
+          ).thenThrow(StateError('database is locked'));
+
+          final result =
+              await createRepository(
+                conversationsDao: mockConversationsDao,
+              ).publish(
+                conversationId: groupConversationId,
+                targetMessageId: _targetMessageId,
+                targetMessageAuthor: _otherPubkey,
+                emoji: '🔥',
+              );
+          await pumpEventQueue();
+
+          expect(result.success, isTrue);
+          final removalRecipients = verify(
+            () => mockMessageService.sendRumor(
+              rumorEvent: deletionRumor,
+              recipientPubkey: captureAny(named: 'recipientPubkey'),
+              awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            ),
+          ).captured;
+          expect(
+            removalRecipients,
+            unorderedEquals([_otherPubkey, thirdPubkey]),
+          );
+          final recorded = verify(
+            () => mockDao.setRecipientPubkeysIfMissing(
+              id: priorReactionId,
+              ownerPubkey: _ownerPubkey,
+              conversationId: _conversationId,
+              recipientPubkeys: captureAny(named: 'recipientPubkeys'),
+            ),
+          ).captured;
+          expect(
+            jsonDecode(recorded.single as String) as List<dynamic>,
+            unorderedEquals([_otherPubkey, thirdPubkey]),
+          );
+        },
+      );
+    });
+
+    test(
+      'publish still sends a reaction it can prove is a 1:1, and reports, when '
+      'the conversation fails to read',
+      () async {
+        final mockConversationsDao = _MockConversationsDao();
+        when(
+          () => mockConversationsDao.getConversation(
+            _conversationId,
+            ownerPubkey: _ownerPubkey,
+          ),
+        ).thenThrow(StateError('database is locked'));
+        final rumor = reactionRumor();
+        when(
+          () => mockMessageService.buildRumor(
+            recipientPubkey: _otherPubkey,
+            content: '🔥',
+            eventKind: EventKind.reaction,
+            additionalTags: any(named: 'additionalTags'),
+          ),
+        ).thenReturn(rumor);
+        when(
+          () => mockDao.insertOwnReactionSuperseding(
+            placeholderId: any(named: 'placeholderId'),
+            conversationId: any(named: 'conversationId'),
+            targetMessageId: any(named: 'targetMessageId'),
+            targetMessageAuthor: any(named: 'targetMessageAuthor'),
+            reactorPubkey: any(named: 'reactorPubkey'),
+            emoji: any(named: 'emoji'),
+            createdAt: any(named: 'createdAt'),
+            ownerPubkey: any(named: 'ownerPubkey'),
+            rumorEventJson: any(named: 'rumorEventJson'),
+            recipientPubkeys: any(named: 'recipientPubkeys'),
+          ),
+        ).thenAnswer((_) async => <String>[]);
+        when(
+          () => mockMessageService.sendRumor(
+            rumorEvent: rumor,
+            recipientPubkey: _otherPubkey,
+            awaitRecipientOk: any(named: 'awaitRecipientOk'),
+          ),
+        ).thenAnswer(
+          (_) async => NIP17SendResult.success(
+            rumorEventId: rumor.id,
+            messageEventId: _giftWrapId,
+            recipientPubkey: _otherPubkey,
+          ),
+        );
+        when(
+          () => mockDao.swapPlaceholderId(
+            placeholderId: any(named: 'placeholderId'),
+            realRumorId: any(named: 'realRumorId'),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer((_) async {});
+
+        final result =
+            await createRepository(
+              conversationsDao: mockConversationsDao,
+            ).publish(
+              conversationId: _conversationId,
+              targetMessageId: _targetMessageId,
+              targetMessageAuthor: _otherPubkey,
+              emoji: '🔥',
+            );
+
+        expect(result.success, isTrue);
+        expect(
+          reporterSites,
+          equals([
+            DmReactionsRepositoryReportableSites.wrapRecipientsConversationRead,
+          ]),
+        );
+        verify(
+          () => mockMessageService.sendRumor(
+            rumorEvent: rumor,
+            recipientPubkey: _otherPubkey,
+            awaitRecipientOk: true,
+          ),
+        ).called(1);
+      },
+    );
+
+    test(
+      'publish queues the reaction for the account that started it when the '
+      'session changes while its recipients are worked out',
+      () async {
+        const nextAccount =
+            '2222222222222222222222222222222222222222222222222222222222222222';
+        final mockConversationsDao = _MockConversationsDao();
+        late final DmReactionsRepository repository;
+        when(
+          () => mockConversationsDao.getConversation(
+            _conversationId,
+            ownerPubkey: _ownerPubkey,
+          ),
+        ).thenAnswer((_) async {
+          repository.setCredentials(
+            userPubkey: nextAccount,
+            messageService: mockMessageService,
+          );
+          return null;
+        });
+        final rumor = reactionRumor();
+        when(
+          () => mockMessageService.buildRumor(
+            recipientPubkey: _otherPubkey,
+            content: '🔥',
+            eventKind: EventKind.reaction,
+            additionalTags: any(named: 'additionalTags'),
+          ),
+        ).thenReturn(rumor);
+        when(
+          () => mockDao.insertOwnReactionSuperseding(
+            placeholderId: any(named: 'placeholderId'),
+            conversationId: any(named: 'conversationId'),
+            targetMessageId: any(named: 'targetMessageId'),
+            targetMessageAuthor: any(named: 'targetMessageAuthor'),
+            reactorPubkey: any(named: 'reactorPubkey'),
+            emoji: any(named: 'emoji'),
+            createdAt: any(named: 'createdAt'),
+            ownerPubkey: any(named: 'ownerPubkey'),
+            rumorEventJson: any(named: 'rumorEventJson'),
+            recipientPubkeys: any(named: 'recipientPubkeys'),
+          ),
+        ).thenAnswer((_) async => <String>[]);
+        when(
+          () => mockMessageService.sendRumor(
+            rumorEvent: rumor,
+            recipientPubkey: _otherPubkey,
+            awaitRecipientOk: any(named: 'awaitRecipientOk'),
+          ),
+        ).thenAnswer((_) async => const NIP17SendResult.failure('offline'));
+        when(
+          () => mockDao.markFailed(
+            placeholderId: any(named: 'placeholderId'),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer((_) async {});
+
+        repository = createRepository(conversationsDao: mockConversationsDao);
+        await repository.publish(
+          conversationId: _conversationId,
+          targetMessageId: _targetMessageId,
+          targetMessageAuthor: _otherPubkey,
+          emoji: '🔥',
+        );
+
+        verify(
+          () => mockDao.insertOwnReactionSuperseding(
+            placeholderId: rumor.id,
+            conversationId: _conversationId,
+            targetMessageId: _targetMessageId,
+            targetMessageAuthor: _otherPubkey,
+            reactorPubkey: _ownerPubkey,
+            emoji: '🔥',
+            createdAt: rumor.createdAt,
+            ownerPubkey: _ownerPubkey,
+            rumorEventJson: any(named: 'rumorEventJson'),
+            recipientPubkeys: jsonEncode([_otherPubkey]),
+          ),
+        ).called(1);
+        verify(
+          () => mockDao.markFailed(
+            placeholderId: rumor.id,
+            ownerPubkey: _ownerPubkey,
+          ),
+        ).called(1);
+      },
+    );
+
+    /// Stubs every write a send outcome can make on the queue row.
+    void stubSettleWrites() {
+      when(
+        () => mockDao.swapPlaceholderId(
+          placeholderId: any(named: 'placeholderId'),
+          realRumorId: any(named: 'realRumorId'),
+          ownerPubkey: any(named: 'ownerPubkey'),
+        ),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockDao.markBlocked(
+          id: any(named: 'id'),
+          ownerPubkey: any(named: 'ownerPubkey'),
+        ),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockDao.markPending(
+          id: any(named: 'id'),
+          ownerPubkey: any(named: 'ownerPubkey'),
+        ),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockDao.markFailed(
+          placeholderId: any(named: 'placeholderId'),
+          ownerPubkey: any(named: 'ownerPubkey'),
+        ),
+      ).thenAnswer((_) async {});
+    }
+
+    NIP17SendResult confirmedSend(Event rumor) => NIP17SendResult.success(
+      rumorEventId: rumor.id,
+      messageEventId: _giftWrapId,
+      recipientPubkey: _otherPubkey,
+    );
+
+    void verifySent(Event rumor) => verify(
+      () => mockDao.swapPlaceholderId(
+        placeholderId: rumor.id,
+        realRumorId: rumor.id,
+        ownerPubkey: _ownerPubkey,
+      ),
+    ).called(1);
+
+    void verifyBlocked(Event rumor) => verify(
+      () => mockDao.markBlocked(id: rumor.id, ownerPubkey: _ownerPubkey),
+    ).called(1);
+
+    for (final (outcome, sendResult, verifyWrite)
+        in <(String, NIP17SendResult Function(Event), void Function(Event))>[
+          ('a confirmed send', confirmedSend, verifySent),
+          (
+            'a refused send',
+            (_) => const NIP17SendResult.blocked('policy refused'),
+            verifyBlocked,
+          ),
+          (
+            'an unconfirmed send',
+            (_) => const NIP17SendResult.failure(
+              'no relay confirmed it',
+              retryablePending: true,
+            ),
+            (rumor) => verify(
+              () =>
+                  mockDao.markPending(id: rumor.id, ownerPubkey: _ownerPubkey),
+            ).called(1),
+          ),
+        ]) {
+      test(
+        'publish settles the row of the account that started it after '
+        '$outcome, when the session changes while its recipients are worked '
+        'out',
+        () async {
+          final nextAccount = '2' * 64;
+          final mockConversationsDao = _MockConversationsDao();
+          late final DmReactionsRepository repository;
+          when(
+            () => mockConversationsDao.getConversation(
+              _conversationId,
+              ownerPubkey: _ownerPubkey,
+            ),
+          ).thenAnswer((_) async {
+            repository.setCredentials(
+              userPubkey: nextAccount,
+              messageService: mockMessageService,
+            );
+            return null;
+          });
+          final rumor = reactionRumor();
+          when(
+            () => mockMessageService.buildRumor(
+              recipientPubkey: _otherPubkey,
+              content: '🔥',
+              eventKind: EventKind.reaction,
+              additionalTags: any(named: 'additionalTags'),
+            ),
+          ).thenReturn(rumor);
+          when(
+            () => mockDao.insertOwnReactionSuperseding(
+              placeholderId: any(named: 'placeholderId'),
+              conversationId: any(named: 'conversationId'),
+              targetMessageId: any(named: 'targetMessageId'),
+              targetMessageAuthor: any(named: 'targetMessageAuthor'),
+              reactorPubkey: any(named: 'reactorPubkey'),
+              emoji: any(named: 'emoji'),
+              createdAt: any(named: 'createdAt'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+              rumorEventJson: any(named: 'rumorEventJson'),
+              recipientPubkeys: any(named: 'recipientPubkeys'),
+            ),
+          ).thenAnswer((_) async => <String>[]);
+          when(
+            () => mockMessageService.sendRumor(
+              rumorEvent: rumor,
+              recipientPubkey: _otherPubkey,
+              awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            ),
+          ).thenAnswer((_) async => sendResult(rumor));
+          stubSettleWrites();
+
+          repository = createRepository(conversationsDao: mockConversationsDao);
+          await repository.publish(
+            conversationId: _conversationId,
+            targetMessageId: _targetMessageId,
+            targetMessageAuthor: _otherPubkey,
+            emoji: '🔥',
+          );
+
+          verifyWrite(rumor);
+        },
+      );
+    }
+
     test('publish marks failed when send returns failure', () async {
       final rumor = reactionRumor();
       when(
@@ -547,6 +1228,7 @@ void main() {
           createdAt: rumor.createdAt,
           ownerPubkey: _ownerPubkey,
           rumorEventJson: jsonEncode(rumor.toJson()),
+          recipientPubkeys: jsonEncode([_otherPubkey]),
         ),
       ).thenAnswer((_) async => <String>[]);
       when(
@@ -605,6 +1287,7 @@ void main() {
             createdAt: rumor.createdAt,
             ownerPubkey: _ownerPubkey,
             rumorEventJson: jsonEncode(rumor.toJson()),
+            recipientPubkeys: jsonEncode([_otherPubkey]),
           ),
         ).thenAnswer((_) async => <String>[]);
         when(
@@ -671,6 +1354,7 @@ void main() {
             createdAt: rumor.createdAt,
             ownerPubkey: _ownerPubkey,
             rumorEventJson: jsonEncode(rumor.toJson()),
+            recipientPubkeys: jsonEncode([_otherPubkey]),
           ),
         ).thenAnswer((_) async => <String>[]);
         // A thrown send (not a returned NIP17SendFailure) must still flip the
@@ -732,6 +1416,7 @@ void main() {
             createdAt: rumor.createdAt,
             ownerPubkey: _ownerPubkey,
             rumorEventJson: jsonEncode(rumor.toJson()),
+            recipientPubkeys: jsonEncode([_otherPubkey]),
           ),
         ).thenAnswer((_) async => <String>[]);
         // Frame written, no relay OK within the window (no explicit rejection).
@@ -797,6 +1482,7 @@ void main() {
           createdAt: any(named: 'createdAt'),
           ownerPubkey: any(named: 'ownerPubkey'),
           rumorEventJson: any(named: 'rumorEventJson'),
+          recipientPubkeys: any(named: 'recipientPubkeys'),
         ),
       ).thenThrow(StateError('insert failed'));
 
@@ -817,9 +1503,10 @@ void main() {
 
     test('retry replays stored rumor and clears failure on success', () async {
       final rumor = reactionRumor();
-      when(
-        () => mockDao.getRumorJson(id: rumor.id, ownerPubkey: _ownerPubkey),
-      ).thenAnswer((_) async => jsonEncode(rumor.toJson()));
+      stubQueuedRow(
+        rumorEventJson: jsonEncode(rumor.toJson()),
+        publishStatus: 'failed',
+      );
       when(
         () => mockDao.markPending(id: rumor.id, ownerPubkey: _ownerPubkey),
       ).thenAnswer((_) async {});
@@ -863,13 +1550,8 @@ void main() {
       ).called(1);
     });
 
-    test('retry marks failed when no stored rumor exists', () async {
-      when(
-        () => mockDao.getRumorJson(
-          id: _reactionRumorId,
-          ownerPubkey: _ownerPubkey,
-        ),
-      ).thenAnswer((_) async => null);
+    test('retry sends nothing when its row holds no rumor', () async {
+      stubQueuedRow(publishStatus: 'sent');
 
       final repository = createRepository();
       final result = await repository.retry(
@@ -879,13 +1561,356 @@ void main() {
 
       expect(result.success, isFalse);
       expect(result.errorMessage, contains('No stored rumor'));
+      verifyNever(
+        () => mockDao.markPending(
+          id: any(named: 'id'),
+          ownerPubkey: any(named: 'ownerPubkey'),
+        ),
+      );
+      verifyNever(
+        () => mockMessageService.sendRumor(
+          rumorEvent: any(named: 'rumorEvent'),
+          recipientPubkey: any(named: 'recipientPubkey'),
+          awaitRecipientOk: any(named: 'awaitRecipientOk'),
+        ),
+      );
     });
+
+    test(
+      'retry settles the row of the account that started it when the session '
+      'changes during the send',
+      () async {
+        const nextAccount =
+            '2222222222222222222222222222222222222222222222222222222222222222';
+        final rumor = reactionRumor();
+        stubQueuedRow(
+          rumorEventJson: jsonEncode(rumor.toJson()),
+          publishStatus: 'failed',
+        );
+        when(
+          () => mockDao.markPending(
+            id: any(named: 'id'),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer((_) async {});
+        when(
+          () => mockDao.markFailed(
+            placeholderId: any(named: 'placeholderId'),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer((_) async {});
+        final repository = createRepository();
+        when(
+          () => mockMessageService.sendRumor(
+            rumorEvent: any(named: 'rumorEvent'),
+            recipientPubkey: _otherPubkey,
+            awaitRecipientOk: any(named: 'awaitRecipientOk'),
+          ),
+        ).thenAnswer((_) async {
+          repository.setCredentials(
+            userPubkey: nextAccount,
+            messageService: mockMessageService,
+          );
+          return const NIP17SendResult.failure('relay down');
+        });
+
+        await repository.retry(
+          rumorId: rumor.id,
+          targetMessageAuthor: _otherPubkey,
+        );
+
+        verify(
+          () => mockDao.markFailed(
+            placeholderId: rumor.id,
+            ownerPubkey: _ownerPubkey,
+          ),
+        ).called(1);
+      },
+    );
+
+    for (final (outcome, sendResult, verifyWrite)
+        in <(String, NIP17SendResult Function(Event), void Function(Event))>[
+          ('a confirmed send', confirmedSend, verifySent),
+          (
+            'a refused send',
+            (_) => const NIP17SendResult.blocked('policy refused'),
+            verifyBlocked,
+          ),
+          (
+            'a rejected send',
+            (_) => const NIP17SendResult.failure('relay down'),
+            (rumor) => verify(
+              () => mockDao.markFailed(
+                placeholderId: rumor.id,
+                ownerPubkey: _ownerPubkey,
+              ),
+            ).called(1),
+          ),
+        ]) {
+      test(
+        'retry settles the row of the account that started it after '
+        '$outcome, when the session changes while its row is read',
+        () async {
+          final nextAccount = '2' * 64;
+          final rumor = reactionRumor();
+          final repository = createRepository();
+          when(
+            () => mockDao.getById(id: rumor.id, ownerPubkey: _ownerPubkey),
+          ).thenAnswer((_) async {
+            repository.setCredentials(
+              userPubkey: nextAccount,
+              messageService: mockMessageService,
+            );
+            return makeRow(
+              publishStatus: 'failed',
+              rumorEventJson: jsonEncode(rumor.toJson()),
+              recipientPubkeys: jsonEncode([_otherPubkey]),
+            );
+          });
+          when(
+            () => mockMessageService.sendRumor(
+              rumorEvent: any(named: 'rumorEvent'),
+              recipientPubkey: _otherPubkey,
+              awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            ),
+          ).thenAnswer((_) async => sendResult(rumor));
+          stubSettleWrites();
+
+          await repository.retry(
+            rumorId: rumor.id,
+            targetMessageAuthor: _otherPubkey,
+          );
+
+          verify(
+            () => mockDao.markPending(id: rumor.id, ownerPubkey: _ownerPubkey),
+          ).called(1);
+          verifyWrite(rumor);
+        },
+      );
+    }
+
+    test(
+      'removeOwn records the removal for the account that started it when the '
+      'session changes while its row is read',
+      () async {
+        const nextAccount =
+            '2222222222222222222222222222222222222222222222222222222222222222';
+        final deletionRumor = reactionRumor(
+          id: _giftWrapId,
+          content: '',
+          kind: EventKind.eventDeletion,
+          tags: [
+            ['e', _reactionRumorId],
+            ['k', EventKind.reaction.toString()],
+          ],
+        );
+        final repository = createRepository();
+        when(
+          () =>
+              mockDao.getById(id: _reactionRumorId, ownerPubkey: _ownerPubkey),
+        ).thenAnswer((_) async {
+          repository.setCredentials(
+            userPubkey: nextAccount,
+            messageService: mockMessageService,
+          );
+          return makeRow(
+            publishStatus: 'sent',
+            recipientPubkeys: jsonEncode([_otherPubkey]),
+          );
+        });
+        when(
+          () => mockMessageService.buildRumor(
+            recipientPubkey: _otherPubkey,
+            content: '',
+            eventKind: EventKind.eventDeletion,
+            additionalTags: any(named: 'additionalTags'),
+          ),
+        ).thenReturn(deletionRumor);
+        when(
+          () => mockDao.markOwnDeletionPending(
+            id: any(named: 'id'),
+            ownerPubkey: any(named: 'ownerPubkey'),
+            deletionRumorJson: any(named: 'deletionRumorJson'),
+          ),
+        ).thenAnswer((_) async {});
+        when(
+          () => mockMessageService.sendRumor(
+            rumorEvent: deletionRumor,
+            recipientPubkey: _otherPubkey,
+            awaitRecipientOk: any(named: 'awaitRecipientOk'),
+          ),
+        ).thenAnswer((_) async => const NIP17SendResult.failure('offline'));
+
+        await repository.removeOwn(
+          rumorId: _reactionRumorId,
+          targetMessageAuthor: _otherPubkey,
+        );
+        await pumpEventQueue();
+
+        verify(
+          () => mockDao.markOwnDeletionPending(
+            id: _reactionRumorId,
+            ownerPubkey: _ownerPubkey,
+            deletionRumorJson: any(named: 'deletionRumorJson'),
+          ),
+        ).called(1);
+      },
+    );
+
+    test(
+      'retryDeletion settles the row of the account that started it when the '
+      'session changes during the send',
+      () async {
+        const nextAccount =
+            '2222222222222222222222222222222222222222222222222222222222222222';
+        final deletionRumor = reactionRumor(
+          id: _giftWrapId,
+          content: '',
+          kind: EventKind.eventDeletion,
+          tags: [
+            ['e', _reactionRumorId],
+            ['k', EventKind.reaction.toString()],
+          ],
+        );
+        when(
+          () =>
+              mockDao.getById(id: _reactionRumorId, ownerPubkey: _ownerPubkey),
+        ).thenAnswer(
+          (_) async => makeRow(
+            isDeleted: true,
+            publishStatus: 'deletion_pending',
+            rumorEventJson: jsonEncode(deletionRumor.toJson()),
+            recipientPubkeys: jsonEncode([_otherPubkey]),
+          ),
+        );
+        when(
+          () => mockDao.markDeletionSent(
+            id: any(named: 'id'),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer((_) async {});
+        final repository = createRepository();
+        when(
+          () => mockMessageService.sendRumor(
+            rumorEvent: any(named: 'rumorEvent'),
+            recipientPubkey: _otherPubkey,
+            awaitRecipientOk: any(named: 'awaitRecipientOk'),
+          ),
+        ).thenAnswer((_) async {
+          repository.setCredentials(
+            userPubkey: nextAccount,
+            messageService: mockMessageService,
+          );
+          return NIP17SendResult.success(
+            rumorEventId: deletionRumor.id,
+            messageEventId: _giftWrapId,
+            recipientPubkey: _otherPubkey,
+          );
+        });
+
+        final outcome = await repository.retryDeletion(
+          rumorId: _reactionRumorId,
+          targetMessageAuthor: _otherPubkey,
+        );
+
+        expect(outcome, equals(DmReactionDeletionOutcome.sent));
+        verify(
+          () => mockDao.markDeletionSent(
+            id: _reactionRumorId,
+            ownerPubkey: _ownerPubkey,
+          ),
+        ).called(1);
+      },
+    );
+
+    test('retry sends nothing when the queue row is gone', () async {
+      final rumor = reactionRumor();
+
+      final result = await createRepository().retry(
+        rumorId: rumor.id,
+        targetMessageAuthor: _otherPubkey,
+      );
+
+      expect(result.success, isFalse);
+      expect(result.errorMessage, contains('No stored rumor'));
+      verifyNever(
+        () => mockDao.markPending(
+          id: any(named: 'id'),
+          ownerPubkey: any(named: 'ownerPubkey'),
+        ),
+      );
+      verifyNever(
+        () => mockMessageService.sendRumor(
+          rumorEvent: any(named: 'rumorEvent'),
+          recipientPubkey: any(named: 'recipientPubkey'),
+          awaitRecipientOk: any(named: 'awaitRecipientOk'),
+        ),
+      );
+    });
+
+    test(
+      'retry still sends, and reports, when recording the resolved recipients '
+      'fails',
+      () async {
+        final rumor = reactionRumor();
+        final rumorJson = jsonEncode(rumor.toJson());
+        when(
+          () => mockDao.getById(id: rumor.id, ownerPubkey: _ownerPubkey),
+        ).thenAnswer(
+          (_) async =>
+              makeRow(publishStatus: 'failed', rumorEventJson: rumorJson),
+        );
+        when(
+          () => mockDao.setRecipientPubkeysIfMissing(
+            id: any(named: 'id'),
+            ownerPubkey: any(named: 'ownerPubkey'),
+            conversationId: any(named: 'conversationId'),
+            recipientPubkeys: any(named: 'recipientPubkeys'),
+          ),
+        ).thenThrow(StateError('write failed'));
+        when(
+          () => mockDao.markPending(id: rumor.id, ownerPubkey: _ownerPubkey),
+        ).thenAnswer((_) async {});
+        when(
+          () => mockMessageService.sendRumor(
+            rumorEvent: any(named: 'rumorEvent'),
+            recipientPubkey: _otherPubkey,
+            awaitRecipientOk: any(named: 'awaitRecipientOk'),
+          ),
+        ).thenAnswer(
+          (_) async => NIP17SendResult.success(
+            rumorEventId: rumor.id,
+            messageEventId: _giftWrapId,
+            recipientPubkey: _otherPubkey,
+          ),
+        );
+        when(
+          () => mockDao.swapPlaceholderId(
+            placeholderId: rumor.id,
+            realRumorId: rumor.id,
+            ownerPubkey: _ownerPubkey,
+          ),
+        ).thenAnswer((_) async {});
+
+        final result = await createRepository().retry(
+          rumorId: rumor.id,
+          targetMessageAuthor: _otherPubkey,
+        );
+
+        expect(result.success, isTrue);
+        expect(
+          reporterSites,
+          equals([DmReactionsRepositoryReportableSites.wrapRecipientsStore]),
+        );
+      },
+    );
 
     test('retry marks failed when send returns failure', () async {
       final rumor = reactionRumor();
-      when(
-        () => mockDao.getRumorJson(id: rumor.id, ownerPubkey: _ownerPubkey),
-      ).thenAnswer((_) async => jsonEncode(rumor.toJson()));
+      stubQueuedRow(
+        rumorEventJson: jsonEncode(rumor.toJson()),
+        publishStatus: 'failed',
+      );
       when(
         () => mockDao.markPending(id: rumor.id, ownerPubkey: _ownerPubkey),
       ).thenAnswer((_) async {});
@@ -924,9 +1949,10 @@ void main() {
       'send',
       () async {
         final rumor = reactionRumor();
-        when(
-          () => mockDao.getRumorJson(id: rumor.id, ownerPubkey: _ownerPubkey),
-        ).thenAnswer((_) async => jsonEncode(rumor.toJson()));
+        stubQueuedRow(
+          rumorEventJson: jsonEncode(rumor.toJson()),
+          publishStatus: 'failed',
+        );
         when(
           () => mockDao.markPending(id: rumor.id, ownerPubkey: _ownerPubkey),
         ).thenAnswer((_) async {});
@@ -952,6 +1978,13 @@ void main() {
         // The pre-send markPending stands; an unconfirmed retry must not flip
         // the row to 'failed' (the sweep keeps re-driving it).
         expect(result.success, isFalse);
+        verify(
+          () => mockMessageService.sendRumor(
+            rumorEvent: any(named: 'rumorEvent'),
+            recipientPubkey: _otherPubkey,
+            awaitRecipientOk: true,
+          ),
+        ).called(1);
         verifyNever(
           () => mockDao.markFailed(
             placeholderId: any(named: 'placeholderId'),
@@ -1008,6 +2041,30 @@ void main() {
       );
     });
 
+    test('removeOwn does nothing when there is no row to remove', () async {
+      await createRepository().removeOwn(
+        rumorId: _reactionRumorId,
+        targetMessageAuthor: _otherPubkey,
+      );
+      await pumpEventQueue();
+
+      verifyNever(
+        () => mockDao.markOwnDeletionPending(
+          id: any(named: 'id'),
+          ownerPubkey: any(named: 'ownerPubkey'),
+          deletionRumorJson: any(named: 'deletionRumorJson'),
+        ),
+      );
+      verifyNever(
+        () => mockMessageService.sendRumor(
+          rumorEvent: any(named: 'rumorEvent'),
+          recipientPubkey: any(named: 'recipientPubkey'),
+          awaitRecipientOk: any(named: 'awaitRecipientOk'),
+        ),
+      );
+      expect(reporterSites, isEmpty);
+    });
+
     test(
       'removeOwn durably records the kind-5 deletion and publishes it',
       () async {
@@ -1020,6 +2077,7 @@ void main() {
             ['k', EventKind.reaction.toString()],
           ],
         );
+        stubQueuedRow(publishStatus: 'sent');
         when(
           () => mockDao.markOwnDeletionPending(
             id: _reactionRumorId,
@@ -1086,6 +2144,7 @@ void main() {
           ['k', EventKind.reaction.toString()],
         ],
       );
+      stubQueuedRow(publishStatus: 'sent');
       when(
         () => mockDao.markOwnDeletionPending(
           id: _reactionRumorId,
@@ -1160,6 +2219,7 @@ void main() {
             isDeleted: true,
             publishStatus: 'deletion_pending',
             rumorEventJson: jsonEncode(deletionRumor.toJson()),
+            recipientPubkeys: jsonEncode([_otherPubkey]),
           ),
         );
         when(
@@ -1267,6 +2327,7 @@ void main() {
             isDeleted: true,
             publishStatus: 'deletion_refused',
             rumorEventJson: jsonEncode(deletionRumor.toJson()),
+            recipientPubkeys: jsonEncode([_otherPubkey]),
           ),
         );
         when(
@@ -1334,6 +2395,7 @@ void main() {
             isDeleted: true,
             publishStatus: 'deletion_pending',
             rumorEventJson: jsonEncode(deletionRumor.toJson()),
+            recipientPubkeys: jsonEncode([_otherPubkey]),
           ),
         );
         when(
@@ -1402,6 +2464,7 @@ void main() {
             isDeleted: true,
             publishStatus: 'deletion_pending',
             rumorEventJson: jsonEncode(deletionRumor.toJson()),
+            recipientPubkeys: jsonEncode([_otherPubkey]),
           ),
         );
         when(
@@ -1848,6 +2911,7 @@ void main() {
             createdAt: any(named: 'createdAt'),
             ownerPubkey: any(named: 'ownerPubkey'),
             rumorEventJson: any(named: 'rumorEventJson'),
+            recipientPubkeys: any(named: 'recipientPubkeys'),
           ),
         ).thenAnswer((_) async => <String>[]);
         when(
@@ -1910,27 +2974,6 @@ void main() {
       test(
         'a mixed confirmed and policy-blocked deletion is recorded refused',
         () async {
-          final mockConversationsDao = _MockConversationsDao();
-          when(
-            () => mockConversationsDao.getConversation(
-              groupConversationId,
-              ownerPubkey: _ownerPubkey,
-            ),
-          ).thenAnswer(
-            (_) async => ConversationRow(
-              id: groupConversationId,
-              participantPubkeys: jsonEncode([
-                _ownerPubkey,
-                _otherPubkey,
-                thirdPubkey,
-              ]),
-              isGroup: true,
-              isRead: true,
-              currentUserHasSent: true,
-              createdAt: 1700000000,
-              ownerPubkey: _ownerPubkey,
-            ),
-          );
           final deletionRumor = reactionRumor(
             id: _giftWrapId,
             content: '',
@@ -1951,6 +2994,7 @@ void main() {
               isDeleted: true,
               publishStatus: 'deletion_pending',
               rumorEventJson: jsonEncode(deletionRumor.toJson()),
+              recipientPubkeys: jsonEncode([_otherPubkey, thirdPubkey]),
             ),
           );
           when(
@@ -1982,13 +3026,10 @@ void main() {
             ),
           ).thenAnswer((_) async {});
 
-          final outcome =
-              await createRepository(
-                conversationsDao: mockConversationsDao,
-              ).retryDeletion(
-                rumorId: _reactionRumorId,
-                targetMessageAuthor: _otherPubkey,
-              );
+          final outcome = await createRepository().retryDeletion(
+            rumorId: _reactionRumorId,
+            targetMessageAuthor: _otherPubkey,
+          );
 
           expect(outcome, DmReactionDeletionOutcome.refused);
           verify(
@@ -2044,6 +3085,7 @@ void main() {
               createdAt: any(named: 'createdAt'),
               ownerPubkey: any(named: 'ownerPubkey'),
               rumorEventJson: any(named: 'rumorEventJson'),
+              recipientPubkeys: any(named: 'recipientPubkeys'),
             ),
           ).thenAnswer((_) async => <String>[]);
           when(
@@ -2097,6 +3139,146 @@ void main() {
       );
 
       test(
+        'publish holds a group reaction, and reports the failure, when the '
+        'conversation fails to read',
+        () async {
+          final mockConversationsDao = _MockConversationsDao();
+          when(
+            () => mockConversationsDao.getConversation(
+              groupConversationId,
+              ownerPubkey: _ownerPubkey,
+            ),
+          ).thenThrow(StateError('database is locked'));
+          final rumor = reactionRumor();
+          when(
+            () => mockMessageService.buildRumor(
+              recipientPubkey: _otherPubkey,
+              content: '🔥',
+              eventKind: EventKind.reaction,
+              additionalTags: any(named: 'additionalTags'),
+            ),
+          ).thenReturn(rumor);
+          when(
+            () => mockDao.insertOwnReactionSuperseding(
+              placeholderId: any(named: 'placeholderId'),
+              conversationId: any(named: 'conversationId'),
+              targetMessageId: any(named: 'targetMessageId'),
+              targetMessageAuthor: any(named: 'targetMessageAuthor'),
+              reactorPubkey: any(named: 'reactorPubkey'),
+              emoji: any(named: 'emoji'),
+              createdAt: any(named: 'createdAt'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+              rumorEventJson: any(named: 'rumorEventJson'),
+              recipientPubkeys: any(named: 'recipientPubkeys'),
+            ),
+          ).thenAnswer((_) async => <String>[]);
+          when(
+            () => mockDao.markFailed(
+              placeholderId: any(named: 'placeholderId'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async {});
+
+          final result =
+              await createRepository(
+                conversationsDao: mockConversationsDao,
+              ).publish(
+                conversationId: groupConversationId,
+                targetMessageId: _targetMessageId,
+                targetMessageAuthor: _otherPubkey,
+                emoji: '🔥',
+              );
+
+          expect(result.success, isFalse);
+          expect(result.optimisticInsertSucceeded, isTrue);
+          expect(
+            reporterSites,
+            equals([
+              DmReactionsRepositoryReportableSites
+                  .wrapRecipientsConversationRead,
+            ]),
+          );
+          verifyNever(
+            () => mockMessageService.sendRumor(
+              rumorEvent: any(named: 'rumorEvent'),
+              recipientPubkey: any(named: 'recipientPubkey'),
+              awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            ),
+          );
+        },
+      );
+
+      test(
+        'publish holds a group reaction, and reports the failure, when the '
+        'reacted message fails to read',
+        () async {
+          final mockMessagesDao = _MockDirectMessagesDao();
+          when(
+            () => mockMessagesDao.getMessageById(
+              _targetMessageId,
+              ownerPubkey: _ownerPubkey,
+            ),
+          ).thenThrow(StateError('database is locked'));
+          final rumor = reactionRumor();
+          when(
+            () => mockMessageService.buildRumor(
+              recipientPubkey: _otherPubkey,
+              content: '🔥',
+              eventKind: EventKind.reaction,
+              additionalTags: any(named: 'additionalTags'),
+            ),
+          ).thenReturn(rumor);
+          when(
+            () => mockDao.insertOwnReactionSuperseding(
+              placeholderId: any(named: 'placeholderId'),
+              conversationId: any(named: 'conversationId'),
+              targetMessageId: any(named: 'targetMessageId'),
+              targetMessageAuthor: any(named: 'targetMessageAuthor'),
+              reactorPubkey: any(named: 'reactorPubkey'),
+              emoji: any(named: 'emoji'),
+              createdAt: any(named: 'createdAt'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+              rumorEventJson: any(named: 'rumorEventJson'),
+              recipientPubkeys: any(named: 'recipientPubkeys'),
+            ),
+          ).thenAnswer((_) async => <String>[]);
+          when(
+            () => mockDao.markFailed(
+              placeholderId: any(named: 'placeholderId'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async {});
+
+          final result =
+              await createRepository(
+                directMessagesDao: mockMessagesDao,
+              ).publish(
+                conversationId: groupConversationId,
+                targetMessageId: _targetMessageId,
+                targetMessageAuthor: _otherPubkey,
+                emoji: '🔥',
+              );
+
+          expect(result.success, isFalse);
+          expect(result.optimisticInsertSucceeded, isTrue);
+          expect(
+            reporterSites,
+            equals([
+              DmReactionsRepositoryReportableSites
+                  .wrapRecipientsTargetMessageRead,
+            ]),
+          );
+          verifyNever(
+            () => mockMessageService.sendRumor(
+              rumorEvent: any(named: 'rumorEvent'),
+              recipientPubkey: any(named: 'recipientPubkey'),
+              awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            ),
+          );
+        },
+      );
+
+      test(
         'publish does NOT mark a group reaction sent on PARTIAL fan-out — one '
         'member confirming while another fails must stay retryable, never '
         'swapped to sent (which would clear the rumor and strand the miss)',
@@ -2142,6 +3324,7 @@ void main() {
               createdAt: any(named: 'createdAt'),
               ownerPubkey: any(named: 'ownerPubkey'),
               rumorEventJson: any(named: 'rumorEventJson'),
+              recipientPubkeys: any(named: 'recipientPubkeys'),
             ),
           ).thenAnswer((_) async => <String>[]);
           // Member A confirms; member B hard-fails.
@@ -2352,6 +3535,7 @@ void main() {
           createdAt: rumor.createdAt,
           ownerPubkey: _ownerPubkey,
           rumorEventJson: jsonEncode(rumor.toJson()),
+          recipientPubkeys: jsonEncode([_otherPubkey]),
         ),
       ).thenAnswer((_) async => superseded);
       when(
@@ -2505,6 +3689,7 @@ void main() {
             ['k', EventKind.reaction.toString()],
           ],
         );
+        stubQueuedRow(publishStatus: 'sent');
         when(
           () => mockDao.markOwnDeletionPending(
             id: _reactionRumorId,
@@ -2773,9 +3958,10 @@ void main() {
         'inbox is unreadable',
         () async {
           final rumor = reactionRumor();
-          when(
-            () => mockDao.getRumorJson(id: rumor.id, ownerPubkey: _ownerPubkey),
-          ).thenAnswer((_) async => jsonEncode(rumor.toJson()));
+          stubQueuedRow(
+            rumorEventJson: jsonEncode(rumor.toJson()),
+            publishStatus: 'failed',
+          );
           when(
             () => mockDao.markPending(id: rumor.id, ownerPubkey: _ownerPubkey),
           ).thenAnswer((_) async {});
@@ -2792,6 +3978,17 @@ void main() {
           // to the same unreadable inbox, republishes to the pool, and would
           // score that OK as sent one sweep later — #7317's retry half.
           expect(result.success, isFalse);
+          verify(
+            () => mockDao.markPending(id: rumor.id, ownerPubkey: _ownerPubkey),
+          ).called(1);
+          verify(
+            () => mockMessageService.sendRumor(
+              rumorEvent: any(named: 'rumorEvent'),
+              recipientPubkey: _otherPubkey,
+              targetRelays: any(named: 'targetRelays', that: isNull),
+              awaitRecipientOk: true,
+            ),
+          ).called(1);
           verifyNever(
             () => mockDao.swapPlaceholderId(
               placeholderId: any(named: 'placeholderId'),
@@ -2813,6 +4010,7 @@ void main() {
         'unreadable, so the removal is re-driven rather than assumed seen',
         () async {
           final deletion = deletionRumor();
+          stubQueuedRow(publishStatus: 'sent');
           when(
             () => mockDao.markOwnDeletionPending(
               id: _reactionRumorId,
@@ -2875,6 +4073,7 @@ void main() {
               isDeleted: true,
               publishStatus: 'deletion_pending',
               rumorEventJson: jsonEncode(deletion.toJson()),
+              recipientPubkeys: jsonEncode([_otherPubkey]),
             ),
           );
           stubSendRumorConfirmed(deletion);
@@ -2941,6 +4140,7 @@ void main() {
               createdAt: any(named: 'createdAt'),
               ownerPubkey: any(named: 'ownerPubkey'),
               rumorEventJson: any(named: 'rumorEventJson'),
+              recipientPubkeys: any(named: 'recipientPubkeys'),
             ),
           ).thenAnswer((_) async => <String>[]);
           when(

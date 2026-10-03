@@ -823,6 +823,11 @@ void main() {
         ),
       ).thenAnswer((_) async => 0);
       when(
+        () => reactionsRepository.backfillQueuedRecipients(
+          ownerPubkey: any(named: 'ownerPubkey'),
+        ),
+      ).thenAnswer((_) async => 0);
+      when(
         () => reactionsRepository.reassignForMovedMessages(
           targetMessageIds: any(named: 'targetMessageIds'),
           toConversationId: any(named: 'toConversationId'),
@@ -1080,7 +1085,7 @@ void main() {
 
       await runHistoricalPass();
       // The historical pass moved the message but left the reaction keyed on
-      // the 1:1 it was re-parented into.
+      // the 1:1 it was re-parented into, and queued for that 1:1 alone.
       await db.dmReactionsDao.insertOwnReactionSuperseding(
         placeholderId: 'r1',
         conversationId: oneToOneId,
@@ -1091,6 +1096,7 @@ void main() {
         createdAt: 1700000004,
         ownerPubkey: _me,
         rumorEventJson: '{}',
+        recipientPubkeys: jsonEncode([_alice]),
       );
 
       await recoverViaSetCredentials();
@@ -1104,6 +1110,13 @@ void main() {
         reason:
             'the render index is (conversation_id, target_message_id), so '
             'a reaction left behind stops rendering on the moved message',
+      );
+      expect(
+        jsonDecode(reaction.recipientPubkeys!),
+        unorderedEquals([_alice, _bob]),
+        reason:
+            'a reaction still waiting to be sent goes to the group it was '
+            'moved into, not to the 1:1 it was queued in (#7880)',
       );
     });
 

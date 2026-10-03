@@ -7356,8 +7356,7 @@ class DmRepository {
   /// for a deletion.
   ///
   /// Resolved from the conversation's participant set rather than the
-  /// message's own author, which for an own message is this user. Mirrors
-  /// `DmReactionsRepository._resolveWrapRecipients`.
+  /// message's own author, which for an own message is this user.
   Future<List<String>> _deletionWrapRecipients(String conversationId) async {
     final conversation = await _conversationsDao.getConversation(
       conversationId,
@@ -9004,6 +9003,9 @@ class DmRepository {
     await _backfillConversationPreviews();
     await _purgeReactionsStrandedByRemoval();
     await _recoverGroupConversations();
+    // After recovery, so the recipients it records come from the conversations
+    // recovery has just restored. The retry sweep is not ordered after it.
+    await _backfillQueuedReactionRecipients();
   }
 
   /// Rebuilds group conversations a startup dedup pass destroyed (#8407).
@@ -9296,6 +9298,24 @@ class DmRepository {
     } on Object catch (e, stackTrace) {
       Log.error(
         'Failed to purge reactions stranded by removed conversations: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  /// Records who each queued DM reaction and removal is for (#7880).
+  ///
+  /// The reasoning is on [DmReactionsRepository.backfillQueuedRecipients].
+  Future<void> _backfillQueuedReactionRecipients() async {
+    final owner = _ownerPubkey;
+    if (owner == null) return;
+    try {
+      await _reactionsRepository?.backfillQueuedRecipients(ownerPubkey: owner);
+    } on Object catch (e, stackTrace) {
+      Log.error(
+        'Failed to record the recipients of queued DM reactions: $e',
         category: LogCategory.system,
         error: e,
         stackTrace: stackTrace,

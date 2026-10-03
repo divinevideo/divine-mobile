@@ -10916,6 +10916,17 @@ class $DmMessageReactionsTable extends DmMessageReactions
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _recipientPubkeysMeta = const VerificationMeta(
+    'recipientPubkeys',
+  );
+  @override
+  late final GeneratedColumn<String> recipientPubkeys = GeneratedColumn<String>(
+    'recipient_pubkeys',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -10930,6 +10941,7 @@ class $DmMessageReactionsTable extends DmMessageReactions
     isDeleted,
     rumorEventJson,
     publishStatus,
+    recipientPubkeys,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -11052,6 +11064,15 @@ class $DmMessageReactionsTable extends DmMessageReactions
         ),
       );
     }
+    if (data.containsKey('recipient_pubkeys')) {
+      context.handle(
+        _recipientPubkeysMeta,
+        recipientPubkeys.isAcceptableOrUnknown(
+          data['recipient_pubkeys']!,
+          _recipientPubkeysMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -11108,6 +11129,10 @@ class $DmMessageReactionsTable extends DmMessageReactions
       publishStatus: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}publish_status'],
+      ),
+      recipientPubkeys: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}recipient_pubkeys'],
       ),
     );
   }
@@ -11167,6 +11192,22 @@ class DmReactionRow extends DataClass implements Insertable<DmReactionRow> {
   /// durable delivery), `deletion_sent` (kind-5 confirmed, terminal), and
   /// `deletion_refused` (automatic retries stopped, retained for user retry).
   final String? publishStatus;
+
+  /// JSON-encoded list of the pubkeys this reaction, and its kind-5 removal,
+  /// are gift-wrapped to: normally every participant of the conversation it
+  /// was queued in except the owner. A superseded reaction that had none
+  /// records its own conversation's participants plus the replacing
+  /// reaction's recipients.
+  ///
+  /// A retry or a removal replays this set instead of re-reading
+  /// `conversations`, whose rows an account switch deletes while the queued
+  /// rows here are kept, set included (#7880). A self-wrap echo that re-files
+  /// the row under another conversation leaves the set as it is.
+  ///
+  /// NULL means the set is not established: a received reaction, a row
+  /// queued before schema v20, a row queued while its recipients could not
+  /// be established, or a row the group-recovery pass has moved.
+  final String? recipientPubkeys;
   const DmReactionRow({
     required this.id,
     required this.conversationId,
@@ -11180,6 +11221,7 @@ class DmReactionRow extends DataClass implements Insertable<DmReactionRow> {
     required this.isDeleted,
     this.rumorEventJson,
     this.publishStatus,
+    this.recipientPubkeys,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -11201,6 +11243,9 @@ class DmReactionRow extends DataClass implements Insertable<DmReactionRow> {
     }
     if (!nullToAbsent || publishStatus != null) {
       map['publish_status'] = Variable<String>(publishStatus);
+    }
+    if (!nullToAbsent || recipientPubkeys != null) {
+      map['recipient_pubkeys'] = Variable<String>(recipientPubkeys);
     }
     return map;
   }
@@ -11225,6 +11270,9 @@ class DmReactionRow extends DataClass implements Insertable<DmReactionRow> {
       publishStatus: publishStatus == null && nullToAbsent
           ? const Value.absent()
           : Value(publishStatus),
+      recipientPubkeys: recipientPubkeys == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recipientPubkeys),
     );
   }
 
@@ -11248,6 +11296,7 @@ class DmReactionRow extends DataClass implements Insertable<DmReactionRow> {
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
       rumorEventJson: serializer.fromJson<String?>(json['rumorEventJson']),
       publishStatus: serializer.fromJson<String?>(json['publishStatus']),
+      recipientPubkeys: serializer.fromJson<String?>(json['recipientPubkeys']),
     );
   }
   @override
@@ -11266,6 +11315,7 @@ class DmReactionRow extends DataClass implements Insertable<DmReactionRow> {
       'isDeleted': serializer.toJson<bool>(isDeleted),
       'rumorEventJson': serializer.toJson<String?>(rumorEventJson),
       'publishStatus': serializer.toJson<String?>(publishStatus),
+      'recipientPubkeys': serializer.toJson<String?>(recipientPubkeys),
     };
   }
 
@@ -11282,6 +11332,7 @@ class DmReactionRow extends DataClass implements Insertable<DmReactionRow> {
     bool? isDeleted,
     Value<String?> rumorEventJson = const Value.absent(),
     Value<String?> publishStatus = const Value.absent(),
+    Value<String?> recipientPubkeys = const Value.absent(),
   }) => DmReactionRow(
     id: id ?? this.id,
     conversationId: conversationId ?? this.conversationId,
@@ -11299,6 +11350,9 @@ class DmReactionRow extends DataClass implements Insertable<DmReactionRow> {
     publishStatus: publishStatus.present
         ? publishStatus.value
         : this.publishStatus,
+    recipientPubkeys: recipientPubkeys.present
+        ? recipientPubkeys.value
+        : this.recipientPubkeys,
   );
   DmReactionRow copyWithCompanion(DmMessageReactionsCompanion data) {
     return DmReactionRow(
@@ -11330,6 +11384,9 @@ class DmReactionRow extends DataClass implements Insertable<DmReactionRow> {
       publishStatus: data.publishStatus.present
           ? data.publishStatus.value
           : this.publishStatus,
+      recipientPubkeys: data.recipientPubkeys.present
+          ? data.recipientPubkeys.value
+          : this.recipientPubkeys,
     );
   }
 
@@ -11347,7 +11404,8 @@ class DmReactionRow extends DataClass implements Insertable<DmReactionRow> {
           ..write('ownerPubkey: $ownerPubkey, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('rumorEventJson: $rumorEventJson, ')
-          ..write('publishStatus: $publishStatus')
+          ..write('publishStatus: $publishStatus, ')
+          ..write('recipientPubkeys: $recipientPubkeys')
           ..write(')'))
         .toString();
   }
@@ -11366,6 +11424,7 @@ class DmReactionRow extends DataClass implements Insertable<DmReactionRow> {
     isDeleted,
     rumorEventJson,
     publishStatus,
+    recipientPubkeys,
   );
   @override
   bool operator ==(Object other) =>
@@ -11382,7 +11441,8 @@ class DmReactionRow extends DataClass implements Insertable<DmReactionRow> {
           other.ownerPubkey == this.ownerPubkey &&
           other.isDeleted == this.isDeleted &&
           other.rumorEventJson == this.rumorEventJson &&
-          other.publishStatus == this.publishStatus);
+          other.publishStatus == this.publishStatus &&
+          other.recipientPubkeys == this.recipientPubkeys);
 }
 
 class DmMessageReactionsCompanion extends UpdateCompanion<DmReactionRow> {
@@ -11398,6 +11458,7 @@ class DmMessageReactionsCompanion extends UpdateCompanion<DmReactionRow> {
   final Value<bool> isDeleted;
   final Value<String?> rumorEventJson;
   final Value<String?> publishStatus;
+  final Value<String?> recipientPubkeys;
   final Value<int> rowid;
   const DmMessageReactionsCompanion({
     this.id = const Value.absent(),
@@ -11412,6 +11473,7 @@ class DmMessageReactionsCompanion extends UpdateCompanion<DmReactionRow> {
     this.isDeleted = const Value.absent(),
     this.rumorEventJson = const Value.absent(),
     this.publishStatus = const Value.absent(),
+    this.recipientPubkeys = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   DmMessageReactionsCompanion.insert({
@@ -11427,6 +11489,7 @@ class DmMessageReactionsCompanion extends UpdateCompanion<DmReactionRow> {
     this.isDeleted = const Value.absent(),
     this.rumorEventJson = const Value.absent(),
     this.publishStatus = const Value.absent(),
+    this.recipientPubkeys = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        conversationId = Value(conversationId),
@@ -11449,6 +11512,7 @@ class DmMessageReactionsCompanion extends UpdateCompanion<DmReactionRow> {
     Expression<bool>? isDeleted,
     Expression<String>? rumorEventJson,
     Expression<String>? publishStatus,
+    Expression<String>? recipientPubkeys,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -11465,6 +11529,7 @@ class DmMessageReactionsCompanion extends UpdateCompanion<DmReactionRow> {
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (rumorEventJson != null) 'rumor_event_json': rumorEventJson,
       if (publishStatus != null) 'publish_status': publishStatus,
+      if (recipientPubkeys != null) 'recipient_pubkeys': recipientPubkeys,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -11482,6 +11547,7 @@ class DmMessageReactionsCompanion extends UpdateCompanion<DmReactionRow> {
     Value<bool>? isDeleted,
     Value<String?>? rumorEventJson,
     Value<String?>? publishStatus,
+    Value<String?>? recipientPubkeys,
     Value<int>? rowid,
   }) {
     return DmMessageReactionsCompanion(
@@ -11497,6 +11563,7 @@ class DmMessageReactionsCompanion extends UpdateCompanion<DmReactionRow> {
       isDeleted: isDeleted ?? this.isDeleted,
       rumorEventJson: rumorEventJson ?? this.rumorEventJson,
       publishStatus: publishStatus ?? this.publishStatus,
+      recipientPubkeys: recipientPubkeys ?? this.recipientPubkeys,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -11542,6 +11609,9 @@ class DmMessageReactionsCompanion extends UpdateCompanion<DmReactionRow> {
     if (publishStatus.present) {
       map['publish_status'] = Variable<String>(publishStatus.value);
     }
+    if (recipientPubkeys.present) {
+      map['recipient_pubkeys'] = Variable<String>(recipientPubkeys.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -11563,6 +11633,7 @@ class DmMessageReactionsCompanion extends UpdateCompanion<DmReactionRow> {
           ..write('isDeleted: $isDeleted, ')
           ..write('rumorEventJson: $rumorEventJson, ')
           ..write('publishStatus: $publishStatus, ')
+          ..write('recipientPubkeys: $recipientPubkeys, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -26125,6 +26196,7 @@ typedef $$DmMessageReactionsTableCreateCompanionBuilder =
       Value<bool> isDeleted,
       Value<String?> rumorEventJson,
       Value<String?> publishStatus,
+      Value<String?> recipientPubkeys,
       Value<int> rowid,
     });
 typedef $$DmMessageReactionsTableUpdateCompanionBuilder =
@@ -26141,6 +26213,7 @@ typedef $$DmMessageReactionsTableUpdateCompanionBuilder =
       Value<bool> isDeleted,
       Value<String?> rumorEventJson,
       Value<String?> publishStatus,
+      Value<String?> recipientPubkeys,
       Value<int> rowid,
     });
 
@@ -26210,6 +26283,11 @@ class $$DmMessageReactionsTableFilterComposer
 
   ColumnFilters<String> get publishStatus => $composableBuilder(
     column: $table.publishStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recipientPubkeys => $composableBuilder(
+    column: $table.recipientPubkeys,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -26282,6 +26360,11 @@ class $$DmMessageReactionsTableOrderingComposer
     column: $table.publishStatus,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get recipientPubkeys => $composableBuilder(
+    column: $table.recipientPubkeys,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$DmMessageReactionsTableAnnotationComposer
@@ -26344,6 +26427,11 @@ class $$DmMessageReactionsTableAnnotationComposer
     column: $table.publishStatus,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get recipientPubkeys => $composableBuilder(
+    column: $table.recipientPubkeys,
+    builder: (column) => column,
+  );
 }
 
 class $$DmMessageReactionsTableTableManager
@@ -26398,6 +26486,7 @@ class $$DmMessageReactionsTableTableManager
                 Value<bool> isDeleted = const Value.absent(),
                 Value<String?> rumorEventJson = const Value.absent(),
                 Value<String?> publishStatus = const Value.absent(),
+                Value<String?> recipientPubkeys = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DmMessageReactionsCompanion(
                 id: id,
@@ -26412,6 +26501,7 @@ class $$DmMessageReactionsTableTableManager
                 isDeleted: isDeleted,
                 rumorEventJson: rumorEventJson,
                 publishStatus: publishStatus,
+                recipientPubkeys: recipientPubkeys,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -26428,6 +26518,7 @@ class $$DmMessageReactionsTableTableManager
                 Value<bool> isDeleted = const Value.absent(),
                 Value<String?> rumorEventJson = const Value.absent(),
                 Value<String?> publishStatus = const Value.absent(),
+                Value<String?> recipientPubkeys = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DmMessageReactionsCompanion.insert(
                 id: id,
@@ -26442,6 +26533,7 @@ class $$DmMessageReactionsTableTableManager
                 isDeleted: isDeleted,
                 rumorEventJson: rumorEventJson,
                 publishStatus: publishStatus,
+                recipientPubkeys: recipientPubkeys,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

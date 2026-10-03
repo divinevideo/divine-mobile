@@ -138,7 +138,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 19;
+  int get schemaVersion => 20;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -245,13 +245,17 @@ class AppDatabase extends _$AppDatabase {
         // `from < 13` step above.
         await _createScheduledPostIndexes();
       }
-      // Unlike every additive step above, a removal must also check `to`:
-      // migration tests call this with `to` capped below 19 to validate an
-      // intermediate version, and every other block here runs regardless of
-      // `to` because an extra table is invisible to schema verification — a
-      // missing one is not.
+      // Migration tests validate an intermediate version by calling this with
+      // `to` capped, against that version's schema. A table created by a
+      // later step is invisible to that check; a dropped table or a column
+      // added to an existing table is not, so those steps also check `to`.
+      // No column step above is newer than v14, the oldest version
+      // migration_test.dart validates.
       if (from < 19 && to >= 19) {
         await _dropHashtagStats(m);
+      }
+      if (from < 20 && to >= 20) {
+        await _repairSchemaV20();
       }
     },
     beforeOpen: (details) async {
@@ -270,6 +274,7 @@ class AppDatabase extends _$AppDatabase {
         await _repairSchemaV11();
         await _migrateToV12OwnerScopedDmKeys();
         await _repairSchemaV14();
+        await _repairSchemaV20();
       }
 
       // Run cleanup of expired data on every app startup
@@ -403,6 +408,19 @@ class AppDatabase extends _$AppDatabase {
     await _addColumnIfMissing(
       'pending_view_events',
       'app_version',
+      'TEXT NULL',
+    );
+  }
+
+  /// Adds the gift-wrap recipient set to the DM reaction queue (#7880).
+  ///
+  /// Existing rows stay NULL: nothing on a pre-v20 row says who it was for,
+  /// and the repository establishes that before the row is sent again rather
+  /// than guessing.
+  Future<void> _repairSchemaV20() async {
+    await _addColumnIfMissing(
+      'dm_message_reactions',
+      'recipient_pubkeys',
       'TEXT NULL',
     );
   }
@@ -1145,6 +1163,7 @@ class AppDatabase extends _$AppDatabase {
           is_deleted INTEGER NOT NULL DEFAULT 0,
           rumor_event_json TEXT,
           publish_status TEXT,
+          recipient_pubkeys TEXT,
           PRIMARY KEY (id, owner_pubkey)
         )
       ''');
@@ -1587,6 +1606,7 @@ class AppDatabase extends _$AppDatabase {
         'last_read_timestamp',
       ],
       'pending_product_events': ['owner_pubkey'],
+      'dm_message_reactions': ['recipient_pubkeys'],
       'outgoing_dms': ['send_batch_id'],
       'personal_reactions': ['addressable_id'],
       'profile_statistics': ['follower_counts_updated_at'],

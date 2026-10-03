@@ -66,6 +66,11 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
   /// resurrected (flipped live, `publishStatus = 'pending'`) rather than
   /// dropped, so the re-reaction is not silently lost.
   ///
+  /// [recipientPubkeys] is the JSON-encoded gift-wrap recipient set, stored on
+  /// the row so a retry replays it instead of re-deriving it (#7880). Pass
+  /// `null` when the recipients are not known yet; on the resurrect path
+  /// above, `null` keeps the set the row already holds.
+  ///
   /// Returns the ids of the superseded prior live rows so the caller can emit
   /// NIP-09 kind-5 deletions on the wire (outside this transaction).
   Future<List<String>> insertOwnReactionSuperseding({
@@ -78,6 +83,7 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
     required int createdAt,
     required String ownerPubkey,
     required String rumorEventJson,
+    String? recipientPubkeys,
   }) {
     return transaction(() async {
       final priors =
@@ -120,6 +126,10 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
                   publishStatus: const Value('pending'),
                   rumorEventJson: Value(rumorEventJson),
                   giftWrapId: const Value(null),
+                  // An unknown set must not erase one the row already holds.
+                  recipientPubkeys: recipientPubkeys == null
+                      ? const Value.absent()
+                      : Value(recipientPubkeys),
                 ),
               );
       if (resurrected > 0) {
@@ -139,6 +149,7 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
           giftWrapId: const Value(null),
           rumorEventJson: Value(rumorEventJson),
           publishStatus: const Value('pending'),
+          recipientPubkeys: Value(recipientPubkeys),
         ),
         mode: InsertMode.insertOrIgnore,
       );
@@ -241,7 +252,11 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
   /// - **Same rumor id** (recipient + self gift-wrap, or relay replay):
   ///   resolves on the primary key `(id, owner_pubkey)` and updates the stable
   ///   fields in place. `is_deleted` is deliberately left untouched so a prior
-  ///   kind-5 removal is not resurrected by a replayed wrap.
+  ///   kind-5 removal is not resurrected by a replayed wrap. An own row still
+  ///   waiting to be sent — a reaction or its kind-5 removal — that has no
+  ///   recipient set only takes the gift-wrap id: its conversation is the one
+  ///   its recipients are later proven against, while the echo's is inferred
+  ///   from wherever the message is filed now (#7880).
   /// - **New rumor id, same `(target, reactor, owner)` tuple**: keeps the most
   ///   recent by `(created_at, id)`. If the incoming is newest it supersedes
   ///   (soft-deletes) the prior live rows and lands live; if an existing live
@@ -271,6 +286,17 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
                 ..limit(1))
               .getSingleOrNull();
       if (existing != null) {
+        if (existing.reactorPubkey == ownerPubkey &&
+            existing.rumorEventJson != null &&
+            existing.recipientPubkeys == null) {
+          await (update(dmMessageReactions)..where(
+                (t) => t.id.equals(id) & t.ownerPubkey.equals(ownerPubkey),
+              ))
+              .write(
+                DmMessageReactionsCompanion(giftWrapId: Value(giftWrapId)),
+              );
+          return;
+        }
         // Same rumor id: update stable fields in place, never `is_deleted`.
         await into(dmMessageReactions).insertOnConflictUpdate(
           DmMessageReactionsCompanion.insert(
@@ -482,17 +508,59 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
     return (await query.get()).isNotEmpty;
   }
 
-  /// Return the stored rumor JSON for a pending/failed outgoing row, or
-  /// `null` if no row matches or the row has no stored rumor.
-  Future<String?> getRumorJson({
+  /// Store [recipientPubkeys] on a row that has none yet.
+  ///
+  /// Never replaces a stored set: a later resolution must not narrow or widen
+  /// what the row was queued with. That includes a stored value the
+  /// repository cannot use, which only corruption produces; such a row is
+  /// resolved again on every attempt instead. [conversationId] is the
+  /// conversation the set was worked out from, and the write is skipped when
+  /// the row has since moved to another one (for example by
+  /// [reassignForTargetMessages]), where that set would be wrong.
+  ///
+  /// Returns the number of rows written — `0` when the row already has
+  /// recipients, has left [conversationId], or does not exist for
+  /// [ownerPubkey].
+  Future<int> setRecipientPubkeysIfMissing({
     required String id,
     required String ownerPubkey,
-  }) async {
-    final query = select(dmMessageReactions)
-      ..where((t) => t.id.equals(id) & t.ownerPubkey.equals(ownerPubkey))
-      ..limit(1);
-    final row = await query.getSingleOrNull();
-    return row?.rumorEventJson;
+    required String conversationId,
+    required String recipientPubkeys,
+  }) {
+    return (update(dmMessageReactions)..where(
+          (t) =>
+              t.id.equals(id) &
+              t.ownerPubkey.equals(ownerPubkey) &
+              t.conversationId.equals(conversationId) &
+              t.recipientPubkeys.isNull(),
+        ))
+        .write(
+          DmMessageReactionsCompanion(
+            recipientPubkeys: Value(recipientPubkeys),
+          ),
+        );
+  }
+
+  /// Fetch this user's own unsent rows that carry no recipient set (#7880):
+  /// reactions and kind-5 removals queued before recipients were stored,
+  /// queued while they could not be established, or moved by the
+  /// group-recovery pass since.
+  ///
+  /// A row still holding its rumor JSON can still be sent — by the retry
+  /// sweep, or for a refused removal by a user retry — so those are the rows
+  /// whose recipients must be established while the state they come from can
+  /// still be read.
+  Future<List<DmReactionRow>> getOwnQueuedRowsMissingRecipients({
+    required String ownerPubkey,
+  }) {
+    return (select(dmMessageReactions)..where(
+          (t) =>
+              t.ownerPubkey.equals(ownerPubkey) &
+              t.reactorPubkey.equals(ownerPubkey) &
+              t.rumorEventJson.isNotNull() &
+              t.recipientPubkeys.isNull(),
+        ))
+        .get();
   }
 
   /// Return a single reaction row by stable reaction rumor id, or `null`
@@ -534,8 +602,9 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
   /// recreated, so it must still be delivered. Tombstones outlive the
   /// `conversations` row on purpose, which is why this keys on them rather
   /// than on conversation existence — a plain existence check would silently
-  /// drop every queued reaction after an account switch, which clears
-  /// `conversations` wholesale while preserving the retry queue (#6984).
+  /// drop every queued reaction after an account switch, which deletes the
+  /// leaving account's `conversations` rows while preserving its retry queue
+  /// (#6984).
   Expression<bool> _notSuppressedByRemoval($DmMessageReactionsTable t) {
     final tombstones = attachedDatabase.removedConversations;
     return notExistsQuery(
@@ -600,6 +669,10 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
   ///
   /// Used by the group-conversation recovery pass (#8407).
   ///
+  /// The stored recipient set goes too: it was worked out from the
+  /// conversation the row is leaving, and is worked out again from the one it
+  /// joins (#7880).
+  ///
   /// No-op returning `0` when [targetMessageIds] is empty.
   Future<int> reassignForTargetMessages({
     required Iterable<String> targetMessageIds,
@@ -613,7 +686,10 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
               t.targetMessageId.isIn(ids) & t.ownerPubkey.equals(ownerPubkey),
         ))
         .write(
-          DmMessageReactionsCompanion(conversationId: Value(toConversationId)),
+          DmMessageReactionsCompanion(
+            conversationId: Value(toConversationId),
+            recipientPubkeys: const Value(null),
+          ),
         );
   }
 

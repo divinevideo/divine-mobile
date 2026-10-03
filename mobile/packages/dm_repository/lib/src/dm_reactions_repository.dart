@@ -9,12 +9,14 @@ import 'dart:convert';
 import 'package:db_client/db_client.dart';
 import 'package:dm_repository/src/dm_reactions_repository_reportable_sites.dart';
 import 'package:dm_repository/src/dm_repository.dart';
+import 'package:dm_repository/src/group_conversation_recovery.dart';
 import 'package:dm_repository/src/nip17_message_service.dart';
 import 'package:meta/meta.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
+import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Reporter port for forwarding DAO-layer surprises to Crashlytics.
@@ -106,7 +108,9 @@ class DmReactionRetryTarget {
   /// Reaction rumor id — the argument `retry` expects.
   final String rumorId;
 
-  /// Author of the reacted message — the reaction's gift-wrap recipient.
+  /// Author of the reacted message. It does not choose the recipients: they
+  /// come from the row, and the author only helps prove a 1:1 when the row
+  /// stores none.
   final String targetMessageAuthor;
 
   /// Persisted publish status: `'failed'` or `'pending'`.
@@ -150,6 +154,8 @@ typedef DmInboxRelayResolver = Future<DmInboxLookup> Function(String pubkey);
 ///   from `DmRepository._handleGiftWrapEvent` when `rumor.kind == 7`).
 /// - `applyDeletion` — applies one already-classified kind-5 target;
 ///   `DmRepository` owns the routing and calls this for reaction targets.
+/// - `backfillQueuedRecipients` — records who queued rows are for, run by
+///   `DmRepository` after sign-in.
 class DmReactionsRepository {
   /// Construct the repository. Most fields are nullable for the legacy
   /// dependency-injection pattern where credentials are bound after
@@ -174,12 +180,14 @@ class DmReactionsRepository {
   final DmReactionsRepositoryErrorReporter? _errorReporter;
 
   /// Source of conversation participant sets, used to fan a group reaction's
-  /// gift wrap out to every member. Null in legacy/test wiring → 1:1 only.
+  /// gift wrap out to every member. Null in legacy/test wiring: only a set
+  /// proven another way is sent to, anything else is held.
   final ConversationsDao? _conversationsDao;
 
-  /// Source of the reacted message's stored conversation id, used to resolve
-  /// the conversation (1:1 **or** group) for an incoming reaction. Null in
-  /// legacy/test wiring → 1:1 inference only.
+  /// Source of the reacted message's stored row: the conversation an
+  /// incoming reaction belongs to, and the room the message names when an
+  /// outgoing reaction's conversation row is gone (#7880). Null in
+  /// legacy/test wiring: 1:1 inference only.
   final DirectMessagesDao? _directMessagesDao;
 
   final Map<String, Future<DmReactionDeletionOutcome>>
@@ -244,12 +252,10 @@ class DmReactionsRepository {
   ///
   /// Called by `DmRepository.removeConversation` from inside its removal
   /// transaction, so a removed conversation leaves no queued reaction or
-  /// pending kind-5 removal behind (#7857). Without this the retry sweep
-  /// keeps re-driving those rows and publishes a gift wrap into a
-  /// conversation the user removed — [retryableReactions] and
-  /// [retryableDeletions] are owner-scoped only, and
-  /// [_resolveWrapRecipients] falls back to the target message's author
-  /// once the conversation row is gone.
+  /// pending kind-5 removal behind (#7857). The retry queries skip rows a
+  /// removal tombstone covers, but a queued row normally carries its own
+  /// recipients and needs no conversation row to be sent, so the queue is
+  /// emptied here rather than left to that filter.
   ///
   /// [ownerPubkey] is supplied by the caller rather than read from this
   /// repository's mutable credentials so an account transition cannot change
@@ -271,9 +277,8 @@ class DmReactionsRepository {
   ///
   /// [deleteForConversations] only closes the leak going forward. An install
   /// that removed a conversation on an older build still holds that
-  /// conversation's rows, and because the retry sweep selects by owner alone
-  /// they stay in the outgoing queue — the sweep's in-memory attempt budget
-  /// resets on every cold start, so they never age out on their own.
+  /// conversation's rows. The retry queries already skip them, since the
+  /// removal tombstone covers them; this reclaims the rows.
   ///
   /// Rows created after the removal marker are kept: they belong to a
   /// conversation the counterparty has since recreated and are still owed
@@ -284,6 +289,52 @@ class DmReactionsRepository {
     return _reactionsDao.deleteSuppressedByRemoval(ownerPubkey: ownerPubkey);
   }
 
+  /// Record the gift-wrap recipients of every queued reaction and removal
+  /// that has none (#7880). Returns how many rows were filled in.
+  ///
+  /// A row without them — queued by a build that did not store them, queued
+  /// while they could not be established, or just moved into its group by the
+  /// recovery pass — has only local state to go by: its conversation row, or
+  /// the stored message it reacts to. Both can go while the queue is kept, so
+  /// this runs after sign-in rather than waiting for each row's next send; a
+  /// row whose state is already gone stays held.
+  ///
+  /// [ownerPubkey] is supplied by the caller rather than read from this
+  /// repository's mutable credentials, so an account transition cannot change
+  /// the owner midway through the pass.
+  ///
+  /// Idempotent. A row whose recipients cannot be established is left as it
+  /// is and looked at again on the next pass.
+  ///
+  /// Throws:
+  ///
+  /// * the database error when listing the queued rows fails. A row whose own
+  ///   reads or recipient write fail is reported and skipped instead.
+  Future<int> backfillQueuedRecipients({required String ownerPubkey}) async {
+    final rows = await _reactionsDao.getOwnQueuedRowsMissingRecipients(
+      ownerPubkey: ownerPubkey,
+    );
+    var filled = 0;
+    for (final row in rows) {
+      final recipients = await _resolveWrapRecipients(
+        conversationId: row.conversationId,
+        targetMessageId: row.targetMessageId,
+        targetMessageAuthor: row.targetMessageAuthor,
+        ownerPubkey: ownerPubkey,
+      );
+      if (recipients == null) continue;
+      filled += await _storeRecipients(row, recipients);
+    }
+    if (rows.isNotEmpty) {
+      Log.info(
+        'Recorded the recipients of $filled of ${rows.length} queued DM '
+        'reaction rows that had none',
+        category: LogCategory.system,
+      );
+    }
+    return filled;
+  }
+
   /// Follow [targetMessageIds] to [toConversationId] after those messages
   /// were moved between conversations.
   ///
@@ -292,6 +343,11 @@ class DmReactionsRepository {
   /// reactions behind silently drops the chips and strands rows the retry
   /// sweep still owns (#7857). Called by the group-conversation recovery pass
   /// (#8407) inside the same transaction as the message move.
+  ///
+  /// The moved rows' stored recipients are cleared (see
+  /// [DmReactionsDao.reassignForTargetMessages]); the backfill that follows
+  /// group recovery, or failing that the next send, works them out from
+  /// [toConversationId].
   Future<int> reassignForMovedMessages({
     required Iterable<String> targetMessageIds,
     required String toConversationId,
@@ -363,6 +419,10 @@ class DmReactionsRepository {
 
   /// Publish a new reaction. Performs cap-at-one supersede when the
   /// reactor already has a live reaction on this target.
+  ///
+  /// When the recipients cannot be established, the reaction is still queued
+  /// — `'failed'`, with no recipients recorded — and nothing is sent until
+  /// they can be.
   Future<DmReactionPublishResult> publish({
     required String conversationId,
     required String targetMessageId,
@@ -370,7 +430,10 @@ class DmReactionsRepository {
     required String emoji,
   }) async {
     final messageService = _messageService;
-    if (messageService == null || _userPubkey.isEmpty) {
+    // Read once. The row below is written after an await, and it must go to
+    // the account that built the rumor even if the session changes meanwhile.
+    final ownerPubkey = _userPubkey;
+    if (messageService == null || ownerPubkey.isEmpty) {
       return const DmReactionPublishResult(
         success: false,
         rumorId: '',
@@ -391,6 +454,16 @@ class DmReactionsRepository {
     );
     final rumorId = rumor.id;
 
+    // Worked out before the row is written, so the row carries the people it
+    // is for whenever they can be established: the retry sweep sends it to
+    // this set (#7880).
+    final knownRecipients = await _resolveWrapRecipients(
+      conversationId: conversationId,
+      targetMessageId: targetMessageId,
+      targetMessageAuthor: targetMessageAuthor,
+      ownerPubkey: ownerPubkey,
+    );
+
     final List<String> superseded;
     try {
       // Atomic cap-at-one: soft-deletes any prior live own reaction on this
@@ -401,11 +474,14 @@ class DmReactionsRepository {
         conversationId: conversationId,
         targetMessageId: targetMessageId,
         targetMessageAuthor: targetMessageAuthor,
-        reactorPubkey: _userPubkey,
+        reactorPubkey: ownerPubkey,
         emoji: emoji,
         createdAt: rumor.createdAt,
-        ownerPubkey: _userPubkey,
+        ownerPubkey: ownerPubkey,
         rumorEventJson: jsonEncode(rumor.toJson()),
+        recipientPubkeys: knownRecipients == null
+            ? null
+            : jsonEncode(knownRecipients),
       );
     } on Object catch (e, st) {
       _errorReporter?.call(
@@ -420,44 +496,35 @@ class DmReactionsRepository {
       );
     }
 
-    final recipients = await _resolveWrapRecipients(
-      conversationId: conversationId,
-      targetMessageAuthor: targetMessageAuthor,
-    );
-
-    // Durably remove each superseded prior reaction (cap-at-one emoji swap):
-    // route it through the same `deletion_pending` + sweep machinery as an
-    // explicit un-react so a flaky/offline relay can't strand the old emoji on
-    // the recipient. Only the durable DAO write is awaited; the wire publish is
-    // fire-and-forget inside the helper, kept OUTSIDE the optimistic insert
-    // transaction so a stalled socket never blocks the local write.
-    //
-    // Intentional ordering tradeoff: the removal commits before the new
-    // emoji's fan-out below is confirmed, so a hard-failed swap degrades into
-    // a bare removal on the recipient rather than rolling back to the old
-    // emoji. That matches the sender's view — the old row is already
-    // soft-deleted locally and the new emoji stays as a retryable failed
-    // chip — whereas a wire rollback would desync the two sides. Recovery is
-    // re-tapping (or the sweep re-driving) the new emoji.
-    // Resolve each recipient's kind-10050 inbox ONCE for the whole tap. An
-    // emoji swap drives two fan-outs milliseconds apart — the kind-5 supersede
-    // below and the kind-7 add after it — and they concern the same recipients
-    // at the same moment, so a second lookup would be redundant latency for an
-    // answer that cannot have changed. Resolved here rather than inside
-    // `_fanOutRumor` so both share it; the optimistic row is already written
-    // above, so this never delays the visible chip.
-    final inboxes = _resolveInboxes(recipients);
-
-    for (final priorId in superseded) {
-      await _durablyDeleteReaction(
-        rumorId: priorId,
-        recipients: recipients,
-        messageService: messageService,
-        reportSite:
-            DmReactionsRepositoryReportableSites.publishSupersedeDeletion,
-        inboxes: inboxes,
+    if (knownRecipients == null) {
+      _logHeld(
+        rumorId,
+        targetMessageId: targetMessageId,
+        conversationId: conversationId,
       );
     }
+    final recipients = knownRecipients ?? const <String>[];
+
+    // A superseded reaction is removed for the people IT was sent to, which
+    // is not always this reaction's set: the same message can be shown in
+    // another conversation by the time the emoji is swapped.
+    final priors = <String, List<String>>{
+      for (final priorId in superseded)
+        priorId: await _recipientsForSuperseded(
+          priorId,
+          targetMessageId: targetMessageId,
+          replacementRecipients: recipients,
+          ownerPubkey: ownerPubkey,
+        ),
+    };
+    final inboxes = _inboxesForTap(recipients, priors.values);
+    await _removeSuperseded(
+      priors,
+      targetMessageAuthor: targetMessageAuthor,
+      ownerPubkey: ownerPubkey,
+      messageService: messageService,
+      inboxes: inboxes,
+    );
 
     final inboxByRecipient = await inboxes;
     try {
@@ -474,7 +541,7 @@ class DmReactionsRepository {
             await _reactionsDao.swapPlaceholderId(
               placeholderId: rumorId,
               realRumorId: rumorId,
-              ownerPubkey: _userPubkey,
+              ownerPubkey: ownerPubkey,
             );
           } on Object catch (e, st) {
             _errorReporter?.call(
@@ -499,7 +566,7 @@ class DmReactionsRepository {
           if (blocked) {
             await _reactionsDao.markBlocked(
               id: rumorId,
-              ownerPubkey: _userPubkey,
+              ownerPubkey: ownerPubkey,
             );
           } else if (retryablePending) {
             // Unconfirmed (frame written, no relay OK): keep the row 'pending'
@@ -507,12 +574,12 @@ class DmReactionsRepository {
             // of loss. Only a confirmed rejection/error flips it to 'failed'.
             await _reactionsDao.markPending(
               id: rumorId,
-              ownerPubkey: _userPubkey,
+              ownerPubkey: ownerPubkey,
             );
           } else {
             await _reactionsDao.markFailed(
               placeholderId: rumorId,
-              ownerPubkey: _userPubkey,
+              ownerPubkey: ownerPubkey,
             );
           }
           return DmReactionPublishResult(
@@ -529,7 +596,7 @@ class DmReactionsRepository {
       );
       await _reactionsDao.markFailed(
         placeholderId: rumorId,
-        ownerPubkey: _userPubkey,
+        ownerPubkey: ownerPubkey,
       );
       return DmReactionPublishResult(
         success: false,
@@ -541,7 +608,12 @@ class DmReactionsRepository {
   }
 
   /// Retry a previously-failed reaction publish by replaying the same
-  /// rumor (read from `rumor_event_json`).
+  /// rumor (read from `rumor_event_json`) to the recipients stored on its
+  /// row.
+  ///
+  /// A row whose recipients cannot be established is not sent: it ends
+  /// `'failed'` with its rumor kept, rather than going to the reacted
+  /// message's author alone (#7880).
   ///
   /// Reliability contract:
   /// 1. Marks the DAO row `'pending'` BEFORE the send so the chip
@@ -558,44 +630,38 @@ class DmReactionsRepository {
     required String targetMessageAuthor,
   }) async {
     final messageService = _messageService;
-    if (messageService == null || _userPubkey.isEmpty) {
+    final ownerPubkey = _userPubkey;
+    if (messageService == null || ownerPubkey.isEmpty) {
       return DmReactionPublishResult(
         success: false,
         rumorId: rumorId,
         errorMessage: 'Repository not initialized',
       );
     }
-    final rumorJson = await _reactionsDao.getRumorJson(
+    final row = await _reactionsDao.getById(
       id: rumorId,
-      ownerPubkey: _userPubkey,
+      ownerPubkey: ownerPubkey,
     );
-    if (rumorJson == null) {
+    final rumorJson = row?.rumorEventJson;
+    if (row == null || rumorJson == null) {
       return DmReactionPublishResult(
         success: false,
         rumorId: rumorId,
         errorMessage: 'No stored rumor to retry',
       );
     }
-    final decoded = jsonDecode(rumorJson) as Map<String, dynamic>;
-    final rumor = Event.fromJson(decoded);
-
-    final retryRow = await _reactionsDao.getById(
-      id: rumorId,
-      ownerPubkey: _userPubkey,
+    final rumor = Event.fromJson(jsonDecode(rumorJson) as Map<String, dynamic>);
+    final recipients = await _recipientsOrHold(
+      row,
+      targetMessageAuthor: targetMessageAuthor,
     );
-    final recipients = retryRow != null
-        ? await _resolveWrapRecipients(
-            conversationId: retryRow.conversationId,
-            targetMessageAuthor: targetMessageAuthor,
-          )
-        : <String>[targetMessageAuthor];
 
     // Persist `pending` so the chip surfaces in-flight state across
     // a cubit rebuild. If this DAO write fails, we still attempt the
     // send — the user-visible recovery path is the chip falling back
     // to `failed` via the next branch.
     try {
-      await _reactionsDao.markPending(id: rumorId, ownerPubkey: _userPubkey);
+      await _reactionsDao.markPending(id: rumorId, ownerPubkey: ownerPubkey);
     } on Object {
       // best-effort
     }
@@ -612,7 +678,7 @@ class DmReactionsRepository {
           await _reactionsDao.swapPlaceholderId(
             placeholderId: rumorId,
             realRumorId: rumorId,
-            ownerPubkey: _userPubkey,
+            ownerPubkey: ownerPubkey,
           );
           return DmReactionPublishResult(
             success: true,
@@ -630,7 +696,7 @@ class DmReactionsRepository {
           if (blocked) {
             await _reactionsDao.markBlocked(
               id: rumorId,
-              ownerPubkey: _userPubkey,
+              ownerPubkey: ownerPubkey,
             );
           } else if (!retryablePending) {
             // Confirmed rejection/error: flip to 'failed' so the chip is
@@ -639,7 +705,7 @@ class DmReactionsRepository {
             // the sweep keeps re-driving it.
             await _reactionsDao.markFailed(
               placeholderId: rumorId,
-              ownerPubkey: _userPubkey,
+              ownerPubkey: ownerPubkey,
             );
           }
           return DmReactionPublishResult(
@@ -653,7 +719,7 @@ class DmReactionsRepository {
       Log.warning('DM reaction retry threw: $e', category: LogCategory.system);
       await _reactionsDao.markFailed(
         placeholderId: rumorId,
-        ownerPubkey: _userPubkey,
+        ownerPubkey: ownerPubkey,
       );
       return DmReactionPublishResult(
         success: false,
@@ -685,29 +751,44 @@ class DmReactionsRepository {
   }
 
   /// Soft-delete an own reaction locally and durably (re)deliver its NIP-09
-  /// kind-5 deletion on the wire. Returns after the local update; the wire
-  /// publish is durable — a failed/offline attempt is re-driven by the retry
-  /// sweep via [retryDeletion] rather than being dropped.
+  /// kind-5 deletion on the wire.
+  ///
+  /// Returns after the local update; the wire publish is durable — a
+  /// failed/offline attempt is re-driven by the retry sweep via
+  /// [retryDeletion] rather than being dropped. When the recipients cannot be
+  /// established, the removal is recorded all the same and left for the retry
+  /// sweep.
+  ///
+  /// Does nothing when this account holds no row for [rumorId].
   Future<void> removeOwn({
     required String rumorId,
     required String targetMessageAuthor,
   }) async {
     final messageService = _messageService;
-    if (messageService == null || _userPubkey.isEmpty) return;
+    final ownerPubkey = _userPubkey;
+    if (messageService == null || ownerPubkey.isEmpty) return;
     final row = await _reactionsDao.getById(
       id: rumorId,
-      ownerPubkey: _userPubkey,
+      ownerPubkey: ownerPubkey,
     );
-    final recipients = row != null
-        ? await _resolveWrapRecipients(
-            conversationId: row.conversationId,
-            targetMessageAuthor: targetMessageAuthor,
-          )
-        : <String>[targetMessageAuthor];
+    if (row == null) {
+      Log.debug(
+        'No DM reaction $rumorId to remove for this account',
+        category: LogCategory.system,
+      );
+      return;
+    }
+    final recipients = await _recipientsOrHold(
+      row,
+      targetMessageAuthor: targetMessageAuthor,
+      removal: true,
+    );
 
     await _durablyDeleteReaction(
       rumorId: rumorId,
       recipients: recipients,
+      targetMessageAuthor: targetMessageAuthor,
+      ownerPubkey: ownerPubkey,
       messageService: messageService,
       reportSite: DmReactionsRepositoryReportableSites.removeOwnSoftDelete,
     );
@@ -726,16 +807,22 @@ class DmReactionsRepository {
   /// every retry are coalesced by rumor id, so only one fan-out can drive the
   /// stored kind-5 at a time. On a DAO write failure the deletion is reported
   /// to [reportSite] and skipped (no wire attempt).
+  ///
+  /// An empty [recipients] means they could not be established. The removal
+  /// is recorded all the same, tagged with [targetMessageAuthor] like the
+  /// reaction it removes, and left for the retry sweep: dropping it would
+  /// leave the reaction live while the UI shows it removed.
   Future<void> _durablyDeleteReaction({
     required String rumorId,
     required List<String> recipients,
+    required String targetMessageAuthor,
+    required String ownerPubkey,
     required NIP17MessageService messageService,
     required String reportSite,
     Future<Map<String, DmInboxLookup>>? inboxes,
   }) async {
-    if (recipients.isEmpty) return;
     final deletion = messageService.buildRumor(
-      recipientPubkey: recipients.first,
+      recipientPubkey: recipients.firstOrNull ?? targetMessageAuthor,
       content: '',
       eventKind: EventKind.eventDeletion,
       additionalTags: [
@@ -747,13 +834,14 @@ class DmReactionsRepository {
     try {
       await _reactionsDao.markOwnDeletionPending(
         id: rumorId,
-        ownerPubkey: _userPubkey,
+        ownerPubkey: ownerPubkey,
         deletionRumorJson: jsonEncode(deletion.toJson()),
       );
     } on Object catch (e, st) {
       _errorReporter?.call(e, st, site: reportSite);
       return;
     }
+    if (recipients.isEmpty) return;
 
     unawaited(
       _coalesceDeletionAttempt(
@@ -762,6 +850,7 @@ class DmReactionsRepository {
           rumorId: rumorId,
           deletion: deletion,
           recipients: recipients,
+          ownerPubkey: ownerPubkey,
           messageService: messageService,
           inboxes: inboxes,
         ),
@@ -790,10 +879,13 @@ class DmReactionsRepository {
   }
 
   /// Retry a previously-failed/interrupted own reaction removal by replaying
-  /// the stored kind-5 rumor. Marks the row `deletion_sent` on a confirmed
-  /// publish and `deletion_refused` when send policy blocks it — off the
-  /// sweep's worklist, rumor retained for a user-driven retry; leaves it
-  /// pending otherwise so the sweep tries again.
+  /// the stored kind-5 rumor to the recipients stored on its row. When they
+  /// cannot be established, nothing is sent and the removal stays queued.
+  ///
+  /// Marks the row `deletion_sent` on a confirmed publish and
+  /// `deletion_refused` when send policy blocks it — off the sweep's
+  /// worklist, rumor retained for a user-driven retry; leaves it pending
+  /// otherwise so the sweep tries again.
   Future<DmReactionDeletionOutcome> retryDeletion({
     required String rumorId,
     required String targetMessageAuthor,
@@ -812,12 +904,13 @@ class DmReactionsRepository {
     required String targetMessageAuthor,
   }) async {
     final messageService = _messageService;
-    if (messageService == null || _userPubkey.isEmpty) {
+    final ownerPubkey = _userPubkey;
+    if (messageService == null || ownerPubkey.isEmpty) {
       return DmReactionDeletionOutcome.unavailable;
     }
     final row = await _reactionsDao.getById(
       id: rumorId,
-      ownerPubkey: _userPubkey,
+      ownerPubkey: ownerPubkey,
     );
     final deletionJson = row?.rumorEventJson;
     if (row == null || deletionJson == null) {
@@ -826,9 +919,10 @@ class DmReactionsRepository {
     final deletion = Event.fromJson(
       jsonDecode(deletionJson) as Map<String, dynamic>,
     );
-    final recipients = await _resolveWrapRecipients(
-      conversationId: row.conversationId,
+    final recipients = await _recipientsOrHold(
+      row,
       targetMessageAuthor: targetMessageAuthor,
+      removal: true,
     );
     try {
       final result = await _fanOutRumor(
@@ -841,14 +935,14 @@ class DmReactionsRepository {
         case NIP17SendSuccess():
           await _reactionsDao.markDeletionSent(
             id: rumorId,
-            ownerPubkey: _userPubkey,
+            ownerPubkey: ownerPubkey,
           );
           return DmReactionDeletionOutcome.sent;
         case NIP17SendFailure(:final error, :final blocked):
           if (blocked) {
             await _reactionsDao.markDeletionRefused(
               id: rumorId,
-              ownerPubkey: _userPubkey,
+              ownerPubkey: ownerPubkey,
             );
             return DmReactionDeletionOutcome.refused;
           }
@@ -872,6 +966,7 @@ class DmReactionsRepository {
     required String rumorId,
     required Event deletion,
     required List<String> recipients,
+    required String ownerPubkey,
     required NIP17MessageService messageService,
     Future<Map<String, DmInboxLookup>>? inboxes,
   }) async {
@@ -888,14 +983,14 @@ class DmReactionsRepository {
         case NIP17SendSuccess():
           await _reactionsDao.markDeletionSent(
             id: rumorId,
-            ownerPubkey: _userPubkey,
+            ownerPubkey: ownerPubkey,
           );
           return DmReactionDeletionOutcome.sent;
         case NIP17SendFailure(:final blocked):
           if (blocked) {
             await _reactionsDao.markDeletionRefused(
               id: rumorId,
-              ownerPubkey: _userPubkey,
+              ownerPubkey: ownerPubkey,
             );
             return DmReactionDeletionOutcome.refused;
           }
@@ -1113,60 +1208,374 @@ class DmReactionsRepository {
         );
   }
 
-  /// Resolve the gift-wrap recipient set for a reaction in [conversationId]:
-  /// every conversation participant except the current user.
+  /// The gift-wrap recipients of the reaction or removal queued on [row], or
+  /// `null` when they cannot be established.
   ///
-  /// Resolved from the conversation's participant set, **not** from
-  /// [targetMessageAuthor]. Reacting to your OWN message makes you the target
-  /// author, and addressing the wrap to the author would send the reaction
-  /// only back to yourself — the counterparty would never receive it (the
-  /// "react to own message isn't delivered" bug). For a 1:1 this yields the
-  /// single other participant; for a group, every other member.
-  ///
-  /// Falls back to [_fallbackWrapRecipients] only when the conversation can't
-  /// be resolved (no [ConversationsDao] wired, row missing, or malformed
-  /// participants).
-  Future<List<String>> _resolveWrapRecipients({
-    required String conversationId,
+  /// A usable set stored on the row wins. Otherwise the set is resolved now,
+  /// for the account that owns the row, and recorded for later attempts if
+  /// the row has none (#7880).
+  Future<List<String>?> _recipientsForRow(
+    DmReactionRow row, {
     required String targetMessageAuthor,
   }) async {
-    final dao = _conversationsDao;
-    if (dao == null) return _fallbackWrapRecipients(targetMessageAuthor);
+    final stored = _storedRecipients(row);
+    if (stored != null) return stored;
+    final resolved = await _resolveWrapRecipients(
+      conversationId: row.conversationId,
+      targetMessageId: row.targetMessageId,
+      targetMessageAuthor: targetMessageAuthor,
+      ownerPubkey: row.ownerPubkey,
+    );
+    if (resolved == null) return null;
+    await _storeRecipients(row, resolved);
+    return resolved;
+  }
+
+  /// [_recipientsForRow], or an empty set when the recipients are not known,
+  /// which holds the send: nothing goes on the wire and the rumor stays on
+  /// the row for a later attempt.
+  Future<List<String>> _recipientsOrHold(
+    DmReactionRow row, {
+    required String targetMessageAuthor,
+    bool removal = false,
+  }) async {
+    final recipients = await _recipientsForRow(
+      row,
+      targetMessageAuthor: targetMessageAuthor,
+    );
+    if (recipients != null) return recipients;
+    _logHeld(
+      row.id,
+      targetMessageId: row.targetMessageId,
+      conversationId: row.conversationId,
+      removal: removal,
+    );
+    return const <String>[];
+  }
+
+  /// The recipients of the kind-5 that removes [rumorId], a prior reaction
+  /// [publish] has just superseded.
+  ///
+  /// The set stored on its row is used alone. A row without one may have
+  /// reached the people its own conversation yields or the ones the replacing
+  /// reaction goes to, [replacementRecipients], so the removal goes to both,
+  /// and that set is recorded on the row for later attempts.
+  ///
+  /// When the row fails to read, or a read fails and nothing can be proven
+  /// without it, the removal is held for the retry sweep and nothing is
+  /// recorded. When the row is already gone there is nothing to hold, and
+  /// this one attempt goes to [replacementRecipients].
+  Future<List<String>> _recipientsForSuperseded(
+    String rumorId, {
+    required String targetMessageId,
+    required List<String> replacementRecipients,
+    required String ownerPubkey,
+  }) async {
+    final DmReactionRow? row;
     try {
-      final convo = await dao.getConversation(
-        conversationId,
-        ownerPubkey: _userPubkey,
+      row = await _reactionsDao.getById(id: rumorId, ownerPubkey: ownerPubkey);
+    } on Object catch (e, st) {
+      _reportRecipientsFailure(
+        e,
+        st,
+        site: DmReactionsRepositoryReportableSites.publishSupersedeRecipients,
       );
-      if (convo == null) return _fallbackWrapRecipients(targetMessageAuthor);
-      final decoded = jsonDecode(convo.participantPubkeys);
-      if (decoded is! List) {
-        return _fallbackWrapRecipients(targetMessageAuthor);
-      }
-      final others = decoded
-          .whereType<String>()
-          .where((p) => p != _userPubkey)
-          .toList();
-      return others.isEmpty
-          ? _fallbackWrapRecipients(targetMessageAuthor)
-          : others;
-    } on Object {
-      return _fallbackWrapRecipients(targetMessageAuthor);
+      _logHeld(rumorId, targetMessageId: targetMessageId, removal: true);
+      return const <String>[];
+    }
+    if (row == null) return replacementRecipients;
+    final stored = _storedRecipients(row);
+    if (stored != null) return stored;
+    var readFailed = false;
+    final derived = await _resolveWrapRecipients(
+      conversationId: row.conversationId,
+      targetMessageId: row.targetMessageId,
+      targetMessageAuthor: row.targetMessageAuthor,
+      ownerPubkey: ownerPubkey,
+      onReadFailed: () => readFailed = true,
+    );
+    final recipients = derived == null && readFailed
+        ? const <String>[]
+        : <String>{...?derived, ...replacementRecipients}.toList();
+    if (recipients.isEmpty) {
+      _logHeld(
+        rumorId,
+        targetMessageId: row.targetMessageId,
+        conversationId: row.conversationId,
+        removal: true,
+      );
+      return recipients;
+    }
+    await _storeRecipients(row, recipients);
+    return recipients;
+  }
+
+  /// Record [recipients] on the queue row [row] if it has none yet and is
+  /// still in the conversation they were worked out for. Returns the number
+  /// of rows written.
+  Future<int> _storeRecipients(
+    DmReactionRow row,
+    List<String> recipients,
+  ) async {
+    try {
+      return await _reactionsDao.setRecipientPubkeysIfMissing(
+        id: row.id,
+        ownerPubkey: row.ownerPubkey,
+        conversationId: row.conversationId,
+        recipientPubkeys: jsonEncode(recipients),
+      );
+    } on Object catch (e, st) {
+      _reportRecipientsFailure(
+        e,
+        st,
+        site: DmReactionsRepositoryReportableSites.wrapRecipientsStore,
+      );
+      return 0;
     }
   }
 
-  /// Recipient set to use when the conversation can't be resolved. The reacted
-  /// message's author is the only counterparty we can name — but when that is
-  /// the current user (reacting to your OWN message), naming self would send
-  /// the reaction only back to yourself and never to the counterparty (the
-  /// "react to own message isn't delivered" bug). There is no counterparty to
-  /// name in that degenerate case, so return empty — the send reports
-  /// no-recipients and stays retryable — rather than silently self-delivering.
-  /// Unreachable in prod: real 1:1/group conversations always store their
-  /// participants, so [_resolveWrapRecipients] resolves before reaching here.
-  List<String> _fallbackWrapRecipients(String targetMessageAuthor) =>
-      targetMessageAuthor == _userPubkey
-      ? const <String>[]
-      : <String>[targetMessageAuthor];
+  /// The recipient set stored on [row], or `null` when it holds none or one
+  /// that cannot be used. An unusable one is logged, since the row then falls
+  /// back to being resolved like a row that never stored a set.
+  List<String>? _storedRecipients(DmReactionRow row) {
+    final stored = _decodePubkeys(row.recipientPubkeys);
+    if (stored == null && row.recipientPubkeys != null) {
+      Log.warning(
+        'DM reaction ${row.id}: its stored recipients cannot be used, so they '
+        'are worked out again',
+        category: LogCategory.system,
+      );
+    }
+    return stored;
+  }
+
+  void _logHeld(
+    String rumorId, {
+    required String targetMessageId,
+    String? conversationId,
+    bool removal = false,
+  }) {
+    final inConversation = conversationId == null
+        ? ''
+        : ', conversation $conversationId';
+    Log.warning(
+      'DM reaction ${removal ? 'removal' : 'publish'} held for $rumorId '
+      '(message $targetMessageId$inConversation): its recipients cannot be '
+      'established from local data, so it stays queued',
+      category: LogCategory.system,
+    );
+  }
+
+  /// Log a failed read or write of a reaction's recipients, or of the state
+  /// they are worked out from, by type only, and report it to [site].
+  void _reportRecipientsFailure(
+    Object error,
+    StackTrace stackTrace, {
+    required String site,
+  }) {
+    Log.warning(
+      'DM reaction recipients: $site failed (${error.runtimeType})',
+      category: LogCategory.system,
+    );
+    _errorReporter?.call(error, stackTrace, site: site);
+  }
+
+  /// Work out who a reaction in [conversationId] is gift-wrapped to: every
+  /// conversation participant except [ownerPubkey]. Returns `null` when that
+  /// cannot be established; the caller must then not send.
+  ///
+  /// Resolved from the conversation's participant set, never from
+  /// [targetMessageAuthor] alone. Reacting to your OWN message makes you the
+  /// target author, and addressing the wrap to the author would send the
+  /// reaction only back to yourself. For a 1:1 this yields the single other
+  /// participant; for a group, every other member.
+  ///
+  /// When the conversation row yields no participants (missing, unreadable,
+  /// or naming nobody else), a set is accepted only when it is proven. A
+  /// conversation id is the hash of its participants, so a set of valid
+  /// pubkeys that includes the owner and hashes to [conversationId] is the
+  /// whole room. Two are tried: the owner with the author, which is a 1:1,
+  /// and the room the reacted message itself names. Anything else stays
+  /// unknown, because naming the author alone would drop the other members of
+  /// a group (#7880).
+  ///
+  /// [onReadFailed] is called when a read of that state fails, so a caller
+  /// can tell "not provable" from "could not look".
+  Future<List<String>?> _resolveWrapRecipients({
+    required String conversationId,
+    required String targetMessageId,
+    required String targetMessageAuthor,
+    required String ownerPubkey,
+    void Function()? onReadFailed,
+  }) async {
+    final participants = await _otherParticipants(
+      conversationId: conversationId,
+      ownerPubkey: ownerPubkey,
+      onReadFailed: onReadFailed,
+    );
+    if (participants != null) return participants;
+    List<String>? othersIfRoomIs(Set<String> room) {
+      final provable =
+          room.every(NostrHexUtils.isValidPubkey) &&
+          room.any((pubkey) => pubkeysEqual(pubkey, ownerPubkey)) &&
+          DmRepository.computeConversationId(room.toList()) == conversationId;
+      if (!provable) return null;
+      final others = room
+          .where((pubkey) => !pubkeysEqual(pubkey, ownerPubkey))
+          .toList();
+      return others.isEmpty ? null : others;
+    }
+
+    return othersIfRoomIs({ownerPubkey, targetMessageAuthor}) ??
+        othersIfRoomIs(
+          await _roomNamedByMessage(
+            targetMessageId,
+            ownerPubkey: ownerPubkey,
+            onReadFailed: onReadFailed,
+          ),
+        );
+  }
+
+  /// Every participant of [conversationId] except [ownerPubkey], or `null`
+  /// when there is no participant source, or the row is missing, unreadable,
+  /// lists something other than pubkeys, leaves out the owner, or names
+  /// nobody else.
+  Future<List<String>?> _otherParticipants({
+    required String conversationId,
+    required String ownerPubkey,
+    void Function()? onReadFailed,
+  }) async {
+    final ConversationRow? conversation;
+    try {
+      conversation = await _conversationsDao?.getConversation(
+        conversationId,
+        ownerPubkey: ownerPubkey,
+      );
+    } on Object catch (e, st) {
+      _reportRecipientsFailure(
+        e,
+        st,
+        site:
+            DmReactionsRepositoryReportableSites.wrapRecipientsConversationRead,
+      );
+      onReadFailed?.call();
+      return null;
+    }
+    final participants = _decodePubkeys(conversation?.participantPubkeys);
+    if (participants == null ||
+        !participants.any((pubkey) => pubkeysEqual(pubkey, ownerPubkey))) {
+      return null;
+    }
+    final others = participants
+        .where((pubkey) => !pubkeysEqual(pubkey, ownerPubkey))
+        .toList();
+    return others.isEmpty ? null : others;
+  }
+
+  /// The room the stored message [messageId] names: its sender and `p` tags
+  /// (NIP-17). Empty when the message is not stored or cannot be read.
+  Future<Set<String>> _roomNamedByMessage(
+    String messageId, {
+    required String ownerPubkey,
+    void Function()? onReadFailed,
+  }) async {
+    final DirectMessageRow? message;
+    try {
+      message = await _directMessagesDao?.getMessageById(
+        messageId,
+        ownerPubkey: ownerPubkey,
+      );
+    } on Object catch (e, st) {
+      _reportRecipientsFailure(
+        e,
+        st,
+        site: DmReactionsRepositoryReportableSites
+            .wrapRecipientsTargetMessageRead,
+      );
+      onReadFailed?.call();
+      return const {};
+    }
+    if (message == null) return const {};
+    return reconstructParticipants(message.tagsJson, message.senderPubkey);
+  }
+
+  /// Decode a JSON list of pubkeys, or `null` when [json] is not a non-empty
+  /// list made only of valid pubkeys.
+  static List<String>? _decodePubkeys(String? json) {
+    if (json == null) return null;
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(json);
+    } on FormatException {
+      return null;
+    }
+    if (decoded is! List || decoded.isEmpty) return null;
+    final pubkeys = <String>[];
+    for (final entry in decoded) {
+      if (entry is! String || !NostrHexUtils.isValidPubkey(entry)) return null;
+      pubkeys.add(entry);
+    }
+    return pubkeys;
+  }
+
+  /// Resolve each recipient's kind-10050 inbox once for the whole tap.
+  ///
+  /// An emoji swap drives two fan-outs milliseconds apart — the kind-5 that
+  /// removes the old emoji and the kind-7 that adds the new one — to sets that
+  /// usually coincide, so looking the same person up twice would be redundant
+  /// latency for an answer that cannot have changed. Resolved once, for
+  /// everyone either fan-out names, rather than inside `_fanOutRumor` so both
+  /// share it; the optimistic row is already written by then, so this never
+  /// delays the visible chip.
+  Future<Map<String, DmInboxLookup>> _inboxesForTap(
+    List<String> recipients,
+    Iterable<List<String>> priorRecipients,
+  ) {
+    return _resolveInboxes(
+      <String>{
+        ...recipients,
+        for (final prior in priorRecipients) ...prior,
+      }.toList(),
+    );
+  }
+
+  /// Durably remove each superseded prior reaction (cap-at-one emoji swap).
+  ///
+  /// Routed through the same `deletion_pending` + sweep machinery as an
+  /// explicit un-react, so a flaky/offline relay can't strand the old emoji on
+  /// the recipient. Only the durable DAO write is awaited; the wire publish is
+  /// fire-and-forget inside [_durablyDeleteReaction], kept outside the
+  /// optimistic insert transaction so a stalled socket never blocks the local
+  /// write.
+  ///
+  /// Intentional ordering tradeoff: the removal commits before the new
+  /// emoji's fan-out is confirmed, so a hard-failed swap degrades into a bare
+  /// removal on the recipient rather than rolling back to the old emoji. That
+  /// matches the sender's view — the old row is already soft-deleted locally
+  /// and the new emoji stays as a retryable failed chip — whereas a wire
+  /// rollback would desync the two sides. Recovery is re-tapping (or the sweep
+  /// re-driving) the new emoji.
+  Future<void> _removeSuperseded(
+    Map<String, List<String>> priors, {
+    required String targetMessageAuthor,
+    required String ownerPubkey,
+    required NIP17MessageService messageService,
+    required Future<Map<String, DmInboxLookup>> inboxes,
+  }) async {
+    for (final MapEntry(key: priorId, value: priorRecipients)
+        in priors.entries) {
+      await _durablyDeleteReaction(
+        rumorId: priorId,
+        recipients: priorRecipients,
+        targetMessageAuthor: targetMessageAuthor,
+        ownerPubkey: ownerPubkey,
+        messageService: messageService,
+        reportSite:
+            DmReactionsRepositoryReportableSites.publishSupersedeDeletion,
+        inboxes: inboxes,
+      );
+    }
+  }
 
   /// Resolve every recipient's NIP-17 kind-10050 DM inbox concurrently.
   ///
@@ -1240,6 +1649,9 @@ class DmReactionsRepository {
   /// stored rumor is cleared, and a reaction the recipient never saw becomes
   /// unrecoverable. A recipient with no lookup at all (no resolver wired)
   /// keeps the pre-#7321 contract, where a pool `OK` is delivery.
+  ///
+  /// An empty [recipients] is a hard failure with nothing sent;
+  /// [_recipientsOrHold] relies on that to hold a row.
   ///
   /// Aggregate failure classification:
   /// - every failure is a policy [NIP17SendResult.blocked] → aggregate blocked
