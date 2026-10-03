@@ -89,6 +89,7 @@ class AudioEvent {
     this.voiceEffect = VoiceEffect.none,
     this.noiseReduction = false,
     this.originalUrl,
+    this.originalMimeType,
     this.allowsReuse = true,
     this.hasExplicitReuseConsent = false,
     this.requiresCurrentReuseVerification = false,
@@ -351,6 +352,7 @@ class AudioEvent {
       },
       noiseReduction: json['noiseReduction'] as bool? ?? false,
       originalUrl: json['originalUrl'] as String?,
+      originalMimeType: json['originalMimeType'] as String?,
       // Persisted events without a terms field predate the reuse policy.
       // Treat them as unknown and let the source-video resolver decide;
       // archive compatibility is a provisional Divine policy grant, not an
@@ -486,11 +488,29 @@ class AudioEvent {
     return original == null || original.isEmpty ? current : original;
   }
 
+  /// Whether [url] names a processed copy of [originalUrl] on this device.
+  ///
+  /// The copy is always a local file, whatever kind of sound this is: a
+  /// bundled, published or provider sound with an effect plays a file the
+  /// editor wrote, while [originalUrl] keeps its asset or network address.
+  bool get playsProcessedCopy {
+    final original = originalUrl;
+    return original != null && original.isNotEmpty;
+  }
+
+  /// Local file path of the processed copy [url] names, or `null` while the
+  /// sound plays its source as is.
+  String? get processedFilePath {
+    if (!playsProcessedCopy) return null;
+    return _classifyUrl(url)?.path;
+  }
+
   /// Whether this audio came from a normalized external sound provider.
   bool get isExternalProviderSound => externalSource != null;
 
   /// Get the asset path for bundled sounds.
-  /// Returns null if this is not a bundled sound.
+  /// Returns null if this is not a bundled sound, and for a bundled sound
+  /// that [playsProcessedCopy], whose [url] is then a local file.
   String? get assetPath {
     if (!isBundled || url == null) return null;
     const prefix = 'asset://';
@@ -513,20 +533,33 @@ class AudioEvent {
   /// superset they can migrate onto without reintroducing that bug. Everything
   /// else (`http(s)`, plus unhandled schemes like `content://`/`blob:`) is
   /// network.
-  ({AudioSourceKind kind, String path})? get resolvedSource {
+  ///
+  /// A sound that [playsProcessedCopy] resolves to that copy, a local file,
+  /// whatever kind of sound it is; [originalSource] is where it came from.
+  ({AudioSourceKind kind, String path})? get resolvedSource =>
+      playsProcessedCopy ? _classifyUrl(url) : _sourceOf(url);
+
+  /// Where the sound plays from before any voice effect: [resolvedSource]
+  /// unless it [playsProcessedCopy], in which case [originalUrl] classified
+  /// the same way.
+  ({AudioSourceKind kind, String path})? get originalSource =>
+      _sourceOf(playsProcessedCopy ? originalUrl : url);
+
+  /// [rawUrl] classified the way this kind of sound stores its address.
+  ({AudioSourceKind kind, String path})? _sourceOf(String? rawUrl) {
+    if (rawUrl == null || rawUrl.isEmpty) return null;
     if (isBundled) {
-      final path = assetPath;
-      return path == null || path.isEmpty
-          ? null
-          : (kind: AudioSourceKind.asset, path: path);
+      const prefix = 'asset://';
+      if (!rawUrl.startsWith(prefix)) return null;
+      final path = rawUrl.substring(prefix.length);
+      return path.isEmpty ? null : (kind: AudioSourceKind.asset, path: path);
     }
-    if (isLocalImport) {
-      final path = localFilePath;
-      return path == null || path.isEmpty
-          ? null
-          : (kind: AudioSourceKind.file, path: path);
-    }
-    final rawUrl = url;
+    if (isLocalImport) return (kind: AudioSourceKind.file, path: rawUrl);
+    return _classifyUrl(rawUrl);
+  }
+
+  /// [rawUrl] as a file when it is a path or `file://` URI, else as network.
+  static ({AudioSourceKind kind, String path})? _classifyUrl(String? rawUrl) {
     if (rawUrl == null || rawUrl.isEmpty) return null;
     final parsed = Uri.tryParse(rawUrl);
     final isLocalFile =
@@ -666,13 +699,22 @@ class AudioEvent {
   /// Local-only editor state, never published to Nostr.
   final bool noiseReduction;
 
-  /// The take as recorded, when [url] names a processed copy of it — one
-  /// with [voiceEffect] or [noiseReduction] applied. `null` while the track
-  /// plays the take itself.
+  /// The sound as recorded, bundled or published, when [url] names a
+  /// processed copy of it — one with [voiceEffect] or [noiseReduction]
+  /// applied. `null` while the track plays that sound itself.
   ///
-  /// Kept so the creator can switch back, or to another effect, without
-  /// re-recording. Local-only editor state, never published to Nostr.
+  /// Holds the address exactly as [url] held it: a path, an `asset://` URL or
+  /// a network URL. Kept so the creator can switch back, or to another
+  /// effect, without re-recording or re-picking the sound. Local-only editor
+  /// state, never published to Nostr.
   final String? originalUrl;
+
+  /// The [mimeType] of [originalUrl], restored when the track switches back
+  /// to it. `null` when it had none, and for copies made before this was
+  /// kept, which only ever processed takes whose file name still tells it.
+  ///
+  /// Local-only editor state, never published to Nostr.
+  final String? originalMimeType;
 
   /// Whether [url] names a processed copy of [originalUrl].
   bool get hasVoiceProcessing => !voiceEffect.isNone || noiseReduction;
@@ -820,6 +862,7 @@ class AudioEvent {
     int? createdAt,
     String? url,
     String? mimeType,
+    bool clearMimeType = false,
     String? sha256,
     int? fileSize,
     double? duration,
@@ -848,6 +891,8 @@ class AudioEvent {
     bool? noiseReduction,
     String? originalUrl,
     bool clearOriginalUrl = false,
+    String? originalMimeType,
+    bool clearOriginalMimeType = false,
     bool? allowsReuse,
     bool? hasExplicitReuseConsent,
     bool? requiresCurrentReuseVerification,
@@ -857,7 +902,7 @@ class AudioEvent {
       pubkey: pubkey ?? this.pubkey,
       createdAt: createdAt ?? this.createdAt,
       url: url ?? this.url,
-      mimeType: mimeType ?? this.mimeType,
+      mimeType: clearMimeType ? null : (mimeType ?? this.mimeType),
       sha256: sha256 ?? this.sha256,
       fileSize: fileSize ?? this.fileSize,
       duration: duration ?? this.duration,
@@ -886,6 +931,9 @@ class AudioEvent {
       voiceEffect: voiceEffect ?? this.voiceEffect,
       noiseReduction: noiseReduction ?? this.noiseReduction,
       originalUrl: clearOriginalUrl ? null : (originalUrl ?? this.originalUrl),
+      originalMimeType: clearOriginalMimeType
+          ? null
+          : (originalMimeType ?? this.originalMimeType),
       allowsReuse: allowsReuse ?? this.allowsReuse,
       hasExplicitReuseConsent:
           hasExplicitReuseConsent ?? this.hasExplicitReuseConsent,
@@ -968,6 +1016,7 @@ class AudioEvent {
     if (!voiceEffect.isNone) 'voiceEffect': voiceEffect.toJson(),
     if (noiseReduction) 'noiseReduction': true,
     'originalUrl': ?originalUrl,
+    'originalMimeType': ?originalMimeType,
   };
 }
 

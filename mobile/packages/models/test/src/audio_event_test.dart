@@ -1766,9 +1766,11 @@ void main() {
         pubkey: testPubkey,
         createdAt: 1700000000,
         url: '/docs/voice_over_recordings/voice_over_1_robot.wav',
+        mimeType: 'audio/wav',
         voiceEffect: const VoiceEffect(robot: 100, echo: 40),
         noiseReduction: true,
         originalUrl: '/docs/voice_over_recordings/voice_over_1.m4a',
+        originalMimeType: 'audio/mp4',
       );
 
       test('defaults to the take as recorded', () {
@@ -1783,11 +1785,17 @@ void main() {
         expect(plain.noiseReduction, isFalse);
         expect(plain.hasVoiceProcessing, isFalse);
         expect(plain.originalLocalFilePath, plain.localFilePath);
+        expect(plain.playsProcessedCopy, isFalse);
+        expect(plain.processedFilePath, isNull);
+        expect(plain.originalSource, plain.resolvedSource);
         expect(
           plain.toJson().keys,
           isNot(anyOf(contains('voiceEffect'), contains('noiseReduction'))),
         );
-        expect(plain.toJson(), isNot(contains('originalUrl')));
+        expect(
+          plain.toJson().keys,
+          isNot(anyOf(contains('originalUrl'), contains('originalMimeType'))),
+        );
       });
 
       test('survives a toJson/fromJson roundtrip', () {
@@ -1801,6 +1809,7 @@ void main() {
           restored.originalLocalFilePath,
           '/docs/voice_over_recordings/voice_over_1.m4a',
         );
+        expect(restored.originalMimeType, 'audio/mp4');
       });
 
       test('reads a malformed effect as none', () {
@@ -1812,12 +1821,16 @@ void main() {
       test('can drop the original when the take goes back to unprocessed', () {
         final reverted = processed.copyWith(
           url: processed.originalUrl,
+          mimeType: processed.originalMimeType,
           voiceEffect: VoiceEffect.none,
           noiseReduction: false,
           clearOriginalUrl: true,
+          clearOriginalMimeType: true,
         );
 
         expect(reverted.originalUrl, isNull);
+        expect(reverted.originalMimeType, isNull);
+        expect(reverted.mimeType, 'audio/mp4');
         expect(reverted.hasVoiceProcessing, isFalse);
         expect(reverted.originalLocalFilePath, processed.originalUrl);
       });
@@ -1834,6 +1847,72 @@ void main() {
         expect(published.originalLocalFilePath, isNull);
       });
 
+      test('plays a processed copy of a bundled sound from its file', () {
+        final bundled = AudioEvent.fromBundledSound(
+          VineSound(
+            id: 'bruh',
+            title: 'Bruh',
+            assetPath: 'assets/sounds/bruh.mp3',
+            duration: const Duration(seconds: 1),
+          ),
+        );
+        final robot = bundled.copyWith(
+          url: '/docs/voice_effect_audio/bruh_p0_r100_e0.wav',
+          voiceEffect: const VoiceEffect(robot: 100),
+          originalUrl: bundled.url,
+        );
+
+        expect(robot.playsProcessedCopy, isTrue);
+        expect(robot.isBundled, isTrue);
+        expect(robot.assetPath, isNull);
+        expect(
+          robot.processedFilePath,
+          '/docs/voice_effect_audio/bruh_p0_r100_e0.wav',
+        );
+        expect(
+          robot.resolvedSource,
+          equals((
+            kind: AudioSourceKind.file,
+            path: '/docs/voice_effect_audio/bruh_p0_r100_e0.wav',
+          )),
+        );
+        expect(
+          robot.originalSource,
+          equals((kind: AudioSourceKind.asset, path: 'assets/sounds/bruh.mp3')),
+        );
+      });
+
+      test('keeps the network address of a processed published sound', () {
+        final robot = AudioEvent(
+          id: testHexId,
+          pubkey: testPubkey,
+          createdAt: 1700000000,
+          url: '/docs/voice_effect_audio/abc_p0_r100_e0.wav',
+          voiceEffect: const VoiceEffect(robot: 100),
+          originalUrl: 'https://example.com/audio.aac',
+        );
+
+        expect(
+          robot.resolvedSource,
+          equals((
+            kind: AudioSourceKind.file,
+            path: '/docs/voice_effect_audio/abc_p0_r100_e0.wav',
+          )),
+        );
+        expect(
+          robot.originalSource,
+          equals((
+            kind: AudioSourceKind.network,
+            path: 'https://example.com/audio.aac',
+          )),
+        );
+      });
+
+      test('can clear the mime type', () {
+        expect(processed.mimeType, 'audio/wav');
+        expect(processed.copyWith(clearMimeType: true).mimeType, isNull);
+      });
+
       test('is never published in Kind 1063 tags', () {
         final tags = processed.toTags();
 
@@ -1844,6 +1923,7 @@ void main() {
               contains('voiceEffect'),
               contains('noiseReduction'),
               contains('originalUrl'),
+              contains('originalMimeType'),
             ),
           ),
         );
