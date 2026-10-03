@@ -366,12 +366,19 @@ class VoiceEffectService {
   /// names the file after its sniffed container rather than an extension a
   /// Blossom URL does not have; writes a bundled sound out of the app's
   /// assets.
+  ///
+  /// A file source is already local — [_decode] short-circuits it before this
+  /// is called — so routing it through the Blossom-flavoured downloader is a
+  /// bug, not a fallback.
   static Future<String> _fetchToTemporaryFile(VoiceEffectSource source) =>
       RenderAudioFetcher().localPathFor(
         switch (source.kind) {
           AudioSourceKind.asset => EditorAudio.asset(source.path),
           AudioSourceKind.network => EditorAudio.network(source.path),
-          AudioSourceKind.file => EditorAudio.file(source.path),
+          AudioSourceKind.file => throw StateError(
+            '_fetchToTemporaryFile called with a local file source: '
+            '${source.path}',
+          ),
         },
         logName: 'VoiceEffectService',
       );
