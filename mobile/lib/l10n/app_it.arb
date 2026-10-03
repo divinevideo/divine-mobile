@@ -2960,10 +2960,8 @@
     "peopleListsNoPeopleSubtitle": "Aggiungi persone per iniziare",
     "peopleListsNoVideosTitle": "Ancora nessun video",
     "peopleListsNoVideosSubtitle": "I video dei membri della lista appariranno qui",
-    "peopleListsNoVideosAvailable": "Nessun video disponibile",
     "peopleListsFailedToLoadVideos": "Impossibile caricare i video",
     "peopleListsVideoNotAvailable": "Video non disponibile",
-    "peopleListsBackToGridTooltip": "Torna alla griglia",
     "peopleListsErrorLoadingVideos": "Errore nel caricamento dei video",
     "peopleListsNoPeopleToAdd": "Nessuna persona disponibile da aggiungere.",
     "peopleListsAddToListName": "Aggiungi a {name}",
@@ -4786,5 +4784,35 @@
     "videoMetadataScheduleTooSoon": "{minutes, plural, =1{Lascia almeno {minutes} minuto.} other{Lascia almeno {minutes} minuti.}}",
     "videoMetadataScheduleTooFar": "{days, plural, =1{È a più di {days} giorno. Scegli qualcosa di più vicino.} other{È a più di {days} giorni. Scegli qualcosa di più vicino.}}",
     "videoMetadataScheduleButton": "Programma",
-    "videoMetadataScheduleVideoHint": "Programma questo video per {time}"
+    "videoMetadataScheduleVideoHint": "Programma questo video per {time}",
+  "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loop}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listMemberCount": "{count, plural, =1{{count} membro} other{{count} membri}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsLoadFailed": "Impossibile caricare questa lista.",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} persona} other{{count} persone}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsViewAllMembers": "Vedi tutti"
 }

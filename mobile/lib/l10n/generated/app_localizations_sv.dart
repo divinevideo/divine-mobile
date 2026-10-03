@@ -3930,17 +3930,11 @@ class AppLocalizationsSv extends AppLocalizations {
       'Videor från listmedlemmar visas här';
 
   @override
-  String get peopleListsNoVideosAvailable => 'Inga videor tillgängliga';
-
-  @override
   String get peopleListsFailedToLoadVideos =>
       'Det gick inte att läsa in videor';
 
   @override
   String get peopleListsVideoNotAvailable => 'Video ej tillgänglig';
-
-  @override
-  String get peopleListsBackToGridTooltip => 'Tillbaka till rutnät';
 
   @override
   String get peopleListsErrorLoadingVideos => 'Fel vid inläsning av videor';
@@ -12771,4 +12765,46 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get soundUploadRetrySaveAction => 'Försök spara i Ljud igen';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted loopar',
+      one: '$formatted loop',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count medlemmar',
+      one: '$count medlem',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsLoadFailed => 'Kunde inte läsa in den här listan.';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count personer',
+      one: '$count person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get peopleListsViewAllMembers => 'Visa alla';
 }

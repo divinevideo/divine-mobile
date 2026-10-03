@@ -3866,16 +3866,10 @@ class AppLocalizationsId extends AppLocalizations {
       'Video dari anggota daftar akan muncul di sini';
 
   @override
-  String get peopleListsNoVideosAvailable => 'Tidak ada video tersedia';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'Gagal memuat video';
 
   @override
   String get peopleListsVideoNotAvailable => 'Video tidak tersedia';
-
-  @override
-  String get peopleListsBackToGridTooltip => 'Kembali ke tampilan kisi';
 
   @override
   String get peopleListsErrorLoadingVideos => 'Kesalahan saat memuat video';
@@ -12674,4 +12668,46 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get soundUploadRetrySaveAction => 'Coba simpan lagi ke Suara';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted loop',
+      one: '$formatted loop',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count anggota',
+      one: '$count anggota',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsLoadFailed => 'Tidak bisa memuat daftar ini.';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count orang',
+      one: '$count orang',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get peopleListsViewAllMembers => 'Lihat semua';
 }

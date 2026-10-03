@@ -2960,10 +2960,8 @@
     "peopleListsNoPeopleSubtitle": "Voeg mensen toe om te beginnen",
     "peopleListsNoVideosTitle": "Nog geen video's",
     "peopleListsNoVideosSubtitle": "Video's van lijstleden verschijnen hier",
-    "peopleListsNoVideosAvailable": "Geen video's beschikbaar",
     "peopleListsFailedToLoadVideos": "Video's laden mislukt",
     "peopleListsVideoNotAvailable": "Video niet beschikbaar",
-    "peopleListsBackToGridTooltip": "Terug naar raster",
     "peopleListsErrorLoadingVideos": "Fout bij laden van video's",
     "peopleListsNoPeopleToAdd": "Geen mensen beschikbaar om toe te voegen.",
     "peopleListsAddToListName": "Toevoegen aan {name}",
@@ -4786,5 +4784,35 @@
     "videoMetadataScheduleTooSoon": "{minutes, plural, =1{Houd minstens {minutes} minuut aan.} other{Houd minstens {minutes} minuten aan.}}",
     "videoMetadataScheduleTooFar": "{days, plural, =1{Dat is meer dan {days} dag vooruit. Kies iets eerder.} other{Dat is meer dan {days} dagen vooruit. Kies iets eerder.}}",
     "videoMetadataScheduleButton": "Inplannen",
-    "videoMetadataScheduleVideoHint": "Plant deze video in voor {time}"
+    "videoMetadataScheduleVideoHint": "Plant deze video in voor {time}",
+  "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loops}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listMemberCount": "{count, plural, =1{{count} lid} other{{count} leden}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsLoadFailed": "Kon deze lijst niet laden.",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} persoon} other{{count} personen}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsViewAllMembers": "Alles bekijken"
 }

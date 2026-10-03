@@ -1929,10 +1929,8 @@
   "peopleListsNoPeopleSubtitle": "شروع کرنے کے لیے کچھ لوگ شامل کریں",
   "peopleListsNoVideosTitle": "ابھی کوئی ویڈیو نہیں",
   "peopleListsNoVideosSubtitle": "فہرست کے ممبران کی ویڈیوز یہاں نظر آئیں گی",
-  "peopleListsNoVideosAvailable": "کوئی ویڈیو دستیاب نہیں",
   "peopleListsFailedToLoadVideos": "ویڈیوز لوڈ نہیں ہو سکیں",
   "peopleListsVideoNotAvailable": "ویڈیو دستیاب نہیں",
-  "peopleListsBackToGridTooltip": "گرڈ پر واپس",
   "peopleListsErrorLoadingVideos": "ویڈیوز لوڈ کرنے میں خرابی",
   "peopleListsNoPeopleToAdd": "شامل کرنے کے لیے کوئی لوگ دستیاب نہیں۔",
   "peopleListsAddToListName": "{name} میں شامل کریں",
@@ -6553,5 +6551,35 @@
     "videoMetadataScheduleTooSoon": "{minutes, plural, =1{کم از کم {minutes} منٹ کا وقفہ رکھیں۔} other{کم از کم {minutes} منٹ کا وقفہ رکھیں۔}}",
     "videoMetadataScheduleTooFar": "{days, plural, =1{یہ {days} دن سے زیادہ دور ہے۔ کوئی قریبی وقت منتخب کریں۔} other{یہ {days} دن سے زیادہ دور ہے۔ کوئی قریبی وقت منتخب کریں۔}}",
     "videoMetadataScheduleButton": "شیڈول کریں",
-    "videoMetadataScheduleVideoHint": "یہ ویڈیو {time} کے لیے شیڈول کرتا ہے"
+    "videoMetadataScheduleVideoHint": "یہ ویڈیو {time} کے لیے شیڈول کرتا ہے",
+  "listLoopsCount": "{count, plural, =1{{formatted} لوپ} other{{formatted} لوپ}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listMemberCount": "{count, plural, =1{{count} ممبر} other{{count} ممبران}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsLoadFailed": "یہ فہرست لوڈ نہیں ہو سکی۔",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} شخص} other{{count} لوگ}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsViewAllMembers": "سب دیکھیں"
 }

@@ -2960,10 +2960,8 @@
     "peopleListsNoPeopleSubtitle": "Adaugă persoane pentru a începe",
     "peopleListsNoVideosTitle": "Niciun videoclip încă",
     "peopleListsNoVideosSubtitle": "Videoclipurile membrilor listei vor apărea aici",
-    "peopleListsNoVideosAvailable": "Niciun videoclip disponibil",
     "peopleListsFailedToLoadVideos": "Încărcarea videoclipurilor a eșuat",
     "peopleListsVideoNotAvailable": "Videoclip indisponibil",
-    "peopleListsBackToGridTooltip": "Înapoi la grilă",
     "peopleListsErrorLoadingVideos": "Eroare la încărcarea videoclipurilor",
     "peopleListsNoPeopleToAdd": "Nicio persoană disponibilă de adăugat.",
     "peopleListsAddToListName": "Adaugă la {name}",
@@ -4786,5 +4784,35 @@
     "videoMetadataScheduleTooSoon": "{minutes, plural, =1{Lasă cel puțin {minutes} minut.} few{Lasă cel puțin {minutes} minute.} other{Lasă cel puțin {minutes} de minute.}}",
     "videoMetadataScheduleTooFar": "{days, plural, =1{E la mai mult de {days} zi. Alege ceva mai apropiat.} few{E la mai mult de {days} zile. Alege ceva mai apropiat.} other{E la mai mult de {days} de zile. Alege ceva mai apropiat.}}",
     "videoMetadataScheduleButton": "Programează",
-    "videoMetadataScheduleVideoHint": "Programează videoclipul pentru {time}"
+    "videoMetadataScheduleVideoHint": "Programează videoclipul pentru {time}",
+  "listLoopsCount": "{count, plural, =1{{formatted} buclă} few{{formatted} bucle} other{{formatted} de bucle}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listMemberCount": "{count, plural, =1{{count} membru} few{{count} membri} other{{count} de membri}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsLoadFailed": "N-am putut încărca această listă.",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} persoană} few{{count} persoane} other{{count} de persoane}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsViewAllMembers": "Vezi toți"
 }

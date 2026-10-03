@@ -2960,10 +2960,8 @@
     "peopleListsNoPeopleSubtitle": "Lägg till personer för att komma igång",
     "peopleListsNoVideosTitle": "Inga videor än",
     "peopleListsNoVideosSubtitle": "Videor från listmedlemmar visas här",
-    "peopleListsNoVideosAvailable": "Inga videor tillgängliga",
     "peopleListsFailedToLoadVideos": "Det gick inte att läsa in videor",
     "peopleListsVideoNotAvailable": "Video ej tillgänglig",
-    "peopleListsBackToGridTooltip": "Tillbaka till rutnät",
     "peopleListsErrorLoadingVideos": "Fel vid inläsning av videor",
     "peopleListsNoPeopleToAdd": "Inga personer tillgängliga att lägga till.",
     "peopleListsAddToListName": "Lägg till i {name}",
@@ -4786,5 +4784,35 @@
     "videoMetadataScheduleTooSoon": "{minutes, plural, =1{Lämna minst {minutes} minut.} other{Lämna minst {minutes} minuter.}}",
     "videoMetadataScheduleTooFar": "{days, plural, =1{Det är mer än {days} dag bort. Välj något tidigare.} other{Det är mer än {days} dagar bort. Välj något tidigare.}}",
     "videoMetadataScheduleButton": "Schemalägg",
-    "videoMetadataScheduleVideoHint": "Schemalägger videon till {time}"
+    "videoMetadataScheduleVideoHint": "Schemalägger videon till {time}",
+  "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loopar}}",
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listMemberCount": "{count, plural, =1{{count} medlem} other{{count} medlemmar}}",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ ",
+  "peopleListsLoadFailed": "Kunde inte läsa in den här listan.",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} person} other{{count} personer}}",
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "peopleListsViewAllMembers": "Visa alla"
 }

@@ -12,16 +12,32 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/features/people_lists/people_lists.dart';
+import 'package:openvine/features/people_lists/view/people_list_member_tile.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/list_providers.dart';
+import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/screens/user_list_people_screen.dart';
-import 'package:openvine/widgets/user_avatar.dart';
+import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:videos_repository/videos_repository.dart';
 
-import '../helpers/finders.dart';
 import '../helpers/test_provider_overrides.dart';
 
 class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
     implements PeopleListsBloc {}
+
+class _MockVideosRepository extends Mock implements VideosRepository {}
+
+/// An empty feed pool, so the members feed has nothing to paint before its
+/// fetch answers.
+class _EmptyVideoEventsPool extends VideoEvents {
+  @override
+  Stream<List<VideoEvent>> build() async* {
+    yield const [];
+  }
+}
 
 const _ownerPubkey =
     'f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0';
@@ -98,6 +114,11 @@ Future<void> _pumpPushedListRoute(
           return UserListPeopleScreen(listId: listId);
         },
       ),
+      GoRoute(
+        path: '${UserListPeopleScreen.path}/add-people',
+        builder: (context, state) =>
+            const Scaffold(body: Center(child: Text('Add people picker'))),
+      ),
     ],
   );
 
@@ -143,7 +164,7 @@ List<String> _captureAnnouncements(WidgetTester tester) {
 
 /// Opens the delete confirmation from the overflow menu and confirms it.
 Future<void> _confirmDelete(WidgetTester tester, AppLocalizations l10n) async {
-  await tester.tap(findByTooltip(l10n.peopleListsActionsTooltip));
+  await tester.tap(find.byTooltip(l10n.peopleListsActionsTooltip));
   await tester.pumpAndSettle();
   await tester.tap(find.text(l10n.listDeleteAction));
   await tester.pumpAndSettle();
@@ -154,6 +175,60 @@ Future<void> _confirmDelete(WidgetTester tester, AppLocalizations l10n) async {
 void main() {
   group(UserListPeopleScreen, () {
     final l10n = lookupAppLocalizations(const Locale('en'));
+
+    for (final listExists in [false, true]) {
+      testWidgets('cold list back returns to Home (exists: $listExists)', (
+        tester,
+      ) async {
+        final bloc = _MockPeopleListsBloc();
+        final list = _buildList(id: 'cold-list');
+        whenListen(
+          bloc,
+          const Stream<PeopleListsState>.empty(),
+          initialState: PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: _ownerPubkey,
+            lists: listExists ? [list] : [],
+          ),
+        );
+        final router = GoRouter(
+          initialLocation: '/people-lists/cold-list',
+          routes: [
+            GoRoute(
+              path: defaultSafePopFallback,
+              builder: (_, _) => const Scaffold(body: Text('Home fallback')),
+            ),
+            GoRoute(
+              path: UserListPeopleScreen.path,
+              builder: (_, state) =>
+                  UserListPeopleScreen(listId: state.pathParameters['listId']!),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          testProviderScope(
+            child: BlocProvider<PeopleListsBloc>.value(
+              value: bloc,
+              child: MaterialApp.router(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                routerConfig: router,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(router.canPop(), isFalse);
+        expect(find.text('Home fallback'), findsNothing);
+        final backLabel = MaterialLocalizations.of(
+          tester.element(find.byType(DiVineAppBar)),
+        ).backButtonTooltip;
+        await tester.tap(find.bySemanticsLabel(backLabel));
+        await tester.pumpAndSettle();
+        expect(find.text('Home fallback'), findsOneWidget);
+      });
+    }
 
     test('exposes route name and path constants', () {
       expect(UserListPeopleScreen.routeName, equals('people-list-members'));
@@ -189,8 +264,131 @@ void main() {
         );
 
         await tester.pump();
-
         expect(find.text('Selected List'), findsOneWidget);
+      },
+    );
+
+    testWidgets('a discovered list that fails to load offers a retry', (
+      tester,
+    ) async {
+      // A relay failure must not read as "this list was deleted": the
+      // viewer gets the failure copy and a retry that re-runs the read.
+      const otherOwner =
+          'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+      final list = _buildList(id: 'crew', name: 'Crew', isEditable: false);
+      var attempts = 0;
+      final bloc = _MockPeopleListsBloc();
+      whenListen(
+        bloc,
+        const Stream<PeopleListsState>.empty(),
+        initialState: const PeopleListsState(
+          status: PeopleListsStatus.ready,
+          ownerPubkey: _ownerPubkey,
+        ),
+      );
+
+      await tester.pumpWidget(
+        testProviderScope(
+          additionalOverrides: [
+            publicPeopleListProvider(
+              ownerPubkey: otherOwner,
+              listId: 'crew',
+            ).overrideWith((ref) async {
+              attempts++;
+              if (attempts == 1) throw Exception('relay timed out');
+              return list;
+            }),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: BlocProvider<PeopleListsBloc>.value(
+              value: bloc,
+              child: const UserListPeopleScreen(
+                listId: 'crew',
+                ownerPubkey: otherOwner,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text(l10n.peopleListsLoadFailed), findsOneWidget);
+      expect(find.text(l10n.peopleListsListNotFoundTitle), findsNothing);
+
+      await tester.tap(find.text(l10n.commonRetry));
+      await tester.pump();
+      await tester.pump();
+      // The hero lives in the video grid, which paints a frame after the
+      // broken-video tracker resolves.
+      await tester.pump();
+
+      expect(attempts, 2);
+      expect(find.text('Crew'), findsOneWidget);
+      expect(find.text(l10n.peopleListsLoadFailed), findsNothing);
+    });
+
+    testWidgets(
+      'a members feed that fails to load offers a retry, not a spinner',
+      (tester) async {
+        const member =
+            'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+        final list = _buildList(pubkeys: const [member]);
+        final bloc = _MockPeopleListsBloc();
+        whenListen(
+          bloc,
+          const Stream<PeopleListsState>.empty(),
+          initialState: PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: _ownerPubkey,
+            lists: [list],
+          ),
+        );
+        final videosRepository = _MockVideosRepository();
+        var attempts = 0;
+        when(
+          () => videosRepository.getVideosByAuthors(
+            authorPubkeys: any(named: 'authorPubkeys'),
+          ),
+        ).thenAnswer((_) async {
+          attempts++;
+          throw Exception('relay down');
+        });
+
+        await tester.pumpWidget(
+          testProviderScope(
+            additionalOverrides: [
+              videosRepositoryProvider.overrideWithValue(videosRepository),
+              videoEventsProvider.overrideWith(_EmptyVideoEventsPool.new),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: BlocProvider<PeopleListsBloc>.value(
+                value: bloc,
+                child: UserListPeopleScreen(listId: list.id),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        await tester.pump();
+
+        // A provider that retries on its own stays loading while it carries
+        // the error, and the viewer never reaches this view.
+        expect(find.text(l10n.peopleListsFailedToLoadVideos), findsOneWidget);
+        expect(attempts, equals(1));
+
+        await tester.tap(find.text(l10n.commonRetry));
+        await tester.pump();
+        await tester.pump();
+        await tester.pump();
+
+        expect(attempts, equals(2));
+        expect(find.text(l10n.peopleListsFailedToLoadVideos), findsOneWidget);
       },
     );
 
@@ -279,9 +477,39 @@ void main() {
       },
     );
 
-    testWidgets('shows the add-people action when current list is editable', (
+    testWidgets("shows loading until the viewer's lists have arrived", (
       tester,
     ) async {
+      // A cold deep link reaches the screen before the bloc has delivered
+      // the viewer's lists; that is not "not found" yet.
+      final bloc = _MockPeopleListsBloc();
+      whenListen(
+        bloc,
+        const Stream<PeopleListsState>.empty(),
+        initialState: const PeopleListsState(
+          status: PeopleListsStatus.loading,
+        ),
+      );
+
+      await tester.pumpWidget(
+        testProviderScope(
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: BlocProvider<PeopleListsBloc>.value(
+              value: bloc,
+              child: const UserListPeopleScreen(listId: 'missing-id'),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
+      expect(find.text(l10n.peopleListsListNotFoundTitle), findsNothing);
+    });
+
+    testWidgets('add people option opens the picker', (tester) async {
       final bloc = _MockPeopleListsBloc();
       final list = _buildList(id: 'punk-friends', name: 'Punk Friends');
       whenListen(
@@ -289,102 +517,20 @@ void main() {
         const Stream<PeopleListsState>.empty(),
         initialState: PeopleListsState(
           status: PeopleListsStatus.ready,
-          ownerPubkey: 'f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0',
-          lists: [list],
-        ),
-      );
-
-      await tester.pumpWidget(
-        testProviderScope(
-          child: MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: BlocProvider<PeopleListsBloc>.value(
-              value: bloc,
-              child: UserListPeopleScreen(listId: list.id),
-            ),
-          ),
-        ),
-      );
-
-      await tester.pump();
-
-      final l10n = lookupAppLocalizations(const Locale('en'));
-      expect(
-        find.bySemanticsLabel(l10n.peopleListsAddPeopleSemanticLabel),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('hides the add-people action when current list is read-only', (
-      tester,
-    ) async {
-      final bloc = _MockPeopleListsBloc();
-      // Read-only lists (e.g. Divine Team) carry isEditable: false and must
-      // not expose the add-people action — editing them is forbidden.
-      final list = _buildList(
-        id: 'divine-team',
-        name: 'Divine Team',
-        isEditable: false,
-      );
-      whenListen(
-        bloc,
-        const Stream<PeopleListsState>.empty(),
-        initialState: PeopleListsState(
-          status: PeopleListsStatus.ready,
-          ownerPubkey: 'f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0',
-          lists: [list],
-        ),
-      );
-
-      await tester.pumpWidget(
-        testProviderScope(
-          child: MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: BlocProvider<PeopleListsBloc>.value(
-              value: bloc,
-              child: UserListPeopleScreen(listId: list.id),
-            ),
-          ),
-        ),
-      );
-
-      await tester.pump();
-
-      final l10n = lookupAppLocalizations(const Locale('en'));
-      expect(
-        find.bySemanticsLabel(l10n.peopleListsAddPeopleSemanticLabel),
-        findsNothing,
-      );
-    });
-
-    testWidgets('shows delete action when current list is editable', (
-      tester,
-    ) async {
-      final bloc = _MockPeopleListsBloc();
-      final list = _buildList(id: 'owned-list', name: 'Owned List');
-      whenListen(
-        bloc,
-        const Stream<PeopleListsState>.empty(),
-        initialState: PeopleListsState(
-          status: PeopleListsStatus.ready,
           ownerPubkey: _ownerPubkey,
           lists: [list],
         ),
       );
 
-      await _pumpPeopleListScreen(tester, bloc: bloc, list: list);
+      await _pumpPushedListRoute(tester, bloc: bloc, list: list);
 
-      expect(findByTooltip(l10n.peopleListsActionsTooltip), findsOneWidget);
-
-      await tester.tap(findByTooltip(l10n.peopleListsActionsTooltip));
+      await tester.tap(find.byTooltip(l10n.peopleListsAddPeopleTooltip));
       await tester.pumpAndSettle();
 
-      expect(find.text(l10n.listDeleteAction), findsOneWidget);
+      expect(find.text('Add people picker'), findsOneWidget);
     });
 
-    testWidgets('hides delete action menu when current list is read-only', (
+    testWidgets('hides the owner actions when current list is read-only', (
       tester,
     ) async {
       final bloc = _MockPeopleListsBloc();
@@ -405,7 +551,8 @@ void main() {
 
       await _pumpPeopleListScreen(tester, bloc: bloc, list: list);
 
-      expect(findByTooltip(l10n.peopleListsActionsTooltip), findsNothing);
+      expect(find.byTooltip(l10n.peopleListsActionsTooltip), findsNothing);
+      expect(find.text(l10n.peopleListsAddPeopleTooltip), findsNothing);
       expect(find.text(l10n.listDeleteAction), findsNothing);
     });
 
@@ -427,7 +574,7 @@ void main() {
 
       await _pumpPeopleListScreen(tester, bloc: bloc, list: list);
 
-      await tester.tap(findByTooltip(l10n.peopleListsActionsTooltip));
+      await tester.tap(find.byTooltip(l10n.peopleListsActionsTooltip));
       await tester.pumpAndSettle();
       await tester.tap(find.text(l10n.listDeleteAction));
       await tester.pumpAndSettle();
@@ -591,6 +738,22 @@ void main() {
               ownerPubkey: _otherOwnerPubkey,
             ),
           );
+        // Two frames: one for the states to land, one for the confirmation
+        // sheet to be gone. The spinner never settles, so no pumpAndSettle.
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        // The new account's lists are still on their way: not "not found"
+        // yet, and no announcement or pop either way.
+        expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
+        expect(find.text(l10n.peopleListsListNotFoundTitle), findsNothing);
+
+        controller.add(
+          const PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: _otherOwnerPubkey,
+          ),
+        );
         await tester.pumpAndSettle();
 
         expect(announcements, isEmpty);
@@ -622,7 +785,7 @@ void main() {
 
       await _pumpPeopleListScreen(tester, bloc: bloc, list: list);
 
-      await tester.tap(findByTooltip(l10n.peopleListsActionsTooltip));
+      await tester.tap(find.byTooltip(l10n.peopleListsActionsTooltip));
       await tester.pumpAndSettle();
       await tester.tap(find.text(l10n.listDeleteAction));
       await tester.pumpAndSettle();
@@ -682,8 +845,8 @@ void main() {
               home: BlocProvider<PeopleListsBloc>.value(
                 value: bloc,
                 child: const Scaffold(
-                  body: PeopleCarousel(
-                    pubkeys: [memberPubkey],
+                  body: PeopleListMemberTile(
+                    pubkey: memberPubkey,
                     listId: 'list-1',
                     canRemove: true,
                   ),
@@ -694,7 +857,7 @@ void main() {
         );
         await tester.pump();
 
-        await tester.longPress(find.byType(UserAvatar).first);
+        await tester.longPress(find.byType(PeopleListMemberTile));
         await tester.pumpAndSettle();
 
         expect(find.text('Remove'), findsOneWidget);
@@ -722,8 +885,8 @@ void main() {
               home: BlocProvider<PeopleListsBloc>.value(
                 value: bloc,
                 child: const Scaffold(
-                  body: PeopleCarousel(
-                    pubkeys: [memberPubkey],
+                  body: PeopleListMemberTile(
+                    pubkey: memberPubkey,
                     listId: 'list-1',
                     canRemove: true,
                   ),
@@ -734,7 +897,7 @@ void main() {
         );
         await tester.pump();
 
-        await tester.longPress(find.byType(UserAvatar).first);
+        await tester.longPress(find.byType(PeopleListMemberTile));
         await tester.pumpAndSettle();
         await tester.tap(find.text('Remove'));
         await tester.pumpAndSettle();
@@ -770,8 +933,8 @@ void main() {
             home: BlocProvider<PeopleListsBloc>.value(
               value: bloc,
               child: const Scaffold(
-                body: PeopleCarousel(
-                  pubkeys: [memberPubkey],
+                body: PeopleListMemberTile(
+                  pubkey: memberPubkey,
                   listId: 'list-1',
                   canRemove: true,
                 ),
@@ -782,7 +945,7 @@ void main() {
       );
       await tester.pump();
 
-      await tester.longPress(find.byType(UserAvatar).first);
+      await tester.longPress(find.byType(PeopleListMemberTile));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Remove'));
       await tester.pumpAndSettle();
@@ -820,8 +983,8 @@ void main() {
             GoRoute(
               path: '/',
               builder: (context, state) => const Scaffold(
-                body: PeopleCarousel(
-                  pubkeys: [memberPubkey],
+                body: PeopleListMemberTile(
+                  pubkey: memberPubkey,
                   listId: 'divine-team',
                   canRemove: false,
                 ),
@@ -849,7 +1012,7 @@ void main() {
         );
         await tester.pump();
 
-        await tester.longPress(find.byType(UserAvatar).first);
+        await tester.longPress(find.byType(PeopleListMemberTile));
         await tester.pumpAndSettle();
 
         expect(find.text('Remove'), findsNothing);
