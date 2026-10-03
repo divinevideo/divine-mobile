@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:badge_repository/badge_repository.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,6 +28,47 @@ void main() {
         );
 
     group('load', () {
+      test('shows indexed holders before the complete relay result', () async {
+        final relayResult = Completer<Set<String>>();
+        when(
+          () => repository.loadAcceptedHolders(_coordinate),
+        ).thenAnswer((_) => relayResult.future);
+        final cubit = BadgeHoldersCubit(
+          repository: repository,
+          coordinate: _coordinate,
+          canSubscribe: false,
+          loadIndexedPreview: (_) async => ['indexed'],
+        );
+        addTearDown(cubit.close);
+
+        final preview = cubit.stream.firstWhere(
+          (state) => state.holdersStatus == BadgeHoldersStatus.preview,
+        );
+        final load = cubit.load();
+        expect((await preview).holders, ['indexed']);
+        relayResult.complete({'indexed', 'federated'});
+        await load;
+        expect(cubit.state.holdersStatus, BadgeHoldersStatus.loaded);
+        expect(cubit.state.holders, containsAll(['indexed', 'federated']));
+      });
+
+      test('uses the relay result when the index is unavailable', () async {
+        when(
+          () => repository.loadAcceptedHolders(_coordinate),
+        ).thenAnswer((_) async => {'federated'});
+        final cubit = BadgeHoldersCubit(
+          repository: repository,
+          coordinate: _coordinate,
+          canSubscribe: false,
+          loadIndexedPreview: (_) async => throw StateError('404'),
+        );
+        addTearDown(cubit.close);
+
+        await cubit.load();
+        expect(cubit.state.holdersStatus, BadgeHoldersStatus.loaded);
+        expect(cubit.state.holders, ['federated']);
+      });
+
       blocTest<BadgeHoldersCubit, BadgeHoldersState>(
         'loads the holders and whether the viewer subscribes',
         setUp: () {

@@ -1174,6 +1174,39 @@ class FunnelcakeApiClient {
     }
   }
 
+  /// Locally indexed accepted holders from the first bounded award page.
+  ///
+  /// This is a fast preview only. Callers must reconcile with relays for the
+  /// complete federated holder set before treating the result as final.
+  Future<List<String>> getBadgeHolderPreview({
+    required String creatorPubkey,
+    required String dTag,
+  }) async {
+    if (!isAvailable) throw const FunnelcakeNotConfiguredException();
+    final uri = Uri.parse(
+      '$_baseUrl/api/badges/${Uri.encodeComponent(creatorPubkey)}/${Uri.encodeComponent(dTag)}/holders',
+    ).replace(queryParameters: {'limit': '50'});
+    try {
+      final response = await _get(uri);
+      if (response.statusCode != 200) {
+        throw FunnelcakeApiException(
+          message: 'Failed to fetch badge holder preview',
+          statusCode: response.statusCode,
+          url: uri.toString(),
+        );
+      }
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final holders = data['holders'] as List<dynamic>;
+      return holders.cast<String>();
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on FunnelcakeException {
+      rethrow;
+    } catch (error) {
+      throw FunnelcakeException('Failed to fetch badge holder preview: $error');
+    }
+  }
+
   /// Searches for user profiles by query string.
   ///
   /// [query] is the search term to look for in profile names, display names,
