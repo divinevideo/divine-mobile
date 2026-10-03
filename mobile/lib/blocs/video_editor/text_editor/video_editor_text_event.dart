@@ -58,17 +58,6 @@ class VideoEditorTextBackgroundStyleChanged extends VideoEditorTextEvent {
   List<Object?> get props => [backgroundStyle];
 }
 
-/// Triggered when the font size changes.
-class VideoEditorTextFontSizeChanged extends VideoEditorTextEvent {
-  const VideoEditorTextFontSizeChanged(this.fontSize);
-
-  /// The new font size as a normalized value (0.0 - 1.0).
-  final double fontSize;
-
-  @override
-  List<Object?> get props => [fontSize];
-}
-
 /// Triggered when the text editor opens for a new layer to reset state.
 class VideoEditorTextReset extends VideoEditorTextEvent {
   const VideoEditorTextReset();
@@ -113,7 +102,6 @@ class VideoEditorTextInitFromLayer extends VideoEditorTextEvent {
     required this.alignment,
     required this.color,
     required this.backgroundStyle,
-    required this.fontSize,
     required this.selectedFontIndex,
     this.effects = TextEffects.none,
   });
@@ -130,9 +118,6 @@ class VideoEditorTextInitFromLayer extends VideoEditorTextEvent {
   /// The background style mode.
   final LayerBackgroundMode backgroundStyle;
 
-  /// The font size as a normalized value (0.0 - 1.0).
-  final double fontSize;
-
   /// The index of the selected font in [VideoEditorConstants.textFonts].
   final int selectedFontIndex;
 
@@ -145,7 +130,6 @@ class VideoEditorTextInitFromLayer extends VideoEditorTextEvent {
     alignment,
     color,
     backgroundStyle,
-    fontSize,
     selectedFontIndex,
     effects,
   ];

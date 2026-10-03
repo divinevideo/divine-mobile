@@ -8,7 +8,6 @@ class VideoEditorTextState extends Equatable {
     this.alignment = .center,
     this.color = VineTheme.backgroundColor,
     this.backgroundStyle = .backgroundAndColor,
-    this.fontSize = 0.5,
     this.showFontSelector = false,
     this.showColorPicker = false,
     this.effects = TextEffects.none,
@@ -37,10 +36,6 @@ class VideoEditorTextState extends Equatable {
   /// The background style.
   final LayerBackgroundMode backgroundStyle;
 
-  /// The font size as a normalized value (0.0 - 1.0).
-  /// Maps to actual font sizes in the text layer.
-  final double fontSize;
-
   /// Whether the font selector is currently shown (replaces keyboard).
   final bool showFontSelector;
 
@@ -65,7 +60,6 @@ class VideoEditorTextState extends Equatable {
     TextAlign? alignment,
     Color? color,
     LayerBackgroundMode? backgroundStyle,
-    double? fontSize,
     bool? showFontSelector,
     bool? showColorPicker,
     TextEffects? effects,
@@ -77,7 +71,6 @@ class VideoEditorTextState extends Equatable {
       alignment: alignment ?? this.alignment,
       color: color ?? this.color,
       backgroundStyle: backgroundStyle ?? this.backgroundStyle,
-      fontSize: fontSize ?? this.fontSize,
       showFontSelector: showFontSelector ?? this.showFontSelector,
       showColorPicker: showColorPicker ?? this.showColorPicker,
       effects: effects ?? this.effects,
@@ -92,7 +85,6 @@ class VideoEditorTextState extends Equatable {
     alignment,
     color,
     backgroundStyle,
-    fontSize,
     showFontSelector,
     showColorPicker,
     effects,

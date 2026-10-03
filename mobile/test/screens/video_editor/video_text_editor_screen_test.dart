@@ -63,7 +63,6 @@ void main() {
         alignment: TextAlign.center,
         color: Colors.white,
         backgroundStyle: LayerBackgroundMode.backgroundAndColor,
-        fontSize: 0.5,
         selectedFontIndex: 0,
       ),
     );
@@ -473,22 +472,31 @@ void main() {
       });
     });
 
-    group('TextEditor configuration', () {
-      testWidgets('TextEditor uses font scale limits', (tester) async {
+    group('Font scale', () {
+      testWidgets('starts new text at the initial font scale', (tester) async {
         await tester.pumpWidget(buildWidget());
         await tester.pump();
 
-        final textEditor = tester.widget<TextEditor>(find.byType(TextEditor));
         expect(
-          textEditor.configs.textEditor.minFontScale,
-          VideoEditorConstants.minFontScale,
-        );
-        expect(
-          textEditor.configs.textEditor.maxFontScale,
-          VideoEditorConstants.maxFontScale,
+          tester.state<TextEditorState>(find.byType(TextEditor)).fontScale,
+          VideoEditorConstants.initialFontScale,
         );
       });
 
+      testWidgets('keeps the font scale of an edited layer', (tester) async {
+        final layer = TextLayer(text: 'Hello', fontScale: 3.1);
+
+        await tester.pumpWidget(buildWidget(layer: layer));
+        await tester.pump();
+
+        expect(
+          tester.state<TextEditorState>(find.byType(TextEditor)).fontScale,
+          3.1,
+        );
+      });
+    });
+
+    group('TextEditor configuration', () {
       testWidgets('TextEditor uses base font size', (tester) async {
         await tester.pumpWidget(buildWidget());
         await tester.pump();
@@ -499,89 +507,6 @@ void main() {
           VideoEditorConstants.baseFontSize,
         );
       });
-    });
-  });
-
-  group('Font scale normalization', () {
-    // These tests verify the font scale calculations work correctly
-    // by testing the screen behavior with different fontSize values
-
-    testWidgets('fontSize 0.0 results in minFontScale', (tester) async {
-      final mockBloc = MockVideoEditorTextBloc();
-      when(
-        () => mockBloc.state,
-      ).thenReturn(const VideoEditorTextState(fontSize: 0.0));
-      when(() => mockBloc.stream).thenAnswer((_) => const Stream.empty());
-
-      await tester.pumpWidget(
-        MaterialApp(
-          localizationsDelegates: appLocalizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: BlocProvider<VideoEditorTextBloc>.value(
-            value: mockBloc,
-            child: const Scaffold(body: VideoTextEditorScreen()),
-          ),
-        ),
-      );
-      await tester.pump();
-
-      final textEditor = tester.widget<TextEditor>(find.byType(TextEditor));
-      expect(
-        textEditor.configs.textEditor.initFontScale,
-        VideoEditorConstants.minFontScale,
-      );
-    });
-
-    testWidgets('fontSize 1.0 results in maxFontScale', (tester) async {
-      final mockBloc = MockVideoEditorTextBloc();
-      when(
-        () => mockBloc.state,
-      ).thenReturn(const VideoEditorTextState(fontSize: 1.0));
-      when(() => mockBloc.stream).thenAnswer((_) => const Stream.empty());
-
-      await tester.pumpWidget(
-        MaterialApp(
-          localizationsDelegates: appLocalizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: BlocProvider<VideoEditorTextBloc>.value(
-            value: mockBloc,
-            child: const Scaffold(body: VideoTextEditorScreen()),
-          ),
-        ),
-      );
-      await tester.pump();
-
-      final textEditor = tester.widget<TextEditor>(find.byType(TextEditor));
-      expect(
-        textEditor.configs.textEditor.initFontScale,
-        VideoEditorConstants.maxFontScale,
-      );
-    });
-
-    testWidgets('fontSize 0.5 results in middle fontScale', (tester) async {
-      final mockBloc = MockVideoEditorTextBloc();
-      when(() => mockBloc.state).thenReturn(const VideoEditorTextState());
-      when(() => mockBloc.stream).thenAnswer((_) => const Stream.empty());
-
-      await tester.pumpWidget(
-        MaterialApp(
-          localizationsDelegates: appLocalizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: BlocProvider<VideoEditorTextBloc>.value(
-            value: mockBloc,
-            child: const Scaffold(body: VideoTextEditorScreen()),
-          ),
-        ),
-      );
-      await tester.pump();
-
-      final textEditor = tester.widget<TextEditor>(find.byType(TextEditor));
-      const expectedFontScale =
-          VideoEditorConstants.minFontScale +
-          (0.5 *
-              (VideoEditorConstants.maxFontScale -
-                  VideoEditorConstants.minFontScale));
-      expect(textEditor.configs.textEditor.initFontScale, expectedFontScale);
     });
   });
 

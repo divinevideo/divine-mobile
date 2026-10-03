@@ -657,6 +657,10 @@ class VideoEditorConstants {
   /// Maximum font scale multiplier for text overlays.
   static const double maxFontScale = 4.0;
 
+  /// Font scale a new text overlay starts at. The text editor has no size
+  /// control; the user resizes the overlay by pinching it on the canvas.
+  static const double initialFontScale = 2.25;
+
   /// Minimum playback speed multiplier for clips.
   static const double clipSpeedMin = 0.25;
 

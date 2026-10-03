@@ -26,7 +26,6 @@ void main() {
         bloc.state.backgroundStyle,
         LayerBackgroundMode.backgroundAndColor,
       );
-      expect(bloc.state.fontSize, 0.5);
       expect(bloc.state.showFontSelector, isFalse);
       expect(bloc.state.showColorPicker, isFalse);
       await bloc.close();
@@ -40,7 +39,6 @@ void main() {
           alignment: TextAlign.left,
           color: Colors.red,
           backgroundStyle: LayerBackgroundMode.onlyColor,
-          fontSize: 0.8,
         ),
       );
       expect(bloc.state.text, 'Hello');
@@ -48,7 +46,6 @@ void main() {
       expect(bloc.state.alignment, TextAlign.left);
       expect(bloc.state.color, Colors.red);
       expect(bloc.state.backgroundStyle, LayerBackgroundMode.onlyColor);
-      expect(bloc.state.fontSize, 0.8);
       await bloc.close();
     });
 
@@ -130,15 +127,13 @@ void main() {
         seed: () => const VideoEditorTextState(
           text: 'Hello',
           color: Colors.green,
-          fontSize: 0.7,
         ),
         act: (bloc) => bloc.add(const VideoEditorTextFontSelected(3)),
         expect: () => [
           isA<VideoEditorTextState>()
               .having((s) => s.selectedFontIndex, 'selectedFontIndex', 3)
               .having((s) => s.text, 'text', 'Hello')
-              .having((s) => s.color, 'color', Colors.green)
-              .having((s) => s.fontSize, 'fontSize', 0.7),
+              .having((s) => s.color, 'color', Colors.green),
         ],
       );
 
@@ -325,65 +320,6 @@ void main() {
       );
     });
 
-    group('VideoEditorTextFontSizeChanged', () {
-      blocTest<VideoEditorTextBloc, VideoEditorTextState>(
-        'emits state with new font size',
-        build: buildBloc,
-        act: (bloc) => bloc.add(const VideoEditorTextFontSizeChanged(0.75)),
-        expect: () => [
-          isA<VideoEditorTextState>().having(
-            (s) => s.fontSize,
-            'fontSize',
-            0.75,
-          ),
-        ],
-      );
-
-      blocTest<VideoEditorTextBloc, VideoEditorTextState>(
-        'handles minimum font size',
-        build: buildBloc,
-        act: (bloc) => bloc.add(const VideoEditorTextFontSizeChanged(0.0)),
-        expect: () => [
-          isA<VideoEditorTextState>().having(
-            (s) => s.fontSize,
-            'fontSize',
-            0.0,
-          ),
-        ],
-      );
-
-      blocTest<VideoEditorTextBloc, VideoEditorTextState>(
-        'handles maximum font size',
-        build: buildBloc,
-        act: (bloc) => bloc.add(const VideoEditorTextFontSizeChanged(1.0)),
-        expect: () => [
-          isA<VideoEditorTextState>().having(
-            (s) => s.fontSize,
-            'fontSize',
-            1.0,
-          ),
-        ],
-      );
-
-      blocTest<VideoEditorTextBloc, VideoEditorTextState>(
-        'preserves other state values when font size changes',
-        build: buildBloc,
-        seed: () => const VideoEditorTextState(
-          text: 'Big Text',
-          color: Colors.orange,
-          selectedFontIndex: 4,
-        ),
-        act: (bloc) => bloc.add(const VideoEditorTextFontSizeChanged(0.9)),
-        expect: () => [
-          isA<VideoEditorTextState>()
-              .having((s) => s.fontSize, 'fontSize', 0.9)
-              .having((s) => s.text, 'text', 'Big Text')
-              .having((s) => s.color, 'color', Colors.orange)
-              .having((s) => s.selectedFontIndex, 'selectedFontIndex', 4),
-        ],
-      );
-    });
-
     group('VideoEditorTextReset', () {
       blocTest<VideoEditorTextBloc, VideoEditorTextState>(
         'resets state to default values',
@@ -394,7 +330,6 @@ void main() {
           alignment: TextAlign.right,
           color: Colors.purple,
           backgroundStyle: LayerBackgroundMode.onlyColor,
-          fontSize: 0.9,
           showFontSelector: true,
           showColorPicker: true,
         ),
@@ -410,7 +345,6 @@ void main() {
                 'backgroundStyle',
                 LayerBackgroundMode.backgroundAndColor,
               )
-              .having((s) => s.fontSize, 'fontSize', 0.5)
               .having((s) => s.showFontSelector, 'showFontSelector', isFalse)
               .having((s) => s.showColorPicker, 'showColorPicker', isFalse),
         ],
@@ -662,7 +596,6 @@ void main() {
             alignment: TextAlign.left,
             color: Colors.blue,
             backgroundStyle: LayerBackgroundMode.onlyColor,
-            fontSize: 0.8,
             selectedFontIndex: 3,
             effects: TextEffects(outlineThickness: 0.25),
           ),
@@ -682,7 +615,6 @@ void main() {
                 'backgroundStyle',
                 LayerBackgroundMode.onlyColor,
               )
-              .having((s) => s.fontSize, 'fontSize', 0.8)
               .having((s) => s.selectedFontIndex, 'selectedFontIndex', 3),
         ],
       );
@@ -700,7 +632,6 @@ void main() {
             alignment: TextAlign.center,
             color: Colors.white,
             backgroundStyle: LayerBackgroundMode.backgroundAndColor,
-            fontSize: 0.5,
             selectedFontIndex: 0,
           ),
         ),
@@ -808,12 +739,6 @@ void main() {
       expect(state1, isNot(equals(state2)));
     });
 
-    test('different font size values are not equal', () {
-      const state1 = VideoEditorTextState(fontSize: 0.3);
-      const state2 = VideoEditorTextState(fontSize: 0.7);
-      expect(state1, isNot(equals(state2)));
-    });
-
     test('different showFontSelector values are not equal', () {
       const state1 = VideoEditorTextState(showFontSelector: true);
       const state2 = VideoEditorTextState();
@@ -841,7 +766,6 @@ void main() {
         alignment: TextAlign.left,
         color: Colors.red,
         backgroundStyle: LayerBackgroundMode.onlyColor,
-        fontSize: 0.8,
         showFontSelector: true,
         showColorPicker: true,
       );
@@ -853,7 +777,6 @@ void main() {
       expect(copied.alignment, original.alignment);
       expect(copied.color, original.color);
       expect(copied.backgroundStyle, original.backgroundStyle);
-      expect(copied.fontSize, original.fontSize);
       expect(copied.showFontSelector, original.showFontSelector);
       expect(copied.showColorPicker, original.showColorPicker);
     });
@@ -911,22 +834,12 @@ void main() {
       expect(event1, isNot(equals(event3)));
     });
 
-    test('VideoEditorTextFontSizeChanged supports value equality', () {
-      const event1 = VideoEditorTextFontSizeChanged(0.5);
-      const event2 = VideoEditorTextFontSizeChanged(0.5);
-      const event3 = VideoEditorTextFontSizeChanged(0.8);
-
-      expect(event1, equals(event2));
-      expect(event1, isNot(equals(event3)));
-    });
-
     test('VideoEditorTextInitFromLayer supports value equality', () {
       const event1 = VideoEditorTextInitFromLayer(
         text: 'Test',
         alignment: TextAlign.center,
         color: Colors.black,
         backgroundStyle: LayerBackgroundMode.backgroundAndColor,
-        fontSize: 0.5,
         selectedFontIndex: 0,
       );
       const event2 = VideoEditorTextInitFromLayer(
@@ -934,7 +847,6 @@ void main() {
         alignment: TextAlign.center,
         color: Colors.black,
         backgroundStyle: LayerBackgroundMode.backgroundAndColor,
-        fontSize: 0.5,
         selectedFontIndex: 0,
       );
       const event3 = VideoEditorTextInitFromLayer(
@@ -942,7 +854,6 @@ void main() {
         alignment: TextAlign.center,
         color: Colors.black,
         backgroundStyle: LayerBackgroundMode.backgroundAndColor,
-        fontSize: 0.5,
         selectedFontIndex: 0,
       );
 
