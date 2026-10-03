@@ -183,15 +183,28 @@ void main() {
       test(
         'returns null when the repost has no references',
         () async {
-          final resolver = _createResolver();
+          var calls = 0;
+          final resolver = _createResolver(
+            queryEvents:
+                (
+                  _, {
+                  required timeout,
+                  required requireAllRelaysSettled,
+                }) async {
+                  calls++;
+                  return (events: <Event>[], timedOut: false, noRelays: false);
+                },
+          );
           final event = _createRepostEvent(
-            content: 'not a video',
-            tags: [],
+            tags: [
+              ['p', _syntheticId(11)],
+            ],
           );
 
-          final result = await resolver.resolve(event, fetchFromRelay: false);
+          final result = await resolver.resolve(event);
 
           expect(result, isNull);
+          expect(calls, 0);
         },
       );
 
