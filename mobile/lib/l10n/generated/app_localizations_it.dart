@@ -12946,4 +12946,19 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get peopleListsViewAllMembers => 'Vedi tutti';
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Privata, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
 }

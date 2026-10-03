@@ -12750,4 +12750,19 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get peopleListsViewAllMembers => 'Xem tất cả';
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Riêng tư, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
 }

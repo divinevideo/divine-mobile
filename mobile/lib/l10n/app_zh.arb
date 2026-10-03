@@ -6581,5 +6581,20 @@
       }
     }
   },
-  "peopleListsViewAllMembers": "查看全部"
+  "peopleListsViewAllMembers": "查看全部",
+  "listMemberNamesSeparator": "、",
+  "listCardSemanticLabel": "{visibility, select, private{{name}，私密，{count}} other{{name}，{count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

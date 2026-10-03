@@ -4932,5 +4932,20 @@
       }
     }
   },
-  "peopleListsViewAllMembers": "ሁሉንም ይመልከቱ"
+  "peopleListsViewAllMembers": "ሁሉንም ይመልከቱ",
+  "listMemberNamesSeparator": "፣ ",
+  "listCardSemanticLabel": "{visibility, select, private{{name}፣ የግል፣ {count}} other{{name}፣ {count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

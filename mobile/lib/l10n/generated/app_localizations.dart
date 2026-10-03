@@ -21458,6 +21458,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'View all'**
   String get peopleListsViewAllMembers;
+
+  /// Joins the member names shown under a people list card that has no description, e.g. 'Alice, Bob, Carol'. Translate the separator: locales that do not list with a Latin comma should use their own (for example '、' or '، ').
+  ///
+  /// In en, this message translates to:
+  /// **', '**
+  String get listMemberNamesSeparator;
+
+  /// Screen-reader label for a list card, read as one sentence: the list's name, 'Private' when it is a device-only list, and its count as already localized by listVideoCount or listMemberCount. The order and the punctuation between them are the locale's to choose.
+  ///
+  /// In en, this message translates to:
+  /// **'{visibility, select, private{{name}, Private, {count}} other{{name}, {count}}}'**
+  String listCardSemanticLabel(String name, String visibility, String count);
 }
 
 class _AppLocalizationsDelegate

@@ -4360,5 +4360,20 @@
       }
     }
   },
-  "peopleListsViewAllMembers": "전체 보기"
+  "peopleListsViewAllMembers": "전체 보기",
+  "listMemberNamesSeparator": ", ",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, 비공개, {count}} other{{name}, {count}}}",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }
