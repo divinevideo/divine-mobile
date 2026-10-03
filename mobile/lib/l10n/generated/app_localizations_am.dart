@@ -1358,12 +1358,12 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String exploreFeaturedSponsoredBy(String sponsor) {
-    return 'Sponsored by $sponsor';
+    return 'ስፖንሰር፦ $sponsor';
   }
 
   @override
   String exploreFeaturedSponsoredPillSemanticLabel(String name) {
-    return '$name, sponsored';
+    return '$name፣ ስፖንሰር የተደረገ';
   }
 
   @override

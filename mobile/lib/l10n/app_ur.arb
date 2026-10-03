@@ -582,6 +582,26 @@
   "exploreTabForYou": "آپ کے لیے",
   "exploreTabLists": "فہرستیں",
   "exploreTabIntegratedApps": "مربوط ایپس",
+  "exploreFeaturedSponsoredBy": "{sponsor} کی جانب سے اسپانسر شدہ",
+  "@exploreFeaturedSponsoredBy": {
+    "description": "Commercial disclosure shown with a sponsored featured collection in grid and fullscreen views. This is a disclosure, not marketing copy: translate it so it clearly communicates commercial sponsorship rather than an editorial credit. Many languages may render this more naturally as a noun label than a prepositional phrase, or may need the brand name to lead. {sponsor} is a brand name supplied by the server and must not be translated.",
+    "placeholders": {
+      "sponsor": {
+        "type": "String",
+        "example": "Acme Bikes"
+      }
+    }
+  },
+  "exploreFeaturedSponsoredPillSemanticLabel": "{name}، اسپانسر شدہ",
+  "@exploreFeaturedSponsoredPillSemanticLabel": {
+    "description": "Spoken label for the featured tab's collection pill when the collection is sponsored. The pill's pink colour conveys this visually; this carries the same state to screen readers. {name} is the collection name supplied by the server.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Skate Week"
+      }
+    }
+  },
   "featuredTabEmpty": "یہاں ابھی کچھ نہیں ہے۔ جلد دوبارہ دیکھیں۔",
   "featuredTabLoadFailed": "یہ مجموعہ لوڈ نہیں ہو سکا۔",
   "featuredTabRetry": "دوبارہ کوشش کریں",

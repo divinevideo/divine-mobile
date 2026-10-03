@@ -1277,12 +1277,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String exploreFeaturedSponsoredBy(String sponsor) {
-    return 'Sponsored by $sponsor';
+    return '由 $sponsor 赞助';
   }
 
   @override
   String exploreFeaturedSponsoredPillSemanticLabel(String name) {
-    return '$name, sponsored';
+    return '$name，有赞助';
   }
 
   @override

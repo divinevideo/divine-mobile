@@ -1271,12 +1271,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String exploreFeaturedSponsoredBy(String sponsor) {
-    return 'Sponsored by $sponsor';
+    return '$sponsor 협찬';
   }
 
   @override
   String exploreFeaturedSponsoredPillSemanticLabel(String name) {
-    return '$name, sponsored';
+    return '$name, 협찬';
   }
 
   @override

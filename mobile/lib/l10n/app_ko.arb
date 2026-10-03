@@ -316,6 +316,26 @@
     "exploreTabForYou": "추천",
     "exploreTabLists": "리스트",
     "exploreTabIntegratedApps": "연동된 앱",
+    "exploreFeaturedSponsoredBy": "{sponsor} 협찬",
+    "@exploreFeaturedSponsoredBy": {
+        "description": "Commercial disclosure shown with a sponsored featured collection in grid and fullscreen views. This is a disclosure, not marketing copy: translate it so it clearly communicates commercial sponsorship rather than an editorial credit. Many languages may render this more naturally as a noun label than a prepositional phrase, or may need the brand name to lead. {sponsor} is a brand name supplied by the server and must not be translated.",
+        "placeholders": {
+            "sponsor": {
+                "type": "String",
+                "example": "Acme Bikes"
+            }
+        }
+    },
+    "exploreFeaturedSponsoredPillSemanticLabel": "{name}, 협찬",
+    "@exploreFeaturedSponsoredPillSemanticLabel": {
+        "description": "Spoken label for the featured tab's collection pill when the collection is sponsored. The pill's pink colour conveys this visually; this carries the same state to screen readers. {name} is the collection name supplied by the server.",
+        "placeholders": {
+            "name": {
+                "type": "String",
+                "example": "Skate Week"
+            }
+        }
+    },
     "featuredTabEmpty": "아직 아무것도 없어요. 곧 다시 확인해 주세요.",
     "featuredTabLoadFailed": "이 컬렉션을 불러오지 못했어요.",
     "featuredTabRetry": "다시 시도",
