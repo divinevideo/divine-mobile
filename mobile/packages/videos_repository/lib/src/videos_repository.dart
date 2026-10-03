@@ -2581,7 +2581,7 @@ class VideosRepository {
         limit: limit,
         until: until,
       );
-    } on Object {
+    } on Exception {
       final api = _funnelcakeApiClient;
       if (api == null || !api.isAvailable) rethrow;
       // A list the fallback cannot cover in full surfaces the relay failure

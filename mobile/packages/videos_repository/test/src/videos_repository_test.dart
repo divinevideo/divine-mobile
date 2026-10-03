@@ -11103,6 +11103,44 @@ void main() {
         },
       );
 
+      test(
+        'propagates programming errors without falling back to the API',
+        () async {
+          final api = MockFunnelcakeApiClient();
+          when(() => api.isAvailable).thenReturn(true);
+          final error = StateError('relay query bug');
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenThrow(error);
+          when(
+            () => api.getVideosByAuthor(
+              pubkey: any(named: 'pubkey'),
+              limit: any(named: 'limit'),
+              before: any(named: 'before'),
+            ),
+          ).thenAnswer((_) async => const VideosByAuthorResponse(videos: []));
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: api,
+          );
+
+          await expectLater(
+            repo.getVideosByAuthors(authorPubkeys: [memberKey(200)]),
+            throwsA(same(error)),
+          );
+          verifyNever(
+            () => api.getVideosByAuthor(
+              pubkey: any(named: 'pubkey'),
+              limit: any(named: 'limit'),
+              before: any(named: 'before'),
+            ),
+          );
+        },
+      );
+
       test('rethrows the relay error without a Funnelcake client', () async {
         when(
           () => mockNostrClient.queryEventsDetailed(
