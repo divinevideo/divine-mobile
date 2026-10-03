@@ -9,17 +9,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:models/models.dart' show AudioEvent, VoiceEffect;
+import 'package:models/models.dart'
+    show AudioEvent, AudioSourceKind, VoiceEffect;
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/providers/voice_over_effect_providers.dart';
-import 'package:openvine/services/video_editor/voice_over_effect_service.dart';
+import 'package:openvine/providers/voice_effect_providers.dart';
+import 'package:openvine/services/video_editor/voice_effect_service.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/animation_picker_components.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_voice_effect_sheet.dart';
 import 'package:sound_service/sound_service.dart';
 
-class _MockVoiceOverEffectService extends Mock
-    implements VoiceOverEffectService {}
+class _MockVoiceEffectService extends Mock implements VoiceEffectService {}
 
 class _MockAudioClipPlayer extends Mock implements AudioClipPlayer {}
 
@@ -38,15 +38,15 @@ final _recording = AudioEvent(
 class _Harness {
   _Harness(this.service, this.player);
 
-  final VoiceOverEffectService service;
+  final VoiceEffectService service;
   final AudioClipPlayer player;
   AudioEvent? result;
   bool popped = false;
 
   Widget build(AudioEvent track) => ProviderScope(
     overrides: [
-      voiceOverEffectServiceProvider.overrideWithValue(service),
-      voiceOverAuditionPlayerFactoryProvider.overrideWithValue(() => player),
+      voiceEffectServiceProvider.overrideWithValue(service),
+      voiceEffectAuditionPlayerFactoryProvider.overrideWithValue(() => player),
     ],
     child: MaterialApp.router(
       localizationsDelegates: appLocalizationsDelegates,
@@ -77,17 +77,19 @@ class _Harness {
 void main() {
   group(VideoEditorVoiceEffectSheet, () {
     final l10n = lookupAppLocalizations(const Locale('en'));
-    late _MockVoiceOverEffectService service;
+    late _MockVoiceEffectService service;
     late _MockAudioClipPlayer player;
     late _Harness harness;
 
     setUpAll(() {
       registerFallbackValue(VoiceEffect.none);
       registerFallbackValue(const AudioSourceConfig.file(''));
+      registerFallbackValue(Duration.zero);
+      registerFallbackValue((kind: AudioSourceKind.file, path: ''));
     });
 
     setUp(() {
-      service = _MockVoiceOverEffectService();
+      service = _MockVoiceEffectService();
       player = _MockAudioClipPlayer();
       when(
         () => player.completionStream,
@@ -98,9 +100,11 @@ void main() {
       when(() => player.dispose()).thenAnswer((_) async {});
       when(
         () => service.renderAudition(
-          takePath: any(named: 'takePath'),
+          source: any(named: 'source'),
           effect: any(named: 'effect'),
           noiseReduction: any(named: 'noiseReduction'),
+          start: any(named: 'start'),
+          length: any(named: 'length'),
         ),
       ).thenAnswer((_) async => '/tmp/audition.wav');
       when(() => service.discardAudition(any())).thenAnswer((_) async {});
@@ -204,9 +208,11 @@ void main() {
         );
         verifyNever(
           () => service.renderAudition(
-            takePath: any(named: 'takePath'),
+            source: any(named: 'source'),
             effect: any(named: 'effect'),
             noiseReduction: any(named: 'noiseReduction'),
+            start: any(named: 'start'),
+            length: any(named: 'length'),
           ),
         );
 
@@ -215,9 +221,11 @@ void main() {
 
         verify(
           () => service.renderAudition(
-            takePath: _take,
+            source: (kind: AudioSourceKind.file, path: _take),
             effect: const VoiceEffect(echo: 40),
             noiseReduction: false,
+            start: any(named: 'start'),
+            length: any(named: 'length'),
           ),
         ).called(1);
         expect(
@@ -231,10 +239,10 @@ void main() {
       testWidgets('pops the processed track once the take is processed', (
         tester,
       ) async {
-        final processing = Completer<ProcessedVoiceOverTake>();
+        final processing = Completer<ProcessedAudio>();
         when(
           () => service.process(
-            takePath: _take,
+            source: (kind: AudioSourceKind.file, path: _take),
             effect: const VoiceEffect(pitch: -5),
             noiseReduction: true,
           ),
@@ -275,10 +283,10 @@ void main() {
       testWidgets('cannot cancel or change settings while saving', (
         tester,
       ) async {
-        final processing = Completer<ProcessedVoiceOverTake>();
+        final processing = Completer<ProcessedAudio>();
         when(
           () => service.process(
-            takePath: any(named: 'takePath'),
+            source: any(named: 'source'),
             effect: any(named: 'effect'),
             noiseReduction: any(named: 'noiseReduction'),
           ),
@@ -340,11 +348,11 @@ void main() {
       ) async {
         when(
           () => service.process(
-            takePath: any(named: 'takePath'),
+            source: any(named: 'source'),
             effect: any(named: 'effect'),
             noiseReduction: any(named: 'noiseReduction'),
           ),
-        ).thenThrow(const VoiceOverEffectException('decode failed'));
+        ).thenThrow(const VoiceEffectException('decode failed'));
         await open(tester);
 
         await tester.tap(preset(l10n.videoEditorVoiceEffectEcho));

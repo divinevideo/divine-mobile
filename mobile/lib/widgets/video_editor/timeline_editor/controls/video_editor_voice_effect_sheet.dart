@@ -1,4 +1,4 @@
-// ABOUTME: Bottom sheet for giving a voice-over take a voice effect and noise
+// ABOUTME: Bottom sheet for giving a timeline sound a voice effect and noise
 // ABOUTME: reduction, looping each setting; pops the processed track or null.
 
 import 'package:divine_ui/divine_ui.dart';
@@ -9,18 +9,18 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show AudioEvent, VoiceEffect;
-import 'package:openvine/blocs/video_editor/voice_over_effect/voice_over_effect_bloc.dart';
-import 'package:openvine/blocs/video_editor/voice_over_effect/voice_over_effect_preset.dart';
+import 'package:openvine/blocs/video_editor/voice_effect/voice_effect_bloc.dart';
+import 'package:openvine/blocs/video_editor/voice_effect/voice_effect_preset.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/providers/voice_over_effect_providers.dart';
+import 'package:openvine/providers/voice_effect_providers.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/animation_picker_components.dart';
 
 /// Lets the creator hear and pick a voice effect and noise reduction for the
-/// voice-over [track].
+/// timeline sound [track] — a voice-over, music or any other track.
 ///
 /// Every setting loops while the sheet is open, so it is heard before it is
-/// kept. The take is processed when the creator confirms, while the sheet
+/// kept. The sound is processed when the creator confirms, while the sheet
 /// stays open; it then pops the processed [AudioEvent], or `null` when the
 /// pick matches what the track already plays or the sheet is dismissed.
 class VideoEditorVoiceEffectSheet extends ConsumerWidget {
@@ -41,17 +41,17 @@ class VideoEditorVoiceEffectSheet extends ConsumerWidget {
     body: VideoEditorVoiceEffectSheet(track: track),
   );
 
-  /// The voice-over track as it is on the timeline.
+  /// The sound as it is on the timeline.
   final AudioEvent track;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return BlocProvider(
-      create: (_) => VoiceOverEffectBloc(
+      create: (_) => VoiceEffectBloc(
         track: track,
-        service: ref.read(voiceOverEffectServiceProvider),
-        player: ref.read(voiceOverAuditionPlayerFactoryProvider)(),
-      )..add(const VoiceOverEffectSettingsChanged()),
+        service: ref.read(voiceEffectServiceProvider),
+        player: ref.read(voiceEffectAuditionPlayerFactoryProvider)(),
+      )..add(const VoiceEffectSettingsChanged()),
       child: const VideoEditorVoiceEffectView(),
     );
   }
@@ -66,24 +66,24 @@ class VideoEditorVoiceEffectView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isApplying = context.select(
-      (VoiceOverEffectBloc bloc) => bloc.state.isApplying,
+      (VoiceEffectBloc bloc) => bloc.state.isApplying,
     );
     return PopScope(
       canPop: !isApplying,
       child: MultiBlocListener(
         listeners: [
-          BlocListener<VoiceOverEffectBloc, VoiceOverEffectState>(
+          BlocListener<VoiceEffectBloc, VoiceEffectState>(
             listenWhen: (previous, current) =>
                 previous.status != current.status &&
-                current.status == VoiceOverEffectStatus.done,
+                current.status == VoiceEffectStatus.done,
             listener: (context, state) => context.pop<AudioEvent>(state.result),
           ),
           // The failure text is red under the controls, which a screen-reader
           // user would never find; say it.
-          BlocListener<VoiceOverEffectBloc, VoiceOverEffectState>(
+          BlocListener<VoiceEffectBloc, VoiceEffectState>(
             listenWhen: (previous, current) =>
                 previous.status != current.status &&
-                current.status == VoiceOverEffectStatus.failure,
+                current.status == VoiceEffectStatus.failure,
             listener: (context, _) => SemanticsService.sendAnnouncement(
               View.of(context),
               context.l10n.videoEditorVoiceEffectFailed,
@@ -122,7 +122,7 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final isApplying = context.select(
-      (VoiceOverEffectBloc bloc) => bloc.state.isApplying,
+      (VoiceEffectBloc bloc) => bloc.state.isApplying,
     );
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -158,8 +158,8 @@ class _Header extends StatelessWidget {
               icon: DivineIconName.check,
               size: DivineIconButtonSize.small,
               semanticLabel: l10n.videoEditorDoneLabel,
-              onPressed: () => context.read<VoiceOverEffectBloc>().add(
-                const VoiceOverEffectApplyRequested(),
+              onPressed: () => context.read<VoiceEffectBloc>().add(
+                const VoiceEffectApplyRequested(),
               ),
             ),
         ],
@@ -175,10 +175,10 @@ class _PresetRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selected = context.select(
-      (VoiceOverEffectBloc bloc) => bloc.state.preset,
+      (VoiceEffectBloc bloc) => bloc.state.preset,
     );
     final isApplying = context.select(
-      (VoiceOverEffectBloc bloc) => bloc.state.isApplying,
+      (VoiceEffectBloc bloc) => bloc.state.isApplying,
     );
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -186,14 +186,14 @@ class _PresetRow extends StatelessWidget {
       child: Row(
         spacing: 8,
         children: [
-          for (final preset in VoiceOverEffectPreset.values)
+          for (final preset in VoiceEffectPreset.values)
             _PresetChip(
               preset: preset,
               selected: preset == selected,
               onTap: isApplying
                   ? null
-                  : () => context.read<VoiceOverEffectBloc>().add(
-                      VoiceOverEffectSettingsChanged(effect: preset.effect),
+                  : () => context.read<VoiceEffectBloc>().add(
+                      VoiceEffectSettingsChanged(effect: preset.effect),
                     ),
             ),
         ],
@@ -209,7 +209,7 @@ class _PresetChip extends StatelessWidget {
     required this.onTap,
   });
 
-  final VoiceOverEffectPreset preset;
+  final VoiceEffectPreset preset;
   final bool selected;
   final VoidCallback? onTap;
 
@@ -217,11 +217,11 @@ class _PresetChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final label = switch (preset) {
-      VoiceOverEffectPreset.original => l10n.videoEditorVoiceEffectOriginal,
-      VoiceOverEffectPreset.highPitch => l10n.videoEditorVoiceEffectHighPitch,
-      VoiceOverEffectPreset.lowPitch => l10n.videoEditorVoiceEffectLowPitch,
-      VoiceOverEffectPreset.robot => l10n.videoEditorVoiceEffectRobot,
-      VoiceOverEffectPreset.echo => l10n.videoEditorVoiceEffectEcho,
+      VoiceEffectPreset.original => l10n.videoEditorVoiceEffectOriginal,
+      VoiceEffectPreset.highPitch => l10n.videoEditorVoiceEffectHighPitch,
+      VoiceEffectPreset.lowPitch => l10n.videoEditorVoiceEffectLowPitch,
+      VoiceEffectPreset.robot => l10n.videoEditorVoiceEffectRobot,
+      VoiceEffectPreset.echo => l10n.videoEditorVoiceEffectEcho,
     };
     final colors = context.vineColors;
     return AnimationPickerChip(
@@ -252,7 +252,7 @@ class _EffectSliders extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final effect = context.select(
-      (VoiceOverEffectBloc bloc) => bloc.state.effect,
+      (VoiceEffectBloc bloc) => bloc.state.effect,
     );
     final pitch = effect.pitch;
     final percent = NumberFormat.percentPattern(
@@ -295,7 +295,7 @@ class _EffectSliders extends StatelessWidget {
 
 /// One change's label, value and slider.
 ///
-/// Dragging updates the setting as it goes; the take is rendered and heard
+/// Dragging updates the setting as it goes; the sound is rendered and heard
 /// once the finger lifts.
 class _EffectSlider extends StatelessWidget {
   const _EffectSlider({
@@ -317,8 +317,8 @@ class _EffectSlider extends StatelessWidget {
   final VoiceEffect Function(int value) toEffect;
 
   void _change(BuildContext context, double value, {required bool audition}) {
-    context.read<VoiceOverEffectBloc>().add(
-      VoiceOverEffectSettingsChanged(
+    context.read<VoiceEffectBloc>().add(
+      VoiceEffectSettingsChanged(
         effect: toEffect((value / step).round() * step),
         audition: audition,
       ),
@@ -328,7 +328,7 @@ class _EffectSlider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isApplying = context.select(
-      (VoiceOverEffectBloc bloc) => bloc.state.isApplying,
+      (VoiceEffectBloc bloc) => bloc.state.isApplying,
     );
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -380,10 +380,10 @@ class _NoiseReductionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final enabled = context.select(
-      (VoiceOverEffectBloc bloc) => bloc.state.noiseReduction,
+      (VoiceEffectBloc bloc) => bloc.state.noiseReduction,
     );
     final isApplying = context.select(
-      (VoiceOverEffectBloc bloc) => bloc.state.isApplying,
+      (VoiceEffectBloc bloc) => bloc.state.isApplying,
     );
     // The sheet body sits on a ColoredBox, which would hide the tile's ink;
     // a transparent Material gives it a surface of its own.
@@ -395,8 +395,8 @@ class _NoiseReductionTile extends StatelessWidget {
         value: enabled,
         onChanged: isApplying
             ? null
-            : (value) => context.read<VoiceOverEffectBloc>().add(
-                VoiceOverEffectSettingsChanged(noiseReduction: value),
+            : (value) => context.read<VoiceEffectBloc>().add(
+                VoiceEffectSettingsChanged(noiseReduction: value),
               ),
       ),
     );
@@ -409,8 +409,7 @@ class _FailureMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final failed = context.select(
-      (VoiceOverEffectBloc bloc) =>
-          bloc.state.status == VoiceOverEffectStatus.failure,
+      (VoiceEffectBloc bloc) => bloc.state.status == VoiceEffectStatus.failure,
     );
     if (!failed) return const SizedBox.shrink();
     final color = context.vineColors.onErrorContainer;

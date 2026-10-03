@@ -2697,7 +2697,7 @@
     "videoEditorFadeInLabel": "Fondu d'entrée",
     "videoEditorFadeOutLabel": "Fondu de sortie",
     "videoEditorVoiceEffectLabel": "Voix",
-    "videoEditorVoiceEffectSemanticLabel": "Modifier le son de l'enregistrement sélectionné",
+    "videoEditorVoiceEffectSemanticLabel": "Ajouter un effet de voix au son sélectionné",
     "videoEditorVoiceEffectSheetTitle": "Effets de voix",
     "videoEditorVoiceEffectOriginal": "Original",
     "videoEditorVoiceEffectHighPitch": "Hélium",

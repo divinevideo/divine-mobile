@@ -9548,7 +9548,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorVoiceEffectSemanticLabel =>
-      'Thay đổi giọng của bản ghi đã chọn';
+      'Thêm hiệu ứng giọng cho âm thanh đã chọn';
 
   @override
   String get videoEditorVoiceEffectSheetTitle => 'Hiệu ứng giọng';

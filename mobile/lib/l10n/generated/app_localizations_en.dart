@@ -9685,7 +9685,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get videoEditorVoiceEffectSemanticLabel =>
-      'Change how the selected recording sounds';
+      'Add a voice effect to the selected sound';
 
   @override
   String get videoEditorVoiceEffectSheetTitle => 'Voice effects';

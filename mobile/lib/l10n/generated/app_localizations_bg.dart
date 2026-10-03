@@ -9669,7 +9669,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorVoiceEffectSemanticLabel =>
-      'Промени как звучи избраният запис';
+      'Добавяне на гласов ефект към избрания звук';
 
   @override
   String get videoEditorVoiceEffectSheetTitle => 'Гласови ефекти';

@@ -6438,19 +6438,19 @@
   },
   "videoEditorVoiceEffectLabel": "Voice",
   "@videoEditorVoiceEffectLabel": {
-    "description": "Label of the timeline action that changes how the selected voice-over recording sounds."
+    "description": "Label of the timeline action that changes how the selected sound sounds — a voice-over, music or any other track."
   },
-  "videoEditorVoiceEffectSemanticLabel": "Change how the selected recording sounds",
+  "videoEditorVoiceEffectSemanticLabel": "Add a voice effect to the selected sound",
   "@videoEditorVoiceEffectSemanticLabel": {
-    "description": "Screen-reader label of the timeline action that opens the voice effects for the selected voice-over recording."
+    "description": "Screen-reader label of the timeline action that opens the voice effects for the selected sound — a voice-over, music or any other track."
   },
   "videoEditorVoiceEffectSheetTitle": "Voice effects",
   "@videoEditorVoiceEffectSheetTitle": {
-    "description": "Title of the sheet where the creator picks a voice effect for a voice-over recording."
+    "description": "Title of the sheet where the creator picks a voice effect for the selected sound."
   },
   "videoEditorVoiceEffectOriginal": "Original",
   "@videoEditorVoiceEffectOriginal": {
-    "description": "Voice effect option that plays the recording as it was recorded, with no effect."
+    "description": "Voice effect option that plays the sound as it is, with no effect."
   },
   "videoEditorVoiceEffectHighPitch": "Chipmunk",
   "@videoEditorVoiceEffectHighPitch": {
@@ -6474,7 +6474,7 @@
   },
   "videoEditorVoiceEffectNoiseReduction": "Reduce background noise",
   "@videoEditorVoiceEffectNoiseReduction": {
-    "description": "Title of the switch that filters steady background noise out of a voice-over recording."
+    "description": "Title of the switch that filters steady background noise out of the selected sound."
   },
   "videoEditorVoiceEffectNoiseReductionSubtitle": "Cuts hiss, fans and room noise",
   "@videoEditorVoiceEffectNoiseReductionSubtitle": {
@@ -6482,11 +6482,11 @@
   },
   "videoEditorVoiceEffectApplying": "Applying the voice effect",
   "@videoEditorVoiceEffectApplying": {
-    "description": "Screen-reader label of the progress indicator shown while the voice effect is applied to the recording."
+    "description": "Screen-reader label of the progress indicator shown while the voice effect is applied to the sound."
   },
   "videoEditorVoiceEffectFailed": "Couldn't change the voice. Try again.",
   "@videoEditorVoiceEffectFailed": {
-    "description": "Shown, and announced, when the voice effect could not be applied to the recording."
+    "description": "Shown, and announced, when the voice effect could not be applied to the sound."
   },
   "videoEditorTransitionSheetTitle": "Transition",
   "@videoEditorTransitionSheetTitle": {

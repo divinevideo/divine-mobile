@@ -2705,7 +2705,7 @@
     "videoEditorFadeInLabel": "Fundido de entrada",
     "videoEditorFadeOutLabel": "Fundido de salida",
     "videoEditorVoiceEffectLabel": "Voz",
-    "videoEditorVoiceEffectSemanticLabel": "Cambiá cómo suena la grabación seleccionada",
+    "videoEditorVoiceEffectSemanticLabel": "Agregá un efecto de voz al sonido seleccionado",
     "videoEditorVoiceEffectSheetTitle": "Efectos de voz",
     "videoEditorVoiceEffectOriginal": "Original",
     "videoEditorVoiceEffectHighPitch": "Ardilla",

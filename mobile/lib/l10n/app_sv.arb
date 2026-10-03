@@ -2697,7 +2697,7 @@
     "videoEditorFadeInLabel": "Intoning",
     "videoEditorFadeOutLabel": "Uttoning",
     "videoEditorVoiceEffectLabel": "Röst",
-    "videoEditorVoiceEffectSemanticLabel": "Ändra hur den valda inspelningen låter",
+    "videoEditorVoiceEffectSemanticLabel": "Lägg till en rösteffekt på det valda ljudet",
     "videoEditorVoiceEffectSheetTitle": "Rösteffekter",
     "videoEditorVoiceEffectOriginal": "Original",
     "videoEditorVoiceEffectHighPitch": "Helium",

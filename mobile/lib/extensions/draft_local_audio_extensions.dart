@@ -7,14 +7,15 @@ extension DraftLocalAudioPaths on DivineVideoDraft {
   /// Absolute file paths of draft-local audio referenced by this draft.
   ///
   /// Covers library-owned audio created by `LocalAudioImportService`, committed
-  /// voice-over recordings (and the processed copies their voice effects
-  /// play), and audio extracted from the draft's own clips —
+  /// voice-over recordings, audio extracted from the draft's own clips, and
+  /// the processed copy a voice effect plays for any sound —
   /// all persisted as local [AudioEvent]s. Sweeps every history entry's audio
   /// metadata in
   /// [DivineVideoDraft.editorStateHistory], the completed-editor snapshot in
   /// [DivineVideoDraft.editorEditingParameters], plus the legacy
   /// [DivineVideoDraft.selectedSound], collecting [AudioEvent.localFilePath]
-  /// for each [AudioEvent.isDraftLocalAudio] track. Used by draft deletion to
+  /// for each [AudioEvent.isDraftLocalAudio] track and
+  /// [AudioEvent.processedFilePath] for every track that has one. Used by draft deletion to
   /// remove audio files that would otherwise persist after the draft is gone.
   Set<String> get localAudioFilePaths {
     final paths = <String>{};
@@ -30,6 +31,10 @@ extension DraftLocalAudioPaths on DivineVideoDraft {
           ..add(path)
           ..add(event.originalLocalFilePath!);
       }
+      // A bundled, published or provider sound with an effect plays a copy
+      // written for the draft; the sound it came from is not the draft's.
+      final processed = event.processedFilePath;
+      if (processed != null) paths.add(processed);
     }
 
     void addFromMeta(Object? rawMeta) {

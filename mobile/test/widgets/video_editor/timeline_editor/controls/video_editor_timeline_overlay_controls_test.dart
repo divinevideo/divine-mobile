@@ -32,9 +32,9 @@ import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/saved_title_style.dart';
 import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:openvine/providers/saved_title_style_repository_provider.dart';
-import 'package:openvine/providers/voice_over_effect_providers.dart';
+import 'package:openvine/providers/voice_effect_providers.dart';
 import 'package:openvine/repositories/saved_title_style_repository.dart';
-import 'package:openvine/services/video_editor/voice_over_effect_service.dart';
+import 'package:openvine/services/video_editor/voice_effect_service.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_audio_fade_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_layer_animation_sheet.dart';
@@ -75,8 +75,7 @@ class _MockStateManager extends Mock implements StateManager {}
 class _MockSavedTitleStyleRepository extends Mock
     implements SavedTitleStyleRepository {}
 
-class _MockVoiceOverEffectService extends Mock
-    implements VoiceOverEffectService {}
+class _MockVoiceEffectService extends Mock implements VoiceEffectService {}
 
 class _MockAudioClipPlayer extends Mock implements AudioClipPlayer {}
 
@@ -89,6 +88,7 @@ void main() {
       registerFallbackValue(const TimelineOverlayItemSelected(null));
       registerFallbackValue(const ClipEditorEditingStopped());
       registerFallbackValue(const AudioSourceConfig.file(''));
+      registerFallbackValue(Duration.zero);
     });
 
     setUp(() {
@@ -435,19 +435,49 @@ void main() {
             ),
           );
 
-      testWidgets('is offered for a voice-over recording only', (tester) async {
+      testWidgets('is offered for every sound with audio to change', (
+        tester,
+      ) async {
         const music = TimelineOverlayItem(
           id: 'sound-1',
           type: TimelineOverlayType.sound,
           startTime: Duration.zero,
           endTime: Duration(seconds: 4),
         );
+        const silent = TimelineOverlayItem(
+          id: 'sound-2',
+          type: TimelineOverlayType.sound,
+          startTime: Duration.zero,
+          endTime: Duration(seconds: 4),
+        );
+        when(() => overlayBloc.state).thenReturn(
+          TimelineOverlayState(
+            audioTracks: [
+              AudioEvent(
+                id: music.id,
+                pubkey: 'pub',
+                createdAt: 0,
+                url: 'https://blossom.example/song',
+              ),
+              AudioEvent(id: silent.id, pubkey: 'pub', createdAt: 0),
+              AudioEvent(
+                id: recordingId,
+                pubkey: 'local_import',
+                createdAt: 0,
+                url: '/docs/voice_over_recordings/voice_over_1.m4a',
+              ),
+            ],
+          ),
+        );
 
         await tester.pumpWidget(build(music));
-        expect(find.text(l10n.videoEditorVoiceEffectLabel), findsNothing);
+        expect(find.text(l10n.videoEditorVoiceEffectLabel), findsOneWidget);
 
         await tester.pumpWidget(build(recording));
         expect(find.text(l10n.videoEditorVoiceEffectLabel), findsOneWidget);
+
+        await tester.pumpWidget(build(silent));
+        expect(find.text(l10n.videoEditorVoiceEffectLabel), findsNothing);
       });
 
       testWidgets('is highlighted once the recording plays with an effect', (
@@ -1555,19 +1585,21 @@ void main() {
           const robotTake =
               '/docs/voice_over_recordings/voice_over_1_p0_r100_e0.wav';
           const robot = VoiceEffect(robot: 100);
-          final service = _MockVoiceOverEffectService();
+          final service = _MockVoiceEffectService();
           when(
             () => service.renderAudition(
-              takePath: take,
+              source: (kind: AudioSourceKind.file, path: take),
               effect: robot,
               noiseReduction: false,
+              start: any(named: 'start'),
+              length: any(named: 'length'),
             ),
           ).thenAnswer((_) async => '/tmp/audition.wav');
           when(() => service.discardAudition(any())).thenAnswer((_) async {});
           when(service.clearAuditions).thenAnswer((_) async {});
           when(
             () => service.process(
-              takePath: take,
+              source: (kind: AudioSourceKind.file, path: take),
               effect: robot,
               noiseReduction: false,
             ),
@@ -1590,6 +1622,9 @@ void main() {
             endTime: const Duration(seconds: 4),
           );
           final other = AudioEvent(id: 'sound-2', pubkey: 'pub', createdAt: 0);
+          when(
+            () => overlayBloc.state,
+          ).thenReturn(TimelineOverlayState(audioTracks: [track, other]));
           when(() => mockStateManager.activeMeta).thenReturn({
             VideoEditorConstants.audioStateHistoryKey: [
               track.toJson(),
@@ -1614,8 +1649,8 @@ void main() {
               mainBloc,
               routed: true,
               overrides: [
-                voiceOverEffectServiceProvider.overrideWithValue(service),
-                voiceOverAuditionPlayerFactoryProvider.overrideWithValue(
+                voiceEffectServiceProvider.overrideWithValue(service),
+                voiceEffectAuditionPlayerFactoryProvider.overrideWithValue(
                   () => player,
                 ),
               ],
@@ -1669,6 +1704,7 @@ void main() {
           expect(processed.url, robotTake);
           expect(processed.mimeType, 'audio/wav');
           expect(processed.originalUrl, take);
+          expect(processed.originalMimeType, 'audio/mp4');
           expect(processed.voiceEffect, robot);
           expect(processed.startTime, const Duration(seconds: 1));
           expect(processed.endTime, const Duration(seconds: 4));

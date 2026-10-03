@@ -9540,7 +9540,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorVoiceEffectLabel => 'الصوت';
 
   @override
-  String get videoEditorVoiceEffectSemanticLabel => 'تغيير صوت التسجيل المحدد';
+  String get videoEditorVoiceEffectSemanticLabel =>
+      'إضافة مؤثر صوتي إلى الصوت المحدد';
 
   @override
   String get videoEditorVoiceEffectSheetTitle => 'مؤثرات صوتية';

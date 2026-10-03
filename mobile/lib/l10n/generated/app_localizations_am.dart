@@ -9363,8 +9363,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorVoiceEffectLabel => 'ድምፅ';
 
   @override
-  String get videoEditorVoiceEffectSemanticLabel =>
-      'የተመረጠው ቀረጻ ድምፅ እንዴት እንደሚሰማ ይቀይሩ';
+  String get videoEditorVoiceEffectSemanticLabel => 'ለተመረጠው ድምጽ የድምፅ ተፅዕኖ ያክሉ';
 
   @override
   String get videoEditorVoiceEffectSheetTitle => 'የድምፅ ተፅዕኖዎች';

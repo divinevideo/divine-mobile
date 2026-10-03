@@ -2697,7 +2697,7 @@
     "videoEditorFadeInLabel": "Einblenden",
     "videoEditorFadeOutLabel": "Ausblenden",
     "videoEditorVoiceEffectLabel": "Stimme",
-    "videoEditorVoiceEffectSemanticLabel": "Ändern, wie die ausgewählte Aufnahme klingt",
+    "videoEditorVoiceEffectSemanticLabel": "Stimmeffekt zum ausgewählten Sound hinzufügen",
     "videoEditorVoiceEffectSheetTitle": "Stimmeffekte",
     "videoEditorVoiceEffectOriginal": "Original",
     "videoEditorVoiceEffectHighPitch": "Helium",

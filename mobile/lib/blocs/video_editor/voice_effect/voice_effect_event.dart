@@ -1,8 +1,8 @@
-part of 'voice_over_effect_bloc.dart';
+part of 'voice_effect_bloc.dart';
 
-/// Events of the [VoiceOverEffectBloc].
-sealed class VoiceOverEffectEvent extends Equatable {
-  const VoiceOverEffectEvent();
+/// Events of the [VoiceEffectBloc].
+sealed class VoiceEffectEvent extends Equatable {
+  const VoiceEffectEvent();
 
   @override
   List<Object?> get props => [];
@@ -13,9 +13,9 @@ sealed class VoiceOverEffectEvent extends Equatable {
 ///
 /// Fields left `null` keep their value. With [audition] set the new setting
 /// is rendered and looped; a slider sends its moves without it and only the
-/// final position with it, so the take is not rendered for every step.
-final class VoiceOverEffectSettingsChanged extends VoiceOverEffectEvent {
-  const VoiceOverEffectSettingsChanged({
+/// final position with it, so the sound is not rendered for every step.
+final class VoiceEffectSettingsChanged extends VoiceEffectEvent {
+  const VoiceEffectSettingsChanged({
     this.effect,
     this.noiseReduction,
     this.audition = true,
@@ -29,7 +29,7 @@ final class VoiceOverEffectSettingsChanged extends VoiceOverEffectEvent {
   List<Object?> get props => [effect, noiseReduction, audition];
 }
 
-/// The creator confirmed the setting: bake it into the take.
-final class VoiceOverEffectApplyRequested extends VoiceOverEffectEvent {
-  const VoiceOverEffectApplyRequested();
+/// The creator confirmed the setting: bake it into the sound.
+final class VoiceEffectApplyRequested extends VoiceEffectEvent {
+  const VoiceEffectApplyRequested();
 }

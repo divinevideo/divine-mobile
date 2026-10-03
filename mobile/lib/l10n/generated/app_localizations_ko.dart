@@ -9136,7 +9136,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorVoiceEffectLabel => '음성';
 
   @override
-  String get videoEditorVoiceEffectSemanticLabel => '선택한 녹음의 목소리 바꾸기';
+  String get videoEditorVoiceEffectSemanticLabel => '선택한 사운드에 음성 효과 추가';
 
   @override
   String get videoEditorVoiceEffectSheetTitle => '음성 효과';

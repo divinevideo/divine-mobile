@@ -36,11 +36,20 @@ const String voiceOverRecordingsDirName = 'voice_over_recordings';
 /// purgeable by iOS at any moment, so that copy has to live here instead.
 const String extractedClipAudioDirName = 'extracted_clip_audio';
 
+/// Documents-relative directory holding the processed copies voice effects
+/// play for sounds with no draft-local file of their own: bundled, published
+/// and provider sounds.
+///
+/// A processed copy of a draft-local file is written beside that file
+/// instead, so this only ever holds copies of sounds the device did not write.
+const String voiceEffectAudioDirName = 'voice_effect_audio';
+
 const Set<String> _audioRootDirNames = {
   draftAudioImportsDirName,
   libraryAudioImportsDirName,
   voiceOverRecordingsDirName,
   extractedClipAudioDirName,
+  voiceEffectAudioDirName,
 };
 
 /// Id prefixes of audio backed by a file this device wrote for a draft.
@@ -60,12 +69,12 @@ const Set<String> _draftLocalMarkers = {
 /// returned unchanged.
 String toPortableAudioPath(String path) => _belowAudioRoot(path) ?? path;
 
-/// Whether [path] names a file inside one of the four directories this app
-/// writes draft-local audio into.
+/// Whether [path] names a file inside one of the directories this app writes
+/// draft-local audio into.
 ///
 /// Bounds what an audio-reclaim path is allowed to delete. Every producer —
-/// `LocalAudioImportService`, the voice-over cubit, clip audio extraction —
-/// writes below one of those roots, so a stored `localFilePath` pointing
+/// `LocalAudioImportService`, the voice-over cubit, clip audio extraction,
+/// voice effects — writes below one of those roots, so a stored `localFilePath` pointing
 /// anywhere else did not come from this app's own audio storage and must not
 /// be deleted on its behalf.
 ///
@@ -128,7 +137,7 @@ Map<String, dynamic> resolveAudioPaths(
 /// Matches on the segment name alone, not on whether [path] sits under the
 /// documents directory, so a file placed in a `voice_over_recordings/` folder
 /// anywhere else would also be rebased onto documents on load. Nothing writes
-/// any of the three names outside the documents directory today.
+/// any of these names outside the documents directory today.
 String? _belowAudioRoot(String path) {
   if (path.isEmpty) return null;
   final segments = p.split(path);
@@ -141,13 +150,18 @@ String? _belowAudioRoot(String path) {
   return null;
 }
 
-/// Keys of a persisted [AudioEvent] map that hold an on-disk path: the file
-/// the track plays, and the take as recorded when that file is a processed
-/// copy of it.
+/// Keys of a persisted [AudioEvent] map that can hold an on-disk path: the
+/// file the track plays, and the sound it was processed from when that file is
+/// a processed copy.
 const List<String> _audioPathKeys = ['url', 'originalUrl'];
 
-/// Applies [transform] to every path of every draft-local [AudioEvent] map
-/// nested anywhere inside [node], returning [node] itself when nothing moved.
+/// Applies [transform] to every on-disk path of every [AudioEvent] map nested
+/// anywhere inside [node] that names a file this device wrote, returning
+/// [node] itself when nothing moved.
+///
+/// That is every path of a draft-local audio event, and the processed copy a
+/// voice effect plays for any other sound. Network and `asset://` addresses —
+/// such a sound's `originalUrl` — are left alone.
 ///
 /// The editor persists audio in three unrelated shapes — the selected sound,
 /// `editorStateHistory.history[].meta.audio[]`, and
@@ -157,11 +171,14 @@ Object? _rewriteAudioUrls(
   Object? node,
   String Function(String path) transform,
 ) => rewriteJsonMaps(node, (map) {
-  if (!_isDraftLocalAudio(map)) return null;
+  final isDraftLocal = _isDraftLocalAudio(map);
+  if (!isDraftLocal && !_playsProcessedCopy(map)) return null;
   Map<String, dynamic>? rewritten;
   for (final key in _audioPathKeys) {
     final path = map[key];
     if (path is! String || path.isEmpty) continue;
+    // Any other sound's own address is remote or an asset, never a file.
+    if (!isDraftLocal && path.contains('://')) continue;
     final moved = transform(path);
     if (moved == path) continue;
     (rewritten ??= Map<String, dynamic>.from(map))[key] = moved;
@@ -177,4 +194,13 @@ Object? _rewriteAudioUrls(
 bool _isDraftLocalAudio(Map<Object?, Object?> node) {
   final id = node['id'];
   return id is String && _draftLocalMarkers.any((m) => id.startsWith('${m}_'));
+}
+
+/// Whether [node] is an audio event playing a processed copy of its sound.
+///
+/// Mirrors [AudioEvent.playsProcessedCopy] against a raw map, like
+/// [_isDraftLocalAudio].
+bool _playsProcessedCopy(Map<Object?, Object?> node) {
+  final original = node['originalUrl'];
+  return original is String && original.isNotEmpty;
 }

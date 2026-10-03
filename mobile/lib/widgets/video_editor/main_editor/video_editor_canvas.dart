@@ -13,6 +13,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:models/models.dart' show AudioSourceKind;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
@@ -1593,31 +1594,28 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
       final trackStart = sound.startOffset;
       final trackEnd = trackStart + (item.endTime - item.startTime);
-      final AudioSourceConfig source;
-      if (sound.isBundled && sound.assetPath != null) {
-        source = AudioSourceConfig.asset(
-          sound.assetPath!,
+      // Imported, extracted and voice-effect tracks all play a local path,
+      // which only the file loader takes — the network loader rejects it. A
+      // clip sampled into stills brings its own sound as an extracted track.
+      final resolved = sound.resolvedSource;
+      if (resolved == null) continue;
+      final source = switch (resolved.kind) {
+        AudioSourceKind.asset => AudioSourceConfig.asset(
+          resolved.path,
           start: trackStart,
           end: trackEnd,
-        );
-      } else if (sound.isDraftLocalAudio && sound.localFilePath != null) {
-        // Imported and extracted alike: a clip sampled into stills brings
-        // its own sound as an extracted track, and the file loader is the
-        // only one that takes a path — the network loader rejects it.
-        source = AudioSourceConfig.file(
-          sound.localFilePath!,
+        ),
+        AudioSourceKind.file => AudioSourceConfig.file(
+          resolved.path,
           start: trackStart,
           end: trackEnd,
-        );
-      } else if (sound.url != null) {
-        source = AudioSourceConfig.network(
-          sound.url!,
+        ),
+        AudioSourceKind.network => AudioSourceConfig.network(
+          resolved.path,
           start: trackStart,
           end: trackEnd,
-        );
-      } else {
-        continue;
-      }
+        ),
+      };
 
       tracks.add(
         StopMotionAudioPreviewTrack(

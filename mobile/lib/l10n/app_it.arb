@@ -2697,7 +2697,7 @@
     "videoEditorFadeInLabel": "Dissolvenza in entrata",
     "videoEditorFadeOutLabel": "Dissolvenza in uscita",
     "videoEditorVoiceEffectLabel": "Voce",
-    "videoEditorVoiceEffectSemanticLabel": "Cambia il suono della registrazione selezionata",
+    "videoEditorVoiceEffectSemanticLabel": "Aggiungi un effetto voce al suono selezionato",
     "videoEditorVoiceEffectSheetTitle": "Effetti voce",
     "videoEditorVoiceEffectOriginal": "Originale",
     "videoEditorVoiceEffectHighPitch": "Scoiattolo",
