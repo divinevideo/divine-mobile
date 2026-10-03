@@ -1,5 +1,5 @@
-// ABOUTME: Widget tests for FollowerCountTitle: the count line's copy and the
-// ABOUTME: rebuild that only a count change triggers.
+// ABOUTME: Widget tests for FollowerCountTitle: the count line's copy, and
+// ABOUTME: that it follows the count as the state moves.
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';

@@ -21,9 +21,6 @@ import 'package:unified_logger/unified_logger.dart';
 
 enum UnsealItemTagsStatus { notSealed, unsealed, failed }
 
-// Keeps the read alive past nostr_sdk's 8s subscription silence probe and 10s
-// teardown repair floor so a repaired relay can still answer this request.
-
 final class UnsealedItemTags {
   const UnsealedItemTags._(this.status, [this.tags]);
 
