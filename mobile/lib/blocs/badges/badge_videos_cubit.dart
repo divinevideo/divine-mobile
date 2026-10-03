@@ -28,6 +28,7 @@ class BadgeVideosCubit extends Cubit<BadgeVideosState>
 
   /// The pager for the current holder snapshot; replaced on every [load].
   BadgeVideoPager? _pager;
+  int _loadGeneration = 0;
 
   /// Resolves the holders and loads the first page.
   Future<void> load() async {
@@ -47,6 +48,7 @@ class BadgeVideosCubit extends Cubit<BadgeVideosState>
   /// profile badges when the video grid follows the holder list on one page.
   Future<void> loadForHolders(Set<String> holders) async {
     if (isClosed) return;
+    final generation = ++_loadGeneration;
     emit(state.copyWith(status: BadgeVideosStatus.loading));
     if (holders.isEmpty) {
       _pager = null;
@@ -56,7 +58,7 @@ class BadgeVideosCubit extends Cubit<BadgeVideosState>
     try {
       final pager = _videosRepository.createBadgeVideoPager(holders);
       final videos = await pager.loadMore();
-      if (isClosed) return;
+      if (isClosed || generation != _loadGeneration) return;
       _pager = pager;
       emit(
         BadgeVideosState(
@@ -66,6 +68,7 @@ class BadgeVideosCubit extends Cubit<BadgeVideosState>
         ),
       );
     } catch (error, stackTrace) {
+      if (generation != _loadGeneration) return;
       addError(error, stackTrace);
       emitIfOpen(state.copyWith(status: BadgeVideosStatus.failure));
     }

@@ -19,6 +19,7 @@ import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
 import 'package:openvine/screens/badges/badge_award_screen.dart';
 import 'package:openvine/screens/badges/badge_delete_confirmation_sheet.dart';
@@ -353,8 +354,8 @@ class _BadgeDetailBody extends StatelessWidget {
   }
 }
 
-/// The complete accepted holder set, with individual follows kept separate
-/// from the account's badge subscription.
+/// Indexed holders appear first, then the complete relay set replaces them.
+/// Individual follows stay separate from the account's badge subscription.
 class _AcceptedHolders extends ConsumerWidget {
   const _AcceptedHolders({required this.coordinate, super.key});
 
@@ -366,6 +367,7 @@ class _AcceptedHolders extends ConsumerWidget {
     final followRepository = ref.watch(followRepositoryProvider);
     final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
     final videosRepository = ref.watch(videosRepositoryProvider);
+    final funnelcakeClient = ref.watch(funnelcakeApiClientProvider);
     final signedIn = ref.watch(authServiceProvider).currentPublicKeyHex != null;
     return MultiBlocProvider(
       providers: [
@@ -376,6 +378,11 @@ class _AcceptedHolders extends ConsumerWidget {
               repository: badgeRepository,
               coordinate: coordinate,
               canSubscribe: signedIn,
+              loadIndexedPreview: (badge) =>
+                  funnelcakeClient.getBadgeHolderPreview(
+                    creatorPubkey: badge.pubkey,
+                    dTag: badge.identifier,
+                  ),
             );
             runDetached(
               cubit.load(),
@@ -390,7 +397,7 @@ class _AcceptedHolders extends ConsumerWidget {
           key: ValueKey((badgeRepository, videosRepository, coordinate)),
           // Eager, so a re-key after the holders loaded (a filter toggle
           // rebuilds videosRepository) reloads here; the listener below only
-          // sees the holders' first load.
+          // sees subsequent holder state transitions.
           lazy: false,
           create: (context) {
             final cubit = BadgeVideosCubit(
@@ -399,7 +406,8 @@ class _AcceptedHolders extends ConsumerWidget {
               coordinate: coordinate,
             );
             final holders = context.read<BadgeHoldersCubit>().state;
-            if (holders.holdersStatus == BadgeHoldersStatus.loaded) {
+            if (holders.holdersStatus == BadgeHoldersStatus.preview ||
+                holders.holdersStatus == BadgeHoldersStatus.loaded) {
               runDetached(
                 cubit.loadForHolders(holders.holders.toSet()),
                 'reload badge holder videos',
@@ -432,9 +440,18 @@ class _AcceptedHolders extends ConsumerWidget {
                 ),
           ),
           BlocListener<BadgeHoldersCubit, BadgeHoldersState>(
-            listenWhen: (previous, current) =>
-                previous.holdersStatus != BadgeHoldersStatus.loaded &&
-                current.holdersStatus == BadgeHoldersStatus.loaded,
+            listenWhen: (previous, current) {
+              if (current.holdersStatus == BadgeHoldersStatus.preview) {
+                return previous.holdersStatus != BadgeHoldersStatus.preview;
+              }
+              if (current.holdersStatus != BadgeHoldersStatus.loaded) {
+                return false;
+              }
+              final previousHolders = previous.holders.toSet();
+              return previous.holdersStatus != BadgeHoldersStatus.preview ||
+                  previousHolders.length != current.holders.length ||
+                  !previousHolders.containsAll(current.holders);
+            },
             listener: (context, state) => runDetached(
               context.read<BadgeVideosCubit>().loadForHolders(
                 state.holders.toSet(),
@@ -535,6 +552,7 @@ class _AcceptedHolderListState extends State<_AcceptedHolderList> {
           onRetry: context.read<BadgeHoldersCubit>().load,
         ),
       ),
+      BadgeHoldersStatus.preview ||
       BadgeHoldersStatus.loaded => SliverMainAxisGroup(
         slivers: [
           SliverList.builder(
@@ -556,7 +574,13 @@ class _AcceptedHolderListState extends State<_AcceptedHolderList> {
               );
             },
           ),
-          if (!_showAll && holders.length > _collapsedHolderCount)
+          if (status == BadgeHoldersStatus.preview)
+            const SliverToBoxAdapter(
+              child: Center(child: BrandedLoadingIndicator(size: 24)),
+            ),
+          if (status == BadgeHoldersStatus.loaded &&
+              !_showAll &&
+              holders.length > _collapsedHolderCount)
             SliverToBoxAdapter(
               child: Align(
                 alignment: Alignment.centerLeft,
@@ -584,7 +608,8 @@ class _BadgeVideoGrid extends ConsumerWidget {
     final holdersStatus = context.select(
       (BadgeHoldersCubit cubit) => cubit.state.holdersStatus,
     );
-    if (holdersStatus != BadgeHoldersStatus.loaded) {
+    if (holdersStatus != BadgeHoldersStatus.loaded &&
+        holdersStatus != BadgeHoldersStatus.preview) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
     final state = context.watch<BadgeVideosCubit>().state;

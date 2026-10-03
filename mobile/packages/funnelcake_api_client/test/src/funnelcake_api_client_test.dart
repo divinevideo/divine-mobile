@@ -801,6 +801,45 @@ void main() {
       );
     });
 
+    group('getBadgeHolderPreview', () {
+      test(
+        'reads the first indexed award page and encodes the d tag',
+        () async {
+          when(
+            () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+          ).thenAnswer(
+            (_) async => http.Response(
+              '{"holders":["$testPubkey"],"next_cursor":"more"}',
+              200,
+            ),
+          );
+
+          final holders = await client.getBadgeHolderPreview(
+            creatorPubkey: testPubkey,
+            dTag: 'art/day',
+          );
+
+          final uri =
+              verify(
+                    () => mockHttpClient.get(
+                      captureAny(),
+                      headers: any(named: 'headers'),
+                    ),
+                  ).captured.single
+                  as Uri;
+          expect(uri.pathSegments, [
+            'api',
+            'badges',
+            testPubkey,
+            'art/day',
+            'holders',
+          ]);
+          expect(uri.queryParameters['limit'], '50');
+          expect(holders, [testPubkey]);
+        },
+      );
+    });
+
     group('getHomeFeed', () {
       const validFeedResponse =
           '''
