@@ -488,21 +488,6 @@ void main() {
 // Keys intentionally allowed to fall back to English until a translation pass.
 // Keep this list small and reviewable so new translation gaps stay visible.
 const _knownUntranslatedDebt = <String>{
-  // The error screen's Reload action (#8673). Its Back label reuses the
-  // translated commonBack; Reload waits for the next translation pass.
-  'commonReload',
-  // Viewer stats-visibility toggles (#7632). Deferred to the next
-  // human pass rather than machine-translated so the loop/date wording stays
-  // natural in each locale.
-  'generalSettingsShowTotalLoops',
-  'generalSettingsShowTotalLoopsSubtitle',
-  'generalSettingsShowVideoLoops',
-  'generalSettingsShowVideoLoopsSubtitle',
-  'generalSettingsShowPublishedDate',
-  'generalSettingsShowPublishedDateSubtitle',
-  // Classic Vine breakdown omits hidden loop metrics; translations tracked in
-  // #7632.
-  'metadataStatsLineWithoutVideoLoops',
   // Unavailable pinned-video recovery (#9443). These keys remain English in
   // all 21 non-English locales until a human translation pass.
   'profilePinReviewUnavailable',
@@ -566,10 +551,8 @@ const _knownUntranslatedDebt = <String>{
   // stays accurate in every locale rather than being machine-translated.
   'bugReportImageInsertionRejected',
   'featureRequestImageInsertionRejected',
-  // Deletion prep-failure copy (feature #6126). Deferred to the l10n
-  // translation-debt pass (#7632) rather than machine-translating a
-  // safety-critical "nothing was deleted" message. Mirror the translated
-  // sibling deleteAccountDeletionIncomplete per locale when the pass runs.
+  // Deletion prep-failure copy (#6126): load-bearing "nothing was deleted"
+  // guidance awaits speaker review in the account-deletion pass (#7879).
   'deleteAccountDeletionNotStarted',
   // New Lists UX detail screen (#8198): hero header, follow pill, owner
   // actions sheet, and manage-posts mode. Deferred to the next human
@@ -595,18 +578,6 @@ const _knownUntranslatedDebt = <String>{
   'keyManagementExportAuthReason',
   'keyManagementExportAuthDenied',
   'keyManagementExportAuthUnavailable',
-  // Log-export copy (#8112 / #8113 / #8114). Left in English until a human
-  // translation pass; machine-translating a diagnostic instruction the user
-  // has to follow exactly is how it stops meaning what it says.
-  'supportNoLogsToExport',
-  'supportExportLogsUnconfirmed',
-  // Clear-logs copy (#8114). New UI strings left in English until the same
-  // human translation pass rather than machine-translated into 21 locales.
-  'supportClearLogs',
-  'supportClearLogsSubtitle',
-  'supportClearLogsConfirmTitle',
-  'supportClearLogsConfirmButton',
-  'supportLogsCleared',
   // Account-enforcement translation remains tracked in #7765. The policy copy
   // is deliberately left in English until its human translation pass.
   'accountStatusTitle',
@@ -694,16 +665,6 @@ const _knownUntranslatedDebt = <String>{
   'accountDeletionRecoveryBodyWithExpiry',
   'accountDeletionSignOut',
   'accountDeletionTerminalFailureBody',
-  // Translation pass tracked in #7632.
-  'analyticsConnectionIssue',
-  'analyticsDiagnosticsFailedSources',
-  'analyticsServerUnavailable',
-  // Social-counts explainer copy is new; translation pass tracked in #7632.
-  'analyticsSocialCountsInfoLabel',
-  'analyticsSocialCountsInfoTitle',
-  'analyticsFollowerCountsBody',
-  'analyticsSocialCountsLearnMore',
-  'analyticsSocialCountsLearnMoreSemantics',
   // Account restore failure copy is new; translation pass tracked in #7659.
   'authAccountRestoreFailed',
   'settingsAccountRestoreFailed',

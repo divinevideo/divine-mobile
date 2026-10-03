@@ -336,25 +336,25 @@ class AppLocalizationsMs extends AppLocalizations {
       'Kekalkan suapan dalam format segi empat klasik';
 
   @override
-  String get generalSettingsShowTotalLoops => 'Show total loops';
+  String get generalSettingsShowTotalLoops => 'Tunjukkan jumlah loop';
 
   @override
   String get generalSettingsShowTotalLoopsSubtitle =>
-      'The creator\'s loop count across all their videos';
+      'Bilangan loop pencipta merentas semua videonya';
 
   @override
-  String get generalSettingsShowVideoLoops => 'Show video loops';
+  String get generalSettingsShowVideoLoops => 'Tunjukkan loop video';
 
   @override
   String get generalSettingsShowVideoLoopsSubtitle =>
-      'How many times the video you\'re watching has looped';
+      'Berapa kali video yang anda tonton telah berulang';
 
   @override
-  String get generalSettingsShowPublishedDate => 'Show publish date';
+  String get generalSettingsShowPublishedDate => 'Tunjukkan tarikh penerbitan';
 
   @override
   String get generalSettingsShowPublishedDateSubtitle =>
-      'When the video you\'re watching was published';
+      'Bila video yang anda tonton diterbitkan';
 
   @override
   String get contentPreferencesTitle => 'Keutamaan Kandungan';
@@ -2124,7 +2124,7 @@ class AppLocalizationsMs extends AppLocalizations {
     String comments,
     String reposts,
   ) {
-    return '$likes likes · $comments comments · $reposts reposts';
+    return '$likes sukaan · $comments komen · $reposts siaran semula';
   }
 
   @override
@@ -2930,11 +2930,11 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get analyticsServerUnavailable =>
-      'Creator analytics is having server trouble. Please try again in a moment.';
+      'Analitik Pencipta sedang mengalami masalah pelayan. Cuba lagi sebentar lagi.';
 
   @override
   String get analyticsConnectionIssue =>
-      'Creator analytics could not connect. Check your connection and try again.';
+      'Analitik Pencipta tidak dapat disambungkan. Semak sambungan anda dan cuba lagi.';
 
   @override
   String get analyticsSignInRequired =>
@@ -3094,21 +3094,21 @@ class AppLocalizationsMs extends AppLocalizations {
       'Pecahan sumber/geo/masa audiens akan diisi apabila Funnelcake menambah titik hujung analitik audiens.';
 
   @override
-  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+  String get analyticsSocialCountsInfoLabel => 'Tentang bilangan pengikut anda';
 
   @override
-  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+  String get analyticsSocialCountsInfoTitle => 'Tentang bilangan pengikut anda';
 
   @override
   String get analyticsFollowerCountsBody =>
-      'Your follower count shows the people who follow you on Divine.';
+      'Bilangan pengikut anda menunjukkan orang yang mengikuti anda di Divine.';
 
   @override
-  String get analyticsSocialCountsLearnMore => 'Learn more';
+  String get analyticsSocialCountsLearnMore => 'Ketahui lebih lanjut';
 
   @override
   String analyticsSocialCountsLearnMoreSemantics(String url) {
-    return 'Learn more at $url';
+    return 'Ketahui lebih lanjut di $url';
   }
 
   @override
@@ -3157,7 +3157,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String analyticsDiagnosticsFailedSources(String sources) {
-    return 'Failed sources: $sources';
+    return 'Sumber yang gagal: $sources';
   }
 
   @override
@@ -4665,19 +4665,20 @@ class AppLocalizationsMs extends AppLocalizations {
       'Eksport log ke fail untuk penghantaran manual';
 
   @override
-  String get supportClearLogs => 'Clear Logs';
+  String get supportClearLogs => 'Kosongkan log';
 
   @override
-  String get supportClearLogsSubtitle => 'Wipe captured logs and start fresh';
+  String get supportClearLogsSubtitle =>
+      'Padam log yang dirakam dan mula semula';
 
   @override
-  String get supportClearLogsConfirmTitle => 'Clear captured logs?';
+  String get supportClearLogsConfirmTitle => 'Kosongkan log yang dirakam?';
 
   @override
-  String get supportClearLogsConfirmButton => 'Clear';
+  String get supportClearLogsConfirmButton => 'Kosongkan';
 
   @override
-  String get supportLogsCleared => 'Logs cleared';
+  String get supportLogsCleared => 'Log dikosongkan';
 
   @override
   String get supportFaq => 'Soalan Lazim';
@@ -4717,11 +4718,11 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get supportNoLogsToExport =>
-      'No logs yet — they start fresh each launch. Reproduce the problem, then come back without restarting.';
+      'Belum ada log — log bermula semula setiap kali aplikasi dibuka. Ulang langkah yang mencetuskan masalah, kemudian kembali tanpa memulakan semula aplikasi.';
 
   @override
   String get supportExportLogsUnconfirmed =>
-      'Logs handed off. Check the app you shared to.';
+      'Log telah diserahkan. Semak aplikasi tempat anda berkongsinya.';
 
   @override
   String supportLogsSavedTo(String path) {
@@ -6228,7 +6229,7 @@ class AppLocalizationsMs extends AppLocalizations {
   String get commonBack => 'Kembali';
 
   @override
-  String get commonReload => 'Reload';
+  String get commonReload => 'Muat semula';
 
   @override
   String get commonClose => 'Tutup';

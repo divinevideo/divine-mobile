@@ -368,25 +368,25 @@ class AppLocalizationsUr extends AppLocalizations {
       'فیڈز کو کلاسک چوکور فارمیٹ میں رکھیں';
 
   @override
-  String get generalSettingsShowTotalLoops => 'Show total loops';
+  String get generalSettingsShowTotalLoops => 'کل لوپ دکھائیں';
 
   @override
   String get generalSettingsShowTotalLoopsSubtitle =>
-      'The creator\'s loop count across all their videos';
+      'کریئیٹر کی تمام ویڈیوز کے لوپ کی تعداد';
 
   @override
-  String get generalSettingsShowVideoLoops => 'Show video loops';
+  String get generalSettingsShowVideoLoops => 'ویڈیو کے لوپ دکھائیں';
 
   @override
   String get generalSettingsShowVideoLoopsSubtitle =>
-      'How many times the video you\'re watching has looped';
+      'اس وقت نظر آنے والی ویڈیو کتنی بار لوپ ہوئی ہے';
 
   @override
-  String get generalSettingsShowPublishedDate => 'Show publish date';
+  String get generalSettingsShowPublishedDate => 'اشاعت کی تاریخ دکھائیں';
 
   @override
   String get generalSettingsShowPublishedDateSubtitle =>
-      'When the video you\'re watching was published';
+      'اس وقت نظر آنے والی ویڈیو کب شائع ہوئی تھی';
 
   @override
   String get contentPreferencesTitle => 'مواد کی ترجیحات';
@@ -2145,7 +2145,7 @@ class AppLocalizationsUr extends AppLocalizations {
     String comments,
     String reposts,
   ) {
-    return '$likes likes · $comments comments · $reposts reposts';
+    return '$likes پسندیں · $comments تبصرے · $reposts ریپوسٹس';
   }
 
   @override
@@ -2944,11 +2944,11 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get analyticsServerUnavailable =>
-      'Creator analytics is having server trouble. Please try again in a moment.';
+      'کریئیٹر تجزیات کے سرور میں مسئلہ ہے۔ کچھ دیر بعد دوبارہ کوشش کریں۔';
 
   @override
   String get analyticsConnectionIssue =>
-      'Creator analytics could not connect. Check your connection and try again.';
+      'کریئیٹر تجزیات سے رابطہ نہیں ہو سکا۔ اپنا کنکشن چیک کریں اور دوبارہ کوشش کریں۔';
 
   @override
   String get analyticsSignInRequired =>
@@ -3107,21 +3107,23 @@ class AppLocalizationsUr extends AppLocalizations {
       'جیسے جیسے Funnelcake سامعین کے تجزیات اینڈ پوائنٹس شامل کرے گا، سامعین کے ذریعہ/جغرافیہ/وقت کی تفصیلات بھر جائیں گی۔';
 
   @override
-  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+  String get analyticsSocialCountsInfoLabel =>
+      'آپ کے فالوورز کی تعداد کے بارے میں';
 
   @override
-  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+  String get analyticsSocialCountsInfoTitle =>
+      'آپ کے فالوورز کی تعداد کے بارے میں';
 
   @override
   String get analyticsFollowerCountsBody =>
-      'Your follower count shows the people who follow you on Divine.';
+      'آپ کے فالوورز کی تعداد ان لوگوں کو دکھاتی ہے جو Divine پر آپ کو فالو کرتے ہیں۔';
 
   @override
-  String get analyticsSocialCountsLearnMore => 'Learn more';
+  String get analyticsSocialCountsLearnMore => 'مزید جانیں';
 
   @override
   String analyticsSocialCountsLearnMoreSemantics(String url) {
-    return 'Learn more at $url';
+    return '$url پر مزید جانیں';
   }
 
   @override
@@ -3170,7 +3172,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String analyticsDiagnosticsFailedSources(String sources) {
-    return 'Failed sources: $sources';
+    return 'ناکام ذرائع: $sources';
   }
 
   @override
@@ -4680,19 +4682,20 @@ class AppLocalizationsUr extends AppLocalizations {
       'دستی بھیجنے کے لیے لاگز فائل میں ایکسپورٹ کریں';
 
   @override
-  String get supportClearLogs => 'Clear Logs';
+  String get supportClearLogs => 'لاگز صاف کریں';
 
   @override
-  String get supportClearLogsSubtitle => 'Wipe captured logs and start fresh';
+  String get supportClearLogsSubtitle =>
+      'ریکارڈ کیے گئے لاگز مٹائیں اور نئے سرے سے شروع کریں';
 
   @override
-  String get supportClearLogsConfirmTitle => 'Clear captured logs?';
+  String get supportClearLogsConfirmTitle => 'ریکارڈ کیے گئے لاگز صاف کریں؟';
 
   @override
-  String get supportClearLogsConfirmButton => 'Clear';
+  String get supportClearLogsConfirmButton => 'صاف کریں';
 
   @override
-  String get supportLogsCleared => 'Logs cleared';
+  String get supportLogsCleared => 'لاگز صاف ہو گئے';
 
   @override
   String get supportFaq => 'عمومی سوالات';
@@ -4731,11 +4734,11 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get supportNoLogsToExport =>
-      'No logs yet — they start fresh each launch. Reproduce the problem, then come back without restarting.';
+      'ابھی کوئی لاگز نہیں — ایپ ہر بار کھلنے پر لاگز نئے سرے سے شروع ہوتے ہیں۔ مسئلہ دوبارہ پیدا کریں، پھر ایپ دوبارہ شروع کیے بغیر یہاں واپس آئیں۔';
 
   @override
   String get supportExportLogsUnconfirmed =>
-      'Logs handed off. Check the app you shared to.';
+      'لاگز ایپ کو دے دیے گئے۔ جس ایپ میں آپ نے انہیں شیئر کیا ہے اسے چیک کریں۔';
 
   @override
   String supportLogsSavedTo(String path) {
@@ -6228,7 +6231,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get commonBack => 'واپس';
 
   @override
-  String get commonReload => 'Reload';
+  String get commonReload => 'دوبارہ لوڈ کریں';
 
   @override
   String get commonClose => 'بند کریں';
