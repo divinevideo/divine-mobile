@@ -101,11 +101,14 @@ class VoiceEffectBloc extends Bloc<VoiceEffectEvent, VoiceEffectState> {
     final source = track.originalSource;
     if (!event.audition || source == null) return;
 
+    // Scoped above the try so the generic Exception catch below can still
+    // discard a rendered audition that the player failed to open — otherwise
+    // the WAV lingers in temp until bloc.close() clears the directory.
+    AudioSourceConfig? audition;
+    var rendered = false;
     try {
       // What the track already plays, and the sound as it came, need no
       // rendering; they loop over the stretch the track plays.
-      final AudioSourceConfig audition;
-      var rendered = false;
       if (effect == track.voiceEffect &&
           noiseReduction == track.noiseReduction) {
         audition = _stretchOf(track.resolvedSource ?? source);
@@ -147,6 +150,9 @@ class VoiceEffectBloc extends Bloc<VoiceEffectEvent, VoiceEffectState> {
     } on Exception catch (e, stackTrace) {
       // The player could not open the audition; the setting can still be
       // kept, it just cannot be heard here.
+      if (rendered && audition != null) {
+        await _service.discardAudition(audition.uri);
+      }
       Log.warning(
         'Failed to play voice-effect audition: $e',
         name: _logName,
@@ -189,6 +195,12 @@ class VoiceEffectBloc extends Bloc<VoiceEffectEvent, VoiceEffectState> {
           id: id,
           url: processed.path,
           mimeType: processed.mimeType,
+          // processed.path always ends in .wav today so audioMimeTypeForPath
+          // returns audio/wav here, but keep the clear flag paired with the
+          // mime for symmetry with [_unprocessed] and the overlay's
+          // _changeVoice — a future decoder that returns null would otherwise
+          // silently carry the previous (non-wav) mime over.
+          clearMimeType: processed.mimeType == null,
           voiceEffect: state.effect,
           noiseReduction: state.noiseReduction,
           // A track already playing a copy keeps the sound it came from.
@@ -212,14 +224,23 @@ class VoiceEffectBloc extends Bloc<VoiceEffectEvent, VoiceEffectState> {
   }
 
   /// [track] playing the sound it was processed from, [source], again.
+  ///
+  /// Must only be called on a track that plays a processed copy — a track
+  /// with no [AudioEvent.originalUrl] has no source to revert to, and the
+  /// `url: track.originalUrl` assignment below would silently keep the
+  /// processed file instead.
   static AudioEvent _unprocessed(AudioEvent track, VoiceEffectSource source) {
+    assert(
+      track.originalUrl != null,
+      'A track reverting to its source must have an originalUrl; '
+      'invariant: voiceEffect != none || noiseReduction => originalUrl != null',
+    );
     // Copies made before the MIME type was kept were all of takes, whose
-    // file name still tells it.
+    // file name still tells it. audioMimeTypeForPath returns null for an
+    // unknown extension on its own, so the asset/network cases need no
+    // additional guard here.
     final mimeType =
-        track.originalMimeType ??
-        (source.kind == AudioSourceKind.file
-            ? audioMimeTypeForPath(source.path)
-            : null);
+        track.originalMimeType ?? audioMimeTypeForPath(source.path);
     return track.copyWith(
       url: track.originalUrl,
       mimeType: mimeType,
@@ -306,12 +327,24 @@ class VoiceEffectBloc extends Bloc<VoiceEffectEvent, VoiceEffectState> {
 
   @override
   Future<void> close() async {
-    await _loopSubscription.cancel();
-    // Closed first, so an audition still rendering finds its handler done and
-    // discards itself, instead of playing on the released player or landing
-    // after the auditions were cleared.
-    await super.close();
-    await _player.dispose();
-    await _service.clearAuditions();
+    // Each cleanup step runs even when an earlier one throws, so the audition
+    // directory does not keep growing across sessions when the player can't
+    // dispose cleanly (e.g. called while a native prepare is in flight).
+    try {
+      await _loopSubscription.cancel();
+    } finally {
+      try {
+        // Closed before the player, so an audition still rendering finds its
+        // handler done and discards itself, instead of playing on the
+        // released player or landing after the auditions were cleared.
+        await super.close();
+      } finally {
+        try {
+          await _player.dispose();
+        } finally {
+          await _service.clearAuditions();
+        }
+      }
+    }
   }
 }
