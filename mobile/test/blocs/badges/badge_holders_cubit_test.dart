@@ -28,6 +28,31 @@ void main() {
         );
 
     group('load', () {
+      test('leaves hidden accounts out of the indexed preview', () async {
+        final relayResult = Completer<Set<String>>();
+        when(
+          () => repository.loadAcceptedHolders(_coordinate),
+        ).thenAnswer((_) => relayResult.future);
+        when(
+          () => repository.withoutHiddenPubkeys(['indexed', 'blocked']),
+        ).thenReturn(['indexed']);
+        final cubit = BadgeHoldersCubit(
+          repository: repository,
+          coordinate: _coordinate,
+          canSubscribe: false,
+          loadIndexedPreview: (_) async => ['indexed', 'blocked'],
+        );
+        addTearDown(cubit.close);
+
+        final preview = cubit.stream.firstWhere(
+          (state) => state.holdersStatus == BadgeHoldersStatus.preview,
+        );
+        final load = cubit.load();
+        expect((await preview).holders, ['indexed']);
+        relayResult.complete({'indexed'});
+        await load;
+      });
+
       test('shows indexed holders before the complete relay result', () async {
         final relayResult = Completer<Set<String>>();
         when(
@@ -39,6 +64,9 @@ void main() {
           canSubscribe: false,
           loadIndexedPreview: (_) async => ['indexed'],
         );
+        when(
+          () => repository.withoutHiddenPubkeys(['indexed']),
+        ).thenReturn(['indexed']);
         addTearDown(cubit.close);
 
         final preview = cubit.stream.firstWhere(
