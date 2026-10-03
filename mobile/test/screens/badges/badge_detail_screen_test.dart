@@ -7,12 +7,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
 import 'package:openvine/screens/badges/widgets/badge_recipient_row.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
+import 'package:videos_repository/videos_repository.dart';
 
 import '../../helpers/test_provider_overrides.dart';
 
@@ -20,6 +22,10 @@ class _MockBadgeRepository extends Mock implements BadgeRepository {}
 
 class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {}
+
+class _MockVideosRepository extends Mock implements VideosRepository {}
+
+class _MockBadgeVideoPager extends Mock implements BadgeVideoPager {}
 
 void main() {
   group('BadgeDetailScreen', () {
@@ -45,7 +51,7 @@ void main() {
     /// The screen pops itself once a deletion lands, and `context.pop` is a
     /// GoRouter extension — a bare `MaterialApp` would throw there instead of
     /// exercising the flow.
-    Widget buildSubject() {
+    Widget buildSubject({VideosRepository? videosRepository}) {
       final router = GoRouter(
         initialLocation: '/badges/b/badge',
         routes: [
@@ -70,6 +76,8 @@ void main() {
           contentBlocklistRepositoryProvider.overrideWithValue(
             contentBlocklistRepository,
           ),
+          if (videosRepository != null)
+            videosRepositoryProvider.overrideWithValue(videosRepository),
         ],
         child: MaterialApp.router(
           localizationsDelegates: appLocalizationsDelegates,
@@ -509,6 +517,37 @@ void main() {
       );
     });
 
+    testWidgets('labels each holder video for screen readers', (
+      tester,
+    ) async {
+      final videosRepository = _MockVideosRepository();
+      final pager = _MockBadgeVideoPager();
+      when(() => repository.loadBadgeDetail(any())).thenAnswer(
+        (_) async => _detail(definition: _definition(), isOwner: false),
+      );
+      when(
+        () => repository.loadAcceptedHolders(any()),
+      ).thenAnswer((_) async => {_pubkey(3)});
+      when(
+        () => videosRepository.createBadgeVideoPager(any()),
+      ).thenReturn(pager);
+      when(pager.loadMore).thenAnswer((_) async => [_video()]);
+      when(() => pager.hasMore).thenReturn(false);
+
+      await tester.pumpWidget(buildSubject(videosRepository: videosRepository));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.bySemanticsLabel(l10n.profileVideoThumbnailLabel(1)),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+
+      expect(
+        find.bySemanticsLabel(l10n.profileVideoThumbnailLabel(1)),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('offers a retry when the lookup fails', (tester) async {
       when(
         () => repository.loadBadgeDetail(any()),
@@ -582,3 +621,12 @@ Event _event({required int kind}) {
 }
 
 String _pubkey(int seed) => (seed + 100).toRadixString(16).padLeft(64, '0');
+
+VideoEvent _video() => VideoEvent(
+  id: 'a'.padLeft(64, '0'),
+  pubkey: _pubkey(3),
+  createdAt: 1000,
+  content: '',
+  timestamp: DateTime.fromMillisecondsSinceEpoch(1000 * 1000),
+  videoUrl: 'https://example.com/a.mp4',
+);
