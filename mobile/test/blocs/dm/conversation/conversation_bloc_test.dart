@@ -265,9 +265,13 @@ void main() {
       // from ordinary to pending to failed.
       group('refused retraction', () {
         late StreamController<List<DmMessage>> thread;
+        late Completer<void> watching;
 
         setUp(() {
-          thread = StreamController<List<DmMessage>>();
+          watching = Completer<void>();
+          thread = StreamController<List<DmMessage>>(
+            onListen: watching.complete,
+          );
           addTearDown(() async {
             if (!thread.isClosed) await thread.close();
           });
@@ -290,7 +294,7 @@ void main() {
 
         Future<void> tick(List<DmMessage> next) async {
           thread.add(next);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         }
 
         Future<void> tapDelete(ConversationBloc bloc) async {
@@ -298,7 +302,7 @@ void main() {
           await untilCalled(
             () => mockDmRepository.deleteMessageForEveryone(messageId),
           );
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         }
 
         blocTest<ConversationBloc, ConversationState>(
@@ -306,7 +310,7 @@ void main() {
           build: buildBloc,
           act: (bloc) async {
             bloc.add(const ConversationStarted());
-            await Future<void>.delayed(Duration.zero);
+            await watching.future;
             await tick([testMessage]);
             await tapDelete(bloc);
             await tick([_pending(testMessage)]);
@@ -322,7 +326,7 @@ void main() {
           build: buildBloc,
           act: (bloc) async {
             bloc.add(const ConversationStarted());
-            await Future<void>.delayed(Duration.zero);
+            await watching.future;
             await tick([testMessage]);
             await tapDelete(bloc);
             await tick([_pending(testMessage)]);
@@ -343,7 +347,7 @@ void main() {
           build: buildBloc,
           act: (bloc) async {
             bloc.add(const ConversationStarted());
-            await Future<void>.delayed(Duration.zero);
+            await watching.future;
             // Opening on an already-refused bubble, as after a first refusal.
             await tick([_blocked(testMessage)]);
             bloc.add(
@@ -371,7 +375,7 @@ void main() {
           build: buildBloc,
           act: (bloc) async {
             bloc.add(const ConversationStarted());
-            await Future<void>.delayed(Duration.zero);
+            await watching.future;
             await tick([_blocked(testMessage)]);
             bloc.add(
               const ConversationMessageDeletionRetryRequested(
@@ -405,7 +409,7 @@ void main() {
           },
           act: (bloc) async {
             bloc.add(const ConversationStarted());
-            await Future<void>.delayed(Duration.zero);
+            await watching.future;
             await tick([_blocked(testMessage)]);
             bloc.add(
               const ConversationMessageDeletionRetryRequested(
@@ -419,7 +423,7 @@ void main() {
             );
             // Deliberately NO further tick: the point is that nothing else
             // arrives to clear it.
-            await Future<void>.delayed(Duration.zero);
+            await pumpEventQueue();
           },
           verify: (bloc) {
             expect(bloc.state.awaitingRetraction, isEmpty);
@@ -436,14 +440,14 @@ void main() {
           },
           act: (bloc) async {
             bloc.add(const ConversationStarted());
-            await Future<void>.delayed(Duration.zero);
+            await watching.future;
             await tick([_blocked(testMessage)]);
             bloc.add(
               const ConversationMessageDeletionRetryRequested(
                 rumorId: messageId,
               ),
             );
-            await Future<void>.delayed(Duration.zero);
+            await pumpEventQueue();
           },
           errors: () => [isA<StateError>()],
           verify: (bloc) {
@@ -459,7 +463,7 @@ void main() {
           build: buildBloc,
           act: (bloc) async {
             bloc.add(const ConversationStarted());
-            await Future<void>.delayed(Duration.zero);
+            await watching.future;
             await tick([testMessage]);
             await tapDelete(bloc);
             await tick(const []);
@@ -479,7 +483,7 @@ void main() {
           build: buildBloc,
           act: (bloc) async {
             bloc.add(const ConversationStarted());
-            await Future<void>.delayed(Duration.zero);
+            await watching.future;
             await tick([_blocked(testMessage)]);
           },
           verify: (bloc) {
@@ -489,38 +493,47 @@ void main() {
         );
       });
 
+      late StreamController<List<DmMessage>> multipleMessages;
       blocTest<ConversationBloc, ConversationState>(
         'emits updated messages when stream emits multiple times',
         setUp: () {
-          final controller = StreamController<List<DmMessage>>();
+          multipleMessages = StreamController<List<DmMessage>>();
+          addTearDown(multipleMessages.close);
           when(
             () => mockDmRepository.markConversationAsRead(conversationId),
           ).thenAnswer((_) async {});
           when(
             () => mockDmRepository.watchMessages(conversationId),
-          ).thenAnswer((_) => controller.stream);
+          ).thenAnswer((_) => multipleMessages.stream);
           when(
             () => mockDmRepository.watchOutgoing(any()),
           ).thenAnswer((_) => Stream.value(const <OutgoingDm>[]));
-
-          // Schedule emissions after bloc subscribes
-          final emissions = Future<void>.delayed(Duration.zero).then((_) async {
-            controller.add([testMessage]);
-            const secondMessage = DmMessage(
-              id: '7777777777777777777777777777777777777777777777777777777777777777',
-              conversationId: conversationId,
-              senderPubkey: recipientPubkey,
-              content: 'Reply message',
-              createdAt: 1700000100,
-              giftWrapId: '8888888888888888888888888888888888888888888888888888888888888888',
-            );
-            controller.add([testMessage, secondMessage]);
-            await controller.close();
-          });
-          addTearDown(() => emissions);
         },
         build: buildBloc,
-        act: (bloc) => bloc.add(const ConversationStarted()),
+        act: (bloc) async {
+          bloc.add(const ConversationStarted());
+          await untilCalled(
+            () => mockDmRepository.watchMessages(conversationId),
+          );
+          multipleMessages.add([testMessage]);
+          await _waitForConversationState(
+            bloc,
+            (state) => state.messages.length == 1,
+          );
+          const secondMessage = DmMessage(
+            id: '7777777777777777777777777777777777777777777777777777777777777777',
+            conversationId: conversationId,
+            senderPubkey: recipientPubkey,
+            content: 'Reply message',
+            createdAt: 1700000100,
+            giftWrapId: '8888888888888888888888888888888888888888888888888888888888888888',
+          );
+          multipleMessages.add([testMessage, secondMessage]);
+          await _waitForConversationState(
+            bloc,
+            (state) => state.messages.length == 2,
+          );
+        },
         expect: () => [
           const ConversationState(status: ConversationStatus.loading),
           const ConversationState(
@@ -922,7 +935,7 @@ void main() {
               // failure (e.g. offline), mark the row failed — both surface via
               // watchOutgoing while _onMessageSent is in flight.
               failOutCtrl.add([_outgoingDm(id: messageId)]);
-              await Future<void>.delayed(Duration.zero);
+              await pumpEventQueue();
               failOutCtrl.add([
                 _outgoingDm(
                   id: messageId,
@@ -1343,14 +1356,24 @@ void main() {
                 content: 'First partial',
               ),
             );
-            await Future<void>.delayed(Duration.zero);
+            await untilCalled(
+              () => mockDmRepository.sendMessage(
+                recipientPubkey: recipientPubkey,
+                content: 'First partial',
+              ),
+            );
             bloc.add(
               const ConversationMessageSent(
                 recipientPubkeys: [recipientPubkey],
                 content: 'Second partial',
               ),
             );
-            await Future<void>.delayed(Duration.zero);
+            await _waitForConversationState(
+              bloc,
+              (state) =>
+                  state.lastPartialSend?.rumorIds.contains(secondRumorId) ??
+                  false,
+            );
             // The slower FIRST send resolves partial after the second one
             // already emitted its sentPartial.
             slowFirstPartial.complete(
@@ -1534,7 +1557,12 @@ void main() {
                 content: 'First message',
               ),
             );
-            await Future<void>.delayed(Duration.zero);
+            await untilCalled(
+              () => mockDmRepository.sendMessage(
+                recipientPubkey: recipientPubkey,
+                content: 'First message',
+              ),
+            );
             bloc.add(
               const ConversationMessageSent(
                 recipientPubkeys: [recipientPubkey],
@@ -1542,7 +1570,10 @@ void main() {
               ),
             );
             // Both sends must be in flight BEFORE the first completes.
-            await Future<void>.delayed(const Duration(milliseconds: 20));
+            await _waitForConversationState(
+              bloc,
+              (state) => state.sendStatus == SendStatus.sent,
+            );
             verify(
               () => mockDmRepository.sendMessage(
                 recipientPubkey: recipientPubkey,
@@ -1557,7 +1588,6 @@ void main() {
               ),
             );
           },
-          wait: const Duration(milliseconds: 100),
           expect: () => [
             // First send starts; the second's identical `sending` emit is
             // suppressed by state equality.
@@ -1576,11 +1606,15 @@ void main() {
           ],
         );
 
+        late Completer<NIP17SendResult> firstSend;
+        late Completer<NIP17SendResult> secondSend;
+        late Completer<void> bothStarted;
         blocTest<ConversationBloc, ConversationState>(
           'does not drop the second event when first is still processing',
           setUp: () {
-            final completer1 = Completer<NIP17SendResult>();
-            final completer2 = Completer<NIP17SendResult>();
+            firstSend = Completer<NIP17SendResult>();
+            secondSend = Completer<NIP17SendResult>();
+            bothStarted = Completer<void>();
             var callCount = 0;
             when(
               () => mockDmRepository.sendMessage(
@@ -1589,41 +1623,13 @@ void main() {
               ),
             ).thenAnswer((_) {
               callCount++;
-              if (callCount == 1) return completer1.future;
-              return completer2.future;
+              if (callCount == 1) return firstSend.future;
+              bothStarted.complete();
+              return secondSend.future;
             });
-
-            // Complete both after a short delay; with concurrent() both
-            // handlers are already in flight when the first resolves.
-            final firstCompletion =
-                Future<void>.delayed(
-                  const Duration(milliseconds: 30),
-                ).then((_) {
-                  completer1.complete(
-                    NIP17SendResult.success(
-                      rumorEventId: sentEventId,
-                      messageEventId: sentEventId,
-                      recipientPubkey: recipientPubkey,
-                    ),
-                  );
-                });
-            addTearDown(() => firstCompletion);
-            final secondCompletion =
-                Future<void>.delayed(
-                  const Duration(milliseconds: 60),
-                ).then((_) {
-                  completer2.complete(
-                    NIP17SendResult.success(
-                      rumorEventId: sentEventId,
-                      messageEventId: sentEventId,
-                      recipientPubkey: recipientPubkey,
-                    ),
-                  );
-                });
-            addTearDown(() => secondCompletion);
           },
           build: buildBloc,
-          act: (bloc) {
+          act: (bloc) async {
             bloc
               ..add(
                 const ConversationMessageSent(
@@ -1637,8 +1643,20 @@ void main() {
                   content: 'Second',
                 ),
               );
+            await bothStarted.future;
+            final result = NIP17SendResult.success(
+              rumorEventId: sentEventId,
+              messageEventId: sentEventId,
+              recipientPubkey: recipientPubkey,
+            );
+            firstSend.complete(result);
+            await _waitForConversationState(
+              bloc,
+              (state) => state.sendStatus == SendStatus.sent,
+            );
+            secondSend.complete(result);
+            await pumpEventQueue();
           },
-          wait: const Duration(milliseconds: 150),
           expect: () => [
             // Both handlers start together; the second's identical `sending`
             // emit is suppressed by state equality, as is the second `sent`.
@@ -1667,12 +1685,24 @@ void main() {
       });
 
       group('restartable() on $ConversationStarted', () {
+        late StreamController<List<DmMessage>> controller1;
+        late StreamController<List<DmMessage>> controller2;
+        late Completer<void> replacementWatching;
+        late Completer<void> firstCancelled;
         blocTest<ConversationBloc, ConversationState>(
           'cancels the previous subscription and starts a new one '
           'when $ConversationStarted is re-added',
           setUp: () {
-            final controller1 = StreamController<List<DmMessage>>();
-            final controller2 = StreamController<List<DmMessage>>();
+            firstCancelled = Completer<void>();
+            replacementWatching = Completer<void>();
+            controller1 = StreamController<List<DmMessage>>(
+              onCancel: firstCancelled.complete,
+            );
+            controller2 = StreamController<List<DmMessage>>(
+              onListen: replacementWatching.complete,
+            );
+            addTearDown(controller1.close);
+            addTearDown(controller2.close);
             var watchCallCount = 0;
 
             when(
@@ -1690,62 +1720,50 @@ void main() {
             when(
               () => mockDmRepository.watchOutgoing(any()),
             ).thenAnswer((_) => Stream.value(const <OutgoingDm>[]));
-
-            // Emit on first stream, then trigger re-add, then emit on second
-            // stream. The first stream's later emission should be ignored
-            // because restartable() cancels it.
-            final firstEmission =
-                Future<void>.delayed(
-                  const Duration(milliseconds: 10),
-                ).then((_) {
-                  controller1.add([testMessage]);
-                });
-            addTearDown(() => firstEmission);
-            final staleEmission =
-                Future<void>.delayed(
-                  const Duration(milliseconds: 60),
-                ).then((_) async {
-                  // This emission on the old stream should be ignored
-                  controller1.add([
-                    testMessage,
-                    const DmMessage(
-                      id: '9999999999999999999999999999999999999999999999999999999999999999',
-                      conversationId: conversationId,
-                      senderPubkey: senderPubkey,
-                      content: 'Should be ignored',
-                      createdAt: 1700000200,
-                      giftWrapId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-                    ),
-                  ]);
-                  await controller1.close();
-                });
-            addTearDown(() => staleEmission);
-            final replacementEmission =
-                Future<void>.delayed(
-                  const Duration(milliseconds: 70),
-                ).then((_) async {
-                  controller2.add([
-                    const DmMessage(
-                      id: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
-                      conversationId: conversationId,
-                      senderPubkey: recipientPubkey,
-                      content: 'New subscription message',
-                      createdAt: 1700000300,
-                      giftWrapId: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
-                    ),
-                  ]);
-                  await controller2.close();
-                });
-            addTearDown(() => replacementEmission);
           },
           build: buildBloc,
           act: (bloc) async {
             bloc.add(const ConversationStarted());
-            // Wait for first stream to emit, then re-add
-            await Future<void>.delayed(const Duration(milliseconds: 30));
+            await untilCalled(
+              () => mockDmRepository.watchMessages(conversationId),
+            );
+            controller1.add([testMessage]);
+            await _waitForConversationState(
+              bloc,
+              (state) => state.status == ConversationStatus.loaded,
+            );
             bloc.add(const ConversationStarted());
+            await firstCancelled.future;
+            await replacementWatching.future;
+            controller1.add([
+              testMessage,
+              const DmMessage(
+                id: '9999999999999999999999999999999999999999999999999999999999999999',
+                conversationId: conversationId,
+                senderPubkey: senderPubkey,
+                content: 'Should be ignored',
+                createdAt: 1700000200,
+                giftWrapId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+              ),
+            ]);
+            await pumpEventQueue();
+            expect(bloc.state.messages, [testMessage]);
+            controller2.add([
+              const DmMessage(
+                id: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+                conversationId: conversationId,
+                senderPubkey: recipientPubkey,
+                content: 'New subscription message',
+                createdAt: 1700000300,
+                giftWrapId: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+              ),
+            ]);
+            await _waitForConversationState(
+              bloc,
+              (state) =>
+                  state.messages.single.content == 'New subscription message',
+            );
           },
-          wait: const Duration(milliseconds: 200),
           expect: () => [
             // First subscription starts
             const ConversationState(status: ConversationStatus.loading),
@@ -2133,7 +2151,7 @@ void main() {
           bloc.add(const ConversationMessageDeleted(rumorId: otherMessageId));
           // Let the second event enter the transformer while the first handler
           // is still suspended, then allow the sequential queue to advance.
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           releaseFirstDelete.complete();
         },
         verify: (_) {

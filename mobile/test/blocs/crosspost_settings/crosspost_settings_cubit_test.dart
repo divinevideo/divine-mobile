@@ -31,11 +31,19 @@ void _close(FakeAsync fake, CrosspostSettingsCubit cubit) {
   fake.flushMicrotasks();
 }
 
+Future<void> _initialStatusLoaded(CrosspostSettingsCubit cubit) async {
+  if (cubit.state.status != CrosspostSettingsStatus.loading) return;
+  await cubit.stream.firstWhere(
+    (state) => state.status != CrosspostSettingsStatus.loading,
+  );
+}
+
 void main() {
   group(CrosspostSettingsCubit, () {
     late _MockBlueskyCrosspostRepository repository;
 
-    const testPubkey = 'abc123def456';
+    const testPubkey =
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
     const loadedStatus = BlueskyCrosspostAccountStatus(
       crosspostEnabled: true,
       username: 'testuser',
@@ -77,7 +85,7 @@ void main() {
         final cubit = buildCubit();
         addTearDown(cubit.close);
 
-        await Future<void>.delayed(Duration.zero);
+        await _initialStatusLoaded(cubit);
 
         expect(cubit.state.status, CrosspostSettingsStatus.loaded);
         expect(cubit.state.enabled, isTrue);
@@ -98,7 +106,7 @@ void main() {
         final cubit = buildCubit();
         addTearDown(cubit.close);
 
-        await Future<void>.delayed(Duration.zero);
+        await _initialStatusLoaded(cubit);
 
         expect(cubit.state.status, CrosspostSettingsStatus.failure);
         expect(cubit.state.usernameClaimStatus, UsernameClaimStatus.notClaimed);
@@ -120,7 +128,7 @@ void main() {
           final cubit = buildCubit();
           addTearDown(cubit.close);
 
-          await Future<void>.delayed(Duration.zero);
+          await _initialStatusLoaded(cubit);
 
           expect(cubit.state.status, CrosspostSettingsStatus.loaded);
           expect(cubit.state.enabled, isFalse);
@@ -144,7 +152,7 @@ void main() {
         final cubit = buildCubit();
         addTearDown(cubit.close);
 
-        await Future<void>.delayed(Duration.zero);
+        await _initialStatusLoaded(cubit);
 
         expect(cubit.state.status, CrosspostSettingsStatus.loaded);
         expect(cubit.state.usernameClaimStatus, UsernameClaimStatus.notClaimed);
@@ -170,7 +178,7 @@ void main() {
         },
         build: buildCubit,
         act: (cubit) async {
-          await Future<void>.delayed(Duration.zero);
+          await _initialStatusLoaded(cubit);
           await cubit.toggleCrosspost(enabled: false);
         },
         skip: 1,
@@ -205,7 +213,7 @@ void main() {
         },
         build: buildCubit,
         act: (cubit) async {
-          await Future<void>.delayed(Duration.zero);
+          await _initialStatusLoaded(cubit);
           await cubit.toggleCrosspost(enabled: false);
         },
         skip: 1,
@@ -246,7 +254,7 @@ void main() {
         },
         build: buildCubit,
         act: (cubit) async {
-          await Future<void>.delayed(Duration.zero);
+          await _initialStatusLoaded(cubit);
           await cubit.toggleCrosspost(enabled: true);
         },
         skip: 1,
@@ -290,7 +298,7 @@ void main() {
         },
         build: buildCubit,
         act: (cubit) async {
-          await Future<void>.delayed(Duration.zero);
+          await _initialStatusLoaded(cubit);
           await cubit.toggleCrosspost(enabled: true);
         },
         skip: 2,
@@ -334,7 +342,7 @@ void main() {
         },
         build: buildCubit,
         act: (cubit) async {
-          await Future<void>.delayed(Duration.zero);
+          await _initialStatusLoaded(cubit);
           await cubit.toggleCrosspost(enabled: true);
         },
         skip: 1,
@@ -377,7 +385,7 @@ void main() {
         },
         build: buildCubit,
         act: (cubit) async {
-          await Future<void>.delayed(Duration.zero);
+          await _initialStatusLoaded(cubit);
           await cubit.toggleCrosspost(enabled: true);
         },
         skip: 2,
@@ -412,7 +420,7 @@ void main() {
         },
         build: buildCubit,
         act: (cubit) async {
-          await Future<void>.delayed(Duration.zero);
+          await _initialStatusLoaded(cubit);
           await cubit.toggleCrosspost(enabled: true);
         },
         skip: 2,
@@ -439,12 +447,15 @@ void main() {
         ).thenAnswer((_) => completer.future);
 
         final cubit = buildCubit();
-        await Future<void>.delayed(Duration.zero);
+        await _initialStatusLoaded(cubit);
 
         final errors = <Object>[];
         final subscription = cubit.stream.listen(null, onError: errors.add);
-        unawaited(cubit.toggleCrosspost(enabled: false));
-        await Future<void>.delayed(Duration.zero);
+        final toggling = cubit.stream.firstWhere(
+          (state) => state.status == CrosspostSettingsStatus.toggling,
+        );
+        final toggle = cubit.toggleCrosspost(enabled: false);
+        await toggling;
         await cubit.close();
 
         completer.complete(
@@ -454,7 +465,7 @@ void main() {
             usernameClaimStatus: UsernameClaimStatus.claimed,
           ),
         );
-        await Future<void>.delayed(Duration.zero);
+        await toggle;
 
         expect(errors, isEmpty);
         await subscription.cancel();
@@ -473,7 +484,7 @@ void main() {
         },
         build: buildCubit,
         act: (cubit) async {
-          await Future<void>.delayed(Duration.zero);
+          await _initialStatusLoaded(cubit);
           await cubit.toggleCrosspost(enabled: true);
           cubit.acknowledgeError();
         },
@@ -522,7 +533,7 @@ void main() {
         () async {
           final cubit = buildCubit();
           addTearDown(cubit.close);
-          await Future<void>.delayed(Duration.zero);
+          await _initialStatusLoaded(cubit);
 
           final previousState = cubit.state;
           final emittedStates = <CrosspostSettingsState>[];
@@ -549,15 +560,18 @@ void main() {
           ).thenAnswer((_) => completer.future);
           final cubit = buildCubit();
           addTearDown(cubit.close);
-          await Future<void>.delayed(Duration.zero);
+          await _initialStatusLoaded(cubit);
 
           final previousState = cubit.state;
           final emittedStates = <CrosspostSettingsState>[];
           final subscription = cubit.stream.listen(emittedStates.add);
           addTearDown(subscription.cancel);
 
-          unawaited(cubit.toggleCrosspost(enabled: false));
-          await Future<void>.delayed(Duration.zero);
+          final toggling = cubit.stream.firstWhere(
+            (state) => state.status == CrosspostSettingsStatus.toggling,
+          );
+          final toggle = cubit.toggleCrosspost(enabled: false);
+          await toggling;
 
           expect(emittedStates, isNotEmpty);
           expect(emittedStates.first, isNot(equals(previousState)));
@@ -573,7 +587,7 @@ void main() {
               usernameClaimStatus: UsernameClaimStatus.claimed,
             ),
           );
-          await Future<void>.delayed(Duration.zero);
+          await toggle;
         },
       );
     });
@@ -1076,7 +1090,7 @@ void main() {
 
           final cubit = buildCubit();
           addTearDown(cubit.close);
-          await Future<void>.delayed(Duration.zero);
+          await _initialStatusLoaded(cubit);
 
           await cubit.retryProvisioning();
 
@@ -1109,11 +1123,10 @@ void main() {
 
         final cubit = buildCubit();
         addTearDown(cubit.close);
-        await Future<void>.delayed(Duration.zero);
+        await _initialStatusLoaded(cubit);
 
-        unawaited(cubit.retryProvisioning());
-        unawaited(cubit.retryProvisioning());
-        await Future<void>.delayed(Duration.zero);
+        final firstRetry = cubit.retryProvisioning();
+        final secondRetry = cubit.retryProvisioning();
 
         verify(
           () => repository.setCrosspost(pubkey: testPubkey, enabled: true),
@@ -1128,7 +1141,7 @@ void main() {
             usernameClaimStatus: UsernameClaimStatus.claimed,
           ),
         );
-        await Future<void>.delayed(Duration.zero);
+        await Future.wait([firstRetry, secondRetry]);
       });
     });
   });
