@@ -1423,12 +1423,12 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String exploreFeaturedSponsoredBy(String sponsor) {
-    return 'Sponsored by $sponsor';
+    return 'Sponsorowane przez $sponsor';
   }
 
   @override
   String exploreFeaturedSponsoredPillSemanticLabel(String name) {
-    return '$name, sponsored';
+    return '$name, sponsorowane';
   }
 
   @override

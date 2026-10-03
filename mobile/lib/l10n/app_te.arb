@@ -788,7 +788,7 @@
   "exploreTabForYou": "మీ కోసం",
   "exploreTabLists": "జాబితాలు",
   "exploreTabIntegratedApps": "ఇంటిగ్రేటెడ్ యాప్‌లు",
-  "exploreFeaturedSponsoredBy": "ద్వారా స్పాన్సర్ చేయబడింది {sponsor}",
+  "exploreFeaturedSponsoredBy": "{sponsor} ద్వారా స్పాన్సర్ చేయబడింది",
   "@exploreFeaturedSponsoredBy": {
     "description": "Commercial disclosure shown with a sponsored featured collection in grid and fullscreen views. This is a disclosure, not marketing copy: translate it so it clearly communicates commercial sponsorship rather than an editorial credit. Many languages may render this more naturally as a noun label than a prepositional phrase, or may need the brand name to lead. {sponsor} is a brand name supplied by the server and must not be translated.",
     "placeholders": {

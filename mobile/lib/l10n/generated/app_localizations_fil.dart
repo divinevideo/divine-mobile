@@ -1373,12 +1373,12 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String exploreFeaturedSponsoredBy(String sponsor) {
-    return 'Sponsored by $sponsor';
+    return 'Sponsored ng $sponsor';
   }
 
   @override
   String exploreFeaturedSponsoredPillSemanticLabel(String name) {
-    return '$name, sponsored';
+    return '$name, sponsored na koleksyon';
   }
 
   @override
