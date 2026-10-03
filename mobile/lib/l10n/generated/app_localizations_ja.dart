@@ -106,11 +106,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsSessionExpiredSubtitle => 'もう一回サインインして、フルアクセスを取り戻そう';
 
   @override
-  String get settingsAccountRestoreFailed => 'Account Restore Failed';
+  String get settingsAccountRestoreFailed => 'アカウントの復元に失敗';
 
   @override
   String get settingsAccountRestoreFailedSwitchMessage =>
-      'We couldn\'t unlock that account on this device. Signing back into it means signing out of the one you\'re on now.';
+      'このデバイスでそのアカウントのロックを解除できませんでした。もう一度サインインすると、今使っているアカウントからサインアウトされます。';
 
   @override
   String get settingsCreatorAnalytics => 'クリエイター分析';
@@ -3880,7 +3880,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get authAccountRestoreFailed =>
-      'We couldn\'t unlock that account on this device. Sign in again.';
+      'このデバイスでそのアカウントのロックを解除できませんでした。もう一度サインインしてください。';
 
   @override
   String get authSignInFailed => 'サインインがうまくいかなかった。もう一回試してみて。';

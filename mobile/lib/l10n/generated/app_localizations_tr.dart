@@ -107,11 +107,11 @@ class AppLocalizationsTr extends AppLocalizations {
       'Tam erişimi geri almak için tekrar giriş yap';
 
   @override
-  String get settingsAccountRestoreFailed => 'Account Restore Failed';
+  String get settingsAccountRestoreFailed => 'Hesap geri yüklenemedi';
 
   @override
   String get settingsAccountRestoreFailedSwitchMessage =>
-      'We couldn\'t unlock that account on this device. Signing back into it means signing out of the one you\'re on now.';
+      'Bu cihazda o hesabın kilidini açamadık. Yeniden giriş yapmak, şu an kullandığın hesaptan çıkmak demek.';
 
   @override
   String get settingsCreatorAnalytics => 'İçerik Üretici Analitikleri';
@@ -4077,7 +4077,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get authAccountRestoreFailed =>
-      'We couldn\'t unlock that account on this device. Sign in again.';
+      'Bu cihazda o hesabın kilidini açamadık. Tekrar giriş yap.';
 
   @override
   String get authSignInFailed => 'Giriş başarısız. Lütfen tekrar dene.';

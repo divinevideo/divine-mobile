@@ -138,11 +138,12 @@ class AppLocalizationsSv extends AppLocalizations {
       'Logga in igen för att återfå full åtkomst';
 
   @override
-  String get settingsAccountRestoreFailed => 'Account Restore Failed';
+  String get settingsAccountRestoreFailed =>
+      'Det gick inte att återställa kontot';
 
   @override
   String get settingsAccountRestoreFailedSwitchMessage =>
-      'We couldn\'t unlock that account on this device. Signing back into it means signing out of the one you\'re on now.';
+      'Vi kunde inte låsa upp det kontot på den här enheten. Att logga in där igen betyder att du loggas ut från det du använder nu.';
 
   @override
   String get settingsCreatorAnalytics => 'Kreatörsstatistik';
@@ -4132,7 +4133,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get authAccountRestoreFailed =>
-      'We couldn\'t unlock that account on this device. Sign in again.';
+      'Vi kunde inte låsa upp det kontot på den här enheten. Logga in igen.';
 
   @override
   String get authSignInFailed => 'Kunde inte logga in. Försök igen.';

@@ -141,11 +141,12 @@ class AppLocalizationsDe extends AppLocalizations {
       'Melde dich erneut an, um wieder vollen Zugriff zu haben';
 
   @override
-  String get settingsAccountRestoreFailed => 'Account Restore Failed';
+  String get settingsAccountRestoreFailed =>
+      'Konto konnte nicht wiederhergestellt werden';
 
   @override
   String get settingsAccountRestoreFailedSwitchMessage =>
-      'We couldn\'t unlock that account on this device. Signing back into it means signing out of the one you\'re on now.';
+      'Wir konnten dieses Konto auf diesem Gerät nicht entsperren. Dich dort neu anzumelden heißt, dich aus dem Konto abzumelden, in dem du gerade bist.';
 
   @override
   String get settingsCreatorAnalytics => 'Creator-Analytics';
@@ -4190,7 +4191,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get authAccountRestoreFailed =>
-      'We couldn\'t unlock that account on this device. Sign in again.';
+      'Wir konnten dieses Konto auf diesem Gerät nicht entsperren. Melde dich erneut an.';
 
   @override
   String get authSignInFailed =>

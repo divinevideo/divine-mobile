@@ -137,11 +137,11 @@ class AppLocalizationsAr extends AppLocalizations {
       'سجّل الدخول مرّة أخرى لاستعادة الوصول الكامل';
 
   @override
-  String get settingsAccountRestoreFailed => 'Account Restore Failed';
+  String get settingsAccountRestoreFailed => 'تعذّرت استعادة الحساب';
 
   @override
   String get settingsAccountRestoreFailedSwitchMessage =>
-      'We couldn\'t unlock that account on this device. Signing back into it means signing out of the one you\'re on now.';
+      'تعذّر علينا إلغاء قفل ذلك الحساب على هذا الجهاز. تسجيل الدخول إليه مرة أخرى يعني تسجيل الخروج من الحساب المستخدم حاليًا.';
 
   @override
   String get settingsCreatorAnalytics => 'تحليلات الصانع';
@@ -4116,7 +4116,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get authAccountRestoreFailed =>
-      'We couldn\'t unlock that account on this device. Sign in again.';
+      'تعذّر علينا إلغاء قفل ذلك الحساب على هذا الجهاز. يرجى تسجيل الدخول مرّة أخرى.';
 
   @override
   String get authSignInFailed => 'فشل تسجيل الدخول. حاول مرّة أخرى.';

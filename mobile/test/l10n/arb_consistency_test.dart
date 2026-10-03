@@ -82,6 +82,44 @@ void main() {
       }
     });
 
+    test('account restore failure copy is localized for every locale', () {
+      final arbFiles =
+          Directory('lib/l10n')
+              .listSync()
+              .whereType<File>()
+              .where((file) => file.path.endsWith('.arb'))
+              .where((file) => !file.path.endsWith('app_en.arb'))
+              .toList()
+            ..sort((a, b) => a.path.compareTo(b.path));
+
+      final template = _readArb(File('lib/l10n/app_en.arb'));
+      const keys = [
+        'authAccountRestoreFailed',
+        'settingsAccountRestoreFailed',
+        'settingsAccountRestoreFailedSwitchMessage',
+      ];
+
+      for (final file in arbFiles) {
+        final arb = _readArb(file);
+        for (final key in keys) {
+          expect(
+            arb[key],
+            isA<String>().having(
+              (s) => s.trim().isNotEmpty,
+              'non-empty',
+              isTrue,
+            ),
+            reason: '${file.path} must define a non-empty $key message',
+          );
+          expect(
+            arb[key],
+            isNot(template[key]),
+            reason: '${file.path} must not fall back to English for $key',
+          );
+        }
+      }
+    });
+
     test('Keycast key export copy is localized for every locale', () {
       final l10nDir = Directory('lib/l10n');
       final arbFiles =
@@ -704,10 +742,6 @@ const _knownUntranslatedDebt = <String>{
   'analyticsFollowerCountsBody',
   'analyticsSocialCountsLearnMore',
   'analyticsSocialCountsLearnMoreSemantics',
-  // Account restore failure copy is new; translation pass tracked in #7659.
-  'authAccountRestoreFailed',
-  'settingsAccountRestoreFailed',
-  'settingsAccountRestoreFailedSwitchMessage',
   // Commercial disclosure copy, deliberately not machine-translated: a
   // softened rendering discloses nothing. Translation pass tracked in #7673,
   // and required before any non-English campaign.
