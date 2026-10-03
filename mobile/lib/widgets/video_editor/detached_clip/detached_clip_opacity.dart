@@ -44,7 +44,7 @@ Future<void> editDetachedClipOpacity(
   final layerId = layer.id;
 
   final playhead = mainBloc.state.currentPosition;
-  if (playhead < item.startTime || playhead >= item.endTime) {
+  if (playhead < item.startTime || playhead > item.endTime) {
     mainBloc.add(VideoEditorSeekRequested(item.startTime));
   }
 
