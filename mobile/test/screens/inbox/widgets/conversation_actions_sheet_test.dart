@@ -45,8 +45,25 @@ void main() {
       );
     }
 
+    // The rows the open sheet shows, whatever kind of widget each one is.
+    List<Widget> sheetRows(WidgetTester tester) {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final sheetBody = find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics &&
+            widget.properties.label == l10n.inboxConversationActionsSheetLabel,
+      );
+      return tester
+          .widget<Column>(
+            find.descendant(of: sheetBody, matching: find.byType(Column)).first,
+          )
+          .children;
+    }
+
     group('renders', () {
-      testWidgets('renders the three action tiles', (tester) async {
+      // Exactly three: the mute toggle that used to lead the sheet saved a
+      // set nothing read, so it confirmed work that never happened (#7379).
+      testWidgets('renders exactly the three action tiles', (tester) async {
         final l10n = lookupAppLocalizations(const Locale('en'));
         await tester.pumpWidget(buildSubject(onResult: (_) {}));
 
@@ -56,21 +73,24 @@ void main() {
         expect(find.text(l10n.inboxActionReport('Alice')), findsOneWidget);
         expect(find.text(l10n.inboxActionBlock('Alice')), findsOneWidget);
         expect(find.text(l10n.inboxActionRemove), findsOneWidget);
+        expect(sheetRows(tester), hasLength(3));
       });
 
-      // The mute toggle saved a set nothing read, so it confirmed work that
-      // never happened (#7379). It stays out until muting has an effect.
-      testWidgets('offers no toggle', (tester) async {
+      testWidgets('withholds Remove for a thread that cannot be removed', (
+        tester,
+      ) async {
         final l10n = lookupAppLocalizations(const Locale('en'));
-        await tester.pumpWidget(buildSubject(onResult: (_) {}));
+        await tester.pumpWidget(
+          buildSubject(onResult: (_) {}, canRemove: false),
+        );
 
         await tester.tap(find.text('Show sheet'));
         await tester.pumpAndSettle();
 
-        // Pinned: the sheet is open, so an absent toggle is not an absent
-        // sheet.
-        expect(find.text(l10n.inboxActionRemove), findsOneWidget);
-        expect(find.byType(Switch), findsNothing);
+        expect(find.text(l10n.inboxActionReport('Alice')), findsOneWidget);
+        expect(find.text(l10n.inboxActionBlock('Alice')), findsOneWidget);
+        expect(find.text(l10n.inboxActionRemove), findsNothing);
+        expect(sheetRows(tester), hasLength(2));
       });
 
       testWidgets('renders Unblock label when user is blocked', (tester) async {
@@ -229,22 +249,21 @@ void main() {
         );
       });
 
-      test('is true for a removable group', () {
-        expect(
-          ConversationActionsSheet.hasActions(isGroup: true, canRemove: true),
-          isTrue,
-        );
-      });
-
-      test('is true for a 1:1 whether or not it can be removed', () {
-        expect(
-          ConversationActionsSheet.hasActions(isGroup: false, canRemove: true),
-          isTrue,
-        );
-        expect(
-          ConversationActionsSheet.hasActions(isGroup: false, canRemove: false),
-          isTrue,
-        );
+      test('is true for every conversation the sheet has a row for', () {
+        for (final (isGroup, canRemove) in [
+          (false, true),
+          (false, false),
+          (true, true),
+        ]) {
+          expect(
+            ConversationActionsSheet.hasActions(
+              isGroup: isGroup,
+              canRemove: canRemove,
+            ),
+            isTrue,
+            reason: 'isGroup: $isGroup, canRemove: $canRemove',
+          );
+        }
       });
     });
 
@@ -262,6 +281,7 @@ void main() {
         expect(find.text(l10n.inboxActionRemove), findsOneWidget);
         expect(find.text(l10n.inboxActionReport('Alice')), findsNothing);
         expect(find.text(l10n.inboxActionBlock('Alice')), findsNothing);
+        expect(sheetRows(tester), hasLength(1));
       });
 
       testWidgets('a 1:1 still offers both', (tester) async {

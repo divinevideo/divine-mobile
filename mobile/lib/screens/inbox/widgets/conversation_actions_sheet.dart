@@ -24,13 +24,31 @@ enum ConversationAction {
 /// notifications, so the toggle is withheld until it does (#7379).
 /// Returns the chosen [ConversationAction] or `null` if dismissed.
 class ConversationActionsSheet {
+  /// The actions offered for a conversation, in display order.
+  ///
+  /// Report and Block act on ONE account, and a group sheet has no way to say
+  /// which — it would act on the arbitrary peer the row names while reading as
+  /// though it dealt with the thread, so a group gets neither. An individual
+  /// is still blockable from their profile in the thread.
+  ///
+  /// Remove is withheld for a removal-protected thread: removal is permanent
+  /// and a Divine Moderation notice is the user's only copy of why they were
+  /// actioned (#8391). The repository refuses it either way; not offering it
+  /// beats a dead-end refusal.
+  static List<ConversationAction> _actionsFor({
+    required bool isGroup,
+    required bool canRemove,
+  }) => [
+    if (!isGroup) ...[ConversationAction.report, ConversationAction.block],
+    if (canRemove) ConversationAction.remove,
+  ];
+
   /// Whether the sheet would offer any action for a conversation.
   ///
-  /// Report and Block are withheld from a group and Remove from a
-  /// removal-protected thread, so a group holding a protected member has
-  /// none. Callers check this before [show] rather than open an empty sheet.
+  /// A group holding a removal-protected member has none. Callers check this
+  /// before [show] rather than open an empty sheet.
   static bool hasActions({required bool isGroup, required bool canRemove}) =>
-      !isGroup || canRemove;
+      _actionsFor(isGroup: isGroup, canRemove: canRemove).isNotEmpty;
 
   static Future<ConversationAction?> show(
     BuildContext context, {
@@ -40,6 +58,9 @@ class ConversationActionsSheet {
     required bool isGroup,
     bool canRemove = true,
   }) {
+    final actions = _actionsFor(isGroup: isGroup, canRemove: canRemove);
+    assert(actions.isNotEmpty, 'Check hasActions before opening the sheet.');
+
     // A vanished peer can publish again under the same key, and their DMs
     // remain in the recipient's history. Keep Report and Block available for
     // safety, but do not turn the deleted-state label into an identity.
@@ -56,47 +77,42 @@ class ConversationActionsSheet {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Report and Block act on ONE account, and a group sheet has no
-            // way to say which — it would act on the arbitrary peer the row
-            // names while reading as though it dealt with the thread. Remove
-            // is conversation-scoped and means what it says. An individual is
-            // still blockable from their profile in the thread.
-            if (!isGroup) ...[
-              _ActionTile(
-                icon: DivineIconName.flag,
-                label: isVanished
-                    ? context.l10n.inboxActionReportVanishedAccount
-                    : context.l10n.inboxActionReport(displayName),
-                result: ConversationAction.report,
-              ),
-              _ActionTile(
-                icon: DivineIconName.eyeSlash,
-                label: switch ((isBlocked, isVanished)) {
-                  (true, true) =>
-                    context.l10n.inboxActionUnblockVanishedAccount,
-                  (true, false) => context.l10n.inboxActionUnblock(displayName),
-                  (false, true) => context.l10n.inboxActionBlockVanishedAccount,
-                  (false, false) => context.l10n.inboxActionBlock(displayName),
-                },
-                isDestructive: !isBlocked,
-                // Block becomes the last row when Remove is withdrawn, so it
-                // owns the missing divider rather than leaving a trailing rule.
-                showDivider: canRemove,
-                result: ConversationAction.block,
-              ),
-            ],
-            // Withdrawn for a Divine Moderation thread: removal is permanent
-            // and the notice is the user's only copy of why they were actioned
-            // (#8391). The repository refuses it either way; not offering it
-            // beats a dead-end refusal.
-            if (canRemove)
-              _ActionTile(
-                icon: DivineIconName.trash,
-                label: context.l10n.inboxActionRemove,
-                isDestructive: true,
-                showDivider: false,
-                result: ConversationAction.remove,
-              ),
+            for (final action in actions)
+              switch (action) {
+                ConversationAction.report => _ActionTile(
+                  icon: DivineIconName.flag,
+                  label: isVanished
+                      ? context.l10n.inboxActionReportVanishedAccount
+                      : context.l10n.inboxActionReport(displayName),
+                  showDivider: action != actions.last,
+                  result: action,
+                ),
+                ConversationAction.block => _ActionTile(
+                  icon: DivineIconName.eyeSlash,
+                  label: switch ((isBlocked, isVanished)) {
+                    (true, true) =>
+                      context.l10n.inboxActionUnblockVanishedAccount,
+                    (true, false) => context.l10n.inboxActionUnblock(
+                      displayName,
+                    ),
+                    (false, true) =>
+                      context.l10n.inboxActionBlockVanishedAccount,
+                    (false, false) => context.l10n.inboxActionBlock(
+                      displayName,
+                    ),
+                  },
+                  isDestructive: !isBlocked,
+                  showDivider: action != actions.last,
+                  result: action,
+                ),
+                ConversationAction.remove => _ActionTile(
+                  icon: DivineIconName.trash,
+                  label: context.l10n.inboxActionRemove,
+                  isDestructive: true,
+                  showDivider: action != actions.last,
+                  result: action,
+                ),
+              },
           ],
         ),
       ),
