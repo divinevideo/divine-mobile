@@ -10983,6 +10983,7 @@ void main() {
       test(
         'surfaces the relay failure for a list the fallback cannot cover',
         () async {
+          final relayError = Exception('relay down');
           final mockFunnelcakeClient = MockFunnelcakeApiClient();
           when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
           when(
@@ -10990,7 +10991,7 @@ void main() {
               any(),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
             ),
-          ).thenThrow(Exception('relay down'));
+          ).thenThrow(relayError);
           final repo = VideosRepository(
             nostrClient: mockNostrClient,
             funnelcakeApiClient: mockFunnelcakeClient,
@@ -11001,7 +11002,7 @@ void main() {
 
           await expectLater(
             repo.getVideosByAuthors(authorPubkeys: members),
-            throwsA(isA<Exception>()),
+            throwsA(same(relayError)),
           );
           verifyNever(
             () => mockFunnelcakeClient.getVideosByAuthor(
@@ -11142,12 +11143,13 @@ void main() {
       );
 
       test('rethrows the relay error without a Funnelcake client', () async {
+        final relayError = Exception('relay down');
         when(
           () => mockNostrClient.queryEventsDetailed(
             any(),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
-        ).thenThrow(Exception('relay down'));
+        ).thenThrow(relayError);
 
         await expectLater(
           repository.getVideosByAuthors(
@@ -11155,11 +11157,12 @@ void main() {
               memberKey(200),
             ],
           ),
-          throwsA(isA<Exception>()),
+          throwsA(same(relayError)),
         );
       });
 
       test('rethrows the relay error when Funnelcake is unavailable', () async {
+        final relayError = Exception('relay down');
         final mockFunnelcakeClient = MockFunnelcakeApiClient();
         when(() => mockFunnelcakeClient.isAvailable).thenReturn(false);
         when(
@@ -11167,7 +11170,7 @@ void main() {
             any(),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
-        ).thenThrow(Exception('relay down'));
+        ).thenThrow(relayError);
         final repo = VideosRepository(
           nostrClient: mockNostrClient,
           funnelcakeApiClient: mockFunnelcakeClient,
@@ -11179,7 +11182,7 @@ void main() {
               memberKey(200),
             ],
           ),
-          throwsA(isA<Exception>()),
+          throwsA(same(relayError)),
         );
         verifyNever(
           () => mockFunnelcakeClient.getVideosByAuthor(
