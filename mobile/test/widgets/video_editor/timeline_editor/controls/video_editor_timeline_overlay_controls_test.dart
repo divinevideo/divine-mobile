@@ -39,6 +39,7 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dar
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_audio_fade_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_layer_animation_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_saved_title_styles_sheet.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_action_bar.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_overlay_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_voice_effect_sheet.dart';
@@ -311,13 +312,14 @@ void main() {
         startTime: Duration.zero,
         endTime: Duration(seconds: 3),
       );
-      DivineIconButton chromaKeyButton() => tester.widget<DivineIconButton>(
-        find.byWidgetPredicate(
-          (w) =>
-              w is DivineIconButton &&
-              w.semanticLabel == l10n.videoEditorChromaKeySemanticLabel,
-        ),
-      );
+      TimelineActionButton chromaKeyButton() =>
+          tester.widget<TimelineActionButton>(
+            find.byWidgetPredicate(
+              (w) =>
+                  w is TimelineActionButton &&
+                  w.semanticLabel == l10n.videoEditorChromaKeySemanticLabel,
+            ),
+          );
       WidgetLayer layerWith(Map<String, dynamic> meta) => WidgetLayer(
         id: item.id,
         widget: const SizedBox.shrink(),
@@ -332,7 +334,7 @@ void main() {
         layerWith(const {detachedClipLayerKindKey: detachedClipLayerKind}),
       ]);
       await tester.pumpWidget(buildWithEditor(item, editor, mainBloc));
-      expect(chromaKeyButton().type, DivineIconButtonType.secondary);
+      expect(chromaKeyButton().type, TimelineActionButtonType.secondary);
 
       when(() => editor.activeLayers).thenReturn([
         layerWith({
@@ -345,7 +347,7 @@ void main() {
       await tester.pumpWidget(buildWithEditor(item, editor, mainBloc));
       // Same treatment the timeline gives a baked key: the effect is visible
       // from the action bar without opening the screen.
-      expect(chromaKeyButton().type, DivineIconButtonType.primary);
+      expect(chromaKeyButton().type, TimelineActionButtonType.primary);
     });
 
     testWidgets('renders $VideoEditorTimelineControls for filter', (
@@ -392,10 +394,10 @@ void main() {
     testWidgets('highlights the fade once the sound carries one', (
       tester,
     ) async {
-      DivineIconButton fadeButton() => tester.widget<DivineIconButton>(
+      TimelineActionButton fadeButton() => tester.widget<TimelineActionButton>(
         find.byWidgetPredicate(
           (w) =>
-              w is DivineIconButton &&
+              w is TimelineActionButton &&
               w.semanticLabel == l10n.videoEditorFadeSoundSemanticLabel,
         ),
       );
@@ -407,12 +409,12 @@ void main() {
       );
 
       await tester.pumpWidget(build(plain));
-      expect(fadeButton().type, DivineIconButtonType.secondary);
+      expect(fadeButton().type, TimelineActionButtonType.secondary);
 
       await tester.pumpWidget(
         build(plain.copyWith(fadeOut: const Duration(seconds: 1))),
       );
-      expect(fadeButton().type, DivineIconButtonType.primary);
+      expect(fadeButton().type, TimelineActionButtonType.primary);
     });
 
     group('voice change', () {
@@ -424,11 +426,11 @@ void main() {
         endTime: Duration(seconds: 4),
       );
 
-      DivineIconButton voiceButton(WidgetTester tester) =>
-          tester.widget<DivineIconButton>(
+      TimelineActionButton voiceButton(WidgetTester tester) =>
+          tester.widget<TimelineActionButton>(
             find.byWidgetPredicate(
               (w) =>
-                  w is DivineIconButton &&
+                  w is TimelineActionButton &&
                   w.semanticLabel == l10n.videoEditorVoiceEffectSemanticLabel,
             ),
           );
@@ -461,7 +463,7 @@ void main() {
           () => overlayBloc.state,
         ).thenReturn(TimelineOverlayState(audioTracks: [take]));
         await tester.pumpWidget(build(recording));
-        expect(voiceButton(tester).type, DivineIconButtonType.secondary);
+        expect(voiceButton(tester).type, TimelineActionButtonType.secondary);
 
         when(() => overlayBloc.state).thenReturn(
           TimelineOverlayState(
@@ -471,7 +473,7 @@ void main() {
           ),
         );
         await tester.pumpWidget(build(recording.copyWith(label: 'rebuilt')));
-        expect(voiceButton(tester).type, DivineIconButtonType.primary);
+        expect(voiceButton(tester).type, TimelineActionButtonType.primary);
       });
     });
 

@@ -1,10 +1,10 @@
 // ABOUTME: Widget tests for VideoEditorTimelineControls.
 // ABOUTME: Verifies optional buttons and callback invocation.
 
-import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_action_bar.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_controls.dart';
 
 void main() {
@@ -50,7 +50,7 @@ void main() {
         ),
       );
 
-      final buttons = find.byType(DivineIconButton);
+      final buttons = find.byType(TimelineActionButton);
       expect(buttons, findsNWidgets(2));
 
       await tester.tap(buttons.first);
@@ -326,10 +326,15 @@ void main() {
       );
       expect(saveCount, equals(0));
 
-      // The spinner carries no semantics, so the caption has to stop being
-      // excluded — otherwise the control disappears from the traversal order
-      // for as long as the save runs.
-      expect(find.bySemanticsLabel(l10n.videoEditorSaveClip), findsOneWidget);
+      // The caption has to stop being excluded — otherwise the control
+      // disappears from the traversal order for as long as the save runs. It
+      // is announced together with the spinner, so the wait says what waits.
+      expect(
+        find.bySemanticsLabel(
+          '${l10n.commonLoading}\n${l10n.videoEditorSaveClip}',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('does not announce the caption twice when idle', (

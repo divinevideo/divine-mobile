@@ -21,6 +21,7 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dar
 import 'package:openvine/widgets/video_editor/stop_motion/stop_motion_frame_commands.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_clip_speed_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_detach_clip_sheet.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_action_bar.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
@@ -723,7 +724,12 @@ class _StopMotionClipControls extends StatelessWidget {
           context.read<ClipEditorBloc>().add(const ClipEditorEditingStopped()),
       extraControls: hasSelection
           ? [
-              _StopMotionFramesButton(
+              TimelineActionButton(
+                icon: .imagesSquare,
+                label:
+                    context.l10n.videoEditorStopMotionFramesPerImageButtonLabel,
+                semanticLabel:
+                    context.l10n.videoEditorStopMotionFramesPerImageLabel,
                 onPressed: () => editStopMotionFrameHold(
                   context,
                   clipId: data.clipId,
@@ -732,34 +738,6 @@ class _StopMotionClipControls extends StatelessWidget {
               ),
             ]
           : const [],
-    );
-  }
-}
-
-/// Action-bar button (icon + label, matching the other controls) that opens the
-/// frames-per-image wheel sheet for the selected still.
-class _StopMotionFramesButton extends StatelessWidget {
-  const _StopMotionFramesButton({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      spacing: 8,
-      children: [
-        DivineIconButton(
-          icon: .imagesSquare,
-          semanticLabel: context.l10n.videoEditorStopMotionFramesPerImageLabel,
-          onPressed: onPressed,
-          type: .secondary,
-          size: .small,
-        ),
-        Text(
-          context.l10n.videoEditorStopMotionFramesPerImageButtonLabel,
-          style: VineTheme.bodySmallFont(color: context.vineColors.primaryText),
-        ),
-      ],
     );
   }
 }
