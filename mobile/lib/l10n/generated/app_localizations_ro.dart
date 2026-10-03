@@ -13105,4 +13105,65 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => 'Activează automat';
+
+  @override
+  String get settingsAccountTitle => 'Cont';
+
+  @override
+  String get settingsWhatYouSeeTitle => 'Ce vezi';
+
+  @override
+  String get settingsCreateShareTitle => 'Creează și distribuie';
+
+  @override
+  String get settingsPrivacySafetyTitle => 'Confidențialitate și siguranță';
+
+  @override
+  String get settingsAppPreferencesTitle => 'Preferințele aplicației';
+
+  @override
+  String get settingsConnectionsTitle => 'Conexiuni';
+
+  @override
+  String get settingsHelpAboutTitle => 'Ajutor și despre Divine';
+
+  @override
+  String get settingsCreatorToolsSection => 'Instrumente pentru creatori';
+
+  @override
+  String get settingsNostrNetworkSection => 'Rețeaua Nostr';
+
+  @override
+  String get settingsAboutDivineSection => 'Despre Divine';
+
+  @override
+  String get settingsAdvancedSection => 'Avansat';
+
+  @override
+  String get settingsAccountSubtitle =>
+      'Autentificare, identitate, chei și datele contului';
+
+  @override
+  String get settingsWhatYouSeeSubtitle =>
+      'Limbă, subtitrări, format video și filtre';
+
+  @override
+  String get settingsCreateShareSubtitle =>
+      'Înregistrare, publicare și instrumente pentru creatori';
+
+  @override
+  String get settingsPrivacySafetySubtitle =>
+      'Date de utilizare, moderare și conturi blocate';
+
+  @override
+  String get settingsAppPreferencesSubtitle =>
+      'Aspect, limbă, stocare și opțiuni avansate';
+
+  @override
+  String get settingsConnectionsSubtitle =>
+      'Aplicații, relee, servere media și permisiuni';
+
+  @override
+  String get settingsHelpAboutSubtitle =>
+      'Asistență, informații legale și detalii despre aplicație';
 }

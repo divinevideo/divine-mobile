@@ -13093,4 +13093,65 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => 'Włącz automatyczne';
+
+  @override
+  String get settingsAccountTitle => 'Konto';
+
+  @override
+  String get settingsWhatYouSeeTitle => 'To, co widzisz';
+
+  @override
+  String get settingsCreateShareTitle => 'Tworzenie i udostępnianie';
+
+  @override
+  String get settingsPrivacySafetyTitle => 'Prywatność i bezpieczeństwo';
+
+  @override
+  String get settingsAppPreferencesTitle => 'Ustawienia aplikacji';
+
+  @override
+  String get settingsConnectionsTitle => 'Połączenia';
+
+  @override
+  String get settingsHelpAboutTitle => 'Pomoc i informacje o Divine';
+
+  @override
+  String get settingsCreatorToolsSection => 'Narzędzia twórcy';
+
+  @override
+  String get settingsNostrNetworkSection => 'Sieć Nostr';
+
+  @override
+  String get settingsAboutDivineSection => 'O Divine';
+
+  @override
+  String get settingsAdvancedSection => 'Zaawansowane';
+
+  @override
+  String get settingsAccountSubtitle =>
+      'Logowanie, tożsamość, klucze i dane konta';
+
+  @override
+  String get settingsWhatYouSeeSubtitle =>
+      'Język, napisy, układ wideo i filtry';
+
+  @override
+  String get settingsCreateShareSubtitle =>
+      'Nagrywanie, publikowanie i narzędzia twórcy';
+
+  @override
+  String get settingsPrivacySafetySubtitle =>
+      'Dane użytkowania, moderacja i zablokowane konta';
+
+  @override
+  String get settingsAppPreferencesSubtitle =>
+      'Wygląd, język, pamięć i opcje zaawansowane';
+
+  @override
+  String get settingsConnectionsSubtitle =>
+      'Aplikacje, przekaźniki, serwery mediów i uprawnienia';
+
+  @override
+  String get settingsHelpAboutSubtitle =>
+      'Pomoc, informacje prawne i szczegóły aplikacji';
 }

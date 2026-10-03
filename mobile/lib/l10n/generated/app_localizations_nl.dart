@@ -12915,4 +12915,65 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => 'Automatisch aanzetten';
+
+  @override
+  String get settingsAccountTitle => 'Account';
+
+  @override
+  String get settingsWhatYouSeeTitle => 'Wat je ziet';
+
+  @override
+  String get settingsCreateShareTitle => 'Maken en delen';
+
+  @override
+  String get settingsPrivacySafetyTitle => 'Privacy en veiligheid';
+
+  @override
+  String get settingsAppPreferencesTitle => 'Appvoorkeuren';
+
+  @override
+  String get settingsConnectionsTitle => 'Verbindingen';
+
+  @override
+  String get settingsHelpAboutTitle => 'Hulp en over Divine';
+
+  @override
+  String get settingsCreatorToolsSection => 'Tools voor makers';
+
+  @override
+  String get settingsNostrNetworkSection => 'Nostr-netwerk';
+
+  @override
+  String get settingsAboutDivineSection => 'Over Divine';
+
+  @override
+  String get settingsAdvancedSection => 'Geavanceerd';
+
+  @override
+  String get settingsAccountSubtitle =>
+      'Inloggen, identiteit, sleutels en accountgegevens';
+
+  @override
+  String get settingsWhatYouSeeSubtitle =>
+      'Taal, ondertiteling, video-indeling en filters';
+
+  @override
+  String get settingsCreateShareSubtitle =>
+      'Opnemen, publiceren en tools voor makers';
+
+  @override
+  String get settingsPrivacySafetySubtitle =>
+      'Gebruiksgegevens, moderatie en geblokkeerde accounts';
+
+  @override
+  String get settingsAppPreferencesSubtitle =>
+      'Weergave, taal, opslag en geavanceerde opties';
+
+  @override
+  String get settingsConnectionsSubtitle =>
+      'Apps, relays, mediaservers en machtigingen';
+
+  @override
+  String get settingsHelpAboutSubtitle =>
+      'Ondersteuning, juridische informatie en appgegevens';
 }

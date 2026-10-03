@@ -21572,6 +21572,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Turn on automatic'**
   String get crosspostingAutoEnable;
+
+  /// No description provided for @settingsAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get settingsAccountTitle;
+
+  /// No description provided for @settingsWhatYouSeeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What you see'**
+  String get settingsWhatYouSeeTitle;
+
+  /// No description provided for @settingsCreateShareTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create & share'**
+  String get settingsCreateShareTitle;
+
+  /// No description provided for @settingsPrivacySafetyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy & safety'**
+  String get settingsPrivacySafetyTitle;
+
+  /// No description provided for @settingsAppPreferencesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'App preferences'**
+  String get settingsAppPreferencesTitle;
+
+  /// No description provided for @settingsConnectionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connections'**
+  String get settingsConnectionsTitle;
+
+  /// No description provided for @settingsHelpAboutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Help & About Divine'**
+  String get settingsHelpAboutTitle;
+
+  /// No description provided for @settingsCreatorToolsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Creator tools'**
+  String get settingsCreatorToolsSection;
+
+  /// No description provided for @settingsNostrNetworkSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Nostr network'**
+  String get settingsNostrNetworkSection;
+
+  /// No description provided for @settingsAboutDivineSection.
+  ///
+  /// In en, this message translates to:
+  /// **'About Divine'**
+  String get settingsAboutDivineSection;
+
+  /// No description provided for @settingsAdvancedSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced'**
+  String get settingsAdvancedSection;
+
+  /// No description provided for @settingsAccountSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in, identity, keys, and account data'**
+  String get settingsAccountSubtitle;
+
+  /// No description provided for @settingsWhatYouSeeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Language, captions, video layout, and filters'**
+  String get settingsWhatYouSeeSubtitle;
+
+  /// No description provided for @settingsCreateShareSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recording, publishing, and creator tools'**
+  String get settingsCreateShareSubtitle;
+
+  /// No description provided for @settingsPrivacySafetySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Usage data, moderation, and blocked accounts'**
+  String get settingsPrivacySafetySubtitle;
+
+  /// No description provided for @settingsAppPreferencesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance, language, storage, and advanced options'**
+  String get settingsAppPreferencesSubtitle;
+
+  /// No description provided for @settingsConnectionsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Apps, relays, media servers, and permissions'**
+  String get settingsConnectionsSubtitle;
+
+  /// No description provided for @settingsHelpAboutSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Support, legal information, and app details'**
+  String get settingsHelpAboutSubtitle;
 }
 
 class _AppLocalizationsDelegate

@@ -12791,4 +12791,65 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => 'Bật tự động';
+
+  @override
+  String get settingsAccountTitle => 'Tài khoản';
+
+  @override
+  String get settingsWhatYouSeeTitle => 'Nội dung bạn xem';
+
+  @override
+  String get settingsCreateShareTitle => 'Tạo và chia sẻ';
+
+  @override
+  String get settingsPrivacySafetyTitle => 'Quyền riêng tư và an toàn';
+
+  @override
+  String get settingsAppPreferencesTitle => 'Tùy chọn ứng dụng';
+
+  @override
+  String get settingsConnectionsTitle => 'Kết nối';
+
+  @override
+  String get settingsHelpAboutTitle => 'Trợ giúp và giới thiệu Divine';
+
+  @override
+  String get settingsCreatorToolsSection => 'Công cụ sáng tạo';
+
+  @override
+  String get settingsNostrNetworkSection => 'Mạng Nostr';
+
+  @override
+  String get settingsAboutDivineSection => 'Giới thiệu Divine';
+
+  @override
+  String get settingsAdvancedSection => 'Nâng cao';
+
+  @override
+  String get settingsAccountSubtitle =>
+      'Đăng nhập, danh tính, khóa và dữ liệu tài khoản';
+
+  @override
+  String get settingsWhatYouSeeSubtitle =>
+      'Ngôn ngữ, phụ đề, bố cục video và bộ lọc';
+
+  @override
+  String get settingsCreateShareSubtitle =>
+      'Quay video, đăng tải và công cụ sáng tạo';
+
+  @override
+  String get settingsPrivacySafetySubtitle =>
+      'Dữ liệu sử dụng, kiểm duyệt và tài khoản bị chặn';
+
+  @override
+  String get settingsAppPreferencesSubtitle =>
+      'Giao diện, ngôn ngữ, lưu trữ và tùy chọn nâng cao';
+
+  @override
+  String get settingsConnectionsSubtitle =>
+      'Ứng dụng, relay, máy chủ media và quyền truy cập';
+
+  @override
+  String get settingsHelpAboutSubtitle =>
+      'Hỗ trợ, thông tin pháp lý và chi tiết ứng dụng';
 }

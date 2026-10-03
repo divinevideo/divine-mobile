@@ -12848,4 +12848,65 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => 'Slå på automatiskt';
+
+  @override
+  String get settingsAccountTitle => 'Konto';
+
+  @override
+  String get settingsWhatYouSeeTitle => 'Det du ser';
+
+  @override
+  String get settingsCreateShareTitle => 'Skapa och dela';
+
+  @override
+  String get settingsPrivacySafetyTitle => 'Integritet och säkerhet';
+
+  @override
+  String get settingsAppPreferencesTitle => 'Appinställningar';
+
+  @override
+  String get settingsConnectionsTitle => 'Anslutningar';
+
+  @override
+  String get settingsHelpAboutTitle => 'Hjälp och om Divine';
+
+  @override
+  String get settingsCreatorToolsSection => 'Verktyg för kreatörer';
+
+  @override
+  String get settingsNostrNetworkSection => 'Nostr-nätverk';
+
+  @override
+  String get settingsAboutDivineSection => 'Om Divine';
+
+  @override
+  String get settingsAdvancedSection => 'Avancerat';
+
+  @override
+  String get settingsAccountSubtitle =>
+      'Inloggning, identitet, nycklar och kontodata';
+
+  @override
+  String get settingsWhatYouSeeSubtitle =>
+      'Språk, undertexter, videolayout och filter';
+
+  @override
+  String get settingsCreateShareSubtitle =>
+      'Inspelning, publicering och verktyg för kreatörer';
+
+  @override
+  String get settingsPrivacySafetySubtitle =>
+      'Användningsdata, moderering och blockerade konton';
+
+  @override
+  String get settingsAppPreferencesSubtitle =>
+      'Utseende, språk, lagring och avancerade alternativ';
+
+  @override
+  String get settingsConnectionsSubtitle =>
+      'Appar, reläer, medieservrar och behörigheter';
+
+  @override
+  String get settingsHelpAboutSubtitle =>
+      'Support, juridisk information och appdetaljer';
 }
