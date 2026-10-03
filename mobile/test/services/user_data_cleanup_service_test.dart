@@ -988,10 +988,12 @@ void main() {
         );
       });
 
-      test('contains no key that nothing in the app writes', () {
+      test('does not reintroduce the writer-less keys removed in #8314', () {
         // Every entry below is a literal whose owning service has no
         // constant to reference yet. They are the remaining conversion work;
         // a key that reaches this list without a writer is the #8314 defect.
+        // `muted_conversations` is the one deliberate exception: its writer
+        // was withdrawn, and installs that used it still hold the value.
         expect(
           UserDataCleanupService.userSpecificKeys,
           isNot(

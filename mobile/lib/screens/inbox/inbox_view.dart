@@ -538,9 +538,7 @@ class _PinnedSupportRow extends StatelessWidget {
   /// participant's avatar to render.
   final String currentUserPubkey;
 
-  /// Opens the conversation action sheet. Null while the pin is synthetic:
-  /// there is no row to act on yet, and the confirmation snackbars would
-  /// report work that did not happen.
+  /// Opens the conversation action sheet. Null while the pin is synthetic.
   final VoidCallback? onLongPress;
 
   @override

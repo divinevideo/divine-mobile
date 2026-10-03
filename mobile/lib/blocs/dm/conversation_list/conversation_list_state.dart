@@ -55,8 +55,8 @@ class PinnedSupport extends Equatable {
 
   /// Whether [conversation] is a row that actually exists in the database.
   ///
-  /// Gates the row's long-press actions: removing a thread that has never
-  /// been written is a no-op the confirmation snackbar would misreport.
+  /// Gates the row's long-press: the action sheet is offered only for an
+  /// adopted thread.
   final bool isPersisted;
 
   @override

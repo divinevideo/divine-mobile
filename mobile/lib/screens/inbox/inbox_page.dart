@@ -72,7 +72,7 @@ class InboxPage extends ConsumerWidget {
       // reportingService is deliberately NOT in this tuple: it resolves
       // from null asynchronously shortly after every inbox mount, and
       // keying the whole MultiBlocProvider on it tore down and recreated
-      // all five blocs (double ConversationListStarted + list reload)
+      // every bloc (double ConversationListStarted + list reload)
       // right after every open. Only its consumer — the
       // ConversationActionsCubit provider below — is re-keyed on it.
       key: ValueKey((
