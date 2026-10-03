@@ -3,6 +3,9 @@
 // ABOUTME: feed via ProfileFeedCubit and the deleted video is excluded.
 // ABOUTME: Requires: the full local Docker stack (mise run local_up) — it
 // ABOUTME: drives Postgres, the Keycast API, and the relay directly.
+// ABOUTME: Targets: Android emulator or iOS Simulator. Physical iOS
+// ABOUTME: registration needs host configuration and HTTPS for Keycast
+// ABOUTME: redirects; HTTP .local redirects are rejected (see #7051).
 
 @Tags(['service'])
 library;
