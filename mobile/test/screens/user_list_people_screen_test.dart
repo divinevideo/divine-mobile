@@ -14,14 +14,24 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/features/people_lists/people_lists.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/screens/user_list_people_screen.dart';
 import 'package:openvine/widgets/user_avatar.dart';
+import 'package:videos_repository/videos_repository.dart';
 
 import '../helpers/finders.dart';
 import '../helpers/test_provider_overrides.dart';
 
 class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
     implements PeopleListsBloc {}
+
+class _MockVideosRepository extends Mock implements VideosRepository {}
+
+class _EmptyVideoEvents extends VideoEvents {
+  @override
+  Stream<List<VideoEvent>> build() => Stream.value(const []);
+}
 
 const _ownerPubkey =
     'f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0';
@@ -154,6 +164,71 @@ Future<void> _confirmDelete(WidgetTester tester, AppLocalizations l10n) async {
 void main() {
   group(UserListPeopleScreen, () {
     final l10n = lookupAppLocalizations(const Locale('en'));
+
+    testWidgets('retries a failed member read without exposing the exception', (
+      tester,
+    ) async {
+      final bloc = _MockPeopleListsBloc();
+      final list = _buildList(pubkeys: const [_ownerPubkey]);
+      whenListen(
+        bloc,
+        const Stream<PeopleListsState>.empty(),
+        initialState: PeopleListsState(
+          status: PeopleListsStatus.ready,
+          ownerPubkey: _ownerPubkey,
+          lists: [list],
+        ),
+      );
+      final repository = _MockVideosRepository();
+      when(() => repository.applyContentPreferences(any())).thenAnswer(
+        (invocation) =>
+            invocation.positionalArguments.single as List<VideoEvent>,
+      );
+      const error = RelayReadUnavailableException('the read timed out');
+      when(
+        () => repository.getVideosByAuthors(authorPubkeys: list.pubkeys),
+      ).thenThrow(error);
+
+      await tester.pumpWidget(
+        testProviderScope(
+          additionalOverrides: [
+            videosRepositoryProvider.overrideWithValue(repository),
+            videoEventsProvider.overrideWith(_EmptyVideoEvents.new),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: BlocProvider<PeopleListsBloc>.value(
+              value: bloc,
+              child: UserListPeopleScreen(listId: list.id),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.peopleListsFailedToLoadVideos), findsOneWidget);
+      expect(find.text(l10n.commonRetry), findsOneWidget);
+      expect(find.text(error.toString()), findsNothing);
+
+      final retriedRead = Completer<List<VideoEvent>>();
+      when(
+        () => repository.getVideosByAuthors(authorPubkeys: list.pubkeys),
+      ).thenAnswer((_) => retriedRead.future);
+      await tester.tap(find.text(l10n.commonRetry));
+      await tester.pump();
+      await tester.pump();
+      expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+
+      retriedRead.complete(const []);
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.peopleListsNoVideosTitle), findsOneWidget);
+      expect(find.text(l10n.peopleListsFailedToLoadVideos), findsNothing);
+      expect(find.text(l10n.commonRetry), findsNothing);
+      verify(
+        () => repository.getVideosByAuthors(authorPubkeys: list.pubkeys),
+      ).called(2);
+    });
 
     test('exposes route name and path constants', () {
       expect(UserListPeopleScreen.routeName, equals('people-list-members'));

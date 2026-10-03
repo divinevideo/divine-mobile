@@ -314,7 +314,23 @@ final class CuratedListVideosFamily extends $Family
   String toString() => r'curatedListVideosProvider';
 }
 
-/// Provider for videos from all members of a user list
+/// Provider for the videos published by the members of a user list.
+///
+/// The members' newest videos come from
+/// [VideosRepository.getVideosByAuthors]: one relay filter over the list,
+/// Funnelcake per member as the fallback. Whatever the feed pool already
+/// holds from those members shows first, so a list of followed people paints
+/// before the round trip returns; the fetched set is then merged in. A fetch
+/// that fails after that first paint keeps the pooled videos; one that fails
+/// with nothing to show surfaces the error at once, with no automatic retry,
+/// so a network failure never reads as "no videos yet" or as endless loading.
+/// Only an [Exception] is absorbed that way: an [Error] is a bug and
+/// surfaces whatever is pooled.
+///
+/// It re-runs when the blocklist changes, as the other list providers here
+/// do (#5104), and when the repository is rebuilt for a filter change or an
+/// account switch. The pool is read, not watched: every pool emission would
+/// otherwise cost a relay round trip.
 ///
 /// The body is a plain function so every `Ref` read happens synchronously
 /// during `build` — see [_LiveDeps] for why an `async*` body cannot
@@ -323,7 +339,23 @@ final class CuratedListVideosFamily extends $Family
 @ProviderFor(userListMemberVideos)
 final userListMemberVideosProvider = UserListMemberVideosFamily._();
 
-/// Provider for videos from all members of a user list
+/// Provider for the videos published by the members of a user list.
+///
+/// The members' newest videos come from
+/// [VideosRepository.getVideosByAuthors]: one relay filter over the list,
+/// Funnelcake per member as the fallback. Whatever the feed pool already
+/// holds from those members shows first, so a list of followed people paints
+/// before the round trip returns; the fetched set is then merged in. A fetch
+/// that fails after that first paint keeps the pooled videos; one that fails
+/// with nothing to show surfaces the error at once, with no automatic retry,
+/// so a network failure never reads as "no videos yet" or as endless loading.
+/// Only an [Exception] is absorbed that way: an [Error] is a bug and
+/// surfaces whatever is pooled.
+///
+/// It re-runs when the blocklist changes, as the other list providers here
+/// do (#5104), and when the repository is rebuilt for a filter change or an
+/// account switch. The pool is read, not watched: every pool emission would
+/// otherwise cost a relay round trip.
 ///
 /// The body is a plain function so every `Ref` read happens synchronously
 /// during `build` — see [_LiveDeps] for why an `async*` body cannot
@@ -337,7 +369,23 @@ final class UserListMemberVideosProvider
           Stream<List<VideoEvent>>
         >
     with $FutureModifier<List<VideoEvent>>, $StreamProvider<List<VideoEvent>> {
-  /// Provider for videos from all members of a user list
+  /// Provider for the videos published by the members of a user list.
+  ///
+  /// The members' newest videos come from
+  /// [VideosRepository.getVideosByAuthors]: one relay filter over the list,
+  /// Funnelcake per member as the fallback. Whatever the feed pool already
+  /// holds from those members shows first, so a list of followed people paints
+  /// before the round trip returns; the fetched set is then merged in. A fetch
+  /// that fails after that first paint keeps the pooled videos; one that fails
+  /// with nothing to show surfaces the error at once, with no automatic retry,
+  /// so a network failure never reads as "no videos yet" or as endless loading.
+  /// Only an [Exception] is absorbed that way: an [Error] is a bug and
+  /// surfaces whatever is pooled.
+  ///
+  /// It re-runs when the blocklist changes, as the other list providers here
+  /// do (#5104), and when the repository is rebuilt for a filter change or an
+  /// account switch. The pool is read, not watched: every pool emission would
+  /// otherwise cost a relay round trip.
   ///
   /// The body is a plain function so every `Ref` read happens synchronously
   /// during `build` — see [_LiveDeps] for why an `async*` body cannot
@@ -346,7 +394,7 @@ final class UserListMemberVideosProvider
     required UserListMemberVideosFamily super.from,
     required List<String> super.argument,
   }) : super(
-         retry: null,
+         retry: _noAutomaticRetry,
          name: r'userListMemberVideosProvider',
          isAutoDispose: true,
          dependencies: null,
@@ -387,9 +435,25 @@ final class UserListMemberVideosProvider
 }
 
 String _$userListMemberVideosHash() =>
-    r'acb78c2d384c7425a9ecc45210b60fb0f764ed31';
+    r'b068fe5ec5c5c18725e9338fc42b2bd058f91636';
 
-/// Provider for videos from all members of a user list
+/// Provider for the videos published by the members of a user list.
+///
+/// The members' newest videos come from
+/// [VideosRepository.getVideosByAuthors]: one relay filter over the list,
+/// Funnelcake per member as the fallback. Whatever the feed pool already
+/// holds from those members shows first, so a list of followed people paints
+/// before the round trip returns; the fetched set is then merged in. A fetch
+/// that fails after that first paint keeps the pooled videos; one that fails
+/// with nothing to show surfaces the error at once, with no automatic retry,
+/// so a network failure never reads as "no videos yet" or as endless loading.
+/// Only an [Exception] is absorbed that way: an [Error] is a bug and
+/// surfaces whatever is pooled.
+///
+/// It re-runs when the blocklist changes, as the other list providers here
+/// do (#5104), and when the repository is rebuilt for a filter change or an
+/// account switch. The pool is read, not watched: every pool emission would
+/// otherwise cost a relay round trip.
 ///
 /// The body is a plain function so every `Ref` read happens synchronously
 /// during `build` — see [_LiveDeps] for why an `async*` body cannot
@@ -399,14 +463,30 @@ final class UserListMemberVideosFamily extends $Family
     with $FunctionalFamilyOverride<Stream<List<VideoEvent>>, List<String>> {
   UserListMemberVideosFamily._()
     : super(
-        retry: null,
+        retry: _noAutomaticRetry,
         name: r'userListMemberVideosProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
         isAutoDispose: true,
       );
 
-  /// Provider for videos from all members of a user list
+  /// Provider for the videos published by the members of a user list.
+  ///
+  /// The members' newest videos come from
+  /// [VideosRepository.getVideosByAuthors]: one relay filter over the list,
+  /// Funnelcake per member as the fallback. Whatever the feed pool already
+  /// holds from those members shows first, so a list of followed people paints
+  /// before the round trip returns; the fetched set is then merged in. A fetch
+  /// that fails after that first paint keeps the pooled videos; one that fails
+  /// with nothing to show surfaces the error at once, with no automatic retry,
+  /// so a network failure never reads as "no videos yet" or as endless loading.
+  /// Only an [Exception] is absorbed that way: an [Error] is a bug and
+  /// surfaces whatever is pooled.
+  ///
+  /// It re-runs when the blocklist changes, as the other list providers here
+  /// do (#5104), and when the repository is rebuilt for a filter change or an
+  /// account switch. The pool is read, not watched: every pool emission would
+  /// otherwise cost a relay round trip.
   ///
   /// The body is a plain function so every `Ref` read happens synchronously
   /// during `build` — see [_LiveDeps] for why an `async*` body cannot
