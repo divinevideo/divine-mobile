@@ -3,6 +3,9 @@
 
 import 'package:badge_repository/badge_repository.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -51,7 +54,10 @@ void main() {
     /// The screen pops itself once a deletion lands, and `context.pop` is a
     /// GoRouter extension — a bare `MaterialApp` would throw there instead of
     /// exercising the flow.
-    Widget buildSubject({VideosRepository? videosRepository}) {
+    Widget buildSubject({
+      VideosRepository? videosRepository,
+      List<Override> overrides = const [],
+    }) {
       final router = GoRouter(
         initialLocation: '/badges/b/badge',
         routes: [
@@ -78,6 +84,7 @@ void main() {
           ),
           if (videosRepository != null)
             videosRepositoryProvider.overrideWithValue(videosRepository),
+          ...overrides,
         ],
         child: MaterialApp.router(
           localizationsDelegates: appLocalizationsDelegates,
@@ -542,6 +549,55 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
 
+      expect(
+        find.bySemanticsLabel(l10n.profileVideoThumbnailLabel(1)),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('reloads holder videos when the videos repository is rebuilt', (
+      tester,
+    ) async {
+      final first = _MockVideosRepository();
+      final second = _MockVideosRepository();
+      final firstPager = _MockBadgeVideoPager();
+      final secondPager = _MockBadgeVideoPager();
+      final activeRepository = StateProvider<VideosRepository>((_) => first);
+      when(() => repository.loadBadgeDetail(any())).thenAnswer(
+        (_) async => _detail(definition: _definition(), isOwner: false),
+      );
+      when(
+        () => repository.loadAcceptedHolders(any()),
+      ).thenAnswer((_) async => {_pubkey(3)});
+      when(() => first.createBadgeVideoPager(any())).thenReturn(firstPager);
+      when(firstPager.loadMore).thenAnswer((_) async => []);
+      when(() => firstPager.hasMore).thenReturn(false);
+      when(() => second.createBadgeVideoPager(any())).thenReturn(secondPager);
+      when(secondPager.loadMore).thenAnswer((_) async => [_video()]);
+      when(() => secondPager.hasMore).thenReturn(false);
+
+      await tester.pumpWidget(
+        buildSubject(
+          overrides: [
+            videosRepositoryProvider.overrideWith(
+              (ref) => ref.watch(activeRepository),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+      ProviderScope.containerOf(
+        tester.element(find.byType(BadgeDetailScreen)),
+      ).read(activeRepository.notifier).state = second;
+      await tester.pumpAndSettle();
+
+      verify(() => first.createBadgeVideoPager({_pubkey(3)})).called(1);
+      verify(() => second.createBadgeVideoPager({_pubkey(3)})).called(1);
+      await tester.scrollUntilVisible(
+        find.bySemanticsLabel(l10n.profileVideoThumbnailLabel(1)),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(
         find.bySemanticsLabel(l10n.profileVideoThumbnailLabel(1)),
         findsOneWidget,
