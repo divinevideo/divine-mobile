@@ -16331,6 +16331,84 @@ abstract class AppLocalizations {
   /// **'Fade out'**
   String get videoEditorFadeOutLabel;
 
+  /// Label of the timeline action that changes how the selected voice-over recording sounds.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice'**
+  String get videoEditorVoiceEffectLabel;
+
+  /// Screen-reader label of the timeline action that opens the voice effects for the selected voice-over recording.
+  ///
+  /// In en, this message translates to:
+  /// **'Change how the selected recording sounds'**
+  String get videoEditorVoiceEffectSemanticLabel;
+
+  /// Title of the sheet where the creator picks a voice effect for a voice-over recording.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice effects'**
+  String get videoEditorVoiceEffectSheetTitle;
+
+  /// Voice effect option that plays the recording as it was recorded, with no effect.
+  ///
+  /// In en, this message translates to:
+  /// **'Original'**
+  String get videoEditorVoiceEffectOriginal;
+
+  /// Voice effect option that makes the voice higher and smaller, like a cartoon chipmunk. A playful local equivalent is fine.
+  ///
+  /// In en, this message translates to:
+  /// **'Chipmunk'**
+  String get videoEditorVoiceEffectHighPitch;
+
+  /// Voice effect option that makes the voice lower and bigger, like a movie-trailer narrator.
+  ///
+  /// In en, this message translates to:
+  /// **'Deep'**
+  String get videoEditorVoiceEffectLowPitch;
+
+  /// Voice effect option that turns the voice into a monotone robot.
+  ///
+  /// In en, this message translates to:
+  /// **'Robot'**
+  String get videoEditorVoiceEffectRobot;
+
+  /// Voice effect option that adds repeats of the voice, as in a big empty room.
+  ///
+  /// In en, this message translates to:
+  /// **'Echo'**
+  String get videoEditorVoiceEffectEcho;
+
+  /// Label of the slider that moves the voice up or down in semitones.
+  ///
+  /// In en, this message translates to:
+  /// **'Pitch'**
+  String get videoEditorVoiceEffectPitch;
+
+  /// Title of the switch that filters steady background noise out of a voice-over recording.
+  ///
+  /// In en, this message translates to:
+  /// **'Reduce background noise'**
+  String get videoEditorVoiceEffectNoiseReduction;
+
+  /// Supporting text under the noise reduction switch, naming the kinds of noise it removes.
+  ///
+  /// In en, this message translates to:
+  /// **'Cuts hiss, fans and room noise'**
+  String get videoEditorVoiceEffectNoiseReductionSubtitle;
+
+  /// Screen-reader label of the progress indicator shown while the voice effect is applied to the recording.
+  ///
+  /// In en, this message translates to:
+  /// **'Applying the voice effect'**
+  String get videoEditorVoiceEffectApplying;
+
+  /// Shown, and announced, when the voice effect could not be applied to the recording.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t change the voice. Try again.'**
+  String get videoEditorVoiceEffectFailed;
+
   /// Title of the bottom sheet for choosing the transition between two adjacent clips.
   ///
   /// In en, this message translates to:

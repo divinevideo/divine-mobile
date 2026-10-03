@@ -9665,6 +9665,48 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'Плавно заглушаване';
 
   @override
+  String get videoEditorVoiceEffectLabel => 'Глас';
+
+  @override
+  String get videoEditorVoiceEffectSemanticLabel =>
+      'Промени как звучи избраният запис';
+
+  @override
+  String get videoEditorVoiceEffectSheetTitle => 'Гласови ефекти';
+
+  @override
+  String get videoEditorVoiceEffectOriginal => 'Оригинал';
+
+  @override
+  String get videoEditorVoiceEffectHighPitch => 'Бурундук';
+
+  @override
+  String get videoEditorVoiceEffectLowPitch => 'Дълбок';
+
+  @override
+  String get videoEditorVoiceEffectRobot => 'Робот';
+
+  @override
+  String get videoEditorVoiceEffectEcho => 'Ехо';
+
+  @override
+  String get videoEditorVoiceEffectPitch => 'Височина';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReduction => 'Намали фоновия шум';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReductionSubtitle =>
+      'Премахва съскане, вентилатори и шум от стаята';
+
+  @override
+  String get videoEditorVoiceEffectApplying => 'Прилагане на гласовия ефект';
+
+  @override
+  String get videoEditorVoiceEffectFailed =>
+      'Гласът не можа да се промени. Опитай отново.';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Преход';
 
   @override

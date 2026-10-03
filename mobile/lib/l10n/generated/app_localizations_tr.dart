@@ -9498,6 +9498,49 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'Yavaş çıkış';
 
   @override
+  String get videoEditorVoiceEffectLabel => 'Ses';
+
+  @override
+  String get videoEditorVoiceEffectSemanticLabel =>
+      'Seçili kaydın sesini değiştir';
+
+  @override
+  String get videoEditorVoiceEffectSheetTitle => 'Ses efektleri';
+
+  @override
+  String get videoEditorVoiceEffectOriginal => 'Orijinal';
+
+  @override
+  String get videoEditorVoiceEffectHighPitch => 'Sincap';
+
+  @override
+  String get videoEditorVoiceEffectLowPitch => 'Kalın';
+
+  @override
+  String get videoEditorVoiceEffectRobot => 'Robot';
+
+  @override
+  String get videoEditorVoiceEffectEcho => 'Yankı';
+
+  @override
+  String get videoEditorVoiceEffectPitch => 'Perde';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReduction =>
+      'Arka plan gürültüsünü azalt';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReductionSubtitle =>
+      'Cızırtıyı, fanları ve oda gürültüsünü giderir';
+
+  @override
+  String get videoEditorVoiceEffectApplying => 'Ses efekti uygulanıyor';
+
+  @override
+  String get videoEditorVoiceEffectFailed =>
+      'Ses değiştirilemedi. Tekrar dene.';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Geçiş';
 
   @override

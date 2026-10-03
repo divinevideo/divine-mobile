@@ -9033,6 +9033,45 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorFadeOutLabel => '淡出';
 
   @override
+  String get videoEditorVoiceEffectLabel => '变声';
+
+  @override
+  String get videoEditorVoiceEffectSemanticLabel => '更改所选录音的声音';
+
+  @override
+  String get videoEditorVoiceEffectSheetTitle => '变声效果';
+
+  @override
+  String get videoEditorVoiceEffectOriginal => '原声';
+
+  @override
+  String get videoEditorVoiceEffectHighPitch => '花栗鼠';
+
+  @override
+  String get videoEditorVoiceEffectLowPitch => '低沉';
+
+  @override
+  String get videoEditorVoiceEffectRobot => '机器人';
+
+  @override
+  String get videoEditorVoiceEffectEcho => '回声';
+
+  @override
+  String get videoEditorVoiceEffectPitch => '音调';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReduction => '降低背景噪音';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReductionSubtitle => '去除嘶嘶声、风扇声和室内噪音';
+
+  @override
+  String get videoEditorVoiceEffectApplying => '正在应用变声效果';
+
+  @override
+  String get videoEditorVoiceEffectFailed => '无法更改声音，请重试。';
+
+  @override
   String get videoEditorTransitionSheetTitle => '转场';
 
   @override

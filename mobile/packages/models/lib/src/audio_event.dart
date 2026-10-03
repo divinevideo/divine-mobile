@@ -8,6 +8,7 @@ import 'package:models/src/nostr_hex_utils.dart';
 import 'package:models/src/sound_search_terms.dart';
 import 'package:models/src/video_event.dart';
 import 'package:models/src/vine_sound.dart';
+import 'package:models/src/voice_effect.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:text_sanitizer/text_sanitizer.dart';
 
@@ -85,6 +86,9 @@ class AudioEvent {
     this.anchorClipId,
     this.fadeInDuration = Duration.zero,
     this.fadeOutDuration = Duration.zero,
+    this.voiceEffect = VoiceEffect.none,
+    this.noiseReduction = false,
+    this.originalUrl,
     this.allowsReuse = true,
     this.hasExplicitReuseConsent = false,
     this.requiresCurrentReuseVerification = false,
@@ -339,6 +343,14 @@ class AudioEvent {
       fadeOutDuration: Duration(
         milliseconds: (json['fadeOutMs'] as num?)?.toInt() ?? 0,
       ),
+      voiceEffect: switch (json['voiceEffect']) {
+        final Map<dynamic, dynamic> effect => VoiceEffect.fromJson(
+          Map<String, dynamic>.from(effect),
+        ),
+        _ => VoiceEffect.none,
+      },
+      noiseReduction: json['noiseReduction'] as bool? ?? false,
+      originalUrl: json['originalUrl'] as String?,
       // Persisted events without a terms field predate the reuse policy.
       // Treat them as unknown and let the source-video resolver decide;
       // archive compatibility is a provisional Divine policy grant, not an
@@ -461,6 +473,17 @@ class AudioEvent {
   String? get localFilePath {
     if (!isDraftLocalAudio || url == null || url!.isEmpty) return null;
     return url;
+  }
+
+  /// Local file path of the take as recorded, before [voiceEffect] and
+  /// [noiseReduction] were applied — [localFilePath] when neither is.
+  ///
+  /// Returns null wherever [localFilePath] does.
+  String? get originalLocalFilePath {
+    final current = localFilePath;
+    if (current == null) return null;
+    final original = originalUrl;
+    return original == null || original.isEmpty ? current : original;
   }
 
   /// Whether this audio came from a normalized external sound provider.
@@ -633,6 +656,27 @@ class AudioEvent {
   bool get hasFade =>
       fadeInDuration > Duration.zero || fadeOutDuration > Duration.zero;
 
+  /// The voice effect baked into the file at [url].
+  ///
+  /// Local-only editor state, never published to Nostr.
+  final VoiceEffect voiceEffect;
+
+  /// Whether background noise was filtered out of the file at [url].
+  ///
+  /// Local-only editor state, never published to Nostr.
+  final bool noiseReduction;
+
+  /// The take as recorded, when [url] names a processed copy of it — one
+  /// with [voiceEffect] or [noiseReduction] applied. `null` while the track
+  /// plays the take itself.
+  ///
+  /// Kept so the creator can switch back, or to another effect, without
+  /// re-recording. Local-only editor state, never published to Nostr.
+  final String? originalUrl;
+
+  /// Whether [url] names a processed copy of [originalUrl].
+  bool get hasVoiceProcessing => !voiceEffect.isNone || noiseReduction;
+
   /// Whether the source creator permits this sound to be reused by others.
   ///
   /// Parsed Kind 1063 events fail closed: only an explicit
@@ -800,6 +844,10 @@ class AudioEvent {
     bool clearAnchorClipId = false,
     Duration? fadeInDuration,
     Duration? fadeOutDuration,
+    VoiceEffect? voiceEffect,
+    bool? noiseReduction,
+    String? originalUrl,
+    bool clearOriginalUrl = false,
     bool? allowsReuse,
     bool? hasExplicitReuseConsent,
     bool? requiresCurrentReuseVerification,
@@ -835,6 +883,9 @@ class AudioEvent {
           : (anchorClipId ?? this.anchorClipId),
       fadeInDuration: fadeInDuration ?? this.fadeInDuration,
       fadeOutDuration: fadeOutDuration ?? this.fadeOutDuration,
+      voiceEffect: voiceEffect ?? this.voiceEffect,
+      noiseReduction: noiseReduction ?? this.noiseReduction,
+      originalUrl: clearOriginalUrl ? null : (originalUrl ?? this.originalUrl),
       allowsReuse: allowsReuse ?? this.allowsReuse,
       hasExplicitReuseConsent:
           hasExplicitReuseConsent ?? this.hasExplicitReuseConsent,
@@ -914,6 +965,9 @@ class AudioEvent {
       'fadeInMs': fadeInDuration.inMilliseconds,
     if (fadeOutDuration > Duration.zero)
       'fadeOutMs': fadeOutDuration.inMilliseconds,
+    if (!voiceEffect.isNone) 'voiceEffect': voiceEffect.toJson(),
+    if (noiseReduction) 'noiseReduction': true,
+    'originalUrl': ?originalUrl,
   };
 }
 

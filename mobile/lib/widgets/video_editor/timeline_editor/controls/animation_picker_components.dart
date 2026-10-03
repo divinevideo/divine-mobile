@@ -51,7 +51,7 @@ class AnimationPickerChip extends StatelessWidget {
   });
 
   final bool selected;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final String semanticLabel;
   final Widget child;
 
@@ -60,27 +60,36 @@ class AnimationPickerChip extends StatelessWidget {
     final colors = context.vineColors;
     return Semantics(
       button: true,
+      enabled: onTap != null,
       selected: selected,
       label: semanticLabel,
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: ConstrainedBox(
-          // 48dp min keeps the tap target at the accessibility floor on both
-          // axes: the wider curve glyphs already clear 48dp via padding, but
-          // the 18dp direction icons (18+14+14 = 46dp) need the minWidth.
-          constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: selected ? colors.controlSelectedFill : colors.controlFill,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: selected ? colors.accentBrand : colors.controlOutline,
+      child: Opacity(
+        opacity: onTap == null ? 0.5 : 1,
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: ConstrainedBox(
+            // 48dp min keeps the tap target at the accessibility floor on both
+            // axes: the wider curve glyphs already clear 48dp via padding, but
+            // the 18dp direction icons (18+14+14 = 46dp) need the minWidth.
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: selected
+                    ? colors.controlSelectedFill
+                    : colors.controlFill,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: selected ? colors.accentBrand : colors.controlOutline,
+                ),
               ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              child: Center(widthFactor: 1, child: child),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                child: Center(widthFactor: 1, child: child),
+              ),
             ),
           ),
         ),

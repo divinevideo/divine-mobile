@@ -141,7 +141,12 @@ String? _belowAudioRoot(String path) {
   return null;
 }
 
-/// Applies [transform] to the `url` of every draft-local [AudioEvent] map
+/// Keys of a persisted [AudioEvent] map that hold an on-disk path: the file
+/// the track plays, and the take as recorded when that file is a processed
+/// copy of it.
+const List<String> _audioPathKeys = ['url', 'originalUrl'];
+
+/// Applies [transform] to every path of every draft-local [AudioEvent] map
 /// nested anywhere inside [node], returning [node] itself when nothing moved.
 ///
 /// The editor persists audio in three unrelated shapes — the selected sound,
@@ -152,24 +157,24 @@ Object? _rewriteAudioUrls(
   Object? node,
   String Function(String path) transform,
 ) => rewriteJsonMaps(node, (map) {
-  final url = _draftLocalAudioUrl(map);
-  if (url == null) return null;
-  final rewritten = transform(url);
-  if (rewritten == url) return null;
-  return Map<String, dynamic>.from(map)..['url'] = rewritten;
+  if (!_isDraftLocalAudio(map)) return null;
+  Map<String, dynamic>? rewritten;
+  for (final key in _audioPathKeys) {
+    final path = map[key];
+    if (path is! String || path.isEmpty) continue;
+    final moved = transform(path);
+    if (moved == path) continue;
+    (rewritten ??= Map<String, dynamic>.from(map))[key] = moved;
+  }
+  return rewritten;
 });
 
-/// The on-disk url of [node] when it is a draft-local audio event, else `null`.
+/// Whether [node] is a draft-local audio event.
 ///
-/// Mirrors [AudioEvent.isDraftLocalAudio] and [AudioEvent.localFilePath]
-/// against a raw map: the persisted tree is walked without deserializing, so a
-/// malformed audio entry is skipped rather than throwing. Keep the predicate in
-/// step.
-String? _draftLocalAudioUrl(Map<Object?, Object?> node) {
+/// Mirrors [AudioEvent.isDraftLocalAudio] against a raw map: the persisted
+/// tree is walked without deserializing, so a malformed audio entry is
+/// skipped rather than throwing. Keep the predicate in step.
+bool _isDraftLocalAudio(Map<Object?, Object?> node) {
   final id = node['id'];
-  if (id is! String || !_draftLocalMarkers.any((m) => id.startsWith('${m}_'))) {
-    return null;
-  }
-  final url = node['url'];
-  return url is String && url.isNotEmpty ? url : null;
+  return id is String && _draftLocalMarkers.any((m) => id.startsWith('${m}_'));
 }

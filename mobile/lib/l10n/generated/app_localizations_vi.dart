@@ -9544,6 +9544,48 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'Giảm dần';
 
   @override
+  String get videoEditorVoiceEffectLabel => 'Giọng';
+
+  @override
+  String get videoEditorVoiceEffectSemanticLabel =>
+      'Thay đổi giọng của bản ghi đã chọn';
+
+  @override
+  String get videoEditorVoiceEffectSheetTitle => 'Hiệu ứng giọng';
+
+  @override
+  String get videoEditorVoiceEffectOriginal => 'Gốc';
+
+  @override
+  String get videoEditorVoiceEffectHighPitch => 'Sóc chuột';
+
+  @override
+  String get videoEditorVoiceEffectLowPitch => 'Trầm';
+
+  @override
+  String get videoEditorVoiceEffectRobot => 'Robot';
+
+  @override
+  String get videoEditorVoiceEffectEcho => 'Tiếng vang';
+
+  @override
+  String get videoEditorVoiceEffectPitch => 'Cao độ';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReduction => 'Giảm tiếng ồn nền';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReductionSubtitle =>
+      'Loại bỏ tiếng xì, tiếng quạt và tiếng ồn trong phòng';
+
+  @override
+  String get videoEditorVoiceEffectApplying => 'Đang áp dụng hiệu ứng giọng';
+
+  @override
+  String get videoEditorVoiceEffectFailed =>
+      'Không thể đổi giọng. Hãy thử lại.';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Chuyển cảnh';
 
   @override

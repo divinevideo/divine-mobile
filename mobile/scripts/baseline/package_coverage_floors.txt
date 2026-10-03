@@ -64,3 +64,4 @@ upload_repository 40
 verifier_client 76
 video_event_cache 0
 videos_repository 100
+voice_effects 100

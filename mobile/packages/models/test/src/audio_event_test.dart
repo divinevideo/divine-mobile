@@ -1760,6 +1760,100 @@ void main() {
       });
     });
 
+    group('voice processing', () {
+      final processed = AudioEvent(
+        id: '${AudioEvent.localImportMarker}_voice_over_1',
+        pubkey: testPubkey,
+        createdAt: 1700000000,
+        url: '/docs/voice_over_recordings/voice_over_1_robot.wav',
+        voiceEffect: const VoiceEffect(robot: 100, echo: 40),
+        noiseReduction: true,
+        originalUrl: '/docs/voice_over_recordings/voice_over_1.m4a',
+      );
+
+      test('defaults to the take as recorded', () {
+        final plain = AudioEvent(
+          id: '${AudioEvent.localImportMarker}_voice_over_2',
+          pubkey: testPubkey,
+          createdAt: 1700000000,
+          url: '/docs/voice_over_recordings/voice_over_2.m4a',
+        );
+
+        expect(plain.voiceEffect, VoiceEffect.none);
+        expect(plain.noiseReduction, isFalse);
+        expect(plain.hasVoiceProcessing, isFalse);
+        expect(plain.originalLocalFilePath, plain.localFilePath);
+        expect(
+          plain.toJson().keys,
+          isNot(anyOf(contains('voiceEffect'), contains('noiseReduction'))),
+        );
+        expect(plain.toJson(), isNot(contains('originalUrl')));
+      });
+
+      test('survives a toJson/fromJson roundtrip', () {
+        final restored = AudioEvent.fromJson(processed.toJson());
+
+        expect(restored.voiceEffect, const VoiceEffect(robot: 100, echo: 40));
+        expect(restored.noiseReduction, isTrue);
+        expect(restored.hasVoiceProcessing, isTrue);
+        expect(restored.url, processed.url);
+        expect(
+          restored.originalLocalFilePath,
+          '/docs/voice_over_recordings/voice_over_1.m4a',
+        );
+      });
+
+      test('reads a malformed effect as none', () {
+        final json = processed.toJson()..['voiceEffect'] = 'kazoo';
+
+        expect(AudioEvent.fromJson(json).voiceEffect, VoiceEffect.none);
+      });
+
+      test('can drop the original when the take goes back to unprocessed', () {
+        final reverted = processed.copyWith(
+          url: processed.originalUrl,
+          voiceEffect: VoiceEffect.none,
+          noiseReduction: false,
+          clearOriginalUrl: true,
+        );
+
+        expect(reverted.originalUrl, isNull);
+        expect(reverted.hasVoiceProcessing, isFalse);
+        expect(reverted.originalLocalFilePath, processed.originalUrl);
+      });
+
+      test('has no original file for audio that is not draft-local', () {
+        final published = AudioEvent(
+          id: testHexId,
+          pubkey: testPubkey,
+          createdAt: 1700000000,
+          url: 'https://example.com/audio.aac',
+          originalUrl: '/docs/voice_over_recordings/voice_over_1.m4a',
+        );
+
+        expect(published.originalLocalFilePath, isNull);
+      });
+
+      test('is never published in Kind 1063 tags', () {
+        final tags = processed.toTags();
+
+        expect(
+          tags.map((tag) => tag.first),
+          isNot(
+            anyOf(
+              contains('voiceEffect'),
+              contains('noiseReduction'),
+              contains('originalUrl'),
+            ),
+          ),
+        );
+        expect(
+          tags.expand((tag) => tag),
+          isNot(contains(processed.originalUrl)),
+        );
+      });
+    });
+
     group('isClipAnchoredOriginalSound', () {
       test('is true for an original sound anchored to a clip', () {
         final event = AudioEvent(

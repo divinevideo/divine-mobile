@@ -10,6 +10,8 @@ class VideoEditorTimelineControls extends StatelessWidget {
     this.onEdit,
     this.onFade,
     this.hasFade = false,
+    this.onVoiceEffect,
+    this.hasVoiceEffect = false,
     this.onDuplicated,
     this.onSplit,
     this.onDetach,
@@ -54,6 +56,13 @@ class VideoEditorTimelineControls extends StatelessWidget {
   /// Whether the selected sound already fades in or out, which highlights
   /// the action so the fade is visible from the timeline.
   final bool hasFade;
+
+  /// Opens the voice effect sheet. Voice-over sounds only.
+  final VoidCallback? onVoiceEffect;
+
+  /// Whether the selected voice-over plays with an effect or noise reduction,
+  /// which highlights the action so the effect is visible from the timeline.
+  final bool hasVoiceEffect;
   final VoidCallback? onDuplicated;
   final VoidCallback? onSplit;
 
@@ -188,6 +197,15 @@ class VideoEditorTimelineControls extends StatelessWidget {
                           context.l10n.videoEditorFadeSoundSemanticLabel,
                       onPressed: onFade,
                       type: hasFade ? .primary : .secondary,
+                    ),
+                  if (onVoiceEffect != null)
+                    _ControlButton(
+                      icon: .microphone,
+                      label: context.l10n.videoEditorVoiceEffectLabel,
+                      semanticLabel:
+                          context.l10n.videoEditorVoiceEffectSemanticLabel,
+                      onPressed: onVoiceEffect,
+                      type: hasVoiceEffect ? .primary : .secondary,
                     ),
                   if (onDuplicated != null)
                     _ControlButton(

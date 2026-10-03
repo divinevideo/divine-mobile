@@ -1,0 +1,12 @@
+name: voice_effects
+description: Offline voice processing for recorded voice-over takes - pitch shift, robot, echo and noise reduction on mono PCM.
+version: 0.1.0+1
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.11.0
+
+dev_dependencies:
+  test: ^1.26.3
+  very_good_analysis: ^10.2.0

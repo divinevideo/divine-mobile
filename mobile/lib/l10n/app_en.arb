@@ -6436,6 +6436,58 @@
   "@videoEditorFadeOutLabel": {
     "description": "Label of the slider for how long a sound falls from full volume to silence before it ends."
   },
+  "videoEditorVoiceEffectLabel": "Voice",
+  "@videoEditorVoiceEffectLabel": {
+    "description": "Label of the timeline action that changes how the selected voice-over recording sounds."
+  },
+  "videoEditorVoiceEffectSemanticLabel": "Change how the selected recording sounds",
+  "@videoEditorVoiceEffectSemanticLabel": {
+    "description": "Screen-reader label of the timeline action that opens the voice effects for the selected voice-over recording."
+  },
+  "videoEditorVoiceEffectSheetTitle": "Voice effects",
+  "@videoEditorVoiceEffectSheetTitle": {
+    "description": "Title of the sheet where the creator picks a voice effect for a voice-over recording."
+  },
+  "videoEditorVoiceEffectOriginal": "Original",
+  "@videoEditorVoiceEffectOriginal": {
+    "description": "Voice effect option that plays the recording as it was recorded, with no effect."
+  },
+  "videoEditorVoiceEffectHighPitch": "Chipmunk",
+  "@videoEditorVoiceEffectHighPitch": {
+    "description": "Voice effect option that makes the voice higher and smaller, like a cartoon chipmunk. A playful local equivalent is fine."
+  },
+  "videoEditorVoiceEffectLowPitch": "Deep",
+  "@videoEditorVoiceEffectLowPitch": {
+    "description": "Voice effect option that makes the voice lower and bigger, like a movie-trailer narrator."
+  },
+  "videoEditorVoiceEffectRobot": "Robot",
+  "@videoEditorVoiceEffectRobot": {
+    "description": "Voice effect option that turns the voice into a monotone robot."
+  },
+  "videoEditorVoiceEffectEcho": "Echo",
+  "@videoEditorVoiceEffectEcho": {
+    "description": "Voice effect option that adds repeats of the voice, as in a big empty room."
+  },
+  "videoEditorVoiceEffectPitch": "Pitch",
+  "@videoEditorVoiceEffectPitch": {
+    "description": "Label of the slider that moves the voice up or down in semitones."
+  },
+  "videoEditorVoiceEffectNoiseReduction": "Reduce background noise",
+  "@videoEditorVoiceEffectNoiseReduction": {
+    "description": "Title of the switch that filters steady background noise out of a voice-over recording."
+  },
+  "videoEditorVoiceEffectNoiseReductionSubtitle": "Cuts hiss, fans and room noise",
+  "@videoEditorVoiceEffectNoiseReductionSubtitle": {
+    "description": "Supporting text under the noise reduction switch, naming the kinds of noise it removes."
+  },
+  "videoEditorVoiceEffectApplying": "Applying the voice effect",
+  "@videoEditorVoiceEffectApplying": {
+    "description": "Screen-reader label of the progress indicator shown while the voice effect is applied to the recording."
+  },
+  "videoEditorVoiceEffectFailed": "Couldn't change the voice. Try again.",
+  "@videoEditorVoiceEffectFailed": {
+    "description": "Shown, and announced, when the voice effect could not be applied to the recording."
+  },
   "videoEditorTransitionSheetTitle": "Transition",
   "@videoEditorTransitionSheetTitle": {
     "description": "Title of the bottom sheet for choosing the transition between two adjacent clips."

@@ -9581,6 +9581,48 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'Uttoning';
 
   @override
+  String get videoEditorVoiceEffectLabel => 'Röst';
+
+  @override
+  String get videoEditorVoiceEffectSemanticLabel =>
+      'Ändra hur den valda inspelningen låter';
+
+  @override
+  String get videoEditorVoiceEffectSheetTitle => 'Rösteffekter';
+
+  @override
+  String get videoEditorVoiceEffectOriginal => 'Original';
+
+  @override
+  String get videoEditorVoiceEffectHighPitch => 'Helium';
+
+  @override
+  String get videoEditorVoiceEffectLowPitch => 'Djup';
+
+  @override
+  String get videoEditorVoiceEffectRobot => 'Robot';
+
+  @override
+  String get videoEditorVoiceEffectEcho => 'Eko';
+
+  @override
+  String get videoEditorVoiceEffectPitch => 'Tonhöjd';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReduction => 'Minska bakgrundsljud';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReductionSubtitle =>
+      'Tar bort brus, fläktar och rumsljud';
+
+  @override
+  String get videoEditorVoiceEffectApplying => 'Lägger på rösteffekt';
+
+  @override
+  String get videoEditorVoiceEffectFailed =>
+      'Det gick inte att ändra rösten. Försök igen.';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Övergång';
 
   @override

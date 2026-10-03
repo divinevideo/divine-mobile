@@ -9579,6 +9579,48 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'فیڈ آؤٹ';
 
   @override
+  String get videoEditorVoiceEffectLabel => 'آواز';
+
+  @override
+  String get videoEditorVoiceEffectSemanticLabel =>
+      'منتخب ریکارڈنگ کی آواز تبدیل کریں';
+
+  @override
+  String get videoEditorVoiceEffectSheetTitle => 'آواز کے اثرات';
+
+  @override
+  String get videoEditorVoiceEffectOriginal => 'اصل';
+
+  @override
+  String get videoEditorVoiceEffectHighPitch => 'گلہری';
+
+  @override
+  String get videoEditorVoiceEffectLowPitch => 'بھاری';
+
+  @override
+  String get videoEditorVoiceEffectRobot => 'روبوٹ';
+
+  @override
+  String get videoEditorVoiceEffectEcho => 'گونج';
+
+  @override
+  String get videoEditorVoiceEffectPitch => 'پچ';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReduction => 'پس منظر کا شور کم کریں';
+
+  @override
+  String get videoEditorVoiceEffectNoiseReductionSubtitle =>
+      'سنسناہٹ، پنکھوں اور کمرے کا شور ہٹاتا ہے';
+
+  @override
+  String get videoEditorVoiceEffectApplying => 'آواز کا اثر لاگو ہو رہا ہے';
+
+  @override
+  String get videoEditorVoiceEffectFailed =>
+      'آواز تبدیل نہیں ہو سکی۔ دوبارہ کوشش کریں۔';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'ٹرانزیشن';
 
   @override
