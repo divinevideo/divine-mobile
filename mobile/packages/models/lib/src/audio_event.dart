@@ -500,9 +500,18 @@ class AudioEvent {
 
   /// Local file path of the processed copy [url] names, or `null` while the
   /// sound plays its source as is.
+  ///
+  /// A processed copy is always a local file. A classifier returning anything
+  /// else — a network URL round-tripped through a persisted event, for
+  /// instance — hands back `null` rather than passing a non-file address to a
+  /// filesystem reader.
   String? get processedFilePath {
     if (!playsProcessedCopy) return null;
-    return _classifyUrl(url)?.path;
+    final classified = _classifyUrl(url);
+    if (classified == null || classified.kind != AudioSourceKind.file) {
+      return null;
+    }
+    return classified.path;
   }
 
   /// Whether this audio came from a normalized external sound provider.
@@ -554,7 +563,9 @@ class AudioEvent {
       final path = rawUrl.substring(prefix.length);
       return path.isEmpty ? null : (kind: AudioSourceKind.asset, path: path);
     }
-    if (isLocalImport) return (kind: AudioSourceKind.file, path: rawUrl);
+    // Imported audio stores its url as a bare on-disk path by construction,
+    // but a round-tripped `file://` URI can still reach here — classify it
+    // the same way every other kind is.
     return _classifyUrl(rawUrl);
   }
 
@@ -568,8 +579,11 @@ class AudioEvent {
         parsed.scheme == 'file' ||
         rawUrl.startsWith('/');
     if (isLocalFile) {
+      // Uri.toFilePath throws on non-Windows when a file URI has a non-empty
+      // host, so fall back to the raw string there rather than taking down
+      // every reader of the enclosing getter.
       final filePath = parsed != null && parsed.scheme == 'file'
-          ? parsed.toFilePath()
+          ? (parsed.host.isEmpty ? parsed.toFilePath() : rawUrl)
           : rawUrl;
       return (kind: AudioSourceKind.file, path: filePath);
     }
@@ -716,7 +730,12 @@ class AudioEvent {
   /// Local-only editor state, never published to Nostr.
   final String? originalMimeType;
 
-  /// Whether [url] names a processed copy of [originalUrl].
+  /// Whether this track has a voice effect or noise reduction applied.
+  ///
+  /// Distinct from [playsProcessedCopy], which asks whether [url] names a
+  /// local processed copy of [originalUrl]: a track is processed when either
+  /// is non-trivial, but a track that has already been reverted back to its
+  /// source carries neither.
   bool get hasVoiceProcessing => !voiceEffect.isNone || noiseReduction;
 
   /// Whether the source creator permits this sound to be reused by others.
