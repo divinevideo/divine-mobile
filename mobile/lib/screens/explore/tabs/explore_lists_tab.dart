@@ -178,6 +178,7 @@ class _VideoListsColumn extends StatelessWidget {
                     listName: list.name,
                     videoIds: list.videoEventIds,
                     authorPubkey: list.pubkey,
+                    list: list,
                   ),
                 ),
                 'open discovered list',

@@ -46,6 +46,7 @@ List<RouteBase> listsRoutes(Ref ref) {
           listName: extra?.listName ?? ctx.l10n.routeDefaultListName,
           videoIds: extra?.videoIds,
           authorPubkey: extra?.authorPubkey,
+          discoveredList: extra?.list,
         );
       },
     ),

@@ -100,6 +100,14 @@ void main() {
         RoutePaths.curatedListByAuthorFor(pubkey: 'pk', listId: 'my list'),
         equals('/list/pk/my%20list'),
       );
+      final peopleListAuthor = 'a' * 64;
+      expect(
+        RoutePaths.peopleListByAuthorFor(
+          pubkey: peopleListAuthor,
+          listId: 'my crew',
+        ),
+        equals('/people-lists/$peopleListAuthor/my%20crew'),
+      );
       expect(RoutePaths.curatedListFeedForId('a/b'), equals('/list/a%2Fb'));
       expect(RoutePaths.exploreForIndex(null), equals('/explore'));
       expect(RoutePaths.exploreForIndex(3), equals('/explore/3'));
