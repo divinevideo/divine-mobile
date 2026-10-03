@@ -49,6 +49,18 @@ class _MockSplitProVideoEditor extends ProVideoEditor {
   }
 }
 
+// Subscribe before triggering an event or completing a render so a fast state
+// emission cannot be missed. Gates in the tests keep in-flight work suspended.
+Future<void> _atClipState(
+  ClipEditorBloc bloc,
+  bool Function(ClipEditorState) matches,
+  void Function() trigger,
+) async {
+  final reached = bloc.stream.firstWhere(matches);
+  trigger();
+  await reached;
+}
+
 DivineVideoClip _createClip({
   String id = 'clip-1',
   Duration duration = const Duration(seconds: 3),
@@ -2274,19 +2286,34 @@ void main() {
                 queued.addAll(paths.whereType<String>()),
           );
 
-          bloc.add(ClipEditorInitialized([clip]));
-          await Future<void>.delayed(Duration.zero);
+          await _atClipState(
+            bloc,
+            (state) => state.clips.isNotEmpty,
+            () => bloc.add(ClipEditorInitialized([clip])),
+          );
 
-          bloc.add(const ClipEditorClipReverseRequested(clipId: 'clip-local'));
-          await Future<void>.delayed(Duration.zero);
+          await _atClipState(
+            bloc,
+            (state) => state.isReversing,
+            () => bloc.add(
+              const ClipEditorClipReverseRequested(clipId: 'clip-local'),
+            ),
+          );
           expect(bloc.state.isReversing, isTrue);
 
-          bloc.add(const ClipEditorClipRemoved('clip-local'));
-          await Future<void>.delayed(Duration.zero);
+          await _atClipState(
+            bloc,
+            (state) => state.clips.every((clip) => clip.id != 'clip-local'),
+            () => bloc.add(const ClipEditorClipRemoved('clip-local')),
+          );
           expect(bloc.state.clips, isEmpty);
 
-          completer.complete(EditorVideo.file('/reversed/discarded.mp4'));
-          await Future<void>.delayed(Duration.zero);
+          await _atClipState(
+            bloc,
+            (state) => state.lastReverseResult is ClipReverseDiscarded,
+            () =>
+                completer.complete(EditorVideo.file('/reversed/discarded.mp4')),
+          );
 
           expect(bloc.state.isReversing, isFalse);
           expect(bloc.state.reversingClipId, isNull);
@@ -2497,21 +2524,15 @@ void main() {
       );
 
       final discardedChromaPaths = <String>[];
+      late Completer<({EditorVideo video, String source})> chromaRender;
       blocTest<ClipEditorBloc, ClipEditorState>(
         'discards the render when the clip is gone',
         build: () => buildBloc(
-          bakeChromaKey:
-              ({
-                required sourceClip,
-                required chromaKey,
-                required renderId,
-              }) async {
-                await Future<void>.delayed(const Duration(milliseconds: 10));
-                return (
-                  video: EditorVideo.file('/path/keyed.mp4'),
-                  source: '/path/clip-1.mp4',
-                );
-              },
+          bakeChromaKey: ({
+            required sourceClip,
+            required chromaKey,
+            required renderId,
+          }) => chromaRender.future,
           deferFileCleanup: (paths) =>
               discardedChromaPaths.addAll(paths.whereType<String>()),
         ),
@@ -2522,17 +2543,31 @@ void main() {
           ],
         ),
         act: (bloc) async {
-          bloc.add(
-            const ClipEditorChromaKeyRequested(
-              clipId: 'clip-1',
-              chromaKey: key,
+          chromaRender = Completer<({EditorVideo video, String source})>();
+          await _atClipState(
+            bloc,
+            (state) => state.isChromaKeying,
+            () => bloc.add(
+              const ClipEditorChromaKeyRequested(
+                clipId: 'clip-1',
+                chromaKey: key,
+              ),
             ),
           );
-          await Future<void>.delayed(Duration.zero);
-          bloc.add(const ClipEditorClipRemoved('clip-1'));
+          await _atClipState(
+            bloc,
+            (state) => state.clips.every((clip) => clip.id != 'clip-1'),
+            () => bloc.add(const ClipEditorClipRemoved('clip-1')),
+          );
+          await _atClipState(
+            bloc,
+            (state) => state.lastChromaKeyResult is ChromaKeyDiscarded,
+            () => chromaRender.complete((
+              video: EditorVideo.file('/path/keyed.mp4'),
+              source: '/path/clip-1.mp4',
+            )),
+          );
         },
-        // Outlast the fake render so `verify` sees the settled state.
-        wait: const Duration(milliseconds: 50),
         verify: (bloc) {
           expect(bloc.state.lastChromaKeyResult, isA<ChromaKeyDiscarded>());
           // Queues the baked output only — not the pre-key source path.
@@ -2683,9 +2718,13 @@ void main() {
       test('writes the change to editor history so undo can reach the old '
           'still', () async {
         var invalidated = 0;
+        final historyWritten = Completer<void>();
         final bloc = buildBloc(
           writeStopMotionFrame: (_) async => 'transformed.jpg',
-          onFinalClipInvalidated: () => invalidated++,
+          onFinalClipInvalidated: () {
+            invalidated++;
+            historyWritten.complete();
+          },
         )..emit(ClipEditorState(clips: [_createStopMotionClip()]));
 
         bloc.add(
@@ -2695,7 +2734,7 @@ void main() {
             imageBytes: bytes,
           ),
         );
-        await Future<void>.delayed(Duration.zero);
+        await historyWritten.future;
 
         expect(invalidated, 1);
         await bloc.close();
@@ -2798,7 +2837,7 @@ void main() {
             imageBytes: bytes,
           ),
         );
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(queued, ['sm-1.jpg']);
         await bloc.close();
@@ -2829,7 +2868,7 @@ void main() {
             imageBytes: bytes,
           ),
         );
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(bloc.state.clips.first.stopMotionFrames!.map((f) => f.path), [
           'sm-0.jpg',
@@ -2848,10 +2887,17 @@ void main() {
           // apply the crop to whatever moved in.
           final queued = <String>[];
           final gate = Completer<String>();
+          final writing = Completer<void>();
+          final reclaimed = Completer<void>();
           final bloc = buildBloc(
-            writeStopMotionFrame: (_) => gate.future,
-            deferFileCleanup: (paths) =>
-                queued.addAll(paths.whereType<String>()),
+            writeStopMotionFrame: (_) {
+              writing.complete();
+              return gate.future;
+            },
+            deferFileCleanup: (paths) {
+              queued.addAll(paths.whereType<String>());
+              reclaimed.complete();
+            },
           )..emit(ClipEditorState(clips: [_createStopMotionClip()]));
 
           bloc.add(
@@ -2861,7 +2907,7 @@ void main() {
               imageBytes: bytes,
             ),
           );
-          await Future<void>.delayed(Duration.zero);
+          await writing.future;
 
           // Frame 0 goes away, so the still the user transformed slides to 0 and
           // index 1 now holds the one that was at 2.
@@ -2875,7 +2921,7 @@ void main() {
           bloc.emit(ClipEditorState(clips: [shifted]));
 
           gate.complete('transformed.jpg');
-          await Future<void>.delayed(Duration.zero);
+          await reclaimed.future;
 
           expect(
             bloc.state.clips.first.stopMotionFrames!.map((f) => f.path),
@@ -2893,10 +2939,17 @@ void main() {
         () async {
           final queued = <String>[];
           final gate = Completer<String>();
+          final writing = Completer<void>();
+          final reclaimed = Completer<void>();
           final bloc = buildBloc(
-            writeStopMotionFrame: (_) => gate.future,
-            deferFileCleanup: (paths) =>
-                queued.addAll(paths.whereType<String>()),
+            writeStopMotionFrame: (_) {
+              writing.complete();
+              return gate.future;
+            },
+            deferFileCleanup: (paths) {
+              queued.addAll(paths.whereType<String>());
+              reclaimed.complete();
+            },
           )..emit(ClipEditorState(clips: [_createStopMotionClip()]));
 
           bloc.add(
@@ -2906,11 +2959,11 @@ void main() {
               imageBytes: bytes,
             ),
           );
-          await Future<void>.delayed(Duration.zero);
+          await writing.future;
 
           bloc.emit(const ClipEditorState());
           gate.complete('transformed.jpg');
-          await Future<void>.delayed(Duration.zero);
+          await reclaimed.future;
 
           expect(bloc.state.clips, isEmpty);
           expect(queued, ['transformed.jpg']);
@@ -3185,24 +3238,38 @@ void main() {
                 queued.addAll(paths.whereType<String>()),
           );
 
-          bloc.add(ClipEditorInitialized([clip]));
-          await Future<void>.delayed(Duration.zero);
+          await _atClipState(
+            bloc,
+            (state) => state.clips.isNotEmpty,
+            () => bloc.add(ClipEditorInitialized([clip])),
+          );
 
-          bloc.add(
-            const ClipEditorClipTransformRequested(
-              clipId: 'clip-local',
-              transform: ExportTransform(),
+          await _atClipState(
+            bloc,
+            (state) => state.isTransforming,
+            () => bloc.add(
+              const ClipEditorClipTransformRequested(
+                clipId: 'clip-local',
+                transform: ExportTransform(),
+              ),
             ),
           );
-          await Future<void>.delayed(Duration.zero);
           expect(bloc.state.isTransforming, isTrue);
 
-          bloc.add(const ClipEditorClipRemoved('clip-local'));
-          await Future<void>.delayed(Duration.zero);
+          await _atClipState(
+            bloc,
+            (state) => state.clips.every((clip) => clip.id != 'clip-local'),
+            () => bloc.add(const ClipEditorClipRemoved('clip-local')),
+          );
           expect(bloc.state.clips, isEmpty);
 
-          completer.complete(EditorVideo.file('/transformed/discarded.mp4'));
-          await Future<void>.delayed(Duration.zero);
+          await _atClipState(
+            bloc,
+            (state) => state.lastTransformResult is ClipTransformDiscarded,
+            () => completer.complete(
+              EditorVideo.file('/transformed/discarded.mp4'),
+            ),
+          );
 
           expect(bloc.state.isTransforming, isFalse);
           expect(bloc.state.transformingClipId, isNull);
@@ -3232,22 +3299,28 @@ void main() {
                 queued.addAll(paths.whereType<String>()),
           );
 
-          bloc.add(ClipEditorInitialized([_createClipWithFile()]));
-          await Future<void>.delayed(Duration.zero);
+          await _atClipState(
+            bloc,
+            (state) => state.clips.isNotEmpty,
+            () => bloc.add(ClipEditorInitialized([_createClipWithFile()])),
+          );
 
-          bloc.add(
-            const ClipEditorClipTransformRequested(
-              clipId: 'clip-local',
-              transform: ExportTransform(),
+          await _atClipState(
+            bloc,
+            (state) => state.isTransforming,
+            () => bloc.add(
+              const ClipEditorClipTransformRequested(
+                clipId: 'clip-local',
+                transform: ExportTransform(),
+              ),
             ),
           );
-          await Future<void>.delayed(Duration.zero);
           expect(bloc.state.isTransforming, isTrue);
 
           final closed = bloc.close();
           completer.complete(EditorVideo.file('/transformed/after-close.mp4'));
           await closed;
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
 
           expect(queued, ['/transformed/after-close.mp4']);
         },
@@ -3710,11 +3783,19 @@ void main() {
         final clip = _createClipWithFile(playbackSpeed: 2.0);
         final bloc = buildBloc(audioExtractionService: mockService);
 
-        bloc.add(ClipEditorInitialized([clip]));
-        await Future<void>.delayed(Duration.zero);
+        await _atClipState(
+          bloc,
+          (state) => state.clips.isNotEmpty,
+          () => bloc.add(ClipEditorInitialized([clip])),
+        );
 
-        bloc.add(const ClipEditorAudioExtractionRequested(clipTitle: 'Test'));
-        await Future<void>.delayed(Duration.zero);
+        await _atClipState(
+          bloc,
+          (state) => state.isExtractingAudio,
+          () => bloc.add(
+            const ClipEditorAudioExtractionRequested(clipTitle: 'Test'),
+          ),
+        );
         expect(bloc.state.isExtractingAudio, isTrue);
 
         bloc.add(
@@ -3723,7 +3804,7 @@ void main() {
             clip: clip.copyWith(playbackSpeed: 0.5),
           ),
         );
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         completer.complete(
           const AudioExtractionResult(
@@ -3734,7 +3815,7 @@ void main() {
             mimeType: 'audio/wav',
           ),
         );
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(bloc.state.isExtractingAudio, isFalse);
         expect(bloc.state.clips.single.volume, equals(1));
@@ -3843,16 +3924,24 @@ void main() {
         final bloc = buildBloc(audioExtractionService: mockService);
 
         // Bring bloc to the expected initial state via event.
-        bloc.add(ClipEditorInitialized([clip]));
-        await Future<void>.delayed(Duration.zero);
+        await _atClipState(
+          bloc,
+          (state) => state.clips.isNotEmpty,
+          () => bloc.add(ClipEditorInitialized([clip])),
+        );
 
-        bloc.add(const ClipEditorAudioExtractionRequested(clipTitle: 'Test'));
-        await Future<void>.delayed(Duration.zero);
+        await _atClipState(
+          bloc,
+          (state) => state.isExtractingAudio,
+          () => bloc.add(
+            const ClipEditorAudioExtractionRequested(clipTitle: 'Test'),
+          ),
+        );
         expect(bloc.state.isExtractingAudio, isTrue);
 
         // Remove the clip while extraction is awaiting the service.
         bloc.add(ClipEditorClipRemoved(clip.id));
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         expect(bloc.state.clips, isEmpty);
 
         // Complete the service call — bloc must discard the stale result.
@@ -3865,7 +3954,7 @@ void main() {
             mimeType: 'audio/mp4',
           ),
         );
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(bloc.state.isExtractingAudio, isFalse);
         expect(
@@ -4082,12 +4171,17 @@ void main() {
         ),
         act: (bloc) async {
           mergeCompleter = Completer<DivineVideoClip?>();
-          bloc.add(const ClipEditorSelectedClipsMergeRequested());
-          // Let the merge start (emits isMerging) and suspend on the completer.
-          await Future<void>.delayed(Duration.zero);
+          await _atClipState(
+            bloc,
+            (state) => state.isMerging,
+            () => bloc.add(const ClipEditorSelectedClipsMergeRequested()),
+          );
           // A selected clip disappears while the render is in flight.
-          bloc.add(const ClipEditorClipRemoved('a'));
-          await Future<void>.delayed(Duration.zero);
+          await _atClipState(
+            bloc,
+            (state) => state.clips.every((clip) => clip.id != 'a'),
+            () => bloc.add(const ClipEditorClipRemoved('a')),
+          );
           mergeCompleter.complete(
             _createClip(
               id: 'merged-clip',
@@ -4346,11 +4440,18 @@ void main() {
         seed: () => ClipEditorState(clips: twoClips),
         act: (bloc) async {
           flattenCompleter = Completer<DivineVideoClip?>();
-          bloc.add(const ClipEditorSaveClipToLibraryRequested(clipId: 'a'));
-          // Let the save start (emits isSavingClipToLibrary) and suspend.
-          await Future<void>.delayed(Duration.zero);
-          bloc.add(const ClipEditorClipRemoved('a'));
-          await Future<void>.delayed(Duration.zero);
+          await _atClipState(
+            bloc,
+            (state) => state.isSavingClipToLibrary,
+            () => bloc.add(
+              const ClipEditorSaveClipToLibraryRequested(clipId: 'a'),
+            ),
+          );
+          await _atClipState(
+            bloc,
+            (state) => state.clips.every((clip) => clip.id != 'a'),
+            () => bloc.add(const ClipEditorClipRemoved('a')),
+          );
           flattenCompleter.complete(_createClip(id: 'flattened-a'));
         },
         verify: (bloc) {
@@ -4378,13 +4479,18 @@ void main() {
         seed: () => ClipEditorState(clips: twoClips),
         act: (bloc) async {
           flattenCompleter = Completer<DivineVideoClip?>();
-          bloc.add(const ClipEditorSaveClipToLibraryRequested(clipId: 'a'));
-          await Future<void>.delayed(Duration.zero);
+          await _atClipState(
+            bloc,
+            (state) => state.isSavingClipToLibrary,
+            () => bloc.add(
+              const ClipEditorSaveClipToLibraryRequested(clipId: 'a'),
+            ),
+          );
           // A double-tap while the first render is still running.
           bloc.add(const ClipEditorSaveClipToLibraryRequested(clipId: 'a'));
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           flattenCompleter.complete(_createClip(id: 'flattened-a'));
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         },
         verify: (bloc) {
           expect(savedToLibrary.map((c) => c.id), equals(['flattened-a']));
@@ -4404,8 +4510,13 @@ void main() {
         seed: () => ClipEditorState(clips: twoClips),
         act: (bloc) async {
           flattenCompleter = Completer<DivineVideoClip?>();
-          bloc.add(const ClipEditorSaveClipToLibraryRequested(clipId: 'a'));
-          await Future<void>.delayed(Duration.zero);
+          await _atClipState(
+            bloc,
+            (state) => state.isSavingClipToLibrary,
+            () => bloc.add(
+              const ClipEditorSaveClipToLibraryRequested(clipId: 'a'),
+            ),
+          );
           // Assert mid-flight: Save is disabled on every clip, and this id
           // marks which one shows the spinner.
           expect(bloc.state.isSavingClipToLibrary, isTrue);
@@ -4487,10 +4598,18 @@ void main() {
           seed: () => ClipEditorState(clips: twoClips),
           act: (bloc) async {
             flattenCompleter = Completer<DivineVideoClip?>();
-            bloc.add(const ClipEditorSaveClipToLibraryRequested(clipId: 'a'));
-            await Future<void>.delayed(Duration.zero);
-            bloc.add(const ClipEditorClipRemoved('a'));
-            await Future<void>.delayed(Duration.zero);
+            await _atClipState(
+              bloc,
+              (state) => state.isSavingClipToLibrary,
+              () => bloc.add(
+                const ClipEditorSaveClipToLibraryRequested(clipId: 'a'),
+              ),
+            );
+            await _atClipState(
+              bloc,
+              (state) => state.clips.every((clip) => clip.id != 'a'),
+              () => bloc.add(const ClipEditorClipRemoved('a')),
+            );
             flattenCompleter.complete(_createClip(id: 'flattened-a'));
           },
           verify: (bloc) {

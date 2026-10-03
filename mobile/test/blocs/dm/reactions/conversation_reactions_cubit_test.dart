@@ -24,10 +24,14 @@ void main() {
   group(ConversationReactionsCubit, () {
     late _MockReactionsRepository repo;
     late StreamController<List<DmReaction>> streamController;
+    late Completer<void> watching;
 
     setUp(() {
       repo = _MockReactionsRepository();
-      streamController = StreamController<List<DmReaction>>.broadcast();
+      watching = Completer<void>();
+      streamController = StreamController<List<DmReaction>>.broadcast(
+        onListen: watching.complete,
+      );
       when(
         () => repo.watchForConversation(any()),
       ).thenAnswer((_) => streamController.stream);
@@ -52,7 +56,7 @@ void main() {
         cubit.add(
           const ConversationReactionsStarted(conversationId: _convo),
         );
-        await Future<void>.delayed(Duration.zero);
+        await watching.future;
         streamController.add(const <DmReaction>[]);
       },
       expect: () => [
@@ -247,9 +251,9 @@ void main() {
       },
       act: (cubit) async {
         cubit.add(const ConversationReactionsStarted(conversationId: _convo));
-        await Future<void>.delayed(Duration.zero);
+        await watching.future;
         streamController.add([ownReaction('❤️')]);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         cubit.add(
           const ConversationReactionSet(
             conversationId: _convo,
@@ -258,7 +262,7 @@ void main() {
             emoji: '❤️',
           ),
         );
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
       },
       verify: (_) {
         verifyNever(
@@ -300,6 +304,9 @@ void main() {
         );
       },
       act: (cubit) async {
+        final published = cubit.stream.firstWhere(
+          (state) => state.pending.isEmpty && state.optimistic.isNotEmpty,
+        );
         // Two sets in a burst, before any persisted row (or stream tick) lands.
         // The first paints the optimistic ❤️; the second must see it via the
         // optimistic-inclusive guard and no-op — so only one gift-wrap is sent
@@ -321,7 +328,7 @@ void main() {
               emoji: '❤️',
             ),
           );
-        await Future<void>.delayed(const Duration(milliseconds: 10));
+        await published;
       },
       verify: (_) {
         verify(
@@ -356,9 +363,9 @@ void main() {
       },
       act: (cubit) async {
         cubit.add(const ConversationReactionsStarted(conversationId: _convo));
-        await Future<void>.delayed(Duration.zero);
+        await watching.future;
         streamController.add([ownReaction('❤️')]);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         cubit.add(
           const ConversationReactionSet(
             conversationId: _convo,
@@ -367,7 +374,7 @@ void main() {
             emoji: '😂',
           ),
         );
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
       },
       verify: (_) {
         verify(
@@ -391,7 +398,7 @@ void main() {
         cubit.add(
           const ConversationReactionsStarted(conversationId: _convo),
         );
-        await Future<void>.delayed(Duration.zero);
+        await watching.future;
         streamController.add([
           const DmReaction(
             id: 'r-3',
@@ -496,7 +503,7 @@ void main() {
         },
         act: (cubit) async {
           cubit.add(const ConversationReactionsStarted(conversationId: _convo));
-          await Future<void>.delayed(Duration.zero);
+          await watching.future;
           cubit.add(
             const ConversationReactionToggled(
               conversationId: _convo,
@@ -505,9 +512,9 @@ void main() {
               emoji: '❤️',
             ),
           );
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           streamController.add([ownReaction('❤️')]);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         },
         verify: (cubit) {
           expect(cubit.state.optimistic, isEmpty);
@@ -536,9 +543,9 @@ void main() {
         },
         act: (cubit) async {
           cubit.add(const ConversationReactionsStarted(conversationId: _convo));
-          await Future<void>.delayed(Duration.zero);
+          await watching.future;
           streamController.add([ownReaction('❤️')]);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           cubit.add(
             const ConversationReactionToggled(
               conversationId: _convo,
@@ -547,7 +554,7 @@ void main() {
               emoji: '❤️',
             ),
           );
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         },
         verify: (cubit) {
           expect(
@@ -591,9 +598,9 @@ void main() {
             cubit.add(
               const ConversationReactionsStarted(conversationId: _convo),
             );
-            await Future<void>.delayed(Duration.zero);
+            await watching.future;
             streamController.add([ownReactionStatus('❤️', status)]);
-            await Future<void>.delayed(Duration.zero);
+            await pumpEventQueue();
             cubit.add(
               const ConversationReactionToggled(
                 conversationId: _convo,
@@ -602,8 +609,7 @@ void main() {
                 emoji: '❤️',
               ),
             );
-            await Future<void>.delayed(Duration.zero);
-            await Future<void>.delayed(Duration.zero);
+            await pumpEventQueue();
           },
           verify: (_) {
             // A re-tap on an undelivered reaction re-drives delivery; it must
@@ -640,14 +646,14 @@ void main() {
           cubit.add(
             const ConversationReactionsStarted(conversationId: _convo),
           );
-          await Future<void>.delayed(Duration.zero);
+          await watching.future;
           streamController.add([
             ownReactionStatus(
               '❤️',
               DmReactionPublishStatus.removalRefused,
             ),
           ]);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           cubit.add(
             const ConversationReactionToggled(
               conversationId: _convo,
@@ -656,8 +662,7 @@ void main() {
               emoji: '❤️',
             ),
           );
-          await Future<void>.delayed(Duration.zero);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         },
         verify: (_) {
           verify(
@@ -719,14 +724,14 @@ void main() {
         ),
         act: (cubit) async {
           cubit.add(const ConversationReactionsStarted(conversationId: _convo));
-          await Future<void>.delayed(Duration.zero);
+          await watching.future;
           streamController.add([
             ownReactionStatus(
               '❤️',
               DmReactionPublishStatus.removalRefused,
             ),
           ]);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           cubit.add(
             const ConversationReactionToggled(
               conversationId: _convo,
@@ -735,7 +740,7 @@ void main() {
               emoji: '🔥',
             ),
           );
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         },
         verify: (cubit) {
           verifyNever(
@@ -762,14 +767,14 @@ void main() {
         ),
         act: (cubit) async {
           cubit.add(const ConversationReactionsStarted(conversationId: _convo));
-          await Future<void>.delayed(Duration.zero);
+          await watching.future;
           streamController.add([
             ownReactionStatus(
               '🔥',
               DmReactionPublishStatus.removalRefused,
             ),
           ]);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           cubit.add(
             const ConversationReactionSet(
               conversationId: _convo,
@@ -778,7 +783,7 @@ void main() {
               emoji: '❤️',
             ),
           );
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         },
         verify: (cubit) {
           verifyNever(
@@ -895,9 +900,9 @@ void main() {
         ),
         act: (cubit) async {
           cubit.add(const ConversationReactionsStarted(conversationId: _convo));
-          await Future<void>.delayed(Duration.zero);
+          await watching.future;
           streamController.add([ownReaction('❤️')]);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           when(
             () => repo.removeOwn(
               rumorId: any(named: 'rumorId'),
@@ -912,7 +917,7 @@ void main() {
               emoji: '❤️',
             ),
           );
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           streamController.add([
             ownReactionStatus(
               '❤️',
@@ -996,9 +1001,9 @@ void main() {
         },
         act: (cubit) async {
           cubit.add(const ConversationReactionsStarted(conversationId: _convo));
-          await Future<void>.delayed(Duration.zero);
+          await watching.future;
           streamController.add([ownReaction('❤️')]);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           cubit.add(
             const ConversationReactionSet(
               conversationId: _convo,
@@ -1007,7 +1012,7 @@ void main() {
               emoji: '😂',
             ),
           );
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         },
         verify: (cubit) {
           final emojis = cubit.state
