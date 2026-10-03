@@ -294,25 +294,22 @@ class AppLocalizationsJa extends AppLocalizations {
       'クラシックな正方形フォーマットでフィードを保つ';
 
   @override
-  String get generalSettingsShowTotalLoops => 'Show total loops';
+  String get generalSettingsShowTotalLoops => '合計ループ数を表示';
 
   @override
-  String get generalSettingsShowTotalLoopsSubtitle =>
-      'The creator\'s loop count across all their videos';
+  String get generalSettingsShowTotalLoopsSubtitle => 'クリエイターのすべての動画のループ数';
 
   @override
-  String get generalSettingsShowVideoLoops => 'Show video loops';
+  String get generalSettingsShowVideoLoops => '動画のループ数を表示';
 
   @override
-  String get generalSettingsShowVideoLoopsSubtitle =>
-      'How many times the video you\'re watching has looped';
+  String get generalSettingsShowVideoLoopsSubtitle => '視聴中の動画が繰り返し再生された回数';
 
   @override
-  String get generalSettingsShowPublishedDate => 'Show publish date';
+  String get generalSettingsShowPublishedDate => '公開日を表示';
 
   @override
-  String get generalSettingsShowPublishedDateSubtitle =>
-      'When the video you\'re watching was published';
+  String get generalSettingsShowPublishedDateSubtitle => '視聴中の動画が公開された日';
 
   @override
   String get contentPreferencesTitle => 'コンテンツ設定';
@@ -1982,7 +1979,7 @@ class AppLocalizationsJa extends AppLocalizations {
     String comments,
     String reposts,
   ) {
-    return '$likes likes · $comments comments · $reposts reposts';
+    return '$likes件のいいね · $comments件のコメント · $reposts件のリポスト';
   }
 
   @override
@@ -2745,11 +2742,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get analyticsServerUnavailable =>
-      'Creator analytics is having server trouble. Please try again in a moment.';
+      'クリエイター分析のサーバーで問題が起きています。少し待ってからもう一度お試しください。';
 
   @override
   String get analyticsConnectionIssue =>
-      'Creator analytics could not connect. Check your connection and try again.';
+      'クリエイター分析に接続できませんでした。接続を確認して、もう一度お試しください。';
 
   @override
   String get analyticsSignInRequired => 'クリエイター分析を見るにはサインインしてね。';
@@ -2905,21 +2902,20 @@ class AppLocalizationsJa extends AppLocalizations {
       'Funnelcake がオーディエンス分析エンドポイントを追加したら、ソース/地域/時間帯の内訳がここに入るよ。';
 
   @override
-  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+  String get analyticsSocialCountsInfoLabel => 'フォロワー数について';
 
   @override
-  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+  String get analyticsSocialCountsInfoTitle => 'フォロワー数について';
 
   @override
-  String get analyticsFollowerCountsBody =>
-      'Your follower count shows the people who follow you on Divine.';
+  String get analyticsFollowerCountsBody => 'フォロワー数は、Divineであなたをフォローしている人の数です。';
 
   @override
-  String get analyticsSocialCountsLearnMore => 'Learn more';
+  String get analyticsSocialCountsLearnMore => '詳しく見る';
 
   @override
   String analyticsSocialCountsLearnMoreSemantics(String url) {
-    return 'Learn more at $url';
+    return '詳しくは $url をご覧ください';
   }
 
   @override
@@ -2968,7 +2964,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String analyticsDiagnosticsFailedSources(String sources) {
-    return 'Failed sources: $sources';
+    return '取得に失敗したソース：$sources';
   }
 
   @override
@@ -4395,19 +4391,19 @@ class AppLocalizationsJa extends AppLocalizations {
   String get supportSaveLogsSubtitle => '手動送信用にログをファイルにエクスポート';
 
   @override
-  String get supportClearLogs => 'Clear Logs';
+  String get supportClearLogs => 'ログを消去';
 
   @override
-  String get supportClearLogsSubtitle => 'Wipe captured logs and start fresh';
+  String get supportClearLogsSubtitle => '記録したログを消去して、記録をやり直す';
 
   @override
-  String get supportClearLogsConfirmTitle => 'Clear captured logs?';
+  String get supportClearLogsConfirmTitle => '記録したログを消去しますか？';
 
   @override
-  String get supportClearLogsConfirmButton => 'Clear';
+  String get supportClearLogsConfirmButton => '消去';
 
   @override
-  String get supportLogsCleared => 'Logs cleared';
+  String get supportLogsCleared => 'ログを消去しました';
 
   @override
   String get supportFaq => 'よくある質問';
@@ -4444,11 +4440,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get supportNoLogsToExport =>
-      'No logs yet — they start fresh each launch. Reproduce the problem, then come back without restarting.';
+      'ログはまだありません。アプリを起動するたびに記録が始まります。問題を再現してから、アプリを再起動せずにここに戻ってください。';
 
   @override
-  String get supportExportLogsUnconfirmed =>
-      'Logs handed off. Check the app you shared to.';
+  String get supportExportLogsUnconfirmed => 'ログを共有先に渡しました。共有先のアプリを確認してください。';
 
   @override
   String supportLogsSavedTo(String path) {
@@ -5900,7 +5895,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get commonBack => '戻る';
 
   @override
-  String get commonReload => 'Reload';
+  String get commonReload => '再読み込み';
 
   @override
   String get commonClose => '閉じる';

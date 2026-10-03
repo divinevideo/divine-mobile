@@ -370,25 +370,25 @@ class AppLocalizationsPt extends AppLocalizations {
       'Mantenha os feeds no formato quadrado clássico';
 
   @override
-  String get generalSettingsShowTotalLoops => 'Show total loops';
+  String get generalSettingsShowTotalLoops => 'Mostrar loops totais';
 
   @override
   String get generalSettingsShowTotalLoopsSubtitle =>
-      'The creator\'s loop count across all their videos';
+      'O número de loops em todos os vídeos de quem os criou';
 
   @override
-  String get generalSettingsShowVideoLoops => 'Show video loops';
+  String get generalSettingsShowVideoLoops => 'Mostrar loops do vídeo';
 
   @override
   String get generalSettingsShowVideoLoopsSubtitle =>
-      'How many times the video you\'re watching has looped';
+      'Quantas vezes o vídeo que você está assistindo se repetiu';
 
   @override
-  String get generalSettingsShowPublishedDate => 'Show publish date';
+  String get generalSettingsShowPublishedDate => 'Mostrar data de publicação';
 
   @override
   String get generalSettingsShowPublishedDateSubtitle =>
-      'When the video you\'re watching was published';
+      'Quando o vídeo que você está assistindo foi publicado';
 
   @override
   String get contentPreferencesTitle => 'Preferências de conteúdo';
@@ -2159,7 +2159,7 @@ class AppLocalizationsPt extends AppLocalizations {
     String comments,
     String reposts,
   ) {
-    return '$likes likes · $comments comments · $reposts reposts';
+    return '$likes curtidas · $comments comentários · $reposts reposts';
   }
 
   @override
@@ -2967,11 +2967,11 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get analyticsServerUnavailable =>
-      'Creator analytics is having server trouble. Please try again in a moment.';
+      'As estatísticas de criador estão com problemas no servidor. Tente de novo daqui a pouco.';
 
   @override
   String get analyticsConnectionIssue =>
-      'Creator analytics could not connect. Check your connection and try again.';
+      'As estatísticas de criador não conseguiram se conectar. Confira sua conexão e tente de novo.';
 
   @override
   String get analyticsSignInRequired =>
@@ -3131,21 +3131,21 @@ class AppLocalizationsPt extends AppLocalizations {
       'Detalhes do público por fonte/geografia/hora vão aparecer conforme o Funnelcake adicionar endpoints de estatísticas de público.';
 
   @override
-  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+  String get analyticsSocialCountsInfoLabel => 'Sobre seu número de seguidores';
 
   @override
-  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+  String get analyticsSocialCountsInfoTitle => 'Sobre seu número de seguidores';
 
   @override
   String get analyticsFollowerCountsBody =>
-      'Your follower count shows the people who follow you on Divine.';
+      'Seu número de seguidores mostra as pessoas que seguem você no Divine.';
 
   @override
-  String get analyticsSocialCountsLearnMore => 'Learn more';
+  String get analyticsSocialCountsLearnMore => 'Saiba mais';
 
   @override
   String analyticsSocialCountsLearnMoreSemantics(String url) {
-    return 'Learn more at $url';
+    return 'Saiba mais em $url';
   }
 
   @override
@@ -3194,7 +3194,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String analyticsDiagnosticsFailedSources(String sources) {
-    return 'Failed sources: $sources';
+    return 'Fontes que falharam: $sources';
   }
 
   @override
@@ -4699,19 +4699,20 @@ class AppLocalizationsPt extends AppLocalizations {
       'Exportar logs para um arquivo para envio manual';
 
   @override
-  String get supportClearLogs => 'Clear Logs';
+  String get supportClearLogs => 'Limpar logs';
 
   @override
-  String get supportClearLogsSubtitle => 'Wipe captured logs and start fresh';
+  String get supportClearLogsSubtitle =>
+      'Limpe os logs capturados e comece do zero';
 
   @override
-  String get supportClearLogsConfirmTitle => 'Clear captured logs?';
+  String get supportClearLogsConfirmTitle => 'Limpar os logs capturados?';
 
   @override
-  String get supportClearLogsConfirmButton => 'Clear';
+  String get supportClearLogsConfirmButton => 'Limpar';
 
   @override
-  String get supportLogsCleared => 'Logs cleared';
+  String get supportLogsCleared => 'Logs limpos';
 
   @override
   String get supportFaq => 'FAQ';
@@ -4750,11 +4751,11 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get supportNoLogsToExport =>
-      'No logs yet — they start fresh each launch. Reproduce the problem, then come back without restarting.';
+      'Ainda não há logs — eles começam do zero sempre que você abre o app. Reproduza o problema e depois volte sem reiniciar o app.';
 
   @override
   String get supportExportLogsUnconfirmed =>
-      'Logs handed off. Check the app you shared to.';
+      'Logs encaminhados. Confira o app em que você compartilhou os logs.';
 
   @override
   String supportLogsSavedTo(String path) {
@@ -6266,7 +6267,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get commonBack => 'Voltar';
 
   @override
-  String get commonReload => 'Reload';
+  String get commonReload => 'Recarregar';
 
   @override
   String get commonClose => 'Fechar';

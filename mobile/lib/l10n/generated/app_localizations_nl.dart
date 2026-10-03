@@ -366,25 +366,25 @@ class AppLocalizationsNl extends AppLocalizations {
       'Hou feeds in het klassieke vierkante formaat';
 
   @override
-  String get generalSettingsShowTotalLoops => 'Show total loops';
+  String get generalSettingsShowTotalLoops => 'Totaal aantal loops tonen';
 
   @override
   String get generalSettingsShowTotalLoopsSubtitle =>
-      'The creator\'s loop count across all their videos';
+      'Het aantal loops van alle video\'s van de maker';
 
   @override
-  String get generalSettingsShowVideoLoops => 'Show video loops';
+  String get generalSettingsShowVideoLoops => 'Loops van de video tonen';
 
   @override
   String get generalSettingsShowVideoLoopsSubtitle =>
-      'How many times the video you\'re watching has looped';
+      'Hoe vaak de video die je bekijkt zich heeft herhaald';
 
   @override
-  String get generalSettingsShowPublishedDate => 'Show publish date';
+  String get generalSettingsShowPublishedDate => 'Publicatiedatum tonen';
 
   @override
   String get generalSettingsShowPublishedDateSubtitle =>
-      'When the video you\'re watching was published';
+      'Wanneer de video die je bekijkt is gepubliceerd';
 
   @override
   String get contentPreferencesTitle => 'Inhoudsvoorkeuren';
@@ -2150,7 +2150,7 @@ class AppLocalizationsNl extends AppLocalizations {
     String comments,
     String reposts,
   ) {
-    return '$likes likes · $comments comments · $reposts reposts';
+    return '$likes likes · $comments reacties · $reposts reposts';
   }
 
   @override
@@ -2954,11 +2954,11 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get analyticsServerUnavailable =>
-      'Creator analytics is having server trouble. Please try again in a moment.';
+      'Creator-statistieken hebben serverproblemen. Probeer het zo nog eens.';
 
   @override
   String get analyticsConnectionIssue =>
-      'Creator analytics could not connect. Check your connection and try again.';
+      'Creator-statistieken konden geen verbinding maken. Controleer je verbinding en probeer het opnieuw.';
 
   @override
   String get analyticsSignInRequired =>
@@ -3119,21 +3119,21 @@ class AppLocalizationsNl extends AppLocalizations {
       'Publieksbron/geo/tijd-overzichten komen zodra Funnelcake publieksanalytics-endpoints toevoegt.';
 
   @override
-  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+  String get analyticsSocialCountsInfoLabel => 'Over je aantal volgers';
 
   @override
-  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+  String get analyticsSocialCountsInfoTitle => 'Over je aantal volgers';
 
   @override
   String get analyticsFollowerCountsBody =>
-      'Your follower count shows the people who follow you on Divine.';
+      'Je aantal volgers toont de mensen die je op Divine volgen.';
 
   @override
-  String get analyticsSocialCountsLearnMore => 'Learn more';
+  String get analyticsSocialCountsLearnMore => 'Meer weten';
 
   @override
   String analyticsSocialCountsLearnMoreSemantics(String url) {
-    return 'Learn more at $url';
+    return 'Meer weten op $url';
   }
 
   @override
@@ -3182,7 +3182,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String analyticsDiagnosticsFailedSources(String sources) {
-    return 'Failed sources: $sources';
+    return 'Mislukte bronnen: $sources';
   }
 
   @override
@@ -4685,19 +4685,20 @@ class AppLocalizationsNl extends AppLocalizations {
       'Exporteer logs naar bestand om handmatig te versturen';
 
   @override
-  String get supportClearLogs => 'Clear Logs';
+  String get supportClearLogs => 'Logs wissen';
 
   @override
-  String get supportClearLogsSubtitle => 'Wipe captured logs and start fresh';
+  String get supportClearLogsSubtitle =>
+      'Wis vastgelegde logs en begin opnieuw';
 
   @override
-  String get supportClearLogsConfirmTitle => 'Clear captured logs?';
+  String get supportClearLogsConfirmTitle => 'Vastgelegde logs wissen?';
 
   @override
-  String get supportClearLogsConfirmButton => 'Clear';
+  String get supportClearLogsConfirmButton => 'Wissen';
 
   @override
-  String get supportLogsCleared => 'Logs cleared';
+  String get supportLogsCleared => 'Logs gewist';
 
   @override
   String get supportFaq => 'Veelgestelde vragen';
@@ -4737,11 +4738,11 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get supportNoLogsToExport =>
-      'No logs yet — they start fresh each launch. Reproduce the problem, then come back without restarting.';
+      'Nog geen logs — ze beginnen bij elke appstart opnieuw. Doe na wat het probleem veroorzaakte en kom dan terug zonder de app opnieuw te starten.';
 
   @override
   String get supportExportLogsUnconfirmed =>
-      'Logs handed off. Check the app you shared to.';
+      'Logs doorgegeven. Kijk in de app waarmee je ze hebt gedeeld.';
 
   @override
   String supportLogsSavedTo(String path) {
@@ -6250,7 +6251,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get commonBack => 'Terug';
 
   @override
-  String get commonReload => 'Reload';
+  String get commonReload => 'Opnieuw laden';
 
   @override
   String get commonClose => 'Sluiten';
