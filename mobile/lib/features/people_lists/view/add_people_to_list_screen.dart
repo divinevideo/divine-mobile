@@ -130,11 +130,9 @@ class AddPeopleToListView extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return BlocListener<PeopleListsBloc, PeopleListsState>(
-      // A write that was in flight and came back as a failure has just been
-      // rolled back under the user's thumb; the row flips back on its own,
-      // this says why.
+      // Repository updates can reset submitting to ready before a write fails.
       listenWhen: (previous, current) =>
-          previous.status == PeopleListsStatus.submitting &&
+          previous.status != PeopleListsStatus.failure &&
           current.status == PeopleListsStatus.failure,
       listener: (context, state) {
         ScaffoldMessenger.of(context).showSnackBar(
