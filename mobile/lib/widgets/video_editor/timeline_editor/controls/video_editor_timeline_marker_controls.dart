@@ -1,10 +1,10 @@
-import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_action_bar.dart';
 
 /// Action bar shown while the timeline is in marker-placement mode.
 ///
@@ -31,81 +31,48 @@ class TimelineMarkerControls extends StatelessWidget {
       (TimelineOverlayBloc b) => b.state.timelineMarkers,
     );
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: context.vineColors.surfaceContainerHigh,
-        boxShadow: [
-          BoxShadow(
-            // A cast shadow, not a surface: stays dark in both modes.
-            color: VineTheme.backgroundColor.withValues(alpha: 0.4),
-            blurRadius: 8,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(0, 16, 0, 8),
-        child: SafeArea(
-          top: false,
-          child: Center(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: ValueListenableBuilder<Duration>(
-                valueListenable: playheadPosition,
-                builder: (context, position, _) {
-                  final markerAtPlayhead = _markerAtPlayhead(markers, position);
-                  final canAdd =
-                      totalDuration > Duration.zero && markerAtPlayhead == null;
+    return ValueListenableBuilder<Duration>(
+      valueListenable: playheadPosition,
+      builder: (context, position, _) {
+        final markerAtPlayhead = _markerAtPlayhead(markers, position);
+        final canAdd =
+            totalDuration > Duration.zero && markerAtPlayhead == null;
 
-                  return Row(
-                    spacing: 16,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _ControlButton(
-                        icon: .bookmarkPlus,
-                        label: context.l10n.videoEditorAddTitle,
-                        semanticLabel: context
-                            .l10n
-                            .videoEditorAddTimelineMarkerSemanticLabel,
-                        onPressed: canAdd
-                            ? () => _addMarker(context, position, totalDuration)
-                            : null,
-                        type: .primary,
-                      ),
-                      _ControlButton(
-                        icon: .trash,
-                        label: context.l10n.videoEditorDeleteLabel,
-                        semanticLabel: context
-                            .l10n
-                            .videoEditorRemoveTimelineMarkerAtPlayheadSemanticLabel,
-                        onPressed: markerAtPlayhead == null
-                            ? null
-                            : () => _removeMarker(context, markerAtPlayhead),
-                        type: .error,
-                      ),
-                      _ControlButton(
-                        icon: .check,
-                        label: context.l10n.videoEditorDoneLabel,
-                        semanticLabel: context
-                            .l10n
-                            .videoEditorFinishTimelineEditingSemanticLabel,
-                        onPressed: () =>
-                            context.read<VideoEditorMainBloc>().add(
-                              const VideoEditorMarkerModeChanged(
-                                isActive: false,
-                              ),
-                            ),
-                      ),
-                    ],
-                  );
-                },
+        return TimelineActionBar(
+          actions: [
+            TimelineActionButton(
+              icon: .bookmarkPlus,
+              label: context.l10n.videoEditorAddTitle,
+              semanticLabel:
+                  context.l10n.videoEditorAddTimelineMarkerSemanticLabel,
+              onPressed: canAdd
+                  ? () => _addMarker(context, position, totalDuration)
+                  : null,
+              type: .primary,
+            ),
+            TimelineActionButton(
+              icon: .trash,
+              label: context.l10n.videoEditorDeleteLabel,
+              semanticLabel: context
+                  .l10n
+                  .videoEditorRemoveTimelineMarkerAtPlayheadSemanticLabel,
+              onPressed: markerAtPlayhead == null
+                  ? null
+                  : () => _removeMarker(context, markerAtPlayhead),
+              type: .error,
+            ),
+            TimelineActionButton(
+              icon: .check,
+              label: context.l10n.videoEditorDoneLabel,
+              semanticLabel:
+                  context.l10n.videoEditorFinishTimelineEditingSemanticLabel,
+              onPressed: () => context.read<VideoEditorMainBloc>().add(
+                const VideoEditorMarkerModeChanged(isActive: false),
               ),
             ),
-          ),
-        ),
-      ),
+          ],
+        );
+      },
     );
   }
 
@@ -131,41 +98,5 @@ class TimelineMarkerControls extends StatelessWidget {
 
   void _removeMarker(BuildContext context, Duration marker) {
     context.read<TimelineOverlayBloc>().add(TimelineMarkerRemoved(marker));
-  }
-}
-
-class _ControlButton extends StatelessWidget {
-  const _ControlButton({
-    required this.icon,
-    required this.label,
-    required this.semanticLabel,
-    required this.onPressed,
-    this.type = .secondary,
-  });
-
-  final DivineIconName icon;
-  final String label;
-  final String semanticLabel;
-  final VoidCallback? onPressed;
-  final DivineIconButtonType type;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      spacing: 8,
-      children: [
-        DivineIconButton(
-          icon: icon,
-          semanticLabel: semanticLabel,
-          onPressed: onPressed,
-          type: type,
-          size: .small,
-        ),
-        Text(
-          label,
-          style: VineTheme.bodySmallFont(color: context.vineColors.primaryText),
-        ),
-      ],
-    );
   }
 }

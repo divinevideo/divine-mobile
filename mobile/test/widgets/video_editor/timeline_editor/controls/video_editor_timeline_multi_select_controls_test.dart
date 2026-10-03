@@ -2,7 +2,6 @@
 // ABOUTME: Verifies the count label, action gating, and event dispatch.
 
 import 'package:bloc_test/bloc_test.dart';
-import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -14,6 +13,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_action_bar.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_multi_select_controls.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -86,9 +86,9 @@ void main() {
       );
     }
 
-    DivineIconButton buttonWithLabel(WidgetTester tester, String label) {
+    TimelineActionButton buttonWithLabel(WidgetTester tester, String label) {
       return tester
-          .widgetList<DivineIconButton>(find.byType(DivineIconButton))
+          .widgetList<TimelineActionButton>(find.byType(TimelineActionButton))
           .firstWhere((b) => b.semanticLabel == label);
     }
 
@@ -270,9 +270,9 @@ void main() {
       );
     }
 
-    DivineIconButton buttonWithLabel(WidgetTester tester, String label) {
+    TimelineActionButton buttonWithLabel(WidgetTester tester, String label) {
       return tester
-          .widgetList<DivineIconButton>(find.byType(DivineIconButton))
+          .widgetList<TimelineActionButton>(find.byType(TimelineActionButton))
           .firstWhere((b) => b.semanticLabel == label);
     }
 

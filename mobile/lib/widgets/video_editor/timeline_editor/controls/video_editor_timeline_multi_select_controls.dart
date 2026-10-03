@@ -1,4 +1,3 @@
-import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
@@ -101,103 +100,53 @@ class TimelineFrameMultiSelectControls extends StatelessWidget {
     final canDelete = hasSelection && selectedCount < data.frameCount;
     final canReverse = selectedCount >= 2;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: context.vineColors.surfaceContainerHigh,
-        boxShadow: [
-          BoxShadow(
-            // A cast shadow, not a surface: stays dark in both modes.
-            color: VineTheme.backgroundColor.withValues(alpha: 0.4),
-            blurRadius: 8,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(0, 16, 0, 8),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 8,
-            children: [
-              Text(
-                context.l10n.videoEditorMultiSelectCountLabel(selectedCount),
-                style: VineTheme.bodySmallFont(
-                  color: context.vineColors.secondaryText,
-                ),
-              ),
-              Center(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    spacing: 16,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _ControlButton(
-                        icon: .imagesSquare,
-                        label: context
-                            .l10n
-                            .videoEditorStopMotionFramesPerImageButtonLabel,
-                        semanticLabel: context
-                            .l10n
-                            .videoEditorStopMotionFramesPerImageLabel,
-                        onPressed: hasSelection
-                            ? () => editStopMotionFramesHold(
-                                context,
-                                clipId: data.clipId,
-                                frameIndexes: data.selected,
-                              )
-                            : null,
-                        type: .primary,
-                      ),
-                      _ControlButton(
-                        icon: .arrowCounterClockwise,
-                        label: context.l10n.videoEditorReverseLabel,
-                        semanticLabel: context
-                            .l10n
-                            .videoEditorReverseSelectedFramesSemanticLabel,
-                        onPressed: canReverse ? () => _reverse(context) : null,
-                      ),
-                      _ControlButton(
-                        icon: .copy,
-                        label: context.l10n.videoEditorDuplicateLabel,
-                        semanticLabel: context
-                            .l10n
-                            .videoEditorDuplicateSelectedFramesSemanticLabel,
-                        onPressed: hasSelection
-                            ? () => _duplicate(context)
-                            : null,
-                      ),
-                      _ControlButton(
-                        icon: .trash,
-                        label: context.l10n.videoEditorDeleteLabel,
-                        semanticLabel: context
-                            .l10n
-                            .videoEditorDeleteSelectedFramesSemanticLabel,
-                        onPressed: canDelete ? () => _delete(context) : null,
-                        type: .error,
-                      ),
-                      _ControlButton(
-                        icon: .check,
-                        label: context.l10n.videoEditorDoneLabel,
-                        semanticLabel: context
-                            .l10n
-                            .videoEditorMultiSelectDoneSemanticLabel,
-                        onPressed: () => context.read<ClipEditorBloc>().add(
-                          const ClipEditorMultiSelectCancelled(),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+    return TimelineActionBar(
+      countLabel: context.l10n.videoEditorMultiSelectCountLabel(selectedCount),
+      actions: [
+        TimelineActionButton(
+          icon: .imagesSquare,
+          label: context.l10n.videoEditorStopMotionFramesPerImageButtonLabel,
+          semanticLabel: context.l10n.videoEditorStopMotionFramesPerImageLabel,
+          onPressed: hasSelection
+              ? () => editStopMotionFramesHold(
+                  context,
+                  clipId: data.clipId,
+                  frameIndexes: data.selected,
+                )
+              : null,
+          type: .primary,
+        ),
+        TimelineActionButton(
+          icon: .arrowCounterClockwise,
+          label: context.l10n.videoEditorReverseLabel,
+          semanticLabel:
+              context.l10n.videoEditorReverseSelectedFramesSemanticLabel,
+          onPressed: canReverse ? () => _reverse(context) : null,
+        ),
+        TimelineActionButton(
+          icon: .copy,
+          label: context.l10n.videoEditorDuplicateLabel,
+          semanticLabel:
+              context.l10n.videoEditorDuplicateSelectedFramesSemanticLabel,
+          onPressed: hasSelection ? () => _duplicate(context) : null,
+        ),
+        TimelineActionButton(
+          icon: .trash,
+          label: context.l10n.videoEditorDeleteLabel,
+          semanticLabel:
+              context.l10n.videoEditorDeleteSelectedFramesSemanticLabel,
+          onPressed: canDelete ? () => _delete(context) : null,
+          type: .error,
+        ),
+        TimelineActionButton(
+          icon: .check,
+          label: context.l10n.videoEditorDoneLabel,
+          semanticLabel: context.l10n.videoEditorMultiSelectDoneSemanticLabel,
+          onPressed: () => context.read<ClipEditorBloc>().add(
+            const ClipEditorMultiSelectCancelled(),
           ),
         ),
-      ),
+      ],
     );
   }
 
@@ -267,41 +216,5 @@ class TimelineFrameMultiSelectControls extends StatelessWidget {
       ),
     );
     bloc.add(const ClipEditorMultiSelectCancelled());
-  }
-}
-
-class _ControlButton extends StatelessWidget {
-  const _ControlButton({
-    required this.icon,
-    required this.label,
-    required this.semanticLabel,
-    required this.onPressed,
-    this.type = .secondary,
-  });
-
-  final DivineIconName icon;
-  final String label;
-  final String semanticLabel;
-  final VoidCallback? onPressed;
-  final DivineIconButtonType type;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      spacing: 8,
-      children: [
-        DivineIconButton(
-          icon: icon,
-          semanticLabel: semanticLabel,
-          onPressed: onPressed,
-          type: type,
-          size: .small,
-        ),
-        Text(
-          label,
-          style: VineTheme.bodySmallFont(color: context.vineColors.primaryText),
-        ),
-      ],
-    );
   }
 }
