@@ -59,6 +59,7 @@ CrosspostingAvailability crosspostingAvailabilityFor({
 }
 
 bool _isCurrentAccountEligible(AuthState authState, AuthService authService) {
+  if (authState != AuthState.authenticated) return false;
   return isCrosspostingAccountEligible(
     authState: authState,
     publicKeyHex: authService.currentPublicKeyHex,
@@ -69,9 +70,12 @@ bool _isCurrentAccountEligible(AuthState authState, AuthService authService) {
 final crosspostingAvailabilityProvider = Provider<CrosspostingAvailability>((
   ref,
 ) {
-  ref.watch(currentAuthRpcCapabilityProvider);
+  final authState = ref.watch(currentAuthStateProvider);
+  if (authState == AuthState.authenticated) {
+    ref.watch(currentAuthRpcCapabilityProvider);
+  }
   final eligible = _isCurrentAccountEligible(
-    ref.watch(currentAuthStateProvider),
+    authState,
     ref.watch(authServiceProvider),
   );
   // Fail to webOnly, not unavailable: an unresolved lookup must not hide the
