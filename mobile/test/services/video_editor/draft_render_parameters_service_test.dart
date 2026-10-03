@@ -267,7 +267,7 @@ void main() {
       },
     );
 
-    test('falls back to the size the state history was laid out at', () async {
+    test('falls back to the image size even when the editor body grew', () async {
       // `bodySize` only reaches storage through the editor's Done callback, so
       // a draft saved by backing out has layers and no parameters at all.
       // Blocking those would hide Post behind an error for the most ordinary
@@ -279,6 +279,7 @@ void main() {
         editorStateHistory: {
           ..._historyWithTextLayer(),
           'lastRenderedImgSize': {'width': 390.0, 'height': 694.0},
+          'editorBodySize': {'width': 694.0, 'height': 694.0},
         },
       );
 

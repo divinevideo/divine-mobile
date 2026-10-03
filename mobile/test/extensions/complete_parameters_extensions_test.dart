@@ -215,6 +215,15 @@ void main() {
     });
 
     group('diff', () {
+      test('ignores a body-only resize with unchanged image and layers', () {
+        final first = _makeParams().copyWith(bodySize: const Size(221, 393));
+        final resized = first.copyWith(bodySize: const Size(393, 393));
+
+        expect(first.bodySize, isNot(resized.bodySize));
+        expect(first.diff(resized), isEmpty);
+        expect(first.deepEquals(resized), isTrue);
+      });
+
       test('returns empty list for equal instances', () {
         final a = _makeParams(blur: 5, flipX: true);
         final b = _makeParams(blur: 5, flipX: true);
