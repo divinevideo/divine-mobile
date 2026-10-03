@@ -2121,7 +2121,6 @@
     "inboxSupportRowSubtitle": "Бъгове, модерация, проблеми с акаунта — слушаме.",
     "inboxSearchEmptyTitle": "Няма съвпадения",
     "inboxSearchEmptySubtitle": "Опитай с друго име или дума.",
-    "inboxActionMute": "Заглушаване на разговора",
     "inboxActionReport": "Докладвай {displayName}",
     "@inboxActionReport": {
         "placeholders": {
@@ -2158,8 +2157,6 @@
     },
     "inboxRemoveConfirmBodyGroup": "Това премахва груповия разговор от входящата ти кутия. Ако някой пише отново в групата, започва нов разговор.",
     "inboxRemoveConfirmConfirm": "Премахни",
-    "inboxConversationMuted": "Разговорът е заглушен",
-    "inboxConversationUnmuted": "Разговорът е включен",
     "inboxCollabInviteCardTitle": "Покана за сътрудник",
     "@inboxCollabInviteCardTitle": {
         "description": "Header label on a collaborator invite card in the DM conversation."

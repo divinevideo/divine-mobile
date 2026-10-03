@@ -14,7 +14,6 @@ import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/blocs/dm/conversation_actions/conversation_actions_cubit.dart';
 import 'package:openvine/blocs/dm/conversation_list/conversation_list_bloc.dart';
-import 'package:openvine/blocs/dm/conversation_mute/conversation_mute_cubit.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
@@ -540,8 +539,8 @@ class _PinnedSupportRow extends StatelessWidget {
   final String currentUserPubkey;
 
   /// Opens the conversation action sheet. Null while the pin is synthetic:
-  /// there is no row to mute or remove yet, and the confirmation snackbars
-  /// would report work that did not happen.
+  /// there is no row to act on yet, and the confirmation snackbars would
+  /// report work that did not happen.
   final VoidCallback? onLongPress;
 
   @override
@@ -905,11 +904,19 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
             // thread; everywhere else a missing timestamp is a real
             // conversation whose first message has yet to land, and must stay
             // tappable. The synthesised row states it has nothing to open and
-            // goes inert — the sheet's actions (mute, remove conversation) act
-            // on a database row, and one that was never written would only
-            // produce a confirmation snackbar for work that did not happen.
+            // goes inert — removing a conversation acts on a database row, and
+            // one that was never written would only produce a confirmation
+            // snackbar for work that did not happen.
             final isBlockedPlaceholder =
                 showingBlocked && conversation.lastMessageTimestamp == null;
+            // A row whose sheet would be empty offers no long-press at all,
+            // rather than one that opens nothing.
+            final hasActions = ConversationActionsSheet.hasActions(
+              isGroup: conversation.isGroup,
+              canRemove: !context
+                  .read<ConversationActionsCubit>()
+                  .isRemovalProtected(conversation),
+            );
             return ConversationTile(
               conversation: conversation,
               currentUserPubkey: widget.currentUserPubkey,
@@ -920,7 +927,7 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
               onTap: isBlockedPlaceholder
                   ? null
                   : () => _onConversationTapped(context, conversation),
-              onLongPress: isBlockedPlaceholder
+              onLongPress: isBlockedPlaceholder || !hasActions
                   ? null
                   : () =>
                         _onConversationLongPressed(context, ref, conversation),
@@ -1109,9 +1116,6 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
       subject: conversation.subject,
     );
 
-    final muteCubit = context.read<ConversationMuteCubit>();
-    final isMuted = muteCubit.state.isMuted(conversation.id);
-
     final actionsCubit = context.read<ConversationActionsCubit>();
     final isBlocked = actionsCubit.isBlocked(otherPubkey);
     final blockConfirmation = switch ((isBlocked, isVanished)) {
@@ -1126,7 +1130,6 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
         context,
         displayName: displayName,
         isVanished: isVanished,
-        isMuted: isMuted,
         isBlocked: isBlocked,
         // Covers the pinned support row AND an ordinary row, which is the
         // same moderation thread whenever a filter or search drops the pin.
@@ -1137,20 +1140,6 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
       if (action == null || !context.mounted) return;
 
       switch (action) {
-        case ConversationAction.toggleMute:
-          final nowMuted = await muteCubit.toggleMute(conversation.id);
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  nowMuted
-                      ? context.l10n.inboxConversationMuted
-                      : context.l10n.inboxConversationUnmuted,
-                ),
-              ),
-            );
-          }
-
         case ConversationAction.report:
           final reported = await actionsCubit.reportUser(otherPubkey);
           if (context.mounted) {

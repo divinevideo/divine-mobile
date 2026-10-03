@@ -13,7 +13,6 @@ void main() {
   group(ConversationActionsSheet, () {
     Widget buildSubject({
       required ValueChanged<ConversationAction?> onResult,
-      bool isMuted = false,
       bool isBlocked = false,
       String displayName = 'Alice',
       bool isVanished = false,
@@ -32,7 +31,6 @@ void main() {
                     context,
                     displayName: displayName,
                     isVanished: isVanished,
-                    isMuted: isMuted,
                     isBlocked: isBlocked,
                     isGroup: isGroup,
                     canRemove: canRemove,
@@ -48,16 +46,31 @@ void main() {
     }
 
     group('renders', () {
-      testWidgets('renders all four action tiles', (tester) async {
+      testWidgets('renders the three action tiles', (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
         await tester.pumpWidget(buildSubject(onResult: (_) {}));
 
         await tester.tap(find.text('Show sheet'));
         await tester.pumpAndSettle();
 
-        expect(find.text('Mute conversation'), findsOneWidget);
-        expect(find.text('Report Alice'), findsOneWidget);
-        expect(find.text('Block Alice'), findsOneWidget);
-        expect(find.text('Remove conversation'), findsOneWidget);
+        expect(find.text(l10n.inboxActionReport('Alice')), findsOneWidget);
+        expect(find.text(l10n.inboxActionBlock('Alice')), findsOneWidget);
+        expect(find.text(l10n.inboxActionRemove), findsOneWidget);
+      });
+
+      // The mute toggle saved a set nothing read, so it confirmed work that
+      // never happened (#7379). It stays out until muting has an effect.
+      testWidgets('offers no toggle', (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.pumpWidget(buildSubject(onResult: (_) {}));
+
+        await tester.tap(find.text('Show sheet'));
+        await tester.pumpAndSettle();
+
+        // Pinned: the sheet is open, so an absent toggle is not an absent
+        // sheet.
+        expect(find.text(l10n.inboxActionRemove), findsOneWidget);
+        expect(find.byType(Switch), findsNothing);
       });
 
       testWidgets('renders Unblock label when user is blocked', (tester) async {
@@ -130,33 +143,9 @@ void main() {
           findsNothing,
         );
       });
-
-      testWidgets('renders $SwitchListTile for mute toggle', (tester) async {
-        await tester.pumpWidget(buildSubject(onResult: (_) {}));
-
-        await tester.tap(find.text('Show sheet'));
-        await tester.pumpAndSettle();
-
-        expect(find.byType(SwitchListTile), findsOneWidget);
-      });
     });
 
     group('interactions', () {
-      testWidgets('returns toggleMute when mute tile tapped', (tester) async {
-        ConversationAction? result;
-        await tester.pumpWidget(
-          buildSubject(onResult: (action) => result = action),
-        );
-
-        await tester.tap(find.text('Show sheet'));
-        await tester.pumpAndSettle();
-
-        await tester.tap(find.text('Mute conversation'));
-        await tester.pumpAndSettle();
-
-        expect(result, equals(ConversationAction.toggleMute));
-      });
-
       testWidgets('returns report when report tile tapped', (tester) async {
         ConversationAction? result;
         await tester.pumpWidget(
@@ -229,29 +218,38 @@ void main() {
     });
 
     // A group sheet has no way to say WHICH account Report and Block would
-    // act on, so it offers neither. Conversation-scoped actions stay.
-    // Only reachable once BOTH withdrawals apply: a group thread whose
-    // members include a removal-protected account (#8391) loses Report,
-    // Block and Remove, leaving Mute alone. Neither change creates this on
-    // its own.
-    testWidgets('a group with nothing removable keeps only Mute', (
-      tester,
-    ) async {
-      final l10n = lookupAppLocalizations(const Locale('en'));
-      await tester.pumpWidget(
-        buildSubject(onResult: (_) {}, isGroup: true, canRemove: false),
-      );
-      await tester.tap(find.text('Show sheet'));
-      await tester.pumpAndSettle();
+    // act on, so it offers neither, and a removal-protected thread (#8391)
+    // loses Remove. A group holding a protected member therefore has nothing
+    // left, and the caller must not open the sheet for it.
+    group('hasActions', () {
+      test('is false for a group with nothing removable', () {
+        expect(
+          ConversationActionsSheet.hasActions(isGroup: true, canRemove: false),
+          isFalse,
+        );
+      });
 
-      expect(find.text(l10n.inboxActionMute), findsOneWidget);
-      expect(find.text(l10n.inboxActionRemove), findsNothing);
-      expect(find.text(l10n.inboxActionReport('Alice')), findsNothing);
-      expect(find.text(l10n.inboxActionBlock('Alice')), findsNothing);
+      test('is true for a removable group', () {
+        expect(
+          ConversationActionsSheet.hasActions(isGroup: true, canRemove: true),
+          isTrue,
+        );
+      });
+
+      test('is true for a 1:1 whether or not it can be removed', () {
+        expect(
+          ConversationActionsSheet.hasActions(isGroup: false, canRemove: true),
+          isTrue,
+        );
+        expect(
+          ConversationActionsSheet.hasActions(isGroup: false, canRemove: false),
+          isTrue,
+        );
+      });
     });
 
     group('a group conversation', () {
-      testWidgets('offers only the conversation-scoped actions', (
+      testWidgets('offers only the conversation-scoped action', (
         tester,
       ) async {
         final l10n = lookupAppLocalizations(const Locale('en'));
@@ -261,7 +259,6 @@ void main() {
         await tester.tap(find.text('Show sheet'));
         await tester.pumpAndSettle();
 
-        expect(find.text(l10n.inboxActionMute), findsOneWidget);
         expect(find.text(l10n.inboxActionRemove), findsOneWidget);
         expect(find.text(l10n.inboxActionReport('Alice')), findsNothing);
         expect(find.text(l10n.inboxActionBlock('Alice')), findsNothing);

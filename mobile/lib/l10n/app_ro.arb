@@ -1918,7 +1918,6 @@
             }
         }
     },
-    "inboxActionMute": "Dezactivează sunetul conversației",
     "inboxActionRemove": "Elimină conversația",
     "inboxActionReport": "Raportează {displayName}",
     "@inboxActionReport": {
@@ -1968,8 +1967,6 @@
     "@inboxCollabInviteSentStatus": {
         "description": "Shown on the inviter's own outgoing collaborator invite card in their DM with the collaborator. Replaces Accept/Ignore which are recipient-only actions."
     },
-    "inboxConversationMuted": "Conversație dezactivată",
-    "inboxConversationUnmuted": "Conversație reactivată",
     "inboxEmptySubtitle": "Butonul + nu mușcă.",
     "inboxEmptyTitle": "Încă niciun mesaj",
     "inboxLoadErrorTitle": "Mesajele nu s-au încărcat",

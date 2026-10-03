@@ -5829,9 +5829,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get inboxSearchEmptySubtitle => 'Опитай с друго име или дума.';
 
   @override
-  String get inboxActionMute => 'Заглушаване на разговора';
-
-  @override
   String inboxActionReport(String displayName) {
     return 'Докладвай $displayName';
   }
@@ -5863,12 +5860,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get inboxRemoveConfirmConfirm => 'Премахни';
-
-  @override
-  String get inboxConversationMuted => 'Разговорът е заглушен';
-
-  @override
-  String get inboxConversationUnmuted => 'Разговорът е включен';
 
   @override
   String get inboxCollabInviteCardTitle => 'Покана за сътрудник';

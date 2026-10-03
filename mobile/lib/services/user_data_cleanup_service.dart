@@ -5,7 +5,6 @@ import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:creator_sync/creator_sync.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
-import 'package:openvine/blocs/dm/conversation_mute/conversation_mute_cubit.dart';
 import 'package:openvine/constants/terms_acceptance_keys.dart';
 import 'package:openvine/services/account_label_service.dart';
 import 'package:openvine/services/age_verification_service.dart';
@@ -63,6 +62,14 @@ class UserDataCleanupService {
   /// Set by the provider layer which has access to DAOs.
   Future<void> Function(String userPubkey)? onClaimLegacyRows;
 
+  /// The set the withdrawn DM mute toggle stored (#7379).
+  ///
+  /// Nothing writes it any more, but installs that used the toggle still hold
+  /// it, so account cleanup keeps clearing it rather than leaving one
+  /// account's conversation ids for the next.
+  static const String legacyMutedConversationsStorageKey =
+      'muted_conversations';
+
   /// Keys that store user-specific data and should be cleared on identity change.
   /// Device/app settings like relay URLs, analytics preferences are NOT included.
   ///
@@ -105,7 +112,7 @@ class UserDataCleanupService {
     DivineHostFilterService.showDivineHostedOnlyStorageKey,
     VideoProvenanceFilterService.showVerifiedOnlyStorageKey,
     // Direct messages
-    mutedConversationsStorageKey,
+    legacyMutedConversationsStorageKey,
     // Sound library. SavedSoundsService is pubkey-scoped and swept
     // separately; this second store is not scoped and was missed.
     SoundLibraryService.customSoundsStorageKey,

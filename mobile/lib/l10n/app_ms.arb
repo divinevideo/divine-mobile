@@ -2755,7 +2755,6 @@
     "description": "Shown in place of the conversation list when an inbox search matches nothing."
   },
   "inboxSearchEmptySubtitle": "Cuba nama atau perkataan lain.",
-  "inboxActionMute": "Senyapkan perbualan",
   "inboxActionReport": "Laporkan {displayName}",
   "@inboxActionReport": {
     "placeholders": {
@@ -2792,8 +2791,6 @@
   },
   "inboxRemoveConfirmBodyGroup": "Ini mengalih keluar perbualan kumpulan daripada peti masuk anda. Jika sesiapa menghantar mesej lagi dalam kumpulan itu, perbualan baharu akan bermula.",
   "inboxRemoveConfirmConfirm": "Alih Keluar",
-  "inboxConversationMuted": "Perbualan disenyapkan",
-  "inboxConversationUnmuted": "Perbualan dinyahsenyap",
   "inboxCollabInviteCardTitle": "Jemputan kolaborator",
   "@inboxCollabInviteCardTitle": {
     "description": "Header label on a collaborator invite card in the DM conversation."

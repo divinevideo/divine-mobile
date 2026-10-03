@@ -2755,7 +2755,6 @@
     "description": "Shown in place of the conversation list when an inbox search matches nothing."
   },
   "inboxSearchEmptySubtitle": "Thử một tên hoặc từ khác nhé.",
-  "inboxActionMute": "Tắt thông báo cuộc trò chuyện",
   "inboxActionReport": "Báo cáo {displayName}",
   "@inboxActionReport": {
     "placeholders": {
@@ -2792,8 +2791,6 @@
   },
   "inboxRemoveConfirmBodyGroup": "Thao tác này xóa cuộc trò chuyện nhóm khỏi hộp thư đến. Nếu có ai nhắn tin vào nhóm lần nữa, một cuộc trò chuyện mới sẽ bắt đầu.",
   "inboxRemoveConfirmConfirm": "Xóa",
-  "inboxConversationMuted": "Đã tắt thông báo cuộc trò chuyện",
-  "inboxConversationUnmuted": "Đã bật lại thông báo cuộc trò chuyện",
   "inboxCollabInviteCardTitle": "Lời mời cộng tác",
   "@inboxCollabInviteCardTitle": {
     "description": "Header label on a collaborator invite card in the DM conversation."

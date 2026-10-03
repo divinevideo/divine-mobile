@@ -5809,9 +5809,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get inboxSearchEmptySubtitle => 'Subukan ang ibang pangalan o salita.';
 
   @override
-  String get inboxActionMute => 'I-mute ang conversation';
-
-  @override
   String inboxActionReport(String displayName) {
     return 'I-report si $displayName';
   }
@@ -5843,12 +5840,6 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get inboxRemoveConfirmConfirm => 'Alisin';
-
-  @override
-  String get inboxConversationMuted => 'Na-mute ang conversation';
-
-  @override
-  String get inboxConversationUnmuted => 'Na-unmute ang conversation';
 
   @override
   String get inboxCollabInviteCardTitle => 'Imbitasyon bilang collaborator';

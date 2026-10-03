@@ -5710,9 +5710,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get inboxSearchEmptySubtitle => 'Başka bir isim veya kelime dene.';
 
   @override
-  String get inboxActionMute => 'Sohbeti sessize al';
-
-  @override
   String inboxActionReport(String displayName) {
     return '$displayName kullanıcısını bildir';
   }
@@ -5744,12 +5741,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get inboxRemoveConfirmConfirm => 'Kaldır';
-
-  @override
-  String get inboxConversationMuted => 'Sohbet sessize alındı';
-
-  @override
-  String get inboxConversationUnmuted => 'Sohbet sessizden çıkarıldı';
 
   @override
   String get inboxCollabInviteCardTitle => 'İşbirliği daveti';

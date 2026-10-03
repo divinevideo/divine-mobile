@@ -5463,9 +5463,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get inboxSearchEmptySubtitle => '別の名前や言葉で試してください。';
 
   @override
-  String get inboxActionMute => '会話をミュート';
-
-  @override
   String inboxActionReport(String displayName) {
     return '$displayNameを報告';
   }
@@ -5497,12 +5494,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get inboxRemoveConfirmConfirm => '削除';
-
-  @override
-  String get inboxConversationMuted => '会話をミュートしたよ';
-
-  @override
-  String get inboxConversationUnmuted => '会話のミュートを解除したよ';
 
   @override
   String get inboxCollabInviteCardTitle => 'コラボ招待';

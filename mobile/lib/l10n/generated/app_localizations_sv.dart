@@ -5767,9 +5767,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get inboxSearchEmptySubtitle => 'Prova ett annat namn eller ord.';
 
   @override
-  String get inboxActionMute => 'Tysta konversation';
-
-  @override
   String inboxActionReport(String displayName) {
     return 'Rapportera $displayName';
   }
@@ -5801,12 +5798,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get inboxRemoveConfirmConfirm => 'Ta bort';
-
-  @override
-  String get inboxConversationMuted => 'Konversation tystad';
-
-  @override
-  String get inboxConversationUnmuted => 'Konversation inte tystad';
 
   @override
   String get inboxCollabInviteCardTitle => 'Inbjudan att samarbeta';

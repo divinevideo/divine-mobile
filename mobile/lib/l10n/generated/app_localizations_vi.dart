@@ -5744,9 +5744,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get inboxSearchEmptySubtitle => 'Thử một tên hoặc từ khác nhé.';
 
   @override
-  String get inboxActionMute => 'Tắt thông báo cuộc trò chuyện';
-
-  @override
   String inboxActionReport(String displayName) {
     return 'Báo cáo $displayName';
   }
@@ -5778,12 +5775,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get inboxRemoveConfirmConfirm => 'Xóa';
-
-  @override
-  String get inboxConversationMuted => 'Đã tắt thông báo cuộc trò chuyện';
-
-  @override
-  String get inboxConversationUnmuted => 'Đã bật lại thông báo cuộc trò chuyện';
 
   @override
   String get inboxCollabInviteCardTitle => 'Lời mời cộng tác';
