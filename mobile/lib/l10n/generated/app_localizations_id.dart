@@ -12717,4 +12717,65 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => 'Aktifkan otomatis';
+
+  @override
+  String get settingsAccountTitle => 'Akun';
+
+  @override
+  String get settingsWhatYouSeeTitle => 'Yang Anda lihat';
+
+  @override
+  String get settingsCreateShareTitle => 'Buat dan bagikan';
+
+  @override
+  String get settingsPrivacySafetyTitle => 'Privasi dan keamanan';
+
+  @override
+  String get settingsAppPreferencesTitle => 'Preferensi aplikasi';
+
+  @override
+  String get settingsConnectionsTitle => 'Koneksi';
+
+  @override
+  String get settingsHelpAboutTitle => 'Bantuan dan tentang Divine';
+
+  @override
+  String get settingsCreatorToolsSection => 'Alat kreator';
+
+  @override
+  String get settingsNostrNetworkSection => 'Jaringan Nostr';
+
+  @override
+  String get settingsAboutDivineSection => 'Tentang Divine';
+
+  @override
+  String get settingsAdvancedSection => 'Lanjutan';
+
+  @override
+  String get settingsAccountSubtitle =>
+      'Masuk, identitas, kunci, dan data akun';
+
+  @override
+  String get settingsWhatYouSeeSubtitle =>
+      'Bahasa, teks, tampilan video, dan filter';
+
+  @override
+  String get settingsCreateShareSubtitle =>
+      'Perekaman, penerbitan, dan alat kreator';
+
+  @override
+  String get settingsPrivacySafetySubtitle =>
+      'Data penggunaan, moderasi, dan akun yang diblokir';
+
+  @override
+  String get settingsAppPreferencesSubtitle =>
+      'Tampilan, bahasa, penyimpanan, dan opsi lanjutan';
+
+  @override
+  String get settingsConnectionsSubtitle =>
+      'Aplikasi, relay, server media, dan izin';
+
+  @override
+  String get settingsHelpAboutSubtitle =>
+      'Dukungan, informasi hukum, dan detail aplikasi';
 }

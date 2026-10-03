@@ -12919,4 +12919,65 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => 'I-on ang awtomatiko';
+
+  @override
+  String get settingsAccountTitle => 'Account';
+
+  @override
+  String get settingsWhatYouSeeTitle => 'Ang nakikita mo';
+
+  @override
+  String get settingsCreateShareTitle => 'Gumawa at magbahagi';
+
+  @override
+  String get settingsPrivacySafetyTitle => 'Privacy at kaligtasan';
+
+  @override
+  String get settingsAppPreferencesTitle => 'Mga kagustuhan sa app';
+
+  @override
+  String get settingsConnectionsTitle => 'Mga koneksyon';
+
+  @override
+  String get settingsHelpAboutTitle => 'Tulong at tungkol sa Divine';
+
+  @override
+  String get settingsCreatorToolsSection => 'Mga tool ng creator';
+
+  @override
+  String get settingsNostrNetworkSection => 'Nostr network';
+
+  @override
+  String get settingsAboutDivineSection => 'Tungkol sa Divine';
+
+  @override
+  String get settingsAdvancedSection => 'Advanced';
+
+  @override
+  String get settingsAccountSubtitle =>
+      'Pag-sign in, pagkakakilanlan, mga key, at data ng account';
+
+  @override
+  String get settingsWhatYouSeeSubtitle =>
+      'Wika, caption, ayos ng video, at filter';
+
+  @override
+  String get settingsCreateShareSubtitle =>
+      'Pag-record, pag-publish, at mga tool ng creator';
+
+  @override
+  String get settingsPrivacySafetySubtitle =>
+      'Data ng paggamit, moderation, at mga naka-block na account';
+
+  @override
+  String get settingsAppPreferencesSubtitle =>
+      'Hitsura, wika, storage, at advanced na opsyon';
+
+  @override
+  String get settingsConnectionsSubtitle =>
+      'Mga app, relay, media server, at pahintulot';
+
+  @override
+  String get settingsHelpAboutSubtitle =>
+      'Suporta, legal na impormasyon, at detalye ng app';
 }

@@ -13149,4 +13149,64 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => 'Turn on automatic';
+
+  @override
+  String get settingsAccountTitle => 'ఖాతా';
+
+  @override
+  String get settingsWhatYouSeeTitle => 'మీరు చూసేవి';
+
+  @override
+  String get settingsCreateShareTitle => 'సృష్టించండి మరియు పంచుకోండి';
+
+  @override
+  String get settingsPrivacySafetyTitle => 'గోప్యత మరియు భద్రత';
+
+  @override
+  String get settingsAppPreferencesTitle => 'యాప్ ప్రాధాన్యతలు';
+
+  @override
+  String get settingsConnectionsTitle => 'కనెక్షన్‌లు';
+
+  @override
+  String get settingsHelpAboutTitle => 'సహాయం మరియు Divine గురించి';
+
+  @override
+  String get settingsCreatorToolsSection => 'సృష్టికర్త సాధనాలు';
+
+  @override
+  String get settingsNostrNetworkSection => 'Nostr నెట్‌వర్క్';
+
+  @override
+  String get settingsAboutDivineSection => 'Divine గురించి';
+
+  @override
+  String get settingsAdvancedSection => 'అధునాతన';
+
+  @override
+  String get settingsAccountSubtitle => 'సైన్ ఇన్, గుర్తింపు, కీలు, ఖాతా డేటా';
+
+  @override
+  String get settingsWhatYouSeeSubtitle =>
+      'భాష, శీర్షికలు, వీడియో అమరిక, ఫిల్టర్లు';
+
+  @override
+  String get settingsCreateShareSubtitle =>
+      'రికార్డింగ్, ప్రచురణ, సృష్టికర్త సాధనాలు';
+
+  @override
+  String get settingsPrivacySafetySubtitle =>
+      'వినియోగ డేటా, నియంత్రణ, బ్లాక్ చేసిన ఖాతాలు';
+
+  @override
+  String get settingsAppPreferencesSubtitle =>
+      'రూపం, భాష, నిల్వ, అధునాతన ఎంపికలు';
+
+  @override
+  String get settingsConnectionsSubtitle =>
+      'యాప్‌లు, రిలేలు, మీడియా సర్వర్లు, అనుమతులు';
+
+  @override
+  String get settingsHelpAboutSubtitle =>
+      'సహాయం, చట్టపరమైన సమాచారం, యాప్ వివరాలు';
 }

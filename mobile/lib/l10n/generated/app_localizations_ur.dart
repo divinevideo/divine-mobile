@@ -12800,4 +12800,65 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => 'خودکار آن کریں';
+
+  @override
+  String get settingsAccountTitle => 'اکاؤنٹ';
+
+  @override
+  String get settingsWhatYouSeeTitle => 'آپ کیا دیکھتے ہیں';
+
+  @override
+  String get settingsCreateShareTitle => 'بنائیں اور شیئر کریں';
+
+  @override
+  String get settingsPrivacySafetyTitle => 'رازداری اور حفاظت';
+
+  @override
+  String get settingsAppPreferencesTitle => 'ایپ کی ترجیحات';
+
+  @override
+  String get settingsConnectionsTitle => 'کنکشنز';
+
+  @override
+  String get settingsHelpAboutTitle => 'مدد اور Divine کے بارے میں';
+
+  @override
+  String get settingsCreatorToolsSection => 'تخلیق کار کے ٹولز';
+
+  @override
+  String get settingsNostrNetworkSection => 'Nostr نیٹ ورک';
+
+  @override
+  String get settingsAboutDivineSection => 'Divine کے بارے میں';
+
+  @override
+  String get settingsAdvancedSection => 'اعلیٰ';
+
+  @override
+  String get settingsAccountSubtitle =>
+      'سائن ان، شناخت، کلیدیں اور اکاؤنٹ کا ڈیٹا';
+
+  @override
+  String get settingsWhatYouSeeSubtitle =>
+      'زبان، کیپشنز، ویڈیو لے آؤٹ اور فلٹرز';
+
+  @override
+  String get settingsCreateShareSubtitle =>
+      'ریکارڈنگ، اشاعت اور تخلیق کار کے ٹولز';
+
+  @override
+  String get settingsPrivacySafetySubtitle =>
+      'استعمال کا ڈیٹا، نگرانی اور بلاک شدہ اکاؤنٹس';
+
+  @override
+  String get settingsAppPreferencesSubtitle =>
+      'ظاہری شکل، زبان، اسٹوریج اور اعلیٰ اختیارات';
+
+  @override
+  String get settingsConnectionsSubtitle =>
+      'ایپس، ریلے، میڈیا سرورز اور اجازتیں';
+
+  @override
+  String get settingsHelpAboutSubtitle =>
+      'مدد، قانونی معلومات اور ایپ کی تفصیلات';
 }

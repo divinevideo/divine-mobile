@@ -107,7 +107,9 @@ class CreatingSettingsScreen extends ConsumerWidget {
     final blueskyEnabled = ref.watch(
       isFeatureEnabledProvider(FeatureFlag.blueskyPublishing),
     );
-    final crosspostingEnabled = ref.watch(crosspostingEligibleProvider);
+    final crosspostingEnabled =
+        ref.watch(crosspostingAvailabilityProvider) !=
+        CrosspostingAvailability.unavailable;
     return _SettingsCategoryScaffold(
       title: context.l10n.settingsCreateShareTitle,
       children: [

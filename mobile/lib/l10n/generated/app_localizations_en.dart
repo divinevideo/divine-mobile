@@ -12903,4 +12903,65 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => 'Turn on automatic';
+
+  @override
+  String get settingsAccountTitle => 'Account';
+
+  @override
+  String get settingsWhatYouSeeTitle => 'What you see';
+
+  @override
+  String get settingsCreateShareTitle => 'Create & share';
+
+  @override
+  String get settingsPrivacySafetyTitle => 'Privacy & safety';
+
+  @override
+  String get settingsAppPreferencesTitle => 'App preferences';
+
+  @override
+  String get settingsConnectionsTitle => 'Connections';
+
+  @override
+  String get settingsHelpAboutTitle => 'Help & About Divine';
+
+  @override
+  String get settingsCreatorToolsSection => 'Creator tools';
+
+  @override
+  String get settingsNostrNetworkSection => 'Nostr network';
+
+  @override
+  String get settingsAboutDivineSection => 'About Divine';
+
+  @override
+  String get settingsAdvancedSection => 'Advanced';
+
+  @override
+  String get settingsAccountSubtitle =>
+      'Sign-in, identity, keys, and account data';
+
+  @override
+  String get settingsWhatYouSeeSubtitle =>
+      'Language, captions, video layout, and filters';
+
+  @override
+  String get settingsCreateShareSubtitle =>
+      'Recording, publishing, and creator tools';
+
+  @override
+  String get settingsPrivacySafetySubtitle =>
+      'Usage data, moderation, and blocked accounts';
+
+  @override
+  String get settingsAppPreferencesSubtitle =>
+      'Appearance, language, storage, and advanced options';
+
+  @override
+  String get settingsConnectionsSubtitle =>
+      'Apps, relays, media servers, and permissions';
+
+  @override
+  String get settingsHelpAboutSubtitle =>
+      'Support, legal information, and app details';
 }
