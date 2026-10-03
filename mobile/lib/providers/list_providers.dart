@@ -252,11 +252,13 @@ Stream<List<VideoEvent>> _userListMemberVideos(
     return;
   }
 
-  final seenIds = fetched.map((video) => video.id).toSet();
+  // Keyed like the repository's own merge: an edit keeps the d-tag and mints
+  // a new event id, so the pool can hold the revision the fetch replaced.
+  final seenKeys = fetched.map((video) => video.feedDedupKey).toSet();
   yield _newestFirst([
     ...fetched,
     for (final video in seeded)
-      if (seenIds.add(video.id)) video,
+      if (seenKeys.add(video.feedDedupKey)) video,
   ]);
 }
 
