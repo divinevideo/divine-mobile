@@ -141,14 +141,43 @@ class CheckBranchMergeableTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("before merging", result.stdout)
 
-    def test_path_extraction_failures_keep_conflicts_blocking(self):
+    def rename_on_base(self, branch_edits_first):
+        # Base renames old.txt to new.txt and edits line 5, so a conflict over
+        # that line is reported as new.txt while the branch still edits old.txt.
+        lines = "".join(f"line {n}\n" for n in range(1, 11))
+        commit(self.repo, "old.txt", lines)
+        git(self.repo, "branch", "-f", "base")
+        baseline = self.make_conflict()
+        if branch_edits_first:
+            commit(self.repo, "old.txt", lines.replace("line 5\n", "feature 5\n"))
+            baseline = git(self.repo, "rev-parse", "HEAD").stdout.strip()
+        git(self.repo, "checkout", "-q", "base")
+        git(self.repo, "mv", "old.txt", "new.txt")
+        commit(self.repo, "new.txt", lines.replace("line 5\n", "base 5\n"))
+        git(self.repo, "checkout", "-q", "feature")
+        commit(self.repo, "old.txt", lines.replace("line 5\n", "review 5\n"))
+        return baseline
+
+    def test_push_editing_a_conflict_the_base_renamed_blocks(self):
+        baseline = self.rename_on_base(branch_edits_first=True)
+        result = self.run_check(pushed_from=baseline)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+
+    def test_push_creating_a_conflict_under_a_name_the_base_renamed_blocks(self):
+        # Before the push only shared.txt conflicts; the push adds new.txt.
+        baseline = self.rename_on_base(branch_edits_first=False)
+        result = self.run_check(pushed_from=baseline)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+
+    def test_merge_listing_failures_keep_conflicts_blocking(self):
         baseline = self.make_conflict()
         commit(self.repo, "unrelated.txt", "review fix\n")
         bindir = Path(self._tmp.name) / "bin"
         bindir.mkdir()
         real_git = shutil.which("git")
         wrapper = bindir / "git"
-        for operation in ("diff", "--name-only"):
+        # --no-messages fails every entry listing; --name-only only the names.
+        for operation in ("--no-messages", "--name-only"):
             with self.subTest(operation=operation):
                 wrapper.write_text(
                     "#!/bin/bash\n"

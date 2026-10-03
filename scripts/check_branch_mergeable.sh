@@ -30,6 +30,14 @@ PUSHED_FROM="${2:-}"
 PUSHED_TIP="${3:-HEAD}"
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 
+# Prints the conflicted-file section of merging the given tip into BASE_REF,
+# one C-quoted line per entry, and returns merge-tree's status (1: conflicts).
+conflicted_entries() {
+    local tip="$1"
+    shift
+    git -C "$REPO_ROOT" merge-tree --write-tree --no-messages "$@" "$BASE_REF" "$tip" | sed 1d
+}
+
 if ! git -C "$REPO_ROOT" rev-parse --verify --quiet "${PUSHED_TIP}^{commit}" >/dev/null; then
     echo "Cannot resolve pushed tip: $PUSHED_TIP"
     exit 1
@@ -57,32 +65,24 @@ case "$status" in
         echo "No merge conflicts with ${BASE_REF#origin/}"
         ;;
     1)
-        # Files hold NUL-delimited output: shell variables cannot preserve NULs.
-        # Extraction failures keep the genuine-conflict failure below.
+        # The push is outside the conflicts when merging before and after it
+        # gives the same conflicted entries: the same paths, with the same mode
+        # and blob at every stage. Pushed file names are not enough, because a
+        # conflict on a file the base renamed is reported under the base's new
+        # name while the branch edits the old one. Any failure keeps the block.
         if [ -n "$PUSHED_FROM" ] && git -C "$REPO_ROOT" rev-parse --verify --quiet "${PUSHED_FROM}^{commit}" >/dev/null; then
-            paths_dir=$(mktemp -d) || exit 1
-            trap 'rm -rf "$paths_dir"' EXIT
-            git -C "$REPO_ROOT" merge-tree --write-tree --name-only --no-messages -z "$BASE_REF" "$PUSHED_TIP" > "$paths_dir/conflicts"
-            paths_status=$?
-            if [ "$paths_status" -eq 1 ] && git -C "$REPO_ROOT" diff --no-renames --name-only -z "$PUSHED_FROM" "$PUSHED_TIP" > "$paths_dir/pushed"; then
-                conflicts=()
-                overlap=false
-                # The first NUL-delimited field is the merge tree OID.
-                {
-                    IFS= read -r -d '' tree_oid
-                    while IFS= read -r -d '' path; do
-                        conflicts+=("$path")
-                        while IFS= read -r -d '' pushed_path; do
-                            if [ "$path" = "$pushed_path" ]; then overlap=true; fi
-                        done < "$paths_dir/pushed"
-                    done
-                } < "$paths_dir/conflicts"
-                if [ "${#conflicts[@]}" -gt 0 ] && [ "$overlap" = false ]; then
-                    echo "Warning: branch has merge conflicts with ${BASE_REF#origin/}, outside the pushed changes:"
-                    printf '  %q\n' "${conflicts[@]}"
-                    echo "Continuing; resolve these conflicts before merging or final handoff."
-                    exit 0
-                fi
+            before=$(conflicted_entries "$PUSHED_FROM")
+            before_status=$?
+            after=$(conflicted_entries "$PUSHED_TIP")
+            after_status=$?
+            conflicts=$(conflicted_entries "$PUSHED_TIP" --name-only)
+            conflicts_status=$?
+            if [ "$before_status" -eq 1 ] && [ "$after_status" -eq 1 ] \
+                && [ "$conflicts_status" -eq 1 ] && [ "$before" = "$after" ]; then
+                echo "Warning: branch has merge conflicts with ${BASE_REF#origin/}, outside the pushed changes:"
+                printf '%s\n' "$conflicts" | sed 's/^/  /'
+                echo "Continuing; resolve these conflicts before merging or final handoff."
+                exit 0
             fi
         fi
         echo ""
