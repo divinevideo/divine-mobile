@@ -982,6 +982,23 @@ class DmMessageReactions extends Table {
   /// `deletion_refused` (automatic retries stopped, retained for user retry).
   TextColumn get publishStatus => text().nullable().named('publish_status')();
 
+  /// JSON-encoded list of the pubkeys this reaction, and its kind-5 removal,
+  /// are gift-wrapped to: normally every participant of the conversation it
+  /// was queued in except the owner. A superseded reaction that had none
+  /// records its own conversation's participants plus the replacing
+  /// reaction's recipients.
+  ///
+  /// A retry or a removal replays this set instead of re-reading
+  /// `conversations`, whose rows an account switch deletes while the queued
+  /// rows here are kept, set included (#7880). A self-wrap echo that re-files
+  /// the row under another conversation leaves the set as it is.
+  ///
+  /// NULL means the set is not established: a received reaction, a row
+  /// queued before schema v20, a row queued while its recipients could not
+  /// be established, or a row the group-recovery pass has moved.
+  TextColumn get recipientPubkeys =>
+      text().nullable().named('recipient_pubkeys')();
+
   @override
   Set<Column> get primaryKey => {id, ownerPubkey};
 

@@ -32,13 +32,36 @@ abstract class DmReactionsRepositoryReportableSites {
   /// the next app start picks up the rescue sweep.
   static const String publishSwapPlaceholder = 'publish.swapPlaceholder';
 
-  /// `removeOwn`: soft-delete update threw. The reaction was already
-  /// kind-5 deleted on the wire — local state will eventually reconcile
-  /// from the relay echo.
+  /// `removeOwn`: recording the removal (the soft-delete and its stored
+  /// kind-5) threw. Nothing was sent, and the reaction stays as it was.
   static const String removeOwnSoftDelete = 'removeOwn.softDelete';
 
   /// `publish`: recording the durable `deletion_pending` row for a superseded
   /// prior reaction (cap-at-one emoji swap) threw. The new reaction still
   /// publishes; the superseded emoji's kind-5 removal is the part at risk.
   static const String publishSupersedeDeletion = 'publish.supersedeDeletion';
+
+  /// `publish`: reading a superseded prior reaction's row, to see who it was
+  /// sent to, threw. Its removal is recorded, if that write succeeds, and
+  /// held for the retry sweep, which reads the row again.
+  static const String publishSupersedeRecipients =
+      'publish.supersedeRecipients';
+
+  /// Recording a queue row's resolved gift-wrap recipients threw. A send in
+  /// progress still goes to the resolved set; the row stays without one and
+  /// is resolved again on its next attempt, which for a superseded reaction's
+  /// removal no longer includes the replacing reaction's recipients.
+  static const String wrapRecipientsStore = 'wrapRecipients.store';
+
+  /// Reading the conversation a reaction belongs to, for its participants,
+  /// threw. Nothing is concluded from the failure: the recipients come from
+  /// what can still be proven, and otherwise the send is held. A superseded
+  /// reaction's removal is held in that case too, with nothing recorded.
+  static const String wrapRecipientsConversationRead =
+      'wrapRecipients.conversationRead';
+
+  /// Reading the reacted message, for the room it names, threw. The send is
+  /// held, with nothing recorded, and looked at again on its next attempt.
+  static const String wrapRecipientsTargetMessageRead =
+      'wrapRecipients.targetMessageRead';
 }

@@ -44,7 +44,9 @@ class ConversationReactionToggled extends ConversationReactionsEvent {
   /// Rumor id of the message being reacted to.
   final String messageId;
 
-  /// Author of the target message — receiver of the reaction wrap.
+  /// Author of the target message. It does not choose the recipients: the
+  /// repository sends the reaction to every other participant of the
+  /// conversation.
   final String messageAuthorPubkey;
 
   /// Reaction emoji codepoint (or NIP-30 shortcode).
@@ -81,7 +83,9 @@ class ConversationReactionSet extends ConversationReactionsEvent {
   /// Rumor id of the message being reacted to.
   final String messageId;
 
-  /// Author of the target message — receiver of the reaction wrap.
+  /// Author of the target message. It does not choose the recipients: the
+  /// repository sends the reaction to every other participant of the
+  /// conversation.
   final String messageAuthorPubkey;
 
   /// Reaction emoji codepoint (or NIP-30 shortcode).
@@ -112,7 +116,8 @@ class ConversationReactionRetryRequested extends ConversationReactionsEvent {
   /// Target message id (used to key the pending map).
   final String messageId;
 
-  /// Target message author (recipient of the wrap).
+  /// Author of the target message. Recipients come from the reaction's row;
+  /// the author only helps prove a 1:1 when the row stores none.
   final String messageAuthorPubkey;
 
   /// Reaction emoji (used to key the pending map).
@@ -134,7 +139,8 @@ class ConversationReactionRemovalRetryRequested
   /// Reaction rumor id targeted by the stored kind-5.
   final String rumorId;
 
-  /// Target message author used to resolve the wrap recipients.
+  /// Author of the target message. Recipients come from the reaction's row;
+  /// the author only helps prove a 1:1 when the row stores none.
   final String messageAuthorPubkey;
 
   @override

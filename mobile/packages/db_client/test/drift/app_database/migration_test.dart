@@ -28,14 +28,14 @@ void main() {
   });
 
   group('schema validation', () {
-    test('current schema version is 19', () {
-      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 19);
+    test('current schema version is 20', () {
+      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 20);
     });
 
-    test('v19 schema is valid and up to date', () async {
-      final schema = await verifier.schemaAt(19);
+    test('v20 schema is valid and up to date', () async {
+      final schema = await verifier.schemaAt(20);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 19);
+      await verifier.migrateAndValidate(db, 20);
       await db.close();
     });
 
@@ -415,10 +415,10 @@ void main() {
       },
     );
 
-    test('v8 schema migrates to v19', () async {
+    test('v8 schema migrates to v20', () async {
       final schema = await verifier.schemaAt(8);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 19);
+      await verifier.migrateAndValidate(db, 20);
       const conversationId =
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -440,47 +440,90 @@ void main() {
       await db.close();
     });
 
-    test('v7 schema migrates to v19', () async {
+    test('v7 schema migrates to v20', () async {
       final schema = await verifier.schemaAt(7);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 19);
+      await verifier.migrateAndValidate(db, 20);
       await db.close();
     });
 
-    test('v6 schema migrates to v19', () async {
+    test('v6 schema migrates to v20', () async {
       final schema = await verifier.schemaAt(6);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 19);
+      await verifier.migrateAndValidate(db, 20);
       await db.close();
     });
 
-    test('v5 schema migrates to v19', () async {
+    test('v5 schema migrates to v20', () async {
       final schema = await verifier.schemaAt(5);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 19);
+      await verifier.migrateAndValidate(db, 20);
       await db.close();
     });
 
-    test('v3 schema migrates to v19', () async {
+    test('v3 schema migrates to v20', () async {
       final schema = await verifier.schemaAt(3);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 19);
+      await verifier.migrateAndValidate(db, 20);
       await db.close();
     });
 
-    test('v2 schema migrates to v19', () async {
+    test('v2 schema migrates to v20', () async {
       final schema = await verifier.schemaAt(2);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 19);
+      await verifier.migrateAndValidate(db, 20);
       await db.close();
     });
 
-    test('legacy v1 schema migrates to v19', () async {
+    test('legacy v1 schema migrates to v20', () async {
       final schema = await verifier.schemaAt(1);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 19);
+      await verifier.migrateAndValidate(db, 20);
       await db.close();
     });
+
+    test(
+      'a v19 queued reaction survives the upgrade with no stored recipients',
+      () async {
+        // #7880. `recipient_pubkeys` is additive and nullable: a reaction an
+        // older build queued must arrive intact, and NULL is what tells the
+        // repository it still has to establish who the reaction is for.
+        final schema = await verifier.schemaAt(19);
+        schema.rawDatabase.execute(
+          'INSERT INTO dm_message_reactions '
+          '(id, conversation_id, target_message_id, target_message_author, '
+          'reactor_pubkey, emoji, created_at, owner_pubkey, rumor_event_json, '
+          'publish_status) '
+          'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [
+            'a' * 64,
+            'b' * 64,
+            'c' * 64,
+            'd' * 64,
+            'e' * 64,
+            '🔥',
+            1700000000,
+            'e' * 64,
+            '{"kind":7}',
+            'failed',
+          ],
+        );
+
+        final db = AppDatabase(schema.newConnection());
+        await verifier.migrateAndValidate(db, 20);
+
+        final row = await db
+            .customSelect(
+              'SELECT publish_status, rumor_event_json, recipient_pubkeys '
+              'FROM dm_message_reactions',
+            )
+            .getSingle();
+        expect(row.read<String>('publish_status'), equals('failed'));
+        expect(row.read<String?>('rumor_event_json'), equals('{"kind":7}'));
+        expect(row.read<String?>('recipient_pubkeys'), isNull);
+        await db.close();
+      },
+    );
 
     test('migrates v2 profile statistic follower timestamps', () async {
       final schema = await verifier.schemaAt(2);
@@ -506,7 +549,7 @@ void main() {
       );
 
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 19);
+      await verifier.migrateAndValidate(db, 20);
 
       final rows = await db
           .customSelect(
@@ -565,7 +608,7 @@ void main() {
         );
 
         final db = AppDatabase(schema.newConnection());
-        await verifier.migrateAndValidate(db, 19);
+        await verifier.migrateAndValidate(db, 20);
 
         final migrated = await db.clipsDao.getClipById('clip-1');
         expect(migrated?.id, 'clip-1');
@@ -586,7 +629,7 @@ void main() {
         );
 
         final db = AppDatabase(schema.newConnection());
-        await verifier.migrateAndValidate(db, 19);
+        await verifier.migrateAndValidate(db, 20);
 
         final migrated = await db.clipsDao.getClipById('clip-1');
         expect(migrated?.id, 'clip-1');
@@ -726,7 +769,7 @@ void main() {
       );
 
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 19);
+      await verifier.migrateAndValidate(db, 20);
 
       final row = await db
           .customSelect(
@@ -781,7 +824,7 @@ void main() {
         );
 
         final db = AppDatabase(schema.newConnection());
-        await verifier.migrateAndValidate(db, 19);
+        await verifier.migrateAndValidate(db, 20);
 
         final row = await db
             .customSelect(
@@ -858,7 +901,7 @@ void main() {
 
       final schema = await verifier.schemaAt(11);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 19);
+      await verifier.migrateAndValidate(db, 20);
 
       final rows = await db
           .customSelect("SELECT name FROM sqlite_master WHERE type = 'index'")
@@ -948,7 +991,7 @@ void main() {
 
       final schema = await verifier.schemaAt(6);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 19);
+      await verifier.migrateAndValidate(db, 20);
 
       final rows = await db
           .customSelect("SELECT name FROM sqlite_master WHERE type = 'index'")

@@ -101,6 +101,56 @@ void main() {
       );
     });
 
+    group('DM reaction recipient schema recovery', () {
+      test(
+        'restores recipient_pubkeys without losing a queued reaction, and the '
+        're-added column is writable',
+        () async {
+          const reactionId =
+              'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
+              'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+          const recipients =
+              '["dddddddddddddddddddddddddddddddd'
+              'dddddddddddddddddddddddddddddddd"]';
+          await database.dmReactionsDao.insertOwnReactionSuperseding(
+            placeholderId: reactionId,
+            conversationId: 'b' * 64,
+            targetMessageId: 'c' * 64,
+            targetMessageAuthor: 'd' * 64,
+            reactorPubkey: testPubkey,
+            emoji: '🔥',
+            createdAt: 1700000000,
+            ownerPubkey: testPubkey,
+            rumorEventJson: '{"kind":7}',
+          );
+          await database.customStatement(
+            'ALTER TABLE dm_message_reactions DROP COLUMN recipient_pubkeys',
+          );
+          await database.close();
+
+          database = AppDatabase.test(NativeDatabase(File(tempDbPath)));
+
+          // A read cannot tell a restored column from a missing one: Drift maps
+          // an absent nullable column to null. A write can — it names the
+          // column, so it throws unless the recovery re-added it.
+          final written = await database.dmReactionsDao
+              .setRecipientPubkeysIfMissing(
+                id: reactionId,
+                ownerPubkey: testPubkey,
+                conversationId: 'b' * 64,
+                recipientPubkeys: recipients,
+              );
+          final row = await database.dmReactionsDao.getById(
+            id: reactionId,
+            ownerPubkey: testPubkey,
+          );
+          expect(written, equals(1));
+          expect(row!.rumorEventJson, equals('{"kind":7}'));
+          expect(row.recipientPubkeys, equals(recipients));
+        },
+      );
+    });
+
     group('runStartupCleanup', () {
       test('deletes expired nostr events', () async {
         final dao = database.nostrEventsDao;

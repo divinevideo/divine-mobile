@@ -37,7 +37,9 @@ class DmReplyContext extends Equatable {
   /// thread under it and quick reactions target it.
   final String sharedReelMessageId;
 
-  /// Author of the shared-reel message — the reaction wrap recipient.
+  /// Author of the shared-reel message. It does not choose who a quick
+  /// reaction is sent to: that is every other participant of
+  /// [conversationId].
   final String messageAuthorPubkey;
 
   /// Display name used in the composer hint (peer name or group subject).
