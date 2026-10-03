@@ -38,6 +38,26 @@ void main() {
 
     group('load', () {
       blocTest<BadgeVideosCubit, BadgeVideosState>(
+        'uses a supplied holder snapshot without reading the badge again',
+        setUp: () {
+          when(() => pager.loadMore()).thenAnswer((_) async => [_video('a')]);
+          when(() => pager.hasMore).thenReturn(false);
+        },
+        build: buildCubit,
+        act: (cubit) => cubit.loadForHolders({'holder'}),
+        expect: () => [
+          const BadgeVideosState(status: BadgeVideosStatus.loading),
+          BadgeVideosState(
+            status: BadgeVideosStatus.loaded,
+            videos: [_video('a')],
+          ),
+        ],
+        verify: (_) => verifyNever(
+          () => badgeRepository.loadAcceptedHolders(_coordinate),
+        ),
+      );
+
+      blocTest<BadgeVideosCubit, BadgeVideosState>(
         'loads the first page of holder videos',
         setUp: () {
           when(() => pager.loadMore()).thenAnswer((_) async => [_video('a')]);
