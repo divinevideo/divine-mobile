@@ -354,25 +354,25 @@ class AppLocalizationsSv extends AppLocalizations {
       'Behåll flöden i klassiskt kvadratiskt format';
 
   @override
-  String get generalSettingsShowTotalLoops => 'Show total loops';
+  String get generalSettingsShowTotalLoops => 'Visa totalt antal loopar';
 
   @override
   String get generalSettingsShowTotalLoopsSubtitle =>
-      'The creator\'s loop count across all their videos';
+      'Kreatörens antal loopar för alla sina videor';
 
   @override
-  String get generalSettingsShowVideoLoops => 'Show video loops';
+  String get generalSettingsShowVideoLoops => 'Visa videoloopar';
 
   @override
   String get generalSettingsShowVideoLoopsSubtitle =>
-      'How many times the video you\'re watching has looped';
+      'Hur många gånger videon du tittar på har loopat';
 
   @override
-  String get generalSettingsShowPublishedDate => 'Show publish date';
+  String get generalSettingsShowPublishedDate => 'Visa publiceringsdatum';
 
   @override
   String get generalSettingsShowPublishedDateSubtitle =>
-      'When the video you\'re watching was published';
+      'När videon du tittar på publicerades';
 
   @override
   String get contentPreferencesTitle => 'Innehållsinställningar';
@@ -2133,7 +2133,7 @@ class AppLocalizationsSv extends AppLocalizations {
     String comments,
     String reposts,
   ) {
-    return '$likes likes · $comments comments · $reposts reposts';
+    return '$likes gillamarkeringar · $comments kommentarer · $reposts återpubliceringar';
   }
 
   @override
@@ -2936,11 +2936,11 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get analyticsServerUnavailable =>
-      'Creator analytics is having server trouble. Please try again in a moment.';
+      'Kreatörsstatistiken har serverproblem. Försök igen om en stund.';
 
   @override
   String get analyticsConnectionIssue =>
-      'Creator analytics could not connect. Check your connection and try again.';
+      'Kreatörsstatistiken kunde inte ansluta. Kontrollera din anslutning och försök igen.';
 
   @override
   String get analyticsSignInRequired =>
@@ -3101,21 +3101,21 @@ class AppLocalizationsSv extends AppLocalizations {
       'Publikkälla/geografi/tidsuppdelningar kommer att fyllas i när Funnelcake lägger till publikstatistikslutpunkter.';
 
   @override
-  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+  String get analyticsSocialCountsInfoLabel => 'Om ditt antal följare';
 
   @override
-  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+  String get analyticsSocialCountsInfoTitle => 'Om ditt antal följare';
 
   @override
   String get analyticsFollowerCountsBody =>
-      'Your follower count shows the people who follow you on Divine.';
+      'Ditt antal följare visar de personer som följer dig på Divine.';
 
   @override
-  String get analyticsSocialCountsLearnMore => 'Learn more';
+  String get analyticsSocialCountsLearnMore => 'Läs mer';
 
   @override
   String analyticsSocialCountsLearnMoreSemantics(String url) {
-    return 'Learn more at $url';
+    return 'Läs mer på $url';
   }
 
   @override
@@ -3164,7 +3164,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String analyticsDiagnosticsFailedSources(String sources) {
-    return 'Failed sources: $sources';
+    return 'Källor som misslyckades: $sources';
   }
 
   @override
@@ -4663,19 +4663,19 @@ class AppLocalizationsSv extends AppLocalizations {
       'Exportera loggar till fil för manuell sändning';
 
   @override
-  String get supportClearLogs => 'Clear Logs';
+  String get supportClearLogs => 'Rensa loggar';
 
   @override
-  String get supportClearLogsSubtitle => 'Wipe captured logs and start fresh';
+  String get supportClearLogsSubtitle => 'Rensa insamlade loggar och börja om';
 
   @override
-  String get supportClearLogsConfirmTitle => 'Clear captured logs?';
+  String get supportClearLogsConfirmTitle => 'Rensa insamlade loggar?';
 
   @override
-  String get supportClearLogsConfirmButton => 'Clear';
+  String get supportClearLogsConfirmButton => 'Rensa';
 
   @override
-  String get supportLogsCleared => 'Logs cleared';
+  String get supportLogsCleared => 'Loggar rensade';
 
   @override
   String get supportFaq => 'FAQ';
@@ -4713,11 +4713,11 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get supportNoLogsToExport =>
-      'No logs yet — they start fresh each launch. Reproduce the problem, then come back without restarting.';
+      'Inga loggar ännu — de börjar om varje gång appen startas. Återskapa problemet och kom sedan tillbaka utan att starta om appen.';
 
   @override
   String get supportExportLogsUnconfirmed =>
-      'Logs handed off. Check the app you shared to.';
+      'Loggar överlämnade. Kolla appen du delade dem till.';
 
   @override
   String supportLogsSavedTo(String path) {
@@ -6216,7 +6216,7 @@ class AppLocalizationsSv extends AppLocalizations {
   String get commonBack => 'Tillbaka';
 
   @override
-  String get commonReload => 'Reload';
+  String get commonReload => 'Ladda om';
 
   @override
   String get commonClose => 'Stäng';

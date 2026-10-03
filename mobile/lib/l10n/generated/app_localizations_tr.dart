@@ -306,25 +306,25 @@ class AppLocalizationsTr extends AppLocalizations {
       'Akışları klasik kare formatta tut';
 
   @override
-  String get generalSettingsShowTotalLoops => 'Show total loops';
+  String get generalSettingsShowTotalLoops => 'Toplam döngü sayısını göster';
 
   @override
   String get generalSettingsShowTotalLoopsSubtitle =>
-      'The creator\'s loop count across all their videos';
+      'İçerik üreticisinin tüm videolarındaki döngü sayısı';
 
   @override
-  String get generalSettingsShowVideoLoops => 'Show video loops';
+  String get generalSettingsShowVideoLoops => 'Video döngülerini göster';
 
   @override
   String get generalSettingsShowVideoLoopsSubtitle =>
-      'How many times the video you\'re watching has looped';
+      'İzlediğin videonun kaç kez döngüye girdiği';
 
   @override
-  String get generalSettingsShowPublishedDate => 'Show publish date';
+  String get generalSettingsShowPublishedDate => 'Yayınlanma tarihini göster';
 
   @override
   String get generalSettingsShowPublishedDateSubtitle =>
-      'When the video you\'re watching was published';
+      'İzlediğin videonun ne zaman yayınlandığı';
 
   @override
   String get contentPreferencesTitle => 'İçerik Tercihleri';
@@ -2075,7 +2075,7 @@ class AppLocalizationsTr extends AppLocalizations {
     String comments,
     String reposts,
   ) {
-    return '$likes likes · $comments comments · $reposts reposts';
+    return '$likes beğeni · $comments yorum · $reposts yeniden paylaşım';
   }
 
   @override
@@ -2881,11 +2881,11 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get analyticsServerUnavailable =>
-      'Creator analytics is having server trouble. Please try again in a moment.';
+      'İçerik üretici analitiklerinde sunucu sorunu var. Lütfen birazdan tekrar dene.';
 
   @override
   String get analyticsConnectionIssue =>
-      'Creator analytics could not connect. Check your connection and try again.';
+      'İçerik üretici analitikleri bağlanamadı. Bağlantını kontrol et ve tekrar dene.';
 
   @override
   String get analyticsSignInRequired =>
@@ -3044,21 +3044,21 @@ class AppLocalizationsTr extends AppLocalizations {
       'Kaynak/coğrafya/zaman ayrıntıları, Funnelcake kitle analitik uç noktalarını ekledikçe doldurulacak.';
 
   @override
-  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+  String get analyticsSocialCountsInfoLabel => 'Takipçi sayın hakkında';
 
   @override
-  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+  String get analyticsSocialCountsInfoTitle => 'Takipçi sayın hakkında';
 
   @override
   String get analyticsFollowerCountsBody =>
-      'Your follower count shows the people who follow you on Divine.';
+      'Takipçi sayın, Divine\'da seni takip eden kişileri gösterir.';
 
   @override
-  String get analyticsSocialCountsLearnMore => 'Learn more';
+  String get analyticsSocialCountsLearnMore => 'Daha fazla bilgi';
 
   @override
   String analyticsSocialCountsLearnMoreSemantics(String url) {
-    return 'Learn more at $url';
+    return 'Daha fazla bilgi: $url';
   }
 
   @override
@@ -3107,7 +3107,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String analyticsDiagnosticsFailedSources(String sources) {
-    return 'Failed sources: $sources';
+    return 'Başarısız kaynaklar: $sources';
   }
 
   @override
@@ -4610,19 +4610,21 @@ class AppLocalizationsTr extends AppLocalizations {
       'Manuel göndermek için günlükleri dosyaya aktar';
 
   @override
-  String get supportClearLogs => 'Clear Logs';
+  String get supportClearLogs => 'Günlükleri temizle';
 
   @override
-  String get supportClearLogsSubtitle => 'Wipe captured logs and start fresh';
+  String get supportClearLogsSubtitle =>
+      'Kaydedilen günlükleri sil ve sıfırdan başla';
 
   @override
-  String get supportClearLogsConfirmTitle => 'Clear captured logs?';
+  String get supportClearLogsConfirmTitle =>
+      'Kaydedilen günlükler temizlensin mi?';
 
   @override
-  String get supportClearLogsConfirmButton => 'Clear';
+  String get supportClearLogsConfirmButton => 'Temizle';
 
   @override
-  String get supportLogsCleared => 'Logs cleared';
+  String get supportLogsCleared => 'Günlükler temizlendi';
 
   @override
   String get supportFaq => 'SSS';
@@ -4661,11 +4663,11 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get supportNoLogsToExport =>
-      'No logs yet — they start fresh each launch. Reproduce the problem, then come back without restarting.';
+      'Henüz günlük yok — uygulama her açıldığında sıfırdan başlarlar. Sorunu yeniden oluştur, ardından uygulamayı yeniden başlatmadan geri dön.';
 
   @override
   String get supportExportLogsUnconfirmed =>
-      'Logs handed off. Check the app you shared to.';
+      'Günlükler aktarıldı. Paylaştığın uygulamayı kontrol et.';
 
   @override
   String supportLogsSavedTo(String path) {
@@ -6156,7 +6158,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get commonBack => 'Geri';
 
   @override
-  String get commonReload => 'Reload';
+  String get commonReload => 'Yeniden yükle';
 
   @override
   String get commonClose => 'Kapat';

@@ -337,25 +337,25 @@ class AppLocalizationsVi extends AppLocalizations {
       'Giữ bảng tin ở định dạng vuông cổ điển';
 
   @override
-  String get generalSettingsShowTotalLoops => 'Show total loops';
+  String get generalSettingsShowTotalLoops => 'Hiện tổng số loop';
 
   @override
   String get generalSettingsShowTotalLoopsSubtitle =>
-      'The creator\'s loop count across all their videos';
+      'Số loop của nhà sáng tạo trên tất cả video của họ';
 
   @override
-  String get generalSettingsShowVideoLoops => 'Show video loops';
+  String get generalSettingsShowVideoLoops => 'Hiện số loop của video';
 
   @override
   String get generalSettingsShowVideoLoopsSubtitle =>
-      'How many times the video you\'re watching has looped';
+      'Số lần video bạn đang xem đã lặp lại';
 
   @override
-  String get generalSettingsShowPublishedDate => 'Show publish date';
+  String get generalSettingsShowPublishedDate => 'Hiện ngày đăng';
 
   @override
   String get generalSettingsShowPublishedDateSubtitle =>
-      'When the video you\'re watching was published';
+      'Thời điểm video bạn đang xem được đăng';
 
   @override
   String get contentPreferencesTitle => 'Tùy chọn nội dung';
@@ -2115,7 +2115,7 @@ class AppLocalizationsVi extends AppLocalizations {
     String comments,
     String reposts,
   ) {
-    return '$likes likes · $comments comments · $reposts reposts';
+    return '$likes lượt thích · $comments bình luận · $reposts lượt đăng lại';
   }
 
   @override
@@ -2914,11 +2914,11 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get analyticsServerUnavailable =>
-      'Creator analytics is having server trouble. Please try again in a moment.';
+      'Phân tích nhà sáng tạo đang gặp sự cố máy chủ. Vui lòng thử lại sau một lát.';
 
   @override
   String get analyticsConnectionIssue =>
-      'Creator analytics could not connect. Check your connection and try again.';
+      'Phân tích nhà sáng tạo không thể kết nối. Kiểm tra kết nối của bạn rồi thử lại.';
 
   @override
   String get analyticsSignInRequired =>
@@ -3077,21 +3077,21 @@ class AppLocalizationsVi extends AppLocalizations {
       'Phân tích nguồn/vùng/thời gian của khán giả sẽ xuất hiện khi Funnelcake bổ sung endpoint phân tích khán giả.';
 
   @override
-  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+  String get analyticsSocialCountsInfoLabel => 'Về số người theo dõi bạn';
 
   @override
-  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+  String get analyticsSocialCountsInfoTitle => 'Về số người theo dõi bạn';
 
   @override
   String get analyticsFollowerCountsBody =>
-      'Your follower count shows the people who follow you on Divine.';
+      'Số người theo dõi bạn cho biết những người theo dõi bạn trên Divine.';
 
   @override
-  String get analyticsSocialCountsLearnMore => 'Learn more';
+  String get analyticsSocialCountsLearnMore => 'Tìm hiểu thêm';
 
   @override
   String analyticsSocialCountsLearnMoreSemantics(String url) {
-    return 'Learn more at $url';
+    return 'Tìm hiểu thêm tại $url';
   }
 
   @override
@@ -3140,7 +3140,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String analyticsDiagnosticsFailedSources(String sources) {
-    return 'Failed sources: $sources';
+    return 'Nguồn bị lỗi: $sources';
   }
 
   @override
@@ -4637,19 +4637,19 @@ class AppLocalizationsVi extends AppLocalizations {
   String get supportSaveLogsSubtitle => 'Xuất nhật ký ra tệp để gửi thủ công';
 
   @override
-  String get supportClearLogs => 'Clear Logs';
+  String get supportClearLogs => 'Xóa nhật ký';
 
   @override
-  String get supportClearLogsSubtitle => 'Wipe captured logs and start fresh';
+  String get supportClearLogsSubtitle => 'Xóa nhật ký đã ghi và bắt đầu lại';
 
   @override
-  String get supportClearLogsConfirmTitle => 'Clear captured logs?';
+  String get supportClearLogsConfirmTitle => 'Xóa nhật ký đã ghi?';
 
   @override
-  String get supportClearLogsConfirmButton => 'Clear';
+  String get supportClearLogsConfirmButton => 'Xóa';
 
   @override
-  String get supportLogsCleared => 'Logs cleared';
+  String get supportLogsCleared => 'Đã xóa nhật ký';
 
   @override
   String get supportFaq => 'Câu hỏi thường gặp';
@@ -4689,11 +4689,11 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get supportNoLogsToExport =>
-      'No logs yet — they start fresh each launch. Reproduce the problem, then come back without restarting.';
+      'Chưa có nhật ký — nhật ký bắt đầu lại mỗi lần mở ứng dụng. Lặp lại thao tác gây ra sự cố rồi quay lại mà không khởi động lại ứng dụng.';
 
   @override
   String get supportExportLogsUnconfirmed =>
-      'Logs handed off. Check the app you shared to.';
+      'Đã chuyển nhật ký sang ứng dụng. Kiểm tra ứng dụng bạn đã chia sẻ nhật ký đến.';
 
   @override
   String supportLogsSavedTo(String path) {
@@ -6193,7 +6193,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get commonBack => 'Quay lại';
 
   @override
-  String get commonReload => 'Reload';
+  String get commonReload => 'Tải lại';
 
   @override
   String get commonClose => 'Đóng';

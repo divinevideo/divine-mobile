@@ -371,25 +371,26 @@ class AppLocalizationsBg extends AppLocalizations {
       'Запази емисиите в класическия квадратен формат';
 
   @override
-  String get generalSettingsShowTotalLoops => 'Show total loops';
+  String get generalSettingsShowTotalLoops => 'Показвай общия брой лупове';
 
   @override
   String get generalSettingsShowTotalLoopsSubtitle =>
-      'The creator\'s loop count across all their videos';
+      'Броят лупове във всички видеа на човека, който ги е създал';
 
   @override
-  String get generalSettingsShowVideoLoops => 'Show video loops';
+  String get generalSettingsShowVideoLoops => 'Показвай луповете на видеото';
 
   @override
   String get generalSettingsShowVideoLoopsSubtitle =>
-      'How many times the video you\'re watching has looped';
+      'Колко пъти се е повторило видеото, което гледаш';
 
   @override
-  String get generalSettingsShowPublishedDate => 'Show publish date';
+  String get generalSettingsShowPublishedDate =>
+      'Показвай датата на публикуване';
 
   @override
   String get generalSettingsShowPublishedDateSubtitle =>
-      'When the video you\'re watching was published';
+      'Кога е публикувано видеото, което гледаш';
 
   @override
   String get contentPreferencesTitle => 'Предпочитания за съдържание';
@@ -2173,7 +2174,7 @@ class AppLocalizationsBg extends AppLocalizations {
     String comments,
     String reposts,
   ) {
-    return '$likes likes · $comments comments · $reposts reposts';
+    return '$likes харесвания · $comments коментари · $reposts репоста';
   }
 
   @override
@@ -2987,11 +2988,11 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get analyticsServerUnavailable =>
-      'Creator analytics is having server trouble. Please try again in a moment.';
+      'Анализът на създателите има проблем със сървъра. Опитай отново след малко.';
 
   @override
   String get analyticsConnectionIssue =>
-      'Creator analytics could not connect. Check your connection and try again.';
+      'Анализът на създателите не успя да се свърже. Провери връзката си и опитай отново.';
 
   @override
   String get analyticsSignInRequired =>
@@ -3153,21 +3154,21 @@ class AppLocalizationsBg extends AppLocalizations {
       'Разбивките по източник на аудитория, гео и време ще се попълнят, когато Funnelcake добави ендпойнти за анализ на аудиторията.';
 
   @override
-  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+  String get analyticsSocialCountsInfoLabel => 'За броя на последователите ти';
 
   @override
-  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+  String get analyticsSocialCountsInfoTitle => 'За броя на последователите ти';
 
   @override
   String get analyticsFollowerCountsBody =>
-      'Your follower count shows the people who follow you on Divine.';
+      'Броят на последователите ти показва хората, които те следват в Divine.';
 
   @override
-  String get analyticsSocialCountsLearnMore => 'Learn more';
+  String get analyticsSocialCountsLearnMore => 'Научи повече';
 
   @override
   String analyticsSocialCountsLearnMoreSemantics(String url) {
-    return 'Learn more at $url';
+    return 'Научи повече на $url';
   }
 
   @override
@@ -3216,7 +3217,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String analyticsDiagnosticsFailedSources(String sources) {
-    return 'Failed sources: $sources';
+    return 'Източници с грешка: $sources';
   }
 
   @override
@@ -4716,19 +4717,21 @@ class AppLocalizationsBg extends AppLocalizations {
       'Експортирай логовете във файл за ръчно изпращане';
 
   @override
-  String get supportClearLogs => 'Clear Logs';
+  String get supportClearLogs => 'Изчисти логовете';
 
   @override
-  String get supportClearLogsSubtitle => 'Wipe captured logs and start fresh';
+  String get supportClearLogsSubtitle =>
+      'Изчисти записаните логове и започни отначало';
 
   @override
-  String get supportClearLogsConfirmTitle => 'Clear captured logs?';
+  String get supportClearLogsConfirmTitle =>
+      'Да се изчистят ли записаните логове?';
 
   @override
-  String get supportClearLogsConfirmButton => 'Clear';
+  String get supportClearLogsConfirmButton => 'Изчисти';
 
   @override
-  String get supportLogsCleared => 'Logs cleared';
+  String get supportLogsCleared => 'Логовете са изчистени';
 
   @override
   String get supportFaq => 'ЧЗВ';
@@ -4767,11 +4770,11 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get supportNoLogsToExport =>
-      'No logs yet — they start fresh each launch. Reproduce the problem, then come back without restarting.';
+      'Все още няма логове — започват отначало при всяко стартиране на приложението. Възпроизведи проблема и се върни, без да рестартираш приложението.';
 
   @override
   String get supportExportLogsUnconfirmed =>
-      'Logs handed off. Check the app you shared to.';
+      'Логовете са предадени. Провери приложението, в което ги сподели.';
 
   @override
   String supportLogsSavedTo(String path) {
@@ -6277,7 +6280,7 @@ class AppLocalizationsBg extends AppLocalizations {
   String get commonBack => 'Назад';
 
   @override
-  String get commonReload => 'Reload';
+  String get commonReload => 'Презареди';
 
   @override
   String get commonClose => 'Затвори';
