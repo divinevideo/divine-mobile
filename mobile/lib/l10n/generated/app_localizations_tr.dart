@@ -9502,7 +9502,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorVoiceEffectSemanticLabel =>
-      'Seçili kaydın sesini değiştir';
+      'Seçili sese ses efekti ekle';
 
   @override
   String get videoEditorVoiceEffectSheetTitle => 'Ses efektleri';

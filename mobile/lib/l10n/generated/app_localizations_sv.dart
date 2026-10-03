@@ -9585,7 +9585,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoEditorVoiceEffectSemanticLabel =>
-      'Ändra hur den valda inspelningen låter';
+      'Lägg till en rösteffekt på det valda ljudet';
 
   @override
   String get videoEditorVoiceEffectSheetTitle => 'Rösteffekter';

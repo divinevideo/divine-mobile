@@ -4991,7 +4991,7 @@
   "videoEditorFadeInLabel": "淡入",
   "videoEditorFadeOutLabel": "淡出",
   "videoEditorVoiceEffectLabel": "变声",
-  "videoEditorVoiceEffectSemanticLabel": "更改所选录音的声音",
+  "videoEditorVoiceEffectSemanticLabel": "为选中的声音添加变声效果",
   "videoEditorVoiceEffectSheetTitle": "变声效果",
   "videoEditorVoiceEffectOriginal": "原声",
   "videoEditorVoiceEffectHighPitch": "花栗鼠",

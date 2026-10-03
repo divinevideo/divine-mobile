@@ -9859,7 +9859,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorVoiceEffectSemanticLabel =>
-      'ఎంచుకున్న రికార్డింగ్ ఎలా వినిపిస్తుందో మార్చండి';
+      'ఎంచుకున్న ధ్వనికి వాయిస్ ఎఫెక్ట్ జోడించండి';
 
   @override
   String get videoEditorVoiceEffectSheetTitle => 'వాయిస్ ఎఫెక్ట్‌లు';

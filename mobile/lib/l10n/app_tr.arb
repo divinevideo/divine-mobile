@@ -2645,7 +2645,7 @@
     "videoEditorFadeInLabel": "Yavaş giriş",
     "videoEditorFadeOutLabel": "Yavaş çıkış",
     "videoEditorVoiceEffectLabel": "Ses",
-    "videoEditorVoiceEffectSemanticLabel": "Seçili kaydın sesini değiştir",
+    "videoEditorVoiceEffectSemanticLabel": "Seçili sese ses efekti ekle",
     "videoEditorVoiceEffectSheetTitle": "Ses efektleri",
     "videoEditorVoiceEffectOriginal": "Orijinal",
     "videoEditorVoiceEffectHighPitch": "Sincap",

@@ -2638,7 +2638,7 @@
     "videoEditorFadeInLabel": "フェードイン",
     "videoEditorFadeOutLabel": "フェードアウト",
     "videoEditorVoiceEffectLabel": "ボイス",
-    "videoEditorVoiceEffectSemanticLabel": "選択した録音の声を変更",
+    "videoEditorVoiceEffectSemanticLabel": "選択したサウンドにボイスエフェクトを追加",
     "videoEditorVoiceEffectSheetTitle": "ボイスエフェクト",
     "videoEditorVoiceEffectOriginal": "オリジナル",
     "videoEditorVoiceEffectHighPitch": "ヘリウム",

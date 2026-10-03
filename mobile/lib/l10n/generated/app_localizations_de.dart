@@ -9709,7 +9709,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get videoEditorVoiceEffectSemanticLabel =>
-      'Ändern, wie die ausgewählte Aufnahme klingt';
+      'Stimmeffekt zum ausgewählten Sound hinzufügen';
 
   @override
   String get videoEditorVoiceEffectSheetTitle => 'Stimmeffekte';

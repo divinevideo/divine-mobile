@@ -9631,7 +9631,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoEditorVoiceEffectSemanticLabel =>
-      'Verander hoe de geselecteerde opname klinkt';
+      'Voeg een stemeffect toe aan het geselecteerde geluid';
 
   @override
   String get videoEditorVoiceEffectSheetTitle => 'Stemeffecten';

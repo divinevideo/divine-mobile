@@ -2952,7 +2952,7 @@
     "videoEditorFadeInLabel": "Плавно усилване",
     "videoEditorFadeOutLabel": "Плавно заглушаване",
     "videoEditorVoiceEffectLabel": "Глас",
-    "videoEditorVoiceEffectSemanticLabel": "Промени как звучи избраният запис",
+    "videoEditorVoiceEffectSemanticLabel": "Добавяне на гласов ефект към избрания звук",
     "videoEditorVoiceEffectSheetTitle": "Гласови ефекти",
     "videoEditorVoiceEffectOriginal": "Оригинал",
     "videoEditorVoiceEffectHighPitch": "Бурундук",

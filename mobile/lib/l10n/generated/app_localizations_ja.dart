@@ -9119,7 +9119,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorVoiceEffectLabel => 'ボイス';
 
   @override
-  String get videoEditorVoiceEffectSemanticLabel => '選択した録音の声を変更';
+  String get videoEditorVoiceEffectSemanticLabel => '選択したサウンドにボイスエフェクトを追加';
 
   @override
   String get videoEditorVoiceEffectSheetTitle => 'ボイスエフェクト';

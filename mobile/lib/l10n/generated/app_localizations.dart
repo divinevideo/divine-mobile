@@ -16331,25 +16331,25 @@ abstract class AppLocalizations {
   /// **'Fade out'**
   String get videoEditorFadeOutLabel;
 
-  /// Label of the timeline action that changes how the selected voice-over recording sounds.
+  /// Label of the timeline action that changes how the selected sound sounds — a voice-over, music or any other track.
   ///
   /// In en, this message translates to:
   /// **'Voice'**
   String get videoEditorVoiceEffectLabel;
 
-  /// Screen-reader label of the timeline action that opens the voice effects for the selected voice-over recording.
+  /// Screen-reader label of the timeline action that opens the voice effects for the selected sound — a voice-over, music or any other track.
   ///
   /// In en, this message translates to:
-  /// **'Change how the selected recording sounds'**
+  /// **'Add a voice effect to the selected sound'**
   String get videoEditorVoiceEffectSemanticLabel;
 
-  /// Title of the sheet where the creator picks a voice effect for a voice-over recording.
+  /// Title of the sheet where the creator picks a voice effect for the selected sound.
   ///
   /// In en, this message translates to:
   /// **'Voice effects'**
   String get videoEditorVoiceEffectSheetTitle;
 
-  /// Voice effect option that plays the recording as it was recorded, with no effect.
+  /// Voice effect option that plays the sound as it is, with no effect.
   ///
   /// In en, this message translates to:
   /// **'Original'**
@@ -16385,7 +16385,7 @@ abstract class AppLocalizations {
   /// **'Pitch'**
   String get videoEditorVoiceEffectPitch;
 
-  /// Title of the switch that filters steady background noise out of a voice-over recording.
+  /// Title of the switch that filters steady background noise out of the selected sound.
   ///
   /// In en, this message translates to:
   /// **'Reduce background noise'**
@@ -16397,13 +16397,13 @@ abstract class AppLocalizations {
   /// **'Cuts hiss, fans and room noise'**
   String get videoEditorVoiceEffectNoiseReductionSubtitle;
 
-  /// Screen-reader label of the progress indicator shown while the voice effect is applied to the recording.
+  /// Screen-reader label of the progress indicator shown while the voice effect is applied to the sound.
   ///
   /// In en, this message translates to:
   /// **'Applying the voice effect'**
   String get videoEditorVoiceEffectApplying;
 
-  /// Shown, and announced, when the voice effect could not be applied to the recording.
+  /// Shown, and announced, when the voice effect could not be applied to the sound.
   ///
   /// In en, this message translates to:
   /// **'Couldn\'t change the voice. Try again.'**

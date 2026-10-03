@@ -9794,7 +9794,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorVoiceEffectSemanticLabel =>
-      'Schimbă cum sună înregistrarea selectată';
+      'Adaugă un efect de voce sunetului selectat';
 
   @override
   String get videoEditorVoiceEffectSheetTitle => 'Efecte de voce';

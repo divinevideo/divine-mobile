@@ -2638,7 +2638,7 @@
     "videoEditorFadeInLabel": "رفع تدريجي",
     "videoEditorFadeOutLabel": "خفض تدريجي",
     "videoEditorVoiceEffectLabel": "الصوت",
-    "videoEditorVoiceEffectSemanticLabel": "تغيير صوت التسجيل المحدد",
+    "videoEditorVoiceEffectSemanticLabel": "إضافة مؤثر صوتي إلى الصوت المحدد",
     "videoEditorVoiceEffectSheetTitle": "مؤثرات صوتية",
     "videoEditorVoiceEffectOriginal": "الأصلي",
     "videoEditorVoiceEffectHighPitch": "سنجاب",

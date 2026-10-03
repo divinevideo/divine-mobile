@@ -9583,7 +9583,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorVoiceEffectSemanticLabel =>
-      'منتخب ریکارڈنگ کی آواز تبدیل کریں';
+      'منتخب آواز میں آواز کا اثر شامل کریں';
 
   @override
   String get videoEditorVoiceEffectSheetTitle => 'آواز کے اثرات';

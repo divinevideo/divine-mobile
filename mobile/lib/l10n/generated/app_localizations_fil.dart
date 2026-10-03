@@ -9658,7 +9658,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoEditorVoiceEffectSemanticLabel =>
-      'Baguhin kung paano tumunog ang napiling recording';
+      'Lagyan ng voice effect ang napiling sound';
 
   @override
   String get videoEditorVoiceEffectSheetTitle => 'Voice effects';

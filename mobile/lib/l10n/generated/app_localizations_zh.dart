@@ -9036,7 +9036,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorVoiceEffectLabel => '变声';
 
   @override
-  String get videoEditorVoiceEffectSemanticLabel => '更改所选录音的声音';
+  String get videoEditorVoiceEffectSemanticLabel => '为选中的声音添加变声效果';
 
   @override
   String get videoEditorVoiceEffectSheetTitle => '变声效果';
