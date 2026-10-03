@@ -1,6 +1,8 @@
 // ABOUTME: Tests for UploadProgressDialog widget that shows blocking upload progress UI
 // ABOUTME: Validates progress display, non-dismissibility, auto-close, and polling behavior
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
@@ -76,12 +78,14 @@ void main() {
               builder: (context) {
                 return ElevatedButton(
                   onPressed: () {
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (_) => UploadProgressDialog(
-                        uploadId: mockUpload.id,
-                        uploadManager: mockManager,
+                    unawaited(
+                      showDialog<void>(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (_) => UploadProgressDialog(
+                          uploadId: mockUpload.id,
+                          uploadManager: mockManager,
+                        ),
                       ),
                     );
                   },
