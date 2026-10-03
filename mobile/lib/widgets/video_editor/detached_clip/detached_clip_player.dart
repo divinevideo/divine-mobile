@@ -22,6 +22,14 @@ const _logName = 'DetachedClipPlayer';
 class DetachedClipPlayer {
   DetachedClipPlayer._(this._controller, this._clip);
 
+  /// A player around an already loaded [controller], for tests that drive the
+  /// playhead coupling without a native player.
+  @visibleForTesting
+  DetachedClipPlayer.withController(
+    DivineVideoPlayerController controller,
+    DivineVideoClip clip,
+  ) : this._(controller, clip);
+
   /// Opens a player for [clip], or returns `null` when its file is unusable.
   static Future<DetachedClipPlayer?> open(DivineVideoClip clip) async {
     final video = clip.video;
@@ -114,6 +122,7 @@ class DetachedClipPlayer {
   DateTime? _lastSeekAt;
   bool _isPlaying = false;
   bool _muted = false;
+  bool _disposed = false;
 
   /// The controller to hand to a `DivineVideoPlayer`.
   DivineVideoPlayerController get controller => _controller;
@@ -212,6 +221,7 @@ class DetachedClipPlayer {
   }
 
   Future<void> dispose() async {
+    _disposed = true;
     detach();
     await _controller.dispose();
   }
@@ -308,7 +318,20 @@ class DetachedClipPlayer {
     if (_absDiff(_controller.state.position, target) < tolerance) return;
 
     _lastSeekAt = DateTime.now();
-    unawaited(_controller.seekTo(target));
+    unawaited(
+      _seekTo(target, restart: _controller.state.status.isCompleted),
+    );
+  }
+
+  /// Seeks the companion, and plays it again if it was sitting finished.
+  ///
+  /// A player that ran to its end does not resume from a seek on every
+  /// platform: Android keeps playing, iOS stayed paused there. Without asking
+  /// again, a clip that once reached its end froze on each later pass of the
+  /// composition, since playback is only requested when it changes.
+  Future<void> _seekTo(Duration target, {required bool restart}) async {
+    await _controller.seekTo(target);
+    if (restart && _isPlaying && !_disposed) await _controller.play();
   }
 
   static Duration _absDiff(Duration a, Duration b) => a > b ? a - b : b - a;
