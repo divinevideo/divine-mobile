@@ -15,7 +15,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/conversation_actions/conversation_actions_cubit.dart';
 import 'package:openvine/blocs/dm/conversation_list/conversation_list_bloc.dart';
-import 'package:openvine/blocs/dm/conversation_mute/conversation_mute_cubit.dart';
 import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
@@ -48,9 +47,6 @@ class _MockConversationListBloc
 
 class _MockMyFollowingBloc extends MockBloc<MyFollowingEvent, MyFollowingState>
     implements MyFollowingBloc {}
-
-class _MockConversationMuteCubit extends MockCubit<ConversationMuteState>
-    implements ConversationMuteCubit {}
 
 class _MockConversationActionsCubit extends MockCubit<ConversationActionsState>
     implements ConversationActionsCubit {}
@@ -159,14 +155,6 @@ void main() {
         initialState: notificationUnreadCount,
       );
 
-      final mockMuteCubit = _MockConversationMuteCubit();
-      when(() => mockMuteCubit.state).thenReturn(const ConversationMuteState());
-      whenListen(
-        mockMuteCubit,
-        const Stream<ConversationMuteState>.empty(),
-        initialState: const ConversationMuteState(),
-      );
-
       final mockActionsCubit = actionsCubit ?? _MockConversationActionsCubit();
       when(
         () => mockActionsCubit.state,
@@ -206,7 +194,6 @@ void main() {
               BlocProvider<NotificationBadgeCubit>.value(
                 value: mockNotifBadgeCubit,
               ),
-              BlocProvider<ConversationMuteCubit>.value(value: mockMuteCubit),
               BlocProvider<ConversationActionsCubit>.value(
                 value: mockActionsCubit,
               ),
@@ -2130,8 +2117,7 @@ void main() {
           final l10n = lookupAppLocalizations(const Locale('en'));
           await openSheet(tester, groupConversation(subject: 'Weekend trip'));
 
-          // Conversation-scoped actions stay: both mean what they say here.
-          expect(find.text(l10n.inboxActionMute), findsOneWidget);
+          // The conversation-scoped action stays: it means what it says here.
           expect(find.text(l10n.inboxActionRemove), findsOneWidget);
           // Account-scoped ones do not, in any of their label variants.
           expect(
@@ -2151,6 +2137,62 @@ void main() {
             findsNothing,
           );
           expect(find.text(l10n.inboxActionBlockVanishedAccount), findsNothing);
+        });
+
+        // Report and Block are withheld from every group and Remove from a
+        // removal-protected thread (#8391), so a group holding a protected
+        // member has no action left. Its row takes no long-press handler, so
+        // it neither opens an empty sheet nor advertises a gesture it cannot
+        // honour.
+        testWidgets(
+          'a group holding a removal-protected member has no long-press',
+          (tester) async {
+            final actionsCubit = _MockConversationActionsCubit();
+            final conversation = groupConversation(subject: 'Weekend trip');
+            await tester.pumpWidget(
+              buildSubject(
+                actionsCubit: actionsCubit,
+                state: ConversationListState(
+                  status: ConversationListStatus.loaded,
+                  conversations: [conversation],
+                  visibleConversations: [conversation],
+                  hasMore: false,
+                ),
+              ),
+            );
+            // After buildSubject, which stubs isRemovalProtected to false.
+            when(
+              () => actionsCubit.isRemovalProtected(any()),
+            ).thenReturn(true);
+            await openMessages(tester);
+
+            final data = tester
+                .getSemantics(find.byType(ConversationTile))
+                .getSemanticsData();
+            expect(data.hasAction(SemanticsAction.longPress), isFalse);
+          },
+        );
+
+        testWidgets('a removable group still advertises its long-press', (
+          tester,
+        ) async {
+          final conversation = groupConversation(subject: 'Weekend trip');
+          await tester.pumpWidget(
+            buildSubject(
+              state: ConversationListState(
+                status: ConversationListStatus.loaded,
+                conversations: [conversation],
+                visibleConversations: [conversation],
+                hasMore: false,
+              ),
+            ),
+          );
+          await openMessages(tester);
+
+          final data = tester
+              .getSemantics(find.byType(ConversationTile))
+              .getSemanticsData();
+          expect(data.hasAction(SemanticsAction.longPress), isTrue);
         });
 
         testWidgets('a 1:1 still offers both, so the guard is not blanket', (
@@ -2678,7 +2720,7 @@ void main() {
       // is lifted into the pinned row, whose long-press offered "Remove
       // conversation" through a cubit with no policy at all. Withdrawing the
       // action is the deliberate reversal of the #6388-review expectation
-      // above: Mute / Report / Block still survive adoption, Remove does not,
+      // above: Report / Block still survive adoption, Remove does not,
       // because removal is permanent and the notice is the user's only copy
       // of why they were actioned.
       testWidgets(

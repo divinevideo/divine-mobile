@@ -5482,9 +5482,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get inboxSearchEmptySubtitle => '다른 이름이나 단어로 시도해 보세요.';
 
   @override
-  String get inboxActionMute => '대화 알림 끄기';
-
-  @override
   String inboxActionReport(String displayName) {
     return '$displayName 신고';
   }
@@ -5516,12 +5513,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get inboxRemoveConfirmConfirm => '삭제';
-
-  @override
-  String get inboxConversationMuted => '대화 알림을 껐어요';
-
-  @override
-  String get inboxConversationUnmuted => '대화 알림을 다시 켰어요';
 
   @override
   String get inboxCollabInviteCardTitle => '콜라보 초대';

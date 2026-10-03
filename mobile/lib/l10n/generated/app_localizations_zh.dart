@@ -5439,9 +5439,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get inboxSearchEmptySubtitle => '换个名字或词试试。';
 
   @override
-  String get inboxActionMute => '静音会话';
-
-  @override
   String inboxActionReport(String displayName) {
     return '举报 $displayName';
   }
@@ -5473,12 +5470,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get inboxRemoveConfirmConfirm => '删除';
-
-  @override
-  String get inboxConversationMuted => '会话已静音';
-
-  @override
-  String get inboxConversationUnmuted => '会话已取消静音';
 
   @override
   String get inboxCollabInviteCardTitle => '合作邀请';

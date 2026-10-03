@@ -1918,7 +1918,6 @@
             }
         }
     },
-    "inboxActionMute": "Silenzia conversazione",
     "inboxActionRemove": "Rimuovi conversazione",
     "inboxActionReport": "Segnala {displayName}",
     "@inboxActionReport": {
@@ -1968,8 +1967,6 @@
     "@inboxCollabInviteSentStatus": {
         "description": "Shown on the inviter's own outgoing collaborator invite card in their DM with the collaborator. Replaces Accept/Ignore which are recipient-only actions."
     },
-    "inboxConversationMuted": "Conversazione silenziata",
-    "inboxConversationUnmuted": "Conversazione riattivata",
     "inboxEmptySubtitle": "Il pulsante + non morde.",
     "inboxEmptyTitle": "Ancora nessun messaggio",
     "inboxLoadErrorTitle": "I messaggi non si sono caricati",

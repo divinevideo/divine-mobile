@@ -5919,9 +5919,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get inboxSearchEmptySubtitle => 'Spróbuj innego imienia lub słowa.';
 
   @override
-  String get inboxActionMute => 'Wycisz rozmowę';
-
-  @override
   String inboxActionReport(String displayName) {
     return 'Zgłoś $displayName';
   }
@@ -5953,12 +5950,6 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get inboxRemoveConfirmConfirm => 'Usuń';
-
-  @override
-  String get inboxConversationMuted => 'Wyciszono rozmowę';
-
-  @override
-  String get inboxConversationUnmuted => 'Wyłączono wyciszenie rozmowy';
 
   @override
   String get inboxCollabInviteCardTitle => 'Zaproszenie do współpracy';

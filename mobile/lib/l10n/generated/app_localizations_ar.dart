@@ -5740,9 +5740,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get inboxSearchEmptySubtitle => 'جرّب اسمًا أو كلمة أخرى.';
 
   @override
-  String get inboxActionMute => 'كتم المحادثة';
-
-  @override
   String inboxActionReport(String displayName) {
     return 'الإبلاغ عن $displayName';
   }
@@ -5774,12 +5771,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get inboxRemoveConfirmConfirm => 'إزالة';
-
-  @override
-  String get inboxConversationMuted => 'تم كتم المحادثة';
-
-  @override
-  String get inboxConversationUnmuted => 'تم إلغاء كتم المحادثة';
 
   @override
   String get inboxCollabInviteCardTitle => 'دعوة للتعاون';

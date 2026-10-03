@@ -5782,9 +5782,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get inboxSearchEmptySubtitle => 'کوئی اور نام یا لفظ آزمائیں۔';
 
   @override
-  String get inboxActionMute => 'گفتگو میوٹ کریں';
-
-  @override
   String inboxActionReport(String displayName) {
     return '$displayName کی رپورٹ کریں';
   }
@@ -5816,12 +5813,6 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get inboxRemoveConfirmConfirm => 'ہٹائیں';
-
-  @override
-  String get inboxConversationMuted => 'گفتگو میوٹ ہو گئی';
-
-  @override
-  String get inboxConversationUnmuted => 'گفتگو ان میوٹ ہو گئی';
 
   @override
   String get inboxCollabInviteCardTitle => 'شریک کار دعوت';

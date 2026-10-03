@@ -13,7 +13,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/dm/conversation_list/conversation_list_bloc.dart';
-import 'package:openvine/blocs/dm/conversation_mute/conversation_mute_cubit.dart';
 import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -361,9 +360,6 @@ void main() {
           final followingBloc = BlocProvider.of<MyFollowingBloc>(
             tester.element(find.byType(InboxView)),
           );
-          final muteCubit = BlocProvider.of<ConversationMuteCubit>(
-            tester.element(find.byType(InboxView)),
-          );
           final viewState = tester.state(find.byType(InboxView));
 
           // The provider hands over the ready ProfileRepository.
@@ -387,13 +383,6 @@ void main() {
             ),
             same(followingBloc),
             reason: 'an unrelated bloc must survive the flip',
-          );
-          expect(
-            BlocProvider.of<ConversationMuteCubit>(
-              tester.element(find.byType(InboxView)),
-            ),
-            same(muteCubit),
-            reason: 'an unrelated cubit must survive the flip',
           );
           expect(
             tester.state(find.byType(InboxView)),

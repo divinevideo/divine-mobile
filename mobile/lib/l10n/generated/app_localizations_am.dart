@@ -5643,9 +5643,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get inboxSearchEmptySubtitle => 'ሌላ ስም ወይም ቃል ሞክር።';
 
   @override
-  String get inboxActionMute => 'ውይይት ድምጸ-ከል አድርግ';
-
-  @override
   String inboxActionReport(String displayName) {
     return 'ሪፖርት $displayName';
   }
@@ -5677,12 +5674,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get inboxRemoveConfirmConfirm => 'አስወግድ';
-
-  @override
-  String get inboxConversationMuted => 'ውይይት ድምጸ-ከል ተደርጓል';
-
-  @override
-  String get inboxConversationUnmuted => 'ውይይቱ ድምጸ-ከል ተነስቷል።';
 
   @override
   String get inboxCollabInviteCardTitle => 'የተባባሪ ግብዣ';

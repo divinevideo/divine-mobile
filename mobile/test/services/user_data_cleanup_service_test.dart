@@ -4,7 +4,6 @@
 import 'package:creator_sync/creator_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:openvine/blocs/dm/conversation_mute/conversation_mute_cubit.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/services/account_label_service.dart';
 import 'package:openvine/services/audio_sharing_preference_service.dart';
@@ -276,7 +275,6 @@ void main() {
             ContentFilterService.filterMigratedStorageKey,
         'the legacy adult-content preference used by that migration':
             ContentFilterService.legacyAdultContentPreferenceStorageKey,
-        'muted DM conversations': mutedConversationsStorageKey,
         'the seen-videos migration flag guarding watch history':
             SeenVideosService.seenVideosMigratedStorageKey,
         'declared content language published on videos':
@@ -306,6 +304,23 @@ void main() {
           );
         });
       }
+
+      // Not a live key: the DM mute toggle that wrote it was withdrawn
+      // (#7379). The literal is the name earlier builds stored under, so a
+      // changed constant cannot silently stop clearing those installs.
+      test(
+        'identity change clears the set left by the withdrawn DM mute toggle',
+        () async {
+          await prefs.setString(
+            'muted_conversations',
+            '["conversation_id_from_departing_account"]',
+          );
+
+          await service.clearUserSpecificData(isIdentityChange: true);
+
+          expect(prefs.containsKey('muted_conversations'), isFalse);
+        },
+      );
 
       test(
         'clears the labelers the departing account chose to trust',
@@ -969,15 +984,16 @@ void main() {
             DivineHostFilterService.showDivineHostedOnlyStorageKey,
             VideoProvenanceFilterService.showVerifiedOnlyStorageKey,
             SoundLibraryService.customSoundsStorageKey,
-            mutedConversationsStorageKey,
           ]),
         );
       });
 
-      test('contains no key that nothing in the app writes', () {
+      test('does not reintroduce the writer-less keys removed in #8314', () {
         // Every entry below is a literal whose owning service has no
         // constant to reference yet. They are the remaining conversion work;
         // a key that reaches this list without a writer is the #8314 defect.
+        // `muted_conversations` is the one deliberate exception: its writer
+        // was withdrawn, and installs that used it still hold the value.
         expect(
           UserDataCleanupService.userSpecificKeys,
           isNot(

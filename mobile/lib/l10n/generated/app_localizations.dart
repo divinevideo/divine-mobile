@@ -9931,12 +9931,6 @@ abstract class AppLocalizations {
   /// **'Try a different name or word.'**
   String get inboxSearchEmptySubtitle;
 
-  /// No description provided for @inboxActionMute.
-  ///
-  /// In en, this message translates to:
-  /// **'Mute conversation'**
-  String get inboxActionMute;
-
   /// No description provided for @inboxActionReport.
   ///
   /// In en, this message translates to:
@@ -9984,18 +9978,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Remove'**
   String get inboxRemoveConfirmConfirm;
-
-  /// No description provided for @inboxConversationMuted.
-  ///
-  /// In en, this message translates to:
-  /// **'Conversation muted'**
-  String get inboxConversationMuted;
-
-  /// No description provided for @inboxConversationUnmuted.
-  ///
-  /// In en, this message translates to:
-  /// **'Conversation unmuted'**
-  String get inboxConversationUnmuted;
 
   /// Header label on a collaborator invite card in the DM conversation.
   ///

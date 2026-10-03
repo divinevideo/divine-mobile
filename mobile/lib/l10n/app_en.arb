@@ -3575,7 +3575,6 @@
     "description": "Shown in place of the conversation list when an inbox search matches nothing."
   },
   "inboxSearchEmptySubtitle": "Try a different name or word.",
-  "inboxActionMute": "Mute conversation",
   "inboxActionReport": "Report {displayName}",
   "@inboxActionReport": {
     "placeholders": {
@@ -3615,8 +3614,6 @@
     "description": "Body of the remove-conversation confirmation for a GROUP thread. Names nobody, because a group has no single counterparty \u2014 the 1:1 wording `inboxRemoveConfirmBody` says 'your conversation with {displayName}', which would read as a conversation with the room's title. Mirrors `inboxRemoveConfirmBodyVanishedAccount`, which is name-free for the same reason."
   },
   "inboxRemoveConfirmConfirm": "Remove",
-  "inboxConversationMuted": "Conversation muted",
-  "inboxConversationUnmuted": "Conversation unmuted",
   "inboxCollabInviteCardTitle": "Collaborator invite",
   "@inboxCollabInviteCardTitle": {
     "description": "Header label on a collaborator invite card in the DM conversation."
