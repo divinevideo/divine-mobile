@@ -40,9 +40,9 @@ void main() {
       expect(state, isFalse);
     });
 
-    test('toggle persists disabling captions globally', () {
+    test('toggle persists disabling captions globally', () async {
       final notifier = container.read(subtitleVisibilityProvider.notifier);
-      notifier.toggle();
+      await notifier.toggle();
 
       final state = container.read(subtitleVisibilityProvider);
       expect(state, isFalse);
@@ -57,7 +57,7 @@ void main() {
       );
 
       final notifier = container.read(subtitleVisibilityProvider.notifier);
-      notifier.toggle();
+      await notifier.toggle();
       final state = container.read(subtitleVisibilityProvider);
       expect(state, isTrue);
       expect(prefs.getBool('subtitle_visibility_enabled'), isTrue);

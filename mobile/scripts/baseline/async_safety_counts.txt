@@ -60,7 +60,6 @@ discarded_futures|lib/widgets/watermark_download_progress_sheet.dart	1
 discarded_futures|test/in_memory/in_memory_auth_service.dart	1
 discarded_futures|test/mocks/mock_subscription_manager.dart	1
 discarded_futures|test/providers/deep_link_provider_test.dart	2
-discarded_futures|test/providers/subtitle_visibility_test.dart	1
 discarded_futures|test/repositories/community_content_label_repository_test.dart	1
 discarded_futures|test/router/providers/last_tab_position_provider_test.dart	1
 discarded_futures|test/router/providers/tab_history_provider_test.dart	1
@@ -87,7 +86,6 @@ unawaited_futures|test/helpers/test_provider_overrides.dart	1
 unawaited_futures|test/mocks/mock_subscription_manager.dart	2
 unawaited_futures|test/providers/editor_background_work_test.dart	1
 unawaited_futures|test/providers/explore_active_video_test.dart	2
-unawaited_futures|test/providers/subtitle_visibility_test.dart	1
 unawaited_futures|test/providers/video_playback_stop_integration_test.dart	5
 unawaited_futures|test/services/auth_service_data_cleanup_ordering_test.dart	1
 unawaited_futures|test/services/auth_service_identity_change_preservation_test.dart	1
