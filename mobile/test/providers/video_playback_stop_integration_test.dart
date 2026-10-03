@@ -89,7 +89,7 @@ void main() {
         expect(container.read(activeVideoIdProvider), isNull);
         expect(activeVideoIds.last, isNull);
 
-        locationController.close();
+        await locationController.close();
         container.dispose();
       },
     );
@@ -152,7 +152,7 @@ void main() {
           equals('explore-video-1'),
         );
 
-        locationController.close();
+        await locationController.close();
         container.dispose();
       },
     );
@@ -207,7 +207,7 @@ void main() {
       expect(container.read(activeVideoIdProvider), equals('explore-video-0'));
       expect(activeVideoIds.last, equals('explore-video-0'));
 
-      locationController.close();
+      await locationController.close();
       container.dispose();
     });
 
@@ -257,7 +257,7 @@ void main() {
         containsAllInOrder(['explore-video-0', 'explore-video-1']),
       );
 
-      locationController.close();
+      await locationController.close();
       container.dispose();
     });
 
@@ -313,7 +313,7 @@ void main() {
           equals('explore-video-0'),
         );
 
-        locationController.close();
+        await locationController.close();
         container.dispose();
       },
     );
