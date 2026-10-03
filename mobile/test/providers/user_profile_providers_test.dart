@@ -72,8 +72,7 @@ void main() {
       final result = container.read(
         profileVanishedSnapshotProvider(pubkey).future,
       );
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await untilCalled(() => vanishedProfilesDao.isVanished(pubkey));
 
       lookup.complete(true);
 
@@ -124,8 +123,7 @@ void main() {
       expect(subscription.read(), isTrue);
 
       fetch.complete(null);
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(subscription.read(), isFalse);
     });
@@ -161,13 +159,12 @@ void main() {
         addTearDown(subscription.close);
 
         fetch.complete(null);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(subscription.read(), isTrue);
 
         profiles.add(null);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(subscription.read(), isFalse);
       },
@@ -205,8 +202,7 @@ void main() {
       );
 
       subscription.close();
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await container.pump();
 
       expect(
         container.exists(profileIdentityResolvingProvider(pubkey)),
@@ -238,7 +234,7 @@ void main() {
           fireImmediately: true,
         );
         addTearDown(sourceSub.close);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(container.read(profileVanishedProvider(pubkey)), isTrue);
       },
@@ -273,9 +269,9 @@ void main() {
       addTearDown(profileSub.close);
 
       pubkeys.add(const []);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       pubkeys.add([pubkey]);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(values, [false, true]);
     });
@@ -317,7 +313,7 @@ void main() {
 
           container.invalidate(userProfileReactiveProvider(pubkey));
           sub.close();
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         });
 
         expect(uncaughtErrors, isEmpty);
@@ -346,11 +342,11 @@ void main() {
       addTearDown(sub.close);
 
       await untilCalled(() => profileRepository.watchProfile(pubkey: pubkey));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       liveController.add(cachedProfile);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       liveController.add(liveProfile);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(emitted.where((value) => value.hasValue).map((v) => v.value), [
         cachedProfile,
@@ -380,7 +376,7 @@ void main() {
       );
       addTearDown(sub.close);
 
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       verify(
         () => profileRepository.fetchFreshProfile(pubkey: pubkey),
@@ -409,10 +405,10 @@ void main() {
         fireImmediately: true,
       );
 
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       sub.close();
       container.invalidate(userProfileReactiveProvider(pubkey));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(wasCancelled, isTrue);
     });
@@ -433,7 +429,7 @@ void main() {
         );
         addTearDown(sub.close);
 
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(emitted, isNotEmpty);
         // Not AsyncLoading: a stream that closes without ever emitting
@@ -532,7 +528,7 @@ void main() {
       final cachedProfile = _profile(pubkey, name: 'updated');
 
       updates.add(cachedProfile);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(emitted, [cachedProfile]);
       verify(() => profileRepository.watchProfile(pubkey: pubkey)).called(1);
@@ -636,7 +632,7 @@ void main() {
 
           container.invalidate(userProfileStatsReactiveProvider(pubkey));
           sub.close();
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         });
 
         expect(uncaughtErrors, isEmpty);
@@ -677,14 +673,14 @@ void main() {
         fireImmediately: true,
       );
 
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       verify(
         () => profileRepository.fetchFreshProfile(pubkey: pubkey),
       ).called(1);
 
       statsController.add(null);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       const stats = ProfileStats(
         pubkey: pubkey,
@@ -694,12 +690,12 @@ void main() {
         totalViews: 78,
       );
       statsController.add(stats);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(emitted.last.value, stats);
       sub.close();
       container.invalidate(userProfileStatsReactiveProvider(pubkey));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       await statsController.close();
     });
 
@@ -744,7 +740,7 @@ void main() {
           fireImmediately: true,
         );
 
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         expect(fetchCount, 1);
 
         streamContainer
@@ -755,12 +751,12 @@ void main() {
                 client: nostrClient,
               ),
             );
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(fetchCount, 1);
         sub.close();
         streamContainer.invalidate(userProfileStatsReactiveProvider(pubkey));
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         await statsController.close();
       },
     );
@@ -902,8 +898,7 @@ void main() {
       );
       addTearDown(sub.close);
 
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(emitted.last.value?.name, 'real-name');
     });
