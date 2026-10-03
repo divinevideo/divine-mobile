@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 #
-# Reports whether HEAD merges into a base ref without conflicts.
+# Reports whether a pushed tip merges into a base ref without conflicts.
+# Usage: check_branch_mergeable.sh [base-ref [pushed-from [pushed-tip]]]
+# A known push baseline permits changes outside conflicted paths, with a warning.
 #
-#   exit 0 — merges cleanly, or the question could not be answered
-#   exit 1 — genuine merge conflicts
+#   exit 0 — clean, conflict outside pushed paths, or merge could not be computed
+#   exit 1 — invalid pushed tip, or conflicts touched by push/no usable baseline
 #
 # `git merge-tree --write-tree` answers with three distinct exit codes: 0 for a
 # clean merge, 1 for conflicts, and 128 for a fatal error. Treating "not 0" as
@@ -24,7 +26,22 @@
 set -uo pipefail
 
 BASE_REF="${1:-origin/main}"
+PUSHED_FROM="${2:-}"
+PUSHED_TIP="${3:-HEAD}"
 REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+# Prints the conflicted-file section of merging the given tip into BASE_REF,
+# one C-quoted line per entry, and returns merge-tree's status (1: conflicts).
+conflicted_entries() {
+    local tip="$1"
+    shift
+    git -C "$REPO_ROOT" merge-tree --write-tree --no-messages "$@" "$BASE_REF" "$tip" | sed 1d
+}
+
+if ! git -C "$REPO_ROOT" rev-parse --verify --quiet "${PUSHED_TIP}^{commit}" >/dev/null; then
+    echo "Cannot resolve pushed tip: $PUSHED_TIP"
+    exit 1
+fi
 
 # A base ref that does not resolve at all — origin/main renamed, deleted, or
 # never fetched — is a fourth unanswerable case merge-tree does not surface as
@@ -40,7 +57,7 @@ if ! git -C "$REPO_ROOT" rev-parse --verify --quiet "${BASE_REF}^{commit}" >/dev
     exit 0
 fi
 
-stderr=$(git -C "$REPO_ROOT" merge-tree --write-tree "$BASE_REF" HEAD 2>&1 >/dev/null)
+stderr=$(git -C "$REPO_ROOT" merge-tree --write-tree "$BASE_REF" "$PUSHED_TIP" 2>&1 >/dev/null)
 status=$?
 
 case "$status" in
@@ -48,12 +65,32 @@ case "$status" in
         echo "No merge conflicts with ${BASE_REF#origin/}"
         ;;
     1)
+        # The push is outside the conflicts when merging before and after it
+        # gives the same conflicted entries: the same paths, with the same mode
+        # and blob at every stage. Pushed file names are not enough, because a
+        # conflict on a file the base renamed is reported under the base's new
+        # name while the branch edits the old one. Any failure keeps the block.
+        if [ -n "$PUSHED_FROM" ] && git -C "$REPO_ROOT" rev-parse --verify --quiet "${PUSHED_FROM}^{commit}" >/dev/null; then
+            before=$(conflicted_entries "$PUSHED_FROM")
+            before_status=$?
+            after=$(conflicted_entries "$PUSHED_TIP")
+            after_status=$?
+            conflicts=$(conflicted_entries "$PUSHED_TIP" --name-only)
+            conflicts_status=$?
+            if [ "$before_status" -eq 1 ] && [ "$after_status" -eq 1 ] \
+                && [ "$conflicts_status" -eq 1 ] && [ "$before" = "$after" ]; then
+                echo "Warning: branch has merge conflicts with ${BASE_REF#origin/}, outside the pushed changes:"
+                printf '%s\n' "$conflicts" | sed 's/^/  /'
+                echo "Continuing; resolve these conflicts before merging or final handoff."
+                exit 0
+            fi
+        fi
         echo ""
         echo "Branch has merge conflicts with ${BASE_REF#origin/}!"
         echo ""
         echo "Resolve conflicts before pushing:"
         echo "  git fetch origin ${BASE_REF#origin/}"
-        echo "  git rebase $BASE_REF   # or: git merge $BASE_REF"
+        echo "  git rebase $BASE_REF"
         exit 1
         ;;
     *)

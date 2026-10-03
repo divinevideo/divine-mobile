@@ -160,6 +160,7 @@ results influence work.
   - `git fetch origin && git rebase origin/main`
   - `git push --force-with-lease` (never `--force` without `--lease`)
 - During PR review, if GitHub reports no merge conflicts and the update is only addressing review feedback, do not rebase just to refresh history. Push the review fix normally; the PR is squash-merged anyway.
+- An authorized reviewer may push a narrowly scoped review fix to an existing conflicted branch when a known remote SHA baseline shows the push touches no conflicted paths. The hook checks each pushed branch tip. This exception does not permit publishing a new conflicted branch or skipping the rebase before final handoff or merge.
 - Never merge `main` into a feature branch — always rebase.
 
 ## Security

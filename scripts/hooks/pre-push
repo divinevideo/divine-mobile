@@ -6,6 +6,16 @@
 
 set -e
 
+# Buffer stdin before running any subprocess that might consume it. Git supplies
+# one update per line; neither HEAD nor @{upstream} identifies all pushed refs.
+# A terminal means a manual run: there are no updates, and reading would wait.
+PUSH_UPDATES=()
+if [ ! -t 0 ]; then
+    while IFS= read -r update; do
+        PUSH_UPDATES+=("$update")
+    done
+fi
+
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT/mobile"
 
@@ -48,23 +58,33 @@ BASE_BRANCH="origin/main"
 # Fetch latest main to ensure accurate comparison
 git -C "$REPO_ROOT" fetch origin main --quiet 2>/dev/null || true
 
-# Merge-conflict check
+# Check each branch tip actually being pushed, including non-HEAD branches.
 CURRENT_BRANCH=$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD)
-if [ "$CURRENT_BRANCH" != "main" ]; then
-    echo "Checking for merge conflicts with main..."
-    # Lives in the repo rather than inline so it is testable, and so a fix to
-    # it reaches everyone without a re-run of `mise run setup_hooks`. Skipped
-    # when absent, e.g. on a branch predating it.
-    MERGEABLE_CHECK="$REPO_ROOT/scripts/check_branch_mergeable.sh"
-    # Invoked through `bash`, so it needs to be present and readable, not
-    # executable. Testing `-x` would skip the whole check on a checkout that
-    # lost the +x bit (Windows, a mode-stripped copy) and let a genuine
-    # conflict through — the check must fail closed, not open.
-    if [ -f "$MERGEABLE_CHECK" ]; then
-        bash "$MERGEABLE_CHECK" "$BASE_BRANCH" || exit 1
+MERGEABLE_CHECK="$REPO_ROOT/scripts/check_branch_mergeable.sh"
+if [ -f "$MERGEABLE_CHECK" ]; then
+    if [ "${#PUSH_UPDATES[@]}" -eq 0 ]; then
+        # Manual invocation has no baseline: preserve the strict HEAD check.
+        if [ "$CURRENT_BRANCH" != "main" ]; then
+            bash "$MERGEABLE_CHECK" "$BASE_BRANCH" || exit 1
+        fi
     else
-        echo "Skipped: scripts/check_branch_mergeable.sh not present"
+        for update in "${PUSH_UPDATES[@]}"; do
+            read -r local_ref local_sha remote_ref remote_sha <<< "$update"
+            # Deletions have no tip to merge; tags are not pull-request branches.
+            [[ "$local_sha" =~ ^0+$ ]] && continue
+            [[ "$remote_ref" == refs/heads/* ]] || continue
+            if [ "$local_ref" = refs/heads/main ] && [ "$remote_ref" = refs/heads/main ]; then continue; fi
+            echo "Checking $remote_ref for merge conflicts with main..."
+            # Zero/missing remote SHAs do not resolve: the script keeps conflicts
+            # blocking when there is no usable baseline, including new branches.
+            bash "$MERGEABLE_CHECK" "$BASE_BRANCH" "$remote_sha" "$local_sha" || exit 1
+        done
     fi
+else
+    echo "Skipped: scripts/check_branch_mergeable.sh not present"
+fi
+
+if [ "$CURRENT_BRANCH" != "main" ]; then
     echo ""
 
     # Validate branch name matches semantic PR title convention
