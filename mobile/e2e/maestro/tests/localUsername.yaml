@@ -1,0 +1,57 @@
+appId: co.openvine.app.staging
+name: Local username check and claim
+tags:
+  - local-stack
+---
+# Run only via local_stack/test_username_ui.sh, which builds DEFAULT_ENV=LOCAL
+# and seeds localtaken in the local registry before installing the app.
+- assertTrue: ${typeof LOCAL_USERNAME !== 'undefined' && LOCAL_USERNAME !== ''}
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: create_account_button
+    timeout: 30000
+- tapOn:
+    id: create_account_button
+- tapOn:
+    id: use_without_backup_button
+- tapOn:
+    id: use_device_only_button
+- extendedWaitUntil:
+    visible:
+      id: profile_tab
+    timeout: 30000
+- tapOn:
+    id: profile_tab
+- extendedWaitUntil:
+    visible:
+      id: edit_profile_button
+    timeout: 30000
+- tapOn:
+    id: edit_profile_button
+- tapOn: Username (Optional)
+- inputText: admin
+- extendedWaitUntil:
+    visible: Username is reserved
+    timeout: 15000
+- eraseText
+- inputText: localtaken
+- extendedWaitUntil:
+    visible: Username already taken
+    timeout: 15000
+- eraseText
+- inputText: ${LOCAL_USERNAME}
+- extendedWaitUntil:
+    visible: Username available!
+    timeout: 15000
+- hideKeyboard
+- tapOn: Save
+- extendedWaitUntil:
+    visible:
+      id: edit_profile_button
+    timeout: 30000
+- tapOn:
+    id: edit_profile_button
+- tapOn: Username (Optional)
+- assertVisible: ${LOCAL_USERNAME}

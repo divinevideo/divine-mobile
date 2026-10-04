@@ -68,6 +68,10 @@ bash ../local_stack/test_stack_scripts.sh
 bash ../local_stack/test_android_scripts.sh
 """
 
+[tasks.test_local_name_server]
+description = "Real signed username HTTP tests with an isolated local database (port 43005 must be free)"
+run = "bash ../local_stack/test_name_server.sh"
+
 [tasks.local_token]
 description = "Get verification token for an email from local DB"
 run = """

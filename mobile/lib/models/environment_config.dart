@@ -38,6 +38,7 @@ const localRelayPort = 47777;
 /// `/api/*` to funnelcake-api, everything else to the relay WebSocket).
 const int localApiPort = localRelayPort;
 const localBlossomPort = 43003;
+const localNameServerPort = 43005;
 
 /// Not in local_stack: wrangler dev default for divine-relay-manager,
 /// which is run separately.
@@ -136,9 +137,15 @@ class EnvironmentConfig {
   String get verifierBaseUrl => 'https://verifier.divine.video';
 
   /// Origin of the divine-name-server that owns `@divine.video` usernames
-  /// (names.divine.video). Single host across all environments — the service
-  /// has no staging deployment and is not part of local_stack.
-  String get nameServerBaseUrl => 'https://names.divine.video';
+  ///
+  /// LOCAL uses the isolated registry in local_stack. Other environments use
+  /// names.divine.video because the service has no staging deployment.
+  String get nameServerBaseUrl {
+    if (environment == AppEnvironment.local) {
+      return 'http://$localHost:$localNameServerPort';
+    }
+    return 'https://names.divine.video';
+  }
 
   /// Base URL for creator-delete enforcement in moderation-service.
   ///
