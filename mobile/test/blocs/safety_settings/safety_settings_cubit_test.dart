@@ -64,44 +64,16 @@ void main() {
       blocklistRepository = _MockContentBlocklistRepository();
       blocklistStream = StreamController<ContentPolicyState>.broadcast();
 
-      when(ageService.initialize).thenAnswer((_) async {});
       when(() => ageService.isAdultContentVerified).thenReturn(false);
-      when(
-        () => ageService.setAdultContentVerified(any()),
-      ).thenAnswer((_) async => true);
-
-      when(filterService.unlockAdultCategories).thenAnswer((_) async {});
-      when(filterService.lockAdultCategories).thenAnswer((_) async {});
-      when(
-        videoEventService.filterAdultContentFromExistingVideos,
-      ).thenReturn(0);
 
       when(
         () => divineHostFilterService.showDivineHostedOnly,
       ).thenReturn(true);
-      when(
-        () => divineHostFilterService.setShowDivineHostedOnly(any()),
-      ).thenAnswer((_) async {});
 
       when(
         () => moderationLabelService.isFollowingModerationEnabled,
       ).thenReturn(false);
-      when(
-        () => moderationLabelService.ensureLoaded(),
-      ).thenAnswer((_) async {});
       when(() => moderationLabelService.customLabelers).thenReturn(<String>{});
-      when(
-        () => moderationLabelService.setFollowingModerationEnabled(
-          any(),
-          followedPubkeys: any(named: 'followedPubkeys'),
-        ),
-      ).thenAnswer((_) async {});
-      when(
-        () => moderationLabelService.addLabeler(any()),
-      ).thenAnswer((_) async {});
-      when(
-        () => moderationLabelService.removeLabeler(any()),
-      ).thenAnswer((_) async {});
 
       when(() => followRepository.followingPubkeys).thenReturn(const []);
 
@@ -111,14 +83,17 @@ void main() {
       when(
         () => blocklistRepository.stateStream,
       ).thenAnswer((_) => blocklistStream.stream);
-      when(
-        () => blocklistRepository.unblockUser(any()),
-      ).thenAnswer((_) async => true);
     });
 
     tearDown(() async {
       await blocklistStream.close();
     });
+
+    void stubSettingsInitialization() {
+      when(ageService.initialize).thenAnswer((_) async {});
+      when(() => moderationLabelService.ensureLoaded())
+          .thenAnswer((_) async {});
+    }
 
     SafetySettingsCubit buildCubit({bool isAdultContentLocked = false}) =>
         SafetySettingsCubit(
@@ -135,6 +110,9 @@ void main() {
 
     blocTest<SafetySettingsCubit, SafetySettingsState>(
       'load() surfaces isAdultContentLocked for a protected minor',
+      setUp: () {
+        stubSettingsInitialization();
+      },
       build: () => buildCubit(isAdultContentLocked: true),
       act: (cubit) => cubit.load(),
       expect: () => [
@@ -161,6 +139,8 @@ void main() {
     blocTest<SafetySettingsCubit, SafetySettingsState>(
       'load snapshots all settings and emits ready',
       setUp: () {
+        stubSettingsInitialization();
+
         when(() => ageService.isAdultContentVerified).thenReturn(true);
         when(
           () => moderationLabelService.isFollowingModerationEnabled,
@@ -213,6 +193,11 @@ void main() {
     blocTest<SafetySettingsCubit, SafetySettingsState>(
       'setAgeVerified(true) unlocks adult categories and emits',
       seed: () => const SafetySettingsState(status: SafetySettingsStatus.ready),
+      setUp: () {
+        when(() => ageService.setAdultContentVerified(true))
+            .thenAnswer((_) async => true);
+        when(filterService.unlockAdultCategories).thenAnswer((_) async {});
+      },
       build: buildCubit,
       act: (cubit) => cubit.setAgeVerified(true),
       expect: () => [
@@ -236,6 +221,13 @@ void main() {
         status: SafetySettingsStatus.ready,
         isAgeVerified: true,
       ),
+      setUp: () {
+        when(() => ageService.setAdultContentVerified(false))
+            .thenAnswer((_) async => true);
+        when(filterService.lockAdultCategories).thenAnswer((_) async {});
+        when(videoEventService.filterAdultContentFromExistingVideos)
+            .thenReturn(0);
+      },
       build: buildCubit,
       act: (cubit) => cubit.setAgeVerified(false),
       expect: () => [
@@ -286,6 +278,10 @@ void main() {
     blocTest<SafetySettingsCubit, SafetySettingsState>(
       'setShowDivineHostedOnly persists and emits',
       seed: () => const SafetySettingsState(status: SafetySettingsStatus.ready),
+      setUp: () {
+        when(() => divineHostFilterService.setShowDivineHostedOnly(false))
+            .thenAnswer((_) async {});
+      },
       build: buildCubit,
       act: (cubit) => cubit.setShowDivineHostedOnly(false),
       expect: () => [
@@ -306,6 +302,13 @@ void main() {
       'setPeopleIFollowEnabled passes the current followed-pubkeys list',
       seed: () => const SafetySettingsState(status: SafetySettingsStatus.ready),
       setUp: () {
+        when(
+          () => moderationLabelService.setFollowingModerationEnabled(
+            true,
+            followedPubkeys: ['follow_a', 'follow_b'],
+          ),
+        ).thenAnswer((_) async {});
+
         when(
           () => followRepository.followingPubkeys,
         ).thenReturn(['follow_a', 'follow_b']);
@@ -369,6 +372,9 @@ void main() {
       'addLabeler trims input, converts npub to hex, and re-reads labelers',
       seed: () => const SafetySettingsState(status: SafetySettingsStatus.ready),
       setUp: () {
+        when(() => moderationLabelService.addLabeler('new_hex_pubkey'))
+            .thenAnswer((_) async {});
+
         // A raw hex pubkey passes through npubToHexOrNull → trimmed input.
         when(
           () => moderationLabelService.customLabelers,
@@ -408,6 +414,9 @@ void main() {
         customLabelers: {'a', 'b'},
       ),
       setUp: () {
+        when(() => moderationLabelService.removeLabeler('b'))
+            .thenAnswer((_) async {});
+
         when(() => moderationLabelService.customLabelers).thenReturn({'a'});
       },
       build: buildCubit,
@@ -431,6 +440,9 @@ void main() {
         blockedUsers: {'a', 'b'},
       ),
       setUp: () {
+        when(() => blocklistRepository.unblockUser('b'))
+            .thenAnswer((_) async => true);
+
         when(
           () => blocklistRepository.runtimeBlockedUsers,
         ).thenReturn({'a'});
@@ -451,6 +463,9 @@ void main() {
 
     blocTest<SafetySettingsCubit, SafetySettingsState>(
       'blocklist stateStream tick refreshes blockedUsers',
+      setUp: () {
+        stubSettingsInitialization();
+      },
       build: buildCubit,
       act: (cubit) async {
         await cubit.load();
@@ -514,6 +529,7 @@ void main() {
         'load does not subscribe to the blocklist stream after close',
         () async {
           final ensureLoaded = Completer<void>();
+          when(ageService.initialize).thenAnswer((_) async {});
           when(
             () => moderationLabelService.ensureLoaded(),
           ).thenAnswer((_) => ensureLoaded.future);
@@ -531,6 +547,7 @@ void main() {
       );
 
       test('load does not subscribe when it resumes inside close', () async {
+        when(ageService.initialize).thenAnswer((_) async {});
         final ensureLoaded = Completer<void>();
         when(
           () => moderationLabelService.ensureLoaded(),

@@ -2116,7 +2116,9 @@ void main() {
     setUp(() {
       mockDmRepository = _MockDmRepository();
       mockFollowRepository = _MockFollowRepository();
+    });
 
+    void stubUnreadInboxDependencies() {
       when(() => mockFollowRepository.isFollowing(any())).thenReturn(true);
       when(
         () => mockFollowRepository.followingStream,
@@ -2127,7 +2129,7 @@ void main() {
       when(
         () => mockDmRepository.retryPendingDecryptions(),
       ).thenAnswer((_) async {});
-    });
+    }
 
     ConversationListBloc createBloc() => ConversationListBloc(
       dmRepository: mockDmRepository,
@@ -2153,6 +2155,7 @@ void main() {
     test(
       'loaded state exposes the full list as visibleConversations',
       () async {
+        stubUnreadInboxDependencies();
         _stubStreams(mockDmRepository, accepted: mixedConversations());
         final bloc = createBloc();
         addTearDown(bloc.close);
@@ -2172,6 +2175,8 @@ void main() {
     // the list claimed "You're all caught up" while the Messages badge — which
     // counts the full accepted set — still showed unread.
     group('filters see the whole inbox, not just the loaded page', () {
+      setUp(stubUnreadInboxDependencies);
+
       /// One page of read conversations plus a single unread one ranked
       /// *below* the initial render window. Timestamps descend so the ranking
       /// is explicit rather than dependent on sort tie-breaking.
@@ -2269,6 +2274,7 @@ void main() {
     });
 
     test('toggling on narrows visibleConversations to unread only', () async {
+      stubUnreadInboxDependencies();
       _stubStreams(mockDmRepository, accepted: mixedConversations());
       final bloc = createBloc();
       addTearDown(bloc.close);
@@ -2291,6 +2297,7 @@ void main() {
     });
 
     test('toggling off restores the full list', () async {
+      stubUnreadInboxDependencies();
       _stubStreams(mockDmRepository, accepted: mixedConversations());
       final bloc = createBloc();
       addTearDown(bloc.close);
@@ -2312,6 +2319,7 @@ void main() {
     test(
       'new stream data arrives filtered while unread filter is on',
       () async {
+        stubUnreadInboxDependencies();
         final acceptedController = StreamController<List<DmConversation>>();
         _stubStreams(mockDmRepository);
         when(
@@ -2372,7 +2380,18 @@ void main() {
         moderation: l10n.inboxSupportRowTitle,
         retiredConversationClosed: l10n.dmRetiredThreadClosedTitle,
       );
+    });
 
+    void stubVanished(Set<String> pubkeys) {
+      when(
+        () => mockProfileRepository.watchVanishedPubkeys(),
+      ).thenAnswer((_) => Stream.value(pubkeys));
+    }
+
+    void stubPeerSearchDependencies() {
+      // The batch path never yields a profile for either peer, which is the
+      // measured reality: a PENDING vanish is stripped from the funnelcake
+      // bulk response entirely, and a retired moderation key has no kind 0.
       when(() => mockFollowRepository.isFollowing(any())).thenReturn(true);
       when(
         () => mockFollowRepository.followingStream,
@@ -2383,20 +2402,11 @@ void main() {
       when(
         () => mockDmRepository.retryPendingDecryptions(),
       ).thenAnswer((_) async {});
-      // The batch path never yields a profile for either peer, which is the
-      // measured reality: a PENDING vanish is stripped from the funnelcake
-      // bulk response entirely, and a retired moderation key has no kind 0.
       when(
         () => mockProfileRepository.fetchBatchProfiles(
           pubkeys: any(named: 'pubkeys'),
         ),
       ).thenAnswer((_) async => const {});
-    });
-
-    void stubVanished(Set<String> pubkeys) {
-      when(
-        () => mockProfileRepository.watchVanishedPubkeys(),
-      ).thenAnswer((_) => Stream.value(pubkeys));
     }
 
     ConversationListBloc createBloc({DmPeerLabels? withLabels}) {
@@ -2444,6 +2454,7 @@ void main() {
     // participant's name at all, so the index has to match on the subject or a
     // search finds a row by a string that is not on it (#8204's own rule).
     group('a group conversation', () {
+      setUp(stubPeerSearchDependencies);
       setUp(() => stubVanished(const {}));
 
       test('is found by the NIP-17 subject its row renders', () async {
@@ -2591,6 +2602,7 @@ void main() {
     });
 
     group('a vanished counterparty', () {
+      setUp(stubPeerSearchDependencies);
       setUp(() => stubVanished({_testPubkey2}));
 
       test('is found by the deleted-account label the row shows', () async {
@@ -2648,6 +2660,7 @@ void main() {
     });
 
     group('a retired Divine Moderation key', () {
+      setUp(stubPeerSearchDependencies);
       // Rotated away from, so `_extractPinnedSupport` leaves it in the list as
       // an ordinary searchable row — while `isModerationAccount` still answers
       // for it, so the row renders the brand name.
@@ -2750,6 +2763,7 @@ void main() {
     );
 
     test('a live counterparty still matches its generated name', () async {
+      stubPeerSearchDependencies();
       stubVanished(const {});
       _stubStreams(
         mockDmRepository,
@@ -2771,6 +2785,7 @@ void main() {
     });
 
     test('a vanish arriving after the query re-filters on its own', () async {
+      stubPeerSearchDependencies();
       // The row learns of a vanish from its own singular profile fetch, which
       // can land after the index was built. Without a live subscription the
       // results would stay wrong until the next keystroke.
@@ -2801,6 +2816,7 @@ void main() {
     });
 
     test('changing the app language re-filters into the new one', () async {
+      stubPeerSearchDependencies();
       stubVanished({_testPubkey2});
       final german = lookupAppLocalizations(const Locale('de'));
       _stubStreams(
@@ -2837,6 +2853,7 @@ void main() {
     });
 
     test('a repository swap re-points the vanished subscription', () async {
+      stubPeerSearchDependencies();
       stubVanished(const {});
       _stubStreams(
         mockDmRepository,
