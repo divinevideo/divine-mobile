@@ -86,11 +86,10 @@ void main() {
         );
 
         // Emit fewer events than requested to trigger hasMore = false
+        final firstVideoTimestamp =
+            DateTime.now().millisecondsSinceEpoch ~/ 1000;
         streamController.add(
-          _createTestVideoEvent(
-            'test1',
-            DateTime.now().millisecondsSinceEpoch ~/ 1000,
-          ),
+          _createTestVideoEvent('test1', firstVideoTimestamp),
         );
         await streamController.close();
 
@@ -116,8 +115,13 @@ void main() {
         await secondLoad;
         await secondCompleted;
 
-        // Assert - should have made two subscription calls
-        verify(() => mockNostrService.subscribe(any())).called(2);
+        // Assert - the second query resumes from the oldest cached video
+        // instead of restarting from the newest events.
+        final queries = verify(
+          () => mockNostrService.subscribe(captureAny()),
+        ).captured.cast<List<Filter>>();
+        expect(queries, hasLength(2));
+        expect(queries.last.single.until, equals(firstVideoTimestamp));
       },
     );
 
