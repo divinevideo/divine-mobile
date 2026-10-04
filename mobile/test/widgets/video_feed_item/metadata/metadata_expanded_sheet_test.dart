@@ -430,6 +430,29 @@ void main() {
     });
 
     testWidgetsWithSurfaceSize(
+      'shows only the description when an original Vine caption is followed '
+      'by stats',
+      (tester) async {
+        final video = _makeVideo(
+          title: 'Same caption',
+          content: 'Same caption\n\nOriginal stats: 3 loops - 2 likes',
+          rawTags: const {'platform': 'vine'},
+        );
+
+        await tester.pumpWidget(
+          buildSubject(child: MetadataExpandedSheet(video: video)),
+        );
+
+        // Exact match: only a separate headline renders the bare caption.
+        expect(find.text('Same caption'), findsNothing);
+        expect(
+          find.text('Same caption\n\nOriginal stats: 3 loops - 2 likes'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
       'renders farewell-day date when original Vine has a published_at tag',
       (tester) async {
         const publishedAt = 1484627482;

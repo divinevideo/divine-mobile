@@ -162,6 +162,24 @@ void main() {
       expect(find.text('Same caption'), findsOneWidget);
     });
 
+    testWidgets('shows only the description when a classic Vine caption is '
+        'followed by stats', (tester) async {
+      testVideo = testVideo.copyWith(
+        title: 'Same caption',
+        content: 'Same caption\n\nOriginal stats: 3 loops - 2 likes',
+        rawTags: const {'platform': 'vine'},
+      );
+
+      await pumpOverlay(tester);
+
+      // Exact match: only a separate title row renders the bare caption.
+      expect(find.text('Same caption'), findsNothing);
+      expect(
+        find.text('Same caption\n\nOriginal stats: 3 loops - 2 likes'),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('hides inspired-by attribution from the player overlay', (
       tester,
     ) async {
