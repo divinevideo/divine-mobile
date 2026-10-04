@@ -112,6 +112,11 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
   // Queue bookkeeping is independent of UI state. The epoch invalidates even
   // queued writes on A -> B -> A, feature disable, or repository replacement.
   int _mutationSession = 0;
+
+  /// Captures an editor's account, repository and feature lifetime.
+  ///
+  /// A boundary changes the epoch even if the same owner signs in again.
+  int get mutationSessionEpoch => _mutationSession;
   bool _closing = false;
   final _operations = <_QueuedPeopleListsMutation>{};
   _QueuedPeopleListsMutation? _activeOperation;
