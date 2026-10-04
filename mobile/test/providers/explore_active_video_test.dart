@@ -197,7 +197,7 @@ void main() {
         );
         expect(activeVideoIds, contains('explore-video-1'));
 
-        locationController.close();
+        await locationController.close();
         container.dispose();
       },
     );
@@ -249,7 +249,7 @@ void main() {
         // Active video should be null (grid mode)
         expect(container.read(activeVideoIdProvider), isNull);
 
-        locationController.close();
+        await locationController.close();
         container.dispose();
       },
     );
