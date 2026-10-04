@@ -173,11 +173,13 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
             collaborators.toSet(),
             _storedCollaborators.toSet(),
           );
+      // Only a flip sends visibility: the list may have changed since the
+      // sheet opened, and resending the opening value would undo that.
       final update = service.updateList(
         listId: listId,
         name: name,
         description: description,
-        isPublic: isPublic,
+        isPublic: visibilityWillChange ? isPublic : null,
         isCollaborative: writesCollaborators ? collaborators.isNotEmpty : null,
         allowedCollaborators: writesCollaborators ? collaborators : null,
       );

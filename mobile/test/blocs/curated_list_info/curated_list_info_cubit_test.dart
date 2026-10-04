@@ -423,7 +423,45 @@ void main() {
             listId: 'list-1',
             name: 'Marionettes',
             description: 'Strings attached',
-            isPublic: true,
+          ),
+        ).called(1),
+      );
+
+      blocTest<CuratedListInfoCubit, CuratedListInfoState>(
+        'sends no visibility when the owner did not flip it',
+        setUp: () => stubUpdate(() async => true),
+        build: () => buildCubit(existingList: _list()),
+        act: (cubit) async {
+          cubit.nameChanged('Marionettes');
+          await cubit.submitted();
+        },
+        // The sheet can be open on a list whose visibility changed since, so
+        // resending what it opened with would flip the list straight back.
+        // Leaving isPublic out of the matcher pins it to null.
+        verify: (_) => verify(
+          () => service.updateList(
+            listId: 'list-1',
+            name: 'Marionettes',
+            description: 'Strings attached',
+          ),
+        ).called(1),
+      );
+
+      blocTest<CuratedListInfoCubit, CuratedListInfoState>(
+        'sends no visibility when a private list is only renamed',
+        setUp: () => stubUpdate(() async => true),
+        build: () => buildCubit(existingList: _list(isPublic: false)),
+        act: (cubit) async {
+          cubit.nameChanged('Marionettes');
+          await cubit.submitted();
+        },
+        verify: (_) => verify(
+          () => service.updateList(
+            listId: 'list-1',
+            name: 'Marionettes',
+            description: 'Strings attached',
+            isCollaborative: false,
+            allowedCollaborators: const [],
           ),
         ).called(1),
       );
@@ -449,7 +487,6 @@ void main() {
             listId: 'list-1',
             name: 'Marionettes',
             description: 'Strings attached',
-            isPublic: true,
           ),
         ).called(1),
       );
@@ -470,7 +507,6 @@ void main() {
             listId: 'list-1',
             name: 'Puppets',
             description: 'Strings attached',
-            isPublic: true,
             isCollaborative: true,
             allowedCollaborators: any(
               named: 'allowedCollaborators',
@@ -493,7 +529,6 @@ void main() {
             listId: 'list-1',
             name: 'Puppets',
             description: 'Strings attached',
-            isPublic: true,
             isCollaborative: false,
             allowedCollaborators: const [],
           ),

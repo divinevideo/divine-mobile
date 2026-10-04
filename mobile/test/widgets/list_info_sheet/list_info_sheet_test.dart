@@ -547,7 +547,6 @@ void main() {
             listId: _listId,
             name: 'Marionettes',
             description: '',
-            isPublic: true,
           ),
         ).called(1);
         expect(find.text(l10n.listEditInfoAction), findsNothing);
