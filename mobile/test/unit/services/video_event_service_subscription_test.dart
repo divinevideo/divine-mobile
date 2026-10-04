@@ -35,6 +35,7 @@ void main() {
       eventStreamController = StreamController<Event>.broadcast();
 
       when(() => mockNostrService.isInitialized).thenReturn(true);
+      when(() => mockNostrService.publicKey).thenReturn('');
       when(() => mockNostrService.connectedRelayCount).thenReturn(1);
       when(
         () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),

@@ -27,6 +27,7 @@ void main() {
 
       // Setup basic mock responses
       when(() => mockNostrService.isInitialized).thenReturn(true);
+      when(() => mockNostrService.publicKey).thenReturn('');
       when(() => mockNostrService.connectedRelayCount).thenReturn(1);
       videoEventService = VideoEventService(
         mockNostrService,
@@ -37,6 +38,9 @@ void main() {
     tearDown(() {
       videoEventService.dispose();
     });
+
+    PaginationState discoveryState() => videoEventService
+        .getPaginationStatesForTesting()[SubscriptionType.discovery]!;
 
     Future<void> queryCompleted() {
       final completed = Completer<void>();
@@ -93,6 +97,8 @@ void main() {
         await firstLoad;
         await firstCompleted;
         expect(videoEventService.discoveryVideos, hasLength(1));
+        // Ingest finished; it throws before counting if publicKey is unstubbed.
+        expect(discoveryState().eventsReceivedInCurrentQuery, equals(1));
 
         // Now try to load more - it should reset and allow loading
         final secondController = StreamController<Event>.broadcast();
