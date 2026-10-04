@@ -35,7 +35,13 @@ import '../helpers/test_provider_overrides.dart';
 class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
     implements PeopleListsBloc {}
 
-class _MockVideosRepository extends Mock implements VideosRepository {}
+class _MockVideosRepository extends Mock implements VideosRepository {
+  _MockVideosRepository() {
+    when(
+      () => applyContentPreferences(any()),
+    ).thenAnswer((call) => call.positionalArguments.single as List<VideoEvent>);
+  }
+}
 
 class _MockPeopleListsRepository extends Mock
     implements PeopleListsRepository {}
