@@ -189,5 +189,70 @@ void main() {
         });
       },
     );
+    test('delete after a delivered create without OK removes the remote coordinate', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final client = Client();
+      final auth = Auth();
+      when(() => auth.isAuthenticated).thenReturn(true);
+      when(() => auth.currentPublicKeyHex).thenReturn(ownerA);
+      stubListPublishing(client: client, auth: auth, pubkey: ownerA);
+      final delivered = <Event>[];
+      Event? remote;
+      when(() => client.publishEventAwaitOk(any())).thenAnswer((i) async {
+        final event = i.positionalArguments.single as Event;
+        delivered.add(event);
+        if (event.kind == 30005) {
+          remote = event;
+          return PublishOutcome(
+            eventId: event.id,
+            acceptedBy: const [],
+            rejectedBy: const {},
+            noResponseFrom: const ['wss://relay.test'],
+          );
+        }
+        if (event.kind == 5 &&
+            event.tags.any(
+              (tag) =>
+                  tag.length >= 2 &&
+                  tag[0] == 'a' &&
+                  tag[1] ==
+                      '30005:$ownerA:${remote!.tags.firstWhere((tag) => tag.first == 'd')[1]}',
+            ) &&
+            event.createdAt > remote!.createdAt) {
+          remote = null;
+        }
+        return acceptedOutcome(event);
+      });
+      await withClock(Clock.fixed(instant), () async {
+        final service = CuratedListService(
+          nostrService: client,
+          authService: auth,
+          prefs: prefs,
+        );
+        addTearDown(service.dispose);
+        final created = (await service.createList(name: 'Delivered'))!;
+        expect(created.nostrEventId, isNull);
+        expect(created.pendingRepublish, isTrue);
+        expect(remote, isNotNull);
+        final reloaded = CuratedListService(
+          nostrService: client,
+          authService: auth,
+          prefs: prefs,
+        );
+        addTearDown(reloaded.dispose);
+        expect(await reloaded.deleteOwnedList(created.authorScopedId), isTrue);
+        expect(remote, isNull);
+        expect(reloaded.lists, isEmpty);
+        expect(
+          delivered.last.tags,
+          contains(equals(['a', '30005:$ownerA:${created.id}'])),
+        );
+        expect(
+          delivered.last.createdAt,
+          greaterThan(delivered.first.createdAt),
+        );
+      });
+    });
   });
 }

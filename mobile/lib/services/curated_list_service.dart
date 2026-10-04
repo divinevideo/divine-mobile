@@ -744,6 +744,7 @@ class CuratedListService extends ChangeNotifier {
         clearDescription: description != null && description.isEmpty,
         imageUrl: imageUrl ?? list.imageUrl,
         isPublic: isPublic ?? list.isPublic,
+        clearPendingVisibility: isPublic != null,
         tags: tags ?? list.tags,
         isCollaborative: isCollaborative ?? list.isCollaborative,
         allowedCollaborators: allowedCollaborators ?? list.allowedCollaborators,
@@ -771,13 +772,7 @@ class CuratedListService extends ChangeNotifier {
       }
 
       // Metadata saves locally; visibility and permissions await acceptance.
-      _lists[listIndex] = updatedList.copyWith(
-        isPublic: list.isPublic,
-        isCollaborative: visibilityChanged ? list.isCollaborative : null,
-        allowedCollaborators: visibilityChanged
-            ? list.allowedCollaborators
-            : null,
-      );
+      _lists[listIndex] = updatedList.stageVisibilityFrom(list);
       if (!await _saveLists(
         ownershipClaims: list.pubkey == null && updatedList.pubkey != null
             ? {updatedList.authorScopedId: list}
@@ -824,12 +819,6 @@ class CuratedListService extends ChangeNotifier {
         }
       }
 
-      Log.debug(
-        '✏️ Updated list: ${updatedList.name}',
-        name: 'CuratedListService',
-        category: LogCategory.system,
-      );
-
       return const CuratedListUpdateResult.saved();
     } catch (e) {
       Log.error(
@@ -872,7 +861,7 @@ class CuratedListService extends ChangeNotifier {
         return false;
       }
 
-      if (list.nostrEventId != null) {
+      if (list.nostrEventId != null || list.pendingRepublish) {
         if (!await _relayGateway.publishListDeletion(
           list.id,
           ownerPubkey: list.pubkey!,
@@ -1284,10 +1273,11 @@ class CuratedListService extends ChangeNotifier {
 
   /// Confirmed writes await acceptance; queued item changes stay local for retry.
   Future<bool> _publishListToNostr(
-    CuratedList list, {
+    CuratedList sourceList, {
     bool confirmed = false,
   }) async {
     try {
+      final list = sourceList.publicationTarget;
       final ownerPubkey = _relayGateway.currentAuthenticatedPubkey();
       if (ownerPubkey == null || list.pubkey != ownerPubkey) {
         Log.warning(
@@ -1324,18 +1314,28 @@ class CuratedListService extends ChangeNotifier {
       if (sendingIndex != -1) {
         final current = _lists[sendingIndex];
         final signedAt = event.createdAtDateTime;
-        _lists[sendingIndex] = current.copyWith(
-          updatedAt: signedAt.isAfter(current.updatedAt)
-              ? signedAt
-              : current.updatedAt,
-          pendingRepublish: true,
-        );
+        _lists[sendingIndex] = list
+            .stageVisibilityFrom(current, stageProposal: true)
+            .copyWith(
+              updatedAt: signedAt.isAfter(current.updatedAt)
+                  ? signedAt
+                  : current.updatedAt,
+              pendingRepublish: true,
+            );
         if (!await _saveLists()) return false;
       }
       if (confirmed) {
         final outcome = await _nostrService.publishEventAwaitOk(event);
         // A privacy transition commits once any relay accepts it.
         if (!outcome.acceptedByAny) {
+          if (outcome.rejectedBy.isNotEmpty &&
+              outcome.noResponseFrom.isEmpty &&
+              sendingIndex != -1) {
+            _lists[sendingIndex] = _lists[sendingIndex].copyWith(
+              clearPendingVisibility: true,
+            );
+            await _saveLists();
+          }
           if (outcome.rejectedBy.values.any(
             (reason) => reason.toLowerCase().contains('future'),
           )) {
@@ -1385,14 +1385,13 @@ class CuratedListService extends ChangeNotifier {
               ? list.allowedCollaborators
               : null,
           pendingRepublish: false,
+          clearPendingVisibility: true,
         );
-        if (!await _saveLists()) return false;
+        if (!await _saveLists()) {
+          _restoreList(current);
+          return false;
+        }
       }
-      Log.debug(
-        'Published list to Nostr: ${list.name} (${event.id})',
-        name: 'CuratedListService',
-        category: LogCategory.system,
-      );
       return true;
     } catch (e) {
       Log.error(
