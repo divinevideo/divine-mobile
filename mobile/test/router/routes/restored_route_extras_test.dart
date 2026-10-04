@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/router/routes/video_routes.dart';
@@ -299,6 +300,8 @@ Future<void> _buildWithContext(
 ) async {
   await tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: appLocalizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Builder(
         builder: (context) {
           body(context);

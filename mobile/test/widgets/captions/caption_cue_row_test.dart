@@ -3,6 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/captions/caption_cue_row.dart';
 
 void main() {
@@ -12,6 +13,8 @@ void main() {
       VoidCallback? onFocused,
       ValueChanged<String>? onTextChanged,
     }) => MaterialApp(
+      localizationsDelegates: appLocalizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: CaptionCueRow(
           text: text,

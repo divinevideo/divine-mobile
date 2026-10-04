@@ -4,6 +4,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/router.dart';
 
 const _keys = [
@@ -15,6 +16,8 @@ const _keys = [
 
 Widget _buildSubject(ValueListenable<int> currentIndex, {bool reduce = false}) {
   return MaterialApp(
+    localizationsDelegates: appLocalizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
     home: MediaQuery(
       data: MediaQueryData(disableAnimations: reduce),
       child: ValueListenableBuilder<int>(

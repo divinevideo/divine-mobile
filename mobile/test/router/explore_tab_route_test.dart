@@ -125,7 +125,13 @@ void main() {
       );
       addTearDown(router.dispose);
 
-      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpWidget(
+        MaterialApp.router(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          routerConfig: router,
+        ),
+      );
       router.go(ExploreScreen.pathForTab('popular'));
       await tester.pumpAndSettle();
 

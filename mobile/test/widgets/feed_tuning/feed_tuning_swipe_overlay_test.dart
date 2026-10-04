@@ -434,6 +434,8 @@ void main() {
       const childKey = Key('feed-child');
       await tester.pumpWidget(
         const MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: FeedTuningSwipeGate(
               enabled: false,

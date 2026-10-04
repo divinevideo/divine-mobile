@@ -144,6 +144,8 @@ void main() {
             draftStorageServiceProvider.overrideWithValue(draftStorageService),
           ],
           child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: AppLifecycleHandler(child: SizedBox.shrink()),
           ),
         ),
@@ -187,6 +189,8 @@ void main() {
             draftStorageServiceProvider.overrideWithValue(draftStorageService),
           ],
           child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: AppLifecycleHandler(child: SizedBox.shrink()),
           ),
         ),
@@ -237,6 +241,8 @@ void main() {
             draftStorageServiceProvider.overrideWithValue(draftStorageService),
           ],
           child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: AppLifecycleHandler(child: SizedBox.shrink()),
           ),
         ),
@@ -284,6 +290,8 @@ void main() {
             draftStorageServiceProvider.overrideWithValue(draftStorageService),
           ],
           child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: AppLifecycleHandler(child: SizedBox.shrink()),
           ),
         ),

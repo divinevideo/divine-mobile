@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:media_cache/media_cache.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/avatar_svg_repository_provider.dart';
 import 'package:openvine/repositories/avatar_svg_repository.dart';
 import 'package:openvine/widgets/avatar_failure_cache.dart';
@@ -99,6 +100,8 @@ void main() {
     AvatarSvgRepository? avatarSvgRepository,
   }) {
     return MaterialApp(
+      localizationsDelegates: appLocalizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: UserAvatar(
           imageUrl: imageUrl,
@@ -417,6 +420,8 @@ void main() {
     ) async {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: UserAvatar(
               imageProvider: MemoryImage(_transparentImageBytes),
@@ -437,6 +442,8 @@ void main() {
       // not just fill in for a missing one.
       await tester.pumpWidget(
         const MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: UserAvatar(
               imageUrl: 'https://divine.video/avatar.png',

@@ -5,6 +5,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/providers/environment_indicator_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
@@ -148,7 +149,11 @@ void main() {
         overrides: [
           environmentIndicatorColorProvider.overrideWithValue(color),
         ],
-        child: const MaterialApp(home: EnvironmentIndicatorLine()),
+        child: const MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: EnvironmentIndicatorLine(),
+        ),
       );
     }
 

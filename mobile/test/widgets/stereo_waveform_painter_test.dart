@@ -382,6 +382,8 @@ void main() {
       ) async {
         await tester.pumpWidget(
           MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: Center(
               child: SizedBox(
                 width: size.width,

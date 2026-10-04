@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/blurhash_display.dart';
 
 void main() {
@@ -20,6 +21,8 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: StatefulBuilder(
               builder: (context, setState) {
@@ -57,6 +60,8 @@ void main() {
     ) async {
       await tester.pumpWidget(
         const MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: BlurhashDisplay(
               blurhash: validBlurhash,

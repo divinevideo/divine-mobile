@@ -12,6 +12,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/features/app_review/app_review_coordinator.dart';
 import 'package:openvine/features/app_review/app_review_coordinator_cubit.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -112,7 +113,11 @@ void main() {
             profileReadRepositoryProvider.overrideWithValue(profileRepository),
             sharedPreferencesProvider.overrideWithValue(prefs),
           ],
-          child: const MaterialApp(home: AppReviewCoordinator()),
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: AppReviewCoordinator(),
+          ),
         ),
       );
 

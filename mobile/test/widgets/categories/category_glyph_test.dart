@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show VideoCategory;
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/categories/category_glyph.dart';
 import 'package:openvine/widgets/categories/category_visuals.dart';
 
@@ -12,6 +13,8 @@ void main() {
   group(CategoryGlyph, () {
     Widget buildSubject({required String? assetPath, required String emoji}) {
       return MaterialApp(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: Center(
             child: CategoryGlyph(
@@ -46,6 +49,8 @@ void main() {
       // test clock). vector_graphics calls this builder on asset-not-found.
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: Builder(
               builder: (context) =>
@@ -66,6 +71,8 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: MediaQuery(
             data: const MediaQueryData(textScaler: TextScaler.linear(3)),
             child: Scaffold(

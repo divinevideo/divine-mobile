@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/blurhash_display.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
 import 'package:openvine/widgets/video_feed_item/blurred_video_backdrop.dart';
@@ -16,6 +17,8 @@ void main() {
       double? videoAspectRatio,
     }) {
       return WidgetsApp(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         color: const Color(0xFF000000),
         builder: (_, _) => SizedBox(
           width: 400,
@@ -69,6 +72,8 @@ void main() {
       (tester) async {
         await tester.pumpWidget(
           WidgetsApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             color: const Color(0xFF000000),
             builder: (_, _) => const SizedBox(
               width: 400,
@@ -88,6 +93,8 @@ void main() {
       (tester) async {
         await tester.pumpWidget(
           WidgetsApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             color: const Color(0xFF000000),
             builder: (_, _) => const SizedBox(
               width: 400,
@@ -109,6 +116,8 @@ void main() {
         // The pre-publish preview has a local thumbnail, never a poster URL.
         await tester.pumpWidget(
           WidgetsApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             color: const Color(0xFF000000),
             builder: (_, _) => const SizedBox(
               width: 400,

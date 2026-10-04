@@ -274,7 +274,11 @@ void main() {
                 () => _MockVideoEditorNotifier(state),
               ),
             ],
-            child: const MaterialApp(home: Scaffold(body: SizedBox())),
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(body: SizedBox()),
+            ),
           ),
         );
         await tester.pumpAndSettle();

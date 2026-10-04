@@ -161,7 +161,13 @@ void main() {
       expect(spriteY(), isNot(equals(afterTwoCycles)));
 
       // Leaves no live ticker behind for the merged VGV isolate.
-      await tester.pumpWidget(const MaterialApp(home: SizedBox()));
+      await tester.pumpWidget(
+        const MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: SizedBox(),
+        ),
+      );
     });
   });
 

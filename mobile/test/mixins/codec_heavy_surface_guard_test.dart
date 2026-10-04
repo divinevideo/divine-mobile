@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/codec_heavy_surface/codec_heavy_surface_cubit.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/codec_heavy_surface_guard.dart';
 
 class _GuardedScreen extends StatefulWidget {
@@ -50,6 +51,8 @@ void main() {
       BlocProvider<CodecHeavySurfaceCubit>.value(
         value: cubit,
         child: MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           navigatorKey: navKey,
           home: const Scaffold(body: SizedBox.shrink()),
         ),

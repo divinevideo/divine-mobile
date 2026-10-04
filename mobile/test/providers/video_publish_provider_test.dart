@@ -392,7 +392,11 @@ void main() {
         await tester.pumpWidget(
           UncontrolledProviderScope(
             container: container,
-            child: const MaterialApp(home: SizedBox()),
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: SizedBox(),
+            ),
           ),
         );
         final context = tester.element(find.byType(SizedBox));
@@ -442,7 +446,11 @@ void main() {
         await tester.pumpWidget(
           UncontrolledProviderScope(
             container: container,
-            child: const MaterialApp(home: SizedBox()),
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: SizedBox(),
+            ),
           ),
         );
         final context = tester.element(find.byType(SizedBox));
@@ -483,6 +491,8 @@ void main() {
           UncontrolledProviderScope(
             container: container,
             child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
               navigatorKey: NavigatorKeys.root,
               home: const Scaffold(body: SizedBox()),
             ),

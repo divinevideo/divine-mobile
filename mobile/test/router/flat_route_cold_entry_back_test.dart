@@ -4,6 +4,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/settings/monetization_links_settings_screen.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
 import 'package:openvine/screens/settings/support_center_screen.dart';
@@ -62,7 +63,13 @@ void main() {
         );
         addTearDown(router.dispose);
 
-        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+        await tester.pumpWidget(
+          MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        );
         await tester.pumpAndSettle();
 
         expect(

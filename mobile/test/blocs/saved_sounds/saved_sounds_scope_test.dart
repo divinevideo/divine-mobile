@@ -12,6 +12,7 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sound_media_probe.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sounds_bloc.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sounds_scope.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/saved_sound.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -47,6 +48,8 @@ void main() {
       SavedSoundsBloc? visibleBloc;
 
       Widget app(SavedSoundsService service) => MaterialApp(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: SavedSoundsScope(
           service: service,
           mediaProbe: _NoopProbe(),
@@ -97,6 +100,8 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: SavedSoundsScope(
               service: service,
               mediaProbe: _NoopProbe(),

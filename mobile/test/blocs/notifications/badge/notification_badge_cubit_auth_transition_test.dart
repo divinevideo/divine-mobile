@@ -14,6 +14,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:notification_repository/notification_repository.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
 
 class _MockNotificationRepository extends Mock
@@ -109,7 +110,11 @@ void main() {
                 (ref) => ref.watch(_testRepoSelector),
               ),
             ],
-            child: const MaterialApp(home: _BadgeProbe()),
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: _BadgeProbe(),
+            ),
           ),
         );
 
@@ -155,7 +160,11 @@ void main() {
                 (ref) => ref.watch(_testRepoSelector),
               ),
             ],
-            child: const MaterialApp(home: _BadgeProbe()),
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: _BadgeProbe(),
+            ),
           ),
         );
 

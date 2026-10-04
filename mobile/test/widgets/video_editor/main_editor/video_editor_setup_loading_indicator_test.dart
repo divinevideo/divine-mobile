@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_setup_loading_indicator.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_thumbnail.dart';
 
@@ -17,6 +18,8 @@ void main() {
       return tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: SizedBox.fromSize(
                 size: bodySize,

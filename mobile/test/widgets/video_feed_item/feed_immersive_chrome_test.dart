@@ -5,6 +5,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/feed/feed_immersive_cubit.dart';
 import 'package:openvine/widgets/video_feed_item/feed_immersive_chrome.dart';
 
@@ -23,6 +24,8 @@ Future<void> _pumpChrome(
 
   await tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: appLocalizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: MediaQuery(
         data: MediaQueryData(disableAnimations: disableAnimations),
         child: cubit == null

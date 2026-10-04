@@ -21,6 +21,7 @@ import 'package:likes_repository/likes_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:reposts_repository/reposts_repository.dart';
 
@@ -156,7 +157,11 @@ void main() {
         await tester.pumpWidget(
           UncontrolledProviderScope(
             container: container,
-            child: const MaterialApp(home: _Fixture()),
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: _Fixture(),
+            ),
           ),
         );
 
@@ -208,7 +213,11 @@ void main() {
         await tester.pumpWidget(
           UncontrolledProviderScope(
             container: container,
-            child: const MaterialApp(home: _Fixture()),
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: _Fixture(),
+            ),
           ),
         );
 
@@ -258,7 +267,11 @@ void main() {
         await tester.pumpWidget(
           UncontrolledProviderScope(
             container: container,
-            child: const MaterialApp(home: _Fixture()),
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: _Fixture(),
+            ),
           ),
         );
 
