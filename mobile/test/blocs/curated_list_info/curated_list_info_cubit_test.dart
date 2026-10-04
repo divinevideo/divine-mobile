@@ -556,6 +556,103 @@ void main() {
       );
 
       blocTest<CuratedListInfoCubit, CuratedListInfoState>(
+        'saves the collaborators of a list going public after the flip is '
+        'accepted, not with it',
+        setUp: () => stubUpdate(() async => true),
+        build: () => buildCubit(existingList: _list(isPublic: false)),
+        act: (cubit) async {
+          cubit
+            ..visibilityChanged(isPublic: true)
+            ..collaboratorsPicked(offered: const {}, picked: {_alice});
+          await cubit.submitted();
+        },
+        verify: (cubit) {
+          verifyInOrder([
+            () => service.updateList(
+              listId: 'list-1',
+              name: 'Puppets',
+              description: 'Strings attached',
+              isPublic: true,
+            ),
+            () => service.updateList(
+              listId: 'list-1',
+              isCollaborative: true,
+              allowedCollaborators: [_alice],
+            ),
+          ]);
+          verifyNoMoreInteractions(service);
+          expect(cubit.state.status, equals(CuratedListInfoStatus.saved));
+        },
+      );
+
+      blocTest<CuratedListInfoCubit, CuratedListInfoState>(
+        'saves nothing for the collaborators when the flip to public is '
+        'rejected',
+        setUp: () => stubUpdate(() async => false),
+        build: () => buildCubit(existingList: _list(isPublic: false)),
+        act: (cubit) async {
+          cubit
+            ..visibilityChanged(isPublic: true)
+            ..collaboratorsPicked(offered: const {}, picked: {_alice});
+          await cubit.submitted();
+        },
+        verify: (cubit) {
+          verify(
+            () => service.updateList(
+              listId: 'list-1',
+              name: 'Puppets',
+              description: 'Strings attached',
+              isPublic: true,
+            ),
+          ).called(1);
+          verifyNoMoreInteractions(service);
+          expect(cubit.state.status, equals(CuratedListInfoStatus.failure));
+          expect(cubit.state.collaboratorPubkeys, equals([_alice]));
+        },
+      );
+
+      blocTest<CuratedListInfoCubit, CuratedListInfoState>(
+        'reports collaborators no relay accepted after the list went public',
+        setUp: () {
+          var answers = 0;
+          stubUpdate(() async => ++answers == 1);
+        },
+        build: () => buildCubit(existingList: _list(isPublic: false)),
+        act: (cubit) async {
+          cubit
+            ..visibilityChanged(isPublic: true)
+            ..collaboratorsPicked(offered: const {}, picked: {_alice});
+          await cubit.submitted();
+        },
+        verify: (cubit) => expect(
+          cubit.state.status,
+          equals(CuratedListInfoStatus.publishFailed),
+        ),
+      );
+
+      blocTest<CuratedListInfoCubit, CuratedListInfoState>(
+        'makes a list public in one save when no collaborators are picked',
+        setUp: () => stubUpdate(() async => true),
+        build: () => buildCubit(existingList: _list(isPublic: false)),
+        act: (cubit) async {
+          cubit.visibilityChanged(isPublic: true);
+          await cubit.submitted();
+        },
+        verify: (cubit) {
+          verify(
+            () => service.updateList(
+              listId: 'list-1',
+              name: 'Puppets',
+              description: 'Strings attached',
+              isPublic: true,
+            ),
+          ).called(1);
+          verifyNoMoreInteractions(service);
+          expect(cubit.state.status, equals(CuratedListInfoStatus.saved));
+        },
+      );
+
+      blocTest<CuratedListInfoCubit, CuratedListInfoState>(
         'reports a rename no relay accepted',
         setUp: () => stubUpdate(() async => false),
         build: () => buildCubit(existingList: _list()),

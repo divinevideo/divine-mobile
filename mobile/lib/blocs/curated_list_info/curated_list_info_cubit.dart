@@ -114,7 +114,8 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
   /// not take the video ends in [CuratedListInfoStatus.createdWithoutVideo].
   /// An edit that leaves visibility alone passes through
   /// [CuratedListInfoStatus.savedAwaitingRelay] first and can end in
-  /// [CuratedListInfoStatus.publishFailed] instead.
+  /// [CuratedListInfoStatus.publishFailed] instead, as do the collaborators of
+  /// a list that has just gone public.
   Future<void> submitted() async {
     if (!state.canSubmit) return;
 
@@ -173,6 +174,13 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
             collaborators.toSet(),
             _storedCollaborators.toSet(),
           );
+      // A list going public takes its collaborators once the flip is
+      // accepted: updateList stores them before any relay answers, so a
+      // refused flip would leave a private list that is collaborative.
+      final collaboratorsFollowFlip =
+          visibilityWillChange && isPublic && writesCollaborators;
+      final carriesCollaborators =
+          writesCollaborators && !collaboratorsFollowFlip;
       // Only a flip sends visibility: the list may have changed since the
       // sheet opened, and resending the opening value would undo that.
       final update = service.updateList(
@@ -180,39 +188,33 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
         name: name,
         description: description,
         isPublic: visibilityWillChange ? isPublic : null,
-        isCollaborative: writesCollaborators ? collaborators.isNotEmpty : null,
-        allowedCollaborators: writesCollaborators ? collaborators : null,
+        isCollaborative: carriesCollaborators ? collaborators.isNotEmpty : null,
+        allowedCollaborators: carriesCollaborators ? collaborators : null,
       );
 
       // Visibility is the one field updateList holds back until a relay
       // accepts the change, so a rejection means the switch the user flipped
       // did not take. Wait for the answer and keep the form open on failure.
       if (visibilityWillChange) {
-        final updated = await update;
-        emitIfOpen(
-          state.copyWith(
-            status: updated
-                ? CuratedListInfoStatus.saved
-                : CuratedListInfoStatus.failure,
-          ),
-        );
+        if (!await update) {
+          emitIfOpen(state.copyWith(status: CuratedListInfoStatus.failure));
+          return;
+        }
+        if (collaboratorsFollowFlip) {
+          await _closeThenAwait(
+            service.updateList(
+              listId: listId,
+              isCollaborative: collaborators.isNotEmpty,
+              allowedCollaborators: collaborators,
+            ),
+          );
+        } else {
+          emitIfOpen(state.copyWith(status: CuratedListInfoStatus.saved));
+        }
         return;
       }
 
-      // Everything else is stored on this device before updateList awaits a
-      // relay, so nothing typed rides on the answer. Let the form close now
-      // rather than hold it open on a slow relay.
-      emitIfOpen(
-        state.copyWith(status: CuratedListInfoStatus.savedAwaitingRelay),
-      );
-      final published = await update;
-      emitIfOpen(
-        state.copyWith(
-          status: published
-              ? CuratedListInfoStatus.saved
-              : CuratedListInfoStatus.publishFailed,
-        ),
-      );
+      await _closeThenAwait(update);
     } catch (error, stackTrace) {
       // Expected domain or network failure: surfaced through the status, not
       // Crashlytics, per the reportable-error decision matrix.
@@ -225,5 +227,24 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
         ),
       );
     }
+  }
+
+  /// Lets the form close, then reports how [update] ended.
+  ///
+  /// Everything but visibility is stored on this device before updateList
+  /// awaits a relay, so nothing typed rides on the answer. The form closes
+  /// now rather than stay open on a slow relay.
+  Future<void> _closeThenAwait(Future<bool> update) async {
+    emitIfOpen(
+      state.copyWith(status: CuratedListInfoStatus.savedAwaitingRelay),
+    );
+    final published = await update;
+    emitIfOpen(
+      state.copyWith(
+        status: published
+            ? CuratedListInfoStatus.saved
+            : CuratedListInfoStatus.publishFailed,
+      ),
+    );
   }
 }
