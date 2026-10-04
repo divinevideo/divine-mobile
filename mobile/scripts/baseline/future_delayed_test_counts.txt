@@ -12,9 +12,7 @@ test/blocs/change_email/change_email_cubit_test.dart	1
 test/blocs/clips_library/clips_library_bloc_test.dart	4
 test/blocs/comments/comments_list/comments_list_bloc_test.dart	3
 test/blocs/creator_sync/sound_sync_cubit_test.dart	1
-test/blocs/crosspost_settings/crosspost_settings_cubit_test.dart	23
 test/blocs/crossposting_settings/crossposting_settings_cubit_test.dart	1
-test/blocs/dm/conversation/conversation_bloc_test.dart	25
 test/blocs/dm/conversation_list/conversation_list_bloc_test.dart	9
 test/blocs/dm/conversation_list/protected_minor_inbox_gate_impl_test.dart	3
 test/blocs/dm/inline_reel_reply/inline_reel_reply_cubit_test.dart	1
@@ -47,7 +45,6 @@ test/blocs/video_editor/voice_over/voice_over_cubit_test.dart	1
 test/blocs/video_feed/home_feed_resume_manager_test.dart	1
 test/blocs/video_feed/video_feed_bloc_test.dart	21
 test/blocs/video_interactions/video_interactions_bloc_test.dart	17
-test/blocs/video_recorder/video_recorder_bloc_test.dart	30
 test/blocs/video_search/video_search_bloc_test.dart	4
 test/blocs/video_volume/video_volume_cubit_test.dart	4
 test/blocs/welcome/welcome_bloc_test.dart	7
