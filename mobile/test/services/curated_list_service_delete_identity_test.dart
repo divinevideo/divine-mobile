@@ -12,6 +12,7 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/curated_list_publish_stubs.dart';
@@ -105,7 +106,7 @@ void main() {
       expect(service.getListById('$_ownerB:shared'), isNotNull);
       expect(
         prefs.getStringList(
-          CuratedListService.deletedListCoordinatesStorageKey,
+          PrefsCuratedListStore.deletedCoordinatesStorageKey,
         ),
         contains('$_ownerA:shared'),
       );
