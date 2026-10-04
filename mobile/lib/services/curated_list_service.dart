@@ -1374,7 +1374,7 @@ class CuratedListService extends ChangeNotifier {
         final current = _lists[listIndex];
         final commitsVisibility = current.isPublic != list.isPublic;
         final signedAt = event.createdAtDateTime;
-        _lists[listIndex] = _lists[listIndex].copyWith(
+        _lists[listIndex] = current.copyWith(
           nostrEventId: event.id,
           updatedAt: signedAt.isAfter(current.updatedAt)
               ? signedAt
