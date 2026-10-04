@@ -225,11 +225,18 @@ void main() {
       });
 
       testWidgets('reads its copy from the app localizations', (tester) async {
-        await openSheet(tester);
-
         final german = lookupAppLocalizations(const Locale('de'));
+        // Copy that reads the same in both languages could not tell them
+        // apart.
         expect(german.listCreateNewList, isNot(l10n.listCreateNewList));
-        expect(find.text(german.listCreateNewList), findsNothing);
+        expect(german.listNameLabel, isNot(l10n.listNameLabel));
+
+        await openSheet(tester, locale: const Locale('de'));
+
+        expect(find.text(german.listCreateNewList), findsOneWidget);
+        expect(find.text(german.listNameLabel), findsOneWidget);
+        expect(find.text(l10n.listCreateNewList), findsNothing);
+        expect(find.text(l10n.listNameLabel), findsNothing);
       });
     });
 
