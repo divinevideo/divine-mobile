@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -487,34 +488,35 @@ void main() {
       expect(monitor.traces.single.stops, 1);
     });
 
-    test('does not time out a human-approved signer', () async {
-      final signer = Completer<Nip98Token?>();
-      when(
-        () => auth.createAuthToken(
-          url: any(named: 'url'),
-          method: any(named: 'method'),
-          payload: any(named: 'payload'),
-        ),
-      ).thenAnswer((_) => signer.future);
-      final repository = CreatorDeleteEnforcementRepository(
-        baseUrl: 'https://moderation.example',
-        httpClient: MockClient(
-          (_) async => http.Response('{"status":"success"}', 200),
-        ),
-        nip98AuthService: auth,
-        requestTimeout: const Duration(milliseconds: 10),
-        shouldBoundSigning: () => false,
-      );
+    test('does not time out a human-approved signer', () {
+      fakeAsync((async) {
+        final signer = Completer<Nip98Token?>();
+        when(
+          () => auth.createAuthToken(
+            url: any(named: 'url'),
+            method: any(named: 'method'),
+            payload: any(named: 'payload'),
+          ),
+        ).thenAnswer((_) => signer.future);
+        final repository = CreatorDeleteEnforcementRepository(
+          baseUrl: 'https://moderation.example',
+          httpClient: MockClient(
+            (_) async => http.Response('{"status":"success"}', 200),
+          ),
+          nip98AuthService: auth,
+          shouldBoundSigning: () => false,
+        );
 
-      final resultFuture = repository.enforce('kind5');
-      var completed = false;
-      unawaited(resultFuture.then((_) => completed = true));
-      await Future<void>.delayed(const Duration(milliseconds: 20));
-      expect(completed, isFalse);
+        CreatorDeleteEnforcementResult? result;
+        unawaited(repository.enforce('kind5').then((value) => result = value));
+        async.flushMicrotasks();
+        async.elapse(const Duration(seconds: 30));
+        expect(result, isNull);
 
-      signer.complete(token);
-      final result = await resultFuture;
-      expect(result.status, CreatorDeleteEnforcementStatus.delayed);
+        signer.complete(token);
+        async.flushMicrotasks();
+        expect(result!.status, CreatorDeleteEnforcementStatus.confirmed);
+      });
     });
   });
 }

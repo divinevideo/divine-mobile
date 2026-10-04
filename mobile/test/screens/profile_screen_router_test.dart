@@ -291,7 +291,7 @@ void main() {
       );
 
       await tester.runAsync(() async {
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
       });
       await tester.pump();
       await tester.pump();

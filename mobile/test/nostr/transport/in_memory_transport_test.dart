@@ -16,7 +16,7 @@ void main() {
       transport.injectFromRelay('["EVENT","sub1",{"id":"abc"}]');
       transport.injectFromRelay('["EOSE","sub1"]');
 
-      await Future.delayed(Duration.zero); // Flush microtasks
+      await pumpEventQueue();
 
       expect(messages, ['["EVENT","sub1",{"id":"abc"}]', '["EOSE","sub1"]']);
     });
@@ -31,7 +31,7 @@ void main() {
       transport.send('["REQ","sub1",{"kinds":[1]}]');
       transport.send('["CLOSE","sub1"]');
 
-      await Future.delayed(Duration.zero); // Flush microtasks
+      await pumpEventQueue();
 
       expect(outgoing, ['["REQ","sub1",{"kinds":[1]}]', '["CLOSE","sub1"]']);
     });
@@ -61,7 +61,7 @@ void main() {
       transport.incoming.listen(messages.add);
 
       transport.injectFromRelay('["EVENT","sub1",{"id":"abc"}]');
-      await Future.delayed(Duration.zero);
+      await pumpEventQueue();
 
       transport.dispose();
 
@@ -69,7 +69,7 @@ void main() {
       transport.injectFromRelay('["EVENT","sub2",{"id":"def"}]');
       transport.send('["REQ","sub2",{}]');
 
-      await Future.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(messages, ['["EVENT","sub1",{"id":"abc"}]']);
     });
@@ -86,7 +86,7 @@ void main() {
 
       transport.injectFromRelay('["EVENT","sub1",{"id":"abc"}]');
 
-      await Future.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(listener1, ['["EVENT","sub1",{"id":"abc"}]']);
       expect(listener2, ['["EVENT","sub1",{"id":"abc"}]']);

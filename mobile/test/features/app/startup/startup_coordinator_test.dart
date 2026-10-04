@@ -57,7 +57,7 @@ void main() {
       final initFuture = coordinator.initialize();
 
       // Critical services should start immediately
-      await Future.delayed(Duration.zero);
+      await pumpEventQueue();
       expect(
         initializationLog,
         containsAll(['AuthService:start', 'NostrService:start']),
@@ -69,7 +69,7 @@ void main() {
       serviceCompleters['NostrService']!.complete();
 
       // Now deferred services should start
-      await Future.delayed(Duration.zero);
+      await pumpEventQueue();
       expect(initializationLog, contains('VideoService:start'));
 
       // Complete all services
@@ -85,24 +85,31 @@ void main() {
       // equal (fastMs == slowMs == 200), defeating an earlier relative
       // `fastMs < slowMs` bound.
       fakeAsync((async) {
+        final fast = Completer<void>();
+        final slow = Completer<void>();
         final coordinator = StartupCoordinator()
           ..registerService(
             name: 'FastService',
             phase: StartupPhase.critical,
-            initialize: () =>
-                Future<void>.delayed(const Duration(milliseconds: 50)),
+            initialize: () => fast.future,
           )
           ..registerService(
             name: 'SlowService',
             phase: StartupPhase.critical,
-            initialize: () =>
-                Future<void>.delayed(const Duration(milliseconds: 200)),
+            initialize: () => slow.future,
           );
 
         var initialized = false;
         unawaited(coordinator.initialize().then((_) => initialized = true));
 
-        async.elapse(const Duration(milliseconds: 200));
+        async.flushMicrotasks();
+        async.elapse(const Duration(milliseconds: 50));
+        fast.complete();
+        async.flushMicrotasks();
+        expect(initialized, isFalse);
+        async.elapse(const Duration(milliseconds: 150));
+        slow.complete();
+        async.flushMicrotasks();
         expect(initialized, isTrue);
 
         final metrics = coordinator.metrics;
@@ -137,7 +144,7 @@ void main() {
 
       // Start initialization
       final initFuture = coordinator.initialize();
-      await Future.delayed(Duration.zero);
+      await pumpEventQueue();
 
       // DatabaseService should start first
       expect(initializationLog, contains('DatabaseService:start'));
@@ -145,7 +152,7 @@ void main() {
 
       // Complete DatabaseService
       serviceCompleters['DatabaseService']!.complete();
-      await Future.delayed(Duration.zero);
+      await pumpEventQueue();
 
       // Now UserService should start
       expect(initializationLog, contains('UserService:start'));
@@ -169,7 +176,7 @@ void main() {
       );
 
       final initFuture = coordinator.initializeThrough(StartupPhase.critical);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(initializationLog, contains('EnvironmentService:start'));
       expect(initializationLog, isNot(contains('AuthService:start')));
@@ -205,7 +212,7 @@ void main() {
         await coordinator.initializeThrough(StartupPhase.critical);
 
         final initFuture = coordinator.initializeRemaining();
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(
           initializationLog.where(
@@ -239,7 +246,7 @@ void main() {
       final criticalFuture = coordinator.initializeThrough(
         StartupPhase.critical,
       );
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(initializationLog, contains('HiveStorage:start'));
       expect(initializationLog, isNot(contains('UploadManager:start')));
@@ -248,7 +255,7 @@ void main() {
       await criticalFuture;
 
       final remainingFuture = coordinator.initializeRemaining();
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(initializationLog, contains('UploadManager:start'));
 
@@ -269,7 +276,7 @@ void main() {
         );
 
         final initFuture = coordinator.initializeThrough(StartupPhase.critical);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(
           () => coordinator.registerService(

@@ -119,7 +119,7 @@ void main() {
 
         await cubit.close();
         completer.complete(['pubkey-late']);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(emissions, isEmpty);
         await subscription.cancel();
@@ -144,7 +144,7 @@ void main() {
 
         await cubit.close();
         completer.completeError(StateError('relay timeout'));
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(emissions, isEmpty);
         await subscription.cancel();

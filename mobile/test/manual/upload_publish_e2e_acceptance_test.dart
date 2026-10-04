@@ -48,6 +48,8 @@ import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../helpers/observe_until.dart';
+
 const _localHost = 'localhost';
 const _relayPort = 47777;
 const _blossomPort = 43003;
@@ -474,12 +476,13 @@ Future<int> _getHlsStatus(String sha256Hex) async {
 }
 
 Future<bool> _pollHlsReady(String sha256Hex) async {
-  final deadline = DateTime.now().add(_consistencyTimeout);
-  while (DateTime.now().isBefore(deadline)) {
-    if (await _getHlsStatus(sha256Hex) == HttpStatus.ok) return true;
-    await Future<void>.delayed(_pollInterval);
-  }
-  return false;
+  return observeUntil<bool>(
+    probe: () async => await _getHlsStatus(sha256Hex) == HttpStatus.ok,
+    ready: (value) => value,
+    initialValue: false,
+    interval: _pollInterval,
+    timeout: _consistencyTimeout,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -509,17 +512,18 @@ Future<List<dynamic>> _getVideosUntil(
   String path,
   bool Function(List<dynamic>) found,
 ) async {
-  final deadline = DateTime.now().add(_consistencyTimeout);
-  var list = const <dynamic>[];
-  while (DateTime.now().isBefore(deadline)) {
-    final (status, json) = await _getJson(path);
-    if (status == HttpStatus.ok && json is List) {
-      list = json;
-      if (found(list)) return list;
-    }
-    await Future<void>.delayed(_pollInterval);
-  }
-  return list;
+  var lastList = const <dynamic>[];
+  return observeUntil<List<dynamic>>(
+    probe: () async {
+      final (status, json) = await _getJson(path);
+      if (status == HttpStatus.ok && json is List) lastList = json;
+      return lastList;
+    },
+    ready: found,
+    initialValue: lastList,
+    interval: _pollInterval,
+    timeout: _consistencyTimeout,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -563,14 +567,13 @@ Future<List<Map<String, dynamic>>> _queryRelayUntil(
   Map<String, dynamic> filter,
   bool Function(List<Map<String, dynamic>>) found,
 ) async {
-  final deadline = DateTime.now().add(_consistencyTimeout);
-  var events = <Map<String, dynamic>>[];
-  while (DateTime.now().isBefore(deadline)) {
-    events = await _queryRelayOnce(filter);
-    if (found(events)) return events;
-    await Future<void>.delayed(_pollInterval);
-  }
-  return events;
+  return observeUntil<List<Map<String, dynamic>>>(
+    probe: () => _queryRelayOnce(filter),
+    ready: found,
+    initialValue: const [],
+    interval: _pollInterval,
+    timeout: _consistencyTimeout,
+  );
 }
 
 /// Sends a single REQ, collects EVENTs until EOSE (or timeout), then CLOSEs.

@@ -778,15 +778,10 @@ void main() {
       const pubkey = 'pubkey';
       final api = MockFunnelcakeApiClient();
       final unhandledErrors = <Object>[];
+      late Completer<SocialCounts?> social;
 
       when(() => api.isAvailable).thenReturn(true);
-      when(() => api.getSocialCounts(pubkey)).thenAnswer((_) async {
-        await Future<void>.delayed(Duration.zero);
-        throw const FunnelcakeApiException(
-          message: 'social failed',
-          statusCode: 500,
-        );
-      });
+      when(() => api.getSocialCounts(pubkey)).thenAnswer((_) => social.future);
       when(
         () => api.getVideosByAuthor(
           pubkey: pubkey,
@@ -801,11 +796,18 @@ void main() {
 
       await runZonedGuarded<Future<void>>(
         () async {
+          social = Completer<SocialCounts?>();
           await expectLater(
             repo.fetchCreatorAnalytics(pubkey),
             throwsA(isA<CreatorAnalyticsLoadException>()),
           );
-          await Future<void>.delayed(Duration.zero);
+          social.completeError(
+            const FunnelcakeApiException(
+              message: 'social failed',
+              statusCode: 500,
+            ),
+          );
+          await pumpEventQueue();
         },
         (error, stackTrace) {
           unhandledErrors.add(error);
@@ -819,15 +821,13 @@ void main() {
       const pubkey = 'pubkey';
       final api = MockFunnelcakeApiClient();
       final unhandledErrors = <Object>[];
+      late Completer<SocialCounts?> social;
 
       when(() => api.isAvailable).thenReturn(true);
       // The tolerant wrapper only catches Exceptions, so an Error (an
       // invariant) escapes it and would otherwise surface as an unhandled
       // async error when the required load aborts first.
-      when(() => api.getSocialCounts(pubkey)).thenAnswer((_) async {
-        await Future<void>.delayed(Duration.zero);
-        throw StateError('social invariant failed');
-      });
+      when(() => api.getSocialCounts(pubkey)).thenAnswer((_) => social.future);
       when(
         () => api.getVideosByAuthor(
           pubkey: pubkey,
@@ -842,11 +842,13 @@ void main() {
 
       await runZonedGuarded<Future<void>>(
         () async {
+          social = Completer<SocialCounts?>();
           await expectLater(
             repo.fetchCreatorAnalytics(pubkey),
             throwsA(isA<CreatorAnalyticsLoadException>()),
           );
-          await Future<void>.delayed(Duration.zero);
+          social.completeError(StateError('social invariant failed'));
+          await pumpEventQueue();
         },
         (error, stackTrace) {
           unhandledErrors.add(error);

@@ -609,9 +609,12 @@ void main() {
         bloc
           ..add(const NewMessageSearchPeerLabelsChanged(labels))
           ..add(const NewMessageSearchStarted());
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await pumpEventQueue();
+        final searched = bloc.stream.firstWhere(
+          (state) => state.status == NewMessageSearchStatus.searchSuccess,
+        );
         bloc.add(NewMessageSearchQueryChanged(query));
-        await Future<void>.delayed(debounceDuration * 2);
+        await searched;
       }
 
       blocTest<NewMessageSearchBloc, NewMessageSearchState>(
@@ -735,16 +738,19 @@ void main() {
           bloc
             ..add(const NewMessageSearchPeerLabelsChanged(labels))
             ..add(const NewMessageSearchStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
+          final searched = bloc.stream.firstWhere(
+            (state) => state.status == NewMessageSearchStatus.searchSuccess,
+          );
           bloc.add(const NewMessageSearchQueryChanged('Aeontropy'));
-          await Future<void>.delayed(debounceDuration * 2);
+          await searched;
           expect(
             bloc.state.results.map((p) => p.pubkey),
             contains(vanishedPubkey),
           );
 
           vanished.add({vanishedPubkey});
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
 
           expect(bloc.state.results, isEmpty);
         },
@@ -774,7 +780,7 @@ void main() {
               ),
             ),
           );
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
 
           expect(
             bloc.state.results.map((p) => p.pubkey),
@@ -820,7 +826,7 @@ void main() {
           bloc
             ..add(const NewMessageSearchPeerLabelsChanged(labels))
             ..add(const NewMessageSearchStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
         },
         verify: (bloc) {
           expect(

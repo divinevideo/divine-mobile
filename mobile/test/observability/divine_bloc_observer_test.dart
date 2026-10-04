@@ -119,7 +119,7 @@ void main() {
         for (final error in invariantErrors) {
           final stack = StackTrace.current;
           observer.onError(cubit, error, stack);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
 
           final captured = verify(
             () => mockCrash.recordErrorWithCustomKeys(
@@ -145,7 +145,7 @@ void main() {
         StackTrace.current,
       );
 
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       // Matched anywhere in the capture rather than at `.last`.
       // LogCaptureService is a process-global ring buffer and every file in
@@ -209,7 +209,7 @@ void main() {
 
         // addError dispatches to the bloc error stream via a microtask;
         // drain it before verifying the synchronous expectation.
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         verify(
           () => mockCrash.recordErrorWithCustomKeys(

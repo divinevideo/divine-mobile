@@ -340,19 +340,35 @@ void main() {
               _labelEvent(author, ['gambling'], videoId: videoId),
           ]);
 
+          final pendingLookups = <Completer<void>>[];
           var inFlight = 0;
           var peakInFlight = 0;
           when(() => profileRepository.resolveDivineIdentity(any())).thenAnswer(
             (_) async {
               inFlight++;
               peakInFlight = max(peakInFlight, inFlight);
-              await Future<void>.delayed(Duration.zero);
+              final lookup = Completer<void>();
+              pendingLookups.add(lookup);
+              await lookup.future;
               inFlight--;
               return true;
             },
           );
 
-          final result = await repository.communityLabelsForVideo(video);
+          Set<String>? result;
+          unawaited(
+            repository
+                .communityLabelsForVideo(video)
+                .then((value) => result = value),
+          );
+          while (result == null) {
+            await pumpEventQueue();
+            final batch = List<Completer<void>>.of(pendingLookups);
+            pendingLookups.clear();
+            for (final lookup in batch) {
+              lookup.complete();
+            }
+          }
 
           // Correctness under chunking: every author is still counted.
           expect(result, equals({'gambling'}));

@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:analytics/analytics.dart';
+import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -110,7 +111,7 @@ class _PopularVideosTabState extends ConsumerState<PopularVideosTab> {
 
     // Track feed loading start
     if (feedAsync.isLoading && _feedLoadStartTime == null) {
-      _feedLoadStartTime = DateTime.now();
+      _feedLoadStartTime = clock.now();
       _slowFeedLoadReported = false;
       _feedLoad = _feedTracker.startFeedLoad('popular');
     }
@@ -210,7 +211,7 @@ class _PopularVideosTabState extends ConsumerState<PopularVideosTab> {
     );
 
     final loadTime = _feedLoadStartTime != null
-        ? DateTime.now().difference(_feedLoadStartTime!).inMilliseconds
+        ? clock.now().difference(_feedLoadStartTime!).inMilliseconds
         : null;
     _feedTracker.trackFeedError(
       'popular',
@@ -253,7 +254,7 @@ class _PopularVideosTabState extends ConsumerState<PopularVideosTab> {
     final startedAt = _feedLoadStartTime;
     if (startedAt == null || _slowFeedLoadReported) return;
 
-    final elapsed = DateTime.now().difference(startedAt).inMilliseconds;
+    final elapsed = clock.now().difference(startedAt).inMilliseconds;
     if (elapsed <= widget.slowLoadThresholdMs) return;
 
     _slowFeedLoadReported = true;

@@ -24,7 +24,7 @@ void main() {
       final pump = NostrFixturePump(transport);
       pump.pumpFromString(fixtureContent);
 
-      await Future.delayed(Duration.zero); // Flush microtasks
+      await pumpEventQueue();
 
       expect(messages, [
         '["EVENT","sub1",{"id":"abc","kind":1}]',
@@ -51,7 +51,7 @@ void main() {
       final pump = NostrFixturePump(transport);
       pump.pumpFromString(fixtureContent);
 
-      await Future.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(messages, ['["EVENT","sub1",{"id":"abc"}]', '["EOSE","sub1"]']);
     });
@@ -103,7 +103,7 @@ void main() {
       pump.pumpFromString(fixture1);
       pump.pumpFromString(fixture2);
 
-      await Future.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(messages, [
         '["EVENT","sub1",{"id":"abc"}]',

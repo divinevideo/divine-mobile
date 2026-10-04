@@ -49,9 +49,7 @@ class MockUploadManager implements UploadManager {
 
   @override
   Future<void> retryUpload(String uploadId) async {
-    // In a real implementation, this would restart the upload process
-    // For testing, we just simulate the retry
-    await Future.delayed(const Duration(milliseconds: 100));
+    // This fixture has no asynchronous upload work to perform.
   }
 
   @override

@@ -105,45 +105,46 @@ void main() {
       expect(state.isInitialLoad, isTrue);
     });
 
-    test('continuous listener updates state as videos arrive', () async {
-      final videos = <VideoEvent>[];
-      final stateUpdates = <int>[];
-      VoidCallback? capturedListener;
+    test('continuous listener updates state as videos arrive', () {
+      fakeAsync((async) {
+        final videos = <VideoEvent>[];
+        final stateUpdates = <int>[];
+        VoidCallback? capturedListener;
 
-      when(() => mockService.addListener(any())).thenAnswer((invocation) {
-        capturedListener = invocation.positionalArguments[0] as VoidCallback;
+        when(() => mockService.addListener(any())).thenAnswer((invocation) {
+          capturedListener = invocation.positionalArguments[0] as VoidCallback;
+        });
+
+        final config = VideoFeedConfig(
+          subscriptionType: SubscriptionType.discovery,
+          subscribe: (service) async {},
+          getVideos: (service) => videos,
+          sortVideos: (videos) => videos,
+        );
+
+        builder.setupContinuousListener(
+          config: config,
+          onUpdate: (state) {
+            stateUpdates.add(state.videos.length);
+          },
+        );
+
+        // Simulate videos arriving progressively
+        videos.add(_createMockVideo(id: 'v1'));
+        capturedListener?.call();
+
+        async.elapse(const Duration(milliseconds: 600));
+
+        expect(stateUpdates, contains(1));
+
+        // More videos arrive
+        videos.add(_createMockVideo(id: 'v2'));
+        capturedListener?.call();
+
+        async.elapse(const Duration(milliseconds: 600));
+
+        expect(stateUpdates, contains(2));
       });
-
-      final config = VideoFeedConfig(
-        subscriptionType: SubscriptionType.discovery,
-        subscribe: (service) async {},
-        getVideos: (service) => videos,
-        sortVideos: (videos) => videos,
-      );
-
-      builder.setupContinuousListener(
-        config: config,
-        onUpdate: (state) {
-          stateUpdates.add(state.videos.length);
-        },
-      );
-
-      // Simulate videos arriving progressively
-      videos.add(_createMockVideo(id: 'v1'));
-      capturedListener?.call();
-
-      // Wait for debounce (500ms)
-      await Future<void>.delayed(const Duration(milliseconds: 600));
-
-      expect(stateUpdates, contains(1));
-
-      // More videos arrive
-      videos.add(_createMockVideo(id: 'v2'));
-      capturedListener?.call();
-
-      await Future<void>.delayed(const Duration(milliseconds: 600));
-
-      expect(stateUpdates, contains(2));
     });
   });
 }

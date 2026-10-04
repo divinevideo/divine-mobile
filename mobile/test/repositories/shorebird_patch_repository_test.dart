@@ -187,9 +187,9 @@ void main() {
       );
 
       final startup = startupRepository.updateSubscribedTrackAtStartup();
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       final staging = stagingRepository.applyStagingPatch();
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(stagingUpdater.updateCalls, 0);
       stableCheck.complete(UpdateStatus.upToDate);
@@ -207,7 +207,7 @@ void main() {
 
       final pendingOperation = pendingRepository
           .updateSubscribedTrackAtStartup();
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       ShorebirdPatchRepository.resetOperationQueueForTesting();
 

@@ -43,7 +43,7 @@ void main() {
     http.Client client, {
     Duration timeout = const Duration(seconds: 15),
     Duration retryBaseDelay = const Duration(milliseconds: 500),
-    Future<void> Function(Duration) delay = Future<void>.delayed,
+    Future<void> Function(Duration)? delay,
     String? Function()? currentPubkey,
   }) => AccountDeletionRecoveryRepository(
     baseUrl: 'https://api.divine.video/',
@@ -56,7 +56,7 @@ void main() {
             '385c3a6ec0b9d57a4330dbd6284989be5bd00e41c535f9ca39b6ae7c521b81cd',
     timeout: timeout,
     retryBaseDelay: retryBaseDelay,
-    delay: delay,
+    delay: delay ?? (_) async {},
   );
 
   http.Response coordinatorPreparing(http.Request request) => http.Response(
