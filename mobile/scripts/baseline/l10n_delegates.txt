@@ -10,4 +10,3 @@
 # identifiers containing the substring "MaterialApp". Regenerate after adding
 # delegates:
 #   UPDATE_BASELINE=1 bash scripts/check_l10n_delegates_ceiling.sh
-test/goldens/widgets/design_system_gallery_golden_test.dart	1
