@@ -23,9 +23,9 @@ void main() {
     container.listen(pageContextProvider, (_, _) {});
   });
 
-  tearDown(() {
+  tearDown(() async {
     container.dispose();
-    locations.close();
+    await locations.close();
   });
 
   Future<List<int>> visit(List<String> paths) async {
