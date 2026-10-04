@@ -1633,7 +1633,6 @@
     "reportReceivedReviewNotice": "Wyślemy je automatycznie, gdy połączysz się z internetem. Nasz zespół przejrzy twoje zgłoszenie i podejmie odpowiednie działania. Możesz otrzymać aktualizacje przez wiadomość bezpośrednią.",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "Zamknij",
-    "listAddToList": "Dodaj do listy",
     "listVideoCount": "{count, plural, one{1 film} few{{count} filmy} many{{count} filmów} other{{count} filmu}}",
     "@listVideoCount": {
         "placeholders": {
@@ -1642,25 +1641,8 @@
             }
         }
     },
-    "listNewList": "Nowa lista",
     "listDone": "Gotowe",
     "listErrorLoading": "Błąd wczytywania list",
-    "listRemovedFrom": "Usunięto z {name}",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "Dodano do {name}",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "Utwórz nową listę",
     "listNewPeopleList": "Nowa lista osób",
     "listNameLabel": "Nazwa listy",
@@ -3030,10 +3012,8 @@
     },
     "notificationSystemUpdate": "Masz nową aktualizację",
     "peopleListsAddToList": "Dodaj do listy",
-    "peopleListsSheetTitle": "Dodaj do listy",
     "peopleListsEmptyTitle": "Brak list",
     "peopleListsEmptySubtitle": "Utwórz listę, aby zacząć grupować osoby.",
-    "peopleListsCreateList": "Utwórz listę",
     "peopleListsNewListTitle": "Nowa lista",
     "peopleListsRouteTitle": "Lista osób",
     "peopleListsListNameLabel": "Nazwa listy",

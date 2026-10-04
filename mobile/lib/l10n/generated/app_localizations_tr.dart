@@ -3850,17 +3850,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get peopleListsAddToList => 'Listeye ekle';
 
   @override
-  String get peopleListsSheetTitle => 'Listeye ekle';
-
-  @override
   String get peopleListsEmptyTitle => 'Henüz liste yok';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Kişileri gruplamaya başlamak için bir liste oluştur.';
-
-  @override
-  String get peopleListsCreateList => 'Liste oluştur';
 
   @override
   String get peopleListsNewListTitle => 'Yeni liste';
@@ -4875,9 +4869,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get reportClose => 'Kapat';
 
   @override
-  String get listAddToList => 'Listeye Ekle';
-
-  @override
   String listVideoCount(int count) {
     return '$count video';
   }
@@ -4886,23 +4877,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get listByAuthorPrefix => 'Yazan ';
 
   @override
-  String get listNewList => 'Yeni Liste';
-
-  @override
   String get listDone => 'Bitti';
 
   @override
   String get listErrorLoading => 'Listeler yüklenirken hata';
-
-  @override
-  String listRemovedFrom(String name) {
-    return '$name listesinden kaldırıldı';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return '$name listesine eklendi';
-  }
 
   @override
   String get listCreateNewList => 'Yeni Liste Oluştur';

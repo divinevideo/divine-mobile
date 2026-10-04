@@ -1633,7 +1633,6 @@
     "reportReceivedReviewNotice": "Vi skickar den automatiskt när du är ansluten. Vårt team granskar din rapport och vidtar lämpliga åtgärder. Du kan få uppdateringar via direktmeddelande.",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "Stäng",
-    "listAddToList": "Lägg till i lista",
     "listVideoCount": "{count} videor",
     "@listVideoCount": {
         "placeholders": {
@@ -1642,25 +1641,8 @@
             }
         }
     },
-    "listNewList": "Ny lista",
     "listDone": "Klar",
     "listErrorLoading": "Fel vid inläsning av listor",
-    "listRemovedFrom": "Borttagen från {name}",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "Tillagd i {name}",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "Skapa ny lista",
     "listNewPeopleList": "Ny personlista",
     "listNameLabel": "Listnamn",
@@ -3030,10 +3012,8 @@
     },
     "notificationSystemUpdate": "Du har en ny uppdatering",
     "peopleListsAddToList": "Lägg till i lista",
-    "peopleListsSheetTitle": "Lägg till i lista",
     "peopleListsEmptyTitle": "Inga listor än",
     "peopleListsEmptySubtitle": "Skapa en lista för att börja gruppera personer.",
-    "peopleListsCreateList": "Skapa lista",
     "peopleListsNewListTitle": "Ny lista",
     "peopleListsRouteTitle": "Personlista",
     "peopleListsListNameLabel": "Listnamn",

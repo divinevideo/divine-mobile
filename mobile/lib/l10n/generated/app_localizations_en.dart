@@ -3981,17 +3981,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get peopleListsAddToList => 'Add to list';
 
   @override
-  String get peopleListsSheetTitle => 'Add to list';
-
-  @override
   String get peopleListsEmptyTitle => 'No lists yet';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Create a list to start grouping people.';
-
-  @override
-  String get peopleListsCreateList => 'Create list';
 
   @override
   String get peopleListsNewListTitle => 'New list';
@@ -5010,9 +5004,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportClose => 'Close';
 
   @override
-  String get listAddToList => 'Add to List';
-
-  @override
   String listVideoCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5027,23 +5018,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listByAuthorPrefix => 'By ';
 
   @override
-  String get listNewList => 'New List';
-
-  @override
   String get listDone => 'Done';
 
   @override
   String get listErrorLoading => 'Error loading lists';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'Removed from $name';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'Added to $name';
-  }
 
   @override
   String get listCreateNewList => 'Create New List';

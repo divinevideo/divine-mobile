@@ -1633,7 +1633,6 @@
     "reportReceivedReviewNotice": "Wir senden sie automatisch, sobald du verbunden bist. Unser Team prüft deine Meldung und ergreift entsprechende Maßnahmen. Du erhältst möglicherweise Updates per Direktnachricht.",
     "reportSafetyUrl": "divine.video/safety",
     "reportClose": "Schließen",
-    "listAddToList": "Zur Liste hinzufügen",
     "listVideoCount": "{count} Videos",
     "@listVideoCount": {
         "placeholders": {
@@ -1642,25 +1641,8 @@
             }
         }
     },
-    "listNewList": "Neue Liste",
     "listDone": "Fertig",
     "listErrorLoading": "Fehler beim Laden der Listen",
-    "listRemovedFrom": "Aus {name} entfernt",
-    "@listRemovedFrom": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
-    "listAddedTo": "Zu {name} hinzugefügt",
-    "@listAddedTo": {
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "listCreateNewList": "Neue Liste erstellen",
     "listNewPeopleList": "Neue Personenliste",
     "listNameLabel": "Listenname",
@@ -3030,10 +3012,8 @@
     },
     "notificationSystemUpdate": "Du hast eine neue Aktualisierung",
     "peopleListsAddToList": "Zur Liste hinzufügen",
-    "peopleListsSheetTitle": "Zur Liste hinzufügen",
     "peopleListsEmptyTitle": "Noch keine Listen",
     "peopleListsEmptySubtitle": "Erstelle eine Liste, um Personen zu gruppieren.",
-    "peopleListsCreateList": "Liste erstellen",
     "peopleListsNewListTitle": "Neue Liste",
     "peopleListsRouteTitle": "Personenliste",
     "peopleListsListNameLabel": "Listenname",

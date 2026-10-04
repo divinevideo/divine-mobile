@@ -3660,16 +3660,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get peopleListsAddToList => 'リストに追加';
 
   @override
-  String get peopleListsSheetTitle => 'リストに追加';
-
-  @override
   String get peopleListsEmptyTitle => 'リストがありません';
 
   @override
   String get peopleListsEmptySubtitle => 'リストを作成して人々をグループ化しましょう。';
-
-  @override
-  String get peopleListsCreateList => 'リストを作成';
 
   @override
   String get peopleListsNewListTitle => '新しいリスト';
@@ -4635,9 +4629,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get reportClose => '閉じる';
 
   @override
-  String get listAddToList => 'リストに追加';
-
-  @override
   String listVideoCount(int count) {
     return '$count本の動画';
   }
@@ -4646,23 +4637,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get listByAuthorPrefix => '作成者: ';
 
   @override
-  String get listNewList => '新しいリスト';
-
-  @override
   String get listDone => '完了';
 
   @override
   String get listErrorLoading => 'リストの読み込みに失敗';
-
-  @override
-  String listRemovedFrom(String name) {
-    return '$nameから削除したよ';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return '$nameに追加したよ';
-  }
 
   @override
   String get listCreateNewList => '新しいリストを作る';

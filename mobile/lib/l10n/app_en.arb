@@ -2504,10 +2504,8 @@
     }
   },
   "peopleListsAddToList": "Add to list",
-  "peopleListsSheetTitle": "Add to list",
   "peopleListsEmptyTitle": "No lists yet",
   "peopleListsEmptySubtitle": "Create a list to start grouping people.",
-  "peopleListsCreateList": "Create list",
   "peopleListsNewListTitle": "New list",
   "peopleListsRouteTitle": "People list",
   "@peopleListsRouteTitle": {
@@ -3160,7 +3158,6 @@
   "reportLearnMoreAt": "Learn more at",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "Close",
-  "listAddToList": "Add to List",
   "listVideoCount": "{count, plural, =1{{count} video} other{{count} videos}}",
   "@listVideoCount": {
     "placeholders": {
@@ -3170,25 +3167,8 @@
     }
   },
   "listByAuthorPrefix": "By ",
-  "listNewList": "New List",
   "listDone": "Done",
   "listErrorLoading": "Error loading lists",
-  "listRemovedFrom": "Removed from {name}",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "Added to {name}",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "Create New List",
   "listNewPeopleList": "New people list",
   "listNameLabel": "List Name",

@@ -3922,17 +3922,11 @@ class AppLocalizationsNl extends AppLocalizations {
   String get peopleListsAddToList => 'Toevoegen aan lijst';
 
   @override
-  String get peopleListsSheetTitle => 'Toevoegen aan lijst';
-
-  @override
   String get peopleListsEmptyTitle => 'Nog geen lijsten';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Maak een lijst om mensen te groeperen.';
-
-  @override
-  String get peopleListsCreateList => 'Lijst aanmaken';
 
   @override
   String get peopleListsNewListTitle => 'Nieuwe lijst';
@@ -4951,9 +4945,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get reportClose => 'Sluiten';
 
   @override
-  String get listAddToList => 'Toevoegen aan lijst';
-
-  @override
   String listVideoCount(int count) {
     return '$count video\'s';
   }
@@ -4962,23 +4953,10 @@ class AppLocalizationsNl extends AppLocalizations {
   String get listByAuthorPrefix => 'Door ';
 
   @override
-  String get listNewList => 'Nieuwe lijst';
-
-  @override
   String get listDone => 'Klaar';
 
   @override
   String get listErrorLoading => 'Fout bij laden van lijsten';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'Verwijderd uit $name';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'Toegevoegd aan $name';
-  }
 
   @override
   String get listCreateNewList => 'Nieuwe lijst maken';
