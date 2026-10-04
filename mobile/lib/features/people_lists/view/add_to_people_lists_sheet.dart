@@ -4,6 +4,7 @@
 import 'package:collection/collection.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/extensions/modal_pop_extension.dart';
@@ -15,6 +16,7 @@ import 'package:openvine/features/people_lists/curated_lists_gate.dart';
 import 'package:openvine/features/people_lists/models/people_list_entry_point.dart';
 import 'package:openvine/features/people_lists/view/widgets/widgets.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
 import 'package:openvine/widgets/list_picker_create_button.dart';
@@ -83,7 +85,11 @@ class AddToPeopleListsSheet extends StatefulWidget {
   }) async {
     if (!curatedListsEnabled(context)) return;
 
-    final session = _PickerSession(context.read<PeopleListsBloc>());
+    final session = _PickerSession(
+      context.read<PeopleListsBloc>(),
+      ProviderScope.containerOf(context, listen: false),
+    );
+    if (!session.isAuthCurrent || !session.isCurrent(context)) return;
     final l10n = context.l10n;
     // Resolved before the sheet opens: the screen that opened it may be
     // gone by the time a refusal is known.
@@ -138,6 +144,7 @@ class AddToPeopleListsSheet extends StatefulWidget {
           messenger: messenger,
           failedMessage: l10n.peopleListsMembershipUpdateFailed,
           cancelledMessage: l10n.peopleListsSessionChanged,
+          isSessionCurrent: () => session.isAuthCurrent,
         ),
         'report refused people list picks',
         logName: 'AddToPeopleListsSheet',
@@ -151,9 +158,11 @@ class AddToPeopleListsSheet extends StatefulWidget {
     required ScaffoldMessengerState? messenger,
     required String failedMessage,
     required String cancelledMessage,
+    required bool Function() isSessionCurrent,
   }) async {
     final result = await refusedPicks;
     if (result == PeopleListsOperationResult.succeeded ||
+        !isSessionCurrent() ||
         !(messenger?.mounted ?? false)) {
       return;
     }
@@ -287,6 +296,7 @@ class _ApplyButton extends StatelessWidget {
   final ValueChanged<Future<PeopleListsOperationResult>> onApplied;
 
   void _apply(BuildContext context) {
+    if (!session.isAuthCurrent) return;
     final cubit = context.read<PeopleListPicksCubit>();
     final bloc = context.read<PeopleListsBloc>();
     if (!session.isCurrent(context)) {
@@ -336,9 +346,10 @@ class _ApplyButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Disabled until at least one list is picked.
+    // Disabled while no list is picked and none that holds the person is
+    // unpicked.
     final canApply = context.select(
-      (PeopleListPicksCubit cubit) => cubit.state.selectedListIds.isNotEmpty,
+      (PeopleListPicksCubit cubit) => cubit.state.canApply,
     );
     return ListInfoCheckButton(
       semanticLabel: context.l10n.listDone,
@@ -365,6 +376,7 @@ class _CreateNewListButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListPickerCreateButton(
       onPressed: () {
+        if (!session.isAuthCurrent) return;
         if (!session.isCurrent(context)) {
           ScaffoldMessenger.maybeOf(context)?.showSnackBar(
             DivineSnackbarContainer.snackBar(
@@ -374,10 +386,15 @@ class _CreateNewListButton extends StatelessWidget {
           );
           return;
         }
-        showNewPeopleListSheet(
-          context,
-          initialCollaborator: initialCollaborator,
-          initialPubkey: pubkey,
+        runDetached(
+          showNewPeopleListSheet(
+            context,
+            initialCollaborator: initialCollaborator,
+            initialPubkey: pubkey,
+          ),
+          'open people list creation sheet',
+          logName: 'AddToPeopleListsSheet',
+          category: LogCategory.ui,
         );
       },
     );
@@ -419,13 +436,19 @@ class _EmptyListRows extends StatelessWidget {
 
 /// The opening account and mutation epoch belong to one picker visit.
 class _PickerSession {
-  _PickerSession(this.bloc)
+  _PickerSession(this.bloc, this.container)
     : ownerPubkey = bloc.state.activeOwnerPubkey,
       epoch = bloc.mutationSessionEpoch;
 
   final PeopleListsBloc bloc;
+  final ProviderContainer container;
   final String? ownerPubkey;
   final int epoch;
+
+  bool get isAuthCurrent =>
+      ownerPubkey != null &&
+      ownerPubkey!.isNotEmpty &&
+      container.read(authServiceProvider).currentPublicKeyHex == ownerPubkey;
 
   bool isCurrent(BuildContext context) =>
       curatedListsEnabled(context) &&
