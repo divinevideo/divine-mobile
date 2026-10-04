@@ -52,8 +52,13 @@ void main() {
   group('showSelectListSheet', () {
     late _MockCuratedListService service;
     late VideoEvent video;
+    late MockAuthService auth;
+    late String? activeOwner;
 
     setUp(() {
+      activeOwner = _authorPubkey;
+      auth = createMockAuthService(currentPublicKeyHex: _authorPubkey);
+      when(() => auth.currentPublicKeyHex).thenAnswer((_) => activeOwner);
       service = _MockCuratedListService();
       _fakeService = service;
       when(() => service.myLists).thenReturn(const []);
@@ -97,6 +102,7 @@ void main() {
       await tester.pumpWidget(
         testMaterialApp(
           additionalOverrides: [
+            authServiceProvider.overrideWithValue(auth),
             curatedListsStateProvider.overrideWith(listsState),
             myListsWithThumbnailsProvider.overrideWith(
               (ref) => thumbnails == null
@@ -320,8 +326,8 @@ void main() {
         expect(find.byType(SelectListSheetBody), findsNothing);
       });
 
-      testWidgets('the check is disabled until a list is picked, and enabled '
-          'again once one is', (tester) async {
+      testWidgets('with the video in no list, the check is disabled until a '
+          'list is picked, and again once it is unpicked', (tester) async {
         when(() => service.myLists).thenReturn([list('Empty')]);
         await openSheet(tester);
 
@@ -343,6 +349,33 @@ void main() {
           saveButtonNode(),
           isSemantics(hasEnabledState: true, isEnabled: false),
         );
+      });
+
+      testWidgets('unpicking the only list that holds the video leaves the '
+          'check enabled, and the check takes the video out', (tester) async {
+        when(() => service.myLists).thenReturn([
+          list('Holds it', videoEventIds: const [_videoEventId]),
+        ]);
+        when(
+          () => service.removeVideoFromList(any(), any()),
+        ).thenAnswer((_) async => true);
+        await openSheet(tester);
+
+        await tester.tap(find.text('Holds it'));
+        await tester.pump();
+        expect(rowChecks(), findsNothing);
+        expect(
+          saveButtonNode(),
+          isSemantics(hasEnabledState: true, isEnabled: true),
+        );
+
+        await tester.tap(saveButton());
+        await tester.pumpAndSettle();
+
+        verify(
+          () => service.removeVideoFromList('list_holds_it', _videoEventId),
+        ).called(1);
+        expect(find.byType(SelectListSheetBody), findsNothing);
       });
 
       testWidgets('the check closes at once when nothing was changed', (
@@ -435,6 +468,49 @@ void main() {
         expect(find.text(l10n.listUpdateFailed), findsNothing);
       });
 
+      testWidgets(
+        'Sync now keeps the existing video checked and does not toggle it',
+        (tester) async {
+          final pending = list(
+            'Pending',
+            videoEventIds: const [_videoEventId],
+          ).copyWith(pendingRepublish: true);
+          when(() => service.myLists).thenReturn([pending]);
+          when(() => service.retryListSync(pending.id))
+              .thenAnswer((_) async => true);
+          await openSheet(tester);
+          expect(find.text(l10n.listVideoPendingSync), findsOneWidget);
+          expect(rowChecks(), findsOneWidget);
+          await tester.tap(find.text(l10n.listRetrySync));
+          await tester.pumpAndSettle();
+          expect(rowChecks(), findsOneWidget);
+          verify(() => service.retryListSync(pending.id)).called(1);
+          verifyNever(() => service.addVideoToList(any(), any()));
+          verifyNever(() => service.removeVideoFromList(any(), any()));
+        },
+      );
+
+      testWidgets(
+        'an account change suppresses a dismissed pending save refusal',
+        (tester) async {
+          final answer = Completer<bool>();
+          when(() => service.myLists).thenReturn([list('Empty')]);
+          when(() => service.addVideoToList(any(), any()))
+              .thenAnswer((_) => answer.future);
+          await openSheet(tester);
+          await tester.tap(find.text('Empty'));
+          await tester.pump();
+          await tester.tap(saveButton());
+          await tester.pump();
+          await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+          await tester.pumpAndSettle();
+          activeOwner = 'e' * 64;
+          answer.complete(false);
+          await tester.pumpAndSettle();
+          expect(find.byType(SnackBar), findsNothing);
+        },
+      );
+
       testWidgets('the X closes without writing the picks', (tester) async {
         when(() => service.myLists).thenReturn([list('Empty')]);
         await openSheet(tester);
@@ -475,7 +551,7 @@ void main() {
 
         expect(find.byType(ListInfoForm), findsNothing);
         expect(find.byType(SelectListSheetBody), findsOneWidget);
-        expect(find.text(l10n.listUpdateFailed), findsOneWidget);
+        expect(find.text(l10n.listVideoNotAdded), findsOneWidget);
         expect(find.byType(SnackBar), findsNothing);
       });
 
@@ -522,7 +598,7 @@ void main() {
             answer.complete(false);
             await tester.pumpAndSettle();
 
-            expect(find.text(l10n.listUpdateFailed), findsOneWidget);
+            expect(find.text(l10n.listVideoNotAdded), findsOneWidget);
             expect(
               find.byType(SelectListSheetBody),
               dismissPicker ? findsNothing : findsOneWidget,
@@ -540,6 +616,64 @@ void main() {
           },
         );
       }
+
+      testWidgets(
+        'a newly created list with local video pending sync stays checked and offers sync',
+        (tester) async {
+          final empty = list('Empty');
+          final fresh = list('Fresh');
+          final pending = fresh.copyWith(
+            videoEventIds: const [_videoEventId],
+            pendingRepublish: true,
+          );
+          late VoidCallback listener;
+          when(() => service.myLists).thenReturn([empty]);
+          when(
+            () => service.createList(
+              name: any(named: 'name'),
+              description: any(named: 'description'),
+              isPublic: any(named: 'isPublic'),
+              isCollaborative: any(named: 'isCollaborative'),
+              allowedCollaborators: any(named: 'allowedCollaborators'),
+            ),
+          ).thenAnswer((_) async => fresh);
+          when(() => service.getListById(fresh.id)).thenReturn(pending);
+          when(() => service.addVideoToList(fresh.id, _videoEventId))
+              .thenAnswer((_) async {
+                when(() => service.myLists).thenReturn([empty, pending]);
+                listener();
+                return false;
+              });
+          when(() => service.retryListSync(fresh.id)).thenAnswer((_) async {
+            when(() => service.myLists)
+                .thenReturn([empty, pending.copyWith(pendingRepublish: false)]);
+            listener();
+            return true;
+          });
+          await openSheet(tester);
+          listener =
+              verify(() => service.addListener(captureAny())).captured.single
+                  as VoidCallback;
+          await tester.tap(find.text(l10n.listCreateNewList));
+          await tester.pumpAndSettle();
+          await tester.enterText(find.byType(TextField).first, 'Fresh');
+          await tester.pump();
+          await tester.tap(find.bySemanticsLabel(l10n.listCreate));
+          await tester.pumpAndSettle();
+          expect(find.byType(ListInfoForm), findsNothing);
+          expect(find.text(l10n.listVideoNotAdded), findsNothing);
+          expect(find.text(l10n.listVideoPendingSync), findsWidgets);
+          expect(rowChecks(), findsOneWidget);
+          await tester.tap(find.text(l10n.listRetrySync));
+          await tester.pumpAndSettle();
+          expect(rowChecks(), findsOneWidget);
+          expect(find.text(l10n.listRetrySync), findsNothing);
+          verify(() => service.retryListSync(fresh.id)).called(1);
+          verify(() => service.addVideoToList(fresh.id, _videoEventId))
+              .called(1);
+          verifyNever(() => service.removeVideoFromList(any(), any()));
+        },
+      );
 
       testWidgets('Create new list opens the create sheet, and the list it '
           'creates shows up picked', (tester) async {

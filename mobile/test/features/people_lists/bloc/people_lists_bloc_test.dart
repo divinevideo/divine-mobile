@@ -2230,6 +2230,10 @@ void main() {
       }
     });
 
+    // #6494: the app-shell BlocProvider is unconditional (#6477), so laziness
+    // only gates construction. A bloc built while FeatureFlag.curatedLists was
+    // on used to keep its cache subscription and keep calling syncOwner for
+    // kind 30000 for the rest of the session after the flag went off.
     group('curated-lists flag lifecycle', () {
       Future<PeopleListsBloc> startedWithOwnerA() async {
         final bloc = buildBloc()..add(const PeopleListsStarted());

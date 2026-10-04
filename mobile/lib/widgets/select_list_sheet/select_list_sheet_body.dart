@@ -58,9 +58,31 @@ class _SaveFailedMessage extends StatelessWidget {
       SelectListStatus.failureListFull => ListInfoFailureMessage(
         context.l10n.listPrivateFull,
       ),
+      SelectListStatus.createdWithoutVideo => ListInfoFailureMessage(
+        context.l10n.listVideoNotAdded,
+      ),
+      SelectListStatus.videoPendingSync => const _PendingSyncNotice(),
       _ => const SizedBox.shrink(),
     };
   }
+}
+
+class _PendingSyncNotice extends StatelessWidget {
+  const _PendingSyncNotice();
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    liveRegion: true,
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Text(
+        context.l10n.listVideoPendingSync,
+        style: VineTheme.bodyMediumFont(
+          color: context.vineColors.onSurfaceVariant,
+        ),
+      ),
+    ),
+  );
 }
 
 class _ListRows extends ConsumerWidget {
@@ -145,19 +167,52 @@ class _ListRow extends StatelessWidget {
     final visibility = list.isPublic
         ? l10n.listVisibilityPublic
         : l10n.listVisibilityPrivate;
-    return ListPickerRow(
-      media: DivineListMedia.videos(
-        thumbnailUrls: thumbnailUrls,
-        videoCount: list.videoEventIds.length,
-        pending: thumbnailsPending,
-        showCount: false,
-      ),
-      title: list.name,
-      meta: '${l10n.listVideoCount(list.videoEventIds.length)} • $visibility',
-      isSelected: isSelected,
-      onTap: isSaving
-          ? null
-          : () => context.read<SelectListCubit>().toggled(list.id),
+    final pendingSync = context.select(
+      (SelectListCubit cubit) =>
+          cubit.state.pendingSyncListIds.contains(list.id),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ListPickerRow(
+          media: DivineListMedia.videos(
+            thumbnailUrls: thumbnailUrls,
+            videoCount: list.videoEventIds.length,
+            pending: thumbnailsPending,
+            showCount: false,
+          ),
+          title: list.name,
+          meta:
+              '${l10n.listVideoCount(list.videoEventIds.length)} • $visibility',
+          isSelected: isSelected,
+          onTap: isSaving
+              ? null
+              : () => context.read<SelectListCubit>().toggled(list.id),
+        ),
+        if (pendingSync)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(l10n.listVideoPendingSync),
+                DivineButton(
+                  label: l10n.listRetrySync,
+                  onPressed: isSaving
+                      ? null
+                      : () => runDetached(
+                          context.read<SelectListCubit>().syncRequested(
+                            list.id,
+                          ),
+                          'retry list sync',
+                          logName: 'SelectListSheet',
+                          category: LogCategory.ui,
+                        ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }
@@ -174,16 +229,29 @@ class SelectListCreateButton extends StatelessWidget {
   Future<void> _create(BuildContext context) async {
     // Read before the await: the button may be gone when the sheet closes.
     final cubit = context.read<SelectListCubit>();
+    if (!cubit.isSessionCurrent) return;
     final messenger = ScaffoldMessenger.maybeOf(context);
     final route = ModalRoute.of(context);
     final l10n = context.l10n;
     final outcome = await showListInfoSheet(context, video: video);
-    if (outcome != ListInfoSheetOutcome.createdWithoutVideo) return;
+    if (!cubit.isSessionCurrent) return;
+    final pendingSync =
+        outcome == ListInfoSheetOutcome.createdWithVideoPendingSync;
+    if (!pendingSync && outcome != ListInfoSheetOutcome.createdWithoutVideo) {
+      return;
+    }
     if ((route?.isActive ?? false) && !cubit.isClosed) {
-      cubit.createdListRefusedVideo();
+      if (pendingSync) {
+        cubit.createdListWithVideoPendingSync();
+      } else {
+        cubit.createdListRefusedVideo();
+      }
     } else if (messenger?.mounted ?? false) {
       messenger!.showSnackBar(
-        DivineSnackbarContainer.snackBar(l10n.listUpdateFailed, error: true),
+        DivineSnackbarContainer.snackBar(
+          pendingSync ? l10n.listVideoPendingSync : l10n.listVideoNotAdded,
+          error: !pendingSync,
+        ),
       );
     }
   }

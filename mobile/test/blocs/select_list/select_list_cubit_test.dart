@@ -1,6 +1,8 @@
 // ABOUTME: Tests for SelectListCubit: which lists are picked, how the picks
 // ABOUTME: are written, and how the lists on offer follow the service.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -42,8 +44,11 @@ void main() {
       when(() => service.myLists).thenReturn(lists);
     }
 
-    SelectListCubit buildCubit() =>
-        SelectListCubit(service: service, videoEventId: _videoId);
+    SelectListCubit buildCubit() => SelectListCubit(
+      service: service,
+      videoEventId: _videoId,
+      currentOwnerPubkey: () => _ownerPubkey,
+    );
 
     /// The listener the cubit registered on the service.
     VoidCallback capturedListener() =>
@@ -210,6 +215,42 @@ void main() {
       );
 
       blocTest<SelectListCubit, SelectListState>(
+        'removes the video from the only list that holds it, leaving '
+        'nothing picked',
+        setUp: () {
+          stubLists([
+            _list('holds', videoEventIds: [_videoId]),
+          ]);
+          when(
+            () => service.removeVideoFromList(any(), any()),
+          ).thenAnswer((_) async => true);
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          cubit.toggled('holds');
+          await cubit.submitted();
+        },
+        skip: 1,
+        expect: () => [
+          isA<SelectListState>().having(
+            (s) => s.status,
+            'status',
+            SelectListStatus.saving,
+          ),
+          isA<SelectListState>().having(
+            (s) => s.status,
+            'status',
+            SelectListStatus.saved,
+          ),
+        ],
+        verify: (_) {
+          verify(
+            () => service.removeVideoFromList('holds', _videoId),
+          ).called(1);
+        },
+      );
+
+      blocTest<SelectListCubit, SelectListState>(
         'keeps the sheet open with the picks when a list refuses the change',
         setUp: () {
           stubLists([_list('works'), _list('refuses')]);
@@ -346,6 +387,90 @@ void main() {
       });
     });
 
+    group('opening account', () {
+      test('does not submit a visit after the account changes', () async {
+        stubLists([_list('empty')]);
+        String? owner = _ownerPubkey;
+        final cubit = SelectListCubit(
+          service: service,
+          videoEventId: _videoId,
+          currentOwnerPubkey: () => owner,
+        );
+        addTearDown(cubit.close);
+        cubit.toggled('empty');
+        owner = 'e' * 64;
+        expect(await cubit.submitted(), SelectListStatus.failure);
+        verifyNever(() => service.addVideoToList(any(), any()));
+      });
+
+      test('stops the remainder of a batch after an account changes', () async {
+        stubLists([_list('first'), _list('second')]);
+        final gate = Completer<bool>();
+        when(() => service.addVideoToList('first', _videoId))
+            .thenAnswer((_) => gate.future);
+        String? owner = _ownerPubkey;
+        final cubit = SelectListCubit(
+          service: service,
+          videoEventId: _videoId,
+          currentOwnerPubkey: () => owner,
+        );
+        addTearDown(cubit.close);
+        cubit
+          ..toggled('first')
+          ..toggled('second');
+        final save = cubit.submitted();
+        owner = 'e' * 64;
+        gate.complete(true);
+        expect(await save, SelectListStatus.failure);
+        verifyNever(() => service.addVideoToList('second', _videoId));
+      });
+
+      test('unknown authors are not offered as owned lists', () {
+        stubLists([
+          _list('legacy').copyWith(pubkey: ''),
+          _list('foreign').copyWith(pubkey: 'e' * 64),
+        ]);
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+        expect(cubit.state.lists, isEmpty);
+        expect(cubit.state.canSubmit, isFalse);
+      });
+
+      test(
+        'revalidates ownership of a selected coordinate before writing',
+        () async {
+          stubLists([_list('same')]);
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+          cubit.toggled('same');
+          stubLists([_list('same').copyWith(pubkey: 'e' * 64)]);
+          expect(await cubit.submitted(), SelectListStatus.failure);
+          verifyNever(() => service.addVideoToList(any(), any()));
+        },
+      );
+    });
+
+    test(
+      'sync retries publication without changing local membership',
+      () async {
+        final list = _list(
+          'pending',
+          videoEventIds: [_videoId],
+        ).copyWith(pendingRepublish: true);
+        stubLists([list]);
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+        when(() => service.retryListSync('pending'))
+            .thenAnswer((_) async => false);
+        await cubit.syncRequested('pending');
+        expect(cubit.state.memberListIds, {'pending'});
+        expect(cubit.state.selectedListIds, {'pending'});
+        expect(cubit.state.status, SelectListStatus.videoPendingSync);
+        verifyNever(() => service.addVideoToList(any(), any()));
+        verifyNever(() => service.removeVideoFromList(any(), any()));
+      },
+    );
+
     group('createdListRefusedVideo', () {
       blocTest<SelectListCubit, SelectListState>(
         'shows the failure line, leaving the picks alone',
@@ -357,7 +482,11 @@ void main() {
         skip: 1,
         expect: () => [
           isA<SelectListState>()
-              .having((s) => s.status, 'status', SelectListStatus.failure)
+              .having(
+                (s) => s.status,
+                'status',
+                SelectListStatus.createdWithoutVideo,
+              )
               .having((s) => s.selectedListIds, 'selected', {'empty'}),
         ],
       );

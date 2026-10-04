@@ -24,6 +24,10 @@ class PeopleListPicksState extends Equatable {
   /// Ids of the lists the person is removed from when the picks are applied.
   Set<String> get listIdsToRemove => memberListIds.difference(selectedListIds);
 
+  /// Whether the picks can be applied: a list is picked, or one that holds
+  /// the person is unpicked.
+  bool get canApply => selectedListIds.isNotEmpty || listIdsToRemove.isNotEmpty;
+
   PeopleListPicksState copyWith({
     Set<String>? memberListIds,
     Set<String>? selectedListIds,

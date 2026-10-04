@@ -91,8 +91,13 @@ void main() {
     final l10n = lookupAppLocalizations(const Locale('en'));
     late _MockPeopleListsBloc bloc;
     late PeopleListPicksCubit picks;
+    late MockAuthService auth;
+    late String? activeOwner;
 
     setUp(() {
+      activeOwner = _ownerPubkey;
+      auth = createMockAuthService(currentPublicKeyHex: _ownerPubkey);
+      when(() => auth.currentPublicKeyHex).thenAnswer((_) => activeOwner);
       bloc = _MockPeopleListsBloc();
       picks = PeopleListPicksCubit(memberListIds: const {});
       when(() => bloc.mutationSessionEpoch).thenReturn(0);
@@ -137,6 +142,7 @@ void main() {
       await tester.pumpWidget(
         _withCuratedListsFlag(
           enabled: true,
+          auth: auth,
           child: BlocProvider<PeopleListsBloc>.value(
             value: bloc,
             child: MaterialApp(
@@ -161,6 +167,75 @@ void main() {
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
     }
+
+    testWidgets('pending owner read does not claim there are no lists', (
+      tester,
+    ) async {
+      whenListen(
+        bloc,
+        const Stream<PeopleListsState>.empty(),
+        initialState: _stateWith(lists: const [])
+            .copyWith(ownerReadStatus: PeopleListsOwnerReadStatus.pending),
+      );
+      await tester.pumpWidget(buildSubject(pubkey: _targetPubkey));
+      await tester.pump();
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.text(l10n.peopleListsEmptyTitle), findsNothing);
+    });
+
+    testWidgets('failed owner read offers an explicit retry', (tester) async {
+      whenListen(
+        bloc,
+        const Stream<PeopleListsState>.empty(),
+        initialState: _stateWith(lists: const [])
+            .copyWith(ownerReadStatus: PeopleListsOwnerReadStatus.failed),
+      );
+      await tester.pumpWidget(buildSubject(pubkey: _targetPubkey));
+      await tester.pump();
+      expect(find.text(l10n.peopleListsEmptyTitle), findsNothing);
+      expect(find.text(l10n.peopleListsLoadFailed), findsOneWidget);
+      await tester.tap(find.text(l10n.peopleListsAddPeopleRetry));
+      verify(() => bloc.add(any(that: isA<PeopleListsOwnerSyncRequested>())))
+          .called(1);
+    });
+
+    testWidgets('cached lists stay visible when the owner read fails', (
+      tester,
+    ) async {
+      whenListen(
+        bloc,
+        const Stream<PeopleListsState>.empty(),
+        initialState: _stateWith(
+          lists: [_buildList(id: 'cached', name: 'Cached')],
+        ).copyWith(ownerReadStatus: PeopleListsOwnerReadStatus.failed),
+      );
+      await tester.pumpWidget(buildSubject(pubkey: _targetPubkey));
+      await tester.pump();
+      expect(find.text('Cached'), findsOneWidget);
+      expect(find.text(l10n.peopleListsEmptyTitle), findsNothing);
+    });
+
+    testWidgets(
+      'applying a picker opened in another account does not send a batch',
+      (tester) async {
+        whenListen(
+          bloc,
+          const Stream<PeopleListsState>.empty(),
+          initialState: _stateWith(
+            lists: [_buildList(id: 'list', name: 'Friends')],
+          ),
+        );
+        await openSheet(tester);
+        await tester.tap(find.text('Friends'));
+        await tester.pump();
+        activeOwner = 'e' * 64;
+        await tester.tap(find.bySemanticsLabel(l10n.listDone));
+        await tester.pump();
+        verifyNever(() => bloc.add(any()));
+        verifyNever(() => bloc.submit(any()));
+        expect(find.byType(AddToPeopleListsSheet), findsOneWidget);
+      },
+    );
 
     group('renders', () {
       testWidgetsWithSurfaceSize(
@@ -241,6 +316,7 @@ void main() {
           expect(_rowChecks(), findsOneWidget);
 
           verifyNever(() => bloc.add(any()));
+          verifyNever(() => bloc.submit(any()));
         },
       );
 
@@ -441,13 +517,14 @@ void main() {
           await tester.pumpAndSettle();
 
           verifyNever(() => bloc.add(any()));
+          verifyNever(() => bloc.submit(any()));
           expect(find.byType(AddToPeopleListsSheet), findsNothing);
         },
       );
 
       testWidgetsWithSurfaceSize(
-        'the check is disabled until a list is picked, and enabled again '
-        'once one is',
+        'with the person in no list, the check is disabled until a list is '
+        'picked, and again once it is unpicked',
         (tester) async {
           final list = _buildList(id: 'list-1', name: 'Close Friends');
           when(() => bloc.state).thenReturn(_stateWith(lists: [list]));
@@ -477,6 +554,38 @@ void main() {
       );
 
       testWidgetsWithSurfaceSize(
+        'unpicking the only list that holds the person leaves the check '
+        'enabled, and the check takes them out',
+        (tester) async {
+          final list = _buildList(
+            id: 'list-1',
+            name: 'Close Friends',
+            pubkeys: [_targetPubkey],
+          );
+          when(() => bloc.state).thenReturn(_stateWith(lists: [list]));
+
+          await openSheet(tester);
+          await tester.tap(find.text('Close Friends'));
+          await tester.pump();
+          expect(_rowChecks(), findsNothing);
+          expect(
+            find.semantics.byLabel(l10n.listDone).evaluate().single,
+            isSemantics(hasEnabledState: true, isEnabled: true),
+          );
+
+          await tester.tap(find.bySemanticsLabel(l10n.listDone));
+          await tester.pumpAndSettle();
+
+          final request =
+              verify(() => bloc.submit(captureAny())).captured.single
+                  as PeopleListsPicksApplied;
+          expect(request.addListIds, isEmpty);
+          expect(request.removeListIds, {'list-1'});
+          expect(find.byType(AddToPeopleListsSheet), findsNothing);
+        },
+      );
+
+      testWidgetsWithSurfaceSize(
         'the X discards the picks',
         (tester) async {
           final list = _buildList(id: 'list-1', name: 'Close Friends');
@@ -489,6 +598,7 @@ void main() {
           await tester.pumpAndSettle();
 
           verifyNever(() => bloc.add(any()));
+          verifyNever(() => bloc.submit(any()));
           expect(find.byType(AddToPeopleListsSheet), findsNothing);
         },
       );
@@ -912,12 +1022,16 @@ Widget _buildLazyBlocSubject({
 
 /// Scopes [child] with an explicit [FeatureFlag.curatedLists] value —
 /// `AddToPeopleListsSheet.show` reads it before opening.
-Widget _withCuratedListsFlag({required bool enabled, required Widget child}) {
+Widget _withCuratedListsFlag({
+  required bool enabled,
+  required Widget child,
+  MockAuthService? auth,
+}) {
   return ProviderScope(
     overrides: [
       ...getStandardTestOverrides(),
       authServiceProvider.overrideWithValue(
-        createMockAuthService(currentPublicKeyHex: _ownerPubkey),
+        auth ?? createMockAuthService(currentPublicKeyHex: _ownerPubkey),
       ),
       isFeatureEnabledProvider(
         FeatureFlag.curatedLists,

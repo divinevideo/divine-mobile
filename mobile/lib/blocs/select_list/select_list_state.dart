@@ -22,6 +22,12 @@ enum SelectListStatus {
   /// Every failed change was an add to a private list that has no room left,
   /// which retrying cannot fix.
   failureListFull,
+
+  /// A new list exists without the video.
+  createdWithoutVideo,
+
+  /// The video is saved locally and awaits relay publication.
+  videoPendingSync,
 }
 
 class SelectListState extends Equatable {
@@ -46,9 +52,16 @@ class SelectListState extends Equatable {
   /// Whether the picks are being written.
   bool get isSaving => status == SelectListStatus.saving;
 
-  /// Whether the picks can be written: at least one list is picked and no
-  /// save is running.
-  bool get canSubmit => selectedListIds.isNotEmpty && !isSaving;
+  /// Whether the picks can be written: no save is running, and a list is
+  /// picked or one that holds the video is unpicked.
+  bool get canSubmit =>
+      !isSaving && (selectedListIds.isNotEmpty || listIdsToRemove.isNotEmpty);
+
+  /// Local membership awaiting publication; retry does not toggle the pick.
+  Set<String> get pendingSyncListIds => {
+    for (final list in lists)
+      if (list.pendingRepublish && memberListIds.contains(list.id)) list.id,
+  };
 
   /// Whether the sheet has nothing left to show and can close.
   bool get canClose => status == SelectListStatus.saved;
