@@ -162,6 +162,98 @@ void main() {
         if (state.hasValue) [for (final video in state.value!) video.id],
     ];
 
+    test(
+      'reuses the feed after unchanged members are decoded from cache',
+      () async {
+        when(
+          () => videosRepository.getVideosByAuthors(
+            authorPubkeys: any(named: 'authorPubkeys'),
+          ),
+        ).thenAnswer((_) async => const []);
+        final initial = _buildList(
+          id: 'crew',
+          name: 'Old name',
+          pubkeys: [_ownerA, _ownerB],
+        );
+        final renamed = UserList.fromJson(
+          initial.copyWith(name: 'New name').toJson(),
+        );
+        expect(identical(initial.pubkeys, renamed.pubkeys), isFalse);
+
+        final container = buildContainer();
+        await collect(container, initial.pubkeys);
+        await collect(container, renamed.pubkeys);
+
+        verify(
+          () => videosRepository.getVideosByAuthors(
+            authorPubkeys: any(named: 'authorPubkeys'),
+          ),
+        ).called(1);
+      },
+    );
+
+    test(
+      'reuses reordered members without changing the caller roster',
+      () async {
+        when(
+          () => videosRepository.getVideosByAuthors(
+            authorPubkeys: any(named: 'authorPubkeys'),
+          ),
+        ).thenAnswer((_) async => const []);
+        final members = [_ownerB, _ownerA, _ownerB];
+        final container = buildContainer();
+
+        await collect(container, members);
+        await collect(container, [_ownerA, _ownerB]);
+
+        expect(members, [_ownerB, _ownerA, _ownerB]);
+        final queriedMembers = verify(
+          () => videosRepository.getVideosByAuthors(
+            authorPubkeys: captureAny(named: 'authorPubkeys'),
+          ),
+        ).captured;
+        expect(queriedMembers, [
+          equals([_ownerA, _ownerB]),
+        ]);
+      },
+    );
+
+    test('fetches a different feed when membership changes', () async {
+      when(
+        () => videosRepository.getVideosByAuthors(
+          authorPubkeys: any(named: 'authorPubkeys'),
+        ),
+      ).thenAnswer((_) async => const []);
+      final container = buildContainer();
+
+      await collect(container, [_ownerA]);
+      await collect(container, [_ownerA, _ownerB]);
+
+      verify(
+        () => videosRepository.getVideosByAuthors(
+          authorPubkeys: any(named: 'authorPubkeys'),
+        ),
+      ).called(2);
+    });
+
+    test('keeps delimiter-containing malformed rosters separate', () async {
+      when(
+        () => videosRepository.getVideosByAuthors(
+          authorPubkeys: any(named: 'authorPubkeys'),
+        ),
+      ).thenAnswer((_) async => const []);
+      final container = buildContainer();
+
+      await collect(container, [_ownerA, _ownerB]);
+      await collect(container, ['$_ownerA,$_ownerB']);
+
+      verify(
+        () => videosRepository.getVideosByAuthors(
+          authorPubkeys: any(named: 'authorPubkeys'),
+        ),
+      ).called(2);
+    });
+
     test("fetches the members' videos through the repository", () async {
       final fetched = _video(
         id: fetchedId,

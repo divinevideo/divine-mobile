@@ -2,6 +2,7 @@
 // ABOUTME: Manages list state and provides reactive updates for the Lists tab
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart'
@@ -220,11 +221,22 @@ Duration? _noAutomaticRetry(int retryCount, Object error) => null;
 /// account switch. The pool is read, not watched: every pool emission would
 /// otherwise cost a relay round trip.
 ///
-/// The body is a plain function so every `Ref` read happens synchronously
-/// during `build` — see [_LiveDeps] for why an `async*` body cannot
-/// touch `Ref`.
+/// Equal member sets reuse the same feed across cache decoding and metadata
+/// changes without mutating the caller's roster.
+UserListMemberVideosByRosterProvider userListMemberVideosProvider(
+  List<String> pubkeys,
+) {
+  final members = pubkeys.toSet().toList()..sort();
+  return userListMemberVideosByRosterProvider(jsonEncode(members));
+}
+
+/// Reads dependencies synchronously during build before the stream starts.
 @Riverpod(retry: _noAutomaticRetry)
-Stream<List<VideoEvent>> userListMemberVideos(Ref ref, List<String> pubkeys) {
+Stream<List<VideoEvent>> userListMemberVideosByRoster(
+  Ref ref,
+  String rosterKey,
+) {
+  final pubkeys = (jsonDecode(rosterKey) as List<dynamic>).cast<String>();
   ref.watch(blocklistVersionProvider);
   final repository = ref.watch(videosRepositoryProvider);
   final pooled = ref.read(videoEventsProvider).value ?? const <VideoEvent>[];
