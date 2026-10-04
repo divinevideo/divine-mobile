@@ -5019,5 +5019,9 @@
     "listCollaboratorsNone": "Niciunul",
     "listAddCollaboratorTitle": "Adaugă un colaborator",
     "listMakePublicSubtitle": "Lasă-i pe alții să vadă această listă",
-    "listCollaboratorSearchHint": "Caută în Divine..."
+    "listCollaboratorSearchHint": "Caută în Divine...",
+    "listVideoNotAdded": "Lista ta a fost creată, dar acest videoclip nu a fost adăugat.",
+    "listPrivateCollaboratorsWarning": "Dacă faci această listă privată, colaboratorii ei vor fi eliminați. Doar tu vei putea adăuga videoclipuri.",
+    "listVideoPendingSync": "Lista și videoclipul tău sunt salvate aici. Videoclipul așteaptă sincronizarea.",
+    "listRetrySync": "Sincronizează acum"
 }

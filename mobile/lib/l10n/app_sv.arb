@@ -5019,5 +5019,9 @@
     "listCollaboratorsNone": "Inga",
     "listAddCollaboratorTitle": "Lägg till medarbetare",
     "listMakePublicSubtitle": "Låt andra se den här listan",
-    "listCollaboratorSearchHint": "Sök i Divine..."
+    "listCollaboratorSearchHint": "Sök i Divine...",
+    "listVideoNotAdded": "Din lista skapades, men den här videon lades inte till.",
+    "listPrivateCollaboratorsWarning": "Om du gör den här listan privat tas även dess medskapare bort. Bara du kommer att kunna lägga till videor.",
+    "listVideoPendingSync": "Din lista och video är sparade här. Videon väntar på synkronisering.",
+    "listRetrySync": "Synkronisera nu"
 }

@@ -5136,5 +5136,9 @@
     "listCollaboratorsNone": "Няма",
     "listAddCollaboratorTitle": "Добави сътрудник",
     "listMakePublicSubtitle": "Позволи на другите да виждат този списък",
-    "listCollaboratorSearchHint": "Търсене Divine..."
+    "listCollaboratorSearchHint": "Търсене Divine...",
+    "listVideoNotAdded": "Списъкът ти е създаден, но това видео не е добавено.",
+    "listPrivateCollaboratorsWarning": "Ако направиш този списък частен, сътрудниците му също ще бъдат премахнати. Само ти ще можеш да добавяш видеа.",
+    "listVideoPendingSync": "Списъкът и видеото ти са запазени тук. Видеото чака синхронизиране.",
+    "listRetrySync": "Синхронизирай сега"
 }

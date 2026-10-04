@@ -5019,5 +5019,9 @@
     "listCollaboratorsNone": "Keine",
     "listAddCollaboratorTitle": "Mitarbeiter hinzufügen",
     "listMakePublicSubtitle": "Lass andere diese Liste sehen",
-    "listCollaboratorSearchHint": "Divine durchsuchen..."
+    "listCollaboratorSearchHint": "Divine durchsuchen...",
+    "listVideoNotAdded": "Deine Liste wurde erstellt, aber dieses Video wurde nicht hinzugefügt.",
+    "listPrivateCollaboratorsWarning": "Wenn du diese Liste privat machst, werden auch ihre Mitwirkenden entfernt. Nur du kannst dann Videos hinzufügen.",
+    "listVideoPendingSync": "Deine Liste und dein Video sind hier gespeichert. Das Video wartet auf die Synchronisierung.",
+    "listRetrySync": "Jetzt synchronisieren"
 }

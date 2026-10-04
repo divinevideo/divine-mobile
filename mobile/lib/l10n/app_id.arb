@@ -5019,5 +5019,9 @@
     "listCollaboratorsNone": "Tidak ada",
     "listAddCollaboratorTitle": "Tambah kolaborator",
     "listMakePublicSubtitle": "Biar orang lain bisa lihat daftar ini",
-    "listCollaboratorSearchHint": "Cari di Divine..."
+    "listCollaboratorSearchHint": "Cari di Divine...",
+    "listVideoNotAdded": "Daftarmu sudah dibuat, tetapi video ini belum ditambahkan.",
+    "listPrivateCollaboratorsWarning": "Menjadikan daftar ini privat juga menghapus kolaboratornya. Hanya kamu yang dapat menambahkan video.",
+    "listVideoPendingSync": "Daftar dan videomu tersimpan di sini. Video menunggu untuk disinkronkan.",
+    "listRetrySync": "Sinkronkan sekarang"
 }

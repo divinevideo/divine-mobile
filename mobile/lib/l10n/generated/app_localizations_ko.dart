@@ -12558,17 +12558,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get listMakePublicSubtitle => '다른 사람도 이 목록을 볼 수 있어요';
 
   @override
-  String get listVideoNotAdded =>
-      'Your list was created, but this video wasn\'t added.';
+  String get listVideoNotAdded => '목록은 만들어졌지만 이 동영상은 추가되지 않았어요.';
 
   @override
   String get listPrivateCollaboratorsWarning =>
-      'Making this list private also removes its collaborators. Only you will be able to add videos.';
+      '이 목록을 비공개로 만들면 공동 작업자도 삭제돼요. 나만 동영상을 추가할 수 있게 돼요.';
 
   @override
-  String get listVideoPendingSync =>
-      'Your list and video are saved here. The video is waiting to sync.';
+  String get listVideoPendingSync => '목록과 동영상이 여기에 저장되었어요. 동영상이 동기화를 기다리고 있어요.';
 
   @override
-  String get listRetrySync => 'Sync now';
+  String get listRetrySync => '지금 동기화';
 }

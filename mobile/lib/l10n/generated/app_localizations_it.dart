@@ -13356,16 +13356,16 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get listVideoNotAdded =>
-      'Your list was created, but this video wasn\'t added.';
+      'La tua lista è stata creata, ma questo video non è stato aggiunto.';
 
   @override
   String get listPrivateCollaboratorsWarning =>
-      'Making this list private also removes its collaborators. Only you will be able to add videos.';
+      'Rendere questa lista privata rimuove anche i suoi collaboratori. Solo tu potrai aggiungere video.';
 
   @override
   String get listVideoPendingSync =>
-      'Your list and video are saved here. The video is waiting to sync.';
+      'La tua lista e il tuo video sono salvati qui. Il video è in attesa di sincronizzazione.';
 
   @override
-  String get listRetrySync => 'Sync now';
+  String get listRetrySync => 'Sincronizza ora';
 }

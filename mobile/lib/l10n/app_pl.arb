@@ -5019,5 +5019,9 @@
     "listCollaboratorsNone": "Brak",
     "listAddCollaboratorTitle": "Dodaj współpracownika",
     "listMakePublicSubtitle": "Pozwól innym zobaczyć tę listę",
-    "listCollaboratorSearchHint": "Szukaj w Divine..."
+    "listCollaboratorSearchHint": "Szukaj w Divine...",
+    "listVideoNotAdded": "Twoja lista została utworzona, ale ten film nie został dodany.",
+    "listPrivateCollaboratorsWarning": "Ustawienie tej listy jako prywatnej usunie też jej współtwórców. Tylko Ty będziesz mieć możliwość dodawania filmów.",
+    "listVideoPendingSync": "Twoja lista i film są zapisane tutaj. Film czeka na synchronizację.",
+    "listRetrySync": "Synchronizuj teraz"
 }

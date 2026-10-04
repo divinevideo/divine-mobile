@@ -4565,5 +4565,9 @@
     "listCollaboratorsNone": "없음",
     "listAddCollaboratorTitle": "협업자 추가",
     "listMakePublicSubtitle": "다른 사람도 이 목록을 볼 수 있어요",
-    "listCollaboratorSearchHint": "Divine 검색..."
+    "listCollaboratorSearchHint": "Divine 검색...",
+    "listVideoNotAdded": "목록은 만들어졌지만 이 동영상은 추가되지 않았어요.",
+    "listPrivateCollaboratorsWarning": "이 목록을 비공개로 만들면 공동 작업자도 삭제돼요. 나만 동영상을 추가할 수 있게 돼요.",
+    "listVideoPendingSync": "목록과 동영상이 여기에 저장되었어요. 동영상이 동기화를 기다리고 있어요.",
+    "listRetrySync": "지금 동기화"
 }

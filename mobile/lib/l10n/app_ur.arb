@@ -6779,5 +6779,9 @@
   "listMakePublicLabel": "عوامی بنائیں",
   "listAddCollaboratorTitle": "شریک کار شامل کریں",
   "listCollaboratorSearchHint": "Divine میں تلاش کریں...",
-  "listCollaboratorsNone": "کوئی نہیں"
+  "listCollaboratorsNone": "کوئی نہیں",
+  "listPrivateCollaboratorsWarning": "اس فہرست کو نجی بنانے سے اس کے معاونین بھی ہٹ جائیں گے۔ صرف آپ ویڈیوز شامل کر سکیں گے۔",
+  "listVideoNotAdded": "آپ کی فہرست بن گئی، لیکن یہ ویڈیو شامل نہیں ہوئی۔",
+  "listVideoPendingSync": "آپ کی فہرست اور ویڈیو یہاں محفوظ ہیں۔ ویڈیو ہم آہنگ ہونے کا انتظار کر رہی ہے۔",
+  "listRetrySync": "اب ہم آہنگ کریں"
 }

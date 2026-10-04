@@ -12396,17 +12396,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get listMakePublicSubtitle => '让其他人看到此列表';
 
   @override
-  String get listVideoNotAdded =>
-      'Your list was created, but this video wasn\'t added.';
+  String get listVideoNotAdded => '你的列表已创建，但未添加此视频。';
 
   @override
-  String get listPrivateCollaboratorsWarning =>
-      'Making this list private also removes its collaborators. Only you will be able to add videos.';
+  String get listPrivateCollaboratorsWarning => '将此列表设为私密也会移除其协作者。只有你可以添加视频。';
 
   @override
-  String get listVideoPendingSync =>
-      'Your list and video are saved here. The video is waiting to sync.';
+  String get listVideoPendingSync => '你的列表和视频已保存在此设备上。视频正在等待同步。';
 
   @override
-  String get listRetrySync => 'Sync now';
+  String get listRetrySync => '立即同步';
 }

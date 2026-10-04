@@ -13537,16 +13537,16 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get listVideoNotAdded =>
-      'Your list was created, but this video wasn\'t added.';
+      'మీ జాబితా సృష్టించబడింది, కానీ ఈ వీడియో జోడించబడలేదు.';
 
   @override
   String get listPrivateCollaboratorsWarning =>
-      'Making this list private also removes its collaborators. Only you will be able to add videos.';
+      'ఈ జాబితాను ప్రైవేట్‌గా మార్చితే దాని సహకారులను కూడా తొలగిస్తుంది. మీరు మాత్రమే వీడియోలను జోడించగలరు.';
 
   @override
   String get listVideoPendingSync =>
-      'Your list and video are saved here. The video is waiting to sync.';
+      'మీ జాబితా, వీడియో ఇక్కడ సేవ్ అయ్యాయి. వీడియో సింక్ కావడానికి వేచి ఉంది.';
 
   @override
-  String get listRetrySync => 'Sync now';
+  String get listRetrySync => 'ఇప్పుడే సింక్ చేయండి';
 }

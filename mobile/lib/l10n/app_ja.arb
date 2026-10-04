@@ -5019,5 +5019,9 @@
     "listCollaboratorsNone": "なし",
     "listAddCollaboratorTitle": "コラボレーターを追加",
     "listMakePublicSubtitle": "他の人もこのリストを見られます",
-    "listCollaboratorSearchHint": "Divineを検索..."
+    "listCollaboratorSearchHint": "Divineを検索...",
+    "listVideoNotAdded": "リストは作成されましたが、この動画は追加されませんでした。",
+    "listPrivateCollaboratorsWarning": "このリストを非公開にすると、共同編集者も削除されます。動画を追加できるのはあなただけになります。",
+    "listVideoPendingSync": "リストと動画はこの端末に保存されています。動画は同期を待っています。",
+    "listRetrySync": "今すぐ同期"
 }

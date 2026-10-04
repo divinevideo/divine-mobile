@@ -5019,5 +5019,9 @@
     "listCollaboratorsNone": "Ninguno",
     "listAddCollaboratorTitle": "Añadir colaborador",
     "listMakePublicSubtitle": "Dejá que otras personas vean esta lista",
-    "listCollaboratorSearchHint": "Buscar en Divine..."
+    "listCollaboratorSearchHint": "Buscar en Divine...",
+    "listVideoNotAdded": "Tu lista se creó, pero este vídeo no se añadió.",
+    "listPrivateCollaboratorsWarning": "Al hacer privada esta lista, también se eliminan sus colaboradores. Solo tú podrás añadir vídeos.",
+    "listVideoPendingSync": "Tu lista y tu vídeo están guardados aquí. El vídeo está esperando a sincronizarse.",
+    "listRetrySync": "Sincronizar ahora"
 }
