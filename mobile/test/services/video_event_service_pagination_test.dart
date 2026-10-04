@@ -98,6 +98,9 @@ void main() {
         expect(videoEventService.discoveryVideos, hasLength(1));
         // Ingest finished; it throws before counting if publicKey is unstubbed.
         expect(discoveryState().eventsReceivedInCurrentQuery, equals(1));
+        // The page read as the end of the feed and recorded its video's id.
+        expect(discoveryState().hasMore, isFalse);
+        expect(discoveryState().seenEventIds, hasLength(1));
 
         // Now try to load more - it should reset and allow loading
         final secondController = StreamController<Event>.broadcast();
@@ -115,7 +118,9 @@ void main() {
         await secondLoad;
         await secondCompleted;
 
-        // Assert - the second query resumes from the oldest cached video
+        // Assert - the reset forgot the first page's ids...
+        expect(discoveryState().seenEventIds, isEmpty);
+        // ...and the second query resumes from the oldest cached video
         // instead of restarting from the newest events.
         final queries = verify(
           () => mockNostrService.subscribe(captureAny()),
