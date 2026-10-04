@@ -61,7 +61,10 @@ void main() {
 
       setUp(() async {
         list = (await service.createList(name: 'Puppets', isPublic: false))!;
-        cubit = CuratedListInfoCubit(service: service, existingList: list);
+        cubit = CuratedListInfoCubit(
+          resolveService: () => service,
+          existingList: list,
+        );
         addTearDown(cubit.close);
         cubit
           ..visibilityChanged(isPublic: true)

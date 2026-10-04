@@ -22,11 +22,15 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
   ///
   /// Pass [existingList] to edit that list; leave it out to create one.
   /// [videoEventId] is added to a newly created list.
+  ///
+  /// [resolveService] is asked for the service when a save starts: the app
+  /// builds a new one when its relay client is replaced, and a save has to
+  /// reach the one it holds then. It answers null when there is none.
   CuratedListInfoCubit({
-    required CuratedListService? service,
+    required CuratedListService? Function() resolveService,
     CuratedList? existingList,
     String? videoEventId,
-  }) : _service = service,
+  }) : _resolveService = resolveService,
        _listId = existingList?.id,
        _storedCollaborators = existingList?.allowedCollaborators ?? const [],
        _videoEventId = videoEventId,
@@ -40,7 +44,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
          ),
        );
 
-  final CuratedListService? _service;
+  final CuratedListService? Function() _resolveService;
   final String? _listId;
 
   /// The collaborators the list was opened with.
@@ -124,7 +128,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
     final isPublic = state.isPublic;
     final collaborators = state.savedCollaboratorPubkeys;
     final visibilityWillChange = state.visibilityWillChange;
-    final service = _service;
+    final service = _resolveService();
     final listId = _listId;
 
     emitIfOpen(state.copyWith(status: CuratedListInfoStatus.saving));

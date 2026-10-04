@@ -306,6 +306,33 @@ void main() {
         expect(find.text(l10n.listCreateNewList), findsNothing);
       });
 
+      testWidgets('saves through the list service the app holds when Create is '
+          'tapped, not the one it held when the sheet opened', (
+        tester,
+      ) async {
+        final replacement = _MockCuratedListService();
+        when(
+          () => replacement.createList(
+            name: any(named: 'name'),
+            description: any(named: 'description'),
+            isPublic: any(named: 'isPublic'),
+            isCollaborative: any(named: 'isCollaborative'),
+            allowedCollaborators: any(named: 'allowedCollaborators'),
+          ),
+        ).thenAnswer((_) async => list(name: 'Fresh List'));
+        await openSheet(tester);
+
+        // The app builds a new service when its relay client is replaced.
+        _fakeService = replacement;
+        await tester.enterText(find.byType(TextField).first, 'Fresh List');
+        await tester.pump();
+        await tester.tap(saveButton(editing: false));
+        await tester.pumpAndSettle();
+
+        verify(() => replacement.createList(name: 'Fresh List')).called(1);
+        verifyZeroInteractions(service);
+      });
+
       testWidgets('creates a private list when the switch is off', (
         tester,
       ) async {

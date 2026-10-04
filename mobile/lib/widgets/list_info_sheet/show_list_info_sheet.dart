@@ -52,13 +52,11 @@ Future<ListInfoSheetOutcome> showListInfoSheet(
   // Resolved before the sheet opens: once it has closed, the screen that
   // opened it may be gone, and neither could be recovered from [context].
   final messenger = ScaffoldMessenger.of(context);
-  final service = ProviderScope.containerOf(
-    context,
-    listen: false,
-  ).read(curatedListsStateProvider.notifier).service;
+  final container = ProviderScope.containerOf(context, listen: false);
 
   final cubit = CuratedListInfoCubit(
-    service: service,
+    resolveService: () =>
+        container.read(curatedListsStateProvider.notifier).service,
     existingList: existingList,
     videoEventId: video?.id,
   );

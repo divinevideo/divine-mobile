@@ -49,7 +49,7 @@ void main() {
       String? videoEventId,
       bool withService = true,
     }) => CuratedListInfoCubit(
-      service: withService ? service : null,
+      resolveService: () => withService ? service : null,
       existingList: existingList,
       videoEventId: videoEventId,
     );
@@ -78,6 +78,23 @@ void main() {
         ),
       ).thenAnswer((_) => answer());
     }
+
+    test(
+      'looks the service up when a save starts, not when it is built',
+      () async {
+        CuratedListService? current;
+        final cubit = CuratedListInfoCubit(resolveService: () => current);
+        addTearDown(cubit.close);
+        cubit.nameChanged('Puppets');
+        stubCreate(() async => _list());
+
+        current = service;
+        await cubit.submitted();
+
+        expect(cubit.state.status, equals(CuratedListInfoStatus.saved));
+        verify(() => service.createList(name: 'Puppets')).called(1);
+      },
+    );
 
     group('initial state', () {
       test('opens empty and public when creating', () {
