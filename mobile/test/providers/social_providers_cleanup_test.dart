@@ -32,6 +32,7 @@ import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
 import 'package:openvine/services/seen_videos_service.dart';
+import 'package:openvine/services/sound_library_service.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/services/video_provenance_filter_service.dart';
@@ -149,6 +150,12 @@ void main() {
           dmRepositoryProvider.overrideWithValue(dmRepository),
           openVineImageCacheClearProvider.overrideWithValue(() async {}),
           uploadManagerProvider.overrideWithValue(uploadManager),
+          soundLibraryServiceProvider.overrideWith((ref) async {
+            // Cleanup exercises custom storage, independently of bundled assets.
+            final service = SoundLibraryService();
+            await service.loadCustomSounds();
+            return service;
+          }),
         ],
       );
     });
@@ -642,6 +649,11 @@ void main() {
         ),
       );
       expect(sounds.customSounds, hasLength(1));
+      expect(
+        jsonDecode(prefs.getString(SoundLibraryService.customSoundsStorageKey)!)
+            as List<dynamic>,
+        hasLength(1),
+      );
 
       final subscription = container.listen(
         userDataCleanupServiceProvider,
@@ -656,6 +668,13 @@ void main() {
       final incoming = await container.read(soundLibraryServiceProvider.future);
       expect(incoming, same(sounds));
       expect(incoming.customSounds, isEmpty);
+      expect(
+        prefs.containsKey(SoundLibraryService.customSoundsStorageKey),
+        isFalse,
+      );
+      final reloaded = SoundLibraryService();
+      await reloaded.loadCustomSounds();
+      expect(reloaded.customSounds, isEmpty);
     });
 
     test("deleting an account drops only that account's queued work", () async {
