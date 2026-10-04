@@ -4,6 +4,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 
 /// These render `divine_ui` components from the *app's* test context on
 /// purpose: `divine_ui` bundles no fonts of its own, so `VineTheme`
@@ -126,6 +127,8 @@ Future<void> _pumpGallery(
 
   await tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: appLocalizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: VineTheme.theme,
       debugShowCheckedModeBanner: false,
       home: Scaffold(

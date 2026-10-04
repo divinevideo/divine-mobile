@@ -1,9 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_shutter_flash.dart';
 
 void main() {
   Widget build(int shutterTick) => MaterialApp(
+    localizationsDelegates: appLocalizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(
       body: VideoRecorderShutterFlash(shutterTick: shutterTick),
     ),

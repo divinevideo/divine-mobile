@@ -85,7 +85,13 @@ void main() {
         );
 
         // Dispose the tree while _refreshClassics is suspended on the future.
-        await tester.pumpWidget(const MaterialApp(home: SizedBox()));
+        await tester.pumpWidget(
+          const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: SizedBox(),
+          ),
+        );
 
         // Completing the future resumes _refreshClassics after the widget is gone.
         // Without the mounted guard, ref.invalidate throws an unhandled StateError

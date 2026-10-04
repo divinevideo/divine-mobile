@@ -145,7 +145,13 @@ void main() {
             url,
             const PassiveAuthUnavailableThumbnailException(),
           );
-          await tester.pumpWidget(MaterialApp(home: fallback));
+          await tester.pumpWidget(
+            MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: fallback,
+            ),
+          );
 
           expect(find.byType(BlurhashDisplay), findsOneWidget);
         },

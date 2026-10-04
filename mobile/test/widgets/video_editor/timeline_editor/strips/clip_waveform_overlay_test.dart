@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/clip_waveform.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/clip_waveform_overlay.dart';
 
@@ -26,6 +27,8 @@ void main() {
     }) {
       return tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Center(
             child: SizedBox(
               width: width,

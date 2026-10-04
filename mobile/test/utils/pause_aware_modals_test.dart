@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 
@@ -27,6 +28,8 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Builder(
                 builder: (context) => ElevatedButton(
@@ -73,6 +76,8 @@ void main() {
               builder: (context, ref, _) {
                 container = ProviderScope.containerOf(context, listen: false);
                 return MaterialApp(
+                  localizationsDelegates: appLocalizationsDelegates,
+                  supportedLocales: AppLocalizations.supportedLocales,
                   home: Scaffold(
                     body: Builder(
                       builder: (innerContext) => ElevatedButton(
@@ -130,6 +135,8 @@ void main() {
               builder: (context, ref, _) {
                 container = ProviderScope.containerOf(context, listen: false);
                 return MaterialApp(
+                  localizationsDelegates: appLocalizationsDelegates,
+                  supportedLocales: AppLocalizations.supportedLocales,
                   home: Scaffold(
                     body: Builder(
                       builder: (innerContext) => ElevatedButton(
@@ -228,6 +235,8 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: Builder(
                   builder: (context) => ElevatedButton(
@@ -271,6 +280,8 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: Builder(
                   builder: (context) => ElevatedButton(
@@ -408,7 +419,11 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp.router(routerConfig: router),
+          child: MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -515,6 +530,8 @@ void main() {
             builder: (context, ref, _) {
               container = ProviderScope.containerOf(context, listen: false);
               return MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
                 home: Scaffold(
                   body: Builder(
                     builder: (context) => TextButton(

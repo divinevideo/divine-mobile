@@ -4,6 +4,7 @@
 import 'package:flutter/gestures.dart' show kLongPressTimeout;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/library/drag_select_region.dart';
 
 void main() {
@@ -29,6 +30,8 @@ void main() {
     /// [footerHeight] taken off the bottom the way the create-video bar does.
     Widget buildWidget({double height = 600, double footerHeight = 0}) {
       return MaterialApp(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: Column(
             children: [
