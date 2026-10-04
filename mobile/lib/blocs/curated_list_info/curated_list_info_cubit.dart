@@ -236,8 +236,9 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
   /// Lets the form close, then reports how [update] ended.
   ///
   /// Everything but visibility is stored on this device before updateList
-  /// awaits a relay, so nothing typed rides on the answer. The form closes
-  /// now rather than stay open on a slow relay.
+  /// awaits a relay, so nothing typed rides on the answer. That write waits
+  /// its turn behind an earlier save to the same list that is still waiting on
+  /// a relay. The form closes now rather than stay open on a slow relay.
   Future<void> _closeThenAwait(Future<bool> update) async {
     emitIfOpen(
       state.copyWith(status: CuratedListInfoStatus.savedAwaitingRelay),

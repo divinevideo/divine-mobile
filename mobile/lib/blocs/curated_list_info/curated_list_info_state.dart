@@ -11,8 +11,9 @@ enum CuratedListInfoStatus {
   /// A save is running and the form waits on its answer.
   saving,
 
-  /// The edit is stored on this device, so the form can close, but no relay
-  /// has answered yet.
+  /// The edit is on its way to this device's store, so the form can close,
+  /// but no relay has answered yet. It lands at once unless an earlier save to
+  /// the same list is still waiting on a relay.
   savedAwaitingRelay,
 
   /// The save landed.
