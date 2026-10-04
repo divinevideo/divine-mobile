@@ -25,101 +25,105 @@ void main() {
     });
   });
 
-  test('dirty preferences survive notification box cleanup', () async {
-    const pubkey =
-        '1111111111111111111111111111111111111111111111111111111111111111';
-    const prefs = NotificationPreferences(commentsEnabled: false);
-    final notificationBox = _MockHiveBox();
-    final dirtyBox = _MockHiveBox();
-    final notificationStorage = <dynamic, dynamic>{};
-    final dirtyStorage = <dynamic, dynamic>{};
-    final store = HiveNotificationPreferencesStore(
-      openBox: () async => notificationBox,
-      openDirtyBox: () async => dirtyBox,
-    );
-    when(() => notificationBox.put(any(), any())).thenAnswer((invocation) {
-      notificationStorage[invocation.positionalArguments[0]] =
-          invocation.positionalArguments[1];
-      return Future<void>.value();
-    });
-    when(() => dirtyBox.put(any(), any())).thenAnswer((invocation) {
-      dirtyStorage[invocation.positionalArguments[0]] =
-          invocation.positionalArguments[1];
-      return Future<void>.value();
-    });
-    when(() => dirtyBox.get(any())).thenAnswer(
-      (invocation) => dirtyStorage[invocation.positionalArguments[0]],
-    );
+  group('markDirty', () {
+    test('dirty preferences survive notification box cleanup', () async {
+      const pubkey =
+          '1111111111111111111111111111111111111111111111111111111111111111';
+      const prefs = NotificationPreferences(commentsEnabled: false);
+      final notificationBox = _MockHiveBox();
+      final dirtyBox = _MockHiveBox();
+      final notificationStorage = <dynamic, dynamic>{};
+      final dirtyStorage = <dynamic, dynamic>{};
+      final store = HiveNotificationPreferencesStore(
+        openBox: () async => notificationBox,
+        openDirtyBox: () async => dirtyBox,
+      );
+      when(() => notificationBox.put(any(), any())).thenAnswer((invocation) {
+        notificationStorage[invocation.positionalArguments[0]] =
+            invocation.positionalArguments[1];
+        return Future<void>.value();
+      });
+      when(() => dirtyBox.put(any(), any())).thenAnswer((invocation) {
+        dirtyStorage[invocation.positionalArguments[0]] =
+            invocation.positionalArguments[1];
+        return Future<void>.value();
+      });
+      when(() => dirtyBox.get(any())).thenAnswer(
+        (invocation) => dirtyStorage[invocation.positionalArguments[0]],
+      );
 
-    await store.markDirty(pubkey, prefs);
-    await notificationBox.put('cached_notification', {
-      'id': 'cached_notification',
+      await store.markDirty(pubkey, prefs);
+      await notificationBox.put('cached_notification', {
+        'id': 'cached_notification',
+      });
+
+      notificationStorage.clear();
+
+      expect(await store.loadDirty(pubkey), prefs);
+      expect(notificationStorage, isEmpty);
     });
-
-    notificationStorage.clear();
-
-    expect(await store.loadDirty(pubkey), prefs);
-    expect(notificationStorage, isEmpty);
   });
 
-  test(
-    'syncs and clears matching dirty preferences after publish succeeds',
-    () async {
+  group('syncDirtyPreferencesForPubkey', () {
+    test(
+      'syncs and clears matching dirty preferences after publish succeeds',
+      () async {
+        const pubkey =
+            '1111111111111111111111111111111111111111111111111111111111111111';
+        const prefs = NotificationPreferences(commentsEnabled: false);
+        final store = _MemoryNotificationPreferencesStore();
+        final published = <NotificationPreferences>[];
+        final service = NotificationPreferencesService(
+          store: store,
+          currentPubkey: () => pubkey,
+          publishPreferences: (publishPubkey, preferences) async {
+            expect(publishPubkey, pubkey);
+            published.add(preferences);
+            return true;
+          },
+        );
+
+        await store.markDirty(pubkey, prefs);
+        final outcome = await service.syncDirtyPreferencesForPubkey(pubkey);
+
+        expect(outcome, NotificationPreferencesSyncOutcome.publishedAndCleared);
+        expect(published, [prefs]);
+        expect(await store.loadDirty(pubkey), isNull);
+      },
+    );
+
+    test('keeps dirty preferences after publish failure', () async {
       const pubkey =
           '1111111111111111111111111111111111111111111111111111111111111111';
       const prefs = NotificationPreferences(commentsEnabled: false);
       final store = _MemoryNotificationPreferencesStore();
-      final published = <NotificationPreferences>[];
       final service = NotificationPreferencesService(
         store: store,
         currentPubkey: () => pubkey,
-        publishPreferences: (publishPubkey, preferences) async {
-          expect(publishPubkey, pubkey);
-          published.add(preferences);
-          return true;
-        },
+        publishPreferences: (_, _) async => false,
       );
 
       await store.markDirty(pubkey, prefs);
       final outcome = await service.syncDirtyPreferencesForPubkey(pubkey);
 
-      expect(outcome, NotificationPreferencesSyncOutcome.publishedAndCleared);
-      expect(published, [prefs]);
-      expect(await store.loadDirty(pubkey), isNull);
-    },
-  );
+      expect(outcome, NotificationPreferencesSyncOutcome.stillDirty);
+      expect(await store.loadDirty(pubkey), prefs);
+    });
 
-  test('keeps dirty preferences after publish failure', () async {
-    const pubkey =
-        '1111111111111111111111111111111111111111111111111111111111111111';
-    const prefs = NotificationPreferences(commentsEnabled: false);
-    final store = _MemoryNotificationPreferencesStore();
-    final service = NotificationPreferencesService(
-      store: store,
-      currentPubkey: () => pubkey,
-      publishPreferences: (_, _) async => false,
-    );
+    test('reports nothing to drain when no dirty preferences exist', () async {
+      const pubkey =
+          '1111111111111111111111111111111111111111111111111111111111111111';
+      final store = _MemoryNotificationPreferencesStore();
+      final service = NotificationPreferencesService(
+        store: store,
+        currentPubkey: () => pubkey,
+        publishPreferences: (_, _) async => true,
+      );
 
-    await store.markDirty(pubkey, prefs);
-    final outcome = await service.syncDirtyPreferencesForPubkey(pubkey);
+      final outcome = await service.syncDirtyPreferencesForPubkey(pubkey);
 
-    expect(outcome, NotificationPreferencesSyncOutcome.stillDirty);
-    expect(await store.loadDirty(pubkey), prefs);
-  });
-
-  test('reports nothing to drain when no dirty preferences exist', () async {
-    const pubkey =
-        '1111111111111111111111111111111111111111111111111111111111111111';
-    final store = _MemoryNotificationPreferencesStore();
-    final service = NotificationPreferencesService(
-      store: store,
-      currentPubkey: () => pubkey,
-      publishPreferences: (_, _) async => true,
-    );
-
-    final outcome = await service.syncDirtyPreferencesForPubkey(pubkey);
-
-    expect(outcome, NotificationPreferencesSyncOutcome.nothingToDrain);
+      expect(outcome, NotificationPreferencesSyncOutcome.nothingToDrain);
+    });
   });
 
   group('published kind-list schema', () {
