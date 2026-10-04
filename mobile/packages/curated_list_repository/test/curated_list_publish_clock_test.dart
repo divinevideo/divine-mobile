@@ -116,4 +116,27 @@ void main() {
       );
     });
   });
+  test(
+    'rapid revisions stop at the configured client ceiling without reserving a rejected revision',
+    () {
+      withClock(Clock(() => now), () {
+        final revisions = CuratedListPublishClock();
+        for (var offset = 0; offset <= 60; offset++) {
+          expect(
+            revisions.next(ownerPubkey: owner, listId: 'clock-list'),
+            seconds + offset,
+          );
+        }
+        expect(
+          () => revisions.next(ownerPubkey: owner, listId: 'clock-list'),
+          throwsA(isA<CuratedListClockException>()),
+        );
+        now = now.add(const Duration(seconds: 1));
+        expect(
+          revisions.next(ownerPubkey: owner, listId: 'clock-list'),
+          seconds + 61,
+        );
+      });
+    },
+  );
 }
