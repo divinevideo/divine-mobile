@@ -627,6 +627,30 @@ void main() {
     );
 
     blocTest<PeopleListsBloc, PeopleListsState>(
+      'rejects create fields captured for another account',
+      build: buildBloc,
+      seed: () => const PeopleListsState(
+        status: PeopleListsStatus.ready,
+        ownerPubkey: _ownerB,
+      ),
+      act: (bloc) => bloc.add(
+        const PeopleListsCreateRequested(
+          expectedOwnerPubkey: _ownerA,
+          name: 'Account A fields',
+        ),
+      ),
+      expect: () => <PeopleListsState>[],
+      verify: (_) {
+        verifyNever(
+          () => repository.createList(
+            ownerPubkey: any(named: 'ownerPubkey'),
+            name: any(named: 'name'),
+          ),
+        );
+      },
+    );
+
+    blocTest<PeopleListsBloc, PeopleListsState>(
       'emits optimistic state for create list before repository returns',
       build: buildBloc,
       setUp: () {
@@ -648,6 +672,7 @@ void main() {
       ),
       act: (bloc) => bloc.add(
         const PeopleListsCreateRequested(
+          expectedOwnerPubkey: _ownerA,
           name: 'New List',
           initialPubkeys: [_memberAlice],
         ),
@@ -675,8 +700,12 @@ void main() {
         status: PeopleListsStatus.ready,
         ownerPubkey: _ownerA,
       ),
-      act: (bloc) =>
-          bloc.add(const PeopleListsCreateRequested(name: 'New List')),
+      act: (bloc) => bloc.add(
+        const PeopleListsCreateRequested(
+          expectedOwnerPubkey: _ownerA,
+          name: 'New List',
+        ),
+      ),
       verify: (bloc) {
         expect(bloc.state.status, equals(PeopleListsStatus.failure));
         expect(bloc.state.pendingMutations, isEmpty);
@@ -1221,7 +1250,12 @@ void main() {
         addTearDown(bloc.close);
         await disable();
 
-        bloc.add(const PeopleListsCreateRequested(name: 'Friends'));
+        bloc.add(
+          const PeopleListsCreateRequested(
+            expectedOwnerPubkey: _ownerA,
+            name: 'Friends',
+          ),
+        );
         await _flush();
         await _flush();
 
@@ -1695,7 +1729,12 @@ void main() {
           final bloc = await startedWithOwnerAList();
           addTearDown(bloc.close);
 
-          bloc.add(const PeopleListsCreateRequested(name: 'Crew'));
+          bloc.add(
+            const PeopleListsCreateRequested(
+              expectedOwnerPubkey: _ownerA,
+              name: 'Crew',
+            ),
+          );
           await _flush();
           expect(bloc.state.pendingMutations, hasLength(1));
 

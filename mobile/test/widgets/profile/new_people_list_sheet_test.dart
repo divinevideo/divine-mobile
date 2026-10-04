@@ -21,6 +21,11 @@ import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod/misc.dart' show Override;
 import 'package:rxdart/rxdart.dart';
 
+import '../../helpers/test_provider_overrides.dart';
+
+const _owner =
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+
 class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
     implements PeopleListsBloc {}
 
@@ -32,6 +37,14 @@ class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {}
 
 void main() {
+  setUpAll(
+    () => registerFallbackValue(
+      const PeopleListsCreateRequested(
+        expectedOwnerPubkey: _owner,
+        name: 'Fallback',
+      ),
+    ),
+  );
   group('showNewPeopleListSheet', () {
     final l10n = lookupAppLocalizations(const Locale('en'));
     late _MockPeopleListsBloc bloc;
@@ -41,7 +54,10 @@ void main() {
       whenListen(
         bloc,
         const Stream<PeopleListsState>.empty(),
-        initialState: const PeopleListsState(),
+        initialState: const PeopleListsState(
+          status: PeopleListsStatus.ready,
+          ownerPubkey: _owner,
+        ),
       );
     });
 
@@ -148,6 +164,30 @@ void main() {
       expect(find.text(l10n.profileDeletedAccountName), findsWidgets);
     });
 
+    testWidgets(
+      'an account change while create is open does not create under the replacement account',
+      (tester) async {
+        String? owner = _owner;
+        final auth = createMockAuthService(currentPublicKeyHex: owner);
+        when(() => auth.currentPublicKeyHex).thenAnswer((_) => owner);
+        await tester.pumpWidget(
+          _buildSubject(
+            curatedListsEnabled: true,
+            createBloc: () => bloc,
+            auth: auth,
+          ),
+        );
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField).first, 'Entered in A');
+        await tester.pump();
+        owner = 'e' * 64;
+        await tester.tap(find.bySemanticsLabel(l10n.listDone));
+        await tester.pumpAndSettle();
+        verifyNever(() => bloc.add(any()));
+      },
+    );
+
     testWidgets('opens when curatedLists is on', (tester) async {
       await tester.pumpWidget(
         _buildSubject(curatedListsEnabled: true, createBloc: () => bloc),
@@ -167,9 +207,13 @@ Widget _buildSubject({
   required bool curatedListsEnabled,
   required PeopleListsBloc Function() createBloc,
   List<Override> extraOverrides = const [],
+  MockAuthService? auth,
 }) {
   return ProviderScope(
     overrides: [
+      authServiceProvider.overrideWithValue(
+        auth ?? createMockAuthService(currentPublicKeyHex: _owner),
+      ),
       isFeatureEnabledProvider(
         FeatureFlag.curatedLists,
       ).overrideWithValue(curatedListsEnabled),

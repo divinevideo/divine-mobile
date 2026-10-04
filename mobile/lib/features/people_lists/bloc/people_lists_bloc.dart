@@ -419,7 +419,7 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
     Emitter<PeopleListsState> emit,
   ) async {
     final owner = state.activeOwnerPubkey;
-    if (owner == null || owner.isEmpty) {
+    if (owner == null || owner.isEmpty || owner != event.expectedOwnerPubkey) {
       return;
     }
 
