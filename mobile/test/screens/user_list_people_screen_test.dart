@@ -1299,7 +1299,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text(l10n.listEditInfoAction), findsOneWidget);
+      expect(find.text(l10n.listEditTitle), findsOneWidget);
       final fields = tester.widgetList<TextField>(find.byType(TextField));
       expect(fields.first.controller!.text, 'Punk Friends');
       expect(fields.last.controller!.text, 'The early crew');
