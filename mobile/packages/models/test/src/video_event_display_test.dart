@@ -58,6 +58,36 @@ void main() {
     });
   });
 
+  group('VideoEvent.captionTitle', () {
+    test('returns the title for a non-classic video', () {
+      expect(
+        build(title: 'Title', content: 'Description').captionTitle,
+        equals('Title'),
+      );
+    });
+
+    test('returns null for a classic Vine with a description', () {
+      expect(
+        build(
+          title: 'Same caption',
+          content: 'Same caption',
+          rawTags: const {'platform': 'vine'},
+        ).captionTitle,
+        isNull,
+      );
+    });
+
+    test('keeps the title for a classic Vine without a description', () {
+      expect(
+        build(
+          title: 'Only caption',
+          rawTags: const {'platform': 'vine'},
+        ).captionTitle,
+        equals('Only caption'),
+      );
+    });
+  });
+
   group('VideoEvent.displayContent', () {
     test('returns empty string for empty content', () {
       expect(build().displayContent, equals(''));

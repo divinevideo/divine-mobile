@@ -116,6 +116,52 @@ void main() {
   });
 
   group('renders', () {
+    Future<void> pumpOverlay(WidgetTester tester) async {
+      await tester.pumpWidget(
+        testProviderScope(
+          additionalOverrides: [
+            repostsRepositoryProvider.overrideWithValue(mockRepostsRepository),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: BlocProvider<VideoInteractionsBloc>.value(
+                value: mockInteractionsBloc,
+                child: VideoOverlayActions(
+                  video: testVideo,
+                  isVisible: true,
+                  isActive: true,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('shows title and description for a non-classic video', (
+      tester,
+    ) async {
+      await pumpOverlay(tester);
+
+      expect(find.text('Test Video'), findsOneWidget);
+      expect(find.text('Tap this description'), findsOneWidget);
+    });
+
+    testWidgets('shows the caption once for a classic Vine', (tester) async {
+      testVideo = testVideo.copyWith(
+        title: 'Same caption',
+        content: 'Same caption',
+        rawTags: const {'platform': 'vine'},
+      );
+
+      await pumpOverlay(tester);
+
+      expect(find.text('Same caption'), findsOneWidget);
+    });
+
     testWidgets('hides inspired-by attribution from the player overlay', (
       tester,
     ) async {
@@ -251,9 +297,7 @@ void main() {
       expect(tester.widget<DivineIcon>(heartFinder).color, VineTheme.vineGreen);
     });
 
-    testWidgets('author line uses localized plural loop label', (
-      tester,
-    ) async {
+    testWidgets('author line uses localized plural loop label', (tester) async {
       // A large total resolves through the plural ICU form.
       await tester.pumpWidget(
         testProviderScope(

@@ -409,9 +409,25 @@ void main() {
           DateTime.fromMillisecondsSinceEpoch(importedAt * 1000, isUtc: true),
         );
         expect(find.text(importedDate), findsNothing);
-        expect(find.text('Classic vine'), findsOneWidget);
+        expect(find.text('From the archive'), findsOneWidget);
       },
     );
+
+    testWidgetsWithSurfaceSize('shows the caption once for an original Vine', (
+      tester,
+    ) async {
+      final video = _makeVideo(
+        title: 'Same caption',
+        content: 'Same caption',
+        rawTags: const {'platform': 'vine'},
+      );
+
+      await tester.pumpWidget(
+        buildSubject(child: MetadataExpandedSheet(video: video)),
+      );
+
+      expect(find.text('Same caption'), findsOneWidget);
+    });
 
     testWidgetsWithSurfaceSize(
       'renders farewell-day date when original Vine has a published_at tag',
