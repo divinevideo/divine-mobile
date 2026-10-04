@@ -32,6 +32,7 @@ class CuratedListCacheWriteCoordinator {
     for (final entry in after.entries) {
       if (before[entry.key] == entry.value) continue;
       final stored = latest[entry.key];
+      if (stored == entry.value) continue;
       if (stored == null ||
           stored == before[entry.key] ||
           entry.value.updatedAt.isAfter(stored.updatedAt)) {
