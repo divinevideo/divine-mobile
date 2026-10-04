@@ -2289,12 +2289,13 @@ void main() {
 
         var removalWasProtected = false;
         service.setOnListUnsubscribed((removedListId) {
+          expect(removedListId, list.authorScopedId);
           final tombstones = prefs.getStringList(
             CuratedListService.deletedListCoordinatesStorageKey,
           );
           removalWasProtected =
               service.getListById(removedListId) == null &&
-              (tombstones?.contains('$_ownerPubkey:$removedListId') ?? false);
+              (tombstones?.contains('$_ownerPubkey:$listId') ?? false);
         });
 
         expect(await service.deleteOwnedList(listId), isTrue);
