@@ -4377,7 +4377,7 @@
   "analyticsSocialCountsInfoLabel": "팔로워 수에 대해",
   "analyticsFollowerCountsBody": "팔로워 수는 Divine에서 나를 팔로우하는 사람 수를 보여줘요.",
   "analyticsSocialCountsLearnMore": "자세히 알아보기",
-  "supportNoLogsToExport": "아직 로그가 없어요. 앱을 실행할 때마다 새로 기록해요. 문제를 다시 재현한 다음 앱을 재시작하지 말고 여기로 돌아와 주세요.",
+  "supportNoLogsToExport": "아직 로그가 없어요. 앱을 실행할 때마다 새로 기록해요. 문제를 재현한 다음 앱을 재시작하지 말고 여기로 돌아와 주세요.",
   "supportExportLogsUnconfirmed": "로그를 공유할 앱에 전달했어요. 공유한 앱을 확인해 주세요.",
   "supportClearLogs": "로그 지우기",
   "supportClearLogsSubtitle": "기록한 로그를 지우고 새로 시작해요",

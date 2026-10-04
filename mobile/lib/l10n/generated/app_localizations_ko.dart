@@ -4457,7 +4457,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get supportNoLogsToExport =>
-      '아직 로그가 없어요. 앱을 실행할 때마다 새로 기록해요. 문제를 다시 재현한 다음 앱을 재시작하지 말고 여기로 돌아와 주세요.';
+      '아직 로그가 없어요. 앱을 실행할 때마다 새로 기록해요. 문제를 재현한 다음 앱을 재시작하지 말고 여기로 돌아와 주세요.';
 
   @override
   String get supportExportLogsUnconfirmed =>
