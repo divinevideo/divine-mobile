@@ -2,6 +2,7 @@
 // the removedVideoIds broadcast stream so subscribers (FullscreenFeedBloc,
 // profileFeedProvider) can drop the id without waiting for a route change.
 
+import 'package:async/async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -75,28 +76,22 @@ void main() {
     });
 
     test('removeVideoCompletely emits the id on the bus', () async {
-      final emitted = <String>[];
-      final sub = service.removedVideoIds.listen(emitted.add);
+      final removal = expectLater(service.removedVideoIds, emits('vid-1'));
 
       service.removeVideoCompletely('vid-1');
-      await Future<void>.delayed(Duration.zero);
 
-      expect(emitted, equals(['vid-1']));
-      await sub.cancel();
+      await removal;
     });
 
     test('emits even when the video was not in any active feed', () async {
       // Mirrors the log line "Video ... marked as deleted (was not in any
       // active feeds)" — the side-channel must still fire so a fullscreen
       // bloc holding the id in its own list drops it.
-      final emitted = <String>[];
-      final sub = service.removedVideoIds.listen(emitted.add);
+      final removal = expectLater(service.removedVideoIds, emits('phantom'));
 
       service.removeVideoCompletely('phantom');
-      await Future<void>.delayed(Duration.zero);
 
-      expect(emitted, equals(['phantom']));
-      await sub.cancel();
+      await removal;
     });
 
     test('notifies listeners when the video was not in any active feed', () {
@@ -109,37 +104,35 @@ void main() {
     });
 
     test('emits one event per call, in dispatch order', () async {
-      final emitted = <String>[];
-      final sub = service.removedVideoIds.listen(emitted.add);
+      final removals = expectLater(
+        service.removedVideoIds,
+        emitsInOrder(['a', 'b', 'c']),
+      );
 
       service
         ..removeVideoCompletely('a')
         ..removeVideoCompletely('b')
         ..removeVideoCompletely('c');
-      await Future<void>.delayed(Duration.zero);
 
-      expect(emitted, equals(['a', 'b', 'c']));
-      await sub.cancel();
+      await removals;
     });
 
     test('broadcast: a late subscriber misses past emits but receives '
         'future emits', () async {
-      final earlyEmits = <String>[];
-      final lateEmits = <String>[];
-
-      final earlySub = service.removedVideoIds.listen(earlyEmits.add);
+      final early = StreamQueue(service.removedVideoIds);
+      addTearDown(early.cancel);
+      final past = early.next;
       service.removeVideoCompletely('past');
-      await Future<void>.delayed(Duration.zero);
+      expect(await past, 'past');
 
-      final lateSub = service.removedVideoIds.listen(lateEmits.add);
+      final late = StreamQueue(service.removedVideoIds);
+      addTearDown(late.cancel);
+      final earlyFuture = early.next;
+      final lateFuture = late.next;
       service.removeVideoCompletely('future');
-      await Future<void>.delayed(Duration.zero);
 
-      expect(earlyEmits, equals(['past', 'future']));
-      expect(lateEmits, equals(['future']));
-
-      await earlySub.cancel();
-      await lateSub.cancel();
+      expect(await earlyFuture, 'future');
+      expect(await lateFuture, 'future');
     });
 
     test(
@@ -147,8 +140,10 @@ void main() {
       () async {
         const pubkey =
             'c3dd74d68e414f0305db9f7dc96ec32e616502e6ccf5bbf5739de19a96b67f3e';
-        final emitted = <String>[];
-        final sub = service.removedVideoIds.listen(emitted.add);
+        final removal = expectLater(
+          service.removedVideoIds,
+          emitsInAnyOrder(['held-fullscreen-id', 'cached-replacement-id']),
+        );
 
         final deletedVideo = _videoEvent(
           id: 'held-fullscreen-id',
@@ -168,11 +163,7 @@ void main() {
         );
 
         service.removeVideoEventCompletely(deletedVideo);
-        await Future<void>.delayed(Duration.zero);
-
-        expect(emitted, contains('held-fullscreen-id'));
-        expect(emitted, contains('cached-replacement-id'));
-        await sub.cancel();
+        await removal;
       },
     );
 
@@ -191,8 +182,7 @@ void main() {
             '1111111111111111111111111111111111111111111111111111111111111111';
         const deletionId =
             '2222222222222222222222222222222222222222222222222222222222222222';
-        final emitted = <String>[];
-        final sub = service.removedVideoIds.listen(emitted.add);
+        final removal = expectLater(service.removedVideoIds, emits(videoId));
 
         final video = _videoEvent(
           id: videoId,
@@ -216,12 +206,10 @@ void main() {
           ),
           SubscriptionType.profile,
         );
-        await Future<void>.delayed(Duration.zero);
+        await removal;
 
         expect(service.authorVideos(author), isEmpty);
         expect(service.isVideoKnownDeleted(videoId), isTrue);
-        expect(emitted, contains(videoId));
-        await sub.cancel();
       },
     );
 
@@ -236,6 +224,7 @@ void main() {
           '4444444444444444444444444444444444444444444444444444444444444444';
       final emitted = <String>[];
       final sub = service.removedVideoIds.listen(emitted.add);
+      addTearDown(sub.cancel);
 
       final video = _videoEvent(
         id: videoId,
@@ -260,12 +249,11 @@ void main() {
         ),
         SubscriptionType.profile,
       );
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(service.authorVideos(author).map((v) => v.id), contains(videoId));
       expect(service.isVideoKnownDeleted(videoId), isFalse);
       expect(emitted, isEmpty);
-      await sub.cancel();
     });
 
     test(
@@ -279,8 +267,10 @@ void main() {
             '6666666666666666666666666666666666666666666666666666666666666666';
         const deletionId =
             '7777777777777777777777777777777777777777777777777777777777777777';
-        final emitted = <String>[];
-        final sub = service.removedVideoIds.listen(emitted.add);
+        final removal = expectLater(
+          service.removedVideoIds,
+          emitsInAnyOrder([olderId, replacementId]),
+        );
 
         final older = _videoEvent(
           id: olderId,
@@ -315,26 +305,23 @@ void main() {
           ),
           SubscriptionType.profile,
         );
-        await Future<void>.delayed(Duration.zero);
+        await removal;
 
         expect(service.authorVideos(author), isEmpty);
         expect(service.isVideoEventKnownDeleted(older), isTrue);
         expect(service.isVideoEventKnownDeleted(replacement), isTrue);
-        expect(emitted, containsAll(<String>[olderId, replacementId]));
-        await sub.cancel();
       },
     );
 
     test('dispose closes the stream', () async {
-      final sub = service.removedVideoIds.listen((_) {});
+      final closed = expectLater(service.removedVideoIds, emitsDone);
       service.dispose();
       // Re-create for tearDown safety — overrides the field.
       service = VideoEventService(
         nostrClient,
         crashReporter: const SilentCrashReporter(),
       );
-      // The original subscription should complete cleanly.
-      await sub.cancel();
+      await closed;
     });
   });
 }
