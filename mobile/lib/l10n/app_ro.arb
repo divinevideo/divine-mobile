@@ -5497,5 +5497,9 @@
   "listEditTitle": "Editează lista",
   "listAddCollaboratorTitle": "Adaugă un colaborator",
   "listCollaboratorSearchHint": "Caută în Divine...",
-  "listCollaboratorsNone": "Niciunul"
+  "listCollaboratorsNone": "Niciunul",
+  "listPrivateCollaboratorsWarning": "Dacă faci această listă privată, colaboratorii ei vor fi eliminați. Doar tu vei putea adăuga videoclipuri.",
+  "listVideoNotAdded": "Lista ta a fost creată, dar acest videoclip nu a fost adăugat.",
+  "listVideoPendingSync": "Lista și videoclipul tău sunt salvate aici. Videoclipul așteaptă sincronizarea.",
+  "listRetrySync": "Sincronizează acum"
 }

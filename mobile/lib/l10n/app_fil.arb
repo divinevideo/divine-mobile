@@ -4496,5 +4496,9 @@
   "listEditTitle": "I-edit ang list",
   "listAddCollaboratorTitle": "Magdagdag ng collaborator",
   "listCollaboratorSearchHint": "Maghanap sa Divine...",
-  "listCollaboratorsNone": "Wala"
+  "listCollaboratorsNone": "Wala",
+  "listPrivateCollaboratorsWarning": "Kapag ginawang pribado ang listahang ito, aalisin din ang mga collaborator nito. Ikaw lang ang makakapagdagdag ng mga video.",
+  "listVideoNotAdded": "Nagawa ang listahan mo, pero hindi naidagdag ang video na ito.",
+  "listVideoPendingSync": "Naka-save dito ang listahan at video mo. Naghihintay ang video na ma-sync.",
+  "listRetrySync": "I-sync ngayon"
 }

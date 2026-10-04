@@ -5497,5 +5497,9 @@
   "listEditTitle": "Editar lista",
   "listAddCollaboratorTitle": "Adicionar colaborador",
   "listCollaboratorSearchHint": "Pesquisar no Divine...",
-  "listCollaboratorsNone": "Nenhum"
+  "listCollaboratorsNone": "Nenhum",
+  "listPrivateCollaboratorsWarning": "Tornar esta lista privada também remove seus colaboradores. Só você poderá adicionar vídeos.",
+  "listVideoNotAdded": "Sua lista foi criada, mas este vídeo não foi adicionado.",
+  "listVideoPendingSync": "Sua lista e seu vídeo estão salvos aqui. O vídeo está aguardando a sincronização.",
+  "listRetrySync": "Sincronizar agora"
 }

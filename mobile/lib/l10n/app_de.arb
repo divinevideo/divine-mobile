@@ -5497,5 +5497,9 @@
   "listEditTitle": "Liste bearbeiten",
   "listAddCollaboratorTitle": "Mitarbeiter hinzufügen",
   "listCollaboratorSearchHint": "Divine durchsuchen...",
-  "listCollaboratorsNone": "Keine"
+  "listCollaboratorsNone": "Keine",
+  "listPrivateCollaboratorsWarning": "Wenn du diese Liste privat machst, werden auch ihre Mitwirkenden entfernt. Nur du kannst dann Videos hinzufügen.",
+  "listVideoNotAdded": "Deine Liste wurde erstellt, aber dieses Video wurde nicht hinzugefügt.",
+  "listVideoPendingSync": "Deine Liste und dein Video sind hier gespeichert. Das Video wartet auf die Synchronisierung.",
+  "listRetrySync": "Jetzt synchronisieren"
 }

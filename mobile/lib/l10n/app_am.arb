@@ -5574,5 +5574,9 @@
   "listEditTitle": "ዝርዝር አርትዕ",
   "listAddCollaboratorTitle": "ተባባሪ ጨምር",
   "listCollaboratorSearchHint": "Divine ፈልግ...",
-  "listCollaboratorsNone": "ምንም"
+  "listCollaboratorsNone": "ምንም",
+  "listPrivateCollaboratorsWarning": "ይህን ዝርዝር የግል ማድረግ ተባባሪዎቹንም ያስወግዳል። ቪዲዮዎችን ማከል የሚችሉት እርስዎ ብቻ ይሆናሉ።",
+  "listVideoNotAdded": "ዝርዝርዎ ተፈጥሯል፣ ግን ይህ ቪዲዮ አልተጨመረም።",
+  "listVideoPendingSync": "ዝርዝርዎ እና ቪዲዮዎ እዚህ ተቀምጠዋል። ቪዲዮው ለመመሳሰል በመጠባበቅ ላይ ነው።",
+  "listRetrySync": "አሁን አመሳስል"
 }

@@ -5497,5 +5497,9 @@
   "listEditTitle": "Lijst bewerken",
   "listAddCollaboratorTitle": "Medewerker toevoegen",
   "listCollaboratorSearchHint": "Zoek in Divine...",
-  "listCollaboratorsNone": "Geen"
+  "listCollaboratorsNone": "Geen",
+  "listPrivateCollaboratorsWarning": "Als je deze lijst privé maakt, worden ook de bijdragers verwijderd. Alleen jij kunt dan video’s toevoegen.",
+  "listVideoNotAdded": "Je lijst is gemaakt, maar deze video is niet toegevoegd.",
+  "listVideoPendingSync": "Je lijst en video zijn hier opgeslagen. De video wacht op synchronisatie.",
+  "listRetrySync": "Nu synchroniseren"
 }

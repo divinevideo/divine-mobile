@@ -5497,5 +5497,9 @@
   "listEditTitle": "تعديل القائمة",
   "listAddCollaboratorTitle": "إضافة متعاون",
   "listCollaboratorSearchHint": "ابحث في Divine...",
-  "listCollaboratorsNone": "لا أحد"
+  "listCollaboratorsNone": "لا أحد",
+  "listPrivateCollaboratorsWarning": "جعل هذه القائمة خاصة يزيل المتعاونين معها أيضًا. ستكون أنت الوحيد القادر على إضافة الفيديوهات.",
+  "listVideoNotAdded": "تم إنشاء قائمتك، لكن لم تتم إضافة هذا الفيديو.",
+  "listVideoPendingSync": "تم حفظ قائمتك وفيديوك هنا. الفيديو بانتظار المزامنة.",
+  "listRetrySync": "زامن الآن"
 }

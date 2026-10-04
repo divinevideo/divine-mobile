@@ -13036,16 +13036,16 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get listPrivateCollaboratorsWarning =>
-      'Making this list private also removes its collaborators. Only you will be able to add videos.';
+      'Đặt danh sách này ở chế độ riêng tư cũng sẽ xóa các cộng tác viên. Chỉ bạn mới có thể thêm video.';
 
   @override
   String get listVideoPendingSync =>
-      'Your list and video are saved here. The video is waiting to sync.';
+      'Danh sách và video của bạn đã được lưu tại đây. Video đang chờ đồng bộ.';
 
   @override
   String get listVideoNotAdded =>
-      'Your list was created, but this video wasn\'t added.';
+      'Danh sách của bạn đã được tạo, nhưng video này chưa được thêm.';
 
   @override
-  String get listRetrySync => 'Sync now';
+  String get listRetrySync => 'Đồng bộ ngay';
 }

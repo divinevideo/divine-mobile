@@ -13017,16 +13017,16 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get listPrivateCollaboratorsWarning =>
-      'Making this list private also removes its collaborators. Only you will be able to add videos.';
+      'Bu listeyi özel yapmak, ortak çalışanlarını da kaldırır. Yalnızca sen video ekleyebilirsin.';
 
   @override
   String get listVideoPendingSync =>
-      'Your list and video are saved here. The video is waiting to sync.';
+      'Listen ve videon burada kaydedildi. Video eşitlenmeyi bekliyor.';
 
   @override
   String get listVideoNotAdded =>
-      'Your list was created, but this video wasn\'t added.';
+      'Listen oluşturuldu, ancak bu video eklenmedi.';
 
   @override
-  String get listRetrySync => 'Sync now';
+  String get listRetrySync => 'Şimdi eşitle';
 }

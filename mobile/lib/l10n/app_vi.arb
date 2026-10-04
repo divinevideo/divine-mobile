@@ -6794,5 +6794,9 @@
   "listEditTitle": "Sửa danh sách",
   "listAddCollaboratorTitle": "Thêm cộng tác viên",
   "listCollaboratorSearchHint": "Tìm trên Divine...",
-  "listCollaboratorsNone": "Không có"
+  "listCollaboratorsNone": "Không có",
+  "listPrivateCollaboratorsWarning": "Đặt danh sách này ở chế độ riêng tư cũng sẽ xóa các cộng tác viên. Chỉ bạn mới có thể thêm video.",
+  "listVideoNotAdded": "Danh sách của bạn đã được tạo, nhưng video này chưa được thêm.",
+  "listVideoPendingSync": "Danh sách và video của bạn đã được lưu tại đây. Video đang chờ đồng bộ.",
+  "listRetrySync": "Đồng bộ ngay"
 }

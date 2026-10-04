@@ -13206,16 +13206,16 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get listPrivateCollaboratorsWarning =>
-      'Making this list private also removes its collaborators. Only you will be able to add videos.';
+      'Kapag ginawang pribado ang listahang ito, aalisin din ang mga collaborator nito. Ikaw lang ang makakapagdagdag ng mga video.';
 
   @override
   String get listVideoPendingSync =>
-      'Your list and video are saved here. The video is waiting to sync.';
+      'Naka-save dito ang listahan at video mo. Naghihintay ang video na ma-sync.';
 
   @override
   String get listVideoNotAdded =>
-      'Your list was created, but this video wasn\'t added.';
+      'Nagawa ang listahan mo, pero hindi naidagdag ang video na ito.';
 
   @override
-  String get listRetrySync => 'Sync now';
+  String get listRetrySync => 'I-sync ngayon';
 }

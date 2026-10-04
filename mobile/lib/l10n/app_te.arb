@@ -8463,5 +8463,9 @@
   "listEditTitle": "జాబితాను సవరించండి",
   "listAddCollaboratorTitle": "సహకారిని జోడించండి",
   "listCollaboratorSearchHint": "శోధన Divine...",
-  "listCollaboratorsNone": "ఏదీ లేదు"
+  "listCollaboratorsNone": "ఏదీ లేదు",
+  "listPrivateCollaboratorsWarning": "ఈ జాబితాను ప్రైవేట్‌గా మార్చితే దాని సహకారులను కూడా తొలగిస్తుంది. మీరు మాత్రమే వీడియోలను జోడించగలరు.",
+  "listVideoNotAdded": "మీ జాబితా సృష్టించబడింది, కానీ ఈ వీడియో జోడించబడలేదు.",
+  "listVideoPendingSync": "మీ జాబితా, వీడియో ఇక్కడ సేవ్ అయ్యాయి. వీడియో సింక్ కావడానికి వేచి ఉంది.",
+  "listRetrySync": "ఇప్పుడే సింక్ చేయండి"
 }

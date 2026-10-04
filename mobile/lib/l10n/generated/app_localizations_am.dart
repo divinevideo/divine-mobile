@@ -12758,16 +12758,15 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get listPrivateCollaboratorsWarning =>
-      'Making this list private also removes its collaborators. Only you will be able to add videos.';
+      'ይህን ዝርዝር የግል ማድረግ ተባባሪዎቹንም ያስወግዳል። ቪዲዮዎችን ማከል የሚችሉት እርስዎ ብቻ ይሆናሉ።';
 
   @override
   String get listVideoPendingSync =>
-      'Your list and video are saved here. The video is waiting to sync.';
+      'ዝርዝርዎ እና ቪዲዮዎ እዚህ ተቀምጠዋል። ቪዲዮው ለመመሳሰል በመጠባበቅ ላይ ነው።';
 
   @override
-  String get listVideoNotAdded =>
-      'Your list was created, but this video wasn\'t added.';
+  String get listVideoNotAdded => 'ዝርዝርዎ ተፈጥሯል፣ ግን ይህ ቪዲዮ አልተጨመረም።';
 
   @override
-  String get listRetrySync => 'Sync now';
+  String get listRetrySync => 'አሁን አመሳስል';
 }

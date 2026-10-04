@@ -12445,16 +12445,14 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get listPrivateCollaboratorsWarning =>
-      'Making this list private also removes its collaborators. Only you will be able to add videos.';
+      'このリストを非公開にすると、共同編集者も削除されます。動画を追加できるのはあなただけになります。';
 
   @override
-  String get listVideoPendingSync =>
-      'Your list and video are saved here. The video is waiting to sync.';
+  String get listVideoPendingSync => 'リストと動画はこの端末に保存されています。動画は同期を待っています。';
 
   @override
-  String get listVideoNotAdded =>
-      'Your list was created, but this video wasn\'t added.';
+  String get listVideoNotAdded => 'リストは作成されましたが、この動画は追加されませんでした。';
 
   @override
-  String get listRetrySync => 'Sync now';
+  String get listRetrySync => '今すぐ同期';
 }
