@@ -10,12 +10,16 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/services/relay_capability_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_filter_builder.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 // Mock classes
 class MockNostrService extends Mock implements NostrClient {}
+
+class _MockRelayCapabilityService extends Mock
+    implements RelayCapabilityService {}
 
 // Fake classes for setUpAll
 class FakeFilter extends Fake implements Filter {}
@@ -53,11 +57,15 @@ void main() {
     late MockNostrService mockNostrService;
     late StreamController<Event> eventStreamController;
     late int subscribeCallCount;
+    late List<List<Filter>> subscribedFilters;
+    late _MockRelayCapabilityService mockRelayCapabilityService;
 
     setUp(() {
       mockNostrService = MockNostrService();
+      mockRelayCapabilityService = _MockRelayCapabilityService();
       eventStreamController = StreamController<Event>.broadcast();
       subscribeCallCount = 0;
+      subscribedFilters = [];
 
       when(() => mockNostrService.isInitialized).thenReturn(true);
       when(() => mockNostrService.publicKey).thenReturn('');
@@ -66,6 +74,9 @@ void main() {
         () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
       ).thenAnswer((invocation) {
         subscribeCallCount++;
+        subscribedFilters.add(
+          invocation.positionalArguments.first as List<Filter>,
+        );
         // Simulate EOSE immediately
         unawaited(
           Future.microtask(() {
@@ -81,6 +92,7 @@ void main() {
       videoEventService = VideoEventService(
         mockNostrService,
         crashReporter: const SilentCrashReporter(),
+        videoFilterBuilder: VideoFilterBuilder(mockRelayCapabilityService),
       );
     });
 
@@ -253,24 +265,45 @@ void main() {
       );
     });
 
-    test('stores and uses sortBy and nip50Sort params', () async {
+    test('resubscribes with the stored NIP-50 sort mode', () async {
+      await videoEventService.subscribeToVideoFeed(
+        subscriptionType: SubscriptionType.discovery,
+        limit: 50,
+        nip50Sort: NIP50SortMode.hot,
+      );
+      expect(subscribedFilters.single.first.search, equals('sort:hot'));
+
+      await videoEventService.resetAndResubscribeAll();
+
+      expect(subscribedFilters, hasLength(2));
+      expect(subscribedFilters.last.first.search, equals('sort:hot'));
+    });
+
+    test('resubscribes with the stored sort field', () async {
+      when(() => mockNostrService.connectedRelays).thenReturn(const <String>[]);
+      when(
+        () => mockRelayCapabilityService.getRelayCapabilities(any()),
+      ).thenAnswer(
+        (invocation) async => RelayCapabilities(
+          relayUrl: invocation.positionalArguments.single as String,
+          rawData: const {},
+          hasDivineExtensions: true,
+          sortFields: [VideoSortField.loopCount.fieldName],
+        ),
+      );
+      final sortSent = {'field': 'loop_count', 'dir': 'desc'};
+
       await videoEventService.subscribeToVideoFeed(
         subscriptionType: SubscriptionType.discovery,
         limit: 50,
         sortBy: VideoSortField.loopCount,
-        nip50Sort: NIP50SortMode.hot,
       );
+      expect(subscribedFilters.single.first.toJson()['sort'], equals(sortSent));
 
-      final callsBefore = subscribeCallCount;
-
-      // Reset should re-use the stored params including sort fields
       await videoEventService.resetAndResubscribeAll();
 
-      expect(
-        subscribeCallCount,
-        greaterThan(callsBefore),
-        reason: 'Should resubscribe with stored sort params',
-      );
+      expect(subscribedFilters, hasLength(2));
+      expect(subscribedFilters.last.first.toJson()['sort'], equals(sortSent));
     });
 
     test(
