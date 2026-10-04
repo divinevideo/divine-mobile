@@ -757,9 +757,12 @@ class CuratedListRelayGateway {
     }
   }
 
-  Future<bool> publishListDeletion(String listId) async {
+  Future<bool> publishListDeletion(
+    String listId, {
+    required String ownerPubkey,
+  }) async {
     final currentPubkey = currentAuthenticatedPubkey();
-    if (currentPubkey == null || currentPubkey.isEmpty) {
+    if (currentPubkey == null || currentPubkey != ownerPubkey) {
       return false;
     }
 
@@ -771,7 +774,11 @@ class CuratedListRelayGateway {
         ['k', '30005'],
       ],
     );
-    if (event == null) return false;
+    if (event == null ||
+        event.pubkey != ownerPubkey ||
+        currentAuthenticatedPubkey() != ownerPubkey) {
+      return false;
+    }
 
     // Confirmed, for the same reason as the confirmed publish path: both
     // callers drop or flip local state when this returns false, and a queued
