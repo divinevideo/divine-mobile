@@ -84,7 +84,6 @@ unawaited_futures|lib/widgets/upload_failure_sheet.dart	1
 unawaited_futures|test/features/feature_flags/screens/feature_flag_screen_route_test.dart	1
 unawaited_futures|test/helpers/test_provider_overrides.dart	1
 unawaited_futures|test/mocks/mock_subscription_manager.dart	2
-unawaited_futures|test/providers/editor_background_work_test.dart	1
 unawaited_futures|test/services/auth_service_data_cleanup_ordering_test.dart	1
 unawaited_futures|test/services/auth_service_identity_change_preservation_test.dart	1
 unawaited_futures|test/services/auth_service_multi_account_test.dart	1

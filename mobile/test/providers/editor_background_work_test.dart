@@ -44,7 +44,7 @@ void main() {
 
       var settlingFinished = false;
       final settling = backgroundWork.settle();
-      settling.then<void>(
+      final settlingCompletion = settling.then<void>(
         (_) => settlingFinished = true,
         onError: (Object _, StackTrace _) => settlingFinished = true,
       );
@@ -63,6 +63,12 @@ void main() {
 
       finishSpawnedOperation.complete();
       await errorExpectation;
+      await settlingCompletion;
+      expect(
+        settlingFinished,
+        isTrue,
+        reason: 'the completion observer must have seen settle finish',
+      );
       expect(backgroundWork.isNotEmptyForTest, isFalse);
     });
   });
