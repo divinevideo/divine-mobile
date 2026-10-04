@@ -12,7 +12,8 @@ import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
 
 /// The header's check button; needs a [SelectListCubit] above it.
 ///
-/// Disabled until at least one list is picked.
+/// Disabled while a save runs, and while no list is picked and none that
+/// holds the video is unpicked.
 class SelectListSaveButton extends StatelessWidget {
   /// Creates the button.
   const SelectListSaveButton({super.key});
@@ -21,7 +22,9 @@ class SelectListSaveButton extends StatelessWidget {
     final messenger = ScaffoldMessenger.maybeOf(context);
     final route = ModalRoute.of(context);
     final l10n = context.l10n;
-    final status = await context.read<SelectListCubit>().submitted();
+    final cubit = context.read<SelectListCubit>();
+    final status = await cubit.submitted();
+    if (!cubit.isSessionCurrent) return;
     if ((route?.isCurrent ?? false) || !(messenger?.mounted ?? false)) return;
     final message = switch (status) {
       SelectListStatus.failure => l10n.listUpdateFailed,

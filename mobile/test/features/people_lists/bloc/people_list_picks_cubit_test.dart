@@ -35,6 +35,32 @@ void main() {
       );
     });
 
+    group('canApply', () {
+      test('is false while nothing is picked or to be removed', () {
+        final cubit = PeopleListPicksCubit(memberListIds: const {});
+        addTearDown(cubit.close);
+
+        expect(cubit.state.canApply, isFalse);
+      });
+
+      test('is true once a list is picked', () {
+        final cubit = PeopleListPicksCubit(memberListIds: const {})
+          ..toggled('empty');
+        addTearDown(cubit.close);
+
+        expect(cubit.state.canApply, isTrue);
+      });
+
+      test('stays true when the only list holding the person is unpicked', () {
+        final cubit = PeopleListPicksCubit(memberListIds: const {'holds'})
+          ..toggled('holds');
+        addTearDown(cubit.close);
+
+        expect(cubit.state.selectedListIds, isEmpty);
+        expect(cubit.state.canApply, isTrue);
+      });
+    });
+
     group('membershipChanged', () {
       blocTest<PeopleListPicksCubit, PeopleListPicksState>(
         'picks a list that gained the person and unpicks one that lost '

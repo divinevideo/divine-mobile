@@ -90,14 +90,18 @@ class ListPickerRow extends StatelessWidget {
                     ],
                   ),
                 ),
-                SizedBox.square(
-                  dimension: DivineIcon.scaleSize(context, _checkSize),
-                  child: isSelected
-                      ? DivineIcon(
-                          icon: DivineIconName.check,
-                          color: colors.accentPositive,
-                        )
-                      : null,
+                // The row's checked state already reads the pick; the icon
+                // would add an image to it.
+                ExcludeSemantics(
+                  child: SizedBox.square(
+                    dimension: DivineIcon.scaleSize(context, _checkSize),
+                    child: isSelected
+                        ? DivineIcon(
+                            icon: DivineIconName.check,
+                            color: colors.accentPositive,
+                          )
+                        : null,
+                  ),
                 ),
               ],
             ),
