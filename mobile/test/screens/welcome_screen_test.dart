@@ -529,6 +529,10 @@ void main() {
         expect(find.text('Continue as Test User'), findsOneWidget);
         expect(find.text('Use another account'), findsOneWidget);
         expect(find.text('Create new account'), findsOneWidget);
+        expect(
+          find.bySemanticsIdentifier(SemanticIds.authCreateAccountButton),
+          findsOneWidget,
+        );
       });
 
       testWidgets('shows terms notice above returning-user action buttons', (
