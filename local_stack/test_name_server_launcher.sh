@@ -40,6 +40,8 @@ docker() {
   esac
 }
 
+uname() { printf '%s\n' "$fixture_kernel"; }
+
 reset_fixture() {
   fixture_container=fixture-container
   fixture_image=sha256:synthetic-image
@@ -49,6 +51,7 @@ reset_fixture() {
   fixture_binding=127.0.0.1:43005
   fixture_engine='Ubuntu 24.04'
   fixture_os=linux
+  fixture_kernel=Linux
   fixture_info_failure=false
   fixture_endpoint=unix:///var/run/docker.sock
   : > "$calls"
@@ -99,6 +102,12 @@ for engine in 'Docker Desktop' 'Docker Desktop for Linux'; do
   printf '%s\n' "${COMPOSE[@]:1}" run --rm --no-deps name-server-smoke --seed > "$scratch/expected"
   assert_calls 'Desktop must retain Compose transport even with Linux OSType'
 done
+
+reset_fixture
+fixture_kernel=Darwin
+run_name_server_smoke --seed
+printf '%s\n' "${COMPOSE[@]:1}" run --rm --no-deps name-server-smoke --seed > "$scratch/expected"
+assert_calls 'a Linux VM on a non-Linux host must not select native host networking'
 
 for defect in absent multiple unhealthy other-checkout wrong-service public-binding remote override unknown failed-info; do
   reset_fixture

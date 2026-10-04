@@ -22,7 +22,8 @@ run_name_server_smoke() {
     echo "ERROR: could not classify the Docker engine." >&2
     return 1
   fi
-  if [[ "$os_type" == linux && "$engine" != *"Docker Desktop"* ]]; then
+  if [[ "$os_type" == linux && "$engine" != *"Docker Desktop"* &&
+        "$(uname -s)" == Linux ]]; then
     # Host networking must mean this machine, not a remote daemon's host.
     # Reject an environment override without inspecting its value.
     if [[ ${DOCKER_HOST+x} ]]; then
