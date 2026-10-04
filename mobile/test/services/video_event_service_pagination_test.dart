@@ -152,6 +152,9 @@ void main() {
       await expectLater(loadMoreFuture, completes);
       await completed;
       expect(videoEventService.discoveryVideos, isEmpty);
+      // The relay was asked once, and its empty answer ended the feed.
+      verify(() => mockNostrService.subscribe(any())).called(1);
+      expect(discoveryState().hasMore, isFalse);
     });
   });
 }
