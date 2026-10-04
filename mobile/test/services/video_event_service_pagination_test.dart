@@ -41,9 +41,10 @@ void main() {
     Future<void> queryCompleted() {
       final completed = Completer<void>();
       void listener() {
-        final state = videoEventService
-            .getPaginationStatesForTesting()[SubscriptionType.discovery]!;
-        if (!state.isLoading && !completed.isCompleted) {
+        final isLoading = videoEventService.isLoadingForSubscription(
+          SubscriptionType.discovery,
+        );
+        if (!isLoading && !completed.isCompleted) {
           completed.complete();
         }
       }
