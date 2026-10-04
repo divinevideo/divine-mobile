@@ -88,6 +88,7 @@ class CuratedList extends Equatable {
     this.isPublic = true,
     this.nostrEventId,
     this.pendingRepublish = false,
+    this.pendingVisibility,
     this.tags = const [],
     this.isCollaborative = false,
     this.allowedCollaborators = const [],
@@ -110,6 +111,11 @@ class CuratedList extends Equatable {
     isPublic: json['isPublic'] as bool? ?? true,
     nostrEventId: json['nostrEventId'] as String?,
     pendingRepublish: json['pendingRepublish'] as bool? ?? false,
+    pendingVisibility: json['pendingVisibility'] == null
+        ? null
+        : CuratedListVisibility.fromJson(
+            json['pendingVisibility'] as Map<String, dynamic>,
+          ),
     tags: List<String>.from(json['tags'] as List? ?? []),
     isCollaborative: json['isCollaborative'] as bool? ?? false,
     allowedCollaborators: List<String>.from(
@@ -172,6 +178,10 @@ class CuratedList extends Equatable {
   /// Whether a local edit failed to publish and should be retried.
   final bool pendingRepublish;
 
+  /// The requested privacy and permissions awaiting durable relay acceptance.
+  /// This proposal does not change the accepted visibility shown to the user.
+  final CuratedListVisibility? pendingVisibility;
+
   /// Tags for categorization and discovery.
   final List<String> tags;
 
@@ -211,6 +221,8 @@ class CuratedList extends Equatable {
     String? nostrEventId,
     bool clearNostrEventId = false,
     bool? pendingRepublish,
+    CuratedListVisibility? pendingVisibility,
+    bool clearPendingVisibility = false,
     List<String>? tags,
     bool? isCollaborative,
     List<String>? allowedCollaborators,
@@ -229,6 +241,9 @@ class CuratedList extends Equatable {
     isPublic: isPublic ?? this.isPublic,
     nostrEventId: clearNostrEventId ? null : nostrEventId ?? this.nostrEventId,
     pendingRepublish: pendingRepublish ?? this.pendingRepublish,
+    pendingVisibility: clearPendingVisibility
+        ? null
+        : pendingVisibility ?? this.pendingVisibility,
     tags: tags ?? this.tags,
     isCollaborative: isCollaborative ?? this.isCollaborative,
     allowedCollaborators: allowedCollaborators ?? this.allowedCollaborators,
@@ -236,6 +251,34 @@ class CuratedList extends Equatable {
     thumbnailUrls: thumbnailUrls ?? this.thumbnailUrls,
     playOrder: playOrder ?? this.playOrder,
   );
+
+  /// Stages a privacy proposal while preserving the last accepted visibility.
+  CuratedList stageVisibilityFrom(
+    CuratedList accepted, {
+    bool stageProposal = false,
+  }) {
+    if (isPublic == accepted.isPublic) return this;
+    return copyWith(
+      isPublic: accepted.isPublic,
+      isCollaborative: accepted.isCollaborative,
+      allowedCollaborators: accepted.allowedCollaborators,
+      pendingVisibility: stageProposal
+          ? CuratedListVisibility.fromList(this)
+          : null,
+    );
+  }
+
+  /// The intended publication, including a proposal recovered from storage.
+  CuratedList get publicationTarget {
+    final target = pendingVisibility;
+    if (target == null) return this;
+    return copyWith(
+      isPublic: target.isPublic,
+      isCollaborative: target.isCollaborative,
+      allowedCollaborators: target.allowedCollaborators,
+      clearPendingVisibility: true,
+    );
+  }
 
   /// Converts this list to a JSON map.
   Map<String, dynamic> toJson() => {
@@ -250,6 +293,8 @@ class CuratedList extends Equatable {
     'isPublic': isPublic,
     'nostrEventId': nostrEventId,
     'pendingRepublish': pendingRepublish,
+    if (pendingVisibility != null)
+      'pendingVisibility': pendingVisibility!.toJson(),
     'tags': tags,
     'isCollaborative': isCollaborative,
     'allowedCollaborators': allowedCollaborators,
@@ -271,6 +316,7 @@ class CuratedList extends Equatable {
     isPublic,
     nostrEventId,
     pendingRepublish,
+    pendingVisibility,
     tags,
     isCollaborative,
     allowedCollaborators,
@@ -278,4 +324,51 @@ class CuratedList extends Equatable {
     thumbnailUrls,
     playOrder,
   ];
+}
+
+/// A durable privacy proposal, separate from accepted list visibility.
+class CuratedListVisibility extends Equatable {
+  /// Creates the complete target so privacy and collaboration stay atomic.
+  const CuratedListVisibility({
+    required this.isPublic,
+    required this.isCollaborative,
+    required this.allowedCollaborators,
+  });
+
+  /// Captures a list's intended visibility and permissions.
+  factory CuratedListVisibility.fromList(CuratedList list) =>
+      CuratedListVisibility(
+        isPublic: list.isPublic,
+        isCollaborative: list.isCollaborative,
+        allowedCollaborators: List.unmodifiable(list.allowedCollaborators),
+      );
+
+  /// Restores a locally stored proposal.
+  factory CuratedListVisibility.fromJson(Map<String, dynamic> json) =>
+      CuratedListVisibility(
+        isPublic: json['isPublic'] as bool,
+        isCollaborative: json['isCollaborative'] as bool,
+        allowedCollaborators: List<String>.from(
+          json['allowedCollaborators'] as List,
+        ),
+      );
+
+  /// Whether the intended item references are public.
+  final bool isPublic;
+
+  /// Whether the intended list allows collaboration.
+  final bool isCollaborative;
+
+  /// The intended authorized collaborators.
+  final List<String> allowedCollaborators;
+
+  /// Persists the proposal without altering accepted list fields.
+  Map<String, dynamic> toJson() => {
+    'isPublic': isPublic,
+    'isCollaborative': isCollaborative,
+    'allowedCollaborators': allowedCollaborators,
+  };
+
+  @override
+  List<Object?> get props => [isPublic, isCollaborative, allowedCollaborators];
 }
