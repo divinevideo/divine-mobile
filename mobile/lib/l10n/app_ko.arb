@@ -1200,7 +1200,6 @@
   "reportReceivedReviewNotice": "인터넷에 연결되면 자동으로 보낼게요. 저희 팀이 신고를 검토하고 적절한 조치를 취할 거예요. 다이렉트 메시지로 업데이트를 받을 수 있어요.",
   "reportSafetyUrl": "divine.video/safety",
   "reportClose": "닫기",
-  "listAddToList": "목록에 추가",
   "listVideoCount": "영상 {count}개",
   "@listVideoCount": {
     "placeholders": {
@@ -1209,25 +1208,8 @@
       }
     }
   },
-  "listNewList": "새 목록",
   "listDone": "완료",
   "listErrorLoading": "목록을 불러오는 중 오류 발생",
-  "listRemovedFrom": "{name}에서 삭제했어요",
-  "@listRemovedFrom": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "listAddedTo": "{name}에 추가했어요",
-  "@listAddedTo": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "listCreateNewList": "새 목록 만들기",
   "listNewPeopleList": "새 사람 목록",
   "listNameLabel": "목록 이름",
@@ -2575,10 +2557,8 @@
   },
   "notificationSystemUpdate": "새로운 업데이트가 있어요",
   "peopleListsAddToList": "목록에 추가",
-  "peopleListsSheetTitle": "목록에 추가",
   "peopleListsEmptyTitle": "목록이 없습니다",
   "peopleListsEmptySubtitle": "목록을 만들어 사람들을 그룹화하세요.",
-  "peopleListsCreateList": "목록 만들기",
   "peopleListsNewListTitle": "새 목록",
   "peopleListsRouteTitle": "사람 목록",
   "peopleListsListNameLabel": "목록 이름",

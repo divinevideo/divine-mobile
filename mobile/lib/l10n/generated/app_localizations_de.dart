@@ -3955,17 +3955,11 @@ class AppLocalizationsDe extends AppLocalizations {
   String get peopleListsAddToList => 'Zur Liste hinzufügen';
 
   @override
-  String get peopleListsSheetTitle => 'Zur Liste hinzufügen';
-
-  @override
   String get peopleListsEmptyTitle => 'Noch keine Listen';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Erstelle eine Liste, um Personen zu gruppieren.';
-
-  @override
-  String get peopleListsCreateList => 'Liste erstellen';
 
   @override
   String get peopleListsNewListTitle => 'Neue Liste';
@@ -4979,9 +4973,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get reportClose => 'Schließen';
 
   @override
-  String get listAddToList => 'Zur Liste hinzufügen';
-
-  @override
   String listVideoCount(int count) {
     return '$count Videos';
   }
@@ -4990,23 +4981,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get listByAuthorPrefix => 'Von ';
 
   @override
-  String get listNewList => 'Neue Liste';
-
-  @override
   String get listDone => 'Fertig';
 
   @override
   String get listErrorLoading => 'Fehler beim Laden der Listen';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'Aus $name entfernt';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'Zu $name hinzugefügt';
-  }
 
   @override
   String get listCreateNewList => 'Neue Liste erstellen';

@@ -3874,17 +3874,11 @@ class AppLocalizationsVi extends AppLocalizations {
   String get peopleListsAddToList => 'Thêm vào danh sách';
 
   @override
-  String get peopleListsSheetTitle => 'Thêm vào danh sách';
-
-  @override
   String get peopleListsEmptyTitle => 'Chưa có danh sách nào';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Tạo một danh sách để bắt đầu nhóm mọi người.';
-
-  @override
-  String get peopleListsCreateList => 'Tạo danh sách';
 
   @override
   String get peopleListsNewListTitle => 'Danh sách mới';
@@ -4879,9 +4873,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get reportClose => 'Đóng';
 
   @override
-  String get listAddToList => 'Thêm vào danh sách';
-
-  @override
   String listVideoCount(int count) {
     return '$count video';
   }
@@ -4890,23 +4881,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get listByAuthorPrefix => 'Bởi ';
 
   @override
-  String get listNewList => 'Danh sách mới';
-
-  @override
   String get listDone => 'Xong';
 
   @override
   String get listErrorLoading => 'Lỗi khi tải danh sách';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'Đã xóa khỏi $name';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'Đã thêm vào $name';
-  }
 
   @override
   String get listCreateNewList => 'Tạo danh sách mới';
