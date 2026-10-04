@@ -112,151 +112,159 @@ void main() {
     );
   }
 
-  testWidgets('votes a video reply with its own coordinate and kind, not the '
-      "parent video's (#6124)", (tester) async {
-    // The reply's own coordinate is deliberate: funnelcake's
-    // engagement_counts_by_coordinate_a_mv counts kind-7 `a` tags with no
-    // content filter, so sending the parent video's coordinate would make
-    // every comment vote inflate that video's public reaction_count.
-    const ownCoordinate = '34236:$_testHexPubkey:reply-d-tag';
-    final mocks = buildMocks();
-    final reply = CommentBuilder()
-        .withAuthorPubkey(_testHexPubkey)
-        .withRootEventId(_testRootEventId)
-        .withRootAuthorPubkey(_testRootAuthorPubkey)
-        .withContent('a video reply')
-        .asVideoReply(ownCoordinate: ownCoordinate)
-        .build();
-
-    await tester.pumpWidget(
-      buildTestWidget(
-        'a video reply',
-        composerBloc: mocks.composer,
-        reactionsBloc: mocks.reactions,
-        comment: reply,
-      ),
-    );
-    await tester.pump();
-
-    await tester.tap(find.bySemanticsIdentifier('upvote_button'));
-    await tester.pump();
-
-    final dispatched = verify(
-      () => mocks.reactions.add(captureAny()),
-    ).captured.whereType<CommentVoteToggled>().single;
-
-    expect(dispatched.addressableId, equals(ownCoordinate));
-    expect(dispatched.targetKind, equals(34236));
-    expect(dispatched.commentId, equals(reply.id));
-    // The root event is the parent video; its id must not leak into the vote.
-    expect(dispatched.addressableId, isNot(contains(_testRootEventId)));
-  });
-
-  testWidgets('renders bare npub mentions as interactive profile links', (
-    tester,
-  ) async {
-    final mocks = buildMocks();
-    final npub = NostrKeyUtils.encodePubKey(_testHexPubkey);
-
-    await tester.pumpWidget(
-      buildTestWidget(
-        'My account is $npub',
-        composerBloc: mocks.composer,
-        reactionsBloc: mocks.reactions,
-      ),
-    );
-    await tester.pump();
-
-    expect(find.byType(LinkifiedText), findsOneWidget);
-    final fallbackName = UserProfile.defaultDisplayNameFor(_testHexPubkey);
-    expect(find.textContaining('@$fallbackName'), findsOneWidget);
-  });
-
-  testWidgets('renders comment urls with tappable spans', (tester) async {
-    final mocks = buildMocks();
-
-    await tester.pumpWidget(
-      buildTestWidget(
-        'checkout https://divine.video/leaderboard',
-        composerBloc: mocks.composer,
-        reactionsBloc: mocks.reactions,
-      ),
-    );
-    await tester.pump();
-
-    expect(find.byType(LinkifiedText), findsOneWidget);
-
-    final text = contentText(tester);
-    final textSpan = text.textSpan! as TextSpan;
-    final spans = textSpan.children!.cast<TextSpan>();
-    final linkSpan = spans.firstWhere(
-      (span) => span.text == 'https://divine.video/leaderboard',
-    );
-
-    expect(linkSpan.recognizer, isA<TapGestureRecognizer>());
-  });
-
-  testWidgets(
-    'tapping Reply still dispatches CommentReplyToggled (#5854 scroll intact)',
-    (tester) async {
+  group('interactions', () {
+    testWidgets('votes a video reply with its own coordinate and kind, not the '
+        "parent video's (#6124)", (tester) async {
+      // The reply's own coordinate is deliberate: funnelcake's
+      // engagement_counts_by_coordinate_a_mv counts kind-7 `a` tags with no
+      // content filter, so sending the parent video's coordinate would make
+      // every comment vote inflate that video's public reaction_count.
+      const ownCoordinate = '34236:$_testHexPubkey:reply-d-tag';
       final mocks = buildMocks();
+      final reply = CommentBuilder()
+          .withAuthorPubkey(_testHexPubkey)
+          .withRootEventId(_testRootEventId)
+          .withRootAuthorPubkey(_testRootAuthorPubkey)
+          .withContent('a video reply')
+          .asVideoReply(ownCoordinate: ownCoordinate)
+          .build();
 
       await tester.pumpWidget(
         buildTestWidget(
-          'hello there',
+          'a video reply',
+          composerBloc: mocks.composer,
+          reactionsBloc: mocks.reactions,
+          comment: reply,
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.bySemanticsIdentifier('upvote_button'));
+      await tester.pump();
+
+      final dispatched = verify(
+        () => mocks.reactions.add(captureAny()),
+      ).captured.whereType<CommentVoteToggled>().single;
+
+      expect(dispatched.addressableId, equals(ownCoordinate));
+      expect(dispatched.targetKind, equals(34236));
+      expect(dispatched.commentId, equals(reply.id));
+      // The root event is the parent video; its id must not leak into the vote.
+      expect(dispatched.addressableId, isNot(contains(_testRootEventId)));
+    });
+  });
+
+  group('renders', () {
+    testWidgets('renders bare npub mentions as interactive profile links', (
+      tester,
+    ) async {
+      final mocks = buildMocks();
+      final npub = NostrKeyUtils.encodePubKey(_testHexPubkey);
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          'My account is $npub',
           composerBloc: mocks.composer,
           reactionsBloc: mocks.reactions,
         ),
       );
       await tester.pump();
 
-      final l10n = lookupAppLocalizations(const Locale('en'));
-      await tester.tap(find.text(l10n.commentReply));
+      expect(find.byType(LinkifiedText), findsOneWidget);
+      final fallbackName = UserProfile.defaultDisplayNameFor(_testHexPubkey);
+      expect(find.textContaining('@$fallbackName'), findsOneWidget);
+    });
+
+    testWidgets('renders comment urls with tappable spans', (tester) async {
+      final mocks = buildMocks();
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          'checkout https://divine.video/leaderboard',
+          composerBloc: mocks.composer,
+          reactionsBloc: mocks.reactions,
+        ),
+      );
       await tester.pump();
 
-      // The reply-tap now also scrolls the comment into view (#5854); the
-      // reply-mode toggle must still fire.
-      verify(
-        () => mocks.composer.add(any(that: isA<CommentReplyToggled>())),
-      ).called(1);
-    },
-  );
+      expect(find.byType(LinkifiedText), findsOneWidget);
 
-  testWidgets('pending placeholders do not expose live comment actions', (
-    tester,
-  ) async {
-    final mocks = buildMocks();
-    final pending = CommentBuilder()
-        .withId('${commentPlaceholderIdPrefix}1')
-        .withAuthorPubkey(_testHexPubkey)
-        .withRootEventId(_testRootEventId)
-        .withRootAuthorPubkey(_testRootAuthorPubkey)
-        .withContent('Posting...')
-        .build();
+      final text = contentText(tester);
+      final textSpan = text.textSpan! as TextSpan;
+      final spans = textSpan.children!.cast<TextSpan>();
+      final linkSpan = spans.firstWhere(
+        (span) => span.text == 'https://divine.video/leaderboard',
+      );
 
-    await tester.pumpWidget(
-      buildTestWidget(
-        'Posting...',
-        composerBloc: mocks.composer,
-        reactionsBloc: mocks.reactions,
-        comment: pending,
-      ),
+      expect(linkSpan.recognizer, isA<TapGestureRecognizer>());
+    });
+  });
+
+  group('interactions', () {
+    testWidgets(
+      'tapping Reply still dispatches CommentReplyToggled (#5854 scroll intact)',
+      (tester) async {
+        final mocks = buildMocks();
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            'hello there',
+            composerBloc: mocks.composer,
+            reactionsBloc: mocks.reactions,
+          ),
+        );
+        await tester.pump();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.commentReply));
+        await tester.pump();
+
+        // The reply-tap now also scrolls the comment into view (#5854); the
+        // reply-mode toggle must still fire.
+        verify(
+          () => mocks.composer.add(any(that: isA<CommentReplyToggled>())),
+        ).called(1);
+      },
     );
-    await tester.pump();
+  });
 
-    expect(find.bySemanticsIdentifier('reply_button'), findsNothing);
-    expect(find.bySemanticsIdentifier('upvote_button'), findsNothing);
-    expect(find.bySemanticsIdentifier('downvote_button'), findsNothing);
+  group('renders', () {
+    testWidgets('pending placeholders do not expose live comment actions', (
+      tester,
+    ) async {
+      final mocks = buildMocks();
+      final pending = CommentBuilder()
+          .withId('${commentPlaceholderIdPrefix}1')
+          .withAuthorPubkey(_testHexPubkey)
+          .withRootEventId(_testRootEventId)
+          .withRootAuthorPubkey(_testRootAuthorPubkey)
+          .withContent('Posting...')
+          .build();
 
-    await tester.longPress(find.byType(CommentItem));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        buildTestWidget(
+          'Posting...',
+          composerBloc: mocks.composer,
+          reactionsBloc: mocks.reactions,
+          comment: pending,
+        ),
+      );
+      await tester.pump();
 
-    // The title is shared by both modal variants; a delete-option assertion
-    // would pass even with the sheet open, since isCurrentUser is false here.
-    final l10n = lookupAppLocalizations(const Locale('en'));
-    expect(find.text(l10n.commentOptionsTitle), findsNothing);
-    verifyNever(() => mocks.composer.add(any()));
-    verifyNever(() => mocks.reactions.add(any()));
+      expect(find.bySemanticsIdentifier('reply_button'), findsNothing);
+      expect(find.bySemanticsIdentifier('upvote_button'), findsNothing);
+      expect(find.bySemanticsIdentifier('downvote_button'), findsNothing);
+
+      await tester.longPress(find.byType(CommentItem));
+      await tester.pumpAndSettle();
+
+      // The title is shared by both modal variants; a delete-option assertion
+      // would pass even with the sheet open, since isCurrentUser is false here.
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l10n.commentOptionsTitle), findsNothing);
+      verifyNever(() => mocks.composer.add(any()));
+      verifyNever(() => mocks.reactions.add(any()));
+    });
   });
 
   group('interactions', () {
@@ -340,135 +348,145 @@ void main() {
     );
   });
 
-  testWidgets('opens video comments with hydrated route data', (tester) async {
-    final mocks = buildMocks();
+  group('navigation', () {
+    testWidgets('opens video comments with hydrated route data', (
+      tester,
+    ) async {
+      final mocks = buildMocks();
 
-    final comment = CommentBuilder()
-        .withId(
-          '232cc79d5c91b01d538b2111df380b521f8a927fa52de3844b5feac7aff40c2f',
-        )
-        .withAuthorPubkey(_testHexPubkey)
-        .withRootEventId(_testRootEventId)
-        .withRootAuthorPubkey(_testRootAuthorPubkey)
-        .withContent('Ferns')
-        .build()
-        .copyWith(
-          videoUrl: 'https://media.divine.video/6ab6f26428369761ff7fda84166f5dc4981d93d43370c30171d74b036286b020',
-          thumbnailUrl: 'https://media.divine.video/748855341e45388bc6a2aeacccc68161b8da4a817b11b1e7527423582ec6d42b',
-          videoDimensions: '1080x1920',
-          videoDuration: 6,
-          videoBlurhash:
-              'vjIOqbD%t7M{~q%MM{WA?bWBWBt7t8Rjt7ofV[j@ayt7RjoffQWBogWAofay',
-        );
+      final comment = CommentBuilder()
+          .withId(
+            '232cc79d5c91b01d538b2111df380b521f8a927fa52de3844b5feac7aff40c2f',
+          )
+          .withAuthorPubkey(_testHexPubkey)
+          .withRootEventId(_testRootEventId)
+          .withRootAuthorPubkey(_testRootAuthorPubkey)
+          .withContent('Ferns')
+          .build()
+          .copyWith(
+            videoUrl: 'https://media.divine.video/6ab6f26428369761ff7fda84166f5dc4981d93d43370c30171d74b036286b020',
+            thumbnailUrl: 'https://media.divine.video/748855341e45388bc6a2aeacccc68161b8da4a817b11b1e7527423582ec6d42b',
+            videoDimensions: '1080x1920',
+            videoDuration: 6,
+            videoBlurhash:
+                'vjIOqbD%t7M{~q%MM{WA?bWBWBt7t8Rjt7ofV[j@ayt7RjoffQWBogWAofay',
+          );
 
-    VideoDetailRouteExtra? capturedExtra;
-    final router = GoRouter(
-      routes: [
-        GoRoute(
-          path: '/',
-          builder: (context, state) => Scaffold(
-            body: MultiBlocProvider(
-              providers: [
-                BlocProvider<CommentComposerBloc>.value(value: mocks.composer),
-                BlocProvider<CommentReactionsBloc>.value(
-                  value: mocks.reactions,
+      VideoDetailRouteExtra? capturedExtra;
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => Scaffold(
+              body: MultiBlocProvider(
+                providers: [
+                  BlocProvider<CommentComposerBloc>.value(
+                    value: mocks.composer,
+                  ),
+                  BlocProvider<CommentReactionsBloc>.value(
+                    value: mocks.reactions,
+                  ),
+                ],
+                child: SingleChildScrollView(
+                  child: CommentItem(comment: comment),
                 ),
-              ],
-              child: SingleChildScrollView(
-                child: CommentItem(comment: comment),
               ),
             ),
           ),
-        ),
-        GoRoute(
-          path: VideoDetailScreen.path,
-          builder: (context, state) {
-            capturedExtra = state.extra as VideoDetailRouteExtra?;
-            return const Scaffold(body: Text('video route'));
-          },
-        ),
-      ],
-    );
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          nostrServiceProvider.overrideWithValue(const _FakeNostrClient()),
+          GoRoute(
+            path: VideoDetailScreen.path,
+            builder: (context, state) {
+              capturedExtra = state.extra as VideoDetailRouteExtra?;
+              return const Scaffold(body: Text('video route'));
+            },
+          ),
         ],
-        child: MaterialApp.router(
-          routerConfig: router,
-          localizationsDelegates: appLocalizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            nostrServiceProvider.overrideWithValue(const _FakeNostrClient()),
+          ],
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
         ),
-      ),
-    );
-    await tester.pump();
+      );
+      await tester.pump();
 
-    await tester.tap(find.bySemanticsLabel('Open video comment'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.bySemanticsLabel('Open video comment'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('video route'), findsOneWidget);
-    expect(capturedExtra?.initialVideo, isA<VideoEvent>());
-    expect(capturedExtra?.initialVideo?.id, comment.id);
-    expect(capturedExtra?.initialVideo?.videoUrl, comment.videoUrl);
-    expect(capturedExtra?.initialVideo?.thumbnailUrl, comment.thumbnailUrl);
-    expect(capturedExtra?.initialVideo?.title, comment.content);
-    expect(capturedExtra?.initialVideo?.isVideoReply, isTrue);
-    expect(capturedExtra?.initialVideo?.replyRootRouteId, _testRootEventId);
+      expect(find.text('video route'), findsOneWidget);
+      expect(capturedExtra?.initialVideo, isA<VideoEvent>());
+      expect(capturedExtra?.initialVideo?.id, comment.id);
+      expect(capturedExtra?.initialVideo?.videoUrl, comment.videoUrl);
+      expect(capturedExtra?.initialVideo?.thumbnailUrl, comment.thumbnailUrl);
+      expect(capturedExtra?.initialVideo?.title, comment.content);
+      expect(capturedExtra?.initialVideo?.isVideoReply, isTrue);
+      expect(capturedExtra?.initialVideo?.replyRootRouteId, _testRootEventId);
+    });
   });
 
-  testWidgets('wraps the inline video player with rounded corners', (
-    tester,
-  ) async {
-    final mocks = buildMocks();
-    final comment = CommentBuilder()
-        .withAuthorPubkey(_testHexPubkey)
-        .withRootEventId(_testRootEventId)
-        .withRootAuthorPubkey(_testRootAuthorPubkey)
-        .withContent('Ferns')
-        .build()
-        .copyWith(
-          videoUrl: 'https://media.divine.video/some-video.mp4',
-          thumbnailUrl: 'https://media.divine.video/some-thumb.jpg',
-          videoDimensions: '1080x1920',
-          videoDuration: 6,
-        );
+  group('renders', () {
+    testWidgets('wraps the inline video player with rounded corners', (
+      tester,
+    ) async {
+      final mocks = buildMocks();
+      final comment = CommentBuilder()
+          .withAuthorPubkey(_testHexPubkey)
+          .withRootEventId(_testRootEventId)
+          .withRootAuthorPubkey(_testRootAuthorPubkey)
+          .withContent('Ferns')
+          .build()
+          .copyWith(
+            videoUrl: 'https://media.divine.video/some-video.mp4',
+            thumbnailUrl: 'https://media.divine.video/some-thumb.jpg',
+            videoDimensions: '1080x1920',
+            videoDuration: 6,
+          );
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          nostrServiceProvider.overrideWithValue(const _FakeNostrClient()),
-        ],
-        child: MaterialApp(
-          localizationsDelegates: appLocalizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: MultiBlocProvider(
-              providers: [
-                BlocProvider<CommentComposerBloc>.value(value: mocks.composer),
-                BlocProvider<CommentReactionsBloc>.value(
-                  value: mocks.reactions,
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            nostrServiceProvider.overrideWithValue(const _FakeNostrClient()),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: MultiBlocProvider(
+                providers: [
+                  BlocProvider<CommentComposerBloc>.value(
+                    value: mocks.composer,
+                  ),
+                  BlocProvider<CommentReactionsBloc>.value(
+                    value: mocks.reactions,
+                  ),
+                ],
+                child: SingleChildScrollView(
+                  child: CommentItem(comment: comment),
                 ),
-              ],
-              child: SingleChildScrollView(
-                child: CommentItem(comment: comment),
               ),
             ),
           ),
         ),
-      ),
-    );
-    await tester.pump();
+      );
+      await tester.pump();
 
-    final player = tester.widget<VideoCommentPlayer>(
-      find.byType(VideoCommentPlayer),
-    );
-    expect(player.borderRadius, BorderRadius.circular(12));
+      final player = tester.widget<VideoCommentPlayer>(
+        find.byType(VideoCommentPlayer),
+      );
+      expect(player.borderRadius, BorderRadius.circular(12));
 
-    // Drain VisibilityDetector's 500ms debounce and the identity skeleton's
-    // 7s fallthrough so no pending timers leak into the next test.
-    await tester.pump(const Duration(seconds: 8));
-    await tester.pumpAndSettle();
+      // Drain VisibilityDetector's 500ms debounce and the identity skeleton's
+      // 7s fallthrough so no pending timers leak into the next test.
+      await tester.pump(const Duration(seconds: 8));
+      await tester.pumpAndSettle();
+    });
   });
 
   group('Identity skeleton (#4163 follow-up)', () {

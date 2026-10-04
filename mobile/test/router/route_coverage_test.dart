@@ -43,17 +43,19 @@ import 'package:openvine/screens/video_metadata/video_metadata_screen.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 
 void main() {
-  test('crossposting route is nonvideo for activeVideoIdProvider', () {
-    final route = parseRoute(CrosspostingSettingsScreen.path);
-    final container = ProviderContainer(
-      overrides: [
-        pageContextProvider.overrideWithValue(AsyncValue.data(route)),
-      ],
-    );
-    addTearDown(container.dispose);
+  group('activeVideoIdProvider', () {
+    test('crossposting route is nonvideo for activeVideoIdProvider', () {
+      final route = parseRoute(CrosspostingSettingsScreen.path);
+      final container = ProviderContainer(
+        overrides: [
+          pageContextProvider.overrideWithValue(AsyncValue.data(route)),
+        ],
+      );
+      addTearDown(container.dispose);
 
-    expect(route.type, RouteType.crosspostingSettings);
-    expect(container.read(activeVideoIdProvider), isNull);
+      expect(route.type, RouteType.crosspostingSettings);
+      expect(container.read(activeVideoIdProvider), isNull);
+    });
   });
 
   group('Route Coverage Validation', () {

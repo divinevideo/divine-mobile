@@ -44,35 +44,39 @@ void main() {
     );
   }
 
-  testWidgets('advances through frames over time and loops', (tester) async {
-    await tester.pumpWidget(wrap(StopMotionPlayer(frames: frames)));
+  group('interactions', () {
+    testWidgets('advances through frames over time and loops', (tester) async {
+      await tester.pumpWidget(wrap(StopMotionPlayer(frames: frames)));
 
-    await tester.pump();
-    expect(currentPath(tester), frames[0].path);
+      await tester.pump();
+      expect(currentPath(tester), frames[0].path);
 
-    await tester.pump(const Duration(milliseconds: 110));
-    expect(currentPath(tester), frames[1].path);
+      await tester.pump(const Duration(milliseconds: 110));
+      expect(currentPath(tester), frames[1].path);
 
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(currentPath(tester), frames[2].path);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(currentPath(tester), frames[2].path);
 
-    // Wraps back to the first frame after the last (seamless loop).
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(currentPath(tester), frames[0].path);
+      // Wraps back to the first frame after the last (seamless loop).
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(currentPath(tester), frames[0].path);
+    });
   });
 
-  testWidgets('holds the first frame when animations are disabled', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      wrap(StopMotionPlayer(frames: frames), reduceMotion: true),
-    );
+  group('renders', () {
+    testWidgets('holds the first frame when animations are disabled', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(StopMotionPlayer(frames: frames), reduceMotion: true),
+      );
 
-    await tester.pump();
-    expect(currentPath(tester), frames[0].path);
+      await tester.pump();
+      expect(currentPath(tester), frames[0].path);
 
-    await tester.pump(const Duration(milliseconds: 500));
-    expect(currentPath(tester), frames[0].path);
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(currentPath(tester), frames[0].path);
+    });
   });
 
   group('controlled mode (position provided)', () {

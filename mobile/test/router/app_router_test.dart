@@ -57,57 +57,60 @@ void main() {
 
   setUp(resetNavigationState);
 
-  test(
-    'disposes the router refresh listener before a late auth refresh fires',
-    () async {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
-      final sharedPreferences = await SharedPreferences.getInstance();
-      final authStateController = StreamController<AuthState>.broadcast(
-        sync: true,
-      );
-      addTearDown(authStateController.close);
-
-      final authStateBus = _AuthStateBus();
-
-      ProviderContainer createContainer() {
-        return ProviderContainer(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-            authServiceProvider.overrideWith((ref) {
-              final authService = _MockAuthService();
-              when(
-                () => authService.authStateStream,
-              ).thenAnswer((_) => authStateController.stream);
-              when(
-                () => authService.authState,
-              ).thenAnswer((_) => authStateBus.state);
-              when(() => authService.hasExpiredOAuthSession).thenReturn(false);
-              return authService;
-            }),
-          ],
+  group('dispose', () {
+    test(
+      'disposes the router refresh listener before a late auth refresh fires',
+      () async {
+        SharedPreferences.setMockInitialValues(<String, Object>{});
+        final sharedPreferences = await SharedPreferences.getInstance();
+        final authStateController = StreamController<AuthState>.broadcast(
+          sync: true,
         );
-      }
+        addTearDown(authStateController.close);
 
-      final containerA = createContainer();
-      final routerA = containerA.read(goRouterProvider);
-      expect(routerA, isA<GoRouter>());
+        final authStateBus = _AuthStateBus();
 
-      containerA.dispose();
+        ProviderContainer createContainer() {
+          return ProviderContainer(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+              authServiceProvider.overrideWith((ref) {
+                final authService = _MockAuthService();
+                when(
+                  () => authService.authStateStream,
+                ).thenAnswer((_) => authStateController.stream);
+                when(
+                  () => authService.authState,
+                ).thenAnswer((_) => authStateBus.state);
+                when(() => authService.hasExpiredOAuthSession)
+                    .thenReturn(false);
+                return authService;
+              }),
+            ],
+          );
+        }
 
-      authStateBus.state = AuthState.authenticated;
-      expect(
-        () => authStateController.add(AuthState.authenticated),
-        returnsNormally,
-      );
+        final containerA = createContainer();
+        final routerA = containerA.read(goRouterProvider);
+        expect(routerA, isA<GoRouter>());
 
-      authStateBus.state = AuthState.unauthenticated;
-      final containerB = createContainer();
-      addTearDown(containerB.dispose);
+        containerA.dispose();
 
-      final routerB = containerB.read(goRouterProvider);
-      expect(routerB, isA<GoRouter>());
-    },
-  );
+        authStateBus.state = AuthState.authenticated;
+        expect(
+          () => authStateController.add(AuthState.authenticated),
+          returnsNormally,
+        );
+
+        authStateBus.state = AuthState.unauthenticated;
+        final containerB = createContainer();
+        addTearDown(containerB.dispose);
+
+        final routerB = containerB.read(goRouterProvider);
+        expect(routerB, isA<GoRouter>());
+      },
+    );
+  });
 
   // Regression tests for #3413 — Crashlytics issue
   // 489d5ebc7bd571dfd29e4701e92abdf6 ("Illegal percent encoding in URI"). The

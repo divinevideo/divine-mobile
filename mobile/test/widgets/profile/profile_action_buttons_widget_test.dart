@@ -150,83 +150,88 @@ void main() {
     );
   }
 
-  testWidgets(
-    'hides follow and message actions when target cannot be targeted',
-    (tester) async {
-      when(
-        () => blocklistRepository.hasBlockedUs(targetPubkey),
-      ).thenReturn(true);
-      when(() => blocklistRepository.currentState).thenReturn(
-        const ContentPolicyState(
-          currentUserPubkey: viewerPubkey,
-          mutedPubkeys: {},
-          blockedPubkeys: {},
-          pubkeysBlockingUs: {targetPubkey},
-          pubkeysMutingUs: {},
-        ),
-      );
-
-      await tester.pumpWidget(buildWidget());
-      await tester.pump();
-
-      expect(find.text('Follow'), findsNothing);
-      expect(find.text('Message'), findsNothing);
-      expect(find.byType(Tooltip), findsNothing);
-      expect(find.byType(DivineIconButton), findsOneWidget);
-      expect(find.byType(Spacer), findsOneWidget);
-    },
-  );
-
-  testWidgets(
-    'keeps share right-aligned when already following target cannot be targeted',
-    (tester) async {
-      when(
-        () => blocklistRepository.hasBlockedUs(targetPubkey),
-      ).thenReturn(true);
-      when(() => blocklistRepository.currentState).thenReturn(
-        const ContentPolicyState(
-          currentUserPubkey: viewerPubkey,
-          mutedPubkeys: {},
-          blockedPubkeys: {},
-          pubkeysBlockingUs: {targetPubkey},
-          pubkeysMutingUs: {},
-        ),
-      );
-      when(
-        () => followRepository.followingPubkeys,
-      ).thenReturn(const [targetPubkey]);
-      when(
-        () => followRepository.followingStream,
-      ).thenAnswer((_) => Stream<List<String>>.value(const [targetPubkey]));
-      when(() => followRepository.watchMyFollowingCached()).thenAnswer(
-        (_) => Stream.value(
-          const CacheResult.live(
-            FollowingSnapshot(pubkeys: [targetPubkey], count: 1),
+  group('renders', () {
+    testWidgets(
+      'hides follow and message actions when target cannot be targeted',
+      (tester) async {
+        when(
+          () => blocklistRepository.hasBlockedUs(targetPubkey),
+        ).thenReturn(true);
+        when(() => blocklistRepository.currentState).thenReturn(
+          const ContentPolicyState(
+            currentUserPubkey: viewerPubkey,
+            mutedPubkeys: {},
+            blockedPubkeys: {},
+            pubkeysBlockingUs: {targetPubkey},
+            pubkeysMutingUs: {},
           ),
-        ),
-      );
+        );
 
-      await tester.pumpWidget(buildWidget());
-      await tester.pump();
+        await tester.pumpWidget(buildWidget());
+        await tester.pump();
 
-      expect(find.text('Follow'), findsNothing);
-      expect(find.text('Message'), findsNothing);
-      expect(find.byType(Tooltip), findsNothing);
-      expect(find.byType(DivineIconButton), findsOneWidget);
-      expect(find.byType(Spacer), findsOneWidget);
-    },
-  );
+        expect(find.text('Follow'), findsNothing);
+        expect(find.text('Message'), findsNothing);
+        expect(find.byType(Tooltip), findsNothing);
+        expect(find.byType(DivineIconButton), findsOneWidget);
+        expect(find.byType(Spacer), findsOneWidget);
+      },
+    );
 
-  testWidgets('hides only message action when DM policy restricts the viewer', (
-    tester,
-  ) async {
-    await tester.pumpWidget(buildWidget(isMessageRestricted: true));
-    await tester.pump();
+    testWidgets(
+      'keeps share right-aligned when already following target cannot be targeted',
+      (tester) async {
+        when(
+          () => blocklistRepository.hasBlockedUs(targetPubkey),
+        ).thenReturn(true);
+        when(() => blocklistRepository.currentState).thenReturn(
+          const ContentPolicyState(
+            currentUserPubkey: viewerPubkey,
+            mutedPubkeys: {},
+            blockedPubkeys: {},
+            pubkeysBlockingUs: {targetPubkey},
+            pubkeysMutingUs: {},
+          ),
+        );
+        when(
+          () => followRepository.followingPubkeys,
+        ).thenReturn(const [targetPubkey]);
+        when(
+          () => followRepository.followingStream,
+        ).thenAnswer((_) => Stream<List<String>>.value(const [targetPubkey]));
+        when(() => followRepository.watchMyFollowingCached()).thenAnswer(
+          (_) => Stream.value(
+            const CacheResult.live(
+              FollowingSnapshot(pubkeys: [targetPubkey], count: 1),
+            ),
+          ),
+        );
 
-    expect(find.text('Follow'), findsOneWidget);
-    expect(find.text('Message'), findsNothing);
-    expect(find.byType(DivineButton), findsOneWidget);
-    expect(find.byType(DivineIconButton), findsOneWidget);
+        await tester.pumpWidget(buildWidget());
+        await tester.pump();
+
+        expect(find.text('Follow'), findsNothing);
+        expect(find.text('Message'), findsNothing);
+        expect(find.byType(Tooltip), findsNothing);
+        expect(find.byType(DivineIconButton), findsOneWidget);
+        expect(find.byType(Spacer), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'hides only message action when DM policy restricts the viewer',
+      (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget(isMessageRestricted: true));
+        await tester.pump();
+
+        expect(find.text('Follow'), findsOneWidget);
+        expect(find.text('Message'), findsNothing);
+        expect(find.byType(DivineButton), findsOneWidget);
+        expect(find.byType(DivineIconButton), findsOneWidget);
+      },
+    );
   });
 
   group('library button', () {

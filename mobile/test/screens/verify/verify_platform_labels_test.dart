@@ -103,12 +103,14 @@ void main() {
     });
   });
 
-  test('the OAuth platform set matches what the verifier exposes', () {
-    // Mirrors the switch in the verifier's /auth/:platform/start.
-    expect(
-      VerifierPlatform.oauthPlatforms,
-      equals({'twitter', 'bluesky', 'youtube', 'tiktok'}),
-    );
+  group('oauthPlatforms', () {
+    test('the OAuth platform set matches what the verifier exposes', () {
+      // Mirrors the switch in the verifier's /auth/:platform/start.
+      expect(
+        VerifierPlatform.oauthPlatforms,
+        equals({'twitter', 'bluesky', 'youtube', 'tiktok'}),
+      );
+    });
   });
 
   group('verifyIdentityFieldLabel', () {
