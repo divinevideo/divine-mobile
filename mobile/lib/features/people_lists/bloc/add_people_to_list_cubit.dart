@@ -99,7 +99,8 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
   static const _maxConcurrentProfileHydrations = 4;
 
   /// Load candidates. Emits [AddPeopleToListStatus.ready] on success and
-  /// [AddPeopleToListStatus.failure] on error.
+  /// [AddPeopleToListStatus.failure] on error. Keeps ready candidates visible
+  /// while refreshing the live subscriptions.
   Future<void> started() async {
     if (isClosed) return;
     final snapshot = state;
@@ -108,17 +109,20 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
     final revision = snapshot.loadRevision + 1;
     emitIfOpen(
       state.copyWith(
-        status: snapshot.candidatePositions.isEmpty
-            ? AddPeopleToListStatus.loading
-            : AddPeopleToListStatus.ready,
+        status: snapshot.status == AddPeopleToListStatus.ready ||
+                snapshot.candidatePositions.isNotEmpty
+            ? AddPeopleToListStatus.ready
+            : AddPeopleToListStatus.loading,
         loadRevision: revision,
       ),
     );
     try {
-      await _followingSub?.cancel();
-      if (!_isCurrent(revision)) return;
-      await _followerSub?.cancel();
-      if (!_isCurrent(revision)) return;
+      // Cancellation may wait for a retired network fetch. The load revision
+      // already fences its callbacks, so refresh can attach a new source now.
+      unawaited(_followingSub?.cancel().catchError(_onStreamError));
+      unawaited(_followerSub?.cancel().catchError(_onStreamError));
+      _followingSub = null;
+      _followerSub = null;
       // A set: followingPubkeys is a list, and it is probed once per row below.
       final initialFollowing = _followRepository.followingPubkeys.toSet();
       final initialPubkeys = {
@@ -223,13 +227,13 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
   }
 
   @override
-  Future<void> close() async {
+  Future<void> close() {
     // Mark the Cubit closed before subscription cancellation can yield, so a
     // replacement never competes with pending profile/ranking work.
     final closing = super.close();
     _profileHydrationQueue.clear();
-    await _followingSub?.cancel();
-    await _followerSub?.cancel();
+    unawaited(_followingSub?.cancel().catchError(_onStreamError));
+    unawaited(_followerSub?.cancel().catchError(_onStreamError));
     return closing;
   }
 
