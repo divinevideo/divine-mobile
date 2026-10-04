@@ -20,6 +20,7 @@ import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/models/curated_list_callbacks.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_relay_gateway.dart';
+import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:openvine/utils/curated_list_privacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -43,8 +44,14 @@ class CuratedListService extends ChangeNotifier {
   }) : _nostrService = nostrService,
        _authService = authService,
        _prefs = prefs,
-       _cacheWrites =
-           cacheWriteCoordinator ?? CuratedListCacheWriteCoordinator(),
+       _cacheStore = PrefsCuratedListStore(
+         prefs: prefs,
+         writeCoordinator:
+             cacheWriteCoordinator ?? CuratedListCacheWriteCoordinator(),
+         listsStorageKey: listsStorageKey,
+         subscriptionsStorageKey: subscribedListsStorageKey,
+         defaultListDeletedStorageKey: defaultListDeletedStorageKey,
+       ),
        _onListSubscribed = onListSubscribed,
        _onListUnsubscribed = onListUnsubscribed,
        _relaySyncTimeout = relaySyncTimeout,
@@ -58,9 +65,7 @@ class CuratedListService extends ChangeNotifier {
   final NostrClient _nostrService;
   final AuthService _authService;
   final SharedPreferences _prefs;
-  final CuratedListCacheWriteCoordinator _cacheWrites;
-  List<CuratedList> _savedLists = const [];
-  Set<String> _savedSubscriptions = const {};
+  final PrefsCuratedListStore _cacheStore;
   final Duration _relaySyncTimeout;
   final CuratedListRelayGateway _relayGateway;
 
@@ -84,8 +89,6 @@ class CuratedListService extends ChangeNotifier {
 
   static const String listsStorageKey = 'curated_lists';
   static const String subscribedListsStorageKey = 'subscribed_list_ids';
-  static const String deletedListCoordinatesStorageKey =
-      'deleted_curated_list_coordinates';
   static const String defaultListDeletedStorageKey =
       'curated_lists_default_deleted';
   static const String defaultListId = 'my_vine_list';
@@ -171,7 +174,7 @@ class CuratedListService extends ChangeNotifier {
 
       // Create default list if it doesn't exist and the user has not explicitly
       // withdrawn its relay coordinate.
-      if (!hasDefaultList() && !_wasDefaultListDeleted()) {
+      if (!hasDefaultList() && !_cacheStore.wasDefaultListDeleted()) {
         await _createDefaultList();
       }
 
@@ -218,49 +221,6 @@ class CuratedListService extends ChangeNotifier {
 
   /// Check if default list exists
   bool hasDefaultList() => _lists.any((list) => list.id == defaultListId);
-
-  bool _wasDefaultListDeleted() {
-    return _prefs.getBool(defaultListDeletedStorageKey) ?? false;
-  }
-
-  /// The `<pubkey>:<d-tag>` form of a kind 30005 coordinate.
-  ///
-  /// A `d` tag is only unique per author, so a deletion has to be remembered
-  /// against its owner. Keying on the identifier alone would suppress a list
-  /// that merely shares it — another account on this device, or someone
-  /// else's list arriving from a relay.
-  String _listCoordinate(String ownerPubkey, String listId) =>
-      '$ownerPubkey:$listId';
-
-  /// Coordinates this install has deleted.
-  ///
-  /// NIP-09 is advisory: a relay may never see the deletion request, or may
-  /// decline it, and keep replaying the original event. Without a local record
-  /// the next sync adds the list straight back. The set is not pruned — an
-  /// entry is a few dozen bytes, deletions are rare, and there is no point at
-  /// which every relay is known to have honoured the request.
-  Set<String> _deletedListCoordinates() =>
-      (_prefs.getStringList(deletedListCoordinatesStorageKey) ?? const [])
-          .toSet();
-
-  Future<void> _recordListDeletion(String ownerPubkey, String listId) async {
-    final coordinates = _deletedListCoordinates()
-      ..add(_listCoordinate(ownerPubkey, listId));
-    await _prefs.setStringList(
-      deletedListCoordinatesStorageKey,
-      coordinates.toList(growable: false),
-    );
-  }
-
-  /// Lifts the tombstone so a re-created list can sync again.
-  Future<void> _forgetListDeletion(String ownerPubkey, String listId) async {
-    final coordinates = _deletedListCoordinates();
-    if (!coordinates.remove(_listCoordinate(ownerPubkey, listId))) return;
-    await _prefs.setStringList(
-      deletedListCoordinatesStorageKey,
-      coordinates.toList(growable: false),
-    );
-  }
 
   /// Get the default "My List" for quick adding
   CuratedList? getDefaultList() {
@@ -364,7 +324,7 @@ class CuratedListService extends ChangeNotifier {
       // list's own relay events would be discarded for the life of the install
       // and it would never reach another device.
       if (ownerPubkey != null) {
-        await _forgetListDeletion(ownerPubkey, listId);
+        await _cacheStore.forgetListDeletion(ownerPubkey, listId);
       }
 
       _lists.add(newList);
@@ -773,10 +733,10 @@ class CuratedListService extends ChangeNotifier {
       // same stable d-tag independently, which is the case the unpublished
       // merge in [_processListEvent] exists to handle. Record before removing
       // the local list so relay sync never sees an unprotected absence.
-      await _recordListDeletion(list.pubkey!, list.id);
+      await _cacheStore.recordListDeletion(list.pubkey!, list.id);
       await _removeListAndSubscription(list);
       if (list.id == defaultListId) {
-        await _prefs.setBool(defaultListDeletedStorageKey, true);
+        await _cacheStore.markDefaultListDeleted();
       }
 
       Log.info(
@@ -1382,7 +1342,7 @@ class CuratedListService extends ChangeNotifier {
         );
       }
     }
-    _savedLists = List.unmodifiable(_lists);
+    _cacheStore.listsLoaded(_lists);
   }
 
   /// Load subscribed list IDs from local storage
@@ -1406,35 +1366,14 @@ class CuratedListService extends ChangeNotifier {
         );
       }
     }
-    _savedSubscriptions = Set.unmodifiable(_subscribedListIds);
+    _cacheStore.subscriptionsLoaded(_subscribedListIds);
   }
 
   /// Save lists to local storage
   Future<void> _saveLists() async {
     try {
       notifyListeners();
-      final snapshot = List<CuratedList>.unmodifiable(_lists);
-      final saved = await _cacheWrites.saveLists(
-        baseline: _savedLists,
-        current: snapshot,
-        read: () {
-          final json = _prefs.getString(listsStorageKey);
-          if (json == null) return [];
-          final rows = jsonDecode(json) as List<dynamic>;
-          return rows
-              .map((row) {
-                return CuratedList.fromJson(row as Map<String, dynamic>);
-              })
-              .toList(growable: false);
-        },
-        write: (lists) => _prefs.setString(
-          listsStorageKey,
-          jsonEncode(
-            lists.map((list) => list.toJson()).toList(growable: false),
-          ),
-        ),
-      );
-      if (saved) _savedLists = snapshot;
+      await _cacheStore.saveLists(_lists);
     } catch (e) {
       Log.error(
         'Failed to save curated lists: $e',
@@ -1448,21 +1387,7 @@ class CuratedListService extends ChangeNotifier {
   Future<void> _saveSubscribedListIds() async {
     try {
       notifyListeners();
-      final snapshot = Set<String>.unmodifiable(_subscribedListIds);
-      final saved = await _cacheWrites.saveSubscriptions(
-        baseline: _savedSubscriptions,
-        current: snapshot,
-        read: () {
-          final json = _prefs.getString(subscribedListsStorageKey);
-          if (json == null) return {};
-          return (jsonDecode(json) as List<dynamic>).cast<String>().toSet();
-        },
-        write: (ids) => _prefs.setString(
-          subscribedListsStorageKey,
-          jsonEncode(ids.toList(growable: false)),
-        ),
-      );
-      if (saved) _savedSubscriptions = snapshot;
+      await _cacheStore.saveSubscriptions(_subscribedListIds);
       Log.debug(
         '💾 Saved ${_subscribedListIds.length} subscribed list IDs to storage',
         name: 'CuratedListService',
@@ -1734,7 +1659,7 @@ class CuratedListService extends ChangeNotifier {
         return;
       }
       final dTag = curatedList.id;
-      if (dTag == defaultListId && _wasDefaultListDeleted()) {
+      if (dTag == defaultListId && _cacheStore.wasDefaultListDeleted()) {
         Log.debug(
           'Skipping deleted default list event from relay: ${event.id}',
           name: 'CuratedListService',
@@ -1837,9 +1762,7 @@ class CuratedListService extends ChangeNotifier {
         // Checked here rather than earlier so the tombstone only ever blocks a
         // resurrection. A list still present locally keeps syncing normally,
         // which is what should happen if a delete failed after recording it.
-        if (_deletedListCoordinates().contains(
-          _listCoordinate(event.pubkey, dTag),
-        )) {
+        if (_cacheStore.wasListDeleted(event.pubkey, dTag)) {
           Log.debug(
             'Skipping deleted list event from relay: $dTag',
             name: 'CuratedListService',
