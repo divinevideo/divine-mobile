@@ -36,12 +36,15 @@ class CuratedListService extends ChangeNotifier {
     required NostrClient nostrService,
     required AuthService authService,
     required SharedPreferences prefs,
+    CuratedListCacheWriteCoordinator? cacheWriteCoordinator,
     OnListSubscribedCallback? onListSubscribed,
     OnListUnsubscribedCallback? onListUnsubscribed,
     Duration relaySyncTimeout = const Duration(seconds: 10),
   }) : _nostrService = nostrService,
        _authService = authService,
        _prefs = prefs,
+       _cacheWrites =
+           cacheWriteCoordinator ?? CuratedListCacheWriteCoordinator(),
        _onListSubscribed = onListSubscribed,
        _onListUnsubscribed = onListUnsubscribed,
        _relaySyncTimeout = relaySyncTimeout,
@@ -55,6 +58,9 @@ class CuratedListService extends ChangeNotifier {
   final NostrClient _nostrService;
   final AuthService _authService;
   final SharedPreferences _prefs;
+  final CuratedListCacheWriteCoordinator _cacheWrites;
+  List<CuratedList> _savedLists = const [];
+  Set<String> _savedSubscriptions = const {};
   final Duration _relaySyncTimeout;
   final CuratedListRelayGateway _relayGateway;
 
@@ -1310,8 +1316,13 @@ class CuratedListService extends ChangeNotifier {
       // what commits the change once a relay has accepted it.
       final listIndex = _lists.indexWhere((l) => l.id == list.id);
       if (listIndex != -1) {
+        final current = _lists[listIndex];
+        final signedAt = event.createdAtDateTime;
         _lists[listIndex] = _lists[listIndex].copyWith(
           nostrEventId: event.id,
+          updatedAt: signedAt.isAfter(current.updatedAt)
+              ? signedAt
+              : current.updatedAt,
           isPublic: list.isPublic,
           pendingRepublish: false,
         );
@@ -1358,6 +1369,7 @@ class CuratedListService extends ChangeNotifier {
         );
       }
     }
+    _savedLists = List.unmodifiable(_lists);
   }
 
   /// Load subscribed list IDs from local storage
@@ -1381,14 +1393,35 @@ class CuratedListService extends ChangeNotifier {
         );
       }
     }
+    _savedSubscriptions = Set.unmodifiable(_subscribedListIds);
   }
 
   /// Save lists to local storage
   Future<void> _saveLists() async {
     try {
       notifyListeners();
-      final listsJson = _lists.map((list) => list.toJson()).toList();
-      await _prefs.setString(listsStorageKey, jsonEncode(listsJson));
+      final snapshot = List<CuratedList>.unmodifiable(_lists);
+      final saved = await _cacheWrites.saveLists(
+        baseline: _savedLists,
+        current: snapshot,
+        read: () {
+          final json = _prefs.getString(listsStorageKey);
+          if (json == null) return [];
+          final rows = jsonDecode(json) as List<dynamic>;
+          return rows
+              .map((row) {
+                return CuratedList.fromJson(row as Map<String, dynamic>);
+              })
+              .toList(growable: false);
+        },
+        write: (lists) => _prefs.setString(
+          listsStorageKey,
+          jsonEncode(
+            lists.map((list) => list.toJson()).toList(growable: false),
+          ),
+        ),
+      );
+      if (saved) _savedLists = snapshot;
     } catch (e) {
       Log.error(
         'Failed to save curated lists: $e',
@@ -1402,11 +1435,21 @@ class CuratedListService extends ChangeNotifier {
   Future<void> _saveSubscribedListIds() async {
     try {
       notifyListeners();
-      final subscribedJson = _subscribedListIds.toList();
-      await _prefs.setString(
-        subscribedListsStorageKey,
-        jsonEncode(subscribedJson),
+      final snapshot = Set<String>.unmodifiable(_subscribedListIds);
+      final saved = await _cacheWrites.saveSubscriptions(
+        baseline: _savedSubscriptions,
+        current: snapshot,
+        read: () {
+          final json = _prefs.getString(subscribedListsStorageKey);
+          if (json == null) return {};
+          return (jsonDecode(json) as List<dynamic>).cast<String>().toSet();
+        },
+        write: (ids) => _prefs.setString(
+          subscribedListsStorageKey,
+          jsonEncode(ids.toList(growable: false)),
+        ),
       );
+      if (saved) _savedSubscriptions = snapshot;
       Log.debug(
         '💾 Saved ${_subscribedListIds.length} subscribed list IDs to storage',
         name: 'CuratedListService',

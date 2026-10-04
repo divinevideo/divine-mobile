@@ -571,6 +571,12 @@ CurationRepository curationRepository(Ref ref) {
   );
 }
 
+/// Keeps cache writes serialized while auth/relay changes replace services.
+final curatedListCacheWriteCoordinatorProvider =
+    Provider<CuratedListCacheWriteCoordinator>(
+      (ref) => CuratedListCacheWriteCoordinator(),
+    );
+
 /// Lists state notifier - manages curated lists state
 @riverpod
 class CuratedListsState extends _$CuratedListsState {
@@ -584,30 +590,28 @@ class CuratedListsState extends _$CuratedListsState {
     final authService = ref.watch(authServiceProvider);
     final prefs = ref.watch(sharedPreferencesProvider);
 
-    _service = CuratedListService(
+    final service = CuratedListService(
       nostrService: nostrService,
       authService: authService,
       prefs: prefs,
+      cacheWriteCoordinator: ref.watch(
+        curatedListCacheWriteCoordinatorProvider,
+      ),
     );
+    _service = service;
+    final providerRef = ref;
+    void onServiceChanged() {
+      if (!providerRef.mounted || !identical(_service, service)) return;
+      state = AsyncValue.data(service.lists);
+    }
 
-    // Register dispose callback BEFORE async gap to avoid "ref already disposed" error
-    ref.onDispose(() => _service?.removeListener(_onServiceChanged));
+    providerRef.onDispose(() => service.removeListener(onServiceChanged));
 
     // Initialize the service to create default list and sync with relays
-    await _service!.initialize();
-
-    // Check if provider was disposed during initialization
-    if (!ref.mounted) return [];
-
-    // Listen to changes and update state
-    _service!.addListener(_onServiceChanged);
-
-    return _service!.lists;
-  }
-
-  void _onServiceChanged() {
-    // When service calls notifyListeners(), update the state
-    state = AsyncValue.data(_service!.lists);
+    await service.initialize();
+    if (!providerRef.mounted || !identical(_service, service)) return [];
+    service.addListener(onServiceChanged);
+    return service.lists;
   }
 }
 
