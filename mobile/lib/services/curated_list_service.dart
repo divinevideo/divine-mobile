@@ -728,7 +728,14 @@ class CuratedListService extends ChangeNotifier {
   /// before local state is removed. A list that never reached a relay has no
   /// event to delete and can be removed locally.
   Future<bool> deleteOwnedList(String listId) {
-    return _serializeListOperation(listId, () => _deleteOwnedList(listId));
+    final list = getListById(listId);
+    if (list == null || !isOwnedList(list.authorScopedId)) {
+      return Future.value(false);
+    }
+    return _serializeListOperation(
+      list.id,
+      () => _deleteOwnedList(list.authorScopedId),
+    );
   }
 
   Future<bool> _deleteOwnedList(String listId) async {
@@ -753,7 +760,10 @@ class CuratedListService extends ChangeNotifier {
       // hold this coordinate even when [pendingRepublish] says the latest local
       // edit has not reached it.
       if (list.nostrEventId != null) {
-        if (!await _relayGateway.publishListDeletion(listId)) {
+        if (!await _relayGateway.publishListDeletion(
+          list.id,
+          ownerPubkey: list.pubkey!,
+        )) {
           return false;
         }
       }
@@ -763,9 +773,9 @@ class CuratedListService extends ChangeNotifier {
       // same stable d-tag independently, which is the case the unpublished
       // merge in [_processListEvent] exists to handle. Record before removing
       // the local list so relay sync never sees an unprotected absence.
-      await _recordListDeletion(list.pubkey!, listId);
-      await _removeListAndSubscription(listId);
-      if (listId == defaultListId) {
+      await _recordListDeletion(list.pubkey!, list.id);
+      await _removeListAndSubscription(list);
+      if (list.id == defaultListId) {
         await _prefs.setBool(defaultListDeletedStorageKey, true);
       }
 
@@ -794,12 +804,15 @@ class CuratedListService extends ChangeNotifier {
   /// under `publishEventAwaitOk` that wait runs to a 15s deadline. Anything
   /// removing an earlier list in the meantime shifts the index, so a
   /// positional remove would drop the wrong one.
-  Future<void> _removeListAndSubscription(String listId) async {
-    _lists.removeWhere((list) => list.id == listId);
-    _subscribedListIds.remove(listId);
+  Future<void> _removeListAndSubscription(CuratedList list) async {
+    _lists.removeWhere((item) => item.authorScopedId == list.authorScopedId);
+    _subscribedListIds.remove(list.authorScopedId);
+    if (!_lists.any((item) => item.id == list.id)) {
+      _subscribedListIds.remove(list.id);
+    }
     await _saveLists();
     await _saveSubscribedListIds();
-    _onListUnsubscribed?.call(listId);
+    _onListUnsubscribed?.call(list.authorScopedId);
   }
 
   // === ENHANCED PLAYLIST FEATURES ===
