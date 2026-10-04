@@ -783,7 +783,8 @@ class CuratedListService extends ChangeNotifier {
       }
       onLocalSaved?.call();
 
-      final becamePrivate = list.isPublic && !updatedList.isPublic;
+      final becamePrivate =
+          list.isPublic && !updatedList.publicationTarget.isPublic;
       final plaintextEventId = becamePrivate ? list.nostrEventId : null;
 
       if (_authService.isAuthenticated &&
@@ -808,7 +809,7 @@ class CuratedListService extends ChangeNotifier {
             ownerPubkey: list.pubkey,
             createdAt: _publishClock.next(
               ownerPubkey: list.pubkey!,
-              listId: listId,
+              listId: list.id,
             ),
           );
         } on CuratedListClockException catch (error) {
@@ -1328,12 +1329,11 @@ class CuratedListService extends ChangeNotifier {
         final outcome = await _nostrService.publishEventAwaitOk(event);
         // A privacy transition commits once any relay accepts it.
         if (!outcome.acceptedByAny) {
+          final rejected = getListById(list.authorScopedId);
           if (outcome.rejectedBy.isNotEmpty &&
               outcome.noResponseFrom.isEmpty &&
-              sendingIndex != -1) {
-            _lists[sendingIndex] = _lists[sendingIndex].copyWith(
-              clearPendingVisibility: true,
-            );
+              rejected != null) {
+            _restoreList(rejected.copyWith(clearPendingVisibility: true));
             await _saveLists();
           }
           if (outcome.rejectedBy.values.any(
