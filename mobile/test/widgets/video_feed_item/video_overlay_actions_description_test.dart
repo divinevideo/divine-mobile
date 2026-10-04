@@ -189,29 +189,7 @@ void main() {
         inspiredByNpub: npub,
       );
 
-      await tester.pumpWidget(
-        testProviderScope(
-          additionalOverrides: [
-            repostsRepositoryProvider.overrideWithValue(mockRepostsRepository),
-          ],
-          child: MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: BlocProvider<VideoInteractionsBloc>.value(
-                value: mockInteractionsBloc,
-                child: VideoOverlayActions(
-                  video: testVideo,
-                  isVisible: true,
-                  isActive: true,
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-
-      await tester.pumpAndSettle();
+      await pumpOverlay(tester);
 
       // Exact match: an unstripped line would lengthen the caption text.
       expect(find.text('Visible caption'), findsOneWidget);
