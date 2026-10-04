@@ -3846,16 +3846,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get peopleListsAddToList => 'ወደ ዝርዝር ያክሉ';
 
   @override
-  String get peopleListsSheetTitle => 'ወደ ዝርዝር ያክሉ';
-
-  @override
   String get peopleListsEmptyTitle => 'እስካሁን ምንም ዝርዝሮች የሉም';
 
   @override
   String get peopleListsEmptySubtitle => 'ሰዎችን መቧደን ለመጀመር ዝርዝር ይፍጠሩ።';
-
-  @override
-  String get peopleListsCreateList => 'ዝርዝር ይፍጠሩ';
 
   @override
   String get peopleListsNewListTitle => 'አዲስ ዝርዝር';
@@ -4848,9 +4842,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get reportClose => 'ገጠመ';
 
   @override
-  String get listAddToList => 'ወደ ዝርዝር ያክሉ';
-
-  @override
   String listVideoCount(int count) {
     return '$count ቪዲዮዎች';
   }
@@ -4870,23 +4861,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get listByAuthorPrefix => 'በ';
 
   @override
-  String get listNewList => 'አዲስ ዝርዝር';
-
-  @override
   String get listDone => 'ተከናውኗል';
 
   @override
   String get listErrorLoading => 'ዝርዝሮችን መጫን ላይ ስህተት';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'ከ$name ተወግዷል';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'ወደ $name ታክሏል።';
-  }
 
   @override
   String get listCreateNewList => 'አዲስ ዝርዝር ይፍጠሩ';
