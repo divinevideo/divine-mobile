@@ -482,6 +482,25 @@ void main() {
         verifyNever(() => service.addVideoToList(any(), any()));
       });
 
+      testWidgets('does not report a failure again when the sheet is closed '
+          'after showing it', (tester) async {
+        stubCreate(() async => null);
+        await openSheet(tester);
+
+        await tester.enterText(find.byType(TextField).first, 'Doomed List');
+        await tester.pump();
+        await tester.tap(saveButton(editing: false));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listCreateFailed), findsOneWidget);
+
+        await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.listCreateNewList), findsNothing);
+        expect(find.text(l10n.listCreateFailed), findsNothing);
+        expect(find.byType(SnackBar), findsNothing);
+      });
+
       testWidgets('clears the failure once the form is edited again', (
         tester,
       ) async {
@@ -696,6 +715,30 @@ void main() {
           isSemantics(hasEnabledState: true, isEnabled: true),
         );
         semantics.dispose();
+      });
+
+      testWidgets('does not report a rejected visibility change again when '
+          'the sheet is closed after showing it', (tester) async {
+        final answer = stubPendingUpdate();
+        await openSheet(tester, existingList: list(isPublic: false));
+
+        await tester.tap(find.byType(DivineSwitchTile));
+        await tester.pump();
+        await tester.tap(saveButton(editing: true));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.listContinue));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        answer.complete(false);
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listUpdateFailed), findsOneWidget);
+
+        await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.listEditInfoAction), findsNothing);
+        expect(find.text(l10n.listUpdateFailed), findsNothing);
+        expect(find.byType(SnackBar), findsNothing);
       });
     });
 

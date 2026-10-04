@@ -90,8 +90,10 @@ Future<ListInfoSheetOutcome> showListInfoSheet(
 
     var settled = cubit.state;
     // Let a save finish after manual dismissal so its result is still reported.
-    if (settled.isSaving ||
-        settled.status == CuratedListInfoStatus.savedAwaitingRelay) {
+    final savePending =
+        settled.isSaving ||
+        settled.status == CuratedListInfoStatus.savedAwaitingRelay;
+    if (savePending) {
       settled = await cubit.stream.firstWhere(
         (state) =>
             !state.isSaving &&
@@ -99,9 +101,12 @@ Future<ListInfoSheetOutcome> showListInfoSheet(
         orElse: () => cubit.state,
       );
     }
-    if (messenger.mounted &&
-        (settled.status == CuratedListInfoStatus.publishFailed ||
-            settled.status == CuratedListInfoStatus.failure)) {
+    // A failure the form was still showing when it closed has been reported
+    // there; one that arrived after the sheet closed has not.
+    final unreported =
+        settled.status == CuratedListInfoStatus.publishFailed ||
+        (savePending && settled.status == CuratedListInfoStatus.failure);
+    if (messenger.mounted && unreported) {
       messenger.showSnackBar(
         DivineSnackbarContainer.snackBar(
           existingList == null ? l10n.listCreateFailed : l10n.listUpdateFailed,
