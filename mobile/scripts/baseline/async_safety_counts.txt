@@ -37,7 +37,6 @@ discarded_futures|lib/widgets/delete_account_dialog.dart	2
 discarded_futures|lib/widgets/developer_options/shorebird_patch_section.dart	2
 discarded_futures|lib/widgets/feature_request_dialog.dart	1
 discarded_futures|lib/widgets/feed_tuning/feed_tuning_swipe_overlay.dart	1
-discarded_futures|lib/widgets/find_people_sheet.dart	1
 discarded_futures|lib/widgets/for_you_tab.dart	2
 discarded_futures|lib/widgets/geo_blocking_gate.dart	1
 discarded_futures|lib/widgets/image_attachment_picker.dart	1
@@ -67,7 +66,6 @@ discarded_futures|test/services/subscription_manager_cache_test.dart	1
 discarded_futures|test/services/supporter_repository_test.dart	1
 discarded_futures|test/services/upload_manager_recovery_test.dart	1
 discarded_futures|test/services/video_event_service_home_feed_streaming_test.dart	3
-discarded_futures|test/widgets/find_people_sheet_test.dart	1
 discarded_futures|test/widgets/save_original_progress_sheet_test.dart	1
 discarded_futures|test/widgets/watermark_download_progress_sheet_test.dart	1
 unawaited_futures|integration_test/e2e/deleted_video_visible_to_other_users_test.dart	2
