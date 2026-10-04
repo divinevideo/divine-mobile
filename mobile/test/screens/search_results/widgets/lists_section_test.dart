@@ -206,6 +206,62 @@ void main() {
       );
     });
 
+    testWidgets('a video result navigates with its record riding along', (
+      tester,
+    ) async {
+      // The record lets the list screen share and describe a list the
+      // local store has never seen, before a Follow caches it.
+      final goRouter = MockGoRouter();
+      when(
+        () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+      ).thenAnswer((_) async {});
+      when(() => mockBloc.state).thenReturn(
+        ListSearchState(
+          status: ListSearchStatus.success,
+          query: 'test',
+          videoResults: [testList],
+        ),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [...getStandardTestOverrides()],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: SizedBox(
+                width: 800,
+                height: 1000,
+                child: BlocProvider<ListSearchBloc>.value(
+                  value: mockBloc,
+                  child: MockGoRouterProvider(
+                    goRouter: goRouter,
+                    child: const CustomScrollView(
+                      slivers: [ListsSection()],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text(testList.name));
+
+      final extra =
+          verify(
+                () => goRouter.push<void>(
+                  '/list/$_authorOne/${Uri.encodeComponent(testList.id)}',
+                  extra: captureAny(named: 'extra'),
+                ),
+              ).captured.single
+              as CuratedListRouteExtra;
+      expect(extra.list, same(testList));
+    });
+
     for (final showAll in [false, true]) {
       testWidgets(
         'people result without a description does not name members (showAll: $showAll)',
