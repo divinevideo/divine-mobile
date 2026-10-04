@@ -1,11 +1,5 @@
 // ABOUTME: Service for managing NIP-51 curated lists (kind 30005) for video collections
 // ABOUTME: Handles creation, updates, and management of user's video lists
-//
-// Every owned list is published, whatever its visibility. A public list carries
-// its video references in plain `e`/`a` tags. A private one publishes the same
-// metadata tags but seals those references into the event content with NIP-44,
-// encrypted to the owner, so relays and other users can see that the list
-// exists and what it is called but not what is in it.
 
 import 'dart:async';
 import 'dart:convert';
@@ -326,7 +320,6 @@ class CuratedListService extends ChangeNotifier {
   /// The suffix prevents creates in the same millisecond sharing a coordinate.
   String _generateListId(DateTime now) => _cacheIndex.nextLocalId(now);
 
-  /// Internal method to create a list with optional explicit ID
   Future<CuratedList?> _createList({
     required String name,
     String? id,
@@ -371,16 +364,18 @@ class CuratedListService extends ChangeNotifier {
         playOrder: playOrder,
       );
 
-      // Re-creating a coordinate lifts its local tombstone.
       if (ownerPubkey != null) {
         await _cacheStore.forgetListDeletion(ownerPubkey, listId);
       }
 
       _lists.add(newList);
-      await _saveLists();
+      if (!await _saveLists()) {
+        _lists.remove(newList);
+        notifyListeners();
+        return null;
+      }
 
       if (_authService.isAuthenticated) {
-        // Creation and backfill use the same lane; keep failed creates local for retry.
         await _serializeListOperation(listId, () async {
           final current = getListById(listId);
           if (current == null || current.nostrEventId != null) return;
@@ -408,6 +403,18 @@ class CuratedListService extends ChangeNotifier {
   /// Lists whose current owner evidence permits editing in this session.
   List<CuratedList> get editableLists =>
       List.unmodifiable(_lists.where(_canMutateCachedList));
+
+  void _restoreList(CuratedList list) {
+    final index = _lists.indexWhere(
+      (item) => item.authorScopedId == list.authorScopedId,
+    );
+    if (index == -1) {
+      _lists.add(list);
+    } else {
+      _lists[index] = list;
+    }
+    notifyListeners();
+  }
 
   /// Only an explicitly owned row or an unpublished local draft can change.
   /// Remembered owners may edit offline; relay signing still requires auth.
@@ -478,8 +485,10 @@ class CuratedListService extends ChangeNotifier {
       ownershipClaims: previous.pubkey == null && ownedUpdate.pubkey != null
           ? {ownedUpdate.authorScopedId: previous}
           : const {},
-    ))
+    )) {
+      _restoreList(previous);
       return false;
+    }
 
     if (_authService.isAuthenticated &&
         !await _publishListToNostr(ownedUpdate)) {
@@ -487,7 +496,6 @@ class CuratedListService extends ChangeNotifier {
         (list) => list.authorScopedId == ownedUpdate.authorScopedId,
       );
       if (currentIndex != -1) {
-        // Keep queued local membership changes and retry without losing the accepted ID.
         _lists[currentIndex] = _lists[currentIndex].copyWith(
           pendingRepublish: true,
         );
@@ -792,8 +800,7 @@ class CuratedListService extends ChangeNotifier {
         return const CuratedListUpdateResult.privateListFull();
       }
 
-      // Metadata stays local-first; visibility and permissions wait for relay
-      // acceptance. The index still refers to the same list before publishing.
+      // Metadata saves locally; visibility and permissions await acceptance.
       _lists[listIndex] = updatedList.copyWith(
         isPublic: list.isPublic,
         isCollaborative: visibilityChanged ? list.isCollaborative : null,
@@ -806,17 +813,16 @@ class CuratedListService extends ChangeNotifier {
             ? {updatedList.authorScopedId: list}
             : const {},
       )) {
+        _restoreList(list);
         return const CuratedListUpdateResult.failed();
       }
       onLocalSaved?.call();
 
-      // The sealed replacement uses the same d-tag; redact its prior plain event.
       final becamePrivate = list.isPublic && !updatedList.isPublic;
       final plaintextEventId = becamePrivate ? list.nostrEventId : null;
 
       if (_authService.isAuthenticated &&
           !await _publishListToNostr(updatedList, confirmed: true)) {
-        // Retry local metadata; rejected privacy changes retain accepted permissions.
         if (!visibilityChanged) {
           final currentIndex = _listIndex(listId);
           if (currentIndex != -1) {
@@ -865,11 +871,7 @@ class CuratedListService extends ChangeNotifier {
     }
   }
 
-  /// Delete a list owned by the current user.
-  ///
-  /// Published lists send a NIP-09 deletion event for the kind 30005 coordinate
-  /// before local state is removed. A list that never reached a relay has no
-  /// event to delete and can be removed locally.
+  /// Deletes the captured owned coordinate after confirming any relay deletion.
   Future<bool> deleteOwnedList(String listId) {
     final list = getListById(listId);
     if (list == null || !isOwnedList(list.authorScopedId)) {
@@ -900,7 +902,6 @@ class CuratedListService extends ChangeNotifier {
         return false;
       }
 
-      // An event id says relays may hold this coordinate, even if an edit is pending.
       if (list.nostrEventId != null) {
         if (!await _relayGateway.publishListDeletion(
           list.id,
@@ -919,10 +920,10 @@ class CuratedListService extends ChangeNotifier {
       // same stable d-tag independently, which is the case the unpublished
       // merge in [_processListEvent] exists to handle. Record before removing
       // the local list so relay sync never sees an unprotected absence.
-      if (!await _cacheStore.recordListDeletion(list.pubkey!, list.id)) {
+      if (!await _cacheStore.recordListDeletion(list.pubkey!, list.id) ||
+          !await _removeListAndSubscription(list)) {
         return false;
       }
-      await _removeListAndSubscription(list);
       if (list.id == defaultListId) {
         await _cacheStore.markDefaultListDeleted();
       }
@@ -946,22 +947,21 @@ class CuratedListService extends ChangeNotifier {
     }
   }
 
-  /// Removes [list] locally, re-resolving its position by ID.
-  ///
-  /// The caller captures its index before the deletion publish awaits, and
-  /// under `publishEventAwaitOk` that wait runs to a 15s deadline. Anything
-  /// removing an earlier list in the meantime shifts the index, so a
-  /// positional remove would drop the wrong one.
-  Future<void> _removeListAndSubscription(CuratedList list) async {
+  /// Removes the captured coordinate after the deletion publish completes.
+  Future<bool> _removeListAndSubscription(CuratedList list) async {
     _lists.removeWhere((item) => item.authorScopedId == list.authorScopedId);
-    // A refused list save restores the list, so its follow stays until then.
-    await _saveLists();
+    // Keep the follow until the list removal is durably saved.
+    if (!await _saveLists()) {
+      _restoreList(list);
+      return false;
+    }
     _subscribedListIds.remove(list.authorScopedId);
     if (!_lists.any((item) => item.id == list.id)) {
       _subscribedListIds.remove(list.id);
     }
-    await _saveSubscribedListIds();
+    if (!await _saveSubscribedListIds()) return false;
     _onListUnsubscribed?.call(list.authorScopedId);
+    return true;
   }
 
   // === ENHANCED PLAYLIST FEATURES ===
@@ -1259,11 +1259,7 @@ class CuratedListService extends ChangeNotifier {
     );
   }
 
-  /// Publishes [list] as a NIP-51 kind 30005 event.
-  /// Empty lists publish too so they are not confined to this device.
-  ///
-  /// Confirmed writes wait for relay acceptance; unconfirmed item writes may
-  /// be queued by the SDK for replay. Never roll back a queued local mutation.
+  /// Confirmed writes await acceptance; queued item changes stay local for retry.
   Future<bool> _publishListToNostr(
     CuratedList list, {
     bool confirmed = false,
@@ -1279,28 +1275,10 @@ class CuratedListService extends ChangeNotifier {
         return false;
       }
 
-      // NIP-51 splits a list across the two halves of the event: what the
-      // list is goes in public tags, what is in it can go in encrypted
-      // content. A public list puts everything in tags and keeps using
-      // content for its description, which is where this client has always
-      // written it.
-      final String content;
-      final List<List<String>> tags;
-      if (list.isPublic) {
-        content = list.description ?? 'Curated video list: ${list.name}';
-        tags = CuratedListConverter.toEventTags(list);
-      } else {
-        final sealed = await _relayGateway.sealItemTags(list);
-        if (sealed == null) return false;
-        content = sealed;
-        tags = CuratedListConverter.toPrivateMetadataTags(list);
-      }
-
-      final event = await _authService.createAndSignEvent(
-        kind: 30005, // NIP-51 curated list
-        content: content,
-        tags: tags,
-        createdAt: _publishClock.next(
+      final event = await _relayGateway.signList(
+        list,
+        ownerPubkey: ownerPubkey,
+        createdAt: () => _publishClock.next(
           ownerPubkey: ownerPubkey,
           listId: list.id,
         ),
@@ -1317,16 +1295,19 @@ class CuratedListService extends ChangeNotifier {
         return false;
       }
 
-      // Keep the signed revision even for a queued/failed send, so a later
-      // retry or a reloaded service advances beyond the event SDK may replay.
       final sendingIndex = _lists.indexWhere(
         (l) => l.authorScopedId == list.authorScopedId,
       );
       if (sendingIndex != -1) {
-        _lists[sendingIndex] = _lists[sendingIndex].copyWith(
-          updatedAt: event.createdAtDateTime,
+        final current = _lists[sendingIndex];
+        final signedAt = event.createdAtDateTime;
+        _lists[sendingIndex] = current.copyWith(
+          updatedAt: signedAt.isAfter(current.updatedAt)
+              ? signedAt
+              : current.updatedAt,
+          pendingRepublish: true,
         );
-        await _saveLists();
+        if (!await _saveLists()) return false;
       }
       if (confirmed) {
         final outcome = await _nostrService.publishEventAwaitOk(event);
@@ -1363,7 +1344,6 @@ class CuratedListService extends ChangeNotifier {
         }
       }
 
-      // Commit accepted visibility and permissions into the original coordinate.
       final listIndex = _lists.indexWhere(
         (l) => l.authorScopedId == list.authorScopedId,
       );
@@ -1383,7 +1363,7 @@ class CuratedListService extends ChangeNotifier {
               : null,
           pendingRepublish: false,
         );
-        await _saveLists();
+        if (!await _saveLists()) return false;
       }
       Log.debug(
         'Published list to Nostr: ${list.name} (${event.id})',
@@ -1471,12 +1451,8 @@ class CuratedListService extends ChangeNotifier {
   }
 
   /// Persist follows before notifying video-cache subscription callbacks.
-  Future<void> _saveSubscribedListIds() async {
-    if (_isDisposed) {
-      throw const CuratedCacheWriteException(
-        CuratedCacheWriteStatus.superseded,
-      );
-    }
+  Future<bool> _saveSubscribedListIds() async {
+    if (_isDisposed) return false;
     final owner = _relayGateway.currentAuthenticatedPubkey();
     notifyListeners();
     try {
@@ -1484,6 +1460,15 @@ class CuratedListService extends ChangeNotifier {
         _subscribedListIds,
         isCurrent: () => _isCurrent(owner),
       );
+      return true;
+    } on Exception catch (error, stackTrace) {
+      Log.error(
+        'List subscription storage failed (${error.runtimeType})',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+        stackTrace: stackTrace,
+      );
+      return false;
     } finally {
       if (_isCurrent(owner)) notifyListeners();
     }

@@ -680,6 +680,42 @@ class CuratedListRelayGateway {
     }
   }
 
+  /// Signs public tags or sealed private items after validating the owner.
+  Future<Event?> signList(
+    CuratedList list, {
+    required String ownerPubkey,
+    required int Function() createdAt,
+  }) async {
+    if (list.pubkey != ownerPubkey ||
+        currentAuthenticatedPubkey() != ownerPubkey) {
+      return null;
+    }
+    final String content;
+    final List<List<String>> tags;
+    if (list.isPublic) {
+      content = list.description ?? 'Curated video list: ${list.name}';
+      tags = CuratedListConverter.toEventTags(list);
+    } else {
+      final sealed = await sealItemTags(list);
+      if (sealed == null) return null;
+      content = sealed;
+      tags = CuratedListConverter.toPrivateMetadataTags(list);
+    }
+    if (currentAuthenticatedPubkey() != ownerPubkey) return null;
+    final event = await _authService.createAndSignEvent(
+      kind: 30005,
+      content: content,
+      tags: tags,
+      createdAt: createdAt(),
+    );
+    if (event == null ||
+        event.pubkey != ownerPubkey ||
+        currentAuthenticatedPubkey() != ownerPubkey) {
+      return null;
+    }
+    return event;
+  }
+
   Future<bool> publishListDeletion(
     String listId, {
     required String ownerPubkey,
