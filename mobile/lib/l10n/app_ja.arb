@@ -4944,5 +4944,20 @@
   "peopleListsPeopleLabel": "ユーザー",
   "peopleListsPeopleNone": "ユーザーはまだ追加されていません",
   "peopleListsSessionChanged": "アカウントまたはリストへのアクセスが変更されました。続けるには、このページを開き直してください。",
-  "peopleListsSearchConnectionsHint": "フォロワーとフォロー中のユーザーを検索"
+  "peopleListsSearchConnectionsHint": "フォロワーとフォロー中のユーザーを検索",
+  "listCardSemanticLabel": "{visibility, select, private{{name}、非公開、{count}} other{{name}、{count}}}",
+  "listMemberNamesSeparator": "、",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

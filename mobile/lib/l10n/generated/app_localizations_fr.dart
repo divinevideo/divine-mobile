@@ -13303,4 +13303,19 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get peopleListsSearchConnectionsHint =>
       'Rechercher parmi les abonnés et les abonnements';
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Privée, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
 }

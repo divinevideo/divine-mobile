@@ -262,7 +262,7 @@ class _CollaboratorsRow extends ConsumerWidget {
           isVanished: ref.watch(profileVanishedProvider(profile.pubkey)),
           fallbackName: profile.bestDisplayName,
         ),
-    ].join(', ');
+    ].join(l10n.listMemberNamesSeparator);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

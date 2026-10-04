@@ -5068,5 +5068,20 @@
   "peopleListsPeopleLabel": "Хора",
   "peopleListsPeopleNone": "Няма добавени хора",
   "peopleListsSessionChanged": "Акаунтът ти или достъпът до списъка се промени. Отвори отново страницата, за да продължиш.",
-  "peopleListsSearchConnectionsHint": "Търси сред последователи и следвани"
+  "peopleListsSearchConnectionsHint": "Търси сред последователи и следвани",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Частен, {count}} other{{name}, {count}}}",
+  "listMemberNamesSeparator": ", ",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

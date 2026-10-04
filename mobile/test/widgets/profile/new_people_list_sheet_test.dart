@@ -187,6 +187,78 @@ void main() {
         verifyNever(() => bloc.add(any()));
       },
     );
+    testWidgets("joins the collaborators' names with the locale's own "
+        'separator', (tester) async {
+      // Japanese lists names with 、, so a Latin ", " cannot pass here.
+      const seededPubkey =
+          'c75b9a3131f4263add94ba20beb352a1'
+          '1032684f2dac07a7e1af827c6f3c1505';
+      const pickedPubkey =
+          'd75b9a3131f4263add94ba20beb352a1'
+          '1032684f2dac07a7e1af827c6f3c1505';
+      UserProfile profile(String pubkey, String name) => UserProfile(
+        pubkey: pubkey,
+        displayName: name,
+        rawData: const {},
+        createdAt: DateTime(2026),
+        eventId: 'e' * 64,
+      );
+      final seeded = profile(seededPubkey, 'Aki');
+      final picked = profile(pickedPubkey, 'Rin');
+
+      final profileRepo = _MockProfileRepository();
+      when(
+        () => profileRepo.getCachedProfiles(pubkeys: any(named: 'pubkeys')),
+      ).thenAnswer((_) async => [picked]);
+      when(
+        () => profileRepo.getCachedProfile(pubkey: any(named: 'pubkey')),
+      ).thenAnswer((_) async => picked);
+      final followRepo = _MockFollowRepository();
+      when(() => followRepo.followingPubkeys).thenReturn([pickedPubkey]);
+      when(() => followRepo.isInitialized).thenReturn(true);
+      when(() => followRepo.followingCount).thenReturn(1);
+      when(() => followRepo.followingStream).thenAnswer(
+        (_) => BehaviorSubject<List<String>>.seeded([pickedPubkey]).stream,
+      );
+      when(
+        followRepo.streamMyFollowers,
+      ).thenAnswer((_) => Stream.value([pickedPubkey]));
+      when(followRepo.getMyFollowers).thenAnswer((_) async => [pickedPubkey]);
+      final blocklist = _MockContentBlocklistRepository();
+      when(() => blocklist.shouldFilterFromFeeds(any())).thenReturn(false);
+
+      await tester.pumpWidget(
+        _buildSubject(
+          curatedListsEnabled: true,
+          createBloc: () => bloc,
+          initialCollaborator: seeded,
+          locale: const Locale('ja'),
+          extraOverrides: [
+            // Nobody is vanished; the real provider is a drift stream whose
+            // teardown timer would outlive the test.
+            vanishedProfilePubkeysProvider.overrideWith(
+              (ref) => Stream.value(const <String>{}),
+            ),
+            profileRepositoryProvider.overrideWithValue(profileRepo),
+            followRepositoryProvider.overrideWithValue(followRepo),
+            contentBlocklistRepositoryProvider.overrideWithValue(blocklist),
+          ],
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Aki'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Rin').last);
+      await tester.pumpAndSettle();
+
+      final ja = lookupAppLocalizations(const Locale('ja'));
+      expect(ja.listMemberNamesSeparator, isNot(', '));
+      expect(
+        find.text(['Aki', 'Rin'].join(ja.listMemberNamesSeparator)),
+        findsOneWidget,
+      );
+    });
 
     testWidgets('Done stays disabled until a name is entered', (tester) async {
       await tester.pumpWidget(
@@ -250,6 +322,7 @@ Widget _buildSubject({
   MockAuthService? auth,
   UserProfile? initialCollaborator,
   String? initialPubkey,
+  Locale? locale,
 }) {
   return ProviderScope(
     overrides: [
@@ -264,6 +337,7 @@ Widget _buildSubject({
     child: BlocProvider<PeopleListsBloc>(
       create: (_) => createBloc(),
       child: MaterialApp(
+        locale: locale,
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(

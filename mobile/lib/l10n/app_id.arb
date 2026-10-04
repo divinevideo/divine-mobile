@@ -4944,5 +4944,20 @@
   "peopleListsPeopleLabel": "Orang",
   "peopleListsPeopleNone": "Belum ada orang yang ditambahkan",
   "peopleListsSessionChanged": "Akun atau aksesmu ke daftar berubah. Buka kembali halaman ini untuk melanjutkan.",
-  "peopleListsSearchConnectionsHint": "Cari pengikut dan yang diikuti"
+  "peopleListsSearchConnectionsHint": "Cari pengikut dan yang diikuti",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Privat, {count}} other{{name}, {count}}}",
+  "listMemberNamesSeparator": ", ",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

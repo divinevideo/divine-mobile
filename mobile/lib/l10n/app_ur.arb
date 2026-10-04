@@ -6711,5 +6711,20 @@
   "peopleListsPeopleLabel": "لوگ",
   "peopleListsPeopleNone": "ابھی کوئی شخص شامل نہیں کیا گیا",
   "peopleListsSessionChanged": "آپ کا اکاؤنٹ یا فہرست تک رسائی بدل گئی ہے۔ جاری رکھنے کے لیے یہ صفحہ دوبارہ کھولیں۔",
-  "peopleListsSearchConnectionsHint": "فالوورز اور جنہیں آپ فالو کرتے ہیں ان میں تلاش کریں"
+  "peopleListsSearchConnectionsHint": "فالوورز اور جنہیں آپ فالو کرتے ہیں ان میں تلاش کریں",
+  "listCardSemanticLabel": "{visibility, select, private{{name}، نجی، {count}} other{{name}، {count}}}",
+  "listMemberNamesSeparator": "، ",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

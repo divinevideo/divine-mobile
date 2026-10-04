@@ -4944,5 +4944,20 @@
   "peopleListsPeopleLabel": "Personer",
   "peopleListsPeopleNone": "Inga personer tillagda",
   "peopleListsSessionChanged": "Ditt konto eller din åtkomst till listan har ändrats. Öppna sidan igen för att fortsätta.",
-  "peopleListsSearchConnectionsHint": "Sök bland följare och personer du följer"
+  "peopleListsSearchConnectionsHint": "Sök bland följare och personer du följer",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Privat, {count}} other{{name}, {count}}}",
+  "listMemberNamesSeparator": ", ",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

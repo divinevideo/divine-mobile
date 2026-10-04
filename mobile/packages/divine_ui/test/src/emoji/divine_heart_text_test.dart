@@ -67,16 +67,18 @@ void main() {
     });
 
     testWidgets('forwards maxLines, overflow and textAlign', (tester) async {
+      final content = ['a long line', 'that wraps'].join(' ');
       await pump(
         tester,
-        const DivineHeartText(
-          'a long line that wraps',
+        DivineHeartText(
+          content,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
         ),
       );
 
+      expect(find.text(content), findsOneWidget);
       final rich = tester.widget<Text>(find.byType(Text));
       expect(rich.maxLines, 2);
       expect(rich.overflow, TextOverflow.ellipsis);

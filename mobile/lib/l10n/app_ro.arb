@@ -4944,5 +4944,20 @@
   "peopleListsPeopleLabel": "Persoane",
   "peopleListsPeopleNone": "Nicio persoană adăugată",
   "peopleListsSessionChanged": "Contul tău sau accesul la listă s-a schimbat. Redeschide această pagină pentru a continua.",
-  "peopleListsSearchConnectionsHint": "Caută printre urmăritori și persoanele urmărite"
+  "peopleListsSearchConnectionsHint": "Caută printre urmăritori și persoanele urmărite",
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Privată, {count}} other{{name}, {count}}}",
+  "listMemberNamesSeparator": ", ",
+  "@listCardSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "visibility": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }
