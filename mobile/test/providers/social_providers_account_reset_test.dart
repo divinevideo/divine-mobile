@@ -73,7 +73,11 @@ void main() {
       Future<void> Function(ProviderContainer container)? warmUp,
     }) async {
       final container = await pumpScope(tester);
-      await warmUp?.call(container);
+      if (warmUp != null) {
+        // Asset futures may have been cached by a regular test in the merged
+        // isolate. Finish that real async work before entering widget builds.
+        await tester.runAsync(() => warmUp(container));
+      }
       buildThenPause(container, dependent);
 
       await container.read(accountScopedPreferenceServicesResetProvider)();
