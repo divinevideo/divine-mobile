@@ -77,10 +77,49 @@ void main() {
       );
     });
 
+    test(
+      'returns null when a classic Vine description starts with the title',
+      () {
+        expect(
+          build(
+            title: 'Same caption',
+            content: 'Same caption\n\nOriginal stats: 3 loops - 2 likes',
+            rawTags: const {'platform': 'vine'},
+          ).captionTitle,
+          isNull,
+        );
+      },
+    );
+
     test('keeps the title for a classic Vine without a description', () {
       expect(
         build(
           title: 'Only caption',
+          rawTags: const {'platform': 'vine'},
+        ).captionTitle,
+        equals('Only caption'),
+      );
+    });
+
+    test(
+      'keeps the title for a classic Vine with a whitespace description',
+      () {
+        expect(
+          build(
+            title: 'Only caption',
+            content: ' \n\n ',
+            rawTags: const {'platform': 'vine'},
+          ).captionTitle,
+          equals('Only caption'),
+        );
+      },
+    );
+
+    test('keeps the title for a classic Vine whose content is attribution', () {
+      expect(
+        build(
+          title: 'Only caption',
+          content: 'Inspired by nostr:$npub',
           rawTags: const {'platform': 'vine'},
         ).captionTitle,
         equals('Only caption'),
