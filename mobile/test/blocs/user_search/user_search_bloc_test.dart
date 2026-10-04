@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
@@ -118,40 +119,46 @@ void main() {
       await bloc.close();
     });
 
-    test('superseding a running query cancels its repository token', () async {
-      final tokens = <SearchCancellationToken>[];
-      final controllers = <StreamController<ProgressiveSearchResult>>[];
-      final bloc = UserSearchBloc(
-        profileRepository: mockProfileRepository,
-        searchRunner:
-            ({
-              required query,
-              required limit,
-              required sortBy,
-              required hasVideos,
-              required boostPubkeys,
-              required cancellationToken,
-            }) {
-              tokens.add(cancellationToken);
-              final controller = StreamController<ProgressiveSearchResult>();
-              controllers.add(controller);
-              return controller.stream;
-            },
-      );
+    test('superseding a running query cancels its repository token', () {
+      fakeAsync((clock) {
+        final tokens = <SearchCancellationToken>[];
+        final controllers = <StreamController<ProgressiveSearchResult>>[];
+        final bloc = UserSearchBloc(
+          profileRepository: mockProfileRepository,
+          searchRunner:
+              ({
+                required query,
+                required limit,
+                required sortBy,
+                required hasVideos,
+                required boostPubkeys,
+                required cancellationToken,
+              }) {
+                tokens.add(cancellationToken);
+                final controller = StreamController<ProgressiveSearchResult>();
+                controllers.add(controller);
+                return controller.stream;
+              },
+        );
 
-      bloc.add(const UserSearchQueryChanged('first'));
-      await Future<void>.delayed(const Duration(milliseconds: 450));
-      bloc.add(const UserSearchQueryChanged('second'));
-      await Future<void>.delayed(const Duration(milliseconds: 450));
+        bloc.add(const UserSearchQueryChanged('first'));
+        clock.elapse(const Duration(milliseconds: 300));
+        clock.flushMicrotasks();
+        bloc.add(const UserSearchQueryChanged('second'));
+        clock.elapse(const Duration(milliseconds: 300));
+        clock.flushMicrotasks();
 
-      expect(tokens, hasLength(2));
-      expect(tokens.first.isCancelled, isTrue);
-      expect(tokens.last.isCancelled, isFalse);
-      await bloc.close();
-      expect(tokens.last.isCancelled, isTrue);
-      for (final controller in controllers) {
-        await controller.close();
-      }
+        expect(tokens, hasLength(2));
+        expect(tokens.first.isCancelled, isTrue);
+        expect(tokens.last.isCancelled, isFalse);
+        unawaited(bloc.close());
+        clock.flushMicrotasks();
+        expect(tokens.last.isCancelled, isTrue);
+        for (final controller in controllers) {
+          unawaited(controller.close());
+          clock.flushMicrotasks();
+        }
+      });
     });
 
     blocTest<UserSearchBloc, UserSearchState>(
@@ -1249,8 +1256,11 @@ void main() {
         },
         build: createBloc,
         act: (bloc) async {
+          final first = bloc.stream.firstWhere(
+            (s) => s.query == 'alice' && s.status == UserSearchStatus.success,
+          );
           bloc.add(const UserSearchQueryChanged('alice'));
-          await Future<void>.delayed(debounceDuration);
+          await first;
           bloc.add(const UserSearchQueryChanged('error'));
         },
         wait: debounceDuration,
@@ -1321,8 +1331,11 @@ void main() {
         },
         build: createBloc,
         act: (bloc) async {
+          final first = bloc.stream.firstWhere(
+            (s) => s.query == 'alice' && s.status == UserSearchStatus.success,
+          );
           bloc.add(const UserSearchQueryChanged('alice'));
-          await Future<void>.delayed(debounceDuration);
+          await first;
           bloc.add(const UserSearchQueryChanged('bob'));
         },
         wait: debounceDuration,

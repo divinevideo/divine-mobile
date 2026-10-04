@@ -491,12 +491,12 @@ void main() {
 
           final bloc = createBloc()..add(const ClipsLibraryLoadRequested());
           // Let the handler reach unawaited(_recoverAndReload).
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
 
           await bloc.close();
 
           completer.completeError(Exception('Recovery failed'));
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
 
           expect(observer.errors, isEmpty);
         },
@@ -2022,7 +2022,7 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const ClipsLibraryLoadRequested());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(
             const ClipsLibraryFilterChanged(ClipLibraryArchiveFilter()),
           );
@@ -2038,7 +2038,7 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const ClipsLibraryLoadRequested());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(
             ClipsLibraryFilterChanged(ClipLibraryCategoryFilter(travel.id)),
           );

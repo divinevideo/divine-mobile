@@ -525,15 +525,17 @@ void main() {
             videoPublishServiceFactory: defaultVieoPublishServiceFactory,
             draftStorageService: mockDraftStorageService,
           ),
-          act: (bloc) => bloc.add(
-            BackgroundPublishRequested(
-              draft: draft,
-              publishmentProcess: Future<PublishResult>.delayed(
-                Duration.zero,
-                () => throw Exception('Network connection lost'),
+          act: (bloc) async {
+            final publishing = Completer<PublishResult>();
+            bloc.add(
+              BackgroundPublishRequested(
+                draft: draft,
+                publishmentProcess: publishing.future,
               ),
-            ),
-          ),
+            );
+            await pumpEventQueue();
+            publishing.completeError(Exception('Network connection lost'));
+          },
           errors: () => [isA<Exception>()],
           expect: () => [
             BackgroundPublishState(
@@ -1163,7 +1165,7 @@ void main() {
 
           var parked = false;
           final parking = bloc.parkInFlight().then((_) => parked = true);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           expect(parked, isFalse);
 
           write.complete(true);
@@ -1506,10 +1508,10 @@ void main() {
               error: const PublishError(PublishErrorKind.generic),
             ),
           );
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
 
           bloc.add(BackgroundPublishRetryRequested(draftId: draftId));
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
 
           final closeFuture = bloc.close();
           serviceCompleter.complete(mockPublishService);
@@ -1537,13 +1539,13 @@ void main() {
             error: const PublishError(PublishErrorKind.generic),
           ),
         );
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         when(
           () => mockPublishService.publishVideo(draft: draft),
         ).thenAnswer((_) => publishCompleter.future);
 
         bloc.add(BackgroundPublishRetryRequested(draftId: draftId));
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         final closeFuture = bloc.close();
 
         expect(

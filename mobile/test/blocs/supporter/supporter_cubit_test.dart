@@ -473,7 +473,7 @@ void main() {
         final cubit = SupporterCubit(repository: repo);
 
         final load = cubit.loadTiers();
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         await cubit.close();
         completer.complete(const <SupporterTier>[]);
 
@@ -762,11 +762,11 @@ void main() {
 
       cubit.start();
       lifecycle.add(EntitlementLifecycle.pending);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       expect(cubit.state.status, SupporterStatus.pending);
 
       lifecycle.add(EntitlementLifecycle.confirming);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       expect(cubit.state.status, SupporterStatus.confirming);
     });
   });

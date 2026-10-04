@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/crossposting_settings/crossposting_settings_cubit.dart';
@@ -697,24 +698,33 @@ void main() {
 
       test(
         'a no-callback OAuth session times out with an explicit error',
-        () async {
-          // On Android devices where app-link verification fails, the callback
-          // URL opens in the browser and the OAuth session never completes.
-          // Without a bound the connect flow silently waits forever.
-          final cubit = buildCubit(
-            oauthCallbackTimeout: const Duration(milliseconds: 50),
-            launcher: (_) => Completer<Uri?>().future,
-          );
-          addTearDown(cubit.close);
+        () {
+          fakeAsync((clock) {
+            // On Android devices where app-link verification fails, the callback
+            // URL opens in the browser and the OAuth session never completes.
+            // Without a bound the connect flow silently waits forever.
+            final cubit = buildCubit(
+              oauthCallbackTimeout: const Duration(milliseconds: 50),
+              launcher: (_) => Completer<Uri?>().future,
+            );
 
-          await cubit.connect(CrosspostingPlatform.instagram);
-          await Future<void>.delayed(const Duration(milliseconds: 200));
+            unawaited(cubit.connect(CrosspostingPlatform.instagram));
+            clock.flushMicrotasks();
+            expect(cubit.state.hasPendingAction, isTrue);
+            clock.elapse(const Duration(milliseconds: 50));
+            clock.flushMicrotasks();
 
-          expect(cubit.state.error, CrosspostingSettingsError.callbackTimeout);
-          expect(cubit.state.hasPendingAction, isFalse);
-          // The connection may have completed server-side in the browser, so
-          // the state refreshes before the error surfaces.
-          verify(() => repository.loadSettings()).called(1);
+            expect(
+              cubit.state.error,
+              CrosspostingSettingsError.callbackTimeout,
+            );
+            expect(cubit.state.hasPendingAction, isFalse);
+            // The connection may have completed server-side in the browser, so
+            // the state refreshes before the error surfaces.
+            verify(() => repository.loadSettings()).called(1);
+            unawaited(cubit.close());
+            clock.flushMicrotasks();
+          });
         },
       );
 

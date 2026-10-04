@@ -82,26 +82,27 @@ void main() {
       errors: () => [isA<VaultKeyUnavailableException>()],
     );
 
-    blocTest<SoundSyncCubit, SoundSyncState>(
-      'ignores a second syncNow while one is in flight',
-      build: () {
-        when(repository.reconcile).thenAnswer((_) async {
-          await Future<void>.delayed(const Duration(milliseconds: 20));
-          return const SoundSyncOutcome(
-            pulled: 0,
-            pushed: 0,
-            deleted: 0,
-            deletionsRetried: 0,
-          );
-        });
-        return SoundSyncCubit(repository: repository);
-      },
-      act: (cubit) async {
-        unawaited(cubit.syncNow());
-        await cubit.syncNow();
-      },
-      verify: (_) => verify(repository.reconcile).called(1),
-    );
+    test('ignores a second syncNow while one is in flight', () async {
+      final completion = Completer<SoundSyncOutcome>();
+      when(repository.reconcile).thenAnswer((_) => completion.future);
+      final cubit = SoundSyncCubit(repository: repository);
+      addTearDown(cubit.close);
+
+      final first = cubit.syncNow();
+      await cubit.syncNow();
+      expect(cubit.state.status, SoundSyncStatus.syncing);
+      verify(repository.reconcile).called(1);
+      completion.complete(
+        const SoundSyncOutcome(
+          pulled: 0,
+          pushed: 0,
+          deleted: 0,
+          deletionsRetried: 0,
+        ),
+      );
+      await first;
+      expect(cubit.state.status, SoundSyncStatus.success);
+    });
 
     blocTest<SoundSyncCubit, SoundSyncState>(
       'emits failure and reports an unexpected error, e.g. a malformed '

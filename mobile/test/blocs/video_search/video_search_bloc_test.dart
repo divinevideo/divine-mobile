@@ -16,8 +16,11 @@ class _MockVideosRepository extends Mock implements VideosRepository {}
 void main() {
   group(VideoSearchBloc, () {
     late _MockVideosRepository mockVideosRepository;
-    late Future<void> trendingEmission;
-    late Future<void> delayedLoadMoreCompletion;
+    late StreamController<List<VideoEvent>> trendingController;
+    late Completer<void> trendingSubscribed;
+    late Completer<({List<VideoEvent> videos, int totalCount, bool hasMore})>
+    loadMoreCompleter;
+    late Completer<void> loadMoreStarted;
 
     const debounceDuration = Duration(milliseconds: 400);
 
@@ -661,7 +664,10 @@ void main() {
         'ignores stale stream results after sort changes',
         build: createBloc,
         setUp: () {
-          final trendingController = StreamController<List<VideoEvent>>();
+          trendingSubscribed = Completer<void>();
+          trendingController = StreamController<List<VideoEvent>>(
+            onListen: trendingSubscribed.complete,
+          );
           addTearDown(trendingController.close);
 
           when(
@@ -678,22 +684,23 @@ void main() {
           ).thenAnswer(
             (_) => Stream.value([createVideo(id: 'recent-1', title: 'Recent')]),
           );
-
-          trendingEmission = Future<void>.microtask(() async {
-            await Future<void>.delayed(const Duration(milliseconds: 450));
-            trendingController.add([
-              createVideo(id: 'trending-1', title: 'Trending'),
-            ]);
-            await trendingController.close();
-          });
         },
         act: (bloc) async {
           bloc.add(const VideoSearchQueryChanged('flutter'));
-          await Future<void>.delayed(const Duration(milliseconds: 425));
+          await trendingSubscribed.future;
+          final recent = bloc.stream.firstWhere(
+            (s) =>
+                s.sort == VideoSearchSort.recent &&
+                s.status == VideoSearchStatus.success,
+          );
           bloc.add(const VideoSearchSortChanged(VideoSearchSort.recent));
-          await trendingEmission;
+          await recent;
+          trendingController.add([
+            createVideo(id: 'trending-1', title: 'Trending'),
+          ]);
+          await trendingController.close();
+          await pumpEventQueue();
         },
-        wait: const Duration(milliseconds: 800),
         verify: (bloc) {
           expect(bloc.state.sort, VideoSearchSort.recent);
           expect(bloc.state.videos.map((video) => video.id), ['recent-1']);
@@ -758,7 +765,8 @@ void main() {
         'drops stale load-more results after sort changes',
         build: createBloc,
         setUp: () {
-          final loadMoreCompleter =
+          loadMoreStarted = Completer<void>();
+          loadMoreCompleter =
               Completer<
                 ({List<VideoEvent> videos, int totalCount, bool hasMore})
               >();
@@ -769,7 +777,10 @@ void main() {
               offset: 50,
               sort: any(named: 'sort'),
             ),
-          ).thenAnswer((_) => loadMoreCompleter.future);
+          ).thenAnswer((_) {
+            loadMoreStarted.complete();
+            return loadMoreCompleter.future;
+          });
           when(
             () => mockVideosRepository.searchVideos(
               query: 'flutter',
@@ -780,15 +791,6 @@ void main() {
               createVideo(id: 'recent-1', title: 'Recent Result'),
             ]),
           );
-
-          delayedLoadMoreCompletion = Future<void>.microtask(() async {
-            await Future<void>.delayed(const Duration(milliseconds: 10));
-            loadMoreCompleter.complete((
-              videos: [createVideo(id: 'old-page-2', title: 'Old Page 2')],
-              totalCount: 100,
-              hasMore: true,
-            ));
-          });
         },
         seed: () => VideoSearchState(
           status: VideoSearchStatus.success,
@@ -799,11 +801,21 @@ void main() {
         ),
         act: (bloc) async {
           bloc.add(const VideoSearchLoadMore());
-          await Future<void>.delayed(const Duration(milliseconds: 1));
+          await loadMoreStarted.future;
+          final recent = bloc.stream.firstWhere(
+            (s) =>
+                s.sort == VideoSearchSort.recent &&
+                s.status == VideoSearchStatus.success,
+          );
           bloc.add(const VideoSearchSortChanged(VideoSearchSort.recent));
-          await delayedLoadMoreCompletion;
+          await recent;
+          loadMoreCompleter.complete((
+            videos: [createVideo(id: 'old-page-2', title: 'Old Page 2')],
+            totalCount: 100,
+            hasMore: true,
+          ));
+          await pumpEventQueue();
         },
-        wait: const Duration(milliseconds: 500),
         verify: (bloc) {
           expect(bloc.state.sort, VideoSearchSort.recent);
           expect(bloc.state.videos.map((video) => video.id), ['recent-1']);

@@ -46,15 +46,16 @@ void main() {
       'waits for the current-address load before accepting a no-op change',
       build: buildSubject,
       setUp: () {
-        when(() => repository.fetchAccountStatus()).thenAnswer((_) async {
-          await Future<void>.delayed(Duration.zero);
-          return const KeycastAccountStatus(
-            email: 'old@example.com',
-            emailVerified: true,
-            publicKey: 'abc',
-            verifiedMinor: false,
-          );
-        });
+        when(() => repository.fetchAccountStatus()).thenAnswer(
+          (_) => Future<KeycastAccountStatus>.microtask(
+            () => const KeycastAccountStatus(
+              email: 'old@example.com',
+              emailVerified: true,
+              publicKey: 'abc',
+              verifiedMinor: false,
+            ),
+          ),
+        );
       },
       act: (cubit) async {
         final load = cubit.loadCurrentEmail();

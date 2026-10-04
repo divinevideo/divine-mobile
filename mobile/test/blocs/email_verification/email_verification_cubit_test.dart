@@ -955,6 +955,8 @@ void main() {
       test(
         'abandons exchange when pending context is cleared during verifyPin',
         () {
+          late Completer<void> reply;
+
           when(() => mockAuthService.isRegistered).thenReturn(false);
           when(() => mockAuthService.isAuthenticated).thenReturn(false);
           when(() => mockAuthService.isAnonymous).thenReturn(false);
@@ -966,7 +968,7 @@ void main() {
           when(
             () => mockOAuth.verifyPin(deviceCode: testDeviceCode, pin: pin),
           ).thenAnswer((_) async {
-            await Future<void>.delayed(const Duration(seconds: 5));
+            await reply.future;
             return VerifyPinResult.success(pinCode);
           });
           when(
@@ -979,6 +981,7 @@ void main() {
           ).thenAnswer((_) async {});
 
           fakeAsync((fake) {
+            reply = Completer<void>();
             final cubit = buildCubit()
               ..startPolling(
                 deviceCode: testDeviceCode,
@@ -997,6 +1000,8 @@ void main() {
 
             // verifyPin now resolves success — the abandoned submit must NOT
             // exchange or sign in.
+            reply.complete();
+            fake.flushMicrotasks();
             fake.elapse(const Duration(seconds: 6));
 
             verifyNever(
@@ -1021,6 +1026,8 @@ void main() {
           const secondVerifier = 'second-verifier-uvw123';
           const secondEmail = 'second@example.com';
 
+          late Completer<void> reply;
+
           when(() => mockAuthService.isRegistered).thenReturn(false);
           when(() => mockAuthService.isAuthenticated).thenReturn(false);
           when(
@@ -1032,11 +1039,12 @@ void main() {
           when(
             () => mockOAuth.verifyPin(deviceCode: testDeviceCode, pin: pin),
           ).thenAnswer((_) async {
-            await Future<void>.delayed(const Duration(seconds: 5));
+            await reply.future;
             return VerifyPinResult.failure(VerifyPinError.invalid);
           });
 
           fakeAsync((fake) {
+            reply = Completer<void>();
             final cubit = buildCubit()
               ..startPolling(
                 deviceCode: testDeviceCode,
@@ -1053,6 +1061,10 @@ void main() {
               verifier: secondVerifier,
               email: secondEmail,
             );
+
+            reply.complete();
+
+            fake.flushMicrotasks();
 
             fake.elapse(const Duration(seconds: 6));
             fake.flushMicrotasks();
@@ -1207,6 +1219,8 @@ void main() {
       test(
         'PIN submit wins; in-flight poll bails without a second exchange',
         () {
+          late Completer<void> reply;
+
           when(() => mockAuthService.isRegistered).thenReturn(false);
           when(() => mockAuthService.isAuthenticated).thenReturn(false);
           when(() => mockAuthService.isAnonymous).thenReturn(false);
@@ -1222,7 +1236,7 @@ void main() {
           when(() => mockOAuth.pollForCode(testDeviceCode)).thenAnswer((
             _,
           ) async {
-            await Future<void>.delayed(const Duration(seconds: 5));
+            await reply.future;
             return PollResult.complete(pollCode);
           });
           when(
@@ -1241,6 +1255,7 @@ void main() {
           ).thenAnswer((_) async {});
 
           fakeAsync((fake) {
+            reply = Completer<void>();
             final cubit = buildCubit()
               ..startPolling(
                 deviceCode: testDeviceCode,
@@ -1261,6 +1276,8 @@ void main() {
 
             // Let the in-flight poll resolve. It must observe the claim and
             // bail — no second exchange, no missingAuthCode over success.
+            reply.complete();
+            fake.flushMicrotasks();
             fake.elapse(const Duration(seconds: 10));
 
             expect(cubit.state.status, EmailVerificationStatus.success);
@@ -1343,13 +1360,15 @@ void main() {
           const secondVerifier = 'second-verifier-uvw123';
           const secondEmail = 'second@example.com';
 
+          late Completer<void> reply;
+
           when(() => mockAuthService.isRegistered).thenReturn(false);
           when(() => mockAuthService.isAuthenticated).thenReturn(false);
           when(() => mockAuthService.isAnonymous).thenReturn(false);
           when(() => mockOAuth.pollForCode(testDeviceCode)).thenAnswer((
             _,
           ) async {
-            await Future<void>.delayed(const Duration(seconds: 5));
+            await reply.future;
             return PollResult.complete(pollCode);
           });
           when(
@@ -1368,6 +1387,7 @@ void main() {
           ).thenAnswer((_) async {});
 
           fakeAsync((fake) {
+            reply = Completer<void>();
             final cubit = buildCubit()
               ..startPolling(
                 deviceCode: testDeviceCode,
@@ -1383,6 +1403,10 @@ void main() {
               verifier: secondVerifier,
               email: secondEmail,
             );
+
+            reply.complete();
+
+            fake.flushMicrotasks();
 
             fake.elapse(const Duration(seconds: 5));
             fake.flushMicrotasks();
@@ -1417,12 +1441,14 @@ void main() {
           const secondVerifier = 'second-verifier-uvw123';
           const secondEmail = 'second@example.com';
 
+          late Completer<void> reply;
+
           when(() => mockAuthService.isRegistered).thenReturn(false);
           when(() => mockAuthService.isAuthenticated).thenReturn(false);
           when(() => mockOAuth.pollForCode(testDeviceCode)).thenAnswer((
             _,
           ) async {
-            await Future<void>.delayed(const Duration(seconds: 5));
+            await reply.future;
             return PollResult.error(
               'Invalid or expired verification token',
               statusCode: 401,
@@ -1434,6 +1460,7 @@ void main() {
           ).thenAnswer((_) async => PollResult.pending());
 
           fakeAsync((fake) {
+            reply = Completer<void>();
             final cubit = buildCubit()
               ..startPolling(
                 deviceCode: testDeviceCode,
@@ -1449,6 +1476,10 @@ void main() {
               verifier: secondVerifier,
               email: secondEmail,
             );
+
+            reply.complete();
+
+            fake.flushMicrotasks();
 
             fake.elapse(const Duration(seconds: 5));
             fake.flushMicrotasks();
@@ -1797,6 +1828,8 @@ void main() {
           const secondVerifier = 'second-verifier-uvw123';
           const secondEmail = 'second@example.com';
 
+          late Completer<void> reply;
+
           when(() => mockAuthService.isAuthenticated).thenReturn(false);
           when(() => mockAuthService.isRegistered).thenReturn(false);
           when(
@@ -1808,11 +1841,12 @@ void main() {
           when(
             () => mockOAuth.resendHeadlessVerification(testDeviceCode),
           ).thenAnswer((_) async {
-            await Future<void>.delayed(const Duration(seconds: 5));
+            await reply.future;
             return ResendVerificationResult(success: true);
           });
 
           fakeAsync((fake) {
+            reply = Completer<void>();
             final cubit = buildCubit()
               ..startPolling(
                 deviceCode: testDeviceCode,
@@ -1829,6 +1863,10 @@ void main() {
               verifier: secondVerifier,
               email: secondEmail,
             );
+
+            reply.complete();
+
+            fake.flushMicrotasks();
 
             fake.elapse(const Duration(seconds: 6));
             fake.flushMicrotasks();
@@ -1915,23 +1953,24 @@ void main() {
       test(
         'an in-flight poll that resumes after timeout does not reschedule',
         () {
+          late Completer<void> reply;
+
           when(() => mockAuthService.isAuthenticated).thenReturn(false);
           when(() => mockAuthService.isRegistered).thenReturn(false);
 
-          // Each poll hangs for ~1000s so a poll is still in flight when the
-          // 15-minute timeout fires, and the resume is driven by the fake clock
-          // (a timer) rather than a microtask — making the recursion-guard
-          // decision observable via elapse().
+          // Hold the poll across the 15-minute timeout, release it, then
+          // advance the fake clock to catch an incorrectly re-armed poll.
           var pollCalls = 0;
           when(() => mockOAuth.pollForCode(testDeviceCode)).thenAnswer((
             _,
           ) async {
             pollCalls++;
-            await Future<void>.delayed(const Duration(seconds: 1000));
+            await reply.future;
             return PollResult.pending();
           });
 
           fakeAsync((fake) {
+            reply = Completer<void>();
             final cubit = buildCubit()
               ..startPolling(
                 deviceCode: testDeviceCode,
@@ -1939,7 +1978,7 @@ void main() {
                 email: testEmail,
               );
 
-            // First poll fires at +3s and is still in flight (resolves ~1003s).
+            // First poll fires at +3s and remains held.
             fake.elapse(const Duration(seconds: 4));
             expect(pollCalls, 1);
 
@@ -1947,10 +1986,12 @@ void main() {
             fake.elapse(const Duration(minutes: 15));
             expect(cubit.state.status, EmailVerificationStatus.pollingTimedOut);
 
-            // Drive past the in-flight poll's resolution (~1003s). It must NOT
+            // Release the in-flight poll, then advance time. It must NOT
             // re-arm the poll loop — _onTimeout retains the pending device code
             // for PIN entry, but the poll loop is over. Without the guard, the
             // resumed poll reschedules and pollCalls climbs.
+            reply.complete();
+            fake.flushMicrotasks();
             fake.elapse(const Duration(minutes: 10));
 
             expect(
@@ -2033,6 +2074,8 @@ void main() {
       });
 
       test('timeout does not clobber an in-flight claimed completion', () {
+        late Completer<void> reply;
+
         when(() => mockAuthService.isAuthenticated).thenReturn(false);
         when(() => mockAuthService.isRegistered).thenReturn(false);
         when(() => mockAuthService.isAnonymous).thenReturn(false);
@@ -2046,7 +2089,7 @@ void main() {
           () =>
               mockOAuth.exchangeCode(code: 'race-code', verifier: testVerifier),
         ).thenAnswer((_) async {
-          await Future<void>.delayed(const Duration(minutes: 20));
+          await reply.future;
           return const TokenResponse(bunkerUrl: 'wss://relay.test');
         });
         when(
@@ -2054,6 +2097,7 @@ void main() {
         ).thenAnswer((_) async {});
 
         fakeAsync((fake) {
+          reply = Completer<void>();
           final cubit = buildCubit()
             ..startPolling(
               deviceCode: testDeviceCode,
@@ -2073,6 +2117,8 @@ void main() {
           );
 
           // Let the exchange finish — success lands.
+          reply.complete();
+          fake.flushMicrotasks();
           fake.elapse(const Duration(minutes: 6));
           expect(cubit.state.status, EmailVerificationStatus.success);
 
@@ -2083,19 +2129,22 @@ void main() {
 
       test('in-flight recoverable poll error after timeout keeps PIN entry '
           'available', () {
+        late Completer<void> reply;
+
         when(() => mockAuthService.isAuthenticated).thenReturn(false);
         when(() => mockAuthService.isRegistered).thenReturn(false);
 
         // The poll hangs past the 15-minute timeout, then resolves with a
         // non-transient but recoverable/unknown failure.
         when(() => mockOAuth.pollForCode(testDeviceCode)).thenAnswer((_) async {
-          await Future<void>.delayed(const Duration(seconds: 1000));
+          await reply.future;
           // No explicit failure -> defaults to the non-transient
           // KeycastAuthFailure.unknown (a recoverable/unknown poll error).
           return PollResult.error('server error');
         });
 
         fakeAsync((fake) {
+          reply = Completer<void>();
           final cubit = buildCubit()
             ..startPolling(
               deviceCode: testDeviceCode,
@@ -2109,6 +2158,8 @@ void main() {
 
           // The in-flight poll resolves with a recoverable error after the
           // window elapsed. It must NOT tear down the preserved PIN path.
+          reply.complete();
+          fake.flushMicrotasks();
           fake.elapse(const Duration(minutes: 10));
 
           expect(
@@ -2126,11 +2177,13 @@ void main() {
       });
 
       test('in-flight expired poll error after timeout still terminates', () {
+        late Completer<void> reply;
+
         when(() => mockAuthService.isAuthenticated).thenReturn(false);
         when(() => mockAuthService.isRegistered).thenReturn(false);
 
         when(() => mockOAuth.pollForCode(testDeviceCode)).thenAnswer((_) async {
-          await Future<void>.delayed(const Duration(seconds: 1000));
+          await reply.future;
           return PollResult.error(
             'expired',
             failure: KeycastAuthFailure.expiredVerification,
@@ -2138,6 +2191,7 @@ void main() {
         });
 
         fakeAsync((fake) {
+          reply = Completer<void>();
           final cubit = buildCubit()
             ..startPolling(
               deviceCode: testDeviceCode,
@@ -2148,6 +2202,10 @@ void main() {
           fake.elapse(const Duration(seconds: 4));
           fake.elapse(const Duration(minutes: 15));
           expect(cubit.state.status, EmailVerificationStatus.pollingTimedOut);
+
+          reply.complete();
+
+          fake.flushMicrotasks();
 
           fake.elapse(const Duration(minutes: 10));
 

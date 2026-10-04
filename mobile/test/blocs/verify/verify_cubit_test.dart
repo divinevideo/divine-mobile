@@ -225,7 +225,7 @@ void main() {
           final cubit = build();
 
           final load = cubit.load();
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           await cubit.close();
           claims.complete(
             const IdentityClaimStatus(
@@ -396,7 +396,7 @@ void main() {
         await cubit.load();
 
         final remove = cubit.removeClaim(_twitter);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         await cubit.close();
         removed.complete(const []);
 

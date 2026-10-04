@@ -328,7 +328,7 @@ void main() {
         await cubit.load();
 
         final first = cubit.checkStagingTrack();
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         var secondDone = false;
         final second = cubit.checkStagingTrack().whenComplete(() {
           secondDone = true;

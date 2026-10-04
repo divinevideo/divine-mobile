@@ -43,7 +43,7 @@ void main() {
       final cubit = AvatarSvgCubit(repository: repository, url: url);
 
       final load = cubit.load();
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       expect(cubit.state.status, AvatarSvgStatus.loading);
 
       await cubit.close();

@@ -1614,7 +1614,7 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const ShareSheetSaveRequested());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(const ShareSheetSaveRequested());
         },
         expect: () => [
@@ -1660,12 +1660,12 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const ShareSheetSaveRequested());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           // Still reconciling. The sheet is showing the pending affordance and
           // this second tap must not start another reconcile-and-publish of a
           // replaceable list.
           bloc.add(const ShareSheetSaveRequested());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           saveGate.complete(
             const BookmarkToggleResult(
               succeeded: true,
@@ -1704,7 +1704,7 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const ShareSheetSaveRequested());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           await bloc.close();
           saveGate.complete(
             const BookmarkToggleResult(
@@ -1713,7 +1713,7 @@ void main() {
               isBookmarked: true,
             ),
           );
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         },
         expect: () => [savePending],
       );
@@ -2250,9 +2250,9 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const ShareSheetBookmarkStatusRequested());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(const ShareSheetSaveRequested());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bookmarkStatusSyncCompleter.complete(true);
         },
         expect: () => [

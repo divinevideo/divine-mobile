@@ -458,7 +458,7 @@ void main() {
           () => blocklistRepository.runtimeBlockedUsers,
         ).thenReturn({'newly_blocked'});
         blocklistStream.add(ContentPolicyState.empty());
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
       },
       // Sequence: initial state → loading → ready → stream tick refresh.
       expect: () => [

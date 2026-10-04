@@ -316,22 +316,19 @@ void main() {
         expect(cubit.state.detectionStatus, ChromaKeyDetectionStatus.detecting);
       });
 
+      late Completer<ChromaKeyDetection> detection;
+
       blocTest<ChromaKeyEditorCubit, ChromaKeyEditorState>(
         'ignores a second request while one is in flight',
-        build: () => build(
-          detect: (_) async {
-            await Future<void>.delayed(const Duration(milliseconds: 20));
-            return const ChromaKeyDetection(
-              color: Color(0xFF19A55B),
-              similarity: 0.1,
-              coverage: 0.8,
-              spread: 0.02,
-            );
-          },
-        ),
+        build: () {
+          detection = Completer<ChromaKeyDetection>();
+          return build(detect: (_) => detection.future);
+        },
         act: (cubit) async {
           final first = cubit.detectFromFootage();
           await cubit.detectFromFootage();
+          expect(detection.isCompleted, isFalse);
+          detection.complete(measured);
           await first;
         },
         // detecting, then the single result — a second `detecting` emission

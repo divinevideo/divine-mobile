@@ -298,7 +298,7 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(OthersFollowingListLoadRequested(validPubkey('target1')));
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(OthersFollowingListLoadRequested(validPubkey('target2')));
         },
         verify: (bloc) {
@@ -411,7 +411,7 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(OthersFollowingListLoadRequested(validPubkey('target')));
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           when(
             () => mockBlocklistRepository.isBlocked(validPubkey('toBlock')),
           ).thenReturn(true);

@@ -157,7 +157,7 @@ void main() {
       );
     }
 
-    Future<void> flush() => Future<void>.delayed(Duration.zero);
+    Future<void> flush() => pumpEventQueue();
 
     group('requestPermissionAndStart', () {
       test('starts recording when permission is already granted', () async {

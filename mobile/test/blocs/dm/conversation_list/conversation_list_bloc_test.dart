@@ -8,6 +8,7 @@ import 'dart:async';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:dm_repository/dm_repository.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
@@ -604,75 +605,80 @@ void main() {
     test(
       'coalesces a burst of conversation writes into a single recompute '
       '(debounce)',
-      () async {
-        final acceptedController =
-            StreamController<List<DmConversation>>.broadcast();
-        addTearDown(acceptedController.close);
-        when(
-          () => mockDmRepository.watchAcceptedConversations(
-            limit: any(named: 'limit'),
-          ),
-        ).thenAnswer((_) => acceptedController.stream);
-        // combineLatest5 needs every source to emit at least once; potential
-        // emits a single empty value (the others use startWith in the bloc).
-        when(
-          () => mockDmRepository.watchPotentialRequests(),
-        ).thenAnswer((_) => Stream.value(const <DmConversation>[]));
-        when(
-          () => mockDmRepository.historyRecoveryStream,
-        ).thenAnswer((_) => const Stream<bool>.empty());
-        when(() => mockDmRepository.isRecoveringHistory).thenReturn(false);
+      () {
+        fakeAsync((clock) {
+          final acceptedController =
+              StreamController<List<DmConversation>>.broadcast();
 
-        // filterBlockedConversations runs once per `onData` pass (inbox +
-        // requests = 2 calls), so it doubles as a recompute counter.
-        var filterCalls = 0;
-        final blocklist = _MockContentBlocklistRepository();
-        when(
-          () => blocklist.runtimeBlockedUsers,
-        ).thenReturn(const <String>{});
-        when(
-          () => blocklist.filterBlockedConversations(
-            any(),
-            userPubkey: any(named: 'userPubkey'),
-          ),
-        ).thenAnswer((inv) {
-          filterCalls++;
-          return inv.positionalArguments.first as List<DmConversation>;
+          when(
+            () => mockDmRepository.watchAcceptedConversations(
+              limit: any(named: 'limit'),
+            ),
+          ).thenAnswer((_) => acceptedController.stream);
+          // combineLatest5 needs every source to emit at least once; potential
+          // emits a single empty value (the others use startWith in the bloc).
+          when(
+            () => mockDmRepository.watchPotentialRequests(),
+          ).thenAnswer((_) => Stream.value(const <DmConversation>[]));
+          when(
+            () => mockDmRepository.historyRecoveryStream,
+          ).thenAnswer((_) => const Stream<bool>.empty());
+          when(() => mockDmRepository.isRecoveringHistory).thenReturn(false);
+
+          // filterBlockedConversations runs once per `onData` pass (inbox +
+          // requests = 2 calls), so it doubles as a recompute counter.
+          var filterCalls = 0;
+          final blocklist = _MockContentBlocklistRepository();
+          when(
+            () => blocklist.runtimeBlockedUsers,
+          ).thenReturn(const <String>{});
+          when(
+            () => blocklist.filterBlockedConversations(
+              any(),
+              userPubkey: any(named: 'userPubkey'),
+            ),
+          ).thenAnswer((inv) {
+            filterCalls++;
+            return inv.positionalArguments.first as List<DmConversation>;
+          });
+
+          final bloc = ConversationListBloc(
+            dmRepository: mockDmRepository,
+            followRepository: mockFollowRepository,
+            contentBlocklistRepository: blocklist,
+            recomputeDebounce: const Duration(milliseconds: 100),
+          )..add(const ConversationListStarted());
+
+          // Let _onStarted subscribe to the (broadcast) streams before the burst,
+          // otherwise events emitted pre-subscription are dropped.
+          clock.flushMicrotasks();
+
+          final convos = [
+            _createConversation(
+              id: _testConversationId1,
+              isRead: false,
+              currentUserHasSent: true,
+            ),
+          ];
+          // Five rapid accepted-list updates inside the debounce window.
+          for (var i = 0; i < 5; i++) {
+            acceptedController.add(convos);
+          }
+
+          // Still inside the window: the expensive pass has not run yet.
+          clock.elapse(const Duration(milliseconds: 99));
+          expect(filterCalls, equals(0));
+
+          // After the window settles: exactly one recompute (inbox + requests
+          // filtered once each) for the whole burst, not two per write.
+          clock.elapse(const Duration(milliseconds: 1));
+          clock.flushMicrotasks();
+          expect(filterCalls, equals(2));
+          expect(bloc.state.status, equals(ConversationListStatus.loaded));
+          unawaited(bloc.close());
+          unawaited(acceptedController.close());
+          clock.flushMicrotasks();
         });
-
-        final bloc = ConversationListBloc(
-          dmRepository: mockDmRepository,
-          followRepository: mockFollowRepository,
-          contentBlocklistRepository: blocklist,
-          recomputeDebounce: const Duration(milliseconds: 100),
-        )..add(const ConversationListStarted());
-        addTearDown(bloc.close);
-
-        // Let _onStarted subscribe to the (broadcast) streams before the burst,
-        // otherwise events emitted pre-subscription are dropped.
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-
-        final convos = [
-          _createConversation(
-            id: _testConversationId1,
-            isRead: false,
-            currentUserHasSent: true,
-          ),
-        ];
-        // Five rapid accepted-list updates inside the debounce window.
-        for (var i = 0; i < 5; i++) {
-          acceptedController.add(convos);
-        }
-
-        // Still inside the window: the expensive pass has not run yet.
-        await Future<void>.delayed(const Duration(milliseconds: 20));
-        expect(filterCalls, equals(0));
-
-        // After the window settles: exactly one recompute (inbox + requests
-        // filtered once each) for the whole burst, not two per write.
-        await Future<void>.delayed(const Duration(milliseconds: 150));
-        expect(filterCalls, equals(2));
-        expect(bloc.state.status, equals(ConversationListStatus.loaded));
       },
     );
 
@@ -1081,10 +1087,11 @@ void main() {
 
     group('event transformers', () {
       group('droppable() on $ConversationListMarkRead', () {
+        late Completer<void> markRead;
         blocTest<ConversationListBloc, ConversationListState>(
           'drops additional mark-read events while one is processing',
           setUp: () {
-            final completer = Completer<void>();
+            markRead = Completer<void>();
             var callCount = 0;
             when(
               () => mockDmRepository.markConversationAsRead(any()),
@@ -1092,32 +1099,26 @@ void main() {
               callCount++;
               if (callCount == 1) {
                 // First call is slow
-                return completer.future;
+                return markRead.future;
               }
               // Subsequent calls would complete instantly, but should be
               // dropped by the droppable() transformer.
               return Future.value();
             });
-
-            // Complete the first call after some time
-            final completion =
-                Future<void>.delayed(
-                  const Duration(milliseconds: 50),
-                ).then((_) {
-                  completer.complete();
-                });
-            addTearDown(() => completion);
           },
           build: createBloc,
-          act: (bloc) {
+          act: (bloc) async {
             // Fire three mark-read events rapidly; the second and third
             // should be dropped while the first is still processing.
             bloc
               ..add(const ConversationListMarkRead(_testConversationId1))
               ..add(const ConversationListMarkRead(_testConversationId1))
               ..add(const ConversationListMarkRead(_testConversationId1));
+            await pumpEventQueue();
+            expect(markRead.isCompleted, isFalse);
+            markRead.complete();
+            await pumpEventQueue();
           },
-          wait: const Duration(milliseconds: 150),
           expect: () => const <ConversationListState>[],
           verify: (_) {
             // Only the first call should have been processed; the rest
@@ -1140,7 +1141,7 @@ void main() {
           act: (bloc) async {
             bloc.add(const ConversationListMarkRead(_testConversationId1));
             // Wait for the first to complete before adding the second
-            await Future<void>.delayed(const Duration(milliseconds: 30));
+            await pumpEventQueue();
             bloc.add(const ConversationListMarkRead(_testConversationId2));
           },
           wait: const Duration(milliseconds: 100),
@@ -1449,10 +1450,13 @@ void main() {
           },
         );
 
+        late StreamController<bool> recoveryController;
+
         blocTest<ConversationListBloc, ConversationListState>(
           'applies the request split once history recovery completes',
           setUp: () {
-            final recoveryController = StreamController<bool>();
+            recoveryController = StreamController<bool>();
+            addTearDown(recoveryController.close);
             when(
               () => mockFollowRepository.isFollowing(any()),
             ).thenReturn(false);
@@ -1468,22 +1472,23 @@ void main() {
               isRecovering: true,
               recoveryStream: recoveryController.stream,
             );
-            // Recovery completes: flip the flag, then signal via the recovery
-            // stream so the combined stream re-fires and re-classifies.
-            final recovery =
-                Future<void>.delayed(
-                  const Duration(milliseconds: 50),
-                ).then((_) {
-                  when(
-                    () => mockDmRepository.hasCompletedHistoryRecoveryBefore,
-                  ).thenReturn(true);
-                  recoveryController.add(false);
-                });
-            addTearDown(() => recovery);
           },
           build: createBloc,
-          act: (bloc) => bloc.add(const ConversationListStarted()),
-          wait: const Duration(milliseconds: 200),
+          act: (bloc) async {
+            final withheld = bloc.stream.firstWhere(
+              (s) => s.status == ConversationListStatus.loaded,
+            );
+            bloc.add(const ConversationListStarted());
+            await withheld;
+            expect(bloc.state.requestsWithheld, isTrue);
+            final split = bloc.stream.firstWhere(
+              (s) => s.requestConversations.length == 1,
+            );
+            when(() => mockDmRepository.hasCompletedHistoryRecoveryBefore)
+                .thenReturn(true);
+            recoveryController.add(false);
+            await split;
+          },
           verify: (bloc) {
             // After recovery completes, the unfollowed/never-replied chat is
             // correctly classified as a request.
@@ -1565,8 +1570,11 @@ void main() {
           },
           build: createBloc,
           act: (bloc) async {
+            final loaded = bloc.stream.firstWhere(
+              (s) => s.status == ConversationListStatus.loaded,
+            );
             bloc.add(const ConversationListStarted());
-            await Future<void>.delayed(const Duration(milliseconds: 250));
+            await loaded;
             // The drain succeeded this time.
             when(
               () => mockDmRepository.hasCompletedHistoryRecoveryBefore,
@@ -2931,29 +2939,37 @@ void main() {
 
     test(
       'single-character search does not fan out profile resolution',
-      () async {
-        _stubStreams(mockDmRepository, accepted: conversations());
-        final bloc = createBloc();
-        addTearDown(bloc.close);
-        await load(bloc);
+      () {
+        fakeAsync((clock) {
+          _stubStreams(mockDmRepository, accepted: conversations());
+          final bloc = createBloc();
 
-        bloc.add(const ConversationListSearchQueryChanged('p'));
-        await Future<void>.delayed(const Duration(milliseconds: 350));
+          bloc.add(const ConversationListStarted());
+          clock.flushMicrotasks();
+          clock.elapse(Duration.zero);
+          expect(bloc.state.status, ConversationListStatus.loaded);
 
-        expect(
-          bloc.state.searchQuery,
-          isEmpty,
-          reason: 'inbox search follows the shared minSearchQueryLength gate',
-        );
-        expect(
-          bloc.state.visibleConversations.map((c) => c.id).toList(),
-          equals(['pizza', 'alice']),
-        );
-        verifyNever(
-          () => mockProfileRepository.fetchBatchProfiles(
-            pubkeys: any(named: 'pubkeys'),
-          ),
-        );
+          bloc.add(const ConversationListSearchQueryChanged('p'));
+          clock.elapse(const Duration(milliseconds: 300));
+          clock.flushMicrotasks();
+
+          expect(
+            bloc.state.searchQuery,
+            isEmpty,
+            reason: 'inbox search follows the shared minSearchQueryLength gate',
+          );
+          expect(
+            bloc.state.visibleConversations.map((c) => c.id).toList(),
+            equals(['pizza', 'alice']),
+          );
+          verifyNever(
+            () => mockProfileRepository.fetchBatchProfiles(
+              pubkeys: any(named: 'pubkeys'),
+            ),
+          );
+          unawaited(bloc.close());
+          clock.flushMicrotasks();
+        });
       },
     );
 
@@ -3036,7 +3052,7 @@ void main() {
       bloc.add(
         ConversationListProfileRepositoryChanged(mockProfileRepository),
       );
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(
         emitted,

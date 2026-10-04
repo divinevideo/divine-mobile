@@ -327,25 +327,30 @@ void main() {
       });
     });
 
-    test('close cancels polling so no further client calls fire', () async {
-      when(
-        () =>
-            client.createCrossposts(eventId: eventId, platforms: ['instagram']),
-      ).thenAnswer((_) async => [queuedJob]);
-      when(
-        () => client.getCrossposts(eventId: eventId),
-      ).thenAnswer((_) async => [queuedJob]);
+    test('close cancels polling so no further client calls fire', () {
+      fakeAsync((clock) {
+        when(
+          () => client.createCrossposts(
+            eventId: eventId,
+            platforms: ['instagram'],
+          ),
+        ).thenAnswer((_) async => [queuedJob]);
+        when(
+          () => client.getCrossposts(eventId: eventId),
+        ).thenAnswer((_) async => [queuedJob]);
 
-      final cubit = buildCubit(
-        initialConnections: [instagramConnection],
-        pollInterval: const Duration(milliseconds: 50),
-      );
-      await cubit.submit();
-      await cubit.close();
+        final cubit = buildCubit(
+          initialConnections: [instagramConnection],
+          pollInterval: const Duration(milliseconds: 50),
+        );
+        unawaited(cubit.submit());
+        clock.flushMicrotasks();
+        unawaited(cubit.close());
+        clock.flushMicrotasks();
+        clock.elapse(const Duration(milliseconds: 150));
 
-      await Future<void>.delayed(const Duration(milliseconds: 150));
-
-      verifyNever(() => client.getCrossposts(eventId: eventId));
+        verifyNever(() => client.getCrossposts(eventId: eventId));
+      });
     });
   });
 }
