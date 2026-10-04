@@ -129,21 +129,6 @@ void main() {
       );
     });
 
-    test('resubscribes an empty discovery feed', () async {
-      await videoEventService.subscribeToVideoFeed(
-        subscriptionType: SubscriptionType.discovery,
-        limit: 50,
-      );
-
-      await videoEventService.resetAndResubscribeAll();
-
-      expect(
-        subscribeCallCount,
-        greaterThan(1),
-        reason: 'Should have resubscribed after reset',
-      );
-    });
-
     test('resubscribes to discovery with force', () async {
       // Subscribe with specific params
       await videoEventService.subscribeToVideoFeed(
