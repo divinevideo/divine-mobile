@@ -820,7 +820,7 @@ class CuratedListService extends ChangeNotifier {
       if (_authService.isAuthenticated &&
           !await _publishListToNostr(updatedList, confirmed: true)) {
         if (!visibilityChanged) {
-          final currentIndex = _listIndex(listId);
+          final currentIndex = _listIndex(list.authorScopedId);
           if (currentIndex != -1) {
             _lists[currentIndex] = _lists[currentIndex].copyWith(
               pendingRepublish: true,
