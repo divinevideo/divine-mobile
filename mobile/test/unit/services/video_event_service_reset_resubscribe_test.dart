@@ -94,7 +94,6 @@ void main() {
         subscriptionType: SubscriptionType.discovery,
         limit: 50,
       );
-      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       // Add a mock video event to the stream
       final event = createVideoEvent(
@@ -106,7 +105,7 @@ void main() {
       );
 
       eventStreamController.add(event);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
 
       // Verify we have videos before reset
       expect(videoEventService.discoveryVideos, isNotEmpty);
@@ -114,7 +113,6 @@ void main() {
 
       // Reset and resubscribe
       await videoEventService.resetAndResubscribeAll();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       // After reset, existing events should be PRESERVED (not cleared)
       // This avoids jarring UX when relay set changes during normal operation
@@ -130,23 +128,14 @@ void main() {
       );
     });
 
-    test('resubscribes without unnecessary notifications', () async {
+    test('resubscribes an empty discovery feed', () async {
       await videoEventService.subscribeToVideoFeed(
         subscriptionType: SubscriptionType.discovery,
         limit: 50,
       );
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-
-      var notificationCount = 0;
-      videoEventService.addListener(() => notificationCount++);
 
       await videoEventService.resetAndResubscribeAll();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
 
-      // With the new behavior that preserves events, there's no need
-      // for a "clearing" notification. Notifications happen when new
-      // events arrive from the resubscription, not during reset itself.
-      // This avoids jarring UX where the feed briefly shows as empty.
       expect(
         subscribeCallCount,
         greaterThan(1),
@@ -160,12 +149,10 @@ void main() {
         subscriptionType: SubscriptionType.discovery,
         limit: 75,
       );
-      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       final callsBefore = subscribeCallCount;
 
       await videoEventService.resetAndResubscribeAll();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       // Should have created new subscription after the reset
       expect(
@@ -183,12 +170,10 @@ void main() {
 
       // Subscribe to home feed with authors
       await videoEventService.subscribeToHomeFeed(authors);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       final callsBefore = subscribeCallCount;
 
       await videoEventService.resetAndResubscribeAll();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       // Should have created new subscriptions for home feed after reset
       expect(
@@ -203,7 +188,6 @@ void main() {
         subscriptionType: SubscriptionType.discovery,
         limit: 50,
       );
-      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       final callsBefore = subscribeCallCount;
       // A counter that never moved would make the final assertion compare
@@ -265,7 +249,6 @@ void main() {
         hashtags: ['flutter'],
         limit: 50,
       );
-      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       final callsBefore = subscribeCallCount;
       expect(
@@ -275,7 +258,6 @@ void main() {
       );
 
       await videoEventService.resetAndResubscribeAll();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       // No new subscriptions since only hashtag was active (ephemeral)
       expect(
@@ -292,13 +274,11 @@ void main() {
         sortBy: VideoSortField.loopCount,
         nip50Sort: NIP50SortMode.hot,
       );
-      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       final callsBefore = subscribeCallCount;
 
       // Reset should re-use the stored params including sort fields
       await videoEventService.resetAndResubscribeAll();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       expect(
         subscribeCallCount,
@@ -320,12 +300,10 @@ void main() {
           limit: 50,
         );
         await videoEventService.subscribeToHomeFeed(authors);
-        await Future<void>.delayed(const Duration(milliseconds: 50));
 
         final callsBefore = subscribeCallCount;
 
         await videoEventService.resetAndResubscribeAll();
-        await Future<void>.delayed(const Duration(milliseconds: 50));
 
         // Should have at least 2 new subscribe calls (discovery + home feed)
         expect(

@@ -108,7 +108,7 @@ void main() {
 
       // Add first video to the stream
       eventStreamController.add(event1);
-      await Future.delayed(const Duration(milliseconds: 100));
+      await pumpEventQueue();
 
       // Verify first video is in the list
       final videosAfterFirst = videoEventService.getVideos(
@@ -129,7 +129,7 @@ void main() {
 
       // Add second video to the stream after refresh
       eventStreamController.add(event2);
-      await Future.delayed(const Duration(milliseconds: 100));
+      await pumpEventQueue();
 
       // Step 3: Verify BOTH videos are present (old video wasn't cleared)
       final videosAfterRefresh = videoEventService.getVideos(
@@ -182,7 +182,7 @@ void main() {
 
       // Add video
       eventStreamController.add(event1);
-      await Future.delayed(const Duration(milliseconds: 100));
+      await pumpEventQueue();
 
       // Step 2: Force refresh
       await videoEventService.subscribeToVideoFeed(
@@ -193,7 +193,7 @@ void main() {
 
       // Add same video again (simulating relay sending it again)
       eventStreamController.add(event1);
-      await Future.delayed(const Duration(milliseconds: 100));
+      await pumpEventQueue();
 
       // Step 3: Verify video appears only ONCE (deduplication working)
       final videos = videoEventService.getVideos(SubscriptionType.popularNow);

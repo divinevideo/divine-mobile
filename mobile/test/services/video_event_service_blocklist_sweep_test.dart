@@ -73,7 +73,7 @@ void main() {
       addTearDown(sub.cancel);
 
       await blocklistRepo.blockUser(author);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(emitted, containsAll(['v1', 'v2', 'v3']));
       expect(emitted.length, 3);
@@ -90,7 +90,7 @@ void main() {
       addTearDown(sub.cancel);
 
       await blocklistRepo.unblockUser(author);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(emitted, isEmpty);
     });
@@ -104,7 +104,7 @@ void main() {
         ]);
 
         await blocklistRepo.blockUser(author);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         // The session-tombstone set is reserved for irrevocable
         // user-initiated deletions. Unblocking should restore visibility,
@@ -119,7 +119,7 @@ void main() {
       addTearDown(sub.cancel);
 
       await blocklistRepo.blockUser('unknown-author');
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(emitted, isEmpty);
     });
@@ -130,14 +130,14 @@ void main() {
       service.debugSeedAuthorBucket(author, [_video(id: 'v1', pubkey: author)]);
 
       await blocklistRepo.blockUser(author);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       final emitted = <String>[];
       final sub = service.removedVideoIds.listen(emitted.add);
       addTearDown(sub.cancel);
 
       await blocklistRepo.blockUser(author); // already blocked → no-op
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(emitted, isEmpty);
     });
@@ -178,7 +178,7 @@ void main() {
       // Repo is still live; emit a Blocked. The cancelled subscription
       // means the bus does not see this event.
       await localRepo.blockUser(author);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(emitted, isEmpty);
     });
