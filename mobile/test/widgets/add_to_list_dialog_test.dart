@@ -70,6 +70,7 @@ void main() {
     });
 
     Widget buildSubject() => testProviderScope(
+      mockAuthService: createMockAuthService(currentPublicKeyHex: 'a' * 64),
       additionalOverrides: [
         curatedListsStateProvider.overrideWith(_FakeCuratedListsState.new),
       ],
@@ -286,7 +287,7 @@ void main() {
       final l10n = lookupAppLocalizations(const Locale('en'));
       expect(find.text(l10n.listPrivateFull), findsOneWidget);
       // Retrying cannot succeed, so the generic "try again" copy is wrong here.
-      expect(find.text(l10n.listUpdateFailed), findsNothing);
+      expect(find.text(l10n.listVideoNotAdded), findsNothing);
     });
 
     testWidgets('a failed add for any other reason stays generic', (
@@ -359,7 +360,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(SelectListDialog),
-          matching: find.text(l10n.listUpdateFailed),
+          matching: find.text(l10n.listVideoNotAdded),
         ),
         findsOneWidget,
       );
@@ -403,6 +404,7 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(
         testProviderScope(
+          mockAuthService: createMockAuthService(currentPublicKeyHex: 'a' * 64),
           additionalOverrides: [
             curatedListsStateProvider.overrideWith(_FakeCuratedListsState.new),
           ],
@@ -438,7 +440,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Underlying screen'), findsOneWidget);
-      expect(find.text(l10n.listUpdateFailed), findsOneWidget);
+      expect(find.text(l10n.listVideoNotAdded), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 

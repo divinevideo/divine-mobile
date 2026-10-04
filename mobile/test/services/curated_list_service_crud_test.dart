@@ -161,9 +161,12 @@ void main() {
           kind: any(named: 'kind'),
           content: any(named: 'content'),
           tags: any(named: 'tags'),
+          createdAt: any(named: 'createdAt'),
         ),
       ).thenAnswer((invocation) {
-        final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        final now =
+            invocation.namedArguments[#createdAt] as int? ??
+            DateTime.now().millisecondsSinceEpoch ~/ 1000;
         final kind = invocation.namedArguments[#kind] as int;
         final content = invocation.namedArguments[#content] as String;
         final tags = invocation.namedArguments[#tags] as List<List<String>>;
@@ -234,9 +237,12 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).thenAnswer((invocation) {
-          final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+          final now =
+              invocation.namedArguments[#createdAt] as int? ??
+              DateTime.now().millisecondsSinceEpoch ~/ 1000;
           final event = Event.fromJson({
             'id': sha256
                 .convert(
@@ -1268,6 +1274,7 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         );
       });
@@ -1310,6 +1317,7 @@ void main() {
             kind: 30005,
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).called(1);
         verify(() => mockNostr.publishEventAwaitOk(any())).called(1);
@@ -1383,6 +1391,7 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).thenAnswer((_) async => null);
 
@@ -1487,6 +1496,7 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         );
       });
@@ -1531,6 +1541,7 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         );
       });
@@ -1546,6 +1557,7 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         );
       });
@@ -1570,10 +1582,13 @@ void main() {
         expect(list1!.id, isNot(equals(list2!.id)));
       });
 
-      test('sets createdAt and updatedAt to same time', () async {
+      test('records the signed second in updatedAt on creation', () async {
         final list = await service.createList(name: 'Test List');
 
-        expect(list!.createdAt, list.updatedAt);
+        expect(
+          list!.createdAt.millisecondsSinceEpoch ~/ 1000,
+          list.updatedAt.millisecondsSinceEpoch ~/ 1000,
+        );
       });
     });
 

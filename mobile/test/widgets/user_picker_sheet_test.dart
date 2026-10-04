@@ -148,6 +148,57 @@ void main() {
 
   group(UserPickerSheet, () {
     group('renders', () {
+      testWidgets(
+        'review9746 stored nonmutual collaborator must be removable',
+        (tester) async {
+          final former = UserProfile(
+            pubkey: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+            name: 'Former mutual',
+            rawData: const {'name': 'Former mutual'},
+            createdAt: DateTime(2026),
+            eventId: 'former-profile',
+          );
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                _noVanishedProfiles,
+                profileRepositoryProvider.overrideWithValue(
+                  _createMockProfileRepository(cachedProfiles: [former]),
+                ),
+                followRepositoryProvider.overrideWithValue(
+                  _createMockFollowRepository(),
+                ),
+                contentBlocklistRepositoryProvider.overrideWithValue(
+                  _createMockContentBlocklistRepository(),
+                ),
+              ],
+              child: MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(
+                  body: UserPickerSheet(
+                    title: 'Collaborators',
+                    filterMode: UserPickerFilterMode.mutualFollowsOnly,
+                    initialSelectedProfiles: [former],
+                    showSelectedProfiles: true,
+                    onUserToggled: (_) {},
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(
+            find.text('Former mutual'),
+            findsOneWidget,
+            reason: 'An existing collaborator remains revocable even after they cease to be a mutual follow',
+          );
+          await tester.tap(find.bySemanticsLabel('Remove Former mutual'));
+          await tester.pumpAndSettle();
+          expect(find.text('Former mutual'), findsNothing);
+        },
+      );
+
       testWidgets('header describes cancel and confirm actions', (
         tester,
       ) async {

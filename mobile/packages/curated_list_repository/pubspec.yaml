@@ -8,6 +8,7 @@ environment:
   sdk: ^3.11.0
 
 dependencies:
+  clock: ^1.1.2
   funnelcake_api_client:
   models:
   nostr_client:

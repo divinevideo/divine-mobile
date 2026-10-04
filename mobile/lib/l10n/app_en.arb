@@ -3172,7 +3172,7 @@
   },
   "listCreateNewList": "Create New List",
   "listNewPeopleList": "New people list",
-  "listNameLabel": "List name",
+  "listNameLabel": "List Name",
   "listDescriptionLabel": "Description (optional)",
   "listPrivateListSubtitle": "Videos stay private. Name, description, tags, and cover stay visible.",
   "listVisibilityPublic": "Public",
@@ -9552,5 +9552,21 @@
   "listEditTitle": "Edit list",
   "listAddCollaboratorTitle": "Add a collaborator",
   "listCollaboratorSearchHint": "Search Divine...",
-  "listCollaboratorsNone": "None"
+  "listCollaboratorsNone": "None",
+  "listPrivateCollaboratorsWarning": "Making this list private also removes its collaborators. Only you will be able to add videos.",
+  "@listVideoPendingSync": {
+    "description": "Video added locally to a newly created list but publication has not succeeded."
+  },
+  "listVideoPendingSync": "Your list and video are saved here. The video is waiting to sync.",
+  "@listPrivateCollaboratorsWarning": {
+    "description": "Confirmation explains that making a list private revokes its collaborators."
+  },
+  "@listRetrySync": {
+    "description": "Retry publishing the saved list without adding or removing videos."
+  },
+  "listVideoNotAdded": "Your list was created, but this video wasn't added.",
+  "@listVideoNotAdded": {
+    "description": "A newly created list exists but could not accept the requested video."
+  },
+  "listRetrySync": "Sync now"
 }
