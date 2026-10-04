@@ -88,6 +88,7 @@ profileSetupBioLabel	e2e/maestro/asserts/assertEditProfileModal.yaml	bound:Bio (
 profileSetupBioLabel	e2e/maestro/asserts/assertEditYourProfile.yaml	bound:Bio (Optional)
 profileSetupDisplayNameLabel	e2e/maestro/asserts/assertEditProfileModal.yaml	bound:Display Name
 profileSetupDisplayNameLabel	e2e/maestro/asserts/assertEditYourProfile.yaml	bound:Display Name
+profileSetupDisplayNameLabel	e2e/maestro/tests/localUsername.yaml	bound:Display Name
 profileSetupEditProfileTitle	e2e/maestro/asserts/assertEditProfileModal.yaml	bound:Edit Profile
 profileSetupEditProfileTitle	e2e/maestro/asserts/assertEditYourProfile.yaml	bound:Edit Profile
 profileSetupSaveButton	e2e/maestro/tests/localUsername.yaml	bound:Save

@@ -6,6 +6,8 @@ tags:
 # Run only via local_stack/test_username_ui.sh, which builds DEFAULT_ENV=LOCAL
 # and seeds localtaken in the local registry before installing the app.
 - assertTrue: ${typeof LOCAL_USERNAME !== 'undefined' && LOCAL_USERNAME !== ''}
+# These are local registry fixtures, not product copy.
+- evalScript: ${output.reservedUsername = 'admin'; output.takenUsername = 'localtaken'}
 - launchApp:
     clearState: true
 - extendedWaitUntil:
@@ -30,22 +32,33 @@ tags:
     timeout: 30000
 - tapOn:
     id: edit_profile_button
+- tapOn: Display Name
+- inputText: Local username tester
 - tapOn: Username (Optional)
-- inputText: admin
-- extendedWaitUntil:
-    visible: Username is reserved
+- inputText: ${output.reservedUsername}
+- scrollUntilVisible:
+    element: Username is reserved
+    direction: DOWN
     timeout: 15000
+- assertVisible: Username is reserved
 - eraseText
-- inputText: localtaken
-- extendedWaitUntil:
-    visible: Username already taken
+- inputText: ${output.takenUsername}
+- scrollUntilVisible:
+    element: Username already taken
+    direction: DOWN
     timeout: 15000
+- assertVisible: Username already taken
 - eraseText
 - inputText: ${LOCAL_USERNAME}
-- extendedWaitUntil:
-    visible: Username available!
+- scrollUntilVisible:
+    element: Username available!
+    direction: DOWN
     timeout: 15000
+- assertVisible: Username available!
 - hideKeyboard
+- scrollUntilVisible:
+    element: Save
+    direction: DOWN
 - tapOn: Save
 - extendedWaitUntil:
     visible:
