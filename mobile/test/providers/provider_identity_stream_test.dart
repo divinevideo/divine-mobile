@@ -1,6 +1,8 @@
 // ABOUTME: Pins the seeded-replay contract of identityStreamOf (#6480) — the
 // ABOUTME: behaviour app-shell blocs rely on to re-point captured dependencies.
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/providers/provider_identity_stream.dart';
@@ -22,13 +24,14 @@ void main() {
       final source = Provider<_Dep>((ref) => _Dep('first'));
       final stream = identityStreamOf(source);
       container = ProviderContainer();
-      addTearDown(container.dispose);
+
+      final identityStream = container.read(stream);
 
       // Subscribe well after the provider was created — a plain broadcast
       // controller would have dropped the seed here.
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
-      final first = await container.read(stream).first;
+      final first = await identityStream.first;
       expect(first.label, equals('first'));
     });
 
@@ -37,18 +40,17 @@ void main() {
       final source = Provider<_Dep>((ref) => _Dep(label));
       final stream = identityStreamOf(source);
       container = ProviderContainer();
-      addTearDown(container.dispose);
 
       final seen = <String>[];
       final subscription = container.read(stream).listen((d) {
         seen.add(d.label);
       });
       addTearDown(subscription.cancel);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       label = 'second';
       container.invalidate(source);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(seen, equals(['first', 'second']));
     });
@@ -60,18 +62,17 @@ void main() {
         final source = Provider<_Dep>((ref) => stable);
         final stream = identityStreamOf(source);
         container = ProviderContainer();
-        addTearDown(container.dispose);
 
         final seen = <String>[];
         final subscription = container.read(stream).listen((d) {
           seen.add(d.label);
         });
         addTearDown(subscription.cancel);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         container.invalidate(source);
         container.read(source);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         // Seed only. Riverpod compares with `==`, which for an identity-only
         // class is identity, so re-yielding the same instance is not a change.
@@ -86,25 +87,24 @@ void main() {
         final source = Provider<_Dep>((ref) => _Dep(label));
         final stream = identityStreamOf(source);
         container = ProviderContainer();
-        addTearDown(container.dispose);
 
         final early = <String>[];
         final earlySub = container
             .read(stream)
             .listen((d) => early.add(d.label));
         addTearDown(earlySub.cancel);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         label = 'second';
         container.invalidate(source);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         final late_ = <String>[];
         final lateSub = container
             .read(stream)
             .listen((d) => late_.add(d.label));
         addTearDown(lateSub.cancel);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(early, equals(['first', 'second']));
         expect(late_, equals(['second']));
@@ -116,17 +116,15 @@ void main() {
       final stream = identityStreamOf(source);
       final localContainer = ProviderContainer();
 
-      var done = false;
+      final closed = Completer<void>();
       final subscription = localContainer
           .read(stream)
-          .listen((_) {}, onDone: () => done = true);
+          .listen((_) {}, onDone: closed.complete);
       addTearDown(subscription.cancel);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       localContainer.dispose();
-      await Future<void>.delayed(Duration.zero);
-
-      expect(done, isTrue);
+      await closed.future;
       container = ProviderContainer();
     });
   });

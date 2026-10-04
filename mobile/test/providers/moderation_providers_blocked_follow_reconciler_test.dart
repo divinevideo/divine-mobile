@@ -68,6 +68,7 @@ void main() {
     ).thenAnswer((_) async {});
 
     blocklistRepository = ContentBlocklistRepository(prefs: prefs);
+    addTearDown(blocklistRepository.dispose);
     // Adopting the identity is what scopes the persisted blocks to an
     // account; blockedPubkeysForAccount withholds everything until it runs.
     await blocklistRepository.syncMuteListsInBackground(nostrClient, ourPubkey);
@@ -103,7 +104,7 @@ void main() {
       container.read(blockedFollowReconcilerProvider);
 
       await blocklistRepository.blockUser(blockedFollow, ourPubkey: ourPubkey);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       verify(() => followRepository.republishContactList()).called(1);
     });
@@ -119,7 +120,7 @@ void main() {
           blockedFollow,
           ourPubkey: ourPubkey,
         );
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         verifyNever(() => followRepository.republishContactList());
       },
@@ -134,12 +135,12 @@ void main() {
       container.read(blockedFollowReconcilerProvider);
 
       await blocklistRepository.blockUser(blockedFollow, ourPubkey: ourPubkey);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       verifyNever(() => followRepository.republishContactList());
 
       followingPubkeys = <String>[blockedFollow, otherFollow];
       followingController.add(followingPubkeys);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       verify(() => followRepository.republishContactList()).called(1);
     });
@@ -153,12 +154,12 @@ void main() {
       container.read(blockedFollowReconcilerProvider);
 
       await blocklistRepository.blockUser(blockedFollow, ourPubkey: ourPubkey);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       followingController.add(followingPubkeys);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       followingController.add(followingPubkeys);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       verify(() => followRepository.republishContactList()).called(1);
     });
@@ -172,13 +173,13 @@ void main() {
         () => followRepository.republishContactList(),
       ).thenThrow(Exception('relay unreachable'));
       await blocklistRepository.blockUser(blockedFollow, ourPubkey: ourPubkey);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       when(
         () => followRepository.republishContactList(),
       ).thenAnswer((_) async {});
       followingController.add(followingPubkeys);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       verify(() => followRepository.republishContactList()).called(2);
     });
@@ -193,9 +194,9 @@ void main() {
       container.read(blockedFollowReconcilerProvider);
 
       await blocklistRepository.blockUser(blockedFollow, ourPubkey: ourPubkey);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       followingController.add(followingPubkeys);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       verifyNever(() => followRepository.republishContactList());
     });
@@ -212,9 +213,9 @@ void main() {
       container.read(blockedFollowReconcilerProvider);
 
       await blocklistRepository.blockUser(blockedFollow, ourPubkey: ourPubkey);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       followingController.add(followingPubkeys);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       verifyNever(() => followRepository.republishContactList());
     });
@@ -236,7 +237,7 @@ void main() {
 
         when(() => followRepository.isInitialized).thenAnswer((_) => true);
         initializedCompleter.complete();
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         verify(() => followRepository.republishContactList()).called(1);
       },
@@ -250,10 +251,10 @@ void main() {
       container.read(blockedFollowReconcilerProvider);
 
       await blocklistRepository.blockUser(blockedFollow, ourPubkey: ourPubkey);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       await blocklistRepository.unblockUser(blockedFollow);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       verify(() => followRepository.republishContactList()).called(1);
     });
@@ -267,11 +268,11 @@ void main() {
       container.read(blockedFollowReconcilerProvider);
 
       await blocklistRepository.blockUser(blockedFollow, ourPubkey: ourPubkey);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       await blocklistRepository.unblockUser(blockedFollow);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       await blocklistRepository.blockUser(blockedFollow, ourPubkey: ourPubkey);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       verify(() => followRepository.republishContactList()).called(2);
     });

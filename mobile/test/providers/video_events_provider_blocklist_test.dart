@@ -4,6 +4,7 @@
 import 'dart:ui';
 
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -105,167 +106,175 @@ void main() {
       container.dispose();
     });
 
-    test('filters blocked users from initial discovery emission', () async {
-      // Service returns videos including a blocked user
-      final videos = [
-        createTestVideo('v1', pubkey: allowedPubkey),
-        createTestVideo('v2', pubkey: blockedPubkey),
-        createTestVideo('v3', pubkey: allowedPubkey),
-      ];
-      when(() => mockVideoEventService.discoveryVideos).thenReturn(videos);
+    test('filters blocked users from initial discovery emission', () {
+      fakeAsync((async) {
+        // Service returns videos including a blocked user
+        final videos = [
+          createTestVideo('v1', pubkey: allowedPubkey),
+          createTestVideo('v2', pubkey: blockedPubkey),
+          createTestVideo('v3', pubkey: allowedPubkey),
+        ];
+        when(() => mockVideoEventService.discoveryVideos).thenReturn(videos);
 
-      container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-          videoEventServiceProvider.overrideWithValue(mockVideoEventService),
-          contentBlocklistRepositoryProvider.overrideWithValue(
-            mockBlocklistRepository,
-          ),
-          appReadyProvider.overrideWith((ref) => true),
-          isDiscoveryTabActiveProvider.overrideWith((ref) => true),
-          isExploreTabActiveProvider.overrideWith((ref) => false),
-        ],
-      );
+        container = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+            videoEventServiceProvider.overrideWithValue(mockVideoEventService),
+            contentBlocklistRepositoryProvider.overrideWithValue(
+              mockBlocklistRepository,
+            ),
+            appReadyProvider.overrideWith((ref) => true),
+            isDiscoveryTabActiveProvider.overrideWith((ref) => true),
+            isExploreTabActiveProvider.overrideWith((ref) => false),
+          ],
+        );
 
-      final emissions = <List<VideoEvent>>[];
-      container.listen(videoEventsProvider, (prev, next) {
-        next.whenData(emissions.add);
+        final emissions = <List<VideoEvent>>[];
+        container.listen(videoEventsProvider, (prev, next) {
+          next.whenData(emissions.add);
+        });
+
+        // Give time for the Future.microtask in _startSubscription to fire
+        async.flushMicrotasks();
+
+        // Verify shouldFilterFromFeeds was called for each video
+        verify(
+          () => mockBlocklistRepository.shouldFilterFromFeeds(blockedPubkey),
+        ).called(greaterThanOrEqualTo(1));
+        verify(
+          () => mockBlocklistRepository.shouldFilterFromFeeds(allowedPubkey),
+        ).called(greaterThanOrEqualTo(1));
+
+        expect(emissions, isNotEmpty);
+        expect(emissions.last.map((video) => video.id), ['v1', 'v3']);
+        container.dispose();
+        async.flushMicrotasks();
       });
-
-      // Give time for the Future.microtask in _startSubscription to fire
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
-
-      // Verify shouldFilterFromFeeds was called for each video
-      verify(
-        () => mockBlocklistRepository.shouldFilterFromFeeds(blockedPubkey),
-      ).called(greaterThanOrEqualTo(1));
-      verify(
-        () => mockBlocklistRepository.shouldFilterFromFeeds(allowedPubkey),
-      ).called(greaterThanOrEqualTo(1));
-
-      expect(emissions, isNotEmpty);
-      expect(emissions.last.map((video) => video.id), ['v1', 'v3']);
     });
 
-    test('filters blocked users from change-triggered emission', () async {
-      // Start with empty discovery
-      when(() => mockVideoEventService.discoveryVideos).thenReturn([]);
+    test('filters blocked users from change-triggered emission', () {
+      fakeAsync((async) {
+        // Start with empty discovery
+        when(() => mockVideoEventService.discoveryVideos).thenReturn([]);
 
-      // Capture the listener callback
-      VoidCallback? capturedListener;
-      when(() => mockVideoEventService.addListener(any())).thenAnswer((inv) {
-        capturedListener = inv.positionalArguments[0] as VoidCallback;
+        // Capture the listener callback
+        VoidCallback? capturedListener;
+        when(() => mockVideoEventService.addListener(any())).thenAnswer((inv) {
+          capturedListener = inv.positionalArguments[0] as VoidCallback;
+        });
+
+        container = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+            videoEventServiceProvider.overrideWithValue(mockVideoEventService),
+            contentBlocklistRepositoryProvider.overrideWithValue(
+              mockBlocklistRepository,
+            ),
+            appReadyProvider.overrideWith((ref) => true),
+            isDiscoveryTabActiveProvider.overrideWith((ref) => true),
+            isExploreTabActiveProvider.overrideWith((ref) => false),
+          ],
+        );
+
+        // Listen to the stream for emissions
+        final emissions = <List<VideoEvent>>[];
+        container.listen(videoEventsProvider, (prev, next) {
+          next.whenData(emissions.add);
+        });
+
+        // Wait for initial build
+        async.flushMicrotasks();
+
+        // Now simulate new videos arriving (with a blocked user)
+        final newVideos = [
+          createTestVideo('v1', pubkey: allowedPubkey),
+          createTestVideo('v2', pubkey: blockedPubkey),
+          createTestVideo('v3', pubkey: allowedPubkey),
+        ];
+        when(() => mockVideoEventService.discoveryVideos).thenReturn(newVideos);
+
+        // Trigger the listener (simulating VideoEventService notifying)
+        expect(capturedListener, isNotNull, reason: 'Listener should be set');
+        capturedListener!();
+
+        // Wait for debounce timer (500ms in the provider)
+        async.elapse(const Duration(milliseconds: 500));
+        async.flushMicrotasks();
+
+        expect(emissions, isNotEmpty);
+        expect(emissions.last.map((video) => video.id), ['v1', 'v3']);
+
+        // Verify the blocklist was consulted during the change callback
+        verify(
+          () => mockBlocklistRepository.shouldFilterFromFeeds(blockedPubkey),
+        ).called(greaterThanOrEqualTo(1));
+        container.dispose();
+        async.flushMicrotasks();
       });
-
-      container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-          videoEventServiceProvider.overrideWithValue(mockVideoEventService),
-          contentBlocklistRepositoryProvider.overrideWithValue(
-            mockBlocklistRepository,
-          ),
-          appReadyProvider.overrideWith((ref) => true),
-          isDiscoveryTabActiveProvider.overrideWith((ref) => true),
-          isExploreTabActiveProvider.overrideWith((ref) => false),
-        ],
-      );
-
-      // Listen to the stream for emissions
-      final emissions = <List<VideoEvent>>[];
-      container.listen(videoEventsProvider, (prev, next) {
-        next.whenData(emissions.add);
-      });
-
-      // Wait for initial build
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
-
-      // Now simulate new videos arriving (with a blocked user)
-      final newVideos = [
-        createTestVideo('v1', pubkey: allowedPubkey),
-        createTestVideo('v2', pubkey: blockedPubkey),
-        createTestVideo('v3', pubkey: allowedPubkey),
-      ];
-      when(() => mockVideoEventService.discoveryVideos).thenReturn(newVideos);
-
-      // Trigger the listener (simulating VideoEventService notifying)
-      expect(capturedListener, isNotNull, reason: 'Listener should be set');
-      capturedListener!();
-
-      // Wait for debounce timer (500ms in the provider)
-      await Future<void>.delayed(const Duration(milliseconds: 600));
-
-      // Check that emissions only contain allowed videos
-      if (emissions.isNotEmpty) {
-        final lastEmission = emissions.last;
-        expect(lastEmission.map((video) => video.id), ['v1', 'v3']);
-      }
-
-      // Verify the blocklist was consulted during the change callback
-      verify(
-        () => mockBlocklistRepository.shouldFilterFromFeeds(blockedPubkey),
-      ).called(greaterThanOrEqualTo(1));
     });
 
-    test('emits all videos when no users are blocked', () async {
-      // Nobody is blocked
-      when(
-        () => mockBlocklistRepository.shouldFilterFromFeeds(any()),
-      ).thenReturn(false);
+    test('emits all videos when no users are blocked', () {
+      fakeAsync((async) {
+        // Nobody is blocked
+        when(
+          () => mockBlocklistRepository.shouldFilterFromFeeds(any()),
+        ).thenReturn(false);
 
-      final videos = [
-        createTestVideo('v1', pubkey: allowedPubkey),
-        createTestVideo('v2', pubkey: blockedPubkey),
-        createTestVideo('v3', pubkey: allowedPubkey),
-      ];
-      when(() => mockVideoEventService.discoveryVideos).thenReturn(videos);
+        final videos = [
+          createTestVideo('v1', pubkey: allowedPubkey),
+          createTestVideo('v2', pubkey: blockedPubkey),
+          createTestVideo('v3', pubkey: allowedPubkey),
+        ];
+        when(() => mockVideoEventService.discoveryVideos).thenReturn([]);
 
-      // Capture the listener callback
-      VoidCallback? capturedListener;
-      when(() => mockVideoEventService.addListener(any())).thenAnswer((inv) {
-        capturedListener = inv.positionalArguments[0] as VoidCallback;
-      });
+        // Capture the listener callback
+        VoidCallback? capturedListener;
+        when(() => mockVideoEventService.addListener(any())).thenAnswer((inv) {
+          capturedListener = inv.positionalArguments[0] as VoidCallback;
+        });
 
-      container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-          videoEventServiceProvider.overrideWithValue(mockVideoEventService),
-          contentBlocklistRepositoryProvider.overrideWithValue(
-            mockBlocklistRepository,
-          ),
-          appReadyProvider.overrideWith((ref) => true),
-          isDiscoveryTabActiveProvider.overrideWith((ref) => true),
-          isExploreTabActiveProvider.overrideWith((ref) => false),
-        ],
-      );
+        container = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+            videoEventServiceProvider.overrideWithValue(mockVideoEventService),
+            contentBlocklistRepositoryProvider.overrideWithValue(
+              mockBlocklistRepository,
+            ),
+            appReadyProvider.overrideWith((ref) => true),
+            isDiscoveryTabActiveProvider.overrideWith((ref) => true),
+            isExploreTabActiveProvider.overrideWith((ref) => false),
+          ],
+        );
 
-      // Listen to the stream
-      final emissions = <List<VideoEvent>>[];
-      container.listen(videoEventsProvider, (prev, next) {
-        next.whenData(emissions.add);
-      });
+        // Listen to the stream
+        final emissions = <List<VideoEvent>>[];
+        container.listen(videoEventsProvider, (prev, next) {
+          next.whenData(emissions.add);
+        });
 
-      // Wait for initial build
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+        // Wait for initial build
+        async.flushMicrotasks();
 
-      // Trigger change
-      expect(capturedListener, isNotNull);
-      capturedListener!();
+        emissions.clear();
+        when(() => mockVideoEventService.discoveryVideos).thenReturn(videos);
 
-      // Wait for debounce
-      await Future<void>.delayed(const Duration(milliseconds: 600));
+        // Trigger change
+        expect(capturedListener, isNotNull);
+        capturedListener!();
 
-      // All 3 videos should be emitted
-      if (emissions.isNotEmpty) {
-        final lastEmission = emissions.last;
+        // Wait for debounce
+        async.elapse(const Duration(milliseconds: 500));
+        async.flushMicrotasks();
+
+        expect(emissions, isNotEmpty);
         expect(
-          lastEmission.length,
+          emissions.last.length,
           equals(3),
           reason: 'All videos should be emitted when nothing is blocked',
         );
-      }
+        container.dispose();
+        async.flushMicrotasks();
+      });
     });
   });
 }

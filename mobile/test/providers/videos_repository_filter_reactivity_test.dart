@@ -130,7 +130,7 @@ void main() {
         container.read(_filterVersionTrigger.notifier).state++;
 
         // Allow provider rebuild to propagate.
-        await Future<void>.delayed(Duration.zero);
+        await container.pump();
 
         final repo2 = container.read(videosRepositoryProvider);
 
@@ -175,7 +175,7 @@ void main() {
       container.read(divineHostTrigger.notifier).state++;
 
       // Allow provider rebuild to propagate.
-      await Future<void>.delayed(Duration.zero);
+      await container.pump();
 
       final repo2 = container.read(videosRepositoryProvider);
 

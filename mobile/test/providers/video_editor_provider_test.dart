@@ -1973,21 +1973,27 @@ void main() {
               );
 
           final renderCompleter = Completer<(DivineVideoClip, String?)>();
-          VideoEditorRenderService.renderVideoToClipOverride = ({
-            required clips,
-            required editorStateHistory,
-            parameters,
-            taskId,
-          }) => renderCompleter.future;
+          final renderStarted = Completer<void>();
+          VideoEditorRenderService.renderVideoToClipOverride =
+              ({
+                required clips,
+                required editorStateHistory,
+                parameters,
+                taskId,
+              }) {
+                renderStarted.complete();
+                return renderCompleter.future;
+              };
 
           final render = notifier.startRenderVideo();
+          await renderStarted.future;
 
           var cancelCompleted = false;
           final cancel = notifier.cancelRenderVideo().then(
             (_) => cancelCompleted = true,
           );
 
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           expect(
             cancelCompleted,
             isFalse,

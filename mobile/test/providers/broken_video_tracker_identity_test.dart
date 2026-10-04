@@ -107,7 +107,7 @@ void main() {
 
       // Let the fire-and-forget setBrokenVideoTracker(...) attach.
       await container.read(brokenVideoTrackerProvider.future);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       // media.divine.video so the videos survive the default
       // divine-hosted-only preference and only the tracker mark decides

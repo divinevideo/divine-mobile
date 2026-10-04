@@ -175,7 +175,7 @@ void main() {
         );
         await container.read(accountEnforcementStatusProvider.future);
         subscription.close();
-        await Future<void>.delayed(Duration.zero);
+        await container.pump();
 
         final failedSubscription = container.listen(
           accountEnforcementStatusProvider,
@@ -244,7 +244,7 @@ void main() {
         final staleResult = container.read(
           accountEnforcementStatusProvider.future,
         );
-        await Future<void>.delayed(Duration.zero);
+        await container.pump();
 
         container.invalidate(accountEnforcementStatusProvider);
         final currentResult = container.read(

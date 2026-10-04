@@ -112,19 +112,31 @@ void main() {
         addTearDown(container.dispose);
 
         final emitted = <AsyncValue<FollowRelationship>>[];
+        final initial = Completer<void>();
+        final upgraded = Completer<void>();
         final subscription = container.listen(
           followRelationshipProvider(targetPubkey),
-          (_, next) => emitted.add(next),
+          (_, next) {
+            emitted.add(next);
+            if (next.value == FollowRelationship.youFollow &&
+                !initial.isCompleted) {
+              initial.complete();
+            }
+            if (next.value == FollowRelationship.mutual &&
+                !upgraded.isCompleted) {
+              upgraded.complete();
+            }
+          },
           fireImmediately: true,
         );
         addTearDown(subscription.close);
 
-        await Future<void>.delayed(Duration.zero);
+        await initial.future;
         expect(emitted.last.value, FollowRelationship.youFollow);
 
         warmupCompleter.complete(const <String>[targetPubkey]);
         await container.read(myFollowersWarmupProvider.future);
-        await Future<void>.delayed(Duration.zero);
+        await upgraded.future;
 
         expect(emitted.last.value, FollowRelationship.mutual);
       },

@@ -144,7 +144,7 @@ void main() {
 
       // The provider calls startListening() asynchronously via unawaited(),
       // so let microtasks drain before asserting.
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       // ASSERT — the gift-wrap subscription was opened on the relay
       // client. This is the proof that the auth-scoped lifecycle is
@@ -240,7 +240,7 @@ void main() {
 
       // ACT
       final repository = container.read(dmRepositoryProvider);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       // ASSERT — the repository exists for read-only operations but no
       // relay traffic is generated until Nostr session readiness flips true.
@@ -284,12 +284,12 @@ void main() {
         ),
       );
       container.read(dmRepositoryProvider);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       // ACT — disposing the container fires ref.onDispose hooks, which
       // include repository.stopListening.
       container.dispose();
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       // ASSERT — unsubscribe was called on the relay client.
       verify(() => mockNostrClient.unsubscribe(any())).called(1);

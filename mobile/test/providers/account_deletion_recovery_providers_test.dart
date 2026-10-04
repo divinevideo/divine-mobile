@@ -803,7 +803,7 @@ void main() {
           );
 
       probe.read(_authStateProbe.notifier).set(AuthState.unauthenticated);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(
         probe.read(submittedAccountDeletionAttemptProvider)?.attempt,
@@ -864,7 +864,7 @@ void main() {
         container.read(submittedAccountDeletionAttemptProvider),
         isNull,
       );
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(
         preferences.containsKey('account_deletion_receipt_v1'),

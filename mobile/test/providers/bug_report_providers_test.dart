@@ -80,7 +80,7 @@ void main() {
 
     test('collects diagnostics after a read-only provider access', () async {
       final service = container.read(bugReportServiceProvider);
-      await Future<void>.delayed(Duration.zero);
+      await container.pump();
 
       final report = await service.collectDiagnostics(
         userDescription: 'Drafts disappeared',

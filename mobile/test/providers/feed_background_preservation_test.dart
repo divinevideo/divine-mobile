@@ -156,8 +156,7 @@ void main() {
 
         // Allow provider to rebuild
         await container.read(funnelcakeAvailableProvider.future);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await container.pump();
 
         final afterBackgroundState = await container.read(
           classicVinesFeedProvider.future,
@@ -203,8 +202,7 @@ void main() {
         ]);
 
         await container.read(funnelcakeAvailableProvider.future);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await container.pump();
 
         final afterBackgroundState = await container.read(
           classicVinesFeedProvider.future,
@@ -241,8 +239,7 @@ void main() {
           ),
         ]);
         await container.read(funnelcakeAvailableProvider.future);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await container.pump();
 
         // Verify preserved
         final backgroundState = await container.read(
@@ -268,8 +265,7 @@ void main() {
           ),
         ]);
         await container.read(funnelcakeAvailableProvider.future);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await container.pump();
 
         final resumedState = await container.read(
           classicVinesFeedProvider.future,

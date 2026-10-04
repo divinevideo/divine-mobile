@@ -80,7 +80,7 @@ void main() {
       rpcCapabilityController.add(AuthRpcCapability.rpcReady);
 
       // Allow the listener to fire
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(
         container.read(currentAuthRpcCapabilityProvider),
