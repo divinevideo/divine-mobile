@@ -35,7 +35,7 @@ extension _CuratedListPlaylist on CuratedListService {
       final updatedList = list.copyWith(
         videoEventIds: newOrder,
         playOrder: PlayOrder.manual, // Set to manual when reordering
-        updatedAt: DateTime.now(),
+        updatedAt: clock.now(),
       );
 
       if (!await _commitListMutation(updatedList)) return false;

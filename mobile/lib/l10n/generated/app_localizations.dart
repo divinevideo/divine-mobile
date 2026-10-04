@@ -8446,7 +8446,7 @@ abstract class AppLocalizations {
   /// No description provided for @listNameLabel.
   ///
   /// In en, this message translates to:
-  /// **'List name'**
+  /// **'List Name'**
   String get listNameLabel;
 
   /// No description provided for @listDescriptionLabel.
@@ -22058,6 +22058,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Let others see this list'**
   String get listMakePublicSubtitle;
+
+  /// A newly created list exists but could not accept the requested video.
+  ///
+  /// In en, this message translates to:
+  /// **'Your list was created, but this video wasn\'t added.'**
+  String get listVideoNotAdded;
+
+  /// Confirmation explains that making a list private revokes its collaborators.
+  ///
+  /// In en, this message translates to:
+  /// **'Making this list private also removes its collaborators. Only you will be able to add videos.'**
+  String get listPrivateCollaboratorsWarning;
+
+  /// Video added locally to a newly created list but publication has not succeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Your list and video are saved here. The video is waiting to sync.'**
+  String get listVideoPendingSync;
+
+  /// Retry publishing the saved list without adding or removing videos.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync now'**
+  String get listRetrySync;
 }
 
 class _AppLocalizationsDelegate

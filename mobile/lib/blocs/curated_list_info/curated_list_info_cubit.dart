@@ -22,11 +22,19 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
   ///
   /// Pass [existingList] to edit that list; leave it out to create one.
   /// [videoEventId] is added to a newly created list.
+  ///
+  /// [resolveService] is asked for the service when a save starts: the app
+  /// builds a new one when its relay client is replaced, and a save has to
+  /// reach the one it holds then. It answers null when there is none.
   CuratedListInfoCubit({
-    required CuratedListService? service,
+    required CuratedListService? Function() resolveService,
+    required String? Function() currentOwnerPubkey,
     CuratedList? existingList,
     String? videoEventId,
-  }) : _service = service,
+  }) : _resolveService = resolveService,
+       _currentOwnerPubkey = currentOwnerPubkey,
+       _openingOwnerPubkey = currentOwnerPubkey(),
+       _listOwnerPubkey = existingList?.pubkey,
        _listId = existingList?.id,
        _storedCollaborators = existingList?.allowedCollaborators ?? const [],
        _videoEventId = videoEventId,
@@ -40,8 +48,16 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
          ),
        );
 
-  final CuratedListService? _service;
+  final CuratedListService? Function() _resolveService;
+  final String? Function() _currentOwnerPubkey;
+  final String? _openingOwnerPubkey;
+  final String? _listOwnerPubkey;
   final String? _listId;
+
+  bool get isSessionCurrent =>
+      _openingOwnerPubkey != null &&
+      _openingOwnerPubkey.isNotEmpty &&
+      _currentOwnerPubkey() == _openingOwnerPubkey;
 
   /// The collaborators the list was opened with.
   final List<String> _storedCollaborators;
@@ -117,13 +133,17 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
   /// [CuratedListInfoStatus.publishFailed] instead.
   Future<void> submitted() async {
     if (!state.canSubmit) return;
+    if (!isSessionCurrent) {
+      emitIfOpen(state.copyWith(status: CuratedListInfoStatus.failure));
+      return;
+    }
 
     final name = state.name.trim();
     final description = state.description.trim();
     final isPublic = state.isPublic;
     final collaborators = state.savedCollaboratorPubkeys;
     final visibilityWillChange = state.visibilityWillChange;
-    final service = _service;
+    final service = _resolveService();
     final listId = _listId;
 
     emitIfOpen(state.copyWith(status: CuratedListInfoStatus.saving));
@@ -133,6 +153,13 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
     }
 
     try {
+      if (listId != null &&
+          (_listOwnerPubkey == null ||
+              _listOwnerPubkey != _openingOwnerPubkey ||
+              service.getListById(listId)?.pubkey != _listOwnerPubkey)) {
+        emitIfOpen(state.copyWith(status: CuratedListInfoStatus.failure));
+        return;
+      }
       if (listId == null) {
         final created = await service.createList(
           name: name,
@@ -141,6 +168,10 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
           isCollaborative: collaborators.isNotEmpty,
           allowedCollaborators: collaborators,
         );
+        if (!isSessionCurrent) {
+          emitIfOpen(state.copyWith(status: CuratedListInfoStatus.failure));
+          return;
+        }
         // createList catches its own exceptions and answers with null.
         if (created == null) {
           emitIfOpen(state.copyWith(status: CuratedListInfoStatus.failure));
@@ -153,33 +184,56 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
         final videoAdded =
             videoEventId == null ||
             await service.addVideoToList(created.id, videoEventId);
+        if (!isSessionCurrent) {
+          emitIfOpen(state.copyWith(status: CuratedListInfoStatus.failure));
+          return;
+        }
+        final pendingVideo =
+            !videoAdded &&
+            service
+                    .getListById(created.id)
+                    ?.videoEventIds
+                    .contains(videoEventId) ==
+                true;
         emitIfOpen(
           state.copyWith(
             status: videoAdded
                 ? CuratedListInfoStatus.saved
+                : pendingVideo
+                ? CuratedListInfoStatus.createdWithVideoPendingSync
                 : CuratedListInfoStatus.createdWithoutVideo,
           ),
         );
         return;
       }
 
-      // An edit that leaves the collaborators alone passes none, so the
-      // list keeps what it has stored, its collaborative flag included. A
-      // private list cannot be collaborative at all, so it always writes
-      // them, as none.
+      // Only an explicit permissions edit or privacy flip changes collaborators.
       final writesCollaborators =
-          !isPublic ||
+          (visibilityWillChange && !isPublic) ||
           !const SetEquality<String>().equals(
             collaborators.toSet(),
             _storedCollaborators.toSet(),
           );
+      // Only a flip sends visibility: the list may have changed since the
+      // sheet opened, and resending the opening value would undo that.
       final update = service.updateList(
         listId: listId,
         name: name,
         description: description,
-        isPublic: isPublic,
+        isPublic: visibilityWillChange ? isPublic : null,
         isCollaborative: writesCollaborators ? collaborators.isNotEmpty : null,
         allowedCollaborators: writesCollaborators ? collaborators : null,
+        onLocalSaved: visibilityWillChange
+            ? null
+            : () {
+                if (isSessionCurrent) {
+                  emitIfOpen(
+                    state.copyWith(
+                      status: CuratedListInfoStatus.savedAwaitingRelay,
+                    ),
+                  );
+                }
+              },
       );
 
       // Visibility is the one field updateList holds back until a relay
@@ -187,6 +241,10 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
       // did not take. Wait for the answer and keep the form open on failure.
       if (visibilityWillChange) {
         final updated = await update;
+        if (!isSessionCurrent) {
+          emitIfOpen(state.copyWith(status: CuratedListInfoStatus.failure));
+          return;
+        }
         emitIfOpen(
           state.copyWith(
             status: updated
@@ -197,20 +255,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
         return;
       }
 
-      // Everything else is stored on this device before updateList awaits a
-      // relay, so nothing typed rides on the answer. Let the form close now
-      // rather than hold it open on a slow relay.
-      emitIfOpen(
-        state.copyWith(status: CuratedListInfoStatus.savedAwaitingRelay),
-      );
-      final published = await update;
-      emitIfOpen(
-        state.copyWith(
-          status: published
-              ? CuratedListInfoStatus.saved
-              : CuratedListInfoStatus.publishFailed,
-        ),
-      );
+      await _closeThenAwait(update);
     } catch (error, stackTrace) {
       // Expected domain or network failure: surfaced through the status, not
       // Crashlytics, per the reportable-error decision matrix.
@@ -223,5 +268,26 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
         ),
       );
     }
+  }
+
+  /// Lets the form close, then reports how [update] ended.
+  ///
+  /// The service emits the local milestone only after this edit reaches
+  /// storage, including when it was queued behind another publication.
+  Future<void> _closeThenAwait(Future<bool> update) async {
+    final published = await update;
+    if (!isSessionCurrent) {
+      emitIfOpen(state.copyWith(status: CuratedListInfoStatus.failure));
+      return;
+    }
+    emitIfOpen(
+      state.copyWith(
+        status: published
+            ? CuratedListInfoStatus.saved
+            : state.status == CuratedListInfoStatus.savedAwaitingRelay
+            ? CuratedListInfoStatus.publishFailed
+            : CuratedListInfoStatus.failure,
+      ),
+    );
   }
 }

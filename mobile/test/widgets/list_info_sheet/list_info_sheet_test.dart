@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
@@ -15,9 +16,11 @@ import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_collaborators_row.dart';
+import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_save_button.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
 import 'package:openvine/widgets/user_picker_sheet.dart';
@@ -64,20 +67,6 @@ void main() {
     late _MockCuratedListService service;
     late VideoEvent video;
 
-    setUp(() {
-      service = _MockCuratedListService();
-      _fakeService = service;
-      video = VideoEvent(
-        id: _videoEventId,
-        pubkey: _authorPubkey,
-        createdAt: 1757385263,
-        content: 'Test video',
-        timestamp: DateTime.fromMillisecondsSinceEpoch(1757385263 * 1000),
-        videoUrl: 'https://example.com/video.mp4',
-        title: 'Test Video',
-      );
-    });
-
     CuratedList list({
       String name = 'Puppets',
       bool isPublic = true,
@@ -93,6 +82,21 @@ void main() {
       isCollaborative: collaborators.isNotEmpty,
       allowedCollaborators: collaborators,
     );
+
+    setUp(() {
+      service = _MockCuratedListService();
+      when(() => service.getListById(any())).thenAnswer((_) => list());
+      _fakeService = service;
+      video = VideoEvent(
+        id: _videoEventId,
+        pubkey: _authorPubkey,
+        createdAt: 1757385263,
+        content: 'Test video',
+        timestamp: DateTime.fromMillisecondsSinceEpoch(1757385263 * 1000),
+        videoUrl: 'https://example.com/video.mp4',
+        title: 'Test Video',
+      );
+    });
 
     void stubCreate(Future<CuratedList?> Function() answer) {
       when(
@@ -115,8 +119,12 @@ void main() {
           isPublic: any(named: 'isPublic'),
           isCollaborative: any(named: 'isCollaborative'),
           allowedCollaborators: any(named: 'allowedCollaborators'),
+          onLocalSaved: any(named: 'onLocalSaved'),
         ),
-      ).thenAnswer((_) => answer());
+      ).thenAnswer((invocation) {
+        (invocation.namedArguments[#onLocalSaved] as void Function()?)?.call();
+        return answer();
+      });
     }
 
     /// An update whose relay answer the test decides when to deliver.
@@ -140,14 +148,18 @@ void main() {
       List<Override> overrides = const [],
       Locale? locale,
       List<ListInfoSheetOutcome>? outcomes,
+      // Tall enough by default that the whole form fits above the fold.
+      Size surfaceSize = const Size(800, 1200),
     }) async {
-      // Tall enough that the whole form fits above the fold.
-      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      await tester.binding.setSurfaceSize(surfaceSize);
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(
         testMaterialApp(
           locale: locale,
+          mockAuthService: createMockAuthService(
+            currentPublicKeyHex: _authorPubkey,
+          ),
           mockProfileRepository: profileRepository,
           mockFollowRepository: followRepository,
           additionalOverrides: [
@@ -213,7 +225,7 @@ void main() {
       ) async {
         await openSheet(tester, existingList: list(isPublic: false));
 
-        expect(find.text(l10n.listEditInfoAction), findsOneWidget);
+        expect(find.text(l10n.listEditTitle), findsOneWidget);
         expect(find.text('Puppets'), findsOneWidget);
         expect(find.text(l10n.listPrivateListSubtitle), findsOneWidget);
         expect(find.text(l10n.listMakePublicSubtitle), findsNothing);
@@ -222,11 +234,76 @@ void main() {
       });
 
       testWidgets('reads its copy from the app localizations', (tester) async {
-        await openSheet(tester);
-
         final german = lookupAppLocalizations(const Locale('de'));
+        // Copy that reads the same in both languages could not tell them
+        // apart.
         expect(german.listCreateNewList, isNot(l10n.listCreateNewList));
-        expect(find.text(german.listCreateNewList), findsNothing);
+        expect(german.listNameLabel, isNot(l10n.listNameLabel));
+
+        await openSheet(tester, locale: const Locale('de'));
+
+        expect(find.text(german.listCreateNewList), findsOneWidget);
+        expect(find.text(german.listNameLabel), findsOneWidget);
+        expect(find.text(l10n.listCreateNewList), findsNothing);
+        expect(find.text(l10n.listNameLabel), findsNothing);
+      });
+    });
+
+    group('scrolling', () {
+      testWidgets('keeps a failed save in view when the form is scrolled', (
+        tester,
+      ) async {
+        stubCreate(() async => null);
+        await openSheet(tester, surfaceSize: const Size(800, 360));
+        final form = find.descendant(
+          of: find.byType(ListInfoForm),
+          matching: find.byType(SingleChildScrollView),
+        );
+        await tester.enterText(find.byType(TextField).first, 'Doomed List');
+        await tester.pump();
+        await tester.drag(form, const Offset(0, -400));
+        await tester.pump();
+
+        // Save sits in the pinned header, so the failure it reports has to
+        // stay on screen however far the form has been scrolled.
+        await tester.tap(saveButton(editing: false));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.listCreateFailed).hitTestable(), findsOneWidget);
+      });
+    });
+
+    group('keyboard', () {
+      testWidgets('keeps the description caret above it at a large text '
+          'size', (tester) async {
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(tester.platformDispatcher.clearAllTestValues);
+        await openSheet(tester, surfaceSize: const Size(360, 640));
+
+        const keyboardHeight = 280.0;
+        tester.view.viewInsets = FakeViewPadding(
+          bottom: keyboardHeight * tester.view.devicePixelRatio,
+        );
+        addTearDown(tester.view.resetViewInsets);
+        await tester.pump();
+
+        final description = find.byType(TextField).last;
+        await tester.tap(description);
+        await tester.enterText(description, 'One\nTwo\nThree\nFour');
+        await tester.pumpAndSettle();
+
+        final editable = tester.state<EditableTextState>(
+          find.descendant(
+            of: description,
+            matching: find.byType(EditableText),
+          ),
+        );
+        final render = editable.renderEditable;
+        final caret = render.getLocalRectForCaret(
+          editable.textEditingValue.selection.extent,
+        );
+        final caretBottom = render.localToGlobal(caret.bottomLeft).dy;
+        expect(caretBottom, lessThanOrEqualTo(640 - keyboardHeight));
       });
     });
 
@@ -253,7 +330,7 @@ void main() {
         await tester.tap(find.bySemanticsLabel(l10n.commonClose));
         await tester.pumpAndSettle();
 
-        expect(find.text(l10n.listEditInfoAction), findsNothing);
+        expect(find.text(l10n.listEditTitle), findsNothing);
         verifyZeroInteractions(service);
       });
 
@@ -304,6 +381,33 @@ void main() {
         ).called(1);
         verifyNever(() => service.addVideoToList(any(), any()));
         expect(find.text(l10n.listCreateNewList), findsNothing);
+      });
+
+      testWidgets('saves through the list service the app holds when Create is '
+          'tapped, not the one it held when the sheet opened', (
+        tester,
+      ) async {
+        final replacement = _MockCuratedListService();
+        when(
+          () => replacement.createList(
+            name: any(named: 'name'),
+            description: any(named: 'description'),
+            isPublic: any(named: 'isPublic'),
+            isCollaborative: any(named: 'isCollaborative'),
+            allowedCollaborators: any(named: 'allowedCollaborators'),
+          ),
+        ).thenAnswer((_) async => list(name: 'Fresh List'));
+        await openSheet(tester);
+
+        // The app builds a new service when its relay client is replaced.
+        _fakeService = replacement;
+        await tester.enterText(find.byType(TextField).first, 'Fresh List');
+        await tester.pump();
+        await tester.tap(saveButton(editing: false));
+        await tester.pumpAndSettle();
+
+        verify(() => replacement.createList(name: 'Fresh List')).called(1);
+        verifyZeroInteractions(service);
       });
 
       testWidgets('creates a private list when the switch is off', (
@@ -455,6 +559,25 @@ void main() {
         verifyNever(() => service.addVideoToList(any(), any()));
       });
 
+      testWidgets('does not report a failure again when the sheet is closed '
+          'after showing it', (tester) async {
+        stubCreate(() async => null);
+        await openSheet(tester);
+
+        await tester.enterText(find.byType(TextField).first, 'Doomed List');
+        await tester.pump();
+        await tester.tap(saveButton(editing: false));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listCreateFailed), findsOneWidget);
+
+        await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.listCreateNewList), findsNothing);
+        expect(find.text(l10n.listCreateFailed), findsNothing);
+        expect(find.byType(SnackBar), findsNothing);
+      });
+
       testWidgets('clears the failure once the form is edited again', (
         tester,
       ) async {
@@ -497,6 +620,7 @@ void main() {
             name: 'Puppets',
             description: '',
             isPublic: true,
+            onLocalSaved: any(named: 'onLocalSaved'),
           ),
         ).called(1);
       });
@@ -528,7 +652,7 @@ void main() {
         await tester.pumpAndSettle();
 
         verifyZeroInteractions(service);
-        expect(find.text(l10n.listEditInfoAction), findsOneWidget);
+        expect(find.text(l10n.listEditTitle), findsOneWidget);
         expect(visibilityTile(tester).value, isTrue);
       });
 
@@ -547,10 +671,10 @@ void main() {
             listId: _listId,
             name: 'Marionettes',
             description: '',
-            isPublic: true,
+            onLocalSaved: any(named: 'onLocalSaved'),
           ),
         ).called(1);
-        expect(find.text(l10n.listEditInfoAction), findsNothing);
+        expect(find.text(l10n.listEditTitle), findsNothing);
         expect(find.text(l10n.listUpdateFailed), findsNothing);
 
         answer.complete(false);
@@ -569,7 +693,7 @@ void main() {
         await tester.pump();
         await tester.tap(saveButton(editing: true));
         await tester.pumpAndSettle();
-        expect(find.text(l10n.listEditInfoAction), findsNothing);
+        expect(find.text(l10n.listEditTitle), findsNothing);
 
         answer.complete(true);
         await tester.pumpAndSettle();
@@ -600,9 +724,10 @@ void main() {
             name: 'Puppets',
             description: '',
             isPublic: true,
+            onLocalSaved: any(named: 'onLocalSaved'),
           ),
         ).called(1);
-        expect(find.text(l10n.listEditInfoAction), findsOneWidget);
+        expect(find.text(l10n.listEditTitle), findsOneWidget);
         expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
         // The spinner stands where the button stood.
         expect(
@@ -613,7 +738,7 @@ void main() {
         answer.complete(true);
         await tester.pumpAndSettle();
 
-        expect(find.text(l10n.listEditInfoAction), findsNothing);
+        expect(find.text(l10n.listEditTitle), findsNothing);
       });
 
       testWidgets('reports a refused visibility change after the sheet '
@@ -635,7 +760,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text(l10n.listUpdateFailed), findsOneWidget);
-        expect(find.text(l10n.listEditInfoAction), findsNothing);
+        expect(find.text(l10n.listEditTitle), findsNothing);
         expect(tester.takeException(), isNull);
       });
 
@@ -662,7 +787,7 @@ void main() {
         // The service leaves isPublic at its old value on a rejected publish,
         // so the flip only survives if the form holding it is still on
         // screen with the typed name intact.
-        expect(find.text(l10n.listEditInfoAction), findsOneWidget);
+        expect(find.text(l10n.listEditTitle), findsOneWidget);
         expect(find.text('Marionettes'), findsOneWidget);
         expect(visibilityTile(tester).value, isTrue);
         expect(
@@ -670,6 +795,30 @@ void main() {
           isSemantics(hasEnabledState: true, isEnabled: true),
         );
         semantics.dispose();
+      });
+
+      testWidgets('does not report a rejected visibility change again when '
+          'the sheet is closed after showing it', (tester) async {
+        final answer = stubPendingUpdate();
+        await openSheet(tester, existingList: list(isPublic: false));
+
+        await tester.tap(find.byType(DivineSwitchTile));
+        await tester.pump();
+        await tester.tap(saveButton(editing: true));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.listContinue));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        answer.complete(false);
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listUpdateFailed), findsOneWidget);
+
+        await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.listEditTitle), findsNothing);
+        expect(find.text(l10n.listUpdateFailed), findsNothing);
+        expect(find.byType(SnackBar), findsNothing);
       });
     });
 
@@ -721,6 +870,64 @@ void main() {
         );
       });
 
+      testWidgets(
+        'review9746 explicitly removes an unresolved collaborator through picker and save',
+        (tester) async {
+          stubUpdate(() async => true);
+          final profiles = _MockProfileRepository();
+          when(() => profiles.getCachedProfiles(pubkeys: any(named: 'pubkeys')))
+              .thenAnswer((_) async => []);
+          final follows = _MockFollowRepository();
+          when(() => follows.followingPubkeys).thenReturn([]);
+          when(follows.streamMyFollowers)
+              .thenAnswer((_) => Stream.value(<String>[]));
+          await openSheet(
+            tester,
+            existingList: list(collaborators: [_collaborator]),
+            profileRepository: profiles,
+            followRepository: follows,
+            overrides: [
+              vanishedProfilePubkeysProvider.overrideWith(
+                (ref) => Stream.value(const <String>{}),
+              ),
+              userProfileReactiveProvider(_collaborator)
+                  .overrideWith((ref) => Stream.value(null)),
+            ],
+          );
+          await tester.tap(collaboratorsRow());
+          await tester.pumpAndSettle();
+          final fallback = UserProfile.defaultDisplayNameFor(_collaborator);
+          expect(
+            find.bySemanticsLabel(
+              l10n.userPickerRemoveSelectionSemantics(fallback),
+            ),
+            findsOneWidget,
+          );
+          await tester.tap(
+            find.bySemanticsLabel(
+              l10n.userPickerRemoveSelectionSemantics(fallback),
+            ),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(
+            find.bySemanticsLabel(l10n.userPickerConfirmSemanticLabel),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(saveButton(editing: true));
+          await tester.pumpAndSettle();
+          verify(
+            () => service.updateList(
+              listId: _listId,
+              name: 'Puppets',
+              description: '',
+              isCollaborative: false,
+              allowedCollaborators: const [],
+              onLocalSaved: any(named: 'onLocalSaved'),
+            ),
+          ).called(1);
+        },
+      );
+
       testWidgets('opens the picker from a public list', (tester) async {
         await openSheet(tester);
 
@@ -735,6 +942,25 @@ void main() {
           picker.filterMode,
           equals(UserPickerFilterMode.mutualFollowsOnly),
         );
+      });
+
+      testWidgets('opens the picker from the keyboard', (tester) async {
+        await openSheet(tester);
+
+        bool rowHasFocus() =>
+            FocusManager.instance.primaryFocus?.context
+                ?.findAncestorWidgetOfExactType<ListInfoCollaboratorsRow>() !=
+            null;
+        for (var i = 0; i < 12 && !rowHasFocus(); i++) {
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+          await tester.pump();
+        }
+        expect(rowHasFocus(), isTrue, reason: 'Tab never reached the row');
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(UserPickerSheet), findsOneWidget);
       });
 
       testWidgets('shows the people picked and saves them with the list', (
@@ -857,6 +1083,10 @@ void main() {
         await tester.pump();
         await tester.tap(saveButton(editing: true));
         await tester.pumpAndSettle();
+        expect(
+          find.textContaining(l10n.listPrivateCollaboratorsWarning),
+          findsOneWidget,
+        );
         await tester.tap(find.text(l10n.listContinue));
         await tester.pumpAndSettle();
 
@@ -868,6 +1098,7 @@ void main() {
             isPublic: false,
             isCollaborative: false,
             allowedCollaborators: const [],
+            onLocalSaved: any(named: 'onLocalSaved'),
           ),
         ).called(1);
       });
