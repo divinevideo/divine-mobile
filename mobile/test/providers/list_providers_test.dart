@@ -2,14 +2,19 @@
 // ABOUTME: curated list videos and the public people and curated list reads.
 
 import 'dart:async';
+import 'dart:io';
 
+import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_ce/hive_ce.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/filter.dart';
+import 'package:openvine/features/people_lists/bloc/people_list_info_cubit.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
@@ -142,6 +147,155 @@ void main() {
       for (final state in states)
         if (state.hasValue) [for (final video in state.value!) video.id],
     ];
+
+    test('real info cubit rename cache add remove delete shares roster feeds '
+        'and preserves source under a fixed clock', () async {
+      await withClock(Clock.fixed(DateTime.utc(2026, 10, 4)), () async {
+        final dir = await Directory.systemTemp.createTemp('review-roster-');
+        Box<dynamic>? box;
+        addTearDown(() async {
+          await box?.close();
+          await dir.delete(recursive: true);
+        });
+        registerFallbackValue(<Filter>[]);
+        registerFallbackValue(Duration.zero);
+        registerFallbackValue(Event(_ownerA, 1, [], ''));
+        final client = _MockNostrClient();
+        when(() => client.publicKey).thenReturn(_ownerA);
+        final stamp = DateTime.utc(2026, 10, 4).millisecondsSinceEpoch ~/ 1000;
+        var remote = Event(
+          _ownerA,
+          30000,
+          [
+            ['d', 'crew'],
+            ['title', 'Old name'],
+            ['p', _ownerB, 'wss://one.example', 'friend'],
+            ['p', _ownerB, 'wss://two.example', 'hint'],
+            ['expiration', '2000000000'],
+          ],
+          'foreign-ciphertext',
+          createdAt: stamp,
+        );
+        final sent = <Event>[];
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: true,
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => (events: [remote], timedOut: false, noRelays: false),
+        );
+        when(() => client.publishEvent(any())).thenAnswer((i) async {
+          final event = i.positionalArguments.first as Event;
+          sent.add(event);
+          if (event.kind == 30000 &&
+              (event.createdAt > remote.createdAt ||
+                  (event.createdAt == remote.createdAt &&
+                      event.id.compareTo(remote.id) < 0))) {
+            remote = event;
+          }
+          return PublishSuccess(event: event);
+        });
+        final repository = PeopleListsRepositoryImpl(
+          nostrClient: client,
+          cache: LocalPeopleListsCache(
+            openBox: () async =>
+                box ??= await Hive.openBox<dynamic>('roster', path: dir.path),
+          ),
+          followedListsStore: InMemoryFollowedPeopleListsStore(),
+        );
+        final queries = <List<String>>[];
+        when(
+          () => videosRepository.getVideosByAuthors(
+            authorPubkeys: any(named: 'authorPubkeys'),
+          ),
+        ).thenAnswer((i) async {
+          final authors = i.namedArguments[#authorPubkeys] as List<String>;
+          queries.add(List.of(authors));
+          return [
+            for (final author in authors)
+              _video(
+                id: author == _ownerB ? fetchedId : strangerId,
+                pubkey: author,
+              ),
+          ];
+        });
+        final container = buildContainer();
+        await repository.syncOwner(ownerPubkey: _ownerA);
+        final initial = (await repository.readLists(ownerPubkey: _ownerA))
+            .single;
+        expect(initial.pubkeys, [_ownerB]);
+        await collect(container, initial.pubkeys);
+        final cubit = PeopleListInfoCubit(
+          repository: repository,
+          ownerPubkey: _ownerA,
+          list: initial,
+          currentOwnerPubkey: () => _ownerA,
+        );
+        addTearDown(cubit.close);
+        cubit.nameChanged('New name');
+        expect(await cubit.submitted(), PeopleListInfoStatus.saved);
+        final renamed = (await repository.readLists(ownerPubkey: _ownerA))
+            .single;
+        expect(renamed.name, 'New name');
+        expect(identical(initial.pubkeys, renamed.pubkeys), isFalse);
+        await collect(container, renamed.pubkeys);
+        expect(queries, [
+          [_ownerB],
+        ]);
+        expect(
+          (await repository.addPubkey(
+            ownerPubkey: _ownerA,
+            listId: 'crew',
+            pubkey: _blockedAuthor,
+          )).submitted,
+          isTrue,
+        );
+        final expanded = (await repository.readLists(ownerPubkey: _ownerA))
+            .single;
+        await collect(container, expanded.pubkeys);
+        expect(queries, [
+          [_ownerB],
+          [_ownerB, _blockedAuthor],
+        ]);
+        expect(
+          remote.tags.where((t) => t.first == 'p' && t[1] == _ownerB),
+          hasLength(2),
+        );
+        expect(
+          (await repository.removePubkey(
+            ownerPubkey: _ownerA,
+            listId: 'crew',
+            pubkey: _ownerB,
+          )).submitted,
+          isTrue,
+        );
+        final reduced = (await repository.readLists(ownerPubkey: _ownerA))
+            .single;
+        await collect(container, reduced.pubkeys);
+        expect(queries, [
+          [_ownerB],
+          [_ownerB, _blockedAuthor],
+          [_blockedAuthor],
+        ]);
+        expect(remote.content, 'foreign-ciphertext');
+        expect(remote.tags, contains(equals(['expiration', '2000000000'])));
+        expect(
+          (await repository.deleteList(
+            ownerPubkey: _ownerA,
+            listId: 'crew',
+          )).submitted,
+          isTrue,
+        );
+        expect(await repository.readLists(ownerPubkey: _ownerA), isEmpty);
+        var previous = stamp;
+        for (final event in sent) {
+          expect(event.createdAt, greaterThan(previous));
+          previous = event.createdAt;
+        }
+      });
+    });
 
     test(
       'reuses the feed after unchanged members are decoded from cache',
