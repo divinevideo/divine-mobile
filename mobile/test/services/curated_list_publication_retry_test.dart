@@ -254,5 +254,62 @@ void main() {
         );
       });
     });
+    test(
+      'missing OK after switching accounts preserves the colliding B row',
+      () async {
+        final sourceA = list(ownerA);
+        final sourceB = list(ownerB);
+        SharedPreferences.setMockInitialValues({
+          CuratedListService.listsStorageKey: jsonEncode([
+            sourceA.toJson(),
+            sourceB.toJson(),
+          ]),
+        });
+        final prefs = await SharedPreferences.getInstance();
+        final client = Client();
+        final auth = Auth();
+        var owner = ownerA;
+        when(() => auth.isAuthenticated).thenReturn(true);
+        when(() => auth.currentPublicKeyHex).thenAnswer((_) => owner);
+        stubListPublishing(client: client, auth: auth, pubkey: ownerA);
+        final started = Completer<Event>();
+        final decision = Completer<PublishOutcome>();
+        when(() => client.publishEventAwaitOk(any())).thenAnswer((i) {
+          started.complete(i.positionalArguments.single as Event);
+          return decision.future;
+        });
+        final service = CuratedListService(
+          nostrService: client,
+          authService: auth,
+          prefs: prefs,
+        );
+        addTearDown(service.dispose);
+        await withClock(Clock.fixed(instant), () async {
+          final saving = service.updateList(
+            listId: sourceA.id,
+            name: 'Renamed A',
+          );
+          final sent = await started.future;
+          owner = ownerB;
+          decision.complete(
+            PublishOutcome(
+              eventId: sent.id,
+              acceptedBy: const [],
+              rejectedBy: const {},
+              noResponseFrom: const ['wss://relay.test'],
+            ),
+          );
+          expect(await saving, isFalse);
+          expect(service.getListById(sourceB.authorScopedId), sourceB);
+          final rows = jsonDecode(
+            prefs.getString(CuratedListService.listsStorageKey)!,
+          ) as List;
+          final persistedB = rows
+              .map((row) => CuratedList.fromJson(row as Map<String, dynamic>))
+              .singleWhere((row) => row.pubkey == ownerB);
+          expect(persistedB.toJson(), sourceB.toJson());
+        });
+      },
+    );
   });
 }
