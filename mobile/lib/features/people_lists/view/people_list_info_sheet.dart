@@ -3,12 +3,14 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/extensions/modal_pop_extension.dart';
 import 'package:openvine/features/people_lists/bloc/people_list_info_cubit.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
@@ -27,13 +29,15 @@ Future<void> showPeopleListInfoSheet(
   if (ownerPubkey == null || ownerPubkey.isEmpty) return;
 
   final l10n = context.l10n;
+  final container = ProviderScope.containerOf(context, listen: false);
+  final openingEpoch = mutations.mutationSessionEpoch;
   final formKey = GlobalKey();
 
   await context.showVideoPausingVineBottomSheet<void>(
     scrollable: false,
     expanded: false,
     isScrollControlled: true,
-    title: Text(l10n.listEditInfoAction),
+    title: Text(l10n.listEditTitle),
     headerPadding: listInfoSheetHeaderPadding,
     headerLeadingAction: DivineIconButton(
       icon: DivineIconName.x,
@@ -49,6 +53,14 @@ Future<void> showPeopleListInfoSheet(
       create: (_) => PeopleListInfoCubit(
         submitMutation: mutations.submit,
         ownerPubkey: ownerPubkey,
+        currentOwnerPubkey: () {
+          if (mutations.isClosed ||
+              mutations.mutationSessionEpoch != openingEpoch ||
+              mutations.state.activeOwnerPubkey != ownerPubkey) {
+            return null;
+          }
+          return container.read(authServiceProvider).currentPublicKeyHex;
+        },
         list: list,
       ),
       child: sheet,
@@ -92,8 +104,7 @@ class _PeopleListInfoFormState extends State<_PeopleListInfoForm> {
     return BlocListener<PeopleListInfoCubit, PeopleListInfoState>(
       listenWhen: (previous, current) => !previous.canClose && current.canClose,
       listener: (context, _) => context.popModalIfMounted(),
-      child: SingleChildScrollView(
-        // Keeps the focused field clear of the keyboard.
+      child: Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.viewInsetsOf(context).bottom,
         ),
@@ -102,14 +113,19 @@ class _PeopleListInfoFormState extends State<_PeopleListInfoForm> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const _SaveFailedMessage(),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                spacing: 16,
-                children: [
-                  _NameField(controller: _nameController),
-                  _DescriptionField(controller: _descriptionController),
-                ],
+            Flexible(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    spacing: 16,
+                    children: [
+                      _NameField(controller: _nameController),
+                      _DescriptionField(controller: _descriptionController),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],
@@ -178,7 +194,8 @@ class _SaveButton extends StatelessWidget {
     final route = ModalRoute.of(context);
     final failureMessage = context.l10n.listUpdateFailed;
     final status = await cubit.submitted();
-    if (status == PeopleListInfoStatus.failure &&
+    if (cubit.isSessionCurrent &&
+        status == PeopleListInfoStatus.failure &&
         route?.isCurrent == false &&
         messenger.mounted) {
       messenger.showSnackBar(

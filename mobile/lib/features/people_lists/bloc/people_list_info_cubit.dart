@@ -23,9 +23,11 @@ class PeopleListInfoCubit extends Cubit<PeopleListInfoState>
     )
     submitMutation,
     required String ownerPubkey,
+    required String? Function() currentOwnerPubkey,
     required UserList list,
   }) : _submitMutation = submitMutation,
        _ownerPubkey = ownerPubkey,
+       _currentOwnerPubkey = currentOwnerPubkey,
        _listId = list.id,
        super(
          PeopleListInfoState(
@@ -39,6 +41,11 @@ class PeopleListInfoCubit extends Cubit<PeopleListInfoState>
   )
   _submitMutation;
   final String _ownerPubkey;
+  final String? Function() _currentOwnerPubkey;
+
+  /// The editor visit remains bound to the owner that opened it.
+  bool get isSessionCurrent =>
+      _ownerPubkey.isNotEmpty && _currentOwnerPubkey() == _ownerPubkey;
   final String _listId;
 
   /// Records the list name as typed.
@@ -66,6 +73,10 @@ class PeopleListInfoCubit extends Cubit<PeopleListInfoState>
   /// can report a refused save; returns null if submission was unavailable.
   Future<PeopleListInfoStatus?> submitted() async {
     if (isClosed || !state.canSubmit) return null;
+    if (!isSessionCurrent) {
+      emitIfOpen(state.copyWith(status: PeopleListInfoStatus.failure));
+      return PeopleListInfoStatus.failure;
+    }
 
     emitIfOpen(state.copyWith(status: PeopleListInfoStatus.saving));
     try {
@@ -77,11 +88,15 @@ class PeopleListInfoCubit extends Cubit<PeopleListInfoState>
           description: state.description,
         ),
       );
+      if (!isSessionCurrent) {
+        emitIfOpen(state.copyWith(status: PeopleListInfoStatus.failure));
+        return PeopleListInfoStatus.failure;
+      }
       final status = result == PeopleListsOperationResult.succeeded
           ? PeopleListInfoStatus.saved
           : PeopleListInfoStatus.failure;
-      // A manually closed sheet still needs its request's actual outcome;
-      // CloseGuardedEmit prevents that answer from rebuilding disposed fields.
+      // The outcome remains available after manual dismissal while guarded
+      // emissions protect disposed fields.
       emitIfOpen(state.copyWith(status: status));
       return status;
     } catch (error, stackTrace) {
