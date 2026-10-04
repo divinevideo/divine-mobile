@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:clock/clock.dart';
 import 'package:http/http.dart' as http;
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/observability/performance_operation.dart';
@@ -235,7 +236,7 @@ class CreatorDeleteEnforcementRepository {
     String? body,
   }) async {
     final requestBudget = timeout ?? _requestTimeout;
-    final stopwatch = Stopwatch()..start();
+    final stopwatch = clock.stopwatch()..start();
     final phaseTimer = Stopwatch()..start();
     var signing = true;
     timing.requests++;

@@ -488,8 +488,10 @@ void main() {
       expect(monitor.traces.single.stops, 1);
     });
 
-    test('does not time out a human-approved signer', () {
+    test('waits for human approval before reporting an exhausted budget', () {
       fakeAsync((async) {
+        final monitor = RecordingPerformanceMonitor();
+        var requests = 0;
         final signer = Completer<Nip98Token?>();
         when(
           () => auth.createAuthToken(
@@ -501,9 +503,13 @@ void main() {
         final repository = CreatorDeleteEnforcementRepository(
           baseUrl: 'https://moderation.example',
           httpClient: MockClient(
-            (_) async => http.Response('{"status":"success"}', 200),
+            (_) async {
+              requests++;
+              return http.Response('{"status":"success"}', 200);
+            },
           ),
           nip98AuthService: auth,
+          performanceMonitor: monitor,
           shouldBoundSigning: () => false,
         );
 
@@ -515,7 +521,12 @@ void main() {
 
         signer.complete(token);
         async.flushMicrotasks();
-        expect(result!.status, CreatorDeleteEnforcementStatus.confirmed);
+        expect(result!.status, CreatorDeleteEnforcementStatus.delayed);
+        expect(
+          monitor.traces.single.attributes['reason'],
+          'signing_budget_exhausted',
+        );
+        expect(requests, 0);
       });
     });
   });
