@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/screens/hashtag_screen_router.dart';
@@ -118,6 +119,60 @@ class DeepLinkCoordinator {
 
   final GoRouter _router;
   final AuthService _authService;
+
+  /// Navigates to a list route: another list already showing is replaced in
+  /// place instead of stacked, the same list is left alone, and anything else
+  /// keeps the current route underneath so back returns to wherever the user
+  /// was instead of wiping the stack.
+  void _navigateToListRoute({
+    required String currentLocation,
+    required String targetPath,
+    required String familyPrefix,
+  }) {
+    Log.info(
+      '📱 Navigating to list: $targetPath',
+      name: 'DeepLinkHandler',
+      category: LogCategory.ui,
+    );
+    try {
+      final action = resolveDeepLinkNavAction(
+        currentLocation: currentLocation,
+        targetPath: targetPath,
+        isRouteFamilyLocation: (location) => location.startsWith(familyPrefix),
+      );
+      switch (action) {
+        case DeepLinkNavAction.skip:
+          // GoRouter's universal-link redirect may have already navigated
+          // here; skip the duplicate navigation to avoid a second navigation
+          // frame on the same target.
+          Log.info(
+            '⏭️ Already on $targetPath — skipping duplicate list navigation',
+            name: 'DeepLinkHandler',
+            category: LogCategory.ui,
+          );
+        case DeepLinkNavAction.go:
+          _router.go(targetPath);
+          Log.info(
+            '✅ Navigation completed to: $targetPath',
+            name: 'DeepLinkHandler',
+            category: LogCategory.ui,
+          );
+        case DeepLinkNavAction.push:
+          _push(targetPath);
+          Log.info(
+            '✅ Navigation completed to: $targetPath',
+            name: 'DeepLinkHandler',
+            category: LogCategory.ui,
+          );
+      }
+    } catch (e) {
+      Log.error(
+        '❌ Navigation failed: $e',
+        name: 'DeepLinkHandler',
+        category: LogCategory.ui,
+      );
+    }
+  }
 
   void _push(String location, {Object? extra}) {
     // A push future is the eventual pop result; keep listening and log errors.
@@ -387,64 +442,41 @@ class DeepLinkCoordinator {
             final listPubkey = deepLink.listPubkey;
             final listId = deepLink.listId;
             if (listId != null && listId.isNotEmpty) {
-              final targetPath = listPubkey == null || listPubkey.isEmpty
-                  ? CuratedListFeedScreen.pathForId(listId)
-                  : CuratedListByAuthorScreen.pathFor(
-                      pubkey: listPubkey,
-                      listId: listId,
-                    );
-              Log.info(
-                '📱 Navigating to list: $targetPath',
-                name: 'DeepLinkHandler',
-                category: LogCategory.ui,
+              _navigateToListRoute(
+                currentLocation: currentLocation,
+                targetPath: listPubkey == null || listPubkey.isEmpty
+                    ? CuratedListFeedScreen.pathForId(listId)
+                    : CuratedListByAuthorScreen.pathFor(
+                        pubkey: listPubkey,
+                        listId: listId,
+                      ),
+                familyPrefix: '${CuratedListFeedScreen.basePath}/',
               );
-              try {
-                final action = resolveDeepLinkNavAction(
-                  currentLocation: currentLocation,
-                  targetPath: targetPath,
-                  isRouteFamilyLocation: (location) =>
-                      location.startsWith('${CuratedListFeedScreen.basePath}/'),
-                );
-                switch (action) {
-                  case DeepLinkNavAction.skip:
-                    // GoRouter's universal-link redirect may have already
-                    // navigated here; skip the duplicate navigation to avoid
-                    // a second navigation frame on the same target.
-                    Log.info(
-                      '⏭️ Already on $targetPath — skipping duplicate '
-                      'list navigation',
-                      name: 'DeepLinkHandler',
-                      category: LogCategory.ui,
-                    );
-                  case DeepLinkNavAction.go:
-                    // Another list is already showing — replace it
-                    // in-place instead of stacking it.
-                    router.go(targetPath);
-                    Log.info(
-                      '✅ Navigation completed to: $targetPath',
-                      name: 'DeepLinkHandler',
-                      category: LogCategory.ui,
-                    );
-                  case DeepLinkNavAction.push:
-                    // Keep the current route underneath so back returns to
-                    // wherever the user was instead of wiping the stack.
-                    _push(targetPath);
-                    Log.info(
-                      '✅ Navigation completed to: $targetPath',
-                      name: 'DeepLinkHandler',
-                      category: LogCategory.ui,
-                    );
-                }
-              } catch (e) {
-                Log.error(
-                  '❌ Navigation failed: $e',
-                  name: 'DeepLinkHandler',
-                  category: LogCategory.ui,
-                );
-              }
             } else {
               Log.warning(
                 '⚠️ List deep link missing list id',
+                name: 'DeepLinkHandler',
+                category: LogCategory.ui,
+              );
+            }
+          case DeepLinkType.peopleList:
+            final listPubkey = deepLink.listPubkey;
+            final listId = deepLink.listId;
+            if (listId != null &&
+                listId.isNotEmpty &&
+                listPubkey != null &&
+                listPubkey.isNotEmpty) {
+              _navigateToListRoute(
+                currentLocation: currentLocation,
+                targetPath: RoutePaths.peopleListForId(
+                  listId,
+                  ownerPubkey: listPubkey,
+                ),
+                familyPrefix: '/people-lists/',
+              );
+            } else {
+              Log.warning(
+                '⚠️ People list deep link missing list id or owner',
                 name: 'DeepLinkHandler',
                 category: LogCategory.ui,
               );

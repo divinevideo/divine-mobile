@@ -52,6 +52,19 @@ void main() {
         equals('/list/$authorPubkey/my-vines'),
       );
     });
+
+    test('maps shared people list links to the internal route', () {
+      const ownerPubkey =
+          'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2';
+      expect(
+        divineUrlToPushRoute(
+          Uri.parse(
+            'https://divine.video/people-lists/crew?owner=$ownerPubkey',
+          ),
+        ),
+        equals('/people-lists/crew?owner=$ownerPubkey'),
+      );
+    });
   });
 
   group('universalLinkToRouterPath', () {
@@ -180,6 +193,17 @@ void main() {
     group('list', () {
       const authorPubkey =
           'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2';
+
+      test('maps a shared people list link to its owner-qualified route', () {
+        expect(
+          universalLinkToRouterPath(
+            Uri.parse(
+              'https://divine.video/people-lists/crew?owner=$authorPubkey',
+            ),
+          ),
+          equals('/people-lists/crew?owner=$authorPubkey'),
+        );
+      });
 
       test('maps /list/:listId to the internal list route', () {
         expect(
