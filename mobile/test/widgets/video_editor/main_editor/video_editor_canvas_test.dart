@@ -22,48 +22,52 @@ import 'package:pro_image_editor/pro_image_editor.dart' show ProVideoController;
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
 void main() {
-  testWidgets('VideoEditorCanvas renders safely with no clips', (tester) async {
-    final bodySizeNotifier = ValueNotifier(Size.zero);
-    addTearDown(bodySizeNotifier.dispose);
+  group('renders', () {
+    testWidgets('VideoEditorCanvas renders safely with no clips', (
+      tester,
+    ) async {
+      final bodySizeNotifier = ValueNotifier(Size.zero);
+      addTearDown(bodySizeNotifier.dispose);
 
-    await tester.pumpWidget(
-      ProviderScope(
-        child: MaterialApp(
-          localizationsDelegates: appLocalizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: MultiBlocProvider(
-            providers: [
-              BlocProvider(create: (_) => VideoEditorMainBloc()),
-              BlocProvider(create: (_) => VideoEditorDrawBloc()),
-              BlocProvider(create: (_) => VideoEditorFilterBloc()),
-            ],
-            child: VideoEditorScope(
-              editorKey: GlobalKey(),
-              removeAreaKey: GlobalKey(),
-              onOpenCamera: () {},
-              onAddStickers: () {},
-              onOpenClipsEditor: () {},
-              onOpenMusicLibrary: () {},
-              onOpenVoiceOver: () {},
-              onOpenCaptions: () {},
-              onOpenEffects: () {},
-              onAddEditTextLayer: ([_]) async => null,
-              originalClipAspectRatio: 9 / 16,
-              bodySizeNotifier: bodySizeNotifier,
-              zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
-              playTimeNotifier: ValueNotifier(Duration.zero),
-              playheadAdvancingNotifier: ValueNotifier<bool>(false),
-              fromLibrary: false,
-              child: const Scaffold(body: VideoEditorCanvas()),
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: MultiBlocProvider(
+              providers: [
+                BlocProvider(create: (_) => VideoEditorMainBloc()),
+                BlocProvider(create: (_) => VideoEditorDrawBloc()),
+                BlocProvider(create: (_) => VideoEditorFilterBloc()),
+              ],
+              child: VideoEditorScope(
+                editorKey: GlobalKey(),
+                removeAreaKey: GlobalKey(),
+                onOpenCamera: () {},
+                onAddStickers: () {},
+                onOpenClipsEditor: () {},
+                onOpenMusicLibrary: () {},
+                onOpenVoiceOver: () {},
+                onOpenCaptions: () {},
+                onOpenEffects: () {},
+                onAddEditTextLayer: ([_]) async => null,
+                originalClipAspectRatio: 9 / 16,
+                bodySizeNotifier: bodySizeNotifier,
+                zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
+                playTimeNotifier: ValueNotifier(Duration.zero),
+                playheadAdvancingNotifier: ValueNotifier<bool>(false),
+                fromLibrary: false,
+                child: const Scaffold(body: VideoEditorCanvas()),
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.pump();
+      await tester.pump();
 
-    expect(tester.takeException(), isNull);
+      expect(tester.takeException(), isNull);
+    });
   });
 
   group('VideoEditorCanvas.syncPositionAfterTrimRelease', () {
