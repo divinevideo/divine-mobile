@@ -54,6 +54,57 @@ void main() {
     );
 
     test(
+      'overlapping snapshots accept an identical row already written',
+      () async {
+        final writer = CuratedListCacheWriteCoordinator();
+        CuratedList owned(String id) => CuratedList(
+          id: id,
+          name: id,
+          pubkey: author,
+          videoEventIds: const [],
+          createdAt: DateTime.utc(2026),
+          updatedAt: DateTime.utc(2026),
+        );
+        final initial = [owned('first'), owned('second')];
+        final firstAdded = initial[0].copyWith(
+          videoEventIds: ['c' * 64],
+          updatedAt: DateTime.utc(2026).add(const Duration(seconds: 1)),
+        );
+        final secondAdded = initial[1].copyWith(
+          videoEventIds: ['c' * 64],
+          updatedAt: DateTime.utc(2026).add(const Duration(seconds: 1)),
+        );
+        var stored = initial;
+        final firstWritten = Completer<void>();
+        final finishFirst = Completer<void>();
+        final first = writer.saveLists(
+          baseline: initial,
+          current: [firstAdded, initial[1]],
+          read: () => stored,
+          write: (value) async {
+            stored = value;
+            firstWritten.complete();
+            await finishFirst.future;
+            return true;
+          },
+        );
+        await firstWritten.future;
+        final second = writer.saveLists(
+          baseline: initial,
+          current: [firstAdded, secondAdded],
+          read: () => stored,
+          write: (value) async {
+            stored = value;
+            return true;
+          },
+        );
+        finishFirst.complete();
+        expect(await Future.wait([first, second]), [true, true]);
+        expect(stored, [firstAdded, secondAdded]);
+      },
+    );
+
+    test(
       'a late older revision and stale deletion preserve the newest coordinate',
       () async {
         final writer = CuratedListCacheWriteCoordinator();
@@ -79,7 +130,8 @@ void main() {
     );
 
     test(
-      'local metadata based on the current source can have an earlier wall clock',
+      'local metadata based on the current source can have an earlier '
+      'wall clock',
       () async {
         final writer = CuratedListCacheWriteCoordinator();
         final source = list(author, revision: 5);
