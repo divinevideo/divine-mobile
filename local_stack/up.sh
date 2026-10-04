@@ -28,6 +28,7 @@ case "${1:-}" in
 esac
 
 SERVICES=(
+  name-server
   keycast keycast-postgres keycast-redis
   funnelcake-relay funnelcake-api funnelcake-proxy funnelcake-redis funnelcake-clickhouse
   minio blossom blossom-proxy

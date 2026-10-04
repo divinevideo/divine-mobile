@@ -1,0 +1,22 @@
+# Deliberately independent of wrangler.toml: no routes, production vars,
+# remote bindings, cron, or admin assets. Preserve the incoming Host and port
+# so NIP-98 validates both localhost and Android emulator requests.
+name = "divine-name-server-local"
+main = "src/index.ts"
+compatibility_date = "2024-11-15"
+
+[vars]
+KEYCAST_URL = "http://keycast:3000"
+KEYCAST_CLIENT_ID = "divine-name-server-local"
+ADMIN_PUBKEYS = ""
+FASTLY_STORE_ID = ""
+
+[[kv_namespaces]]
+binding = "SESSION_KV"
+id = "local-sessions"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "divine-name-server-local"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"

@@ -71,6 +71,29 @@ void main() {
 
     group('injection', () {
       test(
+        'an unavailable local registry never falls back to production',
+        () async {
+          const localServer = 'http://localhost:43005';
+          when(() => httpClient.get(any())).thenThrow(
+            ClientException('Local registry is offline'),
+          );
+
+          final result = await buildRepository(
+            nameServerBaseUrl: localServer,
+            keycastNip05Url: 'http://localhost:43000/.well-known/nostr.json',
+          ).checkUsernameAvailability(username: 'localtest');
+
+          expect(result, isA<UsernameCheckError>());
+          verify(
+            () => httpClient.get(
+              Uri.parse('$localServer/api/username/check/localtest'),
+            ),
+          ).called(1);
+          verifyNoMoreInteractions(httpClient);
+        },
+      );
+
+      test(
         'checkUsernameAvailability requests the injected name server',
         () async {
           when(() => httpClient.get(any())).thenAnswer(

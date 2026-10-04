@@ -1,4 +1,5 @@
 # path	tier	runner	requirements	rationale
+tests/localUsername.yaml	manual-regression	operator	android-emulator,LOCAL-build,local-stack	Reserved and taken checks plus signed claim against an isolated local registry
 tests/prLaunchReady.yaml	pr	codemagic:e2e-smoke-ios,codemagic:e2e-smoke-android	simulator-or-emulator	Clean-install launch readiness
 tests/prAuthenticateHome.yaml	pr	codemagic:e2e-smoke-ios,codemagic:e2e-smoke-android	simulator-or-emulator	Throwaway-account authentication into Home
 tests/prSeededVideoPlayback.yaml	pr	codemagic:e2e-smoke-ios,codemagic:e2e-smoke-android	simulator-or-emulator,QA_VIDEO_EVENT_ID	Immutable public-event playback
