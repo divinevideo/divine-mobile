@@ -522,6 +522,13 @@ void main() {
         late CuratedList original;
         late CuratedList other;
         late CuratedListService replacement;
+        // Keep queue futures in the widget test's fake-async zone.
+        service = CuratedListService(
+          nostrService: client,
+          authService: auth,
+          prefs: prefs,
+        );
+        addTearDown(service.dispose);
         await withClock(Clock.fixed(instant), () async {
           original = (await service.createList(name: 'A title'))!;
           SharedPreferences.setMockInitialValues({});
@@ -586,6 +593,13 @@ void main() {
         late CuratedList original;
         late CuratedList other;
         late CuratedListService replacement;
+        // Keep queue futures in the widget test's fake-async zone.
+        service = CuratedListService(
+          nostrService: client,
+          authService: auth,
+          prefs: prefs,
+        );
+        addTearDown(service.dispose);
         await withClock(Clock.fixed(instant), () async {
           original = (await service.createList(name: 'A title'))!;
           SharedPreferences.setMockInitialValues({});
@@ -662,6 +676,13 @@ void main() {
     testWidgets(
       'UI video picker refuses stale account picks without touching A or B',
       (tester) async {
+        // Keep queue futures in the widget test's fake-async zone.
+        service = CuratedListService(
+          nostrService: client,
+          authService: auth,
+          prefs: prefs,
+        );
+        addTearDown(service.dispose);
         final original = (await service.createList(name: 'A list'))!;
         _visibleService = service;
         await tester.binding.setSurfaceSize(const Size(800, 1200));
