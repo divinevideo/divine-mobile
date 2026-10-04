@@ -23,8 +23,10 @@ class _TrackingDeepLinkService extends DeepLinkService {
   late final StreamSubscription<DeepLink> _subscription;
   final List<DeepLink> receivedDeepLinks = [];
   bool _disposed = false;
+  Future<void>? _disposal;
 
   bool get isDisposed => _disposed;
+  Future<void> get disposal => _disposal ?? Future<void>.value();
 
   @override
   Stream<DeepLink> get linkStream => _controller.stream;
@@ -35,8 +37,10 @@ class _TrackingDeepLinkService extends DeepLinkService {
   @override
   void dispose() {
     _disposed = true;
-    _subscription.cancel();
-    _controller.close();
+    _disposal ??= Future.wait<void>([
+      _subscription.cancel(),
+      _controller.close(),
+    ]);
   }
 }
 
@@ -85,6 +89,7 @@ void main() {
       expect(serviceA.isDisposed, isFalse);
 
       containerA.dispose();
+      await serviceA.disposal;
       expect(serviceA.isDisposed, isTrue);
 
       await Future<void>.delayed(Duration.zero);
@@ -99,7 +104,10 @@ void main() {
       final containerB = createContainer(
         assignService: (service) => serviceB = service,
       );
-      addTearDown(containerB.dispose);
+      addTearDown(() async {
+        containerB.dispose();
+        await serviceB.disposal;
+      });
       final subscriptionB = containerB.listen<AsyncValue<DeepLink>>(
         deepLinksProvider,
         (previous, next) {
