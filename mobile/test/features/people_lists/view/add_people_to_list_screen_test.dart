@@ -184,6 +184,7 @@ void main() {
       required AddPeopleToListState cubitState,
       Map<String, String> names = threeNames,
       List<Override> additionalOverrides = const [],
+      PeopleListsBloc? peopleListsBloc,
     }) async {
       when(() => cubit.state).thenReturn(cubitState);
       await tester.pumpWidget(
@@ -194,7 +195,9 @@ void main() {
           ],
           home: MultiBlocProvider(
             providers: [
-              BlocProvider<PeopleListsBloc>.value(value: bloc),
+              BlocProvider<PeopleListsBloc>.value(
+                value: peopleListsBloc ?? bloc,
+              ),
               BlocProvider<AddPeopleToListCubit>.value(value: cubit),
             ],
             child: AddPeopleToListView(userList: userList),
@@ -619,6 +622,107 @@ void main() {
     });
 
     group('interactions', () {
+      testWidgets(
+        'reports a refused write after a repository update while publishing',
+        (tester) async {
+          final list = _buildList(id: 'list-1', name: 'Close Friends');
+          final repository = _MockPeopleListsRepository();
+          final lists = StreamController<List<UserList>>();
+          final publish = Completer<PeopleListPublishResult>();
+          when(
+            () => repository.watchLists(ownerPubkey: _ownerPubkey),
+          ).thenAnswer((_) => lists.stream);
+          when(
+            () => repository.syncOwner(ownerPubkey: _ownerPubkey),
+          ).thenAnswer((_) async {});
+          when(
+            () => repository.syncFollowedLists(
+              viewerPubkey: _ownerPubkey,
+              isCancelled: any(named: 'isCancelled'),
+            ),
+          ).thenAnswer((_) async {});
+          when(
+            () => repository.addPubkey(
+              ownerPubkey: _ownerPubkey,
+              listId: list.id,
+              pubkey: _candidateA,
+            ),
+          ).thenAnswer((_) => publish.future);
+          final peopleListsBloc = (await tester.runAsync(() async {
+            final result = PeopleListsBloc(
+              repository: repository,
+              ownerPubkeyStream: const Stream.empty(),
+              repositoryStream: const Stream.empty(),
+              enabledStream: const Stream.empty(),
+              initialOwnerPubkey: _ownerPubkey,
+            );
+            final loaded = result.stream.firstWhere(
+              (state) => state.status == PeopleListsStatus.ready,
+            );
+            result.add(const PeopleListsStarted());
+            await result.stream.firstWhere(
+              (state) => state.status == PeopleListsStatus.loading,
+            );
+            lists.add([list]);
+            await loaded;
+            return result;
+          }))!;
+          Future<void> waitForStatus(PeopleListsStatus status) async {
+            await tester.runAsync(() async {
+              if (peopleListsBloc.state.status != status) {
+                await peopleListsBloc.stream.firstWhere(
+                  (state) => state.status == status,
+                );
+              }
+            });
+            await tester.pump();
+          }
+
+          try {
+            await pumpView(
+              tester,
+              userList: list,
+              cubitState: threeCandidates,
+              peopleListsBloc: peopleListsBloc,
+            );
+            await tester.tap(_addButtons().first);
+            await waitForStatus(PeopleListsStatus.submitting);
+            expect(peopleListsBloc.state.status, PeopleListsStatus.submitting);
+            expect(peopleListsBloc.state.pendingMutations, hasLength(1));
+            expect(_removeButtons(), findsOneWidget);
+
+            lists.add([list]);
+            await waitForStatus(PeopleListsStatus.ready);
+            expect(peopleListsBloc.state.status, PeopleListsStatus.ready);
+            expect(peopleListsBloc.state.pendingMutations, hasLength(1));
+            expect(
+              find.text(l10n.peopleListsMembershipUpdateFailed),
+              findsNothing,
+            );
+
+            publish.complete(const PeopleListPublishResult.failed());
+            await waitForStatus(PeopleListsStatus.failure);
+            expect(peopleListsBloc.state.status, PeopleListsStatus.failure);
+            expect(peopleListsBloc.state.pendingMutations, isEmpty);
+            expect(_removeButtons(), findsNothing);
+            expect(_addButtons(), findsNWidgets(3));
+            expect(
+              find.text(l10n.peopleListsMembershipUpdateFailed),
+              findsOneWidget,
+            );
+          } finally {
+            if (!publish.isCompleted) {
+              publish.complete(const PeopleListPublishResult.failed());
+            }
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.runAsync(() async {
+              await peopleListsBloc.close();
+              await lists.close();
+            });
+          }
+        },
+      );
+
       testWidgets('the add button toggles that person through the bloc', (
         tester,
       ) async {
