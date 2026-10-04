@@ -439,7 +439,7 @@ void main() {
         if (refreshCalls == 1) {
           throw OAuthNetworkException('offline');
         }
-        retryStarted.complete();
+        if (!retryStarted.isCompleted) retryStarted.complete();
         return backgroundRefresh.future;
       });
 

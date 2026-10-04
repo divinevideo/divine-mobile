@@ -491,7 +491,7 @@ void main() {
             return PendingSaveDriveOutcome.retryableFailure;
           }
           await dao.clear(pubkey);
-          retryCleared.complete();
+          if (!retryCleared.isCompleted) retryCleared.complete();
           return PendingSaveDriveOutcome.confirmed;
         });
 
@@ -605,7 +605,7 @@ void main() {
           ),
         ).thenAnswer((_) async {
           await dao.clear(pubkey);
-          slotCleared.complete();
+          if (!slotCleared.isCompleted) slotCleared.complete();
           return PendingSaveDriveOutcome.confirmed;
         });
 
