@@ -340,14 +340,16 @@ void main() {
     });
   });
 
-  test('tells the retired cursive wordmark apart', () async {
-    final retired = await _decodeFile(_retiredWordmarkAssetKey);
-    expect(
-      silhouetteOverlap(wordmark, normalizedSilhouette(retired)),
-      lessThan(_minWordmarkOverlap),
-      reason:
-          'the launch-image checks above are only meaningful while a wrong '
-          'wordmark scores below the threshold',
-    );
+  group('silhouetteOverlap', () {
+    test('tells the retired cursive wordmark apart', () async {
+      final retired = await _decodeFile(_retiredWordmarkAssetKey);
+      expect(
+        silhouetteOverlap(wordmark, normalizedSilhouette(retired)),
+        lessThan(_minWordmarkOverlap),
+        reason:
+            'the launch-image checks above are only meaningful while a wrong '
+            'wordmark scores below the threshold',
+      );
+    });
   });
 }

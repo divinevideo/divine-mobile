@@ -459,26 +459,28 @@ void main() {
     return seeded;
   }
 
-  testWidgets('seeds the swapped-in container with the retargeted route', (
-    tester,
-  ) async {
-    expect(
-      await seededLocationSwitchingFrom(
-        tester,
-        ProfileScreenRouter.pathForNpub(leavingNpub),
-      ),
-      ProfileScreenRouter.pathForNpub(targetNpub),
-    );
-  });
+  group('navigation', () {
+    testWidgets('seeds the swapped-in container with the retargeted route', (
+      tester,
+    ) async {
+      expect(
+        await seededLocationSwitchingFrom(
+          tester,
+          ProfileScreenRouter.pathForNpub(leavingNpub),
+        ),
+        ProfileScreenRouter.pathForNpub(targetNpub),
+      );
+    });
 
-  testWidgets('seeds another user profile route unchanged', (tester) async {
-    expect(
-      await seededLocationSwitchingFrom(
-        tester,
+    testWidgets('seeds another user profile route unchanged', (tester) async {
+      expect(
+        await seededLocationSwitchingFrom(
+          tester,
+          ProfileScreenRouter.pathForNpub(strangerNpub),
+        ),
         ProfileScreenRouter.pathForNpub(strangerNpub),
-      ),
-      ProfileScreenRouter.pathForNpub(strangerNpub),
-    );
+      );
+    });
   });
 
   group('push lifecycle', () {
@@ -662,68 +664,70 @@ void main() {
     });
   });
 
-  testWidgets('keeps outgoing push registration when target sign-in fails', (
-    tester,
-  ) async {
-    final pushCoordinator = _MockPushNotificationSessionCoordinator();
-    when(
-      pushCoordinator.deregisterLastReadyPubkeyAfterAccountSwitch,
-    ).thenAnswer((_) async {});
-    overridePushSync(pushCoordinator);
-    final initial = await pumpHost(tester);
-    initial.read(pushNotificationSyncProvider);
-    ProviderContainer? attempted;
-    keyStorage.primary = _FakeSecureKeyContainer(
-      npub: 'npub_previous',
-      publicKeyHex:
-          '2222222222222222222222222222222222222222222222222222222222222222',
-    );
+  group('interactions', () {
+    testWidgets('keeps outgoing push registration when target sign-in fails', (
+      tester,
+    ) async {
+      final pushCoordinator = _MockPushNotificationSessionCoordinator();
+      when(
+        pushCoordinator.deregisterLastReadyPubkeyAfterAccountSwitch,
+      ).thenAnswer((_) async {});
+      overridePushSync(pushCoordinator);
+      final initial = await pumpHost(tester);
+      initial.read(pushNotificationSyncProvider);
+      ProviderContainer? attempted;
+      keyStorage.primary = _FakeSecureKeyContainer(
+        npub: 'npub_previous',
+        publicKeyHex:
+            '2222222222222222222222222222222222222222222222222222222222222222',
+      );
 
-    await expectLater(
-      swapAccount(
+      await expectLater(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (container, acct) async {
+            attempted = container;
+            throw Exception('signer unreachable');
+          },
+        ),
+        throwsException,
+      );
+      await tester.pump();
+
+      // The half-built container is disposed; the current account is untouched.
+      expect(attempted, isNotNull);
+      expect(_isDisposed(attempted!), isTrue);
+      expect(_isDisposed(initial), isFalse);
+      expect(keyStorage.restoredPrimary, same(keyStorage.primary));
+      // A sign-in that got far enough to fail already restored the target
+      // account's signer keys and auth source over the shared slots. Disposing
+      // its container does not undo that — the leaving account's own keys have
+      // to go back, or it reads the wrong signer at the next launch.
+      expect(currentAuthService.calls, equals(['archive', 'restore']));
+      verifyNever(pushCoordinator.deregisterLastReadyPubkeyAfterAccountSwitch);
+    });
+
+    testWidgets('archives the leaving account before signing the new one in', (
+      tester,
+    ) async {
+      await pumpHost(tester);
+
+      await swapAccount(
         deviceScope: deviceScope,
         controller: controller,
         currentAuthService: currentAuthService,
         account: account,
-        signIn: (container, acct) async {
-          attempted = container;
-          throw Exception('signer unreachable');
-        },
-      ),
-      throwsException,
-    );
-    await tester.pump();
+        signIn: (_, _) async => currentAuthService.calls.add('signIn'),
+      );
+      await tester.pump();
 
-    // The half-built container is disposed; the current account is untouched.
-    expect(attempted, isNotNull);
-    expect(_isDisposed(attempted!), isTrue);
-    expect(_isDisposed(initial), isFalse);
-    expect(keyStorage.restoredPrimary, same(keyStorage.primary));
-    // A sign-in that got far enough to fail already restored the target
-    // account's signer keys and auth source over the shared slots. Disposing
-    // its container does not undo that — the leaving account's own keys have
-    // to go back, or it reads the wrong signer at the next launch.
-    expect(currentAuthService.calls, equals(['archive', 'restore']));
-    verifyNever(pushCoordinator.deregisterLastReadyPubkeyAfterAccountSwitch);
-  });
-
-  testWidgets('archives the leaving account before signing the new one in', (
-    tester,
-  ) async {
-    await pumpHost(tester);
-
-    await swapAccount(
-      deviceScope: deviceScope,
-      controller: controller,
-      currentAuthService: currentAuthService,
-      account: account,
-      signIn: (_, _) async => currentAuthService.calls.add('signIn'),
-    );
-    await tester.pump();
-
-    // Signing the incoming account in overwrites the shared signer slots, so
-    // the leaving account's credentials must already be in its own archive.
-    expect(currentAuthService.calls, equals(['archive', 'signIn']));
+      // Signing the incoming account in overwrites the shared signer slots, so
+      // the leaving account's credentials must already be in its own archive.
+      expect(currentAuthService.calls, equals(['archive', 'signIn']));
+    });
   });
 
   group('DM lifecycle', () {
@@ -801,60 +805,62 @@ void main() {
     });
   });
 
-  testWidgets('aborts before building anything when the archive fails', (
-    tester,
-  ) async {
-    final initial = await pumpHost(tester);
-    currentAuthService.archiveError = Exception('keychain unavailable');
-    var signInAttempted = false;
+  group('interactions', () {
+    testWidgets('aborts before building anything when the archive fails', (
+      tester,
+    ) async {
+      final initial = await pumpHost(tester);
+      currentAuthService.archiveError = Exception('keychain unavailable');
+      var signInAttempted = false;
 
-    await expectLater(
-      swapAccount(
-        deviceScope: deviceScope,
-        controller: controller,
-        currentAuthService: currentAuthService,
-        account: account,
-        signIn: (_, _) async => signInAttempted = true,
-      ),
-      throwsException,
-    );
-    await tester.pump();
+      await expectLater(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (_, _) async => signInAttempted = true,
+        ),
+        throwsException,
+      );
+      await tester.pump();
 
-    // Carrying on past a failed archive would let the incoming sign-in wipe
-    // the shared slots the archive was meant to copy, destroying the leaving
-    // account's session for a log line.
-    expect(signInAttempted, isFalse);
-    expect(_isDisposed(initial), isFalse);
-  });
+      // Carrying on past a failed archive would let the incoming sign-in wipe
+      // the shared slots the archive was meant to copy, destroying the leaving
+      // account's session for a log line.
+      expect(signInAttempted, isFalse);
+      expect(_isDisposed(initial), isFalse);
+    });
 
-  testWidgets('surfaces the sign-in failure even when the rollback throws', (
-    tester,
-  ) async {
-    await pumpHost(tester);
-    keyStorage.primary = _FakeSecureKeyContainer(
-      npub: 'npub_previous',
-      publicKeyHex:
-          '2222222222222222222222222222222222222222222222222222222222222222',
-    );
-    keyStorage.restoreError = Exception('primary restore failed');
+    testWidgets('surfaces the sign-in failure even when the rollback throws', (
+      tester,
+    ) async {
+      await pumpHost(tester);
+      keyStorage.primary = _FakeSecureKeyContainer(
+        npub: 'npub_previous',
+        publicKeyHex:
+            '2222222222222222222222222222222222222222222222222222222222222222',
+      );
+      keyStorage.restoreError = Exception('primary restore failed');
 
-    // The caller dispatches on this type to offer a fresh sign-in, so a
-    // rollback failure must not replace it with its own.
-    await expectLater(
-      swapAccount(
-        deviceScope: deviceScope,
-        controller: controller,
-        currentAuthService: currentAuthService,
-        account: account,
-        signIn: (_, _) async => throw _FakeSignInException(),
-      ),
-      throwsA(isA<_FakeSignInException>()),
-    );
-    await tester.pump();
+      // The caller dispatches on this type to offer a fresh sign-in, so a
+      // rollback failure must not replace it with its own.
+      await expectLater(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (_, _) async => throw _FakeSignInException(),
+        ),
+        throwsA(isA<_FakeSignInException>()),
+      );
+      await tester.pump();
 
-    // The signer restore is ordered ahead of the throwing primary restore, so
-    // it still ran.
-    expect(currentAuthService.calls, equals(['archive', 'restore']));
+      // The signer restore is ordered ahead of the throwing primary restore, so
+      // it still ran.
+      expect(currentAuthService.calls, equals(['archive', 'restore']));
+    });
   });
 
   // The leaving account's DM repository keeps draining relay history into the

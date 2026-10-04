@@ -332,125 +332,135 @@ void main() {
     });
   });
 
-  test('platform settings are immutable values with mode copyWith', () {
-    const original = CrosspostingPlatformSettings(
-      platform: CrosspostingPlatform.instagram,
-      supportsAutomatic: true,
-      mode: CrosspostingMode.disabled,
-    );
-
-    final updated = original.copyWith(mode: CrosspostingMode.manual);
-
-    expect(updated.mode, CrosspostingMode.manual);
-    expect(updated.platform, original.platform);
-    expect(updated.supportsAutomatic, original.supportsAutomatic);
-    expect(updated.connection, original.connection);
-    expect(
-      original,
-      const CrosspostingPlatformSettings(
+  group('CrosspostingPlatformSettings copyWith', () {
+    test('platform settings are immutable values with mode copyWith', () {
+      const original = CrosspostingPlatformSettings(
         platform: CrosspostingPlatform.instagram,
         supportsAutomatic: true,
         mode: CrosspostingMode.disabled,
-      ),
-    );
+      );
+
+      final updated = original.copyWith(mode: CrosspostingMode.manual);
+
+      expect(updated.mode, CrosspostingMode.manual);
+      expect(updated.platform, original.platform);
+      expect(updated.supportsAutomatic, original.supportsAutomatic);
+      expect(updated.connection, original.connection);
+      expect(
+        original,
+        const CrosspostingPlatformSettings(
+          platform: CrosspostingPlatform.instagram,
+          supportsAutomatic: true,
+          mode: CrosspostingMode.disabled,
+        ),
+      );
+    });
   });
 
-  test('platform settings compare equivalent connection values', () {
-    // Deliberately not `const`: Dart canonicalizes identical const objects to
-    // one instance, which would satisfy the equality assertion below by
-    // identity and let it pass even if `props` were wrong.
-    // ignore: prefer_const_constructors
-    final first = CrosspostingPlatformSettings(
-      platform: CrosspostingPlatform.instagram,
-      supportsAutomatic: true,
-      // Keep connections distinct so equality exercises their value fields.
+  group('CrosspostingPlatformSettings equality', () {
+    test('platform settings compare equivalent connection values', () {
+      // Deliberately not `const`: Dart canonicalizes identical const objects to
+      // one instance, which would satisfy the equality assertion below by
+      // identity and let it pass even if `props` were wrong.
       // ignore: prefer_const_constructors
-      connection: CrosspostingConnection(
-        id: 'connection-id',
+      final first = CrosspostingPlatformSettings(
         platform: CrosspostingPlatform.instagram,
-        status: CrosspostingConnectionStatus.connected,
-        externalAccountId: 'account-id',
-        externalAccountName: '@creator',
-      ),
-      mode: CrosspostingMode.manual,
-    );
-    // Keep settings distinct so equality cannot pass by const identity.
-    // ignore: prefer_const_constructors
-    final second = CrosspostingPlatformSettings(
-      platform: CrosspostingPlatform.instagram,
-      supportsAutomatic: true,
-      // Keep connections distinct so equality exercises their value fields.
+        supportsAutomatic: true,
+        // Keep connections distinct so equality exercises their value fields.
+        // ignore: prefer_const_constructors
+        connection: CrosspostingConnection(
+          id: 'connection-id',
+          platform: CrosspostingPlatform.instagram,
+          status: CrosspostingConnectionStatus.connected,
+          externalAccountId: 'account-id',
+          externalAccountName: '@creator',
+        ),
+        mode: CrosspostingMode.manual,
+      );
+      // Keep settings distinct so equality cannot pass by const identity.
       // ignore: prefer_const_constructors
-      connection: CrosspostingConnection(
-        id: 'connection-id',
+      final second = CrosspostingPlatformSettings(
         platform: CrosspostingPlatform.instagram,
-        status: CrosspostingConnectionStatus.connected,
-        externalAccountId: 'account-id',
-        externalAccountName: '@creator',
-      ),
-      mode: CrosspostingMode.manual,
-    );
+        supportsAutomatic: true,
+        // Keep connections distinct so equality exercises their value fields.
+        // ignore: prefer_const_constructors
+        connection: CrosspostingConnection(
+          id: 'connection-id',
+          platform: CrosspostingPlatform.instagram,
+          status: CrosspostingConnectionStatus.connected,
+          externalAccountId: 'account-id',
+          externalAccountName: '@creator',
+        ),
+        mode: CrosspostingMode.manual,
+      );
 
-    expect(first, second);
+      expect(first, second);
+    });
   });
 
-  test('startConnection forwards platform and return URL', () async {
-    final returnUrl = Uri.parse('https://divine.video/app/callback');
-    final start = CrosspostingStart(
-      authorizationUrl: Uri.parse('https://instagram.com/oauth'),
-      state: 'oauth-state',
-    );
-    when(
-      () => apiClient.startConnection(
+  group('startConnection', () {
+    test('startConnection forwards platform and return URL', () async {
+      final returnUrl = Uri.parse('https://divine.video/app/callback');
+      final start = CrosspostingStart(
+        authorizationUrl: Uri.parse('https://instagram.com/oauth'),
+        state: 'oauth-state',
+      );
+      when(
+        () => apiClient.startConnection(
+          CrosspostingPlatform.instagram,
+          returnUrl: returnUrl,
+        ),
+      ).thenAnswer((_) async => start);
+
+      final result = await repository.startConnection(
         CrosspostingPlatform.instagram,
         returnUrl: returnUrl,
-      ),
-    ).thenAnswer((_) async => start);
+      );
 
-    final result = await repository.startConnection(
-      CrosspostingPlatform.instagram,
-      returnUrl: returnUrl,
-    );
-
-    expect(result, same(start));
-    verify(
-      () => apiClient.startConnection(
-        CrosspostingPlatform.instagram,
-        returnUrl: returnUrl,
-      ),
-    ).called(1);
+      expect(result, same(start));
+      verify(
+        () => apiClient.startConnection(
+          CrosspostingPlatform.instagram,
+          returnUrl: returnUrl,
+        ),
+      ).called(1);
+    });
   });
 
-  test('disconnect forwards platform and connection ID', () async {
-    when(
-      () => apiClient.disconnect(CrosspostingPlatform.x, 'connection-id'),
-    ).thenAnswer((_) async {});
+  group('disconnect', () {
+    test('disconnect forwards platform and connection ID', () async {
+      when(
+        () => apiClient.disconnect(CrosspostingPlatform.x, 'connection-id'),
+      ).thenAnswer((_) async {});
 
-    await repository.disconnect(CrosspostingPlatform.x, 'connection-id');
+      await repository.disconnect(CrosspostingPlatform.x, 'connection-id');
 
-    verify(
-      () => apiClient.disconnect(CrosspostingPlatform.x, 'connection-id'),
-    ).called(1);
+      verify(
+        () => apiClient.disconnect(CrosspostingPlatform.x, 'connection-id'),
+      ).called(1);
+    });
   });
 
-  test('setMode forwards platform and mode', () async {
-    when(
-      () => apiClient.setMode(
+  group('setMode', () {
+    test('setMode forwards platform and mode', () async {
+      when(
+        () => apiClient.setMode(
+          CrosspostingPlatform.youtube,
+          CrosspostingMode.automatic,
+        ),
+      ).thenAnswer((_) async {});
+
+      await repository.setMode(
         CrosspostingPlatform.youtube,
         CrosspostingMode.automatic,
-      ),
-    ).thenAnswer((_) async {});
+      );
 
-    await repository.setMode(
-      CrosspostingPlatform.youtube,
-      CrosspostingMode.automatic,
-    );
-
-    verify(
-      () => apiClient.setMode(
-        CrosspostingPlatform.youtube,
-        CrosspostingMode.automatic,
-      ),
-    ).called(1);
+      verify(
+        () => apiClient.setMode(
+          CrosspostingPlatform.youtube,
+          CrosspostingMode.automatic,
+        ),
+      ).called(1);
+    });
   });
 }

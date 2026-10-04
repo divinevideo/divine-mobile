@@ -10,27 +10,3 @@
 # Fix by wrapping the declaration in the group it belongs to
 # (.claude/rules/testing.md). Regenerate after grouping sites:
 #   UPDATE_BASELINE=1 bash scripts/check_ungrouped_tests.sh
-packages/divine_video_player/test/src/linux_video_player_backend_test.dart	1
-test/blocs/saved_sounds/saved_sounds_bloc_test.dart	9
-test/providers/analytics_providers_test.dart	6
-test/providers/crossposting_providers_test.dart	1
-test/providers/deep_link_provider_test.dart	1
-test/providers/dm_send_policy_test.dart	6
-test/providers/og_viner_cache_provider_test.dart	2
-test/providers/swap_account_test.dart	6
-test/repositories/crossposting_repository_test.dart	5
-test/router/app_router_test.dart	1
-test/router/app_shell_obscured_test.dart	3
-test/router/route_coverage_test.dart	1
-test/screens/comments/comment_item_test.dart	7
-test/screens/explore_screen_apps_tab_test.dart	3
-test/screens/relay_settings_screen_layout_test.dart	3
-test/screens/subtitle_editor/subtitle_editor_screen_test.dart	20
-test/screens/verify/verify_platform_labels_test.dart	1
-test/services/blossom_resumable_upload_integration_test.dart	2
-test/services/notification_preferences_service_test.dart	4
-test/services/protected_minor_sticky_store_test.dart	7
-test/tools/launch_image_set_test.dart	1
-test/widgets/profile/profile_action_buttons_widget_test.dart	3
-test/widgets/stop_motion/stop_motion_player_test.dart	2
-test/widgets/video_editor/main_editor/video_editor_canvas_test.dart	1
