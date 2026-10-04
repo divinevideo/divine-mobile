@@ -55,9 +55,10 @@ registry bound only to `127.0.0.1:43005` before sending any signed request.
 Native Linux Docker Engine runs a disposable `--rm --network host` smoke
 container against that loopback port, using the server's exact image. Docker
 Desktop, including Desktop for Linux, retains the Compose smoke container and
-`host.docker.internal` transport. Engine classification uses Docker's
-`OperatingSystem`, not the host's `uname`. Neither path changes the server
-binding, daemon configuration or firewall. An occupied test port is rejected
+`host.docker.internal` transport. Host networking requires a Linux host and a
+non-Desktop Linux engine, classified using Docker's `OperatingSystem` and
+`OSType`; the host's `uname` alone never selects it. Neither path changes the
+server binding, daemon configuration or firewall. An occupied test port is rejected
 before creating or cleaning up the isolated test project.
 
 The launcher contracts can be checked without Docker or an emulator:
