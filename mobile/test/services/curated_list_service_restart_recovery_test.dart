@@ -1,6 +1,7 @@
 // ABOUTME: Independent restart probes for sent revisions and accepted privacy.
 // ABOUTME: Uses real SharedPreferences over a rejecting in-memory backing store.
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -170,12 +171,21 @@ void main() {
         // Retry of a metadata edit should retain the privacy already accepted
         // remotely, even if the final local acceptance write was rejected.
         expect(
-          await rebuilt.updateList(listId: seed.id, name: 'Retried'),
+          await rebuilt.updateList(
+            listId: seed.authorScopedId,
+            name: 'Retried',
+          ),
           isTrue,
         );
         final retry = sent.where((e) => e.kind == 30005).last;
         expect(retry.tags, isNot(contains(equals(['e', _video]))));
         expect(unsealForTest(retry.content), contains(_video));
+        final redaction =
+            verify(() => client.publishEvent(captureAny())).captured.single
+                as Event;
+        expect(redaction.kind, 5);
+        expect(redaction.tags, contains(equals(['e', _oldEvent])));
+        expect(redaction.createdAt, greaterThan(retry.createdAt));
         await restart();
         expect(open().getListById(seed.id)!.isPublic, isFalse);
       },
@@ -253,5 +263,64 @@ void main() {
         },
       );
     }
+    test(
+      'known rejection settles its exact coordinate after another deletion',
+      () async {
+        final now = DateTime.now().subtract(const Duration(seconds: 4));
+        CuratedList row(String id) => CuratedList(
+          id: id,
+          name: id,
+          pubkey: _owner,
+          videoEventIds: const [_video],
+          createdAt: now,
+          updatedAt: now,
+          nostrEventId: _oldEvent,
+        );
+        final previous = row('previous');
+        final target = row('target');
+        final following = row('following').copyWith(
+          pendingRepublish: true,
+          pendingVisibility: const CuratedListVisibility(
+            isPublic: false,
+            isCollaborative: false,
+            allowedCollaborators: [],
+          ),
+        );
+        await prefs.setString(
+          CuratedListService.listsStorageKey,
+          jsonEncode([previous.toJson(), target.toJson(), following.toJson()]),
+        );
+        final started = Completer<Event>();
+        final decision = Completer<PublishOutcome>();
+        when(() => client.publishEventAwaitOk(any())).thenAnswer((i) async {
+          final event = i.positionalArguments.single as Event;
+          if (event.kind == 30005) {
+            started.complete(event);
+            return decision.future;
+          }
+          return acceptedOutcome(event);
+        });
+        final service = open();
+        final saving = service.updateList(listId: target.id, isPublic: false);
+        final event = await started.future;
+        expect(await service.deleteOwnedList(previous.id), isTrue);
+        decision.complete(rejectedOutcome(event));
+        expect(await saving, isFalse);
+        expect(
+          [
+            service.getListById(target.id)!.pendingVisibility,
+            service.getListById(following.id)!.pendingVisibility,
+          ],
+          [null, following.pendingVisibility],
+        );
+        await restart();
+        final rebuilt = open();
+        expect(rebuilt.getListById(target.id)!.pendingVisibility, isNull);
+        expect(
+          rebuilt.getListById(following.id)!.pendingVisibility,
+          following.pendingVisibility,
+        );
+      },
+    );
   });
 }
