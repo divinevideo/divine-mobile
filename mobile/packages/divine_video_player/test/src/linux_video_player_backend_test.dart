@@ -528,10 +528,12 @@ void main() {
     });
   });
 
-  test(
-    'linux plugin registration is a no-op',
-    () => expect(DivineVideoPlayerLinuxPlugin.registerWith, returnsNormally),
-  );
+  group('registerWith', () {
+    test(
+      'linux plugin registration is a no-op',
+      () => expect(DivineVideoPlayerLinuxPlugin.registerWith, returnsNormally),
+    );
+  });
 }
 
 class _FakeVideoController {
