@@ -23,20 +23,50 @@ class SelectListCubit extends Cubit<SelectListState>
   SelectListCubit({
     required CuratedListService service,
     required String videoEventId,
+    required String? Function() currentOwnerPubkey,
   }) : _service = service,
+       _currentOwnerPubkey = currentOwnerPubkey,
+       _openingOwnerPubkey = currentOwnerPubkey(),
        _videoEventId = videoEventId,
-       super(_initialState(service, videoEventId)) {
+       super(_initialState(service, videoEventId, currentOwnerPubkey())) {
     _service.addListener(_listsChanged);
   }
 
   final CuratedListService _service;
   final String _videoEventId;
+  final String? Function() _currentOwnerPubkey;
+  final String? _openingOwnerPubkey;
+
+  bool get isSessionCurrent =>
+      _openingOwnerPubkey != null &&
+      _openingOwnerPubkey.isNotEmpty &&
+      _currentOwnerPubkey() == _openingOwnerPubkey;
+
+  static List<CuratedList> _ownedLists(
+    CuratedListService service,
+    String? owner,
+  ) => owner == null || owner.isEmpty
+      ? const []
+      : service.myLists.where((list) => list.pubkey == owner).toList();
+
+  bool _canMutate(String listId) =>
+      isSessionCurrent &&
+      _ownedLists(
+        _service,
+        _openingOwnerPubkey,
+      ).any((list) => list.id == listId);
+
+  SelectListStatus _sessionFailure() {
+    emitIfOpen(state.copyWith(status: SelectListStatus.failure));
+    return SelectListStatus.failure;
+  }
 
   static SelectListState _initialState(
     CuratedListService service,
     String videoEventId,
+    String? owner,
   ) {
-    final lists = service.myLists;
+    final lists = _ownedLists(service, owner);
     final members = _membership(lists, videoEventId);
     return SelectListState(
       lists: lists,
@@ -56,7 +86,7 @@ class SelectListCubit extends Cubit<SelectListState>
   ///
   /// Ignored while a save runs, and for a list the sheet does not offer.
   void toggled(String listId) {
-    if (state.isSaving) return;
+    if (state.isSaving || !isSessionCurrent) return;
     if (state.lists.none((list) => list.id == listId)) return;
     final selected = {...state.selectedListIds};
     if (!selected.add(listId)) selected.remove(listId);
@@ -75,10 +105,12 @@ class SelectListCubit extends Cubit<SelectListState>
   /// visit with no changes closes at once. Otherwise the lists that did take
   /// it are done, and the state ends in [SelectListStatus.failure] or
   /// [SelectListStatus.failureListFull] with the rest still picked. Ignored
-  /// while nothing is picked, as the sheet's check is then disabled. Returns
-  /// the outcome so a caller can report failure even after the sheet closes.
+  /// while [SelectListState.canSubmit] is false, as the sheet's check is then
+  /// disabled. Returns the outcome so a caller can report failure even after
+  /// the sheet closes.
   Future<SelectListStatus?> submitted() async {
     if (!state.canSubmit) return null;
+    if (!isSessionCurrent) return _sessionFailure();
     final toAdd = state.listIdsToAdd;
     final toRemove = state.listIdsToRemove;
     if (toAdd.isEmpty && toRemove.isEmpty) {
@@ -91,7 +123,10 @@ class SelectListCubit extends Cubit<SelectListState>
     var full = 0;
     try {
       for (final listId in toAdd) {
-        if (await _service.addVideoToList(listId, _videoEventId)) continue;
+        if (!_canMutate(listId)) return _sessionFailure();
+        final added = await _service.addVideoToList(listId, _videoEventId);
+        if (!isSessionCurrent) return _sessionFailure();
+        if (added) continue;
         failed++;
         final list = state.lists.firstWhereOrNull((it) => it.id == listId);
         if (list != null &&
@@ -103,7 +138,13 @@ class SelectListCubit extends Cubit<SelectListState>
         }
       }
       for (final listId in toRemove) {
-        if (!await _service.removeVideoFromList(listId, _videoEventId)) {
+        if (!_canMutate(listId)) return _sessionFailure();
+        final removed = await _service.removeVideoFromList(
+          listId,
+          _videoEventId,
+        );
+        if (!isSessionCurrent) return _sessionFailure();
+        if (!removed) {
           failed++;
         }
       }
@@ -128,8 +169,35 @@ class SelectListCubit extends Cubit<SelectListState>
   /// is what covers the screen underneath, so the failure line shows here;
   /// the new list's row shows whether the video is in it.
   void createdListRefusedVideo() {
-    if (state.isSaving) return;
-    emitIfOpen(state.copyWith(status: SelectListStatus.failure));
+    if (state.isSaving || !isSessionCurrent) return;
+    emitIfOpen(state.copyWith(status: SelectListStatus.createdWithoutVideo));
+  }
+
+  void createdListWithVideoPendingSync() {
+    if (state.isSaving || !isSessionCurrent) return;
+    emitIfOpen(state.copyWith(status: SelectListStatus.videoPendingSync));
+  }
+
+  /// Retries publication of the existing local membership.
+  Future<void> syncRequested(String listId) async {
+    if (state.isSaving ||
+        !_canMutate(listId) ||
+        !state.pendingSyncListIds.contains(listId)) {
+      return;
+    }
+    emitIfOpen(state.copyWith(status: SelectListStatus.saving));
+    final synced = await _service.retryListSync(listId);
+    if (!isSessionCurrent) {
+      _sessionFailure();
+      return;
+    }
+    emitIfOpen(
+      state.copyWith(
+        status: synced
+            ? SelectListStatus.editing
+            : SelectListStatus.videoPendingSync,
+      ),
+    );
   }
 
   /// Follows the service's lists.
@@ -138,7 +206,18 @@ class SelectListCubit extends Cubit<SelectListState>
   /// lost it is unpicked, and one that is gone drops out of the picks; every
   /// other pick stands, so a save in progress keeps what was chosen.
   void _listsChanged() {
-    final lists = _service.myLists;
+    if (!isSessionCurrent) {
+      emitIfOpen(
+        state.copyWith(
+          lists: const [],
+          memberListIds: const {},
+          selectedListIds: const {},
+          status: SelectListStatus.failure,
+        ),
+      );
+      return;
+    }
+    final lists = _ownedLists(_service, _openingOwnerPubkey);
     final members = _membership(lists, _videoEventId);
     final gained = members.difference(state.memberListIds);
     final lost = state.memberListIds.difference(members);

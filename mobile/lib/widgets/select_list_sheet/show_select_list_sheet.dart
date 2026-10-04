@@ -30,6 +30,10 @@ Future<void> showSelectListSheet(
   final l10n = context.l10n;
   final messenger = ScaffoldMessenger.maybeOf(context);
   final container = ProviderScope.containerOf(context, listen: false);
+  String? currentOwner() =>
+      container.read(authServiceProvider).currentPublicKeyHex;
+  final openingOwner = currentOwner();
+  if (openingOwner == null || openingOwner.isEmpty) return;
   var loaded = false;
   try {
     await container.read(curatedListsStateProvider.future);
@@ -43,6 +47,7 @@ Future<void> showSelectListSheet(
       stackTrace: stackTrace,
     );
   }
+  if (currentOwner() != openingOwner) return;
   final service = loaded
       ? container.read(curatedListsStateProvider.notifier).service
       : null;
@@ -57,28 +62,37 @@ Future<void> showSelectListSheet(
   if (!context.mounted) return;
 
   final bodyKey = GlobalKey();
+  final cubit = SelectListCubit(
+    service: service,
+    videoEventId: video.id,
+    currentOwnerPubkey: currentOwner,
+  );
 
   // The sheet's default sizes, which the people-list picker uses too: it
   // opens over the lower part of the screen and can be dragged taller.
-  await context.showVideoPausingVineBottomSheet<void>(
-    title: Text(l10n.listAddToLists),
-    headerPadding: listInfoSheetHeaderPadding,
-    headerLeadingAction: DivineIconButton(
-      icon: DivineIconName.x,
-      type: DivineIconButtonType.secondary,
-      size: DivineIconButtonSize.small,
-      semanticLabel: l10n.commonClose,
-      // The body's context belongs to the sheet's own route, so the pop is
-      // skipped once that route is already on its way out.
-      onPressed: () => bodyKey.currentContext?.popModalIfMounted(),
-    ),
-    trailing: const SelectListSaveButton(),
-    contentWrapper: (_, sheet) => BlocProvider<SelectListCubit>(
-      create: (_) => SelectListCubit(service: service, videoEventId: video.id),
-      child: sheet,
-    ),
-    buildScrollBody: (scrollController) =>
-        SelectListSheetBody(key: bodyKey, scrollController: scrollController),
-    bottomInput: SelectListCreateButton(video: video),
-  );
+  try {
+    await context.showVideoPausingVineBottomSheet<void>(
+      title: Text(l10n.listAddToLists),
+      headerPadding: listInfoSheetHeaderPadding,
+      headerLeadingAction: DivineIconButton(
+        icon: DivineIconName.x,
+        type: DivineIconButtonType.secondary,
+        size: DivineIconButtonSize.small,
+        semanticLabel: l10n.commonClose,
+        // The body's context belongs to the sheet's own route, so the pop is
+        // skipped once that route is already on its way out.
+        onPressed: () => bodyKey.currentContext?.popModalIfMounted(),
+      ),
+      trailing: const SelectListSaveButton(),
+      contentWrapper: (_, sheet) => BlocProvider<SelectListCubit>.value(
+        value: cubit,
+        child: sheet,
+      ),
+      buildScrollBody: (scrollController) =>
+          SelectListSheetBody(key: bodyKey, scrollController: scrollController),
+      bottomInput: SelectListCreateButton(video: video),
+    );
+  } finally {
+    await cubit.close();
+  }
 }
