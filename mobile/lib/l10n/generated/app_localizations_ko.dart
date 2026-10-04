@@ -295,25 +295,22 @@ class AppLocalizationsKo extends AppLocalizations {
       '피드를 클래식한 정사각형으로 유지해요';
 
   @override
-  String get generalSettingsShowTotalLoops => 'Show total loops';
+  String get generalSettingsShowTotalLoops => '전체 루프 수 표시';
 
   @override
-  String get generalSettingsShowTotalLoopsSubtitle =>
-      'The creator\'s loop count across all their videos';
+  String get generalSettingsShowTotalLoopsSubtitle => '크리에이터의 모든 동영상에 걸친 루프 수';
 
   @override
-  String get generalSettingsShowVideoLoops => 'Show video loops';
+  String get generalSettingsShowVideoLoops => '동영상 루프 수 표시';
 
   @override
-  String get generalSettingsShowVideoLoopsSubtitle =>
-      'How many times the video you\'re watching has looped';
+  String get generalSettingsShowVideoLoopsSubtitle => '지금 보는 동영상이 반복 재생된 횟수';
 
   @override
-  String get generalSettingsShowPublishedDate => 'Show publish date';
+  String get generalSettingsShowPublishedDate => '게시 날짜 표시';
 
   @override
-  String get generalSettingsShowPublishedDateSubtitle =>
-      'When the video you\'re watching was published';
+  String get generalSettingsShowPublishedDateSubtitle => '지금 보는 동영상이 게시된 날짜';
 
   @override
   String get contentPreferencesTitle => '콘텐츠 환경설정';
@@ -1992,7 +1989,7 @@ class AppLocalizationsKo extends AppLocalizations {
     String comments,
     String reposts,
   ) {
-    return '$likes likes · $comments comments · $reposts reposts';
+    return '$likes 좋아요 · $comments 댓글 · $reposts 리포스트';
   }
 
   @override
@@ -2756,11 +2753,11 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get analyticsServerUnavailable =>
-      'Creator analytics is having server trouble. Please try again in a moment.';
+      '크리에이터 분석 서버에 문제가 있어요. 잠시 후 다시 시도해 주세요.';
 
   @override
   String get analyticsConnectionIssue =>
-      'Creator analytics could not connect. Check your connection and try again.';
+      '크리에이터 분석에 연결하지 못했어요. 연결을 확인하고 다시 시도해 주세요.';
 
   @override
   String get analyticsSignInRequired => '크리에이터 분석을 보려면 로그인해주세요.';
@@ -2915,21 +2912,21 @@ class AppLocalizationsKo extends AppLocalizations {
       'Funnelcake가 시청자 분석 엔드포인트를 추가하면 시청자 소스/지역/시간 분석이 채워져요.';
 
   @override
-  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+  String get analyticsSocialCountsInfoLabel => '팔로워 수에 대해';
 
   @override
-  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+  String get analyticsSocialCountsInfoTitle => '팔로워 수에 대해';
 
   @override
   String get analyticsFollowerCountsBody =>
-      'Your follower count shows the people who follow you on Divine.';
+      '팔로워 수는 Divine에서 나를 팔로우하는 사람 수를 보여줘요.';
 
   @override
-  String get analyticsSocialCountsLearnMore => 'Learn more';
+  String get analyticsSocialCountsLearnMore => '자세히 알아보기';
 
   @override
   String analyticsSocialCountsLearnMoreSemantics(String url) {
-    return 'Learn more at $url';
+    return '자세한 내용은 $url에서 확인하세요';
   }
 
   @override
@@ -2978,7 +2975,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String analyticsDiagnosticsFailedSources(String sources) {
-    return 'Failed sources: $sources';
+    return '실패한 소스: $sources';
   }
 
   @override
@@ -4411,19 +4408,19 @@ class AppLocalizationsKo extends AppLocalizations {
   String get supportSaveLogsSubtitle => '수동 전송을 위해 로그를 파일로 내보내요';
 
   @override
-  String get supportClearLogs => 'Clear Logs';
+  String get supportClearLogs => '로그 지우기';
 
   @override
-  String get supportClearLogsSubtitle => 'Wipe captured logs and start fresh';
+  String get supportClearLogsSubtitle => '기록한 로그를 지우고 새로 시작해요';
 
   @override
-  String get supportClearLogsConfirmTitle => 'Clear captured logs?';
+  String get supportClearLogsConfirmTitle => '기록한 로그를 지울까요?';
 
   @override
-  String get supportClearLogsConfirmButton => 'Clear';
+  String get supportClearLogsConfirmButton => '지우기';
 
   @override
-  String get supportLogsCleared => 'Logs cleared';
+  String get supportLogsCleared => '로그를 지웠어요';
 
   @override
   String get supportFaq => '자주 묻는 질문';
@@ -4460,11 +4457,11 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get supportNoLogsToExport =>
-      'No logs yet — they start fresh each launch. Reproduce the problem, then come back without restarting.';
+      '아직 로그가 없어요. 앱을 실행할 때마다 새로 기록해요. 문제를 재현한 다음 앱을 재시작하지 말고 여기로 돌아와 주세요.';
 
   @override
   String get supportExportLogsUnconfirmed =>
-      'Logs handed off. Check the app you shared to.';
+      '로그를 공유할 앱에 전달했어요. 공유한 앱을 확인해 주세요.';
 
   @override
   String supportLogsSavedTo(String path) {
@@ -5920,7 +5917,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get commonBack => '뒤로';
 
   @override
-  String get commonReload => 'Reload';
+  String get commonReload => '새로고침';
 
   @override
   String get commonClose => '닫기';

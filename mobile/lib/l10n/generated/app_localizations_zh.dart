@@ -323,25 +323,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get generalSettingsVideoShapeSquareOnlySubtitle => '让信息流保持经典方形格式';
 
   @override
-  String get generalSettingsShowTotalLoops => 'Show total loops';
+  String get generalSettingsShowTotalLoops => '显示总循环次数';
 
   @override
-  String get generalSettingsShowTotalLoopsSubtitle =>
-      'The creator\'s loop count across all their videos';
+  String get generalSettingsShowTotalLoopsSubtitle => '创作者所有视频的循环总次数';
 
   @override
-  String get generalSettingsShowVideoLoops => 'Show video loops';
+  String get generalSettingsShowVideoLoops => '显示视频循环次数';
 
   @override
-  String get generalSettingsShowVideoLoopsSubtitle =>
-      'How many times the video you\'re watching has looped';
+  String get generalSettingsShowVideoLoopsSubtitle => '你正在观看的视频已经循环了多少次';
 
   @override
-  String get generalSettingsShowPublishedDate => 'Show publish date';
+  String get generalSettingsShowPublishedDate => '显示发布日期';
 
   @override
-  String get generalSettingsShowPublishedDateSubtitle =>
-      'When the video you\'re watching was published';
+  String get generalSettingsShowPublishedDateSubtitle => '你正在观看的视频的发布时间';
 
   @override
   String get contentPreferencesTitle => '内容偏好';
@@ -2006,7 +2003,7 @@ class AppLocalizationsZh extends AppLocalizations {
     String comments,
     String reposts,
   ) {
-    return '$likes likes · $comments comments · $reposts reposts';
+    return '$likes 次点赞 · $comments 条评论 · $reposts 次转发';
   }
 
   @override
@@ -2757,12 +2754,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get analyticsUnableToLoad => '无法加载数据。';
 
   @override
-  String get analyticsServerUnavailable =>
-      'Creator analytics is having server trouble. Please try again in a moment.';
+  String get analyticsServerUnavailable => '创作者数据的服务器出了点问题。请稍后重试。';
 
   @override
-  String get analyticsConnectionIssue =>
-      'Creator analytics could not connect. Check your connection and try again.';
+  String get analyticsConnectionIssue => '创作者数据无法连接。检查你的网络连接后重试。';
 
   @override
   String get analyticsSignInRequired => '登录后即可查看创作者数据。';
@@ -2914,21 +2909,20 @@ class AppLocalizationsZh extends AppLocalizations {
       '等 Funnelcake 增加受众分析端点后，这里会显示受众来源/地区/时间分布。';
 
   @override
-  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+  String get analyticsSocialCountsInfoLabel => '关于你的粉丝数量';
 
   @override
-  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+  String get analyticsSocialCountsInfoTitle => '关于你的粉丝数量';
 
   @override
-  String get analyticsFollowerCountsBody =>
-      'Your follower count shows the people who follow you on Divine.';
+  String get analyticsFollowerCountsBody => '你的粉丝数量显示在 Divine 上关注你的人数。';
 
   @override
-  String get analyticsSocialCountsLearnMore => 'Learn more';
+  String get analyticsSocialCountsLearnMore => '了解更多';
 
   @override
   String analyticsSocialCountsLearnMoreSemantics(String url) {
-    return 'Learn more at $url';
+    return '了解更多：$url';
   }
 
   @override
@@ -2977,7 +2971,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String analyticsDiagnosticsFailedSources(String sources) {
-    return 'Failed sources: $sources';
+    return '出错的数据源：$sources';
   }
 
   @override
@@ -4379,19 +4373,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get supportSaveLogsSubtitle => '导出日志到文件，手动发送';
 
   @override
-  String get supportClearLogs => 'Clear Logs';
+  String get supportClearLogs => '清除日志';
 
   @override
-  String get supportClearLogsSubtitle => 'Wipe captured logs and start fresh';
+  String get supportClearLogsSubtitle => '清除已记录的日志，重新开始';
 
   @override
-  String get supportClearLogsConfirmTitle => 'Clear captured logs?';
+  String get supportClearLogsConfirmTitle => '清除已记录的日志？';
 
   @override
-  String get supportClearLogsConfirmButton => 'Clear';
+  String get supportClearLogsConfirmButton => '清除';
 
   @override
-  String get supportLogsCleared => 'Logs cleared';
+  String get supportLogsCleared => '日志已清除';
 
   @override
   String get supportFaq => '常见问题';
@@ -4427,12 +4421,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get supportExportLogsFailed => '日志导出失败';
 
   @override
-  String get supportNoLogsToExport =>
-      'No logs yet — they start fresh each launch. Reproduce the problem, then come back without restarting.';
+  String get supportNoLogsToExport => '还没有日志——每次启动应用都会重新记录。重现问题后再回来，期间不要重启应用。';
 
   @override
-  String get supportExportLogsUnconfirmed =>
-      'Logs handed off. Check the app you shared to.';
+  String get supportExportLogsUnconfirmed => '日志已交给分享的应用。检查你分享日志的那个应用。';
 
   @override
   String supportLogsSavedTo(String path) {
@@ -5871,7 +5863,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commonBack => '返回';
 
   @override
-  String get commonReload => 'Reload';
+  String get commonReload => '重新加载';
 
   @override
   String get commonClose => '关闭';

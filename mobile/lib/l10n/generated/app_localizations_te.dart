@@ -374,25 +374,25 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఫీడ్‌లను క్లాసిక్ స్క్వేర్ ఫార్మాట్‌లో ఉంచండి';
 
   @override
-  String get generalSettingsShowTotalLoops => 'Show total loops';
+  String get generalSettingsShowTotalLoops => 'మొత్తం లూప్‌లను చూపించండి';
 
   @override
   String get generalSettingsShowTotalLoopsSubtitle =>
-      'The creator\'s loop count across all their videos';
+      'క్రియేటర్ అన్ని వీడియోలలోని లూప్‌ల సంఖ్య';
 
   @override
-  String get generalSettingsShowVideoLoops => 'Show video loops';
+  String get generalSettingsShowVideoLoops => 'వీడియో లూప్‌లను చూపించండి';
 
   @override
   String get generalSettingsShowVideoLoopsSubtitle =>
-      'How many times the video you\'re watching has looped';
+      'మీరు చూస్తున్న వీడియో ఎన్నిసార్లు లూప్ అయిందో';
 
   @override
-  String get generalSettingsShowPublishedDate => 'Show publish date';
+  String get generalSettingsShowPublishedDate => 'ప్రచురించిన తేదీని చూపించండి';
 
   @override
   String get generalSettingsShowPublishedDateSubtitle =>
-      'When the video you\'re watching was published';
+      'మీరు చూస్తున్న వీడియో ఎప్పుడు ప్రచురించబడిందో';
 
   @override
   String get contentPreferencesTitle => 'కంటెంట్ ప్రాధాన్యతలు';
@@ -2188,7 +2188,7 @@ class AppLocalizationsTe extends AppLocalizations {
     String comments,
     String reposts,
   ) {
-    return '$likes likes · $comments comments · $reposts reposts';
+    return '$likesఇష్టాలు · $commentsవ్యాఖ్యలు · $repostsరీపోస్ట్‌లు';
   }
 
   @override
@@ -3238,21 +3238,21 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఫన్నెల్‌కేక్ ఆడియన్స్ అనలిటిక్స్ ఎండ్ పాయింట్‌లను జోడిస్తుంది కాబట్టి ప్రేక్షకుల మూలం/భూగోళం/సమయం బ్రేక్‌డౌన్‌లు జనాదరణ పొందుతాయి.';
 
   @override
-  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+  String get analyticsSocialCountsInfoLabel => 'మీ అనుచరుల సంఖ్య గురించి';
 
   @override
-  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+  String get analyticsSocialCountsInfoTitle => 'మీ అనుచరుల సంఖ్య గురించి';
 
   @override
   String get analyticsFollowerCountsBody =>
-      'Your follower count shows the people who follow you on Divine.';
+      'మీ అనుచరుల సంఖ్య Divineలో మిమ్మల్ని అనుసరించే వ్యక్తుల సంఖ్యను చూపిస్తుంది.';
 
   @override
-  String get analyticsSocialCountsLearnMore => 'Learn more';
+  String get analyticsSocialCountsLearnMore => 'మరింత తెలుసుకోండి';
 
   @override
   String analyticsSocialCountsLearnMoreSemantics(String url) {
-    return 'Learn more at $url';
+    return 'ఇక్కడ మరింత తెలుసుకోండి $url';
   }
 
   @override
@@ -4832,19 +4832,21 @@ class AppLocalizationsTe extends AppLocalizations {
       'మాన్యువల్ పంపడం కోసం ఫైల్‌కి లాగ్‌లను ఎగుమతి చేయండి';
 
   @override
-  String get supportClearLogs => 'Clear Logs';
+  String get supportClearLogs => 'లాగ్‌లను క్లియర్ చేయండి';
 
   @override
-  String get supportClearLogsSubtitle => 'Wipe captured logs and start fresh';
+  String get supportClearLogsSubtitle =>
+      'సేకరించిన లాగ్‌లను తొలగించి కొత్తగా ప్రారంభించండి';
 
   @override
-  String get supportClearLogsConfirmTitle => 'Clear captured logs?';
+  String get supportClearLogsConfirmTitle =>
+      'సేకరించిన లాగ్‌లను క్లియర్ చేయాలా?';
 
   @override
-  String get supportClearLogsConfirmButton => 'Clear';
+  String get supportClearLogsConfirmButton => 'క్లియర్ చేయండి';
 
   @override
-  String get supportLogsCleared => 'Logs cleared';
+  String get supportLogsCleared => 'లాగ్‌లు క్లియర్ అయ్యాయి';
 
   @override
   String get supportFaq => 'తరచుగా అడిగే ప్రశ్నలు';
@@ -6419,7 +6421,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get commonBack => 'వెనుకకు';
 
   @override
-  String get commonReload => 'Reload';
+  String get commonReload => 'మళ్లీ లోడ్ చేయండి';
 
   @override
   String get commonClose => 'మూసివేయండి';

@@ -387,25 +387,25 @@ class AppLocalizationsRo extends AppLocalizations {
       'Păstrează feedurile în formatul clasic pătrat';
 
   @override
-  String get generalSettingsShowTotalLoops => 'Show total loops';
+  String get generalSettingsShowTotalLoops => 'Arată totalul buclelor';
 
   @override
   String get generalSettingsShowTotalLoopsSubtitle =>
-      'The creator\'s loop count across all their videos';
+      'Numărul de bucle pentru toate videoclipurile persoanei care le-a creat';
 
   @override
-  String get generalSettingsShowVideoLoops => 'Show video loops';
+  String get generalSettingsShowVideoLoops => 'Arată buclele videoclipului';
 
   @override
   String get generalSettingsShowVideoLoopsSubtitle =>
-      'How many times the video you\'re watching has looped';
+      'De câte ori s-a repetat videoclipul pe care îl urmărești';
 
   @override
-  String get generalSettingsShowPublishedDate => 'Show publish date';
+  String get generalSettingsShowPublishedDate => 'Arată data publicării';
 
   @override
   String get generalSettingsShowPublishedDateSubtitle =>
-      'When the video you\'re watching was published';
+      'Când a fost publicat videoclipul pe care îl urmărești';
 
   @override
   String get contentPreferencesTitle => 'Preferințe de conținut';
@@ -2195,7 +2195,7 @@ class AppLocalizationsRo extends AppLocalizations {
     String comments,
     String reposts,
   ) {
-    return '$likes likes · $comments comments · $reposts reposts';
+    return '$likes aprecieri · $comments comentarii · $reposts redistribuiri';
   }
 
   @override
@@ -3048,11 +3048,11 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get analyticsServerUnavailable =>
-      'Creator analytics is having server trouble. Please try again in a moment.';
+      'Statisticile creatorului au probleme cu serverul. Încearcă din nou peste un moment.';
 
   @override
   String get analyticsConnectionIssue =>
-      'Creator analytics could not connect. Check your connection and try again.';
+      'Statisticile creatorului nu s-au putut conecta. Verifică-ți conexiunea și încearcă din nou.';
 
   @override
   String get analyticsSignInRequired =>
@@ -3213,21 +3213,23 @@ class AppLocalizationsRo extends AppLocalizations {
       'Detaliile despre sursa/geografia/timpul audienței se vor popula pe măsură ce Funnelcake adaugă endpoint-uri de statistici de audiență.';
 
   @override
-  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+  String get analyticsSocialCountsInfoLabel =>
+      'Despre numărul tău de urmăritori';
 
   @override
-  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+  String get analyticsSocialCountsInfoTitle =>
+      'Despre numărul tău de urmăritori';
 
   @override
   String get analyticsFollowerCountsBody =>
-      'Your follower count shows the people who follow you on Divine.';
+      'Numărul tău de urmăritori arată persoanele care te urmăresc pe Divine.';
 
   @override
-  String get analyticsSocialCountsLearnMore => 'Learn more';
+  String get analyticsSocialCountsLearnMore => 'Află mai multe';
 
   @override
   String analyticsSocialCountsLearnMoreSemantics(String url) {
-    return 'Learn more at $url';
+    return 'Află mai multe pe $url';
   }
 
   @override
@@ -3276,7 +3278,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String analyticsDiagnosticsFailedSources(String sources) {
-    return 'Failed sources: $sources';
+    return 'Surse care au eșuat: $sources';
   }
 
   @override
@@ -4802,19 +4804,20 @@ class AppLocalizationsRo extends AppLocalizations {
       'Exportă jurnalele într-un fișier pentru trimitere manuală';
 
   @override
-  String get supportClearLogs => 'Clear Logs';
+  String get supportClearLogs => 'Șterge jurnalele';
 
   @override
-  String get supportClearLogsSubtitle => 'Wipe captured logs and start fresh';
+  String get supportClearLogsSubtitle =>
+      'Șterge jurnalele capturate și ia-o de la zero';
 
   @override
-  String get supportClearLogsConfirmTitle => 'Clear captured logs?';
+  String get supportClearLogsConfirmTitle => 'Ștergi jurnalele capturate?';
 
   @override
-  String get supportClearLogsConfirmButton => 'Clear';
+  String get supportClearLogsConfirmButton => 'Șterge';
 
   @override
-  String get supportLogsCleared => 'Logs cleared';
+  String get supportLogsCleared => 'Jurnale șterse';
 
   @override
   String get supportFaq => 'Întrebări frecvente';
@@ -4855,11 +4858,11 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get supportNoLogsToExport =>
-      'No logs yet — they start fresh each launch. Reproduce the problem, then come back without restarting.';
+      'Încă nu există jurnale — o iau de la zero la fiecare pornire a aplicației. Reproduce problema, apoi revino fără să repornești aplicația.';
 
   @override
   String get supportExportLogsUnconfirmed =>
-      'Logs handed off. Check the app you shared to.';
+      'Jurnale trimise către aplicație. Verifică aplicația în care le-ai distribuit.';
 
   @override
   String supportLogsSavedTo(String path) {
@@ -6383,7 +6386,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get commonBack => 'Înapoi';
 
   @override
-  String get commonReload => 'Reload';
+  String get commonReload => 'Reîncarcă';
 
   @override
   String get commonClose => 'Închide';

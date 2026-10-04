@@ -366,25 +366,25 @@ class AppLocalizationsAm extends AppLocalizations {
       'ምግቦችን በክላሲክ ካሬ ቅርጽ ያቆዩ';
 
   @override
-  String get generalSettingsShowTotalLoops => 'Show total loops';
+  String get generalSettingsShowTotalLoops => 'ጠቅላላ ሉፖችን ያሳዩ';
 
   @override
   String get generalSettingsShowTotalLoopsSubtitle =>
-      'The creator\'s loop count across all their videos';
+      'ቪዲዮዎቹን የፈጠሩት ሰው በሁሉም ቪዲዮዎቻቸው ላይ ያላቸው የሉፕ ብዛት';
 
   @override
-  String get generalSettingsShowVideoLoops => 'Show video loops';
+  String get generalSettingsShowVideoLoops => 'የቪዲዮ ሉፖችን ያሳዩ';
 
   @override
   String get generalSettingsShowVideoLoopsSubtitle =>
-      'How many times the video you\'re watching has looped';
+      'የሚመለከቱት ቪዲዮ ስንት ጊዜ ተደግሞ እንደታየ';
 
   @override
-  String get generalSettingsShowPublishedDate => 'Show publish date';
+  String get generalSettingsShowPublishedDate => 'የተለጠፈበትን ቀን ያሳዩ';
 
   @override
   String get generalSettingsShowPublishedDateSubtitle =>
-      'When the video you\'re watching was published';
+      'የሚመለከቱት ቪዲዮ መቼ እንደተለጠፈ';
 
   @override
   String get contentPreferencesTitle => 'የይዘት ምርጫዎች';
@@ -2100,7 +2100,7 @@ class AppLocalizationsAm extends AppLocalizations {
     String comments,
     String reposts,
   ) {
-    return '$likes likes · $comments comments · $reposts reposts';
+    return '$likes መውደዶች · $comments አስተያየቶች · $reposts ድጋሚ ልጥፎች';
   }
 
   @override
@@ -2880,11 +2880,11 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get analyticsServerUnavailable =>
-      'Creator analytics is having server trouble. Please try again in a moment.';
+      'የፈጣሪ ትንታኔ የአገልጋይ ችግር አጋጥሞታል። እባክዎ ከትንሽ ጊዜ በኋላ እንደገና ይሞክሩ።';
 
   @override
   String get analyticsConnectionIssue =>
-      'Creator analytics could not connect. Check your connection and try again.';
+      'የፈጣሪ ትንታኔ መገናኘት አልቻለም። ግንኙነትዎን ያረጋግጡና እንደገና ይሞክሩ።';
 
   @override
   String get analyticsSignInRequired => 'የፈጣሪ ትንታኔን ለማየት ይግቡ።';
@@ -3041,21 +3041,21 @@ class AppLocalizationsAm extends AppLocalizations {
       'Funnelcake የታዳሚ ትንታኔ መጨረሻ ነጥቦችን ሲጨምር፣ የታዳሚ ምንጭ/ጂኦ/ጊዜ ዝርዝሮች ይሞላሉ።';
 
   @override
-  String get analyticsSocialCountsInfoLabel => 'About your follower count';
+  String get analyticsSocialCountsInfoLabel => 'ስለ ተከታዮችዎ ብዛት';
 
   @override
-  String get analyticsSocialCountsInfoTitle => 'About your follower count';
+  String get analyticsSocialCountsInfoTitle => 'ስለ ተከታዮችዎ ብዛት';
 
   @override
   String get analyticsFollowerCountsBody =>
-      'Your follower count shows the people who follow you on Divine.';
+      'የተከታዮችዎ ብዛት በDivine ላይ የሚከተሉዎትን ሰዎች ያሳያል።';
 
   @override
-  String get analyticsSocialCountsLearnMore => 'Learn more';
+  String get analyticsSocialCountsLearnMore => 'ተጨማሪ ይወቁ';
 
   @override
   String analyticsSocialCountsLearnMoreSemantics(String url) {
-    return 'Learn more at $url';
+    return 'ተጨማሪ በ$url ይመልከቱ';
   }
 
   @override
@@ -3104,7 +3104,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String analyticsDiagnosticsFailedSources(String sources) {
-    return 'Failed sources: $sources';
+    return 'ያልተሳኩ ምንጮች፦ $sources';
   }
 
   @override
@@ -4564,19 +4564,19 @@ class AppLocalizationsAm extends AppLocalizations {
   String get supportSaveLogsSubtitle => 'በእጅ ለመላክ የምዝግብ ማስታወሻዎችን ወደ ፋይል ይላኩ።';
 
   @override
-  String get supportClearLogs => 'Clear Logs';
+  String get supportClearLogs => 'ምዝግብ ማስታወሻዎችን ያጽዱ';
 
   @override
-  String get supportClearLogsSubtitle => 'Wipe captured logs and start fresh';
+  String get supportClearLogsSubtitle => 'የተያዙትን ምዝግብ ማስታወሻዎች አጥፍተው እንደገና ይጀምሩ';
 
   @override
-  String get supportClearLogsConfirmTitle => 'Clear captured logs?';
+  String get supportClearLogsConfirmTitle => 'የተያዙት ምዝግብ ማስታወሻዎች ይጽዱ?';
 
   @override
-  String get supportClearLogsConfirmButton => 'Clear';
+  String get supportClearLogsConfirmButton => 'ያጽዱ';
 
   @override
-  String get supportLogsCleared => 'Logs cleared';
+  String get supportLogsCleared => 'ምዝግብ ማስታወሻዎች ጸድተዋል';
 
   @override
   String get supportFaq => 'የሚጠየቁ ጥያቄዎች';
@@ -4614,11 +4614,11 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get supportNoLogsToExport =>
-      'No logs yet — they start fresh each launch. Reproduce the problem, then come back without restarting.';
+      'እስካሁን ምዝግብ ማስታወሻዎች የሉም — መተግበሪያው በተከፈተ ቁጥር እንደገና ይጀምራሉ። ችግሩን እንደገና ያስከትሉ፣ ከዚያ መተግበሪያውን እንደገና ሳያስጀምሩ ወደዚህ ይመለሱ።';
 
   @override
   String get supportExportLogsUnconfirmed =>
-      'Logs handed off. Check the app you shared to.';
+      'ምዝግብ ማስታወሻዎቹ ተላልፈዋል። ያጋሩበትን መተግበሪያ ያረጋግጡ።';
 
   @override
   String supportLogsSavedTo(String path) {
@@ -6084,7 +6084,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get commonBack => 'ተመለስ';
 
   @override
-  String get commonReload => 'Reload';
+  String get commonReload => 'እንደገና ይጫኑ';
 
   @override
   String get commonClose => 'ዝጋ';
