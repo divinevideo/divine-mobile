@@ -654,7 +654,7 @@ precisely what a reviewer who does not read the language otherwise lacks.
 | Every locale defines every English key | `arb_consistency_test.dart` (+ `_knownUntranslatedDebt`) |
 | Every placeholder the English value actually substitutes survives translation | `arb_consistency_test.dart` (selector-only arguments are deliberately exempt — see below) |
 | No plural arm hardcodes a literal number, in any locale | `plural_arm_number_test.dart` |
-| No new missing cardinal category in an existing ICU plural block | `check_plural_category_floor.sh` (each locale/message/block/category is frozen) |
+| No new missing cardinal category in any ICU plural block | `check_plural_category_floor.sh` (each locale/message/block/category is frozen) |
 | A named list of countable keys inflects **in English** | `countable_plural_test.dart` |
 | `listVideoCount` / `profileFollowerCountUsers` keep their arms in `pl` and `ro` | `countable_plural_test.dart` (those two locales, those keys) |
 | **A non-English value has a plural block at all** | **nothing — see below** |
@@ -692,7 +692,13 @@ copy; for example the English tab remains “Badges (1)”. Entries marked
 `declined` accept `other` for the existing Spanish, French, Italian and
 Portuguese large-number `many` gaps; revisit these if a surface needs distinct
 large-number wording. These decisions remain visible in the baseline, not
-hidden in detector exemptions. The remaining translation work stays in #7755:
+hidden in detector exemptions.
+
+New messages and renamed keys or selectors must provide every sampled category,
+including large-number `many` in Spanish, French, Italian and Portuguese.
+The declined entries grandfather only the recorded gaps, not future messages.
+
+The remaining translation work stays in #7755:
 Arabic first, then Romanian and Polish, with fluent review before changing
 forms. Category coverage alone cannot prove the resulting copy is natural.
 Romanian `few` includes 0, 2–19 and values such as 101; 20 uses `other`.
