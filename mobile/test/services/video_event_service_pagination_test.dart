@@ -50,7 +50,13 @@ void main() {
 
       videoEventService.addListener(listener);
       addTearDown(() => videoEventService.removeListener(listener));
-      return completed.future;
+      // Liveness bound: fail fast instead of waiting out the 10-minute default.
+      return completed.future.timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => throw TimeoutException(
+          'the discovery query never finished loading',
+        ),
+      );
     }
 
     test(
