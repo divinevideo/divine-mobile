@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:clock/clock.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:hive_ce/hive_ce.dart';
 import 'package:mocktail/mocktail.dart';
@@ -659,6 +660,355 @@ void main() {
         });
         return client;
       }
+
+      test(
+        'future revision exhaustion preserves the source '
+        'and allows later retry',
+        () async {
+          final instant = DateTime.utc(2026, 10, 4);
+          final stamp = instant.millisecondsSinceEpoch ~/ 1000;
+          final remote = signedEvent(
+            kind: _peopleListKind,
+            tags: const [
+              ['d', 'shared-list'],
+              ['title', 'Source'],
+              ['p', _memberA, 'wss://relay.example', 'friend'],
+            ],
+            content: 'private ciphertext',
+            createdAt: stamp + 60,
+          );
+          final client = clientHolding(remote);
+          final repository = buildRepository(nostrClient: client);
+          await withClock(Clock.fixed(instant), () async {
+            final result = await repository.updateListInfo(
+              ownerPubkey: _ownerPubkey,
+              listId: 'shared-list',
+              name: 'Later',
+            );
+            expect(result.submitted, isFalse);
+            verifyNever(() => client.publishEventAwaitOk(any()));
+            final stored = (await repository.readLists(
+              ownerPubkey: _ownerPubkey,
+            )).single;
+            expect(stored.name, 'Source');
+            expect(stored.nostrEventId, remote.id);
+            expect(stored.pubkeys, [_memberA]);
+          });
+          await withClock(
+            Clock.fixed(instant.add(const Duration(seconds: 120))),
+            () async {
+              final result = await repository.updateListInfo(
+                ownerPubkey: _ownerPubkey,
+                listId: 'shared-list',
+                name: 'Later',
+              );
+              expect(result.submitted, isTrue);
+              expect(
+                (await repository.readLists(
+                  ownerPubkey: _ownerPubkey,
+                )).single.name,
+                'Later',
+              );
+            },
+          );
+        },
+      );
+
+      test(
+        'rapid replacements stop at the client budget '
+        'without corrupting the last send',
+        () async {
+          final instant = DateTime.utc(2026, 10, 4);
+          final stamp = instant.millisecondsSinceEpoch ~/ 1000;
+          final remote = signedEvent(
+            kind: _peopleListKind,
+            tags: const [
+              ['d', 'shared-list'],
+              ['title', 'Source'],
+              ['p', _memberA],
+            ],
+            createdAt: stamp,
+          );
+          final client = clientHolding(remote);
+          final repository = buildRepository(nostrClient: client);
+          await withClock(Clock.fixed(instant), () async {
+            for (var n = 1; n <= 60; n++) {
+              expect(
+                (await repository.updateListInfo(
+                  ownerPubkey: _ownerPubkey,
+                  listId: 'shared-list',
+                  name: 'Edit $n',
+                )).submitted,
+                isTrue,
+              );
+            }
+            expect(
+              (await repository.updateListInfo(
+                ownerPubkey: _ownerPubkey,
+                listId: 'shared-list',
+                name: 'Edit 61',
+              )).submitted,
+              isFalse,
+            );
+            final events = verify(
+              () => client.publishEventAwaitOk(captureAny()),
+            ).captured.cast<Event>();
+            expect(events, hasLength(60));
+            expect(
+              events.map((event) => event.createdAt),
+              List.generate(60, (index) => stamp + index + 1),
+            );
+            final stored = (await repository.readLists(
+              ownerPubkey: _ownerPubkey,
+            )).single;
+            expect(stored.name, 'Edit 60');
+            expect(stored.updatedAt.millisecondsSinceEpoch ~/ 1000, stamp + 60);
+          });
+        },
+      );
+
+      test('a failed ACK reserves its revision before a later edit', () async {
+        final instant = DateTime.utc(2026, 10, 4);
+        final stamp = instant.millisecondsSinceEpoch ~/ 1000;
+        final remote = signedEvent(
+          kind: _peopleListKind,
+          tags: const [
+            ['d', 'shared-list'],
+            ['title', 'Source'],
+            ['p', _memberA],
+          ],
+          content: 'private ciphertext',
+          createdAt: stamp,
+        );
+        final client = clientHolding(remote);
+        final events = <Event>[];
+        when(() => client.publishEventAwaitOk(any())).thenAnswer((call) async {
+          final event = call.positionalArguments.single as Event;
+          events.add(event);
+          if (events.length == 1) {
+            return PublishOutcome(
+              eventId: event.id,
+              acceptedBy: const [],
+              rejectedBy: const {},
+              noResponseFrom: const ['wss://relay.example'],
+            );
+          }
+          return _accepted(event: event);
+        });
+        final repository = buildRepository(nostrClient: client);
+        await withClock(Clock.fixed(instant), () async {
+          final first = await repository.updateListInfo(
+            ownerPubkey: _ownerPubkey,
+            listId: 'shared-list',
+            name: 'Unacknowledged',
+          );
+          expect(first.status, PeopleListPublishStatus.failed);
+          final unchanged = (await repository.readLists(
+            ownerPubkey: _ownerPubkey,
+          )).single;
+          expect(unchanged.name, 'Source');
+          expect(unchanged.nostrEventId, remote.id);
+          expect(unchanged.updatedAt.millisecondsSinceEpoch ~/ 1000, stamp);
+          final second = await repository.updateListInfo(
+            ownerPubkey: _ownerPubkey,
+            listId: 'shared-list',
+            name: 'Acknowledged',
+          );
+          expect(second.status, PeopleListPublishStatus.submitted);
+          expect(events.map((event) => event.createdAt), [
+            stamp + 1,
+            stamp + 2,
+          ]);
+          final stored = (await repository.readLists(
+            ownerPubkey: _ownerPubkey,
+          )).single;
+          expect(stored.name, 'Acknowledged');
+          expect(stored.updatedAt.millisecondsSinceEpoch ~/ 1000, stamp + 2);
+          expect(stored.pubkeys, [_memberA]);
+          expect(events.last.content, 'private ciphertext');
+        });
+      });
+
+      test(
+        'review9747 accepted rename actually replaces '
+        'the previous lower event id',
+        () async {
+          await withClock(Clock.fixed(DateTime.utc(2026, 10, 4)), () async {
+            final stamp =
+                DateTime.utc(2026, 10, 4).millisecondsSinceEpoch ~/ 1000;
+            var remote = signedEvent(
+              kind: _peopleListKind,
+              tags: const [
+                ['d', 'shared-list'],
+                ['title', 'Shared'],
+                ['alt', 'Written by another client'],
+                ['p', _memberA, 'wss://relay.example', 'friend'],
+              ],
+              content: 'nip44-encrypted-private-members',
+              createdAt: stamp,
+            );
+            remote = signedEvent(
+              kind: remote.kind,
+              tags: remote.tags,
+              content: remote.content,
+              createdAt: stamp,
+            );
+            var name = '';
+            for (var n = 0; n < 1000; n++) {
+              name = 'Renamed-$n';
+              final payload = Event(
+                _ownerPubkey,
+                remote.kind,
+                [
+                  for (final tag in remote.tags)
+                    if (tag.first == 'title') ['title', name] else tag,
+                ],
+                remote.content,
+                createdAt: stamp,
+              );
+              if (payload.id.compareTo(remote.id) > 0) break;
+            }
+            final client = _MockNostrClient();
+            when(() => client.publicKey).thenReturn(_ownerPubkey);
+            when(
+              () => client.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: true,
+                timeout: any(named: 'timeout'),
+              ),
+            ).thenAnswer(
+              (_) async => (events: [remote], timedOut: false, noRelays: false),
+            );
+            when(() => client.publishEventAwaitOk(any())).thenAnswer((i) async {
+              final sent = i.positionalArguments.first as Event;
+              if (sent.createdAt > remote.createdAt ||
+                  (sent.createdAt == remote.createdAt &&
+                      sent.id.compareTo(remote.id) < 0)) {
+                remote = sent;
+              }
+              return _accepted(event: sent);
+            });
+            final repository = buildRepository(nostrClient: client);
+            expect(
+              (await repository.updateListInfo(
+                ownerPubkey: _ownerPubkey,
+                listId: 'shared-list',
+                name: name,
+              )).submitted,
+              isTrue,
+            );
+            expect(remote.tags, contains(equals(['title', name])));
+          });
+        },
+      );
+
+      test(
+        'review9747 monotonic replacement rename add remove delete '
+        'preserves source',
+        () async {
+          await withClock(Clock.fixed(DateTime.utc(2026, 10, 4)), () async {
+            final client = _MockNostrClient();
+            when(() => client.publicKey).thenReturn(_ownerPubkey);
+            final stamp =
+                DateTime.utc(2026, 10, 4).millisecondsSinceEpoch ~/ 1000;
+            var remote = signedEvent(
+              kind: _peopleListKind,
+              tags: const [
+                ['d', 'shared-list'],
+                ['title', 'Shared'],
+                ['p', _memberA, 'wss://relay.example', 'friend'],
+                ['p', _memberA, 'wss://second.example', 'other-hint'],
+                ['expiration', '2000000000'],
+              ],
+              content: 'nip44-encrypted-private-members',
+              createdAt: stamp,
+            );
+            final sentEvents = <Event>[];
+            when(
+              () => client.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: true,
+                timeout: any(named: 'timeout'),
+              ),
+            ).thenAnswer(
+              (_) async => (events: [remote], timedOut: false, noRelays: false),
+            );
+            when(() => client.publishEventAwaitOk(any())).thenAnswer((i) async {
+              final sent = i.positionalArguments.first as Event;
+              sentEvents.add(sent);
+              if (sent.kind == _peopleListKind &&
+                  (sent.createdAt > remote.createdAt ||
+                      (sent.createdAt == remote.createdAt &&
+                          sent.id.compareTo(remote.id) < 0))) {
+                remote = sent;
+              }
+              return _accepted(event: sent);
+            });
+            final repository = buildRepository(nostrClient: client);
+            var previous = stamp;
+            Future<void> assertRevision(PeopleListPublishResult result) async {
+              expect(result.submitted, isTrue);
+              expect(sentEvents.last.createdAt, greaterThan(previous));
+              previous = sentEvents.last.createdAt;
+              final cached = (await repository.readLists(
+                ownerPubkey: _ownerPubkey,
+              )).single;
+              expect(cached.updatedAt.millisecondsSinceEpoch ~/ 1000, previous);
+              expect(remote.id, sentEvents.last.id);
+              expect(
+                remote.tags,
+                contains(equals(const ['expiration', '2000000000'])),
+              );
+              expect(remote.content, 'nip44-encrypted-private-members');
+              expect(cached.pubkeys.length, cached.pubkeys.toSet().length);
+              final survivorTags = remote.tags.where(
+                (tag) => tag.first == 'p' && tag[1] == _memberA,
+              );
+              if (cached.pubkeys.contains(_memberA)) {
+                expect(survivorTags.length, 2);
+              } else {
+                expect(survivorTags, isEmpty);
+              }
+            }
+
+            await assertRevision(
+              await repository.updateListInfo(
+                ownerPubkey: _ownerPubkey,
+                listId: 'shared-list',
+                name: 'Renamed',
+              ),
+            );
+            await assertRevision(
+              await repository.addPubkey(
+                ownerPubkey: _ownerPubkey,
+                listId: 'shared-list',
+                pubkey: _memberB,
+              ),
+            );
+            await assertRevision(
+              await repository.removePubkey(
+                ownerPubkey: _ownerPubkey,
+                listId: 'shared-list',
+                pubkey: _memberA,
+              ),
+            );
+            expect(remote.tags, isNot(contains(equals(const ['p', _memberA]))));
+            expect(remote.tags, contains(equals(const ['p', _memberB])));
+            expect(
+              (await repository.deleteList(
+                ownerPubkey: _ownerPubkey,
+                listId: 'shared-list',
+              )).submitted,
+              isTrue,
+            );
+            expect(sentEvents.last.createdAt, greaterThan(previous));
+            expect(
+              sentEvents.last.tags,
+              contains(equals(const ['a', '30000:$_ownerPubkey:shared-list'])),
+            );
+          });
+        },
+      );
 
       Event sharedList({String? description}) => signedEvent(
         kind: _peopleListKind,
@@ -1590,6 +1940,38 @@ void main() {
     });
 
     group('syncOwner', () {
+      test(
+        'does not bind another author as the owner replacement source',
+        () async {
+          final client = _MockNostrClient();
+          final foreign = Event(
+            _memberA,
+            _peopleListKind,
+            const [
+              ['d', 'foreign'],
+              ['title', 'Other owner'],
+              ['p', _memberB],
+            ],
+            '',
+            createdAt: 2000,
+          );
+          when(
+            () => client.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer(
+            (_) async => (events: [foreign], timedOut: false, noRelays: false),
+          );
+          final repository = buildRepository(nostrClient: client);
+          await repository.syncOwner(ownerPubkey: _ownerPubkey);
+          expect(
+            await repository.readLists(ownerPubkey: _ownerPubkey),
+            isEmpty,
+          );
+        },
+      );
       for (final unavailable in [(true, false), (false, true)]) {
         test(
           'owner read refuses inconclusive empty cache $unavailable',

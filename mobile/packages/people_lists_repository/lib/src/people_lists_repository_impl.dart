@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:clock/clock.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -63,6 +64,7 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     FunnelcakeApiClient? funnelcakeApiClient,
     List<String> discoveryRelayUrls = const [],
     Set<String> additionalExcludedPublicDTags = const {},
+    Duration maxFutureDrift = _maxRevisionLead,
   }) : _nostrClient = nostrClient,
        _cache = cache,
        _followedListsStore = followedListsStore,
@@ -74,7 +76,8 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
        _discoveryRelayUrls = List.unmodifiable(discoveryRelayUrls),
        _additionalExcludedPublicDTags = Set.unmodifiable(
          additionalExcludedPublicDTags,
-       );
+       ),
+       _maxFutureDrift = maxFutureDrift;
 
   final NostrClient _nostrClient;
   final LocalPeopleListsCache _cache;
@@ -139,8 +142,35 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
   /// a relay can still reject a nearer revision and the write then fails.
   static const _maxRevisionLead = Duration(minutes: 1);
 
+  // Keep attempted revisions even when a relay fails to acknowledge them:
+  // an unacknowledged replacement may still have reached another relay.
+  final Duration _maxFutureDrift;
+  final Map<String, int> _attemptedSeconds = {};
+
+  int _allocateRevision(
+    String ownerPubkey,
+    String listId,
+    UserList? previous,
+  ) {
+    final observed = _revisionTimestamp(previous);
+    final key = '$ownerPubkey:$listId';
+    final attempted = _attemptedSeconds[key];
+    final next = attempted != null && attempted >= observed
+        ? attempted + 1
+        : observed;
+    final now = clock.now().millisecondsSinceEpoch ~/ 1000;
+    final budget = _maxFutureDrift < _maxRevisionLead
+        ? _maxFutureDrift
+        : _maxRevisionLead;
+    if (next > now + budget.inSeconds) {
+      throw StateError('People-list revision is too far ahead of this clock');
+    }
+    _attemptedSeconds[key] = next;
+    return next;
+  }
+
   static int _revisionTimestamp(UserList? previous) {
-    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final now = clock.now().millisecondsSinceEpoch ~/ 1000;
     final next = previous == null
         ? now
         : previous.updatedAt.millisecondsSinceEpoch ~/ 1000 + 1;
@@ -227,6 +257,7 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
 
     final newestByListId = <String, ({Event event, UserList list})>{};
     for (final event in events) {
+      if (event.pubkey != ownerPubkey) continue;
       final list = Nip51PeopleListCodec.decode(event);
       if (list == null) continue;
       final candidate = (event: event, list: list);
@@ -488,7 +519,7 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
       return _refuse(listId, 'the owner read was inconclusive');
     }
     final record = await _findList(ownerPubkey: ownerPubkey, listId: listId);
-    final createdAt = _revisionTimestamp(record?.list);
+    final createdAt = _allocateRevision(ownerPubkey, listId, record?.list);
     final addressableId = '${Nip51PeopleListCodec.kind}:$ownerPubkey:$listId';
     final tags = <List<String>>[
       ['a', addressableId],
@@ -1002,7 +1033,7 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
         payload.kind,
         payload.tags,
         payload.content,
-        createdAt: _revisionTimestamp(previous),
+        createdAt: _allocateRevision(ownerPubkey, list.id, previous),
       );
       final outcome = await _nostrClient.publishEventAwaitOk(event);
       if (!outcome.acceptedByAny) {
