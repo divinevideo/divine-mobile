@@ -58,9 +58,8 @@ class PopularVideosTab extends ConsumerStatefulWidget {
 
   /// Elapsed load time past which the load is reported as slow.
   ///
-  /// Overridable because the elapsed time comes from the wall clock, which
-  /// `fakeAsync` cannot advance — a test would otherwise have to sleep for
-  /// [_slowFeedLoadThresholdMs] to reach the branch.
+  /// Overridable to exercise slow-load reporting at different thresholds.
+  /// Elapsed time uses [clock], so tests can advance it without sleeping.
   final int slowLoadThresholdMs;
 
   @override

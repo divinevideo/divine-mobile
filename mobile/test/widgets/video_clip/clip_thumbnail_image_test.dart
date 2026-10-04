@@ -52,12 +52,13 @@ void main() {
     }
 
     // File resolution performs real I/O. Yield to it and pump frames until
-    // the error placeholder has actually rendered.
+    // the placeholder renders, keeping the original one-second failure budget.
     Future<void> pumpUntil(
       WidgetTester tester,
       bool Function() resolved,
     ) async {
-      while (!resolved()) {
+      final elapsed = Stopwatch()..start();
+      while (!resolved() && elapsed.elapsed < const Duration(seconds: 1)) {
         await tester.runAsync(
           pumpEventQueue,
         );

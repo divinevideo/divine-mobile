@@ -361,7 +361,13 @@ void main() {
                 .communityLabelsForVideo(video)
                 .then((value) => result = value),
           );
-          while (result == null) {
+          // Each round releases at least one of the twelve held lookups.
+          // A stalled result must reach the assertion instead of spinning.
+          for (
+            var round = 0;
+            result == null && round <= authors.length;
+            round++
+          ) {
             await pumpEventQueue();
             final batch = List<Completer<void>>.of(pendingLookups);
             pendingLookups.clear();
