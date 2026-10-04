@@ -51,10 +51,10 @@ class MockNostrServiceWithHeldEose implements NostrClient {
   }
 
   void completeEose() {
-    _eoseCalled = true;
     final callbacks = List<void Function()>.of(_pendingEose);
     _pendingEose.clear();
     for (final callback in callbacks) {
+      _eoseCalled = true;
       callback();
     }
   }
