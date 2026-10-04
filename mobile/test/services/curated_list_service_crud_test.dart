@@ -17,6 +17,7 @@ import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -2291,7 +2292,7 @@ void main() {
         service.setOnListUnsubscribed((removedListId) {
           expect(removedListId, list.authorScopedId);
           final tombstones = prefs.getStringList(
-            CuratedListService.deletedListCoordinatesStorageKey,
+            PrefsCuratedListStore.deletedCoordinatesStorageKey,
           );
           removalWasProtected =
               service.getListById(removedListId) == null &&
@@ -2340,7 +2341,7 @@ void main() {
           // coordinate, and without lifting the tombstone the new list's own
           // relay events would be discarded for the life of the install.
           SharedPreferences.setMockInitialValues({
-            CuratedListService.deletedListCoordinatesStorageKey: <String>[
+            PrefsCuratedListStore.deletedCoordinatesStorageKey: <String>[
               '$_ownerPubkey:${CuratedListService.defaultListId}',
             ],
           });
