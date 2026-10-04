@@ -437,7 +437,7 @@ void main() {
         }),
       );
 
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(events, hasLength(1));
       expect(events.single.referencedEventId, equals('abc123'));
@@ -460,7 +460,7 @@ void main() {
           }),
         );
 
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(events, isEmpty);
       },
@@ -481,7 +481,7 @@ void main() {
           }),
         );
 
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(events, hasLength(1));
         expect(
@@ -501,7 +501,7 @@ void main() {
         jsonEncode({'referencedAddress': '34236:owner_hex:vine-id'}),
       );
 
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(events, hasLength(1));
       expect(
@@ -519,7 +519,7 @@ void main() {
         jsonEncode({'referencedEventId': 'def456'}),
       );
 
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(events, hasLength(1));
       expect(events.single.referencedEventId, equals('def456'));
@@ -536,7 +536,7 @@ void main() {
         returnsNormally,
       );
 
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(events, isEmpty);
     });
@@ -554,7 +554,7 @@ void main() {
           returnsNormally,
         );
 
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(events, isEmpty);
       },
@@ -576,7 +576,7 @@ void main() {
           returnsNormally,
         );
 
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(events, isEmpty);
       },
@@ -589,7 +589,7 @@ void main() {
 
       service.handleNotificationTapPayload(null);
 
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(events, isEmpty);
     });
@@ -604,7 +604,7 @@ void main() {
         jsonEncode({'notificationType': 'comment'}),
       );
 
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(events, isEmpty);
     });
@@ -624,7 +624,7 @@ void main() {
         }),
       );
 
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(events, hasLength(1));
       expect(events.single.referencedEventId, isNull);
@@ -649,7 +649,7 @@ void main() {
         }),
       );
       service.handleNotificationTapPayload(payload);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(events, hasLength(1));
       expect(events.single.notificationType, equals('follow'));

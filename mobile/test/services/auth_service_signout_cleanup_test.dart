@@ -553,10 +553,11 @@ void main() {
             when(() => mockKeyStorage.clearCache()).thenReturn(null);
             final events = <String>[];
             var completed = false;
+            final slow = Completer<void>();
 
             authService.registerBeforeSessionTeardownCallback(() async {
               events.add('slow started');
-              await Future<void>.delayed(const Duration(seconds: 10));
+              await slow.future;
               events.add('slow completed');
             });
             authService.registerBeforeSessionTeardownCallback(() async {
@@ -576,6 +577,13 @@ void main() {
             expect(events, ['slow started', 'second started']);
             expect(completed, isTrue);
             expect(authService.authState, AuthState.unauthenticated);
+            slow.complete();
+            async.flushMicrotasks();
+            expect(events, [
+              'slow started',
+              'second started',
+              'slow completed',
+            ]);
           });
         },
       );

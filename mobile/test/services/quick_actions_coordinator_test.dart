@@ -191,8 +191,7 @@ QuickActionsCoordinator _coordinator({
 }
 
 Future<void> _flushAsyncWork() async {
-  await Future<void>.delayed(Duration.zero);
-  await Future<void>.delayed(Duration.zero);
+  await pumpEventQueue();
 }
 
 class _FakeQuickActionsClient implements QuickActionsClient {

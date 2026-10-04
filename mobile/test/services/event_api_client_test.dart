@@ -1,9 +1,12 @@
 // ABOUTME: Tests for EventApiClient REST-first Nostr event publishing
 // ABOUTME: Covers 200/401/403/422/5xx classification, NIP-98 wiring, signer match
 
+import 'dart:async';
+
 import 'dart:convert';
 
 import 'package:clock/clock.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -288,21 +291,29 @@ void main() {
       expect(result, isA<EventApiTransientFailure>());
     });
 
-    test('returns transient failure on timeout', () async {
-      stubToken(buildToken());
-      final client = EventApiClient(
-        httpClient: MockClient((_) async {
-          await Future<void>.delayed(const Duration(seconds: 30));
-          return http.Response('', 200);
-        }),
-        nip98AuthService: mockNip98,
-        apiBaseUrl: () => 'https://api.divine.video',
-        timeout: const Duration(milliseconds: 50),
-      );
+    test('returns transient failure on timeout', () {
+      fakeAsync((clock) {
+        stubToken(buildToken());
+        final client = EventApiClient(
+          httpClient: MockClient((_) => Completer<http.Response>().future),
+          nip98AuthService: mockNip98,
+          apiBaseUrl: () => 'https://api.divine.video',
+          timeout: const Duration(milliseconds: 50),
+        );
 
-      final result = await client.publishEvent(buildVideoEvent());
+        EventApiPublishResult? result;
+        unawaited(
+          client
+              .publishEvent(buildVideoEvent())
+              .then((value) => result = value),
+        );
+        clock.flushMicrotasks();
+        expect(result, isNull);
+        clock.elapse(const Duration(milliseconds: 50));
+        clock.flushMicrotasks();
 
-      expect(result, isA<EventApiTransientFailure>());
+        expect(result, isA<EventApiTransientFailure>());
+      });
     });
 
     test(

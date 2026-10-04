@@ -688,8 +688,6 @@ void main() {
 
         uploadManager.resumeInterruptedUpload(upload.id);
 
-        await Future<void>.delayed(const Duration(milliseconds: 200));
-
         final current = uploadManager.getUpload(upload.id);
         expect(current!.status, equals(UploadStatus.paused));
 

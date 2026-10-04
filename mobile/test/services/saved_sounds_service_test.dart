@@ -345,7 +345,7 @@ void main() {
 
           // The legacy key is retired only after the account bucket is durably
           // written, so let the ordered migration finish first.
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           expect(sharedPreferences.getString('saved_reusable_sounds'), isNull);
           expect(sharedPreferences.getString(accountA.storageKey), isNotNull);
         },
@@ -382,7 +382,7 @@ void main() {
             pubkeyHex: pubkeyA,
           ).loadSounds();
           // Let the first account's migration retire the legacy key.
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
 
           final accountB = SavedSoundsService(
             sharedPreferences,
@@ -410,7 +410,7 @@ void main() {
         when(() => mockPrefs.remove(any())).thenAnswer((_) async => true);
 
         service.loadSounds();
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         // Legacy key must survive so the migration retries — never removed
         // after a failed write.
@@ -457,7 +457,7 @@ void main() {
 
           // Let A finish so no pending future outlives the test.
           blockedWrite.complete(true);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         },
       );
 

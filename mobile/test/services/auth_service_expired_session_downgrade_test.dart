@@ -428,6 +428,7 @@ void main() {
         userPubkey: pubkey,
       );
       final backgroundRefresh = Completer<KeycastSession?>();
+      final retryStarted = Completer<void>();
       var refreshCalls = 0;
       when(
         () => mockOAuthClient.refreshSession(
@@ -438,6 +439,7 @@ void main() {
         if (refreshCalls == 1) {
           throw OAuthNetworkException('offline');
         }
+        retryStarted.complete();
         return backgroundRefresh.future;
       });
 
@@ -468,10 +470,7 @@ void main() {
             'refresh_token_still_valid',
             reason: 'Offline launch must not discard the retry token.',
           );
-          final retryDeadline = DateTime.now().add(const Duration(seconds: 3));
-          while (refreshCalls < 2 && DateTime.now().isBefore(retryDeadline)) {
-            await Future<void>.delayed(const Duration(milliseconds: 10));
-          }
+          await retryStarted.future;
           expect(refreshCalls, equals(2));
 
           backgroundRefresh.complete(refreshedSession);
@@ -1420,11 +1419,7 @@ void main() {
           // The background upgrade is unawaited but resolves quickly since
           // refreshSession returns immediately. Pump the event queue until
           // the upgrade finishes — it should complete well within 1 second.
-          final deadline = DateTime.now().add(const Duration(seconds: 3));
-          while (authService.isRpcUpgradeInProgress &&
-              DateTime.now().isBefore(deadline)) {
-            await Future<void>.delayed(const Duration(milliseconds: 10));
-          }
+          await waitForRpcUpgradeToSettle(authService);
 
           expect(
             authService.isRpcUpgradeInProgress,
@@ -1472,11 +1467,7 @@ void main() {
           // tryRefreshExpiredSession in isolation. This avoids the
           // _pendingOAuthRefresh single-flight slot being held by the
           // background upgrade, which would conflate call counts.
-          final deadline = DateTime.now().add(const Duration(seconds: 5));
-          while (authService.isRpcUpgradeInProgress &&
-              DateTime.now().isBefore(deadline)) {
-            await Future<void>.delayed(const Duration(milliseconds: 10));
-          }
+          await waitForRpcUpgradeToSettle(authService);
 
           // Session should be expired after init with failed refresh.
           expect(authService.hasExpiredOAuthSession, isTrue);
@@ -1541,11 +1532,7 @@ void main() {
 
             // Wait for the background upgrade to release the single-flight
             // slot before exercising tryRefreshExpiredSession in isolation.
-            final deadline = DateTime.now().add(const Duration(seconds: 5));
-            while (authService.isRpcUpgradeInProgress &&
-                DateTime.now().isBefore(deadline)) {
-              await Future<void>.delayed(const Duration(milliseconds: 10));
-            }
+            await waitForRpcUpgradeToSettle(authService);
             expect(authService.hasExpiredOAuthSession, isTrue);
             clearInteractions(mockOAuthClient);
 

@@ -1207,13 +1207,11 @@ void main() {
       final oldest = await seam('old.mp4', 60, DateTime(2020));
       final newest = await seam('new.mp4', 60, DateTime(2020, 1, 2));
 
+      final removed = oldest.parent
+          .watch(events: FileSystemEvent.delete)
+          .firstWhere((event) => event.path == oldest.path);
       serviceWithBudget(100).clear();
-
-      // The trim is unawaited by design (it must not block editor teardown);
-      // poll until it lands.
-      for (var i = 0; i < 400 && oldest.existsSync(); i++) {
-        await Future<void>.delayed(const Duration(milliseconds: 1));
-      }
+      await removed;
 
       // 120 bytes > 100: drop oldest (→60), newest survives.
       expect(oldest.existsSync(), isFalse);

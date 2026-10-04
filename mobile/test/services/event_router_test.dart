@@ -148,7 +148,6 @@ void main() {
           config: const EventRouterConfig(autoStart: false, maxBatchSize: 10),
           yieldToEventLoop: () async {
             yieldCount++;
-            await Future<void>.delayed(Duration.zero);
           },
         );
 

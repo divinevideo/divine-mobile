@@ -221,7 +221,7 @@ void main() {
         trigger: ForegroundIdleWarmupTrigger.startupSettled,
       );
 
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       expect(calls, ['forYou-start']);
 
       isIdle = false;
@@ -425,7 +425,7 @@ void main() {
       final first = coordinator.requestWarmup(
         trigger: ForegroundIdleWarmupTrigger.startupSettled,
       );
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       expect(calls, ['forYou']);
 
       // Gate closes mid-task: the pass returns but the task is still running.
@@ -440,7 +440,7 @@ void main() {
       final held = coordinator.requestWarmup(
         trigger: ForegroundIdleWarmupTrigger.periodicIdleCheck,
       );
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       expect(calls, ['forYou']);
 
       // Once the abandoned task settles, the held request resolves and

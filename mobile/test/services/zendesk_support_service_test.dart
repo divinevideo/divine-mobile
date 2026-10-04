@@ -122,10 +122,13 @@ void main() {
     // handshake is still in flight. Both must wait for it rather than read a
     // transiently false _initialized and give up.
     test('setJwtIdentity waits for an in-flight initialization', () async {
+      final nativeStarted = Completer<void>();
+      final handshake = Completer<void>();
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (MethodCall call) async {
             if (call.method == 'initialize') {
-              await Future<void>.delayed(const Duration(milliseconds: 20));
+              nativeStarted.complete();
+              await handshake.future;
               return true;
             }
             return null;
@@ -139,10 +142,15 @@ void main() {
         zendeskUrl: 'https://test.zendesk.com',
       );
 
-      await ZendeskSupportService.setJwtIdentity(
+      await nativeStarted.future;
+      final identity = ZendeskSupportService.setJwtIdentity(
         nip98Service: nip98Service,
         relayManagerUrl: 'https://test-relay.divine.video',
       );
+      await pumpEventQueue();
+      expect(nip98Service.createAuthTokenCalls, 0);
+      handshake.complete();
+      await identity;
       await initialization;
 
       // Reaching token creation is the observable: bailing at the
@@ -153,11 +161,14 @@ void main() {
     test(
       'setAnonymousIdentityWithUserInfo waits for an in-flight initialization',
       () async {
+        final nativeStarted = Completer<void>();
+        final handshake = Completer<void>();
         var userIdentityCalls = 0;
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
             .setMockMethodCallHandler(channel, (MethodCall call) async {
               if (call.method == 'initialize') {
-                await Future<void>.delayed(const Duration(milliseconds: 20));
+                nativeStarted.complete();
+                await handshake.future;
                 return true;
               }
               if (call.method == 'setUserIdentity') {
@@ -178,8 +189,13 @@ void main() {
           zendeskUrl: 'https://test.zendesk.com',
         );
 
-        final identitySet =
-            await ZendeskSupportService.setAnonymousIdentityWithUserInfo();
+        await nativeStarted.future;
+        final identity =
+            ZendeskSupportService.setAnonymousIdentityWithUserInfo();
+        await pumpEventQueue();
+        expect(userIdentityCalls, 0);
+        handshake.complete();
+        final identitySet = await identity;
         await initialization;
 
         // This is the identity the JWT upgrade is allowed to fall back to, so
@@ -193,11 +209,14 @@ void main() {
     test(
       'setAnonymousIdentity waits for an in-flight initialization',
       () async {
+        final nativeStarted = Completer<void>();
+        final handshake = Completer<void>();
         var anonymousIdentityCalls = 0;
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
             .setMockMethodCallHandler(channel, (MethodCall call) async {
               if (call.method == 'initialize') {
-                await Future<void>.delayed(const Duration(milliseconds: 20));
+                nativeStarted.complete();
+                await handshake.future;
                 return true;
               }
               if (call.method == 'setAnonymousIdentity') {
@@ -213,7 +232,12 @@ void main() {
           zendeskUrl: 'https://test.zendesk.com',
         );
 
-        final identitySet = await ZendeskSupportService.setAnonymousIdentity();
+        await nativeStarted.future;
+        final identity = ZendeskSupportService.setAnonymousIdentity();
+        await pumpEventQueue();
+        expect(anonymousIdentityCalls, 0);
+        handshake.complete();
+        final identitySet = await identity;
         await initialization;
 
         expect(identitySet, true);

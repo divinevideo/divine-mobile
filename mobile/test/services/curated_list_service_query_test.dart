@@ -222,9 +222,9 @@ void main() {
     group('getListsByTag()', () {
       test('returns lists with specific tag', () async {
         await service.createList(name: 'List 1', tags: ['tech', 'tutorial']);
-        await Future.delayed(const Duration(milliseconds: 5));
+
         await service.createList(name: 'List 2', tags: ['cooking', 'food']);
-        await Future.delayed(const Duration(milliseconds: 5));
+
         await service.createList(name: 'List 3', tags: ['tech', 'news']);
 
         final results = service.getListsByTag('tech');
@@ -274,9 +274,9 @@ void main() {
     group('getAllTags()', () {
       test('returns all unique tags across lists', () async {
         await service.createList(name: 'List 1', tags: ['tech', 'tutorial']);
-        await Future.delayed(const Duration(milliseconds: 5));
+
         await service.createList(name: 'List 2', tags: ['cooking', 'food']);
-        await Future.delayed(const Duration(milliseconds: 5));
+
         await service.createList(name: 'List 3', tags: ['tech', 'news']);
 
         final tags = service.getAllTags();
@@ -332,7 +332,7 @@ void main() {
 
       test('handles lists with no tags', () async {
         await service.createList(name: 'List 1', tags: ['tag1']);
-        await Future.delayed(const Duration(milliseconds: 5));
+
         await service.createList(name: 'List 2', tags: []);
 
         final tags = service.getAllTags();
@@ -547,7 +547,7 @@ void main() {
         });
 
         final result = service.streamPublicListsFromRelays().toList();
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         onEose!();
 
         expect(await result, isEmpty);

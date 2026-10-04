@@ -564,17 +564,21 @@ void main() {
     test('updates lastUsedAt when re-adding existing account', () async {
       await _ignoringDiscoveryErrors(authService.createNewIdentity);
       final firstAccounts = await authService.getKnownAccounts();
-      final firstUsedAt = firstAccounts[0].lastUsedAt;
-
-      // Small delay to ensure timestamp changes
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+      final firstUsedAt = DateTime.utc(2000);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        kKnownAccountsKey,
+        jsonEncode([
+          firstAccounts.single.copyWith(lastUsedAt: firstUsedAt).toJson(),
+        ]),
+      );
       await _ignoringDiscoveryErrors(authService.createNewIdentity);
 
       final secondAccounts = await authService.getKnownAccounts();
       expect(secondAccounts, hasLength(1));
       expect(
         secondAccounts[0].lastUsedAt.millisecondsSinceEpoch,
-        greaterThanOrEqualTo(firstUsedAt.millisecondsSinceEpoch),
+        greaterThan(firstUsedAt.millisecondsSinceEpoch),
       );
     });
   });

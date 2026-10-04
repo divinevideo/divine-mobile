@@ -165,7 +165,7 @@ void main() {
         );
         await service.initialize();
         triggerController.add(null);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         verify(
           () => dao.getRetryableForOwner(
@@ -190,7 +190,7 @@ void main() {
           await service.initialize();
 
           foregroundController.add(false);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           verifyNever(
             () => dao.getRetryableForOwner(
               ownerPubkey: any(named: 'ownerPubkey'),
@@ -199,7 +199,7 @@ void main() {
           );
 
           foregroundController.add(true);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           verify(
             () => dao.getRetryableForOwner(
               ownerPubkey: _ownerPubkey,
@@ -1481,7 +1481,7 @@ void main() {
           final service = buildService();
           final first = service.sweep();
           // Yield so the first sweep gets past the in-progress flag set.
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           expect(service.isSweeping, isTrue);
 
           // Second call returns immediately without entering the loop.

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/models/divine_video_clip.dart';
@@ -378,26 +379,29 @@ void main() {
       });
 
       test('generates unique IDs for split clips', () async {
-        final clip = _clip(
-          id: 'original-clip',
-          duration: const Duration(seconds: 5),
-        );
-        DivineVideoClip? end1;
-        DivineVideoClip? end2;
-        await VideoEditorSplitService.splitClip(
-          sourceClip: clip,
-          splitPosition: const Duration(seconds: 2),
-          onClipsCreated: (_, e) => end1 = e,
-          onThumbnailExtracted: null,
-        );
-        await Future<void>.delayed(const Duration(milliseconds: 2));
-        await VideoEditorSplitService.splitClip(
-          sourceClip: clip,
-          splitPosition: const Duration(seconds: 2),
-          onClipsCreated: (_, e) => end2 = e,
-          onThumbnailExtracted: null,
-        );
-        expect(end1!.id, isNot(equals(end2!.id)));
+        var now = DateTime.utc(2026);
+        await withClock(Clock(() => now), () async {
+          final clip = _clip(
+            id: 'original-clip',
+            duration: const Duration(seconds: 5),
+          );
+          DivineVideoClip? end1;
+          DivineVideoClip? end2;
+          await VideoEditorSplitService.splitClip(
+            sourceClip: clip,
+            splitPosition: const Duration(seconds: 2),
+            onClipsCreated: (_, e) => end1 = e,
+            onThumbnailExtracted: null,
+          );
+          now = now.add(const Duration(microseconds: 1));
+          await VideoEditorSplitService.splitClip(
+            sourceClip: clip,
+            splitPosition: const Duration(seconds: 2),
+            onClipsCreated: (_, e) => end2 = e,
+            onThumbnailExtracted: null,
+          );
+          expect(end1!.id, isNot(equals(end2!.id)));
+        });
       });
     });
   });

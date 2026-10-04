@@ -934,7 +934,7 @@ void main() {
         ),
       );
       // Allow the stream listener to fire.
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(repo.isSupporter, isTrue);
       expect(emitted.last.isSupporter, isTrue);
@@ -958,7 +958,7 @@ void main() {
 
       validator.emit(SupporterEntitlement.inactive);
       validator.emit(SupporterEntitlement.inactive);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(emissions, 0);
     });
@@ -1066,7 +1066,7 @@ void main() {
 
       final first = repo.recoverPurchases();
       final second = repo.recoverPurchases();
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(validator.restoreCallCount, 1);
       validator.restoreCompleter!.complete();
@@ -1189,7 +1189,7 @@ void main() {
         ),
       );
       await claimObserved.future;
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       await repo.recoverPurchases();
 
       expect(validator.restoreCallCount, 1);

@@ -123,10 +123,11 @@ void main() {
 
     test('returns videos by recency', () async {
       await service.recordVideoView('video1');
-      await Future.delayed(const Duration(milliseconds: 10));
+      service.getVideoMetrics('video1')!.lastSeenAt = DateTime.utc(2000);
       await service.recordVideoView('video2');
-      await Future.delayed(const Duration(milliseconds: 10));
+      service.getVideoMetrics('video2')!.lastSeenAt = DateTime.utc(2001);
       await service.recordVideoView('video3');
+      service.getVideoMetrics('video3')!.lastSeenAt = DateTime.utc(2002);
 
       final recent = service.getVideosByRecency(limit: 2);
 

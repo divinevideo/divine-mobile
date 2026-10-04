@@ -6,6 +6,7 @@ import 'dart:async';
 
 import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -622,8 +623,12 @@ void main() {
           },
         );
 
-        unawaited(disposableService.syncPendingActions());
-        await firstExecutorCall.future.timeout(const Duration(seconds: 2));
+        final fake = FakeAsync();
+        fake.run((_) => unawaited(disposableService.syncPendingActions()));
+        while (!firstExecutorCall.isCompleted) {
+          fake.flushMicrotasks();
+          await pumpEventQueue();
+        }
         expect(executorCalls, 1, reason: 'first attempt ran before dispose');
 
         disposableService.dispose();
@@ -631,7 +636,9 @@ void main() {
 
         // Long enough for the whole retry ladder to have fired if cancellation
         // regresses; the executor signal above, not this window, gates dispose.
-        await Future<void>.delayed(const Duration(milliseconds: 150));
+        fake.elapse(const Duration(milliseconds: 150));
+        await pumpEventQueue();
+        fake.flushMicrotasks();
 
         expect(
           callsAfterDispose,
@@ -678,14 +685,18 @@ void main() {
         );
 
         final escapedErrors = <Object>[];
-        await runZonedGuarded(
-          () async {
-            unawaited(service.syncPendingActions());
-            await firstExecutorCall.future.timeout(const Duration(seconds: 2));
-            service.dispose();
-          },
-          (error, _) => escapedErrors.add(error),
+        final fake = FakeAsync();
+        fake.run(
+          (_) => runZonedGuarded(
+            () => unawaited(service.syncPendingActions()),
+            (error, _) => escapedErrors.add(error),
+          ),
         );
+        while (!firstExecutorCall.isCompleted) {
+          fake.flushMicrotasks();
+          await pumpEventQueue();
+        }
+        service.dispose();
 
         // Snapshot immediately after dispose, before any wait. A resurrected
         // timer fires one resyncDelay later, so any window opened before this
@@ -698,7 +709,9 @@ void main() {
         final readsAtDispose = countingDao.getPendingActionsCalls;
 
         // 100ms is five turns of the 20ms resync loop if it is resurrected.
-        await Future<void>.delayed(const Duration(milliseconds: 100));
+        fake.elapse(const Duration(milliseconds: 100));
+        await pumpEventQueue();
+        fake.flushMicrotasks();
 
         expect(
           countingDao.getPendingActionsCalls,
@@ -724,8 +737,7 @@ void main() {
           authorPubkey: 'author123',
         );
 
-        // Allow stream to emit
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await pumpEventQueue();
 
         expect(emissions.isNotEmpty, isTrue);
         expect(emissions.last.length, equals(1));

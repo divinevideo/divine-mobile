@@ -259,7 +259,7 @@ void main() {
       ).thenAnswer((_) async => bunkerUrl);
       when(
         () => mockBunkerSigner.connect(sendConnectRequest: false),
-      ).thenAnswer((_) => Future<String?>.delayed(const Duration(hours: 1)));
+      ).thenAnswer((_) => Completer<String?>().future);
 
       authService = AuthService(
         backgroundActivityManager: BackgroundActivityManager(),

@@ -551,7 +551,7 @@ void main() {
 
         await service.initialize();
         foregroundController.add(true);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(await dao.getById('view-a'), isNull);
         verify(
