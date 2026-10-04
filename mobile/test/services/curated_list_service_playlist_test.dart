@@ -78,15 +78,16 @@ void main() {
           kind: any(named: 'kind'),
           content: any(named: 'content'),
           tags: any(named: 'tags'),
+          createdAt: any(named: 'createdAt'),
         ),
       ).thenAnswer(
-        (_) async => Event.fromJson({
+        (invocation) async => Event.fromJson({
           'id': 'test_event_id',
           'pubkey': 'test_pubkey_123456789abcdef',
-          'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-          'kind': 30005,
-          'tags': [],
-          'content': 'test',
+          'created_at': invocation.namedArguments[#createdAt],
+          'kind': invocation.namedArguments[#kind],
+          'tags': invocation.namedArguments[#tags],
+          'content': invocation.namedArguments[#content],
           'sig': 'test_sig',
         }),
       );
