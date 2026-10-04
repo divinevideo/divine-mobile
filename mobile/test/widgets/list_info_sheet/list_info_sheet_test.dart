@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
@@ -864,6 +865,25 @@ void main() {
           picker.filterMode,
           equals(UserPickerFilterMode.mutualFollowsOnly),
         );
+      });
+
+      testWidgets('opens the picker from the keyboard', (tester) async {
+        await openSheet(tester);
+
+        bool rowHasFocus() =>
+            FocusManager.instance.primaryFocus?.context
+                ?.findAncestorWidgetOfExactType<ListInfoCollaboratorsRow>() !=
+            null;
+        for (var i = 0; i < 12 && !rowHasFocus(); i++) {
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+          await tester.pump();
+        }
+        expect(rowHasFocus(), isTrue, reason: 'Tab never reached the row');
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(UserPickerSheet), findsOneWidget);
       });
 
       testWidgets('shows the people picked and saves them with the list', (
