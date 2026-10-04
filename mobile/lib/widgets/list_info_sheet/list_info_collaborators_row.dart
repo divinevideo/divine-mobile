@@ -5,6 +5,8 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart'
+    show InkWell, Material, MaterialType;
 import 'package:models/models.dart';
 import 'package:openvine/blocs/curated_list_info/curated_list_info_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -28,11 +30,18 @@ class ListInfoCollaboratorsRow extends ConsumerWidget {
     final l10n = context.l10n;
     final viewerPubkey = ref.read(authServiceProvider).currentPublicKeyHex;
 
-    // Only a collaborator whose profile has resolved can be shown as picked.
+    // Existing permissions remain removable while their profiles resolve.
     final offered = [
       for (final pubkey in cubit.state.collaboratorPubkeys)
-        ref.read(userProfileReactiveProvider(pubkey)).value,
-    ].nonNulls.toList();
+        ref.read(userProfileReactiveProvider(pubkey)).value ??
+            UserProfile(
+              pubkey: pubkey,
+              name: UserProfile.defaultDisplayNameFor(pubkey),
+              rawData: const {},
+              createdAt: DateTime.fromMillisecondsSinceEpoch(0),
+              eventId: '',
+            ),
+    ];
 
     final picked = await showUserPickerSheet(
       context,
@@ -41,6 +50,7 @@ class ListInfoCollaboratorsRow extends ConsumerWidget {
       searchText: l10n.videoMetadataMutualFollowersSearchText,
       searchHint: l10n.listCollaboratorSearchHint,
       initialSelectedProfiles: offered,
+      showSelectedProfiles: true,
       excludeViewerPubkey: viewerPubkey,
       // Keeps the picker open for more than one pick. The selection is read
       // from its result, so closing it without confirming changes nothing.
@@ -96,45 +106,50 @@ class ListInfoCollaboratorsRow extends ConsumerWidget {
         enabled: isEnabled,
         label: l10n.metadataCollaboratorsLabel,
         value: value,
-        // excludeSemantics drops the child subtree, the GestureDetector's tap
-        // action with it, so the action is declared again here.
+        // excludeSemantics drops the child subtree, the InkWell's tap action
+        // with it, so the action is declared again here.
         onTap: isEnabled ? open : null,
         excludeSemantics: true,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: isEnabled ? open : null,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: 8,
-              children: [
-                Text(
-                  l10n.metadataCollaboratorsLabel,
-                  style: VineTheme.labelSmallFont(
-                    color: colors.onSurfaceVariant,
+        // An InkWell takes keyboard focus and activation, which a bare tap
+        // detector cannot. The sheet paints its surface with a ColoredBox,
+        // which would hide the ink; its own Material puts the ink back on top.
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            onTap: isEnabled ? open : null,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 8,
+                children: [
+                  Text(
+                    l10n.metadataCollaboratorsLabel,
+                    style: VineTheme.labelSmallFont(
+                      color: colors.onSurfaceVariant,
+                    ),
                   ),
-                ),
-                Row(
-                  spacing: 16,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        value,
-                        style: VineTheme.titleMediumFont(
-                          color: colors.onSurface,
+                  Row(
+                    spacing: 16,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          value,
+                          style: VineTheme.titleMediumFont(
+                            color: colors.onSurface,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    DivineIcon(
-                      icon: DivineIconName.caretRight,
-                      color: colors.accentPositive,
-                    ),
-                  ],
-                ),
-              ],
+                      DivineIcon(
+                        icon: DivineIconName.caretRight,
+                        color: colors.accentPositive,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),

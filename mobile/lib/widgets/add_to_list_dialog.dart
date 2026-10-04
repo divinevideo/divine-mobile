@@ -46,24 +46,30 @@ class SelectListDialog extends StatefulWidget {
 }
 
 class _SelectListDialogState extends State<SelectListDialog> {
-  bool _createdWithoutVideo = false;
+  ListInfoSheetOutcome? _creationOutcome;
 
   Future<void> _createList() async {
     final messenger = ScaffoldMessenger.of(context);
-    final failureMessage = context.l10n.listUpdateFailed;
+    final l10n = context.l10n;
+    final failureMessage = l10n.listVideoNotAdded;
     final outcome = await showListInfoSheet(context, video: widget.video);
     if (!mounted) {
-      if (outcome == ListInfoSheetOutcome.createdWithoutVideo &&
+      if ((outcome == ListInfoSheetOutcome.createdWithoutVideo ||
+              outcome == ListInfoSheetOutcome.createdWithVideoPendingSync) &&
           messenger.mounted) {
         messenger.showSnackBar(
-          DivineSnackbarContainer.snackBar(failureMessage, error: true),
+          DivineSnackbarContainer.snackBar(
+            outcome == ListInfoSheetOutcome.createdWithVideoPendingSync
+                ? l10n.listVideoPendingSync
+                : failureMessage,
+            error: outcome == ListInfoSheetOutcome.createdWithoutVideo,
+          ),
         );
       }
       return;
     }
     setState(() {
-      _createdWithoutVideo =
-          outcome == ListInfoSheetOutcome.createdWithoutVideo;
+      _creationOutcome = outcome;
     });
   }
 
@@ -95,8 +101,12 @@ class _SelectListDialogState extends State<SelectListDialog> {
               height: 300,
               child: Column(
                 children: [
-                  if (_createdWithoutVideo)
-                    ListInfoFailureMessage(l10n.listUpdateFailed),
+                  if (_creationOutcome ==
+                      ListInfoSheetOutcome.createdWithoutVideo)
+                    ListInfoFailureMessage(l10n.listVideoNotAdded),
+                  if (_creationOutcome ==
+                      ListInfoSheetOutcome.createdWithVideoPendingSync)
+                    ListInfoFailureMessage(l10n.listVideoPendingSync),
                   Expanded(
                     child: ListView.builder(
                       itemCount: availableLists.length,
@@ -128,6 +138,23 @@ class _SelectListDialogState extends State<SelectListDialog> {
                               color: context.vineColors.secondaryText,
                             ),
                           ),
+                          trailing: isInList && list.pendingRepublish
+                              ? DivineButton(
+                                  label: l10n.listRetrySync,
+                                  type: DivineButtonType.link,
+                                  onPressed: () => runDetached(
+                                    ref
+                                        .read(
+                                          curatedListsStateProvider.notifier,
+                                        )
+                                        .service!
+                                        .retryListSync(list.id),
+                                    'retry list sync',
+                                    logName: 'SelectListDialog',
+                                    category: LogCategory.ui,
+                                  ),
+                                )
+                              : null,
                           onTap: () => _toggleVideoInList(
                             context,
                             ref

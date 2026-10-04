@@ -25,6 +25,8 @@ class ListInfoSaveButton extends StatelessWidget {
       final confirmed = await confirmListVisibilityChange(
         context,
         wasPublic: wasPublic,
+        removesCollaborators:
+            wasPublic && cubit.state.collaboratorPubkeys.isNotEmpty,
       );
       if (!confirmed) return;
     }

@@ -99,6 +99,7 @@ void stubListPublishing({
       kind: any(named: 'kind'),
       content: any(named: 'content'),
       tags: any(named: 'tags'),
+      createdAt: any(named: 'createdAt'),
     ),
   ).thenAnswer(
     (i) async => Event(
@@ -106,6 +107,7 @@ void stubListPublishing({
       i.namedArguments[#kind] as int,
       i.namedArguments[#tags] as List<List<String>>,
       i.namedArguments[#content] as String,
+      createdAt: i.namedArguments[#createdAt] as int?,
     ),
   );
   when(

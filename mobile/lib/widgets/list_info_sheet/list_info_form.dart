@@ -49,8 +49,9 @@ class _ListInfoFormState extends State<ListInfoForm> {
     return BlocListener<CuratedListInfoCubit, CuratedListInfoState>(
       listenWhen: (previous, current) => !previous.canClose && current.canClose,
       listener: (context, _) => context.popModalIfMounted(),
-      child: SingleChildScrollView(
-        // Keeps the focused field clear of the keyboard.
+      // The scroll view ends at the keyboard rather than running behind it,
+      // so a field being typed in is scrolled into view above it.
+      child: Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.viewInsetsOf(context).bottom,
         ),
@@ -58,21 +59,35 @@ class _ListInfoFormState extends State<ListInfoForm> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Outside the scroll view: Save sits in the pinned header, so the
+            // failure it reports must not scroll out of sight.
             const _SaveFailedMessage(),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                spacing: 16,
-                children: [
-                  _NameField(controller: _nameController),
-                  _DescriptionField(controller: _descriptionController),
-                ],
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        spacing: 16,
+                        children: [
+                          _NameField(controller: _nameController),
+                          _DescriptionField(
+                            controller: _descriptionController,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const ListInfoCollaboratorsRow(),
+                    const _RowDivider(),
+                    const _VisibilityTile(),
+                    const _RowDivider(),
+                  ],
+                ),
               ),
             ),
-            const ListInfoCollaboratorsRow(),
-            const _RowDivider(),
-            const _VisibilityTile(),
-            const _RowDivider(),
           ],
         ),
       ),

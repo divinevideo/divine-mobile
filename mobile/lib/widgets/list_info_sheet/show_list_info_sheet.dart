@@ -24,12 +24,11 @@ enum ListInfoSheetOutcome {
   /// The list was created or its edits saved.
   saved,
 
-  /// The list was created, but the service refused to put [video] in it: a
-  /// private list with no room, or a publish no relay took (the video then
-  /// stays on this device, queued for the next sync). The list exists, so
-  /// the caller says so where the person can see it rather than inviting a
-  /// second list.
+  /// The list exists, but the video could not be added locally.
   createdWithoutVideo,
+
+  /// The list includes the video locally and awaits publication.
+  createdWithVideoPendingSync,
 }
 
 /// Shows the sheet that creates a curated list, or edits [existingList].
@@ -52,13 +51,13 @@ Future<ListInfoSheetOutcome> showListInfoSheet(
   // Resolved before the sheet opens: once it has closed, the screen that
   // opened it may be gone, and neither could be recovered from [context].
   final messenger = ScaffoldMessenger.of(context);
-  final service = ProviderScope.containerOf(
-    context,
-    listen: false,
-  ).read(curatedListsStateProvider.notifier).service;
+  final container = ProviderScope.containerOf(context, listen: false);
 
   final cubit = CuratedListInfoCubit(
-    service: service,
+    resolveService: () =>
+        container.read(curatedListsStateProvider.notifier).service,
+    currentOwnerPubkey: () =>
+        container.read(authServiceProvider).currentPublicKeyHex,
     existingList: existingList,
     videoEventId: video?.id,
   );
@@ -70,7 +69,7 @@ Future<ListInfoSheetOutcome> showListInfoSheet(
       expanded: false,
       isScrollControlled: true,
       title: Text(
-        existingList == null ? l10n.listCreateNewList : l10n.listEditInfoAction,
+        existingList == null ? l10n.listCreateNewList : l10n.listEditTitle,
       ),
       headerPadding: listInfoSheetHeaderPadding,
       headerLeadingAction: DivineIconButton(
@@ -92,8 +91,10 @@ Future<ListInfoSheetOutcome> showListInfoSheet(
 
     var settled = cubit.state;
     // Let a save finish after manual dismissal so its result is still reported.
-    if (settled.isSaving ||
-        settled.status == CuratedListInfoStatus.savedAwaitingRelay) {
+    final savePending =
+        settled.isSaving ||
+        settled.status == CuratedListInfoStatus.savedAwaitingRelay;
+    if (savePending) {
       settled = await cubit.stream.firstWhere(
         (state) =>
             !state.isSaving &&
@@ -101,9 +102,15 @@ Future<ListInfoSheetOutcome> showListInfoSheet(
         orElse: () => cubit.state,
       );
     }
-    if (messenger.mounted &&
-        (settled.status == CuratedListInfoStatus.publishFailed ||
-            settled.status == CuratedListInfoStatus.failure)) {
+    if (!cubit.isSessionCurrent) {
+      return ListInfoSheetOutcome.dismissed;
+    }
+    // A failure the form was still showing when it closed has been reported
+    // there; one that arrived after the sheet closed has not.
+    final unreported =
+        settled.status == CuratedListInfoStatus.publishFailed ||
+        (savePending && settled.status == CuratedListInfoStatus.failure);
+    if (messenger.mounted && unreported) {
       messenger.showSnackBar(
         DivineSnackbarContainer.snackBar(
           existingList == null ? l10n.listCreateFailed : l10n.listUpdateFailed,
@@ -112,6 +119,8 @@ Future<ListInfoSheetOutcome> showListInfoSheet(
       );
     }
     return switch (settled.status) {
+      CuratedListInfoStatus.createdWithVideoPendingSync =>
+        ListInfoSheetOutcome.createdWithVideoPendingSync,
       CuratedListInfoStatus.createdWithoutVideo =>
         ListInfoSheetOutcome.createdWithoutVideo,
       CuratedListInfoStatus.saved ||

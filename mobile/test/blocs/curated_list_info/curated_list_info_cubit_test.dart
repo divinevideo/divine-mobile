@@ -26,6 +26,7 @@ CuratedList _list({
   List<String> collaborators = const [],
 }) => CuratedList(
   id: 'list-1',
+  pubkey: _viewer,
   name: 'Puppets',
   description: 'Strings attached',
   videoEventIds: const [],
@@ -42,6 +43,7 @@ void main() {
 
     setUp(() {
       service = _MockCuratedListService();
+      when(() => service.getListById(any())).thenAnswer((_) => _list());
     });
 
     CuratedListInfoCubit buildCubit({
@@ -49,7 +51,8 @@ void main() {
       String? videoEventId,
       bool withService = true,
     }) => CuratedListInfoCubit(
-      service: withService ? service : null,
+      currentOwnerPubkey: () => _viewer,
+      resolveService: () => withService ? service : null,
       existingList: existingList,
       videoEventId: videoEventId,
     );
@@ -75,9 +78,75 @@ void main() {
           isPublic: any(named: 'isPublic'),
           isCollaborative: any(named: 'isCollaborative'),
           allowedCollaborators: any(named: 'allowedCollaborators'),
+          onLocalSaved: any(named: 'onLocalSaved'),
         ),
-      ).thenAnswer((_) => answer());
+      ).thenAnswer((invocation) {
+        (invocation.namedArguments[#onLocalSaved] as void Function()?)?.call();
+        return answer();
+      });
     }
+
+    test(
+      'looks the service up when a save starts, not when it is built',
+      () async {
+        CuratedListService? current;
+        final cubit = CuratedListInfoCubit(
+          currentOwnerPubkey: () => _viewer,
+          resolveService: () => current,
+        );
+        addTearDown(cubit.close);
+        cubit.nameChanged('Puppets');
+        stubCreate(() async => _list());
+
+        current = service;
+        await cubit.submitted();
+
+        expect(cubit.state.status, equals(CuratedListInfoStatus.saved));
+        verify(() => service.createList(name: 'Puppets')).called(1);
+      },
+    );
+
+    test(
+      'a direct editor visit cannot save after its account changes',
+      () async {
+        var owner = _viewer;
+        final cubit = CuratedListInfoCubit(
+          resolveService: () => service,
+          currentOwnerPubkey: () => owner,
+          existingList: _list(),
+        );
+        addTearDown(cubit.close);
+        cubit.nameChanged('Account A title');
+        owner = _alice;
+        await cubit.submitted();
+        expect(cubit.state.status, CuratedListInfoStatus.failure);
+        verifyNever(
+          () => service.updateList(
+            listId: any(named: 'listId'),
+            name: any(named: 'name'),
+            description: any(named: 'description'),
+            isPublic: any(named: 'isPublic'),
+            isCollaborative: any(named: 'isCollaborative'),
+            allowedCollaborators: any(named: 'allowedCollaborators'),
+            onLocalSaved: any(named: 'onLocalSaved'),
+          ),
+        );
+      },
+    );
+
+    test('a legacy source with no established author fails closed', () async {
+      final legacy = CuratedList(
+        id: 'legacy',
+        name: 'Legacy',
+        videoEventIds: const [],
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+      );
+      final cubit = buildCubit(existingList: legacy);
+      addTearDown(cubit.close);
+      await cubit.submitted();
+      expect(cubit.state.status, CuratedListInfoStatus.failure);
+    });
 
     group('initial state', () {
       test('opens empty and public when creating', () {
@@ -423,7 +492,46 @@ void main() {
             listId: 'list-1',
             name: 'Marionettes',
             description: 'Strings attached',
-            isPublic: true,
+            onLocalSaved: any(named: 'onLocalSaved'),
+          ),
+        ).called(1),
+      );
+
+      blocTest<CuratedListInfoCubit, CuratedListInfoState>(
+        'sends no visibility when the owner did not flip it',
+        setUp: () => stubUpdate(() async => true),
+        build: () => buildCubit(existingList: _list()),
+        act: (cubit) async {
+          cubit.nameChanged('Marionettes');
+          await cubit.submitted();
+        },
+        // The sheet can be open on a list whose visibility changed since, so
+        // resending what it opened with would flip the list straight back.
+        // Leaving isPublic out of the matcher pins it to null.
+        verify: (_) => verify(
+          () => service.updateList(
+            listId: 'list-1',
+            name: 'Marionettes',
+            description: 'Strings attached',
+            onLocalSaved: any(named: 'onLocalSaved'),
+          ),
+        ).called(1),
+      );
+
+      blocTest<CuratedListInfoCubit, CuratedListInfoState>(
+        'sends no visibility when a private list is only renamed',
+        setUp: () => stubUpdate(() async => true),
+        build: () => buildCubit(existingList: _list(isPublic: false)),
+        act: (cubit) async {
+          cubit.nameChanged('Marionettes');
+          await cubit.submitted();
+        },
+        verify: (_) => verify(
+          () => service.updateList(
+            listId: 'list-1',
+            name: 'Marionettes',
+            description: 'Strings attached',
+            onLocalSaved: any(named: 'onLocalSaved'),
           ),
         ).called(1),
       );
@@ -449,7 +557,7 @@ void main() {
             listId: 'list-1',
             name: 'Marionettes',
             description: 'Strings attached',
-            isPublic: true,
+            onLocalSaved: any(named: 'onLocalSaved'),
           ),
         ).called(1),
       );
@@ -470,12 +578,12 @@ void main() {
             listId: 'list-1',
             name: 'Puppets',
             description: 'Strings attached',
-            isPublic: true,
             isCollaborative: true,
             allowedCollaborators: any(
               named: 'allowedCollaborators',
               that: unorderedEquals([_alice, _bob]),
             ),
+            onLocalSaved: any(named: 'onLocalSaved'),
           ),
         ).called(1),
       );
@@ -493,9 +601,9 @@ void main() {
             listId: 'list-1',
             name: 'Puppets',
             description: 'Strings attached',
-            isPublic: true,
             isCollaborative: false,
             allowedCollaborators: const [],
+            onLocalSaved: any(named: 'onLocalSaved'),
           ),
         ).called(1),
       );
@@ -516,6 +624,7 @@ void main() {
             isPublic: false,
             isCollaborative: false,
             allowedCollaborators: const [],
+            onLocalSaved: any(named: 'onLocalSaved'),
           ),
         ).called(1),
       );

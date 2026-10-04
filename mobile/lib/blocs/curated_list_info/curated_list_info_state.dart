@@ -11,8 +11,7 @@ enum CuratedListInfoStatus {
   /// A save is running and the form waits on its answer.
   saving,
 
-  /// The edit is stored on this device, so the form can close, but no relay
-  /// has answered yet.
+  /// The edit is stored on this device and the form can close while relays answer.
   savedAwaitingRelay,
 
   /// The save landed.
@@ -24,11 +23,11 @@ enum CuratedListInfoStatus {
   /// The edit is stored on this device but no relay accepted it.
   publishFailed,
 
-  /// The list was created but the service refused to put the video in it:
-  /// a private list with no room, or a publish no relay took (the video then
-  /// stays on this device, queued). The form can close, since saving again
-  /// would create a second list; the opener returns it to its caller.
+  /// The list exists, but the video could not be added locally.
   createdWithoutVideo,
+
+  /// The video is saved locally and awaits publication.
+  createdWithVideoPendingSync,
 }
 
 /// State emitted by `CuratedListInfoCubit`.
@@ -77,7 +76,8 @@ class CuratedListInfoState extends Equatable {
   bool get canClose =>
       status == CuratedListInfoStatus.saved ||
       status == CuratedListInfoStatus.savedAwaitingRelay ||
-      status == CuratedListInfoStatus.createdWithoutVideo;
+      status == CuratedListInfoStatus.createdWithoutVideo ||
+      status == CuratedListInfoStatus.createdWithVideoPendingSync;
 
   /// Whether the list can carry collaborators.
   ///
