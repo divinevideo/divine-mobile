@@ -127,7 +127,8 @@ void main() {
       });
     });
     test(
-      'rapid revisions stop at the configured client ceiling without reserving a rejected revision',
+      'rapid revisions stop at the configured client ceiling '
+      'without reserving a rejected revision',
       () {
         withClock(Clock(() => now), () {
           final revisions = CuratedListPublishClock();
