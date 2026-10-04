@@ -151,7 +151,7 @@ class _OverviewSection extends ConsumerWidget {
       builder: (context, _) {
         final l10n = context.l10n;
         final title = video.captionTitle;
-        final description = video.displayContent;
+        final description = video.displayContent.trim();
 
         final formattedDate =
             !statsVisibility.showPublishedDate || video.hasUnknownOriginalDate

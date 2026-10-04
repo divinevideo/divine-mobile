@@ -452,6 +452,35 @@ void main() {
       },
     );
 
+    testWidgetsWithSurfaceSize('trims blank lines around the description', (
+      tester,
+    ) async {
+      final video = _makeVideo(
+        title: 'Vine video',
+        content: '\n\nOriginal stats: 3 loops - 2 likes\n',
+        rawTags: const {'platform': 'vine'},
+      );
+
+      await tester.pumpWidget(
+        buildSubject(child: MetadataExpandedSheet(video: video)),
+      );
+
+      expect(find.text('Original stats: 3 loops - 2 likes'), findsOneWidget);
+    });
+
+    testWidgetsWithSurfaceSize('omits a whitespace-only description', (
+      tester,
+    ) async {
+      final video = _makeVideo(title: 'Who knew?', content: ' \n\n ');
+
+      await tester.pumpWidget(
+        buildSubject(child: MetadataExpandedSheet(video: video)),
+      );
+
+      // Only the title is a LinkifiedText; a blank description adds no row.
+      expect(find.byType(LinkifiedText), findsOneWidget);
+    });
+
     testWidgetsWithSurfaceSize(
       'renders farewell-day date when original Vine has a published_at tag',
       (tester) async {
