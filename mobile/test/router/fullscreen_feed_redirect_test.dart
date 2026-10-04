@@ -210,6 +210,8 @@ void main() {
         late Widget recovered;
         await tester.pumpWidget(
           MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: Builder(
               builder: (context) {
                 recovered = buildPooledFullscreenFeed(

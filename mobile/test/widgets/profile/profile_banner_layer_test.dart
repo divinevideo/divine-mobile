@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/my_profile/my_profile_bloc.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/widgets/profile/profile_banner_layer.dart';
 import 'package:openvine/widgets/profile/profile_header_widget.dart';
@@ -68,7 +69,11 @@ void main() {
             _testUserHex,
           ).overrideWith((ref) => isVanished),
         ],
-        child: MaterialApp(home: Scaffold(body: layer)),
+        child: MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: layer),
+        ),
       );
     }
 

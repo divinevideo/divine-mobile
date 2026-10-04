@@ -3,6 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 
 import 'scroll.dart';
 
@@ -60,6 +61,8 @@ class _ScrollProbeState extends State<_ScrollProbe> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      localizationsDelegates: appLocalizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: SizedBox(
           height: 320,

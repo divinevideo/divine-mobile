@@ -394,6 +394,8 @@ void main() {
           ProviderScope(
             overrides: _passiveAuthProviderOverrides(mediaAuthInterceptor),
             child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
               home: PassiveAuthThumbnailImage(
                 url: url,
                 placeholder: (_, _) =>
@@ -413,7 +415,13 @@ void main() {
           StackTrace.current,
         );
 
-        await tester.pumpWidget(MaterialApp(home: errorResult));
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: errorResult,
+          ),
+        );
 
         expect(find.text('caller thumbnail error'), findsOneWidget);
         verifyNever(
@@ -839,6 +847,8 @@ void main() {
           ProviderScope(
             overrides: _passiveAuthProviderOverrides(mediaAuthInterceptor),
             child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
               home: StatefulBuilder(
                 builder: (context, setState) {
                   rebuild = setState;
@@ -904,6 +914,8 @@ void main() {
         Widget buildSubject() => UncontrolledProviderScope(
           container: container,
           child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: PassiveAuthThumbnailImage(
               url: url,
               errorWidget: (_, _, error) => Text('fallback: $error'),
@@ -962,6 +974,8 @@ void main() {
         Widget buildSubject() => UncontrolledProviderScope(
           container: container,
           child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: PassiveAuthThumbnailImage(
               url: url,
               errorWidget: (_, _, error) => Text('fallback: $error'),
@@ -1018,7 +1032,11 @@ void main() {
 
         Widget buildSubject() => UncontrolledProviderScope(
           container: container,
-          child: const MaterialApp(home: PassiveAuthThumbnailImage(url: url)),
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: PassiveAuthThumbnailImage(url: url),
+          ),
         );
 
         await tester.pumpWidget(buildSubject());
@@ -1124,7 +1142,11 @@ void main() {
 
         Widget buildSubject() => UncontrolledProviderScope(
           container: container,
-          child: const MaterialApp(home: PassiveAuthThumbnailImage(url: url)),
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: PassiveAuthThumbnailImage(url: url),
+          ),
         );
 
         await tester.pumpWidget(buildSubject());
@@ -1172,6 +1194,8 @@ void main() {
             UncontrolledProviderScope(
               container: container,
               child: const MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
                 home: PassiveAuthThumbnailImage(url: url),
               ),
             );
@@ -1223,6 +1247,8 @@ void main() {
         Widget buildSubject(double width) => UncontrolledProviderScope(
           container: container,
           child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: PassiveAuthThumbnailImage(url: url, width: width),
           ),
         );
@@ -1271,7 +1297,11 @@ void main() {
         await tester.pumpWidget(
           UncontrolledProviderScope(
             container: container,
-            child: MaterialApp(home: PassiveAuthThumbnailImage(url: url)),
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: PassiveAuthThumbnailImage(url: url),
+            ),
           ),
         );
         final image = tester.widget<Image>(find.byType(Image));
@@ -1302,6 +1332,8 @@ void main() {
         int? height;
         await tester.pumpWidget(
           MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: ImageWithDimensionsListener(
               imageProvider: _syncImageProvider(image),
               onImageDimensionsResolved: (w, h) {
@@ -1326,6 +1358,8 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: _DimensionCallbackParent(
               imageProvider: _syncImageProvider(image),
             ),

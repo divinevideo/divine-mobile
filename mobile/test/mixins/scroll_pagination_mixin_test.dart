@@ -166,6 +166,8 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: _MultiPositionTestWidget(
               onLoadMore: () async {
                 loadMoreCalls++;

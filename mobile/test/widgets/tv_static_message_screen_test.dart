@@ -4,6 +4,7 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/tv_static_message_screen.dart';
 
 void main() {
@@ -11,6 +12,8 @@ void main() {
     testWidgets('renders the sticker, title, and description', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: TvStaticMessageScreen(
             sticker: DivineStickerName.vintageTvTestPattern,
             title: 'Video not found',
@@ -40,6 +43,8 @@ void main() {
     ) async {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: TvStaticMessageScreen(
             sticker: DivineStickerName.alert,
             title: 'Video not found',
@@ -56,6 +61,8 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: TvStaticMessageScreen(
             sticker: DivineStickerName.alert,
             title: 'Failed to load video',
@@ -79,6 +86,8 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: TvStaticMessageScreen(
             sticker: DivineStickerName.alert,
             title: 'Failed to load video',
@@ -97,6 +106,8 @@ void main() {
     testWidgets('renders the footer chrome when supplied', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: TvStaticMessageScreen(
             sticker: DivineStickerName.alert,
             title: 'Allow camera access',
@@ -123,6 +134,8 @@ void main() {
         const MediaQuery(
           data: MediaQueryData(padding: EdgeInsets.only(bottom: 48)),
           child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: TvStaticMessageScreen(
               sticker: DivineStickerName.alert,
               title: 'Allow camera access',
@@ -150,6 +163,8 @@ void main() {
         const MediaQuery(
           data: MediaQueryData(padding: EdgeInsets.only(bottom: 48)),
           child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: TvStaticMessageScreen(
               sticker: DivineStickerName.alert,
               title: 'Video not found',

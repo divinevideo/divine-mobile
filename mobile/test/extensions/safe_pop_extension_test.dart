@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
+import 'package:openvine/l10n/l10n.dart';
 
 import '../helpers/go_router.dart';
 
@@ -47,7 +48,13 @@ void main() {
         );
         addTearDown(router.dispose);
 
-        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+        await tester.pumpWidget(
+          MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        );
         router.go('/home/detail');
         await tester.pumpAndSettle();
 
@@ -83,7 +90,13 @@ void main() {
         );
         addTearDown(router.dispose);
 
-        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+        await tester.pumpWidget(
+          MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        );
         await tester.pumpAndSettle();
 
         expect(find.text('back'), findsOneWidget);
@@ -117,7 +130,13 @@ void main() {
         );
         addTearDown(router.dispose);
 
-        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+        await tester.pumpWidget(
+          MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        );
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('back'));
@@ -150,7 +169,13 @@ void main() {
         );
         addTearDown(router.dispose);
 
-        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+        await tester.pumpWidget(
+          MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        );
         await tester.pumpAndSettle();
 
         await tester.tap(find.byType(BackButton));
@@ -171,6 +196,8 @@ void main() {
           MockGoRouterProvider(
             goRouter: router,
             child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
               home: Builder(
                 builder: (context) => Scaffold(
                   body: TextButton(
@@ -224,7 +251,13 @@ void main() {
         );
         addTearDown(router.dispose);
 
-        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+        await tester.pumpWidget(
+          MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        );
         await tester.tap(find.text('open'));
         await tester.pumpAndSettle();
 
@@ -258,7 +291,13 @@ void main() {
         );
         addTearDown(router.dispose);
 
-        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+        await tester.pumpWidget(
+          MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        );
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('done'));
@@ -287,7 +326,13 @@ void main() {
         );
         addTearDown(router.dispose);
 
-        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+        await tester.pumpWidget(
+          MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        );
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('back'));

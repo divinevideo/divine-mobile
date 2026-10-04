@@ -3,6 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/library/pinch_zoom_grid.dart';
 
 /// Surface the grid under test sits on.
@@ -27,6 +28,8 @@ void main() {
 
     Widget buildWidget({int columnCount = 3}) {
       return MaterialApp(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: PinchZoomGrid(
             columnCount: columnCount,

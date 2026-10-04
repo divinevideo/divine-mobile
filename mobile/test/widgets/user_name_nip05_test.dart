@@ -157,6 +157,8 @@ void main() {
               ),
             ],
             child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: UserName.fromPubKey(
                   defaultPubkey,

@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/router/routes/shell.dart';
 import 'package:openvine/screens/feed/home_feed_retap_cubit.dart';
@@ -72,7 +73,13 @@ void main() {
             'a visible transition.',
       );
 
-      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+      await tester.pumpWidget(
+        const MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: SizedBox.shrink(),
+        ),
+      );
       final context = tester.element(find.byType(SizedBox));
 
       final page = shellRoute.pageBuilder!(

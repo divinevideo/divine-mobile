@@ -6,6 +6,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/notifications/widgets/notification_leading_type_icon.dart';
 import 'package:openvine/notifications/widgets/notification_type_icon_spec.dart';
 import 'package:openvine/widgets/notification_type_icon.dart';
@@ -17,6 +18,8 @@ Future<void> _pump(
 }) async {
   await tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: appLocalizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: VineTheme.theme,
       home: Scaffold(
         body: NotificationLeadingTypeIcon(type: type, isRead: isRead),
