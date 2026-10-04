@@ -80,7 +80,7 @@ const _otherNsec =
 
 Future<T> _ignoringDiscoveryErrors<T>(Future<T> Function() body) async {
   final completer = Completer<T>();
-  runZonedGuarded(
+  await runZonedGuarded(
     () async {
       try {
         completer.complete(await body());

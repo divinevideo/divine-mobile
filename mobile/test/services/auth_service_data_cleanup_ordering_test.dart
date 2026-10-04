@@ -73,7 +73,7 @@ class _FakeFlutterSecureStorage extends Fake implements FlutterSecureStorage {
 /// that is not under test (relay discovery, signer warmup, etc.).
 Future<T> _ignoringDownstreamErrors<T>(Future<T> Function() body) async {
   final completer = Completer<T>();
-  runZonedGuarded(
+  await runZonedGuarded(
     () async {
       try {
         final result = await body();

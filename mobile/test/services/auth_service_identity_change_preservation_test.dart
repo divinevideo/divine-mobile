@@ -30,7 +30,7 @@ class _MockCacheDao extends Mock implements CacheDao {}
 /// prevents that unhandled error from reaching the test zone.
 Future<T> _ignoringDiscoveryErrors<T>(Future<T> Function() body) async {
   final completer = Completer<T>();
-  runZonedGuarded(
+  await runZonedGuarded(
     () async {
       try {
         final result = await body();

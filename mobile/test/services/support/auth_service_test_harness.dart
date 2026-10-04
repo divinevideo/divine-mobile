@@ -167,7 +167,7 @@ AuthService buildTestAuthService({
 /// so a genuine async bug shows up in a failing test rather than vanishing.
 Future<T> ignoringDiscoveryErrors<T>(Future<T> Function() body) async {
   final completer = Completer<T>();
-  runZonedGuarded(
+  await runZonedGuarded(
     () async {
       try {
         completer.complete(await body());
