@@ -50,6 +50,19 @@ persistence across restart and repeated migrations. It removes only its own
 containers and disposable volume. From `mobile/`, the equivalent task is
 `mise run test_local_name_server`.
 
+The smoke runner verifies that this checkout's Compose project owns a healthy
+registry bound only to `127.0.0.1:43005` before sending any signed request.
+Native Linux Docker Engine runs a disposable `--rm --network host` smoke
+container against that loopback port, using the server's exact image. Docker
+Desktop, including Desktop for Linux, retains the Compose smoke container and
+`host.docker.internal` transport. Engine classification uses Docker's
+`OperatingSystem`, not the host's `uname`. Neither path changes the server
+binding, daemon configuration or firewall. An occupied test port is rejected
+before creating or cleaning up the isolated test project.
+
+The launcher contracts can be checked without Docker or an emulator:
+`bash local_stack/test_name_server_launcher.sh`.
+
 ## Android UI test
 
 Start the normal stack and an Android emulator, then run from the repo root:
@@ -63,5 +76,7 @@ Maestro, seeds `localtaken` with a synthetic owner, and creates a throwaway
 device-only identity. It checks reserved (`admin`), taken and available names,
 saves a unique claim, reopens the editor and confirms the server stored it.
 The synthetic accounts and usernames remain in the local database until reset.
+Run from the same checkout that started the normal stack; the seed runner
+rejects a registry owned by another checkout.
 Maestro, adb and the repository's mise toolchain must be installed. Keep this
 manual flow out of the staging smoke lane.

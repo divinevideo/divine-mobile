@@ -983,4 +983,5 @@ if ((failures > 0)); then
     exit 1
 fi
 
+bash "$SCRIPT_DIR/test_name_server_launcher.sh"
 echo "local stack script checks passed"

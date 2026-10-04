@@ -6,7 +6,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/../mobile"
 TEST_DEVICE="${1:?Usage: bash local_stack/test_username_ui.sh <emulator-id>}"
 LOCAL_USERNAME="local$(date +%s)"
-docker compose -f "$SCRIPT_DIR/docker-compose.yml" run --rm --no-deps name-server-smoke --seed
+COMPOSE=(docker compose -f "$SCRIPT_DIR/docker-compose.yml")
+source "$SCRIPT_DIR/name-server/run-smoke.sh"
+run_name_server_smoke --seed
 mise exec -- flutter build apk --debug --dart-define=DEFAULT_ENV=LOCAL
 adb -s "$TEST_DEVICE" install -r build/app/outputs/flutter-apk/app-debug.apk
 mise exec -- maestro --device "$TEST_DEVICE" test -e LOCAL_USERNAME="$LOCAL_USERNAME" e2e/maestro/tests/localUsername.yaml
