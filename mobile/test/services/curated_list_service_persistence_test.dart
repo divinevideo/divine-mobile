@@ -168,6 +168,22 @@ void main() {
         expect(savedData, isNot(contains('To Delete')));
       });
 
+      test('saves subscribed list ids to SharedPreferences', () async {
+        final service = CuratedListService(
+          nostrService: mockNostr,
+          authService: mockAuth,
+          prefs: prefs,
+        );
+
+        final list = await service.createList(name: 'Test List');
+        await service.subscribeToList(list!.id);
+
+        final savedData = prefs.getString(
+          CuratedListService.subscribedListsStorageKey,
+        );
+        expect(savedData, contains(list.id));
+      });
+
       test('saves all list fields to SharedPreferences', () async {
         final service = CuratedListService(
           nostrService: mockNostr,
