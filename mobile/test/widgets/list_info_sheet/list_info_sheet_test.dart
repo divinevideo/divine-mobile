@@ -140,9 +140,10 @@ void main() {
       List<Override> overrides = const [],
       Locale? locale,
       List<ListInfoSheetOutcome>? outcomes,
+      // Tall enough by default that the whole form fits above the fold.
+      Size surfaceSize = const Size(800, 1200),
     }) async {
-      // Tall enough that the whole form fits above the fold.
-      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      await tester.binding.setSurfaceSize(surfaceSize);
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(
@@ -227,6 +228,40 @@ void main() {
         final german = lookupAppLocalizations(const Locale('de'));
         expect(german.listCreateNewList, isNot(l10n.listCreateNewList));
         expect(find.text(german.listCreateNewList), findsNothing);
+      });
+    });
+
+    group('keyboard', () {
+      testWidgets('keeps the description caret above it at a large text '
+          'size', (tester) async {
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(tester.platformDispatcher.clearAllTestValues);
+        await openSheet(tester, surfaceSize: const Size(360, 640));
+
+        const keyboardHeight = 280.0;
+        tester.view.viewInsets = FakeViewPadding(
+          bottom: keyboardHeight * tester.view.devicePixelRatio,
+        );
+        addTearDown(tester.view.resetViewInsets);
+        await tester.pump();
+
+        final description = find.byType(TextField).last;
+        await tester.tap(description);
+        await tester.enterText(description, 'One\nTwo\nThree\nFour');
+        await tester.pumpAndSettle();
+
+        final editable = tester.state<EditableTextState>(
+          find.descendant(
+            of: description,
+            matching: find.byType(EditableText),
+          ),
+        );
+        final render = editable.renderEditable;
+        final caret = render.getLocalRectForCaret(
+          editable.textEditingValue.selection.extent,
+        );
+        final caretBottom = render.localToGlobal(caret.bottomLeft).dy;
+        expect(caretBottom, lessThanOrEqualTo(640 - keyboardHeight));
       });
     });
 
