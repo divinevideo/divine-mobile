@@ -1,6 +1,8 @@
 // ABOUTME: Tests for PeopleListInfoCubit: the form's values and how a save
 // ABOUTME: of a people list's name and description ends.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -45,6 +47,7 @@ void main() {
     PeopleListInfoCubit buildCubit({String? description}) =>
         PeopleListInfoCubit(
           submitMutation: mutations.submit,
+          currentOwnerPubkey: () => _ownerPubkey,
           ownerPubkey: _ownerPubkey,
           list: _list(description: description),
         );
@@ -54,6 +57,38 @@ void main() {
         () => mutations.submit(any()),
       ).thenAnswer((_) => answer());
     }
+
+    test(
+      'blocks a stale account before saving and after a late outcome',
+      () async {
+        var owner = _ownerPubkey;
+        final answer = Completer<PeopleListsOperationResult>();
+        stubUpdate(() => answer.future);
+        final cubit = PeopleListInfoCubit(
+          submitMutation: mutations.submit,
+          ownerPubkey: _ownerPubkey,
+          currentOwnerPubkey: () => owner,
+          list: _list(),
+        );
+        addTearDown(cubit.close);
+        final pending = cubit.submitted();
+        owner = 'b' * 64;
+        answer.complete(PeopleListsOperationResult.succeeded);
+        expect(await pending, PeopleListInfoStatus.failure);
+        expect(cubit.state.canClose, isFalse);
+        await cubit.submitted();
+        verify(
+          () => mutations.submit(
+            PeopleListsInfoUpdateRequested(
+              expectedOwnerPubkey: _ownerPubkey,
+              listId: _list().id,
+              name: _list().name,
+              description: '',
+            ),
+          ),
+        ).called(1);
+      },
+    );
 
     group('initial state', () {
       test("opens on the list's own values", () {

@@ -84,14 +84,21 @@ void main() {
       WidgetTester tester, {
       String? description,
       String? ownerPubkey,
+      Size surfaceSize = const Size(800, 1200),
+      MockAuthService? auth,
     }) async {
       createMutationBloc(ownerPubkey ?? _ownerPubkey);
       // Tall enough that the whole form fits above the fold.
-      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      await tester.binding.setSurfaceSize(surfaceSize);
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(
         testMaterialApp(
+          mockAuthService:
+              auth ??
+              createMockAuthService(
+                currentPublicKeyHex: ownerPubkey ?? _ownerPubkey,
+              ),
           additionalOverrides: [
             peopleListsRepositoryProvider.overrideWithValue(repository),
           ],
@@ -126,13 +133,47 @@ void main() {
     SemanticsNode saveButtonNode() =>
         find.semantics.byLabel(l10n.listSave).evaluate().single;
 
+    group('keyboard', () {
+      testWidgets('keeps the description caret above it at a large text '
+          'size', (tester) async {
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(tester.platformDispatcher.clearAllTestValues);
+        await openSheet(tester, surfaceSize: const Size(360, 640));
+
+        const keyboardHeight = 280.0;
+        tester.view.viewInsets = FakeViewPadding(
+          bottom: keyboardHeight * tester.view.devicePixelRatio,
+        );
+        addTearDown(tester.view.resetViewInsets);
+        await tester.pump();
+
+        final description = find.byType(TextField).last;
+        await tester.tap(description);
+        await tester.enterText(description, 'One\nTwo\nThree\nFour');
+        await tester.pumpAndSettle();
+
+        final editable = tester.state<EditableTextState>(
+          find.descendant(
+            of: description,
+            matching: find.byType(EditableText),
+          ),
+        );
+        final render = editable.renderEditable;
+        final caret = render.getLocalRectForCaret(
+          editable.textEditingValue.selection.extent,
+        );
+        final caretBottom = render.localToGlobal(caret.bottomLeft).dy;
+        expect(caretBottom, lessThanOrEqualTo(640 - keyboardHeight));
+      });
+    });
+
     group('renders', () {
       testWidgets("the list's name and description, nothing else", (
         tester,
       ) async {
         await openSheet(tester, description: 'The early crew');
 
-        expect(find.text(l10n.listEditInfoAction), findsOneWidget);
+        expect(find.text(l10n.listEditTitle), findsOneWidget);
         expect(find.text('Punk Friends'), findsOneWidget);
         expect(find.text('The early crew'), findsOneWidget);
         expect(find.text(l10n.listNameLabel), findsOneWidget);
@@ -148,6 +189,7 @@ void main() {
         createMutationBloc(null);
         await tester.pumpWidget(
           testMaterialApp(
+            mockAuthService: createMockAuthService(),
             home: BlocProvider<PeopleListsBloc>.value(
               value: bloc,
               child: Builder(
@@ -170,7 +212,7 @@ void main() {
         await tester.tap(find.text(_openLabel));
         await tester.pumpAndSettle();
 
-        expect(find.text(l10n.listEditInfoAction), findsNothing);
+        expect(find.text(l10n.listEditTitle), findsNothing);
       });
     });
 
@@ -184,7 +226,7 @@ void main() {
         await tester.tap(find.bySemanticsLabel(l10n.commonClose));
         await tester.pumpAndSettle();
 
-        expect(find.text(l10n.listEditInfoAction), findsNothing);
+        expect(find.text(l10n.listEditTitle), findsNothing);
         verifyZeroInteractions(repository);
       });
 
@@ -206,6 +248,43 @@ void main() {
         );
         semantics.dispose();
       });
+    });
+
+    testWidgets('does not report an old account failure after dismissal', (
+      tester,
+    ) async {
+      final auth = createMockAuthService(currentPublicKeyHex: _ownerPubkey);
+      final pending = Completer<PeopleListPublishResult>();
+      stubUpdate(() => pending.future);
+      await openSheet(tester, auth: auth);
+      await tester.tap(saveButton());
+      await tester.pump();
+      await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+      await tester.pumpAndSettle();
+      when(() => auth.currentPublicKeyHex).thenReturn('b' * 64);
+      pending.complete(const PeopleListPublishResult.failed());
+      await tester.pumpAndSettle();
+      expect(find.byType(SnackBar), findsNothing);
+      expect(find.text(l10n.listUpdateFailed), findsNothing);
+    });
+
+    testWidgets('keeps a save failure visible above the scrolled fields', (
+      tester,
+    ) async {
+      stubUpdate(() async => const PeopleListPublishResult.failed());
+      await openSheet(
+        tester,
+        surfaceSize: const Size(800, 360),
+        description: 'One\nTwo\nThree\nFour',
+      );
+      await tester.tap(saveButton());
+      await tester.pumpAndSettle();
+      await tester.drag(
+        find.byType(SingleChildScrollView),
+        const Offset(0, -400),
+      );
+      await tester.pump();
+      expect(find.text(l10n.listUpdateFailed).hitTestable(), findsOneWidget);
     });
 
     group('saving', () {
@@ -233,7 +312,7 @@ void main() {
             description: 'Everyone',
           ),
         ).called(1);
-        expect(find.text(l10n.listEditInfoAction), findsNothing);
+        expect(find.text(l10n.listEditTitle), findsNothing);
       });
 
       testWidgets('shows the spinner where the button stood while the relay '
@@ -258,7 +337,7 @@ void main() {
           tester.getRect(find.byType(ListInfoCheckButton)),
           equals(buttonRect),
         );
-        expect(find.text(l10n.listEditInfoAction), findsOneWidget);
+        expect(find.text(l10n.listEditTitle), findsOneWidget);
 
         answer.complete(
           const PeopleListPublishResult.submitted(
@@ -267,7 +346,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text(l10n.listEditInfoAction), findsNothing);
+        expect(find.text(l10n.listEditTitle), findsNothing);
       });
 
       testWidgets(
@@ -284,7 +363,7 @@ void main() {
           await tester.tap(find.bySemanticsLabel(l10n.commonClose));
           await tester.pumpAndSettle();
           expect(cubit.isClosed, isTrue);
-          expect(find.text(l10n.listEditInfoAction), findsNothing);
+          expect(find.text(l10n.listEditTitle), findsNothing);
 
           answer.complete(const PeopleListPublishResult.noop());
           await tester.pumpAndSettle();
@@ -315,7 +394,7 @@ void main() {
         answer.complete(const PeopleListPublishResult.failed());
         await tester.pumpAndSettle();
 
-        expect(find.text(l10n.listEditInfoAction), findsNothing);
+        expect(find.text(l10n.listEditTitle), findsNothing);
         expect(find.text(l10n.listUpdateFailed), findsOneWidget);
         expect(find.byType(SnackBar), findsOneWidget);
         expect(tester.takeException(), isNull);
@@ -333,7 +412,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text(l10n.listUpdateFailed), findsOneWidget);
-        expect(find.text(l10n.listEditInfoAction), findsOneWidget);
+        expect(find.text(l10n.listEditTitle), findsOneWidget);
         expect(find.text('Punk Family'), findsOneWidget);
         expect(saveButton(), findsOneWidget);
       });

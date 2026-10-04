@@ -55,8 +55,13 @@ void main() {
   }
 
   PeopleListInfoCubit createInfo(PeopleListsBloc bloc) {
+    final openingEpoch = bloc.mutationSessionEpoch;
     final cubit = PeopleListInfoCubit(
       submitMutation: bloc.submit,
+      currentOwnerPubkey: () =>
+          bloc.isClosed || bloc.mutationSessionEpoch != openingEpoch
+          ? null
+          : bloc.state.activeOwnerPubkey,
       ownerPubkey: _ownerA,
       list: _list(),
     );
@@ -360,6 +365,76 @@ void main() {
           PeopleListsOperationResult.cancelled,
         );
         verifyZeroInteractions(repository);
+      },
+    );
+  }
+  for (final boundary in [
+    'owner round trip',
+    'repository replacement',
+    'feature cycle',
+  ]) {
+    test(
+      'an open draft stays retired after $boundary with the same owner',
+      () async {
+        final bloc = createBloc();
+        await settled(bloc);
+        final epoch = bloc.mutationSessionEpoch;
+        final info = createInfo(bloc)..nameChanged('Retained draft');
+        if (boundary == 'owner round trip') {
+          for (final owner in [_ownerB, _ownerA]) {
+            final changed = bloc.stream.firstWhere(
+              (s) => s.activeOwnerPubkey == owner,
+            );
+            bloc.add(PeopleListsOwnerChanged(ownerPubkey: owner));
+            await changed;
+          }
+        } else if (boundary == 'feature cycle') {
+          final disabled = bloc.stream.firstWhere((s) => !s.enabled);
+          bloc.add(const PeopleListsEnabledChanged(enabled: false));
+          await disabled;
+          final enabled = bloc.stream.firstWhere((s) => s.enabled);
+          bloc.add(const PeopleListsEnabledChanged(enabled: true));
+          await enabled;
+        } else {
+          final replacement = _Repository();
+          when(
+            () =>
+                replacement.watchLists(ownerPubkey: any(named: 'ownerPubkey')),
+          ).thenAnswer((_) => const Stream.empty());
+          when(
+            () => replacement.syncOwner(ownerPubkey: any(named: 'ownerPubkey')),
+          ).thenAnswer((_) async {});
+          when(
+            () => replacement.syncFollowedLists(
+              viewerPubkey: any(named: 'viewerPubkey'),
+              isCancelled: any(named: 'isCancelled'),
+            ),
+          ).thenAnswer((_) async {});
+          bloc.add(PeopleListsRepositoryChanged(repository: replacement));
+          await Future<void>.delayed(Duration.zero);
+          verifyNever(
+            () => replacement.updateListInfo(
+              ownerPubkey: any(named: 'ownerPubkey'),
+              listId: any(named: 'listId'),
+              name: any(named: 'name'),
+              description: any(named: 'description'),
+            ),
+          );
+        }
+        expect(bloc.mutationSessionEpoch, isNot(epoch));
+        expect(bloc.state.activeOwnerPubkey, _ownerA);
+        expect(info.isSessionCurrent, isFalse);
+        expect(await info.submitted(), PeopleListInfoStatus.failure);
+        expect(info.state.canClose, isFalse);
+        expect(info.state.name, 'Retained draft');
+        verifyNever(
+          () => repository.updateListInfo(
+            ownerPubkey: any(named: 'ownerPubkey'),
+            listId: any(named: 'listId'),
+            name: any(named: 'name'),
+            description: any(named: 'description'),
+          ),
+        );
       },
     );
   }
