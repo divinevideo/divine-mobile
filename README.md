@@ -77,7 +77,9 @@ dart run build_runner build --delete-conflicting-outputs
 
 ### Local stack
 
-A Docker-based local stack (relay, Keycast, Blossom, and supporting services) lives in `local_stack/` and is driven through `mise` tasks from `mobile/`: `mise run local_up`, `mise run local_status`, `mise run local_down`, and `mise run e2e_test`. The stack speaks cleartext to loopback hosts (`10.0.2.2`, `localhost`, `127.0.0.1`), and the app resolves the right one per platform — `10.0.2.2` on the Android emulator, `localhost` on the iOS Simulator and macOS. The Android emulator is the only turnkey target: non-Android runs also need `BLOSSOM_PUBLIC_URL=http://localhost:43003` exported before `local_stack/up.sh`, because the seeder bakes that host into the media URLs it mints. See `AGENTS.md` for the full workflow.
+A Docker-based local stack (relay, Keycast, Blossom, the username registry, and supporting services) lives in `local_stack/` and is driven through `mise` tasks from `mobile/`: `mise run local_up`, `mise run local_status`, `mise run local_down`, and `mise run e2e_test`. The stack speaks cleartext to loopback hosts (`10.0.2.2`, `localhost`, `127.0.0.1`), and the app resolves the right one per platform — `10.0.2.2` on the Android emulator, `localhost` on the iOS Simulator and macOS. The Android emulator is the only turnkey target: non-Android runs also need `BLOSSOM_PUBLIC_URL=http://localhost:43003` exported before `local_stack/up.sh`, because the seeder bakes that host into the media URLs it mints. See `AGENTS.md` for the full workflow.
+
+LOCAL username check, claim and release requests use the isolated name server on port `43005`. See [local username setup and tests](local_stack/name-server/README.md).
 
 ## Configuration
 

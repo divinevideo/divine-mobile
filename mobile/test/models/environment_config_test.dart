@@ -33,6 +33,10 @@ void main() {
       expect(config.apiBaseUrl, 'http://$loopbackHost:$localApiPort');
       expect(config.blossomUrl, 'http://$loopbackHost:$localBlossomPort');
       expect(
+        config.nameServerBaseUrl,
+        'http://$loopbackHost:$localNameServerPort',
+      );
+      expect(
         config.relayManagerApiUrl,
         'http://$loopbackHost:$localRelayManagerPort',
       );
@@ -235,8 +239,12 @@ void main() {
         expect(config.nameServerBaseUrl, equals('https://names.divine.video'));
       });
 
-      test('is the same across environments (no local stub)', () {
-        for (final env in AppEnvironment.values) {
+      test('non-local environments use the production service', () {
+        for (final env in [
+          AppEnvironment.poc,
+          AppEnvironment.staging,
+          AppEnvironment.production,
+        ]) {
           final config = EnvironmentConfig(environment: env);
           expect(
             config.nameServerBaseUrl,
@@ -244,6 +252,21 @@ void main() {
           );
         }
       });
+
+      for (final platform in [
+        TargetPlatform.android,
+        TargetPlatform.iOS,
+        TargetPlatform.macOS,
+      ]) {
+        test('LOCAL isolates username requests on $platform', () {
+          debugDefaultTargetPlatformOverride = platform;
+          const config = EnvironmentConfig(environment: AppEnvironment.local);
+          final host = platform == TargetPlatform.android
+              ? '10.0.2.2'
+              : 'localhost';
+          expect(config.nameServerBaseUrl, 'http://$host:43005');
+        });
+      }
     });
 
     group('moderationApiBaseUrl', () {

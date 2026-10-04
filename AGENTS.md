@@ -321,6 +321,8 @@ These issues stay report-only regardless of assignee; see `<context-dir>/AGENT_T
 
 ## Local Stack Development
 
+- LOCAL username requests use the name-server container on port `43005`, including account-deletion release preparation. Non-LOCAL environments still use the production name server. The local adapter pins upstream source and dependencies, omits production routes/secrets, and applies migrations before serving from the `name-server-data` volume. See `local_stack/name-server/README.md` for tests and reset semantics.
+
 - The local Docker stack (`local_stack/`) speaks cleartext on `10.0.2.2`, `localhost`, and `127.0.0.1`. Cleartext to those loopback hosts is permitted in every build type on all three native platforms — Android via the `<domain-config>` block in `mobile/android/app/src/main/res/xml/network_security_config.xml`, iOS via `NSAllowsLocalNetworking=true` in `mobile/ios/Runner/Info.plist`, macOS via the same key in `mobile/macos/Runner/Info.plist`. Remote cleartext is rejected on all three in every build type.
 - Host resolution for local app endpoints is platform-specific: Android emulator uses `10.0.2.2`, while iOS Simulator and macOS use `localhost`. `localHost` in `mobile/lib/models/environment_config.dart` resolves the right one per platform — do not hardcode either alias in app code.
 - `BLOSSOM_PUBLIC_URL` is baked into the media URLs the seeder mints, so it cannot be resolved per client. It defaults to the Android emulator alias; export `BLOSSOM_PUBLIC_URL=http://localhost:43003` before `local_stack/up.sh` when running against the iOS Simulator or macOS.

@@ -159,3 +159,9 @@ regenerate and update the expected values in that script's header:
 ```bash
 cd mobile/android && ./gradlew wrapper --gradle-version <v> --distribution-type all
 ```
+
+## Local usernames
+
+The local stack includes the username registry on host port `43005`. A LOCAL Android build selects `http://10.0.2.2:43005`; iOS Simulator and macOS select `http://localhost:43005`. Username claims and release preparation stay local. An unavailable local registry produces an error; the app does not fall back to production.
+
+See [the name-server adapter](../../local_stack/name-server/README.md) for the signed HTTP and Maestro UI tests. Username data survives `local_down`; `local_reset` deletes it along with the other stack data.

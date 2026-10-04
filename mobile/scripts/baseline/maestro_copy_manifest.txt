@@ -90,10 +90,15 @@ profileSetupDisplayNameLabel	e2e/maestro/asserts/assertEditProfileModal.yaml	bou
 profileSetupDisplayNameLabel	e2e/maestro/asserts/assertEditYourProfile.yaml	bound:Display Name
 profileSetupEditProfileTitle	e2e/maestro/asserts/assertEditProfileModal.yaml	bound:Edit Profile
 profileSetupEditProfileTitle	e2e/maestro/asserts/assertEditYourProfile.yaml	bound:Edit Profile
+profileSetupSaveButton	e2e/maestro/tests/localUsername.yaml	bound:Save
+profileSetupUsernameAvailable	e2e/maestro/tests/localUsername.yaml	bound:Username available!
 profileSetupUsernameLabel	e2e/maestro/asserts/assertEditProfileModal.yaml	bound:Username (Optional)
 profileSetupUsernameLabel	e2e/maestro/asserts/assertEditYourProfile.yaml	bound:Username (Optional)
+profileSetupUsernameLabel	e2e/maestro/tests/localUsername.yaml	bound:Username (Optional)
 profileSetupUsernameLabel	e2e/maestro/tests/userAlreadyTaken.yaml	bound:Username (Optional)
+profileSetupUsernameReserved	e2e/maestro/tests/localUsername.yaml	bound:Username is reserved
 profileSetupUsernameTakenIndicator	e2e/maestro/asserts/assertUserTaken.yaml	bound:Username already taken
+profileSetupUsernameTakenIndicator	e2e/maestro/tests/localUsername.yaml	bound:Username already taken
 saveOriginalNotNow	e2e/maestro/flows/loginEmailPwd.yaml	bound:Not Now
 unfollowUserIndexedSemanticLabel	e2e/maestro/asserts/assertUsersFollowing.yaml	rendered:Unfollow user 0
 videoActionUnlike	e2e/maestro/asserts/assertVideoLiked.yaml	bound:Unlike video
