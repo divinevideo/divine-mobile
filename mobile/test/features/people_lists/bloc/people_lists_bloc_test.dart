@@ -54,6 +54,21 @@ UserList _buildList({
 
 Future<void> _flush() => Future<void>.delayed(Duration.zero);
 
+/// The cancellation predicate the bloc handed to the followed-lists refresh it
+/// started for [viewerPubkey].
+bool Function() _capturedIsCancelled(
+  _MockPeopleListsRepository repository,
+  String viewerPubkey,
+) {
+  final captured = verify(
+    () => repository.syncFollowedLists(
+      viewerPubkey: viewerPubkey,
+      isCancelled: captureAny(named: 'isCancelled'),
+    ),
+  ).captured;
+  return captured.single as bool Function();
+}
+
 void main() {
   setUpAll(() {
     registerFallbackValue(const <String>[]);
@@ -527,6 +542,37 @@ void main() {
         ).called(1);
       },
     );
+
+    test('stops the followed-lists refresh when the owner changes', () async {
+      final bloc = buildBloc();
+      addTearDown(bloc.close);
+      bloc.add(const PeopleListsStarted());
+      await _flush();
+      ownerPubkeyController.add(_ownerA);
+      await _flush();
+      final previousOwnerCancelled = _capturedIsCancelled(repository, _ownerA);
+      expect(previousOwnerCancelled(), isFalse);
+
+      ownerPubkeyController.add(_ownerB);
+      await _flush();
+
+      expect(previousOwnerCancelled(), isTrue);
+      expect(_capturedIsCancelled(repository, _ownerB)(), isFalse);
+    });
+
+    test('stops the followed-lists refresh when the bloc closes', () async {
+      final bloc = buildBloc();
+      bloc.add(const PeopleListsStarted());
+      await _flush();
+      ownerPubkeyController.add(_ownerA);
+      await _flush();
+      final cancelled = _capturedIsCancelled(repository, _ownerA);
+      expect(cancelled(), isFalse);
+
+      await bloc.close();
+
+      expect(cancelled(), isTrue);
+    });
 
     blocTest<PeopleListsBloc, PeopleListsState>(
       'clears lists and pending mutations on owner pubkey change',
