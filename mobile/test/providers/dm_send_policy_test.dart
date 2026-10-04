@@ -44,16 +44,18 @@ void main() {
     return container;
   }
 
-  test(
-    'an unrestricted user may send to anyone; officials not consulted',
-    () async {
-      final container = containerWith(isRestricted: false);
-      final policy = container.read(dmSendPolicyProvider);
+  group('dmSendPolicyProvider', () {
+    test(
+      'an unrestricted user may send to anyone; officials not consulted',
+      () async {
+        final container = containerWith(isRestricted: false);
+        final policy = container.read(dmSendPolicyProvider);
 
-      expect(await policy(strangerHex), DmSendPolicyDecision.allowed);
-      verifyNever(() => officials.isApprovedMinorDmRecipient(any()));
-    },
-  );
+        expect(await policy(strangerHex), DmSendPolicyDecision.allowed);
+        verifyNever(() => officials.isApprovedMinorDmRecipient(any()));
+      },
+    );
+  });
 
   // #6416. Nothing has read a retired moderation key since the rotation, so an
   // appeal typed into one of those threads was gift-wrapped, published, and
@@ -110,102 +112,109 @@ void main() {
 
   // The other half of the same predicate: closing the retired key must not
   // close the live support lane.
-  test('the current moderation key stays sendable', () async {
-    final container = containerWith(isRestricted: false);
+  group('dmSendPolicyProvider', () {
+    test('the current moderation key stays sendable', () async {
+      final container = containerWith(isRestricted: false);
 
-    expect(
-      await container.read(dmSendPolicyProvider)(kModerationPubkeyHex),
-      DmSendPolicyDecision.allowed,
-    );
-  });
-
-  test('a restricted user may send to an approved official', () async {
-    when(
-      () => officials.isApprovedMinorDmRecipient(kModerationPubkeyHex),
-    ).thenAnswer((_) async => true);
-    final container = containerWith(isRestricted: true);
-    final policy = container.read(dmSendPolicyProvider);
-
-    expect(
-      await policy(kModerationPubkeyHex),
-      DmSendPolicyDecision.allowed,
-    );
-  });
-
-  test('a restricted user may not send to a non-approved recipient', () async {
-    when(
-      () => officials.isApprovedMinorDmRecipient(strangerHex),
-    ).thenAnswer((_) async => false);
-    final container = containerWith(isRestricted: true);
-    final policy = container.read(dmSendPolicyProvider);
-
-    expect(
-      await policy(strangerHex),
-      DmSendPolicyDecision.terminallyBlockedDiscard,
-    );
-  });
-
-  test(
-    'an unresolved status without a Greenlight designation allows DMs',
-    () async {
-      SharedPreferences.setMockInitialValues({});
-      final prefs = await SharedPreferences.getInstance();
-      final authService = _MockAuthService();
-      when(() => authService.currentPublicKeyHex).thenReturn('a' * 64);
-      when(
-        () => authService.authenticationSource,
-      ).thenReturn(AuthenticationSource.divineOAuth);
-      final container = ProviderContainer(
-        overrides: [
-          currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
-          sharedPreferencesProvider.overrideWithValue(prefs),
-          authServiceProvider.overrideWithValue(authService),
-          // Keycast never answers (startup, outage, or missing token).
-          protectedMinorStatusProvider.overrideWith(
-            (ref) => Completer<ProtectedMinorStatus>().future,
-          ),
-          officialAccountsServiceProvider.overrideWithValue(officials),
-        ],
+      expect(
+        await container.read(dmSendPolicyProvider)(kModerationPubkeyHex),
+        DmSendPolicyDecision.allowed,
       );
-      addTearDown(container.dispose);
+    });
+
+    test('a restricted user may send to an approved official', () async {
+      when(
+        () => officials.isApprovedMinorDmRecipient(kModerationPubkeyHex),
+      ).thenAnswer((_) async => true);
+      final container = containerWith(isRestricted: true);
       final policy = container.read(dmSendPolicyProvider);
 
       expect(
-        await policy(strangerHex),
+        await policy(kModerationPubkeyHex),
         DmSendPolicyDecision.allowed,
-        reason: 'no affirmative Greenlight designation exists',
       );
-      verifyNever(() => officials.isApprovedMinorDmRecipient(any()));
-    },
-  );
+    });
 
-  test(
-    'unknown status does not manufacture a temporary policy block',
-    () async {
-      SharedPreferences.setMockInitialValues({});
-      final prefs = await SharedPreferences.getInstance();
-      final authService = _MockAuthService();
-      when(() => authService.currentPublicKeyHex).thenReturn('a' * 64);
-      when(
-        () => authService.authenticationSource,
-      ).thenReturn(AuthenticationSource.divineOAuth);
-      final container = ProviderContainer(
-        overrides: [
-          currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
-          sharedPreferencesProvider.overrideWithValue(prefs),
-          authServiceProvider.overrideWithValue(authService),
-          protectedMinorStatusProvider.overrideWith(
-            (ref) => Completer<ProtectedMinorStatus>().future,
-          ),
-          officialAccountsServiceProvider.overrideWithValue(officials),
-        ],
-      );
-      addTearDown(container.dispose);
+    test(
+      'a restricted user may not send to a non-approved recipient',
+      () async {
+        when(
+          () => officials.isApprovedMinorDmRecipient(strangerHex),
+        ).thenAnswer((_) async => false);
+        final container = containerWith(isRestricted: true);
+        final policy = container.read(dmSendPolicyProvider);
 
-      final decision = await container.read(dmSendPolicyProvider)(strangerHex);
+        expect(
+          await policy(strangerHex),
+          DmSendPolicyDecision.terminallyBlockedDiscard,
+        );
+      },
+    );
 
-      expect(decision, DmSendPolicyDecision.allowed);
-      verifyNever(() => officials.isApprovedMinorDmRecipient(any()));
-    },
-  );
+    test(
+      'an unresolved status without a Greenlight designation allows DMs',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final authService = _MockAuthService();
+        when(() => authService.currentPublicKeyHex).thenReturn('a' * 64);
+        when(
+          () => authService.authenticationSource,
+        ).thenReturn(AuthenticationSource.divineOAuth);
+        final container = ProviderContainer(
+          overrides: [
+            currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            authServiceProvider.overrideWithValue(authService),
+            // Keycast never answers (startup, outage, or missing token).
+            protectedMinorStatusProvider.overrideWith(
+              (ref) => Completer<ProtectedMinorStatus>().future,
+            ),
+            officialAccountsServiceProvider.overrideWithValue(officials),
+          ],
+        );
+        addTearDown(container.dispose);
+        final policy = container.read(dmSendPolicyProvider);
+
+        expect(
+          await policy(strangerHex),
+          DmSendPolicyDecision.allowed,
+          reason: 'no affirmative Greenlight designation exists',
+        );
+        verifyNever(() => officials.isApprovedMinorDmRecipient(any()));
+      },
+    );
+
+    test(
+      'unknown status does not manufacture a temporary policy block',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final authService = _MockAuthService();
+        when(() => authService.currentPublicKeyHex).thenReturn('a' * 64);
+        when(
+          () => authService.authenticationSource,
+        ).thenReturn(AuthenticationSource.divineOAuth);
+        final container = ProviderContainer(
+          overrides: [
+            currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            authServiceProvider.overrideWithValue(authService),
+            protectedMinorStatusProvider.overrideWith(
+              (ref) => Completer<ProtectedMinorStatus>().future,
+            ),
+            officialAccountsServiceProvider.overrideWithValue(officials),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final decision = await container.read(dmSendPolicyProvider)(
+          strangerHex,
+        );
+
+        expect(decision, DmSendPolicyDecision.allowed);
+        verifyNever(() => officials.isApprovedMinorDmRecipient(any()));
+      },
+    );
+  });
 }
