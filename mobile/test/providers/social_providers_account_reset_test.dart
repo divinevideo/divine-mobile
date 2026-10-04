@@ -80,7 +80,10 @@ void main() {
       }
       buildThenPause(container, dependent);
 
-      await container.read(accountScopedPreferenceServicesResetProvider)();
+      // Reset can await the same provider future created during warmup.
+      await tester.runAsync(
+        () => container.read(accountScopedPreferenceServicesResetProvider)(),
+      );
       await tester.pump();
 
       await pumpReader(tester, container, service);
