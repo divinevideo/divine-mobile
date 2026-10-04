@@ -97,6 +97,9 @@ void main() {
     });
 
     tearDown(() async {
+      // Unsubscribe before closing the stream, or the close schedules a
+      // reconnection timer that outlives the test.
+      await videoEventService.unsubscribeFromVideoFeed();
       await eventStreamController.close();
       videoEventService.dispose();
     });
@@ -192,7 +195,9 @@ void main() {
       // 0 with 0, so pin that the live subscription happened (#8617).
       expect(callsBefore, greaterThan(0));
 
-      // Dispose and close stream first (to avoid double-dispose in tearDown)
+      // Dispose and close stream first (to avoid double-dispose in tearDown).
+      // Unsubscribing first keeps the close from scheduling a reconnection.
+      await videoEventService.unsubscribeFromVideoFeed();
       await eventStreamController.close();
       videoEventService.dispose();
 
