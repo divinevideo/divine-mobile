@@ -61,6 +61,9 @@ void main() {
         300,
         scrollable: find.byType(Scrollable).first,
       );
+      // Lay out the final ensureVisible scroll before tapping, without
+      // advancing the clock that the retry assertions deliberately pin.
+      await tester.pump();
     }
 
     group('retry connection', () {
