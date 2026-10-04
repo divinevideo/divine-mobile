@@ -103,6 +103,59 @@ void main() {
       });
     });
 
+    group('pendingVisibility', () {
+      test('older JSON has no proposal and keeps its accepted visibility', () {
+        final source = createSubject(isPublic: false);
+        final json = source.toJson()..remove('pendingVisibility');
+        final restored = CuratedList.fromJson(json);
+        expect(restored.pendingVisibility, isNull);
+        expect(restored.publicationTarget, restored);
+        expect(restored.isPublic, isFalse);
+      });
+
+      test(
+        'roundtrip preserves accepted permissions separately from the proposal',
+        () {
+          final accepted = createSubject(
+            isCollaborative: true,
+            allowedCollaborators: ['a' * 64],
+          );
+          final staged = accepted
+              .copyWith(
+                isPublic: false,
+                isCollaborative: false,
+                allowedCollaborators: const [],
+              )
+              .stageVisibilityFrom(accepted, stageProposal: true);
+          final restored = CuratedList.fromJson(staged.toJson());
+          expect(restored, staged);
+          expect(restored.isPublic, isTrue);
+          expect(restored.isCollaborative, isTrue);
+          expect(restored.allowedCollaborators, ['a' * 64]);
+          expect(restored.pendingRepublish, isFalse);
+          expect(restored.publicationTarget.isPublic, isFalse);
+          expect(restored.publicationTarget.isCollaborative, isFalse);
+          expect(restored.publicationTarget.allowedCollaborators, isEmpty);
+          expect(restored.publicationTarget.pendingVisibility, isNull);
+        },
+      );
+
+      test('metadata copies retain a proposal and acceptance can clear it', () {
+        final accepted = createSubject();
+        final staged = accepted
+            .copyWith(isPublic: false)
+            .stageVisibilityFrom(accepted, stageProposal: true);
+        final renamed = staged.copyWith(name: 'New name');
+        expect(renamed.pendingVisibility, staged.pendingVisibility);
+        expect(renamed.publicationTarget.name, 'New name');
+        expect(
+          renamed.copyWith(clearPendingVisibility: true).pendingVisibility,
+          isNull,
+        );
+        expect(renamed.copyWith(clearPendingVisibility: true), isNot(renamed));
+      });
+    });
+
     group('hasVideos', () {
       test('is true when the list references a video', () {
         expect(createSubject().hasVideos, isTrue);

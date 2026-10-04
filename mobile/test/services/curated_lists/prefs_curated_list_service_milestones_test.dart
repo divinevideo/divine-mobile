@@ -188,6 +188,54 @@ void main() {
       verify(() => client.publishEventAwaitOk(any())).called(1);
     });
 
+    test('accepted privacy survives failed final persistence, reload and Retry', () async {
+      final now = DateTime.utc(2026, 10, 4);
+      await withClock(Clock.fixed(now), () async {
+        open();
+        final sent = <Event>[];
+        when(() => client.publishEventAwaitOk(any())).thenAnswer((i) async {
+          final event = i.positionalArguments.single as Event;
+          sent.add(event);
+          return acceptedOutcome(event);
+        });
+        acceptsWrite = (count) => count <= 2;
+        expect(
+          await service.updateList(
+            listId: 'crew',
+            isPublic: false,
+            isCollaborative: false,
+            allowedCollaborators: const [],
+          ),
+          isFalse,
+        );
+        expect(sent, hasLength(1));
+        expect(unsealForTest(sent.single.content), isNotNull);
+        expect(
+          persisted().isPublic,
+          isTrue,
+          reason:
+              'the disk snapshot retains the last durably accepted visibility',
+        );
+        expect(persisted().pendingVisibility!.isPublic, isFalse);
+        expect(persisted().pendingRepublish, isTrue);
+        final reloaded = CuratedListService(
+          nostrService: client,
+          authService: auth,
+          prefs: prefs,
+        );
+        addTearDown(reloaded.dispose);
+        expect(reloaded.getListById('crew')!.isPublic, isTrue);
+        acceptsWrite = (_) => true;
+        expect(await reloaded.retryListSync('crew'), isTrue);
+        expect(sent, hasLength(2));
+        expect(unsealForTest(sent.last.content), isNotNull);
+        expect(sent.last.createdAt, greaterThan(sent.first.createdAt));
+        expect(persisted().isPublic, isFalse);
+        expect(persisted().pendingVisibility, isNull);
+        expect(persisted().pendingRepublish, isFalse);
+      });
+    });
+
     test(
       'a stale accepted revision returns false while a replacement survives',
       () async {
