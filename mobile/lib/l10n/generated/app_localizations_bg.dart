@@ -3981,17 +3981,11 @@ class AppLocalizationsBg extends AppLocalizations {
   String get peopleListsAddToList => 'Добави към списъка';
 
   @override
-  String get peopleListsSheetTitle => 'Добави към списък';
-
-  @override
   String get peopleListsEmptyTitle => 'Още няма списъци';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Създай списък, за да започнеш да групираш хора.';
-
-  @override
-  String get peopleListsCreateList => 'Създаване на списък';
 
   @override
   String get peopleListsNewListTitle => 'Нов списък';
@@ -5020,9 +5014,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get reportClose => 'Затвори';
 
   @override
-  String get listAddToList => 'Добави към списъка';
-
-  @override
   String listVideoCount(int count) {
     return '$count видеа';
   }
@@ -5042,23 +5033,10 @@ class AppLocalizationsBg extends AppLocalizations {
   String get listByAuthorPrefix => 'От ';
 
   @override
-  String get listNewList => 'Нов списък';
-
-  @override
   String get listDone => 'Готово';
 
   @override
   String get listErrorLoading => 'Грешка при зареждане на списъците';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'Премахнато от $name';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'Добавено към $name';
-  }
 
   @override
   String get listCreateNewList => 'Създаване на нов списък';

@@ -6691,12 +6691,6 @@ abstract class AppLocalizations {
   /// **'Add to list'**
   String get peopleListsAddToList;
 
-  /// No description provided for @peopleListsSheetTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Add to list'**
-  String get peopleListsSheetTitle;
-
   /// No description provided for @peopleListsEmptyTitle.
   ///
   /// In en, this message translates to:
@@ -6708,12 +6702,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Create a list to start grouping people.'**
   String get peopleListsEmptySubtitle;
-
-  /// No description provided for @peopleListsCreateList.
-  ///
-  /// In en, this message translates to:
-  /// **'Create list'**
-  String get peopleListsCreateList;
 
   /// No description provided for @peopleListsNewListTitle.
   ///
@@ -8443,12 +8431,6 @@ abstract class AppLocalizations {
   /// **'Close'**
   String get reportClose;
 
-  /// No description provided for @listAddToList.
-  ///
-  /// In en, this message translates to:
-  /// **'Add to List'**
-  String get listAddToList;
-
   /// No description provided for @listVideoCount.
   ///
   /// In en, this message translates to:
@@ -8467,12 +8449,6 @@ abstract class AppLocalizations {
   /// **'By '**
   String get listByAuthorPrefix;
 
-  /// No description provided for @listNewList.
-  ///
-  /// In en, this message translates to:
-  /// **'New List'**
-  String get listNewList;
-
   /// No description provided for @listDone.
   ///
   /// In en, this message translates to:
@@ -8484,18 +8460,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Error loading lists'**
   String get listErrorLoading;
-
-  /// No description provided for @listRemovedFrom.
-  ///
-  /// In en, this message translates to:
-  /// **'Removed from {name}'**
-  String listRemovedFrom(String name);
-
-  /// No description provided for @listAddedTo.
-  ///
-  /// In en, this message translates to:
-  /// **'Added to {name}'**
-  String listAddedTo(String name);
 
   /// No description provided for @listCreateNewList.
   ///
