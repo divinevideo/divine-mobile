@@ -55,28 +55,40 @@ class _ListInfoFormState extends State<ListInfoForm> {
         padding: EdgeInsets.only(
           bottom: MediaQuery.viewInsetsOf(context).bottom,
         ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const _SaveFailedMessage(),
-              Padding(
-                padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Outside the scroll view: Save sits in the pinned header, so the
+            // failure it reports must not scroll out of sight.
+            const _SaveFailedMessage(),
+            Flexible(
+              child: SingleChildScrollView(
                 child: Column(
-                  spacing: 16,
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _NameField(controller: _nameController),
-                    _DescriptionField(controller: _descriptionController),
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        spacing: 16,
+                        children: [
+                          _NameField(controller: _nameController),
+                          _DescriptionField(
+                            controller: _descriptionController,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const ListInfoCollaboratorsRow(),
+                    const _RowDivider(),
+                    const _VisibilityTile(),
+                    const _RowDivider(),
                   ],
                 ),
               ),
-              const ListInfoCollaboratorsRow(),
-              const _RowDivider(),
-              const _VisibilityTile(),
-              const _RowDivider(),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

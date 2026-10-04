@@ -18,6 +18,7 @@ import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_collaborators_row.dart';
+import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_save_button.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
 import 'package:openvine/widgets/user_picker_sheet.dart';
@@ -228,6 +229,30 @@ void main() {
         final german = lookupAppLocalizations(const Locale('de'));
         expect(german.listCreateNewList, isNot(l10n.listCreateNewList));
         expect(find.text(german.listCreateNewList), findsNothing);
+      });
+    });
+
+    group('scrolling', () {
+      testWidgets('keeps a failed save in view when the form is scrolled', (
+        tester,
+      ) async {
+        stubCreate(() async => null);
+        await openSheet(tester, surfaceSize: const Size(800, 360));
+        final form = find.descendant(
+          of: find.byType(ListInfoForm),
+          matching: find.byType(SingleChildScrollView),
+        );
+        await tester.enterText(find.byType(TextField).first, 'Doomed List');
+        await tester.pump();
+        await tester.drag(form, const Offset(0, -400));
+        await tester.pump();
+
+        // Save sits in the pinned header, so the failure it reports has to
+        // stay on screen however far the form has been scrolled.
+        await tester.tap(saveButton(editing: false));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.listCreateFailed).hitTestable(), findsOneWidget);
       });
     });
 
