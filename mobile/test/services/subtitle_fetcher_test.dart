@@ -1,6 +1,8 @@
 // ABOUTME: Tests for the shared fetchSubtitleCues fallback chain.
 // ABOUTME: Verifies embedded content, ordered HTTP refs, and relay ref fallback.
 
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:openvine/services/subtitle_fetcher.dart';
@@ -21,9 +23,48 @@ class _FakeClient extends http.BaseClient {
 }
 
 const _vtt = 'WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nhello\n';
+const _unicodeVtt =
+    'WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nGöbekli\n\n'
+    '00:00:01.000 --> 00:00:02.000\n你好 🌿\n';
 
 void main() {
   group('fetchSubtitleCues', () {
+    test('decodes HTTP ref VTT as UTF-8 without a charset', () async {
+      final result = await fetchSubtitleCues(
+        httpClient: _FakeClient(
+          (_) async => http.Response.bytes(
+            utf8.encode(_unicodeVtt),
+            200,
+            headers: const {'content-type': 'text/vtt'},
+          ),
+        ),
+        nostrClient: null,
+        delay: (_) async {},
+        textTrackRefs: const ['https://media.divine.video/edited.vtt'],
+      );
+
+      expect(result.status, SubtitleFetchStatus.available);
+      expect(result.cues.map((cue) => cue.text), equals(['Göbekli', '你好 🌿']));
+    });
+
+    test('decodes Blossom VTT as UTF-8 without a charset', () async {
+      final result = await fetchSubtitleCues(
+        httpClient: _FakeClient(
+          (_) async => http.Response.bytes(
+            utf8.encode(_unicodeVtt),
+            200,
+            headers: const {'content-type': 'text/vtt'},
+          ),
+        ),
+        nostrClient: null,
+        delay: (_) async {},
+        sha256: 'abc123',
+      );
+
+      expect(result.status, SubtitleFetchStatus.available);
+      expect(result.cues.map((cue) => cue.text), equals(['Göbekli', '你好 🌿']));
+    });
+
     test('parses embedded textTrackContent first (no network)', () async {
       final result = await fetchSubtitleCues(
         httpClient: _FakeClient((_) async => throw StateError('no network')),

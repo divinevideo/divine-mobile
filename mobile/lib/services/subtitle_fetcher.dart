@@ -2,6 +2,8 @@
 // ABOUTME: editor's load path. Ordered fallback: embedded content → each
 // ABOUTME: text-track ref (http or 39307 relay) → Blossom {sha256}/vtt.
 
+import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/filter.dart';
@@ -93,11 +95,16 @@ Uri? _parseHttpSubtitleUrl(String ref) {
   return uri;
 }
 
+String _decodeVtt(http.Response response) {
+  // WebVTT is always UTF-8, even when the server omits the charset.
+  return utf8.decode(response.bodyBytes, allowMalformed: true);
+}
+
 Future<SubtitleFetchResult?> _fetchHttp(http.Client client, Uri url) async {
   try {
     final response = await client.get(url);
-    if (response.statusCode == 200 && response.body.trim().isNotEmpty) {
-      return SubtitleFetchResult.fromBody(response.body);
+    if (response.statusCode == 200) {
+      return SubtitleFetchResult.fromBody(_decodeVtt(response));
     }
     // Saved refs can point at the same generator Blossom fronts, so a direct
     // ref answers 202 while transcription runs. Report it rather than poll:
@@ -150,8 +157,8 @@ Future<SubtitleFetchResult?> _fetchBlossom({
   for (var attempt = 0; attempt < _maxBlossomPollAttempts; attempt++) {
     final response = await client.get(vttUrl);
 
-    if (response.statusCode == 200 && response.body.trim().isNotEmpty) {
-      return SubtitleFetchResult.fromBody(response.body);
+    if (response.statusCode == 200) {
+      return SubtitleFetchResult.fromBody(_decodeVtt(response));
     }
 
     if (response.statusCode == 202) {
