@@ -43,6 +43,7 @@ class CuratedListRouteExtra {
   final List<String>? videoIds;
   final String? authorPubkey;
 
-  /// Warm discovery data; the author route validates its author and d-tag.
+  /// Warm discovery data, validated by author and d-tag in the author route.
+  /// Supports sharing and metadata before the record is cached locally.
   final CuratedList? list;
 }

@@ -25,9 +25,11 @@ import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/screens/user_list_people_screen.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/follow_list_button.dart';
+import 'package:openvine/widgets/share_list_button.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:videos_repository/videos_repository.dart';
 
+import '../helpers/finders.dart';
 import '../helpers/test_provider_overrides.dart';
 
 class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
@@ -187,6 +189,82 @@ Future<void> _confirmDelete(WidgetTester tester, AppLocalizations l10n) async {
 void main() {
   group(UserListPeopleScreen, () {
     final l10n = lookupAppLocalizations(const Locale('en'));
+
+    group('sharing a public people list', () {
+      Future<void> pumpShareableList(WidgetTester tester) async {
+        final bloc = _MockPeopleListsBloc();
+        final list = _buildList(
+          id: 'crew',
+          name: 'Crew',
+          isEditable: false,
+        );
+        whenListen(
+          bloc,
+          const Stream<PeopleListsState>.empty(),
+          initialState: const PeopleListsState(status: PeopleListsStatus.ready),
+        );
+        await tester.pumpWidget(
+          testProviderScope(
+            additionalOverrides: [
+              publicPeopleListProvider(
+                ownerPubkey: _otherOwnerPubkey,
+                listId: 'crew',
+              ).overrideWith((ref) async => list),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: BlocProvider<PeopleListsBloc>.value(
+                value: bloc,
+                child: const UserListPeopleScreen(
+                  listId: 'crew',
+                  ownerPubkey: _otherOwnerPubkey,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+      }
+
+      testWidgets('offers Share to a signed-out viewer', (tester) async {
+        await pumpShareableList(tester);
+
+        expect(find.byType(ShareListButton), findsOneWidget);
+        expect(findByTooltip(l10n.listShareAction), findsOneWidget);
+      });
+
+      testWidgets('shares the public web address before following', (
+        tester,
+      ) async {
+        final shareCalls = <Map<Object?, Object?>>[];
+        const channel = MethodChannel('dev.fluttercommunity.plus/share');
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (call) async {
+              if (call.method != 'share') return null;
+              shareCalls.add(call.arguments as Map<Object?, Object?>);
+              return 'com.apple.UIKit.activity.CopyToPasteboard';
+            });
+        addTearDown(
+          () => TestDefaultBinaryMessengerBinding
+              .instance
+              .defaultBinaryMessenger
+              .setMockMethodCallHandler(channel, null),
+        );
+        await pumpShareableList(tester);
+
+        await tester.tap(findByTooltip(l10n.listShareAction));
+        await tester.pump();
+        await tester.pump();
+
+        expect(shareCalls, hasLength(1));
+        expect(
+          shareCalls.single['text'],
+          contains('https://divine.video/people-lists/$_otherOwnerPubkey/crew'),
+        );
+      });
+    });
 
     for (final listExists in [false, true]) {
       testWidgets('cold list back returns to Home (exists: $listExists)', (
@@ -815,6 +893,19 @@ void main() {
         expect(find.text(l10n.listFollowButton), findsOneWidget);
       });
 
+      testWidgets('shows Share after Follow on a public people list', (
+        tester,
+      ) async {
+        await pumpDiscovered(tester);
+
+        expect(findByTooltip(l10n.listShareAction), findsOneWidget);
+        final followRight = tester
+            .getTopRight(find.byType(FollowListButton))
+            .dx;
+        final shareLeft = tester.getTopLeft(find.byType(ShareListButton)).dx;
+        expect(shareLeft, greaterThan(followRight));
+      });
+
       testWidgets('offers no Follow to a signed-out viewer', (tester) async {
         await pumpDiscovered(tester, viewerPubkey: null);
 
@@ -855,6 +946,7 @@ void main() {
 
         expect(find.text('Mine'), findsOneWidget);
         expect(find.byType(FollowListButton), findsNothing);
+        expect(find.byType(ShareListButton), findsNothing);
         verifyNever(
           () => repository.watchFollowedLists(
             viewerPubkey: any(named: 'viewerPubkey'),

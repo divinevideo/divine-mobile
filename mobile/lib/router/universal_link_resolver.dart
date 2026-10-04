@@ -1,6 +1,7 @@
 // ABOUTME: Pure resolvers from universal-link and divine:// URIs to GoRouter paths
 // ABOUTME: Shared source of truth used by the router redirect and tests
 
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/screens/hashtag_screen_router.dart';
@@ -62,6 +63,12 @@ String? _pushRouteForDeepLink(DeepLink deepLink) {
         pubkey: listPubkey,
         listId: listId,
       );
+    case DeepLinkType.peopleList:
+      final listPubkey = deepLink.listPubkey;
+      final listId = deepLink.listId;
+      if (listId == null || listId.isEmpty) return null;
+      if (listPubkey == null || listPubkey.isEmpty) return null;
+      return RoutePaths.peopleListForId(listId, ownerPubkey: listPubkey);
     // savedVideos is unreachable here — it only arrives over divine://, which
     // both callers reject before this point. customSchemeToRouterPath owns it.
     case DeepLinkType.savedVideos:
@@ -172,6 +179,7 @@ String? universalLinkToRouterPath(Uri uri) {
     case DeepLinkType.hashtag:
     case DeepLinkType.search:
     case DeepLinkType.list:
+    case DeepLinkType.peopleList:
       return route;
   }
 }
