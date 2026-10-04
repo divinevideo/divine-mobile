@@ -64,6 +64,11 @@ void main() {
       finishSpawnedOperation.complete();
       await errorExpectation;
       await settlingCompletion;
+      expect(
+        settlingFinished,
+        isTrue,
+        reason: 'the completion observer must have seen settle finish',
+      );
       expect(backgroundWork.isNotEmptyForTest, isFalse);
     });
   });
