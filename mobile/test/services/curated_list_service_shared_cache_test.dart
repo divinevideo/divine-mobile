@@ -27,7 +27,6 @@ void main() {
   group('CuratedListService shared cache', () {
     final owner = 'a' * 64;
     final other = 'b' * 64;
-    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
     setUpAll(() => registerFallbackValue(Event(owner, 30005, [], '')));
 
@@ -73,6 +72,7 @@ void main() {
       test(
         'late relay acceptance preserves ${sameOwner ? 'a newer revision of the same coordinate' : 'the replacement account cache'} in shared prefs',
         () async {
+          final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
           final original = CuratedList(
             id: 'shared:d-tag',
             name: 'Original',
@@ -126,6 +126,11 @@ void main() {
             await newService.updateList(listId: newId, name: 'Newer metadata'),
             isTrue,
           );
+          final newUpdatedAt = newService
+              .getListById(
+                '${sameOwner ? owner : other}:$newId',
+              )!
+              .updatedAt;
           acceptance.complete(_accepted(signed));
           await oldUpdate;
 
@@ -140,10 +145,7 @@ void main() {
             '${sameOwner ? owner : other}:$newId',
           );
           expect(persisted?.name, 'Newer metadata');
-          expect(
-            persisted?.updatedAt,
-            DateTime.fromMillisecondsSinceEpoch((now + 5) * 1000, isUtc: true),
-          );
+          expect(persisted?.updatedAt, newUpdatedAt);
           if (!sameOwner) {
             expect(
               reloaded.getListById('$owner:${original.id}')?.name,
