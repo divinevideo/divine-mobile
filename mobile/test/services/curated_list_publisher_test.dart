@@ -14,6 +14,7 @@ import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/curated_lists/curated_list_recovery_journal.dart';
+import 'package:openvine/services/curated_lists/curated_list_recovery_storage.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
@@ -28,6 +29,8 @@ class _RejectingStore extends InMemorySharedPreferencesStore {
   _RejectingStore() : super.empty();
   bool Function(String key, Object value)? rejects;
   bool Function(String key, Object value)? throwsOn;
+  String? rejectsRemoval;
+  String? throwsRemoval;
 
   @override
   Future<bool> setValue(String valueType, String key, Object value) async {
@@ -36,6 +39,15 @@ class _RejectingStore extends InMemorySharedPreferencesStore {
     }
     if (rejects?.call(key, value) ?? false) return false;
     return super.setValue(valueType, key, value);
+  }
+
+  @override
+  Future<bool> remove(String key) async {
+    if (throwsRemoval != null && key.endsWith(throwsRemoval!)) {
+      throw StateError('Storage removal unavailable');
+    }
+    if (rejectsRemoval != null && key.endsWith(rejectsRemoval!)) return false;
+    return super.remove(key);
   }
 }
 
@@ -1533,7 +1545,19 @@ void main() {
         expect(unknown, 0, reason: 'The older event was actually acknowledged');
         expect(current.getListById(list.id), winning);
         await restart();
-        expect(open().getListById(list.id), winning);
+        final resumed = open().getListById(list.id)!;
+        expect(
+          resumed,
+          winning.copyWith(pendingPlaintextEventIds: [_oldEvent]),
+        );
+        final journal = CuratedListRecoveryJournal(
+          prefs: prefs,
+          runCurrent: (op) => op(),
+        );
+        expect(journal.record(_owner, list.id)!.visibility, isNull);
+        expect(journal.record(_owner, list.id)!.plaintextEventIds, [_oldEvent]);
+        expect(journal.record(_owner, list.id)!.requiresPrivateCommit, isTrue);
+        expect(sent.where((event) => event.kind == 5), isEmpty);
       },
     );
     test(
@@ -1568,5 +1592,387 @@ void main() {
         expect(current.getListById(list.id)!.isPublic, isFalse);
       },
     );
+
+    test('a privacy ACK after ordinary logout durably belongs only to its captured owner', () async {
+      final list = await seed();
+      await prefs.setString('current_user_pubkey_hex', _owner);
+      final departing = open();
+      final started = Completer<Event>();
+      final decision = Completer<PublishOutcome>();
+      when(() => client.publishEventAwaitOk(any())).thenAnswer((i) {
+        final event = i.positionalArguments.single as Event;
+        started.complete(event);
+        return decision.future;
+      });
+      final saving = departing.updateList(listId: list.id, isPublic: false);
+      final attempted = await started.future;
+      await UserDataCleanupService(prefs)
+          .clearUserSpecificData(userPubkey: _owner);
+      const incoming =
+          'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+      when(() => auth.currentPublicKeyHex).thenReturn(incoming);
+      stubListPublishing(client: client, auth: auth, pubkey: incoming);
+      final active = open();
+      decision.complete(acceptedOutcome(attempted));
+      expect(await saving, isFalse);
+      expect(departing.isCurrentSession, isFalse);
+      expect(active.isCurrentSession, isTrue);
+      expect(active.lists, isEmpty);
+      await restart();
+      final journal = CuratedListRecoveryJournal(
+        prefs: prefs,
+        runCurrent: (op) => op(),
+      );
+      expect(journal.record(_owner, list.id)!.visibility!.isPublic, isFalse);
+      expect(journal.record(_owner, list.id)!.plaintextEventIds, [_oldEvent]);
+      expect(journal.records(incoming), isEmpty);
+      expect(prefs.containsKey(CuratedListService.listsStorageKey), isFalse);
+      expect(sent.where((event) => event.kind == 5), isEmpty);
+    });
+
+    test('inactive-account deletion rejects its held ACK even after the same pubkey is re-added', () async {
+      final list = await seed();
+      await prefs.setString('current_user_pubkey_hex', _owner);
+      final departing = open();
+      final started = Completer<Event>();
+      final decision = Completer<PublishOutcome>();
+      when(() => client.publishEventAwaitOk(any())).thenAnswer((i) {
+        final event = i.positionalArguments.single as Event;
+        started.complete(event);
+        return decision.future;
+      });
+      final saving = departing.updateList(listId: list.id, isPublic: false);
+      final attempted = await started.future;
+      final cleanup = UserDataCleanupService(prefs);
+      await cleanup.clearUserSpecificData(userPubkey: _owner);
+      const incoming =
+          'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+      when(() => auth.currentPublicKeyHex).thenReturn(incoming);
+      stubListPublishing(client: client, auth: auth, pubkey: incoming);
+      await prefs.setString('current_user_pubkey_hex', incoming);
+      final active = open();
+      final journal = CuratedListRecoveryJournal(
+        prefs: prefs,
+        runCurrent: (op) => op(),
+      );
+      expect(
+        await journal.captureRows([
+          list.copyWith(pubkey: incoming, pendingPlaintextEventIds: [_video]),
+        ], incoming),
+        isTrue,
+      );
+      await cleanup.deleteAccountData(
+        _owner,
+        userNpub: 'npub-departed',
+        preserveActiveSession: true,
+      );
+      expect(active.isCurrentSession, isTrue);
+      expect(journal.record(incoming, list.id)!.plaintextEventIds, [_video]);
+      await cleanup.clearUserSpecificData(
+        isIdentityChange: true,
+        userPubkey: _owner,
+      );
+      when(() => auth.currentPublicKeyHex).thenReturn(_owner);
+      stubListPublishing(client: client, auth: auth, pubkey: _owner);
+      final readded = open();
+      decision.complete(acceptedOutcome(attempted));
+      expect(await saving, isFalse);
+      expect(readded.isCurrentSession, isTrue);
+      await restart();
+      expect(prefs.getInt(CuratedListRecoveryStorage.generationKey(_owner)), 1);
+      expect(
+        prefs.containsKey(CuratedListRecoveryJournal.storageKey(_owner)),
+        isFalse,
+      );
+      expect(
+        CuratedListRecoveryJournal(
+          prefs: prefs,
+          runCurrent: (op) => op(),
+        ).record(incoming, list.id)!.plaintextEventIds,
+        [_video],
+      );
+      expect(sent.where((event) => event.kind == 5), isEmpty);
+    });
+
+    for (final throwing in [false, true]) {
+      test(
+        'account deletion stops before removing evidence when its durable generation ${throwing ? 'throws' : 'is refused'}',
+        () async {
+          final list = (await seed()).copyWith(
+            pendingPlaintextEventIds: [_oldEvent],
+          );
+          final journal = CuratedListRecoveryJournal(
+            prefs: prefs,
+            runCurrent: (op) => op(),
+          );
+          expect(await journal.captureRows([list], _owner), isTrue);
+          final key = CuratedListRecoveryStorage.generationKey(_owner);
+          if (throwing) {
+            backing.throwsOn = (candidate, _) => candidate.endsWith(key);
+          } else {
+            backing.rejects = (candidate, _) => candidate.endsWith(key);
+          }
+          await expectLater(
+            UserDataCleanupService(prefs).deleteAccountData(
+              _owner,
+              userNpub: 'npub-owner',
+              preserveActiveSession: true,
+            ),
+            throwsA(isA<CuratedListRecoveryException>()),
+          );
+          await restart();
+          expect(prefs.containsKey(key), isFalse);
+          expect(
+            prefs.getString(CuratedListService.listsStorageKey),
+            isNotNull,
+          );
+          expect(
+            prefs.getString(CuratedListRecoveryJournal.storageKey(_owner)),
+            contains(_oldEvent),
+          );
+        },
+      );
+    }
+
+    test('a corrupt journal allows durable quarantine logout but prevents edits and deletion retries', () async {
+      final list = await seed();
+      final key = CuratedListRecoveryJournal.storageKey(_owner);
+      const raw = '{private recovery malformed';
+      await prefs.setString(key, raw);
+      final current = open();
+      expect(current.recoveryNeedsRepair, isTrue);
+      await expectLater(
+        current.prepareRecovery(),
+        throwsA(isA<CuratedListRecoveryException>()),
+      );
+      expect(
+        await current.updateList(listId: list.id, isPublic: false),
+        isFalse,
+      );
+      expect(await current.retryListSync(list.authorScopedId), isFalse);
+      expect(await current.deleteOwnedList(list.id), isFalse);
+      expect(sent, isEmpty);
+      await UserDataCleanupService(prefs)
+          .clearUserSpecificData(userPubkey: _owner);
+      await restart();
+      expect(prefs.getString(key), raw);
+      expect(
+        prefs.getString(CuratedListRecoveryStorage.quarantineKey(_owner)),
+        contains(raw),
+      );
+      expect(prefs.containsKey(CuratedListService.listsStorageKey), isFalse);
+      expect(open().recoveryNeedsRepair, isTrue);
+    });
+
+    for (final throwing in [false, true]) {
+      test(
+        'default recreation cannot reuse accepted permissions after retirement ${throwing ? 'throws' : 'is refused'}',
+        () async {
+          final original = (await seed(isPublic: false))
+              .copyWith(id: CuratedListService.defaultListId);
+          await prefs.setString(
+            CuratedListService.listsStorageKey,
+            jsonEncode([original.toJson()]),
+          );
+          final journal = CuratedListRecoveryJournal(
+            prefs: prefs,
+            runCurrent: (op) => op(),
+          );
+          expect(
+            await journal.accepted(
+              owner: _owner,
+              listId: original.id,
+              visibility: CuratedListVisibility(
+                isPublic: true,
+                isCollaborative: true,
+                allowedCollaborators: ['e' * 64],
+                relayAccepted: true,
+              ),
+              eventId: _video,
+              acceptedAt: clock.now(),
+              plaintextEventIds: [_oldEvent],
+            ),
+            isTrue,
+          );
+          final current = open();
+          final key = CuratedListRecoveryJournal.storageKey(_owner);
+          bool retirement(String candidate, Object value) =>
+              candidate.endsWith(key) &&
+              value is String &&
+              value.contains('"permissionsRetired":true');
+          if (throwing) {
+            backing.throwsOn = retirement;
+          } else {
+            backing.rejects = retirement;
+          }
+          expect(await current.deleteOwnedList(original.id), isFalse);
+          await restart();
+          expect(
+            jsonDecode(prefs.getString(CuratedListService.listsStorageKey)!)
+                as List,
+            isEmpty,
+          );
+          final resumed = open();
+          expect(
+            await resumed.deleteOwnedList(original.authorScopedId),
+            isFalse,
+          );
+          expect(resumed.getDefaultList(), isNull);
+          backing.throwsOn = null;
+          backing.rejects = null;
+          expect(
+            await resumed.deleteOwnedList(original.authorScopedId),
+            isTrue,
+          );
+          await restart();
+          final retired = CuratedListRecoveryJournal(
+            prefs: prefs,
+            runCurrent: (op) => op(),
+          ).record(_owner, original.id)!;
+          expect(retired.visibility, isNull);
+          expect(retired.plaintextEventIds, [_oldEvent]);
+          expect(retired.permissionsRetired, isTrue);
+          // Existing explicit restore resets this preference before initialize.
+          await prefs.setBool(
+            CuratedListService.defaultListDeletedStorageKey,
+            false,
+          );
+          when(
+            () => client.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer((_) => const Stream.empty());
+          sent.clear();
+          final restored = open();
+          await restored.initialize();
+          final created = restored.getDefaultList()!;
+          expect(created.isPublic, isFalse);
+          expect(created.isCollaborative, isFalse);
+          expect(created.allowedCollaborators, isEmpty);
+          expect(created.hasPendingPermissionRecovery, isFalse);
+          expect(await restored.retryListSync(created.authorScopedId), isTrue);
+          await restart();
+          final durable = open().getDefaultList()!;
+          expect(durable.isPublic, isFalse);
+          expect(durable.isCollaborative, isFalse);
+          expect(durable.allowedCollaborators, isEmpty);
+          expect(durable.hasPendingPermissionRecovery, isFalse);
+          expect(
+            sent
+                .where((event) => event.kind == 5)
+                .any(
+                  (event) => event.tags.any(
+                    (tag) =>
+                        tag.length > 1 && tag[0] == 'e' && tag[1] == _oldEvent,
+                  ),
+                ),
+            isTrue,
+          );
+          final replacements = sent
+              .where((event) => event.kind == 30005)
+              .toList();
+          expect(replacements, isNotEmpty);
+          expect(durable.nostrEventId, replacements.last.id);
+          expect(
+            replacements.every(
+              (event) => event.tags.every((tag) => tag[0] != 'e'),
+            ),
+            isTrue,
+          );
+          expect(
+            replacements.every((event) => unsealForTest(event.content) != null),
+            isTrue,
+          );
+          final redactionIndex = sent.indexWhere(
+            (event) =>
+                event.kind == 5 &&
+                event.tags.any(
+                  (tag) =>
+                      tag.length > 1 && tag[0] == 'e' && tag[1] == _oldEvent,
+                ),
+          );
+          expect(redactionIndex, greaterThan(sent.indexOf(replacements.first)));
+        },
+      );
+    }
+
+    for (final throwing in [false, true]) {
+      test(
+        'inactive-account recovery deletion is retryable after removal ${throwing ? 'throws' : 'is refused'}',
+        () async {
+          final list = (await seed()).copyWith(
+            pendingPlaintextEventIds: [_oldEvent],
+          );
+          final journal = CuratedListRecoveryJournal(
+            prefs: prefs,
+            runCurrent: (op) => op(),
+          );
+          const incoming =
+              'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+          expect(await journal.captureRows([list], _owner), isTrue);
+          expect(
+            await journal.captureRows([
+              list.copyWith(
+                pubkey: incoming,
+                pendingPlaintextEventIds: [_video],
+              ),
+            ], incoming),
+            isTrue,
+          );
+          final quarantine = CuratedListRecoveryStorage.quarantineKey(_owner);
+          final rawQuarantine = jsonEncode({
+            'rawBuckets': ['{malformed accepted evidence'],
+            'records': <String, Object>{},
+          });
+          await prefs.setString(quarantine, rawQuarantine);
+          await prefs.remove(CuratedListService.listsStorageKey);
+          when(() => auth.currentPublicKeyHex).thenReturn(incoming);
+          stubListPublishing(client: client, auth: auth, pubkey: incoming);
+          final active = open();
+          final key = CuratedListRecoveryJournal.storageKey(_owner);
+          if (throwing) {
+            backing.throwsRemoval = key;
+          } else {
+            backing.rejectsRemoval = key;
+          }
+          await expectLater(
+            UserDataCleanupService(prefs).deleteAccountData(
+              _owner,
+              userNpub: 'npub-owner',
+              preserveActiveSession: true,
+            ),
+            throwsA(isA<CuratedListRecoveryException>()),
+          );
+          expect(active.isCurrentSession, isTrue);
+          await restart();
+          expect(prefs.getString(key), contains(_oldEvent));
+          expect(prefs.getString(quarantine), rawQuarantine);
+          expect(
+            prefs.getString(CuratedListRecoveryJournal.storageKey(incoming)),
+            contains(_video),
+          );
+          backing.throwsRemoval = null;
+          backing.rejectsRemoval = null;
+          await UserDataCleanupService(prefs).deleteAccountData(
+            _owner,
+            userNpub: 'npub-owner',
+            preserveActiveSession: true,
+          );
+          await restart();
+          expect(prefs.containsKey(key), isFalse);
+          expect(prefs.containsKey(quarantine), isFalse);
+          expect(
+            prefs.getInt(CuratedListRecoveryStorage.generationKey(_owner)),
+            2,
+          );
+          expect(
+            prefs.getString(CuratedListRecoveryJournal.storageKey(incoming)),
+            contains(_video),
+          );
+        },
+      );
+    }
   });
 }
