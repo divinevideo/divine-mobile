@@ -78,7 +78,7 @@ Timeline:
 
 - Pinch to zoom, from 1 to 600 pixels per second (2400 for stop motion).
 - Dragging the playhead past either end wraps around to the other, so the loop restart can be scrubbed across.
-- Clip and overlay actions appear as labelled tiles in a bar below the timeline.
+- Clip and overlay actions appear as labelled tiles in a bar at the bottom of the timeline.
 - Markers at the playhead; they move with clip edits.
 - Undo and redo.
 - Overlay items snap to clip edges, markers and the playhead, with haptic feedback. Clip trims do not snap.
