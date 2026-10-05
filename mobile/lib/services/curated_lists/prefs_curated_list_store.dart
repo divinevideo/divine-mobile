@@ -190,9 +190,12 @@ class PrefsCuratedListStore {
     if (!result.succeeded) throw CuratedCacheWriteException(result.status);
   }
 
-  Future<bool> _writeString(String key, String value) async {
+  Future<bool> _writeString(String key, String value) =>
+      _persist(() => _prefs.setString(key, value));
+
+  Future<bool> _persist(Future<bool> Function() write) async {
     try {
-      return await _prefs.setString(key, value);
+      return await write();
     } on Exception catch (error, stackTrace) {
       // Platform errors can include private cache fragments in their message.
       // Programming Errors still propagate instead of becoming disk failures.
@@ -236,23 +239,36 @@ class PrefsCuratedListStore {
 
   /// Remembers that [ownerPubkey]'s list [listId] was deleted.
   Future<bool> recordListDeletion(String ownerPubkey, String listId) async {
-    final coordinates = _deletedCoordinates()
+    final before = _deletedCoordinates();
+    final coordinates = Set<String>.of(before)
       ..add(_coordinate(ownerPubkey, listId));
-    return _prefs.setStringList(
-      deletedCoordinatesStorageKey,
-      coordinates.toList(growable: false),
-    );
+    return (await _saveDeletedCoordinates(before, coordinates)).succeeded;
   }
 
   /// Lifts the tombstone so a re-created list can sync again.
   Future<void> forgetListDeletion(String ownerPubkey, String listId) async {
-    final coordinates = _deletedCoordinates();
+    final before = _deletedCoordinates();
+    final coordinates = Set<String>.of(before);
     if (!coordinates.remove(_coordinate(ownerPubkey, listId))) return;
-    await _prefs.setStringList(
-      deletedCoordinatesStorageKey,
-      coordinates.toList(growable: false),
-    );
+    final result = await _saveDeletedCoordinates(before, coordinates);
+    if (!result.succeeded) throw CuratedCacheWriteException(result.status);
   }
+
+  Future<CuratedCacheWriteResult<Set<String>>> _saveDeletedCoordinates(
+    Set<String> before,
+    Set<String> coordinates,
+  ) => _writes.saveSubscriptionsWithResult(
+    baseline: before,
+    current: coordinates,
+    cacheKey: deletedCoordinatesStorageKey,
+    read: _rawDeletedCoordinates,
+    write: (merged) => _persist(
+      () => _prefs.setStringList(
+        deletedCoordinatesStorageKey,
+        merged.toList(growable: false),
+      ),
+    ),
+  );
 
   /// The stored lists, or [fallback] when they cannot be decoded.
   ///
@@ -312,6 +328,11 @@ class PrefsCuratedListStore {
   /// the next sync adds the list straight back. The set is not pruned — an
   /// entry is a few dozen bytes, deletions are rare, and there is no point at
   /// which every relay is known to have honoured the request.
-  Set<String> _deletedCoordinates() =>
+  Set<String> _deletedCoordinates() => _writes.readAcknowledgedSubscriptions(
+    cacheKey: deletedCoordinatesStorageKey,
+    read: _rawDeletedCoordinates,
+  );
+
+  Set<String> _rawDeletedCoordinates() =>
       (_prefs.getStringList(deletedCoordinatesStorageKey) ?? const []).toSet();
 }
