@@ -227,6 +227,36 @@ void main() {
       handle.dispose();
     });
 
+    testWidgets('screen reader is offered no step past 0 % or 300 %', (
+      tester,
+    ) async {
+      clipBloc.add(
+        ClipEditorInitialized([
+          _createTestClip(id: 'clip-a', volume: VideoEditorConstants.volumeMax),
+          _createTestClip(id: 'clip-b', volume: 0),
+        ]),
+      );
+
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(buildWidget());
+      await tester.pump();
+
+      final loudest = tester
+          .getSemantics(find.bySemanticsLabel('Clip 1'))
+          .getSemanticsData();
+      expect(loudest.hasAction(SemanticsAction.increase), isFalse);
+      expect(loudest.hasAction(SemanticsAction.decrease), isTrue);
+      expect(loudest.decreasedValue, '290%');
+
+      final muted = tester
+          .getSemantics(find.bySemanticsLabel('Clip 2'))
+          .getSemanticsData();
+      expect(muted.hasAction(SemanticsAction.decrease), isFalse);
+      expect(muted.increasedValue, '10%');
+
+      handle.dispose();
+    });
+
     testWidgets('clip arc exposes long-press semantic action and hint', (
       tester,
     ) async {

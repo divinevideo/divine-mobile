@@ -271,12 +271,17 @@ class _VolumeArcState extends State<_VolumeArc> {
 
   String _percent(double volume) => '${(volume * 100).round()}%';
 
-  /// The volume one [_semanticStep] up (`direction` 1) or down (-1).
+  /// The volume one [_semanticStep] up (`direction` 1) or down (-1), kept
+  /// within 0–300 % so what is announced is what the step commits.
   double _stepped(int direction) =>
-      ((_localVolume + direction * _semanticStep) * 100).roundToDouble() / 100;
+      (((_localVolume + direction * _semanticStep) * 100).roundToDouble() / 100)
+          .clamp(0.0, VideoEditorConstants.volumeMax);
+
+  /// Whether a step in `direction` changes the volume at all.
+  bool _canStep(int direction) => _stepped(direction) != _localVolume;
 
   void _commitStep(int direction) {
-    final next = _stepped(direction).clamp(0.0, VideoEditorConstants.volumeMax);
+    final next = _stepped(direction);
     if (next == _localVolume) return;
     setState(() => _localVolume = next);
     if (next > 0) _lastUnmutedVolume = next;
@@ -302,11 +307,12 @@ class _VolumeArcState extends State<_VolumeArc> {
         label: widget.semanticLabel,
         slider: true,
         value: _percent(_localVolume),
-        increasedValue: _percent(_stepped(1)),
-        decreasedValue: _percent(_stepped(-1)),
-        // A screen reader cannot drag, so it steps through the same 0–300 %.
-        onIncrease: () => _commitStep(1),
-        onDecrease: () => _commitStep(-1),
+        // A screen reader cannot drag, so it steps through the same 0–300 %;
+        // at either end the step that would leave the range is not offered.
+        increasedValue: _canStep(1) ? _percent(_stepped(1)) : null,
+        decreasedValue: _canStep(-1) ? _percent(_stepped(-1)) : null,
+        onIncrease: _canStep(1) ? () => _commitStep(1) : null,
+        onDecrease: _canStep(-1) ? () => _commitStep(-1) : null,
         onLongPressHint: widget.semanticLongPressHint,
         onLongPress: widget.onLongPress,
         child: SizedBox(
