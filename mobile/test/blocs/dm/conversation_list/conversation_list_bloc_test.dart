@@ -18,6 +18,7 @@ import 'package:openvine/blocs/dm/conversation_list/conversation_list_bloc.dart'
 import 'package:openvine/blocs/dm/conversation_list/protected_minor_inbox_gate.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/config/official_accounts.dart';
+import 'package:openvine/constants/search_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:profile_repository/profile_repository.dart';
 
@@ -2975,10 +2976,12 @@ void main() {
           bloc.add(const ConversationListStarted());
           clock.flushMicrotasks();
           clock.elapse(Duration.zero);
-          expect(bloc.state.status, ConversationListStatus.loaded);
+          expect(bloc.state.status, equals(ConversationListStatus.loaded));
 
           bloc.add(const ConversationListSearchQueryChanged('p'));
-          clock.elapse(const Duration(milliseconds: 300));
+          clock.elapse(
+            searchDebounceDuration + const Duration(milliseconds: 50),
+          );
           clock.flushMicrotasks();
 
           expect(
