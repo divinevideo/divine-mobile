@@ -27,7 +27,5 @@ class InMemoryAuthService {
     _authController.add(_currentState);
   }
 
-  void dispose() {
-    _authController.close();
-  }
+  Future<void> dispose() => _authController.close();
 }
