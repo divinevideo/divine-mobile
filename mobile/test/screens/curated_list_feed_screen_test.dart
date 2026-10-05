@@ -404,6 +404,74 @@ void main() {
         ).called(1);
       });
 
+      testWidgets('following a discovered author list uses its coordinate', (
+        tester,
+      ) async {
+        final author = 'a' * 64;
+        final coordinate = '$author:external-list';
+        isSubscribed = false;
+        final discovered = CuratedList(
+          id: 'external-list',
+          name: 'External List',
+          pubkey: author,
+          videoEventIds: const [],
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+        );
+        when(() => mockService.isOwnedList(coordinate)).thenReturn(false);
+        when(
+          () => mockService.isSubscribedToList(coordinate),
+        ).thenAnswer((_) => isSubscribed);
+        when(
+          () => mockService.subscribeToList(coordinate, discovered),
+        ).thenAnswer((_) async => true);
+
+        await tester.pumpWidget(
+          buildSubject(authorPubkey: author, discoveredList: discovered),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        await tester.tap(find.text(l10n.listFollowButton));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => mockService.subscribeToList(coordinate, discovered),
+        ).called(1);
+      });
+
+      testWidgets('unfollowing an author list already stored keeps its id', (
+        tester,
+      ) async {
+        final author = 'a' * 64;
+        final stored = CuratedList(
+          id: 'external-list',
+          name: 'External List',
+          pubkey: author,
+          videoEventIds: const [],
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+        );
+        when(() => mockService.getListById('external-list')).thenReturn(stored);
+        when(() => mockService.unsubscribeFromList('external-list')).thenAnswer(
+          (_) async {
+            isSubscribed = false;
+            return true;
+          },
+        );
+
+        await tester.pumpWidget(buildSubject(authorPubkey: author));
+        await tester.pump();
+        await tester.pump();
+
+        await tester.tap(find.text(l10n.listFollowingButton));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => mockService.unsubscribeFromList('external-list'),
+        ).called(1);
+      });
+
       testWidgets('hides the share action for a private or unknown list', (
         tester,
       ) async {
