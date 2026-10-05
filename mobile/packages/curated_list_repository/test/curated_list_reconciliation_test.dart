@@ -28,7 +28,7 @@ void main() {
     updatedAt: origin.add(Duration(seconds: seconds)),
     isPublic: public,
     isCollaborative: collaborative,
-    allowedCollaborators: [foreign],
+    allowedCollaborators: const [foreign],
     nostrEventId: eventId,
     videoEventIds: ids,
     pendingPlaintextEventIds: pending,
@@ -36,7 +36,8 @@ void main() {
 
   for (final relayNewer in [false, true]) {
     test(
-      'private union keeps unique items in preferred source order with relayNewer=$relayNewer',
+      'private union keeps unique items in preferred source order '
+      'with relayNewer=$relayNewer',
       () {
         final local = row(
           name: 'Local',
