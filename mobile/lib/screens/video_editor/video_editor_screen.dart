@@ -1183,10 +1183,19 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
                 reduceMotion: context.reduceMotion,
               ),
               awaitPushCoverTransition: _awaitMetadataCoverTransition,
-              child: ValueListenableBuilder<bool>(
-                valueListenable: _isLoadingDraft,
-                builder: (_, isLoading, _) =>
-                    VideoEditorScaffold(isLoading: isLoading),
+              // Leaving the editor is always a tap on its close button. The
+              // iOS back swipe starts from any edge drag — scrubbing the
+              // timeline, dragging a layer — and popped a saved draft back to
+              // the library mid-edit. Blocking the pop here keeps the swipe off
+              // whichever overlay is showing; the toolbar forwards Android's
+              // system back to the close button.
+              child: PopScope(
+                canPop: false,
+                child: ValueListenableBuilder<bool>(
+                  valueListenable: _isLoadingDraft,
+                  builder: (_, isLoading, _) =>
+                      VideoEditorScaffold(isLoading: isLoading),
+                ),
               ),
             );
           },

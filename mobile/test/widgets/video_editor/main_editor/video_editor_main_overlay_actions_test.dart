@@ -399,6 +399,60 @@ void main() {
       });
     });
 
+    group('system back', () {
+      testWidgets('a saved draft refuses the back swipe', (tester) async {
+        await tester.pumpWidget(buildWidget());
+
+        final route = ModalRoute.of(
+          tester.element(find.byType(VideoEditorToolbar)),
+        )!;
+        // The iOS back swipe only starts on a route that would pop.
+        expect(route.popDisposition, equals(RoutePopDisposition.doNotPop));
+      });
+
+      testWidgets('a saved draft still leaves through the close button flow', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget());
+
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+
+        verify(() => mockGoRouter.pop<Object?>(any())).called(1);
+      });
+
+      testWidgets('an edited autosaved draft asks before leaving', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(isAutosavedDraft: true, hasBeenEdited: true),
+        );
+
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+
+        expect(find.text('Save your draft?'), findsOneWidget);
+        verifyNever(() => mockGoRouter.pop<Object?>(any()));
+      });
+
+      testWidgets('leaves the editor open while a sub-editor is open', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            state: const VideoEditorMainState(
+              openSubEditor: SubEditorType.music,
+            ),
+          ),
+        );
+
+        await tester.binding.handlePopRoute();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        verifyNever(() => mockGoRouter.pop<Object?>(any()));
+      });
+    });
+
     group('stop-motion minimum length gate', () {
       DivineVideoClip stopMotionClip(Duration total) => DivineVideoClip(
         id: 'sm1',
