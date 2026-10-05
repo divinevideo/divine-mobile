@@ -12,6 +12,7 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_relay_gateway.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/curated_list_publish_stubs.dart';
 
@@ -231,6 +232,21 @@ void main() {
     });
 
     group('unsealItemTags', () {
+      test('malformed decrypted JSON never enters support logs', () async {
+        const privatePayload = '[PRIVATE_ITEM_PAYLOAD_INVALID_JSON';
+        final logs = LogCaptureService();
+        await logs.clearAllLogs();
+        when(() => mockSigner.nip44Decrypt(any(), any()))
+            .thenAnswer((_) async => privatePayload);
+        final result = await gateway.unsealItemTags(
+          _event(content: sealForTest(privatePayload), pubkey: _ownerPubkey),
+        );
+        expect(result.status, UnsealItemTagsStatus.failed);
+        final captured = await logs.getAllLogsAsText();
+        expect(captured.join('\n'), contains('FormatException'));
+        expect(captured.join('\n'), isNot(contains(privatePayload)));
+      });
+
       test('recovers the tags it sealed', () async {
         final sealed = await gateway.sealItemTags(_list());
 

@@ -17,6 +17,7 @@ import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/services/creator_sync/prefs_sync_state_store.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/curated_lists/curated_list_recovery_journal.dart';
+import 'package:openvine/services/curated_lists/curated_list_recovery_storage.dart';
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
@@ -141,7 +142,10 @@ class UserDataCleanupService {
   /// families during identity changes because their scope prevents cross-user
   /// leakage. Targeted destructive removal uses each owner's key helper.
   static const List<String> identityChangePrefixes = [
-    CuratedListRecoveryJournal.storagePrefix, // minimal owner recovery evidence
+    CuratedListRecoveryJournal.storagePrefix,
+    CuratedListRecoveryStorage.quarantinePrefix,
+    // Durable authorization tombstones survive same-pubkey account re-adds.
+    CuratedListRecoveryStorage.generationPrefix,
     'following_list_', // follow cache per pubkey
     'following_prefetch_complete_', // successful auth prefetch per pubkey
     'relay_discovery_', // relay discovery cache per npub
@@ -234,6 +238,7 @@ class UserDataCleanupService {
     required String userNpub,
     required bool preserveActiveSession,
   }) async {
+    await CuratedListRecoveryJournal.invalidateOwner(_prefs, userPubkey);
     var clearedCount = 0;
 
     Future<void> remove(String key) async {
@@ -270,8 +275,10 @@ class UserDataCleanupService {
     }
 
     await remove(PrefsCuratedListStore.pendingDefaultDeletionKey(userPubkey));
-    await remove(CuratedListRecoveryJournal.storageKey(userPubkey));
-    CuratedListRecoveryJournal.discardPendingAccepted(_prefs, userPubkey);
+    clearedCount += (await CuratedListRecoveryJournal.removeOwnerEvidence(
+      _prefs,
+      userPubkey,
+    )).length;
     await remove(SavedSoundsService.accountStorageKey(userPubkey));
     for (final kind in SyncItemKind.values) {
       await remove(PrefsSyncStateStore.appliedStorageKey(kind, userPubkey));
@@ -397,6 +404,9 @@ class UserDataCleanupService {
       clearedKeys.add(key);
     }
 
+    if (deleteUserData && userPubkey != null) {
+      await CuratedListRecoveryJournal.invalidateOwner(_prefs, userPubkey);
+    }
     // The stored marker describes the departing account. Identity-change
     // callers may pass the incoming account, so it cannot scope legacy rows.
     await CuratedListRecoveryJournal.migrateEmbeddedRecords(
@@ -405,8 +415,12 @@ class UserDataCleanupService {
       deletingOwner: deleteUserData ? userPubkey : null,
     );
     if (deleteUserData && userPubkey != null) {
-      await remove(CuratedListRecoveryJournal.storageKey(userPubkey));
-      CuratedListRecoveryJournal.discardPendingAccepted(_prefs, userPubkey);
+      final removed = await CuratedListRecoveryJournal.removeOwnerEvidence(
+        _prefs,
+        userPubkey,
+      );
+      clearedCount += removed.length;
+      clearedKeys.addAll(removed);
     }
 
     // Clear exact-match keys (always).
