@@ -32,9 +32,8 @@ void main() {
     setUp(() {
       repository = _MockRepository();
       video = _MockVideoEvent();
-      when(
-        () => repository.mySuggestedLabels(any(), any()),
-      ).thenAnswer((_) async => <String>{});
+      when(() => repository.mySuggestedLabels(any(), any()))
+          .thenAnswer((_) async => <String>{});
     });
 
     CommunitySuggestCubit buildCubit() => CommunitySuggestCubit(
@@ -51,9 +50,7 @@ void main() {
           home: Scaffold(
             body: BlocProvider<CommunitySuggestCubit>.value(
               value: cubit,
-              child: CommunitySuggestView(
-                scrollController: ScrollController(),
-              ),
+              child: CommunitySuggestView(scrollController: ScrollController()),
             ),
           ),
         ),
@@ -72,16 +69,12 @@ void main() {
       );
     });
 
-    testWidgets('submit is disabled until a label is selected', (
-      tester,
-    ) async {
+    testWidgets('submit is disabled until a label is selected', (tester) async {
       final cubit = buildCubit();
       await pump(tester, cubit);
       await tester.pumpAndSettle();
 
-      final button = tester.widget<DivineButton>(
-        find.byType(DivineButton),
-      );
+      final button = tester.widget<DivineButton>(find.byType(DivineButton));
       expect(button.onPressed, isNull);
 
       await tester.tap(
@@ -124,10 +117,10 @@ void main() {
     testWidgets('shows the already-suggested badge for prior suggestions', (
       tester,
     ) async {
-      when(
-        () => repository.mySuggestedLabels(any(), any()),
-      ).thenAnswer((_) async => {'nudity'});
-      final cubit = buildCubit()..loadExisting();
+      when(() => repository.mySuggestedLabels(any(), any()))
+          .thenAnswer((_) async => {'nudity'});
+      final cubit = buildCubit();
+      await cubit.loadExisting();
       await pump(tester, cubit);
       await tester.pumpAndSettle();
 
