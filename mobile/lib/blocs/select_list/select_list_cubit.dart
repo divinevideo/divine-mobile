@@ -38,6 +38,7 @@ class SelectListCubit extends Cubit<SelectListState>
   final String? _openingOwnerPubkey;
 
   bool get isSessionCurrent =>
+      _service.isCurrentSession &&
       _openingOwnerPubkey != null &&
       _openingOwnerPubkey.isNotEmpty &&
       _currentOwnerPubkey() == _openingOwnerPubkey;
@@ -55,6 +56,30 @@ class SelectListCubit extends Cubit<SelectListState>
         _service,
         _openingOwnerPubkey,
       ).any((list) => list.id == listId);
+
+  bool _permissionRecoveryBlocks(Set<String> ids) => _ownedLists(
+    _service,
+    _openingOwnerPubkey,
+  ).any((list) => ids.contains(list.id) && list.hasPendingPermissionRecovery);
+
+  SelectListStatus _recoveryRequired() {
+    emitIfOpen(state.copyWith(status: SelectListStatus.recoveryPendingSync));
+    return SelectListStatus.recoveryPendingSync;
+  }
+
+  SelectListStatus _pendingNotice({
+    List<CuratedList>? lists,
+    Set<String>? members,
+  }) =>
+      (lists ?? state.lists).any(
+        (list) =>
+            list.needsSync &&
+            (list.hasPendingPermissionRecovery ||
+                !list.pendingRepublish ||
+                !(members ?? state.memberListIds).contains(list.id)),
+      )
+      ? SelectListStatus.recoveryPendingSync
+      : SelectListStatus.videoPendingSync;
 
   SelectListStatus _sessionFailure() {
     emitIfOpen(
@@ -75,7 +100,9 @@ class SelectListCubit extends Cubit<SelectListState>
     String videoEventId,
     String? owner,
   ) {
-    final lists = _ownedLists(service, owner);
+    final lists = service.isCurrentSession
+        ? _ownedLists(service, owner)
+        : const <CuratedList>[];
     final members = _membership(lists, videoEventId);
     return SelectListState(
       lists: lists,
@@ -95,8 +122,16 @@ class SelectListCubit extends Cubit<SelectListState>
   ///
   /// Ignored while a save runs, and for a list the sheet does not offer.
   void toggled(String listId) {
-    if (state.isSaving || !isSessionCurrent) return;
-    if (state.lists.none((list) => list.id == listId)) return;
+    if (state.isSaving) return;
+    if (!isSessionCurrent) {
+      _sessionFailure();
+      return;
+    }
+    if (state.lists.none(
+      (list) => list.id == listId && !list.hasPendingPermissionRecovery,
+    )) {
+      return;
+    }
     final selected = {...state.selectedListIds};
     if (!selected.add(listId)) selected.remove(listId);
     emitIfOpen(
@@ -122,6 +157,9 @@ class SelectListCubit extends Cubit<SelectListState>
     if (!isSessionCurrent) return _sessionFailure();
     final toAdd = state.listIdsToAdd;
     final toRemove = state.listIdsToRemove;
+    if (_permissionRecoveryBlocks({...toAdd, ...toRemove})) {
+      return _recoveryRequired();
+    }
     if (toAdd.isEmpty && toRemove.isEmpty) {
       emitIfOpen(state.copyWith(status: SelectListStatus.saved));
       return SelectListStatus.saved;
@@ -133,6 +171,7 @@ class SelectListCubit extends Cubit<SelectListState>
     try {
       for (final listId in toAdd) {
         if (!_canMutate(listId)) return _sessionFailure();
+        if (_permissionRecoveryBlocks({listId})) return _recoveryRequired();
         final added = await _service.addVideoToList(listId, _videoEventId);
         if (!isSessionCurrent) return _sessionFailure();
         if (added) continue;
@@ -148,6 +187,7 @@ class SelectListCubit extends Cubit<SelectListState>
       }
       for (final listId in toRemove) {
         if (!_canMutate(listId)) return _sessionFailure();
+        if (_permissionRecoveryBlocks({listId})) return _recoveryRequired();
         final removed = await _service.removeVideoFromList(
           listId,
           _videoEventId,
@@ -159,6 +199,7 @@ class SelectListCubit extends Cubit<SelectListState>
       }
     } catch (error, stackTrace) {
       addError(error, stackTrace);
+      if (!isSessionCurrent) return _sessionFailure();
       emitIfOpen(state.copyWith(status: SelectListStatus.failure));
       return SelectListStatus.failure;
     }
@@ -189,15 +230,19 @@ class SelectListCubit extends Cubit<SelectListState>
       state.copyWith(
         status: state.pendingSyncListIds.isEmpty
             ? SelectListStatus.editing
-            : SelectListStatus.videoPendingSync,
+            : _pendingNotice(),
       ),
     );
   }
 
   /// Retries publication of the existing local membership.
   Future<void> syncRequested(String listId) async {
-    if (isClosed ||
-        state.isSaving ||
+    if (isClosed) return;
+    if (!isSessionCurrent) {
+      _sessionFailure();
+      return;
+    }
+    if (state.isSaving ||
         !_canMutate(listId) ||
         !state.pendingSyncListIds.contains(listId)) {
       return;
@@ -230,7 +275,7 @@ class SelectListCubit extends Cubit<SelectListState>
         status: failed.isNotEmpty
             ? SelectListStatus.syncFailed
             : pending.isNotEmpty
-            ? SelectListStatus.videoPendingSync
+            ? _pendingNotice()
             : SelectListStatus.editing,
         syncingListIds: const {},
         failedSyncListIds: failed,
@@ -269,17 +314,18 @@ class SelectListCubit extends Cubit<SelectListState>
         .intersection(offered);
     final pending = {
       for (final list in lists)
-        if (list.pendingRepublish && members.contains(list.id)) list.id,
+        if (list.needsSync) list.id,
     };
     final failed = state.failedSyncListIds.intersection(pending);
     final followsSync =
         state.status == SelectListStatus.videoPendingSync ||
+        state.status == SelectListStatus.recoveryPendingSync ||
         state.status == SelectListStatus.syncFailed;
     final status = followsSync
         ? failed.isNotEmpty
               ? SelectListStatus.syncFailed
               : pending.isNotEmpty
-              ? SelectListStatus.videoPendingSync
+              ? _pendingNotice(lists: lists, members: members)
               : SelectListStatus.editing
         : state.status;
     emitIfOpen(
