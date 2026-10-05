@@ -43,7 +43,10 @@ class DiVineAppBarStyle extends Equatable {
   DiVineAppBarStyle.solid(VineThemeColors colors)
     : this(
         iconButtonBackgroundColor: colors.surfaceContainer,
-        iconButtonBorderSide: BorderSide(color: colors.outlineMuted, width: 2),
+        iconButtonBorderSide: BorderSide(
+          color: colors.isLight ? colors.outline : colors.outlineMuted,
+          width: 2,
+        ),
         iconColor: colors.isLight
             ? VineTheme.primaryAccessible
             : VineTheme.primary,

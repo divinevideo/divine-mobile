@@ -344,7 +344,11 @@ class _RecoveryContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 24,
       children: [
-        const DivineIcon(icon: DivineIconName.userCircle, size: 64),
+        DivineIcon(
+          icon: DivineIconName.userCircle,
+          size: 64,
+          color: context.vineColors.primaryText,
+        ),
         Text(
           body,
           textAlign: TextAlign.center,

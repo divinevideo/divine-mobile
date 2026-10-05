@@ -264,9 +264,8 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
 
   /// Unselected border for dense interactive controls.
   ///
-  /// Dark keeps the shipped transparent border. Light uses [outlineMuted],
-  /// whose pairing with [accentBrand] reads at 10.10:1 where
-  /// [outline] against [outlineMuted] would only reach 1.37:1.
+  /// Dark keeps the shipped transparent border. Light uses [outline] so the
+  /// control remains identifiable against its neutral fill.
   final Color controlOutline;
 
   /// Decorative accent chips, drawn on [background] or [card] — notification
@@ -1309,22 +1308,22 @@ class VineTheme {
     mediaCard: Color(0xFFDCD7D2),
     surface: Color(0xFFFFFFFF),
     surfaceContainer: Color(0xFFF0EEEC),
-    surfaceContainerHigh: Color(0xFFE7E4E1),
-    containerLow: Color(0xFFEDF3EF),
+    surfaceContainerHigh: Color(0xFFF4F1EF),
+    containerLow: Color(0xFFF5F2F0),
     primaryContainer: Color(0xFFE7F5EE),
     nav: Color(0xFFFFFFFF),
     onNav: Color(0xFF07241B),
-    onNavMuted: Color(0x6607241B),
-    iconButton: Color(0xFFE7F5EE),
-    onIconButton: Color(0xFF226A4C),
+    onNavMuted: Color(0xFF5F7069),
+    iconButton: Color(0xFFF5F2F0),
+    onIconButton: Color(0xFF17382D),
     ghostFill: Color(0x14000000),
     primaryText: Color(0xFF07241B),
     secondaryText: Color(0xFF385149),
     mutedText: Color(0xFF5F7069),
     onSurface: Color(0xFF17382D),
     onSurfaceVariant: Color(0xFF526B61),
-    onSurfaceMuted: Color(0x8C17382D),
-    outline: Color(0xFFB7C9C1),
+    onSurfaceMuted: Color(0xFF5F7069),
+    outline: Color(0xFF768E83),
     outlineMuted: Color(0xFFDCE7E2),
     outlineDisabled: Color(0xFFEBF1EE),
     disabled: Color(0x6638584C),
@@ -1335,8 +1334,8 @@ class VineTheme {
     accentWarning: Color(0xFFAE3100),
     accentBrand: Color(0xFF17382D),
     controlSelectedFill: Color(0xFFE7F5EE),
-    controlFill: Color(0xFFEDF3EF),
-    controlOutline: Color(0xFFDCE7E2),
+    controlFill: Color(0xFFF5F2F0),
+    controlOutline: Color(0xFF768E83),
     // Pale tint / darkened accent. Each pair clears 4.5:1 foreground-on-
     // container (6.30–7.51) and holds 1.18–1.30 container-on-background, which
     // overlaps the dark palette's own low end (pink, 1.28).
@@ -1389,7 +1388,7 @@ class VineTheme {
   /// above `MaterialApp`.
   static final ThemeData theme = _buildTheme(Brightness.dark, darkColors);
 
-  /// Theme data for the experimental light appearance.
+  /// Theme data for the light appearance.
   static final ThemeData lightTheme = _buildTheme(
     Brightness.light,
     lightColors,

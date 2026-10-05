@@ -607,16 +607,18 @@ class _NavIcon extends StatelessWidget {
   }
 }
 
-/// Figma: unselected tabs render at 32 % opacity; selected stays at 100 %.
+/// Dark mode follows Figma's 32% opacity. Light mode uses a solid muted ink
+/// so inactive tabs remain visible against the white navigation surface.
 ///
-/// The dim is applied to the glyph tint rather than through an [Opacity]
-/// widget. Each glyph is a single flat shape, so tinting it at 32 % alpha is
-/// pixel-identical to compositing it at 32 % — and it costs nothing per
-/// frame, where an [Opacity] below 100 % is an offscreen pass on every video
-/// frame the nav bar sits over.
+/// Both modes set the glyph tint directly rather than adding an [Opacity]
+/// layer. Dark mode's 32% tint is pixel-identical to compositing a single
+/// flat glyph at 32%, without an offscreen pass over video.
 Color _navIconColor(BuildContext context, {required bool isSelected}) {
-  final color = context.vineColors.onNav;
-  return isSelected ? color : color.withValues(alpha: _kUnselectedNavIconAlpha);
+  final colors = context.vineColors;
+  if (isSelected) return colors.onNav;
+  return colors.isLight
+      ? colors.onNavMuted
+      : colors.onNav.withValues(alpha: _kUnselectedNavIconAlpha);
 }
 
 /// Alpha of an unselected tab's glyph; see [_navIconColor].

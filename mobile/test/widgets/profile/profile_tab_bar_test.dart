@@ -59,6 +59,7 @@ void main() {
       WidgetTester tester, {
       Locale locale = const Locale('en'),
       bool ownProfile = false,
+      ThemeData? theme,
     }) async {
       final tabs = ownProfile
           ? ownProfileTabsFor(lookupAppLocalizations(locale))
@@ -71,6 +72,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          theme: theme,
           locale: locale,
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -110,6 +112,16 @@ void main() {
         .getSemantics(find.byType(Tab).at(index))
         .getSemanticsData()
         .identifier;
+
+    testWidgets('light profile tabs use a readable selected indicator', (
+      tester,
+    ) async {
+      await pumpBar(tester, theme: VineTheme.lightTheme);
+      expect(
+        tester.widget<TabBar>(find.byType(TabBar)).indicatorColor,
+        VineTheme.lightColors.accentPositive,
+      );
+    });
 
     testWidgets('seven tab touch targets remain at least 48dp', (tester) async {
       tester.view.physicalSize = const Size(320, 700);

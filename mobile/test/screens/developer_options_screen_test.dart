@@ -27,6 +27,7 @@ Future<void> pumpScreen(
   WidgetTester tester,
   SharedPreferences prefs, {
   ShorebirdUpdater Function()? shorebirdUpdaterFactory,
+  ThemeData? theme,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -34,7 +35,7 @@ Future<void> pumpScreen(
       child: MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        theme: VineTheme.theme,
+        theme: theme ?? VineTheme.theme,
         home: DeveloperOptionsScreen(
           shorebirdUpdaterFactory: shorebirdUpdaterFactory,
         ),
@@ -116,6 +117,25 @@ void main() {
         expect(listViewWidth, moreOrLessEquals(600));
       },
     );
+
+    for (final (mode, theme, colors) in [
+      ('light', VineTheme.lightTheme, VineTheme.lightColors),
+      ('dark', VineTheme.theme, VineTheme.darkColors),
+    ]) {
+      testWidgets('clip recovery caret uses $mode primary text', (
+        tester,
+      ) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await pumpScreen(tester, await mockPrefs(), theme: theme);
+
+        final tile = find.widgetWithText(ListTile, l10n.devOptionsClipRecovery);
+        await scrollUntilTappable(tester, tile, 300);
+        final caret = tester.widget<DivineIcon>(
+          find.descendant(of: tile, matching: find.byType(DivineIcon)),
+        );
+        expect(caret.color, equals(colors.primaryText));
+      });
+    }
   });
 
   group('interactions', () {

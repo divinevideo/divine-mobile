@@ -11,6 +11,24 @@ import '../../helpers/test_provider_overrides.dart';
 
 void main() {
   group(ProfileBanner, () {
+    testWidgets('light mode preserves a profile color', (tester) async {
+      const profileColor = Color(0xFF8568FF);
+      await tester.pumpWidget(
+        testMaterialApp(
+          theme: VineTheme.lightTheme,
+          home: const Scaffold(
+            body: ProfileBanner(profileColor: profileColor, height: 334),
+          ),
+        ),
+      );
+
+      final fallback = tester.widget<Container>(
+        find.byKey(const ValueKey('profile_banner_fallback')),
+      );
+      final gradient =
+          (fallback.decoration! as BoxDecoration).gradient! as LinearGradient;
+      expect(gradient.colors, [profileColor, profileColor]);
+    });
     testWidgets('bounds a 3:1 banner decode at cover resolution', (
       tester,
     ) async {
