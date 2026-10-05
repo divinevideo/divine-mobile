@@ -6,16 +6,36 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
 import 'package:openvine/services/curated_lists/curated_list_recovery_journal.dart';
+import 'package:openvine/services/curated_lists/curated_list_recovery_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 class _Store extends InMemorySharedPreferencesStore {
   _Store() : super.empty();
   bool reject = false;
+  String? failingKey;
+  bool throwOnFailure = false;
+
+  bool _fails(String key) =>
+      reject || (failingKey != null && key.endsWith(failingKey!));
 
   @override
-  Future<bool> setValue(String type, String key, Object value) async =>
-      reject ? false : super.setValue(type, key, value);
+  Future<bool> setValue(String type, String key, Object value) async {
+    if (_fails(key)) {
+      if (throwOnFailure) throw StateError('Storage unavailable');
+      return false;
+    }
+    return super.setValue(type, key, value);
+  }
+
+  @override
+  Future<bool> remove(String key) async {
+    if (_fails(key)) {
+      if (throwOnFailure) throw StateError('Storage unavailable');
+      return false;
+    }
+    return super.remove(key);
+  }
 }
 
 void main() {
@@ -488,6 +508,354 @@ void main() {
           acceptedId,
         ]);
         expect(journal.record(owner, 'same-id')!.visibility, isNotNull);
+      },
+    );
+
+    Future<void> restart() async {
+      SharedPreferences.resetStatic();
+      prefs = await SharedPreferences.getInstance();
+      journal = CuratedListRecoveryJournal(
+        prefs: prefs,
+        runCurrent: (operation) async => current && await operation(),
+        runEvidence: (operation) => operation(),
+      );
+    }
+
+    Future<bool> acknowledge(
+      String listId, {
+      CuratedListRecoveryTicket? ticket,
+    }) => journal.accepted(
+      owner: owner,
+      listId: listId,
+      visibility: const CuratedListVisibility(
+        isPublic: false,
+        isCollaborative: false,
+        allowedCollaborators: [],
+        relayAccepted: true,
+      ),
+      eventId: acceptedId,
+      acceptedAt: now,
+      plaintextEventIds: [plaintextId],
+      ticket: ticket,
+    );
+
+    for (final throwing in [false, true]) {
+      test(
+        'retirement survives a ${throwing ? 'throwing' : 'refused'} write without losing its target or sibling ACK',
+        () async {
+          expect(await acknowledge('same-id'), isTrue);
+          backing.failingKey = CuratedListRecoveryJournal.storageKey(owner);
+          backing.throwOnFailure = throwing;
+          if (throwing) {
+            await expectLater(
+              acknowledge('sibling'),
+              throwsA(isA<CuratedListRecoveryException>()),
+            );
+            await expectLater(
+              journal.retirePermissions(owner, 'same-id'),
+              throwsA(isA<CuratedListRecoveryException>()),
+            );
+          } else {
+            expect(await acknowledge('sibling'), isFalse);
+            expect(await journal.retirePermissions(owner, 'same-id'), isFalse);
+          }
+          expect(journal.record(owner, 'same-id')!.visibility, isNotNull);
+          expect(journal.record(owner, 'sibling')!.visibility, isNotNull);
+          backing.failingKey = null;
+          expect(await journal.retirePermissions(owner, 'same-id'), isTrue);
+          await restart();
+          final retired = journal.record(owner, 'same-id')!;
+          expect(retired.permissionsRetired, isTrue);
+          expect(retired.visibility, isNull);
+          expect(retired.plaintextEventIds, [plaintextId]);
+          expect(retired.requiresPrivateCommit, isTrue);
+          expect(journal.record(owner, 'sibling')!.visibility, isNotNull);
+          final recreated = journal.recover(
+            row().copyWith(clearPendingVisibility: true),
+            owner,
+          );
+          expect(recreated.pendingVisibility, isNull);
+          expect(recreated.pendingPlaintextEventIds, [plaintextId]);
+        },
+      );
+
+      test(
+        'corrupt recovery is preserved before logout, including a ${throwing ? 'throwing' : 'refused'} quarantine write',
+        () async {
+          final key = CuratedListRecoveryJournal.storageKey(owner);
+          final raw = jsonEncode({
+            'same-id': const CuratedListRecoveryRecord(
+              plaintextEventIds: [plaintextId],
+            ).toJson(),
+            'broken': {'visibility': 'unreadable'},
+          });
+          await prefs.setString(key, raw);
+          expect(journal.record(owner, 'same-id')!.plaintextEventIds, [
+            plaintextId,
+          ]);
+          expect(journal.needsRepair(owner), isTrue);
+          backing.failingKey = CuratedListRecoveryStorage.quarantineKey(owner);
+          backing.throwOnFailure = throwing;
+          if (throwing) {
+            await expectLater(
+              journal.prepare(owner),
+              throwsA(isA<CuratedListRecoveryException>()),
+            );
+          } else {
+            await expectLater(
+              journal.prepare(owner),
+              throwsA(isA<CuratedListRecoveryException>()),
+            );
+          }
+          await restart();
+          expect(prefs.getString(key), raw);
+          expect(
+            prefs.containsKey(CuratedListRecoveryStorage.quarantineKey(owner)),
+            isFalse,
+          );
+          backing.failingKey = null;
+          await expectLater(
+            journal.prepare(owner),
+            throwsA(isA<CuratedListRecoveryException>()),
+          );
+          await CuratedListRecoveryJournal.migrateEmbeddedRecords(prefs);
+          await restart();
+          expect(prefs.getString(key), raw);
+          final envelope = jsonDecode(
+            prefs.getString(CuratedListRecoveryStorage.quarantineKey(owner))!,
+          ) as Map<String, dynamic>;
+          expect(envelope['rawBuckets'], [raw]);
+          expect(journal.record(owner, 'same-id')!.plaintextEventIds, [
+            plaintextId,
+          ]);
+          expect(await journal.ticket(owner, 'same-id'), isNull);
+          expect(journal.needsRepair(owner), isTrue);
+        },
+      );
+
+      test(
+        'owner deletion generation rejects stale ACKs after a ${throwing ? 'throwing' : 'refused'} tombstone write is retried',
+        () async {
+          final ticket = await journal.ticket(owner, 'same-id');
+          expect(ticket, isNotNull);
+          backing.failingKey = CuratedListRecoveryStorage.generationKey(owner);
+          backing.throwOnFailure = throwing;
+          await expectLater(
+            CuratedListRecoveryJournal.invalidateOwner(prefs, owner),
+            throwsA(isA<CuratedListRecoveryException>()),
+          );
+          await restart();
+          expect(
+            prefs.containsKey(CuratedListRecoveryStorage.generationKey(owner)),
+            isFalse,
+          );
+          backing.failingKey = null;
+          await CuratedListRecoveryJournal.invalidateOwner(prefs, owner);
+          await restart();
+          expect(await acknowledge('same-id', ticket: ticket), isFalse);
+          expect(journal.records(owner), isEmpty);
+          expect(
+            await acknowledge(
+              'same-id',
+              ticket: await journal.ticket(owner, 'same-id'),
+            ),
+            isTrue,
+          );
+        },
+      );
+    }
+
+    test('captured evidence survives logout but cannot authorize cache writes or a deleted coordinate', () async {
+      journal = CuratedListRecoveryJournal(
+        prefs: prefs,
+        runCurrent: (operation) async => current && await operation(),
+        runEvidence: (operation) => operation(),
+      );
+      final ticket = await journal.ticket(owner, 'same-id');
+      current = false;
+      expect(await acknowledge('same-id', ticket: ticket), isTrue);
+      expect(await journal.retirePermissions(owner, 'same-id'), isFalse);
+      current = true;
+      expect(await journal.retirePermissions(owner, 'same-id'), isTrue);
+      expect(await acknowledge('same-id', ticket: ticket), isFalse);
+      await restart();
+      expect(journal.record(owner, 'same-id')!.visibility, isNull);
+      expect(journal.record(owner, 'same-id')!.plaintextEventIds, [
+        plaintextId,
+      ]);
+      expect(
+        await acknowledge(
+          'same-id',
+          ticket: await journal.ticket(owner, 'same-id'),
+        ),
+        isTrue,
+      );
+      expect(journal.record(owner, 'same-id')!.permissionsRetired, isFalse);
+    });
+
+    test('completely invalid JSON is quarantined without inventing empty accepted evidence', () async {
+      final key = CuratedListRecoveryJournal.storageKey(owner);
+      const raw = '{invalid recovery';
+      await prefs.setString(key, raw);
+      expect(journal.records(owner), isEmpty);
+      await expectLater(
+        journal.prepare(owner),
+        throwsA(isA<CuratedListRecoveryException>()),
+      );
+      await restart();
+      final envelope = jsonDecode(
+        prefs.getString(CuratedListRecoveryStorage.quarantineKey(owner))!,
+      ) as Map<String, dynamic>;
+      expect(envelope['rawBuckets'], [raw]);
+      expect(journal.needsRepair(owner), isTrue);
+      expect(prefs.getString(key), raw);
+    });
+
+    for (final throwing in [false, true]) {
+      test(
+        'committing one permission target preserves a memory-only sibling after ${throwing ? 'throwing' : 'refused'} storage',
+        () async {
+          expect(await acknowledge('same-id'), isTrue);
+          backing.failingKey = CuratedListRecoveryJournal.storageKey(owner);
+          backing.throwOnFailure = throwing;
+          if (throwing) {
+            await expectLater(
+              acknowledge('sibling'),
+              throwsA(isA<CuratedListRecoveryException>()),
+            );
+          } else {
+            expect(await acknowledge('sibling'), isFalse);
+          }
+          backing.failingKey = null;
+          final committed = row().copyWith(
+            nostrEventId: acceptedId,
+            clearPendingVisibility: true,
+          );
+          expect(
+            await journal.visibilityCommitted(owner, 'same-id', committed),
+            isTrue,
+          );
+          await restart();
+          expect(journal.record(owner, 'same-id')!.visibility, isNull);
+          expect(
+            journal.record(owner, 'sibling')!.visibility!.isPublic,
+            isFalse,
+          );
+          expect(journal.record(owner, 'sibling')!.plaintextEventIds, [
+            plaintextId,
+          ]);
+        },
+      );
+
+      test(
+        'refused deletion-evidence removal remains durable when storage ${throwing ? 'throws' : 'returns false'}',
+        () async {
+          expect(
+            await journal.captureRows([
+              row().copyWith(clearPendingVisibility: true),
+            ], owner),
+            isTrue,
+          );
+          backing.failingKey = CuratedListRecoveryJournal.storageKey(owner);
+          backing.throwOnFailure = throwing;
+          if (throwing) {
+            await expectLater(
+              journal.redactionAccepted(owner, 'same-id', plaintextId),
+              throwsA(isA<CuratedListRecoveryException>()),
+            );
+          } else {
+            expect(
+              await journal.redactionAccepted(owner, 'same-id', plaintextId),
+              isFalse,
+            );
+          }
+          await restart();
+          expect(journal.record(owner, 'same-id')!.plaintextEventIds, [
+            plaintextId,
+          ]);
+          backing.failingKey = null;
+          expect(
+            await journal.redactionAccepted(owner, 'same-id', plaintextId),
+            isTrue,
+          );
+          await restart();
+          expect(journal.record(owner, 'same-id'), isNull);
+        },
+      );
+    }
+
+    test('a fresh incarnation ACK wins over retired evidence even with an older timestamp', () async {
+      expect(
+        await journal.accepted(
+          owner: owner,
+          listId: 'same-id',
+          visibility: row().pendingVisibility!,
+          eventId: acceptedId,
+          acceptedAt: now.add(const Duration(seconds: 30)),
+          plaintextEventIds: [plaintextId],
+        ),
+        isTrue,
+      );
+      expect(await journal.retirePermissions(owner, 'same-id'), isTrue);
+      expect(
+        await acknowledge(
+          'same-id',
+          ticket: await journal.ticket(owner, 'same-id'),
+        ),
+        isTrue,
+      );
+      await restart();
+      expect(journal.record(owner, 'same-id')!.permissionsRetired, isFalse);
+      expect(journal.record(owner, 'same-id')!.visibility!.isPublic, isFalse);
+      expect(journal.record(owner, 'same-id')!.acceptedAt, now);
+      expect(journal.record(owner, 'same-id')!.plaintextEventIds, [
+        plaintextId,
+      ]);
+    });
+
+    test(
+      'a recreated public ACK cannot certify an unpublished private union',
+      () async {
+        expect(
+          await journal.captureRows([
+            row().copyWith(
+              clearNostrEventId: true,
+              clearPendingVisibility: true,
+            ),
+          ], owner),
+          isTrue,
+        );
+        expect(await journal.retirePermissions(owner, 'same-id'), isTrue);
+        expect(
+          await journal.accepted(
+            owner: owner,
+            listId: 'same-id',
+            visibility: row().pendingVisibility!,
+            eventId: acceptedId,
+            acceptedAt: now,
+            plaintextEventIds: [plaintextId],
+            ticket: await journal.ticket(owner, 'same-id'),
+          ),
+          isTrue,
+        );
+        expect(journal.record(owner, 'same-id')!.requiresPrivateCommit, isTrue);
+        expect(
+          await journal.visibilityCommitted(
+            owner,
+            'same-id',
+            row().copyWith(
+              isPublic: true,
+              nostrEventId: acceptedId,
+              clearPendingVisibility: true,
+            ),
+          ),
+          isTrue,
+        );
+        await restart();
+        expect(journal.record(owner, 'same-id')!.requiresPrivateCommit, isTrue);
+        expect(journal.record(owner, 'same-id')!.plaintextEventIds, [
+          plaintextId,
+        ]);
       },
     );
   });

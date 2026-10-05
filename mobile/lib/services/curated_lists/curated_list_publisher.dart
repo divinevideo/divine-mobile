@@ -64,7 +64,10 @@ class CuratedListPublisher {
     try {
       final target = source.publicationTarget;
       final owner = _gateway.currentAuthenticatedPubkey();
-      if (owner == null || target.pubkey != owner || !_owns(owner)) {
+      if (owner == null ||
+          target.pubkey != owner ||
+          !_owns(owner) ||
+          _recovery.needsRepair(owner)) {
         return false;
       }
       final event = await _gateway.signList(
@@ -99,6 +102,17 @@ class CuratedListPublisher {
       final changesPermissions =
           CuratedListVisibility.fromList(current) !=
           CuratedListVisibility.fromList(target);
+      final evidenceTicket = changesPermissions
+          ? await _recovery.ticket(owner, current.id)
+          : null;
+      if (changesPermissions && evidenceTicket == null) return false;
+      final priorPlaintextIds = <String>{
+        ...current.pendingPlaintextEventIds,
+        if (current.isPublic &&
+            !target.isPublic &&
+            current.nostrEventId != null)
+          current.nostrEventId!,
+      };
       if (confirmed || changesPermissions) {
         attemptedConfirmedSend = true;
         final outcome = await _client.publishEventAwaitOk(event);
@@ -137,26 +151,8 @@ class CuratedListPublisher {
           return false;
         }
       }
-      // A retired account lease cannot record an ACK into an incoming cache.
-      if (!_owns(owner)) return false;
-      current = _findList(target.authorScopedId);
-      if (current == null || current.pubkey != owner || current != sending) {
-        return false;
-      }
-      final commitsPermissions =
-          CuratedListVisibility.fromList(current) !=
-          CuratedListVisibility.fromList(target);
-      if (commitsPermissions) {
-        // An ACK is durable recovery evidence, never permission for an
-        // unrelated content edit while the displayed state remains unchanged.
-        final priorPlaintextIds = <String>{
-          ...current.pendingPlaintextEventIds,
-          if (current.isPublic &&
-              !target.isPublic &&
-              current.nostrEventId != null)
-            current.nostrEventId!,
-        };
-        var savedAcceptance = false;
+      var savedAcceptance = true;
+      if (changesPermissions) {
         try {
           savedAcceptance = await _recovery.accepted(
             owner: owner,
@@ -168,14 +164,30 @@ class CuratedListPublisher {
             eventId: event.id,
             acceptedAt: signedAt,
             plaintextEventIds: priorPlaintextIds,
+            ticket: evidenceTicket,
           );
         } catch (error) {
+          savedAcceptance = false;
           Log.warning(
             'Acknowledged list recovery storage failed (${error.runtimeType})',
             name: 'CuratedListPublisher',
             category: LogCategory.system,
           );
         }
+      }
+      // Only minimal captured evidence can outlive the cache's account lease.
+      if (!_owns(owner)) return false;
+      current = _findList(target.authorScopedId);
+      if (current == null || current.pubkey != owner) return false;
+      if (current != sending) {
+        // A newer durable relay revision wins; retain only advisory evidence.
+        await _recovery.visibilityCommitted(owner, current.id, current);
+        return false;
+      }
+      final commitsPermissions =
+          CuratedListVisibility.fromList(current) !=
+          CuratedListVisibility.fromList(target);
+      if (commitsPermissions) {
         if (!_owns(owner)) return false;
         final journal = target
             .stageVisibilityFrom(
@@ -254,7 +266,7 @@ class CuratedListPublisher {
     if (separator < 1) return false;
     final owner = authorScopedId.substring(0, separator);
     final listId = authorScopedId.substring(separator + 1);
-    if (!_owns(owner)) return false;
+    if (!_owns(owner) || _recovery.needsRepair(owner)) return false;
     var current = _findList(authorScopedId);
     var saved = _recovery.record(owner, listId);
     if (current?.hasPendingPermissionRecovery == true) return false;
