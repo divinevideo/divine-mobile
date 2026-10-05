@@ -53,6 +53,12 @@
 #     this key to reach public relays without a manual `zsp publish`. Never log
 #     or echo this value.
 #
+# Public people-list discovery exclusions come from the GitHub repository
+# variable DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS (JSON array). Release builds
+# read it with the existing github_credentials token, or accept an explicit
+# environment override. Missing/malformed policy blocks a release; values are
+# never printed or committed. Shorebird provenance includes the resolved policy.
+#
 # Every group named under a workflow's `groups:` key must appear in this
 # checklist. Codemagic validates this whole file before it provisions a machine,
 # so naming a group that does not exist fails *every* workflow here — not only
@@ -244,6 +250,9 @@ definitions:
         )
         File.chmod(0o600, 'build/shorebird/dart_defines.json')
         RUBY
+        python3 scripts/write_public_people_list_defines.py \
+          --output build/shorebird/dart_defines.json --merge \
+          --github-repository "$CM_REPO_SLUG"
     - &write_shorebird_public_key
       name: Write Shorebird patch public key
       script: |
@@ -543,7 +552,11 @@ definitions:
         # This workflow packages a DMG for direct download. It does not provision
         # a macOS signing identity/profile in Codemagic, so disable signing for
         # the CI build and handle signing/notarization separately when needed.
+        python3 scripts/write_public_people_list_defines.py \
+          --output build/public_people_list_defines.json \
+          --github-repository "$CM_REPO_SLUG"
         env CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO flutter build macos --release \
+          --dart-define-from-file=build/public_people_list_defines.json \
           --dart-define=ZENDESK_APP_ID=$ZENDESK_APP_ID \
           --dart-define=ZENDESK_CLIENT_ID=$ZENDESK_CLIENT_ID \
           --dart-define=ZENDESK_URL=$ZENDESK_URL \
