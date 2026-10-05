@@ -7,7 +7,13 @@ import 'package:openvine/l10n/l10n.dart';
 
 /// Recovery can include a confirmed permission change or pending deletion IDs.
 class ListInfoRecoveryPendingMessage extends StatelessWidget {
-  const ListInfoRecoveryPendingMessage({super.key});
+  const ListInfoRecoveryPendingMessage({
+    this.permissionRecoveryPending = false,
+    super.key,
+  });
+
+  /// An accepted permission change must settle before unrelated edits resume.
+  final bool permissionRecoveryPending;
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -15,7 +21,9 @@ class ListInfoRecoveryPendingMessage extends StatelessWidget {
     child: Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Text(
-        context.l10n.listRecoveryPending,
+        permissionRecoveryPending
+            ? context.l10n.listPermissionsRecoveryPending
+            : context.l10n.listRecoveryPending,
         style: VineTheme.bodyMediumFont(
           color: context.vineColors.onSurfaceVariant,
         ),

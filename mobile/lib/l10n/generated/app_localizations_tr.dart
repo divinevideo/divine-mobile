@@ -13037,4 +13037,8 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get listRecoveryPending =>
       'Bu listede eşitlenmeyi bekleyen değişiklikler var.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Değişikliğin kabul edildi. Kaydetmeyi tamamlamak için Şimdi eşitle seçeneğine dokun. O zamana kadar düzenleme duraklatılır.';
 }

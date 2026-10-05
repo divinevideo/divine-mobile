@@ -12775,4 +12775,8 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get listRecoveryPending => 'ይህ ዝርዝር መመሳሰል የሚጠብቁ ለውጦች አሉት።';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'ለውጥዎ ተቀባይነት አግኝቷል። ማስቀመጡን ለማጠናቀቅ አሁን አመሳስልን ይንኩ። እስከዚያ ድረስ ማርትዕ ቆሟል።';
 }

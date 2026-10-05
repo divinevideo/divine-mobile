@@ -12312,4 +12312,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get listRecoveryPending => '此列表有等待同步的更改。';
+
+  @override
+  String get listPermissionsRecoveryPending => '更改已被接受。点击立即同步以完成保存。在此之前，编辑将暂停。';
 }

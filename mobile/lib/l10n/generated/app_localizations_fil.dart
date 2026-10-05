@@ -13226,4 +13226,8 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get listRecoveryPending =>
       'May mga pagbabago sa listahang ito na naghihintay ma-sync.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Tinanggap ang pagbabago mo. I-tap ang I-sync ngayon para tapusin ang pag-save. Naka-pause ang pag-edit hanggang matapos ito.';
 }

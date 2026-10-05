@@ -13240,4 +13240,8 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get listRecoveryPending =>
       'Този списък има промени, които чакат синхронизиране.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Промяната е приета. Докосни Синхронизирай сега, за да завършиш запазването. Редактирането е спряно дотогава.';
 }

@@ -12461,4 +12461,8 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get listRecoveryPending => 'このリストには同期を待っている変更があります。';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      '変更は承認されました。「今すぐ同期」をタップして保存を完了してください。それまでは編集が一時停止されます。';
 }

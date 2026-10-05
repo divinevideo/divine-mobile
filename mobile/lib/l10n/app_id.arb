@@ -5503,5 +5503,6 @@
   "listVideoPendingSync": "Daftar dan videomu tersimpan di sini. Video menunggu untuk disinkronkan.",
   "listRetrySync": "Sinkronkan sekarang",
   "listPermissionsUnconfirmed": "Perubahan ini belum bisa dikonfirmasi. Coba lagi.",
-  "listRecoveryPending": "Daftar ini memiliki perubahan yang menunggu sinkronisasi."
+  "listRecoveryPending": "Daftar ini memiliki perubahan yang menunggu sinkronisasi.",
+  "listPermissionsRecoveryPending": "Perubahanmu diterima. Ketuk Sinkronkan sekarang untuk menyelesaikan penyimpanan. Pengeditan dijeda sampai selesai."
 }

@@ -5503,5 +5503,6 @@
   "listVideoPendingSync": "Lista și videoclipul tău sunt salvate aici. Videoclipul așteaptă sincronizarea.",
   "listRetrySync": "Sincronizează acum",
   "listPermissionsUnconfirmed": "Nu am putut confirma această schimbare. Încearcă din nou.",
-  "listRecoveryPending": "Această listă are modificări care așteaptă sincronizarea."
+  "listRecoveryPending": "Această listă are modificări care așteaptă sincronizarea.",
+  "listPermissionsRecoveryPending": "Modificarea a fost acceptată. Apasă Sincronizează acum pentru a termina salvarea. Editarea este suspendată până atunci."
 }

@@ -13017,4 +13017,8 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get listRecoveryPending =>
       'Daftar ini memiliki perubahan yang menunggu sinkronisasi.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Perubahanmu diterima. Ketuk Sinkronkan sekarang untuk menyelesaikan penyimpanan. Pengeditan dijeda sampai selesai.';
 }

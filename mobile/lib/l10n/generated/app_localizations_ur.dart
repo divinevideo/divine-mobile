@@ -13105,4 +13105,8 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get listRecoveryPending =>
       'اس فہرست میں ایسی تبدیلیاں ہیں جو ہم آہنگی کی منتظر ہیں۔';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'آپ کی تبدیلی قبول کر لی گئی ہے۔ اسے محفوظ کرنے کے لیے اب ہم آہنگ کریں پر ٹیپ کریں۔ تب تک ترمیم موقوف ہے۔';
 }

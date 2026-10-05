@@ -13313,4 +13313,8 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get listRecoveryPending =>
       'Cette liste a des modifications en attente de synchronisation.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Votre modification a été acceptée. Appuyez sur Synchroniser maintenant pour terminer son enregistrement. Les modifications sont suspendues jusque-là.';
 }

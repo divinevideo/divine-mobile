@@ -13380,4 +13380,8 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get listRecoveryPending =>
       'Această listă are modificări care așteaptă sincronizarea.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Modificarea a fost acceptată. Apasă Sincronizează acum pentru a termina salvarea. Editarea este suspendată până atunci.';
 }

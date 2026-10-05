@@ -5503,5 +5503,6 @@
   "listVideoPendingSync": "Tu lista y tu video están guardados acá. El video está esperando a sincronizarse.",
   "listRetrySync": "Sincronizar ahora",
   "listPermissionsUnconfirmed": "No se pudo confirmar este cambio. Probá de nuevo.",
-  "listRecoveryPending": "Esta lista tiene cambios pendientes de sincronización."
+  "listRecoveryPending": "Esta lista tiene cambios pendientes de sincronización.",
+  "listPermissionsRecoveryPending": "Tu cambio fue aceptado. Tocá Sincronizar ahora para terminar de guardarlo. La edición está pausada hasta entonces."
 }

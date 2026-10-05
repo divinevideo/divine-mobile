@@ -13118,4 +13118,8 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get listRecoveryPending =>
       'Den här listan har ändringar som väntar på synkronisering.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Din ändring har godkänts. Tryck på Synkronisera nu för att slutföra sparandet. Redigering är pausad tills dess.';
 }

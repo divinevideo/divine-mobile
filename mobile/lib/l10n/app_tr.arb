@@ -5503,5 +5503,6 @@
   "listVideoPendingSync": "Listen ve videon burada kaydedildi. Video eşitlenmeyi bekliyor.",
   "listRetrySync": "Şimdi eşitle",
   "listPermissionsUnconfirmed": "Bu değişiklik doğrulanamadı. Tekrar dene.",
-  "listRecoveryPending": "Bu listede eşitlenmeyi bekleyen değişiklikler var."
+  "listRecoveryPending": "Bu listede eşitlenmeyi bekleyen değişiklikler var.",
+  "listPermissionsRecoveryPending": "Değişikliğin kabul edildi. Kaydetmeyi tamamlamak için Şimdi eşitle seçeneğine dokun. O zamana kadar düzenleme duraklatılır."
 }
