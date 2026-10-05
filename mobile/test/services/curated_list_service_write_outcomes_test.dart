@@ -11,9 +11,11 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -165,6 +167,12 @@ void main() {
     test(
       'rejected follow does not claim success or start the video callback',
       () async {
+        await prefs.setString(
+          CuratedListService.listsStorageKey,
+          jsonEncode([
+            _list().copyWith(videoEventIds: ['c' * 64]).toJson(),
+          ]),
+        );
         var callbacks = 0;
         final service = open(onSubscribed: (_, _) async => callbacks++);
         prefs.rejectSubscriptions = true;
@@ -172,6 +180,9 @@ void main() {
         expect(service.isSubscribedToList('crew'), isFalse);
         expect(callbacks, 0);
         expect(open().isSubscribedToList('crew'), isFalse);
+        prefs.rejectSubscriptions = false;
+        expect(await service.subscribeToList('crew'), isTrue);
+        expect(callbacks, 1);
       },
     );
 
@@ -257,6 +268,100 @@ void main() {
         verifyNever(() => client.publishEventAwaitOk(any()));
       },
     );
+
+    for (final (change, nextOwner, nextSignedIn) in <(String, String?, bool)>[
+      ('an account switch', 'b' * 64, true),
+      ('a sign-out', null, false),
+    ]) {
+      test(
+        '$change during a save reports failure and never publishes',
+        () async {
+          var owner = _owner as String?;
+          var signedIn = true;
+          when(() => auth.currentPublicKeyHex).thenAnswer((_) => owner);
+          when(() => auth.isAuthenticated).thenAnswer((_) => signedIn);
+          final service = open();
+          var notifications = 0;
+          service.addListener(() => notifications++);
+          prefs.listWriteStarted = Completer<void>();
+          prefs.firstListWrite = Completer<bool>();
+          final update = service.updateList(listId: 'crew', name: 'Renamed');
+          await prefs.listWriteStarted!.future;
+          final beforeSwitch = notifications;
+          expect(beforeSwitch, greaterThan(0));
+          owner = nextOwner;
+          signedIn = nextSignedIn;
+          prefs.firstListWrite!.complete(true);
+          expect(await update, isFalse);
+          expect(notifications, beforeSwitch);
+          verifyNever(() => client.publishEventAwaitOk(any()));
+          verifyNever(() => client.publishEvent(any()));
+        },
+      );
+    }
+
+    test(
+      'disposal during a save reports failure and never publishes',
+      () async {
+        final service = CuratedListService(
+          nostrService: client,
+          authService: auth,
+          prefs: prefs,
+        );
+        final logs = LogCaptureService();
+        await logs.clearAllLogs();
+        addTearDown(logs.clearAllLogs);
+        prefs.listWriteStarted = Completer<void>();
+        prefs.firstListWrite = Completer<bool>();
+        final update = service.updateList(listId: 'crew', name: 'Renamed');
+        await prefs.listWriteStarted!.future;
+        service.dispose();
+        prefs.firstListWrite!.complete(true);
+        expect(await update, isFalse);
+        final messages = logs
+            .getRecentLogs()
+            .map((entry) => entry.message)
+            .join(' ');
+        expect(messages, contains('superseded'));
+        expect(messages, isNot(contains('after being disposed')));
+        verifyNever(() => client.publishEventAwaitOk(any()));
+        verifyNever(() => client.publishEvent(any()));
+      },
+    );
+
+    group('default list whose coordinate was deleted', () {
+      setUp(() async {
+        registerFallbackValue(<Filter>[]);
+        when(
+          () => client.subscribe(any(), onEose: any(named: 'onEose')),
+        ).thenAnswer((_) => const Stream<Event>.empty());
+        await prefs.setString(CuratedListService.listsStorageKey, '[]');
+        await prefs.setStringList(
+          PrefsCuratedListStore.deletedCoordinatesStorageKey,
+          ['$_owner:${CuratedListService.defaultListId}'],
+        );
+      });
+
+      test('creating it again lifts the deletion record', () async {
+        final service = open();
+        await service.initialize();
+        expect(service.hasDefaultList(), isTrue);
+        expect(
+          prefs.getStringList(
+            PrefsCuratedListStore.deletedCoordinatesStorageKey,
+          ),
+          isEmpty,
+        );
+      });
+
+      test('stays absent while the deletion record cannot be lifted', () async {
+        prefs.rejectDeletions = true;
+        final service = open();
+        await service.initialize();
+        expect(service.hasDefaultList(), isFalse);
+        expect(open().hasDefaultList(), isFalse);
+      });
+    });
 
     test('rejected unfollow keeps the last stored subscription', () async {
       await prefs.setString(
