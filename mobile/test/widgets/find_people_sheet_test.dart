@@ -47,21 +47,25 @@ void main() {
             return Scaffold(
               body: ElevatedButton(
                 onPressed: () {
-                  showModalBottomSheet<ShareableUser>(
-                    context: context,
-                    isScrollControlled: true,
-                    useSafeArea: true,
-                    backgroundColor: Colors.transparent,
-                    // The real sheet gets its bounded height from
-                    // VineBottomSheet's DraggableScrollableSheet; these
-                    // content tests supply their own so the Expanded
-                    // result list has something to fill.
-                    builder: (context) => SizedBox(
-                      height: 600,
-                      child: FindPeopleSheet(
-                        contacts: contacts,
-                        currentUserPubkey: currentUserPubkey,
-                        searchTimeout: searchTimeout,
+                  // A tap opens the route; its selected-user result is not
+                  // used by this rendering harness.
+                  unawaited(
+                    showModalBottomSheet<ShareableUser>(
+                      context: context,
+                      isScrollControlled: true,
+                      useSafeArea: true,
+                      backgroundColor: Colors.transparent,
+                      // The real sheet gets its bounded height from
+                      // VineBottomSheet's DraggableScrollableSheet; these
+                      // content tests supply their own so the Expanded
+                      // result list has something to fill.
+                      builder: (context) => SizedBox(
+                        height: 600,
+                        child: FindPeopleSheet(
+                          contacts: contacts,
+                          currentUserPubkey: currentUserPubkey,
+                          searchTimeout: searchTimeout,
+                        ),
                       ),
                     ),
                   );
