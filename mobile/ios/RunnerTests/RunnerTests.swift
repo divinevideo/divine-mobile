@@ -1059,6 +1059,41 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
     XCTAssertEqual(state["positionMs"] as? Int, 0)
   }
 
+  func testStopWhileInactiveCancelsDeferredSeekResume() throws {
+    _ = try invoke("play")
+    try waitForState("the clip ends") { $0["status"] as? String == "completed" }
+    NotificationCenter.default.post(name: UIApplication.willResignActiveNotification, object: nil)
+    defer {
+      NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+    }
+    _ = try invoke("seekTo", ["positionMs": 0])
+    _ = try invoke("stop")
+    NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+    RunLoop.main.run(until: Date().addingTimeInterval(0.5))
+    let state = try XCTUnwrap(latestState())
+    XCTAssertEqual(state["status"] as? String, "idle", "a stopped player must stay stopped")
+    // A resume that outlived stop only shows once media is loaded again: it plays at once.
+    _ = try invoke("setClips", ["clips": [["uri": clipURL.path, "startMs": 0]]])
+    try waitForState("the next media loads paused") { $0["status"] as? String == "paused" }
+  }
+
+  func testReplacementWhileInactiveCancelsDeferredSeekResume() throws {
+    _ = try invoke("play")
+    try waitForState("the clip ends") { $0["status"] as? String == "completed" }
+    NotificationCenter.default.post(name: UIApplication.willResignActiveNotification, object: nil)
+    defer {
+      NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+    }
+    _ = try invoke("seekTo", ["positionMs": 0])
+    _ = try invoke("setClips", ["clips": [["uri": clipURL.path, "startMs": 0]]])
+    NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+    RunLoop.main.run(until: Date().addingTimeInterval(0.5))
+    let state = try XCTUnwrap(latestState())
+    XCTAssertEqual(
+      state["status"] as? String, "paused", "the replacement must not inherit the deferred resume"
+    )
+  }
+
   func testOrdinaryBackgroundPausePreservesExistingForegroundResume() throws {
     _ = try invoke("play")
     try waitForState("the clip is playing") { $0["status"] as? String == "playing" }
