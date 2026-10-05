@@ -253,6 +253,44 @@ void main() {
     );
     group('typed outcomes and optimistic cache', () {
       test(
+        'rejected merge retains the confirmed external winner for reconciliation',
+        () async {
+          final original = list(author);
+          final attempted = list(author, revision: 2);
+          final winner = list(author, revision: 3);
+          final writer = CuratedListCacheWriteCoordinator();
+          var stored = [winner];
+          final result = await writer.saveListsWithResult(
+            baseline: [original],
+            current: [attempted],
+            cacheKey: 'lists',
+            read: () => stored,
+            write: (merged) async {
+              stored = merged;
+              return false;
+            },
+          );
+          expect(result.status, CuratedCacheWriteStatus.storageRejected);
+          expect(result.persisted, isNull);
+          expect(result.acknowledgedBeforeWrite, [winner]);
+          expect(result.reconcile([attempted]), [winner]);
+          final newerEdit = list(author, revision: 4);
+          final subsequent = await writer.saveListsWithResult(
+            baseline: result.nextBaseline,
+            current: [newerEdit],
+            cacheKey: 'lists',
+            read: () => stored,
+            write: (merged) async {
+              stored = merged;
+              return true;
+            },
+          );
+          expect(subsequent.succeeded, isTrue);
+          expect(stored, [newerEdit]);
+        },
+      );
+
+      test(
         'reports a real version conflict with the confirmed merged winner',
         () async {
           final writer = CuratedListCacheWriteCoordinator();

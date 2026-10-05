@@ -486,6 +486,12 @@ void main() {
           final original = _list('crew');
           final attempted = _list('crew', revision: 2);
           final newer = _list('crew', revision: 3);
+          refusing.accepts = true;
+          await refusing.setString(
+            _listsKey,
+            jsonEncode([original.toJson()]),
+          );
+          refusing.accepts = false;
           final store = _store(refusing)..listsLoaded([original]);
           final result = await store.saveListsWithResult([attempted]);
           expect(result.reconcile([newer, _list('unrelated')]), [
