@@ -13,6 +13,7 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/curated_list_publish_stubs.dart';
@@ -107,6 +108,34 @@ void main() {
         expect(event.createdAt, greaterThan(0));
       },
     );
+
+    test('edits wait for standalone recovery preparation to settle', () async {
+      final service = CuratedListService(
+        nostrService: mockNostr,
+        authService: mockAuth,
+        prefs: prefs,
+      );
+      addTearDown(service.dispose);
+      final entered = Completer<void>();
+      final release = Completer<void>();
+      final coordinator = CuratedListSessionCoordinator.forPreferences(prefs);
+      final heldWrite = coordinator.writes.runExclusive(() async {
+        entered.complete();
+        await release.future;
+      });
+      await entered.future;
+      final preparation = service.prepareRecovery();
+      expect(service.isReadyForMutations, isFalse);
+      expect(await service.createList(name: 'Not yet'), isNull);
+      expect(prefs.get(CuratedListService.listsStorageKey), isNull);
+      verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+
+      release.complete();
+      await heldWrite;
+      await preparation;
+      expect(service.isReadyForMutations, isTrue);
+      expect(await service.createList(name: 'Ready'), isNotNull);
+    });
 
     test(
       'initialize() completes quickly without waiting for relay sync',
