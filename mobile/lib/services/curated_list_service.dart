@@ -1437,7 +1437,11 @@ class CuratedListService extends ChangeNotifier {
   Future<void> _saveLists() async {
     // The lists key is shared by every account on the device; a stopped
     // service's lists belong to the account that is leaving.
-    if (_isStopped) return;
+    if (_isStopped) {
+      throw const CuratedCacheWriteException(
+        CuratedCacheWriteStatus.superseded,
+      );
+    }
     final owner = _relayGateway.currentAuthenticatedPubkey();
     notifyListeners();
     try {
@@ -1452,7 +1456,11 @@ class CuratedListService extends ChangeNotifier {
 
   /// Persist follows before notifying video-cache subscription callbacks.
   Future<void> _saveSubscribedListIds() async {
-    if (_isStopped) return;
+    if (_isStopped) {
+      throw const CuratedCacheWriteException(
+        CuratedCacheWriteStatus.superseded,
+      );
+    }
     final owner = _relayGateway.currentAuthenticatedPubkey();
     notifyListeners();
     try {
