@@ -5502,5 +5502,6 @@
   "listVideoNotAdded": "تم إنشاء قائمتك، لكن لم تتم إضافة هذا الفيديو.",
   "listVideoPendingSync": "تم حفظ قائمتك وفيديوك هنا. الفيديو بانتظار المزامنة.",
   "listRetrySync": "زامن الآن",
-  "listPermissionsUnconfirmed": "تعذّر تأكيد هذا التغيير. حاول مرة أخرى."
+  "listPermissionsUnconfirmed": "تعذّر تأكيد هذا التغيير. حاول مرة أخرى.",
+  "listRecoveryPending": "تحتوي هذه القائمة على تغييرات بانتظار المزامنة."
 }

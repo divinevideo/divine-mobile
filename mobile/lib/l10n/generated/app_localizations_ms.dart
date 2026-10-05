@@ -13109,4 +13109,8 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get listPermissionsUnconfirmed =>
       'Perubahan ini tidak dapat disahkan. Cuba lagi.';
+
+  @override
+  String get listRecoveryPending =>
+      'Senarai ini mempunyai perubahan yang menunggu untuk disegerakkan.';
 }

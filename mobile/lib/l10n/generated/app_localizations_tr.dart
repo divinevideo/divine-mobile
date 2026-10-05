@@ -13033,4 +13033,8 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get listPermissionsUnconfirmed =>
       'Bu değişiklik doğrulanamadı. Tekrar dene.';
+
+  @override
+  String get listRecoveryPending =>
+      'Bu listede eşitlenmeyi bekleyen değişiklikler var.';
 }

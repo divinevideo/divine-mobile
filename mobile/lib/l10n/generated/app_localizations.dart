@@ -21942,6 +21942,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t confirm this change. Try again.'**
   String get listPermissionsUnconfirmed;
+
+  /// Neutral notice for an acknowledged permission transition, pending publication or event-specific deletion request. Does not claim remote erasure.
+  ///
+  /// In en, this message translates to:
+  /// **'This list has changes waiting to sync.'**
+  String get listRecoveryPending;
 }
 
 class _AppLocalizationsDelegate

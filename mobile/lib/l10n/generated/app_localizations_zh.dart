@@ -12309,4 +12309,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get listPermissionsUnconfirmed => '无法确认此更改。请重试。';
+
+  @override
+  String get listRecoveryPending => '此列表有等待同步的更改。';
 }

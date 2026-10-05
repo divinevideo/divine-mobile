@@ -13222,4 +13222,8 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get listPermissionsUnconfirmed =>
       'Hindi makumpirma ang pagbabagong ito. Subukan ulit.';
+
+  @override
+  String get listRecoveryPending =>
+      'May mga pagbabago sa listahang ito na naghihintay ma-sync.';
 }

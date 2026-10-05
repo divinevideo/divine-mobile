@@ -5502,5 +5502,6 @@
   "listVideoNotAdded": "Je lijst is gemaakt, maar deze video is niet toegevoegd.",
   "listVideoPendingSync": "Je lijst en video zijn hier opgeslagen. De video wacht op synchronisatie.",
   "listRetrySync": "Nu synchroniseren",
-  "listPermissionsUnconfirmed": "Deze wijziging kon niet worden bevestigd. Probeer het opnieuw."
+  "listPermissionsUnconfirmed": "Deze wijziging kon niet worden bevestigd. Probeer het opnieuw.",
+  "listRecoveryPending": "Deze lijst heeft wijzigingen die nog gesynchroniseerd moeten worden."
 }

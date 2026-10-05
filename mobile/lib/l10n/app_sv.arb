@@ -5502,5 +5502,6 @@
   "listVideoNotAdded": "Din lista skapades, men den här videon lades inte till.",
   "listVideoPendingSync": "Din lista och video är sparade här. Videon väntar på synkronisering.",
   "listRetrySync": "Synkronisera nu",
-  "listPermissionsUnconfirmed": "Det gick inte att bekräfta ändringen. Försök igen."
+  "listPermissionsUnconfirmed": "Det gick inte att bekräfta ändringen. Försök igen.",
+  "listRecoveryPending": "Den här listan har ändringar som väntar på synkronisering."
 }

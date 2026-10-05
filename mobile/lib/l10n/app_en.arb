@@ -9572,5 +9572,9 @@
   "@listPermissionsUnconfirmed": {
     "description": "Shown when a requested list visibility or collaborator change has no confirmed relay outcome. Does not claim the remote change failed or was reversed."
   },
-  "listPermissionsUnconfirmed": "Couldn't confirm this change. Try again."
+  "listPermissionsUnconfirmed": "Couldn't confirm this change. Try again.",
+  "@listRecoveryPending": {
+    "description": "Neutral notice for an acknowledged permission transition, pending publication or event-specific deletion request. Does not claim remote erasure."
+  },
+  "listRecoveryPending": "This list has changes waiting to sync."
 }

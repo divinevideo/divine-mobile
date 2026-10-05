@@ -12472,4 +12472,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get listPermissionsUnconfirmed => '이 변경 사항을 확인하지 못했어요. 다시 시도해 주세요.';
+
+  @override
+  String get listRecoveryPending => '이 목록에 동기화를 기다리는 변경 사항이 있어요.';
 }

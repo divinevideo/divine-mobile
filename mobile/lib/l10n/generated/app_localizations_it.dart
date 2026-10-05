@@ -13266,4 +13266,8 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get listPermissionsUnconfirmed =>
       'Non è stato possibile confermare questa modifica. Riprova.';
+
+  @override
+  String get listRecoveryPending =>
+      'Questa lista ha modifiche in attesa di sincronizzazione.';
 }

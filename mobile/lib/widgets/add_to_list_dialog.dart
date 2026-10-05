@@ -103,8 +103,10 @@ class _SelectListDialogState extends ConsumerState<SelectListDialog> {
         final l10n = context.l10n;
         final pendingLists = {
           for (final list in availableLists)
-            if (list.pendingRepublish &&
-                list.videoEventIds.contains(widget.video.id))
+            if (list.hasPendingPermissionRecovery ||
+                list.pendingPlaintextEventIds.isNotEmpty ||
+                (list.pendingRepublish &&
+                    list.videoEventIds.contains(widget.video.id)))
               list.id,
         };
         final syncFailed = _failedSyncListIds
@@ -124,7 +126,14 @@ class _SelectListDialogState extends ConsumerState<SelectListDialog> {
                 if (_creationOutcome ==
                     ListInfoSheetOutcome.createdWithoutVideo)
                   ListInfoFailureMessage(l10n.listVideoNotAdded),
-                if (pendingLists.isNotEmpty) const ListInfoPendingSyncMessage(),
+                if (availableLists.any(
+                  (list) =>
+                      list.hasPendingPermissionRecovery ||
+                      list.pendingPlaintextEventIds.isNotEmpty,
+                ))
+                  const ListInfoRecoveryPendingMessage()
+                else if (pendingLists.isNotEmpty)
+                  const ListInfoPendingSyncMessage(),
                 if (syncFailed) ListInfoFailureMessage(l10n.listUpdateFailed),
                 Expanded(
                   child: ListView.builder(
@@ -152,12 +161,12 @@ class _SelectListDialogState extends ConsumerState<SelectListDialog> {
                         ),
                         subtitle: Text(
                           '${l10n.listVideoCount(list.videoEventIds.length)} • '
-                          '${list.isPublic ? l10n.listVisibilityPublic : l10n.listVisibilityPrivate}',
+                          '${list.publicationTarget.isPublic ? l10n.listVisibilityPublic : l10n.listVisibilityPrivate}',
                           style: TextStyle(
                             color: context.vineColors.secondaryText,
                           ),
                         ),
-                        trailing: isInList && list.pendingRepublish
+                        trailing: pendingLists.contains(list.id)
                             ? _syncingListIds.contains(list.id)
                                   ? const SizedBox(
                                       width: 40,
@@ -174,7 +183,9 @@ class _SelectListDialogState extends ConsumerState<SelectListDialog> {
                                       ),
                                     )
                             : null,
-                        onTap: _syncingListIds.contains(list.id)
+                        onTap:
+                            _syncingListIds.contains(list.id) ||
+                                list.hasPendingPermissionRecovery
                             ? null
                             : () => _toggleVideoInList(
                                 context,

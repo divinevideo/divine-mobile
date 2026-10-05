@@ -13114,4 +13114,8 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get listPermissionsUnconfirmed =>
       'Det gick inte att bekräfta ändringen. Försök igen.';
+
+  @override
+  String get listRecoveryPending =>
+      'Den här listan har ändringar som väntar på synkronisering.';
 }

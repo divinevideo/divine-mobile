@@ -13178,4 +13178,8 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get listPermissionsUnconfirmed =>
       'Deze wijziging kon niet worden bevestigd. Probeer het opnieuw.';
+
+  @override
+  String get listRecoveryPending =>
+      'Deze lijst heeft wijzigingen die nog gesynchroniseerd moeten worden.';
 }

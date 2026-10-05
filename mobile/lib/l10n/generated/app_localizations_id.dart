@@ -13013,4 +13013,8 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get listPermissionsUnconfirmed =>
       'Perubahan ini belum bisa dikonfirmasi. Coba lagi.';
+
+  @override
+  String get listRecoveryPending =>
+      'Daftar ini memiliki perubahan yang menunggu sinkronisasi.';
 }

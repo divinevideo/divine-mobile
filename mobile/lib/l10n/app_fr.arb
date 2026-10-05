@@ -5502,5 +5502,6 @@
   "listVideoNotAdded": "Ta liste a été créée, mais cette vidéo n’a pas été ajoutée.",
   "listVideoPendingSync": "Ta liste et ta vidéo sont enregistrées ici. La vidéo est en attente de synchronisation.",
   "listRetrySync": "Synchroniser maintenant",
-  "listPermissionsUnconfirmed": "Impossible de confirmer ce changement. Réessaie."
+  "listPermissionsUnconfirmed": "Impossible de confirmer ce changement. Réessaie.",
+  "listRecoveryPending": "Cette liste a des modifications en attente de synchronisation."
 }

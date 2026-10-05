@@ -5502,5 +5502,6 @@
   "listVideoNotAdded": "Twoja lista została utworzona, ale ten film nie został dodany.",
   "listVideoPendingSync": "Twoja lista i film są zapisane tutaj. Film czeka na synchronizację.",
   "listRetrySync": "Synchronizuj teraz",
-  "listPermissionsUnconfirmed": "Nie udało się potwierdzić tej zmiany. Spróbuj ponownie."
+  "listPermissionsUnconfirmed": "Nie udało się potwierdzić tej zmiany. Spróbuj ponownie.",
+  "listRecoveryPending": "Ta lista ma zmiany oczekujące na synchronizację."
 }

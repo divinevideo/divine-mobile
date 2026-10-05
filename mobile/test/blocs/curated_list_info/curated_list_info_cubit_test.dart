@@ -57,6 +57,77 @@ void main() {
       videoEventId: videoEventId,
     );
 
+    test(
+      'confirmed permission recovery blocks edits and settles through Sync now',
+      () async {
+        final pending = _list(isPublic: false).copyWith(
+          pendingRepublish: true,
+          pendingVisibility: const CuratedListVisibility(
+            isPublic: true,
+            isCollaborative: false,
+            allowedCollaborators: [],
+            relayAccepted: true,
+          ),
+        );
+        var current = pending;
+        when(() => service.getListById(any())).thenAnswer((_) => current);
+        final cubit = buildCubit(existingList: pending);
+        addTearDown(cubit.close);
+        expect(cubit.state.canEdit, isFalse);
+        expect(cubit.state.canSubmit, isFalse);
+        expect(
+          cubit.state.isPublic,
+          isTrue,
+          reason: 'The form labels the acknowledged target as pending',
+        );
+        cubit.nameChanged('Unrelated edit');
+        cubit.descriptionChanged('Unrelated description');
+        cubit.visibilityChanged(isPublic: false);
+        await cubit.submitted();
+        expect(cubit.state.name, pending.name);
+        expect(cubit.state.description, pending.description);
+        verifyNever(() => service.updateList(listId: any(named: 'listId')));
+        when(() => service.retryListSync(pending.id)).thenAnswer((_) async {
+          current = pending.copyWith(
+            isPublic: true,
+            pendingRepublish: false,
+            clearPendingVisibility: true,
+          );
+          return true;
+        });
+        await cubit.retrySync();
+        expect(cubit.state.canEdit, isTrue);
+        expect(cubit.state.wasPublic, isTrue);
+        expect(cubit.state.needsSync, isFalse);
+        cubit.visibilityChanged(isPublic: false);
+        expect(cubit.state.visibilityWillChange, isTrue);
+      },
+    );
+
+    test(
+      'failed explicit recovery keeps the form blocked and retry available',
+      () async {
+        final pending = _list(isPublic: false).copyWith(
+          pendingVisibility: const CuratedListVisibility(
+            isPublic: true,
+            isCollaborative: false,
+            allowedCollaborators: [],
+            relayAccepted: true,
+          ),
+        );
+        when(() => service.getListById(any())).thenReturn(pending);
+        when(() => service.retryListSync(pending.id))
+            .thenAnswer((_) async => false);
+        final cubit = buildCubit(existingList: pending);
+        addTearDown(cubit.close);
+        await cubit.retrySync();
+        expect(cubit.state.status, CuratedListInfoStatus.failure);
+        expect(cubit.state.permissionRecoveryPending, isTrue);
+        expect(cubit.state.needsSync, isTrue);
+        expect(cubit.state.canSubmit, isFalse);
+      },
+    );
+
     void stubCreate(Future<CuratedList?> Function() answer) {
       when(
         () => service.createList(
