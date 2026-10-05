@@ -273,6 +273,53 @@ void main() {
     });
 
     group('success state', () {
+      testWidgets('already authenticated when mounted navigates to explore', (
+        tester,
+      ) async {
+        when(() => mockAuthService.authState)
+            .thenReturn(AuthState.authenticated);
+        await pumpVerificationScreen(
+          tester,
+          deviceCode: 'test-device-code',
+          verifier: 'test-verifier',
+          initialState: const EmailVerificationState(
+            status: EmailVerificationStatus.polling,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Explore popular'), findsOneWidget);
+        verify(() => mockPendingVerification.clear()).called(1);
+      });
+
+      testWidgets('polling success recovers a missed authenticated event', (
+        tester,
+      ) async {
+        final states = StreamController<EmailVerificationState>.broadcast();
+        addTearDown(states.close);
+        await pumpVerificationScreen(
+          tester,
+          deviceCode: 'test-device-code',
+          verifier: 'test-verifier',
+          initialState: const EmailVerificationState(
+            status: EmailVerificationStatus.polling,
+          ),
+          stateStream: states.stream,
+        );
+        await tester.pump();
+
+        // Authentication completed without another event reaching this screen.
+        when(() => mockAuthService.authState)
+            .thenReturn(AuthState.authenticated);
+        states.add(
+          const EmailVerificationState(status: EmailVerificationStatus.success),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Explore popular'), findsOneWidget);
+        verify(() => mockPendingVerification.clear()).called(1);
+      });
+
       testWidgets('renders success content', (tester) async {
         await tester.pumpWidget(
           createTestWidget(
@@ -843,6 +890,8 @@ void main() {
           await tester.pump();
           await tester.pump();
 
+          when(() => mockAuthService.authState)
+              .thenReturn(AuthState.authenticated);
           authStateController.add(AuthState.authenticated);
           await tester.pump();
           // The account bucket changes while navigation awaits secure storage.

@@ -124,8 +124,9 @@ class _EmailVerificationScreenState
 
     // Use post-frame callback to access context safely
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeVerification();
+      if (!mounted) return;
       _listenForAuthState();
+      if (!_hasLeftVerification) _initializeVerification();
     });
   }
 
@@ -136,7 +137,7 @@ class _EmailVerificationScreenState
   /// an explicit, reliable navigation path.
   void _listenForAuthState() {
     final authService = ref.read(authServiceProvider);
-    _authSubscription = authService.authStateStream.listen((authState) {
+    void onAuthState(AuthState authState) {
       if (authState == AuthState.authenticated && mounted) {
         runDetached(
           _handleAuthenticated(),
@@ -145,7 +146,12 @@ class _EmailVerificationScreenState
           category: LogCategory.auth,
         );
       }
-    });
+    }
+
+    _authSubscription = authService.authStateStream.listen(onAuthState);
+    // Account-scoped providers can remount this screen after the stream event
+    // has already fired (#9727). Subscribe first, then inspect current state.
+    onAuthState(authService.authState);
   }
 
   Future<void> _handleAuthenticated() async {
@@ -399,15 +405,21 @@ class _EmailVerificationScreenState
   }
 
   Future<void> _handleSuccess() async {
+    if (_hasLeftVerification) return;
+    if (!_isTokenMode &&
+        ref.read(authServiceProvider).authState == AuthState.authenticated) {
+      await _handleAuthenticated();
+      return;
+    }
     // Clear persisted verification data on successful login
     await _clearPendingVerification();
     if (!mounted) return;
 
     if (!_isTokenMode) {
-      // Polling mode: the auth-state listener navigates to the explore
-      // Popular tab (by URL) once sign-in completes.
+      // Email verification can finish before sign-in. The listener handles
+      // the remaining transition once authentication completes.
       Log.info(
-        'Email verification succeeded, navigating to explore (Popular tab)',
+        'Email verification succeeded, waiting for sign-in',
         name: 'EmailVerificationScreen',
         category: LogCategory.auth,
       );
