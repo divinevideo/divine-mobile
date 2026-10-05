@@ -809,7 +809,12 @@ void main() {
       });
 
       test('preserves an existing typed required cleanup failure', () async {
-        const failure = UserDataCleanupException('Required cleanup blocked');
+        const privateContents = 'private cleanup cause sentinel';
+        const cause = FormatException('Invalid cached row', privateContents);
+        const failure = UserDataCleanupException(
+          'Required cleanup blocked',
+          cause,
+        );
         service.onDatabaseCleanup =
             ({
               String? userPubkey,
@@ -823,6 +828,9 @@ void main() {
           service.clearUserSpecificData(isIdentityChange: true),
           throwsA(same(failure)),
         );
+        expect(failure.cause, same(cause));
+        expect(failure.toString(), 'Required cleanup blocked');
+        expect(failure.toString(), isNot(contains(privateContents)));
       });
 
       test('claimLegacyRows calls onClaimLegacyRows callback', () async {
