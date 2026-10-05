@@ -1,5 +1,5 @@
-// ABOUTME: Tests for userListsProvider reactivity to authentication transitions
-// ABOUTME: Covers sign-in, sign-out, and active-account switches.
+// ABOUTME: Tests for the list providers: member videos, video events by id,
+// ABOUTME: curated list videos and the public people and curated list reads.
 
 import 'dart:async';
 

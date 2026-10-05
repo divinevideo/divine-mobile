@@ -18,8 +18,10 @@ import 'package:unified_logger/unified_logger.dart';
 /// This is the web-canonical public URL shape for NIP-51 kind 30005 lists,
 /// which are addressed by author + d-tag. Unlike the internal
 /// `/list/:listId` route — which relies on route extras and locally stored
-/// lists — this screen fetches the list from relays, so deep links to lists
-/// the user has never seen still open.
+/// lists — this screen needs only the path: it reuses a warm
+/// [discoveredList] when its author and d-tag match, and otherwise fetches
+/// the list from relays, so deep links to lists the user has never seen
+/// still open.
 class CuratedListByAuthorScreen extends ConsumerWidget {
   const CuratedListByAuthorScreen({
     required this.authorPubkey,
