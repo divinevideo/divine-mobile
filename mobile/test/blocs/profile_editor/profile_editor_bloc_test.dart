@@ -1921,6 +1921,8 @@ void main() {
           );
           clock.elapse(const Duration(milliseconds: 1));
           clock.flushMicrotasks();
+          // Should only call the API once, for the final username, because
+          // of the restartable transformer.
           verify(
             () => mockProfileRepository.checkUsernameAvailability(
               username: 'test3',

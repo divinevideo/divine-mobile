@@ -616,7 +616,7 @@ void main() {
               limit: any(named: 'limit'),
             ),
           ).thenAnswer((_) => acceptedController.stream);
-          // combineLatest5 needs every source to emit at least once; potential
+          // combineLatest6 needs every source to emit at least once; potential
           // emits a single empty value (the others use startWith in the bloc).
           when(
             () => mockDmRepository.watchPotentialRequests(),
@@ -1099,7 +1099,7 @@ void main() {
             ).thenAnswer((_) {
               callCount++;
               if (callCount == 1) {
-                // First call is slow
+                // First call is held until the test completes it
                 return markRead.future;
               }
               // Subsequent calls would complete instantly, but should be
@@ -1489,6 +1489,8 @@ void main() {
             final split = bloc.stream.firstWhere(
               (s) => s.requestConversations.length == 1,
             );
+            // Recovery completes: flip the flag, then signal via the recovery
+            // stream so the combined stream re-fires and re-classifies.
             when(() => mockDmRepository.hasCompletedHistoryRecoveryBefore)
                 .thenReturn(true);
             recoveryController.add(false);
@@ -2400,9 +2402,6 @@ void main() {
     }
 
     void stubPeerSearchDependencies() {
-      // The batch path never yields a profile for either peer, which is the
-      // measured reality: a PENDING vanish is stripped from the funnelcake
-      // bulk response entirely, and a retired moderation key has no kind 0.
       when(() => mockFollowRepository.isFollowing(any())).thenReturn(true);
       when(
         () => mockFollowRepository.followingStream,
@@ -2413,6 +2412,9 @@ void main() {
       when(
         () => mockDmRepository.retryPendingDecryptions(),
       ).thenAnswer((_) async {});
+      // The batch path never yields a profile for either peer, which is the
+      // measured reality: a PENDING vanish is stripped from the funnelcake
+      // bulk response entirely, and a retired moderation key has no kind 0.
       when(
         () => mockProfileRepository.fetchBatchProfiles(
           pubkeys: any(named: 'pubkeys'),

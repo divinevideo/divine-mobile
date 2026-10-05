@@ -1231,8 +1231,8 @@ void main() {
               redirectUri: 'divine://auth',
             ),
           );
-          // pollForCode resolves slowly so the poll is still in flight when
-          // the PIN submit claims completion.
+          // pollForCode is held until the test releases it, so the poll is
+          // still in flight when the PIN submit claims completion.
           when(() => mockOAuth.pollForCode(testDeviceCode)).thenAnswer((
             _,
           ) async {
@@ -1263,7 +1263,7 @@ void main() {
                 email: testEmail,
               );
 
-            // Fire the first poll tick; _poll() is now awaiting the slow
+            // Fire the first poll tick; _poll() is now awaiting the held
             // pollForCode (in flight).
             fake.elapse(const Duration(seconds: 3));
 
