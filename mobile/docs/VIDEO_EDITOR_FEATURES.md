@@ -49,7 +49,7 @@ Clip actions ([`video_editor_timeline_clip_controls.dart`](../lib/widgets/video_
 - **Speed** from 0.25× to 3.0× in 0.05 steps, on a slider, with one-tap presets for 0.25×, 0.5×, 1×, 1.5×, 2× and 3×.
 - **Transform:** crop (locked to the video's aspect ratio), rotate by 90°, flip.
 - **Extract audio:** moves the clip's sound to its own track and mutes the clip.
-- **Save to library:** renders the trimmed clip, overlays included, into a standalone clip in the library.
+- **Save to library:** renders the trimmed clip, with the visual overlays that were over it, into a standalone clip in the library. Flashing effects and the project's music and voice-over are left out.
 - **Add clips** from the library or the camera.
 - **Volume** per clip, up to 300 % (see [Audio](#audio)). Long-pressing any volume control mutes all clips and sound tracks, or unmutes them if everything is already muted.
 
@@ -64,8 +64,8 @@ Detach (picture-in-picture):
 
 - Lifts a clip off the timeline onto the canvas as a freely placed layer.
 - The gap it leaves can be closed, or held with a solid color or a photo.
-- A detached layer can be moved, resized, split, duplicated, deleted, cropped to any aspect ratio, made see-through (opacity 0–100 %), and color-masked. It has no enter or leave animation.
-- Back to timeline puts the clip back as a timeline clip: into the color or photo slot it left if that is still there, otherwise at the playhead. Only the part its layer showed comes back, as trim. Its placement, opacity and live color mask stay behind, a free crop fills the frame, and its length counts toward the 6.3 s maximum again.
+- A detached layer can be moved, resized, split, duplicated, deleted, cropped to any aspect ratio, rotated or flipped (Transform), made see-through (opacity 0–100 %), and color-masked. It has no enter or leave animation.
+- Back to timeline puts the clip back as a timeline clip: into the color or photo slot it left if that is still there, otherwise at the playhead: on a boundary between clips it goes in there, and inside a clip right after that clip. Only the part its layer showed comes back, as trim. Its placement, opacity and live color mask stay behind, a free crop fills the frame, and its length counts toward the 6.3 s maximum again.
 
 Color mask (chroma key, formerly "Green screen"):
 
