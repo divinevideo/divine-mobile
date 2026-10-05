@@ -64,6 +64,7 @@ void main() {
       auth = createMockAuthService(currentPublicKeyHex: _authorPubkey);
       when(() => auth.currentPublicKeyHex).thenAnswer((_) => activeOwner);
       service = _MockCuratedListService();
+      when(() => service.isCurrentSession).thenReturn(true);
       _fakeService = service;
       when(() => service.myLists).thenReturn(const []);
       video = VideoEvent(
@@ -99,12 +100,14 @@ void main() {
       WidgetTester tester, {
       CuratedListsState Function() listsState = _FakeCuratedListsState.new,
       List<CuratedList>? thumbnails = const [],
+      Locale locale = const Locale('en'),
     }) async {
       await tester.binding.setSurfaceSize(const Size(800, 1200));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final neverResolves = Completer<List<CuratedList>>();
       await tester.pumpWidget(
         testMaterialApp(
+          locale: locale,
           additionalOverrides: [
             authServiceProvider.overrideWithValue(auth),
             curatedListsStateProvider.overrideWith(listsState),
@@ -205,9 +208,8 @@ void main() {
 
       testWidgets("each row carries the list's card media, with its resolved "
           'thumbnails in the fan and a flat fan until then', (tester) async {
-        when(
-          () => service.myLists,
-        ).thenReturn([list('Pictured'), list('Bare')]);
+        when(() => service.myLists)
+            .thenReturn([list('Pictured'), list('Bare')]);
 
         await openSheet(
           tester,
@@ -303,12 +305,10 @@ void main() {
           list('First'),
           list('Second'),
         ]);
-        when(
-          () => service.addVideoToList(any(), any()),
-        ).thenAnswer((_) async => true);
-        when(
-          () => service.removeVideoFromList(any(), any()),
-        ).thenAnswer((_) async => true);
+        when(() => service.addVideoToList(any(), any()))
+            .thenAnswer((_) async => true);
+        when(() => service.removeVideoFromList(any(), any()))
+            .thenAnswer((_) async => true);
         await openSheet(tester);
 
         await tester.tap(find.text('First'));
@@ -318,12 +318,10 @@ void main() {
         await tester.tap(saveButton());
         await tester.pumpAndSettle();
 
-        verify(
-          () => service.addVideoToList('list_first', _videoEventId),
-        ).called(1);
-        verify(
-          () => service.addVideoToList('list_second', _videoEventId),
-        ).called(1);
+        verify(() => service.addVideoToList('list_first', _videoEventId))
+            .called(1);
+        verify(() => service.addVideoToList('list_second', _videoEventId))
+            .called(1);
         verify(
           () => service.removeVideoFromList('list_holds_it', _videoEventId),
         ).called(1);
@@ -360,9 +358,8 @@ void main() {
         when(() => service.myLists).thenReturn([
           list('Holds it', videoEventIds: const [_videoEventId]),
         ]);
-        when(
-          () => service.removeVideoFromList(any(), any()),
-        ).thenAnswer((_) async => true);
+        when(() => service.removeVideoFromList(any(), any()))
+            .thenAnswer((_) async => true);
         await openSheet(tester);
 
         await tester.tap(find.text('Holds it'));
@@ -385,9 +382,7 @@ void main() {
       testWidgets('the check closes at once when nothing was changed', (
         tester,
       ) async {
-        when(
-          () => service.myLists,
-        ).thenReturn([
+        when(() => service.myLists).thenReturn([
           list('Holds it', videoEventIds: const [_videoEventId]),
         ]);
         await openSheet(tester);
@@ -403,9 +398,8 @@ void main() {
       testWidgets('a refused change keeps the sheet open, says so, and keeps '
           'the pick for a retry', (tester) async {
         when(() => service.myLists).thenReturn([list('Refuses')]);
-        when(
-          () => service.addVideoToList(any(), any()),
-        ).thenAnswer((_) async => false);
+        when(() => service.addVideoToList(any(), any()))
+            .thenAnswer((_) async => false);
         await openSheet(tester);
 
         await tester.tap(find.text('Refuses'));
@@ -458,9 +452,8 @@ void main() {
             ],
           ),
         ]);
-        when(
-          () => service.addVideoToList(any(), any()),
-        ).thenAnswer((_) async => false);
+        when(() => service.addVideoToList(any(), any()))
+            .thenAnswer((_) async => false);
         await openSheet(tester);
 
         await tester.tap(find.text('Full'));
@@ -493,6 +486,181 @@ void main() {
           verifyNever(() => service.removeVideoFromList(any(), any()));
         },
       );
+
+      testWidgets(
+        'deletion-only Sync now uses recovery copy and keeps the row unpicked',
+        (tester) async {
+          final pending = list('Redaction')
+              .copyWith(pendingPlaintextEventIds: ['c' * 64]);
+          when(() => service.myLists).thenReturn([pending]);
+          when(() => service.retryListSync(pending.id))
+              .thenAnswer((_) async => false);
+          await openSheet(tester);
+          expect(find.text(l10n.listRecoveryPending), findsOneWidget);
+          expect(find.text(l10n.listVideoPendingSync), findsNothing);
+          expect(find.text(l10n.listRetrySync), findsOneWidget);
+          expect(rowChecks(), findsNothing);
+          await tester.tap(find.text(l10n.listRetrySync));
+          await tester.pumpAndSettle();
+          expect(rowChecks(), findsNothing);
+          expect(find.text(l10n.listUpdateFailed), findsOneWidget);
+          verify(() => service.retryListSync(pending.id)).called(1);
+          verifyNever(() => service.addVideoToList(any(), any()));
+          verifyNever(() => service.removeVideoFromList(any(), any()));
+        },
+      );
+
+      testWidgets(
+        'a newer public winner with deletion evidence remains editable after a refused Sync',
+        (tester) async {
+          final winner = list('Public winner').copyWith(
+            nostrEventId: 'd' * 64,
+            updatedAt: DateTime(2026, 1, 2),
+            pendingPlaintextEventIds: ['c' * 64],
+          );
+          when(() => service.myLists).thenReturn([winner]);
+          when(() => service.retryListSync(winner.id))
+              .thenAnswer((_) async => false);
+          await openSheet(tester);
+          final publicMeta =
+              '${l10n.listVideoCount(0)} • ${l10n.listVisibilityPublic}';
+          final privateMeta =
+              '${l10n.listVideoCount(0)} • ${l10n.listVisibilityPrivate}';
+          expect(find.text(publicMeta), findsOneWidget);
+          expect(find.text(privateMeta), findsNothing);
+          expect(find.text(l10n.listRecoveryPending), findsOneWidget);
+          expect(find.text(l10n.listVideoPendingSync), findsNothing);
+          expect(find.text(l10n.listRetrySync), findsOneWidget);
+          await tester.tap(find.text('Public winner'));
+          await tester.pump();
+          expect(rowChecks(), findsOneWidget);
+
+          await tester.tap(find.text(l10n.listRetrySync));
+          await tester.pumpAndSettle();
+
+          expect(find.text(publicMeta), findsOneWidget);
+          expect(find.text(privateMeta), findsNothing);
+          expect(find.text(l10n.listUpdateFailed), findsOneWidget);
+          expect(find.text(l10n.listRecoveryPending), findsOneWidget);
+          expect(rowChecks(), findsOneWidget);
+          expect(service.myLists.single.pendingVisibility, isNull);
+          expect(service.myLists.single.pendingPlaintextEventIds, ['c' * 64]);
+          await tester.tap(find.text('Public winner'));
+          await tester.pump();
+          expect(rowChecks(), findsNothing);
+          verify(() => service.retryListSync(winner.id)).called(1);
+          verifyNever(() => service.addVideoToList(any(), any()));
+          verifyNever(() => service.removeVideoFromList(any(), any()));
+        },
+      );
+
+      for (final locale in [const Locale('en'), const Locale('ar')]) {
+        for (final acknowledgedPublic in [false, true]) {
+          final direction = locale.languageCode == 'ar'
+              ? TextDirection.rtl
+              : TextDirection.ltr;
+          testWidgets(
+            'ACKed ${acknowledgedPublic ? 'Public' : 'Private'} stays visible before and after Sync in ${locale.languageCode}',
+            (tester) async {
+              final strings = lookupAppLocalizations(locale);
+              final pending = list('Recovery', isPublic: !acknowledgedPublic)
+                  .copyWith(
+                    pendingVisibility: CuratedListVisibility(
+                      isPublic: acknowledgedPublic,
+                      isCollaborative: false,
+                      allowedCollaborators: const [],
+                      relayAccepted: true,
+                    ),
+                  );
+              final acceptedLabel = acknowledgedPublic
+                  ? strings.listVisibilityPublic
+                  : strings.listVisibilityPrivate;
+              final oldLabel = acknowledgedPublic
+                  ? strings.listVisibilityPrivate
+                  : strings.listVisibilityPublic;
+              final acceptedMeta =
+                  '${strings.listVideoCount(0)} • $acceptedLabel';
+              final oldMeta = '${strings.listVideoCount(0)} • $oldLabel';
+              when(() => service.myLists).thenReturn([pending]);
+              when(() => service.retryListSync(pending.id))
+                  .thenAnswer((_) async {
+                    when(() => service.myLists).thenReturn([
+                      pending.copyWith(
+                        isPublic: acknowledgedPublic,
+                        clearPendingVisibility: true,
+                      ),
+                    ]);
+                    return true;
+                  });
+              await openSheet(tester, locale: locale);
+              expect(find.text(acceptedMeta), findsOneWidget);
+              expect(find.text(oldMeta), findsNothing);
+              expect(find.text(strings.listRecoveryPending), findsOneWidget);
+              expect(find.text(strings.listVideoPendingSync), findsNothing);
+              expect(
+                Directionality.of(tester.element(find.text('Recovery'))),
+                direction,
+              );
+              await tester.tap(find.text('Recovery'));
+              await tester.pump();
+              expect(rowChecks(), findsNothing);
+              await tester.tap(find.text(strings.listRetrySync));
+              await tester.pumpAndSettle();
+              expect(find.text(acceptedMeta), findsOneWidget);
+              expect(find.text(oldMeta), findsNothing);
+              expect(find.text(strings.listRecoveryPending), findsNothing);
+              expect(find.text(strings.listRetrySync), findsNothing);
+              expect(rowChecks(), findsNothing);
+              await tester.tap(find.text('Recovery'));
+              await tester.pump();
+              expect(rowChecks(), findsOneWidget);
+              verify(() => service.retryListSync(pending.id)).called(1);
+              verifyNever(() => service.addVideoToList(any(), any()));
+              verifyNever(() => service.removeVideoFromList(any(), any()));
+            },
+          );
+        }
+      }
+
+      for (final currentPublic in [false, true]) {
+        testWidgets(
+          'an unconfirmed proposal keeps the current ${currentPublic ? 'Public' : 'Private'} label and editable row',
+          (tester) async {
+            final unconfirmed = list('Unconfirmed', isPublic: currentPublic)
+                .copyWith(
+                  pendingVisibility: CuratedListVisibility(
+                    isPublic: !currentPublic,
+                    isCollaborative: false,
+                    allowedCollaborators: const [],
+                  ),
+                );
+            final currentLabel = currentPublic
+                ? l10n.listVisibilityPublic
+                : l10n.listVisibilityPrivate;
+            final proposalLabel = currentPublic
+                ? l10n.listVisibilityPrivate
+                : l10n.listVisibilityPublic;
+            when(() => service.myLists).thenReturn([unconfirmed]);
+            await openSheet(tester);
+            expect(
+              find.text('${l10n.listVideoCount(0)} • $currentLabel'),
+              findsOneWidget,
+            );
+            expect(
+              find.text('${l10n.listVideoCount(0)} • $proposalLabel'),
+              findsNothing,
+            );
+            expect(find.text(l10n.listRecoveryPending), findsNothing);
+            expect(find.text(l10n.listRetrySync), findsNothing);
+            await tester.tap(find.text('Unconfirmed'));
+            await tester.pump();
+            expect(rowChecks(), findsOneWidget);
+            verifyNever(() => service.retryListSync(any()));
+            verifyNever(() => service.addVideoToList(any(), any()));
+            verifyNever(() => service.removeVideoFromList(any(), any()));
+          },
+        );
+      }
 
       testWidgets(
         'an account change suppresses a dismissed pending save refusal',
@@ -668,9 +836,8 @@ void main() {
             allowedCollaborators: any(named: 'allowedCollaborators'),
           ),
         ).thenAnswer((_) async => fresh);
-        when(
-          () => service.addVideoToList(any(), any()),
-        ).thenAnswer((_) async => false);
+        when(() => service.addVideoToList(any(), any()))
+            .thenAnswer((_) async => false);
         await openSheet(tester);
 
         await tester.tap(find.text(l10n.listCreateNewList));
@@ -714,9 +881,8 @@ void main() {
             await tester.pump();
             await tester.tap(find.bySemanticsLabel(l10n.listCreate));
             await tester.pump();
-            verify(
-              () => service.addVideoToList('list_fresh', _videoEventId),
-            ).called(1);
+            verify(() => service.addVideoToList('list_fresh', _videoEventId))
+                .called(1);
 
             await tester.tap(find.bySemanticsLabel(l10n.commonClose).last);
             await tester.pumpAndSettle();
@@ -820,9 +986,8 @@ void main() {
             allowedCollaborators: any(named: 'allowedCollaborators'),
           ),
         ).thenAnswer((_) async => fresh);
-        when(
-          () => service.addVideoToList(any(), any()),
-        ).thenAnswer((_) async => true);
+        when(() => service.addVideoToList(any(), any()))
+            .thenAnswer((_) async => true);
         await openSheet(tester);
 
         await tester.tap(find.text(l10n.listCreateNewList));
