@@ -155,7 +155,8 @@ class _EmailVerificationScreenState
     // has already fired (#9727). Subscribe first, then inspect current state.
     // An authenticated anonymous account may still need email verification
     // while it is being secured, so it must remain on this screen.
-    onAuthState(authService.authState);
+    // An incoming token still needs to be verified even if already signed in.
+    if (!widget.isTokenMode) onAuthState(authService.authState);
   }
 
   Future<void> _handleAuthenticated() async {

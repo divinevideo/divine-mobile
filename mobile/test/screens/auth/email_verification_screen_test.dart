@@ -1928,6 +1928,19 @@ void main() {
   });
 
   group('token mode', () {
+    testWidgets('signed-in accounts still verify an incoming token', (
+      tester,
+    ) async {
+      when(() => mockAuthService.authState).thenReturn(AuthState.authenticated);
+      await pumpVerificationScreen(tester, token: 'verification-token');
+      await tester.pumpAndSettle();
+
+      verify(
+        () => mockCubit.verifyEmailToken(token: 'verification-token'),
+      ).called(1);
+      expect(find.textContaining('Login Options'), findsOneWidget);
+    });
+
     // Reachable via token + persisted record: the screen latches token mode,
     // then `_initTokenModeWithPersistenceCheck` calls `startPolling`, arming
     // the 15-minute timeout. The URL carries no deviceCode, so `isPollingMode`
