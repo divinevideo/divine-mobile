@@ -402,6 +402,43 @@ void main() {
       );
 
       test(
+        'acknowledged set reads reject optimistic values and accept replacements',
+        () async {
+          final writer = CuratedListCacheWriteCoordinator();
+          var stored = <String>{'confirmed'};
+          Set<String> acknowledged() => writer.readAcknowledgedSubscriptions(
+            cacheKey: 'deletions',
+            read: () => stored,
+          );
+          await writer.saveSubscriptionsWithResult(
+            baseline: {'confirmed'},
+            current: {'refused'},
+            cacheKey: 'deletions',
+            read: () => stored,
+            write: (value) async {
+              stored = value;
+              return false;
+            },
+          );
+          expect(stored, {'refused'});
+          expect(acknowledged(), {'confirmed'});
+          expect(
+            writer.readAcknowledgedSubscriptions(
+              cacheKey: 'another key',
+              read: () => stored,
+            ),
+            {'refused'},
+          );
+          stored = {'replacement'};
+          expect(acknowledged(), {'replacement'});
+          stored = {};
+          expect(acknowledged(), isEmpty);
+          stored = {'refused'};
+          expect(acknowledged(), {'refused'});
+        },
+      );
+
+      test(
         'refused optimistic subscriptions and replacement snapshots '
         'are distinct',
         () async {

@@ -128,6 +128,25 @@ class CuratedListCacheWriteCoordinator {
     write: write,
   )).succeeded;
 
+  /// Reads acknowledged set values without adopting a refused optimistic cache.
+  ///
+  /// A replacement or cleared cache supersedes the rejected attempt. This
+  /// also lets deletion-record readers use the same state as queued writers.
+  Set<String> readAcknowledgedSubscriptions({
+    required Object? cacheKey,
+    required Set<String> Function() read,
+  }) {
+    final observed = Set<String>.unmodifiable(read());
+    final rejected = _rejectedSubscriptions[cacheKey];
+    if (rejected != null &&
+        observed.length == rejected.attempted.length &&
+        observed.containsAll(rejected.attempted)) {
+      return rejected.before;
+    }
+    _rejectedSubscriptions.remove(cacheKey);
+    return observed;
+  }
+
   /// Merges subscription deltas without removing another writer's follows.
   Future<CuratedCacheWriteResult<Set<String>>> saveSubscriptionsWithResult({
     required Set<String> baseline,
@@ -152,15 +171,10 @@ class CuratedListCacheWriteCoordinator {
       if (isCurrent != null && !isCurrent()) {
         return result(CuratedCacheWriteStatus.superseded);
       }
-      var observed = Set<String>.unmodifiable(read());
-      final rejected = _rejectedSubscriptions[cacheKey];
-      if (rejected != null &&
-          observed.length == rejected.attempted.length &&
-          observed.containsAll(rejected.attempted)) {
-        observed = rejected.before;
-      } else {
-        _rejectedSubscriptions.remove(cacheKey);
-      }
+      final observed = readAcknowledgedSubscriptions(
+        cacheKey: cacheKey,
+        read: read,
+      );
       final merged = Set<String>.unmodifiable({
         ...observed.difference(beforeSnapshot.difference(requested)),
         ...requested.difference(beforeSnapshot),
