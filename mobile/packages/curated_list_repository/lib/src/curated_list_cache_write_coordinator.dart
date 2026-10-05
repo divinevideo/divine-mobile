@@ -12,6 +12,15 @@ class CuratedListCacheWriteCoordinator {
   final _rejectedLists = <Object, _RejectedSnapshot<List<CuratedList>>>{};
   final _rejectedSubscriptions = <Object, _RejectedSnapshot<Set<String>>>{};
 
+  /// Forgets refused read-cache overlays when the backing key was removed.
+  ///
+  /// An absent key must stay distinct from a refused empty value, especially
+  /// when an account sweep clears the old account's cache.
+  void cacheKeyRemoved(Object cacheKey) {
+    _rejectedLists.remove(cacheKey);
+    _rejectedSubscriptions.remove(cacheKey);
+  }
+
   /// Compatibility wrapper reporting whether every list delta was saved.
   Future<bool> saveLists({
     required List<CuratedList> baseline,

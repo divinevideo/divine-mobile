@@ -64,8 +64,10 @@ class _RejectingPlatformStore extends InMemorySharedPreferencesStore {
   _RejectingPlatformStore() : super.empty();
   bool rejectLists = false;
   bool throwLists = false;
+  bool rejectStrings = false;
   @override
   Future<bool> setValue(String valueType, String key, Object value) async {
+    if (valueType == 'String' && rejectStrings) return false;
     if (valueType == 'StringList' && rejectLists) return false;
     if (valueType == 'StringList' && throwLists) {
       throw PlatformException(code: 'storage_failed', message: _storedText);
@@ -835,6 +837,46 @@ void main() {
         });
         prefs = await SharedPreferences.getInstance();
       });
+
+      test(
+        'account clear after a rejected empty cache cannot resurrect old rows',
+        () async {
+          final coordinator = CuratedListCacheWriteCoordinator();
+          final original = _list('old');
+          await prefs.setString(_listsKey, jsonEncode([original.toJson()]));
+          final first = _store(prefs, coordinator: coordinator)
+            ..listsLoaded([original]);
+          backing.rejectStrings = true;
+          expect(await first.saveLists([]), isFalse);
+          expect(prefs.getString(_listsKey), '[]');
+          await prefs.remove(_listsKey);
+          backing.rejectStrings = false;
+          final replacement = _list('new').copyWith(pubkey: _otherOwner);
+          final second = _store(prefs, coordinator: coordinator);
+          expect(await second.saveLists([replacement]), isTrue);
+          await prefs.reload();
+          expect(_storedLists(prefs), [replacement]);
+        },
+      );
+
+      test(
+        'account clear after a rejected empty follow cache cannot restore old follows',
+        () async {
+          final coordinator = CuratedListCacheWriteCoordinator();
+          await prefs.setString(_subscriptionsKey, jsonEncode(['old']));
+          final first = _store(prefs, coordinator: coordinator)
+            ..subscriptionsLoaded({'old'});
+          backing.rejectStrings = true;
+          expect(await first.saveSubscriptions({}), isFalse);
+          expect(prefs.getString(_subscriptionsKey), '[]');
+          await prefs.remove(_subscriptionsKey);
+          backing.rejectStrings = false;
+          final second = _store(prefs, coordinator: coordinator);
+          expect(await second.saveSubscriptions({'new'}), isTrue);
+          await prefs.reload();
+          expect(_storedSubscriptions(prefs), {'new'});
+        },
+      );
 
       test(
         'rejected optimistic tombstone does not hide or later flush a list',

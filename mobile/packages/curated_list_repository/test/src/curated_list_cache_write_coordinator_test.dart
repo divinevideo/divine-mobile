@@ -253,6 +253,57 @@ void main() {
     );
     group('typed outcomes and optimistic cache', () {
       test(
+        'a removed key invalidates a rejected empty cache overlay',
+        () async {
+          final writer = CuratedListCacheWriteCoordinator();
+          final original = list(author);
+          final replacement = list(other);
+          var stored = [original];
+          var follows = <String>{'old'};
+          await writer.saveListsWithResult(
+            baseline: [original],
+            current: [],
+            cacheKey: 'lists',
+            read: () => stored,
+            write: (merged) async {
+              stored = merged;
+              return false;
+            },
+          );
+          await writer.saveSubscriptionsWithResult(
+            baseline: {'old'},
+            current: {},
+            cacheKey: 'follows',
+            read: () => follows,
+            write: (merged) async {
+              follows = merged;
+              return false;
+            },
+          );
+          writer.cacheKeyRemoved('lists');
+          writer.cacheKeyRemoved('follows');
+          final saved = await writer.saveListsWithResult(
+            baseline: [],
+            current: [replacement],
+            cacheKey: 'lists',
+            read: () => stored,
+            write: (merged) async {
+              stored = merged;
+              return true;
+            },
+          );
+          expect(saved.persisted, [replacement]);
+          expect(
+            writer.readAcknowledgedSubscriptions(
+              cacheKey: 'follows',
+              read: () => follows,
+            ),
+            isEmpty,
+          );
+        },
+      );
+
+      test(
         'rejected merge retains the confirmed external winner for reconciliation',
         () async {
           final original = list(author);
