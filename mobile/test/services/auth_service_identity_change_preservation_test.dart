@@ -2,11 +2,13 @@
 // ABOUTME: pending uploads must NOT be deleted on non-destructive identity change.
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:cache_sync/cache_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
@@ -24,7 +26,10 @@ class _MockUserDataCleanupService extends Mock
 class _RefusingPreferences extends Fake implements SharedPreferences {
   _RefusingPreferences(this.backing);
   final SharedPreferences backing;
+  final refusedKeys = <String>[];
 
+  @override
+  Object? get(String key) => backing.get(key);
   @override
   String? getString(String key) => backing.getString(key);
   @override
@@ -32,7 +37,11 @@ class _RefusingPreferences extends Fake implements SharedPreferences {
   @override
   Set<String> getKeys() => backing.getKeys();
   @override
-  Future<bool> remove(String key) async => false;
+  Future<bool> remove(String key) async {
+    refusedKeys.add(key);
+    return false;
+  }
+
   @override
   Future<bool> setString(String key, String value) =>
       backing.setString(key, value);
@@ -554,9 +563,20 @@ void main() {
         'real refused removal prevents $operation sign-in and database cleanup',
         () async {
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('curated_lists', 'old account cache');
+          final outgoingCache = jsonEncode([
+            CuratedList(
+              id: 'outgoing-list',
+              name: 'Outgoing account list',
+              pubkey: oldPubkeyHex,
+              videoEventIds: const [],
+              createdAt: DateTime.utc(2026),
+              updatedAt: DateTime.utc(2026),
+            ).toJson(),
+          ]);
+          await prefs.setString('curated_lists', outgoingCache);
           await prefs.setString('subscribed_list_ids', 'old follows');
-          final cleanup = UserDataCleanupService(_RefusingPreferences(prefs));
+          final refusingPrefs = _RefusingPreferences(prefs);
+          final cleanup = UserDataCleanupService(refusingPrefs);
           var databaseCleanups = 0;
           cleanup.onDatabaseCleanup =
               ({
@@ -619,7 +639,9 @@ void main() {
               );
           }
           expect(authService.authState, AuthState.unauthenticated);
+          expect(refusingPrefs.refusedKeys, contains('curated_lists'));
           expect(prefs.getString('current_user_pubkey_hex'), oldPubkeyHex);
+          expect(prefs.getString('curated_lists'), outgoingCache);
           expect(prefs.getString('subscribed_list_ids'), 'old follows');
           expect(databaseCleanups, 0);
         },
