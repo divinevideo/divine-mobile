@@ -25,8 +25,21 @@ class CuratedListPublishClock {
         (list.nostrEventId == null && !list.pendingRepublish)) {
       return;
     }
-    final key = '$owner:${list.id}';
-    final source = list.updatedAt.millisecondsSinceEpoch ~/ 1000;
+    observeRevision(
+      ownerPubkey: owner,
+      listId: list.id,
+      updatedAt: list.updatedAt,
+    );
+  }
+
+  /// Recovery journals retain a revision even after the list payload is wiped.
+  void observeRevision({
+    required String ownerPubkey,
+    required String listId,
+    required DateTime updatedAt,
+  }) {
+    final key = '$ownerPubkey:$listId';
+    final source = updatedAt.millisecondsSinceEpoch ~/ 1000;
     if (source > (_seconds[key] ?? 0)) {
       _seconds[key] = source;
     }

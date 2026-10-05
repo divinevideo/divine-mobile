@@ -13,6 +13,8 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/curated_lists/curated_list_recovery_journal.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
@@ -25,9 +27,13 @@ class _Auth extends Mock implements AuthService {}
 class _RejectingStore extends InMemorySharedPreferencesStore {
   _RejectingStore() : super.empty();
   bool Function(String key, Object value)? rejects;
+  bool Function(String key, Object value)? throwsOn;
 
   @override
   Future<bool> setValue(String valueType, String key, Object value) async {
+    if (throwsOn?.call(key, value) ?? false) {
+      throw StateError('Refused private recovery');
+    }
     if (rejects?.call(key, value) ?? false) return false;
     return super.setValue(valueType, key, value);
   }
@@ -114,6 +120,130 @@ void main() {
       return list;
     }
 
+    test('immediate logout migrates stored owner evidence before the list cache is wiped', () async {
+      final list = await seed(isPublic: false);
+      final pending = list.copyWith(
+        pendingPlaintextEventIds: [_oldEvent],
+        pendingVisibility: const CuratedListVisibility(
+          isPublic: true,
+          isCollaborative: false,
+          allowedCollaborators: [],
+          relayAccepted: true,
+        ),
+        pendingRepublish: true,
+      );
+      await prefs.setString('current_user_pubkey_hex', _owner);
+      await prefs.setString(
+        CuratedListService.listsStorageKey,
+        jsonEncode([pending.toJson()]),
+      );
+      final departing = open();
+      await UserDataCleanupService(prefs)
+          .clearUserSpecificData(userPubkey: _owner);
+      expect(departing.isCurrentSession, isFalse);
+      expect(prefs.containsKey(CuratedListService.listsStorageKey), isFalse);
+      final journal = CuratedListRecoveryJournal(
+        prefs: prefs,
+        runCurrent: (op) => op(),
+      );
+      expect(journal.record(_owner, list.id)!.plaintextEventIds, [_oldEvent]);
+      expect(journal.record(_owner, list.id)!.visibility!.isPublic, isTrue);
+      expect(sent, isEmpty);
+    });
+
+    test('ordinary swap preserves both full owners without authorizing the incoming signer', () async {
+      final list = await seed(isPublic: false);
+      const incoming =
+          'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+      final pending = list.copyWith(pendingPlaintextEventIds: [_oldEvent]);
+      final foreign = pending.copyWith(
+        pubkey: incoming,
+        pendingPlaintextEventIds: [_video],
+      );
+      await prefs.setString('current_user_pubkey_hex', _owner);
+      await prefs.setString(
+        CuratedListService.listsStorageKey,
+        jsonEncode([pending.toJson(), foreign.toJson()]),
+      );
+      final departing = open();
+      await UserDataCleanupService(prefs)
+          .clearUserSpecificData(isIdentityChange: true, userPubkey: incoming);
+      when(() => auth.currentPublicKeyHex).thenReturn(incoming);
+      stubListPublishing(client: client, auth: auth, pubkey: incoming);
+      final next = open();
+      expect(departing.isCurrentSession, isFalse);
+      expect(await next.retryListSync(pending.authorScopedId), isFalse);
+      expect(sent, isEmpty);
+      final journal = CuratedListRecoveryJournal(
+        prefs: prefs,
+        runCurrent: (op) => op(),
+      );
+      expect(journal.record(_owner, list.id)!.plaintextEventIds, [_oldEvent]);
+      expect(journal.record(incoming, list.id)!.plaintextEventIds, [_video]);
+    });
+
+    test('rejected migration stops ordinary logout before pending cache evidence is wiped', () async {
+      final list = (await seed()).copyWith(
+        pendingPlaintextEventIds: [_oldEvent],
+      );
+      await prefs.setString('current_user_pubkey_hex', _owner);
+      await prefs.setString(
+        CuratedListService.listsStorageKey,
+        jsonEncode([list.toJson()]),
+      );
+      backing.rejects = (key, value) =>
+          key.contains(CuratedListRecoveryJournal.storagePrefix);
+      final departing = open();
+      await expectLater(
+        UserDataCleanupService(prefs).clearUserSpecificData(userPubkey: _owner),
+        throwsStateError,
+      );
+      expect(departing.isCurrentSession, isFalse);
+      await restart();
+      expect(
+        prefs.getString(CuratedListService.listsStorageKey),
+        contains(_oldEvent),
+      );
+      expect(sent, isEmpty);
+    });
+
+    for (final preserveActive in [false, true]) {
+      test(
+        'destructive removal clears only the departing journal with activeSession=$preserveActive',
+        () async {
+          const other =
+              'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+          final pending = (await seed()).copyWith(
+            pendingPlaintextEventIds: [_oldEvent],
+          );
+          final journal = CuratedListRecoveryJournal(
+            prefs: prefs,
+            runCurrent: (op) => op(),
+          );
+          expect(await journal.captureRows([pending], _owner), isTrue);
+          expect(
+            await journal.captureRows([pending.copyWith(pubkey: other)], other),
+            isTrue,
+          );
+          await prefs.setString('current_user_pubkey_hex', _owner);
+          await prefs.setString(
+            CuratedListService.listsStorageKey,
+            jsonEncode([pending.toJson()]),
+          );
+          await UserDataCleanupService(prefs).deleteAccountData(
+            _owner,
+            userNpub: 'npub-owner',
+            preserveActiveSession: preserveActive,
+          );
+          expect(journal.records(_owner), isEmpty);
+          expect(journal.record(other, pending.id)!.plaintextEventIds, [
+            _oldEvent,
+          ]);
+          expect(sent, isEmpty);
+        },
+      );
+    }
+
     for (final initialPublic in [false, true]) {
       for (final outcome in ['empty', 'timeout', 'rejected', 'throws']) {
         for (final entry in ['rename', 'add', 'retry', 'backfill']) {
@@ -168,7 +298,11 @@ void main() {
                 expect(await current.retryListSync(list.id), isTrue);
               case 'backfill':
                 when(
-                  () => client.subscribe(any(), onEose: any(named: 'onEose')),
+                  () => client.subscribe(
+                    any(),
+                    closeOnEose: true,
+                    onEose: any(named: 'onEose'),
+                  ),
                 ).thenAnswer((_) => const Stream<Event>.empty());
                 await current.fetchUserListsFromRelays(force: true);
             }
@@ -186,64 +320,243 @@ void main() {
     }
 
     for (final entry in ['update', 'retry', 'add', 'backfill']) {
-      test('accepted private final-local-failure then $entry redacts '
-          'the prior plaintext event', () async {
-        final list = await seed();
-        var rejectedFinal = false;
-        backing.rejects = (key, value) {
-          if (!key.endsWith(CuratedListService.listsStorageKey)) return false;
-          final row =
-              (jsonDecode(value as String) as List).single
-                  as Map<String, dynamic>;
-          final stored = CuratedList.fromJson(row);
-          if (!rejectedFinal &&
-              stored.nostrEventId != _oldEvent &&
-              stored.nostrEventId != null &&
-              !stored.pendingRepublish) {
-            rejectedFinal = true;
-            return true;
+      test(
+        'accepted private final-local-failure blocks $entry until explicit recovery and redacts '
+        'the prior plaintext event',
+        () async {
+          final list = await seed();
+          var rejectedFinal = false;
+          backing.rejects = (key, value) {
+            if (!key.endsWith(CuratedListService.listsStorageKey)) return false;
+            final row =
+                (jsonDecode(value as String) as List).single
+                    as Map<String, dynamic>;
+            final stored = CuratedList.fromJson(row);
+            if (!rejectedFinal &&
+                stored.nostrEventId != _oldEvent &&
+                stored.nostrEventId != null &&
+                !stored.pendingRepublish) {
+              rejectedFinal = true;
+              return true;
+            }
+            return false;
+          };
+          final original = open();
+          expect(
+            await original.updateList(listId: list.id, isPublic: false),
+            isFalse,
+          );
+          expect(rejectedFinal, isTrue);
+          expect(
+            original.getListById(list.id)!.pendingVisibility!.relayAccepted,
+            isTrue,
+          );
+          backing.rejects = null;
+          await restart();
+          final current = open();
+          final beforeRecovery = sent.length;
+          switch (entry) {
+            case 'update':
+              expect(
+                await current.updateList(listId: list.id, name: 'Blocked'),
+                isFalse,
+              );
+            case 'add':
+              expect(await current.addVideoToList(list.id, 'd' * 64), isFalse);
+            case 'backfill':
+              when(
+                () => client.subscribe(
+                  any(),
+                  closeOnEose: true,
+                  onEose: any(named: 'onEose'),
+                ),
+              ).thenAnswer((_) => const Stream<Event>.empty());
+              await current.fetchUserListsFromRelays(force: true);
+            case 'retry':
+              break;
           }
-          return false;
-        };
-        final original = open();
+          expect(
+            sent.length,
+            beforeRecovery,
+            reason: 'Unrelated edits and startup must not apply a pending permission target',
+          );
+          expect(await current.retryListSync(list.id), isTrue);
+          switch (entry) {
+            case 'update':
+              expect(
+                await current.updateList(listId: list.id, name: 'Recovered'),
+                isTrue,
+              );
+            case 'retry':
+              break;
+            case 'add':
+              expect(await current.addVideoToList(list.id, 'd' * 64), isTrue);
+            case 'backfill':
+              when(
+                () => client.subscribe(
+                  any(),
+                  closeOnEose: true,
+                  onEose: any(named: 'onEose'),
+                ),
+              ).thenAnswer((_) => const Stream<Event>.empty());
+              await current.fetchUserListsFromRelays(force: true);
+          }
+          final redaction = sent.singleWhere((e) => e.kind == 5);
+          expect(redaction.tags, contains(equals(['e', _oldEvent])));
+          expect(redaction.tags.where((t) => t.first == 'a'), isEmpty);
+          final privateEvent = sent
+              .take(sent.indexOf(redaction))
+              .where((e) => e.kind == 30005)
+              .last;
+          expect(privateEvent.tags.where((t) => t.first == 'e'), isEmpty);
+          expect(redaction.createdAt, greaterThan(privateEvent.createdAt));
+          expect(
+            current.getListById(list.id)!.pendingPlaintextEventIds,
+            isEmpty,
+          );
+          await restart();
+          expect(open().getListById(list.id)!.isPublic, isFalse);
+        },
+      );
+    }
+
+    for (final failure in ['refused', 'throws']) {
+      for (final allRecoveryWrites in [false, true]) {
+        for (final transition in ['private', 'public', 'collaborators']) {
+          test(
+            'ACKed $transition with $failure recovery storage '
+            '(all=$allRecoveryWrites) blocks edits until explicit Sync',
+            () async {
+              final list = await seed(isPublic: transition != 'public');
+              var acknowledged = false;
+              bool rejectsRecovery(String key, Object value) =>
+                  acknowledged &&
+                  (key.contains(CuratedListRecoveryJournal.storagePrefix) ||
+                      (allRecoveryWrites &&
+                          key.endsWith(CuratedListService.listsStorageKey)));
+              if (failure == 'refused') {
+                backing.rejects = rejectsRecovery;
+              } else {
+                backing.throwsOn = rejectsRecovery;
+              }
+              when(() => client.publishEventAwaitOk(any()))
+                  .thenAnswer((i) async {
+                    final event = i.positionalArguments.single as Event;
+                    sent.add(event);
+                    acknowledged = true;
+                    return acceptedOutcome(event);
+                  });
+              when(() => client.subscribe(any(), closeOnEose: true))
+                  .thenAnswer((_) => const Stream<Event>.empty());
+              final current = open();
+              expect(
+                await current.updateList(
+                  listId: list.id,
+                  isPublic: transition == 'collaborators'
+                      ? null
+                      : transition == 'public',
+                  isCollaborative: transition == 'collaborators' ? true : null,
+                  allowedCollaborators: transition == 'collaborators'
+                      ? [_video]
+                      : null,
+                ),
+                isFalse,
+              );
+              final pending = current.getListById(list.id)!;
+              expect(pending.hasPendingPermissionRecovery, isTrue);
+              expect(
+                pending.publicationTarget.isPublic,
+                transition != 'private',
+              );
+              expect(pending.isPublic, list.isPublic);
+              expect(sent, hasLength(1));
+              expect(
+                await current.updateList(listId: list.id, name: 'Blocked'),
+                isFalse,
+              );
+              expect(await current.addVideoToList(list.id, 'd' * 64), isFalse);
+              expect(
+                await current.updateList(
+                  listId: list.id,
+                  isPublic: list.isPublic,
+                ),
+                isFalse,
+              );
+              await current.fetchUserListsFromRelays(force: true);
+              expect(sent, hasLength(1));
+              backing.rejects = null;
+              backing.throwsOn = null;
+              expect(await current.retryListSync(list.id), isTrue);
+              expect(
+                current.getListById(list.id)!.hasPendingPermissionRecovery,
+                isFalse,
+              );
+              expect(
+                current.getListById(list.id)!.isPublic,
+                transition != 'private',
+              );
+              expect(
+                await current.updateList(listId: list.id, name: 'Recovered'),
+                isTrue,
+              );
+              await restart();
+              expect(open().getListById(list.id)!.name, 'Recovered');
+              expect(
+                open().getListById(list.id)!.isPublic,
+                transition != 'private',
+              );
+            },
+          );
+        }
+      }
+    }
+
+    test(
+      'unsaved permission ACK prevents logout from wiping the last row',
+      () async {
+        final list = await seed();
+        await prefs.setString('current_user_pubkey_hex', _owner);
+        var acknowledged = false;
+        backing.rejects = (key, value) =>
+            acknowledged &&
+            key.contains(CuratedListRecoveryJournal.storagePrefix);
+        when(() => client.publishEventAwaitOk(any())).thenAnswer((i) async {
+          final event = i.positionalArguments.single as Event;
+          sent.add(event);
+          acknowledged = true;
+          return acceptedOutcome(event);
+        });
+        final current = open();
         expect(
-          await original.updateList(listId: list.id, isPublic: false),
+          await current.updateList(listId: list.id, isPublic: false),
           isFalse,
         );
-        expect(rejectedFinal, isTrue);
         expect(
-          original.getListById(list.id)!.pendingVisibility!.relayAccepted,
+          current.getListById(list.id)!.hasPendingPermissionRecovery,
           isTrue,
         );
+        await expectLater(
+          UserDataCleanupService(prefs)
+              .clearUserSpecificData(userPubkey: _owner),
+          throwsStateError,
+        );
+        expect(current.isCurrentSession, isFalse);
+        expect(prefs.containsKey(CuratedListService.listsStorageKey), isTrue);
+        expect(sent, hasLength(1));
         backing.rejects = null;
-        await restart();
-        final current = open();
-        switch (entry) {
-          case 'update':
-            expect(
-              await current.updateList(listId: list.id, name: 'Recovered'),
-              isTrue,
-            );
-          case 'retry':
-            expect(await current.retryListSync(list.id), isTrue);
-          case 'add':
-            expect(await current.addVideoToList(list.id, 'd' * 64), isTrue);
-          case 'backfill':
-            when(() => client.subscribe(any(), onEose: any(named: 'onEose')))
-                .thenAnswer((_) => const Stream<Event>.empty());
-            await current.fetchUserListsFromRelays(force: true);
-        }
-        final redaction = sent.singleWhere((e) => e.kind == 5);
-        expect(redaction.tags, contains(equals(['e', _oldEvent])));
-        expect(redaction.tags.where((t) => t.first == 'a'), isEmpty);
-        final privateEvent = sent.where((e) => e.kind == 30005).last;
-        expect(privateEvent.tags.where((t) => t.first == 'e'), isEmpty);
-        expect(redaction.createdAt, greaterThan(privateEvent.createdAt));
-        expect(current.getListById(list.id)!.pendingPlaintextEventIds, isEmpty);
-        await restart();
-        expect(open().getListById(list.id)!.isPublic, isFalse);
-      });
-    }
+        await UserDataCleanupService(prefs)
+            .clearUserSpecificData(userPubkey: _owner);
+        expect(prefs.containsKey(CuratedListService.listsStorageKey), isFalse);
+        final recovery = CuratedListRecoveryJournal(
+          prefs: prefs,
+          runCurrent: (op) => op(),
+        );
+        expect(recovery.record(_owner, list.id)!.visibility!.isPublic, isFalse);
+        expect(recovery.record(_owner, list.id)!.plaintextEventIds, [
+          _oldEvent,
+        ]);
+      },
+    );
 
     test(
       'pre-send write rejection restores the captured row without a send',
@@ -304,9 +617,16 @@ void main() {
           0,
           reason: 'The relay did acknowledge this replacement',
         );
-        expect(current.getListById(list.id)!.pendingVisibility, isNull);
+        expect(
+          current.getListById(list.id)!.pendingVisibility?.relayAccepted,
+          isTrue,
+        );
+        expect(await current.addVideoToList(list.id, 'd' * 64), isFalse);
         await restart();
-        expect(open().getListById(list.id)!.pendingVisibility, isNull);
+        expect(
+          open().getListById(list.id)!.pendingVisibility?.relayAccepted,
+          isTrue,
+        );
       },
     );
 
@@ -625,11 +945,8 @@ void main() {
           decision.complete(acceptedOutcome(event));
           expect(await saving, isFalse);
           expect(prefs.getString(CuratedListService.listsStorageKey), isNull);
-          expect(
-            sent,
-            isEmpty,
-            reason: 'No further publication or redaction follows the stale ACK',
-          );
+          verify(() => client.publishEventAwaitOk(any())).called(1);
+          verifyNever(() => client.publishEvent(any()));
           await restart();
           expect(open().lists, isEmpty);
         },
@@ -639,8 +956,9 @@ void main() {
     test(
       'newer relay merge retains the durable event-specific redaction outbox',
       () async {
-        final original = (await seed(isPublic: false))
-            .copyWith(pendingPlaintextEventIds: [_oldEvent]);
+        final original = (await seed(
+          isPublic: false,
+        )).copyWith(pendingPlaintextEventIds: [_oldEvent]);
         await prefs.setString(
           CuratedListService.listsStorageKey,
           jsonEncode([original.toJson()]),
@@ -657,8 +975,13 @@ void main() {
           'Updated on another device',
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
         );
-        when(() => client.subscribe(any(), onEose: any(named: 'onEose')))
-            .thenAnswer((_) => Stream.value(newer));
+        when(
+          () => client.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer((_) => Stream.value(newer));
         when(() => client.publishEventAwaitOk(any())).thenAnswer((i) async {
           final event = i.positionalArguments.single as Event;
           sent.add(event);
@@ -681,6 +1004,483 @@ void main() {
         ]);
       },
     );
+    for (final entry in ['rename', 'added video']) {
+      test(
+        'a later $entry keeps the queued plaintext ID until the deletion '
+        'is accepted',
+        () async {
+          final list = await seed();
+          var deletionAnswered = false;
+          when(() => client.publishEventAwaitOk(any())).thenAnswer((i) async {
+            final event = i.positionalArguments.single as Event;
+            sent.add(event);
+            if (event.kind == 5 && !deletionAnswered) {
+              return PublishOutcome(
+                eventId: event.id,
+                acceptedBy: const [],
+                rejectedBy: const {},
+                noResponseFrom: const ['wss://relay.test'],
+              );
+            }
+            return acceptedOutcome(event);
+          });
+          final current = open();
+          expect(
+            await current.updateList(listId: list.id, isPublic: false),
+            isTrue,
+          );
+          expect(current.getListById(list.id)!.pendingPlaintextEventIds, [
+            _oldEvent,
+          ]);
+
+          final later = entry == 'rename'
+              ? await current.updateList(listId: list.id, name: 'Renamed')
+              : await current.addVideoToList(list.id, 'd' * 64);
+          expect(later, isTrue);
+          expect(current.getListById(list.id)!.pendingPlaintextEventIds, [
+            _oldEvent,
+          ], reason: 'the deletion was never answered');
+
+          deletionAnswered = true;
+          sent.clear();
+          expect(
+            await current.updateList(listId: list.id, name: 'Settled'),
+            isTrue,
+          );
+          expect(
+            sent.where(
+              (e) =>
+                  e.kind == 5 &&
+                  e.tags.any((t) => t[0] == 'e' && t[1] == _oldEvent),
+            ),
+            hasLength(1),
+          );
+          expect(
+            current.getListById(list.id)!.pendingPlaintextEventIds,
+            isEmpty,
+          );
+          await restart();
+          expect(
+            open().getListById(list.id)!.pendingPlaintextEventIds,
+            isEmpty,
+          );
+        },
+      );
+    }
+
+    test(
+      'a relay replacement that made the list private queues the old '
+      'plaintext ID and requests its deletion',
+      () async {
+        final original = await seed();
+        final current = open();
+        final sealed = Event(
+          _owner,
+          30005,
+          [
+            ['d', original.id],
+            ['title', 'Sealed on another device'],
+          ],
+          sealForTest(
+            jsonEncode([
+              ['e', _video],
+            ]),
+          ),
+          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        );
+        when(
+          () => client.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer((_) => Stream.value(sealed));
+        await current.fetchUserListsFromRelays(force: true);
+        expect(current.getListById(original.id)!.isPublic, isFalse);
+        final deletion = sent.single;
+        expect(deletion.kind, 5);
+        expect(deletion.tags, contains(equals(['e', _oldEvent])));
+        expect(
+          current.getListById(original.id)!.pendingPlaintextEventIds,
+          isEmpty,
+        );
+        await restart();
+        expect(
+          open().getListById(original.id)!.pendingPlaintextEventIds,
+          isEmpty,
+        );
+      },
+    );
+
+    test(
+      'ACKed public transition rejects every unrelated edit until Sync now',
+      () async {
+        final list = await seed(isPublic: false);
+        var rejectedFinal = false;
+        backing.rejects = (key, value) {
+          if (!key.endsWith(CuratedListService.listsStorageKey)) return false;
+          final saved = CuratedList.fromJson(
+            (jsonDecode(value as String) as List).single
+                as Map<String, dynamic>,
+          );
+          if (!rejectedFinal &&
+              saved.isPublic &&
+              !saved.pendingRepublish &&
+              saved.pendingVisibility == null) {
+            rejectedFinal = true;
+            return true;
+          }
+          return false;
+        };
+        final initial = open();
+        expect(
+          await initial.updateList(listId: list.id, isPublic: true),
+          isFalse,
+        );
+        expect(rejectedFinal, isTrue);
+        expect(initial.getListById(list.id)!.isPublic, isFalse);
+        expect(
+          initial.getListById(list.id)!.hasPendingPermissionRecovery,
+          isTrue,
+        );
+        backing.rejects = null;
+        await restart();
+        final current = open();
+        final before = sent.length;
+        expect(await current.addVideoToList(list.id, 'd' * 64), isFalse);
+        expect(await current.removeVideoFromList(list.id, _video), isFalse);
+        expect(
+          await current.updateList(listId: list.id, name: 'Must wait'),
+          isFalse,
+        );
+        expect(
+          await current.updateList(listId: list.id, isPublic: false),
+          isFalse,
+        );
+        expect(await current.addCollaborator(list.id, 'e' * 64), isFalse);
+        when(
+          () => client.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer((_) => const Stream<Event>.empty());
+        await current.fetchUserListsFromRelays(force: true);
+        expect(sent.length, before);
+        expect(current.getListById(list.id)!.videoEventIds, [_video]);
+        expect(await current.retryListSync(list.id), isTrue);
+        expect(current.getListById(list.id)!.isPublic, isTrue);
+        expect(
+          current.getListById(list.id)!.hasPendingPermissionRecovery,
+          isFalse,
+        );
+        expect(await current.addVideoToList(list.id, 'd' * 64), isTrue);
+        expect(sent.last.tags, contains(equals(['e', 'd' * 64])));
+      },
+    );
+
+    test(
+      'failed durable relay merge never backfills and a later read can retry',
+      () async {
+        final local = (await seed(isPublic: false))
+            .copyWith(clearNostrEventId: true);
+        await prefs.setString(
+          CuratedListService.listsStorageKey,
+          jsonEncode([local.toJson()]),
+        );
+        final event = Event(
+          _owner,
+          30005,
+          [
+            ['d', local.id],
+            ['title', 'Relay copy'],
+            ['e', 'd' * 64],
+          ],
+          '',
+          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        );
+        when(
+          () => client.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer((_) => Stream.value(event));
+        final current = open();
+        backing.rejects = (key, _) =>
+            key.endsWith(CuratedListService.listsStorageKey);
+        await current.fetchUserListsFromRelays();
+        expect(sent, isEmpty);
+        backing.rejects = null;
+        await current.fetchUserListsFromRelays();
+        final publication = sent.singleWhere((e) => e.kind == 30005);
+        expect(publication.tags.where((tag) => tag.first == 'e'), isEmpty);
+        final deletion = sent.singleWhere((e) => e.kind == 5);
+        expect(deletion.tags, contains(equals(['e', event.id])));
+        verify(
+          () => client.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).called(2);
+      },
+    );
+
+    for (final failure in ['rejected', 'no answer']) {
+      test(
+        'unpublished private/public union keeps every plaintext ID across $failure and restart',
+        () async {
+          final local = (await seed(isPublic: false)).copyWith(
+            clearNostrEventId: true,
+            pendingPlaintextEventIds: [_oldEvent],
+          );
+          await prefs.setString(
+            CuratedListService.listsStorageKey,
+            jsonEncode([local.toJson()]),
+          );
+          final relay = Event(
+            _owner,
+            30005,
+            [
+              ['d', local.id],
+              ['title', 'Public copy'],
+              ['e', 'd' * 64],
+            ],
+            '',
+            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          );
+          when(
+            () => client.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer((_) => Stream.value(relay));
+          when(() => client.publishEventAwaitOk(any())).thenAnswer((i) async {
+            final event = i.positionalArguments.single as Event;
+            sent.add(event);
+            if (event.kind == 30005) return acceptedOutcome(event);
+            return PublishOutcome(
+              eventId: event.id,
+              acceptedBy: const [],
+              rejectedBy: failure == 'rejected'
+                  ? const {'wss://relay.test': 'blocked'}
+                  : const {},
+              noResponseFrom: failure == 'no answer'
+                  ? const ['wss://relay.test']
+                  : const [],
+            );
+          });
+          final current = open();
+          await current.fetchUserListsFromRelays(force: true);
+          final publication = sent.singleWhere((event) => event.kind == 30005);
+          expect(publication.tags.where((tag) => tag.first == 'e'), isEmpty);
+          expect(current.getListById(local.id)!.isPublic, isFalse);
+          expect(
+            current.getListById(local.id)!.videoEventIds,
+            containsAll([_video, 'd' * 64]),
+          );
+          expect(
+            current.getListById(local.id)!.pendingPlaintextEventIds,
+            containsAll([_oldEvent, relay.id]),
+          );
+          await restart();
+          final resumed = open();
+          expect(
+            resumed.getListById(local.id)!.pendingPlaintextEventIds,
+            containsAll([_oldEvent, relay.id]),
+          );
+          sent.clear();
+          when(() => client.publishEventAwaitOk(any())).thenAnswer((i) async {
+            final event = i.positionalArguments.single as Event;
+            sent.add(event);
+            return acceptedOutcome(event);
+          });
+          expect(await resumed.retryListSync(local.authorScopedId), isTrue);
+          expect(sent.where((event) => event.kind == 30005), isEmpty);
+          expect(
+            sent
+                .where((event) => event.kind == 5)
+                .map(
+                  (event) =>
+                      event.tags.singleWhere((tag) => tag.first == 'e')[1],
+                ),
+            unorderedEquals([_oldEvent, relay.id]),
+          );
+          expect(
+            resumed.getListById(local.id)!.pendingPlaintextEventIds,
+            isEmpty,
+          );
+        },
+      );
+    }
+
+    test(
+      'unpublished public/public union never queues a plaintext deletion',
+      () async {
+        final local = (await seed()).copyWith(clearNostrEventId: true);
+        await prefs.setString(
+          CuratedListService.listsStorageKey,
+          jsonEncode([local.toJson()]),
+        );
+        final relay = Event(
+          _owner,
+          30005,
+          [
+            ['d', local.id],
+            ['title', 'Public copy'],
+            ['e', 'd' * 64],
+          ],
+          '',
+          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        );
+        when(
+          () => client.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer((_) => Stream.value(relay));
+        final current = open();
+        await current.fetchUserListsFromRelays(force: true);
+        final publication = sent.singleWhere((event) => event.kind == 30005);
+        expect(publication.tags.where((tag) => tag.first == 'e'), hasLength(2));
+        expect(sent.where((event) => event.kind == 5), isEmpty);
+        expect(current.getListById(local.id)!.isPublic, isTrue);
+        expect(
+          current.getListById(local.id)!.pendingPlaintextEventIds,
+          isEmpty,
+        );
+      },
+    );
+
+    for (final incomplete in ['timeout', 'error']) {
+      test(
+        'real finite-read contract requests EOSE; $incomplete never backfills',
+        () async {
+          final local = (await seed()).copyWith(pendingRepublish: true);
+          await prefs.setString(
+            CuratedListService.listsStorageKey,
+            jsonEncode([local.toJson()]),
+          );
+          final controller = StreamController<Event>.broadcast();
+          addTearDown(controller.close);
+          when(
+            () => client.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer(
+            (_) => incomplete == 'timeout'
+                ? controller.stream
+                : Stream<Event>.error(StateError('relay unavailable')),
+          );
+          final current = CuratedListService(
+            nostrService: client,
+            authService: auth,
+            prefs: prefs,
+            relaySyncTimeout: const Duration(milliseconds: 5),
+          );
+          addTearDown(current.dispose);
+          await current.fetchUserListsFromRelays(force: true);
+          expect(sent, isEmpty);
+          expect(current.getListById(local.id)!.pendingRepublish, isTrue);
+          verify(
+            () => client.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).called(1);
+        },
+      );
+    }
+
+    test('a public relay row after logout cannot certify a pending private union or delete its copy', () async {
+      final local = (await seed(isPublic: false)).copyWith(
+        clearNostrEventId: true,
+        pendingPlaintextEventIds: [_oldEvent],
+      );
+      await prefs.setString(
+        CuratedListService.listsStorageKey,
+        jsonEncode([local.toJson()]),
+      );
+      await prefs.setString('current_user_pubkey_hex', _owner);
+      await UserDataCleanupService(prefs)
+          .clearUserSpecificData(userPubkey: _owner);
+      final relay = Event(
+        _owner,
+        30005,
+        [
+          ['d', local.id],
+          ['title', 'Public relay copy'],
+          ['e', _video],
+        ],
+        '',
+        createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      );
+      when(
+        () => client.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
+      ).thenAnswer((_) => Stream.value(relay));
+      final current = open();
+      await current.fetchUserListsFromRelays(force: true);
+      expect(sent, isEmpty);
+      expect(await current.retryListSync(local.authorScopedId), isFalse);
+      expect(sent, isEmpty);
+      final journal = CuratedListRecoveryJournal(
+        prefs: prefs,
+        runCurrent: (op) => op(),
+      );
+      expect(journal.record(_owner, local.id)!.requiresPrivateCommit, isTrue);
+      expect(current.getListById(local.id)!.isPublic, isTrue);
+      expect(
+        await current.updateList(listId: local.id, isPublic: false),
+        isTrue,
+      );
+      final sealed = sent.singleWhere((event) => event.kind == 30005);
+      expect(sealed.tags.where((tag) => tag.first == 'e'), isEmpty);
+      expect(
+        sent
+            .where((event) => event.kind == 5)
+            .map(
+              (event) => event.tags.singleWhere((tag) => tag.first == 'e')[1],
+            ),
+        unorderedEquals([_oldEvent, relay.id]),
+      );
+      expect(journal.records(_owner), isEmpty);
+    });
+
+    test('owner-scoped deletion retry works after list-cache wipe without recreating a row', () async {
+      final local = (await seed(isPublic: false))
+          .copyWith(pendingPlaintextEventIds: [_oldEvent]);
+      await prefs.setString(
+        CuratedListService.listsStorageKey,
+        jsonEncode([local.toJson()]),
+      );
+      await CuratedListRecoveryJournal.migrateEmbeddedRecords(
+        prefs,
+        legacyOwner: _owner,
+      );
+      await prefs.remove(CuratedListService.listsStorageKey);
+      await restart();
+      final current = open();
+      expect(await current.retryListSync(local.authorScopedId), isTrue);
+      expect(sent.single.kind, 5);
+      expect(sent.single.tags, contains(equals(['e', _oldEvent])));
+      expect(current.lists, isEmpty);
+      expect(prefs.getString(CuratedListService.listsStorageKey), isNull);
+      expect(
+        prefs.getString(CuratedListRecoveryJournal.storageKey(_owner)),
+        isNull,
+      );
+    });
+
     test(
       'late ACK cannot overwrite a newer in-service relay replacement',
       () async {
@@ -716,8 +1516,13 @@ void main() {
           'Newer description',
           createdAt: sentEvent.createdAt + 10,
         );
-        when(() => client.subscribe(any(), onEose: any(named: 'onEose')))
-            .thenAnswer((_) => Stream.value(newer));
+        when(
+          () => client.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer((_) => Stream.value(newer));
         await current.fetchUserListsFromRelays(force: true);
         final winning = current.getListById(list.id)!;
         expect(winning.name, 'Newer relay');
@@ -752,11 +1557,8 @@ void main() {
         final adding = current.addVideoToList(list.id, 'd' * 64);
         await pumpEventQueue();
         expect(current.getListById(list.id)!.videoEventIds, [_video]);
-        expect(
-          sent,
-          isEmpty,
-          reason: 'The item write must wait for privacy ACK',
-        );
+        verify(() => client.publishEventAwaitOk(any())).called(1);
+        verifyNever(() => client.publishEvent(any()));
         decision.complete(acceptedOutcome(privateEvent));
         expect(await saving, isTrue);
         expect(await adding, isTrue);

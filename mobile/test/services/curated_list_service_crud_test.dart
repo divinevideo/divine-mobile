@@ -155,7 +155,11 @@ void main() {
 
       // Mock subscribeToEvents for relay sync
       when(
-        () => mockNostr.subscribe(any(), onEose: any(named: 'onEose')),
+        () => mockNostr.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
       ).thenAnswer((_) => const Stream.empty());
 
       // Mock event creation
@@ -284,7 +288,9 @@ void main() {
         });
 
         // Mock subscription to return collected lists
-        when(() => mockNostr.subscribe(any())).thenAnswer((invocation) {
+        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer((
+          invocation,
+        ) {
           final filters = invocation.positionalArguments[0] as List<Filter>;
 
           if (filters.isNotEmpty) {
@@ -401,7 +407,7 @@ void main() {
 
       test('calls fetchUserListsFromRelays during initialization', () async {
         // Mock subscription for relay sync
-        when(() => mockNostr.subscribe(any())).thenAnswer(
+        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
           (_) => Stream.value(
             Event.fromJson({
               'id': 'relay_list_event',
@@ -421,12 +427,12 @@ void main() {
         await service.initialize();
 
         // Should have called subscribeToEvents
-        verify(() => mockNostr.subscribe(any())).called(1);
+        verify(() => mockNostr.subscribe(any(), closeOnEose: true)).called(1);
       });
 
       test('re-queries relays only when the fetch is forced', () async {
         when(
-          () => mockNostr.subscribe(any()),
+          () => mockNostr.subscribe(any(), closeOnEose: true),
         ).thenAnswer((_) => const Stream.empty());
         await service.fetchUserListsFromRelays();
         clearInteractions(mockNostr);
@@ -434,14 +440,14 @@ void main() {
         // The session sync already ran, so an unforced call is a no-op and a
         // list created on another device would stay invisible until restart.
         await service.fetchUserListsFromRelays();
-        verifyNever(() => mockNostr.subscribe(any()));
+        verifyNever(() => mockNostr.subscribe(any(), closeOnEose: true));
 
         await service.fetchUserListsFromRelays(force: true);
-        verify(() => mockNostr.subscribe(any())).called(1);
+        verify(() => mockNostr.subscribe(any(), closeOnEose: true)).called(1);
       });
 
       test('relay-synced own lists stay in myLists', () async {
-        when(() => mockNostr.subscribe(any())).thenAnswer(
+        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
           (_) => Stream.value(
             Event.fromJson({
               'id': 'relay_list_event',
@@ -521,7 +527,9 @@ void main() {
         });
         final neverCompletes = StreamController<Event>();
         var subscriptionCount = 0;
-        when(() => mockNostr.subscribe(any())).thenAnswer((_) {
+        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer((
+          _,
+        ) {
           subscriptionCount++;
           return subscriptionCount == 1
               ? neverCompletes.stream
@@ -562,7 +570,7 @@ void main() {
             ).toJson(),
           ]),
         });
-        when(() => mockNostr.subscribe(any())).thenAnswer(
+        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
           (_) => Stream.value(
             Event.fromJson({
               'id': 'other_device_event',
@@ -626,7 +634,7 @@ void main() {
           expect(deleted, isTrue);
           clearInteractions(mockNostr);
 
-          when(() => mockNostr.subscribe(any())).thenAnswer(
+          when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
             (_) => Stream.value(
               Event.fromJson({
                 'id': 'stale_default_event',
@@ -680,7 +688,7 @@ void main() {
               event: invocation.positionalArguments[0] as Event,
             ),
           );
-          when(() => mockNostr.subscribe(any())).thenAnswer(
+          when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
             (_) => Stream.value(
               Event.fromJson({
                 'id': 'stale_relay_event',
@@ -733,7 +741,7 @@ void main() {
             ).toJson(),
           ]),
         });
-        when(() => mockNostr.subscribe(any())).thenAnswer(
+        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
           (_) => Stream.value(
             Event.fromJson({
               'id': 'relay_collaborative_event',
@@ -781,7 +789,7 @@ void main() {
               ).toJson(),
             ]),
           });
-          when(() => mockNostr.subscribe(any())).thenAnswer(
+          when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
             (_) => Stream.value(
               Event.fromJson({
                 'id': 'relay_collaborative_event',
@@ -824,11 +832,15 @@ void main() {
               .single;
           expect(warning.level, LogLevel.warning);
 
-          final republished =
-              verify(
-                    () => mockNostr.publishEventAwaitOk(captureAny()),
-                  ).captured.last
-                  as Event;
+          final sent = verify(() => mockNostr.publishEventAwaitOk(captureAny()))
+              .captured
+              .cast<Event>();
+          final republished = sent.singleWhere((event) => event.kind == 30005);
+          final deletion = sent.singleWhere((event) => event.kind == 5);
+          expect(
+            deletion.tags,
+            contains(equals(['e', 'relay_collaborative_event'])),
+          );
           expect(
             republished.tags,
             isNot(contains(equals(['e', 'local_video']))),
@@ -1021,7 +1033,7 @@ void main() {
       });
 
       test('reconstructs a private list from its sealed content', () async {
-        when(() => mockNostr.subscribe(any())).thenAnswer(
+        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
           (_) => Stream.value(
             Event.fromJson({
               'id': 'relay_private_event',
@@ -1065,7 +1077,7 @@ void main() {
             ['e', 'legacy_private_video_id'],
           ]),
         );
-        when(() => mockNostr.subscribe(any())).thenAnswer(
+        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
           (_) => Stream.value(
             Event.fromJson({
               'id': 'relay_nip04_private_event',
@@ -1091,7 +1103,7 @@ void main() {
       });
 
       test('skips a sealed list signed by another user', () async {
-        when(() => mockNostr.subscribe(any())).thenAnswer(
+        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
           (_) => Stream.value(
             Event.fromJson({
               'id': 'relay_foreign_event',
@@ -1122,7 +1134,9 @@ void main() {
 
       test('skips a sealed event if the user signs out during sync', () async {
         final events = StreamController<Event>();
-        when(() => mockNostr.subscribe(any())).thenAnswer((_) => events.stream);
+        when(
+          () => mockNostr.subscribe(any(), closeOnEose: true),
+        ).thenAnswer((_) => events.stream);
 
         final sync = service.fetchUserListsFromRelays();
         when(() => mockAuth.isAuthenticated).thenReturn(false);
@@ -1156,7 +1170,7 @@ void main() {
         when(
           () => mockSigner.nip44Decrypt(any(), any()),
         ).thenAnswer((_) async => null);
-        when(() => mockNostr.subscribe(any())).thenAnswer(
+        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
           (_) => Stream.value(
             Event.fromJson({
               'id': 'relay_legacy_event',
@@ -1197,7 +1211,7 @@ void main() {
           when(
             () => mockSigner.nip44Decrypt(any(), any()),
           ).thenAnswer((_) async => null);
-          when(() => mockNostr.subscribe(any())).thenAnswer(
+          when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
             (_) => Stream.value(
               Event.fromJson({
                 'id': 'relay_private_unreadable_event',
@@ -2293,7 +2307,7 @@ void main() {
           // NIP-09 is advisory. A relay that never saw the deletion, or chose
           // not to honour it, keeps serving the original kind 30005 event.
           when(
-            () => mockNostr.subscribe(any()),
+            () => mockNostr.subscribe(any(), closeOnEose: true),
           ).thenAnswer((_) => Stream.value(_listEvent(listId, 'Doomed List')));
 
           await service.fetchUserListsFromRelays(force: true);
@@ -2341,7 +2355,7 @@ void main() {
           expect(await service.deleteOwnedList(listId), isTrue);
 
           when(
-            () => mockNostr.subscribe(any()),
+            () => mockNostr.subscribe(any(), closeOnEose: true),
           ).thenAnswer((_) => Stream.value(_listEvent(listId, 'Doomed List')));
 
           final relaunched = CuratedListService(
@@ -2377,7 +2391,7 @@ void main() {
           final defaultList = relaunched.getDefaultList();
           expect(defaultList, isNotNull);
 
-          when(() => mockNostr.subscribe(any())).thenAnswer(
+          when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
             (_) => Stream.value(_listEvent(defaultList!.id, 'My List')),
           );
           await relaunched.fetchUserListsFromRelays(force: true);
@@ -2404,7 +2418,7 @@ void main() {
           // identifier is a different coordinate entirely.
           when(() => mockAuth.currentPublicKeyHex).thenReturn(_otherPubkey);
           when(mockSigner.getPublicKey).thenAnswer((_) async => _otherPubkey);
-          when(() => mockNostr.subscribe(any())).thenAnswer(
+          when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
             (_) =>
                 Stream.value(_listEvent(listId, 'Someone Else', _otherPubkey)),
           );
