@@ -209,7 +209,7 @@ void main() {
       final departing = open();
       await expectLater(
         UserDataCleanupService(prefs).clearUserSpecificData(userPubkey: _owner),
-        throwsStateError,
+        throwsA(isA<UserDataCleanupException>()),
       );
       expect(departing.isCurrentSession, isFalse);
       await restart();
@@ -551,7 +551,7 @@ void main() {
         await expectLater(
           UserDataCleanupService(prefs)
               .clearUserSpecificData(userPubkey: _owner),
-          throwsStateError,
+          throwsA(isA<UserDataCleanupException>()),
         );
         expect(current.isCurrentSession, isFalse);
         expect(prefs.containsKey(CuratedListService.listsStorageKey), isTrue);
@@ -2050,11 +2050,17 @@ void main() {
                     )
                   : cleanup.clearUserSpecificData(userPubkey: _owner),
               throwsA(
-                isA<CuratedListRecoveryException>().having(
-                  (error) => error.toString(),
-                  'safe reason',
-                  isNot(contains('PRIVATE_UNKNOWN_LEGACY_VALUE')),
-                ),
+                destructive
+                    ? isA<CuratedListRecoveryException>().having(
+                        (error) => error.toString(),
+                        'safe reason',
+                        isNot(contains('PRIVATE_UNKNOWN_LEGACY_VALUE')),
+                      )
+                    : isA<UserDataCleanupException>().having(
+                        (error) => error.toString(),
+                        'safe reason',
+                        isNot(contains('PRIVATE_UNKNOWN_LEGACY_VALUE')),
+                      ),
               ),
             );
             await restart();
