@@ -56,6 +56,21 @@ class _ControlledPrefs extends Fake implements SharedPreferences {
   bool _gated = false;
 
   @override
+  Object? get(String key) => backing.get(key);
+
+  @override
+  bool containsKey(String key) => backing.containsKey(key);
+
+  @override
+  Set<String> getKeys() => backing.getKeys();
+
+  @override
+  Future<void> reload() => backing.reload();
+
+  @override
+  Future<bool> remove(String key) => backing.remove(key);
+
+  @override
   String? getString(String key) => backing.getString(key);
 
   @override
@@ -487,6 +502,15 @@ void main() {
         final service = open();
         await service.initialize();
         expect(service.hasDefaultList(), isFalse);
+        expect(service.isReadyForMutations, isFalse);
+        expect(
+          service.initializationError,
+          isA<CuratedCacheWriteException>().having(
+            (error) => error.status,
+            'status',
+            CuratedCacheWriteStatus.storageRejected,
+          ),
+        );
         expect(open().hasDefaultList(), isFalse);
       });
     });
@@ -592,14 +616,31 @@ void main() {
         final logs = LogCaptureService();
         await logs.clearAllLogs();
         addTearDown(logs.clearAllLogs);
-        open();
-        final entries = logs.getRecentLogs().where(
+        final setterCalls = prefs.setterCalls;
+        final service = open();
+        expect(service.recoveryNeedsRepair, isTrue);
+        expect(service.lists, isEmpty);
+        expect(prefs.setterCalls, setterCalls);
+        expect(
+          prefs.get(CuratedListService.listsStorageKey),
+          '$secret {{{',
+        );
+        expect(
+          prefs.get(CuratedListService.subscribedListsStorageKey),
+          '$secret {{{',
+        );
+        final allEntries = logs.getRecentLogs();
+        final entries = allEntries.where(
           (entry) => entry.name == 'PrefsCuratedListStore',
         );
-        expect(entries, hasLength(2));
+        // The recovery reader preserves the corrupt list before cache decode;
+        // the subscription adapter still reports its sanitized decode error.
+        expect(entries, hasLength(1));
         for (final entry in entries) {
           expect(entry.stackTrace, isNotNull);
           expect(entry.message, contains('FormatException'));
+        }
+        for (final entry in allEntries) {
           expect(jsonEncode(entry.toJson()), isNot(contains(secret)));
         }
       },
