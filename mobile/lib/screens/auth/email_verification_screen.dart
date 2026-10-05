@@ -138,7 +138,9 @@ class _EmailVerificationScreenState
   void _listenForAuthState() {
     final authService = ref.read(authServiceProvider);
     void onAuthState(AuthState authState) {
-      if (authState == AuthState.authenticated && mounted) {
+      if (authState == AuthState.authenticated &&
+          !authService.isAnonymous &&
+          mounted) {
         runDetached(
           _handleAuthenticated(),
           'handle authenticated state',
@@ -151,6 +153,8 @@ class _EmailVerificationScreenState
     _authSubscription = authService.authStateStream.listen(onAuthState);
     // Account-scoped providers can remount this screen after the stream event
     // has already fired (#9727). Subscribe first, then inspect current state.
+    // An authenticated anonymous account may still need email verification
+    // while it is being secured, so it must remain on this screen.
     onAuthState(authService.authState);
   }
 
@@ -406,8 +410,10 @@ class _EmailVerificationScreenState
 
   Future<void> _handleSuccess() async {
     if (_hasLeftVerification) return;
+    final authService = ref.read(authServiceProvider);
     if (!_isTokenMode &&
-        ref.read(authServiceProvider).authState == AuthState.authenticated) {
+        authService.authState == AuthState.authenticated &&
+        !authService.isAnonymous) {
       await _handleAuthenticated();
       return;
     }

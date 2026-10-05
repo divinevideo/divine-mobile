@@ -273,6 +273,44 @@ void main() {
     });
 
     group('success state', () {
+      testWidgets('anonymous authentication waits for account upgrade', (
+        tester,
+      ) async {
+        final states = StreamController<EmailVerificationState>.broadcast();
+        addTearDown(states.close);
+        when(() => mockAuthService.authState)
+            .thenReturn(AuthState.authenticated);
+        when(() => mockAuthService.isAnonymous).thenReturn(true);
+        await pumpVerificationScreen(
+          tester,
+          deviceCode: 'test-device-code',
+          verifier: 'test-verifier',
+          initialState: const EmailVerificationState(
+            status: EmailVerificationStatus.polling,
+          ),
+          stateStream: states.stream,
+        );
+        await tester.pump();
+        expect(find.byType(EmailVerificationScreen), findsOneWidget);
+
+        authStateController.add(AuthState.authenticated);
+        await tester.pump();
+        expect(find.byType(EmailVerificationScreen), findsOneWidget);
+
+        states.add(
+          const EmailVerificationState(status: EmailVerificationStatus.success),
+        );
+        // The success UI animates while waiting for the registered identity.
+        await tester.pump();
+        await tester.pump();
+        expect(find.byType(EmailVerificationScreen), findsOneWidget);
+
+        when(() => mockAuthService.isAnonymous).thenReturn(false);
+        authStateController.add(AuthState.authenticated);
+        await tester.pumpAndSettle();
+        expect(find.text('Explore popular'), findsOneWidget);
+      });
+
       testWidgets('already authenticated when mounted navigates to explore', (
         tester,
       ) async {
