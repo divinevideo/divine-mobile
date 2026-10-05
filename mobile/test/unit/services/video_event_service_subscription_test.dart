@@ -35,6 +35,7 @@ void main() {
       eventStreamController = StreamController<Event>.broadcast();
 
       when(() => mockNostrService.isInitialized).thenReturn(true);
+      when(() => mockNostrService.publicKey).thenReturn('');
       when(() => mockNostrService.connectedRelayCount).thenReturn(1);
       when(
         () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
@@ -211,10 +212,9 @@ void main() {
         subscriptionType: SubscriptionType.discovery,
         limit: 50,
       );
-      await Future.delayed(const Duration(milliseconds: 10));
 
       eventStreamController.add(event1);
-      await Future.delayed(const Duration(milliseconds: 10));
+      await pumpEventQueue();
 
       expect(videoEventService.discoveryVideos.length, equals(1));
 
@@ -234,7 +234,7 @@ void main() {
     });
 
     test('should track active subscription parameters', () async {
-      // This test exposes the current bug where subscription parameters aren't tracked
+      // Distinct author and hashtag filters require separate subscriptions.
       final subscriptionCalls = <List<Filter>>[];
       when(
         () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
@@ -299,7 +299,7 @@ void main() {
     test(
       'should handle the classic vines -> open feed sequence correctly',
       () async {
-        // This is the exact sequence that's failing in production
+        // Exercise successive author-filtered and unfiltered subscriptions.
         final subscriptionCalls = <List<Filter>>[];
         when(
           () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
@@ -322,7 +322,7 @@ void main() {
         expect(subscriptionCalls[0][0].authors, isNotNull);
         expect(subscriptionCalls[0][0].authors!.length, equals(1));
 
-        // Step 2: Load open feed (no author filter) - THIS IS BEING WRONGLY REJECTED
+        // Step 2: Load open feed (no author filter).
         await videoEventService.subscribeToVideoFeed(
           subscriptionType: SubscriptionType.discovery,
           limit: 300,

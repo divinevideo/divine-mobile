@@ -93,11 +93,14 @@ void main() {
       for (var i = 0; i < eventCount; i++) {
         controller.add(_videoEvent(i));
       }
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(capturedOnEose, isNotNull, reason: 'onEose should be set');
+      expect(
+        videoEventService.getVideos(SubscriptionType.profile),
+        hasLength(eventCount),
+      );
       capturedOnEose!();
-      await Future<void>.delayed(Duration.zero);
 
       return videoEventService
           .getPaginationStatesForTesting()[SubscriptionType.profile]!;

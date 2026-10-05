@@ -27,6 +27,7 @@ void main() {
 
       // Setup basic mock responses
       when(() => mockNostrService.isInitialized).thenReturn(true);
+      when(() => mockNostrService.publicKey).thenReturn('');
       when(() => mockNostrService.connectedRelayCount).thenReturn(1);
       videoEventService = VideoEventService(
         mockNostrService,
@@ -34,62 +35,34 @@ void main() {
       );
     });
 
-    // TODO(any): Re-enable and fix this test
-    //test(
-    //  'should request new videos from relay when loadMoreEvents is called',
-    //  () async {
-    //    // Arrange
-    //    final testEvents = [
-    //      _createTestVideoEvent(
-    //        'test1',
-    //        DateTime.now().millisecondsSinceEpoch ~/ 1000,
-    //      ),
-    //      _createTestVideoEvent(
-    //        'test2',
-    //        DateTime.now().millisecondsSinceEpoch ~/ 1000 - 100,
-    //      ),
-    //    ];
+    tearDown(() {
+      videoEventService.dispose();
+    });
 
-    //    // Create a stream controller to control event emission
-    //    final streamController = StreamController<Event>.broadcast();
+    PaginationState discoveryState() => videoEventService
+        .getPaginationStatesForTesting()[SubscriptionType.discovery]!;
 
-    //    when(
-    //      () => mockNostrService.subscribe(any()),
-    //    ).thenAnswer((_) => streamController.stream);
+    Future<void> queryCompleted() {
+      final completed = Completer<void>();
+      void listener() {
+        final isLoading = videoEventService.isLoadingForSubscription(
+          SubscriptionType.discovery,
+        );
+        if (!isLoading && !completed.isCompleted) {
+          completed.complete();
+        }
+      }
 
-    //    // Act
-    //    final loadMoreFuture = videoEventService.loadMoreEvents(
-    //      SubscriptionType.discovery,
-    //      limit: 50,
-    //    );
-
-    //    // Emit test events
-    //    for (final event in testEvents) {
-    //      streamController.add(event);
-    //    }
-
-    //    // Close stream to signal completion
-    //    streamController.close();
-
-    //    // Wait for processing
-    //    await loadMoreFuture;
-    //    await Future.delayed(Duration(milliseconds: 100));
-
-    //    // Assert - Verify the filter was created correctly
-    //    final capturedFilters = verify(
-    //      () => mockNostrService.subscribe(captureAny()),
-    //    ).captured;
-
-    //    expect(capturedFilters.isNotEmpty, true);
-    //    final filters = capturedFilters.first as List<Filter>;
-    //    expect(filters.isNotEmpty, true);
-    //    expect(
-    //      filters.first.kinds,
-    //      contains(34236),
-    //    ); // NIP-71 kind 34236 video events
-    //    expect(filters.first.limit, greaterThan(0));
-    //  },
-    //);
+      videoEventService.addListener(listener);
+      addTearDown(() => videoEventService.removeListener(listener));
+      // Liveness bound: fail fast instead of waiting out the 10-minute default.
+      return completed.future.timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => throw TimeoutException(
+          'the discovery query never finished loading',
+        ),
+      );
+    }
 
     test(
       'should reset pagination when hasMore is false but few videos exist',
@@ -106,22 +79,28 @@ void main() {
         ).thenAnswer((_) => streamController.stream);
 
         // Act - First load should work
+        final firstCompleted = queryCompleted();
         final firstLoad = videoEventService.loadMoreEvents(
           SubscriptionType.discovery,
           limit: 10,
         );
 
         // Emit fewer events than requested to trigger hasMore = false
+        final firstVideoTimestamp =
+            DateTime.now().millisecondsSinceEpoch ~/ 1000;
         streamController.add(
-          _createTestVideoEvent(
-            'test1',
-            DateTime.now().millisecondsSinceEpoch ~/ 1000,
-          ),
+          _createTestVideoEvent('test1', firstVideoTimestamp),
         );
         await streamController.close();
 
         await firstLoad;
-        await Future.delayed(const Duration(milliseconds: 100));
+        await firstCompleted;
+        expect(videoEventService.discoveryVideos, hasLength(1));
+        // Ingest finished; it throws before counting if publicKey is unstubbed.
+        expect(discoveryState().eventsReceivedInCurrentQuery, equals(1));
+        // The page read as the end of the feed and recorded its video's id.
+        expect(discoveryState().hasMore, isFalse);
+        expect(discoveryState().seenEventIds, hasLength(1));
 
         // Now try to load more - it should reset and allow loading
         final secondController = StreamController<Event>.broadcast();
@@ -129,6 +108,7 @@ void main() {
           () => mockNostrService.subscribe(any()),
         ).thenAnswer((_) => secondController.stream);
 
+        final secondCompleted = queryCompleted();
         final secondLoad = videoEventService.loadMoreEvents(
           SubscriptionType.discovery,
           limit: 50,
@@ -136,9 +116,17 @@ void main() {
 
         await secondController.close();
         await secondLoad;
+        await secondCompleted;
 
-        // Assert - should have made two subscription calls
-        verify(() => mockNostrService.subscribe(any())).called(2);
+        // Assert - the reset forgot the first page's ids...
+        expect(discoveryState().seenEventIds, isEmpty);
+        // ...and the second query resumes from the oldest cached video
+        // instead of restarting from the newest events.
+        final queries = verify(
+          () => mockNostrService.subscribe(captureAny()),
+        ).captured.cast<List<Filter>>();
+        expect(queries, hasLength(2));
+        expect(queries.last.single.until, equals(firstVideoTimestamp));
       },
     );
 
@@ -151,6 +139,7 @@ void main() {
       ).thenAnswer((_) => streamController.stream);
 
       // Act
+      final completed = queryCompleted();
       final loadMoreFuture = videoEventService.loadMoreEvents(
         SubscriptionType.discovery,
         limit: 50,
@@ -161,80 +150,12 @@ void main() {
 
       // Should complete without error
       await expectLater(loadMoreFuture, completes);
+      await completed;
+      expect(videoEventService.discoveryVideos, isEmpty);
+      // The relay was asked once, and its empty answer ended the feed.
+      verify(() => mockNostrService.subscribe(any())).called(1);
+      expect(discoveryState().hasMore, isFalse);
     });
-
-    // TODO(any): Re-enable and fix this test
-    //test(
-    //  'should use oldest timestamp from existing events after pagination reset',
-    //  () async {
-    //    // This test ensures that when pagination is reset due to hasMore=false,
-    //    // the until parameter uses the oldest timestamp from existing events
-    //    // to properly request older content from the relay
-
-    //    // Arrange - Add some initial events with specific timestamps
-    //    final oldestTimestamp =
-    //        DateTime.now().millisecondsSinceEpoch ~/ 1000 - 3600; // 1 hour ago
-    //    final newerTimestamp =
-    //        DateTime.now().millisecondsSinceEpoch ~/ 1000 - 1800; // 30 min ago
-
-    //    // First subscription to get initial events
-    //    final firstStreamController = StreamController<Event>.broadcast();
-    //    when(
-    //      () => mockNostrService.subscribe(any()),
-    //    ).thenAnswer((_) => firstStreamController.stream);
-
-    //    await videoEventService.subscribeToVideoFeed(
-    //      subscriptionType: SubscriptionType.discovery,
-    //      limit: 10,
-    //    );
-
-    //    // Emit initial events with specific timestamps
-    //    firstStreamController.add(
-    //      _createTestVideoEvent('oldest', oldestTimestamp),
-    //    );
-    //    firstStreamController.add(
-    //      _createTestVideoEvent('newer', newerTimestamp),
-    //    );
-    //    firstStreamController.close();
-
-    //    await Future.delayed(Duration(milliseconds: 100));
-
-    //    // Reset mock for next query
-    //    reset(mockNostrService);
-    //    when(() => mockNostrService.isInitialized).thenReturn(true);
-    //    when(() => mockNostrService.connectedRelayCount).thenReturn(1);
-
-    //    // Now test that pagination reset preserves the oldest timestamp
-    //    videoEventService.resetPaginationState(SubscriptionType.discovery);
-
-    //    final secondStreamController = StreamController<Event>.broadcast();
-    //    when(
-    //      () => mockNostrService.subscribe(any()),
-    //    ).thenAnswer((_) => secondStreamController.stream);
-
-    //    // Act - Load more events after reset
-    //    final loadMoreFuture = videoEventService.loadMoreEvents(
-    //      SubscriptionType.discovery,
-    //      limit: 50,
-    //    );
-
-    //    secondStreamController.close();
-    //    await loadMoreFuture;
-
-    //    // Assert - Verify the filter used the oldest timestamp as 'until'
-    //    final capturedFilters = verify(
-    //      () => mockNostrService.subscribe(captureAny()),
-    //    ).captured;
-
-    //    expect(capturedFilters.isNotEmpty, true);
-    //    final filters = capturedFilters.first as List<Filter>;
-    //    expect(filters.isNotEmpty, true);
-
-    //    // The filter should have 'until' set to the oldest timestamp from existing events
-    //    // This ensures we get older videos, not the same ones again
-    //    expect(filters.first.until, equals(oldestTimestamp));
-    //  },
-    //);
   });
 }
 

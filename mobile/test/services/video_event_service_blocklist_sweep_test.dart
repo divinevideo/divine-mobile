@@ -2,6 +2,8 @@
 // ContentBlocklistRepository.changes and emits removedVideoIds for every
 // cached video by the affected author when an "addition" event fires.
 
+import 'dart:async';
+
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -13,6 +15,17 @@ import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
+
+/// A repository whose change feed the test owns, so the test can see whether
+/// anything is still listening to it.
+class _ChangesSpyRepository extends ContentBlocklistRepository {
+  _ChangesSpyRepository(this._changes);
+
+  final StreamController<BlocklistChange> _changes;
+
+  @override
+  Stream<BlocklistChange> get changes => _changes.stream;
+}
 
 VideoEvent _video({required String id, required String pubkey}) {
   final now = DateTime.now();
@@ -73,7 +86,7 @@ void main() {
       addTearDown(sub.cancel);
 
       await blocklistRepo.blockUser(author);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(emitted, containsAll(['v1', 'v2', 'v3']));
       expect(emitted.length, 3);
@@ -90,7 +103,7 @@ void main() {
       addTearDown(sub.cancel);
 
       await blocklistRepo.unblockUser(author);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(emitted, isEmpty);
     });
@@ -104,7 +117,7 @@ void main() {
         ]);
 
         await blocklistRepo.blockUser(author);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         // The session-tombstone set is reserved for irrevocable
         // user-initiated deletions. Unblocking should restore visibility,
@@ -119,7 +132,7 @@ void main() {
       addTearDown(sub.cancel);
 
       await blocklistRepo.blockUser('unknown-author');
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(emitted, isEmpty);
     });
@@ -130,20 +143,19 @@ void main() {
       service.debugSeedAuthorBucket(author, [_video(id: 'v1', pubkey: author)]);
 
       await blocklistRepo.blockUser(author);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       final emitted = <String>[];
       final sub = service.removedVideoIds.listen(emitted.add);
       addTearDown(sub.cancel);
 
       await blocklistRepo.blockUser(author); // already blocked → no-op
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(emitted, isEmpty);
     });
 
-    test('dispose cancels the blocklist subscription (further repo emits are '
-        'ignored without errors)', () async {
+    test('dispose cancels the blocklist subscription', () async {
       // Build a separate service so the global tearDown does not double-
       // dispose. Pre-existing helpers (`service`, `blocklistRepo`) stay
       // owned by the outer setUp/tearDown.
@@ -157,30 +169,24 @@ void main() {
         localNostr,
         crashReporter: const SilentCrashReporter(),
       );
-      final localRepo = ContentBlocklistRepository();
+      final changes = StreamController<BlocklistChange>.broadcast();
+      addTearDown(changes.close);
+      final localRepo = _ChangesSpyRepository(changes);
       addTearDown(localRepo.dispose);
 
       localService.setBlocklistRepository(localRepo);
-      const author = 'author-pubkey';
-      localService.debugSeedAuthorBucket(author, [
-        _video(id: 'v1', pubkey: author),
-      ]);
-
-      final emitted = <String>[];
-      final sub = localService.removedVideoIds.listen(
-        emitted.add,
-        onError: (Object _) {},
+      expect(
+        changes.hasListener,
+        isTrue,
+        reason: 'an attached service listens',
       );
-      addTearDown(sub.cancel);
 
       localService.dispose();
+      await pumpEventQueue();
 
-      // Repo is still live; emit a Blocked. The cancelled subscription
-      // means the bus does not see this event.
-      await localRepo.blockUser(author);
-      await Future<void>.delayed(Duration.zero);
-
-      expect(emitted, isEmpty);
+      // dispose closes removedVideoIds first, so a missed cancel would not
+      // show up in the emitted ids; watch the listener itself.
+      expect(changes.hasListener, isFalse);
     });
   });
 

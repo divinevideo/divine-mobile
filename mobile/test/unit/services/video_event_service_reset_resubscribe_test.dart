@@ -10,12 +10,16 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/services/relay_capability_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_filter_builder.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 // Mock classes
 class MockNostrService extends Mock implements NostrClient {}
+
+class _MockRelayCapabilityService extends Mock
+    implements RelayCapabilityService {}
 
 // Fake classes for setUpAll
 class FakeFilter extends Fake implements Filter {}
@@ -53,18 +57,26 @@ void main() {
     late MockNostrService mockNostrService;
     late StreamController<Event> eventStreamController;
     late int subscribeCallCount;
+    late List<List<Filter>> subscribedFilters;
+    late _MockRelayCapabilityService mockRelayCapabilityService;
 
     setUp(() {
       mockNostrService = MockNostrService();
+      mockRelayCapabilityService = _MockRelayCapabilityService();
       eventStreamController = StreamController<Event>.broadcast();
       subscribeCallCount = 0;
+      subscribedFilters = [];
 
       when(() => mockNostrService.isInitialized).thenReturn(true);
+      when(() => mockNostrService.publicKey).thenReturn('');
       when(() => mockNostrService.connectedRelayCount).thenReturn(1);
       when(
         () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
       ).thenAnswer((invocation) {
         subscribeCallCount++;
+        subscribedFilters.add(
+          invocation.positionalArguments.first as List<Filter>,
+        );
         // Simulate EOSE immediately
         unawaited(
           Future.microtask(() {
@@ -80,10 +92,14 @@ void main() {
       videoEventService = VideoEventService(
         mockNostrService,
         crashReporter: const SilentCrashReporter(),
+        videoFilterBuilder: VideoFilterBuilder(mockRelayCapabilityService),
       );
     });
 
     tearDown(() async {
+      // Unsubscribe before closing the stream, or the close schedules a
+      // reconnection timer that outlives the test.
+      await videoEventService.unsubscribeFromVideoFeed();
       await eventStreamController.close();
       videoEventService.dispose();
     });
@@ -94,7 +110,6 @@ void main() {
         subscriptionType: SubscriptionType.discovery,
         limit: 50,
       );
-      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       // Add a mock video event to the stream
       final event = createVideoEvent(
@@ -106,7 +121,7 @@ void main() {
       );
 
       eventStreamController.add(event);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
 
       // Verify we have videos before reset
       expect(videoEventService.discoveryVideos, isNotEmpty);
@@ -114,7 +129,6 @@ void main() {
 
       // Reset and resubscribe
       await videoEventService.resetAndResubscribeAll();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       // After reset, existing events should be PRESERVED (not cleared)
       // This avoids jarring UX when relay set changes during normal operation
@@ -130,42 +144,16 @@ void main() {
       );
     });
 
-    test('resubscribes without unnecessary notifications', () async {
-      await videoEventService.subscribeToVideoFeed(
-        subscriptionType: SubscriptionType.discovery,
-        limit: 50,
-      );
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-
-      var notificationCount = 0;
-      videoEventService.addListener(() => notificationCount++);
-
-      await videoEventService.resetAndResubscribeAll();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-
-      // With the new behavior that preserves events, there's no need
-      // for a "clearing" notification. Notifications happen when new
-      // events arrive from the resubscription, not during reset itself.
-      // This avoids jarring UX where the feed briefly shows as empty.
-      expect(
-        subscribeCallCount,
-        greaterThan(1),
-        reason: 'Should have resubscribed after reset',
-      );
-    });
-
     test('resubscribes to discovery with force', () async {
       // Subscribe with specific params
       await videoEventService.subscribeToVideoFeed(
         subscriptionType: SubscriptionType.discovery,
         limit: 75,
       );
-      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       final callsBefore = subscribeCallCount;
 
       await videoEventService.resetAndResubscribeAll();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       // Should have created new subscription after the reset
       expect(
@@ -183,12 +171,10 @@ void main() {
 
       // Subscribe to home feed with authors
       await videoEventService.subscribeToHomeFeed(authors);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       final callsBefore = subscribeCallCount;
 
       await videoEventService.resetAndResubscribeAll();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       // Should have created new subscriptions for home feed after reset
       expect(
@@ -203,14 +189,15 @@ void main() {
         subscriptionType: SubscriptionType.discovery,
         limit: 50,
       );
-      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       final callsBefore = subscribeCallCount;
       // A counter that never moved would make the final assertion compare
       // 0 with 0, so pin that the live subscription happened (#8617).
       expect(callsBefore, greaterThan(0));
 
-      // Dispose and close stream first (to avoid double-dispose in tearDown)
+      // Dispose and close stream first (to avoid double-dispose in tearDown).
+      // Unsubscribing first keeps the close from scheduling a reconnection.
+      await videoEventService.unsubscribeFromVideoFeed();
       await eventStreamController.close();
       videoEventService.dispose();
 
@@ -265,7 +252,6 @@ void main() {
         hashtags: ['flutter'],
         limit: 50,
       );
-      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       final callsBefore = subscribeCallCount;
       expect(
@@ -275,7 +261,6 @@ void main() {
       );
 
       await videoEventService.resetAndResubscribeAll();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       // No new subscriptions since only hashtag was active (ephemeral)
       expect(
@@ -285,26 +270,45 @@ void main() {
       );
     });
 
-    test('stores and uses sortBy and nip50Sort params', () async {
+    test('resubscribes with the stored NIP-50 sort mode', () async {
+      await videoEventService.subscribeToVideoFeed(
+        subscriptionType: SubscriptionType.discovery,
+        limit: 50,
+        nip50Sort: NIP50SortMode.hot,
+      );
+      expect(subscribedFilters.single.first.search, equals('sort:hot'));
+
+      await videoEventService.resetAndResubscribeAll();
+
+      expect(subscribedFilters, hasLength(2));
+      expect(subscribedFilters.last.first.search, equals('sort:hot'));
+    });
+
+    test('resubscribes with the stored sort field', () async {
+      when(() => mockNostrService.connectedRelays).thenReturn(const <String>[]);
+      when(
+        () => mockRelayCapabilityService.getRelayCapabilities(any()),
+      ).thenAnswer(
+        (invocation) async => RelayCapabilities(
+          relayUrl: invocation.positionalArguments.single as String,
+          rawData: const {},
+          hasDivineExtensions: true,
+          sortFields: [VideoSortField.loopCount.fieldName],
+        ),
+      );
+      final sortSent = {'field': 'loop_count', 'dir': 'desc'};
+
       await videoEventService.subscribeToVideoFeed(
         subscriptionType: SubscriptionType.discovery,
         limit: 50,
         sortBy: VideoSortField.loopCount,
-        nip50Sort: NIP50SortMode.hot,
       );
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(subscribedFilters.single.first.toJson()['sort'], equals(sortSent));
 
-      final callsBefore = subscribeCallCount;
-
-      // Reset should re-use the stored params including sort fields
       await videoEventService.resetAndResubscribeAll();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
 
-      expect(
-        subscribeCallCount,
-        greaterThan(callsBefore),
-        reason: 'Should resubscribe with stored sort params',
-      );
+      expect(subscribedFilters, hasLength(2));
+      expect(subscribedFilters.last.first.toJson()['sort'], equals(sortSent));
     });
 
     test(
@@ -320,12 +324,10 @@ void main() {
           limit: 50,
         );
         await videoEventService.subscribeToHomeFeed(authors);
-        await Future<void>.delayed(const Duration(milliseconds: 50));
 
         final callsBefore = subscribeCallCount;
 
         await videoEventService.resetAndResubscribeAll();
-        await Future<void>.delayed(const Duration(milliseconds: 50));
 
         // Should have at least 2 new subscribe calls (discovery + home feed)
         expect(
