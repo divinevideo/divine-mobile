@@ -469,24 +469,32 @@ void main() {
         ),
       };
 
-  testWidgets('cleanup failure keeps the current account and offers a retry', (
-    tester,
-  ) async {
-    when(() => deviceScope.switchController).thenThrow(
-      const UserDataCleanupException('Could not clear account cache'),
-    );
-    final l10n = await pumpAndTapSwitch(tester);
-    await tester.tap(accountTile(otherPubkey));
-    await tester.pumpAndSettle();
+  group('account cleanup recovery', () {
+    testWidgets(
+      'cleanup failure keeps the current account and offers a retry',
+      (
+        tester,
+      ) async {
+        when(() => deviceScope.switchController).thenThrow(
+          const UserDataCleanupException('Could not clear account cache'),
+        );
+        final l10n = await pumpAndTapSwitch(tester);
+        await tester.tap(accountTile(otherPubkey));
+        await tester.pumpAndSettle();
 
-    expect(find.text(l10n.authAccountCleanupFailed), findsOneWidget);
-    expect(
-      find.text(l10n.settingsAccountRestoreFailedSwitchMessage),
-      findsNothing,
+        expect(find.text(l10n.authAccountCleanupFailed), findsOneWidget);
+        expect(
+          find.text(l10n.settingsAccountRestoreFailedSwitchMessage),
+          findsNothing,
+        );
+        expect(
+          find.text(l10n.settingsSessionExpiredSwitchMessage),
+          findsNothing,
+        );
+        verifyNever(() => authService.signOut());
+        verifyNever(() => authService.pendingAccountSwitchPubkey = any());
+      },
     );
-    expect(find.text(l10n.settingsSessionExpiredSwitchMessage), findsNothing);
-    verifyNever(() => authService.signOut());
-    verifyNever(() => authService.pendingAccountSwitchPubkey = any());
   });
 
   group('switching hits an unusable session', () {
