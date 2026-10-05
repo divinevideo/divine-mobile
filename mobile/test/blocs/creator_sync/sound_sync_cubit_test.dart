@@ -89,7 +89,8 @@ void main() {
       addTearDown(cubit.close);
 
       final first = cubit.syncNow();
-      await cubit.syncNow();
+      final second = cubit.syncNow();
+      await pumpEventQueue();
       expect(cubit.state.status, SoundSyncStatus.syncing);
       verify(repository.reconcile).called(1);
       completion.complete(
@@ -100,7 +101,7 @@ void main() {
           deletionsRetried: 0,
         ),
       );
-      await first;
+      await Future.wait([first, second]);
       expect(cubit.state.status, SoundSyncStatus.success);
     });
 
