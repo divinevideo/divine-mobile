@@ -8554,6 +8554,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorDrawLabel => 'رسم';
 
   @override
+  String get videoEditorCensorLabel => 'حجب';
+
+  @override
+  String get videoEditorBlurLabel => 'تمويه';
+
+  @override
   String get videoEditorFilterLabel => 'فلتر';
 
   @override
@@ -8935,6 +8941,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorOpenDrawSemanticLabel => 'فتح محرر الرسم';
 
   @override
+  String get videoEditorOpenBlurSemanticLabel =>
+      'موّه جزءًا من الفيديو أو حوّله إلى بكسلات';
+
+  @override
   String get videoEditorOpenFilterSemanticLabel => 'فتح محرر الفلاتر';
 
   @override
@@ -9081,6 +9091,9 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get videoEditorVoiceOverHint =>
       'انقر للتسجيل. أضِف أي عدد من اللقطات تريده.';
+
+  @override
+  String get videoEditorCensorHint => 'اسحب فوق ما تريد إخفاءه.';
 
   @override
   String videoEditorVoiceOverRecordingsCount(int count) {

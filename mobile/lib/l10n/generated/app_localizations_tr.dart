@@ -8510,6 +8510,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorDrawLabel => 'Çiz';
 
   @override
+  String get videoEditorCensorLabel => 'Sansürle';
+
+  @override
+  String get videoEditorBlurLabel => 'Bulanıklaştır';
+
+  @override
   String get videoEditorFilterLabel => 'Filtre';
 
   @override
@@ -8897,6 +8903,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorOpenDrawSemanticLabel => 'Çizim düzenleyiciyi aç';
 
   @override
+  String get videoEditorOpenBlurSemanticLabel =>
+      'Videonun bir kısmını bulanıklaştır veya pikselleştir';
+
+  @override
   String get videoEditorOpenFilterSemanticLabel => 'Filtre düzenleyiciyi aç';
 
   @override
@@ -9042,6 +9052,10 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get videoEditorVoiceOverHint =>
       'Kaydetmek için dokun. İstediğin kadar çekim ekle.';
+
+  @override
+  String get videoEditorCensorHint =>
+      'Gizlemek istediğin yerin üzerine sürükle.';
 
   @override
   String videoEditorVoiceOverRecordingsCount(int count) {

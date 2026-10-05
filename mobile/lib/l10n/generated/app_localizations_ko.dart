@@ -8179,6 +8179,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorDrawLabel => '그리기';
 
   @override
+  String get videoEditorCensorLabel => '가리기';
+
+  @override
+  String get videoEditorBlurLabel => '흐리게';
+
+  @override
   String get videoEditorFilterLabel => '필터';
 
   @override
@@ -8557,6 +8563,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorOpenDrawSemanticLabel => '그리기 편집기 열기';
 
   @override
+  String get videoEditorOpenBlurSemanticLabel => '동영상 일부를 흐리게 하거나 픽셀화하기';
+
+  @override
   String get videoEditorOpenFilterSemanticLabel => '필터 편집기 열기';
 
   @override
@@ -8700,6 +8709,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorVoiceOverHint => '탭하여 녹음하세요. 원하는 만큼 테이크를 추가할 수 있어요.';
+
+  @override
+  String get videoEditorCensorHint => '숨기고 싶은 부분 위로 드래그하세요.';
 
   @override
   String videoEditorVoiceOverRecordingsCount(int count) {

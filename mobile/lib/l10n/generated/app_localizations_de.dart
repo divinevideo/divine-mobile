@@ -8703,6 +8703,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorDrawLabel => 'Zeichnen';
 
   @override
+  String get videoEditorCensorLabel => 'Zensieren';
+
+  @override
+  String get videoEditorBlurLabel => 'Verwischen';
+
+  @override
   String get videoEditorFilterLabel => 'Filter';
 
   @override
@@ -9089,6 +9095,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorOpenDrawSemanticLabel => 'Zeichen-Editor öffnen';
 
   @override
+  String get videoEditorOpenBlurSemanticLabel =>
+      'Einen Teil des Videos verwischen oder verpixeln';
+
+  @override
   String get videoEditorOpenFilterSemanticLabel => 'Filter-Editor öffnen';
 
   @override
@@ -9239,6 +9249,9 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get videoEditorVoiceOverHint =>
       'Zum Aufnehmen tippen. Nimm so viele Takes auf, wie du möchtest.';
+
+  @override
+  String get videoEditorCensorHint => 'Zieh über das, was du verbergen willst.';
 
   @override
   String videoEditorVoiceOverRecordingsCount(int count) {

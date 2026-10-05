@@ -8,6 +8,7 @@ import 'package:openvine/models/video_editor/caption_style.dart';
 import 'package:openvine/models/video_editor/caption_style_preset.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:openvine/models/video_editor/composition_duration.dart';
+import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
@@ -67,7 +68,7 @@ extension VideoEditorExtensions on ProImageEditorState {
       basePixelRatio: configs.imageGeneration.customPixelRatio,
     );
     return EditorOverlaySnapshot(
-      capturedLayers: capturedLayers,
+      capturedLayers: withCensorLayers(activeLayers, capturedLayers),
       filterStates: List.of(stateManager.activeFilters),
       tuneAdjustments: List.of(stateManager.activeTuneAdjustments),
       effects: stateManager.videoEffects,

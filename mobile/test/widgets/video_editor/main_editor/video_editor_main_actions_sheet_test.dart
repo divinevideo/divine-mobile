@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
@@ -34,6 +35,10 @@ class _MockVideoEditorTuneBloc
     extends MockBloc<VideoEditorTuneEvent, VideoEditorTuneState>
     implements VideoEditorTuneBloc {}
 
+class _MockVideoEditorDrawBloc
+    extends MockBloc<VideoEditorDrawEvent, VideoEditorDrawState>
+    implements VideoEditorDrawBloc {}
+
 /// [ClipEditorState.totalDuration] is derived from clips; this fake supplies it
 /// directly so tests don't need to construct clip fixtures.
 class _FakeClipEditorState extends ClipEditorState {
@@ -58,18 +63,21 @@ void main() {
     late _MockClipEditorBloc clipBloc;
     late _MockTimelineOverlayBloc timelineOverlayBloc;
     late _MockVideoEditorTuneBloc tuneBloc;
+    late _MockVideoEditorDrawBloc drawBloc;
 
     setUp(() {
       mainBloc = _MockVideoEditorMainBloc();
       clipBloc = _MockClipEditorBloc();
       timelineOverlayBloc = _MockTimelineOverlayBloc();
       tuneBloc = _MockVideoEditorTuneBloc();
+      drawBloc = _MockVideoEditorDrawBloc();
 
       when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
       when(() => clipBloc.state).thenReturn(const ClipEditorState());
       when(
         () => timelineOverlayBloc.state,
       ).thenReturn(const TimelineOverlayState());
+      when(() => drawBloc.state).thenReturn(const VideoEditorDrawState());
       when(() => tuneBloc.state).thenReturn(
         const VideoEditorTuneState(
           adjustments: VideoEditorConstants.tuneAdjustments,
@@ -92,6 +100,7 @@ void main() {
       expect(find.text(l10n.videoEditorVoiceOverLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorTextLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorDrawLabel), findsOneWidget);
+      expect(find.text(l10n.videoEditorCensorLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorFilterLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorStickers), findsOneWidget);
       expect(find.text(l10n.videoEditorMarkerLabel), findsOneWidget);
@@ -312,6 +321,7 @@ void main() {
             clipBloc: clipBloc,
             timelineOverlayBloc: timelineOverlayBloc,
             tuneBloc: tuneBloc,
+            drawBloc: drawBloc,
           ),
         );
 
@@ -326,6 +336,34 @@ void main() {
         expect(tester.takeException(), isNull);
         verify(
           () => tuneBloc.add(any(that: isA<VideoEditorTuneSessionStarted>())),
+        ).called(1);
+      },
+    );
+
+    testWidgets(
+      'tap on Blur in the shown sheet opens the draw editor to hide an area',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildShowHost(
+            mainBloc: mainBloc,
+            clipBloc: clipBloc,
+            timelineOverlayBloc: timelineOverlayBloc,
+            tuneBloc: tuneBloc,
+            drawBloc: drawBloc,
+          ),
+        );
+
+        await tester.tap(find.byKey(const Key('open-sheet')));
+        await tester.pumpAndSettle();
+
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoEditorOpenBlurSemanticLabel),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        verify(
+          () => drawBloc.add(const VideoEditorDrawOpened(censor: true)),
         ).called(1);
       },
     );
@@ -377,6 +415,7 @@ Widget _buildShowHost({
   required _MockClipEditorBloc clipBloc,
   required _MockTimelineOverlayBloc timelineOverlayBloc,
   required _MockVideoEditorTuneBloc tuneBloc,
+  required _MockVideoEditorDrawBloc drawBloc,
 }) => _app(
   child: MultiBlocProvider(
     providers: [
@@ -384,6 +423,7 @@ Widget _buildShowHost({
       BlocProvider<ClipEditorBloc>.value(value: clipBloc),
       BlocProvider<TimelineOverlayBloc>.value(value: timelineOverlayBloc),
       BlocProvider<VideoEditorTuneBloc>.value(value: tuneBloc),
+      BlocProvider<VideoEditorDrawBloc>.value(value: drawBloc),
     ],
     child: _scope(
       child: Builder(

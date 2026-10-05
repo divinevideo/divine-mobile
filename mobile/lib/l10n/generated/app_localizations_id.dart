@@ -8507,6 +8507,12 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorDrawLabel => 'Gambar';
 
   @override
+  String get videoEditorCensorLabel => 'Sensor';
+
+  @override
+  String get videoEditorBlurLabel => 'Buramkan';
+
+  @override
   String get videoEditorFilterLabel => 'Filter';
 
   @override
@@ -8890,6 +8896,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorOpenDrawSemanticLabel => 'Buka editor gambar';
 
   @override
+  String get videoEditorOpenBlurSemanticLabel =>
+      'Buramkan atau pikselkan sebagian video';
+
+  @override
   String get videoEditorOpenFilterSemanticLabel => 'Buka editor filter';
 
   @override
@@ -9036,6 +9046,10 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get videoEditorVoiceOverHint =>
       'Ketuk untuk merekam. Tambahkan sebanyak yang kamu mau.';
+
+  @override
+  String get videoEditorCensorHint =>
+      'Seret di atas yang ingin kamu sembunyikan.';
 
   @override
   String videoEditorVoiceOverRecordingsCount(int count) {

@@ -14,6 +14,7 @@ import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:openvine/screens/video_editor/video_audio_editor_timing_screen.dart';
@@ -144,7 +145,11 @@ class _LayerOverlayControls extends StatelessWidget {
       // an `animations` field the way a rasterized `ImageLayer` does. Offering
       // the action would animate the layer in the editor and drop it silently
       // from the file.
-      onAnimate: layer == null || isDetachedClip
+      //
+      // They are off for a hidden area (blur, pixelate) too: it hides what is
+      // beneath it the moment it shows, and an area that slid or faded in
+      // would show that for a moment first.
+      onAnimate: layer == null || isDetachedClip || isCensorLayer(layer)
           ? null
           : () => _animateLayer(context: context),
       // Saved title styles, for text only. A burned-in caption cue is a text

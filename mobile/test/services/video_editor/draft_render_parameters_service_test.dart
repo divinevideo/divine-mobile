@@ -457,6 +457,60 @@ void main() {
         ),
       );
     });
+
+    test('keeps a hidden area in its place without mounting it', () async {
+      // A censor area is a backdrop filter, which captures nothing behind
+      // the app; its export is built from the layer alone.
+      final stub = _StubLayerRasterizer();
+      addTearDown(stub.dispose);
+      final censor = PaintLayer(
+        id: 'censor-1',
+        rawSize: const Size(40, 20),
+        opacity: 1,
+        item: PaintedModel(
+          mode: PaintMode.blur,
+          offsets: const [Offset.zero, Offset(40, 20)],
+          erasedOffsets: const [],
+          color: const Color(0xFFFFFFFF),
+          strokeWidth: 1,
+          opacity: 1,
+        ),
+      );
+
+      final draft = _draft(
+        editorEditingParameters: _persistedParameters(
+          bodySize: const Size(300, 500),
+        ),
+        editorStateHistory: {
+          // The history format pro_image_editor 14 writes; the legacy
+          // formats before it read layers without their references.
+          'version': '6.5.0',
+          'position': 0,
+          'references': {
+            'censor-1': censor.toMap(),
+            'text-1': TextLayer(id: 'text-1', text: 'hello').toMap(),
+          },
+          'history': [
+            {
+              'layers': [
+                {'id': 'censor-1'},
+                {'id': 'text-1'},
+              ],
+            },
+          ],
+        },
+      );
+
+      final parameters = await DraftRenderParametersService(
+        rasterizer: stub,
+      ).buildForDraft(draft);
+
+      expect(stub.capturedLayerCount, equals(1));
+      expect(
+        parameters!.capturedLayers.map((item) => item.layer.id),
+        ['censor-1', 'text-1'],
+      );
+    });
   });
 }
 

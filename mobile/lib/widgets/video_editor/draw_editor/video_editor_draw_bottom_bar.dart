@@ -1,15 +1,17 @@
 // ABOUTME: Bottom bar for the video editor draw screen.
-// ABOUTME: Shows drawing tools (pencil, marker, arrow, eraser) and color picker.
+// ABOUTME: Shows drawing tools and color picker, or the tools that hide an area.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/tools/video_editor_draw_tool_arrow.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/tools/video_editor_draw_tool_eraser.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/tools/video_editor_draw_tool_marker.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/tools/video_editor_draw_tool_pencil.dart';
+import 'package:openvine/widgets/video_editor/draw_editor/video_editor_draw_censor_tools.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/video_editor_draw_item_indicator.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
@@ -17,7 +19,7 @@ import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.da
 /// Bottom bar for the video editor draw screen.
 ///
 /// Shows available drawing tools (pencil, marker, arrow, eraser) and color
-/// picker.
+/// picker, or — while the editor hides areas — the blur and pixelate tools.
 class VideoEditorDrawBottomBar extends StatelessWidget {
   const VideoEditorDrawBottomBar({super.key});
 
@@ -58,6 +60,11 @@ class VideoEditorDrawBottomBar extends StatelessWidget {
         ..setMode(config.mode)
         ..setOpacity(config.opacity)
         ..setStrokeWidth(config.strokeWidth / scope.fittedBoxScale);
+      if (tool.isCensor) {
+        paintEditor.setCensorStrength(
+          censorStrengthOf(config.mode, bloc.state.censorIntensityOf(tool)),
+        );
+      }
     }
   }
 
@@ -65,6 +72,12 @@ class VideoEditorDrawBottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<VideoEditorDrawBloc, VideoEditorDrawState>(
       builder: (context, state) {
+        if (state.isCensorMode) {
+          return VideoEditorDrawCensorTools(
+            onToolSelected: (tool) => _onToolSelected(context, tool),
+          );
+        }
+
         final bloc = context.read<VideoEditorDrawBloc>();
 
         return Padding(

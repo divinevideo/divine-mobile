@@ -255,6 +255,39 @@ void main() {
       expect(find.text(l10n.videoEditorLayerAnimationLabel), findsNothing);
     });
 
+    testWidgets('offers no animation for a hidden area', (tester) async {
+      const item = TimelineOverlayItem(
+        id: 'censor-layer',
+        type: TimelineOverlayType.layer,
+        startTime: Duration.zero,
+        endTime: Duration(seconds: 3),
+      );
+      final layer = PaintLayer(
+        id: item.id,
+        rawSize: const Size(40, 20),
+        opacity: 1,
+        item: PaintedModel(
+          mode: PaintMode.blur,
+          offsets: const [Offset.zero, Offset(40, 20)],
+          erasedOffsets: const [],
+          color: const Color(0xFFFFFFFF),
+          strokeWidth: 1,
+          opacity: 1,
+        ),
+      );
+      final editor = _MockProImageEditorState();
+      final mainBloc = _MockVideoEditorMainBloc();
+      when(() => editor.activeLayers).thenReturn([layer]);
+      when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+
+      await tester.pumpWidget(buildWithEditor(item, editor, mainBloc));
+
+      // It hides what is beneath it the moment it shows; sliding or fading
+      // in would show that for a moment first.
+      expect(find.text(l10n.videoEditorDuplicateLabel), findsOneWidget);
+      expect(find.text(l10n.videoEditorLayerAnimationLabel), findsNothing);
+    });
+
     testWidgets('offers saved styles for a text layer only', (tester) async {
       const item = TimelineOverlayItem(
         id: 'layer-1',

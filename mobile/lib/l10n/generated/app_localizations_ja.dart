@@ -8162,6 +8162,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorDrawLabel => '描画';
 
   @override
+  String get videoEditorCensorLabel => '目隠し';
+
+  @override
+  String get videoEditorBlurLabel => 'ぼかし';
+
+  @override
   String get videoEditorFilterLabel => 'フィルター';
 
   @override
@@ -8540,6 +8546,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorOpenDrawSemanticLabel => '描画エディタを開く';
 
   @override
+  String get videoEditorOpenBlurSemanticLabel => '動画の一部をぼかすかモザイクをかける';
+
+  @override
   String get videoEditorOpenFilterSemanticLabel => 'フィルターエディタを開く';
 
   @override
@@ -8683,6 +8692,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorVoiceOverHint => 'タップして録音。好きなだけテイクを追加できます。';
+
+  @override
+  String get videoEditorCensorHint => '隠したい部分をドラッグして選んでください。';
 
   @override
   String videoEditorVoiceOverRecordingsCount(int count) {

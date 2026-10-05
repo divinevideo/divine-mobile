@@ -127,6 +127,80 @@ void main() {
         ],
       );
     });
+
+    group('VideoEditorDrawCensorIntensityChanged', () {
+      blocTest<VideoEditorDrawBloc, VideoEditorDrawState>(
+        'sets the intensity of the selected censor tool only',
+        build: buildBloc,
+        seed: () => const VideoEditorDrawState(
+          selectedTool: DrawToolType.pixelate,
+          mode: PaintMode.pixelate,
+        ),
+        act: (bloc) =>
+            bloc.add(const VideoEditorDrawCensorIntensityChanged(0.8)),
+        expect: () => [
+          isA<VideoEditorDrawState>()
+              .having((s) => s.pixelateIntensity, 'pixelateIntensity', 0.8)
+              .having(
+                (s) => s.blurIntensity,
+                'blurIntensity',
+                VideoEditorConstants.censorDefaultIntensity,
+              ),
+        ],
+      );
+
+      blocTest<VideoEditorDrawBloc, VideoEditorDrawState>(
+        'ignores an intensity while drawing',
+        build: buildBloc,
+        act: (bloc) =>
+            bloc.add(const VideoEditorDrawCensorIntensityChanged(0.8)),
+        expect: () => const <VideoEditorDrawState>[],
+      );
+    });
+
+    group('VideoEditorDrawOpened', () {
+      blocTest<VideoEditorDrawBloc, VideoEditorDrawState>(
+        'opens to hide an area with the blur tool',
+        build: buildBloc,
+        act: (bloc) => bloc.add(const VideoEditorDrawOpened(censor: true)),
+        expect: () => [
+          isA<VideoEditorDrawState>()
+              .having((s) => s.selectedTool, 'selectedTool', DrawToolType.blur)
+              .having((s) => s.mode, 'mode', PaintMode.blur)
+              .having((s) => s.isCensorMode, 'isCensorMode', isTrue),
+        ],
+      );
+
+      blocTest<VideoEditorDrawBloc, VideoEditorDrawState>(
+        'keeps the last hide tool when it opens to hide again',
+        build: buildBloc,
+        seed: () => const VideoEditorDrawState(
+          selectedTool: DrawToolType.pixelate,
+          mode: PaintMode.pixelate,
+        ),
+        act: (bloc) => bloc.add(const VideoEditorDrawOpened(censor: true)),
+        expect: () => const <VideoEditorDrawState>[],
+      );
+
+      blocTest<VideoEditorDrawBloc, VideoEditorDrawState>(
+        'opens to draw with the pencil after hiding an area',
+        build: buildBloc,
+        seed: () => const VideoEditorDrawState(
+          selectedTool: DrawToolType.pixelate,
+          mode: PaintMode.pixelate,
+        ),
+        act: (bloc) => bloc.add(const VideoEditorDrawOpened(censor: false)),
+        expect: () => [
+          isA<VideoEditorDrawState>()
+              .having(
+                (s) => s.selectedTool,
+                'selectedTool',
+                DrawToolType.pencil,
+              )
+              .having((s) => s.mode, 'mode', PaintMode.freeStyle),
+        ],
+      );
+    });
   });
 
   group('VideoEditorDrawState', () {
@@ -273,6 +347,8 @@ void main() {
         opacity: 0.7,
         selectedColor: Colors.red,
         mode: PaintMode.arrow,
+        blurIntensity: 0.2,
+        pixelateIntensity: 0.9,
       );
       expect(state.props, [
         true, // canUndo
@@ -282,6 +358,8 @@ void main() {
         0.7, // opacity
         Colors.red,
         PaintMode.arrow,
+        0.2, // blurIntensity
+        0.9, // pixelateIntensity
       ]);
     });
   });

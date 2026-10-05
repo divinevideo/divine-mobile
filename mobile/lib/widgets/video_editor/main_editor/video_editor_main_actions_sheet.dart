@@ -5,6 +5,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
 import 'package:openvine/constants/text_scale_limits.dart';
@@ -34,6 +35,7 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
     final videoEditorMainBloc = context.read<VideoEditorMainBloc>();
     final clipEditorBloc = context.read<ClipEditorBloc>();
     final tuneBloc = context.read<VideoEditorTuneBloc>();
+    final drawBloc = context.read<VideoEditorDrawBloc>();
 
     return VineBottomSheet.show(
       context: context,
@@ -44,7 +46,8 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
       children: [
         // The sheet opens on a separate route, outside the editor's
         // MultiBlocProvider, so re-provide every bloc the actions read —
-        // including the tune bloc the Adjust action needs.
+        // including the tune bloc the Adjust action needs and the draw bloc
+        // the Draw and Blur actions open the draw editor with.
         MultiBlocProvider(
           providers: [
             BlocProvider<VideoEditorMainBloc>.value(
@@ -52,6 +55,7 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
             ),
             BlocProvider<ClipEditorBloc>.value(value: clipEditorBloc),
             BlocProvider<VideoEditorTuneBloc>.value(value: tuneBloc),
+            BlocProvider<VideoEditorDrawBloc>.value(value: drawBloc),
           ],
           child: VideoEditorMainActionsSheet(scope: scope),
         ),
@@ -162,6 +166,21 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
                 label: context.l10n.videoEditorDrawLabel,
                 semanticLabel: context.l10n.videoEditorOpenDrawSemanticLabel,
                 onTap: () {
+                  context.read<VideoEditorDrawBloc>().add(
+                    const VideoEditorDrawOpened(censor: false),
+                  );
+                  Navigator.pop(context);
+                  scope.editor?.openPaintEditor();
+                },
+              ),
+              _ItemButton(
+                icon: .eyeSlash,
+                label: context.l10n.videoEditorCensorLabel,
+                semanticLabel: context.l10n.videoEditorOpenBlurSemanticLabel,
+                onTap: () {
+                  context.read<VideoEditorDrawBloc>().add(
+                    const VideoEditorDrawOpened(censor: true),
+                  );
                   Navigator.pop(context);
                   scope.editor?.openPaintEditor();
                 },

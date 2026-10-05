@@ -8672,6 +8672,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorDrawLabel => 'Dibujar';
 
   @override
+  String get videoEditorCensorLabel => 'Censurar';
+
+  @override
+  String get videoEditorBlurLabel => 'Desenfocar';
+
+  @override
   String get videoEditorFilterLabel => 'Filtro';
 
   @override
@@ -9060,6 +9066,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorOpenDrawSemanticLabel => 'Abrir editor de dibujo';
 
   @override
+  String get videoEditorOpenBlurSemanticLabel =>
+      'Desenfoca o pixela parte del video';
+
+  @override
   String get videoEditorOpenFilterSemanticLabel => 'Abrir editor de filtros';
 
   @override
@@ -9207,6 +9217,9 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get videoEditorVoiceOverHint =>
       'Toca para grabar. Añade todas las tomas que quieras.';
+
+  @override
+  String get videoEditorCensorHint => 'Arrastra sobre lo que quieras ocultar.';
 
   @override
   String videoEditorVoiceOverRecordingsCount(int count) {

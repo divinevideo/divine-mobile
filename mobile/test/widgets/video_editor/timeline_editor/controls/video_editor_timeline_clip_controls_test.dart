@@ -874,6 +874,7 @@ void main() {
             basePixelRatio: any(named: 'basePixelRatio'),
           ),
         ).thenAnswer((_) async => <ExportedLayer>[]);
+        when(() => editor.activeLayers).thenReturn(const []);
         when(() => editor.stateManager).thenReturn(stateManager);
         when(() => editor.sizesManager).thenReturn(sizesManager);
         when(() => editor.configs).thenReturn(const ProImageEditorConfigs());

@@ -8555,6 +8555,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorDrawLabel => 'Vẽ';
 
   @override
+  String get videoEditorCensorLabel => 'Kiểm duyệt';
+
+  @override
+  String get videoEditorBlurLabel => 'Làm mờ';
+
+  @override
   String get videoEditorFilterLabel => 'Bộ lọc';
 
   @override
@@ -8940,6 +8946,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorOpenDrawSemanticLabel => 'Mở trình chỉnh sửa vẽ';
 
   @override
+  String get videoEditorOpenBlurSemanticLabel =>
+      'Làm mờ hoặc pixel hóa một phần video';
+
+  @override
   String get videoEditorOpenFilterSemanticLabel => 'Mở trình chỉnh sửa bộ lọc';
 
   @override
@@ -9086,6 +9096,9 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get videoEditorVoiceOverHint =>
       'Chạm để ghi. Thêm bao nhiêu bản tùy thích.';
+
+  @override
+  String get videoEditorCensorHint => 'Kéo qua phần bạn muốn ẩn.';
 
   @override
   String videoEditorVoiceOverRecordingsCount(int count) {

@@ -12,6 +12,7 @@ import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.d
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/video_editor_draw_overlay_controls.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
+import 'package:openvine/widgets/video_editor/video_editor_vertical_slider.dart';
 
 class MockVideoEditorDrawBloc
     extends MockBloc<VideoEditorDrawEvent, VideoEditorDrawState>
@@ -82,6 +83,26 @@ void main() {
           find.byWidgetPredicate(
             (widget) =>
                 widget is Semantics && widget.properties.label == closeLabel,
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('names the censor tool while hiding areas', (tester) async {
+        when(
+          () => mockBloc.state,
+        ).thenReturn(const VideoEditorDrawState(selectedTool: .blur));
+        await tester.pumpWidget(buildWidget());
+
+        final censorCloseLabel = l10n
+            .videoEditorDiscardToolChangesSemanticLabel(
+              l10n.videoEditorCensorLabel,
+            );
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is Semantics &&
+                widget.properties.label == censorCloseLabel,
           ),
           findsOneWidget,
         );
@@ -207,6 +228,48 @@ void main() {
           ),
         );
         expect(semantics.properties.button, isTrue);
+      });
+    });
+
+    group('Strength slider', () {
+      testWidgets('is hidden while drawing', (tester) async {
+        await tester.pumpWidget(buildWidget());
+
+        expect(find.byType(VideoEditorVerticalSlider), findsNothing);
+      });
+
+      testWidgets('shows the intensity of the selected censor tool', (
+        tester,
+      ) async {
+        when(() => mockBloc.state).thenReturn(
+          const VideoEditorDrawState(
+            selectedTool: DrawToolType.pixelate,
+            pixelateIntensity: 0.8,
+          ),
+        );
+        await tester.pumpWidget(buildWidget());
+
+        final slider = tester.widget<VideoEditorVerticalSlider>(
+          find.byType(VideoEditorVerticalSlider),
+        );
+        expect(slider.value, 0.8);
+      });
+
+      testWidgets('reports a new intensity', (tester) async {
+        when(
+          () => mockBloc.state,
+        ).thenReturn(const VideoEditorDrawState(selectedTool: .blur));
+        await tester.pumpWidget(buildWidget());
+
+        tester
+            .widget<VideoEditorVerticalSlider>(
+              find.byType(VideoEditorVerticalSlider),
+            )
+            .onChanged(0.3);
+
+        verify(
+          () => mockBloc.add(const VideoEditorDrawCensorIntensityChanged(0.3)),
+        ).called(1);
       });
     });
 

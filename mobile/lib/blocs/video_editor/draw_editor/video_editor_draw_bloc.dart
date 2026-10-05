@@ -15,7 +15,8 @@ part 'video_editor_draw_state.dart';
 /// in the UI.
 ///
 /// Handles:
-/// - Tool selection state (pencil, marker, arrow, eraser)
+/// - Tool selection state (pencil, marker, arrow, eraser, and blur and
+///   pixelate, which hide an area instead)
 /// - Color selection state
 /// - Undo/redo availability state
 class VideoEditorDrawBloc
@@ -26,6 +27,43 @@ class VideoEditorDrawBloc
     on<VideoEditorDrawToolSelected>(_onToolSelected);
     on<VideoEditorDrawColorSelected>(_onColorSelected);
     on<VideoEditorDrawReset>(_onReset);
+    on<VideoEditorDrawOpened>(_onOpened);
+    on<VideoEditorDrawCensorIntensityChanged>(_onCensorIntensityChanged);
+  }
+
+  /// Stores how strongly the selected censor tool hides an area.
+  void _onCensorIntensityChanged(
+    VideoEditorDrawCensorIntensityChanged event,
+    Emitter<VideoEditorDrawState> emit,
+  ) {
+    final intensity = event.intensity.clamp(0.0, 1.0);
+    switch (state.selectedTool) {
+      case .blur:
+        emit(state.copyWith(blurIntensity: intensity));
+      case .pixelate:
+        emit(state.copyWith(pixelateIntensity: intensity));
+      case .pencil || .marker || .arrow || .eraser:
+        // Intentional no-op: only the censor tools have an intensity.
+        break;
+    }
+  }
+
+  /// Picks a tool of the kind the editor opens for, keeping the last one.
+  void _onOpened(
+    VideoEditorDrawOpened event,
+    Emitter<VideoEditorDrawState> emit,
+  ) {
+    if (state.selectedTool.isCensor == event.censor) return;
+    final tool = event.censor ? DrawToolType.blur : DrawToolType.pencil;
+    final config = tool.config;
+    emit(
+      state.copyWith(
+        selectedTool: tool,
+        mode: config.mode,
+        opacity: config.opacity,
+        strokeWidth: config.strokeWidth,
+      ),
+    );
   }
 
   /// Resets undo/redo capabilities when the draw editor opens.

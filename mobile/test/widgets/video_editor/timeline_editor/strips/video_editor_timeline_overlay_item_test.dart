@@ -389,6 +389,40 @@ void main() {
 
         expect(drawPaintItemCount(tester), 1);
       });
+
+      for (final mode in [PaintMode.blur, PaintMode.pixelate]) {
+        testWidgets('names a ${mode.name} area instead of painting it', (
+          tester,
+        ) async {
+          // The paint preview throws for a censor area, which has no stroke.
+          final layer = PaintLayer(
+            rawSize: const Size(10, 10),
+            opacity: 1,
+            item: PaintedModel(
+              mode: mode,
+              offsets: const [Offset.zero, Offset(10, 10)],
+              erasedOffsets: const [],
+              color: const Color(0xFFFF0000),
+              strokeWidth: 1,
+              opacity: 1,
+            ),
+          );
+
+          await tester.pumpWidget(buildTile(layer));
+
+          expect(tester.takeException(), isNull);
+          expect(drawPaintItemCount(tester), 0);
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          expect(
+            find.text(
+              mode == PaintMode.blur
+                  ? l10n.videoEditorBlurLabel
+                  : l10n.videoEditorEffectPixelate,
+            ),
+            findsOneWidget,
+          );
+        });
+      }
     });
 
     group('multi-select overlay', () {

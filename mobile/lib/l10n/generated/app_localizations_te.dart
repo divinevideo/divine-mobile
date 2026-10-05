@@ -8838,6 +8838,12 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorDrawLabel => 'డ్రా';
 
   @override
+  String get videoEditorCensorLabel => 'సెన్సార్';
+
+  @override
+  String get videoEditorBlurLabel => 'బ్లర్';
+
+  @override
   String get videoEditorFilterLabel => 'ఫిల్టర్';
 
   @override
@@ -9227,6 +9233,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorOpenDrawSemanticLabel => 'డ్రా ఎడిటర్‌ను తెరవండి';
 
   @override
+  String get videoEditorOpenBlurSemanticLabel =>
+      'వీడియోలోని కొంత భాగాన్ని బ్లర్ లేదా పిక్సలేట్ చేయండి';
+
+  @override
   String get videoEditorOpenFilterSemanticLabel => 'ఫిల్టర్ ఎడిటర్‌ను తెరవండి';
 
   @override
@@ -9380,6 +9390,9 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get videoEditorVoiceOverHint =>
       'రికార్డ్ చేయడానికి నొక్కండి. మీకు నచ్చినన్ని టేక్‌లను జోడించండి.';
+
+  @override
+  String get videoEditorCensorHint => 'మీరు దాచాలనుకునే దానిపై లాగండి.';
 
   @override
   String videoEditorVoiceOverRecordingsCount(int count) {
