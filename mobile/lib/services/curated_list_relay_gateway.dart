@@ -620,7 +620,8 @@ class CuratedListRelayGateway {
       ]);
     } on Object catch (e) {
       Log.debug(
-        'Content of list event ${event.id} is not sealed item tags: $e',
+        'Content of list event ${event.id} is not sealed item tags '
+        '(${e.runtimeType})',
         name: 'CuratedListRelayGateway',
         category: LogCategory.system,
       );
