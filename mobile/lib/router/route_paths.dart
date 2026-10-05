@@ -131,6 +131,10 @@ abstract final class RoutePaths {
     return '$base?owner=${Uri.encodeComponent(ownerPubkey)}';
   }
 
+  /// Full-screen own-list picker. Encode the original d-tag exactly once.
+  static String peopleListAddPeopleForId(String listId) =>
+      '/people-lists/${Uri.encodeComponent(listId)}/add-people';
+
   static String curatedListFeedForId(String listId) {
     final encodedId = Uri.encodeComponent(listId);
     return '$curatedListFeedBase/$encodedId';

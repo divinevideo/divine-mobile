@@ -413,7 +413,7 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
   void _navigateToAddPeople(String listId) {
     runDetached(
       context.push<void>(
-        '/people-lists/${Uri.encodeComponent(listId)}/add-people',
+        RoutePaths.peopleListAddPeopleForId(listId),
       ),
       'open add-people picker',
       logName: 'UserListPeopleScreen',

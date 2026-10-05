@@ -140,6 +140,10 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
   final Stream<bool> _enabledStream;
   final PeopleListsClock _clock;
 
+  // Completion epoch, not UI state: it increases across account changes,
+  // repository replacement, feature toggles and overlapping reads. Resetting
+  // it with screen state would let an old A read match a later A session
+  // after A -> B -> A and incorrectly complete the current read.
   int _ownerReadSession = 0;
 
   StreamSubscription<String?>? _ownerSubscription;

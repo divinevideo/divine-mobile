@@ -313,7 +313,8 @@ RouteContext? _parseRoute(String path, {required bool knownOnly}) {
   // "clips-only?type=video", matches nothing, and the route falls through to
   // the RouteType.home fallback (which the normalizer then "corrects" by
   // yanking the user to /home/0).
-  final pathOnly = Uri.tryParse(path)?.path ?? path;
+  final uri = Uri.tryParse(path);
+  final pathOnly = uri?.path ?? path;
   final segments = pathOnly.split('/').where((s) => s.isNotEmpty).toList();
 
   if (segments.isEmpty) {
@@ -602,7 +603,9 @@ RouteContext? _parseRoute(String path, {required bool knownOnly}) {
       return const RouteContext(type: RouteType.discoverLists);
 
     case 'people-lists':
-      if (segments.length > 1 && segments[1] == 'new') {
+      if (segments.length == 2 &&
+          segments[1] == 'new' &&
+          !(uri?.queryParametersAll.containsKey('owner') ?? false)) {
         return const RouteContext(type: RouteType.peopleListCreate);
       }
       if (segments.length < 2) {
@@ -896,8 +899,7 @@ String buildRoute(RouteContext context) {
       return RoutePaths.peopleListMembersForId(context.listId ?? '');
 
     case RouteType.peopleListAddPeople:
-      final listId = Uri.encodeComponent(context.listId ?? '');
-      return '/people-lists/$listId/add-people';
+      return RoutePaths.peopleListAddPeopleForId(context.listId ?? '');
 
     case RouteType.creatorAnalytics:
       return RoutePaths.creatorAnalytics;

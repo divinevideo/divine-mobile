@@ -27,6 +27,11 @@ abstract interface class PeopleListsRepository {
   ///
   /// Stale relay echoes older than the locally-stored state must not overwrite
   /// newer local data.
+  ///
+  /// Throws `PublicPeopleListReadUnavailableException` when the relay read
+  /// is inconclusive (disconnected, timed out, or failed before completion).
+  /// Callers must retain cached lists and report an unavailable read rather
+  /// than interpreting that exception as a successfully empty owner list.
   Future<void> syncOwner({required String ownerPubkey});
 
   /// Creates a new people list for [ownerPubkey] with the given metadata and

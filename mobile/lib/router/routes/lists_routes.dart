@@ -3,12 +3,14 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/view/add_people_to_list_screen.dart';
 import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
 import 'package:openvine/features/people_lists/view/people_list_members_screen.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/router/route_error_screen.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/curated_list_by_author_screen.dart';
@@ -17,6 +19,8 @@ import 'package:openvine/screens/discover_lists_screen.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/saved_videos_screen.dart';
 import 'package:openvine/screens/user_list_people_screen.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 List<RouteBase> listsRoutes(Ref ref) {
@@ -77,7 +81,7 @@ List<RouteBase> listsRoutes(Ref ref) {
     ),
 
     // CREATE PEOPLE LIST route. Must come before /people-lists/:listId so
-    // the literal `new` segment is not captured as a list id.
+    // unqualified `new` remains creation; owner-qualified `new` opens a list.
     // `initialPubkey` query param lets callers (e.g., the share-video
     // "Add to list" sheet) seed the new list with a target person in
     // the same submit so the URL remains reloadable.
@@ -87,9 +91,16 @@ List<RouteBase> listsRoutes(Ref ref) {
       path: CreatePeopleListPage.path,
       name: CreatePeopleListPage.routeName,
       redirect: (context, state) => _peopleListsRedirectIfDisabled(ref, state),
-      builder: (context, state) => CreatePeopleListPage(
-        initialPubkey: state.uri.queryParameters['initialPubkey'],
-      ),
+      builder: (context, state) {
+        // `new` is a creation action only when no author was supplied. It is
+        // also a valid NIP-51 d-tag, so an addressed list keeps its identity.
+        if (state.uri.queryParametersAll.containsKey('owner')) {
+          return _buildPeopleList(context, state, listId: 'new');
+        }
+        return CreatePeopleListPage(
+          initialPubkey: state.uri.queryParameters['initialPubkey'],
+        );
+      },
     ),
 
     // PEOPLE LIST MEMBERS route (NIP-51 kind 30000 people lists).
@@ -102,17 +113,10 @@ List<RouteBase> listsRoutes(Ref ref) {
       name: UserListPeopleScreen.routeName,
       redirect: (context, state) => _peopleListsRedirectIfDisabled(ref, state),
       builder: (context, state) {
-        final listId = state.pathParameters['listId'];
-        if (listId == null || listId.isEmpty) {
-          return RouteErrorScreen(
-            message: context.l10n.routeInvalidListId,
-            title: context.l10n.peopleListsRouteTitle,
-            showBackButton: true,
-          );
-        }
-        return UserListPeopleScreen(
-          listId: listId,
-          ownerPubkey: state.uri.queryParameters['owner'],
+        return _buildPeopleList(
+          context,
+          state,
+          listId: state.pathParameters['listId'],
         );
       },
     ),
@@ -126,17 +130,11 @@ List<RouteBase> listsRoutes(Ref ref) {
       name: PeopleListMembersScreen.routeName,
       redirect: (context, state) => _peopleListsRedirectIfDisabled(ref, state),
       builder: (context, state) {
-        final listId = state.pathParameters['listId'];
-        if (listId == null || listId.isEmpty) {
-          return RouteErrorScreen(
-            message: context.l10n.routeInvalidListId,
-            title: context.l10n.peopleListsRouteTitle,
-            showBackButton: true,
-          );
-        }
-        return PeopleListMembersScreen(
-          listId: listId,
-          ownerPubkey: state.uri.queryParameters['owner'],
+        return _buildPeopleList(
+          context,
+          state,
+          listId: state.pathParameters['listId'],
+          roster: true,
         );
       },
     ),
@@ -150,7 +148,13 @@ List<RouteBase> listsRoutes(Ref ref) {
       redirect: (context, state) => _peopleListsRedirectIfDisabled(ref, state),
       builder: (context, state) {
         final listId = state.pathParameters['listId'];
-        if (listId == null || listId.isEmpty) {
+        final owner = _peopleListOwner(state.uri);
+        final currentOwner = ref.read(authServiceProvider).currentPublicKeyHex;
+        if (listId == null ||
+            listId.isEmpty ||
+            owner.invalid ||
+            (owner.pubkey != null &&
+                owner.pubkey != currentOwner?.toLowerCase())) {
           return RouteErrorScreen(
             message: context.l10n.routeInvalidListId,
             title: context.l10n.peopleListsAddPeopleTitle,
@@ -179,4 +183,46 @@ String? _peopleListsRedirectIfDisabled(Ref ref, GoRouterState state) {
     category: LogCategory.ui,
   );
   return VideoFeedPage.pathForIndex(0);
+}
+
+/// Absent author selects the legacy own-list route. An explicit invalid or
+/// ambiguous author must never silently select a same-ID list from that cache.
+({String? pubkey, bool invalid}) _peopleListOwner(Uri uri) {
+  final owners = uri.queryParametersAll['owner'];
+  if (owners == null) return (pubkey: null, invalid: false);
+  if (owners.length != 1) return (pubkey: null, invalid: true);
+  final identifier = owners.single;
+  final lowercase = identifier.toLowerCase();
+  // Bech32 accepts uniform uppercase as well as lowercase. Keep mixed-case
+  // input unchanged so its invalid checksum/casing is still rejected.
+  final publicIdentifier =
+      (lowercase.startsWith('npub1') || lowercase.startsWith('nprofile1')) &&
+          identifier == identifier.toUpperCase()
+      ? lowercase
+      : identifier;
+  final normalized = normalizePublicIdentifier(publicIdentifier)?.hexPubkey;
+  if (normalized == null || !NostrKeyUtils.isValidKey(normalized)) {
+    return (pubkey: null, invalid: true);
+  }
+  return (pubkey: normalized.toLowerCase(), invalid: false);
+}
+
+Widget _buildPeopleList(
+  BuildContext context,
+  GoRouterState state, {
+  required String? listId,
+  bool roster = false,
+}) {
+  final owner = _peopleListOwner(state.uri);
+  if (listId == null || listId.isEmpty || owner.invalid) {
+    return RouteErrorScreen(
+      message: context.l10n.routeInvalidListId,
+      title: context.l10n.peopleListsRouteTitle,
+      showBackButton: true,
+    );
+  }
+  if (roster) {
+    return PeopleListMembersScreen(listId: listId, ownerPubkey: owner.pubkey);
+  }
+  return UserListPeopleScreen(listId: listId, ownerPubkey: owner.pubkey);
 }
