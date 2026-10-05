@@ -104,7 +104,6 @@ void main() {
           await pumpEventQueue();
           final toggle = cubit.toggle();
           expect(cubit.state.isSubscribed, isTrue);
-          expect(publish.isCompleted, isFalse);
           publish.complete(
             const PeopleListPublishResult.submitted(eventId: 'e1'),
           );

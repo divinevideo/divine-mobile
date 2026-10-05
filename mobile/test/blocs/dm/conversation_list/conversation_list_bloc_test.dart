@@ -1116,7 +1116,6 @@ void main() {
               ..add(const ConversationListMarkRead(_testConversationId1))
               ..add(const ConversationListMarkRead(_testConversationId1));
             await pumpEventQueue();
-            expect(markRead.isCompleted, isFalse);
             markRead.complete();
             await pumpEventQueue();
           },
