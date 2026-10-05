@@ -676,7 +676,7 @@ void main() {
       await _pumpPeopleListScreen(tester, bloc: bloc, list: list);
 
       expect(find.byTooltip(l10n.peopleListsActionsTooltip), findsNothing);
-      expect(find.text(l10n.peopleListsAddPeopleTooltip), findsNothing);
+      expect(find.byTooltip(l10n.peopleListsAddPeopleTooltip), findsNothing);
       expect(find.text(l10n.listDeleteAction), findsNothing);
     });
 
