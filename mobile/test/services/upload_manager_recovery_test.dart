@@ -141,21 +141,21 @@ void main() {
 
     /// Seeds a [PendingUpload] directly into the Hive box, bypassing the
     /// normal start flow so a stuck state can be simulated.
-    PendingUpload seedUpload({
+    Future<PendingUpload> seedUpload({
       UploadStatus status = UploadStatus.uploading,
       String? localVideoPath,
-    }) {
+    }) async {
       final upload = PendingUpload.create(
         localVideoPath: localVideoPath ?? videoFile.path,
         nostrPubkey: 'test-pubkey',
         title: 'Stuck video',
       ).copyWith(status: status);
-      Hive.box<PendingUpload>('pending_uploads').put(upload.id, upload);
+      await Hive.box<PendingUpload>('pending_uploads').put(upload.id, upload);
       return upload;
     }
 
     test('onAppResumed re-drives uploads stuck in uploading state', () async {
-      seedUpload();
+      await seedUpload();
 
       final resumeStarted = Completer<void>();
       when(
@@ -259,7 +259,7 @@ void main() {
     });
 
     test('onAppResumed re-drives uploads stuck in retrying state', () async {
-      seedUpload(status: UploadStatus.retrying);
+      await seedUpload(status: UploadStatus.retrying);
 
       final resumeStarted = Completer<void>();
       when(
@@ -292,7 +292,7 @@ void main() {
     });
 
     test('onAppResumed does not re-drive failed uploads', () async {
-      final upload = seedUpload(status: UploadStatus.failed);
+      final upload = await seedUpload(status: UploadStatus.failed);
 
       await uploadManager.recoverInterruptedUploads();
 
@@ -323,7 +323,7 @@ void main() {
       'onAppResumed marks stuck upload failed when local file is missing',
       () async {
         final missingPath = '${tempDir.path}/does-not-exist.mp4';
-        final upload = seedUpload(localVideoPath: missingPath);
+        final upload = await seedUpload(localVideoPath: missingPath);
 
         uploadManager.onAppResumed();
 
@@ -354,7 +354,7 @@ void main() {
     );
 
     test('resumeInterruptedUpload is single-flight per upload id', () async {
-      final upload = seedUpload();
+      final upload = await seedUpload();
 
       var uploadCallCount = 0;
       final blockGate = Completer<void>();
@@ -402,7 +402,7 @@ void main() {
       'resumeInterruptedUpload clears in-flight marker when file is missing',
       () async {
         final missingPath = '${tempDir.path}/resume-missing.mp4';
-        final upload = seedUpload(localVideoPath: missingPath);
+        final upload = await seedUpload(localVideoPath: missingPath);
 
         uploadManager.resumeInterruptedUpload(upload.id);
 
