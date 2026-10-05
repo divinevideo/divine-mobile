@@ -10,7 +10,7 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/curated_list_info/curated_list_info_cubit.dart';
 import 'package:openvine/extensions/modal_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/curated_list_editor_session_provider.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_save_button.dart';
@@ -39,7 +39,9 @@ enum ListInfoSheetOutcome {
 /// lets the sheet close before any relay answers, so the wait covers the
 /// answer that arrives afterwards and its failure, if any, is reported on the
 /// screen the sheet was opened from. A [video] the created list refused is
-/// returned as [ListInfoSheetOutcome.createdWithoutVideo] instead, because
+/// returned as [ListInfoSheetOutcome.createdWithoutVideo] instead. A locally
+/// added video still waiting on relays returns
+/// [ListInfoSheetOutcome.createdWithVideoPendingSync]. In both cases,
 /// the caller may itself be a sheet that would cover a report drawn
 /// underneath, as the list picker is.
 Future<ListInfoSheetOutcome> showListInfoSheet(
@@ -53,11 +55,10 @@ Future<ListInfoSheetOutcome> showListInfoSheet(
   final messenger = ScaffoldMessenger.of(context);
   final container = ProviderScope.containerOf(context, listen: false);
 
+  final session = container.read(curatedListEditorSessionProvider);
   final cubit = CuratedListInfoCubit(
-    resolveService: () =>
-        container.read(curatedListsStateProvider.notifier).service,
-    currentOwnerPubkey: () =>
-        container.read(authServiceProvider).currentPublicKeyHex,
+    resolveService: () => session.service,
+    currentOwnerPubkey: () => session.currentOwnerPubkey,
     existingList: existingList,
     videoEventId: video?.id,
   );
@@ -109,11 +110,18 @@ Future<ListInfoSheetOutcome> showListInfoSheet(
     // there; one that arrived after the sheet closed has not.
     final unreported =
         settled.status == CuratedListInfoStatus.publishFailed ||
-        (savePending && settled.status == CuratedListInfoStatus.failure);
+        (savePending &&
+            (settled.status == CuratedListInfoStatus.failure ||
+                settled.status ==
+                    CuratedListInfoStatus.permissionsUnconfirmed));
     if (messenger.mounted && unreported) {
       messenger.showSnackBar(
         DivineSnackbarContainer.snackBar(
-          existingList == null ? l10n.listCreateFailed : l10n.listUpdateFailed,
+          settled.status == CuratedListInfoStatus.permissionsUnconfirmed
+              ? l10n.listPermissionsUnconfirmed
+              : existingList == null
+              ? l10n.listCreateFailed
+              : l10n.listUpdateFailed,
           error: true,
         ),
       );
@@ -128,7 +136,9 @@ Future<ListInfoSheetOutcome> showListInfoSheet(
       CuratedListInfoStatus.publishFailed => ListInfoSheetOutcome.saved,
       CuratedListInfoStatus.editing ||
       CuratedListInfoStatus.saving ||
-      CuratedListInfoStatus.failure => ListInfoSheetOutcome.dismissed,
+      CuratedListInfoStatus.failure ||
+      CuratedListInfoStatus.permissionsUnconfirmed =>
+        ListInfoSheetOutcome.dismissed,
     };
   } finally {
     await cubit.close();

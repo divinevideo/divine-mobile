@@ -6991,6 +6991,7 @@
   "listVideoNotAdded": "Senarai anda telah dibuat, tetapi video ini tidak ditambahkan.",
   "listVideoPendingSync": "Senarai dan video anda disimpan di sini. Video sedang menunggu untuk disegerakkan.",
   "listRetrySync": "Segerakkan sekarang",
+  "listPermissionsUnconfirmed": "Perubahan ini tidak dapat disahkan. Cuba lagi.",
   "soundRequestAction": "Minta bunyi ini",
   "soundRequestTitle": "Seseorang mahu menggunakan bunyi anda",
   "soundRequestDescription": "Benarkan penggunaan semula bunyi video ini supaya sesiapa sahaja boleh menghasilkan remix dengannya.",

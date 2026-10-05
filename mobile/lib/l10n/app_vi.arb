@@ -6991,6 +6991,7 @@
   "listVideoNotAdded": "Danh sách của bạn đã được tạo, nhưng video này chưa được thêm.",
   "listVideoPendingSync": "Danh sách và video của bạn đã được lưu tại đây. Video đang chờ đồng bộ.",
   "listRetrySync": "Đồng bộ ngay",
+  "listPermissionsUnconfirmed": "Không thể xác nhận thay đổi này. Hãy thử lại.",
   "soundRequestAction": "Yêu cầu âm thanh này",
   "soundRequestTitle": "Có người muốn dùng âm thanh của bạn",
   "soundRequestDescription": "Cho phép sử dụng lại âm thanh của video này để mọi người có thể tạo bản phối lại.",
