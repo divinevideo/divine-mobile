@@ -51,6 +51,19 @@ class _SaveFailedMessage extends StatelessWidget {
     final status = context.select(
       (SelectListCubit cubit) => cubit.state.status,
     );
+    final permissionRecovery = context.select(
+      (SelectListCubit cubit) =>
+          cubit.state.lists.any((list) => list.hasPendingPermissionRecovery),
+    );
+    final onlyAcceptedSyncFailures = context.select((SelectListCubit cubit) {
+      final failed = cubit.state.failedSyncListIds;
+      return failed.isNotEmpty &&
+          failed.every(
+            (id) => cubit.state.lists.any(
+              (list) => list.id == id && list.hasPendingPermissionRecovery,
+            ),
+          );
+    });
     return switch (status) {
       SelectListStatus.failure => ListInfoFailureMessage(
         context.l10n.listUpdateFailed,
@@ -63,10 +76,13 @@ class _SaveFailedMessage extends StatelessWidget {
       ),
       SelectListStatus.videoPendingSync => const ListInfoPendingSyncMessage(),
       SelectListStatus.recoveryPendingSync =>
-        const ListInfoRecoveryPendingMessage(),
-      SelectListStatus.syncFailed => ListInfoFailureMessage(
-        context.l10n.listUpdateFailed,
-      ),
+        permissionRecovery
+            ? const SizedBox.shrink()
+            : const ListInfoRecoveryPendingMessage(),
+      SelectListStatus.syncFailed =>
+        onlyAcceptedSyncFailures
+            ? const SizedBox.shrink()
+            : ListInfoFailureMessage(context.l10n.listUpdateFailed),
       _ => const SizedBox.shrink(),
     };
   }
@@ -186,13 +202,14 @@ class _ListRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  list.hasPendingPermissionRecovery ||
-                          !list.pendingRepublish ||
-                          !context
-                              .read<SelectListCubit>()
-                              .state
-                              .memberListIds
-                              .contains(list.id)
+                  list.hasPendingPermissionRecovery
+                      ? l10n.listPermissionsRecoveryPending
+                      : !list.pendingRepublish ||
+                            !context
+                                .read<SelectListCubit>()
+                                .state
+                                .memberListIds
+                                .contains(list.id)
                       ? l10n.listRecoveryPending
                       : l10n.listVideoPendingSync,
                 ),
