@@ -10,6 +10,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/models/auth_result.dart';
 import 'package:openvine/services/auth/nostr_connect_coordinator.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 
 class _MockNostrConnectSession extends Mock implements NostrConnectSession {}
 
@@ -236,6 +237,26 @@ void main() {
           NostrConnectFailureReason.postConnectFailed,
         );
         expect(connectFailedErrors, hasLength(1));
+      });
+
+      test('preserves a cleanup failure after the signer connects', () async {
+        when(
+          () => session.waitForConnection(timeout: any(named: 'timeout')),
+        ).thenAnswer((_) async => resultFor('a' * 64));
+        const cleanupError = UserDataCleanupException(
+          'Account cache unavailable',
+        );
+        onConnectedImpl = (_) async => throw cleanupError;
+        final coordinator = build();
+        await coordinator.initiate();
+
+        final result = await coordinator.waitForResponse();
+
+        expect(result.success, isFalse);
+        expect(result.failureReason, AuthFailureReason.accountCleanupFailed);
+        expect(result.nostrConnectFailureReason, isNull);
+        expect(result.errorMessage, isNull);
+        expect(connectFailedErrors, [cleanupError]);
       });
     });
 

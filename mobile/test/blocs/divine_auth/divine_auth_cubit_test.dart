@@ -1674,6 +1674,46 @@ void main() {
 
     group('skipWithAnonymousAccount', () {
       blocTest<DivineAuthCubit, DivineAuthState>(
+        'keeps cleanup failure distinct and restores an interactive form',
+        setUp: () {
+          when(() => mockAuthService.createAnonymousAccount()).thenThrow(
+            const UserDataCleanupException('Account cache unavailable'),
+          );
+        },
+        build: buildCubit,
+        seed: () => const DivineAuthFormState(),
+        act: (cubit) => cubit.skipWithAnonymousAccount(),
+        expect: () => [
+          const DivineAuthFormState(isSkipping: true),
+          const DivineAuthFormState(
+            signInFailureReason: SignInFailureReason.accountCleanupFailed,
+          ),
+        ],
+        errors: () => [isA<UserDataCleanupException>()],
+      );
+
+      blocTest<DivineAuthCubit, DivineAuthState>(
+        'clears a previous cleanup failure before retrying ordinary creation',
+        setUp: () {
+          when(() => mockAuthService.createAnonymousAccount()).thenThrow(
+            Exception('key generation failed'),
+          );
+        },
+        build: buildCubit,
+        seed: () => const DivineAuthFormState(
+          signInFailureReason: SignInFailureReason.accountCleanupFailed,
+        ),
+        act: (cubit) => cubit.skipWithAnonymousAccount(),
+        expect: () => [
+          const DivineAuthFormState(isSkipping: true),
+          const DivineAuthFormState(
+            generalError: 'Failed to create account. Please try again.',
+          ),
+        ],
+        errors: () => [isA<Exception>()],
+      );
+
+      blocTest<DivineAuthCubit, DivineAuthState>(
         'emits isSkipping then $DivineAuthSuccess on success',
         setUp: () {
           when(
