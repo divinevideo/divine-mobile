@@ -5023,5 +5023,6 @@
     "listVideoNotAdded": "تم إنشاء قائمتك، لكن لم تتم إضافة هذا الفيديو.",
     "listPrivateCollaboratorsWarning": "جعل هذه القائمة خاصة يزيل المتعاونين معها أيضًا. ستكون أنت الوحيد القادر على إضافة الفيديوهات.",
     "listVideoPendingSync": "تم حفظ قائمتك وفيديوك هنا. الفيديو بانتظار المزامنة.",
-    "listRetrySync": "زامن الآن"
+    "listRetrySync": "زامن الآن",
+    "listPermissionsUnconfirmed": "تعذّر تأكيد هذا التغيير. حاول مرة أخرى."
 }

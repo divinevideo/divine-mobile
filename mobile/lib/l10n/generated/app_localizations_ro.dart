@@ -13477,4 +13477,8 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get listRetrySync => 'Sincronizează acum';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Nu am putut confirma această schimbare. Încearcă din nou.';
 }

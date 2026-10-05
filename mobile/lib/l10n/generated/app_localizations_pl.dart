@@ -13471,4 +13471,8 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get listRetrySync => 'Synchronizuj teraz';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Nie udało się potwierdzić tej zmiany. Spróbuj ponownie.';
 }

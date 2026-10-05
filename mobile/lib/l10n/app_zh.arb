@@ -6783,5 +6783,6 @@
   "listPrivateCollaboratorsWarning": "将此列表设为私密也会移除其协作者。只有你可以添加视频。",
   "listVideoNotAdded": "你的列表已创建，但未添加此视频。",
   "listVideoPendingSync": "你的列表和视频已保存在此设备上。视频正在等待同步。",
-  "listRetrySync": "立即同步"
+  "listRetrySync": "立即同步",
+  "listPermissionsUnconfirmed": "无法确认此更改。请重试。"
 }

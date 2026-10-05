@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
@@ -42,6 +43,8 @@ class _FakeCuratedListsState extends CuratedListsState {
     }
     return _fakeLists;
   }
+
+  void replaceLists(List<CuratedList> lists) => state = AsyncData(lists);
 }
 
 void main() {
@@ -450,6 +453,119 @@ void main() {
       expect(find.text(l10n.listVideoNotAdded), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets(
+      'pending creation notice follows durable list state and clears after external sync',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final pending = CuratedList(
+          id: 'new-pending-list',
+          pubkey: 'a' * 64,
+          name: 'Pending collection',
+          videoEventIds: [testVideo.id],
+          pendingRepublish: true,
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+        );
+        when(
+          () => mockListService.createList(
+            name: any(named: 'name'),
+            description: any(named: 'description'),
+            isPublic: any(named: 'isPublic'),
+            isCollaborative: any(named: 'isCollaborative'),
+            allowedCollaborators: any(named: 'allowedCollaborators'),
+          ),
+        ).thenAnswer((_) async => pending.copyWith(videoEventIds: const []));
+        when(() => mockListService.getListById(pending.id)).thenReturn(pending);
+        await tester.binding.setSurfaceSize(const Size(800, 1200));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(SelectListDialog)),
+        );
+        final notifier = container.read(
+          curatedListsStateProvider.notifier,
+        ) as _FakeCuratedListsState;
+        when(() => mockListService.addVideoToList(pending.id, testVideo.id))
+            .thenAnswer((_) async {
+              notifier.replaceLists([pending]);
+              return false;
+            });
+        await tester.tap(find.text(l10n.listNewList));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField).first, pending.name);
+        await tester.pump();
+        await tester.tap(find.bySemanticsLabel(l10n.listCreate));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listVideoPendingSync), findsOneWidget);
+        final notice = tester.widget<Text>(
+          find.text(l10n.listVideoPendingSync),
+        );
+        final context = tester.element(find.byType(SelectListDialog));
+        expect(notice.style!.color, context.vineColors.onSurfaceVariant);
+        expect(find.text(l10n.listVideoNotAdded), findsNothing);
+        notifier.replaceLists([pending.copyWith(pendingRepublish: false)]);
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listVideoPendingSync), findsNothing);
+        expect(find.text(l10n.listRetrySync), findsNothing);
+        expect(_divineIcon(DivineIconName.checkCircle), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'sync retry shows progress, reports rejection, and clears after confirmed sync',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final pending = CuratedList(
+          id: 'pending-list',
+          pubkey: 'a' * 64,
+          name: 'Pending collection',
+          videoEventIds: [testVideo.id],
+          pendingRepublish: true,
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+        );
+        _fakeLists = [pending];
+        final answer = Completer<bool>();
+        addTearDown(() {
+          if (!answer.isCompleted) answer.complete(false);
+        });
+        when(() => mockListService.retryListSync(pending.id))
+            .thenAnswer((_) => answer.future);
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.listRetrySync));
+        await tester.pump();
+        expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+        expect(find.text(l10n.listRetrySync), findsNothing);
+        answer.complete(false);
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listUpdateFailed), findsOneWidget);
+        expect(find.text(l10n.listRetrySync), findsOneWidget);
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(SelectListDialog)),
+        );
+        final notifier = container.read(
+          curatedListsStateProvider.notifier,
+        ) as _FakeCuratedListsState;
+        when(() => mockListService.retryListSync(pending.id)).thenAnswer((
+          _,
+        ) async {
+          notifier.replaceLists([pending.copyWith(pendingRepublish: false)]);
+          return true;
+        });
+        await tester.tap(find.text(l10n.listRetrySync));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listVideoPendingSync), findsNothing);
+        expect(find.text(l10n.listUpdateFailed), findsNothing);
+        expect(find.text(l10n.listRetrySync), findsNothing);
+        expect(_divineIcon(DivineIconName.checkCircle), findsOneWidget);
+        verify(() => mockListService.retryListSync(pending.id)).called(2);
+        verifyNever(() => mockListService.addVideoToList(any(), any()));
+        verifyNever(() => mockListService.removeVideoFromList(any(), any()));
+      },
+    );
 
     testWidgets('renders Done button', (tester) async {
       _fakeLists = [];

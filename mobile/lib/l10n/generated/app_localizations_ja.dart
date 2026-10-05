@@ -12555,4 +12555,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get listRetrySync => '今すぐ同期';
+
+  @override
+  String get listPermissionsUnconfirmed => 'この変更を確認できませんでした。もう一度お試しください。';
 }

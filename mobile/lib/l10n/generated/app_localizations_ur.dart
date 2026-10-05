@@ -13201,4 +13201,8 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get listRetrySync => 'اب ہم آہنگ کریں';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'اس تبدیلی کی تصدیق نہیں ہو سکی۔ دوبارہ کوشش کریں۔';
 }

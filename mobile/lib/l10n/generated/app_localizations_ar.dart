@@ -13163,4 +13163,8 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get listRetrySync => 'زامن الآن';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'تعذّر تأكيد هذا التغيير. حاول مرة أخرى.';
 }

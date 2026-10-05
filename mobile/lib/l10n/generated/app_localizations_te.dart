@@ -13549,4 +13549,8 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get listRetrySync => 'ఇప్పుడే సింక్ చేయండి';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'ఈ మార్పును నిర్ధారించలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
 }

@@ -13132,4 +13132,8 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get listRetrySync => 'Şimdi eşitle';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Bu değişiklik doğrulanamadı. Tekrar dene.';
 }

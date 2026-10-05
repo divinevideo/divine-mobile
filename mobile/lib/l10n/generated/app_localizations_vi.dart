@@ -13150,4 +13150,8 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get listRetrySync => 'Đồng bộ ngay';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Không thể xác nhận thay đổi này. Hãy thử lại.';
 }

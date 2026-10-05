@@ -13209,4 +13209,8 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get listRetrySync => 'Segerakkan sekarang';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Perubahan ini tidak dapat disahkan. Cuba lagi.';
 }

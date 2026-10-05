@@ -12871,4 +12871,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get listRetrySync => 'አሁን አመሳስል';
+
+  @override
+  String get listPermissionsUnconfirmed => 'ይህን ለውጥ ማረጋገጥ አልተቻለም። እንደገና ይሞክሩ።';
 }

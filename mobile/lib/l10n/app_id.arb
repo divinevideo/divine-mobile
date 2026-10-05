@@ -5023,5 +5023,6 @@
     "listVideoNotAdded": "Daftarmu sudah dibuat, tetapi video ini belum ditambahkan.",
     "listPrivateCollaboratorsWarning": "Menjadikan daftar ini privat juga menghapus kolaboratornya. Hanya kamu yang dapat menambahkan video.",
     "listVideoPendingSync": "Daftar dan videomu tersimpan di sini. Video menunggu untuk disinkronkan.",
-    "listRetrySync": "Sinkronkan sekarang"
+    "listRetrySync": "Sinkronkan sekarang",
+    "listPermissionsUnconfirmed": "Perubahan ini belum bisa dikonfirmasi. Coba lagi."
 }

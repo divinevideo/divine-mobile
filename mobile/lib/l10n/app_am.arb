@@ -5116,5 +5116,6 @@
     "listVideoNotAdded": "ዝርዝርዎ ተፈጥሯል፣ ግን ይህ ቪዲዮ አልተጨመረም።",
     "listPrivateCollaboratorsWarning": "ይህን ዝርዝር የግል ማድረግ ተባባሪዎቹንም ያስወግዳል። ቪዲዮዎችን ማከል የሚችሉት እርስዎ ብቻ ይሆናሉ።",
     "listVideoPendingSync": "ዝርዝርዎ እና ቪዲዮዎ እዚህ ተቀምጠዋል። ቪዲዮው ለመመሳሰል በመጠባበቅ ላይ ነው።",
-    "listRetrySync": "አሁን አመሳስል"
+    "listRetrySync": "አሁን አመሳስል",
+    "listPermissionsUnconfirmed": "ይህን ለውጥ ማረጋገጥ አልተቻለም። እንደገና ይሞክሩ።"
 }

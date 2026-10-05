@@ -4029,5 +4029,6 @@
     "listVideoNotAdded": "Nagawa ang listahan mo, pero hindi naidagdag ang video na ito.",
     "listPrivateCollaboratorsWarning": "Kapag ginawang pribado ang listahang ito, aalisin din ang mga collaborator nito. Ikaw lang ang makakapagdagdag ng mga video.",
     "listVideoPendingSync": "Naka-save dito ang listahan at video mo. Naghihintay ang video na ma-sync.",
-    "listRetrySync": "I-sync ngayon"
+    "listRetrySync": "I-sync ngayon",
+    "listPermissionsUnconfirmed": "Hindi makumpirma ang pagbabagong ito. Subukan ulit."
 }

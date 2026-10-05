@@ -5023,5 +5023,6 @@
     "listVideoNotAdded": "Twoja lista została utworzona, ale ten film nie został dodany.",
     "listPrivateCollaboratorsWarning": "Ustawienie tej listy jako prywatnej usunie też jej współtwórców. Tylko Ty będziesz mieć możliwość dodawania filmów.",
     "listVideoPendingSync": "Twoja lista i film są zapisane tutaj. Film czeka na synchronizację.",
-    "listRetrySync": "Synchronizuj teraz"
+    "listRetrySync": "Synchronizuj teraz",
+    "listPermissionsUnconfirmed": "Nie udało się potwierdzić tej zmiany. Spróbuj ponownie."
 }

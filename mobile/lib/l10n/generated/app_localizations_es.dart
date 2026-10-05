@@ -13341,16 +13341,20 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get listVideoNotAdded =>
-      'Tu lista se creó, pero este vídeo no se añadió.';
+      'Tu lista se creó, pero este video no se añadió.';
 
   @override
   String get listPrivateCollaboratorsWarning =>
-      'Al hacer privada esta lista, también se eliminan sus colaboradores. Solo tú podrás añadir vídeos.';
+      'Al hacer privada esta lista, también se eliminan sus colaboradores. Solo vos vas a poder añadir videos.';
 
   @override
   String get listVideoPendingSync =>
-      'Tu lista y tu vídeo están guardados aquí. El vídeo está esperando a sincronizarse.';
+      'Tu lista y tu video están guardados acá. El video está esperando a sincronizarse.';
 
   @override
   String get listRetrySync => 'Sincronizar ahora';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'No se pudo confirmar este cambio. Probá de nuevo.';
 }

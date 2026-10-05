@@ -5023,5 +5023,6 @@
     "listVideoNotAdded": "Je lijst is gemaakt, maar deze video is niet toegevoegd.",
     "listPrivateCollaboratorsWarning": "Als je deze lijst privé maakt, worden ook de bijdragers verwijderd. Alleen jij kunt dan video’s toevoegen.",
     "listVideoPendingSync": "Je lijst en video zijn hier opgeslagen. De video wacht op synchronisatie.",
-    "listRetrySync": "Nu synchroniseren"
+    "listRetrySync": "Nu synchroniseren",
+    "listPermissionsUnconfirmed": "Deze wijziging kon niet worden bevestigd. Probeer het opnieuw."
 }

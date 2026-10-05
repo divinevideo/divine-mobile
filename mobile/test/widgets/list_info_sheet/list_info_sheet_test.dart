@@ -7,6 +7,7 @@ import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
@@ -15,6 +16,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/services/curated_list_service.dart';
@@ -120,6 +122,7 @@ void main() {
           isCollaborative: any(named: 'isCollaborative'),
           allowedCollaborators: any(named: 'allowedCollaborators'),
           onLocalSaved: any(named: 'onLocalSaved'),
+          onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
         ),
       ).thenAnswer((invocation) {
         (invocation.namedArguments[#onLocalSaved] as void Function()?)?.call();
@@ -597,7 +600,190 @@ void main() {
       });
     });
 
+    for (final creating in [true, false]) {
+      testWidgets(
+        creating
+            ? 'account container replacement cancels a dismissed creation before adding video'
+            : 'account container replacement safely settles a dismissed rename',
+        (tester) async {
+          final controller = AccountSwitchController();
+          final first = ProviderContainer(
+            overrides: [
+              ...getStandardTestOverrides(
+                mockAuthService: createMockAuthService(
+                  currentPublicKeyHex: _authorPubkey,
+                ),
+              ),
+              curatedListsStateProvider.overrideWith(
+                _FakeCuratedListsState.new,
+              ),
+            ],
+          );
+          final next = ProviderContainer(
+            overrides: [
+              ...getStandardTestOverrides(
+                mockAuthService: createMockAuthService(
+                  currentPublicKeyHex: 'e' * 64,
+                ),
+              ),
+              curatedListsStateProvider.overrideWith(
+                _FakeCuratedListsState.new,
+              ),
+            ],
+          );
+          final created = Completer<CuratedList?>();
+          final renamed = Completer<bool>();
+          addTearDown(() {
+            if (!created.isCompleted) created.complete(null);
+            if (!renamed.isCompleted) renamed.complete(true);
+          });
+          if (creating) {
+            stubCreate(() => created.future);
+          } else {
+            stubUpdate(() => renamed.future);
+          }
+          final outcomes = <ListInfoSheetOutcome>[];
+          await tester.binding.setSurfaceSize(const Size(800, 1200));
+          addTearDown(() => tester.binding.setSurfaceSize(null));
+          await tester.pumpWidget(
+            ContainerSwapHost(
+              initialContainer: first,
+              controller: controller,
+              child: MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Builder(
+                  builder: (context) => Scaffold(
+                    body: TextButton(
+                      child: const Text(_openLabel),
+                      onPressed: () => runDetached(
+                        showListInfoSheet(
+                          context,
+                          existingList: creating ? null : list(),
+                          video: creating ? video : null,
+                        ).then(outcomes.add),
+                        'open editor during account swap',
+                        logName: 'ListInfoSheetTest',
+                        category: LogCategory.ui,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.tap(find.text(_openLabel));
+          await tester.pumpAndSettle();
+          await tester.enterText(
+            find.byType(TextField).first,
+            'Account A draft',
+          );
+          await tester.pump();
+          await tester.tap(saveButton(editing: !creating));
+          await tester.pump();
+          if (creating) {
+            await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+          }
+          await tester.pumpAndSettle();
+          expect(outcomes, isEmpty);
+          await controller.swapTo(next);
+          await tester.pumpAndSettle();
+          expect(() => first.read(authServiceProvider), throwsStateError);
+          if (creating) {
+            created.complete(list());
+          } else {
+            renamed.complete(false);
+          }
+          await tester.pumpAndSettle();
+          expect(outcomes, [ListInfoSheetOutcome.dismissed]);
+          expect(find.byType(SnackBar), findsNothing);
+          verifyNever(() => service.addVideoToList(any(), any()));
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+
     group('editing', () {
+      testWidgets(
+        'an unconfirmed privacy change keeps the draft and reports uncertainty once',
+        (tester) async {
+          when(
+            () => service.updateList(
+              listId: any(named: 'listId'),
+              name: any(named: 'name'),
+              description: any(named: 'description'),
+              isPublic: any(named: 'isPublic'),
+              isCollaborative: any(named: 'isCollaborative'),
+              allowedCollaborators: any(named: 'allowedCollaborators'),
+              onLocalSaved: any(named: 'onLocalSaved'),
+              onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+            ),
+          ).thenAnswer((invocation) async {
+            (invocation.namedArguments[#onPublicationUnconfirmed]
+                as void Function())();
+            return false;
+          });
+          await openSheet(tester, existingList: list(isPublic: false));
+          await tester.tap(find.byType(DivineSwitchTile));
+          await tester.pump();
+          await tester.tap(saveButton(editing: true));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.listContinue));
+          await tester.pumpAndSettle();
+          expect(find.text(l10n.listPermissionsUnconfirmed), findsOneWidget);
+          expect(find.text(l10n.listUpdateFailed), findsNothing);
+          expect(find.text(l10n.listEditTitle), findsOneWidget);
+          expect(visibilityTile(tester).value, isTrue);
+          await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+          await tester.pumpAndSettle();
+          expect(find.text(l10n.listPermissionsUnconfirmed), findsNothing);
+          expect(find.byType(SnackBar), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'reports an unconfirmed permission change after manual dismissal',
+        (tester) async {
+          final answer = Completer<bool>();
+          void Function()? unconfirmed;
+          addTearDown(() {
+            if (!answer.isCompleted) answer.complete(false);
+          });
+          when(
+            () => service.updateList(
+              listId: any(named: 'listId'),
+              name: any(named: 'name'),
+              description: any(named: 'description'),
+              isPublic: any(named: 'isPublic'),
+              isCollaborative: any(named: 'isCollaborative'),
+              allowedCollaborators: any(named: 'allowedCollaborators'),
+              onLocalSaved: any(named: 'onLocalSaved'),
+              onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+            ),
+          ).thenAnswer((invocation) {
+            unconfirmed =
+                invocation.namedArguments[#onPublicationUnconfirmed]
+                    as void Function()?;
+            return answer.future;
+          });
+          await openSheet(tester, existingList: list(isPublic: false));
+          await tester.tap(find.byType(DivineSwitchTile));
+          await tester.pump();
+          await tester.tap(saveButton(editing: true));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.listContinue));
+          await tester.pump();
+          await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+          await tester.pumpAndSettle();
+          unconfirmed!();
+          answer.complete(false);
+          await tester.pumpAndSettle();
+          expect(find.text(l10n.listPermissionsUnconfirmed), findsOneWidget);
+          expect(find.text(l10n.listUpdateFailed), findsNothing);
+          expect(find.text(l10n.listEditTitle), findsNothing);
+        },
+      );
+
       testWidgets('asks before publishing a private list', (tester) async {
         stubUpdate(() async => true);
         await openSheet(tester, existingList: list(isPublic: false));
@@ -621,6 +807,7 @@ void main() {
             description: '',
             isPublic: true,
             onLocalSaved: any(named: 'onLocalSaved'),
+            onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
           ),
         ).called(1);
       });
@@ -672,6 +859,7 @@ void main() {
             name: 'Marionettes',
             description: '',
             onLocalSaved: any(named: 'onLocalSaved'),
+            onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
           ),
         ).called(1);
         expect(find.text(l10n.listEditTitle), findsNothing);
@@ -725,6 +913,7 @@ void main() {
             description: '',
             isPublic: true,
             onLocalSaved: any(named: 'onLocalSaved'),
+            onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
           ),
         ).called(1);
         expect(find.text(l10n.listEditTitle), findsOneWidget);
@@ -871,7 +1060,7 @@ void main() {
       });
 
       testWidgets(
-        'review9746 explicitly removes an unresolved collaborator through picker and save',
+        'removes an unresolved collaborator through the picker before saving',
         (tester) async {
           stubUpdate(() async => true);
           final profiles = _MockProfileRepository();
@@ -923,6 +1112,7 @@ void main() {
               isCollaborative: false,
               allowedCollaborators: const [],
               onLocalSaved: any(named: 'onLocalSaved'),
+              onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
             ),
           ).called(1);
         },
@@ -1099,6 +1289,7 @@ void main() {
             isCollaborative: false,
             allowedCollaborators: const [],
             onLocalSaved: any(named: 'onLocalSaved'),
+            onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
           ),
         ).called(1);
       });

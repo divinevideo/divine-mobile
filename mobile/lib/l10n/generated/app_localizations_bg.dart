@@ -13336,4 +13336,8 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get listRetrySync => 'Синхронизирай сега';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Не можахме да потвърдим тази промяна. Опитай отново.';
 }

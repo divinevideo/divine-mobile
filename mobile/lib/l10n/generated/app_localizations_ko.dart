@@ -12569,4 +12569,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get listRetrySync => '지금 동기화';
+
+  @override
+  String get listPermissionsUnconfirmed => '이 변경 사항을 확인하지 못했어요. 다시 시도해 주세요.';
 }

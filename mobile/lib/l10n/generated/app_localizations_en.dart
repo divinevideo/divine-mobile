@@ -13299,4 +13299,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get listRetrySync => 'Sync now';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Couldn\'t confirm this change. Try again.';
 }

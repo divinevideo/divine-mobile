@@ -22082,6 +22082,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sync now'**
   String get listRetrySync;
+
+  /// Shown when a requested list visibility or collaborator change has no confirmed relay outcome. Does not claim the remote change failed or was reversed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t confirm this change. Try again.'**
+  String get listPermissionsUnconfirmed;
 }
 
 class _AppLocalizationsDelegate

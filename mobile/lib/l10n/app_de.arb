@@ -5023,5 +5023,6 @@
     "listVideoNotAdded": "Deine Liste wurde erstellt, aber dieses Video wurde nicht hinzugefügt.",
     "listPrivateCollaboratorsWarning": "Wenn du diese Liste privat machst, werden auch ihre Mitwirkenden entfernt. Nur du kannst dann Videos hinzufügen.",
     "listVideoPendingSync": "Deine Liste und dein Video sind hier gespeichert. Das Video wartet auf die Synchronisierung.",
-    "listRetrySync": "Jetzt synchronisieren"
+    "listRetrySync": "Jetzt synchronisieren",
+    "listPermissionsUnconfirmed": "Diese Änderung konnte nicht bestätigt werden. Versuch es erneut."
 }
