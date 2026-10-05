@@ -18,6 +18,7 @@ import 'package:openvine/services/curated_lists/curated_list_recovery_storage.da
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/curated_list_publish_stubs.dart';
 
@@ -1971,6 +1972,140 @@ void main() {
             prefs.getString(CuratedListRecoveryJournal.storageKey(incoming)),
             contains(_video),
           );
+        },
+      );
+    }
+
+    Object malformedLegacy(String form, CuratedList healthyRow) =>
+        switch (form) {
+          'non-string' => ['PRIVATE_UNKNOWN_LEGACY_VALUE'],
+          'invalid JSON' => '{PRIVATE_UNKNOWN_LEGACY_VALUE',
+          'non-list' => '{"PRIVATE_UNKNOWN_LEGACY_VALUE":true}',
+          'non-map row' => '["PRIVATE_UNKNOWN_LEGACY_VALUE"]',
+          _ => jsonEncode([
+            healthyRow.toJson(),
+            {
+              ...healthyRow.toJson(),
+              'id': 'broken',
+              'name': 'PRIVATE_UNKNOWN_LEGACY_VALUE',
+              'createdAt': 'PRIVATE_UNKNOWN_LEGACY_VALUE',
+            },
+          ]),
+        };
+
+    Future<void> storeMalformedLegacy(Object raw) async {
+      if (raw is String) {
+        await prefs.setString(CuratedListService.listsStorageKey, raw);
+      } else {
+        await prefs.setStringList(
+          CuratedListService.listsStorageKey,
+          raw as List<String>,
+        );
+      }
+    }
+
+    for (final form in [
+      'non-string',
+      'invalid JSON',
+      'non-list',
+      'non-map row',
+      'partially corrupt row',
+    ]) {
+      for (final destructive in [false, true]) {
+        test(
+          '${destructive ? 'destructive A cleanup' : 'ordinary logout'} preserves unknown-owner $form legacy evidence and healthy B recovery',
+          () async {
+            const other =
+                'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+            final list = (await seed()).copyWith(pubkey: other);
+            final journal = CuratedListRecoveryJournal(
+              prefs: prefs,
+              runCurrent: (op) => op(),
+            );
+            expect(
+              await journal.accepted(
+                owner: other,
+                listId: list.id,
+                visibility: const CuratedListVisibility(
+                  isPublic: false,
+                  isCollaborative: false,
+                  allowedCollaborators: [],
+                  relayAccepted: true,
+                ),
+                eventId: _video,
+                acceptedAt: clock.now(),
+                plaintextEventIds: [_oldEvent],
+              ),
+              isTrue,
+            );
+            final raw = malformedLegacy(form, list);
+            await storeMalformedLegacy(raw);
+            final cleanup = UserDataCleanupService(prefs);
+            await expectLater(
+              destructive
+                  ? cleanup.deleteAccountData(
+                      _owner,
+                      userNpub: 'npub-A',
+                      preserveActiveSession: false,
+                    )
+                  : cleanup.clearUserSpecificData(userPubkey: _owner),
+              throwsA(
+                isA<CuratedListRecoveryException>().having(
+                  (error) => error.toString(),
+                  'safe reason',
+                  isNot(contains('PRIVATE_UNKNOWN_LEGACY_VALUE')),
+                ),
+              ),
+            );
+            await restart();
+            expect(prefs.get(CuratedListService.listsStorageKey), raw);
+            final recovered = CuratedListRecoveryJournal(
+              prefs: prefs,
+              runCurrent: (op) => op(),
+            );
+            expect(
+              recovered.record(other, list.id)!.visibility!.isPublic,
+              isFalse,
+            );
+            expect(recovered.record(other, list.id)!.plaintextEventIds, [
+              _oldEvent,
+            ]);
+            expect(
+              prefs.containsKey(CuratedListRecoveryJournal.storageKey(_owner)),
+              isFalse,
+            );
+            expect(sent, isEmpty);
+          },
+        );
+      }
+
+      test(
+        'startup and direct creates cannot replace unknown-owner $form legacy evidence',
+        () async {
+          final raw = malformedLegacy(form, await seed());
+          await storeMalformedLegacy(raw);
+          final logs = LogCaptureService();
+          await logs.clearAllLogs();
+          final current = open();
+          expect(current.recoveryNeedsRepair, isTrue);
+          await expectLater(
+            current.prepareRecovery(),
+            throwsA(isA<CuratedListRecoveryException>()),
+          );
+          await current.initialize().catchError((Object _) {});
+          expect(current.isInitialized, isFalse);
+          expect(current.getDefaultList(), isNull);
+          expect(await current.createList(name: 'New list'), isNull);
+          expect(sent, isEmpty);
+          final captured = (await logs.getAllLogsAsText()).join('\n');
+          expect(
+            captured,
+            contains('Failed to initialize curated list service'),
+          );
+          expect(captured, isNot(contains('PRIVATE_UNKNOWN_LEGACY_VALUE')));
+          await restart();
+          expect(prefs.get(CuratedListService.listsStorageKey), raw);
+          expect(open().recoveryNeedsRepair, isTrue);
         },
       );
     }
