@@ -81,8 +81,6 @@ test/services/curated_list_service_collaboration_test.dart	1
 test/services/curated_list_service_crud_test.dart	6
 test/services/curated_list_service_playlist_test.dart	1
 test/services/curated_list_service_video_management_test.dart	10
-test/services/video_event_service_deletion_test.dart	9
-test/services/video_event_service_event_deduplication_test.dart	24
 test/startup/main_startup_registration_test.dart	1
 test/startup/startup_diagnostics_test.dart	9
 test/utils/video_nostr_enrichment_streaming_test.dart	2

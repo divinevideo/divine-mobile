@@ -82,6 +82,8 @@ void main() {
     });
 
     tearDown(() async {
+      await videoEventService.unsubscribeFromVideoFeed();
+      videoEventService.dispose();
       await eventStreamController.close();
       reset(mockNostrService);
     });
@@ -101,17 +103,16 @@ void main() {
       await videoEventService.subscribeToVideoFeed(
         subscriptionType: SubscriptionType.discovery,
       );
-      await Future<void>.delayed(const Duration(milliseconds: 10));
 
       // Send the same event multiple times
       eventStreamController.add(testEvent);
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+      await pumpEventQueue();
 
       eventStreamController.add(testEvent);
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+      await pumpEventQueue();
 
       eventStreamController.add(testEvent);
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+      await pumpEventQueue();
 
       // Verify only one event was added
       expect(videoEventService.discoveryVideos.length, equals(1));
@@ -136,11 +137,10 @@ void main() {
       await videoEventService.subscribeToVideoFeed(
         subscriptionType: SubscriptionType.discovery,
       );
-      await Future<void>.delayed(const Duration(milliseconds: 10));
 
       for (final event in events) {
         eventStreamController.add(event);
-        await Future<void>.delayed(const Duration(milliseconds: 10));
+        await pumpEventQueue();
       }
 
       // Verify all unique events were added
@@ -181,23 +181,22 @@ void main() {
       await videoEventService.subscribeToVideoFeed(
         subscriptionType: SubscriptionType.discovery,
       );
-      await Future<void>.delayed(const Duration(milliseconds: 10));
 
       // Send events in mixed order with duplicates
       eventStreamController.add(event1);
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+      await pumpEventQueue();
 
       eventStreamController.add(event2);
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+      await pumpEventQueue();
 
       eventStreamController.add(event1); // Duplicate
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+      await pumpEventQueue();
 
       eventStreamController.add(event2); // Duplicate
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+      await pumpEventQueue();
 
       eventStreamController.add(event1); // Another duplicate
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+      await pumpEventQueue();
 
       // Verify only unique events were added
       expect(videoEventService.discoveryVideos.length, equals(2));
@@ -229,19 +228,19 @@ void main() {
         await videoEventService.subscribeToVideoFeed(
           subscriptionType: SubscriptionType.discovery,
         );
-        await Future<void>.delayed(const Duration(milliseconds: 10));
 
         eventStreamController.add(testEvent);
-        await Future<void>.delayed(const Duration(milliseconds: 10));
+        await pumpEventQueue();
 
         expect(videoEventService.discoveryVideos.length, equals(1));
 
         // Unsubscribe and re-subscribe
         await videoEventService.unsubscribeFromVideoFeed();
-        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(eventStreamController.hasListener, isFalse);
 
         // Create new stream controller for new subscription
         final newEventStreamController = StreamController<Event>.broadcast();
+        addTearDown(newEventStreamController.close);
         when(
           () => mockNostrService.subscribe(
             any(),
@@ -258,16 +257,14 @@ void main() {
           subscriptionType: SubscriptionType.discovery,
           replace: false,
         );
-        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(newEventStreamController.hasListener, isTrue);
 
         // Try to add the same event again
         newEventStreamController.add(testEvent);
-        await Future<void>.delayed(const Duration(milliseconds: 10));
+        await pumpEventQueue();
 
         // Should still have only one event
         expect(videoEventService.discoveryVideos.length, equals(1));
-
-        await newEventStreamController.close();
       },
     );
 
@@ -284,15 +281,14 @@ void main() {
       await videoEventService.subscribeToVideoFeed(
         subscriptionType: SubscriptionType.discovery,
       );
-      await Future<void>.delayed(const Duration(milliseconds: 10));
 
       // Send the same event rapidly without delays
       for (var i = 0; i < 100; i++) {
         eventStreamController.add(testEvent);
       }
 
-      // Allow processing time
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      // Settle the full burst before checking the deduplicated feed.
+      await pumpEventQueue();
 
       // Should still have only one event despite rapid duplicates
       expect(videoEventService.discoveryVideos.length, equals(1));
@@ -324,12 +320,11 @@ void main() {
       await videoEventService.subscribeToVideoFeed(
         subscriptionType: SubscriptionType.discovery,
       );
-      await Future<void>.delayed(const Duration(milliseconds: 10));
 
       // Send both events
       eventStreamController.add(validEvent);
       eventStreamController.add(invalidEvent);
-      await Future<void>.delayed(const Duration(milliseconds: 20));
+      await pumpEventQueue();
 
       // Should only have the valid video event
       expect(videoEventService.discoveryVideos.length, equals(1));
@@ -367,6 +362,8 @@ void main() {
     });
 
     tearDown(() async {
+      await videoEventService.unsubscribeFromVideoFeed();
+      videoEventService.dispose();
       await eventStreamController.close();
     });
 
@@ -402,24 +399,44 @@ void main() {
       );
       repost2.id = 'repost-2';
 
+      final original = _createVideoEvent(
+        pubkey: originalPubkey,
+        id: originalVideoId,
+        videoUrl: 'https://example.com/original.mp4',
+        createdAt: now - 1,
+      );
+      videoEventService.addVideoEventForTesting(
+        VideoEvent.fromNostrEvent(original),
+        SubscriptionType.profile,
+        isHistorical: false,
+      );
+
       // Subscribe with reposts enabled
       await videoEventService.subscribeToVideoFeed(
         subscriptionType: SubscriptionType.discovery,
         includeReposts: true,
       );
-      await Future<void>.delayed(const Duration(milliseconds: 10));
 
       // Send both reposts
       eventStreamController.add(repost1);
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+      await pumpEventQueue();
+      expect(videoEventService.discoveryVideos.single.id, originalVideoId);
+      expect(videoEventService.discoveryVideos.single.isRepost, isTrue);
+      expect(
+        videoEventService.discoveryVideos.single.reposterPubkey,
+        repost1.pubkey,
+      );
 
       eventStreamController.add(repost2);
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+      await pumpEventQueue();
 
-      // Reposts can't be displayed without the original video event
-      // in cache. This is expected: kind 16 events reference original
-      // events that must exist for repost resolution to succeed.
-      expect(videoEventService.discoveryVideos.length, equals(0));
+      final video = videoEventService.discoveryVideos.single;
+      expect(video.id, originalVideoId);
+      expect(video.isRepost, isTrue);
+      expect(
+        video.reposterPubkeys,
+        containsAll([repost1.pubkey, repost2.pubkey]),
+      );
     });
   });
 }
