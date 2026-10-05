@@ -25,7 +25,29 @@ class _MockNostrClient extends Mock implements NostrClient {}
 
 class _MockAuthService extends Mock implements AuthService {}
 
-class _MockPreferences extends Mock implements SharedPreferences {}
+class _MockPreferences extends Mock implements SharedPreferences {
+  _MockPreferences(this.stored);
+
+  final Map<String, Object> stored;
+
+  @override
+  Object? get(String key) => stored[key];
+
+  @override
+  String? getString(String key) => stored[key] as String?;
+
+  @override
+  List<String>? getStringList(String key) => stored[key] as List<String>?;
+
+  @override
+  bool containsKey(String key) => stored.containsKey(key);
+
+  @override
+  Set<String> getKeys() => stored.keys.toSet();
+
+  @override
+  Future<void> reload() async {}
+}
 
 const _owner =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -38,7 +60,7 @@ void main() {
     late _MockAuthService auth;
     late _MockPreferences prefs;
     late CuratedListService service;
-    late Map<String, String> stored;
+    late Map<String, Object> stored;
     var writes = 0;
     var acceptsWrite = (int count) => true;
 
@@ -49,16 +71,13 @@ void main() {
     setUp(() {
       client = _MockNostrClient();
       auth = _MockAuthService();
-      prefs = _MockPreferences();
       stored = {};
+      prefs = _MockPreferences(stored);
       writes = 0;
       acceptsWrite = (_) => true;
       when(() => auth.currentPublicKeyHex).thenReturn(_owner);
       when(() => auth.isAuthenticated).thenReturn(true);
       stubListPublishing(client: client, auth: auth, pubkey: _owner);
-      when(() => prefs.getString(any())).thenAnswer(
-        (i) => stored[i.positionalArguments.first as String],
-      );
       when(() => prefs.setString(any(), any())).thenAnswer((i) async {
         final key = i.positionalArguments[0] as String;
         if (!key.startsWith(CuratedListRecoveryJournal.storagePrefix) &&
@@ -73,13 +92,17 @@ void main() {
         stored.remove(i.positionalArguments.single as String);
         return true;
       });
-      when(() => prefs.setStringList(any(), any()))
-          .thenAnswer((_) async => true);
+      when(() => prefs.setStringList(any(), any())).thenAnswer((i) async {
+        stored[i.positionalArguments[0] as String] = List<String>.from(
+          i.positionalArguments[1] as List<String>,
+        );
+        return true;
+      });
     });
 
     void open({bool existing = true}) {
       if (existing) {
-        final now = DateTime.now().subtract(const Duration(seconds: 5));
+        final now = clock.now().subtract(const Duration(seconds: 5));
         final list = CuratedList(
           id: 'crew',
           name: 'Original',
@@ -101,7 +124,9 @@ void main() {
     }
 
     CuratedList persisted() => CuratedList.fromJson(
-      (jsonDecode(stored[CuratedListService.listsStorageKey]!) as List).single
+      (jsonDecode(
+            stored[CuratedListService.listsStorageKey]! as String,
+          ) as List).single
           as Map<String, dynamic>,
     );
 
@@ -156,8 +181,14 @@ void main() {
       test('failed deletion persistence preserves the local list '
           'when tombstoneSaved=$tombstoneSaved', () async {
         open();
-        when(() => prefs.setStringList(any(), any()))
-            .thenAnswer((_) async => tombstoneSaved);
+        when(() => prefs.setStringList(any(), any())).thenAnswer((i) async {
+          if (tombstoneSaved) {
+            stored[i.positionalArguments[0] as String] = List<String>.from(
+              i.positionalArguments[1] as List<String>,
+            );
+          }
+          return tombstoneSaved;
+        });
         acceptsWrite = (_) => false;
         expect(await service.deleteOwnedList('crew'), isFalse);
         expect(service.getListById('crew')!.name, 'Original');
@@ -330,7 +361,7 @@ void main() {
       stored['subscriptions'] = jsonEncode(['$_owner:crew', '$_video:other']);
       acceptsWrite = (_) => true;
       expect(await adapter.saveSubscriptions({}), isTrue);
-      expect(jsonDecode(stored['subscriptions']!), ['$_video:other']);
+      expect(jsonDecode(stored['subscriptions']! as String), ['$_video:other']);
     });
   });
 }
