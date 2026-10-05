@@ -141,10 +141,12 @@ Enter and leave animations, per layer:
 
 Open feature requests for things the editor does not do yet:
 
-- Audio: loudness equalization ([#3789](https://github.com/divinevideo/divine-mobile/issues/3789)), a larger sound library ([#8338](https://github.com/divinevideo/divine-mobile/issues/8338)).
-- Text: a link in the text overlay ([#3111](https://github.com/divinevideo/divine-mobile/issues/3111)).
-- Clips: timeline-based zoom controls ([#4951](https://github.com/divinevideo/divine-mobile/issues/4951)), ghost mode for smoother transitions and loops ([#9573](https://github.com/divinevideo/divine-mobile/issues/9573)), a smoother jump when the video loops back to its start ([#9587](https://github.com/divinevideo/divine-mobile/issues/9587)).
+- Audio: loudness equalization ([#3789](https://github.com/divinevideo/divine-mobile/issues/3789)), an equalizer for bass and treble ([#9851](https://github.com/divinevideo/divine-mobile/issues/9851)), an audio visualizer overlay ([#9852](https://github.com/divinevideo/divine-mobile/issues/9852)), a larger sound library ([#8338](https://github.com/divinevideo/divine-mobile/issues/8338)).
+- Text: a link in the text overlay ([#3111](https://github.com/divinevideo/divine-mobile/issues/3111)), animated text styles such as typewriter and shake ([#9850](https://github.com/divinevideo/divine-mobile/issues/9850)).
+- Clips: a ping-pong (boomerang) loop ([#9845](https://github.com/divinevideo/divine-mobile/issues/9845)), timeline-based zoom controls ([#4951](https://github.com/divinevideo/divine-mobile/issues/4951)), ghost mode for smoother transitions and loops ([#9573](https://github.com/divinevideo/divine-mobile/issues/9573)), a smoother jump when the video loops back to its start ([#9587](https://github.com/divinevideo/divine-mobile/issues/9587)).
 - Effects: an echo trail effect ([#9708](https://github.com/divinevideo/divine-mobile/issues/9708)), effects that fire on the beat of the music ([#9710](https://github.com/divinevideo/divine-mobile/issues/9710)).
+- Layers: keyframes for position, size and rotation ([#9846](https://github.com/divinevideo/divine-mobile/issues/9846)), masks that show a clip or layer in a shape or gradient ([#9847](https://github.com/divinevideo/divine-mobile/issues/9847)).
+- Motion analysis (touches the no-ML decision in [#8543](https://github.com/divinevideo/divine-mobile/issues/8543)): video stabilization ([#9848](https://github.com/divinevideo/divine-mobile/issues/9848)), text and stickers that follow a moving object ([#9849](https://github.com/divinevideo/divine-mobile/issues/9849)).
 - Privacy: blur or pixelate part of the picture ([#9562](https://github.com/divinevideo/divine-mobile/issues/9562)).
 - Stickers: NIP-30 stickers ([#2265](https://github.com/divinevideo/divine-mobile/issues/2265)).
 - Frames around the video ([#7099](https://github.com/divinevideo/divine-mobile/issues/7099)).
