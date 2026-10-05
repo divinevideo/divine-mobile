@@ -329,11 +329,17 @@ void main() {
 
         final first = cubit.checkStagingTrack();
         await Future<void>.delayed(Duration.zero);
-        await cubit.checkStagingTrack();
+        var secondDone = false;
+        final second = cubit.checkStagingTrack().whenComplete(() {
+          secondDone = true;
+        });
+        await pumpEventQueue();
+        // The repeat is ignored, so it returns while the first is still held.
+        expect(secondDone, isTrue);
         expect(updater.checkCalls, 1);
 
         completer.complete(UpdateStatus.upToDate);
-        await first;
+        await Future.wait([first, second]);
       },
     );
   });
