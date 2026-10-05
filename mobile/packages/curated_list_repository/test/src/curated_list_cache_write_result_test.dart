@@ -1,0 +1,153 @@
+import 'package:curated_list_repository/curated_list_repository.dart';
+import 'package:models/models.dart';
+import 'package:test/test.dart';
+
+void main() {
+  final owner = 'a' * 64;
+  CuratedList list(String id, {int revision = 1}) => CuratedList(
+    id: id,
+    name: id,
+    pubkey: owner,
+    videoEventIds: const [],
+    createdAt: DateTime.utc(2026),
+    updatedAt: DateTime.utc(2026).add(Duration(seconds: revision)),
+  );
+
+  group('write result reconciliation', () {
+    test('failed lists restore only unchanged attempted coordinates', () {
+      final original = list('crew');
+      final edit = list('crew', revision: 2);
+      final newer = list('crew', revision: 3);
+      final added = list('added');
+      final deleted = list('deleted');
+      final unrelated = list('other');
+      final result = CuratedCacheWriteResult<List<CuratedList>>(
+        status: CuratedCacheWriteStatus.storageRejected,
+        baseline: [original, deleted],
+        requested: [edit, added],
+      );
+      expect(result.succeeded, isFalse);
+      expect(result.reconcile([edit, added, unrelated]), [
+        original,
+        unrelated,
+        deleted,
+      ]);
+      expect(result.reconcile([newer, unrelated]), [newer, unrelated, deleted]);
+      expect(result.nextBaseline, [original, deleted]);
+      expect(() => result.reconcile([edit]).clear(), throwsUnsupportedError);
+    });
+
+    test(
+      'partial conflict reconciles the winner but retains its old baseline',
+      () {
+        final original = list('crew');
+        final stale = list('crew', revision: 2);
+        final winner = list('crew', revision: 5);
+        final removed = list('removed');
+        final added = list('added');
+        final external = list('external');
+        final result = CuratedCacheWriteResult<List<CuratedList>>(
+          status: CuratedCacheWriteStatus.conflict,
+          baseline: [original, removed],
+          requested: [stale, added],
+          persisted: [winner, added, external],
+          conflictedIds: {original.authorScopedId},
+        );
+        expect(result.reconcile([stale, added]), [winner, added]);
+        expect(result.nextBaseline, [original, added]);
+      },
+    );
+
+    test('accepted deletion and addition advance only local records', () {
+      final removed = list('removed');
+      final added = list('added');
+      final external = list('external');
+      final result = CuratedCacheWriteResult<List<CuratedList>>(
+        status: CuratedCacheWriteStatus.saved,
+        baseline: [removed],
+        requested: [added],
+        persisted: [added, external],
+      );
+      expect(result.succeeded, isTrue);
+      expect(result.reconcile([added]), [added]);
+      expect(result.nextBaseline, [added]);
+    });
+
+    test(
+      'subscription rollback preserves unrelated and already changed IDs',
+      () {
+        const result = CuratedCacheWriteResult<Set<String>>(
+          status: CuratedCacheWriteStatus.storageRejected,
+          baseline: {'kept', 'removed'},
+          requested: {'kept', 'added'},
+        );
+        expect(result.reconcile({'kept', 'added', 'external'}), {
+          'kept',
+          'removed',
+          'external',
+        });
+        expect(result.reconcile({'kept', 'removed', 'external'}), {
+          'kept',
+          'removed',
+          'external',
+        });
+        expect(() => result.reconcile({}).clear(), throwsUnsupportedError);
+      },
+    );
+
+    test(
+      'subscription confirmation uses the actual merged persisted values',
+      () {
+        const result = CuratedCacheWriteResult<Set<String>>(
+          status: CuratedCacheWriteStatus.saved,
+          baseline: {'removed'},
+          requested: {'added'},
+          persisted: {'added', 'external'},
+        );
+        expect(result.reconcile({'added', 'local'}), {'added', 'local'});
+      },
+    );
+
+    test('queued list deltas exclude a preceding rejected edit', () {
+      final original = list('crew');
+      final rejected = list('crew', revision: 2);
+      final removed = list('removed');
+      final added = list('added');
+      expect(
+        CuratedCacheWriteSnapshots.rebaseLists(
+          [original, removed],
+          [rejected, removed],
+          [rejected, added],
+        ),
+        [original, added],
+      );
+      expect(
+        CuratedCacheWriteSnapshots.rebaseLists(
+          [original],
+          [rejected],
+          [rejected],
+        ),
+        [original],
+      );
+    });
+
+    test('queued subscription deltas exclude preceding rejected follows', () {
+      expect(
+        CuratedCacheWriteSnapshots.rebaseSubscriptions(
+          {'original', 'removed'},
+          {'rejected', 'removed'},
+          {'rejected', 'added'},
+        ),
+        {'original', 'added'},
+      );
+    });
+
+    test('typed error contains an outcome without private cache contents', () {
+      const error = CuratedCacheWriteException(
+        CuratedCacheWriteStatus.conflict,
+      );
+      expect(error.status, CuratedCacheWriteStatus.conflict);
+      expect(error.toString(), 'Curated cache write: conflict');
+    });
+  });
+}

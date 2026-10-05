@@ -97,6 +97,16 @@ class CuratedListService extends ChangeNotifier {
   final List<CuratedList> _lists = [];
   final Set<String> _subscribedListIds = {};
   bool _isInitialized = false;
+  bool _isDisposed = false;
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
+  bool _isCurrent(String? owner) =>
+      !_isDisposed && _relayGateway.currentAuthenticatedPubkey() == owner;
 
   // Track relay sync status
   bool _hasSyncedWithRelays = false;
@@ -733,7 +743,9 @@ class CuratedListService extends ChangeNotifier {
       // same stable d-tag independently, which is the case the unpublished
       // merge in [_processListEvent] exists to handle. Record before removing
       // the local list so relay sync never sees an unprotected absence.
-      await _cacheStore.recordListDeletion(list.pubkey!, list.id);
+      if (!await _cacheStore.recordListDeletion(list.pubkey!, list.id)) {
+        return false;
+      }
       await _removeListAndSubscription(list);
       if (list.id == defaultListId) {
         await _cacheStore.markDefaultListDeleted();
@@ -1334,11 +1346,12 @@ class CuratedListService extends ChangeNotifier {
           name: 'CuratedListService',
           category: LogCategory.system,
         );
-      } catch (e) {
+      } catch (e, stackTrace) {
         Log.error(
-          'Failed to load curated lists: $e',
+          'Failed to load curated lists (${e.runtimeType})',
           name: 'CuratedListService',
           category: LogCategory.system,
+          stackTrace: stackTrace,
         );
       }
     }
@@ -1358,47 +1371,43 @@ class CuratedListService extends ChangeNotifier {
           name: 'CuratedListService',
           category: LogCategory.system,
         );
-      } catch (e) {
+      } catch (e, stackTrace) {
         Log.error(
-          'Failed to load subscribed list IDs: $e',
+          'Failed to load subscribed list IDs (${e.runtimeType})',
           name: 'CuratedListService',
           category: LogCategory.system,
+          stackTrace: stackTrace,
         );
       }
     }
     _cacheStore.subscriptionsLoaded(_subscribedListIds);
   }
 
-  /// Save lists to local storage
+  /// Persist local lists before reporting success or publishing their delta.
   Future<void> _saveLists() async {
+    final owner = _relayGateway.currentAuthenticatedPubkey();
+    notifyListeners();
     try {
-      notifyListeners();
-      await _cacheStore.saveLists(_lists);
-    } catch (e) {
-      Log.error(
-        'Failed to save curated lists: $e',
-        name: 'CuratedListService',
-        category: LogCategory.system,
+      await _cacheStore.saveListsOrThrow(
+        _lists,
+        isCurrent: () => _isCurrent(owner),
       );
+    } finally {
+      if (_isCurrent(owner)) notifyListeners();
     }
   }
 
-  /// Save subscribed list IDs to local storage
+  /// Persist follows before notifying video-cache subscription callbacks.
   Future<void> _saveSubscribedListIds() async {
+    final owner = _relayGateway.currentAuthenticatedPubkey();
+    notifyListeners();
     try {
-      notifyListeners();
-      await _cacheStore.saveSubscriptions(_subscribedListIds);
-      Log.debug(
-        '💾 Saved ${_subscribedListIds.length} subscribed list IDs to storage',
-        name: 'CuratedListService',
-        category: LogCategory.system,
+      await _cacheStore.saveSubscriptionsOrThrow(
+        _subscribedListIds,
+        isCurrent: () => _isCurrent(owner),
       );
-    } catch (e) {
-      Log.error(
-        'Failed to save subscribed list IDs: $e',
-        name: 'CuratedListService',
-        category: LogCategory.system,
-      );
+    } finally {
+      if (_isCurrent(owner)) notifyListeners();
     }
   }
 
