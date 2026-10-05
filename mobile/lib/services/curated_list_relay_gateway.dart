@@ -44,14 +44,17 @@ class CuratedListRelayGateway {
   CuratedListRelayGateway({
     required NostrClient nostrService,
     required AuthService authService,
+    bool Function()? isCurrentSession,
   }) : _nostrService = nostrService,
-       _authService = authService;
+       _authService = authService,
+       _isCurrentSession = isCurrentSession;
 
   final NostrClient _nostrService;
   final AuthService _authService;
+  final bool Function()? _isCurrentSession;
 
   String? currentAuthenticatedPubkey() {
-    if (!_authService.isAuthenticated) {
+    if (!(_isCurrentSession?.call() ?? true) || !_authService.isAuthenticated) {
       return null;
     }
 
@@ -94,7 +97,9 @@ class CuratedListRelayGateway {
 
     final signer = _nostrService.signer;
     final signerPubkey = await signer.getPublicKey();
-    if (signerPubkey == null || signerPubkey != ownerPubkey) {
+    if (currentAuthenticatedPubkey() != ownerPubkey ||
+        signerPubkey == null ||
+        signerPubkey != ownerPubkey) {
       Log.error(
         'Cannot seal private list ${list.id} - signer does not match the '
         'authenticated account',
@@ -105,6 +110,7 @@ class CuratedListRelayGateway {
     }
 
     final sealed = await signer.nip44Encrypt(signerPubkey, plaintext);
+    if (currentAuthenticatedPubkey() != ownerPubkey) return null;
     if (sealed == null) {
       Log.error(
         'NIP-44 encryption failed for private list ${list.id}',
@@ -113,6 +119,89 @@ class CuratedListRelayGateway {
       );
     }
     return sealed;
+  }
+
+  /// Signs and sends a list without retaining any local cache state.
+  /// Confirmed sends require one relay OK; ordinary sends retain SDK queuing.
+  /// Every signing/encryption continuation remains bound to the captured lease.
+  Future<Event?> publishList(CuratedList list, {bool confirmed = false}) async {
+    final owner = currentAuthenticatedPubkey();
+    if (owner == null) {
+      Log.warning(
+        'Cannot publish list - user not authenticated',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
+      return null;
+    }
+
+    // NIP-51 splits a list across the two halves of the event: what the
+    // list is goes in public tags, what is in it can go in encrypted
+    // content. A public list puts everything in tags and keeps using
+    // content for its description, which is where this client has always
+    // written it.
+    final String content;
+    final List<List<String>> tags;
+    if (list.isPublic) {
+      content = list.description ?? 'Curated video list: ${list.name}';
+      tags = CuratedListConverter.toEventTags(list);
+    } else {
+      final sealed = await sealItemTags(list);
+      if (sealed == null) return null;
+      content = sealed;
+      tags = CuratedListConverter.toPrivateMetadataTags(list);
+    }
+
+    if (currentAuthenticatedPubkey() != owner) return null;
+    final event = await _authService.createAndSignEvent(
+      kind: 30005, // NIP-51 curated list
+      content: content,
+      tags: tags,
+    );
+
+    if (currentAuthenticatedPubkey() != owner) return null;
+    if (event == null) {
+      Log.warning(
+        'Failed to sign curated list event: ${list.name} (${list.id})',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
+      return null;
+    }
+
+    if (confirmed) {
+      final outcome = await _nostrService.publishEventAwaitOk(event);
+      // Accepted-by-any, including the public-to-private replacement. Once
+      // one relay holds the sealed copy the list has to read private
+      // locally, or the next edit would republish plain item tags over it.
+      // Breadth is not the bar and cannot be: nothing here republishes to
+      // relays that did not accept, so a partial publish stays partial, and
+      // one wedged pool member would block every flip forever. The relays
+      // that missed the replacement are covered by its plaintext redaction.
+      if (!outcome.acceptedByAny) {
+        Log.warning(
+          'Failed to publish curated list: ${list.name} (${list.id}): '
+          '${outcome.summary}',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
+        return null;
+      }
+    } else {
+      final publishResult = await _nostrService.publishEvent(event);
+      final failureReason = publishResult.failureReason;
+      if (failureReason != null) {
+        Log.warning(
+          'Failed to publish curated list: ${list.name} (${list.id}): '
+          '$failureReason',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
+        return null;
+      }
+    }
+
+    return currentAuthenticatedPubkey() == owner ? event : null;
   }
 
   String _privateItemPlaintext(CuratedList list) {
@@ -595,13 +684,16 @@ class CuratedListRelayGateway {
 
     try {
       final signer = _nostrService.signer;
-      if (await signer.getPublicKey() != ownerPubkey) {
+      if (await signer.getPublicKey() != ownerPubkey ||
+          currentAuthenticatedPubkey() != ownerPubkey) {
         return const UnsealedItemTags.failed();
       }
       final plaintext = CuratedListConverter.isNip44Payload(event.content)
           ? await signer.nip44Decrypt(ownerPubkey, event.content)
           : await signer.decrypt(ownerPubkey, event.content);
-      if (plaintext == null) return const UnsealedItemTags.failed();
+      if (currentAuthenticatedPubkey() != ownerPubkey || plaintext == null) {
+        return const UnsealedItemTags.failed();
+      }
 
       final decoded = jsonDecode(plaintext);
       if (decoded is! List) return const UnsealedItemTags.failed();
@@ -745,6 +837,7 @@ class CuratedListRelayGateway {
     // deletion that lands after the rollback would delete the list the user
     // still has.
     final outcome = await _nostrService.publishEventAwaitOk(event);
+    if (currentAuthenticatedPubkey() != ownerPubkey) return false;
     if (outcome.acceptedByAny) return true;
 
     Log.warning(
