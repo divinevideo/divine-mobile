@@ -295,6 +295,23 @@ void main() {
       });
     }
 
+    Future<void> openOwnerPicker(WidgetTester tester) async {
+      // The member-controls slice moves this action into the owner's menu.
+      expect(find.byTooltip(strings.peopleListsActionsTooltip), findsOneWidget);
+      await tester.tap(find.byTooltip(strings.peopleListsActionsTooltip));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(strings.peopleListsAddPeopleTooltip));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.byType(AddPeopleToListScreen), findsOneWidget);
+      expect(
+        tester
+            .widget<AddPeopleToListScreen>(find.byType(AddPeopleToListScreen))
+            .listId,
+        'crew',
+      );
+    }
+
     for (final suffix in ['', '/members', '/add-people', '/edit']) {
       for (final query in [
         'owner',
@@ -407,11 +424,8 @@ void main() {
       tester,
     ) async {
       await pumpRoute(tester, '/people-lists/crew', render: true);
-      expect(
-        find.byTooltip(strings.peopleListsAddPeopleTooltip),
-        findsOneWidget,
-      );
       expect((_selected! as UserListPeopleScreen).ownerPubkey, isNull);
+      await openOwnerPicker(tester);
     });
 
     for (final encodedOwner in [
@@ -431,10 +445,14 @@ void main() {
               '/people-lists/crew$suffix?owner=$encodedOwner',
               render: true,
             );
-            expect(
-              find.byTooltip(strings.peopleListsAddPeopleTooltip),
-              findsOneWidget,
-            );
+            if (suffix.isEmpty) {
+              await openOwnerPicker(tester);
+            } else {
+              expect(
+                find.byTooltip(strings.peopleListsAddPeopleTooltip),
+                findsOneWidget,
+              );
+            }
             verifyNever(
               () => repository.fetchPublicList(
                 ownerPubkey: any(named: 'ownerPubkey'),
