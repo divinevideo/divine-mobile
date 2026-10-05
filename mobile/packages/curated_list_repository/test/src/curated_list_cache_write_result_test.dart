@@ -14,6 +14,50 @@ void main() {
   );
 
   group('write result reconciliation', () {
+    test('rejected write restores the acknowledged external winner', () {
+      final original = list('crew');
+      final attempted = list('crew', revision: 2);
+      final winner = list('crew', revision: 3);
+      final unrelated = list('other');
+      final result = CuratedCacheWriteResult<List<CuratedList>>(
+        status: CuratedCacheWriteStatus.storageRejected,
+        baseline: [original],
+        requested: [attempted],
+        acknowledgedBeforeWrite: [winner],
+      );
+      expect(result.persisted, isNull);
+      expect(result.succeeded, isFalse);
+      expect(result.reconcile([attempted, unrelated]), [winner, unrelated]);
+      expect(result.nextBaseline, [original]);
+    });
+
+    test('rejected write cannot restore a row from a cleared key', () {
+      final original = list('crew');
+      final attempted = list('crew', revision: 2);
+      final result = CuratedCacheWriteResult<List<CuratedList>>(
+        status: CuratedCacheWriteStatus.storageRejected,
+        baseline: [original],
+        requested: [attempted],
+        acknowledgedBeforeWrite: const [],
+      );
+      expect(result.reconcile([attempted]), isEmpty);
+      expect(result.persisted, isNull);
+    });
+
+    test(
+      'rejected follow removal preserves an acknowledged external follow',
+      () {
+        const result = CuratedCacheWriteResult<Set<String>>(
+          status: CuratedCacheWriteStatus.storageRejected,
+          baseline: {'follow'},
+          requested: {},
+          acknowledgedBeforeWrite: {'follow', 'external'},
+        );
+        expect(result.persisted, isNull);
+        expect(result.reconcile({'unrelated'}), {'follow', 'unrelated'});
+      },
+    );
+
     test('failed lists restore only unchanged attempted coordinates', () {
       final original = list('crew');
       final edit = list('crew', revision: 2);

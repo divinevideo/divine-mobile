@@ -23,6 +23,7 @@ class CuratedCacheWriteResult<T> {
     required this.baseline,
     required this.requested,
     this.persisted,
+    this.acknowledgedBeforeWrite,
     this.conflictedIds = const {},
   });
 
@@ -37,6 +38,12 @@ class CuratedCacheWriteResult<T> {
 
   /// The merged snapshot the backing store confirmed it accepted.
   final T? persisted;
+
+  /// The confirmed state read before a rejected backing-store attempt.
+  ///
+  /// This remains distinct from [persisted]: a rejected merge did not save its
+  /// new deltas, but must not restore a baseline older than another writer.
+  final T? acknowledgedBeforeWrite;
 
   /// Author coordinates whose requested delta lost to a newer stored value.
   final Set<String> conflictedIds;
@@ -55,7 +62,8 @@ extension CuratedListWriteReconciliation
     final before = {for (final list in baseline) list.authorScopedId: list};
     final after = {for (final list in requested) list.authorScopedId: list};
     final actual = {
-      for (final list in persisted ?? baseline) list.authorScopedId: list,
+      for (final list in persisted ?? acknowledgedBeforeWrite ?? baseline)
+        list.authorScopedId: list,
     };
     final reconciled = {for (final list in current) list.authorScopedId: list};
     for (final id in {...before.keys, ...after.keys}) {
@@ -97,7 +105,7 @@ extension CuratedSubscriptionWriteReconciliation
   /// Restores rejected additions/removals while keeping unrelated IDs.
   Set<String> reconcile(Set<String> current) {
     final reconciled = {...current};
-    final actual = persisted ?? baseline;
+    final actual = persisted ?? acknowledgedBeforeWrite ?? baseline;
     for (final id in {...baseline, ...requested}) {
       if (baseline.contains(id) == requested.contains(id) ||
           reconciled.contains(id) != requested.contains(id)) {
