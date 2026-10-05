@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/utils/relay_url_utils.dart';
 import 'package:openvine/utils/sensitive_uri_for_logs.dart';
@@ -24,6 +25,10 @@ enum DeepLinkType {
   unknown,
 }
 
+/// The addressed view of a people list. Canonical author/d-tag URLs always
+/// select detail, even when their d-tag is `members` or `add-people`.
+enum PeopleListLinkView { detail, members, addPeople }
+
 /// Represents a parsed deep link
 class DeepLink {
   const DeepLink({
@@ -34,6 +39,7 @@ class DeepLink {
     this.searchTerm,
     this.listPubkey,
     this.listId,
+    this.peopleListView = PeopleListLinkView.detail,
     this.signerCallbackRelay,
     this.index,
     this.autoOpenComments = false,
@@ -54,8 +60,11 @@ class DeepLink {
   /// lowercase hex (NIP-51 kind 30005 lists are addressed by author + d-tag).
   final String? listPubkey;
 
-  /// The d-tag identifier of a `/list/:pubkey/:listId` link.
+  /// The d-tag identifier of an authored video-list or people-list link.
   final String? listId;
+
+  /// Query-qualified internal-shaped links may address the roster or picker.
+  final PeopleListLinkView peopleListView;
   final String? signerCallbackRelay;
   final int? index; // Optional video index for feed view
 
@@ -344,12 +353,17 @@ class DeepLinkService {
       // d-tag like the video lists above, with the author in the query.
       // Without an owner the path names the viewer's own list, which nobody
       // else can open, so it is not a link worth following.
-      if (pathSegments.length == 2 && pathSegments[0] == 'people-lists') {
+      final owners = uri.queryParametersAll['owner'];
+      final queryQualifiedPeopleListView =
+          pathSegments.length == 3 &&
+          owners != null &&
+          (pathSegments[2] == 'members' || pathSegments[2] == 'add-people');
+      if ((pathSegments.length == 2 || queryQualifiedPeopleListView) &&
+          pathSegments[0] == 'people-lists') {
         final listId = pathSegments[1];
-        final owner = uri.queryParameters['owner'];
-        final listPubkey = owner == null
-            ? null
-            : normalizePublicIdentifier(owner)?.hexPubkey.toLowerCase();
+        final listPubkey = owners != null && owners.length == 1
+            ? _peopleListOwner(owners.single)
+            : null;
         if (listId.isEmpty || listPubkey == null) {
           Log.warning(
             'Ignoring people list deep link with invalid owner or id: '
@@ -369,6 +383,11 @@ class DeepLinkService {
           type: DeepLinkType.peopleList,
           listPubkey: listPubkey,
           listId: listId,
+          peopleListView: !queryQualifiedPeopleListView
+              ? PeopleListLinkView.detail
+              : pathSegments[2] == 'members'
+              ? PeopleListLinkView.members
+              : PeopleListLinkView.addPeople,
         );
       }
 
@@ -377,9 +396,7 @@ class DeepLinkService {
       // action sends and divine.video routes. It lands on the in-app route
       // above with the author moved into the query.
       if (pathSegments.length == 3 && pathSegments[0] == 'people-lists') {
-        final listPubkey = normalizePublicIdentifier(
-          pathSegments[1],
-        )?.hexPubkey.toLowerCase();
+        final listPubkey = _peopleListOwner(pathSegments[1]);
         final listId = pathSegments[2];
         if (listPubkey == null || listId.isEmpty) {
           Log.warning(
@@ -420,6 +437,21 @@ class DeepLinkService {
       );
       return const DeepLink(type: DeepLinkType.unknown);
     }
+  }
+
+  /// Only complete public authors are valid people-list coordinates. Keep
+  /// this boundary local; profile and other identifier policies are separate.
+  static String? _peopleListOwner(String identifier) {
+    final lowercase = identifier.toLowerCase();
+    final normalizedInput =
+        (lowercase.startsWith('npub1') || lowercase.startsWith('nprofile1')) &&
+            identifier == identifier.toUpperCase()
+        ? lowercase
+        : identifier;
+    final owner = normalizePublicIdentifier(normalizedInput)?.hexPubkey;
+    return owner != null && NostrKeyUtils.isValidKey(owner)
+        ? owner.toLowerCase()
+        : null;
   }
 
   /// Dispose the service
