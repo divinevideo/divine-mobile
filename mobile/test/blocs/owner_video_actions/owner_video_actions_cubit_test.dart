@@ -371,11 +371,12 @@ void main() {
 
       final first = cubit.deleteVideo(video);
       await Future<void>.delayed(Duration.zero);
-      await cubit.deleteVideo(video);
+      final second = cubit.deleteVideo(video);
+      await pumpEventQueue();
       relayCompleter.complete(
         DeleteResult.failure('rejected', DeleteFailureKind.relayRejected),
       );
-      await first;
+      await Future.wait([first, second]);
 
       verify(
         () => deletionService.quickDelete(
