@@ -354,7 +354,6 @@ VineAppBar(
 - [ ] Update Settings screen to use `VineAppBar`
 - [ ] Update CuratedListFeedScreen to use `VineAppBar`
 - [ ] Update UserListPeopleScreen to use `VineAppBar`
-- [ ] Update DiscoverListsScreen to use `VineAppBar`
 - [ ] Update remaining screens
 - [ ] Remove duplicate AppBar styling code
 
