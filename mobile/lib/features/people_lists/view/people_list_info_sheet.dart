@@ -10,7 +10,7 @@ import 'package:openvine/extensions/modal_pop_extension.dart';
 import 'package:openvine/features/people_lists/bloc/people_list_info_cubit.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/curated_list_editor_session_provider.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
@@ -31,6 +31,7 @@ Future<void> showPeopleListInfoSheet(
   final l10n = context.l10n;
   final container = ProviderScope.containerOf(context, listen: false);
   final openingEpoch = mutations.mutationSessionEpoch;
+  final session = container.read(curatedListEditorSessionProvider);
   final formKey = GlobalKey();
 
   await context.showVideoPausingVineBottomSheet<void>(
@@ -59,7 +60,7 @@ Future<void> showPeopleListInfoSheet(
               mutations.state.activeOwnerPubkey != ownerPubkey) {
             return null;
           }
-          return container.read(authServiceProvider).currentPublicKeyHex;
+          return session.currentOwnerPubkey;
         },
         list: list,
       ),
