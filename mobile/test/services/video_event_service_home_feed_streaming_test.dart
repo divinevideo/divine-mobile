@@ -82,7 +82,7 @@ void main() {
         final onEose =
             invocation.namedArguments[const Symbol('onEose')]
                 as void Function()?;
-        Future.microtask(() => onEose?.call());
+        scheduleMicrotask(() => onEose?.call());
         return controller.stream;
       });
 
@@ -122,7 +122,7 @@ void main() {
             invocation.namedArguments[const Symbol('onEose')]
                 as void Function()?;
         // Fire EOSE after a microtask
-        Future.microtask(() => onEose?.call());
+        scheduleMicrotask(() => onEose?.call());
         return controller.stream;
       });
 
@@ -154,7 +154,7 @@ void main() {
         ),
       ).thenAnswer((invocation) {
         // Add an error then close
-        Future.microtask(() {
+        scheduleMicrotask(() {
           controller.addError(Exception('Test error'));
         });
         return controller.stream;
