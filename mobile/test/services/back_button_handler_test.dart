@@ -50,6 +50,7 @@ void main() {
     );
     addTearDown(router.dispose);
 
+    Future<Object?>? pushedRoute;
     late WidgetRef capturedRef;
     late ProviderContainer container;
     await tester.pumpWidget(
@@ -90,7 +91,7 @@ void main() {
     if (pushAfter != null) {
       // Push on the real router *and* feed the mocked location stream, so the
       // page context the handler reads matches the route that is on top.
-      router.push(pushAfter);
+      pushedRoute = router.push<Object?>(pushAfter);
       locations.add(pushAfter);
       await tester.pumpAndSettle();
     }
@@ -110,6 +111,7 @@ void main() {
     );
     await tester.pump(Duration.zero);
     await tester.pump(Duration.zero);
+    if (pushedRoute != null) await pushedRoute;
 
     final location = router.routeInformationProvider.value.uri.toString();
     // Must be cleared inside the test body: flutter_test asserts every
