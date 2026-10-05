@@ -345,6 +345,7 @@ void main() {
         );
         unawaited(cubit.submit());
         clock.flushMicrotasks();
+        expect(clock.periodicTimerCount, equals(1));
         unawaited(cubit.close());
         clock.flushMicrotasks();
         clock.elapse(const Duration(milliseconds: 150));
