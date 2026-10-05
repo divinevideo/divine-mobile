@@ -12277,4 +12277,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get listSearchVideosUnavailable => '视频列表暂时不可用。';
+
+  @override
+  String get authAccountCleanupFailed => '无法清除上一个账号的数据。请重试。';
 }

@@ -12996,4 +12996,8 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get listSearchVideosUnavailable =>
       'Video listeleri şu anda kullanılamıyor.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Önceki hesabın verileri temizlenemedi. Tekrar dene.';
 }

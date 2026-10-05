@@ -13163,4 +13163,8 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get listSearchVideosUnavailable =>
       'Video lists are unavailable right now.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Couldn\'t clear the previous account\'s data. Try again.';
 }

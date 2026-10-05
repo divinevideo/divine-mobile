@@ -111,6 +111,9 @@ class CuratedListService extends ChangeNotifier {
   final List<CuratedList> _lists = [];
   final Set<String> _subscribedListIds = {};
   bool _isInitialized = false;
+  bool _isInitializing = false;
+  Object? _initializationError;
+  StackTrace? _initializationStackTrace;
   bool _isDisposed = false;
 
   @override
@@ -127,6 +130,15 @@ class CuratedListService extends ChangeNotifier {
   bool _isCurrent(String? owner) =>
       isCurrentSession && _relayGateway.currentAuthenticatedPubkey() == owner;
 
+  /// A failed or pending recovery cannot authorize writes or relay sync.
+  bool get isReadyForMutations =>
+      isCurrentSession && !_isInitializing && _initializationError == null;
+
+  /// The last startup recovery failure, cleared only after a successful retry.
+  Object? get initializationError => _initializationError;
+
+  StackTrace? get initializationStackTrace => _initializationStackTrace;
+
   // Track relay sync status
   bool _hasSyncedWithRelays = false;
 
@@ -135,11 +147,21 @@ class CuratedListService extends ChangeNotifier {
     Future<T> Function() operation, {
     T? cancelled,
   }) {
+    if (!isReadyForMutations) {
+      if (!isCurrentSession) {
+        Log.debug(
+          'Curated list operation cancelled: session superseded',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
+      }
+      return Future.value(cancelled as T);
+    }
     final owner = _relayGateway.currentAuthenticatedPubkey();
     return _sessionLease.runListOperation(
       listId,
       operation,
-      isCurrentOwner: () => _isCurrent(owner),
+      isCurrentOwner: () => isReadyForMutations && _isCurrent(owner),
       cancelled: cancelled,
     );
   }
@@ -180,6 +202,8 @@ class CuratedListService extends ChangeNotifier {
   /// This method returns quickly after loading local cache.
   /// Relay sync happens in background and does not block initialization.
   Future<void> initialize() async {
+    if (_isInitializing || _isInitialized) return;
+    _isInitializing = true;
     try {
       if (!isCurrentSession || !_authService.isAuthenticated) {
         Log.warning(
@@ -203,6 +227,9 @@ class CuratedListService extends ChangeNotifier {
       // This allows downstream consumers to access cached lists without waiting
       if (!isCurrentSession) return;
       _isInitialized = true;
+      _initializationError = null;
+      _initializationStackTrace = null;
+      _isInitializing = false;
       notifyListeners();
       Log.info(
         'Curated list service initialized with ${_lists.length} lists (local cache ready)',
@@ -213,12 +240,17 @@ class CuratedListService extends ChangeNotifier {
       // Sync with relays in BACKGROUND - does not block initialization
       // When relay sync completes, it will merge new lists and notify listeners
       unawaited(_syncWithRelaysInBackground());
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _initializationError = e;
+      _initializationStackTrace = stackTrace;
+      if (isCurrentSession) notifyListeners();
       Log.error(
         'Failed to initialize curated list service: $e',
         name: 'CuratedListService',
         category: LogCategory.system,
       );
+    } finally {
+      _isInitializing = false;
     }
   }
 
@@ -300,6 +332,7 @@ class CuratedListService extends ChangeNotifier {
   /// Internal method to create a list with optional explicit ID
   Future<CuratedList?> _createList({
     required String name,
+    bool duringInitialization = false,
     String? id,
     String? description,
     String? imageUrl,
@@ -360,11 +393,21 @@ class CuratedListService extends ChangeNotifier {
         // lane, so it cannot publish a second event for this coordinate while
         // the create is in flight. Keep the local list when no relay is
         // reachable — its null event id makes the next complete sync back it up.
-        await _serializeListOperation(listId, () async {
-          final current = getListById(listId);
-          if (current == null || current.nostrEventId != null) return;
-          await _publishListToNostr(current, confirmed: true);
-        });
+        if (duringInitialization) {
+          // Recovery has completed; the default list may now be backed up.
+          // External operations remain blocked until initialize finishes.
+          await _publishListToNostr(
+            newList,
+            confirmed: true,
+            duringInitialization: true,
+          );
+        } else {
+          await _serializeListOperation(listId, () async {
+            final current = getListById(listId);
+            if (current == null || current.nostrEventId != null) return;
+            await _publishListToNostr(current, confirmed: true);
+          });
+        }
       }
 
       Log.info(
@@ -380,6 +423,7 @@ class CuratedListService extends ChangeNotifier {
         name: 'CuratedListService',
         category: LogCategory.system,
       );
+      if (duringInitialization) rethrow;
       return null;
     }
   }
@@ -713,7 +757,7 @@ class CuratedListService extends ChangeNotifier {
   /// before local state is removed. A list that never reached a relay has no
   /// event to delete and can be removed locally.
   Future<bool> deleteOwnedList(String listId) {
-    if (!isCurrentSession) return Future.value(false);
+    if (!isReadyForMutations) return Future.value(false);
     final list = getListById(listId);
     if (list == null) {
       final owner = _relayGateway.currentAuthenticatedPubkey();
@@ -1099,7 +1143,7 @@ class CuratedListService extends ChangeNotifier {
   /// Subscribe to a curated list to follow its updates
   /// Subscribe to a curated list (saves list data for offline access)
   Future<bool> subscribeToList(String listId, [CuratedList? listData]) async {
-    if (!isCurrentSession) return false;
+    if (!isReadyForMutations) return false;
     try {
       // Check if list exists in our cache
       var list = getListById(listId);
@@ -1146,7 +1190,7 @@ class CuratedListService extends ChangeNotifier {
       );
 
       // Trigger video cache sync for this list
-      if (!isCurrentSession) return false;
+      if (!isReadyForMutations) return false;
       if (_onListSubscribed != null && list.videoEventIds.isNotEmpty) {
         Log.debug(
           'Triggering video cache sync for list: ${list.name} '
@@ -1170,7 +1214,7 @@ class CuratedListService extends ChangeNotifier {
 
   /// Unsubscribe from a curated list
   Future<bool> unsubscribeFromList(String listId) async {
-    if (!isCurrentSession) return false;
+    if (!isReadyForMutations) return false;
     try {
       // Check if subscribed
       if (!_subscribedListIds.contains(listId)) {
@@ -1196,7 +1240,7 @@ class CuratedListService extends ChangeNotifier {
       );
 
       // Remove list from video cache
-      if (!isCurrentSession) return false;
+      if (!isReadyForMutations) return false;
       _onListUnsubscribed?.call(subscriptionId);
 
       return true;
@@ -1259,6 +1303,7 @@ class CuratedListService extends ChangeNotifier {
   /// Default list is PRIVATE - users can make it public if they want
   Future<void> _createDefaultList() async {
     await _createList(
+      duringInitialization: true,
       id: defaultListId,
       name: 'My List',
       description: 'My favorite vines and videos',
@@ -1280,12 +1325,19 @@ class CuratedListService extends ChangeNotifier {
   Future<bool> _publishListToNostr(
     CuratedList list, {
     bool confirmed = false,
+    bool duringInitialization = false,
   }) async {
+    if (!isCurrentSession || (!isReadyForMutations && !duringInitialization)) {
+      return false;
+    }
     try {
       final event = await _relayGateway.publishList(list, confirmed: confirmed);
       if (event == null) return false;
 
-      if (!isCurrentSession) return false;
+      if (!isCurrentSession ||
+          (!isReadyForMutations && !duringInitialization)) {
+        return false;
+      }
       // Record the event ID against the list's current entry, not the copy
       // captured before the publish: under `confirmed` the await above runs to
       // a 15s OK deadline, and a mutation landing inside that window would be
@@ -1423,7 +1475,8 @@ class CuratedListService extends ChangeNotifier {
   /// pull-to-refresh passes: without it a list created on another device only
   /// appears after the app restarts.
   Future<void> fetchUserListsFromRelays({bool force = false}) async {
-    if (!isCurrentSession || !_authService.isAuthenticated) {
+    if (!isReadyForMutations) return;
+    if (!_authService.isAuthenticated) {
       Log.warning(
         'Cannot fetch lists from relays - user not authenticated',
         name: 'CuratedListService',
@@ -1524,7 +1577,7 @@ class CuratedListService extends ChangeNotifier {
         category: LogCategory.system,
       );
 
-      if (!_isCurrent(userPubkey)) return;
+      if (!isReadyForMutations || !_isCurrent(userPubkey)) return;
       // Process received events
       if (receivedEvents.isNotEmpty) {
         await _processReceivedListEvents(receivedEvents);
@@ -1602,7 +1655,7 @@ class CuratedListService extends ChangeNotifier {
   /// [CuratedList.nostrEventId] as the marker that a relay may still hold this
   /// coordinate, and set [CuratedList.pendingRepublish] for the retry.
   Future<void> _backfillUnpublishedLists() async {
-    if (!isCurrentSession || !_authService.isAuthenticated) return;
+    if (!isReadyForMutations || !_authService.isAuthenticated) return;
 
     final owner = _relayGateway.currentAuthenticatedPubkey();
     if (owner == null) return;
@@ -1648,7 +1701,7 @@ class CuratedListService extends ChangeNotifier {
 
   /// Process a single list event from Nostr
   Future<void> _processListEvent(Event event) async {
-    if (!isCurrentSession) return;
+    if (!isReadyForMutations) return;
     try {
       final owner = _relayGateway.currentAuthenticatedPubkey();
       final unsealedItemTags = await _relayGateway.unsealItemTags(event);
@@ -1814,26 +1867,36 @@ class CuratedListService extends ChangeNotifier {
     int limit = 500,
     Set<String>? excludeIds,
     Duration timeout = kPublicCuratedListsRelayReadTimeout,
-  }) => _relayGateway.streamPublicListsFromRelays(
-    until: until,
-    limit: limit,
-    excludeIds: excludeIds,
-    timeout: timeout,
-  );
+  }) => isReadyForMutations
+      ? _relayGateway.streamPublicListsFromRelays(
+          until: until,
+          limit: limit,
+          excludeIds: excludeIds,
+          timeout: timeout,
+        )
+      : const Stream.empty();
 
   /// See [CuratedListRelayGateway.fetchPublicList].
   Future<CuratedList?> fetchPublicList({
     required String authorPubkey,
     required String listId,
-  }) =>
-      _relayGateway.fetchPublicList(authorPubkey: authorPubkey, listId: listId);
+  }) => isReadyForMutations
+      ? _relayGateway.fetchPublicList(
+          authorPubkey: authorPubkey,
+          listId: listId,
+        )
+      : Future.value();
 
   /// See [CuratedListRelayGateway.fetchPublicListsContainingVideo].
   Future<List<CuratedList>> fetchPublicListsContainingVideo(
     String videoEventId,
-  ) => _relayGateway.fetchPublicListsContainingVideo(videoEventId);
+  ) => isReadyForMutations
+      ? _relayGateway.fetchPublicListsContainingVideo(videoEventId)
+      : Future.value(const []);
 
   /// See [CuratedListRelayGateway.streamPublicListsContainingVideo].
   Stream<CuratedList> streamPublicListsContainingVideo(String videoEventId) =>
-      _relayGateway.streamPublicListsContainingVideo(videoEventId);
+      isReadyForMutations
+      ? _relayGateway.streamPublicListsContainingVideo(videoEventId)
+      : const Stream.empty();
 }

@@ -5478,5 +5478,6 @@
   "listsDiscoveryLoadingLabel": "Listen werden geladen",
   "listsDiscoveryEmpty": "Diesmal sind keine Listen aufgetaucht. Zieh nach unten zum Aktualisieren.",
   "listSearchPeopleUnavailable": "Personenlisten sind gerade nicht verfügbar.",
-  "listSearchVideosUnavailable": "Videolisten sind gerade nicht verfügbar."
+  "listSearchVideosUnavailable": "Videolisten sind gerade nicht verfügbar.",
+  "authAccountCleanupFailed": "Die Daten des vorherigen Kontos konnten nicht gelöscht werden. Versuche es erneut."
 }

@@ -11,6 +11,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/divine_auth/divine_auth_cubit.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/pending_verification_service.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/validators.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -678,6 +679,57 @@ void main() {
               signInFailureReason: SignInFailureReason.unknown,
             ),
           ],
+        );
+
+        blocTest<DivineAuthCubit, DivineAuthState>(
+          'keeps sign-in form retryable when account cleanup is refused',
+          setUp: () {
+            when(
+              () => mockOAuth.headlessLogin(
+                email: any(named: 'email'),
+                password: any(named: 'password'),
+                scope: any(named: 'scope'),
+              ),
+            ).thenAnswer(
+              (_) async => (
+                HeadlessLoginResult(success: true, code: testCode),
+                testVerifier,
+              ),
+            );
+            when(
+              () => mockOAuth.exchangeCode(
+                code: any(named: 'code'),
+                verifier: any(named: 'verifier'),
+              ),
+            ).thenAnswer(
+              (_) async => const TokenResponse(bunkerUrl: 'bunker://test'),
+            );
+            when(() => mockAuthService.signInWithDivineOAuth(any())).thenThrow(
+              const UserDataCleanupException('Could not clear account cache'),
+            );
+          },
+          build: buildCubit,
+          seed: () => const DivineAuthFormState(
+            email: testEmail,
+            password: testPassword,
+            isSignIn: true,
+          ),
+          act: (cubit) => cubit.submit(),
+          expect: () => [
+            const DivineAuthFormState(
+              email: testEmail,
+              password: testPassword,
+              isSignIn: true,
+              isSubmitting: true,
+            ),
+            const DivineAuthFormState(
+              email: testEmail,
+              password: testPassword,
+              isSignIn: true,
+              signInFailureReason: SignInFailureReason.accountCleanupFailed,
+            ),
+          ],
+          errors: () => [isA<UserDataCleanupException>()],
         );
 
         blocTest<DivineAuthCubit, DivineAuthState>(

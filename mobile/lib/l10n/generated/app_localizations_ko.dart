@@ -12438,4 +12438,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get listSearchVideosUnavailable => '지금은 동영상 목록을 이용할 수 없어요.';
+
+  @override
+  String get authAccountCleanupFailed => '이전 계정의 데이터를 지울 수 없어요. 다시 시도해 주세요.';
 }

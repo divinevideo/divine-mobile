@@ -13339,4 +13339,8 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get listSearchVideosUnavailable =>
       'Listele de videoclipuri nu sunt disponibile acum.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Nu am putut șterge datele contului anterior. Încearcă din nou.';
 }

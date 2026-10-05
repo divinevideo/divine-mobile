@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -36,6 +37,7 @@ class _Preferences extends Fake implements SharedPreferences {
   final releaseWrite = Completer<void>();
   bool _gated = false;
   bool rejectSubscriptions = false;
+  bool rejectLists = false;
   bool rejectRemoval = false;
   bool rejectDefaultFlag = false;
   bool rejectDefaultRecovery = false;
@@ -68,6 +70,7 @@ class _Preferences extends Fake implements SharedPreferences {
   @override
   Future<bool> setString(String key, String value) async {
     await _gate(key);
+    if (key == CuratedListService.listsStorageKey && rejectLists) return false;
     if (key == CuratedListService.subscribedListsStorageKey &&
         rejectSubscriptions) {
       return false;
@@ -122,6 +125,7 @@ void _actor(_Auth auth, _Client client, String owner) {
 
 void main() {
   group('CuratedListService account isolation', () {
+    setUpAll(() => registerFallbackValue(Duration.zero));
     late _Preferences prefs;
     late _Auth authA;
     late _Client clientA;
@@ -333,6 +337,61 @@ void main() {
       expect(callbacks, [row.authorScopedId]);
       expect(open(authA, clientA).subscribedListIds, isEmpty);
       expect(await restarted.deleteOwnedList(row.authorScopedId), isTrue);
+      expect(callbacks, [row.authorScopedId]);
+    });
+
+    test('refused subscription recovery is observable and a same-service retry succeeds', () async {
+      final row = _row(_ownerA, id: CuratedListService.defaultListId);
+      await prefs.backing.setString(
+        CuratedListService.listsStorageKey,
+        jsonEncode([row.toJson()]),
+      );
+      await prefs.backing.setString(
+        CuratedListService.subscribedListsStorageKey,
+        jsonEncode([row.authorScopedId]),
+      );
+      final original = open(authA, clientA);
+      prefs.rejectSubscriptions = true;
+      expect(await original.deleteOwnedList(row.authorScopedId), isFalse);
+      final callbacks = <String>[];
+      final blocked = open(authA, clientA, onUnsubscribed: callbacks.add);
+      await blocked.initialize();
+      expect(blocked.isInitialized, isFalse);
+      expect(blocked.isReadyForMutations, isFalse);
+      expect(blocked.initializationError, isA<CuratedCacheWriteException>());
+      expect(blocked.getDefaultList(), isNull);
+      expect(callbacks, isEmpty);
+      clearInteractions(clientA);
+      expect(await blocked.createList(name: 'Blocked'), isNull);
+      expect(await blocked.subscribeToList(row.authorScopedId, row), isFalse);
+      expect(await blocked.unsubscribeFromList(row.authorScopedId), isFalse);
+      expect(await blocked.deleteOwnedList(row.authorScopedId), isFalse);
+      await blocked.fetchUserListsFromRelays(force: true);
+      expect(
+        await blocked.fetchPublicList(authorPubkey: _ownerA, listId: row.id),
+        isNull,
+      );
+      expect(await blocked.fetchPublicListsContainingVideo('f' * 64), isEmpty);
+      expect(await blocked.streamPublicListsFromRelays().toList(), isEmpty);
+      expect(
+        await blocked.streamPublicListsContainingVideo('f' * 64).toList(),
+        isEmpty,
+      );
+      verifyNever(() => clientA.subscribe(any()));
+      verifyNever(() => clientA.publishEventAwaitOk(any()));
+      expect(blocked.subscribedListIds, contains(row.authorScopedId));
+      verifyNever(
+        () => clientA.queryEvents(any(), timeout: any(named: 'timeout')),
+      );
+      prefs.rejectSubscriptions = false;
+      await blocked.initialize();
+      expect(blocked.isInitialized, isTrue);
+      expect(blocked.isReadyForMutations, isTrue);
+      expect(blocked.initializationError, isNull);
+      expect(blocked.subscribedListIds, isEmpty);
+      expect(blocked.getDefaultList(), isNull);
+      expect(callbacks, [row.authorScopedId]);
+      await blocked.initialize();
       expect(callbacks, [row.authorScopedId]);
     });
 
@@ -617,6 +676,83 @@ void main() {
         expect(callbacks, [row.authorScopedId]);
         expect(await service.deleteOwnedList(row.authorScopedId), isTrue);
         expect(callbacks, [row.authorScopedId]);
+      },
+    );
+
+    test('default list write refusal is observable and retryable', () async {
+      await prefs.backing.remove(CuratedListService.listsStorageKey);
+      final service = open(authA, clientA);
+      prefs.rejectLists = true;
+      await service.initialize();
+      expect(service.isInitialized, isFalse);
+      expect(service.isReadyForMutations, isFalse);
+      expect(service.initializationError, isA<CuratedCacheWriteException>());
+      expect(service.getDefaultList(), isNull);
+      verifyNever(() => clientA.publishEventAwaitOk(any()));
+      prefs.rejectLists = false;
+      await service.initialize();
+      expect(service.isInitialized, isTrue);
+      expect(service.initializationError, isNull);
+      expect(service.getDefaultList(), isNotNull);
+      expect(prefs.getString(CuratedListService.listsStorageKey), isNotNull);
+    });
+
+    test(
+      'provider exposes recovery failure and retries after storage recovers',
+      () async {
+        final row = _row(_ownerA, id: CuratedListService.defaultListId);
+        await prefs.backing.setString(
+          CuratedListService.listsStorageKey,
+          jsonEncode([row.toJson()]),
+        );
+        await prefs.backing.setString(
+          CuratedListService.subscribedListsStorageKey,
+          jsonEncode([row.authorScopedId]),
+        );
+        prefs.rejectSubscriptions = true;
+        expect(
+          await open(authA, clientA).deleteOwnedList(row.authorScopedId),
+          isFalse,
+        );
+        final container = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            authServiceProvider.overrideWithValue(authA),
+            nostrServiceProvider.overrideWithValue(clientA),
+          ],
+        );
+        addTearDown(container.dispose);
+        final subscription = container.listen(
+          curatedListsStateProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        await expectLater(
+          container.read(curatedListsStateProvider.future),
+          throwsA(isA<CuratedCacheWriteException>()),
+        );
+        expect(container.read(curatedListsStateProvider).hasError, isTrue);
+        final failedService = container
+            .read(curatedListsStateProvider.notifier)
+            .service!;
+        expect(failedService.isReadyForMutations, isFalse);
+        expect(failedService.getDefaultList(), isNull);
+        verifyNever(
+          () => clientA.queryEvents(any(), timeout: any(named: 'timeout')),
+        );
+
+        prefs.rejectSubscriptions = false;
+        container.invalidate(curatedListsStateProvider);
+        expect(await container.read(curatedListsStateProvider.future), isEmpty);
+        final recovered = container
+            .read(curatedListsStateProvider.notifier)
+            .service!;
+        expect(recovered, isNot(same(failedService)));
+        expect(failedService.isCurrentSession, isFalse);
+        expect(recovered.isInitialized, isTrue);
+        expect(recovered.isReadyForMutations, isTrue);
+        expect(recovered.subscribedListIds, isEmpty);
+        expect(recovered.getDefaultList(), isNull);
       },
     );
 

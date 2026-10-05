@@ -5478,5 +5478,6 @@
   "listsDiscoveryLoadingLabel": "Wczytywanie list",
   "listsDiscoveryEmpty": "Tym razem nie pojawiła się żadna lista. Pociągnij, aby odświeżyć.",
   "listSearchPeopleUnavailable": "Listy osób są teraz niedostępne.",
-  "listSearchVideosUnavailable": "Listy filmów są teraz niedostępne."
+  "listSearchVideosUnavailable": "Listy filmów są teraz niedostępne.",
+  "authAccountCleanupFailed": "Nie udało się usunąć danych poprzedniego konta. Spróbuj ponownie."
 }

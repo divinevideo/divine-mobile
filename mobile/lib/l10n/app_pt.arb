@@ -5478,5 +5478,6 @@
   "listsDiscoveryLoadingLabel": "Carregando listas",
   "listsDiscoveryEmpty": "Nenhuma lista deu as caras desta vez. Puxe para atualizar.",
   "listSearchPeopleUnavailable": "As listas de pessoas estão indisponíveis no momento.",
-  "listSearchVideosUnavailable": "As listas de vídeos estão indisponíveis no momento."
+  "listSearchVideosUnavailable": "As listas de vídeos estão indisponíveis no momento.",
+  "authAccountCleanupFailed": "Não foi possível limpar os dados da conta anterior. Tenta novamente."
 }

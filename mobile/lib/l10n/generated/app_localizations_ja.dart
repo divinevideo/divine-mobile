@@ -12425,4 +12425,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get listSearchVideosUnavailable => '現在、動画リストを利用できません。';
+
+  @override
+  String get authAccountCleanupFailed => '前のアカウントのデータを削除できませんでした。もう一度お試しください。';
 }

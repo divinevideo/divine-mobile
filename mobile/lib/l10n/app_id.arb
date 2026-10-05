@@ -5478,5 +5478,6 @@
   "listsDiscoveryLoadingLabel": "Memuat daftar",
   "listsDiscoveryEmpty": "Belum ada daftar yang muncul kali ini. Tarik untuk menyegarkan.",
   "listSearchPeopleUnavailable": "Daftar orang sedang tidak tersedia.",
-  "listSearchVideosUnavailable": "Daftar video sedang tidak tersedia."
+  "listSearchVideosUnavailable": "Daftar video sedang tidak tersedia.",
+  "authAccountCleanupFailed": "Data akun sebelumnya tidak dapat dihapus. Coba lagi."
 }

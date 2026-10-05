@@ -244,6 +244,57 @@ void main() {
       },
     );
 
+    test(
+      'refused cleanup prevents an archived bunker account reconnect',
+      () async {
+        final pubkey = freshPubkeyHex();
+        final url = 'bunker://$pubkey?relay=wss://relay.example.com';
+        channelMocks.secureStorage['bunker_info_$pubkey'] = url;
+        SharedPreferences.setMockInitialValues({
+          'current_user_pubkey_hex': 'a' * 64,
+          kKnownAccountsKey: '[]',
+        });
+        when(() => mockBunkerSigner.info)
+            .thenReturn(NostrRemoteSignerInfo.parseBunkerUrl(url));
+        when(() => mockBunkerSigner.connect(sendConnectRequest: false))
+            .thenAnswer((_) async => 'ack');
+        when(() => mockBunkerSigner.pullPubkey())
+            .thenAnswer((_) async => pubkey);
+        when(() => mockCleanupService.shouldClearDataForUser(any()))
+            .thenReturn(true);
+        when(
+          () => mockCleanupService.clearUserSpecificData(
+            reason: any(named: 'reason'),
+            isIdentityChange: any(named: 'isIdentityChange'),
+            userPubkey: any(named: 'userPubkey'),
+            deleteUserData: any(named: 'deleteUserData'),
+          ),
+        ).thenThrow(
+          const UserDataCleanupException('Could not clear account cache'),
+        );
+        final service = buildTestAuthService(
+          cleanupService: mockCleanupService,
+          remoteSignerFactory: (_, _) => mockBunkerSigner,
+        );
+        addTearDown(service.dispose);
+        await expectLater(
+          service.signInForAccount(
+            pubkey,
+            AuthenticationSource.bunker,
+            claimLegacyRows: false,
+          ),
+          throwsA(isA<UserDataCleanupException>()),
+        );
+        expect(service.authState, AuthState.unauthenticated);
+        expect(service.currentIdentity, isNull);
+        expect(service.currentPublicKeyHex, isNull);
+        verify(() => mockBunkerSigner.close()).called(1);
+        verifyNever(() => mockCleanupService.claimLegacyRows(any()));
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getString('current_user_pubkey_hex'), 'a' * 64);
+      },
+    );
+
     test('startup restore times out unreachable bunker signer', () async {
       await authService.dispose();
 

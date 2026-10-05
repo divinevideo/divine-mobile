@@ -13020,4 +13020,8 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get listSearchVideosUnavailable => 'قوائم الفيديو غير متاحة الآن.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'تعذّر مسح بيانات الحساب السابق. حاول مرة أخرى.';
 }

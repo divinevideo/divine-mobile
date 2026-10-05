@@ -9348,5 +9348,7 @@
     },
     "@listSearchVideosUnavailable": {
         "description": "Video-list search source could not answer; shown beside healthy people results with retry."
-    }
+    },
+  "@authAccountCleanupFailed": {"description": "Error shown when local account cleanup fails during sign-in or switching accounts. The user can retry."},
+  "authAccountCleanupFailed": "Couldn't clear the previous account's data. Try again."
 }

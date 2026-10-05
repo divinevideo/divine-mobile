@@ -13413,4 +13413,8 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get listSearchVideosUnavailable =>
       'ప్రస్తుతం వీడియో జాబితాలు అందుబాటులో లేవు.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'మునుపటి ఖాతా డేటాను తొలగించలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
 }

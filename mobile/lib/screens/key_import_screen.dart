@@ -302,7 +302,11 @@ class _KeyImportScreenState extends ConsumerState<KeyImportScreen> {
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(context.l10n.keyImportFailedToImport),
+            content: Text(
+              result.failureReason == AuthFailureReason.accountCleanupFailed
+                  ? context.l10n.authAccountCleanupFailed
+                  : context.l10n.keyImportFailedToImport,
+            ),
             backgroundColor: VineTheme.error,
           ),
         );
