@@ -7,8 +7,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/live_volume.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/utils/volume_boost_color.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_volume_mute_toggle.dart';
 
 /// Panel shown when the user taps the volume button in the timeline header.
@@ -18,10 +21,15 @@ import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_volum
 class VideoEditorTimelineVolume extends StatelessWidget {
   const VideoEditorTimelineVolume({
     required this.volumePreviewNotifier,
+    this.liveVolumeNotifier,
     super.key,
   });
 
   final ValueNotifier<double?> volumePreviewNotifier;
+
+  /// Receives the clip or track volume while it is dragged, so the preview
+  /// can play it before it is committed on release; null once released.
+  final ValueNotifier<LiveVolume?>? liveVolumeNotifier;
 
   @override
   Widget build(BuildContext context) {
@@ -90,6 +98,8 @@ class VideoEditorTimelineVolume extends StatelessWidget {
                             context.l10n.videoEditorVolumeLongPressHint,
                         volume: clips[i].volume,
                         volumePreviewNotifier: volumePreviewNotifier,
+                        onLivePreview: (v) => liveVolumeNotifier?.value =
+                            v == null ? null : LiveVolume.clip(clips[i].id, v),
                         onChanged: (v) => context.read<ClipEditorBloc>().add(
                           ClipEditorClipVolumeChanged(
                             clipId: clips[i].id,
@@ -121,6 +131,10 @@ class VideoEditorTimelineVolume extends StatelessWidget {
                             context.l10n.videoEditorVolumeLongPressHint,
                         volume: customTracks[i].volume,
                         volumePreviewNotifier: volumePreviewNotifier,
+                        onLivePreview: (v) =>
+                            liveVolumeNotifier?.value = v == null
+                            ? null
+                            : LiveVolume.track(customTracks[i].id, v),
                         onChanged: (v) =>
                             context.read<TimelineOverlayBloc>().add(
                               TimelineOverlayAudioVolumeChanged(
@@ -149,6 +163,7 @@ class _VolumeArc extends StatefulWidget {
     required this.volume,
     required this.volumePreviewNotifier,
     required this.onChanged,
+    this.onLivePreview,
     this.onLongPress,
     this.semanticLongPressHint,
   });
@@ -164,6 +179,10 @@ class _VolumeArc extends StatefulWidget {
   /// `!_debugDuringDeviceUpdate` assertion in mouse_tracker.dart.
   final ValueChanged<double> onChanged;
 
+  /// Called with the volume on every move while it is dragged, so it can be
+  /// heard before [onChanged] commits it, and with null once released.
+  final ValueChanged<double?>? onLivePreview;
+
   /// Called on long press — mutes/unmutes all clips and audio tracks at once.
   final VoidCallback? onLongPress;
 
@@ -176,8 +195,13 @@ class _VolumeArc extends StatefulWidget {
 
 class _VolumeArcState extends State<_VolumeArc> {
   static const double _gapSweepDeg = 80; // gap at the bottom, in degrees.
-  static const double _maxDragRangePx = 160;
-  static const double _maxDeadZonePx = 24;
+
+  /// Vertical drag distance that moves the volume by 100 %.
+  static const double _pxPerFullVolume = 100;
+
+  /// Volumes this close to 100 % snap onto it, so the neutral level is easy
+  /// to land on again after boosting or lowering a track.
+  static const double _unitySnap = 0.04;
 
   // Gesture-local preview state belongs here because it changes every frame
   // while the pointer moves and does not represent persisted editor state.
@@ -188,6 +212,12 @@ class _VolumeArcState extends State<_VolumeArc> {
   double _lastUnmutedVolume = 1.0;
 
   bool _isDragging = false;
+
+  /// Volume when the current drag began; the drag moves it from there.
+  double _dragStartVolume = 1;
+
+  /// Local vertical position where the current drag began.
+  double _dragStartDy = 0;
 
   @override
   void initState() {
@@ -209,43 +239,41 @@ class _VolumeArcState extends State<_VolumeArc> {
     }
   }
 
-  /// Pixels of drag distance that cover the full 0..1 range.
-  ///
-  /// Set once at pan-start to 90 % of the current screen width, capped at
-  /// [_maxDragRangePx].
-  double _dragRangePx = _maxDragRangePx;
-
-  /// Local position where the current pan gesture began.
-  Offset _panStart = Offset.zero;
-
-  void _onPanStart(DragStartDetails d) {
-    _dragRangePx = math.min(
-      _maxDragRangePx,
-      MediaQuery.sizeOf(context).width * 0.9,
-    );
-    _panStart = d.localPosition;
+  void _onDragStart(DragStartDetails d) {
+    _dragStartVolume = _localVolume;
+    _dragStartDy = d.localPosition.dy;
     _isDragging = true;
-    // Snap to full volume immediately so the gesture starts from a known
-    // reference point: finger down = 100%.
-    if (_localVolume != 1.0) {
-      setState(() => _localVolume = 1);
-    }
-    widget.volumePreviewNotifier.value = 1.0;
+    widget.volumePreviewNotifier.value = _localVolume;
   }
 
-  void _onPanUpdate(DragUpdateDetails d) {
-    // Finger on (or near) the tile = 100%. The further away the finger is
-    // from the press point, the quieter it gets. Coming back to the start
-    // pushes it back up to full volume.
-    final dx = d.localPosition.dx - _panStart.dx;
-    final dy = d.localPosition.dy - _panStart.dy;
-    final distance = math.sqrt(dx * dx + dy * dy);
-    final effective = (distance - _maxDeadZonePx).clamp(0.0, double.infinity);
-    final next = (1 - effective / _dragRangePx).clamp(0.0, 1.0);
+  void _onDragUpdate(DragUpdateDetails d) {
+    // Up is louder, down is quieter, relative to the volume the drag
+    // started at.
+    final raised = (_dragStartDy - d.localPosition.dy) / _pxPerFullVolume;
+    var next = (_dragStartVolume + raised).clamp(
+      0.0,
+      VideoEditorConstants.volumeMax,
+    );
+    if ((next - 1).abs() < _unitySnap) next = 1;
+    next = (next * 100).roundToDouble() / 100;
     if (next != _localVolume) {
+      if (_VolumeZone.of(next) != _VolumeZone.of(_localVolume)) {
+        unawaited(HapticFeedback.selectionClick());
+      }
       setState(() => _localVolume = next);
+      widget.onLivePreview?.call(next);
     }
     widget.volumePreviewNotifier.value = next;
+  }
+
+  void _onDragEnd(DragEndDetails _) {
+    _isDragging = false;
+    if (_localVolume > 0) {
+      _lastUnmutedVolume = _localVolume;
+    }
+    widget.onChanged(_localVolume);
+    widget.volumePreviewNotifier.value = null;
+    widget.onLivePreview?.call(null);
   }
 
   @override
@@ -275,19 +303,12 @@ class _VolumeArcState extends State<_VolumeArc> {
               widget.onChanged(next);
             },
             onLongPress: widget.onLongPress,
-            // Press-and-drag: the distance from the press point sets the
-            // volume, full near the tile and quieter further away. The arc
-            // itself is not directly hit-tested.
-            onPanStart: _onPanStart,
-            onPanUpdate: _onPanUpdate,
-            onPanEnd: (_) {
-              _isDragging = false;
-              if (_localVolume > 0) {
-                _lastUnmutedVolume = _localVolume;
-              }
-              widget.onChanged(_localVolume);
-              widget.volumePreviewNotifier.value = null;
-            },
+            // Vertical drag: up is louder, down is quieter. A vertical
+            // recognizer (not a pan) so it wins the arena against the
+            // volume panel's own vertical scroll view.
+            onVerticalDragStart: _onDragStart,
+            onVerticalDragUpdate: _onDragUpdate,
+            onVerticalDragEnd: _onDragEnd,
             child: Stack(
               alignment: Alignment.center,
               children: [
@@ -302,9 +323,11 @@ class _VolumeArcState extends State<_VolumeArc> {
                 ),
                 DivineIcon(
                   icon: isMuted ? .speakerSimpleSlash : .speakerHigh,
-                  color: _localVolume >= 1
-                      ? context.vineColors.onSurface
-                      : VineTheme.accentYellow,
+                  color:
+                      volumeBoostColor(_localVolume) ??
+                      (_localVolume >= 1
+                          ? context.vineColors.onSurface
+                          : VineTheme.accentYellow),
                   size: 16,
                 ),
               ],
@@ -331,7 +354,8 @@ class _VolumeArcPainter extends CustomPainter {
   final Color trackColor;
 
   /// Filled arc colour at full volume; below full the arc uses the fixed
-  /// accent yellow that flags a modified track in both modes.
+  /// accent yellow that flags a modified track in both modes, and above it
+  /// the [volumeBoostColor].
   final Color fullColor;
 
   @override
@@ -351,15 +375,43 @@ class _VolumeArcPainter extends CustomPainter {
       ..strokeCap = StrokeCap.butt;
     canvas.drawArc(rect, startAngle, arcSweep, false, track);
 
-    if (volume > 0) {
-      final fill = Paint()
-        ..color = volume >= 1 ? fullColor : VineTheme.accentYellow
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 4
-        ..strokeCap = StrokeCap.butt;
-      canvas.drawArc(rect, startAngle, arcSweep * volume, false, fill);
+    if (volume <= 0) return;
+    if (volume <= 1) {
+      canvas.drawArc(
+        rect,
+        startAngle,
+        arcSweep * volume,
+        false,
+        _fill(volume >= 1 ? fullColor : VineTheme.accentYellow),
+      );
+      return;
     }
+
+    // Every 100 % above full laps the arc again: the completed lap stays
+    // underneath in its own colour, the current one fills over it.
+    final completedLaps = volume.ceil() - 1;
+    canvas
+      ..drawArc(
+        rect,
+        startAngle,
+        arcSweep,
+        false,
+        _fill(volumeBoostColor(completedLaps.toDouble()) ?? fullColor),
+      )
+      ..drawArc(
+        rect,
+        startAngle,
+        arcSweep * (volume - completedLaps),
+        false,
+        _fill(volumeBoostColor(volume)!),
+      );
   }
+
+  Paint _fill(Color color) => Paint()
+    ..color = color
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 4
+    ..strokeCap = StrokeCap.butt;
 
   @override
   bool shouldRepaint(_VolumeArcPainter oldDelegate) =>
@@ -367,4 +419,22 @@ class _VolumeArcPainter extends CustomPainter {
       oldDelegate.gapSweepDeg != gapSweepDeg ||
       oldDelegate.trackColor != trackColor ||
       oldDelegate.fullColor != fullColor;
+}
+
+/// Volume ranges a drag crosses with a haptic tick, so 100 % and the
+/// boost colours can be felt without looking at the arc.
+enum _VolumeZone {
+  muted,
+  reduced,
+  unity,
+  boosted,
+  highlyBoosted;
+
+  static _VolumeZone of(double volume) {
+    if (volume <= 0) return muted;
+    if (volume < 1) return reduced;
+    if (volume == 1) return unity;
+    if (volume <= 2) return boosted;
+    return highlyBoosted;
+  }
 }

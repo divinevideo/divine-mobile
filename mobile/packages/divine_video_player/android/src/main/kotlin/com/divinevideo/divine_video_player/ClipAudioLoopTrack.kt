@@ -49,6 +49,9 @@ internal class ClipAudioLoopTrack private constructor(
 
     private var released = false
 
+    /** The part of the loop's volume above 100 %; see [setBoost]. */
+    private val boost = AudioSessionBoost()
+
     private val sync = LoopAudioSync(frameCount.toLong(), sampleRate)
     private val timestamp = AudioTimestamp()
 
@@ -282,9 +285,21 @@ internal class ClipAudioLoopTrack private constructor(
         runCatching { track.setVolume(volume) }
     }
 
+    /**
+     * Lifts the loop above 100 % by [gain], which [setVolume] cannot: see
+     * [AudioSessionBoost]. Applies whether or not the loop is aligning, since
+     * the muting there is done by the volume.
+     */
+    fun setBoost(gain: Float) {
+        if (released) return
+        runCatching { boost.attach(track.audioSessionId) }
+        boost.setGain(gain)
+    }
+
     fun release() {
         if (released) return
         released = true
+        boost.release()
         runCatching {
             track.pause()
             track.flush()

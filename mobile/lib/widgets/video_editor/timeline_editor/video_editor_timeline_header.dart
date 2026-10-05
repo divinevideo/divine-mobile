@@ -9,6 +9,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/utils/volume_boost_color.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_volume_mute_toggle.dart';
 import 'package:time_formatter/time_formatter.dart';
 
@@ -118,7 +119,9 @@ class _VolumeTextDisplay extends StatelessWidget {
             context.l10n.videoEditorTimelineVolumePreview(
               (preview * 100).round(),
             ),
-            style: VineTheme.labelLargeFont(color: VineTheme.accentYellow),
+            style: VineTheme.labelLargeFont(
+              color: volumeBoostColor(preview) ?? VineTheme.accentYellow,
+            ),
           );
         }
         return Text(

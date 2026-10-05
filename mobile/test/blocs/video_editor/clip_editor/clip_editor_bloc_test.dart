@@ -10,6 +10,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
@@ -1791,11 +1792,31 @@ void main() {
       );
 
       blocTest<ClipEditorBloc, ClipEditorState>(
-        'is no-op when clamped volume matches current volume',
+        'boosts above 100 % and clamps at the maximum',
         build: buildBloc,
         seed: () => ClipEditorState(clips: twoClips),
         act: (bloc) => bloc.add(
-          const ClipEditorClipVolumeChanged(clipId: 'a', volume: 2.0),
+          const ClipEditorClipVolumeChanged(clipId: 'a', volume: 4.0),
+        ),
+        expect: () => [
+          isA<ClipEditorState>().having(
+            (s) => s.clips.first.volume,
+            'volume',
+            VideoEditorConstants.volumeMax,
+          ),
+        ],
+      );
+
+      blocTest<ClipEditorBloc, ClipEditorState>(
+        'is no-op when clamped volume matches current volume',
+        build: buildBloc,
+        seed: () => ClipEditorState(
+          clips: twoClips
+              .map((c) => c.copyWith(volume: VideoEditorConstants.volumeMax))
+              .toList(growable: false),
+        ),
+        act: (bloc) => bloc.add(
+          const ClipEditorClipVolumeChanged(clipId: 'a', volume: 4.0),
         ),
         expect: () => <ClipEditorState>[],
       );
@@ -1837,7 +1858,7 @@ void main() {
       );
 
       blocTest<ClipEditorBloc, ClipEditorState>(
-        'clamps above 1 to 1 on every clip',
+        'clamps above the maximum to the maximum on every clip',
         build: buildBloc,
         seed: () => ClipEditorState(
           clips: twoClips
@@ -1845,12 +1866,12 @@ void main() {
               .toList(growable: false),
         ),
         act: (bloc) =>
-            bloc.add(const ClipEditorAllClipsVolumeChanged(volume: 2.0)),
+            bloc.add(const ClipEditorAllClipsVolumeChanged(volume: 4.0)),
         expect: () => [
           isA<ClipEditorState>().having(
             (s) => s.clips.map((c) => c.volume).toList(),
             'clip volumes',
-            [1.0, 1.0],
+            [VideoEditorConstants.volumeMax, VideoEditorConstants.volumeMax],
           ),
         ],
       );
@@ -1867,9 +1888,13 @@ void main() {
       blocTest<ClipEditorBloc, ClipEditorState>(
         'is no-op when every clip already has the clamped target volume',
         build: buildBloc,
-        seed: () => ClipEditorState(clips: twoClips),
+        seed: () => ClipEditorState(
+          clips: twoClips
+              .map((c) => c.copyWith(volume: VideoEditorConstants.volumeMax))
+              .toList(growable: false),
+        ),
         act: (bloc) =>
-            bloc.add(const ClipEditorAllClipsVolumeChanged(volume: 2.0)),
+            bloc.add(const ClipEditorAllClipsVolumeChanged(volume: 4.0)),
         expect: () => <ClipEditorState>[],
       );
     });

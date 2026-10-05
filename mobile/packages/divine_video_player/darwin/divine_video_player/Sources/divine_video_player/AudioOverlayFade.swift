@@ -68,4 +68,17 @@ struct AudioOverlayFade: Equatable {
             return Ramp(startSec: start, endSec: end, fromGain: from, toGain: to)
         }
     }
+
+    /// The envelope over a track that sounds for `audibleSec`, played at
+    /// `level`: a track boosted above 100 % plays every ramp that much louder.
+    func ramps(audibleSec: Double, level: Double) -> [Ramp] {
+        ramps(audibleSec: audibleSec).map {
+            Ramp(
+                startSec: $0.startSec,
+                endSec: $0.endSec,
+                fromGain: $0.fromGain * level,
+                toGain: $0.toGain * level
+            )
+        }
+    }
 }

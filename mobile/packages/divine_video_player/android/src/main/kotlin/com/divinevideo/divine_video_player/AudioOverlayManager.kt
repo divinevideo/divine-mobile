@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.Looper
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 
 /**
@@ -70,6 +71,13 @@ internal class AudioOverlayManager(
                 baseVolume = vol,
                 fade = AudioOverlayFade.fromMap(map),
             )
+            // media3 generates the session off the main thread, so it can
+            // arrive after the first volume was applied.
+            overlay.addListener(object : Player.Listener {
+                override fun onAudioSessionIdChanged(audioSessionId: Int) {
+                    entry.boost.attach(audioSessionId)
+                }
+            })
             applyFadeGain(entry, trackStartMs)
             overlays.add(entry)
         }
@@ -177,6 +185,7 @@ internal class AudioOverlayManager(
         handler.removeCallbacks(fadeTicker)
         fadeTickerScheduled = false
         for (entry in overlays) {
+            entry.boost.release()
             entry.player.stop()
             entry.player.release()
         }
@@ -186,14 +195,20 @@ internal class AudioOverlayManager(
     /**
      * Sets [entry]'s volume to its base level scaled by its fade at
      * [audioPositionMs], a position in the audio file.
+     *
+     * The fade steps only the player's own volume, the base level up to
+     * 100 %; the part above it is a constant [AudioOverlayEntry.boost], so a
+     * boosted fade still ramps linearly.
      */
     private fun applyFadeGain(entry: AudioOverlayEntry, audioPositionMs: Long) {
         val gain = entry.fade.gainAt(
             elapsedMs = audioPositionMs - entry.trackStartMs,
             audibleMs = audibleMs(entry),
         )
-        val volume = entry.baseVolume * gain
+        val volume = AudioSessionBoost.attenuationOf(entry.baseVolume) * gain
         if (entry.player.volume != volume) entry.player.volume = volume
+        entry.boost.attach(entry.player.audioSessionId)
+        entry.boost.setGain(AudioSessionBoost.boostOf(entry.baseVolume))
     }
 
     /**
@@ -235,10 +250,12 @@ internal class AudioOverlayEntry(
     val videoEndMs: Long?,
     val trackStartMs: Long,
     val trackEndMs: Long?,
-    /** The track's volume before its fade is applied. */
+    /** The track's volume before its fade is applied, above 1.0 when boosted. */
     var baseVolume: Float = 1.0f,
     val fade: AudioOverlayFade = AudioOverlayFade(fadeInMs = 0, fadeOutMs = 0),
     var isActive: Boolean = false,
+    /** Carries [baseVolume] above 100 %; see [AudioSessionBoost]. */
+    val boost: AudioSessionBoost = AudioSessionBoost(),
 ) {
     /** Whether this track is sounding with a fade that needs stepping. */
     val isFading: Boolean

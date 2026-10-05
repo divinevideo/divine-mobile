@@ -6,6 +6,7 @@ import 'package:collection/collection.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart' show AudioEvent;
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
@@ -1159,7 +1160,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
   ) {
     final index = state.clips.indexWhere((c) => c.id == event.clipId);
     if (index == -1) return;
-    final nextVolume = event.volume.clamp(0.0, 1.0);
+    final nextVolume = event.volume.clamp(0.0, VideoEditorConstants.volumeMax);
     if (state.clips[index].volume == nextVolume) return;
     final updated = List<DivineVideoClip>.of(state.clips);
     updated[index] = updated[index].copyWith(volume: nextVolume);
@@ -1175,7 +1176,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     ClipEditorAllClipsVolumeChanged event,
     Emitter<ClipEditorState> emit,
   ) {
-    final nextVolume = event.volume.clamp(0.0, 1.0);
+    final nextVolume = event.volume.clamp(0.0, VideoEditorConstants.volumeMax);
     if (state.clips.isEmpty) return;
     if (state.clips.every((c) => c.volume == nextVolume)) return;
     final updated = state.clips

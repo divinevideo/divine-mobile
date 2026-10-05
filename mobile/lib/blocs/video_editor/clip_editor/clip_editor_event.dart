@@ -540,7 +540,8 @@ class ClipEditorDetachedClipReattachRequested extends ClipEditorEvent {
 
 /// Update the volume of a clip by its ID.
 ///
-/// [volume] is clamped to [0.0, 1.0] by the handler.
+/// [volume] is clamped to [0.0, VideoEditorConstants.volumeMax] by the
+/// handler.
 class ClipEditorClipVolumeChanged extends ClipEditorEvent {
   const ClipEditorClipVolumeChanged({
     required this.clipId,
@@ -555,7 +556,8 @@ class ClipEditorClipVolumeChanged extends ClipEditorEvent {
 }
 
 /// Set the same [volume] on every clip.
-/// [volume] is clamped to [0.0, 1.0] by the handler.
+/// [volume] is clamped to [0.0, VideoEditorConstants.volumeMax] by the
+/// handler.
 class ClipEditorAllClipsVolumeChanged extends ClipEditorEvent {
   const ClipEditorAllClipsVolumeChanged({required this.volume});
 

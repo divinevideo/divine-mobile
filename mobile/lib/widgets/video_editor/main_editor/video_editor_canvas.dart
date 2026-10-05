@@ -33,6 +33,7 @@ import 'package:openvine/models/video_editor/caption_layer_mapping.dart';
 import 'package:openvine/models/video_editor/clip_history_direction.dart';
 import 'package:openvine/models/video_editor/clip_snapshot_sync_op.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/live_volume.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_screen.dart';
@@ -695,6 +696,67 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     final scope = VideoEditorScope.of(context);
     _playTimeNotifier = scope.playTimeNotifier;
     _playheadAdvancingNotifier = scope.playheadAdvancingNotifier;
+    final liveVolume = scope.liveVolumeNotifier;
+    if (!identical(liveVolume, _liveVolumeNotifier)) {
+      _liveVolumeNotifier?.removeListener(_onLiveVolumeChanged);
+      _liveVolumeNotifier = liveVolume?..addListener(_onLiveVolumeChanged);
+    }
+  }
+
+  /// The volume being dragged in the timeline; see [_onLiveVolumeChanged].
+  ValueNotifier<LiveVolume?>? _liveVolumeNotifier;
+
+  /// The newest dragged volume not yet handed to the player.
+  LiveVolume? _queuedLiveVolume;
+
+  bool _isApplyingLiveVolume = false;
+
+  /// The track ids of the last [_syncAudioTracks], in the player's order.
+  List<String> _loadedAudioTrackIds = const [];
+
+  /// Plays a volume while it is still dragged, without reloading the clips or
+  /// tracks: the editor only takes it on release, which reloads them as usual.
+  ///
+  /// A drag moves faster than the player answers, so a call waits for the
+  /// one before it and only the newest volume is sent.
+  void _onLiveVolumeChanged() {
+    final live = _liveVolumeNotifier?.value;
+    if (live == null) return;
+    _queuedLiveVolume = live;
+    if (_isApplyingLiveVolume) return;
+    _runDetached(_drainLiveVolume(), 'apply live volume');
+  }
+
+  Future<void> _drainLiveVolume() async {
+    _isApplyingLiveVolume = true;
+    try {
+      for (
+        var live = _queuedLiveVolume;
+        live != null;
+        live = _queuedLiveVolume
+      ) {
+        _queuedLiveVolume = null;
+        await _applyLiveVolume(live);
+      }
+    } finally {
+      _isApplyingLiveVolume = false;
+    }
+  }
+
+  Future<void> _applyLiveVolume(LiveVolume live) async {
+    final player = _videoPlayer;
+    if (player == null || !_isPlayerInitialized || _isStopMotionComposition) {
+      return;
+    }
+    if (live.clipId case final clipId?) {
+      final volumes = _composition.clipVolumesWith(clipId, live.volume);
+      if (volumes != null) await player.setClipVolumes(volumes);
+      return;
+    }
+    // A voice-over preview plays every track muted.
+    if (_isVoiceOverPreview) return;
+    final index = _loadedAudioTrackIds.indexOf(live.trackId!);
+    if (index >= 0) await player.setAudioTrackVolume(index, live.volume);
   }
 
   /// The composition the preview player plays (rendered seams and speed
@@ -781,6 +843,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // Null it so a release/init still awaiting bails instead of double-disposing
     // or writing to the disposed notifier below.
     _videoPlayer = null;
+    _liveVolumeNotifier?.removeListener(_onLiveVolumeChanged);
     _isPlayerReadyNotifier.dispose();
     _composition.dispose();
     super.dispose();
@@ -1672,6 +1735,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         .toList();
 
     if (soundItems.isEmpty || audioEvents.isEmpty) {
+      _loadedAudioTrackIds = const [];
       await _videoPlayer!.removeAllAudioTracks();
       Log.info(
         '🎵 Audio cleared',
@@ -1685,6 +1749,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     final audioById = {for (final e in audioEvents) e.id: e};
 
     final tracks = <AudioTrack>[];
+    final trackIds = <String>[];
     for (final item in soundItems) {
       final sound = audioById[item.id];
       if (sound == null || sound.url == null) continue;
@@ -1740,6 +1805,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
           );
         }
         tracks.add(track);
+        trackIds.add(item.id);
       } catch (e, stackTrace) {
         Log.error(
           '🎵 Failed to build audio track ${item.id}: $e',
@@ -1752,12 +1818,15 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     }
 
     if (tracks.isEmpty) {
+      _loadedAudioTrackIds = const [];
       await _videoPlayer!.removeAllAudioTracks();
       return;
     }
 
     try {
+      _loadedAudioTrackIds = const [];
       await _videoPlayer!.setAudioTracks(tracks);
+      _loadedAudioTrackIds = trackIds;
     } catch (e, stackTrace) {
       Log.error(
         '🎵 Failed to load audio: $e',

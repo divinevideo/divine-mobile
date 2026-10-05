@@ -56,6 +56,15 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// load time therefore declicks the first lap and no other, which is
     /// exactly the lap nobody is listening for.
     private var loopAudioMix: AVAudioMix?
+
+    /// What [loopAudioMix] is rebuilt from; see `handleSetClipVolumes`.
+    private var clipVolumeMixSource: ClipVolumeMixSource?
+
+    /// The loaded clips' volumes, one per clip, above 1 when boosted.
+    private var loadedClipVolumes: [Float] = []
+
+    /// The level the loop plays at: Dart's volume times the single clip's.
+    private var clipLoopVolume: Float { Float(volume) * (loadedClipVolumes.first ?? 1) }
     /// Bumped at the start of each `setClips` call, before that call awaits.
     /// A call that resumes after a newer one has started must not install —
     /// publishing its mix earlier would let prewarm stamp that mix onto the
@@ -102,6 +111,18 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         var firstFrameStart: CMTime?
         var loopSource: ClipAudioLoop.Source?
         var streamedLoop: StreamedLoop?
+        var volumeMixSource: ClipVolumeMixSource?
+        var clipVolumes: [Float] = []
+    }
+
+    /// What the loaded item's audio mix is rebuilt from when
+    /// `setClipVolumes` changes its clips' volumes without reloading it.
+    private enum ClipVolumeMixSource {
+        /// A composition: one audio track, each clip a stretch of it.
+        case composition(track: AVAssetTrack, scaledDurations: [CMTime])
+        /// A clip played straight from its asset, a lap from `loopStart` to
+        /// `loopEnd`.
+        case direct(track: AVAssetTrack, loopStart: CMTime, loopEnd: CMTime)
     }
 
     /// A streamed clip's download, and the stretch of the file one lap plays
@@ -177,12 +198,13 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
 
     /// A mix that fades [track] in from [loopStart] and out to [loopEnd] over
     /// [edgeDeclickFadeSeconds] each — the composition's edge fades, for a
-    /// clip played straight from its asset. Nil for a clip too short to carry
-    /// two fades.
+    /// clip played straight from its asset — holding [volume] between them.
+    /// Nil for a clip too short to carry two fades.
     private static func edgeDeclickMix(
         track: AVAssetTrack,
         loopStart: CMTime,
-        loopEnd: CMTime
+        loopEnd: CMTime,
+        volume: Float = 1
     ) -> AVAudioMix? {
         let maxFadeTicks =
             Int64((edgeDeclickFadeSeconds * Double(audioMixTimescale)).rounded())
@@ -199,19 +221,19 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         }
         params.setVolumeRamp(
             fromStartVolume: 0,
-            toEndVolume: 1,
+            toEndVolume: volume,
             timeRange: CMTimeRange(start: loopStart, end: fadeInEnd)
         )
         if CMTimeCompare(flatEnd, fadeInEnd) > 0 {
             params.setVolumeRamp(
-                fromStartVolume: 1,
-                toEndVolume: 1,
+                fromStartVolume: volume,
+                toEndVolume: volume,
                 timeRange: CMTimeRange(start: fadeInEnd, end: flatEnd)
             )
         }
         // Ends exactly on loopEnd, the sample the looper joins.
         params.setVolumeRamp(
-            fromStartVolume: 1,
+            fromStartVolume: volume,
             toEndVolume: 0,
             timeRange: CMTimeRange(start: flatEnd, end: loopEnd)
         )
@@ -358,6 +380,8 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             handleSeekTo(call, result: result)
         case "setVolume":
             handleSetVolume(call, result: result)
+        case "setClipVolumes":
+            handleSetClipVolumes(call, result: result)
         case "setPlaybackSpeed":
             handleSetPlaybackSpeed(call, result: result)
         case "setLooping":
@@ -477,6 +501,8 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 let offsets = built.offsets
                 let durations = built.durations
                 self.loopAudioMix = playerItem.audioMix
+                self.clipVolumeMixSource = built.volumeMixSource
+                self.loadedClipVolumes = built.clipVolumes
                 self.loopTimeRange = built.loopTimeRange
                 self.firstFrameStart = built.firstFrameStart
                 self.clipLoopSource = built.loopSource
@@ -837,6 +863,11 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             playerItem.forwardPlaybackEndTime = loopEnd
         }
         var built = BuiltItem(item: playerItem, offsets: [0], durations: [loopEnd.seconds])
+        // The direct path only takes a clip at its original volume.
+        built.clipVolumes = [1]
+        built.volumeMixSource = audioTrack.map {
+            .direct(track: $0, loopStart: loopStart, loopEnd: loopEnd)
+        }
         if CMTimeCompare(loopStart, .zero) > 0 || CMTimeCompare(loopEnd, assetDuration) < 0 {
             built.loopTimeRange = CMTimeRange(start: loopStart, end: loopEnd)
         }
@@ -888,6 +919,8 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         }
         if let audioMix { playerItem.audioMix = audioMix }
         var built = BuiltItem(item: playerItem, offsets: build.offsets, durations: build.durations)
+        built.volumeMixSource = build.volumeMixSource
+        built.clipVolumes = build.clipVolumes
         // A first clip cut past its empty edit shows a frame at zero.
         if CMTimeCompare(build.firstClipFileStart, .zero) > 0 { built.firstFrameStart = .zero }
         if let loader = build.loader {
@@ -941,6 +974,9 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         let offsets: [Double]
         let durations: [Double]
         let audioMix: AVMutableAudioMix?
+        /// What [audioMix] is rebuilt from for new clip volumes.
+        let volumeMixSource: ClipVolumeMixSource?
+        let clipVolumes: [Float]
         /// Where in its file the first clip starts.
         let firstClipFileStart: CMTime
         /// The download a single streamed looping clip loads through.
@@ -1200,67 +1236,11 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         // abort the process. Folding also keeps a muted video silent.
         var audioMix: AVMutableAudioMix?
         if let audioTrack {
-            let params = AVMutableAudioMixInputParameters(track: audioTrack)
-            // Each edge is capped by the clip it sits in, and only by that
-            // clip. Capping both by a single minimum would let one short clip
-            // at either end shorten the fade at the *other* end too — and
-            // below the ~25 ms floor described on [edgeDeclickFadeSeconds] a
-            // ramp is stretched and never reaches zero, so the edge that did
-            // not need shortening would silently stop declicking.
-            //
-            // [halfFadeTicks] rounds toward zero, so each cap can only ever
-            // understate its clip — a fade that fits twice in the truncated
-            // length fits twice in the real one. Each cap is half its own
-            // clip, so on a single clip the two fades still cannot meet, and
-            // on several they sit in different clips entirely.
-            let maxFadeTicks =
-                Int64((Self.edgeDeclickFadeSeconds * Double(Self.audioMixTimescale)).rounded())
-            let fadeInTicks = min(maxFadeTicks, Self.halfFadeTicks(scaledDurations.first))
-            let fadeOutTicks = min(maxFadeTicks, Self.halfFadeTicks(scaledDurations.last))
-            let fadeIn = CMTime(value: fadeInTicks, timescale: Self.audioMixTimescale)
-            let fadeOut = CMTime(value: fadeOutTicks, timescale: Self.audioMixTimescale)
-            let lastIndex = scaledDurations.count - 1
-            var t = CMTime.zero
-            for (i, clipDuration) in scaledDurations.enumerated() {
-                // Exactly the duration the composition was built from, so the
-                // last clip's end is the composition's end and the fade out
-                // reaches zero on the sample the loop actually joins.
-                let clipEnd = CMTimeAdd(t, clipDuration)
-                let vol = clipVolumes[i]
-                var flatStart = t
-                var flatEnd = clipEnd
-                if i == 0, fadeInTicks > 0 {
-                    flatStart = CMTimeAdd(t, fadeIn)
-                    params.setVolumeRamp(
-                        fromStartVolume: 0,
-                        toEndVolume: vol,
-                        timeRange: CMTimeRange(start: t, end: flatStart)
-                    )
-                }
-                if i == lastIndex, fadeOutTicks > 0 {
-                    flatEnd = CMTimeSubtract(clipEnd, fadeOut)
-                }
-                if CMTimeCompare(flatEnd, flatStart) > 0 {
-                    params.setVolumeRamp(
-                        fromStartVolume: vol,
-                        toEndVolume: vol,
-                        timeRange: CMTimeRange(start: flatStart, end: flatEnd)
-                    )
-                }
-                if i == lastIndex, fadeOutTicks > 0,
-                    CMTimeCompare(flatEnd, flatStart) >= 0
-                {
-                    params.setVolumeRamp(
-                        fromStartVolume: vol,
-                        toEndVolume: 0,
-                        timeRange: CMTimeRange(start: flatEnd, end: clipEnd)
-                    )
-                }
-                t = clipEnd
-            }
-            let mix = AVMutableAudioMix()
-            mix.inputParameters = [params]
-            audioMix = mix
+            audioMix = Self.clipVolumeMix(
+                track: audioTrack,
+                scaledDurations: scaledDurations,
+                clipVolumes: clipVolumes
+            )
         }
 
         built = true
@@ -1270,9 +1250,115 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             offsets: offsets,
             durations: durations,
             audioMix: audioMix,
+            volumeMixSource: audioTrack.map {
+                .composition(track: $0, scaledDurations: scaledDurations)
+            },
+            clipVolumes: clipVolumes,
             firstClipFileStart: firstClipFileStart,
             loader: loader
         )
+    }
+
+    /// The mix that plays each clip of a composition at its volume, over the
+    /// stretch of [track] it occupies, with the edge fades of a loop join.
+    private static func clipVolumeMix(
+        track: AVAssetTrack,
+        scaledDurations: [CMTime],
+        clipVolumes: [Float]
+    ) -> AVMutableAudioMix {
+        let params = AVMutableAudioMixInputParameters(track: track)
+        // Each edge is capped by the clip it sits in, and only by that
+        // clip. Capping both by a single minimum would let one short clip
+        // at either end shorten the fade at the *other* end too — and
+        // below the ~25 ms floor described on [edgeDeclickFadeSeconds] a
+        // ramp is stretched and never reaches zero, so the edge that did
+        // not need shortening would silently stop declicking.
+        //
+        // [halfFadeTicks] rounds toward zero, so each cap can only ever
+        // understate its clip — a fade that fits twice in the truncated
+        // length fits twice in the real one. Each cap is half its own
+        // clip, so on a single clip the two fades still cannot meet, and
+        // on several they sit in different clips entirely.
+        let maxFadeTicks =
+            Int64((Self.edgeDeclickFadeSeconds * Double(Self.audioMixTimescale)).rounded())
+        let fadeInTicks = min(maxFadeTicks, Self.halfFadeTicks(scaledDurations.first))
+        let fadeOutTicks = min(maxFadeTicks, Self.halfFadeTicks(scaledDurations.last))
+        let fadeIn = CMTime(value: fadeInTicks, timescale: Self.audioMixTimescale)
+        let fadeOut = CMTime(value: fadeOutTicks, timescale: Self.audioMixTimescale)
+        let lastIndex = scaledDurations.count - 1
+        var t = CMTime.zero
+        for (i, clipDuration) in scaledDurations.enumerated() {
+            // Exactly the duration the composition was built from, so the
+            // last clip's end is the composition's end and the fade out
+            // reaches zero on the sample the loop actually joins.
+            let clipEnd = CMTimeAdd(t, clipDuration)
+            let vol = clipVolumes[i]
+            var flatStart = t
+            var flatEnd = clipEnd
+            if i == 0, fadeInTicks > 0 {
+                flatStart = CMTimeAdd(t, fadeIn)
+                params.setVolumeRamp(
+                    fromStartVolume: 0,
+                    toEndVolume: vol,
+                    timeRange: CMTimeRange(start: t, end: flatStart)
+                )
+            }
+            if i == lastIndex, fadeOutTicks > 0 {
+                flatEnd = CMTimeSubtract(clipEnd, fadeOut)
+            }
+            if CMTimeCompare(flatEnd, flatStart) > 0 {
+                params.setVolumeRamp(
+                    fromStartVolume: vol,
+                    toEndVolume: vol,
+                    timeRange: CMTimeRange(start: flatStart, end: flatEnd)
+                )
+            }
+            if i == lastIndex, fadeOutTicks > 0,
+                CMTimeCompare(flatEnd, flatStart) >= 0
+            {
+                params.setVolumeRamp(
+                    fromStartVolume: vol,
+                    toEndVolume: 0,
+                    timeRange: CMTimeRange(start: flatEnd, end: clipEnd)
+                )
+            }
+            t = clipEnd
+        }
+        let mix = AVMutableAudioMix()
+        mix.inputParameters = [params]
+        return mix
+    }
+
+    /// The mix for [source] with its clips at [volumes]; see
+    /// `handleSetClipVolumes`.
+    private static func clipVolumeMix(
+        from source: ClipVolumeMixSource,
+        volumes: [Float]
+    ) -> AVAudioMix {
+        switch source {
+        case let .composition(track, scaledDurations):
+            return clipVolumeMix(
+                track: track,
+                scaledDurations: scaledDurations,
+                clipVolumes: volumes
+            )
+        case let .direct(track, loopStart, loopEnd):
+            let volume = volumes.first ?? 1
+            if let mix = edgeDeclickMix(
+                track: track,
+                loopStart: loopStart,
+                loopEnd: loopEnd,
+                volume: volume
+            ) {
+                return mix
+            }
+            // Too short for edge fades: the volume alone.
+            let params = AVMutableAudioMixInputParameters(track: track)
+            params.setVolume(volume, at: .zero)
+            let mix = AVMutableAudioMix()
+            mix.inputParameters = [params]
+            return mix
+        }
     }
 
     // MARK: - Seek
@@ -1326,8 +1412,33 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         volume = vol
         player?.volume = Float(vol)
         if clipAudioTakeover != nil { finishClipAudioTakeover() }
-        clipAudioLoop?.volume = Float(vol)
+        clipAudioLoop?.volume = clipLoopVolume
         result(nil)
+    }
+
+    /// Replaces the loaded clips' volumes without reloading them, so a volume
+    /// control can be followed while it is dragged: the item's mix is rebuilt
+    /// with the new volumes and handed to every copy the looper plays. A list
+    /// that does not match the loaded clips belongs to another composition
+    /// and is ignored.
+    private func handleSetClipVolumes(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        defer { result(nil) }
+        guard let args = call.arguments as? [String: Any],
+            let raw = args["volumes"] as? [NSNumber],
+            raw.count == loadedClipVolumes.count
+        else { return }
+        let volumes = raw.map { max($0.floatValue, 0) }
+        guard volumes != loadedClipVolumes else { return }
+        loadedClipVolumes = volumes
+        if let source = clipVolumeMixSource {
+            let mix = Self.clipVolumeMix(from: source, volumes: volumes)
+            loopAudioMix = mix
+            templateItem?.audioMix = mix
+            player?.currentItem?.audioMix = mix
+            prewarmLoopingOutputs()
+        }
+        if clipAudioTakeover != nil { finishClipAudioTakeover() }
+        clipAudioLoop?.volume = clipLoopVolume
     }
 
     private func handleSetPlaybackSpeed(_ call: FlutterMethodCall, result: @escaping FlutterResult)
@@ -1411,6 +1522,8 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         remoteClipLoader = nil
         playerLooper = nil
         templateItem = nil
+        clipVolumeMixSource = nil
+        loadedClipVolumes = []
         player?.removeAllItems()
         clipOffsets = []
         clipDurations = []
@@ -1538,7 +1651,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             realignClipAudioLoop()
             crossClipAudioOver(to: loop, step: 0)
         } else {
-            loop.volume = Float(volume)
+            loop.volume = clipLoopVolume
             player?.isMuted = true
             realignClipAudioLoop()
         }
@@ -1631,10 +1744,10 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// [clipAudioTakeoverSteps], starting when the loop is first heard.
     private func crossClipAudioOver(to loop: ClipAudioLoop, step: Int) {
         guard loop === clipAudioLoop else { return }
-        let nominal = Float(volume)
+        // The player's clip volume is in its mix; the loop carries its own.
         let progress = Float(step) / Float(Self.clipAudioTakeoverSteps)
-        loop.volume = nominal * progress
-        player?.volume = nominal * (1 - progress)
+        loop.volume = clipLoopVolume * progress
+        player?.volume = Float(volume) * (1 - progress)
         if step >= Self.clipAudioTakeoverSteps {
             finishClipAudioTakeover()
             return
@@ -1654,7 +1767,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         clipAudioTakeover?.cancel()
         clipAudioTakeover = nil
         guard let loop = clipAudioLoop else { return }
-        loop.volume = Float(volume)
+        loop.volume = clipLoopVolume
         player?.isMuted = true
         player?.volume = Float(volume)
     }

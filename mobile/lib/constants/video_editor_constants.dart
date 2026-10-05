@@ -663,6 +663,9 @@ class VideoEditorConstants {
   /// Maximum playback speed multiplier for clips.
   static const double clipSpeedMax = 3.0;
 
+  /// Maximum volume multiplier for clips and audio tracks (300 %).
+  static const double volumeMax = 3.0;
+
   /// Step size between discrete speed values on the clip speed slider.
   static const double clipSpeedStep = 0.05;
 

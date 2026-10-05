@@ -803,10 +803,15 @@ Duration _maxDur(Duration a, Duration b) => a > b ? a : b;
 /// (speed baked in) at 1× instead of retiming live — smoother on both
 /// platforms. Until that render lands (or for a seam-consumed clip) it falls
 /// back to live per-clip retiming, so playback is never blocked on a render.
+///
+/// When [owners] is given it receives, per returned clip, the id of the
+/// editor clip that clip plays — null for a seam, whose blended sound is
+/// rendered in at the volumes of both sides.
 List<player.VideoClip> buildSeamAwarePlayerClips(
   List<DivineVideoClip> clips,
   TransitionSeamRenderService seams, {
   ClipSpeedRenderService? speedRenders,
+  List<String?>? owners,
 }) {
   final clamped = clampTransitions(clips);
   final n = clips.length;
@@ -864,21 +869,24 @@ List<player.VideoClip> buildSeamAwarePlayerClips(
           headConsumed == Duration.zero && tailConsumed == Duration.zero
           ? speedRenders?.cached(clip)
           : null;
-      if (rendered != null) {
-        result.add(player.VideoClip.file(rendered.path, volume: clip.volume));
-      } else {
-        final bodyClip = clip.toPlayerVideoClip(start: bodyStart, end: bodyEnd);
-        if (bodyClip != null) result.add(bodyClip);
+      final body = rendered != null
+          ? player.VideoClip.file(rendered.path, volume: clip.volume)
+          : clip.toPlayerVideoClip(start: bodyStart, end: bodyEnd);
+      if (body != null) {
+        result.add(body);
+        owners?.add(clip.id);
       }
     }
 
     if (outgoingSeam != null) {
       result.add(player.VideoClip.file(outgoingSeam.path));
+      owners?.add(null);
     }
   }
 
   if (wrapSeam != null) {
     result.add(player.VideoClip.file(wrapSeam.path));
+    owners?.add(null);
   }
   return result;
 }

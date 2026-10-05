@@ -481,6 +481,52 @@ class DivineVideoPlayerInstanceTest {
         )
 
     @Test
+    fun `setClips keeps a clip above 100 percent at full player volume`() {
+        capturePlayerListener()
+
+        instance.onMethodCall(
+            MethodCall(
+                "setClips",
+                mapOf(
+                    "clips" to listOf(
+                        mapOf(
+                            "uri" to "file:///tmp/a.mp4",
+                            "startMs" to 0,
+                            "endMs" to 1000,
+                            "volume" to 2.5,
+                        ),
+                    ),
+                ),
+            ),
+            mockk(relaxed = true),
+        )
+
+        // ExoPlayer caps its volume at 1; the rest is the session boost's.
+        verify { mockPlayer.volume = 1f }
+        verify(exactly = 0) { mockPlayer.volume = 2.5f }
+    }
+
+    @Test
+    fun `setClipVolumes applies a matching list without reloading the clips`() {
+        capturePlayerListener()
+        instance.onMethodCall(setClipsCall(), mockk(relaxed = true))
+
+        instance.onMethodCall(
+            MethodCall("setClipVolumes", mapOf("volumes" to listOf(0.5))),
+            mockk(relaxed = true),
+        )
+        instance.onMethodCall(
+            MethodCall("setClipVolumes", mapOf("volumes" to listOf(0.25, 0.25))),
+            mockk(relaxed = true),
+        )
+
+        verify { mockPlayer.volume = 0.5f }
+        // A list for another composition is ignored.
+        verify(exactly = 0) { mockPlayer.volume = 0.25f }
+        verify(exactly = 1) { mockPlayer.setMediaItems(any(), any(), any()) }
+    }
+
+    @Test
     fun `setClips holds Dart result until STATE_READY then completes with success`() {
         val listener = capturePlayerListener()
         val result = mockk<MethodChannel.Result>(relaxed = true)

@@ -1105,6 +1105,33 @@ void main() {
       );
 
       blocTest<TimelineOverlayBloc, TimelineOverlayState>(
+        'boosts above 100 % and clamps at the maximum',
+        build: TimelineOverlayBloc.new,
+        seed: () => TimelineOverlayState(
+          audioTracks: [
+            _audioEvent(
+              id: 'sound-1',
+              start: const Duration(seconds: 1),
+              end: const Duration(seconds: 4),
+            ),
+          ],
+        ),
+        act: (bloc) => bloc.add(
+          const TimelineOverlayAudioVolumeChanged(
+            trackId: 'sound-1',
+            volume: 4.0,
+          ),
+        ),
+        expect: () => [
+          isA<TimelineOverlayState>().having(
+            (s) => s.audioTracks.first.volume,
+            'volume',
+            VideoEditorConstants.volumeMax,
+          ),
+        ],
+      );
+
+      blocTest<TimelineOverlayBloc, TimelineOverlayState>(
         'is no-op for unknown track id',
         build: TimelineOverlayBloc.new,
         seed: () => TimelineOverlayState(
@@ -1274,16 +1301,16 @@ void main() {
               id: 'sound-1',
               start: const Duration(seconds: 1),
               end: const Duration(seconds: 4),
-            ),
+            ).copyWith(volume: VideoEditorConstants.volumeMax),
             _audioEvent(
               id: 'sound-2',
               start: const Duration(seconds: 5),
               end: const Duration(seconds: 8),
-            ),
+            ).copyWith(volume: VideoEditorConstants.volumeMax),
           ],
         ),
         act: (bloc) => bloc.add(
-          const TimelineOverlayAllAudioVolumeChanged(volume: 2.0),
+          const TimelineOverlayAllAudioVolumeChanged(volume: 4.0),
         ),
         expect: () => <TimelineOverlayState>[],
       );

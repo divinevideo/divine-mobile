@@ -556,6 +556,24 @@ class DivineVideoPlayerController {
     });
   }
 
+  /// Replaces the per-clip volumes of the loaded clips without reloading
+  /// them, one entry per clip passed to [setClips] (0.0 silent, 1.0 original,
+  /// above 1.0 amplified).
+  ///
+  /// Cheap enough to follow a volume control while it is dragged; ignored
+  /// when [volumes] does not have one entry per loaded clip. Native only: the
+  /// web and Linux backends keep the volumes [setClips] gave them.
+  Future<void> setClipVolumes(List<double> volumes) async {
+    _ensureInitialized();
+    if (_isWebBackend || _isLinuxBackend) return;
+    await _methodChannel.invokeMethod<void>('setClipVolumes', {
+      'volumes': [
+        for (final volume in volumes)
+          if (volume < 0) 0.0 else volume,
+      ],
+    });
+  }
+
   /// Sets the volume (0.0 silent, 1.0 full).
   Future<void> setVolume(double volume) async {
     _ensureInitialized();
@@ -620,7 +638,7 @@ class DivineVideoPlayerController {
   }
 
   /// Sets the volume of the overlay audio track at [index]
-  /// (0.0 silent, 1.0 full).
+  /// (0.0 silent, 1.0 original, above 1.0 amplified).
   ///
   /// Has no effect if [index] is out of range.
   Future<void> setAudioTrackVolume(int index, double volume) async {
@@ -631,7 +649,7 @@ class DivineVideoPlayerController {
     }
     await _methodChannel.invokeMethod<void>('setAudioTrackVolume', {
       'index': index,
-      'volume': volume.clamp(0.0, 1.0),
+      'volume': volume < 0 ? 0.0 : volume,
     });
   }
 

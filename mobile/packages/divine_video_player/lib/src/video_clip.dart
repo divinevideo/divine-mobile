@@ -121,7 +121,8 @@ class VideoClip {
   /// clamp and reports the requested length.
   final Duration? end;
 
-  /// Audio volume for this clip (0.0 = muted, 1.0 = full volume).
+  /// Audio volume for this clip (0.0 = muted, 1.0 = original volume, above
+  /// 1.0 = amplified, except on the web, which caps it at 1.0).
   final double volume;
 
   /// Playback speed multiplier for this clip (1.0 = normal, 2.0 = 2× fast).

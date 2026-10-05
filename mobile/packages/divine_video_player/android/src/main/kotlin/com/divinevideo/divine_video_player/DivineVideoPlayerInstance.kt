@@ -135,7 +135,10 @@ internal class DivineVideoPlayerInstance(
      * clip's playback speed (slower → longer on the timeline).
      */
     private var clipOffsets = listOf<Long>()
-    /** Per-clip audio volumes (0.0–1.0). Multiplied by [volume] on each clip transition. */
+    /**
+     * Per-clip audio volumes, above 1.0 when boosted. Multiplied by [volume]
+     * on each clip transition; see [applyClipVolume].
+     */
     private var clipVolumes = listOf<Float>()
     /** Per-clip playback speed multipliers (1.0 = normal). Never zero. */
     private var clipSpeeds = listOf<Float>()
@@ -223,6 +226,12 @@ internal class DivineVideoPlayerInstance(
      * renderers factory when the player is built.
      */
     private val declickProcessor = LoopDeclickAudioProcessor()
+
+    /**
+     * Carries the part of a clip's volume above 100 %, which the player's own
+     * volume cannot; see [applyClipVolume].
+     */
+    private val playerBoost = AudioSessionBoost()
 
     /**
      * Pending result for an async seekTo call.
@@ -521,6 +530,7 @@ internal class DivineVideoPlayerInstance(
             "stop" -> handleStop(result)
             "seekTo" -> handleSeekTo(call, result)
             "setVolume" -> handleSetVolume(call, result)
+            "setClipVolumes" -> handleSetClipVolumes(call, result)
             "setPlaybackSpeed" -> handleSetPlaybackSpeed(call, result)
             "setLooping" -> handleSetLooping(call, result)
             "jumpToClip" -> handleJumpToClip(call, result)
@@ -696,7 +706,7 @@ internal class DivineVideoPlayerInstance(
         // level is audible as soon as the decoder is ready. Use startIndex
         // (not 0) so a resume mid-playlist doesn't play clip 0's volume
         // before onMediaItemTransition can correct it.
-        exoPlayer.volume = clipVolumes.getOrElse(startIndex) { 1.0f } * volume.toFloat()
+        applyClipVolume(exoPlayer, startIndex)
         exoPlayer.setPlaybackParameters(PlaybackParameters(clipSpeeds.getOrElse(startIndex) { 1.0f }))
         // While ExoPlayer buffers to the seek position, report the target
         // position so the timeline doesn't show intermediate values.
@@ -964,6 +974,8 @@ internal class DivineVideoPlayerInstance(
      * audio — the very seam the private track exists to avoid.
      */
     private fun adoptClipAudioLoop(loop: ClipAudioLoopTrack) {
+        // The loop only runs for a single clip, so its boost is that clip's.
+        loop.setBoost(AudioSessionBoost.boostOf(clipVolume(0)))
         val exoPlayer = player
         if (exoPlayer?.isPlaying != true) {
             installClipAudioLoop(loop)
@@ -1080,9 +1092,27 @@ internal class DivineVideoPlayerInstance(
         if (player?.isPlaying == true) scheduleClipAudioSync()
     }
 
-    /** The player's volume outside a takeover: the clip's gain times Dart's. */
+    /**
+     * The player's volume outside a takeover: the clip's gain up to 100 %
+     * times Dart's. Anything above 100 % is [playerBoost]'s.
+     */
     private fun nominalPlayerVolume(): Float =
-        clipVolumes.getOrElse(player?.currentMediaItemIndex ?: 0) { 1.0f } * volume.toFloat()
+        AudioSessionBoost.attenuationOf(clipVolume(player?.currentMediaItemIndex ?: 0)) *
+            volume.toFloat()
+
+    /** Clip [index]'s volume as Dart set it, which may lie above 1. */
+    private fun clipVolume(index: Int): Float = clipVolumes.getOrElse(index) { 1.0f }
+
+    /**
+     * Plays clip [index] at its volume: up to 100 % through the player's own
+     * volume, scaled by Dart's, and the rest through [playerBoost].
+     */
+    private fun applyClipVolume(exoPlayer: ExoPlayer, index: Int) {
+        val clipVolume = clipVolume(index)
+        exoPlayer.volume = AudioSessionBoost.attenuationOf(clipVolume) * volume.toFloat()
+        playerBoost.attach(exoPlayer.audioSessionId)
+        playerBoost.setGain(AudioSessionBoost.boostOf(clipVolume))
+    }
 
     /**
      * Keeps a playing loop on the picture; see [LoopAudioSync].
@@ -1205,7 +1235,7 @@ internal class DivineVideoPlayerInstance(
         // with a speed-update path for manual seeks — only AUTO_TRANSITION is
         // covered there. Without this, seeking from clip 2 (e.g. 0.25×) back
         // to clip 1 (e.g. 3×) leaves the player running at 0.25× indefinitely.
-        exoPlayer.volume = (clipVolumes.getOrElse(targetIndex) { 1.0f }) * volume.toFloat()
+        applyClipVolume(exoPlayer, targetIndex)
         exoPlayer.setPlaybackParameters(
             PlaybackParameters(clipSpeeds.getOrElse(targetIndex) { 1.0f }),
         )
@@ -1255,11 +1285,29 @@ internal class DivineVideoPlayerInstance(
     private fun handleSetVolume(call: MethodCall, result: MethodChannel.Result) {
         volume = (call.argument<Number>("volume"))?.toDouble() ?: 1.0
         finishClipAudioTakeover()
-        val currentIndex = player?.currentMediaItemIndex ?: 0
-        player?.volume = (clipVolumes.getOrElse(currentIndex) { 1.0f }) * volume.toFloat()
-        clipAudioLoop?.setVolume(
-            (clipVolumes.getOrElse(currentIndex) { 1.0f }) * volume.toFloat(),
-        )
+        player?.volume = nominalPlayerVolume()
+        clipAudioLoop?.setVolume(nominalPlayerVolume())
+        result.success(null)
+    }
+
+    /**
+     * Replaces the loaded clips' volumes without reloading them, so a volume
+     * control can be followed while it is dragged. A list that does not match
+     * the loaded clips belongs to another composition and is ignored.
+     */
+    private fun handleSetClipVolumes(call: MethodCall, result: MethodChannel.Result) {
+        val volumes = call.argument<List<Number>>("volumes")?.map { it.toFloat() }
+        if (volumes == null || volumes.size != clipVolumes.size) {
+            result.success(null)
+            return
+        }
+        clipVolumes = volumes
+        finishClipAudioTakeover()
+        player?.let { applyClipVolume(it, it.currentMediaItemIndex) }
+        clipAudioLoop?.let {
+            it.setVolume(nominalPlayerVolume())
+            it.setBoost(AudioSessionBoost.boostOf(clipVolume(0)))
+        }
         result.success(null)
     }
 
@@ -1804,7 +1852,7 @@ internal class DivineVideoPlayerInstance(
                 val oldIndex = oldPosition.mediaItemIndex
                 val newSpeed = clipSpeeds.getOrElse(newIndex) { 1.0f }
                 val oldSpeed = clipSpeeds.getOrElse(oldIndex) { 1.0f }
-                player?.volume = (clipVolumes.getOrElse(newIndex) { 1.0f }) * volume.toFloat()
+                player?.let { applyClipVolume(it, newIndex) }
                 player?.setPlaybackParameters(PlaybackParameters(newSpeed))
                 // setPlaybackParameters alone does not flush the audio sink
                 // (Sonic) buffer that was filled at the previous clip's rate.
@@ -1848,7 +1896,7 @@ internal class DivineVideoPlayerInstance(
             ) {
                 val newIndex = player?.currentMediaItemIndex ?: 0
                 val newSpeed = clipSpeeds.getOrElse(newIndex) { 1.0f }
-                player?.volume = (clipVolumes.getOrElse(newIndex) { 1.0f }) * volume.toFloat()
+                player?.let { applyClipVolume(it, newIndex) }
                 player?.setPlaybackParameters(PlaybackParameters(newSpeed))
             }
             syncAudioOverlays()
@@ -1887,6 +1935,12 @@ internal class DivineVideoPlayerInstance(
             )
             pendingSetClipsResult = null
             sendStateUpdate()
+        }
+
+        // media3 generates the session off the main thread, so a fresh
+        // player may only report it after its first clip's volume was set.
+        override fun onAudioSessionIdChanged(audioSessionId: Int) {
+            playerBoost.attach(audioSessionId)
         }
 
         override fun onRenderedFirstFrame() {
@@ -2019,7 +2073,7 @@ internal class DivineVideoPlayerInstance(
             p.play()
             mainHandler.post {
                 p.pause()
-                p.volume = volume.toFloat()
+                p.volume = nominalPlayerVolume()
             }
         }
     }
@@ -2081,6 +2135,7 @@ internal class DivineVideoPlayerInstance(
         // Release the player before the surface producer. Releasing the
         // producer first can cause in-flight decoder frames to land in a
         // detaching surface, triggering native crashes on some OEMs (#3416).
+        playerBoost.release()
         player?.let {
             it.removeListener(playerListener)
             it.stop()
