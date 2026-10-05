@@ -28,60 +28,62 @@ class _RecordingSink implements AnalyticsEventSink {
 void main() {
   const pubkey =
       '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-  test('fans out the exact 64-character hex identity', () async {
-    final sink = _RecordingSink();
-    final crashIds = <String?>[];
-    final coordinator = AnalyticsIdentityCoordinator(
-      analytics: sink,
-      setCrashUserId: (userId) async => crashIds.add(userId),
-    );
+  group('AnalyticsIdentityCoordinator setUserId', () {
+    test('fans out the exact 64-character hex identity', () async {
+      final sink = _RecordingSink();
+      final crashIds = <String?>[];
+      final coordinator = AnalyticsIdentityCoordinator(
+        analytics: sink,
+        setCrashUserId: (userId) async => crashIds.add(userId),
+      );
 
-    await coordinator.setUserId(pubkey);
+      await coordinator.setUserId(pubkey);
 
-    expect(sink.userIds, [pubkey]);
-    expect(crashIds, [pubkey]);
-  });
+      expect(sink.userIds, [pubkey]);
+      expect(crashIds, [pubkey]);
+    });
 
-  test('clears user identity on logout', () async {
-    final sink = _RecordingSink();
-    final crashIds = <String?>[];
-    final coordinator = AnalyticsIdentityCoordinator(
-      analytics: sink,
-      setCrashUserId: (userId) async => crashIds.add(userId),
-    );
+    test('clears user identity on logout', () async {
+      final sink = _RecordingSink();
+      final crashIds = <String?>[];
+      final coordinator = AnalyticsIdentityCoordinator(
+        analytics: sink,
+        setCrashUserId: (userId) async => crashIds.add(userId),
+      );
 
-    await coordinator.setUserId(null);
+      await coordinator.setUserId(null);
 
-    expect(sink.userIds, [null]);
-    expect(crashIds, [null]);
-  });
+      expect(sink.userIds, [null]);
+      expect(crashIds, [null]);
+    });
 
-  test('lowercases identities so the campaign join stays exact', () async {
-    final sink = _RecordingSink();
-    final crashIds = <String?>[];
-    final coordinator = AnalyticsIdentityCoordinator(
-      analytics: sink,
-      setCrashUserId: (userId) async => crashIds.add(userId),
-    );
+    test('lowercases identities so the campaign join stays exact', () async {
+      final sink = _RecordingSink();
+      final crashIds = <String?>[];
+      final coordinator = AnalyticsIdentityCoordinator(
+        analytics: sink,
+        setCrashUserId: (userId) async => crashIds.add(userId),
+      );
 
-    await coordinator.setUserId(pubkey.toUpperCase());
+      await coordinator.setUserId(pubkey.toUpperCase());
 
-    expect(sink.userIds, [pubkey]);
-    expect(crashIds, [pubkey]);
-  });
+      expect(sink.userIds, [pubkey]);
+      expect(crashIds, [pubkey]);
+    });
 
-  test('refuses bech32 and malformed identities', () async {
-    final sink = _RecordingSink();
-    final crashIds = <String?>[];
-    final coordinator = AnalyticsIdentityCoordinator(
-      analytics: sink,
-      setCrashUserId: (userId) async => crashIds.add(userId),
-    );
+    test('refuses bech32 and malformed identities', () async {
+      final sink = _RecordingSink();
+      final crashIds = <String?>[];
+      final coordinator = AnalyticsIdentityCoordinator(
+        analytics: sink,
+        setCrashUserId: (userId) async => crashIds.add(userId),
+      );
 
-    await coordinator.setUserId('npub1not-a-hex-key');
+      await coordinator.setUserId('npub1not-a-hex-key');
 
-    expect(sink.userIds, isEmpty);
-    expect(crashIds, isEmpty);
+      expect(sink.userIds, isEmpty);
+      expect(crashIds, isEmpty);
+    });
   });
 
   group('pageLoadHistoryProvider', () {

@@ -119,52 +119,54 @@ void main() {
     sharedPreferences = await SharedPreferences.getInstance();
   });
 
-  testWidgets(
-    'shellObscuredProvider only flips for the route directly above the '
-    'shell',
-    (tester) async {
-      await tester.pumpWidget(
-        _buildSubject(
-          mockAuthService: mockAuthService,
-          sharedPreferences: sharedPreferences,
-        ),
-      );
-      await tester.pumpAndSettle();
+  group('navigation', () {
+    testWidgets(
+      'shellObscuredProvider only flips for the route directly above the '
+      'shell',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildSubject(
+            mockAuthService: mockAuthService,
+            sharedPreferences: sharedPreferences,
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      final container = ProviderScope.containerOf(
-        tester.element(find.byType(AppShell)),
-      );
-      final navigator = Navigator.of(tester.element(find.byType(AppShell)));
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(AppShell)),
+        );
+        final navigator = Navigator.of(tester.element(find.byType(AppShell)));
 
-      // Nothing pushed yet.
-      expect(container.read(shellObscuredProvider), isFalse);
+        // Nothing pushed yet.
+        expect(container.read(shellObscuredProvider), isFalse);
 
-      // Push a profile over the shell → obscured.
-      navigator.push(
-        MaterialPageRoute<void>(builder: (_) => const SizedBox.shrink()),
-      );
-      await tester.pumpAndSettle();
-      expect(container.read(shellObscuredProvider), isTrue);
+        // Push a profile over the shell → obscured.
+        navigator.push(
+          MaterialPageRoute<void>(builder: (_) => const SizedBox.shrink()),
+        );
+        await tester.pumpAndSettle();
+        expect(container.read(shellObscuredProvider), isTrue);
 
-      // Push a fullscreen video over the profile → still obscured (the shell's
-      // RouteAware does not fire for a push above the profile).
-      navigator.push(
-        MaterialPageRoute<void>(builder: (_) => const SizedBox.shrink()),
-      );
-      await tester.pumpAndSettle();
-      expect(container.read(shellObscuredProvider), isTrue);
+        // Push a fullscreen video over the profile → still obscured (the shell's
+        // RouteAware does not fire for a push above the profile).
+        navigator.push(
+          MaterialPageRoute<void>(builder: (_) => const SizedBox.shrink()),
+        );
+        await tester.pumpAndSettle();
+        expect(container.read(shellObscuredProvider), isTrue);
 
-      // Close the video → back to the profile. The shell is still covered.
-      navigator.pop();
-      await tester.pumpAndSettle();
-      expect(container.read(shellObscuredProvider), isTrue);
+        // Close the video → back to the profile. The shell is still covered.
+        navigator.pop();
+        await tester.pumpAndSettle();
+        expect(container.read(shellObscuredProvider), isTrue);
 
-      // Close the profile → shell revealed.
-      navigator.pop();
-      await tester.pumpAndSettle();
-      expect(container.read(shellObscuredProvider), isFalse);
-    },
-  );
+        // Close the profile → shell revealed.
+        navigator.pop();
+        await tester.pumpAndSettle();
+        expect(container.read(shellObscuredProvider), isFalse);
+      },
+    );
+  });
 
   group('fresh shell mount page-owner recovery', () {
     testWidgets('clears stale owners when the shell is current', (
@@ -308,170 +310,174 @@ void main() {
     });
   });
 
-  testWidgets(
-    'router.go() uncovering the shell clears a page overlay stranded by '
-    'pushWithVideoPause (#6239)',
-    (tester) async {
-      final rootNavigatorKey = GlobalKey<NavigatorState>();
-      final container = ProviderContainer(
-        overrides: _overrides(
-          mockAuthService: mockAuthService,
-          sharedPreferences: sharedPreferences,
-        ),
-      );
-      addTearDown(container.dispose);
+  group('navigation', () {
+    testWidgets(
+      'router.go() uncovering the shell clears a page overlay stranded by '
+      'pushWithVideoPause (#6239)',
+      (tester) async {
+        final rootNavigatorKey = GlobalKey<NavigatorState>();
+        final container = ProviderContainer(
+          overrides: _overrides(
+            mockAuthService: mockAuthService,
+            sharedPreferences: sharedPreferences,
+          ),
+        );
+        addTearDown(container.dispose);
 
-      late final GoRouter router;
-      router = GoRouter(
-        navigatorKey: rootNavigatorKey,
-        initialLocation: '/',
-        observers: [routeObserver],
-        routes: [
-          ShellRoute(
-            pageBuilder: (context, state, child) => NoTransitionPage<void>(
-              key: state.pageKey,
-              child: AppShell(
-                currentIndex: state.uri.path == '/explore' ? 1 : 0,
-                child: child,
+        late final GoRouter router;
+        router = GoRouter(
+          navigatorKey: rootNavigatorKey,
+          initialLocation: '/',
+          observers: [routeObserver],
+          routes: [
+            ShellRoute(
+              pageBuilder: (context, state, child) => NoTransitionPage<void>(
+                key: state.pageKey,
+                child: AppShell(
+                  currentIndex: state.uri.path == '/explore' ? 1 : 0,
+                  child: child,
+                ),
               ),
-            ),
-            routes: [
-              GoRoute(
-                path: '/',
-                pageBuilder: (_, state) => NoTransitionPage<void>(
-                  key: state.pageKey,
-                  child: Center(
-                    child: Builder(
-                      builder: (context) => TextButton(
-                        onPressed: () => unawaited(
-                          context.pushWithVideoPause<void>('/hashtag'),
+              routes: [
+                GoRoute(
+                  path: '/',
+                  pageBuilder: (_, state) => NoTransitionPage<void>(
+                    key: state.pageKey,
+                    child: Center(
+                      child: Builder(
+                        builder: (context) => TextButton(
+                          onPressed: () => unawaited(
+                            context.pushWithVideoPause<void>('/hashtag'),
+                          ),
+                          child: const Text('Open hashtag'),
                         ),
-                        child: const Text('Open hashtag'),
                       ),
                     ),
                   ),
                 ),
-              ),
-              GoRoute(
-                path: '/explore',
-                pageBuilder: (_, state) => NoTransitionPage<void>(
-                  key: state.pageKey,
-                  child: const Center(child: Text('Explore')),
+                GoRoute(
+                  path: '/explore',
+                  pageBuilder: (_, state) => NoTransitionPage<void>(
+                    key: state.pageKey,
+                    child: const Center(child: Text('Explore')),
+                  ),
                 ),
+              ],
+            ),
+            GoRoute(
+              path: '/hashtag',
+              parentNavigatorKey: rootNavigatorKey,
+              pageBuilder: (_, state) => MaterialPage<void>(
+                key: state.pageKey,
+                child: const Scaffold(body: Center(child: Text('Hashtag'))),
               ),
-            ],
-          ),
-          GoRoute(
-            path: '/hashtag',
-            parentNavigatorKey: rootNavigatorKey,
-            pageBuilder: (_, state) => MaterialPage<void>(
-              key: state.pageKey,
-              child: const Scaffold(body: Center(child: Text('Hashtag'))),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+
+        await tester.pumpWidget(
+          _wrapWithBlocs(
+            UncontrolledProviderScope(
+              container: container,
+              child: MaterialApp.router(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                routerConfig: router,
+              ),
             ),
           ),
-        ],
-      );
-      addTearDown(router.dispose);
+        );
+        await tester.pumpAndSettle();
 
-      await tester.pumpWidget(
-        _wrapWithBlocs(
-          UncontrolledProviderScope(
-            container: container,
-            child: MaterialApp.router(
-              localizationsDelegates: appLocalizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              routerConfig: router,
-            ),
+        await tester.tap(find.text('Open hashtag'));
+        await tester.pumpAndSettle();
+        expect(find.text('Hashtag'), findsOneWidget);
+        expect(container.read(shellObscuredProvider), isTrue);
+        expect(container.read(overlayVisibilityProvider).isPageOpen, isTrue);
+
+        // Model a recorder hold whose ordinary release was skipped. Uncovering
+        // the shell is the final recovery path and must clear every page owner.
+        container
+            .read(overlayVisibilityProvider.notifier)
+            .setPageOpenForOwner(Object(), isOpen: true);
+        // A sheet owner alongside it, to prove the recovery is scoped to pages.
+        container
+            .read(overlayVisibilityProvider.notifier)
+            .setBottomSheetOpenForOwner(Object(), isOpen: true);
+
+        // A go()-style back removes the pushed route declaratively, so
+        // pushWithVideoPause's future never completes. AppShell must still notice
+        // that the shell is uncovered and clear the stranded page flag.
+        router.go('/explore');
+        await tester.pumpAndSettle();
+
+        expect(find.text('Explore'), findsOneWidget);
+        expect(container.read(shellObscuredProvider), isFalse);
+        expect(
+          container.read(overlayVisibilityProvider).isPageOpen,
+          isFalse,
+          reason: 'a stranded page flag keeps the home feed from autoplaying',
+        );
+        expect(
+          container.read(overlayVisibilityProvider).isBottomSheetOpen,
+          isTrue,
+          reason:
+              'the shell recovery is page-scoped: a sheet token is released by '
+              'its own route dismiss callback and cannot strand the way a '
+              'go()-removed page token does, so clearing it here would only ever '
+              'destroy a live hold',
+        );
+      },
+    );
+  });
+
+  group('renders', () {
+    testWidgets(
+      'shell stops resizing for the keyboard while a modal (e.g. the share '
+      'sheet) is on top, so the home feed does not re-layout (#5758)',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildSubject(
+            mockAuthService: mockAuthService,
+            sharedPreferences: sharedPreferences,
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Open hashtag'));
-      await tester.pumpAndSettle();
-      expect(find.text('Hashtag'), findsOneWidget);
-      expect(container.read(shellObscuredProvider), isTrue);
-      expect(container.read(overlayVisibilityProvider).isPageOpen, isTrue);
+        Scaffold shellScaffold() => tester.widget<Scaffold>(
+          find
+              .descendant(
+                of: find.byType(AppShell),
+                matching: find.byType(Scaffold),
+              )
+              .first,
+        );
 
-      // Model a recorder hold whose ordinary release was skipped. Uncovering
-      // the shell is the final recovery path and must clear every page owner.
-      container
-          .read(overlayVisibilityProvider.notifier)
-          .setPageOpenForOwner(Object(), isOpen: true);
-      // A sheet owner alongside it, to prove the recovery is scoped to pages.
-      container
-          .read(overlayVisibilityProvider.notifier)
-          .setBottomSheetOpenForOwner(Object(), isOpen: true);
+        // Shell is the topmost route: keep resizing so keyboard-driven UI on the
+        // active tab still lifts above the keyboard.
+        expect(shellScaffold().resizeToAvoidBottomInset, isTrue);
 
-      // A go()-style back removes the pushed route declaratively, so
-      // pushWithVideoPause's future never completes. AppShell must still notice
-      // that the shell is uncovered and clear the stranded page flag.
-      router.go('/explore');
-      await tester.pumpAndSettle();
+        // Open a modal over the shell — the share sheet is one of these. Its own
+        // keyboard avoidance lifts it above the keyboard; the shell must NOT also
+        // shrink, which would re-layout the full-screen feed video + overlay
+        // (the Galaxy S10 lag reported on #5758).
+        final shellContext = tester.element(find.byType(AppShell));
+        unawaited(
+          showModalBottomSheet<void>(
+            context: shellContext,
+            isScrollControlled: true,
+            builder: (_) => const SizedBox(height: 200),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(shellScaffold().resizeToAvoidBottomInset, isFalse);
 
-      expect(find.text('Explore'), findsOneWidget);
-      expect(container.read(shellObscuredProvider), isFalse);
-      expect(
-        container.read(overlayVisibilityProvider).isPageOpen,
-        isFalse,
-        reason: 'a stranded page flag keeps the home feed from autoplaying',
-      );
-      expect(
-        container.read(overlayVisibilityProvider).isBottomSheetOpen,
-        isTrue,
-        reason:
-            'the shell recovery is page-scoped: a sheet token is released by '
-            'its own route dismiss callback and cannot strand the way a '
-            'go()-removed page token does, so clearing it here would only ever '
-            'destroy a live hold',
-      );
-    },
-  );
-
-  testWidgets(
-    'shell stops resizing for the keyboard while a modal (e.g. the share '
-    'sheet) is on top, so the home feed does not re-layout (#5758)',
-    (tester) async {
-      await tester.pumpWidget(
-        _buildSubject(
-          mockAuthService: mockAuthService,
-          sharedPreferences: sharedPreferences,
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      Scaffold shellScaffold() => tester.widget<Scaffold>(
-        find
-            .descendant(
-              of: find.byType(AppShell),
-              matching: find.byType(Scaffold),
-            )
-            .first,
-      );
-
-      // Shell is the topmost route: keep resizing so keyboard-driven UI on the
-      // active tab still lifts above the keyboard.
-      expect(shellScaffold().resizeToAvoidBottomInset, isTrue);
-
-      // Open a modal over the shell — the share sheet is one of these. Its own
-      // keyboard avoidance lifts it above the keyboard; the shell must NOT also
-      // shrink, which would re-layout the full-screen feed video + overlay
-      // (the Galaxy S10 lag reported on #5758).
-      final shellContext = tester.element(find.byType(AppShell));
-      unawaited(
-        showModalBottomSheet<void>(
-          context: shellContext,
-          isScrollControlled: true,
-          builder: (_) => const SizedBox(height: 200),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(shellScaffold().resizeToAvoidBottomInset, isFalse);
-
-      // Restored once the modal closes.
-      Navigator.of(shellContext).pop();
-      await tester.pumpAndSettle();
-      expect(shellScaffold().resizeToAvoidBottomInset, isTrue);
-    },
-  );
+        // Restored once the modal closes.
+        Navigator.of(shellContext).pop();
+        await tester.pumpAndSettle();
+        expect(shellScaffold().resizeToAvoidBottomInset, isTrue);
+      },
+    );
+  });
 }

@@ -17,28 +17,30 @@ void main() {
   const newcomerPubkey =
       'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 
-  test('reads cached OG Viner pubkeys from SharedPreferences', () async {
-    SharedPreferences.setMockInitialValues({
-      ogVinerPubkeysCacheKey: jsonEncode([ogPubkey]),
+  group('ogVinerCacheProvider', () {
+    test('reads cached OG Viner pubkeys from SharedPreferences', () async {
+      SharedPreferences.setMockInitialValues({
+        ogVinerPubkeysCacheKey: jsonEncode([ogPubkey]),
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final container = ProviderContainer(
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      );
+      addTearDown(container.dispose);
+
+      final service = container.read(ogVinerCacheServiceProvider);
+
+      expect(service.isOgViner(ogPubkey), isTrue);
     });
-    final prefs = await SharedPreferences.getInstance();
-    final container = ProviderContainer(
-      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-    );
-    addTearDown(container.dispose);
 
-    final service = container.read(ogVinerCacheServiceProvider);
+    test('falls back to an empty in-memory cache when prefs are not wired', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
 
-    expect(service.isOgViner(ogPubkey), isTrue);
-  });
+      final service = container.read(ogVinerCacheServiceProvider);
 
-  test('falls back to an empty in-memory cache when prefs are not wired', () {
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
-
-    final service = container.read(ogVinerCacheServiceProvider);
-
-    expect(service.knownPubkeys, isEmpty);
+      expect(service.knownPubkeys, isEmpty);
+    });
   });
 
   group('learnFromVideos', () {

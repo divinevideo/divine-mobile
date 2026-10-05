@@ -120,170 +120,183 @@ void main() {
 
   tearDown(() => bloc.close());
 
-  test('loads persisted records', () async {
-    await service.saveSavedSound(
-      SavedSound.fromLegacy(_sound(id: 'existing')),
-    );
-
-    bloc.add(const SavedSoundsLoadRequested());
-    await _settle();
-
-    expect(bloc.state.sounds.single.id, 'existing');
-  });
-
-  test(
-    'durably saves basic context and catalog tags before probe finishes',
-    () async {
-      probe.completer = Completer<SavedSoundMediaResult?>();
-      const context = SavedSoundSourceContext(
-        creatorName: 'Alice',
-        description: 'A rainy loop',
+  group('SavedSoundsLoadRequested', () {
+    test('loads persisted records', () async {
+      await service.saveSavedSound(
+        SavedSound.fromLegacy(_sound(id: 'existing')),
       );
 
-      final result = await bloc.saveSound(_sound(), sourceContext: context);
-
-      expect(result, SavedSoundSaveResult.saved);
-      expect(bloc.state.sounds.single.savedAt, DateTime.utc(2026, 7, 31));
-      expect(bloc.state.sounds.single.sourceContext, context);
-      expect(bloc.state.sounds.single.catalogTags, ['field recording']);
-      expect(service.loadSavedSounds(), bloc.state.sounds);
-      expect(probe.completer!.isCompleted, isFalse);
-    },
-  );
-
-  test(
-    'duplicate save reports alreadySaved and does not probe again',
-    () async {
-      await bloc.saveSound(_sound());
-      await _settle();
-      final result = await bloc.saveSound(_sound());
-
-      expect(result, SavedSoundSaveResult.alreadySaved);
-      expect(probe.calls, hasLength(1));
-    },
-  );
-
-  test(
-    'successful probe replaces duration and waveform on the same full ID',
-    () async {
-      probe.completer = Completer<SavedSoundMediaResult?>();
-      await bloc.saveSound(_sound());
-
-      probe.completer!.complete(
-        const SavedSoundMediaResult(
-          durationSeconds: 4.5,
-          waveformSamples: [0.1, 0.8],
-        ),
-      );
+      bloc.add(const SavedSoundsLoadRequested());
       await _settle();
 
-      expect(bloc.state.sounds.single.id, 'sound-1');
-      expect(bloc.state.sounds.single.audio.duration, 4.5);
-      expect(bloc.state.sounds.single.waveformSamples, [0.1, 0.8]);
-    },
-  );
-
-  test(
-    'failed optional probe leaves the saved record without an error',
-    () async {
-      probe.result = null;
-
-      expect(await bloc.saveSound(_sound()), SavedSoundSaveResult.saved);
-      await _settle();
-
-      expect(bloc.state.sounds.single.id, 'sound-1');
-      expect(bloc.state.unsavedSoundIds, isEmpty);
-    },
-  );
-
-  test('autosaves normalized personal details', () async {
-    await bloc.saveSound(_sound());
-    bloc.add(
-      const SavedSoundDetailsChanged(
-        soundId: 'sound-1',
-        label: '  Warm up  ',
-        hashtags: ['#Practice', 'practice', ' Guitar '],
-      ),
-    );
-    await _settle();
-
-    final saved = service.loadSavedSounds().single;
-    expect(saved.personalLabel, 'Warm up');
-    expect(saved.personalHashtags, ['practice', 'guitar']);
+      expect(bloc.state.sounds.single.id, 'existing');
+    });
   });
 
-  test('query and selected hashtag filter private and source fields', () async {
-    await service.saveSavedSound(
-      SavedSound(
-        audio: _sound(),
-        personalLabel: 'Morning idea',
-        personalHashtags: const ['practice'],
-        catalogTags: const ['field recording'],
-        waveformSamples: const [],
-        sourceContext: const SavedSoundSourceContext(
+  group('saveSound', () {
+    test(
+      'durably saves basic context and catalog tags before probe finishes',
+      () async {
+        probe.completer = Completer<SavedSoundMediaResult?>();
+        const context = SavedSoundSourceContext(
           creatorName: 'Alice',
-          description: 'Rain outside',
-          transcript: 'soft guitar notes',
+          description: 'A rainy loop',
+        );
+
+        final result = await bloc.saveSound(_sound(), sourceContext: context);
+
+        expect(result, SavedSoundSaveResult.saved);
+        expect(bloc.state.sounds.single.savedAt, DateTime.utc(2026, 7, 31));
+        expect(bloc.state.sounds.single.sourceContext, context);
+        expect(bloc.state.sounds.single.catalogTags, ['field recording']);
+        expect(service.loadSavedSounds(), bloc.state.sounds);
+        expect(probe.completer!.isCompleted, isFalse);
+      },
+    );
+
+    test(
+      'duplicate save reports alreadySaved and does not probe again',
+      () async {
+        await bloc.saveSound(_sound());
+        await _settle();
+        final result = await bloc.saveSound(_sound());
+
+        expect(result, SavedSoundSaveResult.alreadySaved);
+        expect(probe.calls, hasLength(1));
+      },
+    );
+
+    test(
+      'successful probe replaces duration and waveform on the same full ID',
+      () async {
+        probe.completer = Completer<SavedSoundMediaResult?>();
+        await bloc.saveSound(_sound());
+
+        probe.completer!.complete(
+          const SavedSoundMediaResult(
+            durationSeconds: 4.5,
+            waveformSamples: [0.1, 0.8],
+          ),
+        );
+        await _settle();
+
+        expect(bloc.state.sounds.single.id, 'sound-1');
+        expect(bloc.state.sounds.single.audio.duration, 4.5);
+        expect(bloc.state.sounds.single.waveformSamples, [0.1, 0.8]);
+      },
+    );
+
+    test(
+      'failed optional probe leaves the saved record without an error',
+      () async {
+        probe.result = null;
+
+        expect(await bloc.saveSound(_sound()), SavedSoundSaveResult.saved);
+        await _settle();
+
+        expect(bloc.state.sounds.single.id, 'sound-1');
+        expect(bloc.state.unsavedSoundIds, isEmpty);
+      },
+    );
+  });
+
+  group('SavedSoundsDetailsChanged', () {
+    test('autosaves normalized personal details', () async {
+      await bloc.saveSound(_sound());
+      bloc.add(
+        const SavedSoundDetailsChanged(
+          soundId: 'sound-1',
+          label: '  Warm up  ',
+          hashtags: ['#Practice', 'practice', ' Guitar '],
         ),
-      ),
-    );
-    bloc.add(const SavedSoundsLoadRequested());
-    await _settle();
-
-    for (final query in [
-      'morning',
-      'rain guitar',
-      'alice',
-      'outside',
-      'soft guitar',
-      'practice',
-      'field recording',
-    ]) {
-      bloc.add(SavedSoundsQueryChanged(query));
+      );
       await _settle();
-      expect(bloc.state.visibleSounds, hasLength(1), reason: query);
-    }
-    bloc.add(const SavedSoundsHashtagSelected('missing'));
-    await _settle();
-    expect(bloc.state.visibleSounds, isEmpty);
-    bloc.add(const SavedSoundsHashtagSelected('practice'));
-    await _settle();
-    expect(bloc.state.visibleSounds, hasLength(1));
+
+      final saved = service.loadSavedSounds().single;
+      expect(saved.personalLabel, 'Warm up');
+      expect(saved.personalHashtags, ['practice', 'guitar']);
+    });
   });
 
-  test('removes a saved sound', () async {
-    await bloc.saveSound(_sound());
+  group('SavedSoundsQueryChanged and SavedSoundsHashtagSelected', () {
+    test(
+      'query and selected hashtag filter private and source fields',
+      () async {
+        await service.saveSavedSound(
+          SavedSound(
+            audio: _sound(),
+            personalLabel: 'Morning idea',
+            personalHashtags: const ['practice'],
+            catalogTags: const ['field recording'],
+            waveformSamples: const [],
+            sourceContext: const SavedSoundSourceContext(
+              creatorName: 'Alice',
+              description: 'Rain outside',
+              transcript: 'soft guitar notes',
+            ),
+          ),
+        );
+        bloc.add(const SavedSoundsLoadRequested());
+        await _settle();
 
-    await bloc.removeSound('sound-1');
-    await _settle();
-
-    expect(bloc.state.sounds, isEmpty);
-    expect(service.loadSavedSounds(), isEmpty);
+        for (final query in [
+          'morning',
+          'rain guitar',
+          'alice',
+          'outside',
+          'soft guitar',
+          'practice',
+          'field recording',
+        ]) {
+          bloc.add(SavedSoundsQueryChanged(query));
+          await _settle();
+          expect(bloc.state.visibleSounds, hasLength(1), reason: query);
+        }
+        bloc.add(const SavedSoundsHashtagSelected('missing'));
+        await _settle();
+        expect(bloc.state.visibleSounds, isEmpty);
+        bloc.add(const SavedSoundsHashtagSelected('practice'));
+        await _settle();
+        expect(bloc.state.visibleSounds, hasLength(1));
+      },
+    );
   });
 
-  test('keeps the row and reports the error when removal fails', () async {
-    final failingBloc = SavedSoundsBloc(
-      service: _FailingRemoveService(await SharedPreferences.getInstance()),
-      mediaProbe: probe,
-      syncRepositoryStream: const Stream.empty(),
-      now: () => DateTime.utc(2026, 7, 31),
-    );
-    addTearDown(failingBloc.close);
+  group('SavedSoundsRemoveRequested', () {
+    test('removes a saved sound', () async {
+      await bloc.saveSound(_sound());
 
-    await failingBloc.saveSound(_sound());
-    expect(failingBloc.state.sounds, hasLength(1));
+      await bloc.removeSound('sound-1');
+      await _settle();
 
-    await expectLater(
-      failingBloc.removeSound('sound-1'),
-      throwsA(isA<StateError>()),
-    );
-    await _settle();
+      expect(bloc.state.sounds, isEmpty);
+      expect(service.loadSavedSounds(), isEmpty);
+    });
 
-    expect(
-      failingBloc.state.sounds,
-      hasLength(1),
-      reason: 'a delete that did not persist must not clear the row',
-    );
+    test('keeps the row and reports the error when removal fails', () async {
+      final failingBloc = SavedSoundsBloc(
+        service: _FailingRemoveService(await SharedPreferences.getInstance()),
+        mediaProbe: probe,
+        syncRepositoryStream: const Stream.empty(),
+        now: () => DateTime.utc(2026, 7, 31),
+      );
+      addTearDown(failingBloc.close);
+
+      await failingBloc.saveSound(_sound());
+      expect(failingBloc.state.sounds, hasLength(1));
+
+      await expectLater(
+        failingBloc.removeSound('sound-1'),
+        throwsA(isA<StateError>()),
+      );
+      await _settle();
+
+      expect(
+        failingBloc.state.sounds,
+        hasLength(1),
+        reason: 'a delete that did not persist must not clear the row',
+      );
+    });
   });
 
   group('missing local audio files', () {
