@@ -681,6 +681,70 @@ void main() {
         );
       });
 
+      testWidgets('decodes at decodeSize instead of the slot size', (
+        tester,
+      ) async {
+        tester.view.devicePixelRatio = 3.0;
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        Future<void> pumpAt(double size) => tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: UserAvatar(
+                imageUrl: 'https://example.com/avatar.jpg',
+                size: size,
+                decodeSize: 144,
+              ),
+            ),
+          ),
+        );
+
+        // An animating avatar must keep one decode (one cache key) for every
+        // frame, or each frame misses the cache and shows the placeholder.
+        for (final size in [144.0, 200.0, 288.0]) {
+          await pumpAt(size);
+          expect(
+            tester
+                .widget<VineCachedImage>(find.byType(VineCachedImage))
+                .memCacheWidth,
+            equals(432),
+            reason: 'size $size',
+          );
+        }
+      });
+
+      testWidgets(
+        'shows the previewDecodeSize decode while the full decode loads',
+        (tester) async {
+          tester.view.devicePixelRatio = 3.0;
+          addTearDown(tester.view.resetDevicePixelRatio);
+
+          await tester.pumpWidget(
+            const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: UserAvatar(
+                  imageUrl: 'https://example.com/avatar.jpg',
+                  size: 288,
+                  previewDecodeSize: 144,
+                ),
+              ),
+            ),
+          );
+
+          final decodeWidths = tester
+              .widgetList<VineCachedImage>(find.byType(VineCachedImage))
+              .map((image) => image.memCacheWidth)
+              .toList();
+          // The 864px decode, with the already-decoded 432px one under it
+          // standing in for the generated placeholder.
+          expect(decodeWidths, equals([864, 432]));
+        },
+      );
+
       testWidgets('bounds a caller-supplied ImageProvider too', (tester) async {
         tester.view.devicePixelRatio = 3.0;
         addTearDown(tester.view.resetDevicePixelRatio);

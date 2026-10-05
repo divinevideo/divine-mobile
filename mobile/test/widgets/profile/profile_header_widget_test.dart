@@ -1331,6 +1331,62 @@ void main() {
       },
     );
 
+    testWidgets(
+      'avatar Hero flight and lightbox reuse the header image decode so the '
+      'real picture shows throughout instead of a placeholder',
+      (tester) async {
+        final testProfile = createTestProfile(
+          displayName: 'Test User',
+          picture: 'https://example.com/avatar.jpg',
+        );
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            userIdHex: testUserHex,
+            isOwnProfile: true,
+            profile: testProfile,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final headerDecode = tester
+            .widget<VineCachedImage>(find.byType(VineCachedImage))
+            .memCacheWidth;
+        expect(headerDecode, isNotNull);
+
+        await tester.tap(find.byType(UserAvatar));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 150));
+
+        // Mid-flight the shuttle grows but keeps the header's decode, which
+        // is already in memory. A decode per frame size missed the cache on
+        // every frame and painted the generated placeholder instead.
+        final flightDecodes = tester
+            .widgetList<VineCachedImage>(find.byType(VineCachedImage))
+            .map((image) => image.memCacheWidth)
+            .toSet();
+        expect(flightDecodes, equals({headerDecode}));
+
+        await tester.pumpAndSettle();
+
+        // The lightbox loads a sharper decode and shows the header one until
+        // it arrives, rather than flashing the placeholder at the end.
+        final lightboxDecodes = tester
+            .widgetList<VineCachedImage>(
+              find.descendant(
+                of: find.byWidgetPredicate(
+                  (widget) => widget is UserAvatar && widget.size == 288,
+                ),
+                matching: find.byType(VineCachedImage),
+              ),
+            )
+            .map((image) => image.memCacheWidth)
+            .toList();
+        expect(lightboxDecodes.last, equals(headerDecode));
+        expect(lightboxDecodes.first, greaterThan(headerDecode!));
+      },
+    );
+
     testWidgets('tapping the opened avatar lightbox pops the route', (
       tester,
     ) async {
