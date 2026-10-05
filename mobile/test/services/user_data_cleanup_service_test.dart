@@ -777,7 +777,7 @@ void main() {
 
         await expectLater(
           service.clearUserSpecificData(deleteUserData: true),
-          throwsA(isA<StateError>()),
+          throwsA(isA<UserDataCleanupException>()),
         );
       });
 
@@ -793,7 +793,24 @@ void main() {
 
         await expectLater(
           service.clearUserSpecificData(isIdentityChange: true),
-          throwsA(isA<StateError>()),
+          throwsA(isA<UserDataCleanupException>()),
+        );
+      });
+
+      test('preserves an existing typed required cleanup failure', () async {
+        const failure = UserDataCleanupException('Required cleanup blocked');
+        service.onDatabaseCleanup =
+            ({
+              String? userPubkey,
+              bool deleteUserData = false,
+              bool preserveActiveSession = false,
+            }) async {
+              throw failure;
+            };
+
+        await expectLater(
+          service.clearUserSpecificData(isIdentityChange: true),
+          throwsA(same(failure)),
         );
       });
 
