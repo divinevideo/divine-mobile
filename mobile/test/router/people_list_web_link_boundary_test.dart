@@ -202,6 +202,22 @@ void main() {
       expect(tester.takeException(), isNull);
     }
 
+    Future<void> openOwnerPicker(WidgetTester tester) async {
+      expect(find.byTooltip(strings.peopleListsActionsTooltip), findsOneWidget);
+      await tester.tap(find.byTooltip(strings.peopleListsActionsTooltip));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(strings.peopleListsAddPeopleTooltip));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.byType(AddPeopleToListScreen), findsOneWidget);
+      expect(
+        tester
+            .widget<AddPeopleToListScreen>(find.byType(AddPeopleToListScreen))
+            .listId,
+        'crew',
+      );
+    }
+
     for (final live in [false, true]) {
       for (final id in ['crew', _owner, 'a b/c%d?雪', '%2F']) {
         testWidgets(
@@ -258,6 +274,10 @@ void main() {
               _foreignOwner,
             );
             expect(find.byType(CreatePeopleListPage), findsNothing);
+            expect(
+              find.byTooltip(strings.peopleListsActionsTooltip),
+              findsNothing,
+            );
             expect(
               find.byTooltip(strings.peopleListsAddPeopleTooltip),
               findsNothing,
@@ -334,10 +354,7 @@ void main() {
           );
           expect(selected, isA<UserListPeopleScreen>());
           expect((selected! as UserListPeopleScreen).ownerPubkey, _owner);
-          expect(
-            find.byTooltip(strings.peopleListsAddPeopleTooltip),
-            findsOneWidget,
-          );
+          await openOwnerPicker(tester);
           verifyNever(
             () => repository.fetchPublicList(
               ownerPubkey: any(named: 'ownerPubkey'),
@@ -440,10 +457,7 @@ void main() {
       );
       expect(selected, isA<UserListPeopleScreen>());
       expect((selected! as UserListPeopleScreen).ownerPubkey, isNull);
-      expect(
-        find.byTooltip(strings.peopleListsAddPeopleTooltip),
-        findsOneWidget,
-      );
+      await openOwnerPicker(tester);
     });
 
     for (final authState in [
