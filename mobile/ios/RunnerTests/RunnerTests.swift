@@ -1021,7 +1021,7 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
     XCTAssertEqual(state["positionMs"] as? Int, loadedPosition)
   }
 
-  func testBackgroundingDuringSeekDoesNotStartPlayback() throws {
+  func testSeekCompletingWhileInactiveDefersPlaybackUntilForeground() throws {
     _ = try invoke("play")
     try waitForState("the clip ends") { $0["status"] as? String == "completed" }
     let handler = try XCTUnwrap(registrar.fakeMessenger.handlers[Self.channel])
