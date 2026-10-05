@@ -249,6 +249,15 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     private var volume: Double = 1.0
     private var speed: Double = 1.0
     private var currentStatus: String = "idle"
+    /// Whether playback is wanted while a non-looping item sits finished at
+    /// its end, so the next seek starts it again.
+    ///
+    /// AVPlayer drops its rate when an item ends; ExoPlayer keeps
+    /// `playWhenReady` and plays on as soon as a seek moves it off the end.
+    /// Without this the editor's detached clips froze on iOS once they had
+    /// run out: the composition looping round seeks them back to the start,
+    /// and they stayed paused there.
+    private var playsWhenLeavingEnd = false
     private var errorMessage: String?
     private var errorCode: String?
     private var firstFrameRendered: Bool = false
@@ -327,11 +336,19 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         case "setClips":
             handleSetClips(call, result: result)
         case "play":
+            // A finished item stays finished, as on Android: it plays again
+            // from wherever the next seek puts it.
+            if currentStatus == "completed" {
+                playsWhenLeavingEnd = true
+                result(nil)
+                return
+            }
             player?.play()
             player?.rate = Float(speed)
             audioOverlayManager.resumeActive(speed: speed)
             result(nil)
         case "pause":
+            playsWhenLeavingEnd = false
             player?.pause()
             audioOverlayManager.pauseAndDeactivateAll()
             result(nil)
@@ -543,6 +560,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 self.safePreroll(at: startTime)
 
                 self.currentStatus = "ready"
+                self.playsWhenLeavingEnd = false
                 self.errorMessage = nil
                 self.errorCode = nil
                 self.clearSetClipsTimeout()
@@ -1269,6 +1287,10 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         let targetPositionMs = Int64(positionMs)
         reportedPositionOverrideMs = targetPositionMs
         let time = CMTime(value: targetPositionMs, timescale: 1000)
+        // Seeking off the end leaves it, as ExoPlayer leaves STATE_ENDED.
+        let resumes = currentStatus == "completed" && playsWhenLeavingEnd
+        if currentStatus == "completed" { currentStatus = "ready" }
+        playsWhenLeavingEnd = false
         player?.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
             guard let self else {
                 result(nil)
@@ -1276,6 +1298,11 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             }
             self.textureOutput?.forceRefresh(for: time)
             self.syncAudioOverlays()
+            if resumes {
+                self.player?.play()
+                self.player?.rate = Float(self.speed)
+                self.audioOverlayManager.resumeActive(speed: self.speed)
+            }
             // The loop's sound runs on its own clock; the seek only moved
             // the picture.
             self.realignClipAudioLoop(force: true)
@@ -1377,6 +1404,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         clearBufferingWatchdog(resetReported: true)
         // Pause and clear media so the surface goes blank.
         player?.pause()
+        playsWhenLeavingEnd = false
         releaseClipAudioLoop()
         clipLoopSource = nil
         remoteClipLoader?.cancel()
@@ -1670,6 +1698,13 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         guard let player else { return }
         playerLooper = nil
         player.removeAllItems()
+        // Without a looper, advancing past the only item drops it: every later
+        // seek fails and play() starts nothing, so it pauses there instead and
+        // a seek can bring it back. A looper needs advance to reach its next
+        // lap, and on iOS it does not switch a paused player over itself — the
+        // composition then stops at its end. Set on every rebuild, since a
+        // released looper leaves its own value behind.
+        player.actionAtItemEnd = isLooping ? .advance : .pause
         if isLooping {
             if let range = loopTimeRange {
                 playerLooper = AVPlayerLooper(
@@ -2067,6 +2102,8 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     @objc private func playerDidFinish() {
         guard !isLooping else { return }
         audioOverlayManager.pauseAndDeactivateAll()
+        // Only playback reaches the end, so playback was wanted.
+        playsWhenLeavingEnd = true
         currentStatus = "completed"
         sendStateUpdate()
     }
