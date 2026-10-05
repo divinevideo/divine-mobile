@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:models/models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Stores the curated lists, their subscriptions, the record of deleted lists
 /// and the default-list flag in [SharedPreferences].
@@ -64,19 +65,14 @@ class PrefsCuratedListStore {
   /// keeping lists another writer stored in the meantime. Returns whether
   /// every change was stored.
   ///
-  /// Throws if the stored lists cannot be decoded; nothing is written then.
+  /// Stored lists that cannot be decoded are logged and replaced by [lists].
   Future<bool> saveLists(List<CuratedList> lists) async {
     final snapshot = List<CuratedList>.unmodifiable(lists);
+    final baseline = _savedLists;
     final saved = await _writes.saveLists(
-      baseline: _savedLists,
+      baseline: baseline,
       current: snapshot,
-      read: () {
-        final json = _prefs.getString(_listsKey);
-        if (json == null) return [];
-        return (jsonDecode(json) as List<dynamic>)
-            .map((row) => CuratedList.fromJson(row as Map<String, dynamic>))
-            .toList(growable: false);
-      },
+      read: () => _storedLists(fallback: baseline),
       write: (merged) => _prefs.setString(
         _listsKey,
         jsonEncode(merged.map((list) => list.toJson()).toList(growable: false)),
@@ -90,18 +86,15 @@ class PrefsCuratedListStore {
   /// keeping subscriptions another writer stored in the meantime. Returns
   /// whether the change was stored.
   ///
-  /// Throws if the stored subscriptions cannot be decoded; nothing is written
-  /// then.
+  /// Stored subscriptions that cannot be decoded are logged and replaced by
+  /// [ids].
   Future<bool> saveSubscriptions(Set<String> ids) async {
     final snapshot = Set<String>.unmodifiable(ids);
+    final baseline = _savedSubscriptions;
     final saved = await _writes.saveSubscriptions(
-      baseline: _savedSubscriptions,
+      baseline: baseline,
       current: snapshot,
-      read: () {
-        final json = _prefs.getString(_subscriptionsKey);
-        if (json == null) return {};
-        return (jsonDecode(json) as List<dynamic>).cast<String>().toSet();
-      },
+      read: () => _storedSubscriptions(fallback: baseline),
       write: (merged) => _prefs.setString(
         _subscriptionsKey,
         jsonEncode(merged.toList(growable: false)),
@@ -144,6 +137,48 @@ class PrefsCuratedListStore {
     await _prefs.setStringList(
       deletedCoordinatesStorageKey,
       coordinates.toList(growable: false),
+    );
+  }
+
+  /// The stored lists, or [fallback] when they cannot be decoded.
+  ///
+  /// The coordinator writes only what changed since the baseline, so the
+  /// baseline as [fallback] makes it rewrite every list the caller holds. An
+  /// absent key is empty, not unreadable: the account-switch sweep removes it,
+  /// and the lists of the previous account must not be written back.
+  List<CuratedList> _storedLists({required List<CuratedList> fallback}) {
+    final json = _prefs.getString(_listsKey);
+    if (json == null) return const [];
+    try {
+      return (jsonDecode(json) as List<dynamic>)
+          .map((row) => CuratedList.fromJson(row as Map<String, dynamic>))
+          .toList(growable: false);
+    } on Object catch (error, stackTrace) {
+      _logUnreadable('lists', error, stackTrace);
+      return fallback;
+    }
+  }
+
+  /// The stored ids, or [fallback] when they cannot be decoded.
+  Set<String> _storedSubscriptions({required Set<String> fallback}) {
+    final json = _prefs.getString(_subscriptionsKey);
+    if (json == null) return const {};
+    try {
+      return (jsonDecode(json) as List<dynamic>).cast<String>().toSet();
+    } on Object catch (error, stackTrace) {
+      _logUnreadable('subscriptions', error, stackTrace);
+      return fallback;
+    }
+  }
+
+  void _logUnreadable(String what, Object error, StackTrace stackTrace) {
+    // The error is left out: FormatException.toString() quotes the stored text.
+    Log.error(
+      'Stored curated $what cannot be read (${error.runtimeType}) and will be '
+      'replaced',
+      name: 'PrefsCuratedListStore',
+      category: LogCategory.system,
+      stackTrace: stackTrace,
     );
   }
 
