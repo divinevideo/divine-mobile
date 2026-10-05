@@ -55,6 +55,33 @@ void main() {
       },
     );
 
+    test(
+      'a wiped list recovery revision still orders event-specific deletion',
+      () {
+        withClock(Clock(() => now), () {
+          final revisions = CuratedListPublishClock()
+            ..observeRevision(
+              ownerPubkey: owner,
+              listId: 'clock-list',
+              updatedAt: now.add(const Duration(seconds: 3)),
+            )
+            ..observeRevision(
+              ownerPubkey: owner,
+              listId: 'clock-list',
+              updatedAt: now,
+            );
+          expect(
+            revisions.next(ownerPubkey: owner, listId: 'clock-list'),
+            seconds + 4,
+          );
+          expect(
+            revisions.next(ownerPubkey: other, listId: 'clock-list'),
+            seconds,
+          );
+        });
+      },
+    );
+
     test('stored attempts and received revisions never move backwards', () {
       withClock(Clock(() => now), () {
         final revisions = CuratedListPublishClock()

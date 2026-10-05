@@ -16,6 +16,7 @@ import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/services/creator_sync/prefs_sync_state_store.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/curated_lists/curated_list_recovery_journal.dart';
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
@@ -137,6 +138,7 @@ class UserDataCleanupService {
   /// families during identity changes because their scope prevents cross-user
   /// leakage. Targeted destructive removal uses each owner's key helper.
   static const List<String> identityChangePrefixes = [
+    CuratedListRecoveryJournal.storagePrefix, // minimal owner recovery evidence
     'following_list_', // follow cache per pubkey
     'following_prefetch_complete_', // successful auth prefetch per pubkey
     'relay_discovery_', // relay discovery cache per npub
@@ -240,6 +242,11 @@ class UserDataCleanupService {
     }
 
     if (!preserveActiveSession) {
+      await CuratedListRecoveryJournal.migrateEmbeddedRecords(
+        _prefs,
+        legacyOwner: _prefs.getString('current_user_pubkey_hex'),
+        deletingOwner: userPubkey,
+      );
       for (final key in userSpecificKeys) {
         await remove(key);
       }
@@ -260,6 +267,8 @@ class UserDataCleanupService {
     }
 
     await remove(PrefsCuratedListStore.pendingDefaultDeletionKey(userPubkey));
+    await remove(CuratedListRecoveryJournal.storageKey(userPubkey));
+    CuratedListRecoveryJournal.discardPendingAccepted(_prefs, userPubkey);
     await remove(SavedSoundsService.accountStorageKey(userPubkey));
     for (final kind in SyncItemKind.values) {
       await remove(PrefsSyncStateStore.appliedStorageKey(kind, userPubkey));
@@ -383,6 +392,18 @@ class UserDataCleanupService {
       }
       clearedCount++;
       clearedKeys.add(key);
+    }
+
+    // The stored marker describes the departing account. Identity-change
+    // callers may pass the incoming account, so it cannot scope legacy rows.
+    await CuratedListRecoveryJournal.migrateEmbeddedRecords(
+      _prefs,
+      legacyOwner: _prefs.getString('current_user_pubkey_hex'),
+      deletingOwner: deleteUserData ? userPubkey : null,
+    );
+    if (deleteUserData && userPubkey != null) {
+      await remove(CuratedListRecoveryJournal.storageKey(userPubkey));
+      CuratedListRecoveryJournal.discardPendingAccepted(_prefs, userPubkey);
     }
 
     // Clear exact-match keys (always).

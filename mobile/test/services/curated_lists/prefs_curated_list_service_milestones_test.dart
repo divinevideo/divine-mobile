@@ -15,6 +15,7 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/curated_lists/curated_list_recovery_journal.dart';
 import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -59,9 +60,17 @@ void main() {
         (i) => stored[i.positionalArguments.first as String],
       );
       when(() => prefs.setString(any(), any())).thenAnswer((i) async {
-        if (!acceptsWrite(++writes)) return false;
+        final key = i.positionalArguments[0] as String;
+        if (!key.startsWith(CuratedListRecoveryJournal.storagePrefix) &&
+            !acceptsWrite(++writes)) {
+          return false;
+        }
         stored[i.positionalArguments[0] as String] =
             i.positionalArguments[1] as String;
+        return true;
+      });
+      when(() => prefs.remove(any())).thenAnswer((i) async {
+        stored.remove(i.positionalArguments.single as String);
         return true;
       });
       when(() => prefs.setStringList(any(), any()))

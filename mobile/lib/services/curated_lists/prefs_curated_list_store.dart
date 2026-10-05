@@ -74,6 +74,17 @@ class PrefsCuratedListStore {
     _savedSubscriptions = Set.unmodifiable(ids);
   }
 
+  /// Decodes the existing list cache through the same guarded codec as saves.
+  List<CuratedList> loadLists() =>
+      _storedLists(fallback: const [], preserveDecoded: true);
+
+  /// Loads the existing subscription cache and captures its write baseline.
+  Set<String> loadSubscriptions() {
+    final subscriptions = _storedSubscriptions(fallback: const {});
+    subscriptionsLoaded(subscriptions);
+    return subscriptions;
+  }
+
   /// Saves what changed in [lists] since the last load or successful save,
   /// keeping lists another writer stored in the meantime. Returns whether
   /// every change was stored.
@@ -480,20 +491,23 @@ class PrefsCuratedListStore {
   List<CuratedList> _storedLists({
     required List<CuratedList> fallback,
     void Function()? onUnreadable,
+    bool preserveDecoded = false,
   }) {
     final json = _prefs.getString(_listsKey);
     if (json == null) {
       _writes.cacheKeyRemoved(_listsKey);
       return const [];
     }
+    final decoded = <CuratedList>[];
     try {
-      return (jsonDecode(json) as List<dynamic>)
-          .map((row) => CuratedList.fromJson(row as Map<String, dynamic>))
-          .toList(growable: false);
+      for (final row in jsonDecode(json) as List<dynamic>) {
+        decoded.add(CuratedList.fromJson(row as Map<String, dynamic>));
+      }
+      return decoded;
     } on Object catch (error, stackTrace) {
       onUnreadable?.call();
       _logUnreadable('lists', error, stackTrace);
-      return fallback;
+      return preserveDecoded ? decoded : fallback;
     }
   }
 

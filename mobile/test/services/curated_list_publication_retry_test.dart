@@ -72,13 +72,30 @@ void main() {
         final event = await started.future;
         owner = ownerB;
         accepted.complete(acceptedOutcome(event));
-        expect(await deleting, isTrue);
+        expect(await deleting, isFalse);
         expect(
           service.lists.any((l) => l.pubkey == ownerB),
           isTrue,
           reason: 'only author A authorized this delete',
         );
-        expect(service.lists.any((l) => l.pubkey == ownerA), isFalse);
+        expect(service.lists.any((l) => l.pubkey == ownerA), isTrue);
+        final rows =
+            (jsonDecode(
+              prefs.getString(CuratedListService.listsStorageKey)!,
+            ) as List).map(
+              (row) => CuratedList.fromJson(row as Map<String, dynamic>),
+            );
+        expect(rows, unorderedEquals([list(ownerA), list(ownerB)]));
+        final authB = Auth();
+        when(() => authB.isAuthenticated).thenReturn(true);
+        when(() => authB.currentPublicKeyHex).thenReturn(ownerB);
+        final currentB = CuratedListService(
+          nostrService: client,
+          authService: authB,
+          prefs: prefs,
+        );
+        addTearDown(currentB.dispose);
+        expect(currentB.getListById('$ownerB:shared'), list(ownerB));
       },
     );
     test(
