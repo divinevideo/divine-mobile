@@ -81,6 +81,24 @@ A Docker-based local stack (relay, Keycast, Blossom, the username registry, and 
 
 LOCAL username check, claim and release requests use the isolated name server on port `43005`. See [local username setup and tests](local_stack/name-server/README.md).
 
+The registration-dependent `deleted_video_visible_to_other_users` and
+`dm_optimistic_survives_watch_race` suites require the Android emulator or an
+iOS Simulator with the stack configured as above. Physical phones cannot use
+the default host addresses. A physical iPhone can reach the stack through a
+Bonjour (`<host>.local`) name, but registration additionally needs that host
+in Keycast's tenant allowlist and an HTTPS redirect URI: Keycast rejects HTTP
+redirects to `.local` hosts. Changing the allowlist alone does not unblock
+registration. See [#7051](https://github.com/divinevideo/divine-mobile/issues/7051).
+`video_creation_flow` only opens the registration form and does not submit
+sign-up or require the Docker stack.
+
+When running multiple targets with `flutter drive` on a physical iPhone,
+verify the test name printed in the log matches the requested target. The
+reporter of #7051 observed an earlier suite's installed binary being reused.
+If that happens, run `rm -rf build/ios/Debug-iphoneos` from `mobile/` before
+the next target to force a rebuild. This removes device debug build output;
+it does not erase account state, including credentials retained in Keychain.
+
 ## Configuration
 
 Runtime environment is selected at build time with `--dart-define=DEFAULT_ENV=<env>`, defaulting to `PRODUCTION`. Supported values (see `mobile/lib/models/environment_config.dart`) are `POC`, `STAGING`, `PRODUCTION`, and `LOCAL`; each maps to one relay URL and API base URL (production API is `https://api.divine.video`). For example, `mise run local_build` builds a debug APK with `DEFAULT_ENV=LOCAL`.

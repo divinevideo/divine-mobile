@@ -3,6 +3,9 @@
 // ABOUTME: initial watchMessages tick on a freshly-opened conversation.
 // ABOUTME: Requires: the full local Docker stack (mise run local_up), and
 // ABOUTME: POST_NOTIFICATIONS pre-granted so no native dialog blocks the UI.
+// ABOUTME: Targets: Android emulator or iOS Simulator. Physical iOS
+// ABOUTME: registration needs host configuration and HTTPS for Keycast
+// ABOUTME: redirects; HTTP .local redirects are rejected (see #7051).
 
 @Tags(['service'])
 library;

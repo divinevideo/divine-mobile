@@ -1,6 +1,7 @@
-// ABOUTME: Complete end-to-end integration test for video creation flow
-// ABOUTME: Tests app start -> welcome screen -> auth -> camera navigation
+// ABOUTME: E2E smoke test for the entry to the video creation auth flow
+// ABOUTME: Tests app start -> welcome screen -> registration form
 // ABOUTME: Runs headlessly on Linux; external relay failures are non-critical.
+// ABOUTME: Does not submit registration or require the local Docker stack.
 
 @Tags(['service'])
 library;
@@ -17,9 +18,9 @@ import '../helpers/test_setup.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  group('Complete Video Creation Flow E2E Tests', () {
+  group('Video Creation Registration Entry E2E Tests', () {
     testWidgets(
-      'Full flow: App start -> Welcome -> Camera navigation',
+      'App start -> Welcome -> Registration form',
       (tester) async {
         await runWithAppErrorHandlers(() async {
           // Headless Linux CI has the libsecret client library but no Secret
@@ -41,18 +42,8 @@ void main() {
           );
           expect(appStarted, isTrue, reason: 'App should start');
 
-          // Welcome screen uses passive terms — tap "Create a new Divine
-          // account" to proceed (no checkboxes in current UI)
-          final foundCreateButton = await waitForText(
-            tester,
-            'Create a new Divine account',
-            maxSeconds: 10,
-          );
-          expect(
-            foundCreateButton,
-            isTrue,
-            reason: 'Welcome screen should show "Create a new Divine account"',
-          );
+          // The helper waits for the create-account semantic identifier,
+          // shared by the fresh-install and returning-user welcome layouts.
           await navigateToCreateAccount(tester);
 
           // Verify we reached the registration screen
