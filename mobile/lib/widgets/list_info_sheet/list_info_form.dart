@@ -110,6 +110,11 @@ class _SaveFailedMessage extends StatelessWidget {
     final isEditing = context.select(
       (CuratedListInfoCubit cubit) => cubit.state.isEditing,
     );
+    final permissionRecoveryPending = context.select(
+      (CuratedListInfoCubit cubit) => cubit.state.permissionRecoveryPending,
+    );
+    // An accepted change needs recovery, not a second permissions submission.
+    if (permissionRecoveryPending) return const SizedBox.shrink();
     if (status != CuratedListInfoStatus.failure &&
         status != CuratedListInfoStatus.permissionsUnconfirmed) {
       return const SizedBox.shrink();
@@ -138,7 +143,9 @@ class _RecoveryMessage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const ListInfoRecoveryPendingMessage(),
+          ListInfoRecoveryPendingMessage(
+            permissionRecoveryPending: state.permissionRecoveryPending,
+          ),
           DivineButton(
             label: context.l10n.listRetrySync,
             type: DivineButtonType.link,

@@ -6993,6 +6993,7 @@
   "listRetrySync": "Đồng bộ ngay",
   "listPermissionsUnconfirmed": "Không thể xác nhận thay đổi này. Hãy thử lại.",
   "listRecoveryPending": "Danh sách này có các thay đổi đang chờ đồng bộ.",
+  "listPermissionsRecoveryPending": "Thay đổi đã được chấp nhận. Nhấn Đồng bộ ngay để hoàn tất lưu. Việc chỉnh sửa tạm dừng cho đến lúc đó.",
   "soundRequestAction": "Yêu cầu âm thanh này",
   "soundRequestTitle": "Có người muốn dùng âm thanh của bạn",
   "soundRequestDescription": "Cho phép sử dụng lại âm thanh của video này để mọi người có thể tạo bản phối lại.",

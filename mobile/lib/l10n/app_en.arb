@@ -10469,6 +10469,10 @@
     "description": "Neutral notice for an acknowledged permission transition, pending publication or event-specific deletion request. Does not claim remote erasure."
   },
   "listRecoveryPending": "This list has changes waiting to sync.",
+  "@listPermissionsRecoveryPending": {
+    "description": "A relay-accepted permissions change still needs durable local recovery. Explain the Sync now action and why editing is temporarily disabled; do not invite another permissions submission."
+  },
+  "listPermissionsRecoveryPending": "Your change was accepted. Tap Sync now to finish saving it. Editing is paused until then.",
   "soundRequestAction": "Request this sound",
   "soundRequestTitle": "Someone wants to use your sound",
   "soundRequestDescription": "Enable sound reuse on this video so anyone can remix with it.",

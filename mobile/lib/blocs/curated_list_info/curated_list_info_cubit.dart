@@ -318,8 +318,15 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
       // Expected domain or network failure: surfaced through the status, not
       // Crashlytics, per the reportable-error decision matrix.
       addError(error, stackTrace);
+      final pending = isSessionCurrent && _listId != null
+          ? _resolveService()?.getListById(_listId)
+          : null;
       emitIfOpen(
         state.copyWith(
+          needsSync: pending?.needsSync ?? state.needsSync,
+          permissionRecoveryPending:
+              pending?.hasPendingPermissionRecovery ??
+              state.permissionRecoveryPending,
           status: state.status == CuratedListInfoStatus.savedAwaitingRelay
               ? CuratedListInfoStatus.publishFailed
               : CuratedListInfoStatus.failure,
