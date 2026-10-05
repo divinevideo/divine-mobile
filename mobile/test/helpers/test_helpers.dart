@@ -326,7 +326,9 @@ class TestHelpers {
       timeout: timeout,
     );
 
-    if (!satisfied) {
+    // observeUntil returns the last completed probe at the deadline, so check
+    // once more for a condition that turned true after it.
+    if (!satisfied && !condition()) {
       throw TimeoutException(
         'Timed out after ${timeout.inSeconds}s waiting for $description.',
         timeout,
