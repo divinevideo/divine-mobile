@@ -328,11 +328,12 @@ void main() {
 
     test(
       'flag is NOT set when signer hangs past timeout (retriable next login)',
-      () {
+      () async {
         // Simulate a hung Keycast/Amber signer that never completes.
         when(
           () => mockSigner.signEvent(any()),
         ).thenAnswer((_) => Completer<Event?>().future);
+        final prefs = await SharedPreferences.getInstance();
 
         fakeAsync((async) {
           final discovery = _ControllableRelayDiscoveryService(
@@ -368,15 +369,7 @@ void main() {
           verify(() => mockSigner.signEvent(any())).called(1);
           expect(discoveryCompleted, isTrue);
           expect(recorder.invocations, isEmpty);
-
-          late bool flagValue;
-          unawaited(
-            SharedPreferences.getInstance().then((prefs) {
-              flagValue = prefs.getBool(flagKey) ?? false;
-            }),
-          );
-          async.flushMicrotasks();
-          expect(flagValue, isFalse);
+          expect(prefs.getBool(flagKey) ?? false, isFalse);
         });
       },
     );
