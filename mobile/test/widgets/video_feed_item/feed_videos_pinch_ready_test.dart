@@ -202,9 +202,15 @@ VideoEvent _makeVideo() => VideoEvent(
 );
 
 class _Rig {
-  _Rig({required this.harness, required this.immersive, required this.likes});
+  _Rig({
+    required this.harness,
+    required this.immersive,
+    required this.likes,
+    required this.container,
+  });
 
   final _NativePlayerHarness harness;
+  final ProviderContainer container;
   final FeedImmersiveCubit immersive;
   final _MockLikesRepository likes;
 }
@@ -313,7 +319,12 @@ Future<_Rig> _pumpReadyFeed(WidgetTester tester) async {
     greaterThanOrEqualTo(1),
     reason: 'the video must be playing before a gesture can toggle playback',
   );
-  return _Rig(harness: harness, immersive: immersive, likes: likes);
+  return _Rig(
+    harness: harness,
+    immersive: immersive,
+    likes: likes,
+    container: container,
+  );
 }
 
 /// Unmounts the feed so its timers do not outlive the test.
@@ -561,6 +572,32 @@ void main() {
 
       expect(rig.harness.countCalls('pause') - pausesBefore, isZero);
       expect(rig.harness.countCalls('play') - playsBefore, isZero);
+      await _unmount(tester);
+    });
+
+    testWidgets('does not resume when the feed goes inactive mid-hold', (
+      tester,
+    ) async {
+      final rig = await _pumpReadyFeed(tester);
+      await rig.harness.emitStatus('playing');
+      final center = tester.getCenter(find.byType(InfiniteVideoFeed));
+      final playsBefore = rig.harness.countCalls('play');
+
+      final gesture = await tester.startGesture(center, pointer: 1);
+      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+      await rig.harness.emitStatus('paused');
+      // An incoming call or the app switcher backgrounds the app mid-hold.
+      rig.container.read(appForegroundProvider.notifier).setForeground(false);
+      await tester.pump();
+      await gesture.up();
+      await tester.pump();
+
+      expect(rig.immersive.state.isHolding, isFalse);
+      expect(
+        rig.harness.countCalls('play') - playsBefore,
+        isZero,
+        reason: 'a backgrounded feed must not start playing on release',
+      );
       await _unmount(tester);
     });
 
