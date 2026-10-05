@@ -12,6 +12,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 import '../test_setup.dart';
 
@@ -328,6 +329,102 @@ void main() {
       );
       expect(authService.authState, equals(AuthState.unauthenticated));
     });
+
+    for (final operation in [
+      'create',
+      'nsec',
+      'hex',
+      'oauth',
+      'restore',
+      'initialize',
+    ]) {
+      test('required database cleanup prevents $operation sign-in', () async {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('curated_lists', '[]');
+        await prefs.setString('subscribed_list_ids', '[]');
+        final cleanup = UserDataCleanupService(prefs);
+        var databaseCleanups = 0;
+        const privateFailure = 'private database failure sentinel';
+        cleanup.onDatabaseCleanup =
+            ({
+              String? userPubkey,
+              bool deleteUserData = false,
+              bool preserveActiveSession = false,
+            }) async {
+              databaseCleanups++;
+              expect(userPubkey, oldPubkeyHex);
+              expect(deleteUserData, isFalse);
+              expect(preserveActiveSession, isFalse);
+              throw StateError(privateFailure);
+            };
+        final logs = LogCaptureService();
+        await logs.clearAllLogs();
+        addTearDown(logs.clearAllLogs);
+        await authService.dispose();
+        authService = AuthService(
+          backgroundActivityManager: BackgroundActivityManager(),
+          userDataCleanupService: cleanup,
+          keyStorage: mockKeyStorage,
+        );
+        switch (operation) {
+          case 'create':
+            final result = await authService.createNewIdentity();
+            expect(result.success, isFalse);
+            expect(
+              result.failureReason,
+              AuthFailureReason.accountCleanupFailed,
+            );
+          case 'nsec':
+            final result = await authService.importFromNsec(testNsec);
+            expect(result.success, isFalse);
+            expect(
+              result.failureReason,
+              AuthFailureReason.accountCleanupFailed,
+            );
+          case 'hex':
+            final result = await authService.importFromHex('1' * 64);
+            expect(result.success, isFalse);
+            expect(
+              result.failureReason,
+              AuthFailureReason.accountCleanupFailed,
+            );
+          case 'oauth':
+            await expectLater(
+              authService.signInWithDivineOAuth(
+                KeycastSession(
+                  bunkerUrl: 'https://keycast.example.com',
+                  accessToken: 'test-access',
+                  expiresAt: DateTime.now().add(const Duration(hours: 1)),
+                  userPubkey: newKeyContainer.publicKeyHex,
+                ),
+              ),
+              throwsA(isA<UserDataCleanupException>()),
+            );
+          case 'restore':
+            await expectLater(
+              authService.signInForAccount(
+                newKeyContainer.publicKeyHex,
+                AuthenticationSource.automatic,
+              ),
+              throwsA(isA<UserDataCleanupException>()),
+            );
+          case 'initialize':
+            await prefs.setString('last_used_npub', newKeyContainer.npub);
+            await authService.initialize();
+            verifyNever(() => mockKeyStorage.generateAndStoreKeys());
+        }
+        expect(databaseCleanups, 1);
+        expect(authService.authState, AuthState.unauthenticated);
+        expect(authService.currentPublicKeyHex, isNull);
+        expect(authService.currentProfile, isNull);
+        expect(prefs.getString('current_user_pubkey_hex'), oldPubkeyHex);
+        expect(prefs.containsKey('curated_lists'), isFalse);
+        expect(prefs.containsKey('subscribed_list_ids'), isFalse);
+        for (final entry in logs.getRecentLogs()) {
+          expect(entry.message, isNot(contains(privateFailure)));
+        }
+      });
+    }
 
     for (final operation in [
       'create',
