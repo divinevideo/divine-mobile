@@ -715,6 +715,9 @@ void main() {
           isFalse,
         );
         final container = ProviderContainer(
+          // Exercise the explicit recovery action, independently of Riverpod's
+          // automatic retry scheduling.
+          retry: (_, _) => null,
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             authServiceProvider.overrideWithValue(authA),
