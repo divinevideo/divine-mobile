@@ -183,6 +183,19 @@ void main() {
       expect(open().getListById('crew'), _list());
     });
 
+    test(
+      'rejected list save on delete keeps the list and its follow',
+      () async {
+        final service = open();
+        expect(await service.subscribeToList('crew'), isTrue);
+        prefs.rejectLists = true;
+        expect(await service.deleteOwnedList('crew'), isFalse);
+        expect(service.getListById('crew'), _list());
+        expect(service.isSubscribedToList('crew'), isTrue);
+        expect(open().isSubscribedToList('crew'), isTrue);
+      },
+    );
+
     test('platform exception restores a rename before another save', () async {
       final service = open();
       prefs.throwLists = true;
