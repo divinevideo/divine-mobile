@@ -64,10 +64,11 @@ bundle exec fastlane frame     # re-frame existing captures (fast)
   creators (see `ScreenshotModeService.creatorPubkeysHex`) so the share
   sheet and feeds have real content. The account persists on the
   simulator between runs.
-- Screenshot mode also overrides `topClassicVinersProvider` and
-  `discoveredListsProvider` with deterministic fixtures so the classics row
-  and list-discovery capture do not depend on live relay ordering or
-  avatar-less public profiles.
+- Screenshot mode also overrides `topClassicVinersProvider` with
+  deterministic fixtures and seeds the Explore Lists tab with
+  `screenshotDiscoverListsFixtures()`, so the classics row and list-discovery
+  capture do not depend on live relay ordering or avatar-less public
+  profiles.
 - `ios/DivineUITests/DivineScreenshots.swift` launches the app once per
   screen with `SCREENSHOT_INITIAL_ROUTE` in the launch environment; the
   screenshot startup hook reads that value from `SharedPreferences` and

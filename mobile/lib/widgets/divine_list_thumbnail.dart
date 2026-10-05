@@ -1,5 +1,5 @@
 // ABOUTME: The list thumbnail card used everywhere a list is shown in a
-// ABOUTME: gallery: the profile My Lists tab and search.
+// ABOUTME: gallery: the Explore Lists tab, profile My Lists and search.
 // ABOUTME: Two media variants (video fan, people collage) share one card.
 
 import 'package:count_formatter/count_formatter.dart';

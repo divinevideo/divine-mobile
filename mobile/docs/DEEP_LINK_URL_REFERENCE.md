@@ -341,7 +341,8 @@ first frame.
 | `/apps/:slug` | `NostrAppDirectoryEntry` | Resolved by slug |
 | `/inbox/conversation/:id` | counterparty pubkeys | Read from the conversation row. A DM-restricted account (#176) is bounced to the inbox instead, by design |
 | `/inbox/message-requests/:id` | counterparty pubkeys | Same, via `RequestPreviewCubit` |
-| `/list/:listId` | list name, video ids, author | Videos resolve from the list id; the title falls back until the local list loads. `/list/:pubkey/:listId` resolves from relays by author + d-tag |
+| `/list/:listId` | list name, video ids, author | Videos resolve from the list id; the title falls back until the local list loads |
+| `/list/:pubkey/:listId` | the discovered `CuratedList`, used only when its author and d-tag match the path | Resolved from relays by author + d-tag |
 | `/categories/:categoryName` | `VideoCategory` | Rebuilt from the path segment with a zero video count |
 | `/video/:id` | prefetched video, comment autoscroll | Loaded by id |
 | `/sound/:id` | `AudioEvent` (+ source video) | `SoundDetailLoader` fetches by id |
