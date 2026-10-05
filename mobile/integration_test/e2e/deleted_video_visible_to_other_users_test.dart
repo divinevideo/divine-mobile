@@ -10,12 +10,14 @@
 @Tags(['service'])
 library;
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:nostr_sdk/nip19/nip19.dart';
 import 'package:openvine/main.dart' as app;
+import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 
 import '../helpers/db_helpers.dart';
@@ -130,6 +132,15 @@ void main() {
 
           // ── Phase 3: Navigate to User A's profile, see video ──
           logPhase('── Phase 3: Navigate to User A profile ──');
+
+          // The fixture's media lives on the local Blossom host. This account
+          // must opt into non-Divine hosts before its profile grid can show it.
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(MaterialApp)),
+          );
+          await container
+              .read(divineHostFilterServiceProvider)
+              .setShowDivineHostedOnly(false);
 
           final userANpub = Nip19.encodePubKey(userA.pubkey);
           final profilePath = OtherProfileScreen.pathForNpub(userANpub);
