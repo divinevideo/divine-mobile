@@ -206,6 +206,65 @@ void main() {
         expect(savedData, contains('tag1'));
         expect(savedData, contains('shuffle'));
       });
+
+      test('replaces corrupted SharedPreferences data', () async {
+        await prefs.setString(
+          CuratedListService.listsStorageKey,
+          'invalid json {{{',
+        );
+        final service = CuratedListService(
+          nostrService: mockNostr,
+          authService: mockAuth,
+          prefs: prefs,
+        );
+
+        await service.createList(name: 'After Corruption');
+
+        final recreated = CuratedListService(
+          nostrService: mockNostr,
+          authService: mockAuth,
+          prefs: prefs,
+        );
+        expect(recreated.lists.map((list) => list.name), ['After Corruption']);
+      });
+
+      test('keeps the lists it loaded before a row it cannot decode', () async {
+        final original = CuratedListService(
+          nostrService: mockNostr,
+          authService: mockAuth,
+          prefs: prefs,
+        );
+        await original.createList(name: 'Kept');
+        final rows = jsonDecode(
+          prefs.getString(CuratedListService.listsStorageKey)!,
+        ) as List<dynamic>;
+        await prefs.setString(
+          CuratedListService.listsStorageKey,
+          jsonEncode([...rows, 'not a row']),
+        );
+        final service = CuratedListService(
+          nostrService: mockNostr,
+          authService: mockAuth,
+          prefs: prefs,
+        );
+        expect(
+          service.lists.map((list) => list.name),
+          ['Kept'],
+          reason: 'the loader keeps the rows that decode before the bad one',
+        );
+
+        await service.createList(name: 'Added');
+
+        final recreated = CuratedListService(
+          nostrService: mockNostr,
+          authService: mockAuth,
+          prefs: prefs,
+        );
+        expect(
+          recreated.lists.map((list) => list.name),
+          unorderedEquals(['Kept', 'Added']),
+        );
+      });
     });
 
     group('Load from Preferences', () {

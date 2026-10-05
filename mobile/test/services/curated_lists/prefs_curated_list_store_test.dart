@@ -1,5 +1,5 @@
 // ABOUTME: Tests PrefsCuratedListStore saves, baselines and deletion record.
-// ABOUTME: Covers merging with another writer, rejected writes and tombstones.
+// ABOUTME: Covers merging, rejected writes, unreadable storage and tombstones.
 
 import 'dart:convert';
 
@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
 import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Refuses writes until [accepts] is set.
 ///
@@ -34,6 +35,8 @@ const _owner =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const _otherOwner =
     'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+
+const _storedText = 'stored-text-sentinel';
 
 const _listsKey = 'lists';
 const _subscriptionsKey = 'subscriptions';
@@ -73,6 +76,29 @@ Set<String> _storedSubscriptions(SharedPreferences prefs) {
   return (jsonDecode(prefs.getString(_subscriptionsKey)!) as List<dynamic>)
       .cast<String>()
       .toSet();
+}
+
+/// Starts a test with an empty log capture and leaves it empty afterwards.
+Future<LogCaptureService> _freshLogs() async {
+  final logs = LogCaptureService();
+  await logs.clearAllLogs();
+  addTearDown(logs.clearAllLogs);
+  return logs;
+}
+
+/// Expects one error log from the store about [what], without the stored data.
+void _expectUnreadableLog(LogCaptureService logs, {required String what}) {
+  final entries = logs
+      .getRecentLogs()
+      .where((entry) => entry.name == 'PrefsCuratedListStore')
+      .toList();
+  expect(entries, hasLength(1));
+  final entry = entries.single;
+  expect(entry.level, LogLevel.error);
+  expect(entry.category, LogCategory.system);
+  expect(entry.stackTrace, isNotNull);
+  expect(entry.message, allOf(contains(what), contains('FormatException')));
+  expect(jsonEncode(entry.toJson()), isNot(contains(_storedText)));
 }
 
 void main() {
@@ -124,6 +150,16 @@ void main() {
         await store.saveLists([crew]);
 
         expect(_storedLists(prefs), unorderedEquals([crew, added]));
+      });
+
+      test('does not bring back a list the storage no longer holds', () async {
+        final crew = _list('crew');
+        final added = _list('added');
+        final store = _store(prefs)..listsLoaded([crew]);
+
+        await store.saveLists([crew, added]);
+
+        expect(_storedLists(prefs), [added]);
       });
 
       test('removes a list dropped after an earlier save', () async {
@@ -226,6 +262,65 @@ void main() {
           expect(_storedLists(prefs), isEmpty);
         });
       });
+
+      group('with storage it cannot read', () {
+        late LogCaptureService logs;
+
+        setUp(() async {
+          logs = await _freshLogs();
+        });
+
+        test('replaces stored lists that are not valid JSON', () async {
+          await prefs.setString(_listsKey, 'invalid json {{{');
+          final crew = _list('crew');
+
+          final saved = await _store(prefs).saveLists([crew]);
+
+          expect(saved, isTrue);
+          expect(_storedLists(prefs), [crew]);
+        });
+
+        test('replaces stored lists of the wrong shape', () async {
+          await prefs.setString(_listsKey, jsonEncode({'crew': 1}));
+          final crew = _list('crew');
+
+          final saved = await _store(prefs).saveLists([crew]);
+
+          expect(saved, isTrue);
+          expect(_storedLists(prefs), [crew]);
+        });
+
+        test(
+          'rewrites the lists it loaded before a row it cannot decode',
+          () async {
+            final kept = _list('kept');
+            final removed = _list('removed');
+            final added = _list('added');
+            await prefs.setString(
+              _listsKey,
+              jsonEncode([
+                kept.toJson(),
+                removed.toJson(),
+                'not a row',
+              ]),
+            );
+            final store = _store(prefs)..listsLoaded([kept, removed]);
+
+            final saved = await store.saveLists([kept, added]);
+
+            expect(saved, isTrue);
+            expect(_storedLists(prefs), unorderedEquals([kept, added]));
+          },
+        );
+
+        test('logs what it replaced without quoting the stored data', () async {
+          await prefs.setString(_listsKey, '$_storedText {{{');
+
+          await _store(prefs).saveLists([_list('crew')]);
+
+          _expectUnreadableLog(logs, what: 'lists');
+        });
+      });
     });
 
     group('saveSubscriptions', () {
@@ -261,6 +356,17 @@ void main() {
 
         expect(_storedSubscriptions(prefs), {'b', 'c'});
       });
+
+      test(
+        'does not bring back a subscription the storage no longer holds',
+        () async {
+          final store = _store(prefs)..subscriptionsLoaded({'a'});
+
+          await store.saveSubscriptions({'a', 'b'});
+
+          expect(_storedSubscriptions(prefs), {'b'});
+        },
+      );
 
       test('saves the ids as they were when called', () async {
         final store = _store(prefs);
@@ -303,6 +409,50 @@ void main() {
           expect(jsonDecode(refusing.getString(_subscriptionsKey)!), ['a']);
         },
       );
+
+      group('with storage it cannot read', () {
+        late LogCaptureService logs;
+
+        setUp(() async {
+          logs = await _freshLogs();
+        });
+
+        test('replaces stored subscriptions that are not valid JSON', () async {
+          await prefs.setString(_subscriptionsKey, 'invalid json {{{');
+
+          final saved = await _store(prefs).saveSubscriptions({'a'});
+
+          expect(saved, isTrue);
+          expect(_storedSubscriptions(prefs), {'a'});
+        });
+
+        test('replaces stored subscriptions of the wrong shape', () async {
+          await prefs.setString(_subscriptionsKey, jsonEncode({'a': 1}));
+
+          final saved = await _store(prefs).saveSubscriptions({'a'});
+
+          expect(saved, isTrue);
+          expect(_storedSubscriptions(prefs), {'a'});
+        });
+
+        test('rewrites the ids it loaded before one it cannot read', () async {
+          await prefs.setString(_subscriptionsKey, jsonEncode(['a', 'b', 1]));
+          final store = _store(prefs)..subscriptionsLoaded({'a', 'b'});
+
+          final saved = await store.saveSubscriptions({'a', 'c'});
+
+          expect(saved, isTrue);
+          expect(_storedSubscriptions(prefs), {'a', 'c'});
+        });
+
+        test('logs what it replaced without quoting the stored data', () async {
+          await prefs.setString(_subscriptionsKey, '$_storedText {{{');
+
+          await _store(prefs).saveSubscriptions({'a'});
+
+          _expectUnreadableLog(logs, what: 'subscriptions');
+        });
+      });
     });
 
     group('deletion record', () {
