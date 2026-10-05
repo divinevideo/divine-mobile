@@ -152,6 +152,51 @@ void main() {
       },
     );
 
+    test('lists keep a change another writer made to an untouched row', () {
+      final kept = list('kept');
+      final keptElsewhere = list('kept', revision: 4);
+      final added = list('added');
+      final addedWinner = list('added', revision: 5);
+      final result = CuratedCacheWriteResult<List<CuratedList>>(
+        status: CuratedCacheWriteStatus.conflict,
+        baseline: [kept],
+        requested: [kept, added],
+        persisted: [keptElsewhere, addedWinner],
+        conflictedIds: {added.authorScopedId},
+      );
+      expect(result.reconcile([kept, added]), [kept, addedWinner]);
+    });
+
+    test('follows keep a change another writer made to an untouched id', () {
+      const result = CuratedCacheWriteResult<Set<String>>(
+        status: CuratedCacheWriteStatus.storageRejected,
+        baseline: {'kept'},
+        requested: {'kept', 'added'},
+        acknowledgedBeforeWrite: {},
+      );
+      expect(result.reconcile({'kept', 'added'}), {'kept'});
+    });
+
+    test('a saved follow removal leaves a follow added since', () {
+      const result = CuratedCacheWriteResult<Set<String>>(
+        status: CuratedCacheWriteStatus.saved,
+        baseline: {'followed'},
+        requested: {},
+        persisted: {},
+      );
+      expect(result.reconcile({'followed'}), {'followed'});
+    });
+
+    test('a rejected follow removal does not restore another removal', () {
+      const result = CuratedCacheWriteResult<Set<String>>(
+        status: CuratedCacheWriteStatus.storageRejected,
+        baseline: {'followed'},
+        requested: {},
+        acknowledgedBeforeWrite: {},
+      );
+      expect(result.reconcile({}), isEmpty);
+    });
+
     test('queued list deltas exclude a preceding rejected edit', () {
       final original = list('crew');
       final rejected = list('crew', revision: 2);
