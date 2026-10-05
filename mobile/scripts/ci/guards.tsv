@@ -170,6 +170,8 @@
 # baseline entries are permanent (units, percentages, ordinals, ratios) and
 # must NEVER be pluralized — each carries a trailing '# reason'.
 🔢 Verify countable ARB keys carry ICU plurals (l10n ratchet)	-	bash scripts/check_countable_plural_floor.sh
+# Freeze individual missing categories so fixing one cannot hide another (#7755).
+🔢 Verify ICU plural category gaps do not grow (l10n ratchet)	-	bash scripts/check_plural_category_floor.sh
 
 🧱 Verify untested-services count does not increase (floor ratchet)	-	bash scripts/check_untested_services_floor.sh
 

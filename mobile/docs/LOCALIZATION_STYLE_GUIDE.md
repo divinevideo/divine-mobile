@@ -654,6 +654,7 @@ precisely what a reviewer who does not read the language otherwise lacks.
 | Every locale defines every English key | `arb_consistency_test.dart` (+ `_knownUntranslatedDebt`) |
 | Every placeholder the English value actually substitutes survives translation | `arb_consistency_test.dart` (selector-only arguments are deliberately exempt — see below) |
 | No plural arm hardcodes a literal number, in any locale | `plural_arm_number_test.dart` |
+| No new missing cardinal category in any ICU plural block | `check_plural_category_floor.sh` (each locale/message/block/category is frozen) |
 | A named list of countable keys inflects **in English** | `countable_plural_test.dart` |
 | `listVideoCount` / `profileFollowerCountUsers` keep their arms in `pl` and `ro` | `countable_plural_test.dart` (those two locales, those keys) |
 | **A non-English value has a plural block at all** | **nothing — see below** |
@@ -670,6 +671,39 @@ precisely what a reviewer who does not read the language otherwise lacks.
 
 A green CI proves the top half. It says nothing about the bottom half, which
 is the half this guide is about.
+
+**Plural-category coverage is a ratchet, not a grammar verdict.** The detector
+samples the pinned `intl` rules without explicit-number overrides: integers
+0–1000, decimals at precision 1 and 2, and 1,000,000 / 2,000,000. These samples
+cover our current locale categories, including large-number `many`, but are
+not an exhaustive proof for future CLDR releases. Unsupported locales and
+malformed ICU fail the guard. Flutter's `=0`, `=1` and `=2` compile to
+`zero`, `one` and `two`, so either spelling satisfies that category.
+
+The baseline `scripts/baseline/plural_category_gaps.txt` records each missing
+category in each plural block, including nested selects and repeated selectors.
+Fixing one cannot excuse a new gap in another message, block or category.
+After fixing gaps, run `UPDATE_BASELINE=1 bash scripts/check_plural_category_floor.sh`
+from `mobile/` and commit the smaller baseline. Regeneration preserves reasons.
+Run the detector with `dart run scripts/lib/plural_category_detector.dart lib/l10n`.
+
+Entries marked `intentional` use invariant wording rather than count-inflected
+copy; for example the English tab remains “Badges (1)”. Entries marked
+`declined` accept `other` for the existing Spanish, French, Italian and
+Portuguese large-number `many` gaps; revisit these if a surface needs distinct
+large-number wording. These decisions remain visible in the baseline, not
+hidden in detector exemptions.
+
+New messages and renamed keys or selectors must provide every sampled category,
+including large-number `many` in Spanish, French, Italian and Portuguese.
+The declined entries grandfather only the recorded gaps, not future messages.
+
+The remaining translation work stays in #7755:
+Arabic first, then Romanian and Polish, with fluent review before changing
+forms. Category coverage alone cannot prove the resulting copy is natural.
+Romanian `few` includes 0, 2–19 and values such as 101; 20 uses `other`.
+The guard does not detect a plural block removed entirely; flat countable
+messages remain covered only by the narrower checks below.
 
 Two gaps are worth knowing about, because both look like Tier 1 problems and
 neither is.
