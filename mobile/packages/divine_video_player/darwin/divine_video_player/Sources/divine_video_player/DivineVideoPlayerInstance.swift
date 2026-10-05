@@ -257,8 +257,16 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// Without this the editor's detached clips froze on iOS once they had
     /// run out: the composition looping round seeks them back to the start,
     /// and they stayed paused there.
+    ///
+    /// Read when that seek lands, not when it is sent, so a pause arriving in
+    /// between still wins.
     private var playsWhenLeavingEnd = false
+    /// Set when a seek off the end that should resume playback lands while
+    /// the app is inactive, so the clip plays once it is active again.
+    /// Separate from [wasPlayingBeforePause]: a pause cancels this, never that.
     private var resumesSeekOnForeground = false
+    /// Bumped by every call that moves, replaces or releases the media, so a
+    /// `seekTo` completion landing after one of them leaves playback alone.
     private var seekGeneration = 0
     private var errorMessage: String?
     private var errorCode: String?
