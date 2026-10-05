@@ -15,6 +15,8 @@ import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/services/creator_sync/prefs_sync_state_store.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
+import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
 import 'package:openvine/services/language_preference_service.dart';
 import 'package:openvine/services/minor_account_review_status_store.dart';
@@ -34,9 +36,11 @@ import 'package:unified_logger/unified_logger.dart';
 /// detects identity changes and clears user-specific data to prevent
 /// data leakage between accounts.
 class UserDataCleanupService {
-  UserDataCleanupService(this._prefs);
+  UserDataCleanupService(this._prefs)
+    : _listSessions = CuratedListSessionCoordinator.forPreferences(_prefs);
 
   final SharedPreferences _prefs;
+  final CuratedListSessionCoordinator _listSessions;
 
   /// Optional callback invoked during cleanup to clear user-specific
   /// database tables (DMs, conversations, notifications, per-user DAOs).
@@ -135,6 +139,7 @@ class UserDataCleanupService {
     'following_list_', // follow cache per pubkey
     'following_prefetch_complete_', // successful auth prefetch per pubkey
     'relay_discovery_', // relay discovery cache per npub
+    'curated_list_default_cleanup:', // unfinished default deletion per owner
   ];
 
   /// Checks if user-specific data should be cleared for the given pubkey.
@@ -202,6 +207,22 @@ class UserDataCleanupService {
     String userPubkey, {
     required String userNpub,
     required bool preserveActiveSession,
+  }) {
+    Future<int> clear() => _deleteAccountData(
+      userPubkey,
+      userNpub: userNpub,
+      preserveActiveSession: preserveActiveSession,
+    );
+    // Removing an inactive account must not retire the active account's lease.
+    return preserveActiveSession
+        ? _listSessions.writes.runExclusive(clear)
+        : _listSessions.clearCaches(clear);
+  }
+
+  Future<int> _deleteAccountData(
+    String userPubkey, {
+    required String userNpub,
+    required bool preserveActiveSession,
   }) async {
     var clearedCount = 0;
 
@@ -233,6 +254,7 @@ class UserDataCleanupService {
       await remove(legacyDraftOwnerKey);
     }
 
+    await remove(PrefsCuratedListStore.pendingDefaultDeletionKey(userPubkey));
     await remove(SavedSoundsService.accountStorageKey(userPubkey));
     for (final kind in SyncItemKind.values) {
       await remove(PrefsSyncStateStore.appliedStorageKey(kind, userPubkey));
@@ -269,6 +291,20 @@ class UserDataCleanupService {
     bool isIdentityChange = false,
     String? userPubkey,
     bool deleteUserData = false,
+  }) => _listSessions.clearCaches(
+    () => _clearUserSpecificData(
+      reason: reason,
+      isIdentityChange: isIdentityChange,
+      userPubkey: userPubkey,
+      deleteUserData: deleteUserData,
+    ),
+  );
+
+  Future<int> _clearUserSpecificData({
+    String? reason,
+    bool isIdentityChange = false,
+    String? userPubkey,
+    bool deleteUserData = false,
   }) async {
     final cleanupReason = reason ?? 'unspecified';
     Log.info(
@@ -287,7 +323,9 @@ class UserDataCleanupService {
     // Clear exact-match keys (always)
     for (final key in userSpecificKeys) {
       if (_prefs.containsKey(key)) {
-        await _prefs.remove(key);
+        if (!await _prefs.remove(key)) {
+          throw const UserDataCleanupException('Could not clear account cache');
+        }
         clearedCount++;
         clearedKeys.add(key);
       }
@@ -312,6 +350,16 @@ class UserDataCleanupService {
     // Drop it only on a destructive delete of a known account — a plain account
     // switch keeps it so the user's library survives switching back.
     if (deleteUserData && userPubkey != null && userPubkey.isNotEmpty) {
+      final defaultCleanupKey = PrefsCuratedListStore.pendingDefaultDeletionKey(
+        userPubkey,
+      );
+      if (_prefs.containsKey(defaultCleanupKey)) {
+        if (!await _prefs.remove(defaultCleanupKey)) {
+          throw const UserDataCleanupException('Could not remove account data');
+        }
+        clearedCount++;
+        clearedKeys.add(defaultCleanupKey);
+      }
       final savedSoundsKey = SavedSoundsService.accountStorageKey(userPubkey);
       if (_prefs.containsKey(savedSoundsKey)) {
         await _prefs.remove(savedSoundsKey);

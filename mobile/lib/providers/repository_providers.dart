@@ -42,6 +42,7 @@ import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/repositories/profile_pins_repository.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:openvine/services/hive_box_opener.dart';
 import 'package:openvine/services/immediate_completion_helper.dart';
 import 'package:openvine/services/notify_subscriptions_unfollow_cleanup.dart';
@@ -557,7 +558,9 @@ CurationRepository curationRepository(Ref ref) {
 /// Keeps cache writes serialized while auth/relay changes replace services.
 final curatedListCacheWriteCoordinatorProvider =
     Provider<CuratedListCacheWriteCoordinator>(
-      (ref) => CuratedListCacheWriteCoordinator(),
+      (ref) => CuratedListSessionCoordinator.forPreferences(
+        ref.watch(sharedPreferencesProvider),
+      ).writes,
     );
 
 /// Lists state notifier - manages curated lists state
@@ -588,11 +591,18 @@ class CuratedListsState extends _$CuratedListsState {
       state = AsyncValue.data(service.lists);
     }
 
-    providerRef.onDispose(() => service.removeListener(onServiceChanged));
+    providerRef.onDispose(() {
+      service.removeListener(onServiceChanged);
+      service.dispose();
+    });
 
     // Initialize the service to create default list and sync with relays
     await service.initialize();
-    if (!providerRef.mounted || !identical(_service, service)) return [];
+    if (!providerRef.mounted ||
+        !identical(_service, service) ||
+        !service.isCurrentSession) {
+      return [];
+    }
     service.addListener(onServiceChanged);
     return service.lists;
   }
