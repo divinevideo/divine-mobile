@@ -1135,7 +1135,7 @@ class CuratedListService extends ChangeNotifier {
       // If list not in cache but listData provided, add it
       if (list == null && listData != null) {
         _lists.add(listData);
-        await _saveLists();
+        if (!await _saveLists()) return false;
         list = listData;
         Log.debug(
           'Added discovered list to cache: ${listData.name}',
@@ -1165,7 +1165,7 @@ class CuratedListService extends ChangeNotifier {
 
       // Add to subscribed lists
       _subscribedListIds.add(listId);
-      await _saveSubscribedListIds();
+      if (!await _saveSubscribedListIds()) return false;
 
       Log.info(
         'Subscribed to list: ${list.name} ($listId)',
@@ -1214,7 +1214,7 @@ class CuratedListService extends ChangeNotifier {
 
       // Remove from subscribed lists
       _subscribedListIds.remove(subscriptionId);
-      await _saveSubscribedListIds();
+      if (!await _saveSubscribedListIds()) return false;
 
       Log.info(
         'Unsubscribed from list: $listName ($listId)',

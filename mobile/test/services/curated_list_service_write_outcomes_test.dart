@@ -113,6 +113,7 @@ void main() {
     CuratedListService open({
       CuratedListCacheWriteCoordinator? coordinator,
       Future<void> Function(String, List<String>)? onSubscribed,
+      OnListUnsubscribedCallback? onUnsubscribed,
     }) {
       final service = CuratedListService(
         nostrService: client,
@@ -120,6 +121,7 @@ void main() {
         prefs: prefs,
         cacheWriteCoordinator: coordinator,
         onListSubscribed: onSubscribed,
+        onListUnsubscribed: onUnsubscribed,
       );
       addTearDown(service.dispose);
       return service;
@@ -165,13 +167,34 @@ void main() {
     );
 
     test(
+      'rejected discovered-list cache save never follows or starts callbacks',
+      () async {
+        var callbacks = 0;
+        final service = open(onSubscribed: (_, _) async => callbacks++);
+        final discovered = _list(name: 'Discovered').copyWith(
+          id: 'discovered',
+          pubkey: 'b' * 64,
+          videoEventIds: ['c' * 64],
+        );
+        prefs.rejectLists = true;
+        expect(
+          await service.subscribeToList(discovered.authorScopedId, discovered),
+          isFalse,
+        );
+        expect(service.getListById(discovered.authorScopedId), isNull);
+        expect(service.subscribedListIds, isEmpty);
+        expect(callbacks, 0);
+        expect(open().lists, [_list()]);
+      },
+    );
+
+    test(
       'rejected follow does not claim success or start the video callback',
       () async {
+        final withVideo = _list().copyWith(videoEventIds: ['c' * 64]);
         await prefs.setString(
           CuratedListService.listsStorageKey,
-          jsonEncode([
-            _list().copyWith(videoEventIds: ['c' * 64]).toJson(),
-          ]),
+          jsonEncode([withVideo.toJson()]),
         );
         var callbacks = 0;
         final service = open(onSubscribed: (_, _) async => callbacks++);
@@ -183,6 +206,7 @@ void main() {
         prefs.rejectSubscriptions = false;
         expect(await service.subscribeToList('crew'), isTrue);
         expect(callbacks, 1);
+        expect(open().isSubscribedToList('crew'), isTrue);
       },
     );
 
@@ -368,11 +392,17 @@ void main() {
         CuratedListService.subscribedListsStorageKey,
         jsonEncode(['$_owner:crew']),
       );
-      final service = open();
+      var callbacks = 0;
+      final service = open(onUnsubscribed: (_) => callbacks++);
       prefs.rejectSubscriptions = true;
       expect(await service.unsubscribeFromList('crew'), isFalse);
       expect(service.isSubscribedToList('crew'), isTrue);
       expect(open().isSubscribedToList('crew'), isTrue);
+      expect(callbacks, 0);
+      prefs.rejectSubscriptions = false;
+      expect(await service.unsubscribeFromList('crew'), isTrue);
+      expect(callbacks, 1);
+      expect(open().isSubscribedToList('crew'), isFalse);
     });
 
     test(
