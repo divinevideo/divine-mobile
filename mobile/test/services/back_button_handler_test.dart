@@ -27,7 +27,11 @@ void main() {
 
   /// Visits [visitedPaths], then delivers a real `onBackPressed` call over the
   /// platform channel and reports what the native side would receive.
-  Future<({bool? handled, String location})> pressBackAfterVisiting(
+  ///
+  /// With [pushAfter], that route is pushed first and `pushedRoutePopped`
+  /// reports whether the press popped it.
+  Future<({bool? handled, String location, bool pushedRoutePopped})>
+  pressBackAfterVisiting(
     WidgetTester tester,
     List<String> visitedPaths, {
     String? pushAfter,
@@ -50,7 +54,7 @@ void main() {
     );
     addTearDown(router.dispose);
 
-    Future<Object?>? pushedRoute;
+    var pushedRoutePopped = false;
     late WidgetRef capturedRef;
     late ProviderContainer container;
     await tester.pumpWidget(
@@ -91,7 +95,11 @@ void main() {
     if (pushAfter != null) {
       // Push on the real router *and* feed the mocked location stream, so the
       // page context the handler reads matches the route that is on top.
-      pushedRoute = router.push<Object?>(pushAfter);
+      unawaited(
+        router
+            .push<Object?>(pushAfter)
+            .whenComplete(() => pushedRoutePopped = true),
+      );
       locations.add(pushAfter);
       await tester.pumpAndSettle();
     }
@@ -111,14 +119,17 @@ void main() {
     );
     await tester.pump(Duration.zero);
     await tester.pump(Duration.zero);
-    if (pushedRoute != null) await pushedRoute;
 
     final location = router.routeInformationProvider.value.uri.toString();
     // Must be cleared inside the test body: flutter_test asserts every
     // foundation debug variable is unset before tearDown runs.
     debugDefaultTargetPlatformOverride = null;
 
-    return (handled: handled, location: location);
+    return (
+      handled: handled,
+      location: location,
+      pushedRoutePopped: pushedRoutePopped,
+    );
   }
 
   group(BackButtonHandler, () {
@@ -245,6 +256,11 @@ void main() {
         );
 
         expect(result.handled, isTrue);
+        expect(
+          result.pushedRoutePopped,
+          isTrue,
+          reason: 'back must pop the pushed route, not replace the stack',
+        );
         // Popped back to whatever the router had underneath, rather than
         // replacing the stack with /explore the way the pre-#3337 Android
         // copy did.
