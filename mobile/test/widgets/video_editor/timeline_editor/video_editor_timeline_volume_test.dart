@@ -208,6 +208,25 @@ void main() {
       });
     });
 
+    testWidgets('screen-reader increase steps a clip above 100 %', (
+      tester,
+    ) async {
+      clipBloc.add(ClipEditorInitialized([_createTestClip(id: 'clip-a')]));
+
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(buildWidget());
+      await tester.pump();
+
+      final node = tester.getSemantics(find.bySemanticsLabel('Clip 1'));
+      expect(node.getSemanticsData().increasedValue, '110%');
+      node.owner!.performAction(node.id, SemanticsAction.increase);
+      await tester.pump();
+
+      expect(clipBloc.state.clips.first.volume, 1.1);
+
+      handle.dispose();
+    });
+
     testWidgets('clip arc exposes long-press semantic action and hint', (
       tester,
     ) async {

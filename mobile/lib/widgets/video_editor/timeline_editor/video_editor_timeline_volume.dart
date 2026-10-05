@@ -203,6 +203,9 @@ class _VolumeArcState extends State<_VolumeArc> {
   /// to land on again after boosting or lowering a track.
   static const double _unitySnap = 0.04;
 
+  /// How far one screen-reader increase or decrease moves the volume.
+  static const double _semanticStep = 0.1;
+
   // Gesture-local preview state belongs here because it changes every frame
   // while the pointer moves and does not represent persisted editor state.
   late double _localVolume;
@@ -266,6 +269,20 @@ class _VolumeArcState extends State<_VolumeArc> {
     widget.volumePreviewNotifier.value = next;
   }
 
+  String _percent(double volume) => '${(volume * 100).round()}%';
+
+  /// The volume one [_semanticStep] up (`direction` 1) or down (-1).
+  double _stepped(int direction) =>
+      ((_localVolume + direction * _semanticStep) * 100).roundToDouble() / 100;
+
+  void _commitStep(int direction) {
+    final next = _stepped(direction).clamp(0.0, VideoEditorConstants.volumeMax);
+    if (next == _localVolume) return;
+    setState(() => _localVolume = next);
+    if (next > 0) _lastUnmutedVolume = next;
+    widget.onChanged(next);
+  }
+
   void _onDragEnd(DragEndDetails _) {
     _isDragging = false;
     if (_localVolume > 0) {
@@ -284,7 +301,12 @@ class _VolumeArcState extends State<_VolumeArc> {
       child: Semantics(
         label: widget.semanticLabel,
         slider: true,
-        value: '${(_localVolume * 100).round()}%',
+        value: _percent(_localVolume),
+        increasedValue: _percent(_stepped(1)),
+        decreasedValue: _percent(_stepped(-1)),
+        // A screen reader cannot drag, so it steps through the same 0–300 %.
+        onIncrease: () => _commitStep(1),
+        onDecrease: () => _commitStep(-1),
         onLongPressHint: widget.semanticLongPressHint,
         onLongPress: widget.onLongPress,
         child: SizedBox(
