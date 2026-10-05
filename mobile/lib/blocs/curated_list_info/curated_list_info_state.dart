@@ -43,6 +43,8 @@ class CuratedListInfoState extends Equatable {
     this.isPublic = true,
     this.collaboratorPubkeys = const [],
     this.wasPublic,
+    this.needsSync = false,
+    this.permissionRecoveryPending = false,
   });
 
   /// Where the save stands.
@@ -63,6 +65,15 @@ class CuratedListInfoState extends Equatable {
   /// Visibility of the list as it was opened, or null when creating one.
   final bool? wasPublic;
 
+  /// The existing Sync now action has publication or deletion work to deliver.
+  final bool needsSync;
+
+  /// An acknowledged permission change blocks unrelated edits until settled.
+  final bool permissionRecoveryPending;
+
+  /// Whether fields and permissions may be edited.
+  bool get canEdit => !isSaving && !permissionRecoveryPending;
+
   /// Whether the form edits an existing list rather than creating one.
   bool get isEditing => wasPublic != null;
 
@@ -73,7 +84,7 @@ class CuratedListInfoState extends Equatable {
   bool get isSaving => status == CuratedListInfoStatus.saving;
 
   /// Whether the form can be submitted as it stands.
-  bool get canSubmit => name.trim().isNotEmpty && !isSaving;
+  bool get canSubmit => name.trim().isNotEmpty && canEdit;
 
   /// Whether the form has nothing left to show and can close.
   bool get canClose =>
@@ -99,6 +110,9 @@ class CuratedListInfoState extends Equatable {
     String? description,
     bool? isPublic,
     List<String>? collaboratorPubkeys,
+    bool? wasPublic,
+    bool? needsSync,
+    bool? permissionRecoveryPending,
   }) {
     return CuratedListInfoState(
       status: status ?? this.status,
@@ -106,7 +120,10 @@ class CuratedListInfoState extends Equatable {
       description: description ?? this.description,
       isPublic: isPublic ?? this.isPublic,
       collaboratorPubkeys: collaboratorPubkeys ?? this.collaboratorPubkeys,
-      wasPublic: wasPublic,
+      wasPublic: wasPublic ?? this.wasPublic,
+      needsSync: needsSync ?? this.needsSync,
+      permissionRecoveryPending:
+          permissionRecoveryPending ?? this.permissionRecoveryPending,
     );
   }
 
@@ -118,5 +135,7 @@ class CuratedListInfoState extends Equatable {
     isPublic,
     collaboratorPubkeys,
     wasPublic,
+    needsSync,
+    permissionRecoveryPending,
   ];
 }

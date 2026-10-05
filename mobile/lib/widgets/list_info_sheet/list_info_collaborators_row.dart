@@ -74,7 +74,7 @@ class ListInfoCollaboratorsRow extends ConsumerWidget {
     );
     final isEnabled = context.select(
       (CuratedListInfoCubit cubit) =>
-          cubit.state.canHaveCollaborators && !cubit.state.isSaving,
+          cubit.state.canHaveCollaborators && cubit.state.canEdit,
     );
 
     final names = [

@@ -42,9 +42,13 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
          CuratedListInfoState(
            name: existingList?.name ?? '',
            description: existingList?.description ?? '',
-           isPublic: existingList?.isPublic ?? true,
-           collaboratorPubkeys: existingList?.allowedCollaborators ?? const [],
+           isPublic: existingList?.publicationTarget.isPublic ?? true,
+           collaboratorPubkeys:
+               existingList?.publicationTarget.allowedCollaborators ?? const [],
            wasPublic: existingList?.isPublic,
+           needsSync: existingList?.needsSync ?? false,
+           permissionRecoveryPending:
+               existingList?.hasPendingPermissionRecovery ?? false,
          ),
        );
 
@@ -60,12 +64,12 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
       _currentOwnerPubkey() == _openingOwnerPubkey;
 
   /// The collaborators the list was opened with.
-  final List<String> _storedCollaborators;
+  List<String> _storedCollaborators;
   final String? _videoEventId;
 
   /// Records the list name as typed.
   void nameChanged(String name) {
-    if (state.isSaving) return;
+    if (!state.canEdit) return;
     emitIfOpen(
       state.copyWith(name: name, status: CuratedListInfoStatus.editing),
     );
@@ -73,7 +77,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
 
   /// Records the description as typed.
   void descriptionChanged(String description) {
-    if (state.isSaving) return;
+    if (!state.canEdit) return;
     emitIfOpen(
       state.copyWith(
         description: description,
@@ -84,7 +88,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
 
   /// Records whether the list should be public.
   void visibilityChanged({required bool isPublic}) {
-    if (state.isSaving) return;
+    if (!state.canEdit) return;
     emitIfOpen(
       state.copyWith(
         isPublic: isPublic,
@@ -106,7 +110,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
     required Set<String> picked,
     String? viewerPubkey,
   }) {
-    if (state.isSaving || isClosed || !isSessionCurrent) return;
+    if (!state.canEdit || isClosed || !isSessionCurrent) return;
     final neverOffered = state.collaboratorPubkeys.where(
       (pubkey) => !offered.contains(pubkey),
     );
@@ -120,6 +124,44 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
       state.copyWith(
         collaboratorPubkeys: next,
         status: CuratedListInfoStatus.editing,
+      ),
+    );
+  }
+
+  /// Completes only previously confirmed recovery or pending delivery.
+  Future<void> retrySync() async {
+    final listId = _listId;
+    final service = _resolveService();
+    if (listId == null ||
+        service == null ||
+        state.isSaving ||
+        !isSessionCurrent) {
+      return;
+    }
+    emitIfOpen(state.copyWith(status: CuratedListInfoStatus.saving));
+    var recovered = false;
+    try {
+      recovered = await service.retryListSync(listId);
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
+    }
+    if (!isSessionCurrent || isClosed) return;
+    final list = service.getListById(listId);
+    if (list == null || list.pubkey != _openingOwnerPubkey) {
+      emitIfOpen(state.copyWith(status: CuratedListInfoStatus.failure));
+      return;
+    }
+    _storedCollaborators = list.allowedCollaborators;
+    emitIfOpen(
+      state.copyWith(
+        status: recovered
+            ? CuratedListInfoStatus.editing
+            : CuratedListInfoStatus.failure,
+        isPublic: list.publicationTarget.isPublic,
+        collaboratorPubkeys: list.publicationTarget.allowedCollaborators,
+        wasPublic: list.isPublic,
+        needsSync: list.needsSync,
+        permissionRecoveryPending: list.hasPendingPermissionRecovery,
       ),
     );
   }
@@ -255,8 +297,12 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
           emitIfOpen(state.copyWith(status: CuratedListInfoStatus.failure));
           return;
         }
+        final pending = service.getListById(listId);
         emitIfOpen(
           state.copyWith(
+            needsSync: pending?.needsSync ?? false,
+            permissionRecoveryPending:
+                pending?.hasPendingPermissionRecovery ?? false,
             status: updated
                 ? CuratedListInfoStatus.saved
                 : publicationUnconfirmed
