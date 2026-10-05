@@ -925,7 +925,7 @@ class _TextBone extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 3),
         child: FractionallySizedBox(
-          alignment: Alignment.centerLeft,
+          alignment: AlignmentDirectional.centerStart,
           widthFactor: widthFactor,
           child: Skeleton.leaf(
             child: DecoratedBox(
