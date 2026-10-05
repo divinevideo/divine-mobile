@@ -6832,5 +6832,7 @@
   "manageHashtags": "Quản lý hashtag",
   "followedHashtagsEmpty": "Theo dõi hashtag từ trang của nó để tìm thấy ở đây.",
   "listsDiscoveryLoadingLabel": "Đang tải danh sách",
-  "listsDiscoveryEmpty": "Lần này chẳng thấy danh sách nào. Kéo để làm mới."
+  "listsDiscoveryEmpty": "Lần này chẳng thấy danh sách nào. Kéo để làm mới.",
+    "listSearchPeopleUnavailable": "Danh sách người hiện không khả dụng.",
+    "listSearchVideosUnavailable": "Danh sách video hiện không khả dụng."
 }

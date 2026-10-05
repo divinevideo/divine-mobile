@@ -1,7 +1,8 @@
-// ABOUTME: BLoC for searching curated video lists (kind 30005) and people lists (kind 30000).
-// ABOUTME: Merges both streams via a tagged union and uses emit.forEach for safe lifecycle.
+// ABOUTME: Searches video and people lists with independent source outcomes.
+// ABOUTME: Cancels both sources when the query, blocklist or active view changes.
 
-import 'package:bloc_concurrency/bloc_concurrency.dart';
+import 'dart:async';
+
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -13,7 +14,6 @@ import 'package:rxdart/rxdart.dart';
 part 'list_search_event.dart';
 part 'list_search_state.dart';
 
-/// Tagged union emitted by the merged search stream.
 sealed class _SearchResult {
   const _SearchResult();
 }
@@ -28,16 +28,15 @@ final class _PeopleSearchResult extends _SearchResult {
   final List<PeopleListSearchResult> results;
 }
 
-/// BLoC for searching curated video lists (kind 30005) and people lists
-/// (kind 30000).
+final class _SourceFailed extends _SearchResult {
+  const _SourceFailed({required this.people});
+  final bool people;
+}
+
+/// Searches public lists without losing one source when the other fails.
 ///
-/// Merges [CuratedListRepository.searchAllLists] and
-/// [PeopleListsRepository.searchPublicLists] into a single stream via
-/// [Rx.merge] and processes it with [emit.forEach] so that
-/// [debounceRestartable] correctly cancels in-flight subscriptions.
-///
-/// The [peopleListSearchEnabled] flag controls whether the people list stream
-/// is included. When `false`, only video lists are searched.
+/// All events share one cancellation boundary, including clear and blocklist
+/// changes. A new event cancels both subscriptions before its debounce starts.
 class ListSearchBloc extends Bloc<ListSearchEvent, ListSearchState> {
   ListSearchBloc({
     required CuratedListRepository curatedListRepository,
@@ -49,104 +48,144 @@ class ListSearchBloc extends Bloc<ListSearchEvent, ListSearchState> {
        _peopleListSearchEnabled = peopleListSearchEnabled,
        _viewerPubkey = viewerPubkey,
        super(const ListSearchState()) {
-    on<ListSearchQueryChanged>(
-      _onQueryChanged,
-      transformer: debounceRestartable(),
-    );
-    on<ListSearchCleared>(_onCleared);
-    on<ListSearchBlocklistChanged>(
-      _onBlocklistChanged,
-      transformer: restartable(),
+    on<ListSearchEvent>(
+      _onEvent,
+      transformer: (events, mapper) =>
+          events.where(_shouldHandle).switchMap((event) {
+            if (event is ListSearchQueryChanged) {
+              _requestedQuery = event.query.trim();
+            } else if (event is ListSearchCleared) {
+              _requestedQuery = '';
+            }
+            return (event is ListSearchQueryChanged
+                    ? Stream.value(event).delay(searchDebounceDuration)
+                    : Stream.value(event))
+                .asyncExpand(mapper);
+          }),
     );
   }
 
   final CuratedListRepository _curatedListRepository;
   final PeopleListsRepository _peopleListsRepository;
   final bool _peopleListSearchEnabled;
-
-  /// Whose own lists survive the Divine author check in people-list search.
   final String? _viewerPubkey;
+  String? _requestedQuery;
 
-  Future<void> _onQueryChanged(
-    ListSearchQueryChanged event,
+  bool _shouldHandle(ListSearchEvent event) =>
+      event is! ListSearchQueryChanged ||
+      event.query.trim() != state.query ||
+      _requestedQuery != state.query ||
+      state.status == ListSearchStatus.initial ||
+      state.status == ListSearchStatus.failure ||
+      state.hasSourceFailure;
+
+  Future<void> _onEvent(
+    ListSearchEvent event,
     Emitter<ListSearchState> emit,
   ) async {
-    final query = event.query.trim();
-
-    if (query.isEmpty || query.length < minSearchQueryLength) {
+    if (event is ListSearchCleared) {
       emit(const ListSearchState());
       return;
     }
-
-    if (query == state.query &&
-        state.status != ListSearchStatus.initial &&
-        state.status != ListSearchStatus.failure) {
+    final query = event is ListSearchQueryChanged
+        ? event.query.trim()
+        : _requestedQuery ?? state.query;
+    if (query.length < minSearchQueryLength) {
+      if (event is ListSearchBlocklistChanged && state.query.isEmpty) return;
+      emit(const ListSearchState());
       return;
     }
-
-    await _runSearch(query, emit);
+    final retry =
+        event is ListSearchRetried ||
+        (event is ListSearchQueryChanged &&
+            query == state.query &&
+            (state.hasSourceFailure ||
+                state.status == ListSearchStatus.failure));
+    await _runSearch(query, emit, retainResults: retry && query == state.query);
   }
 
-  /// Re-runs the current search after a block/unblock so results pass
-  /// through the repository's block filter again. Bypasses the same-query
-  /// guard in [_onQueryChanged] on purpose — the query is unchanged but
-  /// the result set is not.
-  Future<void> _onBlocklistChanged(
-    ListSearchBlocklistChanged event,
-    Emitter<ListSearchState> emit,
-  ) async {
-    if (state.query.isEmpty) return;
-    await _runSearch(state.query, emit);
+  Stream<_SearchResult> _source<T>(
+    Stream<List<T>> Function() create,
+    _SearchResult Function(List<T>) wrap, {
+    required bool people,
+  }) {
+    var latest = <T>[];
+    var failed = false;
+    try {
+      return create().transform(
+        StreamTransformer<List<T>, _SearchResult>.fromHandlers(
+          handleData: (lists, sink) {
+            latest = List.unmodifiable(lists);
+            sink.add(wrap(latest));
+          },
+          handleError: (Object error, StackTrace stackTrace, sink) {
+            failed = true;
+            addError(error, stackTrace);
+            sink.add(_SourceFailed(people: people));
+          },
+          handleDone: (sink) {
+            if (!failed) sink.add(wrap(latest));
+            sink.close();
+          },
+        ),
+      );
+    } on Object catch (error, stackTrace) {
+      addError(error, stackTrace);
+      return Stream.value(_SourceFailed(people: people));
+    }
   }
 
-  Future<void> _runSearch(String query, Emitter<ListSearchState> emit) async {
+  Future<void> _runSearch(
+    String query,
+    Emitter<ListSearchState> emit, {
+    required bool retainResults,
+  }) async {
     emit(
-      state.copyWith(
+      ListSearchState(
         status: ListSearchStatus.loading,
         query: query,
-        videoResults: const [],
-        peopleResults: const [],
+        videoResults: retainResults ? state.videoResults : const [],
+        peopleResults: retainResults ? state.peopleResults : const [],
+        videoStatus: ListSearchSourceStatus.loading,
+        peopleStatus: _peopleListSearchEnabled
+            ? ListSearchSourceStatus.loading
+            : ListSearchSourceStatus.initial,
       ),
     );
-
-    try {
-      final videoStream = _curatedListRepository
-          .searchAllLists(query)
-          .map<_SearchResult>(_VideoSearchResult.new);
-
-      final streams = [
-        videoStream,
+    await emit.forEach<_SearchResult>(
+      Rx.merge([
+        _source(
+          () => _curatedListRepository.searchAllLists(query),
+          _VideoSearchResult.new,
+          people: false,
+        ),
         if (_peopleListSearchEnabled)
-          _peopleListsRepository
-              .searchPublicLists(query, viewerPubkey: _viewerPubkey)
-              .map<_SearchResult>(_PeopleSearchResult.new),
-      ];
-
-      await emit.forEach<_SearchResult>(
-        Rx.merge(streams),
-        onData: (result) => switch (result) {
+          _source(
+            () => _peopleListsRepository.searchPublicLists(
+              query,
+              viewerPubkey: _viewerPubkey,
+            ),
+            _PeopleSearchResult.new,
+            people: true,
+          ),
+      ]),
+      onData: (result) {
+        final next = switch (result) {
           _VideoSearchResult(:final lists) => state.copyWith(
-            status: ListSearchStatus.success,
+            videoStatus: ListSearchSourceStatus.success,
             videoResults: lists,
           ),
           _PeopleSearchResult(:final results) => state.copyWith(
-            status: ListSearchStatus.success,
+            peopleStatus: ListSearchSourceStatus.success,
             peopleResults: results,
           ),
-        },
-      );
-
-      // If stream completes without emitting, still emit success.
-      if (state.status == ListSearchStatus.loading) {
-        emit(state.copyWith(status: ListSearchStatus.success));
-      }
-    } on Exception catch (e, stackTrace) {
-      addError(e, stackTrace);
-      emit(state.copyWith(status: ListSearchStatus.failure));
-    }
-  }
-
-  void _onCleared(ListSearchCleared event, Emitter<ListSearchState> emit) {
-    emit(const ListSearchState());
+          _SourceFailed(:final people) =>
+            people
+                ? state.copyWith(peopleStatus: ListSearchSourceStatus.failure)
+                : state.copyWith(videoStatus: ListSearchSourceStatus.failure),
+        };
+        return next.copyWith(status: next.combinedStatus);
+      },
+    );
   }
 }

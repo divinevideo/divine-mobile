@@ -4081,5 +4081,7 @@
   "manageHashtags": "Pamahalaan ang mga hashtag",
   "followedHashtagsEmpty": "Sundan ang isang hashtag sa pahina nito para makita ito rito.",
   "listsDiscoveryEmpty": "Walang lumabas na list ngayon. Hilahin pababa para mag-refresh.",
-  "listsDiscoveryLoadingLabel": "Naglo-load ng mga list"
+  "listsDiscoveryLoadingLabel": "Naglo-load ng mga list",
+  "listSearchPeopleUnavailable": "Hindi available ang mga listahan ng tao ngayon.",
+  "listSearchVideosUnavailable": "Hindi available ang mga listahan ng video ngayon."
 }

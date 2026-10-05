@@ -5068,5 +5068,7 @@
   "manageHashtags": "Etiketleri yönet",
   "followedHashtagsEmpty": "Bir etiketi burada bulmak için kendi sayfasından takip et.",
   "listsDiscoveryEmpty": "Bu sefer hiç liste çıkmadı. Yenilemek için aşağı çek.",
-  "listsDiscoveryLoadingLabel": "Listeler yükleniyor"
+  "listsDiscoveryLoadingLabel": "Listeler yükleniyor",
+  "listSearchPeopleUnavailable": "Kişi listeleri şu anda kullanılamıyor.",
+  "listSearchVideosUnavailable": "Video listeleri şu anda kullanılamıyor."
 }

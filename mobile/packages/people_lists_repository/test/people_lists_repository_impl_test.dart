@@ -131,6 +131,7 @@ void main() {
       BlockedPeopleListOwnerFilter? blockFilter,
       FunnelcakeApiClient? funnelcakeApiClient,
       List<String> discoveryRelayUrls = const [],
+      Set<String> additionalExcludedPublicDTags = const {},
     }) {
       return PeopleListsRepositoryImpl(
         nostrClient: nostrClient,
@@ -138,6 +139,7 @@ void main() {
         blockFilter: blockFilter,
         funnelcakeApiClient: funnelcakeApiClient,
         discoveryRelayUrls: discoveryRelayUrls,
+        additionalExcludedPublicDTags: additionalExcludedPublicDTags,
       );
     }
 
@@ -1437,6 +1439,78 @@ void main() {
       }
     }
 
+    group('configured public exclusions', () {
+      const tag = 'synthetic-machine-set';
+      late _MockNostrClient client;
+      setUp(() {
+        client = _MockNostrClient();
+        when(() => client.publicKey).thenReturn(_ownerPubkey);
+        final event = signedEvent(
+          kind: _peopleListKind,
+          tags: [
+            ['d', tag],
+            ['title', 'Synthetic crew'],
+            ['p', _memberA],
+          ],
+        );
+        when(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer((_) async => [event]);
+      });
+
+      test(
+        'configured d-tag is omitted from search and discovery only',
+        () async {
+          final repository = buildRepository(
+            nostrClient: client,
+            additionalExcludedPublicDTags: {tag},
+          );
+          expect(await repository.discoverPublicLists(), isEmpty);
+          expect(await repository.searchPublicLists('crew').toList(), isEmpty);
+          final direct = await repository.fetchPublicList(
+            ownerPubkey: _ownerPubkey,
+            listId: tag,
+          );
+          expect(direct?.id, tag);
+          expect(direct?.pubkeys, [_memberA]);
+          await repository.syncOwner(ownerPubkey: _ownerPubkey);
+          final owned = await repository.readLists(ownerPubkey: _ownerPubkey);
+          expect(owned.single.id, tag);
+          expect(owned.single.isEditable, isTrue);
+        },
+      );
+
+      test(
+        'unconfigured d-tag remains ordinary owner-authored curation',
+        () async {
+          final repository = buildRepository(nostrClient: client);
+          expect((await repository.discoverPublicLists()).single.list.id, tag);
+          expect(
+            (await repository.searchPublicLists('crew').first).single.list.id,
+            tag,
+          );
+        },
+      );
+
+      test(
+        'copies exclusions so later caller mutations cannot change policy',
+        () async {
+          final exclusions = <String>{tag};
+          final repository = buildRepository(
+            nostrClient: client,
+            additionalExcludedPublicDTags: exclusions,
+          );
+          exclusions.clear();
+          expect(await repository.discoverPublicLists(), isEmpty);
+          expect(await repository.searchPublicLists('crew').toList(), isEmpty);
+        },
+      );
+    });
+
     group('discoverPublicLists', () {
       const secondOwner =
           '4444444444444444444444444444444444444444444444444444444444444444';
@@ -2270,14 +2344,17 @@ void main() {
             ),
             peopleEvent(
               pubkey: secondOwner,
-              dTag: 'blindoracle-v1-health',
+              dTag: 'synthetic-machine-set',
               title: 'Health crew',
               pubkeys: const [_memberA],
             ),
           ],
         );
 
-        final repository = buildRepository(nostrClient: client);
+        final repository = buildRepository(
+          nostrClient: client,
+          additionalExcludedPublicDTags: {'synthetic-machine-set'},
+        );
 
         final emissions = await repository.searchPublicLists('crew').toList();
 

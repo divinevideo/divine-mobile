@@ -5068,5 +5068,7 @@
   "manageHashtags": "Gérer les hashtags",
   "followedHashtagsEmpty": "Suivez un hashtag depuis sa page pour le retrouver ici.",
   "listsDiscoveryEmpty": "Aucune liste cette fois-ci. Tire pour actualiser.",
-  "listsDiscoveryLoadingLabel": "Chargement des listes"
+  "listsDiscoveryLoadingLabel": "Chargement des listes",
+  "listSearchPeopleUnavailable": "Les listes de personnes sont indisponibles pour le moment.",
+  "listSearchVideosUnavailable": "Les listes de vidéos sont indisponibles pour le moment."
 }

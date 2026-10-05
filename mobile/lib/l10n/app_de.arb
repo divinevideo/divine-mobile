@@ -5068,5 +5068,7 @@
   "manageHashtags": "Hashtags verwalten",
   "followedHashtagsEmpty": "Folge einem Hashtag auf seiner Seite, um ihn hier zu finden.",
   "listsDiscoveryEmpty": "Diesmal sind keine Listen aufgetaucht. Zieh nach unten zum Aktualisieren.",
-  "listsDiscoveryLoadingLabel": "Listen werden geladen"
+  "listsDiscoveryLoadingLabel": "Listen werden geladen",
+  "listSearchPeopleUnavailable": "Personenlisten sind gerade nicht verfügbar.",
+  "listSearchVideosUnavailable": "Videolisten sind gerade nicht verfügbar."
 }

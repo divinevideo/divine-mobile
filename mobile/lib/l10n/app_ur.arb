@@ -6832,5 +6832,7 @@
   "manageHashtags": "ہیش ٹیگز کا نظم کریں",
   "followedHashtagsEmpty": "کسی ہیش ٹیگ کو یہاں دیکھنے کے لیے اس کے صفحے سے فالو کریں۔",
   "listsDiscoveryLoadingLabel": "فہرستیں لوڈ ہو رہی ہیں",
-  "listsDiscoveryEmpty": "اس بار کوئی فہرست ہاتھ نہیں آئی۔ ریفریش کے لیے کھینچیں۔"
+  "listsDiscoveryEmpty": "اس بار کوئی فہرست ہاتھ نہیں آئی۔ ریفریش کے لیے کھینچیں۔",
+    "listSearchPeopleUnavailable": "لوگوں کی فہرستیں فی الحال دستیاب نہیں ہیں۔",
+    "listSearchVideosUnavailable": "ویڈیو کی فہرستیں فی الحال دستیاب نہیں ہیں۔"
 }

@@ -5068,5 +5068,7 @@
   "manageHashtags": "Kelola tagar",
   "followedHashtagsEmpty": "Ikuti tagar dari halamannya untuk menemukannya di sini.",
   "listsDiscoveryEmpty": "Belum ada daftar yang muncul kali ini. Tarik untuk menyegarkan.",
-  "listsDiscoveryLoadingLabel": "Memuat daftar"
+  "listsDiscoveryLoadingLabel": "Memuat daftar",
+  "listSearchPeopleUnavailable": "Daftar orang sedang tidak tersedia.",
+  "listSearchVideosUnavailable": "Daftar video sedang tidak tersedia."
 }

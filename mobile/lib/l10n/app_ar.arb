@@ -5068,5 +5068,7 @@
   "manageHashtags": "إدارة الوسوم",
   "followedHashtagsEmpty": "تابع وسمًا من صفحته لتجده هنا.",
   "listsDiscoveryEmpty": "لم تظهر أي قوائم هذه المرة. يمكن السحب للتحديث.",
-  "listsDiscoveryLoadingLabel": "جارٍ تحميل القوائم"
+  "listsDiscoveryLoadingLabel": "جارٍ تحميل القوائم",
+  "listSearchPeopleUnavailable": "قوائم الأشخاص غير متاحة الآن.",
+  "listSearchVideosUnavailable": "قوائم الفيديو غير متاحة الآن."
 }

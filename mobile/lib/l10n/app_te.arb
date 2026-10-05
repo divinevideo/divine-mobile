@@ -8567,5 +8567,7 @@
   "manageHashtags": "హ్యాష్‌ట్యాగ్‌లను నిర్వహించండి",
   "followedHashtagsEmpty": "హ్యాష్‌ట్యాగ్‌ను ఇక్కడ చూడటానికి దాని పేజీలో అనుసరించండి.",
   "listsDiscoveryLoadingLabel": "జాబితాలను లోడ్ చేస్తోంది",
-  "listsDiscoveryEmpty": "ఈసారి జాబితాలు ఏవీ దొరకలేదు. రిఫ్రెష్ చేయడానికి లాగండి."
+  "listsDiscoveryEmpty": "ఈసారి జాబితాలు ఏవీ దొరకలేదు. రిఫ్రెష్ చేయడానికి లాగండి.",
+    "listSearchPeopleUnavailable": "ప్రస్తుతం వ్యక్తుల జాబితాలు అందుబాటులో లేవు.",
+    "listSearchVideosUnavailable": "ప్రస్తుతం వీడియో జాబితాలు అందుబాటులో లేవు."
 }

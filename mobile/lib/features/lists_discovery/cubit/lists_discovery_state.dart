@@ -20,6 +20,9 @@ class ListsDiscoveryState extends Equatable {
     this.videoLists = const [],
     this.peopleLists = const [],
     this.videoThumbnailsPending = false,
+    this.peopleLoadGeneration = 0,
+    this.peopleListsEnabled = true,
+    this.videoInitializationFailed = false,
   });
 
   final ListsDiscoveryColumnStatus videoStatus;
@@ -36,12 +39,22 @@ class ListsDiscoveryState extends Equatable {
   /// the resolve gives up, so cards can shimmer their empty fan slots.
   final bool videoThumbnailsPending;
 
+  /// Identifies the people-list request whose result may update this state.
+  final int peopleLoadGeneration;
+
+  /// Whether the people-list master feature is available to this gallery.
+  final bool peopleListsEnabled;
+
+  /// Saved video-list recovery must succeed before video discovery can run.
+  final bool videoInitializationFailed;
+
   /// Whether both columns finished without anything to show.
   bool get isEmpty =>
       videoStatus == ListsDiscoveryColumnStatus.success &&
-      peopleStatus == ListsDiscoveryColumnStatus.success &&
+      (!peopleListsEnabled ||
+          peopleStatus == ListsDiscoveryColumnStatus.success) &&
       videoLists.isEmpty &&
-      peopleLists.isEmpty;
+      (!peopleListsEnabled || peopleLists.isEmpty);
 
   ListsDiscoveryState copyWith({
     ListsDiscoveryColumnStatus? videoStatus,
@@ -49,6 +62,9 @@ class ListsDiscoveryState extends Equatable {
     List<CuratedList>? videoLists,
     List<PeopleListSearchResult>? peopleLists,
     bool? videoThumbnailsPending,
+    int? peopleLoadGeneration,
+    bool? peopleListsEnabled,
+    bool? videoInitializationFailed,
   }) {
     return ListsDiscoveryState(
       videoStatus: videoStatus ?? this.videoStatus,
@@ -57,6 +73,10 @@ class ListsDiscoveryState extends Equatable {
       peopleLists: peopleLists ?? this.peopleLists,
       videoThumbnailsPending:
           videoThumbnailsPending ?? this.videoThumbnailsPending,
+      peopleLoadGeneration: peopleLoadGeneration ?? this.peopleLoadGeneration,
+      peopleListsEnabled: peopleListsEnabled ?? this.peopleListsEnabled,
+      videoInitializationFailed:
+          videoInitializationFailed ?? this.videoInitializationFailed,
     );
   }
 
@@ -67,5 +87,8 @@ class ListsDiscoveryState extends Equatable {
     videoLists,
     peopleLists,
     videoThumbnailsPending,
+    peopleLoadGeneration,
+    peopleListsEnabled,
+    videoInitializationFailed,
   ];
 }

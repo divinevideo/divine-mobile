@@ -68,6 +68,58 @@ void main() {
       );
     }
 
+    for (final showAll in [false, true]) {
+      testWidgets(
+        'partial people failure keeps video cards (showAll: $showAll)',
+        (tester) async {
+          when(() => mockBloc.state).thenReturn(
+            ListSearchState(
+              status: ListSearchStatus.success,
+              query: 'test',
+              videoResults: [testList],
+              videoStatus: ListSearchSourceStatus.success,
+              peopleStatus: ListSearchSourceStatus.failure,
+            ),
+          );
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: getStandardTestOverrides(),
+              child: buildSubject(showAll: showAll),
+            ),
+          );
+          expect(
+            find.text('People lists are unavailable right now.'),
+            findsOneWidget,
+          );
+          expect(find.text('Top Videos'), findsOneWidget);
+          expect(find.byType(SearchSectionEmptyState), findsNothing);
+          await tester.tap(find.text('Try again'));
+          verify(() => mockBloc.add(const ListSearchRetried())).called(1);
+        },
+      );
+
+      testWidgets(
+        'unavailable people and empty video never claim no matches (showAll: $showAll)',
+        (tester) async {
+          when(() => mockBloc.state).thenReturn(
+            const ListSearchState(
+              status: ListSearchStatus.failure,
+              query: 'test',
+              videoStatus: ListSearchSourceStatus.success,
+              peopleStatus: ListSearchSourceStatus.failure,
+            ),
+          );
+          await tester.pumpWidget(buildSubject(showAll: showAll));
+          expect(
+            find.text('People lists are unavailable right now.'),
+            findsOneWidget,
+          );
+          expect(find.byType(SearchSectionEmptyState), findsNothing);
+          expect(find.text('Try again'), findsOneWidget);
+        },
+      );
+    }
+
     group('showAll: false (All tab preview)', () {
       testWidgets('hides entirely when success with empty results', (
         tester,
