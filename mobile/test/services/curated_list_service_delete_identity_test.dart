@@ -13,6 +13,7 @@ import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/curated_list_publish_stubs.dart';
@@ -73,7 +74,7 @@ void main() {
     });
 
     test(
-      'accepted deletion after account switch only removes its captured owner',
+      'late deletion cannot alter incoming same-dtag row after real account wipe',
       () async {
         final started = Completer<Event>();
         final accepted = Completer<PublishOutcome>();
@@ -83,16 +84,55 @@ void main() {
         });
         final deleting = service.deleteOwnedList('shared');
         final event = await started.future;
-        activeOwner = _ownerB;
+        await UserDataCleanupService(prefs).clearUserSpecificData(
+          userPubkey: _ownerA,
+          isIdentityChange: true,
+        );
+        final incomingAuth = _Auth();
+        final incomingClient = _Client();
+        when(() => incomingAuth.isAuthenticated).thenReturn(true);
+        when(() => incomingAuth.currentPublicKeyHex).thenReturn(_ownerB);
+        stubListPublishing(
+          client: incomingClient,
+          auth: incomingAuth,
+          pubkey: _ownerB,
+        );
+        when(() => incomingClient.subscribe(any()))
+            .thenAnswer((_) => const Stream.empty());
+        final incoming = CuratedListService(
+          nostrService: incomingClient,
+          authService: incomingAuth,
+          prefs: prefs,
+        );
+        addTearDown(incoming.dispose);
+        await incoming.initialize();
+        expect(
+          await incoming.subscribeToList('$_ownerB:shared', list(_ownerB)),
+          isTrue,
+        );
+        final before = prefs.getString(CuratedListService.listsStorageKey);
         accepted.complete(acceptedOutcome(event));
-        expect(await deleting, isTrue);
-        expect(service.getListById('$_ownerA:shared'), isNull);
-        expect(service.getListById('$_ownerB:shared')!.name, 'B');
-        expect(service.subscribedListIds, {'$_ownerB:shared'});
-        final saved = jsonDecode(
-          prefs.getString(CuratedListService.listsStorageKey)!,
-        ) as List;
-        expect(saved.single['pubkey'], _ownerB);
+        expect(await deleting, isFalse);
+        expect(auth.currentPublicKeyHex, _ownerA);
+        expect(service.isCurrentSession, isFalse);
+        expect(incoming.getListById('$_ownerB:shared')!.name, 'B');
+        expect(incoming.subscribedListIds, {'$_ownerB:shared'});
+        expect(prefs.getString(CuratedListService.listsStorageKey), before);
+        expect(
+          prefs.getStringList(
+            PrefsCuratedListStore.deletedCoordinatesStorageKey,
+          ),
+          isNull,
+        );
+        final restart = CuratedListService(
+          nostrService: incomingClient,
+          authService: incomingAuth,
+          prefs: prefs,
+        );
+        addTearDown(restart.dispose);
+        expect(restart.getListById('$_ownerA:shared'), isNull);
+        expect(restart.getListById('$_ownerB:shared')!.name, 'B');
+        expect(restart.subscribedListIds, {'$_ownerB:shared'});
       },
     );
 

@@ -27,7 +27,9 @@ class PrefsCuratedListStore {
     required String listsStorageKey,
     required String subscriptionsStorageKey,
     required String defaultListDeletedStorageKey,
+    bool Function()? isCurrentSession,
   }) : _prefs = prefs,
+       _isCurrentSession = isCurrentSession,
        _writes = writeCoordinator,
        _listsKey = listsStorageKey,
        _subscriptionsKey = subscriptionsStorageKey,
@@ -43,6 +45,7 @@ class PrefsCuratedListStore {
       'deleted_curated_list_coordinates';
 
   final SharedPreferences _prefs;
+  final bool Function()? _isCurrentSession;
   final CuratedListCacheWriteCoordinator _writes;
   final String _listsKey;
   final String _subscriptionsKey;
@@ -97,7 +100,8 @@ class PrefsCuratedListStore {
         baseline: baseline,
         current: requested,
         cacheKey: _listsKey,
-        isCurrent: isCurrent,
+        isCurrent: () =>
+            (_isCurrentSession?.call() ?? true) && (isCurrent?.call() ?? true),
         read: () => _storedLists(fallback: baseline),
         write: (merged) => _writeString(
           _listsKey,
@@ -160,7 +164,8 @@ class PrefsCuratedListStore {
         baseline: baseline,
         current: requested,
         cacheKey: _subscriptionsKey,
-        isCurrent: isCurrent,
+        isCurrent: () =>
+            (_isCurrentSession?.call() ?? true) && (isCurrent?.call() ?? true),
         read: () => _storedSubscriptions(fallback: baseline),
         write: (merged) => _writeString(
           _subscriptionsKey,
@@ -221,6 +226,73 @@ class PrefsCuratedListStore {
     }
   }
 
+  /// Finishes persisted follow/default state after an owned row was removed.
+  /// Leaves foreign rows and legacy aliases shared by surviving rows intact.
+  Future<Set<String>> recoverRemovedListSubscriptions(
+    List<CuratedList> lists,
+    Set<String> subscriptions, {
+    required String owner,
+    required String defaultListId,
+    required Future<void> Function() saveSubscriptions,
+  }) async {
+    bool missingOwned(String id) =>
+        !lists.any((list) => list.authorScopedId == '$owner:$id') &&
+        wasListDeleted(owner, id);
+    final pendingDefault =
+        missingOwned(defaultListId) && hasPendingDefaultListDeletion(owner);
+    if (pendingDefault) {
+      await markDefaultListDeleted();
+      await finishDefaultListDeletion(owner);
+    }
+    final coordinates = <String>{};
+    for (final subscription in subscriptions.toList(growable: false)) {
+      final qualified = subscription.startsWith('$owner:');
+      final id = qualified
+          ? subscription.substring(owner.length + 1)
+          : subscription;
+      if (!missingOwned(id)) continue;
+      if (!qualified && lists.any((list) => list.id == id)) continue;
+      subscriptions.remove(subscription);
+      coordinates.add('$owner:$id');
+    }
+    if (coordinates.isNotEmpty) await saveSubscriptions();
+    return coordinates;
+  }
+
+  /// Owner-scoped recovery for a durable removal whose default flag failed.
+  /// A tombstone alone must still allow the existing explicit restore flow.
+  static String pendingDefaultDeletionKey(String ownerPubkey) =>
+      'curated_list_default_cleanup:$ownerPubkey';
+
+  bool hasPendingDefaultListDeletion(String ownerPubkey) =>
+      _prefs.getBool(pendingDefaultDeletionKey(ownerPubkey)) ?? false;
+
+  Future<void> beginDefaultListDeletion(String ownerPubkey) =>
+      _saveDefaultDeletionRecovery(
+        () => _prefs.setBool(pendingDefaultDeletionKey(ownerPubkey), true),
+      );
+
+  Future<void> finishDefaultListDeletion(String ownerPubkey) =>
+      _saveDefaultDeletionRecovery(
+        () => _prefs.remove(pendingDefaultDeletionKey(ownerPubkey)),
+      );
+
+  Future<void> _saveDefaultDeletionRecovery(
+    Future<bool> Function() write,
+  ) async {
+    final saved = await _writes.runExclusive(() async {
+      if (!(_isCurrentSession?.call() ?? true)) return false;
+      return _persist(write);
+    });
+    if (!saved || !(_isCurrentSession?.call() ?? true)) {
+      throw CuratedCacheWriteException(
+        (_isCurrentSession?.call() ?? true)
+            ? CuratedCacheWriteStatus.storageRejected
+            : CuratedCacheWriteStatus.superseded,
+      );
+    }
+  }
+
   /// Whether the signed-in account deleted its default list.
   ///
   /// Unlike the deletion record, the account-switch sweep clears this flag.
@@ -229,7 +301,17 @@ class PrefsCuratedListStore {
 
   /// Remembers that the default list was deleted.
   Future<void> markDefaultListDeleted() async {
-    await _prefs.setBool(_defaultListDeletedKey, true);
+    final saved = await _writes.runExclusive(() async {
+      if (!(_isCurrentSession?.call() ?? true)) return false;
+      return _persist(() => _prefs.setBool(_defaultListDeletedKey, true));
+    });
+    if (!saved || !(_isCurrentSession?.call() ?? true)) {
+      throw CuratedCacheWriteException(
+        (_isCurrentSession?.call() ?? true)
+            ? CuratedCacheWriteStatus.storageRejected
+            : CuratedCacheWriteStatus.superseded,
+      );
+    }
   }
 
   /// Whether this install has deleted the list [ownerPubkey] published as
@@ -261,6 +343,7 @@ class PrefsCuratedListStore {
     baseline: before,
     current: coordinates,
     cacheKey: deletedCoordinatesStorageKey,
+    isCurrent: _isCurrentSession,
     read: _rawDeletedCoordinates,
     write: (merged) => _persist(
       () => _prefs.setStringList(

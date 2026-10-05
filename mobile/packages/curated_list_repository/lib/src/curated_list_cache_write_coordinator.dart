@@ -12,6 +12,13 @@ class CuratedListCacheWriteCoordinator {
   final _rejectedLists = <Object, _RejectedSnapshot<List<CuratedList>>>{};
   final _rejectedSubscriptions = <Object, _RejectedSnapshot<Set<String>>>{};
 
+  /// Serializes cache clearing and auxiliary writes with the backing saves.
+  ///
+  /// A clear queued here cannot overtake a platform write already dispatched
+  /// by a list/subscription save. Callers retire old writers before queuing it.
+  Future<T> runExclusive<T>(Future<T> Function() operation) =>
+      _serialize(operation);
+
   /// Forgets refused read-cache overlays when the backing key was removed.
   ///
   /// An absent key must stay distinct from a refused empty value, especially

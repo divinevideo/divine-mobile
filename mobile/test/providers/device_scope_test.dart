@@ -12,6 +12,7 @@ import 'package:openvine/providers/device_scope.dart';
 import 'package:openvine/providers/documents_path_provider.dart';
 import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/log_message_batcher_provider.dart';
+import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/shorebird_availability_provider.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
@@ -59,6 +60,17 @@ void main() {
 
       expect(a.read(databaseProvider), same(database));
       expect(b.read(databaseProvider), same(a.read(databaseProvider)));
+    });
+
+    test('account containers share the curated cache write barrier', () {
+      final a = buildAccountContainer(deviceScope);
+      addTearDown(a.dispose);
+      final b = buildAccountContainer(deviceScope);
+      addTearDown(b.dispose);
+      expect(
+        a.read(curatedListCacheWriteCoordinatorProvider),
+        same(b.read(curatedListCacheWriteCoordinatorProvider)),
+      );
     });
 
     test('shared instances survive disposing a container', () {

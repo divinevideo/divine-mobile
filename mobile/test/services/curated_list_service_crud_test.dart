@@ -966,7 +966,7 @@ void main() {
           verify(() => mockNostr.publishEventAwaitOk(any())).called(1);
           expect(
             upgraded.getListById('first-stranded')!.nostrEventId,
-            isNotNull,
+            isNull,
           );
           final second = upgraded.getListById('second-stranded')!;
           expect(second.nostrEventId, isNull);
@@ -992,7 +992,11 @@ void main() {
 
           await upgraded.fetchUserListsFromRelays(force: true);
 
-          verify(() => mockNostr.publishEventAwaitOk(any())).called(1);
+          verify(() => mockNostr.publishEventAwaitOk(any())).called(2);
+          expect(
+            upgraded.getListById('first-stranded')!.nostrEventId,
+            isNotNull,
+          );
           expect(
             upgraded.getListById('second-stranded')!.nostrEventId,
             isNotNull,

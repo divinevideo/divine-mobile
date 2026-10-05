@@ -10,6 +10,7 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _Auth extends Mock implements AuthService {}
@@ -109,6 +110,12 @@ void main() {
           );
           final signed = await publishing.future;
 
+          if (!sameOwner) {
+            await UserDataCleanupService(prefs).clearUserSpecificData(
+              userPubkey: owner,
+              isIdentityChange: true,
+            );
+          }
           final newAuth = _Auth();
           final newClient = _Client();
           stubActor(newAuth, newClient, sameOwner ? owner : other, now + 5);
@@ -148,8 +155,8 @@ void main() {
           expect(persisted?.updatedAt, newUpdatedAt);
           if (!sameOwner) {
             expect(
-              reloaded.getListById('$owner:${original.id}')?.name,
-              'Old accepted later',
+              reloaded.getListById('$owner:${original.id}'),
+              isNull,
             );
           }
         },

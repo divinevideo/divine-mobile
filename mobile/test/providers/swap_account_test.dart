@@ -2,6 +2,7 @@
 // ABOUTME: (dispose the new container, leave the old) when sign-in fails.
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
 import 'package:dm_repository/dm_repository.dart';
@@ -11,6 +12,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -18,6 +21,7 @@ import 'package:openvine/models/known_account.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/device_scope.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/notifications_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -26,8 +30,10 @@ import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
+import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/push_notification_session_coordinator.dart';
 import 'package:openvine/services/startup_performance_service.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/log_message_batcher.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 // Override lives in riverpod's misc barrel; flutter_riverpod does not
@@ -35,7 +41,11 @@ import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/curated_list_publish_stubs.dart';
+
 class _MockAuthService extends Mock implements AuthService {}
+
+class _MockNostrClient extends Mock implements NostrClient {}
 
 class _MockPushNotificationSessionCoordinator extends Mock
     implements PushNotificationSessionCoordinator {}
@@ -534,6 +544,75 @@ void main() {
   });
 
   group('account swap failure boundaries', () {
+    testWidgets('failed switch rebuilds a fresh outgoing list session', (
+      tester,
+    ) async {
+      final prefs = deviceScope.sharedPreferences;
+      final liveAuth = _MockAuthService();
+      final client = _MockNostrClient();
+      when(() => liveAuth.isAuthenticated).thenReturn(true);
+      when(() => liveAuth.currentPublicKeyHex).thenReturn(leavingHex);
+      stubListPublishing(client: client, auth: liveAuth, pubkey: leavingHex);
+      when(() => client.subscribe(any()))
+          .thenAnswer((_) => const Stream.empty());
+      final row = CuratedList(
+        id: CuratedListService.defaultListId,
+        pubkey: leavingHex,
+        name: 'Existing list',
+        isPublic: false,
+        videoEventIds: const [],
+        createdAt: DateTime.utc(2026),
+        updatedAt: DateTime.utc(2026),
+        nostrEventId:
+            'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+      );
+      await prefs.setString(
+        CuratedListService.listsStorageKey,
+        jsonEncode([row.toJson()]),
+      );
+      final initial = await pumpHost(
+        tester,
+        accountOverrides: [
+          authServiceProvider.overrideWithValue(liveAuth),
+          nostrServiceProvider.overrideWithValue(client),
+        ],
+      );
+      final listening = initial.listen(curatedListsStateProvider, (_, _) {});
+      await initial.read(curatedListsStateProvider.future);
+      final retired = initial.read(curatedListsStateProvider.notifier).service!;
+      await expectLater(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (_, _) async {
+            expect(retired.isCurrentSession, isFalse);
+            await UserDataCleanupService(prefs).clearUserSpecificData(
+              userPubkey: leavingHex,
+              isIdentityChange: true,
+            );
+            throw _FakeSignInException();
+          },
+        ),
+        throwsA(isA<_FakeSignInException>()),
+      );
+      expect(controller.currentContainer, same(initial));
+      expect(currentAuthService.calls, ['archive', 'restore']);
+      await initial.read(curatedListsStateProvider.future);
+      final restored = initial
+          .read(curatedListsStateProvider.notifier)
+          .service!;
+      expect(restored, isNot(same(retired)));
+      expect(restored.isCurrentSession, isTrue);
+      expect(retired.isCurrentSession, isFalse);
+      expect(
+        await retired.updateList(listId: row.id, name: 'Old callback'),
+        isFalse,
+      );
+      expect(await restored.subscribeToList('$leavingHex:${row.id}'), isTrue);
+      listening.close();
+    });
     testWidgets('keeps the target account live when push cleanup fails', (
       tester,
     ) async {

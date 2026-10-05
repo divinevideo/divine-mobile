@@ -20,6 +20,7 @@ import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/models/curated_list_callbacks.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_relay_gateway.dart';
+import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:openvine/utils/curated_list_privacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -38,36 +39,49 @@ class CuratedListService extends ChangeNotifier {
     required AuthService authService,
     required SharedPreferences prefs,
     CuratedListCacheWriteCoordinator? cacheWriteCoordinator,
+    CuratedListSessionCoordinator? sessionCoordinator,
     OnListSubscribedCallback? onListSubscribed,
     OnListUnsubscribedCallback? onListUnsubscribed,
     Duration relaySyncTimeout = const Duration(seconds: 10),
   }) : _nostrService = nostrService,
        _authService = authService,
        _prefs = prefs,
-       _cacheStore = PrefsCuratedListStore(
-         prefs: prefs,
-         writeCoordinator:
-             cacheWriteCoordinator ?? CuratedListCacheWriteCoordinator(),
-         listsStorageKey: listsStorageKey,
-         subscriptionsStorageKey: subscribedListsStorageKey,
-         defaultListDeletedStorageKey: defaultListDeletedStorageKey,
-       ),
+       _sessions =
+           sessionCoordinator ??
+           CuratedListSessionCoordinator.forPreferences(
+             prefs,
+             writes: cacheWriteCoordinator,
+           ),
        _onListSubscribed = onListSubscribed,
        _onListUnsubscribed = onListUnsubscribed,
-       _relaySyncTimeout = relaySyncTimeout,
-       _relayGateway = CuratedListRelayGateway(
-         nostrService: nostrService,
-         authService: authService,
-       ) {
-    _loadLists();
-    _loadSubscribedListIds();
+       _relaySyncTimeout = relaySyncTimeout {
+    _sessionLease = _sessions.acquire();
+    _relayGateway = CuratedListRelayGateway(
+      nostrService: nostrService,
+      authService: authService,
+      isCurrentSession: () => isCurrentSession,
+    );
+    _cacheStore = PrefsCuratedListStore(
+      prefs: prefs,
+      writeCoordinator: _sessions.writes,
+      listsStorageKey: listsStorageKey,
+      subscriptionsStorageKey: subscribedListsStorageKey,
+      defaultListDeletedStorageKey: defaultListDeletedStorageKey,
+      isCurrentSession: () => isCurrentSession,
+    );
+    if (isCurrentSession) {
+      _loadLists();
+      _loadSubscribedListIds();
+    }
   }
   final NostrClient _nostrService;
   final AuthService _authService;
   final SharedPreferences _prefs;
-  final PrefsCuratedListStore _cacheStore;
+  late final PrefsCuratedListStore _cacheStore;
+  final CuratedListSessionCoordinator _sessions;
+  late final CuratedListSessionLease _sessionLease;
   final Duration _relaySyncTimeout;
-  final CuratedListRelayGateway _relayGateway;
+  late final CuratedListRelayGateway _relayGateway;
 
   /// Callback invoked when a list is subscribed (for video cache sync)
   OnListSubscribedCallback? _onListSubscribed;
@@ -101,39 +115,33 @@ class CuratedListService extends ChangeNotifier {
 
   @override
   void dispose() {
+    if (_isDisposed) return;
     _isDisposed = true;
+    _sessionLease.retire();
     super.dispose();
   }
 
+  /// Whether this instance may still mutate the active account's cache.
+  bool get isCurrentSession => !_isDisposed && _sessionLease.isCurrent;
+
   bool _isCurrent(String? owner) =>
-      !_isDisposed && _relayGateway.currentAuthenticatedPubkey() == owner;
+      isCurrentSession && _relayGateway.currentAuthenticatedPubkey() == owner;
 
   // Track relay sync status
   bool _hasSyncedWithRelays = false;
 
-  // Mutations to one addressable list must publish in the same order they are
-  // applied locally. In particular, an item add cannot overtake a public to
-  // private transition and put the new item back into plaintext relay tags.
-  final Map<String, Future<void>> _listOperationTails = {};
-
   Future<T> _serializeListOperation<T>(
     String listId,
-    Future<T> Function() operation,
-  ) async {
-    final previous = _listOperationTails[listId] ?? Future<void>.value();
-    final completed = Completer<void>();
-    final tail = completed.future;
-    _listOperationTails[listId] = tail;
-
-    await previous;
-    try {
-      return await operation();
-    } finally {
-      completed.complete();
-      if (identical(_listOperationTails[listId], tail)) {
-        final _ = _listOperationTails.remove(listId);
-      }
-    }
+    Future<T> Function() operation, {
+    T? cancelled,
+  }) {
+    final owner = _relayGateway.currentAuthenticatedPubkey();
+    return _sessionLease.runListOperation(
+      listId,
+      operation,
+      isCurrentOwner: () => _isCurrent(owner),
+      cancelled: cancelled,
+    );
   }
 
   // Getters
@@ -173,7 +181,7 @@ class CuratedListService extends ChangeNotifier {
   /// Relay sync happens in background and does not block initialization.
   Future<void> initialize() async {
     try {
-      if (!_authService.isAuthenticated) {
+      if (!isCurrentSession || !_authService.isAuthenticated) {
         Log.warning(
           'Cannot initialize curated lists - user not authenticated',
           name: 'CuratedListService',
@@ -181,6 +189,9 @@ class CuratedListService extends ChangeNotifier {
         );
         return;
       }
+
+      await _recoverDeletedSubscriptions();
+      if (!isCurrentSession) return;
 
       // Create default list if it doesn't exist and the user has not explicitly
       // withdrawn its relay coordinate.
@@ -190,6 +201,7 @@ class CuratedListService extends ChangeNotifier {
 
       // Mark initialized IMMEDIATELY after local cache is ready
       // This allows downstream consumers to access cached lists without waiting
+      if (!isCurrentSession) return;
       _isInitialized = true;
       notifyListeners();
       Log.info(
@@ -361,7 +373,7 @@ class CuratedListService extends ChangeNotifier {
         category: LogCategory.system,
       );
 
-      return getListById(listId) ?? newList;
+      return isCurrentSession ? getListById(listId) ?? newList : null;
     } catch (e) {
       Log.error(
         'Failed to create curated list: $e',
@@ -409,6 +421,7 @@ class CuratedListService extends ChangeNotifier {
     return _serializeListOperation(
       listId,
       () => _addVideoToList(listId, videoEventId),
+      cancelled: false,
     );
   }
 
@@ -467,6 +480,7 @@ class CuratedListService extends ChangeNotifier {
     return _serializeListOperation(
       listId,
       () => _removeVideoFromList(listId, videoEventId),
+      cancelled: false,
     );
   }
 
@@ -562,6 +576,7 @@ class CuratedListService extends ChangeNotifier {
         thumbnailEventId: thumbnailEventId,
         playOrder: playOrder,
       ),
+      cancelled: false,
     );
   }
 
@@ -666,8 +681,8 @@ class CuratedListService extends ChangeNotifier {
       // saves, so writing [updatedList] over it here would drop that ID. Only
       // the signed-out case still owes a write, and it must re-resolve the
       // index — [listIndex] was captured before the publish awaits above.
-      if (!_authService.isAuthenticated) {
-        final currentIndex = _lists.indexWhere((list) => list.id == listId);
+      if (!isCurrentSession || !_authService.isAuthenticated) {
+        final currentIndex = _listIndex(listId);
         if (currentIndex == -1) {
           return false;
         }
@@ -698,13 +713,35 @@ class CuratedListService extends ChangeNotifier {
   /// before local state is removed. A list that never reached a relay has no
   /// event to delete and can be removed locally.
   Future<bool> deleteOwnedList(String listId) {
+    if (!isCurrentSession) return Future.value(false);
     final list = getListById(listId);
-    if (list == null || !isOwnedList(list.authorScopedId)) {
-      return Future.value(false);
+    if (list == null) {
+      final owner = _relayGateway.currentAuthenticatedPubkey();
+      if (owner == null) return Future.value(false);
+      final bareId = listId.startsWith('$owner:')
+          ? listId.substring(owner.length + 1)
+          : listId;
+      if (!_cacheStore.wasListDeleted(owner, bareId)) {
+        return Future.value(false);
+      }
+      return _serializeListOperation(
+        '$owner:$bareId',
+        () async {
+          try {
+            await _recoverDeletedSubscriptions();
+            return _isCurrent(owner);
+          } on Exception {
+            return false;
+          }
+        },
+        cancelled: false,
+      );
     }
+    if (!isOwnedList(list.authorScopedId)) return Future.value(false);
     return _serializeListOperation(
       list.id,
       () => _deleteOwnedList(list.authorScopedId),
+      cancelled: false,
     );
   }
 
@@ -743,13 +780,11 @@ class CuratedListService extends ChangeNotifier {
       // same stable d-tag independently, which is the case the unpublished
       // merge in [_processListEvent] exists to handle. Record before removing
       // the local list so relay sync never sees an unprotected absence.
+      if (!isCurrentSession) return false;
       if (!await _cacheStore.recordListDeletion(list.pubkey!, list.id)) {
         return false;
       }
       await _removeListAndSubscription(list);
-      if (list.id == defaultListId) {
-        await _cacheStore.markDefaultListDeleted();
-      }
 
       Log.info(
         'Deleted owned curated list: ${list.name} ($listId)',
@@ -777,15 +812,42 @@ class CuratedListService extends ChangeNotifier {
   /// removing an earlier list in the meantime shifts the index, so a
   /// positional remove would drop the wrong one.
   Future<void> _removeListAndSubscription(CuratedList list) async {
+    if (list.id == defaultListId) {
+      await _cacheStore.beginDefaultListDeletion(list.pubkey!);
+    }
     _lists.removeWhere((item) => item.authorScopedId == list.authorScopedId);
     // A refused list save restores the list, so its follow stays until then.
     await _saveLists();
+    // The list removal is durable even if follow cleanup fails afterward.
+    if (list.id == defaultListId) {
+      await _cacheStore.markDefaultListDeleted();
+      await _cacheStore.finishDefaultListDeletion(list.pubkey!);
+    }
     _subscribedListIds.remove(list.authorScopedId);
     if (!_lists.any((item) => item.id == list.id)) {
       _subscribedListIds.remove(list.id);
     }
     await _saveSubscribedListIds();
-    _onListUnsubscribed?.call(list.authorScopedId);
+    if (isCurrentSession) _onListUnsubscribed?.call(list.authorScopedId);
+  }
+
+  /// Finishes follow cleanup after an owned list was durably removed.
+  ///
+  /// Tombstones distinguish this from an arbitrary missing foreign list. Do
+  /// not restore an already relay-deleted row to imitate an atomic disk write.
+  Future<void> _recoverDeletedSubscriptions() async {
+    final owner = _relayGateway.currentAuthenticatedPubkey();
+    if (owner == null || !isCurrentSession) return;
+    final coordinates = await _cacheStore.recoverRemovedListSubscriptions(
+      _lists,
+      _subscribedListIds,
+      owner: owner,
+      defaultListId: defaultListId,
+      saveSubscriptions: _saveSubscribedListIds,
+    );
+    if (!_isCurrent(owner)) return;
+    final onUnsubscribed = _onListUnsubscribed;
+    if (onUnsubscribed != null) coordinates.forEach(onUnsubscribed);
   }
 
   // === ENHANCED PLAYLIST FEATURES ===
@@ -795,6 +857,7 @@ class CuratedListService extends ChangeNotifier {
     return _serializeListOperation(
       listId,
       () => _reorderVideos(listId, newOrder),
+      cancelled: false,
     );
   }
 
@@ -875,6 +938,7 @@ class CuratedListService extends ChangeNotifier {
     return _serializeListOperation(
       listId,
       () => _addCollaborator(listId, pubkey),
+      cancelled: false,
     );
   }
 
@@ -934,6 +998,7 @@ class CuratedListService extends ChangeNotifier {
     return _serializeListOperation(
       listId,
       () => _removeCollaborator(listId, pubkey),
+      cancelled: false,
     );
   }
 
@@ -1034,6 +1099,7 @@ class CuratedListService extends ChangeNotifier {
   /// Subscribe to a curated list to follow its updates
   /// Subscribe to a curated list (saves list data for offline access)
   Future<bool> subscribeToList(String listId, [CuratedList? listData]) async {
+    if (!isCurrentSession) return false;
     try {
       // Check if list exists in our cache
       var list = getListById(listId);
@@ -1080,6 +1146,7 @@ class CuratedListService extends ChangeNotifier {
       );
 
       // Trigger video cache sync for this list
+      if (!isCurrentSession) return false;
       if (_onListSubscribed != null && list.videoEventIds.isNotEmpty) {
         Log.debug(
           'Triggering video cache sync for list: ${list.name} '
@@ -1103,6 +1170,7 @@ class CuratedListService extends ChangeNotifier {
 
   /// Unsubscribe from a curated list
   Future<bool> unsubscribeFromList(String listId) async {
+    if (!isCurrentSession) return false;
     try {
       // Check if subscribed
       if (!_subscribedListIds.contains(listId)) {
@@ -1128,7 +1196,8 @@ class CuratedListService extends ChangeNotifier {
       );
 
       // Remove list from video cache
-      _onListUnsubscribed?.call(listId);
+      if (!isCurrentSession) return false;
+      _onListUnsubscribed?.call(subscriptionId);
 
       return true;
     } catch (e) {
@@ -1197,11 +1266,7 @@ class CuratedListService extends ChangeNotifier {
     );
   }
 
-  /// Publishes [list] as a NIP-51 kind 30005 event.
-  ///
-  /// Empty lists are published too — a freshly created public list must
-  /// reach the relay immediately or it exists only on this device.
-  ///
+  /// Publishes [list] as a NIP-51 kind 30005 event, including empty lists.
   /// [confirmed] picks the failure semantics. Set, the publish waits for relay
   /// `OK` frames and a `false` return means no relay took the event. Unset,
   /// the SDK queues a failed send and replays it on reconnect (`RelayPool`
@@ -1217,80 +1282,10 @@ class CuratedListService extends ChangeNotifier {
     bool confirmed = false,
   }) async {
     try {
-      if (!_authService.isAuthenticated) {
-        Log.warning(
-          'Cannot publish list - user not authenticated',
-          name: 'CuratedListService',
-          category: LogCategory.system,
-        );
-        return false;
-      }
+      final event = await _relayGateway.publishList(list, confirmed: confirmed);
+      if (event == null) return false;
 
-      // NIP-51 splits a list across the two halves of the event: what the
-      // list is goes in public tags, what is in it can go in encrypted
-      // content. A public list puts everything in tags and keeps using
-      // content for its description, which is where this client has always
-      // written it.
-      final String content;
-      final List<List<String>> tags;
-      if (list.isPublic) {
-        content = list.description ?? 'Curated video list: ${list.name}';
-        tags = CuratedListConverter.toEventTags(list);
-      } else {
-        final sealed = await _relayGateway.sealItemTags(list);
-        if (sealed == null) return false;
-        content = sealed;
-        tags = CuratedListConverter.toPrivateMetadataTags(list);
-      }
-
-      final event = await _authService.createAndSignEvent(
-        kind: 30005, // NIP-51 curated list
-        content: content,
-        tags: tags,
-      );
-
-      if (event == null) {
-        Log.warning(
-          'Failed to sign curated list event: ${list.name} (${list.id})',
-          name: 'CuratedListService',
-          category: LogCategory.system,
-        );
-        return false;
-      }
-
-      if (confirmed) {
-        final outcome = await _nostrService.publishEventAwaitOk(event);
-        // Accepted-by-any, including the public-to-private replacement. Once
-        // one relay holds the sealed copy the list has to read private
-        // locally, or the next edit would republish plain item tags over it.
-        // Breadth is not the bar and cannot be: nothing here republishes to
-        // relays that did not accept, so a partial publish stays partial, and
-        // one wedged pool member would block every flip forever. The relays
-        // that missed the replacement are covered by the plaintext redaction
-        // in [_redactPlaintextListEvent] instead.
-        if (!outcome.acceptedByAny) {
-          Log.warning(
-            'Failed to publish curated list: ${list.name} (${list.id}): '
-            '${outcome.summary}',
-            name: 'CuratedListService',
-            category: LogCategory.system,
-          );
-          return false;
-        }
-      } else {
-        final publishResult = await _nostrService.publishEvent(event);
-        final failureReason = publishResult.failureReason;
-        if (failureReason != null) {
-          Log.warning(
-            'Failed to publish curated list: ${list.name} (${list.id}): '
-            '$failureReason',
-            name: 'CuratedListService',
-            category: LogCategory.system,
-          );
-          return false;
-        }
-      }
-
+      if (!isCurrentSession) return false;
       // Record the event ID against the list's current entry, not the copy
       // captured before the publish: under `confirmed` the await above runs to
       // a 15s OK deadline, and a mutation landing inside that window would be
@@ -1386,7 +1381,7 @@ class CuratedListService extends ChangeNotifier {
 
   /// Persist local lists before reporting success or publishing their delta.
   Future<void> _saveLists() async {
-    if (_isDisposed) {
+    if (!isCurrentSession) {
       throw const CuratedCacheWriteException(
         CuratedCacheWriteStatus.superseded,
       );
@@ -1405,7 +1400,7 @@ class CuratedListService extends ChangeNotifier {
 
   /// Persist follows before notifying video-cache subscription callbacks.
   Future<void> _saveSubscribedListIds() async {
-    if (_isDisposed) {
+    if (!isCurrentSession) {
       throw const CuratedCacheWriteException(
         CuratedCacheWriteStatus.superseded,
       );
@@ -1428,7 +1423,7 @@ class CuratedListService extends ChangeNotifier {
   /// pull-to-refresh passes: without it a list created on another device only
   /// appears after the app restarts.
   Future<void> fetchUserListsFromRelays({bool force = false}) async {
-    if (!_authService.isAuthenticated) {
+    if (!isCurrentSession || !_authService.isAuthenticated) {
       Log.warning(
         'Cannot fetch lists from relays - user not authenticated',
         name: 'CuratedListService',
@@ -1529,6 +1524,7 @@ class CuratedListService extends ChangeNotifier {
         category: LogCategory.system,
       );
 
+      if (!_isCurrent(userPubkey)) return;
       // Process received events
       if (receivedEvents.isNotEmpty) {
         await _processReceivedListEvents(receivedEvents);
@@ -1606,7 +1602,7 @@ class CuratedListService extends ChangeNotifier {
   /// [CuratedList.nostrEventId] as the marker that a relay may still hold this
   /// coordinate, and set [CuratedList.pendingRepublish] for the retry.
   Future<void> _backfillUnpublishedLists() async {
-    if (!_authService.isAuthenticated) return;
+    if (!isCurrentSession || !_authService.isAuthenticated) return;
 
     final owner = _relayGateway.currentAuthenticatedPubkey();
     if (owner == null) return;
@@ -1631,7 +1627,7 @@ class CuratedListService extends ChangeNotifier {
     for (final list in stranded) {
       await _serializeListOperation(list.id, () async {
         final currentOwner = _relayGateway.currentAuthenticatedPubkey();
-        if (currentOwner == null || currentOwner != owner) return;
+        if (!_isCurrent(owner)) return;
         var current = getListById(list.id);
         if (current == null) return;
         if (current.nostrEventId != null && !current.pendingRepublish) return;
@@ -1652,8 +1648,11 @@ class CuratedListService extends ChangeNotifier {
 
   /// Process a single list event from Nostr
   Future<void> _processListEvent(Event event) async {
+    if (!isCurrentSession) return;
     try {
+      final owner = _relayGateway.currentAuthenticatedPubkey();
       final unsealedItemTags = await _relayGateway.unsealItemTags(event);
+      if (!_isCurrent(owner)) return;
       if (unsealedItemTags.status == UnsealItemTagsStatus.failed) {
         Log.warning(
           'Skipping list event ${event.id} because its private items '
