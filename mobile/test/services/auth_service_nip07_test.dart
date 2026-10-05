@@ -176,6 +176,31 @@ void main() {
       },
     );
 
+    test('returns typed failure when account cleanup is refused', () async {
+      when(() => mockNip07Service.isAvailable).thenReturn(true);
+      when(() => mockNip07Service.connect()).thenAnswer(
+        (_) async => Nip07AuthResult.success(_testPubkey),
+      );
+      when(() => mockNip07Service.publicKey).thenReturn(_testPubkey);
+      when(() => mockCleanupService.shouldClearDataForUser(any()))
+          .thenReturn(true);
+      when(
+        () => mockCleanupService.clearUserSpecificData(
+          reason: any(named: 'reason'),
+          isIdentityChange: any(named: 'isIdentityChange'),
+          userPubkey: any(named: 'userPubkey'),
+          deleteUserData: any(named: 'deleteUserData'),
+        ),
+      ).thenThrow(
+        const UserDataCleanupException('Could not clear account cache'),
+      );
+      final result = await authService.connectWithNip07();
+      expect(result.success, isFalse);
+      expect(result.failureReason, AuthFailureReason.accountCleanupFailed);
+      expect(authService.authState, AuthState.unauthenticated);
+      expect(authService.currentIdentity, isNull);
+    });
+
     test('returns failure when extension reports failure', () async {
       when(() => mockNip07Service.isAvailable).thenReturn(true);
       when(() => mockNip07Service.connect()).thenAnswer(

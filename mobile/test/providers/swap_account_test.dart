@@ -29,6 +29,7 @@ import 'package:openvine/providers/swap_account.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/push_notification_session_coordinator.dart';
@@ -411,6 +412,93 @@ void main() {
     );
     return initial;
   }
+
+  testWidgets(
+    'default sign-in rolls back when the real identity sweep refuses removal',
+    (tester) async {
+      final prefs = deviceScope.sharedPreferences;
+      await prefs.setString('current_user_pubkey_hex', leavingHex);
+      await prefs.setString(
+        CuratedListService.listsStorageKey,
+        'old account cache',
+      );
+      final targetKey = SecureKeyContainer.fromPrivateKeyHex('1' * 64);
+      final storage = _RestorableSecureKeyStorage(targetKey);
+      final oldKey = _FakeSecureKeyContainer(
+        npub: leavingNpub,
+        publicKeyHex: leavingHex,
+      );
+      storage.primary = oldKey;
+      final cleanup = UserDataCleanupService(
+        _RefusingCleanupPreferences(prefs),
+      );
+      var databaseCleanups = 0;
+      cleanup.onDatabaseCleanup =
+          ({
+            String? userPubkey,
+            bool deleteUserData = false,
+            bool preserveActiveSession = false,
+          }) async {
+            databaseCleanups++;
+          };
+      var incomingDisposed = false;
+      var authContainers = 0;
+      final oldAuth = _MockAuthService();
+      when(() => oldAuth.currentPublicKeyHex).thenReturn(leavingHex);
+      deviceScope = DeviceScope(
+        database: database,
+        sharedPreferences: prefs,
+        switchController: controller,
+        appVersion: 'test',
+        crashReporting: deviceScope.crashReporting,
+        startupPerformance: deviceScope.startupPerformance,
+        documentsPath: '/documents',
+        logMessageBatcher: deviceScope.logMessageBatcher,
+        accountOverrides: [
+          secureKeyStorageProvider.overrideWithValue(storage),
+          pushNotificationSyncProvider.overrideWithValue(null),
+          authServiceProvider.overrideWith((ref) {
+            if (authContainers++ == 0) return oldAuth;
+            final auth = AuthService(
+              backgroundActivityManager: BackgroundActivityManager(),
+              userDataCleanupService: cleanup,
+              keyStorage: storage,
+            );
+            ref.onDispose(() {
+              incomingDisposed = true;
+              unawaited(auth.dispose());
+            });
+            return auth;
+          }),
+        ],
+      );
+      final initial = await pumpHost(tester);
+      initial.read(authServiceProvider);
+      final targetAccount = KnownAccount(
+        pubkeyHex: targetKey.publicKeyHex,
+        authSource: AuthenticationSource.automatic,
+        addedAt: DateTime(2026),
+        lastUsedAt: DateTime(2026),
+      );
+      await expectLater(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: targetAccount,
+        ),
+        throwsA(isA<UserDataCleanupException>()),
+      );
+      expect(controller.currentContainer, same(initial));
+      expect(_isDisposed(initial), isFalse);
+      expect(incomingDisposed, isTrue);
+      expect(storage.primary, same(oldKey));
+      expect(storage.restoredPrimary, same(oldKey));
+      expect(currentAuthService.calls, ['archive', 'restore']);
+      expect(prefs.getString('current_user_pubkey_hex'), leavingHex);
+      expect(databaseCleanups, 0);
+    },
+  );
 
   /// Switches away from [from] and reports the location [swapAccount] seeded
   /// into the container it built for the target account.
@@ -1049,6 +1137,35 @@ void main() {
       expect(events, equals(['stop dm ingest', 'resume dm ingest']));
     });
   });
+}
+
+class _RefusingCleanupPreferences extends Fake implements SharedPreferences {
+  _RefusingCleanupPreferences(this.backing);
+  final SharedPreferences backing;
+  @override
+  String? getString(String key) => backing.getString(key);
+  @override
+  bool containsKey(String key) => backing.containsKey(key);
+  @override
+  Future<bool> remove(String key) async => false;
+}
+
+class _RestorableSecureKeyStorage extends _FakeSecureKeyStorage {
+  _RestorableSecureKeyStorage(this.target);
+  final SecureKeyContainer target;
+  @override
+  Future<void> initialize() async {}
+  @override
+  Future<SecureKeyContainer?> getIdentityKeyContainer(String npub) async =>
+      target;
+  @override
+  Future<bool> switchToIdentity(String npub) async {
+    primary = target;
+    return true;
+  }
+
+  @override
+  void dispose() {}
 }
 
 class _FakeSignInException implements Exception {}

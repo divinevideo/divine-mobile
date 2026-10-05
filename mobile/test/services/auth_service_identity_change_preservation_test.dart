@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:cache_sync/cache_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -18,6 +19,20 @@ class _MockSecureKeyStorage extends Mock implements SecureKeyStorage {}
 
 class _MockUserDataCleanupService extends Mock
     implements UserDataCleanupService {}
+
+class _RefusingPreferences extends Fake implements SharedPreferences {
+  _RefusingPreferences(this.backing);
+  final SharedPreferences backing;
+
+  @override
+  String? getString(String key) => backing.getString(key);
+  @override
+  bool containsKey(String key) => backing.containsKey(key);
+  @override
+  Set<String> getKeys() => backing.getKeys();
+  @override
+  Future<bool> remove(String key) async => false;
+}
 
 class _MockCacheDao extends Mock implements CacheDao {}
 
@@ -99,6 +114,10 @@ void main() {
       when(() => mockKeyStorage.deleteIdentityKeyContainer(any()))
           .thenAnswer((_) async {});
       when(() => mockKeyStorage.generateAndStoreKeys())
+          .thenAnswer((_) async => newKeyContainer);
+      when(() => mockKeyStorage.importFromNsec(any()))
+          .thenAnswer((_) async => newKeyContainer);
+      when(() => mockKeyStorage.importFromHex(any()))
           .thenAnswer((_) async => newKeyContainer);
       when(() => mockKeyStorage.storeIdentityKeyContainer(any(), any()))
           .thenAnswer((_) async {});
@@ -282,8 +301,8 @@ void main() {
       },
     );
 
-    test('a failed identity-change sweep leaves the old identity recorded '
-        'and the session awaiting terms', () async {
+    test('a failed identity-change sweep reports a failed sign-in '
+        'and leaves the old identity recorded', () async {
       when(
         () => mockCleanupService.clearUserSpecificData(
           reason: any(named: 'reason'),
@@ -295,7 +314,9 @@ void main() {
         const UserDataCleanupException('Could not clear account cache'),
       );
 
-      await _ignoringDiscoveryErrors(authService.createNewIdentity);
+      final result = await authService.createNewIdentity();
+      expect(result.success, isFalse);
+      expect(result.failureReason, AuthFailureReason.accountCleanupFailed);
 
       final prefs = await SharedPreferences.getInstance();
       expect(
@@ -305,8 +326,92 @@ void main() {
             'the incoming identity must not be recorded over the old '
             "account's data when the sweep failed",
       );
-      expect(authService.authState, equals(AuthState.awaitingTosAcceptance));
+      expect(authService.authState, equals(AuthState.unauthenticated));
     });
+
+    for (final operation in [
+      'create',
+      'nsec',
+      'hex',
+      'oauth',
+      'restore',
+      'initialize',
+    ]) {
+      test(
+        'real refused removal prevents $operation sign-in and database cleanup',
+        () async {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('curated_lists', 'old account cache');
+          await prefs.setString('subscribed_list_ids', 'old follows');
+          final cleanup = UserDataCleanupService(_RefusingPreferences(prefs));
+          var databaseCleanups = 0;
+          cleanup.onDatabaseCleanup =
+              ({
+                String? userPubkey,
+                bool deleteUserData = false,
+                bool preserveActiveSession = false,
+              }) async {
+                databaseCleanups++;
+              };
+          await authService.dispose();
+          authService = AuthService(
+            backgroundActivityManager: BackgroundActivityManager(),
+            userDataCleanupService: cleanup,
+            keyStorage: mockKeyStorage,
+          );
+          switch (operation) {
+            case 'create':
+              final result = await authService.createNewIdentity();
+              expect(result.success, isFalse);
+              expect(
+                result.failureReason,
+                AuthFailureReason.accountCleanupFailed,
+              );
+            case 'nsec':
+              final result = await authService.importFromNsec(testNsec);
+              expect(result.success, isFalse);
+              expect(
+                result.failureReason,
+                AuthFailureReason.accountCleanupFailed,
+              );
+            case 'hex':
+              final result = await authService.importFromHex('1' * 64);
+              expect(result.success, isFalse);
+              expect(
+                result.failureReason,
+                AuthFailureReason.accountCleanupFailed,
+              );
+            case 'oauth':
+              final session = KeycastSession(
+                bunkerUrl: 'https://keycast.example.com',
+                accessToken: 'test-access',
+                expiresAt: DateTime.now().add(const Duration(hours: 1)),
+                userPubkey: newKeyContainer.publicKeyHex,
+              );
+              await expectLater(
+                authService.signInWithDivineOAuth(session),
+                throwsA(isA<UserDataCleanupException>()),
+              );
+            case 'initialize':
+              await prefs.setString('last_used_npub', newKeyContainer.npub);
+              await authService.initialize();
+              verifyNever(() => mockKeyStorage.generateAndStoreKeys());
+            case 'restore':
+              await expectLater(
+                authService.signInForAccount(
+                  newKeyContainer.publicKeyHex,
+                  AuthenticationSource.automatic,
+                ),
+                throwsA(isA<UserDataCleanupException>()),
+              );
+          }
+          expect(authService.authState, AuthState.unauthenticated);
+          expect(prefs.getString('current_user_pubkey_hex'), oldPubkeyHex);
+          expect(prefs.getString('subscribed_list_ids'), 'old follows');
+          expect(databaseCleanups, 0);
+        },
+      );
+    }
 
     test('identity-change: isIdentityChange=true is still passed '
         'so legacy and database cleanup stays fail-closed', () async {

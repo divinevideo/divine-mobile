@@ -16,6 +16,7 @@ import 'package:nostr_sdk/nostr_sdk.dart' show AndroidPlugin;
 import 'package:openvine/blocs/divine_auth/divine_auth_cubit.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/auth_result.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/auth/email_verification_screen.dart';
 import 'package:openvine/screens/auth/nostr_connect_screen.dart';
@@ -257,7 +258,10 @@ class _SignInContentState extends ConsumerState<_SignInContent> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              result.errorMessage ?? context.l10n.authNip07ConnectionFailed,
+              result.failureReason == AuthFailureReason.accountCleanupFailed
+                  ? context.l10n.authAccountCleanupFailed
+                  : result.errorMessage ??
+                        context.l10n.authNip07ConnectionFailed,
             ),
             backgroundColor: VineTheme.error,
           ),
@@ -298,7 +302,10 @@ class _SignInContentState extends ConsumerState<_SignInContent> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              result.errorMessage ?? context.l10n.authAmberConnectionFailed,
+              result.failureReason == AuthFailureReason.accountCleanupFailed
+                  ? context.l10n.authAccountCleanupFailed
+                  : result.errorMessage ??
+                        context.l10n.authAmberConnectionFailed,
             ),
             backgroundColor: VineTheme.error,
           ),
@@ -572,6 +579,8 @@ String _signInErrorMessage(BuildContext context, SignInFailureReason reason) {
       return l10n.accountCredentialsRateLimited;
     case SignInFailureReason.network:
       return l10n.authSignInErrorNetwork;
+    case SignInFailureReason.accountCleanupFailed:
+      return context.l10n.authAccountCleanupFailed;
     case SignInFailureReason.unknown:
       return l10n.authSignInErrorGeneric;
   }
