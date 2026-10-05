@@ -8,6 +8,7 @@ import 'dart:async';
 
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/models/auth_result.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -240,6 +241,12 @@ class NostrConnectCoordinator {
       _session = null;
 
       return authResult;
+    } on UserDataCleanupException catch (e) {
+      _onConnectFailed(e);
+      return const AuthResult(
+        success: false,
+        failureReason: AuthFailureReason.accountCleanupFailed,
+      );
     } catch (e) {
       Log.error(
         'NostrConnect failed: $e',
