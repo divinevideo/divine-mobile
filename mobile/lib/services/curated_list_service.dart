@@ -1385,6 +1385,11 @@ class CuratedListService extends ChangeNotifier {
 
   /// Persist local lists before reporting success or publishing their delta.
   Future<void> _saveLists() async {
+    if (_isDisposed) {
+      throw const CuratedCacheWriteException(
+        CuratedCacheWriteStatus.superseded,
+      );
+    }
     final owner = _relayGateway.currentAuthenticatedPubkey();
     notifyListeners();
     try {
@@ -1399,6 +1404,11 @@ class CuratedListService extends ChangeNotifier {
 
   /// Persist follows before notifying video-cache subscription callbacks.
   Future<void> _saveSubscribedListIds() async {
+    if (_isDisposed) {
+      throw const CuratedCacheWriteException(
+        CuratedCacheWriteStatus.superseded,
+      );
+    }
     final owner = _relayGateway.currentAuthenticatedPubkey();
     notifyListeners();
     try {

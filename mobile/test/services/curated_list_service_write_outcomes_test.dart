@@ -212,6 +212,39 @@ void main() {
       expect(open().isSubscribedToList('other'), isTrue);
     });
 
+    test(
+      'disposed mutation reports superseded before notifying or saving',
+      () async {
+        final service = CuratedListService(
+          nostrService: client,
+          authService: auth,
+          prefs: prefs,
+        );
+        final before = prefs.getString(CuratedListService.listsStorageKey);
+        final logs = LogCaptureService();
+        await logs.clearAllLogs();
+        addTearDown(logs.clearAllLogs);
+        service.dispose();
+        expect(
+          await service.updateList(listId: 'crew', name: 'Stale'),
+          isFalse,
+        );
+        expect(await service.subscribeToList('crew'), isFalse);
+        expect(prefs.getString(CuratedListService.listsStorageKey), before);
+        expect(
+          prefs.getString(CuratedListService.subscribedListsStorageKey),
+          isNull,
+        );
+        final messages = logs
+            .getRecentLogs()
+            .map((entry) => entry.message)
+            .join(' ');
+        expect(messages, contains('superseded'));
+        expect(messages, isNot(contains('after being disposed')));
+        verifyNever(() => client.publishEventAwaitOk(any()));
+      },
+    );
+
     test('rejected unfollow keeps the last stored subscription', () async {
       await prefs.setString(
         CuratedListService.subscribedListsStorageKey,
