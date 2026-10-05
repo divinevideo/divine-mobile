@@ -668,7 +668,9 @@ void main() {
           trendingController = StreamController<List<VideoEvent>>(
             onListen: trendingSubscribed.complete,
           );
-          addTearDown(trendingController.close);
+          // Not awaited: close() on a controller nobody listened to never
+          // completes, which would hang teardown if the bloc never subscribes.
+          addTearDown(() => unawaited(trendingController.close()));
 
           when(
             () => mockVideosRepository.searchVideos(
@@ -687,14 +689,20 @@ void main() {
         },
         act: (bloc) async {
           bloc.add(const VideoSearchQueryChanged('flutter'));
-          await trendingSubscribed.future;
+          await trendingSubscribed.future.timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => fail('trending search was never subscribed'),
+          );
           final recent = bloc.stream.firstWhere(
             (s) =>
                 s.sort == VideoSearchSort.recent &&
                 s.status == VideoSearchStatus.success,
           );
           bloc.add(const VideoSearchSortChanged(VideoSearchSort.recent));
-          await recent;
+          await recent.timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => fail('sort change never reached success'),
+          );
           trendingController.add([
             createVideo(id: 'trending-1', title: 'Trending'),
           ]);
@@ -801,14 +809,20 @@ void main() {
         ),
         act: (bloc) async {
           bloc.add(const VideoSearchLoadMore());
-          await loadMoreStarted.future;
+          await loadMoreStarted.future.timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => fail('load more never reached the repository'),
+          );
           final recent = bloc.stream.firstWhere(
             (s) =>
                 s.sort == VideoSearchSort.recent &&
                 s.status == VideoSearchStatus.success,
           );
           bloc.add(const VideoSearchSortChanged(VideoSearchSort.recent));
-          await recent;
+          await recent.timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => fail('sort change never reached success'),
+          );
           loadMoreCompleter.complete((
             videos: [createVideo(id: 'old-page-2', title: 'Old Page 2')],
             totalCount: 100,
