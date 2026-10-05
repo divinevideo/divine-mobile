@@ -63,15 +63,23 @@ class CuratedListRecoveryJournal {
   final Future<bool> Function(Future<bool> Function()) _runEvidence;
 
   /// Unknown accepted evidence blocks edits rather than implying empty state.
-  bool needsRepair(String owner) => CuratedListRecoveryStorage.needsRepair(
-    _prefs,
-    storageKey(owner),
-    owner,
-  );
+  bool get legacyNeedsRepair =>
+      CuratedListRecoveryStorage.legacyNeedsRepair(_prefs);
+
+  void validateLegacy() => CuratedListRecoveryStorage.legacyRows(_prefs);
+
+  bool needsRepair(String owner) =>
+      legacyNeedsRepair ||
+      CuratedListRecoveryStorage.needsRepair(
+        _prefs,
+        storageKey(owner),
+        owner,
+      );
 
   /// Preserves malformed bytes before exposing a retryable initialization error.
   Future<void> prepare(String owner) async {
     await _runCurrent(() async {
+      validateLegacy();
       _generation(_prefs, owner);
       if (!needsRepair(owner)) return true;
       if (!await CuratedListRecoveryStorage.preserve(
@@ -366,20 +374,8 @@ class CuratedListRecoveryJournal {
         throw StateError('Could not preserve acknowledged curated recovery');
       }
     }
-    final encoded = prefs.get('curated_lists');
-    if (encoded is! String) return;
-    final dynamic decoded;
-    try {
-      decoded = jsonDecode(encoded);
-    } on FormatException {
-      // A cache that is not JSON contains no decodable recovery evidence.
-      return;
-    }
-    if (decoded is! List) return;
     final groups = <String, List<CuratedList>>{};
-    for (final row in decoded) {
-      if (row is! Map<String, dynamic>) continue;
-      final list = CuratedList.fromJson(row);
+    for (final list in CuratedListRecoveryStorage.legacyRows(prefs)) {
       final owner = list.pubkey ?? legacyOwner;
       if (deletingOwner != null && owner == deletingOwner) continue;
       if (list.pendingPlaintextEventIds.isEmpty &&

@@ -3,6 +3,7 @@
 
 import 'dart:convert';
 
+import 'package:models/models.dart';
 import 'package:openvine/services/curated_lists/curated_list_recovery_record.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -37,6 +38,30 @@ abstract final class CuratedListRecoveryStorage {
 
   static String quarantineKey(String owner) => '$quarantinePrefix$owner';
   static String generationKey(String owner) => '$generationPrefix$owner';
+
+  /// An unreadable shared cache cannot be assigned to a departing owner.
+  static List<CuratedList> legacyRows(SharedPreferences prefs) {
+    final encoded = prefs.get('curated_lists');
+    if (encoded == null) return const [];
+    try {
+      final decoded = jsonDecode(encoded as String) as List;
+      return [
+        for (final row in decoded)
+          CuratedList.fromJson(row as Map<String, dynamic>),
+      ];
+    } on Object {
+      throw const CuratedListRecoveryException();
+    }
+  }
+
+  static bool legacyNeedsRepair(SharedPreferences prefs) {
+    try {
+      legacyRows(prefs);
+      return false;
+    } on CuratedListRecoveryException {
+      return true;
+    }
+  }
 
   static CuratedListRecoveryRead read(
     SharedPreferences prefs,
