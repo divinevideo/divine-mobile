@@ -6,7 +6,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/universal_link_resolver.dart';
 import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/screens/hashtag_screen_router.dart';
@@ -460,18 +460,11 @@ class DeepLinkCoordinator {
               );
             }
           case DeepLinkType.peopleList:
-            final listPubkey = deepLink.listPubkey;
-            final listId = deepLink.listId;
-            if (listId != null &&
-                listId.isNotEmpty &&
-                listPubkey != null &&
-                listPubkey.isNotEmpty) {
+            final targetPath = peopleListDeepLinkToRouterPath(deepLink);
+            if (targetPath != null) {
               _navigateToListRoute(
                 currentLocation: currentLocation,
-                targetPath: RoutePaths.peopleListForId(
-                  listId,
-                  ownerPubkey: listPubkey,
-                ),
+                targetPath: targetPath,
                 familyPrefix: '/people-lists/',
               );
             } else {
