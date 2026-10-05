@@ -138,6 +138,7 @@ void main() {
                       overlayStripsScrollController:
                           overlayStripsScrollController,
                       volumePreviewNotifier: volumePreview,
+                      onVolumePreviewCancelled: (_) {},
                     ),
                   ),
                 ),

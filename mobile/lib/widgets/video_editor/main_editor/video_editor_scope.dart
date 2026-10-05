@@ -39,9 +39,13 @@ class VideoEditorScope extends InheritedWidget {
     this.editorOverride,
     this.awaitPushCoverTransition,
     this.liveVolumeNotifier,
+    this.cancelLiveVolumePreview,
     super.child = const SizedBox.shrink(),
     super.key,
-  });
+  }) : assert(
+         liveVolumeNotifier == null || cancelLiveVolumePreview != null,
+         'A live volume notifier requires its owner cancellation callback.',
+       );
 
   /// Global key to access the [ProImageEditorState].
   final GlobalKey<ProImageEditorState> editorKey;
@@ -122,6 +126,10 @@ class VideoEditorScope extends InheritedWidget {
   /// The volume being dragged in the timeline's volume panel, null while
   /// none is. The canvas plays it before it is committed on release.
   final ValueNotifier<LiveVolume?>? liveVolumeNotifier;
+
+  /// Cancels the expected preview and restores its current committed gain.
+  /// The notifier owner guards its lifetime and rejects stale requests.
+  final bool Function(LiveVolume expected)? cancelLiveVolumePreview;
 
   /// Callback to open the text editor.
   final Future<TextLayer?> Function([TextLayer? layer]) onAddEditTextLayer;
@@ -251,5 +259,6 @@ class VideoEditorScope extends InheritedWidget {
       targetClipAspectRatio != oldWidget.targetClipAspectRatio ||
       canvasBodyKey != oldWidget.canvasBodyKey ||
       zoomMatrixNotifier != oldWidget.zoomMatrixNotifier ||
-      liveVolumeNotifier != oldWidget.liveVolumeNotifier;
+      liveVolumeNotifier != oldWidget.liveVolumeNotifier ||
+      cancelLiveVolumePreview != oldWidget.cancelLiveVolumePreview;
 }

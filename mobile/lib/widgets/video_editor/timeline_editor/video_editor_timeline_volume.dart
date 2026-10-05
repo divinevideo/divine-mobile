@@ -21,6 +21,7 @@ import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_volum
 class VideoEditorTimelineVolume extends StatelessWidget {
   const VideoEditorTimelineVolume({
     required this.volumePreviewNotifier,
+    required this.onPreviewCancelled,
     this.liveVolumeNotifier,
     super.key,
   });
@@ -30,6 +31,9 @@ class VideoEditorTimelineVolume extends StatelessWidget {
   /// Receives the clip or track volume while it is dragged, so the preview
   /// can play it before it is committed on release; null once released.
   final ValueNotifier<LiveVolume?>? liveVolumeNotifier;
+
+  /// Preview owners guard their lifetimes and reject older drag requests.
+  final ValueChanged<LiveVolume> onPreviewCancelled;
 
   @override
   Widget build(BuildContext context) {
@@ -90,6 +94,7 @@ class VideoEditorTimelineVolume extends StatelessWidget {
                   children: [
                     for (var i = 0; i < clips.length; i++)
                       _VolumeArc(
+                        key: ValueKey(('clip-volume', clips[i].id)),
                         height: TimelineConstants.thumbnailStripHeight,
                         semanticLabel: context.l10n.videoEditorClipVolumeLabel(
                           i + 1,
@@ -98,8 +103,17 @@ class VideoEditorTimelineVolume extends StatelessWidget {
                             context.l10n.videoEditorVolumeLongPressHint,
                         volume: clips[i].volume,
                         volumePreviewNotifier: volumePreviewNotifier,
-                        onLivePreview: (v) => liveVolumeNotifier?.value =
-                            v == null ? null : LiveVolume.clip(clips[i].id, v),
+                        onLivePreview: (v, session) {
+                          final live = LiveVolume.clip(
+                            clips[i].id,
+                            v,
+                            session: session,
+                          );
+                          liveVolumeNotifier?.value = live;
+                          return liveVolumeNotifier?.value ?? live;
+                        },
+                        onPreviewEnded: () => liveVolumeNotifier?.value = null,
+                        onPreviewCancelled: onPreviewCancelled,
                         onChanged: (v) => context.read<ClipEditorBloc>().add(
                           ClipEditorClipVolumeChanged(
                             clipId: clips[i].id,
@@ -119,6 +133,7 @@ class VideoEditorTimelineVolume extends StatelessWidget {
                   children: [
                     for (var i = 0; i < customTracks.length; i++)
                       _VolumeArc(
+                        key: ValueKey(('track-volume', customTracks[i].id)),
                         height:
                             TimelineConstants.soundOverlayRowHeight -
                             TimelineConstants.overlayRowGap,
@@ -131,10 +146,17 @@ class VideoEditorTimelineVolume extends StatelessWidget {
                             context.l10n.videoEditorVolumeLongPressHint,
                         volume: customTracks[i].volume,
                         volumePreviewNotifier: volumePreviewNotifier,
-                        onLivePreview: (v) =>
-                            liveVolumeNotifier?.value = v == null
-                            ? null
-                            : LiveVolume.track(customTracks[i].id, v),
+                        onLivePreview: (v, session) {
+                          final live = LiveVolume.track(
+                            customTracks[i].id,
+                            v,
+                            session: session,
+                          );
+                          liveVolumeNotifier?.value = live;
+                          return liveVolumeNotifier?.value ?? live;
+                        },
+                        onPreviewEnded: () => liveVolumeNotifier?.value = null,
+                        onPreviewCancelled: onPreviewCancelled,
                         onChanged: (v) =>
                             context.read<TimelineOverlayBloc>().add(
                               TimelineOverlayAudioVolumeChanged(
@@ -163,7 +185,10 @@ class _VolumeArc extends StatefulWidget {
     required this.volume,
     required this.volumePreviewNotifier,
     required this.onChanged,
-    this.onLivePreview,
+    required this.onLivePreview,
+    required this.onPreviewEnded,
+    required this.onPreviewCancelled,
+    super.key,
     this.onLongPress,
     this.semanticLongPressHint,
   });
@@ -179,9 +204,11 @@ class _VolumeArc extends StatefulWidget {
   /// `!_debugDuringDeviceUpdate` assertion in mouse_tracker.dart.
   final ValueChanged<double> onChanged;
 
-  /// Called with the volume on every move while it is dragged, so it can be
-  /// heard before [onChanged] commits it, and with null once released.
-  final ValueChanged<double?>? onLivePreview;
+  /// Returns the exact object stored by the notifier, which suppresses equal
+  /// repeated values within one drag.
+  final LiveVolume Function(double volume, Object session) onLivePreview;
+  final VoidCallback onPreviewEnded;
+  final ValueChanged<LiveVolume> onPreviewCancelled;
 
   /// Called on long press — mutes/unmutes all clips and audio tracks at once.
   final VoidCallback? onLongPress;
@@ -215,6 +242,9 @@ class _VolumeArcState extends State<_VolumeArc> {
   double _lastUnmutedVolume = 1.0;
 
   bool _isDragging = false;
+  int? _dragPointer;
+  Object? _dragSession;
+  LiveVolume? _lastLivePreview;
 
   /// Volume when the current drag began; the drag moves it from there.
   double _dragStartVolume = 1;
@@ -246,10 +276,13 @@ class _VolumeArcState extends State<_VolumeArc> {
     _dragStartVolume = _localVolume;
     _dragStartDy = d.localPosition.dy;
     _isDragging = true;
+    final session = _dragSession = Object();
+    _lastLivePreview = widget.onLivePreview(_localVolume, session);
     widget.volumePreviewNotifier.value = _localVolume;
   }
 
   void _onDragUpdate(DragUpdateDetails d) {
+    if (!_isDragging) return;
     // Up is louder, down is quieter, relative to the volume the drag
     // started at.
     final raised = (_dragStartDy - d.localPosition.dy) / _pxPerFullVolume;
@@ -264,7 +297,7 @@ class _VolumeArcState extends State<_VolumeArc> {
         unawaited(HapticFeedback.selectionClick());
       }
       setState(() => _localVolume = next);
-      widget.onLivePreview?.call(next);
+      _lastLivePreview = widget.onLivePreview(next, _dragSession!);
     }
     widget.volumePreviewNotifier.value = next;
   }
@@ -289,13 +322,63 @@ class _VolumeArcState extends State<_VolumeArc> {
   }
 
   void _onDragEnd(DragEndDetails _) {
+    if (!_isDragging) return;
     _isDragging = false;
+    _dragPointer = null;
     if (_localVolume > 0) {
       _lastUnmutedVolume = _localVolume;
     }
     widget.onChanged(_localVolume);
     widget.volumePreviewNotifier.value = null;
-    widget.onLivePreview?.call(null);
+    widget.onPreviewEnded();
+    _lastLivePreview = null;
+  }
+
+  void _onPointerDown(PointerDownEvent event) {
+    _dragPointer ??= event.pointer;
+  }
+
+  void _onPointerUp(PointerUpEvent event) {
+    if (!_isDragging && _dragPointer == event.pointer) _dragPointer = null;
+  }
+
+  void _onPointerCancel(PointerCancelEvent event) {
+    // Accepted PointerCancel is reported as drag end by the recognizer. This
+    // raw listener runs first so that end cannot commit a cancelled drag.
+    if (_dragPointer == event.pointer) {
+      _cancelDrag();
+      _dragPointer = null;
+    }
+  }
+
+  void _restoreCommittedVolume() {
+    _localVolume = widget.volume;
+    if (_localVolume > 0) _lastUnmutedVolume = _localVolume;
+  }
+
+  void _cancelDrag() {
+    if (!_isDragging) return;
+    _isDragging = false;
+    final expected = _lastLivePreview;
+    final session = _dragSession;
+    final onCancelled = widget.onPreviewCancelled;
+    _lastLivePreview = null;
+    _restoreCommittedVolume();
+    // Recognizers can cancel during teardown. Notify the owners only after
+    // ancestor builds/disposal finish, using callbacks captured while alive.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (expected != null) onCancelled(expected);
+      if (mounted && !_isDragging && identical(_dragSession, session)) {
+        setState(_restoreCommittedVolume);
+      }
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  @override
+  void dispose() {
+    _cancelDrag();
+    super.dispose();
   }
 
   @override
@@ -317,48 +400,54 @@ class _VolumeArcState extends State<_VolumeArc> {
         onLongPress: widget.onLongPress,
         child: SizedBox(
           height: widget.height,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            // Short tap (no drag) toggles mute. GestureDetector only
-            // fires onTap when the gesture didn't escalate to a pan, so
-            // taps and drags don't conflict.
-            onTap: () {
-              unawaited(HapticFeedback.lightImpact());
-              final next = _localVolume > 0.001
-                  ? 0.0
-                  : (_lastUnmutedVolume > 0 ? _lastUnmutedVolume : 1.0);
-              setState(() => _localVolume = next);
-              widget.onChanged(next);
-            },
-            onLongPress: widget.onLongPress,
-            // Vertical drag: up is louder, down is quieter. A vertical
-            // recognizer (not a pan) so it wins the arena against the
-            // volume panel's own vertical scroll view.
-            onVerticalDragStart: _onDragStart,
-            onVerticalDragUpdate: _onDragUpdate,
-            onVerticalDragEnd: _onDragEnd,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                CustomPaint(
-                  size: const Size.square(52),
-                  painter: _VolumeArcPainter(
-                    volume: _localVolume,
-                    gapSweepDeg: _gapSweepDeg,
-                    trackColor: context.vineColors.disabled,
-                    fullColor: context.vineColors.onSurface,
+          child: Listener(
+            onPointerDown: _onPointerDown,
+            onPointerUp: _onPointerUp,
+            onPointerCancel: _onPointerCancel,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              // Short tap (no drag) toggles mute. GestureDetector only
+              // fires onTap when the gesture didn't escalate to a pan, so
+              // taps and drags don't conflict.
+              onTap: () {
+                unawaited(HapticFeedback.lightImpact());
+                final next = _localVolume > 0.001
+                    ? 0.0
+                    : (_lastUnmutedVolume > 0 ? _lastUnmutedVolume : 1.0);
+                setState(() => _localVolume = next);
+                widget.onChanged(next);
+              },
+              onLongPress: widget.onLongPress,
+              // Vertical drag: up is louder, down is quieter. A vertical
+              // recognizer (not a pan) so it wins the arena against the
+              // volume panel's own vertical scroll view.
+              onVerticalDragStart: _onDragStart,
+              onVerticalDragUpdate: _onDragUpdate,
+              onVerticalDragEnd: _onDragEnd,
+              onVerticalDragCancel: _cancelDrag,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  CustomPaint(
+                    size: const Size.square(52),
+                    painter: _VolumeArcPainter(
+                      volume: _localVolume,
+                      gapSweepDeg: _gapSweepDeg,
+                      trackColor: context.vineColors.disabled,
+                      fullColor: context.vineColors.onSurface,
+                    ),
                   ),
-                ),
-                DivineIcon(
-                  icon: isMuted ? .speakerSimpleSlash : .speakerHigh,
-                  color:
-                      volumeBoostColor(_localVolume) ??
-                      (_localVolume >= 1
-                          ? context.vineColors.onSurface
-                          : VineTheme.accentYellow),
-                  size: 16,
-                ),
-              ],
+                  DivineIcon(
+                    icon: isMuted ? .speakerSimpleSlash : .speakerHigh,
+                    color:
+                        volumeBoostColor(_localVolume) ??
+                        (_localVolume >= 1
+                            ? context.vineColors.onSurface
+                            : VineTheme.accentYellow),
+                    size: 16,
+                  ),
+                ],
+              ),
             ),
           ),
         ),

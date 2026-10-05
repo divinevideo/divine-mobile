@@ -12,6 +12,7 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/live_volume.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/utils/cancel_live_volume_preview.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_volume.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -22,6 +23,7 @@ void main() {
     late TimelineOverlayBloc overlayBloc;
     late ValueNotifier<double?> volumePreviewNotifier;
     late ValueNotifier<LiveVolume?> liveVolumeNotifier;
+    late ValueNotifier<bool> defaultPanelVisibility;
 
     setUp(() {
       clipBloc = ClipEditorBloc(
@@ -31,16 +33,18 @@ void main() {
       overlayBloc = TimelineOverlayBloc();
       volumePreviewNotifier = ValueNotifier<double?>(null);
       liveVolumeNotifier = ValueNotifier<LiveVolume?>(null);
+      defaultPanelVisibility = ValueNotifier(true);
     });
 
     tearDown(() async {
       volumePreviewNotifier.dispose();
       liveVolumeNotifier.dispose();
+      defaultPanelVisibility.dispose();
       await clipBloc.close();
       await overlayBloc.close();
     });
 
-    Widget buildWidget() {
+    Widget buildWidget({ValueNotifier<bool>? showPanel}) {
       return MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -50,9 +54,29 @@ void main() {
               BlocProvider<ClipEditorBloc>.value(value: clipBloc),
               BlocProvider<TimelineOverlayBloc>.value(value: overlayBloc),
             ],
-            child: VideoEditorTimelineVolume(
-              volumePreviewNotifier: volumePreviewNotifier,
-              liveVolumeNotifier: liveVolumeNotifier,
+            child: ValueListenableBuilder<bool>(
+              valueListenable: showPanel ?? defaultPanelVisibility,
+              builder: (context, show, _) => AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                child: show
+                    ? VideoEditorTimelineVolume(
+                        key: const ValueKey('volume'),
+                        volumePreviewNotifier: volumePreviewNotifier,
+                        liveVolumeNotifier: liveVolumeNotifier,
+                        onPreviewCancelled: (expected) {
+                          if (!context.mounted) return;
+                          if (cancelLiveVolumePreview(
+                            expected: expected,
+                            notifier: liveVolumeNotifier,
+                            clipState: clipBloc.state,
+                            overlayState: overlayBloc.state,
+                          )) {
+                            volumePreviewNotifier.value = null;
+                          }
+                        },
+                      )
+                    : const SizedBox.shrink(key: ValueKey('empty')),
+              ),
             ),
           ),
         ),
@@ -115,6 +139,37 @@ void main() {
     });
 
     group('vertical drag', () {
+      testWidgets('unmount cancels an unfinished preview without committing', (
+        tester,
+      ) async {
+        final showPanel = ValueNotifier(true);
+        addTearDown(showPanel.dispose);
+        clipBloc.add(ClipEditorInitialized([_createTestClip(id: 'clip-a')]));
+        await tester.pumpWidget(buildWidget(showPanel: showPanel));
+        await tester.pump();
+        final gesture = await tester.startGesture(
+          tester.getCenter(find.bySemanticsLabel('Clip 1')),
+        );
+        await gesture.moveBy(const Offset(0, -30));
+        await gesture.moveBy(const Offset(0, -60));
+        await tester.pump();
+        expect(liveVolumeNotifier.value?.volume, greaterThan(1));
+        expect(clipBloc.state.clips.first.volume, 1);
+        expect(clipBloc.state.clipsVolumeRevision, 0);
+        showPanel.value = false;
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pump();
+        expect(find.bySemanticsLabel('Clip 1'), findsNothing);
+        expect(liveVolumeNotifier.value, isNull);
+        expect(volumePreviewNotifier.value, isNull);
+        await gesture.up();
+        await tester.pump();
+        expect(clipBloc.state.clips.first.volume, 1);
+        expect(clipBloc.state.clipsVolumeRevision, 0);
+        expect(tester.takeException(), isNull);
+      });
+
       testWidgets('down lowers custom audio volume and commits on release', (
         tester,
       ) async {
