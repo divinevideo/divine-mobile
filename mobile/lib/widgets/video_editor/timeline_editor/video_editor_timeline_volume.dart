@@ -242,8 +242,7 @@ class _VolumeArcState extends State<_VolumeArc> {
   double _lastUnmutedVolume = 1.0;
 
   bool _isDragging = false;
-  int? _dragPointer;
-  Object? _dragSession;
+  late Object _dragSession;
   LiveVolume? _lastLivePreview;
 
   /// Volume when the current drag began; the drag moves it from there.
@@ -282,7 +281,6 @@ class _VolumeArcState extends State<_VolumeArc> {
   }
 
   void _onDragUpdate(DragUpdateDetails d) {
-    if (!_isDragging) return;
     // Up is louder, down is quieter, relative to the volume the drag
     // started at.
     final raised = (_dragStartDy - d.localPosition.dy) / _pxPerFullVolume;
@@ -297,7 +295,7 @@ class _VolumeArcState extends State<_VolumeArc> {
         unawaited(HapticFeedback.selectionClick());
       }
       setState(() => _localVolume = next);
-      _lastLivePreview = widget.onLivePreview(next, _dragSession!);
+      _lastLivePreview = widget.onLivePreview(next, _dragSession);
     }
     widget.volumePreviewNotifier.value = next;
   }
@@ -322,9 +320,7 @@ class _VolumeArcState extends State<_VolumeArc> {
   }
 
   void _onDragEnd(DragEndDetails _) {
-    if (!_isDragging) return;
     _isDragging = false;
-    _dragPointer = null;
     if (_localVolume > 0) {
       _lastUnmutedVolume = _localVolume;
     }
@@ -334,51 +330,17 @@ class _VolumeArcState extends State<_VolumeArc> {
     _lastLivePreview = null;
   }
 
-  void _onPointerDown(PointerDownEvent event) {
-    _dragPointer ??= event.pointer;
-  }
-
-  void _onPointerUp(PointerUpEvent event) {
-    if (!_isDragging && _dragPointer == event.pointer) _dragPointer = null;
-  }
-
-  void _onPointerCancel(PointerCancelEvent event) {
-    // Accepted PointerCancel is reported as drag end by the recognizer. This
-    // raw listener runs first so that end cannot commit a cancelled drag.
-    // The recognizer can hand the drag to another finger on the same arc.
-    if (_isDragging || _dragPointer == event.pointer) {
-      _cancelDrag();
-      _dragPointer = null;
-    }
-  }
-
-  void _restoreCommittedVolume() {
-    _localVolume = widget.volume;
-    if (_localVolume > 0) _lastUnmutedVolume = _localVolume;
-  }
-
-  void _cancelDrag() {
-    if (!_isDragging) return;
-    _isDragging = false;
-    final expected = _lastLivePreview;
-    final session = _dragSession;
-    final onCancelled = widget.onPreviewCancelled;
-    _lastLivePreview = null;
-    _restoreCommittedVolume();
-    // A pointer can cancel during teardown. Notify the owners only after
-    // ancestor builds/disposal finish, using callbacks captured while alive.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (expected != null) onCancelled(expected);
-      if (mounted && !_isDragging && identical(_dragSession, session)) {
-        setState(_restoreCommittedVolume);
-      }
-    });
-    WidgetsBinding.instance.ensureVisualUpdate();
-  }
-
   @override
   void dispose() {
-    _cancelDrag();
+    final expected = _lastLivePreview;
+    if (_isDragging && expected != null) {
+      final onCancelled = widget.onPreviewCancelled;
+      // Owners may also be disposing; let their lifetime guards run next frame.
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => onCancelled(expected),
+      );
+      WidgetsBinding.instance.ensureVisualUpdate();
+    }
     super.dispose();
   }
 
@@ -401,53 +363,48 @@ class _VolumeArcState extends State<_VolumeArc> {
         onLongPress: widget.onLongPress,
         child: SizedBox(
           height: widget.height,
-          child: Listener(
-            onPointerDown: _onPointerDown,
-            onPointerUp: _onPointerUp,
-            onPointerCancel: _onPointerCancel,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              // Short tap (no drag) toggles mute. GestureDetector only
-              // fires onTap when the gesture didn't escalate to a pan, so
-              // taps and drags don't conflict.
-              onTap: () {
-                unawaited(HapticFeedback.lightImpact());
-                final next = _localVolume > 0.001
-                    ? 0.0
-                    : (_lastUnmutedVolume > 0 ? _lastUnmutedVolume : 1.0);
-                setState(() => _localVolume = next);
-                widget.onChanged(next);
-              },
-              onLongPress: widget.onLongPress,
-              // Vertical drag: up is louder, down is quieter. A vertical
-              // recognizer (not a pan) so it wins the arena against the
-              // volume panel's own vertical scroll view.
-              onVerticalDragStart: _onDragStart,
-              onVerticalDragUpdate: _onDragUpdate,
-              onVerticalDragEnd: _onDragEnd,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  CustomPaint(
-                    size: const Size.square(52),
-                    painter: _VolumeArcPainter(
-                      volume: _localVolume,
-                      gapSweepDeg: _gapSweepDeg,
-                      trackColor: context.vineColors.disabled,
-                      fullColor: context.vineColors.onSurface,
-                    ),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            // Short tap (no drag) toggles mute. GestureDetector only
+            // fires onTap when the gesture didn't escalate to a pan, so
+            // taps and drags don't conflict.
+            onTap: () {
+              unawaited(HapticFeedback.lightImpact());
+              final next = _localVolume > 0.001
+                  ? 0.0
+                  : (_lastUnmutedVolume > 0 ? _lastUnmutedVolume : 1.0);
+              setState(() => _localVolume = next);
+              widget.onChanged(next);
+            },
+            onLongPress: widget.onLongPress,
+            // Vertical drag: up is louder, down is quieter. A vertical
+            // recognizer (not a pan) so it wins the arena against the
+            // volume panel's own vertical scroll view.
+            onVerticalDragStart: _onDragStart,
+            onVerticalDragUpdate: _onDragUpdate,
+            onVerticalDragEnd: _onDragEnd,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CustomPaint(
+                  size: const Size.square(52),
+                  painter: _VolumeArcPainter(
+                    volume: _localVolume,
+                    gapSweepDeg: _gapSweepDeg,
+                    trackColor: context.vineColors.disabled,
+                    fullColor: context.vineColors.onSurface,
                   ),
-                  DivineIcon(
-                    icon: isMuted ? .speakerSimpleSlash : .speakerHigh,
-                    color:
-                        volumeBoostColor(_localVolume) ??
-                        (_localVolume >= 1
-                            ? context.vineColors.onSurface
-                            : VineTheme.accentYellow),
-                    size: 16,
-                  ),
-                ],
-              ),
+                ),
+                DivineIcon(
+                  icon: isMuted ? .speakerSimpleSlash : .speakerHigh,
+                  color:
+                      volumeBoostColor(_localVolume) ??
+                      (_localVolume >= 1
+                          ? context.vineColors.onSurface
+                          : VineTheme.accentYellow),
+                  size: 16,
+                ),
+              ],
             ),
           ),
         ),

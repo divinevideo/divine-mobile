@@ -180,87 +180,72 @@ void main() {
         expect(tester.takeException(), isNull);
       });
 
-      testVolume(
-        '$label pointer cancellation restores without an undo revision',
-        (tester) async {
-          await mount(tester);
-          final gesture = await drag(tester, label: label);
-          await gesture.cancel();
-          await tester.pump();
-          await tester.pump();
-          await settlePlayer(tester);
-          restored(1);
-          expect(probe.header.value, isNull);
-          expect(clips.state.clipsVolumeRevision, 0);
-          expect(overlays.state.audioTracksRevision, 0);
-          expect(
-            tester
-                .getSemantics(find.bySemanticsLabel(label))
-                .getSemanticsData()
-                .value,
-            '100%',
-          );
-          expect(tester.takeException(), isNull);
-        },
-      );
+      for (final secondPointer in [false, true]) {
+        testVolume(
+          '$label OS cancel still commits (second finger: $secondPointer)',
+          (
+            tester,
+          ) async {
+            await mount(tester);
+            final first = await drag(tester, label: label);
+            var active = first;
+            if (secondPointer) {
+              active = await tester.startGesture(
+                tester.getCenter(find.bySemanticsLabel(label)),
+                pointer: 7,
+              );
+              await first.up();
+              await active.moveBy(const Offset(0, -10));
+            }
+            final gain = probe.live.value!.volume;
+            expect(gain, isNot(1));
+            await active.cancel();
+            await deliverBlocStates(tester);
+            expect(probe.live.value, isNull);
+            expect(probe.header.value, isNull);
+            expect(
+              clips.state.clips.first.volume,
+              label == 'Clip 1' ? gain : 1,
+            );
+            expect(
+              overlays.state.audioTracks.first.volume,
+              label == 'Beat' ? gain : 1,
+            );
+            expect(clips.state.clipsVolumeRevision, label == 'Clip 1' ? 1 : 0);
+            expect(overlays.state.audioTracksRevision, label == 'Beat' ? 1 : 0);
+            expect(probe.accepted, 0);
+            expect(tester.takeException(), isNull);
+          },
+        );
+      }
 
-      testVolume('$label second-pointer cancellation restores saved gain', (
+      testVolume('$label release during panel exit still commits once', (
         tester,
       ) async {
         await mount(tester);
-        final first = await drag(tester, label: label);
-        final second = await tester.startGesture(
-          tester.getCenter(find.bySemanticsLabel(label)),
-          pointer: 7,
-        );
-        await tester.pump();
-        await first.up();
-        await second.moveBy(const Offset(0, -10));
-        await second.cancel();
-        await tester.pump();
+        final gesture = await drag(tester, label: label);
+        final gain = probe.live.value!.volume;
+        main.add(const VideoEditorVolumeEditModeToggled());
         await deliverBlocStates(tester);
-        await settlePlayer(tester);
-        restored(1);
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(find.bySemanticsLabel(label), findsOneWidget);
+        await gesture.up();
+        await deliverBlocStates(tester);
+        await tester.pumpAndSettle();
+        expect(probe.live.value, isNull);
         expect(probe.header.value, isNull);
-        expect(clips.state.clipsVolumeRevision, 0);
-        expect(overlays.state.audioTracksRevision, 0);
+        expect(clips.state.clips.first.volume, label == 'Clip 1' ? gain : 1);
+        expect(
+          overlays.state.audioTracks.first.volume,
+          label == 'Beat' ? gain : 1,
+        );
+        expect(clips.state.clipsVolumeRevision, label == 'Clip 1' ? 1 : 0);
+        expect(overlays.state.audioTracksRevision, label == 'Beat' ? 1 : 0);
+        expect(probe.accepted, 0);
         expect(tester.takeException(), isNull);
       });
 
-      for (final duringExit in [false, true]) {
-        testVolume('$label release commits once (during exit: $duringExit)', (
-          tester,
-        ) async {
-          await mount(tester);
-          final gesture = await drag(tester, label: label);
-          final gain = probe.live.value!.volume;
-          if (duringExit) {
-            main.add(const VideoEditorVolumeEditModeToggled());
-            await deliverBlocStates(tester);
-            await tester.pump();
-            await tester.pump();
-            await tester.pump(const Duration(milliseconds: 100));
-            expect(find.bySemanticsLabel(label), findsOneWidget);
-          }
-          await gesture.up();
-          await deliverBlocStates(tester);
-          expect(probe.live.value, isNull);
-          expect(probe.header.value, isNull);
-          expect(clips.state.clips.first.volume, label == 'Clip 1' ? gain : 1);
-          expect(
-            overlays.state.audioTracks.first.volume,
-            label == 'Beat' ? gain : 1,
-          );
-          await tester.pump(const Duration(milliseconds: 300));
-          await tester.pump();
-          expect(clips.state.clipsVolumeRevision, label == 'Clip 1' ? 1 : 0);
-          expect(overlays.state.audioTracksRevision, label == 'Beat' ? 1 : 0);
-          expect(probe.accepted, 0);
-          expect(tester.takeException(), isNull);
-        });
-      }
-
-      testVolume('$label cancellation restores current committed gain', (
+      testVolume('$label disposal restores current committed gain', (
         tester,
       ) async {
         await mount(tester);
@@ -284,10 +269,12 @@ void main() {
               : overlays.state.audioTracks.first.volume,
           0.4,
         );
-        await gesture.cancel();
-        await tester.pump();
+        main.add(const VideoEditorVolumeEditModeToggled());
+        await deliverBlocStates(tester);
+        await tester.pumpAndSettle();
         await settlePlayer(tester);
         restored(0.4);
+        await gesture.up();
         expect(clips.state.clipsVolumeRevision, label == 'Clip 1' ? 1 : 0);
         expect(overlays.state.audioTracksRevision, label == 'Beat' ? 1 : 0);
         expect(probe.header.value, isNull);
@@ -295,70 +282,26 @@ void main() {
       });
     }
 
-    testVolume('same-target same-gain new drag survives stale cleanup', (
+    testVolume('stale disposal cannot clear an equal-gain newer preview', (
       tester,
     ) async {
       await mount(tester);
-      final first = await drag(tester, boost: false);
-      final old = probe.live.value!;
-      await first.cancel();
-      // No pump: the old cancellation is still queued for the next frame.
-      final second = await tester.startGesture(
-        tester.getCenter(find.bySemanticsLabel('Clip 1')),
-      );
-      await second.moveBy(const Offset(0, -30));
-      final next = probe.live.value!;
-      expect(next.volume, old.volume);
-      expect(next.clipId, old.clipId);
-      expect(identical(next.session, old.session), isFalse);
-      expect(identical(next, old), isFalse);
-      await tester.pump();
-      expect(identical(probe.live.value, next), isTrue);
-      expect(probe.header.value, 1);
-      expect(probe.accepted, 0);
-      expect(clips.state.clipsVolumeRevision, 0);
-      await second.moveBy(const Offset(0, -60));
-      await tester.pump();
-      final gain = probe.live.value!.volume;
-      expect(gain, greaterThan(1));
-      await second.up();
-      await deliverBlocStates(tester);
-      expect(clips.state.clips.first.volume, gain);
-      expect(clips.state.clipsVolumeRevision, 1);
-      expect(tester.takeException(), isNull);
-    });
-
-    testVolume('stale cleanup cannot reset a boosted new drag before release', (
-      tester,
-    ) async {
-      await mount(tester);
-      final first = await drag(tester);
-      await first.cancel();
-      // Start and boost the next drag before the old cleanup gets a frame.
-      final second = await tester.startGesture(
-        tester.getCenter(find.bySemanticsLabel('Clip 1')),
-      );
-      await second.moveBy(const Offset(0, -30));
-      await second.moveBy(const Offset(0, -60));
-      final next = probe.live.value!;
-      expect(next.volume, greaterThan(1));
-      await tester.pump();
-      expect(identical(probe.live.value, next), isTrue);
-      expect(probe.header.value, next.volume);
+      final expected = LiveVolume.clip('clip-a', 1.6, session: UniqueKey());
+      final newer = LiveVolume.clip('clip-a', 1.6, session: UniqueKey());
+      probe.live.value = expected;
+      probe.live.value = newer;
+      expect(identical(probe.live.value, newer), isTrue);
       expect(
-        tester
-            .getSemantics(find.bySemanticsLabel('Clip 1'))
-            .getSemanticsData()
-            .value,
-        '${(next.volume * 100).round()}%',
+        cancelLiveVolumePreview(
+          expected: expected,
+          notifier: probe.live,
+          clipState: clips.state,
+          overlayState: overlays.state,
+        ),
+        isFalse,
       );
-      // No additional move can mask a local-volume reset before commit.
-      await second.up();
-      await deliverBlocStates(tester);
-      expect(clips.state.clips.first.volume, next.volume);
-      expect(clips.state.clipsVolumeRevision, 1);
-      expect(probe.accepted, 0);
-      expect(tester.takeException(), isNull);
+      expect(identical(probe.live.value, newer), isTrue);
+      expect(clips.state.clipsVolumeRevision, 0);
     });
 
     for (final isClip in [true, false]) {
@@ -484,7 +427,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testVolume('restoration follows an already in-flight boost', (
+    testVolume('disposal restoration follows an already in-flight boost', (
       tester,
     ) async {
       await mount(tester);
@@ -496,14 +439,16 @@ void main() {
         await gesture.moveBy(const Offset(0, -60));
         await tester.pump();
         expect(probe.player.sent.last.volume, greaterThan(1));
-        await gesture.cancel();
-        await tester.pump();
+        main.add(const VideoEditorVolumeEditModeToggled());
+        await deliverBlocStates(tester);
+        await tester.pumpAndSettle();
         expect(probe.live.value, isNull);
         expect(probe.values[probe.values.length - 2]?.volume, 1);
         expect(probe.values.last, isNull);
         barrier.complete();
         await settlePlayer(tester);
         restored(1);
+        await gesture.up();
         expect(clips.state.clipsVolumeRevision, 0);
         expect(tester.takeException(), isNull);
       } finally {
