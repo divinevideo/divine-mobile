@@ -13557,4 +13557,8 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get listRecoveryPending =>
       'ఈ జాబితాలో సమకాలీకరణ కోసం వేచి ఉన్న మార్పులు ఉన్నాయి.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'మీ మార్పు ఆమోదించబడింది. దాన్ని సేవ్ చేయడం పూర్తి చేయడానికి ఇప్పుడే సింక్ చేయండి నొక్కండి. అప్పటి వరకు సవరణ నిలిపివేయబడుతుంది.';
 }

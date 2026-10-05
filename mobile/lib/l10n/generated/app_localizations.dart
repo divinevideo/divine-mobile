@@ -22094,6 +22094,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This list has changes waiting to sync.'**
   String get listRecoveryPending;
+
+  /// A relay-accepted permissions change still needs durable local recovery. Explain the Sync now action and why editing is temporarily disabled; do not invite another permissions submission.
+  ///
+  /// In en, this message translates to:
+  /// **'Your change was accepted. Tap Sync now to finish saving it. Editing is paused until then.'**
+  String get listPermissionsRecoveryPending;
 }
 
 class _AppLocalizationsDelegate

@@ -5025,5 +5025,6 @@
     "listVideoPendingSync": "リストと動画はこの端末に保存されています。動画は同期を待っています。",
     "listRetrySync": "今すぐ同期",
     "listPermissionsUnconfirmed": "この変更を確認できませんでした。もう一度お試しください。",
-    "listRecoveryPending": "このリストには同期を待っている変更があります。"
+    "listRecoveryPending": "このリストには同期を待っている変更があります。",
+    "listPermissionsRecoveryPending": "変更は承認されました。「今すぐ同期」をタップして保存を完了してください。それまでは編集が一時停止されます。"
 }

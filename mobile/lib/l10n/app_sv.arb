@@ -5025,5 +5025,6 @@
     "listVideoPendingSync": "Din lista och video är sparade här. Videon väntar på synkronisering.",
     "listRetrySync": "Synkronisera nu",
     "listPermissionsUnconfirmed": "Det gick inte att bekräfta ändringen. Försök igen.",
-    "listRecoveryPending": "Den här listan har ändringar som väntar på synkronisering."
+    "listRecoveryPending": "Den här listan har ändringar som väntar på synkronisering.",
+    "listPermissionsRecoveryPending": "Din ändring har godkänts. Tryck på Synkronisera nu för att slutföra sparandet. Redigering är pausad tills dess."
 }

@@ -5025,5 +5025,6 @@
     "listVideoPendingSync": "تم حفظ قائمتك وفيديوك هنا. الفيديو بانتظار المزامنة.",
     "listRetrySync": "زامن الآن",
     "listPermissionsUnconfirmed": "تعذّر تأكيد هذا التغيير. حاول مرة أخرى.",
-    "listRecoveryPending": "تحتوي هذه القائمة على تغييرات بانتظار المزامنة."
+    "listRecoveryPending": "تحتوي هذه القائمة على تغييرات بانتظار المزامنة.",
+    "listPermissionsRecoveryPending": "تم قبول تغييرك. اضغط على زامن الآن لإكمال حفظه. التعديل متوقف حتى ذلك الحين."
 }

@@ -12575,4 +12575,8 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get listRecoveryPending => '이 목록에 동기화를 기다리는 변경 사항이 있어요.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      '변경 사항이 승인되었습니다. 지금 동기화를 눌러 저장을 완료하세요. 그때까지 편집이 일시 중지됩니다.';
 }

@@ -13217,4 +13217,8 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get listRecoveryPending =>
       'Senarai ini mempunyai perubahan yang menunggu untuk disegerakkan.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Perubahan anda diterima. Ketik Segerakkan sekarang untuk menyelesaikan penyimpanan. Penyuntingan dijeda sehingga selesai.';
 }

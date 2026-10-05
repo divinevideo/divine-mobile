@@ -116,9 +116,12 @@ class _SelectListDialogState extends ConsumerState<SelectListDialog> {
                     list.videoEventIds.contains(widget.video.id)))
               list.id,
         };
-        final syncFailed = _failedSyncListIds
-            .intersection(pendingLists)
-            .isNotEmpty;
+        final syncFailed = availableLists.any(
+          (list) =>
+              _failedSyncListIds.contains(list.id) &&
+              pendingLists.contains(list.id) &&
+              !list.hasPendingPermissionRecovery,
+        );
         return AlertDialog(
           backgroundColor: context.vineColors.card,
           title: Text(
@@ -138,7 +141,11 @@ class _SelectListDialogState extends ConsumerState<SelectListDialog> {
                       list.hasPendingPermissionRecovery ||
                       list.pendingPlaintextEventIds.isNotEmpty,
                 ))
-                  const ListInfoRecoveryPendingMessage()
+                  ListInfoRecoveryPendingMessage(
+                    permissionRecoveryPending: availableLists.any(
+                      (list) => list.hasPendingPermissionRecovery,
+                    ),
+                  )
                 else if (pendingLists.isNotEmpty)
                   const ListInfoPendingSyncMessage(),
                 if (syncFailed) ListInfoFailureMessage(l10n.listUpdateFailed),

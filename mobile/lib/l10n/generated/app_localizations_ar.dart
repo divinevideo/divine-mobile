@@ -13171,4 +13171,8 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get listRecoveryPending =>
       'تحتوي هذه القائمة على تغييرات بانتظار المزامنة.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'تم قبول تغييرك. اضغط على زامن الآن لإكمال حفظه. التعديل متوقف حتى ذلك الحين.';
 }

@@ -13158,4 +13158,8 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get listRecoveryPending =>
       'Danh sách này có các thay đổi đang chờ đồng bộ.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Thay đổi đã được chấp nhận. Nhấn Đồng bộ ngay để hoàn tất lưu. Việc chỉnh sửa tạm dừng cho đến lúc đó.';
 }
