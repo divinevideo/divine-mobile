@@ -654,6 +654,7 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         );
         expect(prefs.containsKey(CuratedListService.listsStorageKey), isFalse);
@@ -668,6 +669,7 @@ void main() {
           kind: any(named: 'kind'),
           content: any(named: 'content'),
           tags: any(named: 'tags'),
+          createdAt: any(named: 'createdAt'),
         ),
       ).thenAnswer((_) {
         entered.complete();
