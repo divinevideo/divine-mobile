@@ -104,7 +104,8 @@ abstract interface class PeopleListsRepository {
   ///   (`kind:ownerPubkey:d-tag`) keep the newest by `updatedAt`.
   ///
   /// An inconclusive relay read throws
-  /// `PublicPeopleListReadUnavailableException` rather than reporting no matches.
+  /// `PublicPeopleListReadUnavailableException` rather than reporting no
+  /// matches.
   /// Deployment-configured exclusions affect search/discovery only.
   ///
   /// Two owners publishing a list with the same `d` tag both survive the
