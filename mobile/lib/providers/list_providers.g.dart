@@ -314,22 +314,15 @@ final class CuratedListVideosFamily extends $Family
   String toString() => r'curatedListVideosProvider';
 }
 
-/// Provider for videos from all members of a user list
-///
-/// The body is a plain function so every `Ref` read happens synchronously
-/// during `build` — see [_LiveDeps] for why an `async*` body cannot
-/// touch `Ref`.
+/// Reads dependencies synchronously during build before the stream starts.
 
-@ProviderFor(userListMemberVideos)
-final userListMemberVideosProvider = UserListMemberVideosFamily._();
+@ProviderFor(userListMemberVideosByRoster)
+final userListMemberVideosByRosterProvider =
+    UserListMemberVideosByRosterFamily._();
 
-/// Provider for videos from all members of a user list
-///
-/// The body is a plain function so every `Ref` read happens synchronously
-/// during `build` — see [_LiveDeps] for why an `async*` body cannot
-/// touch `Ref`.
+/// Reads dependencies synchronously during build before the stream starts.
 
-final class UserListMemberVideosProvider
+final class UserListMemberVideosByRosterProvider
     extends
         $FunctionalProvider<
           AsyncValue<List<VideoEvent>>,
@@ -337,28 +330,24 @@ final class UserListMemberVideosProvider
           Stream<List<VideoEvent>>
         >
     with $FutureModifier<List<VideoEvent>>, $StreamProvider<List<VideoEvent>> {
-  /// Provider for videos from all members of a user list
-  ///
-  /// The body is a plain function so every `Ref` read happens synchronously
-  /// during `build` — see [_LiveDeps] for why an `async*` body cannot
-  /// touch `Ref`.
-  UserListMemberVideosProvider._({
-    required UserListMemberVideosFamily super.from,
-    required List<String> super.argument,
+  /// Reads dependencies synchronously during build before the stream starts.
+  UserListMemberVideosByRosterProvider._({
+    required UserListMemberVideosByRosterFamily super.from,
+    required String super.argument,
   }) : super(
-         retry: null,
-         name: r'userListMemberVideosProvider',
+         retry: _noAutomaticRetry,
+         name: r'userListMemberVideosByRosterProvider',
          isAutoDispose: true,
          dependencies: null,
          $allTransitiveDependencies: null,
        );
 
   @override
-  String debugGetCreateSourceHash() => _$userListMemberVideosHash();
+  String debugGetCreateSourceHash() => _$userListMemberVideosByRosterHash();
 
   @override
   String toString() {
-    return r'userListMemberVideosProvider'
+    return r'userListMemberVideosByRosterProvider'
         ''
         '($argument)';
   }
@@ -371,13 +360,14 @@ final class UserListMemberVideosProvider
 
   @override
   Stream<List<VideoEvent>> create(Ref ref) {
-    final argument = this.argument as List<String>;
-    return userListMemberVideos(ref, argument);
+    final argument = this.argument as String;
+    return userListMemberVideosByRoster(ref, argument);
   }
 
   @override
   bool operator ==(Object other) {
-    return other is UserListMemberVideosProvider && other.argument == argument;
+    return other is UserListMemberVideosByRosterProvider &&
+        other.argument == argument;
   }
 
   @override
@@ -386,37 +376,29 @@ final class UserListMemberVideosProvider
   }
 }
 
-String _$userListMemberVideosHash() =>
-    r'acb78c2d384c7425a9ecc45210b60fb0f764ed31';
+String _$userListMemberVideosByRosterHash() =>
+    r'5e1e2ee8822c156866389999109f837165f253b5';
 
-/// Provider for videos from all members of a user list
-///
-/// The body is a plain function so every `Ref` read happens synchronously
-/// during `build` — see [_LiveDeps] for why an `async*` body cannot
-/// touch `Ref`.
+/// Reads dependencies synchronously during build before the stream starts.
 
-final class UserListMemberVideosFamily extends $Family
-    with $FunctionalFamilyOverride<Stream<List<VideoEvent>>, List<String>> {
-  UserListMemberVideosFamily._()
+final class UserListMemberVideosByRosterFamily extends $Family
+    with $FunctionalFamilyOverride<Stream<List<VideoEvent>>, String> {
+  UserListMemberVideosByRosterFamily._()
     : super(
-        retry: null,
-        name: r'userListMemberVideosProvider',
+        retry: _noAutomaticRetry,
+        name: r'userListMemberVideosByRosterProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
         isAutoDispose: true,
       );
 
-  /// Provider for videos from all members of a user list
-  ///
-  /// The body is a plain function so every `Ref` read happens synchronously
-  /// during `build` — see [_LiveDeps] for why an `async*` body cannot
-  /// touch `Ref`.
+  /// Reads dependencies synchronously during build before the stream starts.
 
-  UserListMemberVideosProvider call(List<String> pubkeys) =>
-      UserListMemberVideosProvider._(argument: pubkeys, from: this);
+  UserListMemberVideosByRosterProvider call(String rosterKey) =>
+      UserListMemberVideosByRosterProvider._(argument: rosterKey, from: this);
 
   @override
-  String toString() => r'userListMemberVideosProvider';
+  String toString() => r'userListMemberVideosByRosterProvider';
 }
 
 /// Provider that streams public lists containing a specific video

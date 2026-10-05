@@ -2,6 +2,7 @@
 // ABOUTME: Manages list state and provides reactive updates for the Lists tab
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart'
@@ -20,6 +21,7 @@ import 'package:openvine/services/video_event_service.dart'
     show VideoEventService;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:unified_logger/unified_logger.dart';
+import 'package:videos_repository/videos_repository.dart';
 
 part 'list_providers.g.dart';
 
@@ -194,39 +196,96 @@ class _LiveDeps {
       _torndown ? null : _ref.read(nostrServiceProvider);
 }
 
-/// Provider for videos from all members of a user list
-///
-/// The body is a plain function so every `Ref` read happens synchronously
-/// during `build` — see [_LiveDeps] for why an `async*` body cannot
-/// touch `Ref`.
-@riverpod
-Stream<List<VideoEvent>> userListMemberVideos(Ref ref, List<String> pubkeys) {
-  // Watch discovery videos and filter to only those from list members
-  final allVideosAsync = ref.watch(videoEventsProvider);
+/// Riverpod's default retries a failed provider ten times with backoff, and
+/// every attempt here is a relay query with its own timeout — the viewer
+/// would sit on a spinner for minutes. While it retries the state is loading
+/// that carries the error, so a screen never reaches its retry view. A failed
+/// read surfaces at once instead, with a retry the viewer drives.
+Duration? _noAutomaticRetry(int retryCount, Object error) => null;
 
-  return _userListMemberVideos(allVideosAsync, pubkeys);
+/// Provider for the videos published by the members of a user list.
+///
+/// The members' newest videos come from
+/// [VideosRepository.getVideosByAuthors]: one relay filter over the list,
+/// Funnelcake per member as the fallback. Whatever the feed pool already
+/// holds from those members shows first, so a list of followed people paints
+/// before the round trip returns; the fetched set is then merged in. A fetch
+/// that fails after that first paint keeps the pooled videos; one that fails
+/// with nothing to show surfaces the error at once, with no automatic retry,
+/// so a network failure never reads as "no videos yet" or as endless loading.
+/// Only an [Exception] is absorbed that way: an [Error] is a bug and
+/// surfaces whatever is pooled.
+///
+/// It re-runs when the blocklist changes, as the other list providers here
+/// do (#5104), and when the repository is rebuilt for a filter change or an
+/// account switch. The pool is read, not watched: every pool emission would
+/// otherwise cost a relay round trip.
+///
+/// Equal member sets reuse the same feed across cache decoding and metadata
+/// changes without mutating the caller's roster.
+UserListMemberVideosByRosterProvider userListMemberVideosProvider(
+  List<String> pubkeys,
+) {
+  final members = pubkeys.toSet().toList()..sort();
+  return userListMemberVideosByRosterProvider(jsonEncode(members));
+}
+
+/// Reads dependencies synchronously during build before the stream starts.
+@Riverpod(retry: _noAutomaticRetry)
+Stream<List<VideoEvent>> userListMemberVideosByRoster(
+  Ref ref,
+  String rosterKey,
+) {
+  final pubkeys = (jsonDecode(rosterKey) as List<dynamic>).cast<String>();
+  ref.watch(blocklistVersionProvider);
+  final repository = ref.watch(videosRepositoryProvider);
+  final pooled = ref.read(videoEventsProvider).value ?? const <VideoEvent>[];
+  return _userListMemberVideos(repository, pooled, pubkeys);
 }
 
 Stream<List<VideoEvent>> _userListMemberVideos(
-  AsyncValue<List<VideoEvent>> allVideosAsync,
+  VideosRepository repository,
+  List<VideoEvent> pooled,
   List<String> pubkeys,
 ) async* {
-  await for (final _ in Stream.value(null)) {
-    if (allVideosAsync.hasValue) {
-      final allVideos = allVideosAsync.value!;
+  final members = pubkeys.toSet();
+  // A re-run can read the pool before it drops what the change hid, and the
+  // merge below keeps every pooled video, so filter it again here.
+  final seeded = _newestFirst(
+    repository.applyContentPreferences([
+      for (final video in pooled)
+        if (members.contains(video.pubkey)) video,
+    ]),
+  );
+  if (seeded.isNotEmpty) yield seeded;
 
-      // Filter videos to only those authored by list members
-      final listMemberVideos = allVideos
-          .where((video) => pubkeys.contains(video.pubkey))
-          .toList();
-
-      // Sort by creation time (newest first)
-      listMemberVideos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-      yield listMemberVideos;
-    }
+  final List<VideoEvent> fetched;
+  try {
+    fetched = await repository.getVideosByAuthors(authorPubkeys: pubkeys);
+  } on Exception catch (error, stackTrace) {
+    if (seeded.isEmpty) rethrow;
+    Log.warning(
+      'Member videos fetch failed; keeping ${seeded.length} pooled videos',
+      name: 'ListProviders',
+      category: LogCategory.relay,
+      error: error,
+      stackTrace: stackTrace,
+    );
+    return;
   }
+
+  // Keyed like the repository's own merge: an edit keeps the d-tag and mints
+  // a new event id, so the pool can hold the revision the fetch replaced.
+  final seenKeys = fetched.map((video) => video.feedDedupKey).toSet();
+  yield _newestFirst([
+    ...fetched,
+    for (final video in seeded)
+      if (seenKeys.add(video.feedDedupKey)) video,
+  ]);
 }
+
+List<VideoEvent> _newestFirst(List<VideoEvent> videos) =>
+    videos..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
 /// Provider that streams public lists containing a specific video
 /// Accumulates results as they arrive from Nostr relays, yielding updated list
