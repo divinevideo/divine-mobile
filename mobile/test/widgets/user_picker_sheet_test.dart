@@ -149,7 +149,7 @@ void main() {
   group(UserPickerSheet, () {
     group('renders', () {
       testWidgets(
-        'review9746 stored nonmutual collaborator must be removable',
+        'stored nonmutual collaborator can be removed',
         (tester) async {
           final former = UserProfile(
             pubkey: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',

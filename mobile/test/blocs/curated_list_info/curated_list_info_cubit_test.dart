@@ -159,6 +159,38 @@ void main() {
     }
 
     test(
+      'a save that throws after acceptance keeps recovery and blocks another edit',
+      () async {
+        final original = _list(isPublic: false);
+        var current = original;
+        when(() => service.getListById(any())).thenAnswer((_) => current);
+        stubUpdate(() async {
+          current = original.copyWith(
+            pendingVisibility: const CuratedListVisibility(
+              isPublic: true,
+              isCollaborative: false,
+              allowedCollaborators: [],
+              relayAccepted: true,
+            ),
+          );
+          throw StateError('local recovery write refused');
+        });
+        final cubit = buildCubit(existingList: original);
+        addTearDown(cubit.close);
+        cubit.visibilityChanged(isPublic: true);
+        await cubit.submitted();
+        expect(cubit.state.needsSync, isTrue);
+        expect(cubit.state.permissionRecoveryPending, isTrue);
+        expect(cubit.state.canEdit, isFalse);
+        expect(cubit.state.canSubmit, isFalse);
+        expect(cubit.state.canClose, isFalse);
+        clearInteractions(service);
+        await cubit.submitted();
+        verifyNever(() => service.updateList(listId: any(named: 'listId')));
+      },
+    );
+
+    test(
       'looks the service up when a save starts, not when it is built',
       () async {
         CuratedListService? current;

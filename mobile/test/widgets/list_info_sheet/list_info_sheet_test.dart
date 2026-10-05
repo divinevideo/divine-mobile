@@ -206,7 +206,7 @@ void main() {
         tester.widget<DivineSwitchTile>(find.byType(DivineSwitchTile));
 
     testWidgets(
-      'acknowledged recovery shows neutral Sync now and blocks editing until settled',
+      'accepted permissions explain Sync now and block editing until settled',
       (tester) async {
         final pending = list(isPublic: false).copyWith(
           pendingVisibility: const CuratedListVisibility(
@@ -226,7 +226,8 @@ void main() {
           return true;
         });
         await openSheet(tester, existingList: pending);
-        expect(find.text(l10n.listRecoveryPending), findsOneWidget);
+        expect(find.text(l10n.listPermissionsRecoveryPending), findsOneWidget);
+        expect(find.text(l10n.listRecoveryPending), findsNothing);
         expect(find.text(l10n.listRetrySync), findsOneWidget);
         expect(visibilityTile(tester).value, isTrue);
         expect(visibilityTile(tester).onChanged, isNull);
@@ -234,13 +235,39 @@ void main() {
         expect(fields.every((field) => field.enabled == false), isTrue);
         await tester.tap(find.text(l10n.listRetrySync));
         await tester.pumpAndSettle();
-        expect(find.text(l10n.listRecoveryPending), findsNothing);
+        expect(find.text(l10n.listPermissionsRecoveryPending), findsNothing);
         expect(visibilityTile(tester).onChanged, isNotNull);
         expect(
           find.byType(ListInfoForm),
           findsOneWidget,
           reason: 'Recovery leaves the form open for intentional edits',
         );
+      },
+    );
+
+    testWidgets(
+      'failed recovery keeps accepted feedback and does not invite resubmission',
+      (tester) async {
+        final pending = list(isPublic: false).copyWith(
+          pendingVisibility: const CuratedListVisibility(
+            isPublic: true,
+            isCollaborative: false,
+            allowedCollaborators: [],
+            relayAccepted: true,
+          ),
+        );
+        when(() => service.getListById(any())).thenReturn(pending);
+        when(() => service.retryListSync(_listId))
+            .thenAnswer((_) async => false);
+        await openSheet(tester, existingList: pending);
+        await tester.tap(find.text(l10n.listRetrySync));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listPermissionsRecoveryPending), findsOneWidget);
+        expect(find.text(l10n.listRetrySync), findsOneWidget);
+        expect(find.byType(ListInfoFailureMessage), findsNothing);
+        expect(visibilityTile(tester).onChanged, isNull);
+        verify(() => service.retryListSync(_listId)).called(1);
+        verifyNever(() => service.updateList(listId: any(named: 'listId')));
       },
     );
 
@@ -252,6 +279,7 @@ void main() {
         when(() => service.getListById(any())).thenReturn(pending);
         await openSheet(tester, existingList: pending);
         expect(find.text(l10n.listRecoveryPending), findsOneWidget);
+        expect(find.text(l10n.listPermissionsRecoveryPending), findsNothing);
         expect(find.text(l10n.listRetrySync), findsOneWidget);
         expect(find.byType(ListInfoFailureMessage), findsNothing);
         expect(visibilityTile(tester).onChanged, isNotNull);

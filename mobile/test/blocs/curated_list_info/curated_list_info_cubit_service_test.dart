@@ -59,7 +59,7 @@ void main() {
       );
     }
 
-    group('review9746 public collaboration privacy and queue', () {
+    group('public collaboration privacy and serialized publication', () {
       test('refused public to private keeps collaborators and does not break later rename', () async {
         final list = (await service.createList(
           name: 'Team',

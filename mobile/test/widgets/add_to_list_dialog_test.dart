@@ -297,7 +297,7 @@ void main() {
       final l10n = lookupAppLocalizations(const Locale('en'));
       expect(find.text(l10n.listPrivateFull), findsOneWidget);
       // Retrying cannot succeed, so the generic "try again" copy is wrong here.
-      expect(find.text(l10n.listVideoNotAdded), findsNothing);
+      expect(find.text(l10n.listUpdateFailed), findsNothing);
     });
 
     testWidgets('a failed add for any other reason stays generic', (
