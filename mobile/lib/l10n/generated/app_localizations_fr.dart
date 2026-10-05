@@ -13118,6 +13118,7 @@ class AppLocalizationsFr extends AppLocalizations {
       count,
       locale: localeName,
       other: '$formatted loops',
+      many: '$formatted loops',
       one: '$formatted loop',
     );
     return '$_temp0';
@@ -13129,6 +13130,7 @@ class AppLocalizationsFr extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count personnes',
+      many: '$count personnes',
       one: '$count personne',
     );
     return '$_temp0';
@@ -13140,6 +13142,7 @@ class AppLocalizationsFr extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count membres',
+      many: '$count membres',
       one: '$count membre',
     );
     return '$_temp0';

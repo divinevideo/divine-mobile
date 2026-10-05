@@ -4863,9 +4863,9 @@
   "settingsAppPreferencesSubtitle": "Aspetto, lingua, archivio e opzioni avanzate",
   "settingsConnectionsSubtitle": "App, relay, server multimediali e autorizzazioni",
   "settingsHelpAboutSubtitle": "Assistenza, informazioni legali e dettagli dell’app",
-  "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loop}}",
-  "peopleListsPeopleCount": "{count, plural, =1{{count} persona} other{{count} persone}}",
-  "listMemberCount": "{count, plural, =1{{count} membro} other{{count} membri}}",
+  "listLoopsCount": "{count, plural, =1{{formatted} loop} many{{formatted} loop} other{{formatted} loop}}",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} persona} many{{count} persone} other{{count} persone}}",
+  "listMemberCount": "{count, plural, =1{{count} membro} many{{count} membri} other{{count} membri}}",
   "peopleListsViewAllMembers": "Vedi tutti",
   "peopleListsLoadFailed": "Impossibile caricare questa lista.",
   "@listMemberCount": {
