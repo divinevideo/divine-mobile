@@ -317,22 +317,30 @@ void main() {
       });
 
       late Completer<ChromaKeyDetection> detection;
+      var detectCalls = 0;
 
       blocTest<ChromaKeyEditorCubit, ChromaKeyEditorState>(
         'ignores a second request while one is in flight',
         build: () {
           detection = Completer<ChromaKeyDetection>();
-          return build(detect: (_) => detection.future);
+          detectCalls = 0;
+          return build(
+            detect: (_) {
+              detectCalls++;
+              return detection.future;
+            },
+          );
         },
         act: (cubit) async {
           final first = cubit.detectFromFootage();
-          await cubit.detectFromFootage();
-          expect(detection.isCompleted, isFalse);
+          final second = cubit.detectFromFootage();
+          await pumpEventQueue();
+          expect(detectCalls, equals(1));
           detection.complete(measured);
-          await first;
+          await Future.wait([first, second]);
         },
-        // detecting, then the single result — a second `detecting` emission
-        // would mean two decodes were kicked off for one tap.
+        // detecting, then the single result. A repeated `detecting` state is
+        // not re-emitted, so the decode count above is what pins the guard.
         expect: () => [
           isA<ChromaKeyEditorState>().having(
             (s) => s.detectionStatus,
