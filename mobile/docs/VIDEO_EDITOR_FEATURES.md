@@ -111,7 +111,7 @@ Enter and leave animations, per layer:
 
 - **Auto captions:** the audio is transcribed on Divine's server first, with a fallback to the platform's speech recognition: Apple's on iOS, which runs on the device when it supports the language and on Apple's servers otherwise; Android 14 or later with language packs installed, on the device. Clip audio is transcribed; music and voice-over are not. The language is the app's language.
 - **Editing:** change a caption's text and timing, add and remove captions. Minimum caption length 200 ms. Captions can be typed by hand when recognition finds nothing.
-- **Styles:** 21 presets, a custom style (font, text color, background, outline and shadow, animation: none, fade, pop, spring or karaoke), and saved caption styles.
+- **Styles:** 21 presets, a custom style (font, text color, background, outline and shadow, animation: none, fade, pop, spring or karaoke), and saved caption styles, picked with a button that appears once "Burn into video" is on.
 - **Word highlight:** the karaoke animation, also a built-in preset, lights each word in a highlight color as it is spoken. Word timings come from the recognizer; for Divine's server, which only times whole cues, they are spread by word length. The published subtitle track stays cue-level.
 - **Output:** burning captions into the picture is optional. The app also publishes them as a separate subtitle track, best effort: if that upload fails or times out, the video is published without it.
 - **After publishing,** the subtitle editor lets the author fix the text and timing of a published video's captions.
@@ -124,7 +124,7 @@ Enter and leave animations, per layer:
 - **Voice-over:** records takes over the muted preview. Takes are placed one after another; the last take can be deleted.
 - **Volume** per clip and per sound track, from silent to 300 %. The timeline arc turns orange above 100 % and red above 200 %. Boosted audio is limited at −1 dBFS in the export, and the Android preview limits at the same ceiling; the iOS preview plays the boost without a limiter.
 - **Fade in and out** per sound track, in 100 ms steps. The envelope is linear, and the preview plays the same one the export bakes in.
-- **Voice effects and noise reduction** on any sound track, not only voice-overs (a clip's own sound needs Extract audio first): one-tap presets (original, high pitch, low pitch, robot, echo) or sliders for pitch (−12 to +12 semitones), robot (0–100 %) and echo (0–100 %), plus a noise reduction toggle. Settings loop while the sheet is open and are processed offline when confirmed. The track keeps the original, so the effect can be changed or removed later.
+- **Voice effects and noise reduction** on any sound track, not only voice-overs (a clip's own sound needs Extract audio first): one-tap presets (original, high pitch, low pitch, robot, echo) or sliders for pitch (−12 to +12 semitones), robot (0–100 %) and echo (0–100 %), plus a noise reduction toggle. Settings loop while the sheet is open and are processed offline when confirmed. Processing downmixes the track to mono. The track keeps the original, so the effect can be changed or removed later.
 - **Waveforms** on clips and sound tracks, and live while recording a voice-over.
 - Creators choose whether others may reuse the audio of their published video.
 
