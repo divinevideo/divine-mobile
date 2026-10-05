@@ -40,7 +40,8 @@ void main() {
       final controller = StreamController<Event>(
         onCancel: () => cancellations++,
       );
-      when(() => client.subscribe(any())).thenAnswer((_) => controller.stream);
+      when(() => client.subscribe(any(), closeOnEose: true))
+          .thenAnswer((_) => controller.stream);
 
       final pending = reader.read(
         ownerPubkey: owner,
@@ -55,7 +56,7 @@ void main() {
       expect(cancellations, 1);
       final filters =
           verify(
-                () => client.subscribe(captureAny()),
+                () => client.subscribe(captureAny(), closeOnEose: true),
               ).captured.single
               as List<Filter>;
       expect(filters.single.authors, [owner]);
@@ -69,7 +70,7 @@ void main() {
         final controller = StreamController<Event>(
           onCancel: () => cancellations++,
         );
-        when(() => client.subscribe(any()))
+        when(() => client.subscribe(any(), closeOnEose: true))
             .thenAnswer((_) => controller.stream);
         CuratedListRelaySnapshot? snapshot;
         unawaited(
@@ -101,7 +102,7 @@ void main() {
         final controller = StreamController<Event>(
           onCancel: () => cancellations++,
         );
-        when(() => client.subscribe(any()))
+        when(() => client.subscribe(any(), closeOnEose: true))
             .thenAnswer((_) => controller.stream);
         final pending = reader.read(
           ownerPubkey: owner,
@@ -122,7 +123,8 @@ void main() {
     test('propagates setup failure to the service without leaking timers', () {
       fakeAsync((async) {
         final setupError = StateError('subscription unavailable');
-        when(() => client.subscribe(any())).thenThrow(setupError);
+        when(() => client.subscribe(any(), closeOnEose: true))
+            .thenThrow(setupError);
         Object? observedError;
         unawaited(
           reader

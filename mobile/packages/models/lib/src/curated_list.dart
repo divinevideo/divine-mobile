@@ -192,6 +192,18 @@ class CuratedList extends Equatable {
   /// Local-only recovery state; relay acceptance does not prove erasure.
   final List<String> pendingPlaintextEventIds;
 
+  /// A confirmed remote permission change needs its final local commit.
+  /// Until explicit recovery settles it, unrelated edits cannot expand its
+  /// remotely accepted public payload under the previously displayed privacy.
+  bool get hasPendingPermissionRecovery =>
+      pendingVisibility?.relayAccepted == true;
+
+  /// Includes deletion delivery, which does not require republishing the list.
+  bool get needsSync =>
+      pendingRepublish ||
+      hasPendingPermissionRecovery ||
+      pendingPlaintextEventIds.isNotEmpty;
+
   /// Tags for categorization and discovery.
   final List<String> tags;
 

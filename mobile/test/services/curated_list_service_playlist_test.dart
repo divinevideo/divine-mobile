@@ -72,7 +72,11 @@ void main() {
       });
 
       when(
-        () => mockNostr.subscribe(any(), onEose: any(named: 'onEose')),
+        () => mockNostr.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
       ).thenAnswer((_) => const Stream.empty());
 
       when(

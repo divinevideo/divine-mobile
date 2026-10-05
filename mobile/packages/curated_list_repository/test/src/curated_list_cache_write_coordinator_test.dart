@@ -18,6 +18,33 @@ void main() {
           updatedAt: DateTime.utc(2026).add(Duration(seconds: revision)),
         );
 
+    test('exclusive cleanup drains an already dispatched cache save', () async {
+      final writer = CuratedListCacheWriteCoordinator();
+      final started = Completer<void>();
+      final release = Completer<void>();
+      var stored = [list(author)];
+      final saving = writer.saveLists(
+        baseline: stored,
+        current: [list(author, revision: 2)],
+        read: () => stored,
+        write: (value) async {
+          started.complete();
+          await release.future;
+          stored = value;
+          return true;
+        },
+      );
+      await started.future;
+      final clearing = writer.runExclusive(() async {
+        stored = [];
+        return 'cleared';
+      });
+      release.complete();
+      expect(await saving, isTrue);
+      expect(await clearing, 'cleared');
+      expect(stored, isEmpty);
+    });
+
     test('an invalid read cannot discard a later repaired row', () async {
       final writer = CuratedListCacheWriteCoordinator();
       final repaired = list(author);

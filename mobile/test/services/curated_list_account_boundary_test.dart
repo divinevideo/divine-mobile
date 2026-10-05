@@ -53,6 +53,9 @@ class _Preferences extends Fake implements SharedPreferences {
   @override
   bool containsKey(String key) => backing.containsKey(key);
   @override
+  Object? get(String key) => backing.get(key);
+
+  @override
   String? getString(String key) => backing.getString(key);
   @override
   List<String>? getStringList(String key) => backing.getStringList(key);
@@ -125,7 +128,8 @@ void _actor(_Auth auth, _Client client, String owner) {
   when(() => auth.isAuthenticated).thenReturn(true);
   when(() => auth.currentPublicKeyHex).thenReturn(owner);
   stubListPublishing(client: client, auth: auth, pubkey: owner);
-  when(() => client.subscribe(any())).thenAnswer((_) => const Stream.empty());
+  when(() => client.subscribe(any(), closeOnEose: true))
+      .thenAnswer((_) => const Stream.empty());
 }
 
 void main() {

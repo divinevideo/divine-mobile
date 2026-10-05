@@ -76,7 +76,11 @@ void main() {
       });
 
       when(
-        () => mockNostr.subscribe(any(), onEose: any(named: 'onEose')),
+        () => mockNostr.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
       ).thenAnswer((_) => const Stream.empty());
 
       when(
@@ -108,9 +112,9 @@ void main() {
         addTearDown(publicationService.dispose);
         final created = await publicationService.createList(name: 'Fixture');
         final event =
-            verify(() => mockNostr.publishEventAwaitOk(captureAny()))
-                    .captured
-                    .single
+            verify(
+                  () => mockNostr.publishEventAwaitOk(captureAny()),
+                ).captured.single
                 as Event;
         expect(created!.nostrEventId, event.id);
         expect(event.kind, 30005);
