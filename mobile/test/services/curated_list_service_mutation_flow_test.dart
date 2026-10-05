@@ -132,8 +132,13 @@ void main() {
         accept(event);
         return PublishSuccess(event: event);
       });
-      when(() => client.subscribe(any(), onEose: any(named: 'onEose')))
-          .thenAnswer((_) => const Stream.empty());
+      when(
+        () => client.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
+      ).thenAnswer((_) => const Stream.empty());
       service = CuratedListService(
         nostrService: client,
         authService: auth,
@@ -225,9 +230,21 @@ void main() {
           expect(stored.nostrEventId, remote[coordinate]!.id);
           expect(stored.updatedAt, remote[coordinate]!.createdAtDateTime);
           // A cached late public echo cannot undo the now-newer list revision.
-          when(() => client.subscribe(any(), onEose: any(named: 'onEose')))
-              .thenAnswer((_) => Stream.value(initialEvent));
+          when(
+            () => client.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer((_) => Stream.value(initialEvent));
           await service.fetchUserListsFromRelays(force: true);
+          verify(
+            () => client.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).called(1);
           expect(service.getListById(list.id)!.name, 'Renamed');
           expect(service.getListById(list.id)!.allowedCollaborators, [
             _collaborator,
@@ -237,6 +254,13 @@ void main() {
           expect(service.getListById(list.id), isNull);
           // Replayed relay copies do not resurrect a withdrawn coordinate.
           await service.fetchUserListsFromRelays(force: true);
+          verify(
+            () => client.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).called(1);
           expect(service.getListById(list.id), isNull);
           var prior = instant.millisecondsSinceEpoch ~/ 1000 - 1;
           for (final event in sent) {
@@ -270,8 +294,13 @@ void main() {
             accept(event);
             return PublishSuccess(event: event);
           });
-          when(() => client.subscribe(any(), onEose: any(named: 'onEose')))
-              .thenAnswer((_) => Stream.value(old));
+          when(
+            () => client.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer((_) => Stream.value(old));
           final reloaded = CuratedListService(
             nostrService: client,
             authService: auth,
@@ -279,6 +308,13 @@ void main() {
           );
           addTearDown(reloaded.dispose);
           await reloaded.fetchUserListsFromRelays(force: true);
+          verify(
+            () => client.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).called(1);
           final retry = remote['$_owner:${list.id}']!;
           expect(retry.createdAt, greaterThan(queued!.createdAt));
           expect(
@@ -522,14 +558,17 @@ void main() {
         late CuratedList original;
         late CuratedList other;
         late CuratedListService replacement;
-        // Keep queue futures in the widget test's fake-async zone.
-        service = CuratedListService(
-          nostrService: client,
-          authService: auth,
-          prefs: prefs,
-        );
-        addTearDown(service.dispose);
+        // A fresh preference identity keeps its device-wide queue in this
+        // widget's fake-async zone, including the later UI save.
+        SharedPreferences.setMockInitialValues({});
+        prefs = await SharedPreferences.getInstance();
         await withClock(Clock.fixed(instant), () async {
+          service = CuratedListService(
+            nostrService: client,
+            authService: auth,
+            prefs: prefs,
+          );
+          addTearDown(service.dispose);
           original = (await service.createList(name: 'A title'))!;
           SharedPreferences.setMockInitialValues({});
           final otherPrefs = await SharedPreferences.getInstance();
@@ -593,14 +632,17 @@ void main() {
         late CuratedList original;
         late CuratedList other;
         late CuratedListService replacement;
-        // Keep queue futures in the widget test's fake-async zone.
-        service = CuratedListService(
-          nostrService: client,
-          authService: auth,
-          prefs: prefs,
-        );
-        addTearDown(service.dispose);
+        // A fresh preference identity keeps its device-wide queue in this
+        // widget's fake-async zone, including the later UI save.
+        SharedPreferences.setMockInitialValues({});
+        prefs = await SharedPreferences.getInstance();
         await withClock(Clock.fixed(instant), () async {
+          service = CuratedListService(
+            nostrService: client,
+            authService: auth,
+            prefs: prefs,
+          );
+          addTearDown(service.dispose);
           original = (await service.createList(name: 'A title'))!;
           SharedPreferences.setMockInitialValues({});
           final otherPrefs = await SharedPreferences.getInstance();
@@ -654,10 +696,15 @@ void main() {
         await tester.enterText(find.byType(TextField).first, 'Edited A');
         final l10n = lookupAppLocalizations(const Locale('en'));
         await tester.tap(find.bySemanticsLabel(l10n.listSave));
-        await tester.pumpAndSettle();
+        // First dispatch the held request, then finish only the sheet's exit
+        // animation. Metadata closes after its durable local milestone, while
+        // the outcome still waits for this ACK.
+        await tester.pump();
         expect(pending, isNotNull);
         expect(pending!.pubkey, _owner);
+        await tester.pumpAndSettle();
         expect(find.bySemanticsLabel(l10n.listSave), findsNothing);
+        expect(outcomes, isEmpty);
         activeOwner = _other;
         _visibleService = replacement;
         gate.complete(
@@ -676,14 +723,16 @@ void main() {
     testWidgets(
       'UI video picker refuses stale account picks without touching A or B',
       (tester) async {
-        // Keep queue futures in the widget test's fake-async zone.
-        service = CuratedListService(
-          nostrService: client,
-          authService: auth,
-          prefs: prefs,
-        );
-        addTearDown(service.dispose);
-        final original = (await service.createList(name: 'A list'))!;
+        late CuratedList original;
+        await tester.runAsync(() async {
+          service = CuratedListService(
+            nostrService: client,
+            authService: auth,
+            prefs: prefs,
+          );
+          addTearDown(service.dispose);
+          original = (await service.createList(name: 'A list'))!;
+        });
         _visibleService = service;
         await tester.binding.setSurfaceSize(const Size(800, 1200));
         addTearDown(() => tester.binding.setSurfaceSize(null));

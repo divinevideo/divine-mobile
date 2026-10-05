@@ -62,6 +62,8 @@ class _SaveFailedMessage extends StatelessWidget {
         context.l10n.listVideoNotAdded,
       ),
       SelectListStatus.videoPendingSync => const ListInfoPendingSyncMessage(),
+      SelectListStatus.recoveryPendingSync =>
+        const ListInfoRecoveryPendingMessage(),
       SelectListStatus.syncFailed => ListInfoFailureMessage(
         context.l10n.listUpdateFailed,
       ),
@@ -149,7 +151,7 @@ class _ListRow extends StatelessWidget {
     final isSaving = context.select(
       (SelectListCubit cubit) => cubit.state.isSaving,
     );
-    final visibility = list.isPublic
+    final visibility = list.publicationTarget.isPublic
         ? l10n.listVisibilityPublic
         : l10n.listVisibilityPrivate;
     final syncing = context.select(
@@ -173,7 +175,7 @@ class _ListRow extends StatelessWidget {
           meta:
               '${l10n.listVideoCount(list.videoEventIds.length)} • $visibility',
           isSelected: isSelected,
-          onTap: isSaving
+          onTap: isSaving || list.hasPendingPermissionRecovery
               ? null
               : () => context.read<SelectListCubit>().toggled(list.id),
         ),
@@ -183,7 +185,17 @@ class _ListRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(l10n.listVideoPendingSync),
+                Text(
+                  list.hasPendingPermissionRecovery ||
+                          !list.pendingRepublish ||
+                          !context
+                              .read<SelectListCubit>()
+                              .state
+                              .memberListIds
+                              .contains(list.id)
+                      ? l10n.listRecoveryPending
+                      : l10n.listVideoPendingSync,
+                ),
                 if (syncing)
                   const Center(
                     child: SizedBox(

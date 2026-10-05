@@ -31,6 +31,9 @@ enum SelectListStatus {
 
   /// The video is saved locally and awaits relay publication.
   videoPendingSync,
+
+  /// A confirmed permission change or deletion request needs local recovery.
+  recoveryPendingSync,
 }
 
 class SelectListState extends Equatable {
@@ -68,10 +71,10 @@ class SelectListState extends Equatable {
   bool get canSubmit =>
       !isSaving && (selectedListIds.isNotEmpty || listIdsToRemove.isNotEmpty);
 
-  /// Local membership awaiting publication; retry does not toggle the pick.
+  /// Any pending list recovery; retry does not toggle the pick.
   Set<String> get pendingSyncListIds => {
     for (final list in lists)
-      if (list.pendingRepublish && memberListIds.contains(list.id)) list.id,
+      if (list.needsSync) list.id,
   };
 
   /// Whether the sheet has nothing left to show and can close.

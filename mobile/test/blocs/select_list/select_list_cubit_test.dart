@@ -2,16 +2,30 @@
 // ABOUTME: are written, and how the lists on offer follow the service.
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:openvine/blocs/select_list/select_list_cubit.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/curated_lists/curated_list_recovery_journal.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../helpers/curated_list_publish_stubs.dart';
 
 class _MockCuratedListService extends Mock implements CuratedListService {}
+
+class _MockNostrClient extends Mock implements NostrClient {}
+
+class _MockAuthService extends Mock implements AuthService {}
 
 // Full-length 64-char ids — never truncate.
 final String _videoId = 'a' * 64;
@@ -38,6 +52,7 @@ void main() {
 
     setUp(() {
       service = _MockCuratedListService();
+      when(() => service.isCurrentSession).thenReturn(true);
     });
 
     void stubLists(List<CuratedList> lists) {
@@ -56,29 +71,26 @@ void main() {
             as VoidCallback;
 
     group('initial state', () {
-      test(
-        "offers the viewer's lists with those holding the video picked",
-        () {
-          stubLists([
-            _list('holds', videoEventIds: [_videoId]),
-            _list('other', videoEventIds: [_otherVideoId]),
-            _list('empty'),
-          ]);
-          final cubit = buildCubit();
-          addTearDown(cubit.close);
+      test("offers the viewer's lists with those holding the video picked", () {
+        stubLists([
+          _list('holds', videoEventIds: [_videoId]),
+          _list('other', videoEventIds: [_otherVideoId]),
+          _list('empty'),
+        ]);
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
 
-          expect(cubit.state.lists.map((list) => list.id), [
-            'holds',
-            'other',
-            'empty',
-          ]);
-          expect(cubit.state.memberListIds, {'holds'});
-          expect(cubit.state.selectedListIds, {'holds'});
-          expect(cubit.state.status, SelectListStatus.editing);
-          expect(cubit.state.listIdsToAdd, isEmpty);
-          expect(cubit.state.listIdsToRemove, isEmpty);
-        },
-      );
+        expect(cubit.state.lists.map((list) => list.id), [
+          'holds',
+          'other',
+          'empty',
+        ]);
+        expect(cubit.state.memberListIds, {'holds'});
+        expect(cubit.state.selectedListIds, {'holds'});
+        expect(cubit.state.status, SelectListStatus.editing);
+        expect(cubit.state.listIdsToAdd, isEmpty);
+        expect(cubit.state.listIdsToRemove, isEmpty);
+      });
     });
 
     group('toggled', () {
@@ -113,9 +125,8 @@ void main() {
         'clears a failure so the line goes away once the picks change',
         setUp: () {
           stubLists([_list('empty')]);
-          when(
-            () => service.addVideoToList(any(), any()),
-          ).thenAnswer((_) async => false);
+          when(() => service.addVideoToList(any(), any()))
+              .thenAnswer((_) async => false);
         },
         build: buildCubit,
         act: (cubit) async {
@@ -176,12 +187,10 @@ void main() {
             _list('first'),
             _list('second'),
           ]);
-          when(
-            () => service.addVideoToList(any(), any()),
-          ).thenAnswer((_) async => true);
-          when(
-            () => service.removeVideoFromList(any(), any()),
-          ).thenAnswer((_) async => true);
+          when(() => service.addVideoToList(any(), any()))
+              .thenAnswer((_) async => true);
+          when(() => service.removeVideoFromList(any(), any()))
+              .thenAnswer((_) async => true);
         },
         build: buildCubit,
         act: (cubit) async {
@@ -207,9 +216,8 @@ void main() {
         verify: (_) {
           verify(() => service.addVideoToList('first', _videoId)).called(1);
           verify(() => service.addVideoToList('second', _videoId)).called(1);
-          verify(
-            () => service.removeVideoFromList('holds', _videoId),
-          ).called(1);
+          verify(() => service.removeVideoFromList('holds', _videoId))
+              .called(1);
           verifyNever(() => service.addVideoToList('holds', any()));
         },
       );
@@ -221,9 +229,8 @@ void main() {
           stubLists([
             _list('holds', videoEventIds: [_videoId]),
           ]);
-          when(
-            () => service.removeVideoFromList(any(), any()),
-          ).thenAnswer((_) async => true);
+          when(() => service.removeVideoFromList(any(), any()))
+              .thenAnswer((_) async => true);
         },
         build: buildCubit,
         act: (cubit) async {
@@ -244,9 +251,8 @@ void main() {
           ),
         ],
         verify: (_) {
-          verify(
-            () => service.removeVideoFromList('holds', _videoId),
-          ).called(1);
+          verify(() => service.removeVideoFromList('holds', _videoId))
+              .called(1);
         },
       );
 
@@ -254,12 +260,10 @@ void main() {
         'keeps the sheet open with the picks when a list refuses the change',
         setUp: () {
           stubLists([_list('works'), _list('refuses')]);
-          when(
-            () => service.addVideoToList('works', any()),
-          ).thenAnswer((_) async => true);
-          when(
-            () => service.addVideoToList('refuses', any()),
-          ).thenAnswer((_) async => false);
+          when(() => service.addVideoToList('works', any()))
+              .thenAnswer((_) async => true);
+          when(() => service.addVideoToList('refuses', any()))
+              .thenAnswer((_) async => false);
         },
         build: buildCubit,
         act: (cubit) async {
@@ -293,9 +297,8 @@ void main() {
               ],
             ),
           ]);
-          when(
-            () => service.addVideoToList(any(), any()),
-          ).thenAnswer((_) async => false);
+          when(() => service.addVideoToList(any(), any()))
+              .thenAnswer((_) async => false);
         },
         build: buildCubit,
         act: (cubit) async {
@@ -325,9 +328,8 @@ void main() {
             ),
             _list('refuses'),
           ]);
-          when(
-            () => service.addVideoToList(any(), any()),
-          ).thenAnswer((_) async => false);
+          when(() => service.addVideoToList(any(), any()))
+              .thenAnswer((_) async => false);
         },
         build: buildCubit,
         act: (cubit) async {
@@ -350,9 +352,8 @@ void main() {
         'reports a service that throws and keeps the picks',
         setUp: () {
           stubLists([_list('empty')]);
-          when(
-            () => service.addVideoToList(any(), any()),
-          ).thenThrow(StateError('no signer'));
+          when(() => service.addVideoToList(any(), any()))
+              .thenThrow(StateError('no signer'));
         },
         build: buildCubit,
         act: (cubit) async {
@@ -370,9 +371,8 @@ void main() {
 
       test('ignores a second submit while the first is running', () async {
         stubLists([_list('empty')]);
-        when(
-          () => service.addVideoToList(any(), any()),
-        ).thenAnswer((_) async => true);
+        when(() => service.addVideoToList(any(), any()))
+            .thenAnswer((_) async => true);
         final cubit = buildCubit();
         addTearDown(cubit.close);
         cubit.toggled('empty');
@@ -633,9 +633,8 @@ void main() {
         'is ignored while a save runs',
         setUp: () {
           stubLists([_list('empty')]);
-          when(
-            () => service.addVideoToList(any(), any()),
-          ).thenAnswer((_) async => true);
+          when(() => service.addVideoToList(any(), any()))
+              .thenAnswer((_) async => true);
         },
         build: buildCubit,
         act: (cubit) async {
@@ -695,12 +694,37 @@ void main() {
         expect(cubit.state.selectedListIds, {'kept'});
       });
 
+      test('uses the incoming membership snapshot for the pending notice', () {
+        final pending = _list(
+          'unpublished',
+          videoEventIds: [_videoId],
+        ).copyWith(pendingRepublish: true);
+        stubLists([pending]);
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+        final listener = capturedListener();
+        cubit.createdListWithVideoPendingSync();
+        expect(cubit.state.status, SelectListStatus.videoPendingSync);
+
+        stubLists([pending.copyWith(videoEventIds: [])]);
+        listener();
+        expect(cubit.state.status, SelectListStatus.recoveryPendingSync);
+        expect(cubit.state.memberListIds, isEmpty);
+        expect(cubit.state.selectedListIds, isEmpty);
+
+        stubLists([pending]);
+        listener();
+        expect(cubit.state.status, SelectListStatus.videoPendingSync);
+        expect(cubit.state.memberListIds, {'unpublished'});
+        expect(cubit.state.selectedListIds, {'unpublished'});
+        verifyNever(() => service.addVideoToList(any(), any()));
+        verifyNever(() => service.removeVideoFromList(any(), any()));
+      });
+
       test('keeps a save in progress on its status', () async {
         stubLists([_list('empty')]);
         final listener = <VoidCallback>[];
-        when(
-          () => service.addListener(any()),
-        ).thenAnswer((invocation) {
+        when(() => service.addListener(any())).thenAnswer((invocation) {
           listener.add(invocation.positionalArguments.single as VoidCallback);
         });
         when(() => service.addVideoToList(any(), any())).thenAnswer((_) async {
@@ -723,6 +747,183 @@ void main() {
       });
     });
 
+    for (final retirement in ['account switch', 'permanent lease retirement']) {
+      var currentOwner = _ownerPubkey;
+      late Completer<bool> pendingWrite;
+      blocTest<SelectListCubit, SelectListState>(
+        '$retirement clears picks after an exceptional save completion',
+        setUp: () {
+          currentOwner = _ownerPubkey;
+          pendingWrite = Completer<bool>();
+          stubLists([_list('first'), _list('second')]);
+          when(() => service.addVideoToList('first', _videoId))
+              .thenAnswer((_) => pendingWrite.future);
+        },
+        build: () => SelectListCubit(
+          service: service,
+          videoEventId: _videoId,
+          currentOwnerPubkey: () => currentOwner,
+        ),
+        act: (cubit) async {
+          cubit
+            ..toggled('first')
+            ..toggled('second');
+          final saving = cubit.submitted();
+          if (retirement == 'account switch') {
+            currentOwner = 'e' * 64;
+          } else {
+            // The owner can still be A while its old permanent lease is gone.
+            when(() => service.isCurrentSession).thenReturn(false);
+          }
+          pendingWrite.completeError(StateError('retired save'));
+          expect(await saving, SelectListStatus.failure);
+        },
+        skip: 3,
+        expect: () => [
+          isA<SelectListState>()
+              .having((s) => s.status, 'status', SelectListStatus.failure)
+              .having((s) => s.lists, 'old lists', isEmpty)
+              .having((s) => s.memberListIds, 'members', isEmpty)
+              .having((s) => s.selectedListIds, 'old picks', isEmpty)
+              .having((s) => s.syncingListIds, 'sync progress', isEmpty)
+              .having((s) => s.failedSyncListIds, 'sync failures', isEmpty),
+        ],
+        verify: (_) {
+          verify(() => service.addVideoToList('first', _videoId)).called(1);
+          verifyNever(() => service.addVideoToList('second', _videoId));
+          verifyNever(() => service.removeVideoFromList(any(), any()));
+        },
+        errors: () => [isA<StateError>()],
+      );
+    }
+
+    test('a retired lease cannot revive when the same owner returns', () async {
+      final pending = _list('retired')
+          .copyWith(pendingPlaintextEventIds: ['c' * 64]);
+      stubLists([pending]);
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      when(() => service.isCurrentSession).thenReturn(false);
+      await cubit.syncRequested('retired');
+      cubit.toggled('retired');
+      expect(cubit.state.lists, isEmpty);
+      expect(cubit.state.selectedListIds, isEmpty);
+      expect(cubit.state.status, SelectListStatus.failure);
+      verifyNever(() => service.retryListSync(any()));
+      verifyNever(() => service.addVideoToList(any(), any()));
+    });
+
+    group('permission and deletion recovery', () {
+      CuratedList recovery({bool member = false}) =>
+          _list(
+            'recovering',
+            videoEventIds: member ? [_videoId] : const [],
+            isPublic: false,
+          ).copyWith(
+            pendingVisibility: const CuratedListVisibility(
+              isPublic: true,
+              isCollaborative: false,
+              allowedCollaborators: [],
+              relayAccepted: true,
+            ),
+          );
+
+      test(
+        'a deletion-only retry is offered without video membership',
+        () async {
+          final pending = _list('redaction')
+              .copyWith(pendingPlaintextEventIds: ['c' * 64]);
+          stubLists([pending]);
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+          expect(cubit.state.pendingSyncListIds, {'redaction'});
+          when(() => service.retryListSync('redaction'))
+              .thenAnswer((_) async => false);
+          await cubit.syncRequested('redaction');
+          expect(cubit.state.status, SelectListStatus.syncFailed);
+          expect(cubit.state.selectedListIds, isEmpty);
+          expect(cubit.state.memberListIds, isEmpty);
+          verifyNever(() => service.addVideoToList(any(), any()));
+          verifyNever(() => service.removeVideoFromList(any(), any()));
+          when(() => service.retryListSync('redaction')).thenAnswer((_) async {
+            stubLists([pending.copyWith(pendingPlaintextEventIds: [])]);
+            return true;
+          });
+          await cubit.syncRequested('redaction');
+          expect(cubit.state.pendingSyncListIds, isEmpty);
+          expect(cubit.state.status, SelectListStatus.editing);
+        },
+      );
+
+      test(
+        'ACKed permission recovery blocks both adding and removing a pick',
+        () {
+          for (final member in [false, true]) {
+            stubLists([recovery(member: member)]);
+            final cubit = buildCubit();
+            addTearDown(cubit.close);
+            final before = cubit.state;
+            cubit.toggled('recovering');
+            expect(cubit.state, before);
+            expect(cubit.state.pendingSyncListIds, {'recovering'});
+          }
+        },
+      );
+
+      test(
+        'a permission ACK arriving after a draft pick prevents its write',
+        () async {
+          stubLists([_list('recovering', isPublic: false)]);
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+          cubit.toggled('recovering');
+          stubLists([recovery()]);
+          expect(await cubit.submitted(), SelectListStatus.recoveryPendingSync);
+          expect(cubit.state.lists, isNotEmpty);
+          verifyNever(() => service.addVideoToList(any(), any()));
+          verifyNever(() => service.removeVideoFromList(any(), any()));
+        },
+      );
+
+      test(
+        'explicit sync settles confirmed visibility before editing resumes',
+        () async {
+          final pending = recovery();
+          stubLists([pending]);
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+          when(() => service.retryListSync('recovering')).thenAnswer((_) async {
+            stubLists([
+              pending.copyWith(isPublic: true, clearPendingVisibility: true),
+            ]);
+            return true;
+          });
+          await cubit.syncRequested('recovering');
+          expect(cubit.state.lists.single.isPublic, isTrue);
+          expect(cubit.state.pendingSyncListIds, isEmpty);
+          expect(cubit.state.selectedListIds, isEmpty);
+          cubit.toggled('recovering');
+          expect(cubit.state.selectedListIds, {'recovering'});
+          verifyNever(() => service.addVideoToList(any(), any()));
+        },
+      );
+
+      test(
+        'another list can be edited while one waits for permission recovery',
+        () async {
+          stubLists([recovery(), _list('other')]);
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+          cubit.toggled('other');
+          when(() => service.addVideoToList('other', _videoId))
+              .thenAnswer((_) async => true);
+          expect(await cubit.submitted(), SelectListStatus.saved);
+          verify(() => service.addVideoToList('other', _videoId)).called(1);
+          verifyNever(() => service.addVideoToList('recovering', any()));
+        },
+      );
+    });
+
     group('close', () {
       test('stops following the service', () async {
         stubLists([]);
@@ -733,6 +934,131 @@ void main() {
 
         verify(() => service.removeListener(listener)).called(1);
       });
+    });
+  });
+
+  group('SelectListCubit with owner-scoped recovery', () {
+    test('a newer public winner stays editable through real deletion recovery '
+        'after logout retires its older permission target', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final nostr = _MockNostrClient();
+      final auth = _MockAuthService();
+      when(() => auth.isAuthenticated).thenReturn(true);
+      when(() => auth.currentPublicKeyHex).thenReturn(_ownerPubkey);
+      stubListPublishing(client: nostr, auth: auth, pubkey: _ownerPubkey);
+      final oldEventId = 'c' * 64;
+      final original = _list('external-winner')
+          .copyWith(nostrEventId: oldEventId);
+      await prefs.setString(
+        CuratedListService.listsStorageKey,
+        jsonEncode([original.toJson()]),
+      );
+      final previousService = CuratedListService(
+        nostrService: nostr,
+        authService: auth,
+        prefs: prefs,
+      );
+      addTearDown(previousService.dispose);
+      final sent = Completer<Event>();
+      final accepted = Completer<PublishOutcome>();
+      when(() => nostr.publishEventAwaitOk(any())).thenAnswer((invocation) {
+        sent.complete(invocation.positionalArguments.single as Event);
+        return accepted.future;
+      });
+      final privateRequest = previousService.updateList(
+        listId: original.id,
+        isPublic: false,
+      );
+      final privateEvent = await sent.future;
+      final winner = original.copyWith(
+        name: 'Newer public winner',
+        nostrEventId: 'd' * 64,
+        updatedAt: DateTime.fromMillisecondsSinceEpoch(
+          privateEvent.createdAt * 1000,
+          isUtc: true,
+        ).add(const Duration(seconds: 1)),
+      );
+      await prefs.setString(
+        CuratedListService.listsStorageKey,
+        jsonEncode([winner.toJson()]),
+      );
+      accepted.complete(acceptedOutcome(privateEvent));
+      expect(await privateRequest, isFalse);
+      expect(previousService.getListById(winner.id)!.isPublic, isTrue);
+
+      // Cleanup proves supersession from the durable row before wiping it, and
+      // preserves only the owner's event IDs and private-commit prerequisite.
+      await UserDataCleanupService(prefs)
+          .clearUserSpecificData(userPubkey: _ownerPubkey);
+      expect(previousService.isCurrentSession, isFalse);
+      await prefs.reload();
+      final journal = CuratedListRecoveryJournal(
+        prefs: prefs,
+        runCurrent: (operation) => operation(),
+      );
+      expect(journal.record(_ownerPubkey, winner.id)!.visibility, isNull);
+      expect(
+        journal.record(_ownerPubkey, winner.id)!.requiresPrivateCommit,
+        isTrue,
+      );
+      await prefs.setString(
+        CuratedListService.listsStorageKey,
+        jsonEncode([winner.toJson()]),
+      );
+      final service = CuratedListService(
+        nostrService: nostr,
+        authService: auth,
+        prefs: prefs,
+      );
+      addTearDown(service.dispose);
+      final cubit = SelectListCubit(
+        service: service,
+        videoEventId: _videoId,
+        currentOwnerPubkey: () => _ownerPubkey,
+      );
+      addTearDown(cubit.close);
+      final recovered = cubit.state.lists.single;
+      expect(recovered.name, winner.name);
+      expect(recovered.nostrEventId, winner.nostrEventId);
+      expect(recovered.publicationTarget.isPublic, isTrue);
+      expect(recovered.pendingVisibility, isNull);
+      expect(recovered.pendingPlaintextEventIds, [oldEventId]);
+      expect(cubit.state.pendingSyncListIds, {winner.id});
+      cubit.toggled(winner.id);
+      expect(cubit.state.selectedListIds, {winner.id});
+      expect(cubit.state.memberListIds, isEmpty);
+      clearInteractions(nostr);
+      clearInteractions(auth);
+
+      await cubit.syncRequested(winner.id);
+
+      expect(cubit.state.status, SelectListStatus.syncFailed);
+      expect(cubit.state.selectedListIds, {winner.id});
+      expect(cubit.state.memberListIds, isEmpty);
+      expect(cubit.state.lists.single.publicationTarget.isPublic, isTrue);
+      expect(cubit.state.lists.single.pendingVisibility, isNull);
+      expect(cubit.state.lists.single.pendingPlaintextEventIds, [oldEventId]);
+      expect(
+        journal.record(_ownerPubkey, winner.id)!.requiresPrivateCommit,
+        isTrue,
+      );
+      expect(journal.record(_ownerPubkey, winner.id)!.plaintextEventIds, [
+        oldEventId,
+      ]);
+      verifyNever(() => nostr.publishEventAwaitOk(any()));
+      verifyNever(() => nostr.publishEvent(any()));
+      verifyNever(
+        () => auth.createAndSignEvent(
+          kind: any(named: 'kind'),
+          content: any(named: 'content'),
+          tags: any(named: 'tags'),
+          createdAt: any(named: 'createdAt'),
+        ),
+      );
+      cubit.toggled(winner.id);
+      expect(cubit.state.selectedListIds, isEmpty);
+      expect(cubit.state.lists.single.isPublic, isTrue);
     });
   });
 }
