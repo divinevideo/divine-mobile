@@ -2,7 +2,6 @@
 // the removedVideoIds broadcast stream so subscribers (FullscreenFeedBloc,
 // profileFeedProvider) can drop the id without waiting for a route change.
 
-import 'package:async/async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -76,22 +75,28 @@ void main() {
     });
 
     test('removeVideoCompletely emits the id on the bus', () async {
-      final removal = expectLater(service.removedVideoIds, emits('vid-1'));
+      final emitted = <String>[];
+      final subscription = service.removedVideoIds.listen(emitted.add);
+      addTearDown(subscription.cancel);
 
       service.removeVideoCompletely('vid-1');
+      await pumpEventQueue();
 
-      await removal;
+      expect(emitted, equals(['vid-1']));
     });
 
     test('emits even when the video was not in any active feed', () async {
       // Mirrors the log line "Video ... marked as deleted (was not in any
       // active feeds)" — the side-channel must still fire so a fullscreen
       // bloc holding the id in its own list drops it.
-      final removal = expectLater(service.removedVideoIds, emits('phantom'));
+      final emitted = <String>[];
+      final subscription = service.removedVideoIds.listen(emitted.add);
+      addTearDown(subscription.cancel);
 
       service.removeVideoCompletely('phantom');
+      await pumpEventQueue();
 
-      await removal;
+      expect(emitted, equals(['phantom']));
     });
 
     test('notifies listeners when the video was not in any active feed', () {
@@ -104,35 +109,36 @@ void main() {
     });
 
     test('emits one event per call, in dispatch order', () async {
-      final removals = expectLater(
-        service.removedVideoIds,
-        emitsInOrder(['a', 'b', 'c']),
-      );
+      final emitted = <String>[];
+      final subscription = service.removedVideoIds.listen(emitted.add);
+      addTearDown(subscription.cancel);
 
       service
         ..removeVideoCompletely('a')
         ..removeVideoCompletely('b')
         ..removeVideoCompletely('c');
 
-      await removals;
+      await pumpEventQueue();
+      expect(emitted, equals(['a', 'b', 'c']));
     });
 
     test('broadcast: a late subscriber misses past emits but receives '
         'future emits', () async {
-      final early = StreamQueue(service.removedVideoIds);
-      addTearDown(early.cancel);
-      final past = early.next;
+      final earlyEmits = <String>[];
+      final lateEmits = <String>[];
+      final earlySub = service.removedVideoIds.listen(earlyEmits.add);
+      addTearDown(earlySub.cancel);
       service.removeVideoCompletely('past');
-      expect(await past, 'past');
+      await pumpEventQueue();
+      expect(earlyEmits, equals(['past']));
 
-      final late = StreamQueue(service.removedVideoIds);
-      addTearDown(late.cancel);
-      final earlyFuture = early.next;
-      final lateFuture = late.next;
+      final lateSub = service.removedVideoIds.listen(lateEmits.add);
+      addTearDown(lateSub.cancel);
       service.removeVideoCompletely('future');
+      await pumpEventQueue();
 
-      expect(await earlyFuture, 'future');
-      expect(await lateFuture, 'future');
+      expect(earlyEmits, equals(['past', 'future']));
+      expect(lateEmits, equals(['future']));
     });
 
     test(
