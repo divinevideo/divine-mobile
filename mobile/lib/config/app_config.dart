@@ -14,13 +14,13 @@ class AppConfig {
       );
 
   /// Reads an immutable deployment policy without logging identifying values.
-  /// Returns null when the build did not supply a valid nonempty policy.
+  /// Returns null when the build did not supply a valid policy. An explicit
+  /// empty array deliberately enables no additional exclusions.
   static Set<String>? parsePublicPeopleListExcludedDTags(String input) {
     if (input.trim().isEmpty) return null;
     try {
       final decoded = jsonDecode(input);
       if (decoded is! List ||
-          decoded.isEmpty ||
           decoded.any((value) => value is! String || value.trim().isEmpty)) {
         return null;
       }
