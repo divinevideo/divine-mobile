@@ -560,6 +560,9 @@ void main() {
 
           final secondOldFetchStarted = Completer<void>();
           final secondOldFetch = Completer<Map<String, UserProfile>>();
+          // The old pass's second chunk holds only the last candidate, so only
+          // a reply for it can reach the stale-emission guard.
+          final stalePubkey = candidatePubkeys.last;
           var oldCalls = 0;
           when(
             () => profileRepository.fetchBatchProfiles(
@@ -601,7 +604,7 @@ void main() {
           clock.flushMicrotasks();
 
           secondOldFetch.complete({
-            _bobPubkey: _profile(pubkey: _bobPubkey, displayName: 'Bobby'),
+            stalePubkey: _profile(pubkey: stalePubkey, displayName: 'Stale'),
           });
 
           clock.flushMicrotasks();
@@ -609,7 +612,7 @@ void main() {
           clock.flushMicrotasks();
 
           expect(bloc.state.searchTerms[_alicePubkey], equals('alice'));
-          expect(bloc.state.searchTerms, isNot(contains(_bobPubkey)));
+          expect(bloc.state.searchTerms, isNot(contains(stalePubkey)));
 
           unawaited(bloc.close());
           clock.flushMicrotasks();
