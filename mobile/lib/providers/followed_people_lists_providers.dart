@@ -24,10 +24,20 @@ final followedPeopleListsStoreProvider = Provider<FollowedPeopleListsStore>((
   return store;
 });
 
-/// Shared by repositories and the account-clear port across identity changes.
+// Account containers share the device's preferences and Hive box. Their write
+// queues must share that same lifetime, so an inactive account's cleanup waits
+// for writes already dispatched by its previous container. Weak keys avoid
+// keeping a discarded device store alive solely for its coordinator.
+final _deviceWriteCoordinators = Expando<FollowedPeopleListsWriteCoordinator>(
+  'followed people lists',
+);
+
+/// Shared by repositories and the account-clear port across account containers.
 final followedPeopleListsWriteCoordinatorProvider =
     Provider<FollowedPeopleListsWriteCoordinator>((ref) {
-      return FollowedPeopleListsWriteCoordinator();
+      final prefs = ref.watch(sharedPreferencesProvider);
+      return _deviceWriteCoordinators[prefs] ??=
+          FollowedPeopleListsWriteCoordinator();
     });
 
 /// Deletes the people lists [viewerPubkey] follows during account deletion:
