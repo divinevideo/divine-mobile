@@ -217,5 +217,110 @@ void main() {
         verifyNever(() => mockNostr.publishEvent(any()));
       });
     });
+
+    group('publishListDeletion', () {
+      Event deletion({String pubkey = _ownerPubkey}) => Event(
+        pubkey,
+        EventKind.eventDeletion,
+        [
+          ['a', '30005:$pubkey:list-1'],
+          ['k', '30005'],
+        ],
+        'Deleted curated list list-1',
+      );
+
+      void stubSigning(Future<Event?> Function() sign) {
+        when(
+          () => mockAuth.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer((_) => sign());
+      }
+
+      test('publishes the deletion once a relay accepts it', () async {
+        final signed = deletion();
+        stubSigning(() async => signed);
+        when(
+          () => mockNostr.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => acceptedOutcome(signed));
+
+        expect(
+          await gateway.publishListDeletion(
+            'list-1',
+            ownerPubkey: _ownerPubkey,
+          ),
+          isTrue,
+        );
+        verify(() => mockNostr.publishEventAwaitOk(signed)).called(1);
+      });
+
+      test('reports failure when no relay accepts the deletion', () async {
+        final signed = deletion();
+        stubSigning(() async => signed);
+        when(
+          () => mockNostr.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => rejectedOutcome(signed));
+
+        expect(
+          await gateway.publishListDeletion(
+            'list-1',
+            ownerPubkey: _ownerPubkey,
+          ),
+          isFalse,
+        );
+      });
+
+      test('refuses another account without signing', () async {
+        stubSigning(() async => deletion());
+
+        expect(
+          await gateway.publishListDeletion(
+            'list-1',
+            ownerPubkey: _strangerPubkey,
+          ),
+          isFalse,
+        );
+        verifyNever(
+          () => mockAuth.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        );
+      });
+
+      test('drops a deletion when the account changed while signing', () async {
+        var active = _ownerPubkey;
+        when(() => mockAuth.currentPublicKeyHex).thenAnswer((_) => active);
+        stubSigning(() async {
+          active = _strangerPubkey;
+          return deletion();
+        });
+
+        expect(
+          await gateway.publishListDeletion(
+            'list-1',
+            ownerPubkey: _ownerPubkey,
+          ),
+          isFalse,
+        );
+        verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+      });
+
+      test('drops a deletion signed by another account', () async {
+        stubSigning(() async => deletion(pubkey: _strangerPubkey));
+
+        expect(
+          await gateway.publishListDeletion(
+            'list-1',
+            ownerPubkey: _ownerPubkey,
+          ),
+          isFalse,
+        );
+        verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+      });
+    });
   });
 }
