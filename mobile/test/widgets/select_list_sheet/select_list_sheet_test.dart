@@ -5,12 +5,16 @@ import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/semantics.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/select_list/select_list_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -511,6 +515,133 @@ void main() {
         },
       );
 
+      testWidgets(
+        'pending membership sync exposes progress and failure then clears on acceptance',
+        (tester) async {
+          final pending = list(
+            'Pending',
+            videoEventIds: [_videoEventId],
+          ).copyWith(pendingRepublish: true);
+          when(() => service.myLists).thenReturn([pending]);
+          final answer = Completer<bool>();
+          addTearDown(() {
+            if (!answer.isCompleted) answer.complete(false);
+          });
+          when(() => service.retryListSync(pending.id))
+              .thenAnswer((_) => answer.future);
+          await openSheet(tester);
+          final listener =
+              verify(() => service.addListener(captureAny())).captured.single
+                  as VoidCallback;
+          await tester.tap(find.text(l10n.listRetrySync));
+          await tester.pump();
+          expect(
+            find.byType(DivineCircularProgressIndicator),
+            findsNWidgets(2),
+          );
+          expect(find.text(l10n.listRetrySync), findsNothing);
+          expect(rowChecks(), findsOneWidget);
+          answer.complete(false);
+          await tester.pumpAndSettle();
+          expect(find.text(l10n.listUpdateFailed), findsOneWidget);
+          expect(find.text(l10n.listVideoPendingSync), findsOneWidget);
+          expect(find.text(l10n.listRetrySync), findsOneWidget);
+          when(() => service.retryListSync(pending.id)).thenAnswer((_) async {
+            when(() => service.myLists)
+                .thenReturn([pending.copyWith(pendingRepublish: false)]);
+            listener();
+            return true;
+          });
+          await tester.tap(find.text(l10n.listRetrySync));
+          await tester.pumpAndSettle();
+          expect(find.text(l10n.listVideoPendingSync), findsNothing);
+          expect(find.text(l10n.listUpdateFailed), findsNothing);
+          expect(find.text(l10n.listRetrySync), findsNothing);
+          expect(rowChecks(), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'account scope replacement safely settles a dismissed membership save',
+        (tester) async {
+          final controller = AccountSwitchController();
+          final first = ProviderContainer(
+            overrides: [
+              ...getStandardTestOverrides(mockAuthService: auth),
+              curatedListsStateProvider.overrideWith(
+                _FakeCuratedListsState.new,
+              ),
+              myListsWithThumbnailsProvider.overrideWith((ref) async => []),
+            ],
+          );
+          final next = ProviderContainer(
+            overrides: [
+              ...getStandardTestOverrides(
+                mockAuthService: createMockAuthService(
+                  currentPublicKeyHex: 'e' * 64,
+                ),
+              ),
+              curatedListsStateProvider.overrideWith(
+                _FakeCuratedListsState.new,
+              ),
+              myListsWithThumbnailsProvider.overrideWith((ref) async => []),
+            ],
+          );
+          when(() => service.myLists).thenReturn([list('Empty')]);
+          final answer = Completer<bool>();
+          addTearDown(() {
+            if (!answer.isCompleted) answer.complete(false);
+          });
+          when(() => service.addVideoToList(any(), any()))
+              .thenAnswer((_) => answer.future);
+          await tester.binding.setSurfaceSize(const Size(800, 1200));
+          addTearDown(() => tester.binding.setSurfaceSize(null));
+          await tester.pumpWidget(
+            ContainerSwapHost(
+              initialContainer: first,
+              controller: controller,
+              child: MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Builder(
+                  builder: (context) => Scaffold(
+                    body: TextButton(
+                      child: const Text(_openLabel),
+                      onPressed: () => runDetached(
+                        showSelectListSheet(context, video: video),
+                        'open picker during account replacement',
+                        logName: 'SelectListSheetTest',
+                        category: LogCategory.ui,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.tap(find.text(_openLabel));
+          await tester.pumpAndSettle();
+          final cubit = tester
+              .element(find.byType(SelectListSaveButton))
+              .read<SelectListCubit>();
+          await tester.tap(find.text('Empty'));
+          await tester.pump();
+          await tester.tap(saveButton());
+          await tester.pump();
+          await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+          await tester.pumpAndSettle();
+          await controller.swapTo(next);
+          await tester.pumpAndSettle();
+          expect(() => first.read(authServiceProvider), throwsStateError);
+          expect(cubit.isClosed, isTrue);
+          expect(cubit.isSessionCurrent, isFalse);
+          answer.complete(false);
+          await tester.pumpAndSettle();
+          expect(find.byType(SnackBar), findsNothing);
+          expect(tester.takeException(), isNull);
+        },
+      );
+
       testWidgets('the X closes without writing the picks', (tester) async {
         when(() => service.myLists).thenReturn([list('Empty')]);
         await openSheet(tester);
@@ -668,6 +799,7 @@ void main() {
           await tester.pumpAndSettle();
           expect(rowChecks(), findsOneWidget);
           expect(find.text(l10n.listRetrySync), findsNothing);
+          expect(find.text(l10n.listVideoPendingSync), findsNothing);
           verify(() => service.retryListSync(fresh.id)).called(1);
           verify(() => service.addVideoToList(fresh.id, _videoEventId))
               .called(1);
