@@ -97,9 +97,9 @@ void main() {
         addTearDown(publicationService.dispose);
         final created = await publicationService.createList(name: 'Fixture');
         final event =
-            verify(() => mockNostr.publishEventAwaitOk(captureAny()))
-                    .captured
-                    .single
+            verify(
+                  () => mockNostr.publishEventAwaitOk(captureAny()),
+                ).captured.single
                 as Event;
         expect(created!.nostrEventId, event.id);
         expect(event.kind, 30005);
@@ -114,7 +114,11 @@ void main() {
         // Set up a SLOW relay response (simulates 7+ second timeout)
         final slowRelayCompleter = Completer<void>();
         when(
-          () => mockNostr.subscribe(any(), onEose: any(named: 'onEose')),
+          () => mockNostr.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
         ).thenAnswer((_) {
           // This stream never completes quickly - simulates slow relay
           return Stream.fromFuture(
@@ -179,7 +183,11 @@ void main() {
     test('notifies listeners immediately after initialization', () async {
       // Set up slow relay
       when(
-        () => mockNostr.subscribe(any(), onEose: any(named: 'onEose')),
+        () => mockNostr.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
       ).thenAnswer((_) => const Stream.empty());
 
       final service = CuratedListService(
@@ -206,7 +214,11 @@ void main() {
         // Set up relay that never responds
         final neverCompletes = Completer<void>();
         when(
-          () => mockNostr.subscribe(any(), onEose: any(named: 'onEose')),
+          () => mockNostr.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
         ).thenAnswer((_) {
           return Stream.fromFuture(
             neverCompletes.future.then((_) => null),
@@ -254,7 +266,11 @@ void main() {
         // Set up slow relay
         final slowRelay = Completer<void>();
         when(
-          () => mockNostr.subscribe(any(), onEose: any(named: 'onEose')),
+          () => mockNostr.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
         ).thenAnswer((_) {
           return Stream.fromFuture(
             slowRelay.future.then((_) => null),
@@ -306,7 +322,11 @@ void main() {
         final relayResponseCompleter = Completer<Event>();
 
         when(
-          () => mockNostr.subscribe(any(), onEose: any(named: 'onEose')),
+          () => mockNostr.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
         ).thenAnswer((invocation) {
           // Return a stream that will emit an event after delay
           return Stream.fromFuture(relayResponseCompleter.future);

@@ -40,6 +40,46 @@ abstract final class CuratedListConverter {
     return latest.values.toList();
   }
 
+  /// Preserves both device copies of an unpublished owned coordinate.
+  /// The caller persists this private-preferred union before backfilling it.
+  static CuratedList mergeUnpublished(
+    CuratedList local,
+    CuratedList relay, {
+    required DateTime mergedAt,
+  }) {
+    final relayIsNewer =
+        relay.updatedAt.millisecondsSinceEpoch ~/ 1000 >
+        local.updatedAt.millisecondsSinceEpoch ~/ 1000;
+    final preferred = relayIsNewer ? relay : local;
+    final other = relayIsNewer ? local : relay;
+    final items = <String>{...preferred.videoEventIds, ...other.videoEventIds};
+    final isPublic = local.isPublic && relay.isPublic;
+    final collaborative = local.isCollaborative || relay.isCollaborative;
+    final privacyConflict = !isPublic && collaborative;
+    final isCollaborative = collaborative && !privacyConflict;
+    return preferred.copyWith(
+      pubkey: relay.pubkey,
+      videoEventIds: items.toList(growable: false),
+      createdAt: local.createdAt,
+      updatedAt: mergedAt,
+      isCollaborative: isCollaborative,
+      allowedCollaborators: privacyConflict
+          ? const []
+          : {
+              ...local.allowedCollaborators,
+              ...relay.allowedCollaborators,
+            }.toList(growable: false),
+      isPublic: isPublic,
+      clearNostrEventId: true,
+      pendingRepublish: false,
+      pendingPlaintextEventIds: {
+        ...local.pendingPlaintextEventIds,
+        if (relay.isPublic && !isPublic && relay.nostrEventId != null)
+          relay.nostrEventId!,
+      }.toList(growable: false),
+    );
+  }
+
   /// Parses a Nostr [Event] into a [CuratedList].
   ///
   /// Returns `null` if the event cannot be parsed (e.g. missing d-tag).

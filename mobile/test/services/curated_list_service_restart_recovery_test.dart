@@ -169,15 +169,16 @@ void main() {
         backing.rejects = null;
         await restart();
         final rebuilt = open();
-        // Retry of a metadata edit should retain the privacy already accepted
-        // remotely, even if the final local acceptance write was rejected.
+        // New edits wait for explicit recovery of the accepted permission state.
         expect(
           await rebuilt.updateList(
             listId: seed.authorScopedId,
             name: 'Retried',
           ),
-          isTrue,
+          isFalse,
         );
+        expect(sent.where((e) => e.kind == 30005), hasLength(1));
+        expect(await rebuilt.retryListSync(seed.authorScopedId), isTrue);
         final retry = sent.where((e) => e.kind == 30005).last;
         expect(retry.tags, isNot(contains(equals(['e', _video]))));
         expect(unsealForTest(retry.content), contains(_video));
@@ -185,6 +186,13 @@ void main() {
         expect(redaction.kind, 5);
         expect(redaction.tags, contains(equals(['e', _oldEvent])));
         expect(redaction.createdAt, greaterThan(retry.createdAt));
+        expect(
+          await rebuilt.updateList(
+            listId: seed.authorScopedId,
+            name: 'Retried',
+          ),
+          isTrue,
+        );
         await restart();
         expect(open().getListById(seed.id)!.isPublic, isFalse);
       },
@@ -193,7 +201,7 @@ void main() {
       test(
         initialPublic
             ? 'immediate Retry after failed final privacy write keeps sealed target'
-            : 'a new explicit privacy request replaces the recovered proposal',
+            : 'new permission edits wait for explicit accepted-state recovery',
         () async {
           final now = DateTime.now().subtract(const Duration(seconds: 4));
           final seed = CuratedList(
@@ -246,6 +254,12 @@ void main() {
           } else {
             await restart();
             final rebuilt = open();
+            expect(
+              await rebuilt.updateList(listId: seed.id, isPublic: false),
+              isFalse,
+            );
+            expect(await rebuilt.retryListSync(seed.id), isTrue);
+            expect(rebuilt.getListById(seed.id)!.isPublic, isTrue);
             expect(
               await rebuilt.updateList(listId: seed.id, isPublic: false),
               isTrue,

@@ -66,7 +66,7 @@ final class CuratedListRelaySnapshotReader {
         name: 'CuratedListService',
         category: LogCategory.system,
       );
-      final subscription = _nostrClient.subscribe([filter]);
+      final subscription = _nostrClient.subscribe([filter], closeOnEose: true);
       timeoutTimer = Timer(timeout, () {
         Log.debug(
           'Relay sync timeout reached, processing received events',
@@ -95,7 +95,7 @@ final class CuratedListRelaySnapshotReader {
         },
         onError: (Object error) {
           Log.error(
-            'Error fetching lists from relay: $error',
+            'Error fetching lists from relay (${error.runtimeType})',
             name: 'CuratedListService',
             category: LogCategory.system,
           );

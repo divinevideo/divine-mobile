@@ -5,6 +5,7 @@ import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/curated_list_relay_gateway.dart';
+import 'package:openvine/services/curated_lists/curated_list_recovery_journal.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Persists a replacement only while [current] is still the captured row.
@@ -24,11 +25,15 @@ class CuratedListPublisher {
     required CuratedListPublishClock publishClock,
     required CuratedList? Function(String) findList,
     required PersistCuratedList persistList,
+    required CuratedListRecoveryJournal recoveryJournal,
+    required bool Function() isCurrentSession,
   }) : _client = client,
        _gateway = gateway,
        _clock = publishClock,
        _findList = findList,
-       _persistList = persistList;
+       _persistList = persistList,
+       _recovery = recoveryJournal,
+       _isCurrentSession = isCurrentSession;
 
   final NostrClient _client;
   final CuratedListRelayGateway _gateway;
@@ -36,7 +41,11 @@ class CuratedListPublisher {
   final CuratedList? Function(String) _findList;
   final PersistCuratedList _persistList;
 
-  bool _owns(String owner) => _gateway.currentAuthenticatedPubkey() == owner;
+  final CuratedListRecoveryJournal _recovery;
+  final bool Function() _isCurrentSession;
+
+  bool _owns(String owner) =>
+      _isCurrentSession() && _gateway.currentAuthenticatedPubkey() == owner;
 
   Future<bool> publish(
     CuratedList source, {
@@ -55,7 +64,9 @@ class CuratedListPublisher {
     try {
       final target = source.publicationTarget;
       final owner = _gateway.currentAuthenticatedPubkey();
-      if (owner == null || target.pubkey != owner) return false;
+      if (owner == null || target.pubkey != owner || !_owns(owner)) {
+        return false;
+      }
       final event = await _gateway.signList(
         target,
         ownerPubkey: owner,
@@ -93,6 +104,12 @@ class CuratedListPublisher {
         final outcome = await _client.publishEventAwaitOk(event);
         relayAccepted = outcome.acceptedByAny;
         if (!relayAccepted) {
+          Log.warning(
+            'List publish not accepted (rejected=${outcome.rejectedBy.length}, '
+            'noResponse=${outcome.noResponseFrom.length})',
+            name: 'CuratedListPublisher',
+            category: LogCategory.system,
+          );
           if (outcome.noResponseFrom.isNotEmpty || outcome.rejectedBy.isEmpty) {
             reportUnconfirmed();
           }
@@ -111,11 +128,17 @@ class CuratedListPublisher {
         }
       } else {
         final result = await _client.publishEvent(event);
-        if (result.failureReason != null) return false;
+        if (result.failureReason != null) {
+          Log.warning(
+            'List publish failed (${result.failureReason.runtimeType})',
+            name: 'CuratedListPublisher',
+            category: LogCategory.system,
+          );
+          return false;
+        }
       }
-      // Recording an already acknowledged event still belongs to its
-      // captured author's unchanged row after an account switch. Further
-      // signing/redaction remains gated to the active owner.
+      // A retired account lease cannot record an ACK into an incoming cache.
+      if (!_owns(owner)) return false;
       current = _findList(target.authorScopedId);
       if (current == null || current.pubkey != owner || current != sending) {
         return false;
@@ -124,9 +147,36 @@ class CuratedListPublisher {
           CuratedListVisibility.fromList(current) !=
           CuratedListVisibility.fromList(target);
       if (commitsPermissions) {
-        // An acknowledged target must survive a rejected final acceptance
-        // write. Unlike the old pre-send proposal, this journal is safe to
-        // recover through later metadata edits and restart backfill.
+        // An ACK is durable recovery evidence, never permission for an
+        // unrelated content edit while the displayed state remains unchanged.
+        final priorPlaintextIds = <String>{
+          ...current.pendingPlaintextEventIds,
+          if (current.isPublic &&
+              !target.isPublic &&
+              current.nostrEventId != null)
+            current.nostrEventId!,
+        };
+        var savedAcceptance = false;
+        try {
+          savedAcceptance = await _recovery.accepted(
+            owner: owner,
+            listId: current.id,
+            visibility: CuratedListVisibility.fromList(
+              target,
+              relayAccepted: true,
+            ),
+            eventId: event.id,
+            acceptedAt: signedAt,
+            plaintextEventIds: priorPlaintextIds,
+          );
+        } catch (error) {
+          Log.warning(
+            'Acknowledged list recovery storage failed (${error.runtimeType})',
+            name: 'CuratedListPublisher',
+            category: LogCategory.system,
+          );
+        }
+        if (!_owns(owner)) return false;
         final journal = target
             .stageVisibilityFrom(
               current,
@@ -139,7 +189,9 @@ class CuratedListPublisher {
               pendingRepublish: true,
               pendingPlaintextEventIds: current.pendingPlaintextEventIds,
             );
-        if (!await _persistList(current, journal)) {
+        // Even refused recovery storage projects the retained ACK into this
+        // session. Only an explicit Sync may settle it; cleanup must drain it.
+        if (!await _persistList(current, journal) || !savedAcceptance) {
           return false;
         }
         current = _findList(target.authorScopedId);
@@ -166,7 +218,17 @@ class CuratedListPublisher {
         clearPendingVisibility: true,
         pendingPlaintextEventIds: plaintextIds.toList(growable: false),
       );
-      if (!await _persistList(current, committed)) return false;
+      if (!await _persistList(current, committed) || !_owns(owner)) {
+        return false;
+      }
+      if (!await _recovery.visibilityCommitted(
+            owner,
+            committed.id,
+            committed,
+          ) ||
+          !_owns(owner)) {
+        return false;
+      }
       // Failure of advisory redaction does not undo an accepted replacement.
       // Its IDs remain stored for a later sync, without claiming erasure.
       await retryPlaintextRedactions(target.authorScopedId);
@@ -183,43 +245,94 @@ class CuratedListPublisher {
   }
 
   /// Retries event-specific requests without republishing an accepted list.
+  ///
+  /// The owner journal also covers a row wiped by ordinary logout. A pending
+  /// permission transition needs an owned row recovered first; an accepted
+  /// private commit's deletion IDs can be delivered without its payload.
   Future<bool> retryPlaintextRedactions(String authorScopedId) async {
+    final separator = authorScopedId.indexOf(':');
+    if (separator < 1) return false;
+    final owner = authorScopedId.substring(0, separator);
+    final listId = authorScopedId.substring(separator + 1);
+    if (!_owns(owner)) return false;
     var current = _findList(authorScopedId);
-    final owner = current?.pubkey;
-    if (current == null || owner == null || !_owns(owner)) return false;
-    for (final eventId in List<String>.of(current.pendingPlaintextEventIds)) {
+    var saved = _recovery.record(owner, listId);
+    if (current?.hasPendingPermissionRecovery == true) return false;
+    if (saved?.requiresPrivateCommit == true && current?.isPublic == true) {
+      return false;
+    }
+    if (saved?.visibility != null || saved?.requiresPrivateCommit == true) {
+      if (current == null ||
+          current.nostrEventId == null ||
+          current.pendingRepublish ||
+          _recovery.needsPermissionRecovery(current, owner)) {
+        return false;
+      }
+      if (!await _recovery.visibilityCommitted(owner, listId, current) ||
+          !_owns(owner)) {
+        return false;
+      }
+      saved = _recovery.record(owner, listId);
+    }
+    if (saved?.acceptedAt != null) {
+      _clock.observeRevision(
+        ownerPubkey: owner,
+        listId: listId,
+        updatedAt: saved!.acceptedAt!,
+      );
+    }
+    final pending = <String>{
+      ...?current?.pendingPlaintextEventIds,
+      ...?saved?.plaintextEventIds,
+    };
+    for (final eventId in pending) {
       try {
         current = _findList(authorScopedId);
-        if (current == null || !_owns(owner)) return false;
-        // A pending private acceptance journal is not yet a durable private
-        // commit. Publish/recover it before requesting plaintext deletion.
-        if (current.pendingVisibility != null && current.isPublic) return false;
-        final createdAt = _clock.next(ownerPubkey: owner, listId: current.id);
-        final reservedAt = DateTime.fromMillisecondsSinceEpoch(
-          createdAt * 1000,
-        );
-        final reserved = current.copyWith(
-          updatedAt: reservedAt.isAfter(current.updatedAt)
-              ? reservedAt
-              : current.updatedAt,
-        );
-        if (!await _persistList(current, reserved) || !_owns(owner)) {
+        if (!_owns(owner) || current?.hasPendingPermissionRecovery == true) {
           return false;
+        }
+        final createdAt = _clock.next(ownerPubkey: owner, listId: listId);
+        if (current != null) {
+          final reservedAt = DateTime.fromMillisecondsSinceEpoch(
+            createdAt * 1000,
+          );
+          final reserved = current.copyWith(
+            updatedAt: reservedAt.isAfter(current.updatedAt)
+                ? reservedAt
+                : current.updatedAt,
+          );
+          if (!await _persistList(current, reserved) || !_owns(owner)) {
+            return false;
+          }
         }
         final accepted = await _gateway.redactPlaintextListEvent(
           eventId,
           ownerPubkey: owner,
           createdAt: createdAt,
         );
-        if (!accepted || !_owns(owner)) return false;
+        if (!accepted || !_owns(owner)) {
+          Log.warning(
+            'Plaintext deletion request not accepted; recovery retained',
+            name: 'CuratedListPublisher',
+            category: LogCategory.system,
+          );
+          return false;
+        }
         current = _findList(authorScopedId);
-        if (current == null) return false;
-        final completed = current.copyWith(
-          pendingPlaintextEventIds: current.pendingPlaintextEventIds
-              .where((id) => id != eventId)
-              .toList(growable: false),
-        );
-        if (!await _persistList(current, completed)) return false;
+        if (current != null) {
+          final completed = current.copyWith(
+            pendingPlaintextEventIds: current.pendingPlaintextEventIds
+                .where((id) => id != eventId)
+                .toList(growable: false),
+          );
+          if (!await _persistList(current, completed) || !_owns(owner)) {
+            return false;
+          }
+        }
+        if (!await _recovery.redactionAccepted(owner, listId, eventId) ||
+            !_owns(owner)) {
+          return false;
+        }
       } catch (error) {
         Log.warning(
           'Plaintext redaction deferred (${error.runtimeType})',

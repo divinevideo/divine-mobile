@@ -12,6 +12,8 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/curated_lists/curated_list_recovery_journal.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
@@ -91,7 +93,7 @@ void main() {
           CuratedListService.listsStorageKey,
           jsonEncode([original.toJson()]),
         );
-        final current = open();
+        var current = open();
         final started = Completer<Event>();
         final decision = Completer<PublishOutcome>();
         when(() => client.publishEventAwaitOk(any())).thenAnswer((i) {
@@ -120,19 +122,54 @@ void main() {
         backing.reject = rejectsMerge;
         decision.complete(acceptedOutcome(event));
         expect(await saving, isFalse);
-        expect(current.getListById(original.id), winner);
+        final recoveredWinner = winner.copyWith(
+          pendingPlaintextEventIds: const [_oldEvent],
+        );
+        expect(current.getListById(original.id), recoveredWinner);
         verify(() => client.publishEventAwaitOk(any())).called(1);
         verifyNever(() => client.publishEvent(any()));
         SharedPreferences.resetStatic();
         prefs = await SharedPreferences.getInstance();
-        expect(open().getListById(original.id), winner);
+        expect(open().getListById(original.id), recoveredWinner);
         backing.reject = false;
         when(() => client.publishEventAwaitOk(any())).thenAnswer((i) async {
           return acceptedOutcome(i.positionalArguments.single as Event);
         });
-        expect(await current.retryListSync(original.id), isTrue);
+        // Retain the old event evidence without letting it overwrite the
+        // newer public revision or authorize premature private redaction.
+        expect(await current.retryListSync(original.id), isFalse);
+        verifyNever(() => client.publishEventAwaitOk(any()));
         expect(current.getListById(original.id)!.name, winner.name);
         expect(current.getListById(original.id)!.isPublic, isTrue);
+        // Cleanup reads the actual durable winner before wiping the row.
+        // An older relay echo on a later login cannot revive the old target.
+        await UserDataCleanupService(prefs)
+            .clearUserSpecificData(userPubkey: _owner);
+        final journal = CuratedListRecoveryJournal(
+          prefs: prefs,
+          runCurrent: (op) => op(),
+        );
+        expect(journal.record(_owner, original.id)!.visibility, isNull);
+        expect(
+          journal.record(_owner, original.id)!.requiresPrivateCommit,
+          isTrue,
+        );
+        await prefs.setString(
+          CuratedListService.listsStorageKey,
+          jsonEncode([
+            winner
+                .copyWith(
+                  updatedAt: original.updatedAt,
+                  nostrEventId: _oldEvent,
+                )
+                .toJson(),
+          ]),
+        );
+        current = open();
+        expect(current.getListById(original.id)!.pendingVisibility, isNull);
+        expect(current.getListById(original.id)!.isPublic, isTrue);
+        expect(await current.retryListSync(original.id), isFalse);
+        verifyNever(() => client.publishEventAwaitOk(any()));
         expect(
           await current.updateList(listId: original.id, name: 'New edit'),
           isTrue,
@@ -142,6 +179,10 @@ void main() {
         prefs = await SharedPreferences.getInstance();
         expect(open().getListById(original.id)!.name, 'New edit');
         expect(open().getListById(original.id)!.isPublic, isTrue);
+        expect(open().getListById(original.id)!.pendingVisibility, isNull);
+        expect(open().getListById(original.id)!.pendingPlaintextEventIds, [
+          _oldEvent,
+        ]);
       });
     }
   });

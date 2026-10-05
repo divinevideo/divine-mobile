@@ -15,6 +15,7 @@ import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -364,6 +365,65 @@ void main() {
       );
     }
 
+    for (final nextOwner in <String?>['b' * 64, null]) {
+      for (final isDefault in [false, true]) {
+        test(
+          'retired deletion save never restores an old row or emits callbacks '
+          'with next owner=$nextOwner/default=$isDefault',
+          () async {
+            var owner = _owner as String?;
+            when(() => auth.currentPublicKeyHex).thenAnswer((_) => owner);
+            when(() => auth.isAuthenticated).thenAnswer((_) => owner != null);
+            final source = _list().copyWith(
+              id: isDefault ? CuratedListService.defaultListId : 'crew',
+            );
+            await prefs.setString(
+              CuratedListService.listsStorageKey,
+              jsonEncode([source.toJson()]),
+            );
+            await prefs.setString(
+              CuratedListService.subscribedListsStorageKey,
+              jsonEncode([source.authorScopedId]),
+            );
+            var callbacks = 0;
+            final service = open(onUnsubscribed: (_) async => callbacks++);
+            var notifications = 0;
+            service.addListener(() => notifications++);
+            prefs.listWriteStarted = Completer<void>();
+            prefs.firstListWrite = Completer<bool>();
+            final deleting = service.deleteOwnedList(source.authorScopedId);
+            await prefs.listWriteStarted!.future;
+            final beforeSwitch = notifications;
+            owner = nextOwner;
+            final retired = CuratedListSessionCoordinator.forPreferences(prefs)
+                .retireAndDrain();
+            prefs.firstListWrite!.complete(false);
+            expect(await deleting, isFalse);
+            await retired;
+            expect(service.isCurrentSession, isFalse);
+            expect(notifications, beforeSwitch);
+            expect(callbacks, 0);
+            expect(
+              prefs.getBool(CuratedListService.defaultListDeletedStorageKey),
+              isNot(isTrue),
+            );
+            expect(
+              jsonDecode(prefs.getString(CuratedListService.listsStorageKey)!),
+              [source.toJson()],
+            );
+            expect(
+              jsonDecode(
+                prefs.getString(CuratedListService.subscribedListsStorageKey)!,
+              ),
+              [source.authorScopedId],
+            );
+            verifyNever(() => client.publishEventAwaitOk(any()));
+            verifyNever(() => client.publishEvent(any()));
+          },
+        );
+      }
+    }
+
     test(
       'disposal during a save reports failure and never publishes',
       () async {
@@ -397,7 +457,11 @@ void main() {
       setUp(() async {
         registerFallbackValue(<Filter>[]);
         when(
-          () => client.subscribe(any(), onEose: any(named: 'onEose')),
+          () => client.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
         ).thenAnswer((_) => const Stream<Event>.empty());
         await prefs.setString(CuratedListService.listsStorageKey, '[]');
         await prefs.setStringList(
@@ -530,7 +594,7 @@ void main() {
         addTearDown(logs.clearAllLogs);
         open();
         final entries = logs.getRecentLogs().where(
-          (entry) => entry.name == 'CuratedListService',
+          (entry) => entry.name == 'PrefsCuratedListStore',
         );
         expect(entries, hasLength(2));
         for (final entry in entries) {
