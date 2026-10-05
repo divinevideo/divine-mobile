@@ -13014,4 +13014,10 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get listsDiscoveryLoadingLabel => 'جارٍ تحميل القوائم';
+
+  @override
+  String get listSearchPeopleUnavailable => 'قوائم الأشخاص غير متاحة الآن.';
+
+  @override
+  String get listSearchVideosUnavailable => 'قوائم الفيديو غير متاحة الآن.';
 }

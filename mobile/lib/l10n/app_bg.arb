@@ -5600,5 +5600,7 @@
     }
   },
   "listsDiscoveryLoadingLabel": "Зареждане на списъци",
-  "listsDiscoveryEmpty": "Този път не изскочи нито един списък. Дръпни надолу за обновяване."
+  "listsDiscoveryEmpty": "Този път не изскочи нито един списък. Дръпни надолу за обновяване.",
+  "listSearchPeopleUnavailable": "Списъците с хора не са достъпни в момента.",
+  "listSearchVideosUnavailable": "Списъците с видеа не са достъпни в момента."
 }

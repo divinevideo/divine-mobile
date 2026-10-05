@@ -13190,4 +13190,12 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get listsDiscoveryLoadingLabel => 'Зареждане на списъци';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Списъците с хора не са достъпни в момента.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Списъците с видеа не са достъпни в момента.';
 }

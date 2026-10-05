@@ -13007,4 +13007,12 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get listsDiscoveryLoadingLabel => 'Đang tải danh sách';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Danh sách người hiện không khả dụng.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Danh sách video hiện không khả dụng.';
 }

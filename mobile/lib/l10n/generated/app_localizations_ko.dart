@@ -12432,4 +12432,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get listsDiscoveryLoadingLabel => '목록 불러오는 중';
+
+  @override
+  String get listSearchPeopleUnavailable => '지금은 사용자 목록을 이용할 수 없어요.';
+
+  @override
+  String get listSearchVideosUnavailable => '지금은 동영상 목록을 이용할 수 없어요.';
 }

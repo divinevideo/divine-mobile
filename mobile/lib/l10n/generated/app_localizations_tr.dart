@@ -12988,4 +12988,12 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get listsDiscoveryLoadingLabel => 'Listeler yükleniyor';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Kişi listeleri şu anda kullanılamıyor.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Video listeleri şu anda kullanılamıyor.';
 }

@@ -13331,4 +13331,12 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get listsDiscoveryLoadingLabel => 'Se încarcă listele';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Listele de persoane nu sunt disponibile acum.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Listele de videoclipuri nu sunt disponibile acum.';
 }

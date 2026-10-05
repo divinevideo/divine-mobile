@@ -5476,5 +5476,7 @@
     }
   },
   "listsDiscoveryLoadingLabel": "جارٍ تحميل القوائم",
-  "listsDiscoveryEmpty": "لم تظهر أي قوائم هذه المرة. يمكن السحب للتحديث."
+  "listsDiscoveryEmpty": "لم تظهر أي قوائم هذه المرة. يمكن السحب للتحديث.",
+  "listSearchPeopleUnavailable": "قوائم الأشخاص غير متاحة الآن.",
+  "listSearchVideosUnavailable": "قوائم الفيديو غير متاحة الآن."
 }

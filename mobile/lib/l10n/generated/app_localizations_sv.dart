@@ -13068,4 +13068,12 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get listsDiscoveryLoadingLabel => 'Läser in listor';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Personlistor är inte tillgängliga just nu.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Videolistor är inte tillgängliga just nu.';
 }

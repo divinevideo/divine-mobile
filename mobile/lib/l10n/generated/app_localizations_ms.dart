@@ -13063,4 +13063,12 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get listsDiscoveryLoadingLabel => 'Memuatkan senarai';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Senarai orang tidak tersedia buat masa ini.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Senarai video tidak tersedia buat masa ini.';
 }

@@ -12730,4 +12730,10 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get listsDiscoveryLoadingLabel => 'ዝርዝሮችን በመጫን ላይ';
+
+  @override
+  String get listSearchPeopleUnavailable => 'የሰዎች ዝርዝሮች በአሁኑ ጊዜ አይገኙም።';
+
+  @override
+  String get listSearchVideosUnavailable => 'የቪዲዮ ዝርዝሮች በአሁኑ ጊዜ አይገኙም።';
 }

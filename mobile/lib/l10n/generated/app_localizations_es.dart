@@ -13204,4 +13204,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get listsDiscoveryLoadingLabel => 'Cargando listas';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Las listas de personas no están disponibles ahora.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Las listas de videos no están disponibles ahora.';
 }

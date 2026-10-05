@@ -12968,4 +12968,12 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get listsDiscoveryLoadingLabel => 'Memuat daftar';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Daftar orang sedang tidak tersedia.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Daftar video sedang tidak tersedia.';
 }

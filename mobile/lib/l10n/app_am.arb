@@ -5560,5 +5560,7 @@
     }
   },
   "listsDiscoveryLoadingLabel": "ዝርዝሮችን በመጫን ላይ",
-  "listsDiscoveryEmpty": "በዚህ ጊዜ ምንም ዝርዝሮች አልተገኙም። ለማደስ ወደታች ይጎትቱ።"
+  "listsDiscoveryEmpty": "በዚህ ጊዜ ምንም ዝርዝሮች አልተገኙም። ለማደስ ወደታች ይጎትቱ።",
+  "listSearchPeopleUnavailable": "የሰዎች ዝርዝሮች በአሁኑ ጊዜ አይገኙም።",
+  "listSearchVideosUnavailable": "የቪዲዮ ዝርዝሮች በአሁኑ ጊዜ አይገኙም።"
 }

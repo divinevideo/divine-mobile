@@ -13177,4 +13177,12 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get listsDiscoveryLoadingLabel => 'Naglo-load ng mga list';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Hindi available ang mga listahan ng tao ngayon.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Hindi available ang mga listahan ng video ngayon.';
 }

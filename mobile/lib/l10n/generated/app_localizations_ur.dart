@@ -13056,4 +13056,12 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get listsDiscoveryLoadingLabel => 'فہرستیں لوڈ ہو رہی ہیں';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'لوگوں کی فہرستیں فی الحال دستیاب نہیں ہیں۔';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'ویڈیو کی فہرستیں فی الحال دستیاب نہیں ہیں۔';
 }

@@ -5476,5 +5476,7 @@
     }
   },
   "listsDiscoveryLoadingLabel": "Läser in listor",
-  "listsDiscoveryEmpty": "Inga listor dök upp den här gången. Dra för att uppdatera."
+  "listsDiscoveryEmpty": "Inga listor dök upp den här gången. Dra för att uppdatera.",
+  "listSearchPeopleUnavailable": "Personlistor är inte tillgängliga just nu.",
+  "listSearchVideosUnavailable": "Videolistor är inte tillgängliga just nu."
 }

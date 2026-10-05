@@ -19,6 +19,7 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:models/models.dart';
+import 'package:openvine/config/app_config.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/constants/hive_box_names.dart';
@@ -624,7 +625,18 @@ PeopleListsRepository peopleListsRepository(Ref ref) {
     openBox: () => HiveBoxOpener.open<dynamic>(_peopleListsBoxName),
   );
 
+  final excludedDTags = AppConfig.publicPeopleListExcludedDTags;
+  if (excludedDTags == null) {
+    Log.warning(
+      'Public people-list discovery policy is missing or invalid; '
+      'release builds must supply DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS',
+      name: 'peopleListsRepository',
+      category: LogCategory.system,
+    );
+  }
+
   return PeopleListsRepositoryImpl(
+    additionalExcludedPublicDTags: excludedDTags ?? const {},
     nostrClient: nostrClient,
     cache: cache,
     blockFilter: createBlockedAuthorFilter(ref),

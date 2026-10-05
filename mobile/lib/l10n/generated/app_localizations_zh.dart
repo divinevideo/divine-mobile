@@ -12271,4 +12271,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get listsDiscoveryLoadingLabel => '正在加载列表';
+
+  @override
+  String get listSearchPeopleUnavailable => '人员列表暂时不可用。';
+
+  @override
+  String get listSearchVideosUnavailable => '视频列表暂时不可用。';
 }

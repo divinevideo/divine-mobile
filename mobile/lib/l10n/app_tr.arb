@@ -5476,5 +5476,7 @@
     }
   },
   "listsDiscoveryLoadingLabel": "Listeler yükleniyor",
-  "listsDiscoveryEmpty": "Bu sefer hiç liste çıkmadı. Yenilemek için aşağı çek."
+  "listsDiscoveryEmpty": "Bu sefer hiç liste çıkmadı. Yenilemek için aşağı çek.",
+  "listSearchPeopleUnavailable": "Kişi listeleri şu anda kullanılamıyor.",
+  "listSearchVideosUnavailable": "Video listeleri şu anda kullanılamıyor."
 }

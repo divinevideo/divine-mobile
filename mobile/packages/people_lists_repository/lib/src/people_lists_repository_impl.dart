@@ -49,11 +49,15 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     BlockedPeopleListOwnerFilter? blockFilter,
     FunnelcakeApiClient? funnelcakeApiClient,
     List<String> discoveryRelayUrls = const [],
+    Set<String> additionalExcludedPublicDTags = const {},
   }) : _nostrClient = nostrClient,
        _cache = cache,
        _blockFilter = blockFilter,
        _funnelcakeApiClient = funnelcakeApiClient,
-       _discoveryRelayUrls = discoveryRelayUrls;
+       _discoveryRelayUrls = List.unmodifiable(discoveryRelayUrls),
+       _additionalExcludedPublicDTags = Set.unmodifiable(
+         additionalExcludedPublicDTags,
+       );
 
   final NostrClient _nostrClient;
   final LocalPeopleListsCache _cache;
@@ -137,6 +141,9 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
   /// a deep link, a followed list's refresh — is still read from the whole
   /// pool, since it cannot be noise.
   final List<String> _discoveryRelayUrls;
+
+  /// Deployment-owned exclusions apply only to public discovery and search.
+  final Set<String> _additionalExcludedPublicDTags;
 
   @override
   Stream<List<UserList>> watchLists({required String ownerPubkey}) {
@@ -601,6 +608,7 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
       final list = result.list;
       return list.pubkeys.isNotEmpty &&
           !Nip51PeopleListCodec.machineryDTags.contains(list.id) &&
+          !_additionalExcludedPublicDTags.contains(list.id) &&
           (where == null || where(list));
     }).toList();
     return _keepDivineAuthors(results, keepAuthor: keepAuthor);

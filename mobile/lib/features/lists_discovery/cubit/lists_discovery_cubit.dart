@@ -33,60 +33,56 @@ const kListsDiscoveryThumbnails = 5;
 class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
     with CloseGuardedEmit<ListsDiscoveryState> {
   ListsDiscoveryCubit({
-    required CuratedListService curatedListService,
+    required CuratedListService? curatedListService,
     required CuratedListRepository curatedListRepository,
     required PeopleListsRepository peopleListsRepository,
     required String? viewerPubkey,
+    bool peopleListsEnabled = true,
+    bool videoInitializationFailed = false,
+    bool Function(String authorPubkey)? blockFilter,
+    ListsDiscoveryState? seed,
   }) : _curatedListService = curatedListService,
        _curatedListRepository = curatedListRepository,
        _peopleListsRepository = peopleListsRepository,
        _viewerPubkey = viewerPubkey,
-       super(const ListsDiscoveryState());
+       _blockFilter = blockFilter,
+       _peopleListsEnabled = peopleListsEnabled,
+       _videoInitializationFailed = videoInitializationFailed,
+       _isSeeded = seed != null,
+       super(
+         (seed ?? const ListsDiscoveryState()).copyWith(
+           peopleListsEnabled: peopleListsEnabled,
+           videoInitializationFailed: videoInitializationFailed,
+           videoStatus: videoInitializationFailed
+               ? ListsDiscoveryColumnStatus.failure
+               : seed?.videoStatus,
+         ),
+       );
 
-  final CuratedListService _curatedListService;
+  final CuratedListService? _curatedListService;
   final CuratedListRepository _curatedListRepository;
   final PeopleListsRepository _peopleListsRepository;
   final String? _viewerPubkey;
+  final bool _isSeeded;
+  final bool _peopleListsEnabled;
+  final bool _videoInitializationFailed;
+  final bool Function(String authorPubkey)? _blockFilter;
 
   StreamSubscription<List<CuratedList>>? _videoSubscription;
-  int _peopleLoadGeneration = 0;
-  bool _isScreenshotMode = false;
 
   /// Settles when the video stream errors, completes, or the cubit closes —
   /// cancellation fires no onDone, so [close] must release this latch or a
   /// pending [load] future would dangle forever.
   Completer<void>? _videoStreamSettled;
 
-  /// Seeds both columns with fixed data and skips relay loading entirely.
-  ///
-  /// Screenshot mode only (see `app_bootstrap`): marketing captures need
-  /// deterministic, on-brand lists, and the live discovery feed cannot
-  /// promise either.
-  void seedForScreenshots({
-    required List<CuratedList> videoLists,
-    List<PeopleListSearchResult> peopleLists = const [],
-  }) {
-    _isScreenshotMode = true;
-    _peopleLoadGeneration++;
-    final settled = _videoStreamSettled;
-    _videoStreamSettled = null;
-    if (settled != null && !settled.isCompleted) settled.complete();
-    unawaited(_videoSubscription?.cancel());
-    _videoSubscription = null;
-    emitIfOpen(
-      ListsDiscoveryState(
-        videoStatus: ListsDiscoveryColumnStatus.success,
-        peopleStatus: ListsDiscoveryColumnStatus.success,
-        videoLists: videoLists,
-        peopleLists: peopleLists,
-      ),
-    );
-  }
-
   /// Loads both columns. Safe to call again to refresh.
   Future<void> load() {
-    if (_isScreenshotMode || isClosed) return Future.value();
-    return Future.wait([_loadVideoLists(), _loadPeopleLists()]);
+    if (_isSeeded || isClosed) return Future.value();
+    return Future.wait([
+      if (!_videoInitializationFailed && _curatedListService != null)
+        _loadVideoLists(),
+      if (_peopleListsEnabled) _loadPeopleLists(),
+    ]);
   }
 
   bool _isCurrentVideoLoad(Completer<void> generation) =>
@@ -94,7 +90,10 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
 
   Future<void> _loadVideoLists() async {
     emitIfOpen(
-      state.copyWith(videoStatus: ListsDiscoveryColumnStatus.loading),
+      state.copyWith(
+        videoStatus: ListsDiscoveryColumnStatus.loading,
+        videoLists: _sortedVideoLists(state.videoLists),
+      ),
     );
 
     // Take over the latch before yielding. `cancel()` fires neither onDone
@@ -111,7 +110,7 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
     var streamFailed = false;
     var latest = const <CuratedList>[];
 
-    _videoSubscription = _curatedListService
+    _videoSubscription = _curatedListService!
         .streamPublicListsFromRelays()
         .listen(
           (lists) {
@@ -171,13 +170,14 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
     required Completer<void> generation,
   }) async {
     if (!_isCurrentVideoLoad(generation)) return;
-    if (lists.isEmpty) {
+    final visible = _sortedVideoLists(lists);
+    if (visible.isEmpty) {
       emitIfOpen(state.copyWith(videoThumbnailsPending: false));
       return;
     }
     try {
       final enriched = await _curatedListRepository.resolveListThumbnails(
-        lists,
+        visible,
         // Explicit even though it matches the resolver default: the value is
         // this feature's product invariant (the card fan has 5 slots).
         // ignore: avoid_redundant_argument_values
@@ -203,7 +203,11 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
   List<CuratedList> _sortedVideoLists(List<CuratedList> lists) {
     final visible = [
       for (final list in lists)
-        if (list.hasVideos && !_isOwn(list)) list,
+        if (list.hasVideos &&
+            !_isOwn(list) &&
+            (list.pubkey == null ||
+                !(_blockFilter?.call(list.pubkey!) ?? false)))
+          list,
     ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return List.unmodifiable(visible.take(kListsDiscoveryColumnCap));
   }
@@ -212,26 +216,39 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
       _viewerPubkey != null && list.pubkey == _viewerPubkey;
 
   Future<void> _loadPeopleLists() async {
-    final generation = ++_peopleLoadGeneration;
+    final generation = state.peopleLoadGeneration + 1;
     emitIfOpen(
-      state.copyWith(peopleStatus: ListsDiscoveryColumnStatus.loading),
+      state.copyWith(
+        peopleStatus: ListsDiscoveryColumnStatus.loading,
+        peopleLoadGeneration: generation,
+        peopleLists: state.peopleLists
+            .where(
+              (result) => !(_blockFilter?.call(result.ownerPubkey) ?? false),
+            )
+            .toList(),
+      ),
     );
     try {
       final lists = await _peopleListsRepository.discoverPublicLists(
         limit: kPublicListsRelayWindow,
         excludeAuthor: _viewerPubkey,
       );
-      if (isClosed || generation != _peopleLoadGeneration) return;
+      if (isClosed || generation != state.peopleLoadGeneration) return;
       emitIfOpen(
         state.copyWith(
           peopleStatus: ListsDiscoveryColumnStatus.success,
           peopleLists: List.unmodifiable(
-            lists.take(kListsDiscoveryColumnCap),
+            lists
+                .where(
+                  (result) =>
+                      !(_blockFilter?.call(result.ownerPubkey) ?? false),
+                )
+                .take(kListsDiscoveryColumnCap),
           ),
         ),
       );
     } catch (error, stackTrace) {
-      if (isClosed || generation != _peopleLoadGeneration) return;
+      if (isClosed || generation != state.peopleLoadGeneration) return;
       addError(error, stackTrace);
       emitIfOpen(
         state.copyWith(peopleStatus: ListsDiscoveryColumnStatus.failure),
@@ -241,9 +258,13 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
 
   @override
   Future<void> close() async {
+    // Retire this load before releasing it so it cannot start hydration while
+    // subscription cancellation is still awaiting completion.
     final settled = _videoStreamSettled;
+    _videoStreamSettled = null;
     if (settled != null && !settled.isCompleted) settled.complete();
+    final closing = super.close();
     await _videoSubscription?.cancel();
-    return super.close();
+    return closing;
   }
 }

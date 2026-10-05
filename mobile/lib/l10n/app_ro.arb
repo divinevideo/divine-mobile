@@ -5476,5 +5476,7 @@
     }
   },
   "listsDiscoveryLoadingLabel": "Se încarcă listele",
-  "listsDiscoveryEmpty": "De data asta n-a apărut nicio listă. Trage în jos pentru reîmprospătare."
+  "listsDiscoveryEmpty": "De data asta n-a apărut nicio listă. Trage în jos pentru reîmprospătare.",
+  "listSearchPeopleUnavailable": "Listele de persoane nu sunt disponibile acum.",
+  "listSearchVideosUnavailable": "Listele de videoclipuri nu sunt disponibile acum."
 }
