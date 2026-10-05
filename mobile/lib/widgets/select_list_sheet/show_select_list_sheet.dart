@@ -11,6 +11,7 @@ import 'package:openvine/blocs/select_list/select_list_cubit.dart';
 import 'package:openvine/extensions/modal_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/curated_list_editor_session_provider.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
 import 'package:openvine/widgets/select_list_sheet/select_list_save_button.dart';
@@ -30,8 +31,8 @@ Future<void> showSelectListSheet(
   final l10n = context.l10n;
   final messenger = ScaffoldMessenger.maybeOf(context);
   final container = ProviderScope.containerOf(context, listen: false);
-  String? currentOwner() =>
-      container.read(authServiceProvider).currentPublicKeyHex;
+  final session = container.read(curatedListEditorSessionProvider);
+  String? currentOwner() => session.currentOwnerPubkey;
   final openingOwner = currentOwner();
   if (openingOwner == null || openingOwner.isEmpty) return;
   var loaded = false;
@@ -48,9 +49,7 @@ Future<void> showSelectListSheet(
     );
   }
   if (currentOwner() != openingOwner) return;
-  final service = loaded
-      ? container.read(curatedListsStateProvider.notifier).service
-      : null;
+  final service = loaded ? session.service : null;
   if (service == null) {
     if (messenger?.mounted ?? false) {
       messenger!.showSnackBar(
@@ -62,37 +61,32 @@ Future<void> showSelectListSheet(
   if (!context.mounted) return;
 
   final bodyKey = GlobalKey();
-  final cubit = SelectListCubit(
-    service: service,
-    videoEventId: video.id,
-    currentOwnerPubkey: currentOwner,
-  );
 
   // The sheet's default sizes, which the people-list picker uses too: it
   // opens over the lower part of the screen and can be dragged taller.
-  try {
-    await context.showVideoPausingVineBottomSheet<void>(
-      title: Text(l10n.listAddToLists),
-      headerPadding: listInfoSheetHeaderPadding,
-      headerLeadingAction: DivineIconButton(
-        icon: DivineIconName.x,
-        type: DivineIconButtonType.secondary,
-        size: DivineIconButtonSize.small,
-        semanticLabel: l10n.commonClose,
-        // The body's context belongs to the sheet's own route, so the pop is
-        // skipped once that route is already on its way out.
-        onPressed: () => bodyKey.currentContext?.popModalIfMounted(),
+  await context.showVideoPausingVineBottomSheet<void>(
+    title: Text(l10n.listAddToLists),
+    headerPadding: listInfoSheetHeaderPadding,
+    headerLeadingAction: DivineIconButton(
+      icon: DivineIconName.x,
+      type: DivineIconButtonType.secondary,
+      size: DivineIconButtonSize.small,
+      semanticLabel: l10n.commonClose,
+      // The body's context belongs to the sheet's own route, so the pop is
+      // skipped once that route is already on its way out.
+      onPressed: () => bodyKey.currentContext?.popModalIfMounted(),
+    ),
+    trailing: const SelectListSaveButton(),
+    contentWrapper: (_, sheet) => BlocProvider<SelectListCubit>(
+      create: (_) => SelectListCubit(
+        service: service,
+        videoEventId: video.id,
+        currentOwnerPubkey: currentOwner,
       ),
-      trailing: const SelectListSaveButton(),
-      contentWrapper: (_, sheet) => BlocProvider<SelectListCubit>.value(
-        value: cubit,
-        child: sheet,
-      ),
-      buildScrollBody: (scrollController) =>
-          SelectListSheetBody(key: bodyKey, scrollController: scrollController),
-      bottomInput: SelectListCreateButton(video: video),
-    );
-  } finally {
-    await cubit.close();
-  }
+      child: sheet,
+    ),
+    buildScrollBody: (scrollController) =>
+        SelectListSheetBody(key: bodyKey, scrollController: scrollController),
+    bottomInput: SelectListCreateButton(video: video),
+  );
 }

@@ -26,6 +26,9 @@ enum SelectListStatus {
   /// A new list exists without the video.
   createdWithoutVideo,
 
+  /// A sync attempt could not confirm publication of local membership.
+  syncFailed,
+
   /// The video is saved locally and awaits relay publication.
   videoPendingSync,
 }
@@ -36,6 +39,8 @@ class SelectListState extends Equatable {
     required this.memberListIds,
     required this.selectedListIds,
     this.status = SelectListStatus.editing,
+    this.syncingListIds = const {},
+    this.failedSyncListIds = const {},
   });
 
   /// The lists the viewer can put the video in.
@@ -48,6 +53,12 @@ class SelectListState extends Equatable {
   final Set<String> selectedListIds;
 
   final SelectListStatus status;
+
+  /// Lists whose retry is currently awaiting a relay outcome.
+  final Set<String> syncingListIds;
+
+  /// Outstanding memberships whose latest retry did not confirm publication.
+  final Set<String> failedSyncListIds;
 
   /// Whether the picks are being written.
   bool get isSaving => status == SelectListStatus.saving;
@@ -80,15 +91,26 @@ class SelectListState extends Equatable {
     Set<String>? memberListIds,
     Set<String>? selectedListIds,
     SelectListStatus? status,
+    Set<String>? syncingListIds,
+    Set<String>? failedSyncListIds,
   }) {
     return SelectListState(
       lists: lists ?? this.lists,
       memberListIds: memberListIds ?? this.memberListIds,
       selectedListIds: selectedListIds ?? this.selectedListIds,
       status: status ?? this.status,
+      syncingListIds: syncingListIds ?? this.syncingListIds,
+      failedSyncListIds: failedSyncListIds ?? this.failedSyncListIds,
     );
   }
 
   @override
-  List<Object?> get props => [lists, memberListIds, selectedListIds, status];
+  List<Object?> get props => [
+    lists,
+    memberListIds,
+    selectedListIds,
+    status,
+    syncingListIds,
+    failedSyncListIds,
+  ];
 }
