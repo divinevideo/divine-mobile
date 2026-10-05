@@ -286,19 +286,32 @@ class UserDataCleanupService {
   ///
   /// Account-scoped caches are preserved across identity changes. Destructive
   /// cleanup removes only the known account's pubkey-scoped entries.
+  /// Required cleanup failures use one payload-free type for every auth caller.
   Future<int> clearUserSpecificData({
     String? reason,
     bool isIdentityChange = false,
     String? userPubkey,
     bool deleteUserData = false,
-  }) => _listSessions.clearCaches(
-    () => _clearUserSpecificData(
-      reason: reason,
-      isIdentityChange: isIdentityChange,
-      userPubkey: userPubkey,
-      deleteUserData: deleteUserData,
-    ),
-  );
+  }) async {
+    try {
+      return await _listSessions.clearCaches(
+        () => _clearUserSpecificData(
+          reason: reason,
+          isIdentityChange: isIdentityChange,
+          userPubkey: userPubkey,
+          deleteUserData: deleteUserData,
+        ),
+      );
+    } on UserDataCleanupException {
+      rethrow;
+    } on Object {
+      // A cleanup failure must never become a partly established account.
+      // Its cause may contain unreadable private cache or database payloads.
+      throw const UserDataCleanupException(
+        'Could not clear account data safely',
+      );
+    }
+  }
 
   Future<int> _clearUserSpecificData({
     String? reason,
@@ -424,9 +437,10 @@ class UserDataCleanupService {
         );
       } catch (e, stackTrace) {
         Log.error(
-          'Database cleanup failed: $e\n$stackTrace',
+          'Database cleanup failed (${e.runtimeType})',
           name: 'UserDataCleanupService',
           category: LogCategory.auth,
+          stackTrace: stackTrace,
         );
         // An account switch must fail closed: proceeding after its shared
         // database cleanup fails can expose the departing account's local DM
