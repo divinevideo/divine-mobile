@@ -58,6 +58,8 @@ export 'package:openvine/models/authentication_source.dart';
 export 'package:openvine/services/auth/relay_discovery_orchestrator.dart'
     show BootstrapRelayListCallback, UserRelaysDiscoveredCallback;
 
+part 'auth/account_cleanup_failure.dart';
+
 // Key for the last-used account npub (used to restore the correct identity on restart)
 const _kLastUsedNpubKey = 'last_used_npub';
 
@@ -3946,14 +3948,6 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     await _userDataCleanupService.claimLegacyRows(pubkeyHex);
   }
 
-  AuthResult _authFailureResult(Object error) =>
-      error is UserDataCleanupException
-      ? const AuthResult(
-          success: false,
-          failureReason: AuthFailureReason.accountCleanupFailed,
-        )
-      : AuthResult.failure(_lastError!);
-
   /// Set up user session after successful authentication.
   ///
   /// Throws [UserDataCleanupException] if the outgoing account's data cannot
@@ -4156,14 +4150,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       // when editing profile or publishing content.
       unawaited(_performDiscovery());
     } on UserDataCleanupException {
-      // Storage cleanup must finish before any incoming identity becomes live.
-      // Terms acceptance cannot repair a refused cache removal.
-      _currentIdentity = null;
-      _currentKeyContainer = null;
-      _currentProfile = null;
-      _authSource = AuthenticationSource.none;
-      _profileController.add(null);
-      _setAuthState(AuthState.unauthenticated);
+      _resetTentativeSessionAfterCleanupFailure();
       rethrow;
     } catch (e) {
       Log.warning(
