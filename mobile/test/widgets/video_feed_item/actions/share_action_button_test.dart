@@ -546,6 +546,7 @@ void main() {
         ) async {
           _fakeListService = _MockCuratedListService();
           when(() => _fakeListService!.myLists).thenReturn(const []);
+          when(() => _fakeListService!.isCurrentSession).thenReturn(true);
           await pumpOwnerSheet(tester);
 
           await tester.tap(find.text(l10n.shareSheetAddToList));
