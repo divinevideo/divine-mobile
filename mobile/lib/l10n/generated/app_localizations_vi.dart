@@ -13109,4 +13109,12 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'Lần này chẳng thấy danh sách nào. Kéo để làm mới.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Danh sách người hiện không khả dụng.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Danh sách video hiện không khả dụng.';
 }

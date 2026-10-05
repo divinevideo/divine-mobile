@@ -13171,4 +13171,12 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'Inga listor dök upp den här gången. Dra för att uppdatera.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Personlistor är inte tillgängliga just nu.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Videolistor är inte tillgängliga just nu.';
 }

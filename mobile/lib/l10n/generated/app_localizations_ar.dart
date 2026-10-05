@@ -13124,4 +13124,10 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'لم تظهر أي قوائم هذه المرة. يمكن السحب للتحديث.';
+
+  @override
+  String get listSearchPeopleUnavailable => 'قوائم الأشخاص غير متاحة الآن.';
+
+  @override
+  String get listSearchVideosUnavailable => 'قوائم الفيديو غير متاحة الآن.';
 }

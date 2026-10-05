@@ -13294,4 +13294,12 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'Този път не изскочи нито един списък. Дръпни надолу за обновяване.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Списъците с хора не са достъпни в момента.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Списъците с видеа не са достъпни в момента.';
 }

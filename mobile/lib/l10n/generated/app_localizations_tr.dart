@@ -13091,4 +13091,12 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'Bu sefer hiç liste çıkmadı. Yenilemek için aşağı çek.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Kişi listeleri şu anda kullanılamıyor.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Video listeleri şu anda kullanılamıyor.';
 }

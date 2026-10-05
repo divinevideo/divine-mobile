@@ -4998,5 +4998,7 @@
     "ideasTitleSix": "Lite av idag",
     "ideasDescriptionSix": "Lämnar det här.",
     "listsDiscoveryEmpty": "Inga listor dök upp den här gången. Dra för att uppdatera.",
-    "listsDiscoveryLoadingLabel": "Läser in listor"
+    "listsDiscoveryLoadingLabel": "Läser in listor",
+    "listSearchPeopleUnavailable": "Personlistor är inte tillgängliga just nu.",
+    "listSearchVideosUnavailable": "Videolistor är inte tillgängliga just nu."
 }

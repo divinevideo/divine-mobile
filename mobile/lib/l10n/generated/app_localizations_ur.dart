@@ -13160,4 +13160,12 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'اس بار کوئی فہرست ہاتھ نہیں آئی۔ ریفریش کے لیے کھینچیں۔';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'لوگوں کی فہرستیں فی الحال دستیاب نہیں ہیں۔';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'ویڈیو کی فہرستیں فی الحال دستیاب نہیں ہیں۔';
 }

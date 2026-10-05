@@ -13327,4 +13327,12 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'Stavolta non è saltata fuori nessuna lista. Trascina per aggiornare.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Le liste di persone non sono disponibili al momento.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Le liste di video non sono disponibili al momento.';
 }

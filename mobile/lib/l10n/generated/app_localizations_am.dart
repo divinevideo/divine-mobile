@@ -12831,4 +12831,10 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get listsDiscoveryEmpty => 'በዚህ ጊዜ ምንም ዝርዝሮች አልተገኙም። ለማደስ ወደታች ይጎትቱ።';
+
+  @override
+  String get listSearchPeopleUnavailable => 'የሰዎች ዝርዝሮች በአሁኑ ጊዜ አይገኙም።';
+
+  @override
+  String get listSearchVideosUnavailable => 'የቪዲዮ ዝርዝሮች በአሁኑ ጊዜ አይገኙም።';
 }

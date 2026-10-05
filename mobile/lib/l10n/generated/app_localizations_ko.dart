@@ -12531,4 +12531,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get listsDiscoveryEmpty => '이번엔 목록이 하나도 안 나왔어요. 당겨서 새로고침하세요.';
+
+  @override
+  String get listSearchPeopleUnavailable => '지금은 사용자 목록을 이용할 수 없어요.';
+
+  @override
+  String get listSearchVideosUnavailable => '지금은 동영상 목록을 이용할 수 없어요.';
 }

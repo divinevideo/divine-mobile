@@ -12518,4 +12518,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get listsDiscoveryEmpty => '今回はリストが見つかりませんでした。引っ張って更新してください。';
+
+  @override
+  String get listSearchPeopleUnavailable => '現在、ユーザーリストを利用できません。';
+
+  @override
+  String get listSearchVideosUnavailable => '現在、動画リストを利用できません。';
 }

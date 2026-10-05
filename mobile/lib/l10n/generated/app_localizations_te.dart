@@ -13508,4 +13508,12 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'ఈసారి జాబితాలు ఏవీ దొరకలేదు. రిఫ్రెష్ చేయడానికి లాగండి.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'ప్రస్తుతం వ్యక్తుల జాబితాలు అందుబాటులో లేవు.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'ప్రస్తుతం వీడియో జాబితాలు అందుబాటులో లేవు.';
 }

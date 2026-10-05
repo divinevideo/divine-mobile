@@ -4998,5 +4998,7 @@
     "ideasTitleSix": "Odrobina dzisiaj",
     "ideasDescriptionSix": "Zostawiam to tutaj.",
     "listsDiscoveryEmpty": "Tym razem nie pojawiła się żadna lista. Pociągnij, aby odświeżyć.",
-    "listsDiscoveryLoadingLabel": "Wczytywanie list"
+    "listsDiscoveryLoadingLabel": "Wczytywanie list",
+    "listSearchPeopleUnavailable": "Listy osób są teraz niedostępne.",
+    "listSearchVideosUnavailable": "Listy filmów są teraz niedostępne."
 }

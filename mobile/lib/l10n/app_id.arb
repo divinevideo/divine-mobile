@@ -4998,5 +4998,7 @@
     "ideasTitleSix": "Sedikit tentang hari ini",
     "ideasDescriptionSix": "Kutinggalkan ini di sini.",
     "listsDiscoveryEmpty": "Belum ada daftar yang muncul kali ini. Tarik untuk menyegarkan.",
-    "listsDiscoveryLoadingLabel": "Memuat daftar"
+    "listsDiscoveryLoadingLabel": "Memuat daftar",
+    "listSearchPeopleUnavailable": "Daftar orang sedang tidak tersedia.",
+    "listSearchVideosUnavailable": "Daftar video sedang tidak tersedia."
 }

@@ -13369,4 +13369,12 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'Aucune liste cette fois-ci. Tire pour actualiser.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Les listes de personnes sont indisponibles pour le moment.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Les listes de vidéos sont indisponibles pour le moment.';
 }

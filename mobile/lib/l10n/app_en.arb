@@ -9670,5 +9670,13 @@
   "@listsDiscoveryLoadingLabel": {
     "description": "Screen-reader label for the shimmering placeholder cards shown while the Explore Lists gallery loads."
   },
-  "listsDiscoveryEmpty": "No lists turned up this time. Pull to refresh."
+  "listsDiscoveryEmpty": "No lists turned up this time. Pull to refresh.",
+  "listSearchPeopleUnavailable": "People lists are unavailable right now.",
+  "@listSearchVideosUnavailable": {
+    "description": "Video-list search source could not answer; shown beside healthy people results with retry."
+  },
+  "@listSearchPeopleUnavailable": {
+    "description": "People-list search source could not answer; shown beside healthy video results with retry."
+  },
+  "listSearchVideosUnavailable": "Video lists are unavailable right now."
 }

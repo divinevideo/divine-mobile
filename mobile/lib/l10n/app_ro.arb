@@ -4998,5 +4998,7 @@
     "ideasTitleSix": "Un pic din ziua de azi",
     "ideasDescriptionSix": "Las asta aici.",
     "listsDiscoveryEmpty": "De data asta n-a apărut nicio listă. Trage în jos pentru reîmprospătare.",
-    "listsDiscoveryLoadingLabel": "Se încarcă listele"
+    "listsDiscoveryLoadingLabel": "Se încarcă listele",
+    "listSearchPeopleUnavailable": "Listele de persoane nu sunt disponibile acum.",
+    "listSearchVideosUnavailable": "Listele de videoclipuri nu sunt disponibile acum."
 }

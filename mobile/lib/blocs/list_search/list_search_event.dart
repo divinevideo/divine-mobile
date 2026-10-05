@@ -32,3 +32,8 @@ final class ListSearchBlocklistChanged extends ListSearchEvent {
 final class ListSearchCleared extends ListSearchEvent {
   const ListSearchCleared();
 }
+
+/// Retry list search while keeping useful results on screen.
+final class ListSearchRetried extends ListSearchEvent {
+  const ListSearchRetried();
+}

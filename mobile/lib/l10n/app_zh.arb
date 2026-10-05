@@ -6765,5 +6765,7 @@
   "ideasTitleSix": "今天的一小段",
   "ideasDescriptionSix": "把这个留在这里。",
   "listsDiscoveryLoadingLabel": "正在加载列表",
-  "listsDiscoveryEmpty": "这次没找到列表。下拉刷新试试。"
+  "listsDiscoveryEmpty": "这次没找到列表。下拉刷新试试。",
+    "listSearchPeopleUnavailable": "人员列表暂时不可用。",
+    "listSearchVideosUnavailable": "视频列表暂时不可用。"
 }

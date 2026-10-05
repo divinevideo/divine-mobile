@@ -13072,4 +13072,12 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'Belum ada daftar yang muncul kali ini. Tarik untuk menyegarkan.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Daftar orang sedang tidak tersedia.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Daftar video sedang tidak tersedia.';
 }

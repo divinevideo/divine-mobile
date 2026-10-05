@@ -13167,4 +13167,12 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'Tiada senarai yang muncul kali ini. Tarik untuk muat semula.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Senarai orang tidak tersedia buat masa ini.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Senarai video tidak tersedia buat masa ini.';
 }

@@ -13431,4 +13431,11 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'Tym razem nie pojawiła się żadna lista. Pociągnij, aby odświeżyć.';
+
+  @override
+  String get listSearchPeopleUnavailable => 'Listy osób są teraz niedostępne.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Listy filmów są teraz niedostępne.';
 }

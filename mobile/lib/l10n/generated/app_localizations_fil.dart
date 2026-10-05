@@ -13281,4 +13281,12 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'Walang lumabas na list ngayon. Hilahin pababa para mag-refresh.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Hindi available ang mga listahan ng tao ngayon.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Hindi available ang mga listahan ng video ngayon.';
 }

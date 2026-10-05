@@ -6765,5 +6765,7 @@
   "ideasTitleSix": "آج کا ایک حصہ",
   "ideasDescriptionSix": "یہ یہاں چھوڑ رہا ہوں۔",
   "listsDiscoveryLoadingLabel": "فہرستیں لوڈ ہو رہی ہیں",
-  "listsDiscoveryEmpty": "اس بار کوئی فہرست ہاتھ نہیں آئی۔ ریفریش کے لیے کھینچیں۔"
+  "listsDiscoveryEmpty": "اس بار کوئی فہرست ہاتھ نہیں آئی۔ ریفریش کے لیے کھینچیں۔",
+    "listSearchPeopleUnavailable": "لوگوں کی فہرستیں فی الحال دستیاب نہیں ہیں۔",
+    "listSearchVideosUnavailable": "ویڈیو کی فہرستیں فی الحال دستیاب نہیں ہیں۔"
 }

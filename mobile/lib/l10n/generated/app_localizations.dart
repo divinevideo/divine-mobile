@@ -22016,6 +22016,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No lists turned up this time. Pull to refresh.'**
   String get listsDiscoveryEmpty;
+
+  /// People-list search source could not answer; shown beside healthy video results with retry.
+  ///
+  /// In en, this message translates to:
+  /// **'People lists are unavailable right now.'**
+  String get listSearchPeopleUnavailable;
+
+  /// Video-list search source could not answer; shown beside healthy people results with retry.
+  ///
+  /// In en, this message translates to:
+  /// **'Video lists are unavailable right now.'**
+  String get listSearchVideosUnavailable;
 }
 
 class _AppLocalizationsDelegate

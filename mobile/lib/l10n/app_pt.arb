@@ -4998,5 +4998,7 @@
     "ideasTitleSix": "Um pouco de hoje",
     "ideasDescriptionSix": "Vou deixar isso aqui.",
     "listsDiscoveryEmpty": "Nenhuma lista deu as caras desta vez. Puxe para atualizar.",
-    "listsDiscoveryLoadingLabel": "Carregando listas"
+    "listsDiscoveryLoadingLabel": "Carregando listas",
+    "listSearchPeopleUnavailable": "As listas de pessoas estão indisponíveis no momento.",
+    "listSearchVideosUnavailable": "As listas de vídeos estão indisponíveis no momento."
 }

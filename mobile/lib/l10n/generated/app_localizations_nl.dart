@@ -13236,4 +13236,12 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'Er doken deze keer geen lijsten op. Trek omlaag om te vernieuwen.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Personenlijsten zijn momenteel niet beschikbaar.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Videolijsten zijn momenteel niet beschikbaar.';
 }

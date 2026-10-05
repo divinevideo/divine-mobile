@@ -4998,5 +4998,7 @@
     "ideasTitleSix": "Bugünden bir parça",
     "ideasDescriptionSix": "Bunu buraya bırakıyorum.",
     "listsDiscoveryEmpty": "Bu sefer hiç liste çıkmadı. Yenilemek için aşağı çek.",
-    "listsDiscoveryLoadingLabel": "Listeler yükleniyor"
+    "listsDiscoveryLoadingLabel": "Listeler yükleniyor",
+    "listSearchPeopleUnavailable": "Kişi listeleri şu anda kullanılamıyor.",
+    "listSearchVideosUnavailable": "Video listeleri şu anda kullanılamıyor."
 }

@@ -13436,4 +13436,12 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'De data asta n-a apărut nicio listă. Trage în jos pentru reîmprospătare.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Listele de persoane nu sunt disponibile acum.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Listele de videoclipuri nu sunt disponibile acum.';
 }

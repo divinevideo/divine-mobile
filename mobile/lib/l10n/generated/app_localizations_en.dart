@@ -13257,4 +13257,12 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get listsDiscoveryEmpty =>
       'No lists turned up this time. Pull to refresh.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'People lists are unavailable right now.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Video lists are unavailable right now.';
 }

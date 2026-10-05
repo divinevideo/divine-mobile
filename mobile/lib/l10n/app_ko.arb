@@ -4544,5 +4544,7 @@
     "ideasTitleSix": "오늘의 한 조각",
     "ideasDescriptionSix": "여기에 남겨 둘게요.",
     "listsDiscoveryEmpty": "이번엔 목록이 하나도 안 나왔어요. 당겨서 새로고침하세요.",
-    "listsDiscoveryLoadingLabel": "목록 불러오는 중"
+    "listsDiscoveryLoadingLabel": "목록 불러오는 중",
+    "listSearchPeopleUnavailable": "지금은 사용자 목록을 이용할 수 없어요.",
+    "listSearchVideosUnavailable": "지금은 동영상 목록을 이용할 수 없어요."
 }

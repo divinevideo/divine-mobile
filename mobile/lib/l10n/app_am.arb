@@ -5098,5 +5098,7 @@
     "ideasTitleSix": "ከዛሬ ትንሽ",
     "ideasDescriptionSix": "ይህን እዚህ እተዋለሁ።",
     "listsDiscoveryEmpty": "በዚህ ጊዜ ምንም ዝርዝሮች አልተገኙም። ለማደስ ወደታች ይጎትቱ።",
-    "listsDiscoveryLoadingLabel": "ዝርዝሮችን በመጫን ላይ"
+    "listsDiscoveryLoadingLabel": "ዝርዝሮችን በመጫን ላይ",
+    "listSearchPeopleUnavailable": "የሰዎች ዝርዝሮች በአሁኑ ጊዜ አይገኙም።",
+    "listSearchVideosUnavailable": "የቪዲዮ ዝርዝሮች በአሁኑ ጊዜ አይገኙም።"
 }

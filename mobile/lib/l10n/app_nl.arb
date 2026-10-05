@@ -4998,5 +4998,7 @@
     "ideasTitleSix": "Een beetje van vandaag",
     "ideasDescriptionSix": "Dit laat ik hier achter.",
     "listsDiscoveryEmpty": "Er doken deze keer geen lijsten op. Trek omlaag om te vernieuwen.",
-    "listsDiscoveryLoadingLabel": "Lijsten laden"
+    "listsDiscoveryLoadingLabel": "Lijsten laden",
+    "listSearchPeopleUnavailable": "Personenlijsten zijn momenteel niet beschikbaar.",
+    "listSearchVideosUnavailable": "Videolijsten zijn momenteel niet beschikbaar."
 }
