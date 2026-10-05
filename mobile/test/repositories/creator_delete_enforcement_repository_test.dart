@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:clock/clock.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -488,6 +489,38 @@ void main() {
       expect(monitor.traces.single.stops, 1);
     });
 
+    test('wall-clock changes do not exhaust the request budget', () async {
+      var now = DateTime(2026);
+      var requests = 0;
+      when(
+        () => auth.createAuthToken(
+          url: any(named: 'url'),
+          method: any(named: 'method'),
+          payload: any(named: 'payload'),
+        ),
+      ).thenAnswer((_) async {
+        now = now.add(const Duration(hours: 1));
+        return token;
+      });
+
+      await withClock(Clock(() => now), () async {
+        final repository = CreatorDeleteEnforcementRepository(
+          baseUrl: 'https://moderation.example',
+          httpClient: MockClient((_) async {
+            requests++;
+            return http.Response('{"status":"success"}', 200);
+          }),
+          nip98AuthService: auth,
+          shouldBoundSigning: () => false,
+        );
+
+        final result = await repository.enforce('kind5');
+
+        expect(result.status, CreatorDeleteEnforcementStatus.confirmed);
+        expect(requests, 1);
+      });
+    });
+
     test('waits for human approval before reporting an exhausted budget', () {
       fakeAsync((async) {
         final monitor = RecordingPerformanceMonitor();
@@ -511,6 +544,7 @@ void main() {
           nip98AuthService: auth,
           performanceMonitor: monitor,
           shouldBoundSigning: () => false,
+          stopwatchFactory: clock.stopwatch,
         );
 
         CreatorDeleteEnforcementResult? result;
