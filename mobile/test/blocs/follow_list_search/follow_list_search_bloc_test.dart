@@ -3,13 +3,23 @@
 
 import 'dart:async';
 
-import 'package:bloc_test/bloc_test.dart';
+import 'package:bloc/bloc.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/follow_list_search/follow_list_search_bloc.dart';
 import 'package:profile_repository/profile_repository.dart';
+
+class _Errors extends BlocObserver {
+  final captured = <Object>[];
+  @override
+  void onError(BlocBase<dynamic> bloc, Object error, StackTrace stackTrace) {
+    captured.add(error);
+    super.onError(bloc, error, stackTrace);
+  }
+}
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
@@ -28,7 +38,7 @@ const String _subjectPubkey =
 
 const List<String> _allPubkeys = [_alicePubkey, _bobPubkey, _carolPubkey];
 
-/// Long enough to clear the 300 ms search debounce.
+/// Advance fake time beyond the 300 ms search debounce.
 const _pastDebounce = Duration(milliseconds: 400);
 
 UserProfile _profile({
@@ -101,417 +111,586 @@ void main() {
       expect(bloc.state.visibleFrom(_allPubkeys), _allPubkeys);
     });
 
-    blocTest<FollowListSearchBloc, FollowListSearchState>(
+    test(
       'ignores a query shorter than the minimum and resolves no profiles',
-      build: createBloc,
-      act: (bloc) =>
-          bloc.add(const FollowListSearchQueryChanged('a', _allPubkeys)),
-      wait: _pastDebounce,
-      verify: (bloc) {
-        expect(bloc.state.query, isEmpty);
-        expect(bloc.state.visibleFrom(_allPubkeys), _allPubkeys);
-        verifyNever(
-          () => profileRepository.fetchBatchProfiles(
-            pubkeys: any(named: 'pubkeys'),
-          ),
-        );
+      () {
+        fakeAsync((clock) {
+          final bloc = createBloc();
+          bloc.add(const FollowListSearchQueryChanged('a', _allPubkeys));
+          clock.flushMicrotasks();
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+
+          expect(bloc.state.query, isEmpty);
+          expect(bloc.state.visibleFrom(_allPubkeys), _allPubkeys);
+          verifyNever(
+            () => profileRepository.fetchBatchProfiles(
+              pubkeys: any(named: 'pubkeys'),
+            ),
+          );
+
+          unawaited(bloc.close());
+          clock.flushMicrotasks();
+        });
       },
     );
 
-    blocTest<FollowListSearchBloc, FollowListSearchState>(
+    test(
       'filters the list down to the display name that matches',
-      build: createBloc,
-      act: (bloc) =>
-          bloc.add(const FollowListSearchQueryChanged('ali', _allPubkeys)),
-      wait: _pastDebounce,
-      verify: (bloc) {
-        expect(bloc.state.visibleFrom(_allPubkeys), [_alicePubkey]);
+      () {
+        fakeAsync((clock) {
+          final bloc = createBloc();
+          bloc.add(const FollowListSearchQueryChanged('ali', _allPubkeys));
+          clock.flushMicrotasks();
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+
+          expect(bloc.state.visibleFrom(_allPubkeys), [_alicePubkey]);
+
+          unawaited(bloc.close());
+          clock.flushMicrotasks();
+        });
       },
     );
 
-    blocTest<FollowListSearchBloc, FollowListSearchState>(
+    test(
       'matches on the NIP-05 handle as well as the display name',
-      build: createBloc,
-      act: (bloc) =>
-          bloc.add(const FollowListSearchQueryChanged('bobby', _allPubkeys)),
-      wait: _pastDebounce,
-      verify: (bloc) {
-        expect(bloc.state.visibleFrom(_allPubkeys), [_bobPubkey]);
+      () {
+        fakeAsync((clock) {
+          final bloc = createBloc();
+          bloc.add(const FollowListSearchQueryChanged('bobby', _allPubkeys));
+          clock.flushMicrotasks();
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+
+          expect(bloc.state.visibleFrom(_allPubkeys), [_bobPubkey]);
+
+          unawaited(bloc.close());
+          clock.flushMicrotasks();
+        });
       },
     );
 
-    blocTest<FollowListSearchBloc, FollowListSearchState>(
+    test(
       'matches a pasted hex pubkey prefix',
-      build: createBloc,
-      act: (bloc) =>
-          bloc.add(const FollowListSearchQueryChanged('cccccc', _allPubkeys)),
-      wait: _pastDebounce,
-      verify: (bloc) {
-        expect(bloc.state.visibleFrom(_allPubkeys), [_carolPubkey]);
+      () {
+        fakeAsync((clock) {
+          final bloc = createBloc();
+          bloc.add(const FollowListSearchQueryChanged('cccccc', _allPubkeys));
+          clock.flushMicrotasks();
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+
+          expect(bloc.state.visibleFrom(_allPubkeys), [_carolPubkey]);
+
+          unawaited(bloc.close());
+          clock.flushMicrotasks();
+        });
       },
     );
 
-    blocTest<FollowListSearchBloc, FollowListSearchState>(
+    test(
       'falls back to the generated name when no repository is wired yet',
-      build: () => createBloc(withRepository: false),
-      act: (bloc) => bloc.add(
-        FollowListSearchQueryChanged(
-          UserProfile.defaultDisplayNameFor(_bobPubkey),
-          _allPubkeys,
-        ),
-      ),
-      wait: _pastDebounce,
-      verify: (bloc) {
-        expect(bloc.state.visibleFrom(_allPubkeys), [_bobPubkey]);
+      () {
+        fakeAsync((clock) {
+          final bloc = createBloc(withRepository: false);
+          bloc.add(
+            FollowListSearchQueryChanged(
+              UserProfile.defaultDisplayNameFor(_bobPubkey),
+              _allPubkeys,
+            ),
+          );
+          clock.flushMicrotasks();
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+
+          expect(bloc.state.visibleFrom(_allPubkeys), [_bobPubkey]);
+
+          unawaited(bloc.close());
+          clock.flushMicrotasks();
+        });
       },
     );
 
-    blocTest<FollowListSearchBloc, FollowListSearchState>(
+    test(
       'resolves names once a late profile repository arrives',
-      build: () => createBloc(withRepository: false),
-      act: (bloc) async {
-        bloc.add(const FollowListSearchQueryChanged('ali', _allPubkeys));
-        await Future<void>.delayed(_pastDebounce);
-        bloc.add(FollowListSearchProfileRepositoryChanged(profileRepository));
-      },
-      wait: _pastDebounce,
-      verify: (bloc) {
-        expect(bloc.state.visibleFrom(_allPubkeys), [_alicePubkey]);
+      () {
+        fakeAsync((clock) {
+          final bloc = createBloc(withRepository: false);
+
+          bloc.add(const FollowListSearchQueryChanged('ali', _allPubkeys));
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+          bloc.add(FollowListSearchProfileRepositoryChanged(profileRepository));
+
+          clock.flushMicrotasks();
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+
+          expect(bloc.state.visibleFrom(_allPubkeys), [_alicePubkey]);
+
+          unawaited(bloc.close());
+          clock.flushMicrotasks();
+        });
       },
     );
 
-    blocTest<FollowListSearchBloc, FollowListSearchState>(
+    test(
       'keeps matching on generated names when the batch fetch throws',
-      build: createBloc,
-      setUp: () {
-        when(
-          () => profileRepository.fetchBatchProfiles(
-            pubkeys: any(named: 'pubkeys'),
-          ),
-        ).thenThrow(Exception('offline'));
-      },
-      act: (bloc) => bloc.add(
-        FollowListSearchQueryChanged(
-          UserProfile.defaultDisplayNameFor(_carolPubkey),
-          _allPubkeys,
-        ),
-      ),
-      wait: _pastDebounce,
-      errors: () => [isA<Exception>()],
-      verify: (bloc) {
-        expect(bloc.state.visibleFrom(_allPubkeys), [_carolPubkey]);
+      () {
+        fakeAsync((clock) {
+          final previousObserver = Bloc.observer;
+          final observer = _Errors();
+          Bloc.observer = observer;
+          try {
+            when(
+              () => profileRepository.fetchBatchProfiles(
+                pubkeys: any(named: 'pubkeys'),
+              ),
+            ).thenThrow(Exception('offline'));
+
+            final bloc = createBloc();
+            bloc.add(
+              FollowListSearchQueryChanged(
+                UserProfile.defaultDisplayNameFor(_carolPubkey),
+                _allPubkeys,
+              ),
+            );
+            clock.flushMicrotasks();
+            clock.elapse(_pastDebounce);
+            clock.flushMicrotasks();
+
+            expect(bloc.state.visibleFrom(_allPubkeys), [_carolPubkey]);
+
+            expect(observer.captured, [isA<Exception>()]);
+            unawaited(bloc.close());
+            clock.flushMicrotasks();
+          } finally {
+            Bloc.observer = previousObserver;
+          }
+        });
       },
     );
 
-    blocTest<FollowListSearchBloc, FollowListSearchState>(
+    test(
       'keeps a row the API matched but this device has no name for',
-      build: createBloc,
-      setUp: () {
-        // The cold-cache case: no profile resolves on device, so on-device
-        // matching can only see generated fallback names.
-        when(
-          () => profileRepository.fetchBatchProfiles(
-            pubkeys: any(named: 'pubkeys'),
-          ),
-        ).thenAnswer((_) async => const {});
-        when(
-          () => followRepository.searchFollowList(
-            pubkey: _subjectPubkey,
-            query: 'ali',
-            kind: FollowListKind.followers,
-          ),
-        ).thenAnswer((_) async => const {_alicePubkey});
-      },
-      act: (bloc) =>
-          bloc.add(const FollowListSearchQueryChanged('ali', _allPubkeys)),
-      wait: _pastDebounce,
-      verify: (bloc) {
-        expect(bloc.state.visibleFrom(_allPubkeys), [_alicePubkey]);
+      () {
+        fakeAsync((clock) {
+          // The cold-cache case: no profile resolves on device, so on-device
+          // matching can only see generated fallback names.
+          when(
+            () => profileRepository.fetchBatchProfiles(
+              pubkeys: any(named: 'pubkeys'),
+            ),
+          ).thenAnswer((_) async => const {});
+          when(
+            () => followRepository.searchFollowList(
+              pubkey: _subjectPubkey,
+              query: 'ali',
+              kind: FollowListKind.followers,
+            ),
+          ).thenAnswer((_) async => const {_alicePubkey});
+
+          final bloc = createBloc();
+          bloc.add(const FollowListSearchQueryChanged('ali', _allPubkeys));
+          clock.flushMicrotasks();
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+
+          expect(bloc.state.visibleFrom(_allPubkeys), [_alicePubkey]);
+
+          unawaited(bloc.close());
+          clock.flushMicrotasks();
+        });
       },
     );
 
-    blocTest<FollowListSearchBloc, FollowListSearchState>(
+    test(
       'unions API matches with on-device matches',
-      build: createBloc,
-      setUp: () {
-        // The API knows Carol but not Bob; on-device only knows Bob's name.
-        when(
-          () => profileRepository.fetchBatchProfiles(
-            pubkeys: any(named: 'pubkeys'),
-          ),
-        ).thenAnswer(
-          (_) async => {
-            _bobPubkey: _profile(pubkey: _bobPubkey, displayName: 'Zeta Bob'),
-          },
-        );
-        when(
-          () => followRepository.searchFollowList(
-            pubkey: _subjectPubkey,
-            query: 'zeta',
-            kind: FollowListKind.followers,
-          ),
-        ).thenAnswer((_) async => const {_carolPubkey});
-      },
-      act: (bloc) =>
-          bloc.add(const FollowListSearchQueryChanged('zeta', _allPubkeys)),
-      wait: _pastDebounce,
-      verify: (bloc) {
-        expect(bloc.state.visibleFrom(_allPubkeys), [_bobPubkey, _carolPubkey]);
+      () {
+        fakeAsync((clock) {
+          // The API knows Carol but not Bob; on-device only knows Bob's name.
+          when(
+            () => profileRepository.fetchBatchProfiles(
+              pubkeys: any(named: 'pubkeys'),
+            ),
+          ).thenAnswer(
+            (_) async => {
+              _bobPubkey: _profile(pubkey: _bobPubkey, displayName: 'Zeta Bob'),
+            },
+          );
+          when(
+            () => followRepository.searchFollowList(
+              pubkey: _subjectPubkey,
+              query: 'zeta',
+              kind: FollowListKind.followers,
+            ),
+          ).thenAnswer((_) async => const {_carolPubkey});
+
+          final bloc = createBloc();
+          bloc.add(const FollowListSearchQueryChanged('zeta', _allPubkeys));
+          clock.flushMicrotasks();
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+
+          expect(bloc.state.visibleFrom(_allPubkeys), [
+            _bobPubkey,
+            _carolPubkey,
+          ]);
+
+          unawaited(bloc.close());
+          clock.flushMicrotasks();
+        });
       },
     );
 
-    blocTest<FollowListSearchBloc, FollowListSearchState>(
+    test(
       'drops API matches from the previous query',
-      build: createBloc,
-      setUp: () {
-        when(
-          () => profileRepository.fetchBatchProfiles(
-            pubkeys: any(named: 'pubkeys'),
-          ),
-        ).thenAnswer((_) async => const {});
-        when(
-          () => followRepository.searchFollowList(
-            pubkey: _subjectPubkey,
-            query: 'ali',
-            kind: FollowListKind.followers,
-          ),
-        ).thenAnswer((_) async => const {_alicePubkey});
-      },
-      act: (bloc) async {
-        bloc.add(const FollowListSearchQueryChanged('ali', _allPubkeys));
-        await Future<void>.delayed(_pastDebounce);
-        bloc.add(const FollowListSearchQueryChanged('zzz', _allPubkeys));
-      },
-      wait: _pastDebounce,
-      verify: (bloc) {
-        expect(bloc.state.remoteMatches, isEmpty);
-        expect(bloc.state.visibleFrom(_allPubkeys), isEmpty);
+      () {
+        fakeAsync((clock) {
+          when(
+            () => profileRepository.fetchBatchProfiles(
+              pubkeys: any(named: 'pubkeys'),
+            ),
+          ).thenAnswer((_) async => const {});
+          when(
+            () => followRepository.searchFollowList(
+              pubkey: _subjectPubkey,
+              query: 'ali',
+              kind: FollowListKind.followers,
+            ),
+          ).thenAnswer((_) async => const {_alicePubkey});
+
+          final bloc = createBloc();
+
+          bloc.add(const FollowListSearchQueryChanged('ali', _allPubkeys));
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+          bloc.add(const FollowListSearchQueryChanged('zzz', _allPubkeys));
+
+          clock.flushMicrotasks();
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+
+          expect(bloc.state.remoteMatches, isEmpty);
+          expect(bloc.state.visibleFrom(_allPubkeys), isEmpty);
+
+          unawaited(bloc.close());
+          clock.flushMicrotasks();
+        });
       },
     );
 
-    blocTest<FollowListSearchBloc, FollowListSearchState>(
+    test(
       'skips the API search when there is no subject pubkey',
-      build: () => FollowListSearchBloc(
-        followRepository: followRepository,
-        subjectPubkey: '',
-        listKind: FollowListKind.followers,
-        profileRepository: profileRepository,
-      ),
-      act: (bloc) =>
-          bloc.add(const FollowListSearchQueryChanged('ali', _allPubkeys)),
-      wait: _pastDebounce,
-      verify: (bloc) {
-        expect(bloc.state.visibleFrom(_allPubkeys), [_alicePubkey]);
-        verifyNever(
-          () => followRepository.searchFollowList(
-            pubkey: any(named: 'pubkey'),
-            query: any(named: 'query'),
-            kind: any(named: 'kind'),
-          ),
-        );
+      () {
+        fakeAsync((clock) {
+          final bloc = FollowListSearchBloc(
+            followRepository: followRepository,
+            subjectPubkey: '',
+            listKind: FollowListKind.followers,
+            profileRepository: profileRepository,
+          );
+          bloc.add(const FollowListSearchQueryChanged('ali', _allPubkeys));
+          clock.flushMicrotasks();
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+
+          expect(bloc.state.visibleFrom(_allPubkeys), [_alicePubkey]);
+          verifyNever(
+            () => followRepository.searchFollowList(
+              pubkey: any(named: 'pubkey'),
+              query: any(named: 'query'),
+              kind: any(named: 'kind'),
+            ),
+          );
+
+          unawaited(bloc.close());
+          clock.flushMicrotasks();
+        });
       },
     );
 
-    blocTest<FollowListSearchBloc, FollowListSearchState>(
+    test(
       'retries a chunk whose profile fetch threw instead of pinning it',
-      build: createBloc,
-      setUp: () {
-        var attempt = 0;
-        when(
-          () => profileRepository.fetchBatchProfiles(
-            pubkeys: any(named: 'pubkeys'),
-          ),
-        ).thenAnswer((_) async {
-          if (attempt++ == 0) throw Exception('offline');
-          return {
-            _alicePubkey: _profile(pubkey: _alicePubkey, displayName: 'Alice'),
-          };
+      () {
+        fakeAsync((clock) {
+          final previousObserver = Bloc.observer;
+          final observer = _Errors();
+          Bloc.observer = observer;
+          try {
+            var attempt = 0;
+            when(
+              () => profileRepository.fetchBatchProfiles(
+                pubkeys: any(named: 'pubkeys'),
+              ),
+            ).thenAnswer((_) async {
+              if (attempt++ == 0) throw Exception('offline');
+              return {
+                _alicePubkey: _profile(
+                  pubkey: _alicePubkey,
+                  displayName: 'Alice',
+                ),
+              };
+            });
+
+            final bloc = createBloc();
+
+            bloc.add(const FollowListSearchQueryChanged('ali', _allPubkeys));
+            clock.elapse(_pastDebounce);
+            clock.flushMicrotasks();
+            bloc.add(const FollowListSearchQueryChanged('alic', _allPubkeys));
+
+            clock.flushMicrotasks();
+            clock.elapse(_pastDebounce);
+            clock.flushMicrotasks();
+
+            expect(bloc.state.visibleFrom(_allPubkeys), [_alicePubkey]);
+
+            expect(observer.captured, [isA<Exception>()]);
+            unawaited(bloc.close());
+            clock.flushMicrotasks();
+          } finally {
+            Bloc.observer = previousObserver;
+          }
         });
-      },
-      act: (bloc) async {
-        bloc.add(const FollowListSearchQueryChanged('ali', _allPubkeys));
-        await Future<void>.delayed(_pastDebounce);
-        bloc.add(const FollowListSearchQueryChanged('alic', _allPubkeys));
-      },
-      wait: _pastDebounce,
-      errors: () => [isA<Exception>()],
-      verify: (bloc) {
-        expect(bloc.state.visibleFrom(_allPubkeys), [_alicePubkey]);
       },
     );
 
-    blocTest<FollowListSearchBloc, FollowListSearchState>(
+    test(
       'retries a partial profile fetch instead of pinning missing rows',
-      build: createBloc,
-      setUp: () {
-        var attempt = 0;
-        when(
-          () => profileRepository.fetchBatchProfiles(
-            pubkeys: any(named: 'pubkeys'),
-          ),
-        ).thenAnswer((_) async {
-          if (attempt++ == 0) return const <String, UserProfile>{};
-          return {
-            _alicePubkey: _profile(pubkey: _alicePubkey, displayName: 'Alice'),
-          };
-        });
-      },
-      act: (bloc) async {
-        bloc.add(const FollowListSearchQueryChanged('ali', _allPubkeys));
-        await Future<void>.delayed(_pastDebounce);
-        expect(bloc.state.searchTerms, isNot(contains(_alicePubkey)));
-
-        bloc.add(const FollowListSearchQueryChanged('alic', _allPubkeys));
-      },
-      wait: _pastDebounce,
-      verify: (bloc) {
-        expect(bloc.state.searchTerms[_alicePubkey], contains('alice'));
-        expect(bloc.state.visibleFrom(_allPubkeys), [_alicePubkey]);
-        verify(
-          () => profileRepository.fetchBatchProfiles(
-            pubkeys: any(named: 'pubkeys'),
-          ),
-        ).called(2);
-      },
-    );
-
-    blocTest<FollowListSearchBloc, FollowListSearchState>(
-      'drops terms resolved through the previous profile repository',
-      build: createBloc,
-      setUp: () {
-        // This repository cannot reach Alice, so she is only matchable by her
-        // generated name until a better one arrives.
-        when(
-          () => profileRepository.fetchBatchProfiles(
-            pubkeys: any(named: 'pubkeys'),
-          ),
-        ).thenAnswer((_) async => const {});
-      },
-      act: (bloc) async {
-        bloc.add(const FollowListSearchQueryChanged('ali', _allPubkeys));
-        await Future<void>.delayed(_pastDebounce);
-
-        final replacement = _MockProfileRepository();
-        when(
-          () => replacement.fetchBatchProfiles(pubkeys: any(named: 'pubkeys')),
-        ).thenAnswer(
-          (_) async => {
-            _alicePubkey: _profile(pubkey: _alicePubkey, displayName: 'Alice'),
-          },
-        );
-        bloc.add(FollowListSearchProfileRepositoryChanged(replacement));
-      },
-      wait: _pastDebounce,
-      verify: (bloc) {
-        expect(bloc.state.visibleFrom(_allPubkeys), [_alicePubkey]);
-      },
-    );
-
-    blocTest<FollowListSearchBloc, FollowListSearchState>(
-      'ignores stale resolver emissions after the profile repository changes',
-      build: createBloc,
-      act: (bloc) async {
-        final candidatePubkeys = [
-          _alicePubkey,
-          for (var i = 0; i < 50; i++) i.toRadixString(16).padLeft(64, '0'),
-        ];
-
-        final secondOldFetchStarted = Completer<void>();
-        final secondOldFetch = Completer<Map<String, UserProfile>>();
-        var oldCalls = 0;
-        when(
-          () => profileRepository.fetchBatchProfiles(
-            pubkeys: any(named: 'pubkeys'),
-          ),
-        ).thenAnswer((_) {
-          if (oldCalls++ == 0) {
-            return Future.value({
+      () {
+        fakeAsync((clock) {
+          var attempt = 0;
+          when(
+            () => profileRepository.fetchBatchProfiles(
+              pubkeys: any(named: 'pubkeys'),
+            ),
+          ).thenAnswer((_) async {
+            if (attempt++ == 0) return const <String, UserProfile>{};
+            return {
               _alicePubkey: _profile(
                 pubkey: _alicePubkey,
-                displayName: 'Alicia',
+                displayName: 'Alice',
               ),
-            });
-          }
-          if (!secondOldFetchStarted.isCompleted) {
-            secondOldFetchStarted.complete();
-          }
-          return secondOldFetch.future;
+            };
+          });
+
+          final bloc = createBloc();
+
+          bloc.add(const FollowListSearchQueryChanged('ali', _allPubkeys));
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+          expect(bloc.state.searchTerms, isNot(contains(_alicePubkey)));
+
+          bloc.add(const FollowListSearchQueryChanged('alic', _allPubkeys));
+
+          clock.flushMicrotasks();
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+
+          expect(bloc.state.searchTerms[_alicePubkey], contains('alice'));
+          expect(bloc.state.visibleFrom(_allPubkeys), [_alicePubkey]);
+          verify(
+            () => profileRepository.fetchBatchProfiles(
+              pubkeys: any(named: 'pubkeys'),
+            ),
+          ).called(2);
+
+          unawaited(bloc.close());
+          clock.flushMicrotasks();
         });
-
-        bloc.add(FollowListSearchQueryChanged('ali', candidatePubkeys));
-        await Future<void>.delayed(_pastDebounce);
-        await secondOldFetchStarted.future;
-
-        final replacement = _MockProfileRepository();
-        when(
-          () => replacement.fetchBatchProfiles(pubkeys: any(named: 'pubkeys')),
-        ).thenAnswer(
-          (_) async => {
-            _alicePubkey: _profile(pubkey: _alicePubkey, displayName: 'Alice'),
-          },
-        );
-        bloc.add(FollowListSearchProfileRepositoryChanged(replacement));
-        await Future<void>.delayed(Duration.zero);
-
-        secondOldFetch.complete({
-          _bobPubkey: _profile(pubkey: _bobPubkey, displayName: 'Bobby'),
-        });
-      },
-      wait: _pastDebounce,
-      verify: (bloc) {
-        expect(bloc.state.searchTerms[_alicePubkey], equals('alice'));
-        expect(bloc.state.searchTerms, isNot(contains(_bobPubkey)));
       },
     );
 
-    blocTest<FollowListSearchBloc, FollowListSearchState>(
+    test(
+      'drops terms resolved through the previous profile repository',
+      () {
+        fakeAsync((clock) {
+          // This repository only knows Alice by a name the query does not
+          // match, so the pass pins her to it until the repository changes.
+          when(
+            () => profileRepository.fetchBatchProfiles(
+              pubkeys: any(named: 'pubkeys'),
+            ),
+          ).thenAnswer(
+            (_) async => {
+              _alicePubkey: _profile(pubkey: _alicePubkey, displayName: 'Zed'),
+            },
+          );
+
+          final bloc = createBloc();
+
+          bloc.add(const FollowListSearchQueryChanged('ali', _allPubkeys));
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+          expect(bloc.state.searchTerms[_alicePubkey], contains('zed'));
+          expect(bloc.state.visibleFrom(_allPubkeys), isEmpty);
+
+          final replacement = _MockProfileRepository();
+          when(
+            () =>
+                replacement.fetchBatchProfiles(pubkeys: any(named: 'pubkeys')),
+          ).thenAnswer(
+            (_) async => {
+              _alicePubkey: _profile(
+                pubkey: _alicePubkey,
+                displayName: 'Alice',
+              ),
+            },
+          );
+          bloc.add(FollowListSearchProfileRepositoryChanged(replacement));
+
+          clock.flushMicrotasks();
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+
+          expect(bloc.state.visibleFrom(_allPubkeys), [_alicePubkey]);
+
+          unawaited(bloc.close());
+          clock.flushMicrotasks();
+        });
+      },
+    );
+
+    test(
+      'ignores stale resolver emissions after the profile repository changes',
+      () {
+        fakeAsync((clock) {
+          final bloc = createBloc();
+
+          final candidatePubkeys = [
+            _alicePubkey,
+            for (var i = 0; i < 50; i++) i.toRadixString(16).padLeft(64, '0'),
+          ];
+
+          final secondOldFetchStarted = Completer<void>();
+          final secondOldFetch = Completer<Map<String, UserProfile>>();
+          // The old pass's second chunk holds only the last candidate, so only
+          // a reply for it can reach the stale-emission guard.
+          final stalePubkey = candidatePubkeys.last;
+          var oldCalls = 0;
+          when(
+            () => profileRepository.fetchBatchProfiles(
+              pubkeys: any(named: 'pubkeys'),
+            ),
+          ).thenAnswer((_) {
+            if (oldCalls++ == 0) {
+              return Future.value({
+                _alicePubkey: _profile(
+                  pubkey: _alicePubkey,
+                  displayName: 'Alicia',
+                ),
+              });
+            }
+            if (!secondOldFetchStarted.isCompleted) {
+              secondOldFetchStarted.complete();
+            }
+            return secondOldFetch.future;
+          });
+
+          bloc.add(FollowListSearchQueryChanged('ali', candidatePubkeys));
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+          expect(secondOldFetchStarted.isCompleted, isTrue);
+
+          final replacement = _MockProfileRepository();
+          when(
+            () =>
+                replacement.fetchBatchProfiles(pubkeys: any(named: 'pubkeys')),
+          ).thenAnswer(
+            (_) async => {
+              _alicePubkey: _profile(
+                pubkey: _alicePubkey,
+                displayName: 'Alice',
+              ),
+            },
+          );
+          bloc.add(FollowListSearchProfileRepositoryChanged(replacement));
+          clock.flushMicrotasks();
+
+          secondOldFetch.complete({
+            stalePubkey: _profile(pubkey: stalePubkey, displayName: 'Stale'),
+          });
+
+          clock.flushMicrotasks();
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+
+          expect(bloc.state.searchTerms[_alicePubkey], equals('alice'));
+          expect(bloc.state.searchTerms, isNot(contains(stalePubkey)));
+
+          unawaited(bloc.close());
+          clock.flushMicrotasks();
+        });
+      },
+    );
+
+    test(
       'runs the API search once the subject pubkey arrives',
-      build: () => FollowListSearchBloc(
-        followRepository: followRepository,
-        subjectPubkey: '',
-        listKind: FollowListKind.followers,
-        profileRepository: profileRepository,
-      ),
-      setUp: () {
-        // Nothing resolves on device, so only the API can produce this match.
-        when(
-          () => profileRepository.fetchBatchProfiles(
-            pubkeys: any(named: 'pubkeys'),
-          ),
-        ).thenAnswer((_) async => const {});
-        when(
-          () => followRepository.searchFollowList(
-            pubkey: _subjectPubkey,
-            query: 'ali',
-            kind: FollowListKind.followers,
-          ),
-        ).thenAnswer((_) async => const {_alicePubkey});
-      },
-      act: (bloc) async {
-        bloc.add(const FollowListSearchQueryChanged('ali', _allPubkeys));
-        await Future<void>.delayed(_pastDebounce);
-        expect(bloc.state.visibleFrom(_allPubkeys), isEmpty);
+      () {
+        fakeAsync((clock) {
+          // Nothing resolves on device, so only the API can produce this match.
+          when(
+            () => profileRepository.fetchBatchProfiles(
+              pubkeys: any(named: 'pubkeys'),
+            ),
+          ).thenAnswer((_) async => const {});
+          when(
+            () => followRepository.searchFollowList(
+              pubkey: _subjectPubkey,
+              query: 'ali',
+              kind: FollowListKind.followers,
+            ),
+          ).thenAnswer((_) async => const {_alicePubkey});
 
-        bloc.add(const FollowListSearchSubjectPubkeyChanged(_subjectPubkey));
-      },
-      wait: _pastDebounce,
-      verify: (bloc) {
-        expect(bloc.state.visibleFrom(_allPubkeys), [_alicePubkey]);
+          final bloc = FollowListSearchBloc(
+            followRepository: followRepository,
+            subjectPubkey: '',
+            listKind: FollowListKind.followers,
+            profileRepository: profileRepository,
+          );
+
+          bloc.add(const FollowListSearchQueryChanged('ali', _allPubkeys));
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+          expect(bloc.state.visibleFrom(_allPubkeys), isEmpty);
+
+          bloc.add(const FollowListSearchSubjectPubkeyChanged(_subjectPubkey));
+
+          clock.flushMicrotasks();
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+
+          expect(bloc.state.visibleFrom(_allPubkeys), [_alicePubkey]);
+
+          unawaited(bloc.close());
+          clock.flushMicrotasks();
+        });
       },
     );
 
-    blocTest<FollowListSearchBloc, FollowListSearchState>(
+    test(
       'clearing the query restores the full list',
-      build: createBloc,
-      act: (bloc) async {
-        bloc.add(const FollowListSearchQueryChanged('ali', _allPubkeys));
-        await Future<void>.delayed(_pastDebounce);
-        bloc.add(const FollowListSearchQueryChanged('', _allPubkeys));
-      },
-      wait: _pastDebounce,
-      verify: (bloc) {
-        expect(bloc.state.isActive, isFalse);
-        expect(bloc.state.visibleFrom(_allPubkeys), _allPubkeys);
+      () {
+        fakeAsync((clock) {
+          final bloc = createBloc();
+
+          bloc.add(const FollowListSearchQueryChanged('ali', _allPubkeys));
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+          bloc.add(const FollowListSearchQueryChanged('', _allPubkeys));
+
+          clock.flushMicrotasks();
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+
+          expect(bloc.state.isActive, isFalse);
+          expect(bloc.state.visibleFrom(_allPubkeys), _allPubkeys);
+
+          unawaited(bloc.close());
+          clock.flushMicrotasks();
+        });
       },
     );
   });

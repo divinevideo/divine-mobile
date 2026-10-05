@@ -267,7 +267,7 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const MyFollowersListLoadRequested());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           // Now block user 'a'
           when(
             () => mockBlocklistRepository.isBlocked(validPubkey('a')),
@@ -319,7 +319,7 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const MyFollowersListLoadRequested());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(
             const MyFollowersSortOrderChanged(FollowSortOrder.oldestFirst),
           );
@@ -351,11 +351,11 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const MyFollowersListLoadRequested());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(
             const MyFollowersSortOrderChanged(FollowSortOrder.oldestFirst),
           );
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         },
         verify: (_) {
           verify(() => mockFollowRepository.watchMyFollowersCached()).called(1);
@@ -368,7 +368,7 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const MyFollowersListLoadRequested());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(
             const MyFollowersSortOrderChanged(FollowSortOrder.newestFirst),
           );
@@ -385,7 +385,7 @@ void main() {
           bloc.add(
             const MyFollowersSortOrderChanged(FollowSortOrder.oldestFirst),
           );
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(const MyFollowersListLoadRequested());
         },
         skip: 2,
@@ -420,7 +420,7 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const MyFollowersListLoadRequested());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(
             const MyFollowersSortOrderChanged(FollowSortOrder.oldestFirst),
           );

@@ -943,7 +943,7 @@ void main() {
           // Start subscription first
           bloc.add(const ProfileRepostedVideosSubscriptionRequested());
           // Wait for subscription to be set up
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           // Emit stream with addressableId2 removed (unreposted)
           repostedIdsController.add({
             createAddressableId(currentUserPubkey, 'd1'),
@@ -974,7 +974,7 @@ void main() {
         ),
         act: (bloc) async {
           bloc.add(const ProfileRepostedVideosSubscriptionRequested());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           repostedIdsController.add({
             createAddressableId(currentUserPubkey, 'd1'),
           });
@@ -1014,7 +1014,7 @@ void main() {
         ),
         act: (bloc) async {
           bloc.add(const ProfileRepostedVideosSubscriptionRequested());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           // d2 reposted, prepended (most-recent-first).
           repostedIdsController.add({
             createAddressableId(currentUserPubkey, 'd2'),
@@ -1188,7 +1188,7 @@ void main() {
         build: () => createBloc(targetUserPubkey: otherUserPubkey),
         act: (bloc) async {
           bloc.add(const ProfileRepostedVideosSubscriptionRequested());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           // Try to emit on the reposted IDs stream
           repostedIdsController.add({
             createAddressableId(currentUserPubkey, 'd1'),

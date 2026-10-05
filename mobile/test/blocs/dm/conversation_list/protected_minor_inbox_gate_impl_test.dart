@@ -110,7 +110,7 @@ void main() {
           conv('a', [self, approved]),
         ], userPubkey: self);
 
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         verify(() => officials.isApprovedMinorDmRecipient(approved)).called(1);
         // self is never revalidated
         verifyNever(() => officials.isApprovedMinorDmRecipient(self));
@@ -145,7 +145,7 @@ void main() {
         addTearDown(sub.cancel);
 
         gate.notifyRestrictionChanged();
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(emissions, hasLength(1));
       },
@@ -168,7 +168,7 @@ void main() {
 
         verdicts.add(null);
         gate.notifyRestrictionChanged();
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(emissions, hasLength(2));
       },

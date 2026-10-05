@@ -8,6 +8,7 @@ import 'dart:async';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:dm_repository/dm_repository.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
@@ -17,6 +18,7 @@ import 'package:openvine/blocs/dm/conversation_list/conversation_list_bloc.dart'
 import 'package:openvine/blocs/dm/conversation_list/protected_minor_inbox_gate.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/config/official_accounts.dart';
+import 'package:openvine/constants/search_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:profile_repository/profile_repository.dart';
 
@@ -604,75 +606,80 @@ void main() {
     test(
       'coalesces a burst of conversation writes into a single recompute '
       '(debounce)',
-      () async {
-        final acceptedController =
-            StreamController<List<DmConversation>>.broadcast();
-        addTearDown(acceptedController.close);
-        when(
-          () => mockDmRepository.watchAcceptedConversations(
-            limit: any(named: 'limit'),
-          ),
-        ).thenAnswer((_) => acceptedController.stream);
-        // combineLatest5 needs every source to emit at least once; potential
-        // emits a single empty value (the others use startWith in the bloc).
-        when(
-          () => mockDmRepository.watchPotentialRequests(),
-        ).thenAnswer((_) => Stream.value(const <DmConversation>[]));
-        when(
-          () => mockDmRepository.historyRecoveryStream,
-        ).thenAnswer((_) => const Stream<bool>.empty());
-        when(() => mockDmRepository.isRecoveringHistory).thenReturn(false);
+      () {
+        fakeAsync((clock) {
+          final acceptedController =
+              StreamController<List<DmConversation>>.broadcast();
 
-        // filterBlockedConversations runs once per `onData` pass (inbox +
-        // requests = 2 calls), so it doubles as a recompute counter.
-        var filterCalls = 0;
-        final blocklist = _MockContentBlocklistRepository();
-        when(
-          () => blocklist.runtimeBlockedUsers,
-        ).thenReturn(const <String>{});
-        when(
-          () => blocklist.filterBlockedConversations(
-            any(),
-            userPubkey: any(named: 'userPubkey'),
-          ),
-        ).thenAnswer((inv) {
-          filterCalls++;
-          return inv.positionalArguments.first as List<DmConversation>;
+          when(
+            () => mockDmRepository.watchAcceptedConversations(
+              limit: any(named: 'limit'),
+            ),
+          ).thenAnswer((_) => acceptedController.stream);
+          // combineLatest6 needs every source to emit at least once; potential
+          // emits a single empty value (the others use startWith in the bloc).
+          when(
+            () => mockDmRepository.watchPotentialRequests(),
+          ).thenAnswer((_) => Stream.value(const <DmConversation>[]));
+          when(
+            () => mockDmRepository.historyRecoveryStream,
+          ).thenAnswer((_) => const Stream<bool>.empty());
+          when(() => mockDmRepository.isRecoveringHistory).thenReturn(false);
+
+          // filterBlockedConversations runs once per `onData` pass (inbox +
+          // requests = 2 calls), so it doubles as a recompute counter.
+          var filterCalls = 0;
+          final blocklist = _MockContentBlocklistRepository();
+          when(
+            () => blocklist.runtimeBlockedUsers,
+          ).thenReturn(const <String>{});
+          when(
+            () => blocklist.filterBlockedConversations(
+              any(),
+              userPubkey: any(named: 'userPubkey'),
+            ),
+          ).thenAnswer((inv) {
+            filterCalls++;
+            return inv.positionalArguments.first as List<DmConversation>;
+          });
+
+          final bloc = ConversationListBloc(
+            dmRepository: mockDmRepository,
+            followRepository: mockFollowRepository,
+            contentBlocklistRepository: blocklist,
+            recomputeDebounce: const Duration(milliseconds: 100),
+          )..add(const ConversationListStarted());
+
+          // Let _onStarted subscribe to the (broadcast) streams before the burst,
+          // otherwise events emitted pre-subscription are dropped.
+          clock.flushMicrotasks();
+
+          final convos = [
+            _createConversation(
+              id: _testConversationId1,
+              isRead: false,
+              currentUserHasSent: true,
+            ),
+          ];
+          // Five rapid accepted-list updates inside the debounce window.
+          for (var i = 0; i < 5; i++) {
+            acceptedController.add(convos);
+          }
+
+          // Still inside the window: the expensive pass has not run yet.
+          clock.elapse(const Duration(milliseconds: 99));
+          expect(filterCalls, equals(0));
+
+          // After the window settles: exactly one recompute (inbox + requests
+          // filtered once each) for the whole burst, not two per write.
+          clock.elapse(const Duration(milliseconds: 1));
+          clock.flushMicrotasks();
+          expect(filterCalls, equals(2));
+          expect(bloc.state.status, equals(ConversationListStatus.loaded));
+          unawaited(bloc.close());
+          unawaited(acceptedController.close());
+          clock.flushMicrotasks();
         });
-
-        final bloc = ConversationListBloc(
-          dmRepository: mockDmRepository,
-          followRepository: mockFollowRepository,
-          contentBlocklistRepository: blocklist,
-          recomputeDebounce: const Duration(milliseconds: 100),
-        )..add(const ConversationListStarted());
-        addTearDown(bloc.close);
-
-        // Let _onStarted subscribe to the (broadcast) streams before the burst,
-        // otherwise events emitted pre-subscription are dropped.
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-
-        final convos = [
-          _createConversation(
-            id: _testConversationId1,
-            isRead: false,
-            currentUserHasSent: true,
-          ),
-        ];
-        // Five rapid accepted-list updates inside the debounce window.
-        for (var i = 0; i < 5; i++) {
-          acceptedController.add(convos);
-        }
-
-        // Still inside the window: the expensive pass has not run yet.
-        await Future<void>.delayed(const Duration(milliseconds: 20));
-        expect(filterCalls, equals(0));
-
-        // After the window settles: exactly one recompute (inbox + requests
-        // filtered once each) for the whole burst, not two per write.
-        await Future<void>.delayed(const Duration(milliseconds: 150));
-        expect(filterCalls, equals(2));
-        expect(bloc.state.status, equals(ConversationListStatus.loaded));
       },
     );
 
@@ -1081,43 +1088,37 @@ void main() {
 
     group('event transformers', () {
       group('droppable() on $ConversationListMarkRead', () {
+        late Completer<void> markRead;
         blocTest<ConversationListBloc, ConversationListState>(
           'drops additional mark-read events while one is processing',
           setUp: () {
-            final completer = Completer<void>();
+            markRead = Completer<void>();
             var callCount = 0;
             when(
               () => mockDmRepository.markConversationAsRead(any()),
             ).thenAnswer((_) {
               callCount++;
               if (callCount == 1) {
-                // First call is slow
-                return completer.future;
+                // First call is held until the test completes it
+                return markRead.future;
               }
               // Subsequent calls would complete instantly, but should be
               // dropped by the droppable() transformer.
               return Future.value();
             });
-
-            // Complete the first call after some time
-            final completion =
-                Future<void>.delayed(
-                  const Duration(milliseconds: 50),
-                ).then((_) {
-                  completer.complete();
-                });
-            addTearDown(() => completion);
           },
           build: createBloc,
-          act: (bloc) {
+          act: (bloc) async {
             // Fire three mark-read events rapidly; the second and third
             // should be dropped while the first is still processing.
             bloc
               ..add(const ConversationListMarkRead(_testConversationId1))
               ..add(const ConversationListMarkRead(_testConversationId1))
               ..add(const ConversationListMarkRead(_testConversationId1));
+            await pumpEventQueue();
+            markRead.complete();
+            await pumpEventQueue();
           },
-          wait: const Duration(milliseconds: 150),
           expect: () => const <ConversationListState>[],
           verify: (_) {
             // Only the first call should have been processed; the rest
@@ -1140,7 +1141,7 @@ void main() {
           act: (bloc) async {
             bloc.add(const ConversationListMarkRead(_testConversationId1));
             // Wait for the first to complete before adding the second
-            await Future<void>.delayed(const Duration(milliseconds: 30));
+            await pumpEventQueue();
             bloc.add(const ConversationListMarkRead(_testConversationId2));
           },
           wait: const Duration(milliseconds: 100),
@@ -1449,10 +1450,15 @@ void main() {
           },
         );
 
+        late StreamController<bool> recoveryController;
+
         blocTest<ConversationListBloc, ConversationListState>(
           'applies the request split once history recovery completes',
           setUp: () {
-            final recoveryController = StreamController<bool>();
+            recoveryController = StreamController<bool>();
+            // Not awaited: close() on a controller nobody listened to never
+            // completes, which hangs teardown if the bloc never subscribes.
+            addTearDown(() => unawaited(recoveryController.close()));
             when(
               () => mockFollowRepository.isFollowing(any()),
             ).thenReturn(false);
@@ -1468,22 +1474,31 @@ void main() {
               isRecovering: true,
               recoveryStream: recoveryController.stream,
             );
-            // Recovery completes: flip the flag, then signal via the recovery
-            // stream so the combined stream re-fires and re-classifies.
-            final recovery =
-                Future<void>.delayed(
-                  const Duration(milliseconds: 50),
-                ).then((_) {
-                  when(
-                    () => mockDmRepository.hasCompletedHistoryRecoveryBefore,
-                  ).thenReturn(true);
-                  recoveryController.add(false);
-                });
-            addTearDown(() => recovery);
           },
           build: createBloc,
-          act: (bloc) => bloc.add(const ConversationListStarted()),
-          wait: const Duration(milliseconds: 200),
+          act: (bloc) async {
+            final withheld = bloc.stream.firstWhere(
+              (s) => s.status == ConversationListStatus.loaded,
+            );
+            bloc.add(const ConversationListStarted());
+            await withheld.timeout(
+              const Duration(seconds: 5),
+              onTimeout: () => fail('inbox never loaded'),
+            );
+            expect(bloc.state.requestsWithheld, isTrue);
+            final split = bloc.stream.firstWhere(
+              (s) => s.requestConversations.length == 1,
+            );
+            // Recovery completes: flip the flag, then signal via the recovery
+            // stream so the combined stream re-fires and re-classifies.
+            when(() => mockDmRepository.hasCompletedHistoryRecoveryBefore)
+                .thenReturn(true);
+            recoveryController.add(false);
+            await split.timeout(
+              const Duration(seconds: 5),
+              onTimeout: () => fail('held-back request never split out'),
+            );
+          },
           verify: (bloc) {
             // After recovery completes, the unfollowed/never-replied chat is
             // correctly classified as a request.
@@ -1565,8 +1580,14 @@ void main() {
           },
           build: createBloc,
           act: (bloc) async {
+            final loaded = bloc.stream.firstWhere(
+              (s) => s.status == ConversationListStatus.loaded,
+            );
             bloc.add(const ConversationListStarted());
-            await Future<void>.delayed(const Duration(milliseconds: 250));
+            await loaded.timeout(
+              const Duration(seconds: 5),
+              onTimeout: () => fail('inbox never loaded'),
+            );
             // The drain succeeded this time.
             when(
               () => mockDmRepository.hasCompletedHistoryRecoveryBefore,
@@ -2108,7 +2129,9 @@ void main() {
     setUp(() {
       mockDmRepository = _MockDmRepository();
       mockFollowRepository = _MockFollowRepository();
+    });
 
+    void stubUnreadInboxDependencies() {
       when(() => mockFollowRepository.isFollowing(any())).thenReturn(true);
       when(
         () => mockFollowRepository.followingStream,
@@ -2119,7 +2142,7 @@ void main() {
       when(
         () => mockDmRepository.retryPendingDecryptions(),
       ).thenAnswer((_) async {});
-    });
+    }
 
     ConversationListBloc createBloc() => ConversationListBloc(
       dmRepository: mockDmRepository,
@@ -2145,6 +2168,7 @@ void main() {
     test(
       'loaded state exposes the full list as visibleConversations',
       () async {
+        stubUnreadInboxDependencies();
         _stubStreams(mockDmRepository, accepted: mixedConversations());
         final bloc = createBloc();
         addTearDown(bloc.close);
@@ -2164,6 +2188,8 @@ void main() {
     // the list claimed "You're all caught up" while the Messages badge — which
     // counts the full accepted set — still showed unread.
     group('filters see the whole inbox, not just the loaded page', () {
+      setUp(stubUnreadInboxDependencies);
+
       /// One page of read conversations plus a single unread one ranked
       /// *below* the initial render window. Timestamps descend so the ranking
       /// is explicit rather than dependent on sort tie-breaking.
@@ -2261,6 +2287,7 @@ void main() {
     });
 
     test('toggling on narrows visibleConversations to unread only', () async {
+      stubUnreadInboxDependencies();
       _stubStreams(mockDmRepository, accepted: mixedConversations());
       final bloc = createBloc();
       addTearDown(bloc.close);
@@ -2283,6 +2310,7 @@ void main() {
     });
 
     test('toggling off restores the full list', () async {
+      stubUnreadInboxDependencies();
       _stubStreams(mockDmRepository, accepted: mixedConversations());
       final bloc = createBloc();
       addTearDown(bloc.close);
@@ -2304,6 +2332,7 @@ void main() {
     test(
       'new stream data arrives filtered while unread filter is on',
       () async {
+        stubUnreadInboxDependencies();
         final acceptedController = StreamController<List<DmConversation>>();
         _stubStreams(mockDmRepository);
         when(
@@ -2364,7 +2393,15 @@ void main() {
         moderation: l10n.inboxSupportRowTitle,
         retiredConversationClosed: l10n.dmRetiredThreadClosedTitle,
       );
+    });
 
+    void stubVanished(Set<String> pubkeys) {
+      when(
+        () => mockProfileRepository.watchVanishedPubkeys(),
+      ).thenAnswer((_) => Stream.value(pubkeys));
+    }
+
+    void stubPeerSearchDependencies() {
       when(() => mockFollowRepository.isFollowing(any())).thenReturn(true);
       when(
         () => mockFollowRepository.followingStream,
@@ -2383,12 +2420,6 @@ void main() {
           pubkeys: any(named: 'pubkeys'),
         ),
       ).thenAnswer((_) async => const {});
-    });
-
-    void stubVanished(Set<String> pubkeys) {
-      when(
-        () => mockProfileRepository.watchVanishedPubkeys(),
-      ).thenAnswer((_) => Stream.value(pubkeys));
     }
 
     ConversationListBloc createBloc({DmPeerLabels? withLabels}) {
@@ -2436,6 +2467,7 @@ void main() {
     // participant's name at all, so the index has to match on the subject or a
     // search finds a row by a string that is not on it (#8204's own rule).
     group('a group conversation', () {
+      setUp(stubPeerSearchDependencies);
       setUp(() => stubVanished(const {}));
 
       test('is found by the NIP-17 subject its row renders', () async {
@@ -2583,6 +2615,7 @@ void main() {
     });
 
     group('a vanished counterparty', () {
+      setUp(stubPeerSearchDependencies);
       setUp(() => stubVanished({_testPubkey2}));
 
       test('is found by the deleted-account label the row shows', () async {
@@ -2640,6 +2673,7 @@ void main() {
     });
 
     group('a retired Divine Moderation key', () {
+      setUp(stubPeerSearchDependencies);
       // Rotated away from, so `_extractPinnedSupport` leaves it in the list as
       // an ordinary searchable row — while `isModerationAccount` still answers
       // for it, so the row renders the brand name.
@@ -2742,6 +2776,7 @@ void main() {
     );
 
     test('a live counterparty still matches its generated name', () async {
+      stubPeerSearchDependencies();
       stubVanished(const {});
       _stubStreams(
         mockDmRepository,
@@ -2763,6 +2798,7 @@ void main() {
     });
 
     test('a vanish arriving after the query re-filters on its own', () async {
+      stubPeerSearchDependencies();
       // The row learns of a vanish from its own singular profile fetch, which
       // can land after the index was built. Without a live subscription the
       // results would stay wrong until the next keystroke.
@@ -2793,6 +2829,7 @@ void main() {
     });
 
     test('changing the app language re-filters into the new one', () async {
+      stubPeerSearchDependencies();
       stubVanished({_testPubkey2});
       final german = lookupAppLocalizations(const Locale('de'));
       _stubStreams(
@@ -2829,6 +2866,7 @@ void main() {
     });
 
     test('a repository swap re-points the vanished subscription', () async {
+      stubPeerSearchDependencies();
       stubVanished(const {});
       _stubStreams(
         mockDmRepository,
@@ -2931,29 +2969,39 @@ void main() {
 
     test(
       'single-character search does not fan out profile resolution',
-      () async {
-        _stubStreams(mockDmRepository, accepted: conversations());
-        final bloc = createBloc();
-        addTearDown(bloc.close);
-        await load(bloc);
+      () {
+        fakeAsync((clock) {
+          _stubStreams(mockDmRepository, accepted: conversations());
+          final bloc = createBloc();
 
-        bloc.add(const ConversationListSearchQueryChanged('p'));
-        await Future<void>.delayed(const Duration(milliseconds: 350));
+          bloc.add(const ConversationListStarted());
+          clock.flushMicrotasks();
+          clock.elapse(Duration.zero);
+          expect(bloc.state.status, equals(ConversationListStatus.loaded));
 
-        expect(
-          bloc.state.searchQuery,
-          isEmpty,
-          reason: 'inbox search follows the shared minSearchQueryLength gate',
-        );
-        expect(
-          bloc.state.visibleConversations.map((c) => c.id).toList(),
-          equals(['pizza', 'alice']),
-        );
-        verifyNever(
-          () => mockProfileRepository.fetchBatchProfiles(
-            pubkeys: any(named: 'pubkeys'),
-          ),
-        );
+          bloc.add(const ConversationListSearchQueryChanged('p'));
+          clock.elapse(
+            searchDebounceDuration + const Duration(milliseconds: 50),
+          );
+          clock.flushMicrotasks();
+
+          expect(
+            bloc.state.searchQuery,
+            isEmpty,
+            reason: 'inbox search follows the shared minSearchQueryLength gate',
+          );
+          expect(
+            bloc.state.visibleConversations.map((c) => c.id).toList(),
+            equals(['pizza', 'alice']),
+          );
+          verifyNever(
+            () => mockProfileRepository.fetchBatchProfiles(
+              pubkeys: any(named: 'pubkeys'),
+            ),
+          );
+          unawaited(bloc.close());
+          clock.flushMicrotasks();
+        });
       },
     );
 
@@ -3036,7 +3084,7 @@ void main() {
       bloc.add(
         ConversationListProfileRepositoryChanged(mockProfileRepository),
       );
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(
         emitted,

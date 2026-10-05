@@ -4,6 +4,8 @@
 // ABOUTME: covers the staged-avatar contract: upload stages, save persists,
 // ABOUTME: failure preserves the prior preview, no publish on upload alone.
 
+import 'dart:async';
+
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' show Color;
@@ -11,6 +13,7 @@ import 'dart:ui' show Color;
 import 'package:bloc_test/bloc_test.dart';
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -332,7 +335,7 @@ void main() {
           // 'testuser' — then saving with no username is an explicit removal.
           act: (bloc) async {
             bloc.add(const InitialUsernameSet(testUsername));
-            await Future<void>.delayed(Duration.zero);
+            await pumpEventQueue();
             bloc.add(
               const ProfileSaved(
                 pubkey: testPubkey,
@@ -655,8 +658,14 @@ void main() {
             currentUserPubkey: testPubkey,
           ),
           act: (bloc) async {
+            final available = bloc.stream.firstWhere(
+              (s) => s.usernameStatus == UsernameStatus.available,
+            );
             bloc.add(const UsernameChanged(testUsername));
-            await Future<void>.delayed(const Duration(milliseconds: 700));
+            await available.timeout(
+              const Duration(seconds: 5),
+              onTimeout: () => fail('username never reported available'),
+            );
             bloc.add(
               const ProfileSaved(
                 pubkey: testPubkey,
@@ -1264,9 +1273,14 @@ void main() {
         },
         build: createBloc,
         act: (bloc) async {
+          final failed = bloc.stream.firstWhere(
+            (s) => s.usernameStatus == UsernameStatus.error,
+          );
           bloc.add(const UsernameChanged(testUsername));
-          // Wait out the 500ms debounce + buffer
-          await Future<void>.delayed(const Duration(milliseconds: 600));
+          await failed.timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => fail('username check never reported an error'),
+          );
         },
         wait: const Duration(milliseconds: 700),
         expect: () => [
@@ -1886,26 +1900,29 @@ void main() {
         ],
       );
 
-      blocTest<ProfileEditorBloc, ProfileEditorState>(
-        'debounces rapid username changes',
-        setUp: () {
+      test('debounces rapid username changes', () {
+        fakeAsync((clock) {
           when(
             () => mockProfileRepository.checkUsernameAvailability(
               username: any(named: 'username'),
             ),
           ).thenAnswer((_) async => const UsernameAvailable());
-        },
-        build: createBloc,
-        act: (bloc) async {
+          final bloc = createBloc();
           bloc.add(const UsernameChanged('test1'));
-          await Future<void>.delayed(const Duration(milliseconds: 100));
+          clock.elapse(const Duration(milliseconds: 100));
           bloc.add(const UsernameChanged('test2'));
-          await Future<void>.delayed(const Duration(milliseconds: 100));
+          clock.elapse(const Duration(milliseconds: 100));
           bloc.add(const UsernameChanged('test3'));
-        },
-        wait: debounceDuration,
-        verify: (_) {
-          // Should only call API once for the final username due to restartable transformer
+          clock.elapse(const Duration(milliseconds: 499));
+          verifyNever(
+            () => mockProfileRepository.checkUsernameAvailability(
+              username: any(named: 'username'),
+            ),
+          );
+          clock.elapse(const Duration(milliseconds: 1));
+          clock.flushMicrotasks();
+          // Should only call the API once, for the final username, because
+          // of the restartable transformer.
           verify(
             () => mockProfileRepository.checkUsernameAvailability(
               username: 'test3',
@@ -1921,15 +1938,17 @@ void main() {
               username: 'test2',
             ),
           );
-        },
-      );
+          unawaited(bloc.close());
+          clock.flushMicrotasks();
+        });
+      });
 
       blocTest<ProfileEditorBloc, ProfileEditorState>(
         'skips API check when username matches initial username',
         build: createBloc,
         act: (bloc) async {
           bloc.add(const InitialUsernameSet(testUsername));
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(const UsernameChanged(testUsername));
         },
         wait: debounceDuration,
@@ -1978,7 +1997,7 @@ void main() {
               username: testUsername,
             ),
           );
-          await Future<void>.delayed(const Duration(milliseconds: 100));
+          await pumpEventQueue();
           // Now check username again - should use cache
           bloc.add(const UsernameChanged(testUsername));
         },

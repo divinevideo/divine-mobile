@@ -67,7 +67,7 @@ VideoEvent _video(String id, {String? vineId}) => VideoEvent(
   addressableDTag: vineId,
 );
 
-Future<void> _pump() => Future<void>.delayed(Duration.zero);
+Future<void> _pump() => pumpEventQueue();
 
 void main() {
   group(HomeFeedResumeManager, () {

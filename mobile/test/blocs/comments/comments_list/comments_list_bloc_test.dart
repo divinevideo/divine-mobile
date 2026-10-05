@@ -1112,7 +1112,7 @@ void main() {
 
         final bloc = createBloc();
         bloc.add(const CommentsLoadRequested());
-        await Future<void>.delayed(const Duration(milliseconds: 10));
+        await pumpEventQueue();
 
         verify(
           () => mockCommentsRepository.watchComments(
@@ -1140,7 +1140,7 @@ void main() {
 
         final bloc = createBloc();
         bloc.add(const CommentsLoadRequested());
-        await Future<void>.delayed(const Duration(milliseconds: 10));
+        await pumpEventQueue();
 
         await bloc.close();
 
@@ -1171,7 +1171,7 @@ void main() {
 
           final bloc = createBloc();
           bloc.add(const CommentsLoadRequested());
-          await Future<void>.delayed(const Duration(milliseconds: 10));
+          await pumpEventQueue();
 
           await bloc.close();
 

@@ -58,7 +58,7 @@ class _ManualTimers {
     final timer = timers.firstWhere((timer) => timer.isActive);
     _advance(timer.delay);
     timer.fire();
-    await Future<void>.delayed(Duration.zero);
+    await pumpEventQueue();
   }
 }
 
@@ -1527,7 +1527,7 @@ void main() {
         await cubit.signerUnavailable();
 
         final retry = cubit.retry();
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         await cubit.close();
         refresh.complete(false);
         await retry;

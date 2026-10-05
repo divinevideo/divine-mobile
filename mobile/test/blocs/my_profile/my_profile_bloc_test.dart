@@ -1000,7 +1000,7 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const MyProfileSubscriptionRequested());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(const MyProfileSubscriptionRequested());
         },
         expect: () => [

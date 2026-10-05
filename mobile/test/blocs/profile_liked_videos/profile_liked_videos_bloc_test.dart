@@ -1096,7 +1096,7 @@ void main() {
           // Start subscription first
           bloc.add(const ProfileLikedVideosSubscriptionRequested());
           // Wait for subscription to be set up
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           // Emit stream with event2 removed (unliked)
           likedIdsController.add(['event1']);
         },
@@ -1117,7 +1117,7 @@ void main() {
         ),
         act: (bloc) async {
           bloc.add(const ProfileLikedVideosSubscriptionRequested());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           likedIdsController.add(['event1']);
         },
         wait: const Duration(milliseconds: 100),
@@ -1143,7 +1143,7 @@ void main() {
         ),
         act: (bloc) async {
           bloc.add(const ProfileLikedVideosSubscriptionRequested());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           // event2 liked, prepended (most-recent-first).
           likedIdsController.add(['event2', 'event1']);
         },
@@ -1235,7 +1235,7 @@ void main() {
         build: () => createBloc(targetUserPubkey: otherUserPubkey),
         act: (bloc) async {
           bloc.add(const ProfileLikedVideosSubscriptionRequested());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           // Try to emit on the liked IDs stream
           likedIdsController.add(['event1']);
         },
@@ -1644,7 +1644,7 @@ void main() {
         ),
         act: (bloc) async {
           bloc.add(const ProfileLikedVideosSubscriptionRequested());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           // event3 was unliked
           likedIdsController.add(['event1', 'event2']);
         },
@@ -1680,7 +1680,7 @@ void main() {
         ),
         act: (bloc) async {
           bloc.add(const ProfileLikedVideosSubscriptionRequested());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
           // New like prepended
           likedIdsController.add(['event3', 'event1', 'event2']);
         },
@@ -1849,7 +1849,7 @@ void main() {
 
         // A stateStream emission after close must not trigger a re-filter.
         blocklistStateController.add(ContentPolicyState.empty());
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         verifyNever(
           () => mockBlocklistRepository.filterContent<VideoEvent>(any(), any()),

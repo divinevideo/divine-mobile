@@ -13,8 +13,6 @@ packages/profile_repository/test/src/identity_claims_repository_test.dart	12
 packages/profile_repository/test/src/profile_repository_pending_save_test.dart	11
 packages/profile_repository/test/src/profile_repository_test.dart	12
 packages/reposts_repository/test/src/reposts_repository_test.dart	19
-test/blocs/dm/conversation_list/conversation_list_bloc_test.dart	18
-test/blocs/safety_settings/safety_settings_cubit_test.dart	19
 test/providers/nostr_service_identity_source_test.dart	12
 test/providers/push_notification_sync_test.dart	18
 test/screens/inbox/conversation/conversation_page_test.dart	12

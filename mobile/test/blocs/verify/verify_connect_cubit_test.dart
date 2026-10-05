@@ -375,7 +375,7 @@ void main() {
             ..proofChanged('https://gist.github.com/octocat/abc');
 
           final submit = cubit.submitProof();
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           await cubit.close();
           verified.complete(_result(verified: true));
 
@@ -394,7 +394,7 @@ void main() {
           ..proofChanged('https://gist.github.com/octocat/abc');
 
         final submit = cubit.submitProof();
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         await cubit.close();
         published.complete(const []);
 
@@ -593,7 +593,7 @@ void main() {
         );
 
         final connect = cubit.connectWithOAuth();
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         await cubit.close();
         browser.complete(callback);
 

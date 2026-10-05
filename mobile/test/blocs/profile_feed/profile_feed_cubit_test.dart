@@ -234,6 +234,17 @@ void main() {
       return cubit;
     }
 
+    ProfileFeedCubit buildReadyWithClock(
+      AuthorFeedResult result,
+      FakeAsync clock,
+    ) {
+      h.stubAuthorFeed(result);
+      final cubit = h.build();
+      clock.flushMicrotasks();
+      clock.elapse(Duration.zero);
+      return cubit;
+    }
+
     const cacheKey = '$_author:profile_videos';
 
     Future<void> seedSnapshot(ProfileVideoOffsetSnapshot snapshot) =>
@@ -706,47 +717,58 @@ void main() {
 
     test(
       'cold load -> loadMore -> realtime add compose in newest-first order',
-      () async {
-        final originalAudit = ProfileFeedCubit.relaySnapshotAudit;
-        ProfileFeedCubit.relaySnapshotAudit = const Duration(milliseconds: 20);
-        addTearDown(() => ProfileFeedCubit.relaySnapshotAudit = originalAudit);
+      () {
+        fakeAsync((clock) {
+          final originalAudit = ProfileFeedCubit.relaySnapshotAudit;
+          ProfileFeedCubit.relaySnapshotAudit = const Duration(
+            milliseconds: 20,
+          );
+          addTearDown(
+            () => ProfileFeedCubit.relaySnapshotAudit = originalAudit,
+          );
 
-        // Cold load: first page, more available.
-        final cubit = await buildReady(
-          _result(
-            [_video('a', createdAt: 3000)],
-            nextOffset: 50,
-            hasMore: true,
-          ),
-        );
-        addTearDown(cubit.close);
-        expect(cubit.state.videos.map((v) => v.id), ['a']);
+          // Cold load: first page, more available.
+          final cubit = buildReadyWithClock(
+            _result(
+              [_video('a', createdAt: 3000)],
+              nextOffset: 50,
+              hasMore: true,
+            ),
+            clock,
+          );
 
-        // loadMore appends an older page beneath the cold-load page.
-        h.stubAuthorFeed(
-          _result(
-            [_video('b', createdAt: 2000)],
-            nextOffset: 100,
-            hasMore: false,
-          ),
-        );
-        cubit.add(const ProfileFeedLoadMoreRequested());
-        await pumpEventQueue();
-        expect(cubit.state.videos.map((v) => v.id), ['a', 'b']);
+          expect(cubit.state.videos.map((v) => v.id), ['a']);
 
-        // A new relay video for this author slots ahead of the paginated list
-        // without disturbing the pagination cursor. It flows through the
-        // audited snapshot reconciliation (the sole realtime add path).
-        when(
-          () => h.ves.authorVideos(_author),
-        ).thenReturn([_video('c', createdAt: 5000)]);
-        h.onChanged!();
-        await Future<void>.delayed(const Duration(milliseconds: 60));
-        await pumpEventQueue();
+          // loadMore appends an older page beneath the cold-load page.
+          h.stubAuthorFeed(
+            _result(
+              [_video('b', createdAt: 2000)],
+              nextOffset: 100,
+              hasMore: false,
+            ),
+          );
+          cubit.add(const ProfileFeedLoadMoreRequested());
+          clock.flushMicrotasks();
+          clock.elapse(Duration.zero);
+          expect(cubit.state.videos.map((v) => v.id), ['a', 'b']);
 
-        expect(cubit.state.videos.map((v) => v.id), ['c', 'a', 'b']);
-        expect(cubit.state.nextOffset, 100);
-        expect(cubit.state.hasMoreContent, isFalse);
+          // A new relay video for this author slots ahead of the paginated list
+          // without disturbing the pagination cursor. It flows through the
+          // audited snapshot reconciliation (the sole realtime add path).
+          when(
+            () => h.ves.authorVideos(_author),
+          ).thenReturn([_video('c', createdAt: 5000)]);
+          h.onChanged!();
+          clock.elapse(const Duration(milliseconds: 20));
+          clock.flushMicrotasks();
+          clock.elapse(Duration.zero);
+
+          expect(cubit.state.videos.map((v) => v.id), ['c', 'a', 'b']);
+          expect(cubit.state.nextOffset, 100);
+          expect(cubit.state.hasMoreContent, isFalse);
+          unawaited(cubit.close());
+          clock.flushMicrotasks();
+        });
       },
     );
 
@@ -851,70 +873,89 @@ void main() {
 
     test(
       'snapshot add: new video prepended; duplicate snapshot no-ops',
-      () async {
-        final originalAudit = ProfileFeedCubit.relaySnapshotAudit;
-        ProfileFeedCubit.relaySnapshotAudit = const Duration(milliseconds: 20);
-        addTearDown(() => ProfileFeedCubit.relaySnapshotAudit = originalAudit);
+      () {
+        fakeAsync((clock) {
+          final originalAudit = ProfileFeedCubit.relaySnapshotAudit;
+          ProfileFeedCubit.relaySnapshotAudit = const Duration(
+            milliseconds: 20,
+          );
+          addTearDown(
+            () => ProfileFeedCubit.relaySnapshotAudit = originalAudit,
+          );
 
-        final cubit = await buildReady(_result([_video('a')]));
-        addTearDown(cubit.close);
+          final cubit = buildReadyWithClock(_result([_video('a')]), clock);
 
-        // A new relay video flows through the audited snapshot path; allow the
-        // window to elapse before asserting the merged result.
-        when(
-          () => h.ves.authorVideos(_author),
-        ).thenReturn([_video('b', createdAt: 5000), _video('a')]);
-        h.onChanged!();
-        await Future<void>.delayed(const Duration(milliseconds: 60));
-        await pumpEventQueue();
-        expect(cubit.state.videos.map((v) => v.id), ['b', 'a']);
+          // A new relay video flows through the audited snapshot path; allow the
+          // window to elapse before asserting the merged result.
+          when(
+            () => h.ves.authorVideos(_author),
+          ).thenReturn([_video('b', createdAt: 5000), _video('a')]);
+          h.onChanged!();
+          clock.elapse(const Duration(milliseconds: 20));
+          clock.flushMicrotasks();
+          clock.elapse(Duration.zero);
+          expect(cubit.state.videos.map((v) => v.id), ['b', 'a']);
 
-        // A repeat snapshot with the same set produces no further change.
-        final before = cubit.state.videos.length;
-        h.onChanged!();
-        await Future<void>.delayed(const Duration(milliseconds: 60));
-        await pumpEventQueue();
-        expect(cubit.state.videos.length, before);
+          // A repeat snapshot with the same set produces no further change.
+          clearInteractions(h.ves);
+          final before = cubit.state;
+          h.onChanged!();
+          clock.elapse(const Duration(milliseconds: 20));
+          clock.flushMicrotasks();
+          clock.elapse(Duration.zero);
+          verify(() => h.ves.authorVideos(_author)).called(1);
+          expect(cubit.state, same(before));
+          unawaited(cubit.close());
+          clock.flushMicrotasks();
+        });
       },
     );
 
     test(
       'relay-snapshot bursts coalesce into a single reconciliation (audit)',
-      () async {
-        final originalAudit = ProfileFeedCubit.relaySnapshotAudit;
-        ProfileFeedCubit.relaySnapshotAudit = const Duration(milliseconds: 20);
-        addTearDown(() => ProfileFeedCubit.relaySnapshotAudit = originalAudit);
+      () {
+        fakeAsync((clock) {
+          final originalAudit = ProfileFeedCubit.relaySnapshotAudit;
+          ProfileFeedCubit.relaySnapshotAudit = const Duration(
+            milliseconds: 20,
+          );
+          addTearDown(
+            () => ProfileFeedCubit.relaySnapshotAudit = originalAudit,
+          );
 
-        final cubit = await buildReady(_result(const []));
-        addTearDown(cubit.close);
+          final cubit = buildReadyWithClock(_result(const []), clock);
 
-        // Cold-load interactions are irrelevant — only count the snapshot
-        // reconciliation triggered by the burst below.
-        clearInteractions(h.ves);
-        when(
-          () => h.ves.authorVideos(_author),
-        ).thenReturn([_video('relay', createdAt: 9000)]);
+          // Cold-load interactions are irrelevant — only count the snapshot
+          // reconciliation triggered by the burst below.
+          clearInteractions(h.ves);
+          when(
+            () => h.ves.authorVideos(_author),
+          ).thenReturn([_video('relay', createdAt: 9000)]);
 
-        final emitted = <List<String>>[];
-        final sub = cubit.stream.listen(
-          (s) => emitted.add(s.videos.map((v) => v.id).toList()),
-        );
-        addTearDown(sub.cancel);
+          final emitted = <List<String>>[];
+          final sub = cubit.stream.listen(
+            (s) => emitted.add(s.videos.map((v) => v.id).toList()),
+          );
+          addTearDown(sub.cancel);
 
-        // A burst of app-wide VideoEventService notifications (e.g. other feeds
-        // streaming, or this author's backlog arriving as live events) all land
-        // inside one audit window.
-        for (var i = 0; i < 5; i++) {
-          h.onChanged!();
-        }
-        await Future<void>.delayed(const Duration(milliseconds: 60));
-        await pumpEventQueue();
+          // A burst of app-wide VideoEventService notifications (e.g. other feeds
+          // streaming, or this author's backlog arriving as live events) all land
+          // inside one audit window.
+          for (var i = 0; i < 5; i++) {
+            h.onChanged!();
+          }
+          clock.elapse(const Duration(milliseconds: 20));
+          clock.flushMicrotasks();
+          clock.elapse(Duration.zero);
 
-        // The O(videos) snapshot reconciliation runs once, not once per
-        // notification, and lands the new relay video in a single emit.
-        verify(() => h.ves.authorVideos(_author)).called(1);
-        expect(emitted, hasLength(1));
-        expect(cubit.state.videos.map((v) => v.id), contains('relay'));
+          // The O(videos) snapshot reconciliation runs once, not once per
+          // notification, and lands the new relay video in a single emit.
+          verify(() => h.ves.authorVideos(_author)).called(1);
+          expect(emitted, hasLength(1));
+          expect(cubit.state.videos.map((v) => v.id), contains('relay'));
+          unawaited(cubit.close());
+          clock.flushMicrotasks();
+        });
       },
     );
 
@@ -949,28 +990,40 @@ void main() {
       expect(cubit.state.videos.map((v) => v.id), ['b']);
     });
 
-    test('service tombstone removes an already-loaded REST video', () async {
-      final originalAudit = ProfileFeedCubit.relaySnapshotAudit;
-      ProfileFeedCubit.relaySnapshotAudit = const Duration(milliseconds: 20);
-      addTearDown(() => ProfileFeedCubit.relaySnapshotAudit = originalAudit);
+    test('service tombstone removes an already-loaded REST video', () {
+      fakeAsync((clock) {
+        final originalAudit = ProfileFeedCubit.relaySnapshotAudit;
+        ProfileFeedCubit.relaySnapshotAudit = const Duration(milliseconds: 20);
+        addTearDown(() => ProfileFeedCubit.relaySnapshotAudit = originalAudit);
 
-      final cubit = await buildReady(_result([_video('a'), _video('b')]));
-      addTearDown(cubit.close);
-      expect(cubit.state.videos.map((v) => v.id), ['a', 'b']);
+        final cubit = buildReadyWithClock(
+          _result([_video('a'), _video('b')]),
+          clock,
+        );
 
-      when(
-        () => h.ves.isVideoEventKnownDeleted(
-          any(that: isA<VideoEvent>().having((v) => v.id, 'id', 'a')),
-        ),
-      ).thenReturn(true);
-      when(() => h.ves.authorVideos(_author)).thenReturn(const <VideoEvent>[]);
+        expect(cubit.state.videos.map((v) => v.id), ['a', 'b']);
 
-      h.onChanged!();
-      await Future<void>.delayed(const Duration(milliseconds: 60));
-      await pumpEventQueue();
+        when(
+          () => h.ves.isVideoEventKnownDeleted(
+            any(that: isA<VideoEvent>().having((v) => v.id, 'id', 'a')),
+          ),
+        ).thenReturn(true);
+        when(() => h.ves.authorVideos(_author))
+            .thenReturn(const <VideoEvent>[]);
 
-      expect(cubit.state.videos.map((v) => v.id), ['b']);
-      expect((await readSnapshot())?.videos.map((v) => v.id), ['b']);
+        h.onChanged!();
+        clock.elapse(const Duration(milliseconds: 20));
+        clock.flushMicrotasks();
+        clock.elapse(Duration.zero);
+
+        expect(cubit.state.videos.map((v) => v.id), ['b']);
+        ProfileVideoOffsetSnapshot? saved;
+        unawaited(readSnapshot().then((value) => saved = value));
+        clock.flushMicrotasks();
+        expect(saved?.videos.map((v) => v.id), ['b']);
+        unawaited(cubit.close());
+        clock.flushMicrotasks();
+      });
     });
 
     test(

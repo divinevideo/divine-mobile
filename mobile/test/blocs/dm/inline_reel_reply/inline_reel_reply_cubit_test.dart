@@ -363,23 +363,19 @@ void main() {
       ],
     );
 
+    late Completer<NIP17SendResult> sending;
+
     blocTest<InlineReelReplyCubit, InlineReelReplyState>(
       'second submit while sending is dropped',
       build: () {
+        sending = Completer<NIP17SendResult>();
         when(
           () => repo.sendMessage(
             recipientPubkey: any(named: 'recipientPubkey'),
             content: any(named: 'content'),
             replyToId: any(named: 'replyToId'),
           ),
-        ).thenAnswer((_) async {
-          await Future<void>.delayed(const Duration(milliseconds: 20));
-          return NIP17SendResult.success(
-            rumorEventId: 'r',
-            messageEventId: 'g',
-            recipientPubkey: _peer,
-          );
-        });
+        ).thenAnswer((_) => sending.future);
         return InlineReelReplyCubit(
           dmRepository: repo,
           replyContext: oneToOne(),
@@ -388,6 +384,14 @@ void main() {
       act: (cubit) async {
         final first = cubit.submit('one');
         final second = cubit.submit('two');
+        await pumpEventQueue();
+        sending.complete(
+          NIP17SendResult.success(
+            rumorEventId: 'r',
+            messageEventId: 'g',
+            recipientPubkey: _peer,
+          ),
+        );
         await Future.wait([first, second]);
       },
       verify: (_) {

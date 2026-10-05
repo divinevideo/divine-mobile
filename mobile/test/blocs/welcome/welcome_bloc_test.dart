@@ -223,7 +223,7 @@ void main() {
 
           final bloc = buildBloc()..add(const WelcomeStarted());
           // Let the handler reach the await on getProfile.
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
 
           // Close the bloc while _hydrateAccount is still awaiting.
           await bloc.close();
@@ -231,7 +231,7 @@ void main() {
           // Now fail the in-flight future; the catch arm runs post-close.
           completer.completeError(Exception('DB error'));
           // Drain microtasks queued by the completion.
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
 
           expect(observer.errors, isEmpty);
         },
@@ -255,12 +255,12 @@ void main() {
           addTearDown(() => Bloc.observer = priorObserver);
 
           final bloc = buildBloc()..add(const WelcomeStarted());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
 
           await bloc.close();
 
           completer.complete(_testProfile);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
 
           expect(observer.errors, isEmpty);
         },
@@ -960,7 +960,7 @@ void main() {
         );
         bloc.add(const WelcomeStarted());
         // Wait for _onStarted to complete (accounts load is async).
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         final state = bloc.state;
         expect(
@@ -1005,7 +1005,7 @@ void main() {
           authService: mockAuthService,
         );
         bloc.add(const WelcomeStarted());
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(bloc.state.recoveryAnchorPubkeyHex, isNull);
         expect(bloc.state.hasCrossAccountMismatch, isFalse);
@@ -1039,7 +1039,7 @@ void main() {
         bloc.add(
           const WelcomeStarted(initialSelectedPubkeyHex: _testPubkeyHex2),
         );
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         // Router-provided selection wins over anchor.
         expect(

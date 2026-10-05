@@ -370,7 +370,7 @@ void main() {
       final cubit = buildCubit();
 
       final first = cubit.deleteVideo(video);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       final second = cubit.deleteVideo(video);
       await pumpEventQueue();
       relayCompleter.complete(
@@ -406,7 +406,7 @@ void main() {
 
       final first = cubit.deleteVideo(video);
       final second = cubit.deleteVideo(secondVideo);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(cubit.isDeleteInProgress(video.id), isTrue);
       expect(cubit.isDeleteInProgress(secondVideo.id), isTrue);
@@ -458,7 +458,7 @@ void main() {
       );
 
       final deletion = cubit.deleteVideo(video);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       surfaceDisposed = true;
       await cubit.close();
       relayCompleter.complete(

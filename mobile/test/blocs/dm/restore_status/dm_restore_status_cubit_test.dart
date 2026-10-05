@@ -91,6 +91,8 @@ void main() {
       },
     );
 
+    late StreamController<bool> recoveryController;
+
     blocTest<DmRestoreStatusCubit, DmRestoreStatusState>(
       're-reads the persisted flag on every recovery tick',
       setUp: () {
@@ -99,26 +101,22 @@ void main() {
         when(
           () => dmRepository.hasCompletedHistoryRecoveryBefore,
         ).thenReturn(false);
-        final controller = StreamController<bool>();
+        recoveryController = StreamController<bool>();
+        // Not awaited: close() on a controller nobody listened to never
+        // completes, which would hang teardown if the cubit never subscribes.
+        addTearDown(() => unawaited(recoveryController.close()));
         when(
           () => dmRepository.historyRecoveryStream,
-        ).thenAnswer((_) => controller.stream);
-        final recovery =
-            Future<void>.delayed(
-              const Duration(milliseconds: 20),
-            ).then((_) {
-              when(
-                () => dmRepository.hasCompletedHistoryRecoveryBefore,
-              ).thenReturn(true);
-              when(
-                () => dmRepository.hasAttemptedHistoryRecovery,
-              ).thenReturn(true);
-              controller.add(false);
-            });
-        addTearDown(() => recovery);
+        ).thenAnswer((_) => recoveryController.stream);
       },
       build: () => DmRestoreStatusCubit(dmRepository: dmRepository),
-      wait: const Duration(milliseconds: 100),
+      act: (cubit) async {
+        expect(cubit.state.mayBeIncomplete, isTrue);
+        when(() => dmRepository.hasCompletedHistoryRecoveryBefore)
+            .thenReturn(true);
+        recoveryController.add(false);
+        await pumpEventQueue();
+      },
       verify: (cubit) {
         expect(cubit.state.mayBeIncomplete, isFalse);
       },

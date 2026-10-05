@@ -1,6 +1,8 @@
 // ABOUTME: Tests for ChangeEmailCubit
 // ABOUTME: Covers loading the current address, validation, and refusal mapping
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
@@ -42,27 +44,39 @@ void main() {
       ).thenAnswer((_) async => result);
     }
 
+    late Completer<KeycastAccountStatus?> accountLoad;
+
     blocTest<ChangeEmailCubit, ChangeEmailState>(
       'waits for the current-address load before accepting a no-op change',
       build: buildSubject,
       setUp: () {
-        when(() => repository.fetchAccountStatus()).thenAnswer((_) async {
-          await Future<void>.delayed(Duration.zero);
-          return const KeycastAccountStatus(
-            email: 'old@example.com',
-            emailVerified: true,
-            publicKey: 'abc',
-            verifiedMinor: false,
-          );
-        });
+        accountLoad = Completer<KeycastAccountStatus?>();
+        when(
+          () => repository.fetchAccountStatus(),
+        ).thenAnswer((_) => accountLoad.future);
       },
       act: (cubit) async {
         final load = cubit.loadCurrentEmail();
         cubit
           ..updateNewEmail('OLD@example.com')
           ..updatePassword('hunter2');
-        await cubit.submit();
-        await load;
+        final submit = cubit.submit();
+        await pumpEventQueue();
+        verifyNever(
+          () => repository.changeEmail(
+            newEmail: any(named: 'newEmail'),
+            password: any(named: 'password'),
+          ),
+        );
+        accountLoad.complete(
+          const KeycastAccountStatus(
+            email: 'old@example.com',
+            emailVerified: true,
+            publicKey: 'abc',
+            verifiedMinor: false,
+          ),
+        );
+        await Future.wait([load, submit]);
       },
       skip: 3,
       expect: () => [

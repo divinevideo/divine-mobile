@@ -85,25 +85,29 @@ void main() {
     );
 
     group('toggle', () {
+      late Completer<PeopleListPublishResult> publish;
       blocTest<NotifyBellCubit, NotifyBellState>(
         'flips on optimistically before the publish resolves',
         build: build,
         setUp: () {
+          publish = Completer<PeopleListPublishResult>();
           when(
             () => repository.subscribe(
               ownerPubkey: any(named: 'ownerPubkey'),
               creatorPubkey: any(named: 'creatorPubkey'),
             ),
-          ).thenAnswer((_) async {
-            await Future<void>.delayed(const Duration(milliseconds: 20));
-            return const PeopleListPublishResult.submitted(eventId: 'e1');
-          });
+          ).thenAnswer((_) => publish.future);
         },
         act: (cubit) async {
           await cubit.load();
           subscriptions.add(const <String>{});
-          await Future<void>.delayed(Duration.zero);
-          await cubit.toggle();
+          await pumpEventQueue();
+          final toggle = cubit.toggle();
+          expect(cubit.state.isSubscribed, isTrue);
+          publish.complete(
+            const PeopleListPublishResult.submitted(eventId: 'e1'),
+          );
+          await toggle;
         },
         expect: () => const [
           NotifyBellState(status: NotifyBellStatus.ready),
@@ -125,7 +129,7 @@ void main() {
         act: (cubit) async {
           await cubit.load();
           subscriptions.add(const <String>{});
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           await cubit.toggle();
         },
         expect: () => const [
@@ -151,7 +155,7 @@ void main() {
         act: (cubit) async {
           await cubit.load();
           subscriptions.add({_creator});
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           await cubit.toggle();
         },
         verify: (_) {
@@ -193,7 +197,7 @@ void main() {
         act: (cubit) async {
           await cubit.load();
           subscriptions.add(const <String>{});
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           await cubit.toggle();
         },
         expect: () => const [

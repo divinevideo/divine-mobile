@@ -87,7 +87,7 @@ void main() {
         cubit.onPlaybackVolumeChanged(0);
 
         // Allow the async _persist to complete.
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(prefs.getDouble('video_playback_volume'), equals(0.0));
       });
@@ -129,7 +129,7 @@ void main() {
         addTearDown(cubit.close);
 
         fakeVolumeListener.controller.add(0);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(prefs.getDouble('video_playback_volume'), equals(0.0));
       });
@@ -139,10 +139,10 @@ void main() {
         addTearDown(cubit.close);
 
         cubit.onPlaybackVolumeChanged(0);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         fakeVolumeListener.controller.add(0.7);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(prefs.getDouble('video_playback_volume'), equals(1.0));
       });

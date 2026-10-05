@@ -135,11 +135,11 @@ void main() {
 
         // First request — bloc enters loading state.
         bloc.add(const CategoriesLoadRequested());
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         // Second request while first is still suspended.
         bloc.add(const CategoriesLoadRequested());
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         // Only one network call should have been made.
         verify(() => mockRepository.watchCategoriesCached()).called(1);

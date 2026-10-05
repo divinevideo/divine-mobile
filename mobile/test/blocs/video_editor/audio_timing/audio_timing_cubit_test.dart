@@ -610,7 +610,7 @@ void main() {
         completionController.add(null);
 
         // Allow the stream listener to process
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         verify(() => mockClipPlayer.seek(Duration.zero)).called(1);
         // Initial play + restart play
