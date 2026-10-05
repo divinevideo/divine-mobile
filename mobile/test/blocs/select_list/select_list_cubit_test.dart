@@ -465,9 +465,147 @@ void main() {
         await cubit.syncRequested('pending');
         expect(cubit.state.memberListIds, {'pending'});
         expect(cubit.state.selectedListIds, {'pending'});
-        expect(cubit.state.status, SelectListStatus.videoPendingSync);
+        expect(cubit.state.status, SelectListStatus.syncFailed);
         verifyNever(() => service.addVideoToList(any(), any()));
         verifyNever(() => service.removeVideoFromList(any(), any()));
+      },
+    );
+
+    test('external sync clears the creation notice and preserves other draft picks', () async {
+      final pending = _list(
+        'pending',
+        videoEventIds: [_videoId],
+      ).copyWith(pendingRepublish: true);
+      stubLists([pending, _list('other')]);
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      final listener = capturedListener();
+      cubit.toggled('other');
+      cubit.createdListWithVideoPendingSync();
+      expect(cubit.state.status, SelectListStatus.videoPendingSync);
+      stubLists([pending.copyWith(pendingRepublish: false), _list('other')]);
+      listener();
+      expect(cubit.state.status, SelectListStatus.editing);
+      expect(cubit.state.pendingSyncListIds, isEmpty);
+      expect(cubit.state.selectedListIds, {'pending', 'other'});
+    });
+
+    test(
+      'creation settling after sync does not revive a stale pending notice',
+      () {
+        final pending = _list(
+          'pending',
+          videoEventIds: [_videoId],
+        ).copyWith(pendingRepublish: true);
+        stubLists([pending]);
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+        stubLists([pending.copyWith(pendingRepublish: false)]);
+
+        cubit.createdListWithVideoPendingSync();
+
+        expect(cubit.state.status, SelectListStatus.editing);
+        expect(cubit.state.pendingSyncListIds, isEmpty);
+        expect(cubit.state.selectedListIds, {'pending'});
+      },
+    );
+
+    test(
+      'sync settles from current service data even before its notification',
+      () async {
+        final pending = _list(
+          'pending',
+          videoEventIds: [_videoId],
+        ).copyWith(pendingRepublish: true);
+        stubLists([pending]);
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+        when(() => service.retryListSync('pending')).thenAnswer((_) async {
+          stubLists([pending.copyWith(pendingRepublish: false)]);
+          return true;
+        });
+        await cubit.syncRequested('pending');
+        expect(cubit.state.status, SelectListStatus.editing);
+        expect(cubit.state.pendingSyncListIds, isEmpty);
+        expect(cubit.state.syncingListIds, isEmpty);
+        expect(cubit.state.selectedListIds, {'pending'});
+      },
+    );
+
+    test(
+      'syncing one list preserves another outstanding membership notice',
+      () async {
+        final first = _list(
+          'first',
+          videoEventIds: [_videoId],
+        ).copyWith(pendingRepublish: true);
+        final second = _list(
+          'second',
+          videoEventIds: [_videoId],
+        ).copyWith(pendingRepublish: true);
+        stubLists([first, second]);
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+        when(() => service.retryListSync('first')).thenAnswer((_) async {
+          stubLists([first.copyWith(pendingRepublish: false), second]);
+          return true;
+        });
+        await cubit.syncRequested('first');
+        expect(cubit.state.status, SelectListStatus.videoPendingSync);
+        expect(cubit.state.pendingSyncListIds, {'second'});
+        expect(cubit.state.selectedListIds, {'first', 'second'});
+      },
+    );
+
+    test(
+      'retry exceptions restore actionable state without dropping membership',
+      () async {
+        final pending = _list(
+          'pending',
+          videoEventIds: [_videoId],
+        ).copyWith(pendingRepublish: true);
+        stubLists([pending]);
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+        when(() => service.retryListSync('pending'))
+            .thenThrow(StateError('relay closed'));
+        await cubit.syncRequested('pending');
+        expect(cubit.state.status, SelectListStatus.syncFailed);
+        expect(cubit.state.syncingListIds, isEmpty);
+        expect(cubit.state.failedSyncListIds, {'pending'});
+        expect(cubit.state.selectedListIds, {'pending'});
+        expect(cubit.state.canSubmit, isTrue);
+      },
+    );
+
+    test(
+      'a retry result after an account change clears stale rows and selections',
+      () async {
+        final pending = _list(
+          'pending',
+          videoEventIds: [_videoId],
+        ).copyWith(pendingRepublish: true);
+        stubLists([pending]);
+        String? owner = _ownerPubkey;
+        final cubit = SelectListCubit(
+          service: service,
+          videoEventId: _videoId,
+          currentOwnerPubkey: () => owner,
+        );
+        addTearDown(cubit.close);
+        final answer = Completer<bool>();
+        when(() => service.retryListSync('pending'))
+            .thenAnswer((_) => answer.future);
+        final retry = cubit.syncRequested('pending');
+        expect(cubit.state.syncingListIds, {'pending'});
+        owner = 'e' * 64;
+        answer.complete(true);
+        await retry;
+        expect(cubit.state.status, SelectListStatus.failure);
+        expect(cubit.state.lists, isEmpty);
+        expect(cubit.state.selectedListIds, isEmpty);
+        expect(cubit.state.syncingListIds, isEmpty);
+        expect(cubit.state.failedSyncListIds, isEmpty);
       },
     );
 

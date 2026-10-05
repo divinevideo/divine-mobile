@@ -61,28 +61,13 @@ class _SaveFailedMessage extends StatelessWidget {
       SelectListStatus.createdWithoutVideo => ListInfoFailureMessage(
         context.l10n.listVideoNotAdded,
       ),
-      SelectListStatus.videoPendingSync => const _PendingSyncNotice(),
+      SelectListStatus.videoPendingSync => const ListInfoPendingSyncMessage(),
+      SelectListStatus.syncFailed => ListInfoFailureMessage(
+        context.l10n.listUpdateFailed,
+      ),
       _ => const SizedBox.shrink(),
     };
   }
-}
-
-class _PendingSyncNotice extends StatelessWidget {
-  const _PendingSyncNotice();
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    liveRegion: true,
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: Text(
-        context.l10n.listVideoPendingSync,
-        style: VineTheme.bodyMediumFont(
-          color: context.vineColors.onSurfaceVariant,
-        ),
-      ),
-    ),
-  );
 }
 
 class _ListRows extends ConsumerWidget {
@@ -167,6 +152,9 @@ class _ListRow extends StatelessWidget {
     final visibility = list.isPublic
         ? l10n.listVisibilityPublic
         : l10n.listVisibilityPrivate;
+    final syncing = context.select(
+      (SelectListCubit cubit) => cubit.state.syncingListIds.contains(list.id),
+    );
     final pendingSync = context.select(
       (SelectListCubit cubit) =>
           cubit.state.pendingSyncListIds.contains(list.id),
@@ -196,19 +184,28 @@ class _ListRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(l10n.listVideoPendingSync),
-                DivineButton(
-                  label: l10n.listRetrySync,
-                  onPressed: isSaving
-                      ? null
-                      : () => runDetached(
-                          context.read<SelectListCubit>().syncRequested(
-                            list.id,
+                if (syncing)
+                  const Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: DivineCircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                else
+                  DivineButton(
+                    label: l10n.listRetrySync,
+                    onPressed: isSaving
+                        ? null
+                        : () => runDetached(
+                            context.read<SelectListCubit>().syncRequested(
+                              list.id,
+                            ),
+                            'retry list sync',
+                            logName: 'SelectListSheet',
+                            category: LogCategory.ui,
                           ),
-                          'retry list sync',
-                          logName: 'SelectListSheet',
-                          category: LogCategory.ui,
-                        ),
-                ),
+                  ),
               ],
             ),
           ),
