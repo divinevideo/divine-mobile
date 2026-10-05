@@ -108,8 +108,9 @@ void main() {
         ..writeAsBytesSync(List<int>.generate(32, (index) => index));
 
       mockBlossomService = _MockBlossomUploadService();
-      when(() => mockBlossomService.isBlossomEnabled())
-          .thenAnswer((_) async => false);
+      when(
+        () => mockBlossomService.isBlossomEnabled(),
+      ).thenAnswer((_) async => false);
       _mockConnectivity('wifi');
 
       uploadManager = UploadManager(
@@ -427,8 +428,9 @@ void main() {
     test('initialize registers and dispose unregisters', () async {
       await _withIsolatedHiveHome('upload_recovery_reg_', () async {
         final mockBlossom = _MockBlossomUploadService();
-        when(mockBlossom.isBlossomEnabled)
-            .thenAnswer((_) => Future.value(false));
+        when(
+          mockBlossom.isBlossomEnabled,
+        ).thenAnswer((_) => Future.value(false));
         _mockConnectivity('wifi');
 
         final mockBgManager = _MockBackgroundActivityManager();
@@ -456,8 +458,9 @@ void main() {
     test('dispose during initialize prevents late registration', () async {
       await _withIsolatedHiveHome('upload_recovery_dispose_', () async {
         final mockBlossom = _MockBlossomUploadService();
-        when(mockBlossom.isBlossomEnabled)
-            .thenAnswer((_) => Future.value(false));
+        when(
+          mockBlossom.isBlossomEnabled,
+        ).thenAnswer((_) => Future.value(false));
         _mockConnectivity('wifi');
 
         final mockBgManager = _MockBackgroundActivityManager();
