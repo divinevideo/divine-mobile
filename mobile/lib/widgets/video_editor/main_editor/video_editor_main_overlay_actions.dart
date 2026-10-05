@@ -79,16 +79,28 @@ class _TopActions extends ConsumerWidget {
       );
     });
 
+    void close() {
+      if (isAutosavedDraft) {
+        _onClosePressed(
+          context: context,
+          ref: ref,
+          closeSubEditor: scope.editor?.closeSubEditor,
+        );
+      } else {
+        context.pop();
+      }
+    }
+
+    // The editor route never pops itself (see `VideoEditorScreen.build`), so
+    // Android's system back lands here and leaves the way the close button
+    // does. An open sub-editor takes that back press itself
+    // (`VideoEditorCanvas`), so it must not also close the editor.
     return PopScope(
-      canPop: !isAutosavedDraft,
+      canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop && isAutosavedDraft) {
-          _onClosePressed(
-            context: context,
-            ref: ref,
-            closeSubEditor: scope.editor?.closeSubEditor,
-          );
-        }
+        if (didPop) return;
+        if (context.read<VideoEditorMainBloc>().state.isSubEditorOpen) return;
+        close();
       },
       child: VideoEditorToolbar(
         closeIcon: .caretLeft,
@@ -102,17 +114,7 @@ class _TopActions extends ConsumerWidget {
                 clipId: stopMotionData.clipId,
                 value: stopMotionData.value,
               ),
-        onClose: () {
-          if (isAutosavedDraft) {
-            _onClosePressed(
-              context: context,
-              ref: ref,
-              closeSubEditor: scope.editor?.closeSubEditor,
-            );
-          } else {
-            context.pop();
-          }
-        },
+        onClose: close,
         onDone: () => _onDonePressed(context, scope),
       ),
     );
