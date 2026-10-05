@@ -13110,4 +13110,8 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get listRetrySync => 'Synkronisera nu';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Det gick inte att bekräfta ändringen. Försök igen.';
 }

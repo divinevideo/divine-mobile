@@ -13009,4 +13009,8 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get listRetrySync => 'Sinkronkan sekarang';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Perubahan ini belum bisa dikonfirmasi. Coba lagi.';
 }

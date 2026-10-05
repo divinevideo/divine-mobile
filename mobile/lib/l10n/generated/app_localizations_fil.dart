@@ -13218,4 +13218,8 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get listRetrySync => 'I-sync ngayon';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Hindi makumpirma ang pagbabagong ito. Subukan ulit.';
 }

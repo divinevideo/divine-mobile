@@ -12306,4 +12306,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get listRetrySync => '立即同步';
+
+  @override
+  String get listPermissionsUnconfirmed => '无法确认此更改。请重试。';
 }

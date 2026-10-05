@@ -5498,8 +5498,9 @@
   "listAddCollaboratorTitle": "Añadir colaborador",
   "listCollaboratorSearchHint": "Buscar en Divine...",
   "listCollaboratorsNone": "Ninguno",
-  "listPrivateCollaboratorsWarning": "Al hacer privada esta lista, también se eliminan sus colaboradores. Solo tú podrás añadir vídeos.",
-  "listVideoNotAdded": "Tu lista se creó, pero este vídeo no se añadió.",
-  "listVideoPendingSync": "Tu lista y tu vídeo están guardados aquí. El vídeo está esperando a sincronizarse.",
-  "listRetrySync": "Sincronizar ahora"
+  "listPrivateCollaboratorsWarning": "Al hacer privada esta lista, también se eliminan sus colaboradores. Solo vos vas a poder añadir videos.",
+  "listVideoNotAdded": "Tu lista se creó, pero este video no se añadió.",
+  "listVideoPendingSync": "Tu lista y tu video están guardados acá. El video está esperando a sincronizarse.",
+  "listRetrySync": "Sincronizar ahora",
+  "listPermissionsUnconfirmed": "No se pudo confirmar este cambio. Probá de nuevo."
 }

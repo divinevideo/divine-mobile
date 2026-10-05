@@ -6798,5 +6798,6 @@
   "listPrivateCollaboratorsWarning": "Menjadikan senarai ini peribadi turut mengalih keluar kolaboratornya. Hanya anda yang boleh menambah video.",
   "listVideoNotAdded": "Senarai anda telah dibuat, tetapi video ini tidak ditambahkan.",
   "listVideoPendingSync": "Senarai dan video anda disimpan di sini. Video sedang menunggu untuk disegerakkan.",
-  "listRetrySync": "Segerakkan sekarang"
+  "listRetrySync": "Segerakkan sekarang",
+  "listPermissionsUnconfirmed": "Perubahan ini tidak dapat disahkan. Cuba lagi."
 }

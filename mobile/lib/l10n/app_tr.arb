@@ -5501,5 +5501,6 @@
   "listPrivateCollaboratorsWarning": "Bu listeyi özel yapmak, ortak çalışanlarını da kaldırır. Yalnızca sen video ekleyebilirsin.",
   "listVideoNotAdded": "Listen oluşturuldu, ancak bu video eklenmedi.",
   "listVideoPendingSync": "Listen ve videon burada kaydedildi. Video eşitlenmeyi bekliyor.",
-  "listRetrySync": "Şimdi eşitle"
+  "listRetrySync": "Şimdi eşitle",
+  "listPermissionsUnconfirmed": "Bu değişiklik doğrulanamadı. Tekrar dene."
 }

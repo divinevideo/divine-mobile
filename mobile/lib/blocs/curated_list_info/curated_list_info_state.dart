@@ -20,6 +20,9 @@ enum CuratedListInfoStatus {
   /// The save failed; the form stays open so nothing typed is lost.
   failure,
 
+  /// The permissions update has no confirmed relay outcome.
+  permissionsUnconfirmed,
+
   /// The edit is stored on this device but no relay accepted it.
   publishFailed,
 

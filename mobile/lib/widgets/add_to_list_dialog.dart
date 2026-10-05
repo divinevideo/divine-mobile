@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/curated_list_editor_session_provider.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
@@ -37,22 +38,40 @@ class _LoadingIndicator extends StatelessWidget {
 }
 
 /// Dialog for selecting an existing list to add a video to.
-class SelectListDialog extends StatefulWidget {
+class SelectListDialog extends ConsumerStatefulWidget {
   const SelectListDialog({required this.video, super.key});
   final VideoEvent video;
 
   @override
-  State<SelectListDialog> createState() => _SelectListDialogState();
+  ConsumerState<SelectListDialog> createState() => _SelectListDialogState();
 }
 
-class _SelectListDialogState extends State<SelectListDialog> {
+class _SelectListDialogState extends ConsumerState<SelectListDialog> {
   ListInfoSheetOutcome? _creationOutcome;
+  final _syncingListIds = <String>{};
+  final _failedSyncListIds = <String>{};
+  late final CuratedListEditorSession _session;
+  late final String? _openingOwner;
+
+  @override
+  void initState() {
+    super.initState();
+    _session = ref.read(curatedListEditorSessionProvider);
+    _openingOwner = _session.currentOwnerPubkey;
+  }
+
+  bool get _isSessionCurrent =>
+      _openingOwner != null &&
+      _openingOwner.isNotEmpty &&
+      _session.currentOwnerPubkey == _openingOwner;
 
   Future<void> _createList() async {
+    if (!_isSessionCurrent) return;
     final messenger = ScaffoldMessenger.of(context);
     final l10n = context.l10n;
     final failureMessage = l10n.listVideoNotAdded;
     final outcome = await showListInfoSheet(context, video: widget.video);
+    if (!_isSessionCurrent) return;
     if (!mounted) {
       if ((outcome == ListInfoSheetOutcome.createdWithoutVideo ||
               outcome == ListInfoSheetOutcome.createdWithVideoPendingSync) &&
@@ -74,133 +93,168 @@ class _SelectListDialogState extends State<SelectListDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => Consumer(
-    builder: (context, ref, child) {
-      final listServiceAsync = ref.watch(curatedListsStateProvider);
+  Widget build(BuildContext context) {
+    final listServiceAsync = ref.watch(curatedListsStateProvider);
 
-      return listServiceAsync.when(
-        data: (lists) {
-          final availableLists = lists.toList();
+    return listServiceAsync.when(
+      data: (lists) {
+        final availableLists = lists.toList();
 
-          final l10n = context.l10n;
-          return AlertDialog(
-            backgroundColor: context.vineColors.card,
-            title: Text(
-              l10n.listAddToList,
-              style: TextStyle(color: context.vineColors.primaryText),
-            ),
-            content: SizedBox(
-              width: double.maxFinite,
-              height: 300,
-              child: Column(
-                children: [
-                  if (_creationOutcome ==
-                      ListInfoSheetOutcome.createdWithoutVideo)
-                    ListInfoFailureMessage(l10n.listVideoNotAdded),
-                  if (_creationOutcome ==
-                      ListInfoSheetOutcome.createdWithVideoPendingSync)
-                    ListInfoFailureMessage(l10n.listVideoPendingSync),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: availableLists.length,
-                      itemBuilder: (context, index) {
-                        final list = availableLists[index];
-                        final isInList = list.videoEventIds.contains(
-                          widget.video.id,
-                        );
-
-                        return ListTile(
-                          leading: DivineIcon(
-                            icon: isInList
-                                ? DivineIconName.checkCircle
-                                : DivineIconName.playlist,
-                            color: isInList
-                                ? context.vineColors.accentPositive
-                                : context.vineColors.primaryText,
-                          ),
-                          title: Text(
-                            list.name,
-                            style: TextStyle(
-                              color: context.vineColors.primaryText,
-                            ),
-                          ),
-                          subtitle: Text(
-                            '${l10n.listVideoCount(list.videoEventIds.length)} • '
-                            '${list.isPublic ? l10n.listVisibilityPublic : l10n.listVisibilityPrivate}',
-                            style: TextStyle(
-                              color: context.vineColors.secondaryText,
-                            ),
-                          ),
-                          trailing: isInList && list.pendingRepublish
-                              ? DivineButton(
-                                  label: l10n.listRetrySync,
-                                  type: DivineButtonType.link,
-                                  onPressed: () => runDetached(
-                                    ref
-                                        .read(
-                                          curatedListsStateProvider.notifier,
-                                        )
-                                        .service!
-                                        .retryListSync(list.id),
-                                    'retry list sync',
-                                    logName: 'SelectListDialog',
-                                    category: LogCategory.ui,
-                                  ),
-                                )
-                              : null,
-                          onTap: () => _toggleVideoInList(
-                            context,
-                            ref
-                                .read(curatedListsStateProvider.notifier)
-                                .service!,
-                            list,
-                            isInList,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  runDetached(
-                    _createList(),
-                    'open list creation sheet',
-                    logName: 'SelectListDialog',
-                    category: LogCategory.ui,
-                  );
-                },
-                child: Text(l10n.listNewList),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(l10n.listDone),
-              ),
-            ],
-          );
-        },
-        loading: () => const _LoadingIndicator(),
-        error: (_, _) => AlertDialog(
+        final l10n = context.l10n;
+        final pendingLists = {
+          for (final list in availableLists)
+            if (list.pendingRepublish &&
+                list.videoEventIds.contains(widget.video.id))
+              list.id,
+        };
+        final syncFailed = _failedSyncListIds
+            .intersection(pendingLists)
+            .isNotEmpty;
+        return AlertDialog(
           backgroundColor: context.vineColors.card,
-          title: Text(context.l10n.listAddToList),
-          content: CuratedListInitializationFailure(
-            onRetry: () => ref.invalidate(curatedListsStateProvider),
+          title: Text(
+            l10n.listAddToList,
+            style: TextStyle(color: context.vineColors.primaryText),
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 300,
+            child: Column(
+              children: [
+                if (_creationOutcome ==
+                    ListInfoSheetOutcome.createdWithoutVideo)
+                  ListInfoFailureMessage(l10n.listVideoNotAdded),
+                if (pendingLists.isNotEmpty) const ListInfoPendingSyncMessage(),
+                if (syncFailed) ListInfoFailureMessage(l10n.listUpdateFailed),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: availableLists.length,
+                    itemBuilder: (context, index) {
+                      final list = availableLists[index];
+                      final isInList = list.videoEventIds.contains(
+                        widget.video.id,
+                      );
+
+                      return ListTile(
+                        leading: DivineIcon(
+                          icon: isInList
+                              ? DivineIconName.checkCircle
+                              : DivineIconName.playlist,
+                          color: isInList
+                              ? context.vineColors.accentPositive
+                              : context.vineColors.primaryText,
+                        ),
+                        title: Text(
+                          list.name,
+                          style: TextStyle(
+                            color: context.vineColors.primaryText,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '${l10n.listVideoCount(list.videoEventIds.length)} • '
+                          '${list.isPublic ? l10n.listVisibilityPublic : l10n.listVisibilityPrivate}',
+                          style: TextStyle(
+                            color: context.vineColors.secondaryText,
+                          ),
+                        ),
+                        trailing: isInList && list.pendingRepublish
+                            ? _syncingListIds.contains(list.id)
+                                  ? const SizedBox(
+                                      width: 40,
+                                      child: _LoadingIndicator(),
+                                    )
+                                  : DivineButton(
+                                      label: l10n.listRetrySync,
+                                      type: DivineButtonType.link,
+                                      onPressed: () => runDetached(
+                                        _retrySync(list),
+                                        'retry list sync',
+                                        logName: 'SelectListDialog',
+                                        category: LogCategory.ui,
+                                      ),
+                                    )
+                            : null,
+                        onTap: _syncingListIds.contains(list.id)
+                            ? null
+                            : () => _toggleVideoInList(
+                                context,
+                                ref
+                                    .read(curatedListsStateProvider.notifier)
+                                    .service!,
+                                list,
+                                isInList,
+                              ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
           actions: [
-            DivineButton(
-              label: context.l10n.listDone,
-              type: DivineButtonType.secondary,
-              size: DivineButtonSize.small,
+            TextButton(
+              onPressed: () {
+                runDetached(
+                  _createList(),
+                  'open list creation sheet',
+                  logName: 'SelectListDialog',
+                  category: LogCategory.ui,
+                );
+              },
+              child: Text(l10n.listNewList),
+            ),
+            TextButton(
               onPressed: () => Navigator.of(context).pop(),
+              child: Text(l10n.listDone),
             ),
           ],
+        );
+      },
+      loading: () => const _LoadingIndicator(),
+      error: (_, _) => AlertDialog(
+        backgroundColor: context.vineColors.card,
+        title: Text(context.l10n.listAddToList),
+        content: CuratedListInitializationFailure(
+          onRetry: () => ref.invalidate(curatedListsStateProvider),
         ),
+        actions: [
+          DivineButton(
+            label: context.l10n.listDone,
+            type: DivineButtonType.secondary,
+            size: DivineButtonSize.small,
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _retrySync(CuratedList list) async {
+    if (!_isSessionCurrent || _syncingListIds.contains(list.id)) return;
+    final service = ref.read(curatedListsStateProvider.notifier).service;
+    if (service == null) return;
+    setState(() {
+      _syncingListIds.add(list.id);
+      _failedSyncListIds.remove(list.id);
+    });
+    var synced = false;
+    try {
+      synced = await service.retryListSync(list.id);
+    } catch (error, stackTrace) {
+      Log.error(
+        'Could not confirm list sync',
+        name: 'SelectListDialog',
+        category: LogCategory.ui,
+        error: error,
+        stackTrace: stackTrace,
       );
-    },
-  );
+    }
+    if (!mounted || !_isSessionCurrent) return;
+    setState(() {
+      _syncingListIds.remove(list.id);
+      if (!synced) _failedSyncListIds.add(list.id);
+    });
+  }
 
   Future<void> _toggleVideoInList(
     BuildContext context,
@@ -208,6 +262,7 @@ class _SelectListDialogState extends State<SelectListDialog> {
     CuratedList list,
     bool isCurrentlyInList,
   ) async {
+    if (!_isSessionCurrent) return;
     try {
       bool success;
       if (isCurrentlyInList) {
@@ -219,7 +274,7 @@ class _SelectListDialogState extends State<SelectListDialog> {
         success = await listService.addVideoToList(list.id, widget.video.id);
       }
 
-      if (!context.mounted) return;
+      if (!context.mounted || !_isSessionCurrent) return;
 
       if (success) {
         final message = isCurrentlyInList
