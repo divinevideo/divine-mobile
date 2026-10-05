@@ -80,7 +80,7 @@ const _testNsec =
 /// Runs [body] while silencing unhandled async errors from `_performDiscovery`.
 Future<T> _ignoringDiscoveryErrors<T>(Future<T> Function() body) async {
   final completer = Completer<T>();
-  runZonedGuarded(
+  await runZonedGuarded(
     () async {
       try {
         final result = await body();
