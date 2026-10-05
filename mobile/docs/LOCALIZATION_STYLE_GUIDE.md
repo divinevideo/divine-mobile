@@ -337,9 +337,12 @@ affected locales is tracked in
 
 **Never soften a load-bearing word.** Safety, consent, money, deletion and age
 copy carry meaning that a friendlier synonym destroys. The repo already treats
-this as a first-class reason to *defer* rather than approximate. The
-`exploreFeaturedSponsoredBy` and `exploreFeaturedSponsoredPillSemanticLabel`
-messages must remain unmistakable commercial disclosures rather than soften
+this as a first-class reason to *defer* rather than approximate: load-bearing
+copy nobody can check waits in `_knownUntranslatedDebt` (see
+[When nobody speaks the language](#when-nobody-speaks-the-language--the-normal-case)).
+The translated `exploreFeaturedSponsoredBy` and
+`exploreFeaturedSponsoredPillSemanticLabel` messages must remain
+unmistakable commercial disclosures rather than soften
 into editorial credits. `mobile/test/l10n/arb_consistency_test.dart` guards
 their presence, placeholders and English fallback; human review must check
 the commercial meaning of both messages.
