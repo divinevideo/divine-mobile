@@ -98,12 +98,10 @@ MockSharedPreferences createMockSharedPreferences() {
   // Stub all FeatureFlag methods to return sensible defaults
   for (final flag in FeatureFlag.values) {
     when(() => mockPrefs.getBool('ff_${flag.name}')).thenReturn(null);
-    when(
-      () => mockPrefs.setBool('ff_${flag.name}', any()),
-    ).thenAnswer((_) async => true);
-    when(
-      () => mockPrefs.remove('ff_${flag.name}'),
-    ).thenAnswer((_) async => true);
+    when(() => mockPrefs.setBool('ff_${flag.name}', any()))
+        .thenAnswer((_) async => true);
+    when(() => mockPrefs.remove('ff_${flag.name}'))
+        .thenAnswer((_) async => true);
     when(() => mockPrefs.containsKey('ff_${flag.name}')).thenReturn(false);
   }
 
@@ -117,9 +115,8 @@ MockSharedPreferences createMockSharedPreferences() {
   when(() => mockPrefs.getDouble(any())).thenReturn(null);
   when(() => mockPrefs.setDouble(any(), any())).thenAnswer((_) async => true);
   when(() => mockPrefs.getStringList(any())).thenReturn(null);
-  when(
-    () => mockPrefs.setStringList(any(), any()),
-  ).thenAnswer((_) async => true);
+  when(() => mockPrefs.setStringList(any(), any()))
+      .thenAnswer((_) async => true);
   when(() => mockPrefs.remove(any())).thenAnswer((_) async => true);
   when(mockPrefs.clear).thenAnswer((_) async => true);
   when(() => mockPrefs.containsKey(any())).thenReturn(false);
@@ -135,23 +132,19 @@ MockAuthService createMockAuthService({
   final mockAuth = MockAuthService();
 
   // Stub common auth methods with sensible defaults
-  when(
-    () => mockAuth.isAuthenticated,
-  ).thenReturn(authState == AuthState.authenticated);
+  when(() => mockAuth.isAuthenticated)
+      .thenReturn(authState == AuthState.authenticated);
   when(() => mockAuth.canExportLocalNsec).thenReturn(false);
   when(() => mockAuth.canPublishNostrWritesNow).thenReturn(false);
-  when(
-    () => mockAuth.authenticationSource,
-  ).thenReturn(AuthenticationSource.none);
+  when(() => mockAuth.authenticationSource)
+      .thenReturn(AuthenticationSource.none);
   when(() => mockAuth.currentPublicKeyHex).thenReturn(currentPublicKeyHex);
   when(() => mockAuth.isNip07Available).thenReturn(false);
   when(() => mockAuth.signerReadiness).thenReturn(SignerReadiness.pending);
-  when(
-    () => mockAuth.authRpcCapability,
-  ).thenReturn(AuthRpcCapability.unavailable);
-  when(
-    () => mockAuth.authRpcCapabilityStream,
-  ).thenAnswer((_) => const Stream<AuthRpcCapability>.empty());
+  when(() => mockAuth.authRpcCapability)
+      .thenReturn(AuthRpcCapability.unavailable);
+  when(() => mockAuth.authRpcCapabilityStream)
+      .thenAnswer((_) => const Stream<AuthRpcCapability>.empty());
 
   // The crossposter client reads its bearer token here, so any widget that
   // mounts the share sheet reaches it. Unstubbed it returns null rather than a
@@ -165,9 +158,8 @@ MockAuthService createMockAuthService({
   // Stub authState and authStateStream so currentAuthStateProvider does not
   // crash with type 'Null' is not a subtype of type 'Stream<AuthState>'
   when(() => mockAuth.authState).thenReturn(authState);
-  when(
-    () => mockAuth.authStateStream,
-  ).thenAnswer((_) => const Stream<AuthState>.empty());
+  when(() => mockAuth.authStateStream)
+      .thenAnswer((_) => const Stream<AuthState>.empty());
 
   // Providers built from an authenticated identity read requireIdentity, which
   // throws on the real service and returned null here. A pubkey-only identity
@@ -183,9 +175,8 @@ MockAuthService createMockAuthService({
 void _stubSessionCleanupRegistration(AuthService mockAuth) {
   if (mockAuth is! Mock) return;
 
-  when(
-    () => mockAuth.registerBeforeSessionTeardownCallback(any()),
-  ).thenReturn(() {});
+  when(() => mockAuth.registerBeforeSessionTeardownCallback(any()))
+      .thenReturn(() {});
 }
 
 /// Creates a properly stubbed MockNostrClient for testing
@@ -201,9 +192,8 @@ MockNostrClient createMockNostrService() {
   // Stub subscribe() to return empty stream (never null) so
   // SubscriptionManager batch fetch does not get
   // type 'Null' is not a subtype of type 'Stream<Event>'
-  when(
-    () => mockNostr.subscribe(any()),
-  ).thenAnswer((_) => const Stream<Event>.empty());
+  when(() => mockNostr.subscribe(any()))
+      .thenAnswer((_) => const Stream<Event>.empty());
 
   // Stub queryEvents() to return empty list (never null) so
   // FollowRepository getFollowers/getMyFollowers do not get
@@ -264,10 +254,12 @@ MockSubscriptionManager createMockSubscriptionManager() {
   ).thenAnswer((invocation) async {
     // Call onComplete callback if provided to signal subscription finished
     final onComplete =
-        invocation.namedArguments[const Symbol('onComplete')] as Function()?;
+        invocation.namedArguments[const Symbol('onComplete')]
+            as void Function()?;
     if (onComplete != null) {
-      // Use Future.microtask to call after the subscription is "created"
-      Future.microtask(onComplete);
+      // Defer until after the subscription is "created" without an unused
+      // Future.
+      scheduleMicrotask(onComplete);
     }
     return 'mock_subscription_${DateTime.now().millisecondsSinceEpoch}';
   });
@@ -313,22 +305,18 @@ MockMediaCacheManager createMockMediaCacheManager() {
 MockProfileRepository createMockProfileRepository() {
   final mockRepo = MockProfileRepository();
 
-  when(
-    () => mockRepo.getCachedProfile(pubkey: any(named: 'pubkey')),
-  ).thenAnswer((_) async => null);
-  when(
-    () => mockRepo.fetchFreshProfile(pubkey: any(named: 'pubkey')),
-  ).thenAnswer((_) async => null);
+  when(() => mockRepo.getCachedProfile(pubkey: any(named: 'pubkey')))
+      .thenAnswer((_) async => null);
+  when(() => mockRepo.fetchFreshProfile(pubkey: any(named: 'pubkey')))
+      .thenAnswer((_) async => null);
   when(() => mockRepo.isConfirmedMissing(any())).thenReturn(false);
-  when(
-    () => mockRepo.watchProfile(pubkey: any(named: 'pubkey')),
-  ).thenAnswer((_) => Stream.value(null));
+  when(() => mockRepo.watchProfile(pubkey: any(named: 'pubkey')))
+      .thenAnswer((_) => Stream.value(null));
   // Surfaces that show counts read `profile_statistics` rather than the
   // profile, so anything pumping them needs this stubbed or the provider
   // throws `MissingStubError` before the widget builds.
-  when(
-    () => mockRepo.watchProfileStats(pubkey: any(named: 'pubkey')),
-  ).thenAnswer((_) => Stream.value(null));
+  when(() => mockRepo.watchProfileStats(pubkey: any(named: 'pubkey')))
+      .thenAnswer((_) => Stream.value(null));
 
   return mockRepo;
 }
@@ -338,9 +326,8 @@ MockNip05VerificationService createMockNip05VerificationService() {
   final mockService = MockNip05VerificationService();
 
   when(() => mockService.getCachedStatus(any())).thenReturn(null);
-  when(
-    () => mockService.getVerificationStatus(any(), any()),
-  ).thenAnswer((_) async => Nip05VerificationStatus.none);
+  when(() => mockService.getVerificationStatus(any(), any()))
+      .thenAnswer((_) async => Nip05VerificationStatus.none);
   when(() => mockService.addListener(any())).thenReturn(null);
   when(() => mockService.removeListener(any())).thenReturn(null);
 
@@ -360,13 +347,11 @@ MockFollowRepository createMockFollowRepository({
   when(() => mock.followingPubkeys).thenReturn(followingPubkeys);
   when(() => mock.isInitialized).thenReturn(true);
   when(() => mock.followingCount).thenReturn(followingPubkeys.length);
-  when(
-    () => mock.followingStream,
-  ).thenAnswer((_) => Stream.value(followingPubkeys));
+  when(() => mock.followingStream)
+      .thenAnswer((_) => Stream.value(followingPubkeys));
   when(() => mock.isFollowing(any())).thenReturn(false);
-  when(
-    mock.watchMyFollowingCached,
-  ).thenAnswer((_) => const Stream<CacheResult<FollowingSnapshot>>.empty());
+  when(mock.watchMyFollowingCached)
+      .thenAnswer((_) => const Stream<CacheResult<FollowingSnapshot>>.empty());
   when(
     () => mock.watchOthersFollowingCached(
       any(),
@@ -385,9 +370,8 @@ MockFollowRepository createMockFollowRepository({
 MockModerationLabelService createMockModerationLabelService() {
   final mock = MockModerationLabelService();
 
-  when(
-    () => mock.divineModerationPubkeyHex,
-  ).thenReturn(ModerationLabelService.fallbackModerationPubkeyHex);
+  when(() => mock.divineModerationPubkeyHex)
+      .thenReturn(ModerationLabelService.fallbackModerationPubkeyHex);
   when(() => mock.subscribedLabelers).thenReturn({});
   when(() => mock.isDivineLabelerSubscribed).thenReturn(false);
   when(() => mock.customLabelers).thenReturn({});
