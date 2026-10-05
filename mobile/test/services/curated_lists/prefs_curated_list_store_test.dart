@@ -482,6 +482,24 @@ void main() {
       });
 
       test(
+        'a conflict still advances the lists it did save',
+        () async {
+          final original = _list('crew');
+          final winner = _list('crew', revision: 5);
+          await prefs.setString(_listsKey, jsonEncode([winner.toJson()]));
+          final store = _store(prefs)..listsLoaded([original]);
+          final conflicted = await store.saveListsWithResult([
+            _list('crew', revision: 2),
+            _list('added'),
+          ]);
+          expect(conflicted.status, CuratedCacheWriteStatus.conflict);
+          expect(_storedLists(prefs), [winner, _list('added')]);
+          expect(await store.saveLists([winner]), isTrue);
+          expect(_storedLists(prefs), [winner]);
+        },
+      );
+
+      test(
         'rollback preserves local edits newer than the rejected snapshot',
         () async {
           final refusing = _RefusingPrefs();
@@ -521,6 +539,27 @@ void main() {
           );
           expect(prefs.getKeys(), isEmpty);
           expect(local, [_list('crew')]);
+        },
+      );
+
+      test(
+        'superseded follow session reports failure without saving or '
+        'rolling back',
+        () async {
+          final ids = {'crew'};
+          final store = _store(prefs);
+          await expectLater(
+            store.saveSubscriptionsOrThrow(ids, isCurrent: () => false),
+            throwsA(
+              isA<CuratedCacheWriteException>().having(
+                (error) => error.status,
+                'status',
+                CuratedCacheWriteStatus.superseded,
+              ),
+            ),
+          );
+          expect(prefs.getKeys(), isEmpty);
+          expect(ids, {'crew'});
         },
       );
 
@@ -633,8 +672,13 @@ void main() {
             throwsA(isA<TypeError>()),
           );
           backing.throws = false;
-          expect(await store.saveLists([_list('accepted')]), isTrue);
-          expect(_storedLists(backing), [_list('accepted')]);
+          expect(
+            await store.saveLists([_list('crew'), _list('accepted')]),
+            isTrue,
+          );
+          expect(_storedLists(backing), [_list('crew'), _list('accepted')]);
+          expect(await store.saveSubscriptions({'crew', 'accepted'}), isTrue);
+          expect(_storedSubscriptions(backing), {'crew', 'accepted'});
         },
       );
     });
@@ -903,6 +947,20 @@ void main() {
           await prefs.reload();
           expect(first.wasListDeleted(_owner, 'crew'), isFalse);
           expect(first.wasListDeleted(_otherOwner, 'friends'), isTrue);
+        },
+      );
+
+      test(
+        'a retried tombstone that is saved is not hidden by the refused one',
+        () async {
+          final store = _store(prefs);
+          backing.rejectLists = true;
+          expect(await store.recordListDeletion(_owner, 'crew'), isFalse);
+          backing.rejectLists = false;
+          expect(await store.recordListDeletion(_owner, 'crew'), isTrue);
+          expect(store.wasListDeleted(_owner, 'crew'), isTrue);
+          await prefs.reload();
+          expect(store.wasListDeleted(_owner, 'crew'), isTrue);
         },
       );
 
