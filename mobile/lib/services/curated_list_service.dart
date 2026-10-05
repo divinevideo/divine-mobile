@@ -770,7 +770,7 @@ class CuratedListService extends ChangeNotifier {
     }
   }
 
-  /// Removes [listId] locally, re-resolving its position by ID.
+  /// Removes [list] locally, re-resolving its position by ID.
   ///
   /// The caller captures its index before the deletion publish awaits, and
   /// under `publishEventAwaitOk` that wait runs to a 15s deadline. Anything
