@@ -800,5 +800,74 @@ void main() {
         );
       }
     });
+
+    group('runExclusive', () {
+      test('runs operations in call order and returns their values', () async {
+        final writer = CuratedListCacheWriteCoordinator();
+        final order = <String>[];
+        final firstGate = Completer<void>();
+
+        final first = writer.runExclusive(() async {
+          order.add('first:start');
+          await firstGate.future;
+          order.add('first:end');
+          return 1;
+        });
+        final second = writer.runExclusive(() async {
+          order.add('second');
+          return 2;
+        });
+        await pumpEventQueue();
+        expect(order, ['first:start']);
+
+        firstGate.complete();
+        expect(await first, 1);
+        expect(await second, 2);
+        expect(order, ['first:start', 'first:end', 'second']);
+      });
+
+      test('queues behind a list save already in flight', () async {
+        final writer = CuratedListCacheWriteCoordinator();
+        final original = list(author);
+        final updated = list(author, revision: 2, name: 'Updated');
+        final writeGate = Completer<bool>();
+        final order = <String>[];
+
+        final save = writer.saveLists(
+          baseline: [original],
+          current: [updated],
+          read: () => [original],
+          write: (_) {
+            order.add('write');
+            return writeGate.future;
+          },
+        );
+        final clear = writer.runExclusive(() async => order.add('clear'));
+        await pumpEventQueue();
+        expect(order, ['write']);
+
+        writeGate.complete(true);
+        await save;
+        await clear;
+        expect(order, ['write', 'clear']);
+      });
+
+      test(
+        'a failing operation rethrows and does not block the next one',
+        () async {
+          final writer = CuratedListCacheWriteCoordinator();
+
+          await expectLater(
+            writer.runExclusive<void>(() async => throw StateError('boom')),
+            throwsStateError,
+          );
+
+          expect(
+            await writer.runExclusive(() async => 'recovered'),
+            'recovered',
+          );
+        },
+      );
+    });
   });
 }
