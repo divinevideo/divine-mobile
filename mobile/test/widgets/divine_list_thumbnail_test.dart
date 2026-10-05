@@ -1140,6 +1140,48 @@ void main() {
       );
       expect(large.width / media.width, closeTo(0.661, 0.01));
     });
+
+    testWidgets('text bones start at the edge the text reads from', (
+      tester,
+    ) async {
+      Future<double> startInset(TextDirection direction) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              builder: (context, child) =>
+                  Directionality(textDirection: direction, child: child!),
+              home: const Scaffold(
+                body: SizedBox(
+                  width: 180,
+                  child: Skeletonizer(
+                    ignoreContainers: true,
+                    child: DivineListThumbnailSkeleton.videos(),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        final frame = tester.getRect(find.byType(DivineListThumbnailSkeleton));
+        final bone = tester.getRect(
+          find
+              .descendant(
+                of: find.byType(FractionallySizedBox).first,
+                matching: find.byType(DecoratedBox),
+              )
+              .first,
+        );
+        return direction == TextDirection.ltr
+            ? bone.left - frame.left
+            : frame.right - bone.right;
+      }
+
+      final leftToRight = await startInset(TextDirection.ltr);
+      final rightToLeft = await startInset(TextDirection.rtl);
+      expect(rightToLeft, closeTo(leftToRight, 0.01));
+    });
   });
 
   group('pending thumbnails', () {
