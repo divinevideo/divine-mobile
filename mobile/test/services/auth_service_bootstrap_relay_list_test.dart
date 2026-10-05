@@ -346,8 +346,7 @@ void main() {
             recorder: recorder,
           );
 
-          // Launch the operation (signer hangs forever). Only the sign
-          // timeout can complete it, so completion is asserted below.
+          // Detached: a synchronous fakeAsync callback cannot await it.
           var discoveryCompleted = false;
           unawaited(
             authService
@@ -355,17 +354,14 @@ void main() {
                 .then((_) => discoveryCompleted = true),
           );
 
-          // Just short of the 10s bootstrap sign timeout, the hung signer
-          // still holds discovery open.
+          // The hung signer holds discovery open until the 10s sign cap.
           async.elapse(const Duration(seconds: 9));
           expect(discoveryCompleted, isFalse);
 
-          // Drive just past the 10s bootstrap sign timeout.
           async.elapse(const Duration(seconds: 2));
           async.flushMicrotasks();
 
-          // Signer timed out → discovery finished without invoking the
-          // callback → flag not set.
+          // The cap abandoned the signer: nothing published, flag unset.
           verify(() => mockSigner.signEvent(any())).called(1);
           expect(discoveryCompleted, isTrue);
           expect(recorder.invocations, isEmpty);
