@@ -40,12 +40,14 @@ class CuratedListCacheWriteCoordinator {
       CuratedCacheWriteResult<List<CuratedList>> result(
         CuratedCacheWriteStatus status, {
         List<CuratedList>? persisted,
+        List<CuratedList>? acknowledgedBeforeWrite,
         Set<String> conflicts = const {},
       }) => CuratedCacheWriteResult(
         status: status,
         baseline: beforeSnapshot,
         requested: requested,
         persisted: persisted,
+        acknowledgedBeforeWrite: acknowledgedBeforeWrite,
         conflictedIds: Set.unmodifiable(conflicts),
       );
       if (isCurrent != null && !isCurrent()) {
@@ -104,7 +106,12 @@ class CuratedListCacheWriteCoordinator {
       if (isCurrent != null && !isCurrent()) {
         return result(CuratedCacheWriteStatus.superseded);
       }
-      if (!saved) return result(CuratedCacheWriteStatus.storageRejected);
+      if (!saved) {
+        return result(
+          CuratedCacheWriteStatus.storageRejected,
+          acknowledgedBeforeWrite: observed,
+        );
+      }
       return result(
         conflicts.isEmpty
             ? CuratedCacheWriteStatus.saved
@@ -162,11 +169,13 @@ class CuratedListCacheWriteCoordinator {
       CuratedCacheWriteResult<Set<String>> result(
         CuratedCacheWriteStatus status, {
         Set<String>? persisted,
+        Set<String>? acknowledgedBeforeWrite,
       }) => CuratedCacheWriteResult(
         status: status,
         baseline: beforeSnapshot,
         requested: requested,
         persisted: persisted,
+        acknowledgedBeforeWrite: acknowledgedBeforeWrite,
       );
       if (isCurrent != null && !isCurrent()) {
         return result(CuratedCacheWriteStatus.superseded);
@@ -209,6 +218,7 @@ class CuratedListCacheWriteCoordinator {
             ? CuratedCacheWriteStatus.saved
             : CuratedCacheWriteStatus.storageRejected,
         persisted: saved ? merged : null,
+        acknowledgedBeforeWrite: saved ? null : observed,
       );
     });
   }
