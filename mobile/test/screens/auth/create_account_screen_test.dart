@@ -23,6 +23,7 @@ import 'package:openvine/services/analytics_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/pending_verification_service.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/widgets/auth_back_button.dart';
 
 import '../../helpers/autofill_context_mock.dart';
@@ -277,6 +278,39 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
 
         verify(() => mockAuthService.createAnonymousAccount()).called(1);
+      });
+
+      testWidgets('anonymous cleanup failure displays localized recovery '
+          'copy and leaves the form usable', (tester) async {
+        when(() => mockAuthService.createAnonymousAccount()).thenThrow(
+          const UserDataCleanupException('Private storage detail'),
+        );
+        await tester.pumpWidget(createTestWidget());
+        await tester.pumpAndSettle();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final skipButton = find.widgetWithText(
+          TextButton,
+          'Use Divine with no backup',
+        );
+        await tester.ensureVisible(skipButton);
+        await tester.tap(skipButton);
+        await tester.pumpAndSettle();
+        final deviceOnlyButton = find.widgetWithText(
+          TextButton,
+          'Use this device only',
+        );
+        await tester.ensureVisible(deviceOnlyButton);
+        await tester.tap(deviceOnlyButton);
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.authAccountCleanupFailed), findsOneWidget);
+        expect(find.text('Private storage detail'), findsNothing);
+        expect(
+          find.text('Failed to create account. Please try again.'),
+          findsNothing,
+        );
+        expect(tester.widget<TextButton>(skipButton).onPressed, isNotNull);
+        expect(find.byType(CreateAccountScreen), findsOneWidget);
       });
 
       testWidgets(

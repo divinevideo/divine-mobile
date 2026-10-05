@@ -15,6 +15,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/widgets/auth_back_button.dart';
@@ -39,10 +40,10 @@ class NostrConnectScreen extends ConsumerStatefulWidget {
 class _NostrConnectScreenState extends ConsumerState<NostrConnectScreen> {
   String? _connectUrl;
   NostrConnectState _sessionState = NostrConnectState.idle;
-  // Retained only for the out-of-scope bunker:// path (_showPasteBunkerDialog).
-  // The nostrconnect:// path uses _failureReason instead.
+  // Generic bunker:// copy; typed auth and nostrconnect reasons take priority.
   String? _errorMessage;
   NostrConnectFailureReason? _failureReason;
+  AuthFailureReason? _authFailureReason;
   StreamSubscription<NostrConnectState>? _stateSubscription;
   bool _isWaiting = false;
   bool _switchedToBunker = false;
@@ -135,6 +136,7 @@ class _NostrConnectScreenState extends ConsumerState<NostrConnectScreen> {
       _sessionState = activeState;
       _errorMessage = null;
       _failureReason = null;
+      _authFailureReason = null;
     });
 
     _stateSubscription = _authService.nostrConnectStateStream?.listen((state) {
@@ -183,6 +185,7 @@ class _NostrConnectScreenState extends ConsumerState<NostrConnectScreen> {
       _sessionState = NostrConnectState.generating;
       _errorMessage = null;
       _failureReason = null;
+      _authFailureReason = null;
     });
 
     try {
@@ -257,6 +260,7 @@ class _NostrConnectScreenState extends ConsumerState<NostrConnectScreen> {
       // timeout/cancelled keep their dedicated UI branches; everything else
       // surfaces through the error branch.
       setState(() {
+        _authFailureReason = result.failureReason;
         _failureReason = result.nostrConnectFailureReason;
         _sessionState = switch (result.nostrConnectFailureReason) {
           NostrConnectFailureReason.timedOut => NostrConnectState.timeout,
@@ -407,6 +411,9 @@ class _NostrConnectScreenState extends ConsumerState<NostrConnectScreen> {
     // Show loading state
     setState(() {
       _sessionState = NostrConnectState.connected;
+      _errorMessage = null;
+      _failureReason = null;
+      _authFailureReason = null;
     });
 
     // Authenticate with bunker URL
@@ -421,9 +428,16 @@ class _NostrConnectScreenState extends ConsumerState<NostrConnectScreen> {
       } else {
         setState(() {
           _sessionState = NostrConnectState.error;
+          _authFailureReason = authResult.failureReason;
           _errorMessage = context.l10n.authFailedToConnect;
         });
       }
+    } on UserDataCleanupException {
+      if (!mounted) return;
+      setState(() {
+        _sessionState = NostrConnectState.error;
+        _authFailureReason = AuthFailureReason.accountCleanupFailed;
+      });
     } catch (e) {
       Log.error(
         'Nostr Connect session failed: $e',
@@ -486,7 +500,10 @@ class _NostrConnectScreenState extends ConsumerState<NostrConnectScreen> {
           ),
           NostrConnectState.error => _ErrorContent(
             title: context.l10n.authConnectionFailed,
-            message: _failureReason != null
+            message:
+                _authFailureReason == AuthFailureReason.accountCleanupFailed
+                ? context.l10n.authAccountCleanupFailed
+                : _failureReason != null
                 ? resolveNostrConnectFailureMessage(
                     context.l10n,
                     _failureReason,

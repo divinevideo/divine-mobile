@@ -1311,6 +1311,11 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
 
     final result = await createNewIdentity();
     if (!result.success) {
+      if (result.failureReason == AuthFailureReason.accountCleanupFailed) {
+        throw const UserDataCleanupException(
+          'Could not prepare the account safely',
+        );
+      }
       Log.error(
         'createAnonymousAccount: identity creation failed — '
         '${result.errorMessage}',
