@@ -488,6 +488,91 @@ void main() {
       );
 
       testWidgets(
+        'accepted permission recovery offers Sync now without resubmitting picks',
+        (tester) async {
+          final pending =
+              list(
+                'Accepted change',
+                videoEventIds: const [_videoEventId],
+              ).copyWith(
+                pendingRepublish: true,
+                pendingVisibility: const CuratedListVisibility(
+                  isPublic: false,
+                  isCollaborative: false,
+                  allowedCollaborators: [],
+                  relayAccepted: true,
+                ),
+              );
+          when(() => service.myLists).thenReturn([pending]);
+          when(() => service.retryListSync(pending.id))
+              .thenAnswer((_) async => false);
+          await openSheet(tester);
+
+          expect(
+            find.text(l10n.listPermissionsRecoveryPending),
+            findsOneWidget,
+          );
+          expect(find.text(l10n.listVideoPendingSync), findsNothing);
+          expect(rowChecks(), findsOneWidget);
+          await tester.tap(find.text(pending.name));
+          await tester.pump();
+          expect(rowChecks(), findsOneWidget);
+          await tester.tap(find.text(l10n.listRetrySync));
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text(l10n.listPermissionsRecoveryPending),
+            findsOneWidget,
+          );
+          expect(find.text(l10n.listUpdateFailed), findsNothing);
+          expect(find.text(l10n.listRetrySync), findsOneWidget);
+          expect(rowChecks(), findsOneWidget);
+          verify(() => service.retryListSync(pending.id)).called(1);
+          verifyNever(() => service.addVideoToList(any(), any()));
+          verifyNever(() => service.removeVideoFromList(any(), any()));
+        },
+      );
+
+      testWidgets(
+        'ordinary sync errors remain visible beside accepted permission recovery',
+        (tester) async {
+          final accepted = list('Accepted change').copyWith(
+            pendingVisibility: const CuratedListVisibility(
+              isPublic: false,
+              isCollaborative: false,
+              allowedCollaborators: [],
+              relayAccepted: true,
+            ),
+          );
+          final ordinary = list('Ordinary change')
+              .copyWith(pendingRepublish: true);
+          when(() => service.myLists).thenReturn([accepted, ordinary]);
+          when(() => service.retryListSync(any()))
+              .thenAnswer((_) async => false);
+          await openSheet(tester);
+          await tester.tap(find.text(l10n.listRetrySync).first);
+          await tester.pumpAndSettle();
+          expect(find.text(l10n.listUpdateFailed), findsNothing);
+          expect(
+            find.text(l10n.listPermissionsRecoveryPending),
+            findsOneWidget,
+          );
+          await tester.tap(find.text(l10n.listRetrySync).last);
+          await tester.pumpAndSettle();
+          expect(find.text(l10n.listUpdateFailed), findsOneWidget);
+          expect(
+            find.text(l10n.listPermissionsRecoveryPending),
+            findsOneWidget,
+          );
+          expect(find.text(l10n.listRetrySync), findsNWidgets(2));
+          verify(() => service.retryListSync(accepted.id)).called(1);
+          verify(() => service.retryListSync(ordinary.id)).called(1);
+          verifyNever(() => service.addVideoToList(any(), any()));
+          verifyNever(() => service.removeVideoFromList(any(), any()));
+        },
+      );
+
+      testWidgets(
         'deletion-only Sync now uses recovery copy and keeps the row unpicked',
         (tester) async {
           final pending = list('Redaction')
@@ -595,7 +680,11 @@ void main() {
               await openSheet(tester, locale: locale);
               expect(find.text(acceptedMeta), findsOneWidget);
               expect(find.text(oldMeta), findsNothing);
-              expect(find.text(strings.listRecoveryPending), findsOneWidget);
+              expect(
+                find.text(strings.listPermissionsRecoveryPending),
+                findsOneWidget,
+              );
+              expect(find.text(strings.listRecoveryPending), findsNothing);
               expect(find.text(strings.listVideoPendingSync), findsNothing);
               expect(
                 Directionality.of(tester.element(find.text('Recovery'))),
@@ -608,6 +697,10 @@ void main() {
               await tester.pumpAndSettle();
               expect(find.text(acceptedMeta), findsOneWidget);
               expect(find.text(oldMeta), findsNothing);
+              expect(
+                find.text(strings.listPermissionsRecoveryPending),
+                findsNothing,
+              );
               expect(find.text(strings.listRecoveryPending), findsNothing);
               expect(find.text(strings.listRetrySync), findsNothing);
               expect(rowChecks(), findsNothing);
