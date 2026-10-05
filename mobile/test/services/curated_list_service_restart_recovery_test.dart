@@ -163,8 +163,9 @@ void main() {
         );
         expect(rejectedFinal, isTrue);
         expect(sent.where((e) => e.kind == 30005), hasLength(1));
-        expect(sent.single.tags, isNot(contains(equals(['e', _video]))));
-        expect(unsealForTest(sent.single.content), contains(_video));
+        final first = sent.singleWhere((event) => event.kind == 30005);
+        expect(first.tags, isNot(contains(equals(['e', _video]))));
+        expect(unsealForTest(first.content), contains(_video));
         backing.rejects = null;
         await restart();
         final rebuilt = open();
@@ -180,9 +181,7 @@ void main() {
         final retry = sent.where((e) => e.kind == 30005).last;
         expect(retry.tags, isNot(contains(equals(['e', _video]))));
         expect(unsealForTest(retry.content), contains(_video));
-        final redaction =
-            verify(() => client.publishEvent(captureAny())).captured.single
-                as Event;
+        final redaction = sent.singleWhere((event) => event.kind == 5);
         expect(redaction.kind, 5);
         expect(redaction.tags, contains(equals(['e', _oldEvent])));
         expect(redaction.createdAt, greaterThan(retry.createdAt));
@@ -284,6 +283,7 @@ void main() {
             isPublic: false,
             isCollaborative: false,
             allowedCollaborators: [],
+            relayAccepted: true,
           ),
         );
         await prefs.setString(
