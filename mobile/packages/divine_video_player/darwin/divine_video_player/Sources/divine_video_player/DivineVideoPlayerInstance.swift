@@ -258,6 +258,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// run out: the composition looping round seeks them back to the start,
     /// and they stayed paused there.
     private var playsWhenLeavingEnd = false
+    private var resumesSeekOnForeground = false
     private var seekGeneration = 0
     private var errorMessage: String?
     private var errorCode: String?
@@ -349,7 +350,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             audioOverlayManager.resumeActive(speed: speed)
             result(nil)
         case "pause":
-            wasPlayingBeforePause = false
+            resumesSeekOnForeground = false
             playsWhenLeavingEnd = false
             player?.pause()
             audioOverlayManager.pauseAndDeactivateAll()
@@ -434,6 +435,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
 
         seekGeneration += 1
         playsWhenLeavingEnd = false
+        resumesSeekOnForeground = false
         wasPlayingBeforePause = false
         armSetClipsTimeout()
         setClipsGeneration += 1
@@ -1315,7 +1317,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             if self.playsWhenLeavingEnd {
                 self.playsWhenLeavingEnd = false
                 if self.isBackgrounded {
-                    self.wasPlayingBeforePause = true
+                    self.resumesSeekOnForeground = true
                 } else {
                     self.player?.play()
                     self.player?.rate = Float(self.speed)
@@ -1398,6 +1400,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         }
         seekGeneration += 1
         playsWhenLeavingEnd = false
+        resumesSeekOnForeground = false
         let targetPositionMs = Int64((clipOffsets[index] * 1000).rounded())
         reportedPositionOverrideMs = targetPositionMs
         let targetTime = CMTime(seconds: clipOffsets[index], preferredTimescale: 600)
@@ -1421,6 +1424,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
 
     private func handleStop(result: @escaping FlutterResult) {
         wasPlayingBeforePause = false
+        resumesSeekOnForeground = false
         seekGeneration += 1
         audioOverlayManager.pauseAndDeactivateAll()
         clearSetClipsTimeout()
@@ -1749,6 +1753,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         guard let player, let item = templateItem else { return }
         seekGeneration += 1
         playsWhenLeavingEnd = false
+        resumesSeekOnForeground = false
         // `currentTime()` answers an invalid time whenever the queue has no
         // current item — an item still loading, or a queue already drained by
         // an earlier rebuild. `AVPlayerItem` raises `NSInvalidArgumentException`
@@ -2379,11 +2384,12 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     func onAppForegrounded() {
         isBackgrounded = false
         textureOutput?.resumeFrameDelivery()
-        if wasPlayingBeforePause {
+        if wasPlayingBeforePause || resumesSeekOnForeground {
             player?.play()
             player?.rate = Float(speed)
             audioOverlayManager.resumeActive(speed: speed)
             wasPlayingBeforePause = false
+            resumesSeekOnForeground = false
         }
         // Resync unconditionally: a status change suppressed by the gate
         // while backgrounded (e.g. a paused item that failed on a dropped
@@ -2403,6 +2409,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         diagnosticDisposed = true
         seekGeneration += 1
         playsWhenLeavingEnd = false
+        resumesSeekOnForeground = false
         if let observer = timeObserver {
             player?.removeTimeObserver(observer)
             timeObserver = nil

@@ -1032,9 +1032,42 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
     wait(for: [sought], timeout: 10)
     RunLoop.main.run(until: Date().addingTimeInterval(0.5))
     NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
-    _ = try invoke("pause")
     let state = try XCTUnwrap(latestState())
     XCTAssertEqual(state["positionMs"] as? Int, 0, "the seek must not play while inactive")
+    try waitForState("the deferred seek resumes in foreground") {
+      $0["status"] as? String == "playing" && ($0["positionMs"] as? Int ?? 0) > 100
+    }
+  }
+
+  func testPauseWhileInactiveCancelsDeferredSeekResume() throws {
+    _ = try invoke("play")
+    try waitForState("the clip ends") { $0["status"] as? String == "completed" }
+    NotificationCenter.default.post(name: UIApplication.willResignActiveNotification, object: nil)
+    defer {
+      NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+    }
+    _ = try invoke("seekTo", ["positionMs": 0])
+    _ = try invoke("pause")
+    NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+    RunLoop.main.run(until: Date().addingTimeInterval(0.5))
+    let state = try XCTUnwrap(latestState())
+    XCTAssertEqual(state["status"] as? String, "paused")
+    XCTAssertEqual(state["positionMs"] as? Int, 0)
+  }
+
+  func testOrdinaryBackgroundPausePreservesExistingForegroundResume() throws {
+    _ = try invoke("play")
+    try waitForState("the clip is playing") { $0["status"] as? String == "playing" }
+    NotificationCenter.default.post(name: UIApplication.willResignActiveNotification, object: nil)
+    defer {
+      NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+    }
+    // Dart's lifecycle pause must not cancel the existing native resume policy.
+    _ = try invoke("pause")
+    NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+    try waitForState("ordinary playback resumes in foreground") {
+      $0["status"] as? String == "playing"
+    }
   }
 
   /// Calls [method] the way the Dart controller does and waits for its answer.
