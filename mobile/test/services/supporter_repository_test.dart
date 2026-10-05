@@ -156,8 +156,8 @@ void main() {
       validator = _FakeValidator(controller);
     });
 
-    tearDown(() {
-      controller.close();
+    tearDown(() async {
+      await controller.close();
     });
 
     test('an older account refresh cannot undo a verified purchase', () async {

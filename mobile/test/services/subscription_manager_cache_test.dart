@@ -30,7 +30,9 @@ void main() {
       ).thenAnswer((_) => eventController.stream);
     });
 
-    tearDown(() => eventController.close());
+    tearDown(() async {
+      await eventController.close();
+    });
 
     test(
       'should skip relay subscription entirely if all events are cached',
