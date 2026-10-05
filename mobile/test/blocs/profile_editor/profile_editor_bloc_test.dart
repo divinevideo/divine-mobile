@@ -662,7 +662,10 @@ void main() {
               (s) => s.usernameStatus == UsernameStatus.available,
             );
             bloc.add(const UsernameChanged(testUsername));
-            await available;
+            await available.timeout(
+              const Duration(seconds: 5),
+              onTimeout: () => fail('username never reported available'),
+            );
             bloc.add(
               const ProfileSaved(
                 pubkey: testPubkey,
@@ -1274,7 +1277,10 @@ void main() {
             (s) => s.usernameStatus == UsernameStatus.error,
           );
           bloc.add(const UsernameChanged(testUsername));
-          await failed;
+          await failed.timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => fail('username check never reported an error'),
+          );
         },
         wait: const Duration(milliseconds: 700),
         expect: () => [
