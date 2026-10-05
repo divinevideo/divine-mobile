@@ -42,10 +42,9 @@ void main() {
     // The grid paints thumbnails through VineCachedImage, which resolves
     // against the process-global openVineImageCache. That lookup answers off a
     // real file read and then arms a 10s cleanup timer inside the fake-async
-    // zone; the wall-clock wait in the slow-load test is exactly what gives the
-    // read time to land mid-test, and the pending timer fails the test on the
-    // widget-tree teardown assert. Stub the cache (#5158 seam) so no real
-    // cache-manager work runs here at all.
+    // zone, and a pending timer fails the test on the widget-tree teardown
+    // assert. Stub the cache (#5158 seam) so no real cache-manager work runs
+    // here at all.
     setUp(() => debugImageCacheOverride = createMockMediaCacheManager());
     tearDown(() => debugImageCacheOverride = null);
 
