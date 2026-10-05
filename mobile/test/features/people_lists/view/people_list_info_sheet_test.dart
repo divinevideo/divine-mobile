@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
@@ -15,6 +16,7 @@ import 'package:openvine/features/people_lists/people_lists.dart';
 import 'package:openvine/features/people_lists/view/people_list_info_sheet.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
@@ -153,10 +155,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final editable = tester.state<EditableTextState>(
-          find.descendant(
-            of: description,
-            matching: find.byType(EditableText),
-          ),
+          find.descendant(of: description, matching: find.byType(EditableText)),
         );
         final render = editable.renderEditable;
         final caret = render.getLocalRectForCaret(
@@ -267,6 +266,102 @@ void main() {
       expect(find.byType(SnackBar), findsNothing);
       expect(find.text(l10n.listUpdateFailed), findsNothing);
     });
+
+    for (final dismissBeforeSwap in [true, false]) {
+      testWidgets(
+        dismissBeforeSwap
+            ? 'account container replacement safely settles a dismissed people-list save'
+            : 'account container replacement safely dismisses a pending people-list save',
+        (tester) async {
+          createMutationBloc(_ownerPubkey);
+          final controller = AccountSwitchController();
+          ProviderContainer containerFor(String owner) => ProviderContainer(
+            overrides: [
+              ...getStandardTestOverrides(
+                mockAuthService: createMockAuthService(
+                  currentPublicKeyHex: owner,
+                ),
+              ),
+              peopleListsRepositoryProvider.overrideWithValue(repository),
+            ],
+          );
+          final first = containerFor(_ownerPubkey);
+          final next = containerFor('b' * 64);
+          final answer = Completer<PeopleListPublishResult>();
+          addTearDown(() {
+            if (!answer.isCompleted) {
+              answer.complete(const PeopleListPublishResult.failed());
+            }
+          });
+          stubUpdate(() => answer.future);
+          await tester.binding.setSurfaceSize(const Size(800, 1200));
+          addTearDown(() => tester.binding.setSurfaceSize(null));
+          await tester.pumpWidget(
+            ContainerSwapHost(
+              initialContainer: first,
+              controller: controller,
+              child: MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: BlocProvider<PeopleListsBloc>.value(
+                  value: bloc,
+                  child: Builder(
+                    builder: (context) => Scaffold(
+                      body: TextButton(
+                        onPressed: () => runDetached(
+                          showPeopleListInfoSheet(context, list: list()),
+                          'open people list editor during account swap',
+                          logName: 'PeopleListInfoSheetTest',
+                          category: LogCategory.ui,
+                        ),
+                        child: const Text(_openLabel),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.tap(find.text(_openLabel));
+          await tester.pumpAndSettle();
+          final cubit = tester
+              .element(find.byType(ListInfoCheckButton))
+              .read<PeopleListInfoCubit>();
+          await tester.enterText(
+            find.byType(TextField).first,
+            'Account A draft',
+          );
+          await tester.pump();
+          await tester.tap(saveButton());
+          await tester.pump();
+          if (dismissBeforeSwap) {
+            await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+            await tester.pumpAndSettle();
+          }
+          await controller.swapTo(next);
+          await tester.pumpAndSettle();
+
+          // Exercise the real disposal path rather than mutating a mock owner.
+          expect(() => first.read(authServiceProvider), throwsStateError);
+          expect(cubit.isClosed, isTrue);
+          expect(cubit.isSessionCurrent, isFalse);
+          answer.complete(const PeopleListPublishResult.failed());
+          await tester.pumpAndSettle();
+
+          expect(find.text(l10n.listEditTitle), findsNothing);
+          expect(find.byType(SnackBar), findsNothing);
+          verify(
+            () => repository.updateListInfo(
+              ownerPubkey: _ownerPubkey,
+              listId: 'punk-friends',
+              name: 'Account A draft',
+              description: '',
+            ),
+          ).called(1);
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
 
     testWidgets('keeps a save failure visible above the scrolled fields', (
       tester,
