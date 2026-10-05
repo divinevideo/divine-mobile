@@ -1109,6 +1109,19 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
     }
   }
 
+  func testSeekBeforeAnyMediaIsLoadedIsAnswered() throws {
+    let bareId = Self.playerId - 1
+    plugin.handle(
+      FlutterMethodCall(methodName: "create", arguments: ["id": bareId, "useTexture": true])
+    ) { _ in }
+    addTeardownBlock { [plugin] in
+      plugin?.handle(FlutterMethodCall(methodName: "dispose", arguments: ["id": bareId])) { _ in }
+    }
+
+    // Nothing is loaded, so there is no queue to seek; the call must still answer.
+    _ = try invoke("seekTo", ["positionMs": 0], on: "divine_video_player/player_\(bareId)")
+  }
+
   /// Calls [method] the way the Dart controller does and waits for its answer.
   @discardableResult
   private func invoke(
