@@ -102,7 +102,9 @@ void main() {
           () => dmRepository.hasCompletedHistoryRecoveryBefore,
         ).thenReturn(false);
         recoveryController = StreamController<bool>();
-        addTearDown(recoveryController.close);
+        // Not awaited: close() on a controller nobody listened to never
+        // completes, which would hang teardown if the cubit never subscribes.
+        addTearDown(() => unawaited(recoveryController.close()));
         when(
           () => dmRepository.historyRecoveryStream,
         ).thenAnswer((_) => recoveryController.stream);
