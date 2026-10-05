@@ -6973,6 +6973,8 @@
   "followedHashtagsEmpty": "کسی ہیش ٹیگ کو یہاں دیکھنے کے لیے اس کے صفحے سے فالو کریں۔",
   "listsDiscoveryLoadingLabel": "فہرستیں لوڈ ہو رہی ہیں",
   "listsDiscoveryEmpty": "اس بار کوئی فہرست ہاتھ نہیں آئی۔ ریفریش کے لیے کھینچیں۔",
+  "listSearchPeopleUnavailable": "لوگوں کی فہرستیں فی الحال دستیاب نہیں ہیں۔",
+  "listSearchVideosUnavailable": "ویڈیو کی فہرستیں فی الحال دستیاب نہیں ہیں۔",
   "soundRequestAction": "یہ آواز مانگیں",
   "soundRequestTitle": "کوئی آپ کی آواز استعمال کرنا چاہتا ہے",
   "soundRequestDescription": "اس ویڈیو کی آواز دوبارہ استعمال کرنے کی اجازت دیں تاکہ کوئی بھی اس سے ریمکس بنا سکے۔",

@@ -9,16 +9,17 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/config/screenshot_mode.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
-import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
 import 'package:openvine/features/lists_discovery/cubit/lists_discovery_cubit.dart';
 import 'package:openvine/features/lists_discovery/lists_discovery_screenshot_fixtures.dart';
+import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/route_extras.dart';
-import 'package:openvine/screens/curated_list_feed_screen.dart';
+import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
@@ -26,29 +27,52 @@ import 'package:people_lists_repository/people_lists_repository.dart'
     show PeopleListSearchResult;
 import 'package:unified_logger/unified_logger.dart';
 
+/// Shared content-policy filter injected into the discovery cubit.
+final listsDiscoveryBlockFilterProvider = Provider<bool Function(String)>(
+  createBlockedAuthorFilter,
+);
+
 /// The Lists tab shown inside `ExploreScreen`: the discovery gallery.
 ///
 /// Page half of the Page/View split: bridges the Riverpod-provided service
 /// and repositories into the [ListsDiscoveryCubit], re-keyed on their
 /// identities so an auth flip rebuilds the cubit against the fresh
 /// dependencies.
-class ExploreListsTab extends ConsumerWidget {
+class ExploreListsTab extends ConsumerStatefulWidget {
   /// Creates the Lists tab.
   const ExploreListsTab({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Readiness gate: the service is null until the curated-lists state
-    // finishes its cold-start load.
-    ref.watch(curatedListsStateProvider);
+  ConsumerState<ExploreListsTab> createState() => _ExploreListsTabState();
+}
+
+class _ExploreListsTabState extends ConsumerState<ExploreListsTab>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    // The state creates its service before awaiting initialization. Watching
+    // the state re-keys discovery when a new service becomes available.
+    final curatedState = ref.watch(curatedListsStateProvider);
     final service = ref.watch(curatedListsStateProvider.notifier).service;
     final curatedRepository = ref.watch(curatedListRepositoryProvider);
     final peopleRepository = ref.watch(peopleListsRepositoryProvider);
+    final peopleListsEnabled = ref.watch(
+      isFeatureEnabledProvider(FeatureFlag.curatedLists),
+    );
+    final blocklistVersion = ref.watch(blocklistVersionProvider);
+    final blockFilter = ref.watch(listsDiscoveryBlockFilterProvider);
     ref.watch(currentAuthStateProvider);
     final viewerPubkey = ref.watch(authServiceProvider).currentPublicKeyHex;
 
-    if (service == null) {
-      return const _LoadingGallery(showCreationActions: true);
+    if (service == null && !curatedState.hasError) {
+      return _LoadingGallery(
+        peopleListsEnabled: peopleListsEnabled,
+        showCreationActions: true,
+      );
     }
 
     return BlocProvider(
@@ -57,6 +81,9 @@ class ExploreListsTab extends ConsumerWidget {
         curatedRepository,
         peopleRepository,
         viewerPubkey,
+        peopleListsEnabled,
+        blocklistVersion,
+        curatedState.hasError,
       )),
       create: (_) {
         final cubit = ListsDiscoveryCubit(
@@ -64,14 +91,20 @@ class ExploreListsTab extends ConsumerWidget {
           curatedListRepository: curatedRepository,
           peopleListsRepository: peopleRepository,
           viewerPubkey: viewerPubkey,
+          peopleListsEnabled: peopleListsEnabled,
+          videoInitializationFailed: curatedState.hasError,
+          blockFilter: blockFilter,
+          seed: ScreenshotMode.enabled
+              ? ListsDiscoveryState(
+                  videoStatus: ListsDiscoveryColumnStatus.success,
+                  peopleStatus: ListsDiscoveryColumnStatus.success,
+                  videoLists: screenshotDiscoverListsFixtures(),
+                )
+              : null,
         );
         // Screenshot mode: deterministic fixtures instead of live relay
         // discovery, same pattern as the classics row in app_bootstrap.
-        if (ScreenshotMode.enabled) {
-          cubit.seedForScreenshots(
-            videoLists: screenshotDiscoverListsFixtures(),
-          );
-        } else {
+        if (!ScreenshotMode.enabled) {
           runDetached(
             cubit.load(),
             'load list discovery',
@@ -81,7 +114,11 @@ class ExploreListsTab extends ConsumerWidget {
         }
         return cubit;
       },
-      child: const ExploreListsView(showCreationActions: true),
+      child: ExploreListsView(
+        showCreationActions: true,
+        onRetryVideoInitialization: () =>
+            ref.invalidate(curatedListsStateProvider),
+      ),
     );
   }
 }
@@ -90,10 +127,17 @@ class ExploreListsTab extends ConsumerWidget {
 class ExploreListsView extends StatelessWidget {
   /// Creates the view. Requires a [ListsDiscoveryCubit] above it.
   @visibleForTesting
-  const ExploreListsView({this.showCreationActions = false, super.key});
+  const ExploreListsView({
+    this.onRetryVideoInitialization,
+    this.showCreationActions = false,
+    super.key,
+  });
 
-  /// Main retains its existing creation entry points above discovery.
+  /// Existing Main creation flows remain available above discovery.
   final bool showCreationActions;
+
+  /// Rebuilds the saved-list service from acknowledged storage after recovery.
+  final VoidCallback? onRetryVideoInitialization;
 
   @override
   Widget build(BuildContext context) {
@@ -108,9 +152,7 @@ class ExploreListsView extends StatelessWidget {
         child: BlocBuilder<ListsDiscoveryCubit, ListsDiscoveryState>(
           builder: (context, state) {
             if (state.isEmpty && !showCreationActions) {
-              return _FullBleedMessage(
-                text: context.l10n.listsDiscoveryEmpty,
-              );
+              return _FullBleedMessage(text: context.l10n.listsDiscoveryEmpty);
             }
             return SingleChildScrollView(
               key: const Key('lists-tab-content'),
@@ -143,16 +185,20 @@ class ExploreListsView extends StatelessWidget {
                         Expanded(
                           child: _VideoListsColumn(
                             status: state.videoStatus,
+                            initializationFailed:
+                                state.videoInitializationFailed,
+                            onRetryInitialization: onRetryVideoInitialization,
                             lists: state.videoLists,
                             thumbnailsPending: state.videoThumbnailsPending,
                           ),
                         ),
-                        Expanded(
-                          child: _PeopleListsColumn(
-                            status: state.peopleStatus,
-                            lists: state.peopleLists,
+                        if (state.peopleListsEnabled)
+                          Expanded(
+                            child: _PeopleListsColumn(
+                              status: state.peopleStatus,
+                              lists: state.peopleLists,
+                            ),
                           ),
-                        ),
                       ],
                     ),
                 ],
@@ -171,46 +217,91 @@ class _VideoListsColumn extends StatelessWidget {
     required this.status,
     required this.lists,
     required this.thumbnailsPending,
+    required this.initializationFailed,
+    this.onRetryInitialization,
   });
 
   final ListsDiscoveryColumnStatus status;
   final List<CuratedList> lists;
   final bool thumbnailsPending;
+  final bool initializationFailed;
+  final VoidCallback? onRetryInitialization;
 
   @override
   Widget build(BuildContext context) {
+    if (initializationFailed) {
+      return _VideoInitializationFailure(onRetry: onRetryInitialization);
+    }
     return _DiscoveryColumn(
       status: status,
       placeholder: const DivineListThumbnailSkeleton.videos(),
       isColumnEmpty: lists.isEmpty,
       children: [
-        for (final list in lists)
-          DivineListThumbnail.videos(
+        for (final (index, list) in lists.indexed)
+          Semantics(
             // The stream re-sorts on every emit, so cards can change slots;
             // the key keeps each card's image state with its list.
             key: ValueKey(list.authorScopedId),
-            curatedList: list,
-            thumbnailsPending: thumbnailsPending,
-            onTap: () {
-              Log.info(
-                'Opening discovered video list: ${list.id}',
-                category: LogCategory.ui,
-              );
-              runDetached(
-                context.push<void>(
-                  CuratedListFeedScreen.pathForId(list.id),
-                  extra: CuratedListRouteExtra(
-                    listName: list.name,
-                    videoIds: list.videoEventIds,
-                    authorPubkey: list.pubkey,
+            identifier: SemanticIds.listCard(index),
+            container: true,
+            child: DivineListThumbnail.videos(
+              curatedList: list,
+              thumbnailsPending: thumbnailsPending,
+              onTap: () {
+                final author = list.pubkey;
+                if (author == null) return;
+                Log.info(
+                  'Opening discovered video list: ${list.id}',
+                  category: LogCategory.ui,
+                );
+                runDetached(
+                  context.push<void>(
+                    CuratedListByAuthorScreen.pathFor(
+                      pubkey: author,
+                      listId: list.id,
+                    ),
+                    extra: CuratedListRouteExtra(
+                      listName: list.name,
+                      videoIds: list.videoEventIds,
+                      authorPubkey: list.pubkey,
+                      list: list,
+                    ),
                   ),
-                ),
-                'open discovered list',
-                logName: 'VideoListsColumn',
-                category: LogCategory.ui,
-              );
-            },
+                  'open discovered list',
+                  logName: 'VideoListsColumn',
+                  category: LogCategory.ui,
+                );
+              },
+            ),
           ),
+      ],
+    );
+  }
+}
+
+class _VideoInitializationFailure extends StatelessWidget {
+  const _VideoInitializationFailure({required this.onRetry});
+
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 12,
+      children: [
+        Text(
+          context.l10n.listErrorLoading,
+          style: VineTheme.bodyMediumFont(
+            color: context.vineColors.onSurfaceMuted,
+          ),
+        ),
+        DivineButton(
+          type: DivineButtonType.secondary,
+          size: DivineButtonSize.small,
+          label: context.l10n.searchTryAgain,
+          onPressed: onRetry,
+        ),
       ],
     );
   }
@@ -326,10 +417,15 @@ class _LoadingColumn extends StatelessWidget {
   }
 }
 
-/// Both columns as silhouettes under one shimmer, for the moment before the
-/// curated-list service is ready and there is no cubit to render from.
+/// Both columns as silhouettes under one shimmer when no curated-list
+/// service is available to create the cubit.
 class _LoadingGallery extends StatelessWidget {
-  const _LoadingGallery({this.showCreationActions = false});
+  const _LoadingGallery({
+    required this.peopleListsEnabled,
+    this.showCreationActions = false,
+  });
+
+  final bool peopleListsEnabled;
 
   final bool showCreationActions;
 
@@ -347,21 +443,22 @@ class _LoadingGallery extends StatelessWidget {
             if (showCreationActions) const _ExploreCreationHeader(),
             Semantics(
               label: context.l10n.listsDiscoveryLoadingLabel,
-              child: const ListSkeletonizer(
+              child: ListSkeletonizer(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   spacing: 16,
                   children: [
-                    Expanded(
+                    const Expanded(
                       child: _SkeletonCards(
                         card: DivineListThumbnailSkeleton.videos(),
                       ),
                     ),
-                    Expanded(
-                      child: _SkeletonCards(
-                        card: DivineListThumbnailSkeleton.people(),
+                    if (peopleListsEnabled)
+                      const Expanded(
+                        child: _SkeletonCards(
+                          card: DivineListThumbnailSkeleton.people(),
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
