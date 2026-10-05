@@ -15,6 +15,9 @@ class CuratedListSessionCoordinator {
   ///
   /// Keeping this attached weakly to the preference instance covers legacy
   /// service constructors as well as injected providers and auth cleanup.
+  ///
+  /// The first caller for a preference instance fixes its [writes]; a later
+  /// [writes] argument is ignored, so every container shares one queue.
   factory CuratedListSessionCoordinator.forPreferences(
     SharedPreferences preferences, {
     CuratedListCacheWriteCoordinator? writes,

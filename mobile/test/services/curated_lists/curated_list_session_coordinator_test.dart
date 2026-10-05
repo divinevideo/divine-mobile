@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
@@ -24,6 +25,30 @@ void main() {
         CuratedListSessionCoordinator.forPreferences(prefs),
         same(sessions),
       );
+    });
+
+    test('the first caller fixes the write queue for the preference store', () {
+      final later = CuratedListCacheWriteCoordinator();
+
+      final again = CuratedListSessionCoordinator.forPreferences(
+        prefs,
+        writes: later,
+      );
+
+      expect(again, same(sessions));
+      expect(again.writes, same(sessions.writes));
+      expect(again.writes, isNot(same(later)));
+    });
+
+    test('a separate preference store gets its own write queue', () async {
+      SharedPreferences.setMockInitialValues({});
+      final otherPrefs = await SharedPreferences.getInstance();
+      expect(otherPrefs, isNot(same(prefs)));
+
+      final other = CuratedListSessionCoordinator.forPreferences(otherPrefs);
+
+      expect(other, isNot(same(sessions)));
+      expect(other.writes, isNot(same(sessions.writes)));
     });
 
     test(
