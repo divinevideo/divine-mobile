@@ -59,7 +59,7 @@ void main() {
         verify: (cubit) {
           expect(cubit.state.isEditing, isTrue);
           expect(cubit.state.editingId, 'vhs');
-          expect(cubit.state.selectedType, VideoEffectType.vhs);
+          expect(cubit.state.selectedType?.builtIn, VideoEffectType.vhs);
           expect(cubit.state.intensity, 0.4);
         },
       );
@@ -69,7 +69,7 @@ void main() {
         build: buildCubit,
         seed: () => const VideoEditorEffectsState(
           applied: [vhs],
-          selectedType: VideoEffectType.glitch,
+          selectedType: EditorEffectType.builtIn(VideoEffectType.glitch),
           intensity: 0.1,
         ),
         act: (cubit) => cubit.startEditing(),
@@ -96,7 +96,7 @@ void main() {
         seed: () => const VideoEditorEffectsState(applied: [vhs, vignette]),
         act: (cubit) => cubit
           ..startEditing(effectId: 'vhs')
-          ..selectType(VideoEffectType.pixelate)
+          ..selectType(const EditorEffectType.builtIn(VideoEffectType.pixelate))
           ..setIntensity(1.7),
         verify: (cubit) {
           expect(cubit.state.intensity, 1);
@@ -116,7 +116,7 @@ void main() {
         seed: () => const VideoEditorEffectsState(applied: [vhs]),
         act: (cubit) => cubit
           ..startEditing()
-          ..selectType(VideoEffectType.strobe),
+          ..selectType(const EditorEffectType.builtIn(VideoEffectType.strobe)),
         verify: (cubit) {
           expect(
             [for (final e in cubit.state.previewEffects) e.effect],
@@ -147,7 +147,7 @@ void main() {
         ),
         act: (cubit) => cubit
           ..startEditing()
-          ..selectType(VideoEffectType.strobe),
+          ..selectType(const EditorEffectType.builtIn(VideoEffectType.strobe)),
         verify: (cubit) {
           expect(
             [for (final e in cubit.state.previewEffects) e.effect],
@@ -167,7 +167,7 @@ void main() {
         seed: () => const VideoEditorEffectsState(applied: [vhs]),
         act: (cubit) => cubit
           ..startEditing(effectId: 'vhs')
-          ..selectType(VideoEffectType.glitch)
+          ..selectType(const EditorEffectType.builtIn(VideoEffectType.glitch))
           ..cancel(),
         verify: (cubit) {
           expect(cubit.state.isEditing, isFalse);
@@ -185,7 +185,7 @@ void main() {
         final cubit = buildCubit()
           ..syncApplied(const [vhs])
           ..startEditing()
-          ..selectType(VideoEffectType.glitch)
+          ..selectType(const EditorEffectType.builtIn(VideoEffectType.glitch))
           ..setIntensity(0.5);
         addTearDown(cubit.close);
 
@@ -198,11 +198,30 @@ void main() {
         expect(cubit.state.applied, const [vhs, added]);
       });
 
+      test('adds the echo as a custom effect the preview leaves out', () {
+        final cubit = buildCubit()
+          ..syncApplied(const [vhs])
+          ..startEditing()
+          ..selectType(EditorEffectType.echo)
+          ..setIntensity(0.6);
+        addTearDown(cubit.close);
+
+        expect(cubit.state.previewEffects, const [vhs]);
+        const added = EditorVideoEffect.custom(
+          id: 'new',
+          custom: CustomVideoEffect(
+            id: echoVideoEffectId,
+            params: {EditorVideoEffect.intensityParam: 0.6},
+          ),
+        );
+        expect(cubit.confirm().effects, const [vhs, added]);
+      });
+
       test('changes an edited effect in place and keeps its window', () {
         final cubit = buildCubit()
           ..syncApplied(const [vhs, vignette])
           ..startEditing(effectId: 'vhs')
-          ..selectType(VideoEffectType.oldFilm)
+          ..selectType(const EditorEffectType.builtIn(VideoEffectType.oldFilm))
           ..setIntensity(0.9);
         addTearDown(cubit.close);
 
@@ -246,7 +265,7 @@ void main() {
         final cubit = buildCubit()
           ..syncApplied(const [negative, vignette])
           ..startEditing()
-          ..selectType(VideoEffectType.strobe);
+          ..selectType(const EditorEffectType.builtIn(VideoEffectType.strobe));
         addTearDown(cubit.close);
 
         final result = cubit.confirm();
@@ -260,7 +279,7 @@ void main() {
         final cubit = buildCubit()
           ..syncApplied(const [vhs])
           ..startEditing()
-          ..selectType(VideoEffectType.strobe);
+          ..selectType(const EditorEffectType.builtIn(VideoEffectType.strobe));
         addTearDown(cubit.close);
 
         expect(cubit.confirm().replacedFlashing, isFalse);
@@ -320,13 +339,15 @@ void main() {
       test('commits onBeat only for an effect that can fire on the beat', () {
         final cubit = buildCubit()
           ..startEditing()
-          ..selectType(VideoEffectType.zoomPulse)
+          ..selectType(
+            const EditorEffectType.builtIn(VideoEffectType.zoomPulse),
+          )
           ..setOnBeat(onBeat: true);
         expect(cubit.confirm().effects.single.onBeat, isTrue);
 
         cubit
           ..startEditing()
-          ..selectType(VideoEffectType.vignette)
+          ..selectType(const EditorEffectType.builtIn(VideoEffectType.vignette))
           ..setOnBeat(onBeat: true);
         expect(cubit.confirm().effects.last.onBeat, isFalse);
       });
@@ -356,7 +377,9 @@ void main() {
 
         cubit
           ..startEditing()
-          ..selectType(VideoEffectType.zoomPulse)
+          ..selectType(
+            const EditorEffectType.builtIn(VideoEffectType.zoomPulse),
+          )
           ..setOnBeat(onBeat: true);
         final state = await settled(cubit);
 
@@ -372,7 +395,9 @@ void main() {
         final silent = buildWithMusic()
           ..syncBeatSource(sounds: const [], clips: [mutedClip])
           ..startEditing()
-          ..selectType(VideoEffectType.zoomPulse)
+          ..selectType(
+            const EditorEffectType.builtIn(VideoEffectType.zoomPulse),
+          )
           ..setOnBeat(onBeat: true);
         expect(
           (await settled(silent)).beatStatus,
@@ -383,7 +408,9 @@ void main() {
             buildWithMusic(failure: PlatformException(code: 'gone'))
               ..syncBeatSource(sounds: [music], clips: [mutedClip])
               ..startEditing()
-              ..selectType(VideoEffectType.zoomPulse)
+              ..selectType(
+                const EditorEffectType.builtIn(VideoEffectType.zoomPulse),
+              )
               ..setOnBeat(onBeat: true);
         expect(
           (await settled(unreadable)).beatStatus,

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effects_bottom_bar.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show VideoEffectType;
 
@@ -72,7 +73,7 @@ void main() {
       await tester.pumpWidget(buildWidget());
 
       await tester.tap(find.text(l10n.videoEditorEffectVhs));
-      expect(cubit.state.selectedType, VideoEffectType.vhs);
+      expect(cubit.state.selectedType?.builtIn, VideoEffectType.vhs);
 
       await tester.tap(find.text(l10n.videoEditorEffectNone));
       expect(cubit.state.selectedType, isNull);
@@ -81,7 +82,9 @@ void main() {
     testWidgets('marks the picked effect as selected for screen readers', (
       tester,
     ) async {
-      cubit.selectType(VideoEffectType.pixelate);
+      cubit.selectType(
+        const EditorEffectType.builtIn(VideoEffectType.pixelate),
+      );
       await tester.pumpWidget(buildWidget());
 
       expect(

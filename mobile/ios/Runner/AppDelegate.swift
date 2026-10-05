@@ -17,6 +17,8 @@ extension FlutterError: @retroactive Error {}
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     UNUserNotificationCenter.current().delegate = self as UNUserNotificationCenterDelegate
+    // Divine's own video effects, for the editor preview and the export (#9708).
+    EchoVideoEffect.register()
     #if DEBUG
     exportScreenshotLaunchConfig()
     #endif

@@ -8,7 +8,8 @@ import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/widgets/video_editor/video_editor_widget_layer_loader.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show VideoEffect;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show CustomVideoEffect, VideoEffect;
 import 'package:unified_logger/unified_logger.dart';
 
 /// Deserializes [CompleteParameters] from a persisted draft map, rehydrating
@@ -74,6 +75,12 @@ extension CompleteParametersEquality on CompleteParameters {
   /// whether it fires on the beat.
   List<EditorVideoEffect> get videoEffectEntriesFromCompleteMeta =>
       videoEffectEntriesFromMeta(
+        meta[VideoEditorConstants.effectsStateHistoryKey],
+      );
+
+  /// Restores the effects Divine renders itself from the completion metadata.
+  List<CustomVideoEffect> get customVideoEffectsFromCompleteMeta =>
+      customVideoEffectsFromMeta(
         meta[VideoEditorConstants.effectsStateHistoryKey],
       );
 

@@ -117,7 +117,8 @@ String? onBeatStatusLabel(
 }
 
 /// Fires the picked effect on the beat of the music, for an effect that
-/// [canFireOnBeat], with a line saying when there is no beat to follow.
+/// [EditorEffectType.supportsOnBeat], with a line saying when there is no
+/// beat to follow.
 class _OnBeatSwitch extends StatelessWidget {
   const _OnBeatSwitch();
 
@@ -125,7 +126,7 @@ class _OnBeatSwitch extends StatelessWidget {
   Widget build(BuildContext context) {
     final canFire = context.select((VideoEditorEffectsCubit c) {
       final type = c.state.selectedType;
-      return type != null && canFireOnBeat(type);
+      return type != null && type.supportsOnBeat;
     });
     if (!canFire) return const SizedBox.shrink();
     final l10n = context.l10n;

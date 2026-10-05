@@ -2483,6 +2483,7 @@
   "videoEditorEffectSplitScreen": "Layar Terbagi",
   "videoEditorEffectWave": "Gelombang",
   "videoEditorEffectGlow": "Pendar",
+  "videoEditorEffectEcho": "Gema",
   "videoEditorEffectsFlashingReplaced": "Satu efek berkedip dalam satu waktu. Kedipan berlebihan bisa membahayakan orang yang sensitif, jadi kami mengganti efek lainnya di sini.",
   "videoEditorEffectsFlashingNotDuplicated": "Satu efek berkedip dalam satu waktu. Kedipan berlebihan bisa membahayakan orang yang sensitif.",
   "videoEditorEffectsOnBeat": "Sesuai ketukan",

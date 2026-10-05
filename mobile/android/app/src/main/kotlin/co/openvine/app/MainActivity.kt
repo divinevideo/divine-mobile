@@ -11,6 +11,7 @@ import android.security.keystore.KeyProperties
 import android.util.Log
 import android.window.OnBackInvokedCallback
 import co.openvine.app.proofmode.HardwareAttestationNotarizationProvider
+import co.openvine.app.videoeffects.EchoVideoEffect
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -86,6 +87,9 @@ class MainActivity : FlutterFragmentActivity() {
 
         // Set up NIP-55 Android Signer plugin
         nostrSignerPlugin = NostrSignerPlugin(this, flutterEngine)
+
+        // Divine's own video effects, for the editor preview and the export (#9708).
+        EchoVideoEffect.register()
 
         // Set up Nostr bridge frame attestation channel. Must run after
         // super.configureFlutterEngine (which registers WebViewFlutterPlugin via

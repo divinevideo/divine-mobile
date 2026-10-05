@@ -405,6 +405,10 @@ dependencies:
   # over every `LayerAnimationType` and `AnimationPhase`, and the render
   # service passes `animationStartTime:`, so a relaxed floor is a compile
   # error.
+  # 2.26.0 is the first release that renders custom video effects, which the
+  # editor's echo trail is (#9708). Self-enforcing: the render service passes
+  # `customEffects:`, and the native effects extend `CustomVideoEffectRenderer`,
+  # neither of which exists before it, so a relaxed floor is a compile error.
   # 2.25.0 is the first release with ImageLayer.censor, which the censor tool
   # exports a hidden area as (#9562, hm21/pro_video_editor#231).
   # Self-enforcing: censorImageLayer passes `censor:`, which does not exist

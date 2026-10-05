@@ -75,7 +75,7 @@ extension VideoEditorExtensions on ProImageEditorState {
       // does not take along: in another video it would miss the beat.
       effects: [
         for (final entry in stateManager.videoEffectEntries)
-          if (!entry.onBeat) entry.effect,
+          if (!entry.onBeat) ?entry.effect,
       ],
       blur: stateManager.activeBlur,
       bodySize: sizesManager.bodySize,

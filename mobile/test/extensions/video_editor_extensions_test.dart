@@ -536,7 +536,7 @@ void main() {
 
       verifyNever(() => editor.addHistory(meta: any(named: 'meta')));
       expect(
-        stateManager.videoEffectEntries.single.effect.endTime,
+        stateManager.videoEffectEntries.single.endTime,
         const Duration(seconds: 4),
       );
     });
@@ -570,7 +570,7 @@ void main() {
       verifyNever(() => editor.addHistory(meta: any(named: 'meta')));
       expect(
         stateManager.videoEffectEntries.map(
-          (e) => (e.id, e.effect.startTime, e.effect.endTime),
+          (e) => (e.id, e.startTime, e.endTime),
         ),
         [
           ('strobe', Duration.zero, const Duration(seconds: 3)),
@@ -585,13 +585,13 @@ void main() {
       when(() => stateManager.activeMeta).thenReturn({
         VideoEditorConstants.effectsStateHistoryKey: [
           {'type': 'sparkle', 'intensity': 1},
-          vhs.effect.toMap(),
+          vhs.effect!.toMap(),
           'not-a-map',
         ],
       });
 
       expect(stateManager.videoEffectEntries, [
-        EditorVideoEffect(id: 'effect_1', effect: vhs.effect),
+        EditorVideoEffect(id: 'effect_1', effect: vhs.effect!),
       ]);
     });
   });

@@ -13,6 +13,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
+import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
@@ -169,6 +170,7 @@ void main() {
               BlocProvider<TimelineOverlayBloc>.value(value: overlayBloc),
               BlocProvider(create: (_) => VideoEditorDrawBloc()),
               BlocProvider(create: (_) => VideoEditorFilterBloc()),
+              BlocProvider(create: (_) => VideoEditorEffectsCubit()),
             ],
             child: VideoEditorScope(
               editorKey: GlobalKey(),

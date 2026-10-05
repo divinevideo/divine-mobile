@@ -8,6 +8,7 @@ import 'package:models/models.dart'
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_item.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_positioned_item.dart';
 import 'package:pro_image_editor/pro_image_editor.dart' show WidgetLayer;
@@ -244,7 +245,7 @@ void main() {
         startTime: Duration.zero,
         endTime: Duration(seconds: 3),
         label: 'negativeFlash',
-        effectType: VideoEffectType.negativeFlash,
+        effectType: EditorEffectType.builtIn(VideoEffectType.negativeFlash),
       );
 
       final handle = tester.ensureSemantics();
@@ -298,7 +299,7 @@ void main() {
         startTime: Duration.zero,
         endTime: Duration(seconds: 3),
         label: 'negativeFlash',
-        effectType: VideoEffectType.negativeFlash,
+        effectType: EditorEffectType.builtIn(VideoEffectType.negativeFlash),
         effectOnBeat: true,
       );
 
