@@ -87,7 +87,7 @@ void main() {
       addTearDown(container.dispose);
 
       container.read(moderationLabelServiceProvider);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       verifyNever(
         () => nostrClient.queryEventsDetailed(
@@ -138,7 +138,7 @@ void main() {
       addTearDown(container.dispose);
 
       container.read(moderationLabelServiceProvider);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       verify(
         () => nostrClient.queryEventsDetailed(
@@ -167,7 +167,7 @@ void main() {
         addTearDown(container.dispose);
 
         container.read(moderationLabelServiceProvider);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         verifyNever(
           () => activeClient.queryEventsDetailed(

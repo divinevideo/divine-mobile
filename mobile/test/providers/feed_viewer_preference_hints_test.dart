@@ -122,7 +122,7 @@ void main() {
             completed = true;
           }),
         );
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(completed, isFalse);
 

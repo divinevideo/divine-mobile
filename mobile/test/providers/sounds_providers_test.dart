@@ -106,8 +106,8 @@ void main() {
 
         final repo1 = container.read(soundsRepositoryProvider);
 
-        // Force garbage collection by creating pressure
-        await Future<void>.delayed(const Duration(milliseconds: 10));
+        // Advance the provider disposal boundary without a listener.
+        await container.pump();
 
         final repo2 = container.read(soundsRepositoryProvider);
 
@@ -615,7 +615,7 @@ void main() {
         streamController.add(testSounds);
 
         // Allow stream to propagate
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await container.read(soundsStreamProvider.future);
 
         final state = container.read(soundsStreamProvider);
         expect(state.hasValue, isTrue);

@@ -218,18 +218,30 @@ void main() {
       });
     });
 
-    test('logs nothing when the operation completes', () async {
-      final errors = await unhandledErrorsWhile(() async {
-        runDetached(
-          Future<void>.value(),
-          'load badges',
-          logName: 'BadgeLoader',
-          category: LogCategory.ui,
+    test(
+      'logs nothing for a completed operation amid unrelated logging',
+      () async {
+        Log.info(
+          'Unrelated background work completed',
+          name: 'OtherBackgroundWork',
         );
-      });
+        final errors = await unhandledErrorsWhile(() async {
+          runDetached(
+            Future<void>.value(),
+            'load badges',
+            logName: 'BadgeLoader',
+            category: LogCategory.ui,
+          );
+        });
 
-      expect(errors, isEmpty);
-      expect(logCapture.getRecentLogs(), isEmpty);
-    });
+        expect(errors, isEmpty);
+        final logs = logCapture.getRecentLogs();
+        expect(
+          logs.where((entry) => entry.name == 'OtherBackgroundWork'),
+          hasLength(1),
+        );
+        expect(logs.where((entry) => entry.name == 'BadgeLoader'), isEmpty);
+      },
+    );
   });
 }

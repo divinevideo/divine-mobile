@@ -376,13 +376,13 @@ void main() {
       addTearDown(container.dispose);
 
       container.read(analyticsIdentitySyncProvider);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(analytics.userIds, [pubkey]);
       expect(crashUserIds, [pubkey]);
 
       authStateController.add(AuthState.unauthenticated);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(analytics.userIds, [pubkey, null]);
       expect(crashUserIds, [pubkey, null]);
@@ -416,7 +416,7 @@ void main() {
       container.read(analyticsIdentitySyncProvider);
       when(() => authService.currentPublicKeyHex).thenReturn(pubkey);
       authStateController.add(AuthState.authenticated);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(analytics.userIds, [pubkey]);
     });

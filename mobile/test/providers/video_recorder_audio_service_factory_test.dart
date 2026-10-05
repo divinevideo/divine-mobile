@@ -27,10 +27,15 @@ class _FakeWakelockPlatform extends WakelockPlusPlatformInterface {
 }
 
 void main() {
+  late WakelockPlusPlatformInterface previousWakelock;
+
   setUpAll(() {
     TestWidgetsFlutterBinding.ensureInitialized();
+    previousWakelock = wakelockPlusPlatformInstance;
     wakelockPlusPlatformInstance = _FakeWakelockPlatform();
   });
+
+  tearDownAll(() => wakelockPlusPlatformInstance = previousWakelock);
 
   group('VideoRecorderBloc - Audio Playback Service Factory (#4539)', () {
     test(
@@ -99,8 +104,7 @@ void main() {
         addTearDown(bloc.close);
 
         bloc.add(const VideoRecorderRecordingStartRequested());
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(factoryCalls, equals(1));
         verify(mockAudioPlaybackService.configureForRecording).called(1);
@@ -110,8 +114,7 @@ void main() {
         verify(mockAudioPlaybackService.play).called(1);
 
         bloc.add(const VideoRecorderRecordingStopRequested());
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         verify(mockAudioPlaybackService.stop).called(1);
         verify(mockAudioPlaybackService.resetAudioSession).called(1);

@@ -140,7 +140,7 @@ void main() {
       verifyNever(() => repository.recoverPurchases());
 
       container.read(appForegroundProvider.notifier).setForeground(true);
-      await Future<void>.delayed(Duration.zero);
+      await container.pump();
 
       verify(() => repository.recoverPurchases()).called(1);
     });
