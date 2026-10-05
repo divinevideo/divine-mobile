@@ -345,16 +345,22 @@ void main() {
             recorder: recorder,
           );
 
-          // Launch the operation (signer hangs forever).
-          // The operation runs while fake time advances; its timeout and
-          // resulting side effects are asserted below.
-          unawaited(authService.debugDiscoverUserRelays(testNpub));
+          // Launch the operation (signer hangs forever). Only the sign
+          // timeout can complete it, so completion is asserted below.
+          var discoveryCompleted = false;
+          unawaited(
+            authService
+                .debugDiscoverUserRelays(testNpub)
+                .then((_) => discoveryCompleted = true),
+          );
 
           // Drive past the 10s bootstrap sign timeout.
           async.elapse(const Duration(seconds: 15));
           async.flushMicrotasks();
 
-          // Signer timed out → callback never invoked → flag not set.
+          // Signer timed out → discovery finished without invoking the
+          // callback → flag not set.
+          expect(discoveryCompleted, isTrue);
           expect(recorder.invocations, isEmpty);
 
           late bool flagValue;
