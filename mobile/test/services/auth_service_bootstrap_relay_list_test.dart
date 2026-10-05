@@ -328,11 +328,12 @@ void main() {
 
     test(
       'flag is NOT set when signer hangs past timeout (retriable next login)',
-      () {
+      () async {
         // Simulate a hung Keycast/Amber signer that never completes.
         when(
           () => mockSigner.signEvent(any()),
         ).thenAnswer((_) => Completer<Event?>().future);
+        final prefs = await SharedPreferences.getInstance();
 
         fakeAsync((async) {
           final discovery = _ControllableRelayDiscoveryService(
@@ -345,22 +346,26 @@ void main() {
             recorder: recorder,
           );
 
-          // Launch the operation (signer hangs forever).
-          authService.debugDiscoverUserRelays(testNpub);
+          // Detached: a synchronous fakeAsync callback cannot await it.
+          var discoveryCompleted = false;
+          unawaited(
+            authService
+                .debugDiscoverUserRelays(testNpub)
+                .then((_) => discoveryCompleted = true),
+          );
 
-          // Drive past the 10s bootstrap sign timeout.
-          async.elapse(const Duration(seconds: 15));
+          // The hung signer holds discovery open until the 10s sign cap.
+          async.elapse(const Duration(seconds: 9));
+          expect(discoveryCompleted, isFalse);
+
+          async.elapse(const Duration(seconds: 2));
           async.flushMicrotasks();
 
-          // Signer timed out → callback never invoked → flag not set.
+          // The cap abandoned the signer: nothing published, flag unset.
+          verify(() => mockSigner.signEvent(any())).called(1);
+          expect(discoveryCompleted, isTrue);
           expect(recorder.invocations, isEmpty);
-
-          late bool flagValue;
-          SharedPreferences.getInstance().then((prefs) {
-            flagValue = prefs.getBool(flagKey) ?? false;
-          });
-          async.flushMicrotasks();
-          expect(flagValue, isFalse);
+          expect(prefs.getBool(flagKey) ?? false, isFalse);
         });
       },
     );
