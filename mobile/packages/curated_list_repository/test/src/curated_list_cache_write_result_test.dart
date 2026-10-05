@@ -187,11 +187,11 @@ void main() {
     });
 
     test('typed error contains an outcome without private cache contents', () {
-      const error = CuratedCacheWriteException(
-        CuratedCacheWriteStatus.conflict,
-      );
-      expect(error.status, CuratedCacheWriteStatus.conflict);
-      expect(error.toString(), 'Curated cache write: conflict');
+      for (final status in CuratedCacheWriteStatus.values) {
+        final error = CuratedCacheWriteException(status);
+        expect(error.status, status);
+        expect(error.toString(), 'Curated cache write: ${status.name}');
+      }
     });
   });
 }
