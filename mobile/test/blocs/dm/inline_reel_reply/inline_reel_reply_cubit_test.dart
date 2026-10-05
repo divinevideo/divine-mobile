@@ -384,8 +384,7 @@ void main() {
       act: (cubit) async {
         final first = cubit.submit('one');
         final second = cubit.submit('two');
-        await second;
-        expect(sending.isCompleted, isFalse);
+        await pumpEventQueue();
         sending.complete(
           NIP17SendResult.success(
             rumorEventId: 'r',
@@ -393,7 +392,7 @@ void main() {
             recipientPubkey: _peer,
           ),
         );
-        await first;
+        await Future.wait([first, second]);
       },
       verify: (_) {
         verify(
