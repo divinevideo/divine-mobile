@@ -1420,7 +1420,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String exploreFeaturedSponsoredBy(String sponsor) {
-    return 'ద్వారా స్పాన్సర్ చేయబడింది $sponsor';
+    return '$sponsor ద్వారా స్పాన్సర్ చేయబడింది';
   }
 
   @override

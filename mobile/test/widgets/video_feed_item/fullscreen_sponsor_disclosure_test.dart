@@ -11,8 +11,9 @@ import '../../helpers/test_provider_overrides.dart';
 
 void main() {
   group(FullscreenSponsorDisclosure, () {
-    Widget buildSubject({double textScale = 1}) {
+    Widget buildSubject({double textScale = 1, Locale? locale}) {
       return testMaterialApp(
+        locale: locale,
         home: MediaQuery(
           data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
           child: const Scaffold(
@@ -86,6 +87,38 @@ void main() {
         semanticsHandle.dispose();
       }
     });
+
+    for (final language in ['es', 'ar', 'ko', 'te']) {
+      testWidgets('$language disclosure stays complete at large text sizes', (
+        tester,
+      ) async {
+        final locale = Locale(language);
+        final l10n = lookupAppLocalizations(locale);
+        final expected = l10n.exploreFeaturedSponsoredBy('Acme Bikes');
+        final english = lookupAppLocalizations(
+          const Locale('en'),
+        ).exploreFeaturedSponsoredBy('Acme Bikes');
+        final handle = tester.ensureSemantics();
+        try {
+          await tester.pumpWidget(buildSubject(locale: locale, textScale: 3));
+
+          expect(expected, isNot(english));
+          expect(find.text(expected), findsOneWidget);
+          expect(find.text(english), findsNothing);
+          expect(find.bySemanticsLabel(expected), findsOneWidget);
+          final text = tester.widget<Text>(find.text(expected));
+          expect(text.maxLines, isNull);
+          expect(text.overflow, isNull);
+          expect(
+            Directionality.of(tester.element(find.text(expected))),
+            language == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+          );
+          expect(tester.takeException(), isNull);
+        } finally {
+          handle.dispose();
+        }
+      });
+    }
   });
 }
 

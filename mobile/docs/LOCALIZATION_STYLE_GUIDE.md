@@ -337,11 +337,15 @@ affected locales is tracked in
 
 **Never soften a load-bearing word.** Safety, consent, money, deletion and age
 copy carry meaning that a friendlier synonym destroys. The repo already treats
-this as a first-class reason to *defer* rather than approximate — see the
-comment on `exploreFeaturedSponsoredBy` in
-`mobile/test/l10n/arb_consistency_test.dart`, held out of machine translation
-because it must remain an unmistakable commercial disclosure rather than
-soften into an editorial credit.
+this as a first-class reason to *defer* rather than approximate: load-bearing
+copy nobody can check waits in `_knownUntranslatedDebt` (see
+[When nobody speaks the language](#when-nobody-speaks-the-language--the-normal-case)).
+The translated `exploreFeaturedSponsoredBy` and
+`exploreFeaturedSponsoredPillSemanticLabel` messages must remain
+unmistakable commercial disclosures rather than soften
+into editorial credits. `mobile/test/l10n/arb_consistency_test.dart` guards
+their presence, placeholders and English fallback; human review must check
+the commercial meaning of both messages.
 
 **Match the source's energy, not its punctuation.** Exclamation marks and
 ALL CAPS are one language's way of spelling emphasis, and copying the marks
@@ -661,6 +665,7 @@ precisely what a reviewer who does not read the language otherwise lacks.
 | No wrong-script characters in a locale | `arb_script_integrity_test.dart` |
 | No value shared across unrelated scripts (stale/wrong-language paste) | `arb_script_integrity_test.dart` |
 | Named disclosures survive translation (`Divine`, `Nostr`, CSAM, Bluesky, Keycast) | `arb_consistency_test.dart`, per-key |
+| Sponsorship disclosures exist in every locale, preserve `{sponsor}` / `{name}`, and differ from English | `arb_consistency_test.dart`, per-key — commercial meaning still needs human review |
 | Copy never reveals a block/mute relationship | `disclosure_invariant_test.dart` |
 | Shipped locales match the Android/iOS declarations | `platform_locale_declarations_test.dart` |
 | **Register matches this guide's table** | **review only** |

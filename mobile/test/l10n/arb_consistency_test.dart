@@ -48,6 +48,51 @@ void main() {
       );
     });
 
+    test(
+      'commercial sponsorship disclosures are localized in every locale',
+      () {
+        final template = _readArb(File('lib/l10n/app_en.arb'));
+        const placeholders = {
+          'exploreFeaturedSponsoredBy': '{sponsor}',
+          'exploreFeaturedSponsoredPillSemanticLabel': '{name}',
+        };
+        final arbFiles = Directory('lib/l10n')
+            .listSync()
+            .whereType<File>()
+            .where(
+              (file) => file.path.endsWith('.arb'),
+            );
+
+        for (final file in arbFiles) {
+          final arb = _readArb(file);
+          for (final entry in placeholders.entries) {
+            final value = arb[entry.key];
+            expect(
+              value,
+              isA<String>().having(
+                (s) => s.trim().isNotEmpty,
+                'nonempty',
+                isTrue,
+              ),
+              reason: '${file.path} must define ${entry.key}',
+            );
+            expect(
+              value,
+              contains(entry.value),
+              reason: '${file.path} must preserve ${entry.value} unchanged',
+            );
+            if (!file.path.endsWith('app_en.arb')) {
+              expect(
+                value,
+                isNot(template[entry.key]),
+                reason: '${file.path} must not copy the English ${entry.key}',
+              );
+            }
+          }
+        }
+      },
+    );
+
     test('owner delete copy keeps Divine and Nostr disclosure', () {
       final l10nDir = Directory('lib/l10n');
       final arbFiles =
@@ -703,11 +748,6 @@ const _knownUntranslatedDebt = <String>{
   'accountDeletionRecoveryBodyWithExpiry',
   'accountDeletionSignOut',
   'accountDeletionTerminalFailureBody',
-  // Commercial disclosure copy, deliberately not machine-translated: a
-  // softened rendering discloses nothing. Translation pass tracked in #7673,
-  // and required before any non-English campaign.
-  'exploreFeaturedSponsoredBy',
-  'exploreFeaturedSponsoredPillSemanticLabel',
   // Secure-account key-conflict recovery copy is new; translation pass
   // tracked in #7984.
   'authSecureAccountAlreadyRegistered',

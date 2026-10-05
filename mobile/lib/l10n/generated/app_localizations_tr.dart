@@ -1324,12 +1324,12 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String exploreFeaturedSponsoredBy(String sponsor) {
-    return 'Sponsored by $sponsor';
+    return '$sponsor sponsorluğunda';
   }
 
   @override
   String exploreFeaturedSponsoredPillSemanticLabel(String name) {
-    return '$name, sponsored';
+    return '$name, sponsorlu';
   }
 
   @override
