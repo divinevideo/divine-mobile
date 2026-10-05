@@ -354,12 +354,18 @@ void main() {
                 .then((_) => discoveryCompleted = true),
           );
 
-          // Drive past the 10s bootstrap sign timeout.
-          async.elapse(const Duration(seconds: 15));
+          // Just short of the 10s bootstrap sign timeout, the hung signer
+          // still holds discovery open.
+          async.elapse(const Duration(seconds: 9));
+          expect(discoveryCompleted, isFalse);
+
+          // Drive just past the 10s bootstrap sign timeout.
+          async.elapse(const Duration(seconds: 2));
           async.flushMicrotasks();
 
           // Signer timed out → discovery finished without invoking the
           // callback → flag not set.
+          verify(() => mockSigner.signEvent(any())).called(1);
           expect(discoveryCompleted, isTrue);
           expect(recorder.invocations, isEmpty);
 
