@@ -6975,6 +6975,7 @@
   "listsDiscoveryEmpty": "Tiada senarai yang muncul kali ini. Tarik untuk muat semula.",
   "listSearchPeopleUnavailable": "Senarai orang tidak tersedia buat masa ini.",
   "listSearchVideosUnavailable": "Senarai video tidak tersedia buat masa ini.",
+  "authAccountCleanupFailed": "Data akaun sebelumnya tidak dapat dipadamkan. Cuba lagi.",
   "soundRequestAction": "Minta bunyi ini",
   "soundRequestTitle": "Seseorang mahu menggunakan bunyi anda",
   "soundRequestDescription": "Benarkan penggunaan semula bunyi video ini supaya sesiapa sahaja boleh menghasilkan remix dengannya.",

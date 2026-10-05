@@ -43,6 +43,7 @@ import 'package:openvine/screens/settings/privacy_settings_screen.dart';
 import 'package:openvine/screens/settings/settings_categories_screen.dart';
 import 'package:openvine/screens/verify/verify_screen.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/deferred_login_options_navigator.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -302,6 +303,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 await _offerReauthentication(account, e);
               } on AccountRestoreFailedException catch (e) {
                 await _offerReauthentication(account, e);
+              } on UserDataCleanupException {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  DivineSnackbarContainer.snackBar(
+                    context.l10n.authAccountCleanupFailed,
+                    error: true,
+                  ),
+                );
               } catch (e, stackTrace) {
                 Log.error(
                   'Account switch failed',

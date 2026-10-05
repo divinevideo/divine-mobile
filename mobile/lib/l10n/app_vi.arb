@@ -6975,6 +6975,7 @@
   "listsDiscoveryEmpty": "Lần này chẳng thấy danh sách nào. Kéo để làm mới.",
   "listSearchPeopleUnavailable": "Danh sách người hiện không khả dụng.",
   "listSearchVideosUnavailable": "Danh sách video hiện không khả dụng.",
+  "authAccountCleanupFailed": "Không thể xóa dữ liệu của tài khoản trước. Hãy thử lại.",
   "soundRequestAction": "Yêu cầu âm thanh này",
   "soundRequestTitle": "Có người muốn dùng âm thanh của bạn",
   "soundRequestDescription": "Cho phép sử dụng lại âm thanh của video này để mọi người có thể tạo bản phối lại.",

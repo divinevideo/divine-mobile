@@ -6975,6 +6975,7 @@
   "listsDiscoveryEmpty": "这次没找到列表。下拉刷新试试。",
   "listSearchPeopleUnavailable": "人员列表暂时不可用。",
   "listSearchVideosUnavailable": "视频列表暂时不可用。",
+  "authAccountCleanupFailed": "无法清除上一个账号的数据。请重试。",
   "soundRequestAction": "请求使用此声音",
   "soundRequestTitle": "有人想使用你的声音",
   "soundRequestDescription": "允许重复使用此视频的声音，让任何人都能用它进行混剪。",

@@ -10416,6 +10416,10 @@
     "description": "People-list search source could not answer; shown beside healthy video results with retry."
   },
   "listSearchVideosUnavailable": "Video lists are unavailable right now.",
+  "@authAccountCleanupFailed": {
+    "description": "Error shown when local account cleanup fails during sign-in or switching accounts. The user can retry."
+  },
+  "authAccountCleanupFailed": "Couldn't clear the previous account's data. Try again.",
   "soundRequestAction": "Request this sound",
   "soundRequestTitle": "Someone wants to use your sound",
   "soundRequestDescription": "Enable sound reuse on this video so anyone can remix with it.",
