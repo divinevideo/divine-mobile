@@ -280,8 +280,9 @@ void main() {
               return false;
             },
           );
-          writer.cacheKeyRemoved('lists');
-          writer.cacheKeyRemoved('follows');
+          writer
+            ..cacheKeyRemoved('lists')
+            ..cacheKeyRemoved('follows');
           final saved = await writer.saveListsWithResult(
             baseline: [],
             current: [replacement],
@@ -304,7 +305,8 @@ void main() {
       );
 
       test(
-        'rejected merge retains the confirmed external winner for reconciliation',
+        'rejected merge retains the confirmed external winner '
+        'for reconciliation',
         () async {
           final original = list(author);
           final attempted = list(author, revision: 2);
@@ -491,7 +493,8 @@ void main() {
       );
 
       test(
-        'acknowledged set reads reject optimistic values and accept replacements',
+        'acknowledged set reads reject optimistic values '
+        'and accept replacements',
         () async {
           final writer = CuratedListCacheWriteCoordinator();
           var stored = <String>{'confirmed'};
