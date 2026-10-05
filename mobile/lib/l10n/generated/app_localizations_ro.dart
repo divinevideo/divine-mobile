@@ -5934,9 +5934,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get inboxSearchEmptySubtitle => 'Încearcă alt nume sau alt cuvânt.';
 
   @override
-  String get inboxActionMute => 'Dezactivează sunetul conversației';
-
-  @override
   String inboxActionReport(String displayName) {
     return 'Raportează $displayName';
   }
@@ -5968,12 +5965,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get inboxRemoveConfirmConfirm => 'Elimină';
-
-  @override
-  String get inboxConversationMuted => 'Conversație dezactivată';
-
-  @override
-  String get inboxConversationUnmuted => 'Conversație reactivată';
 
   @override
   String get inboxCollabInviteCardTitle => 'Invitație de colaborare';

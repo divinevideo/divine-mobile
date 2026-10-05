@@ -1,5 +1,5 @@
 // ABOUTME: Bottom sheet with long-press actions for DM conversations.
-// ABOUTME: Provides contextual Mute, Report, Block, and Remove actions.
+// ABOUTME: Provides contextual Report, Block, and Remove actions.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
@@ -7,9 +7,6 @@ import 'package:openvine/l10n/l10n.dart';
 
 /// Actions available from the conversation long-press sheet.
 enum ConversationAction {
-  /// Toggle mute notifications for this conversation.
-  toggleMute,
-
   /// Report the other participant.
   report,
 
@@ -22,18 +19,48 @@ enum ConversationAction {
 
 /// Shows a bottom sheet with contextual actions for a DM conversation.
 ///
-/// Matches the Figma "conversation list - long press" design (node 10183:132451).
+/// Matches the Figma "conversation list - long press" design (node 10183:132451),
+/// minus its Mute row: muting had no effect on delivery, badges or
+/// notifications, so the toggle is withheld until it does (#7379).
 /// Returns the chosen [ConversationAction] or `null` if dismissed.
 class ConversationActionsSheet {
+  /// The actions offered for a conversation, in display order.
+  ///
+  /// Report and Block act on ONE account, and a group sheet has no way to say
+  /// which — it would act on the arbitrary peer the row names while reading as
+  /// though it dealt with the thread, so a group gets neither. An individual
+  /// is still blockable from their profile in the thread.
+  ///
+  /// Remove is withheld for a removal-protected thread: removal is permanent
+  /// and a Divine Moderation notice is the user's only copy of why they were
+  /// actioned (#8391). The repository refuses it either way; not offering it
+  /// beats a dead-end refusal.
+  static List<ConversationAction> _actionsFor({
+    required bool isGroup,
+    required bool canRemove,
+  }) => [
+    if (!isGroup) ...[ConversationAction.report, ConversationAction.block],
+    if (canRemove) ConversationAction.remove,
+  ];
+
+  /// Whether the sheet would offer any action for a conversation.
+  ///
+  /// A group holding a removal-protected member has none. Callers check this
+  /// before [show] rather than open an empty sheet.
+  static bool hasActions({required bool isGroup, required bool canRemove}) =>
+      _actionsFor(isGroup: isGroup, canRemove: canRemove).isNotEmpty;
+
   static Future<ConversationAction?> show(
     BuildContext context, {
     required String displayName,
     required bool isVanished,
-    required bool isMuted,
     required bool isBlocked,
     required bool isGroup,
     bool canRemove = true,
   }) {
+    final actions = _actionsFor(isGroup: isGroup, canRemove: canRemove);
+    assert(actions.isNotEmpty, 'Check hasActions before opening the sheet.');
+
     // A vanished peer can publish again under the same key, and their DMs
     // remain in the recipient's history. Keep Report and Block available for
     // safety, but do not turn the deleted-state label into an identity.
@@ -50,102 +77,43 @@ class ConversationActionsSheet {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _MuteActionTile(
-              isMuted: isMuted,
-              showDivider: !isGroup || canRemove,
-            ),
-            // Report and Block act on ONE account, and a group sheet has no
-            // way to say which — it would act on the arbitrary peer the row
-            // names while reading as though it dealt with the thread. Mute and
-            // Remove are conversation-scoped and mean what they say. An
-            // individual is still blockable from their profile in the thread.
-            if (!isGroup) ...[
-              _ActionTile(
-                icon: DivineIconName.flag,
-                label: isVanished
-                    ? context.l10n.inboxActionReportVanishedAccount
-                    : context.l10n.inboxActionReport(displayName),
-                result: ConversationAction.report,
-              ),
-              _ActionTile(
-                icon: DivineIconName.eyeSlash,
-                label: switch ((isBlocked, isVanished)) {
-                  (true, true) =>
-                    context.l10n.inboxActionUnblockVanishedAccount,
-                  (true, false) => context.l10n.inboxActionUnblock(displayName),
-                  (false, true) => context.l10n.inboxActionBlockVanishedAccount,
-                  (false, false) => context.l10n.inboxActionBlock(displayName),
-                },
-                isDestructive: !isBlocked,
-                // Block becomes the last row when Remove is withdrawn, so it
-                // owns the missing divider rather than leaving a trailing rule.
-                showDivider: canRemove,
-                result: ConversationAction.block,
-              ),
-            ],
-            // Withdrawn for a Divine Moderation thread: removal is permanent
-            // and the notice is the user's only copy of why they were actioned
-            // (#8391). The repository refuses it either way; not offering it
-            // beats a dead-end refusal.
-            if (canRemove)
-              _ActionTile(
-                icon: DivineIconName.trash,
-                label: context.l10n.inboxActionRemove,
-                isDestructive: true,
-                showDivider: false,
-                result: ConversationAction.remove,
-              ),
+            for (final action in actions)
+              switch (action) {
+                ConversationAction.report => _ActionTile(
+                  icon: DivineIconName.flag,
+                  label: isVanished
+                      ? context.l10n.inboxActionReportVanishedAccount
+                      : context.l10n.inboxActionReport(displayName),
+                  showDivider: action != actions.last,
+                  result: action,
+                ),
+                ConversationAction.block => _ActionTile(
+                  icon: DivineIconName.eyeSlash,
+                  label: switch ((isBlocked, isVanished)) {
+                    (true, true) =>
+                      context.l10n.inboxActionUnblockVanishedAccount,
+                    (true, false) => context.l10n.inboxActionUnblock(
+                      displayName,
+                    ),
+                    (false, true) =>
+                      context.l10n.inboxActionBlockVanishedAccount,
+                    (false, false) => context.l10n.inboxActionBlock(
+                      displayName,
+                    ),
+                  },
+                  isDestructive: !isBlocked,
+                  showDivider: action != actions.last,
+                  result: action,
+                ),
+                ConversationAction.remove => _ActionTile(
+                  icon: DivineIconName.trash,
+                  label: context.l10n.inboxActionRemove,
+                  isDestructive: true,
+                  showDivider: action != actions.last,
+                  result: action,
+                ),
+              },
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MuteActionTile extends StatelessWidget {
-  const _MuteActionTile({required this.isMuted, this.showDivider = true});
-
-  final bool isMuted;
-
-  /// False when Mute is the only row left — a group thread that also carries a
-  /// removal-protected member withdraws Report, Block AND Remove, and a rule
-  /// under the last row reads as a missing action rather than a separator.
-  final bool showDivider;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      toggled: isMuted,
-      label: context.l10n.inboxActionMute,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          border: showDivider
-              ? Border(
-                  bottom: BorderSide(color: context.vineColors.outlineDisabled),
-                )
-              : null,
-        ),
-        child: Material(
-          type: MaterialType.transparency,
-          child: SwitchListTile(
-            value: isMuted,
-            activeThumbColor: context.vineColors.primaryText,
-            activeTrackColor: VineTheme.primary,
-            inactiveThumbColor: context.vineColors.disabled,
-            inactiveTrackColor: context.vineColors.surfaceContainer,
-            onChanged: (_) =>
-                Navigator.of(context).pop(ConversationAction.toggleMute),
-            title: Text(
-              context.l10n.inboxActionMute,
-              style: VineTheme.titleMediumFont(
-                color: context.vineColors.primaryText,
-              ),
-            ),
-            secondary: DivineIcon(
-              icon: DivineIconName.bellSimple,
-              color: context.vineColors.onSurface,
-            ),
-          ),
         ),
       ),
     );

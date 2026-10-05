@@ -2758,7 +2758,6 @@
     "description": "Shown in place of the conversation list when an inbox search matches nothing."
   },
   "inboxSearchEmptySubtitle": "کوئی اور نام یا لفظ آزمائیں۔",
-  "inboxActionMute": "گفتگو میوٹ کریں",
   "inboxActionReport": "{displayName} کی رپورٹ کریں",
   "@inboxActionReport": {
     "placeholders": {
@@ -2795,8 +2794,6 @@
   },
   "inboxRemoveConfirmBodyGroup": "اس سے گروپ گفتگو آپ کے ان باکس سے ہٹ جائے گی۔ اگر کوئی گروپ میں دوبارہ پیغام بھیجے تو نئی گفتگو شروع ہو جائے گی۔",
   "inboxRemoveConfirmConfirm": "ہٹائیں",
-  "inboxConversationMuted": "گفتگو میوٹ ہو گئی",
-  "inboxConversationUnmuted": "گفتگو ان میوٹ ہو گئی",
   "inboxCollabInviteCardTitle": "شریک کار دعوت",
   "@inboxCollabInviteCardTitle": {
     "description": "Header label on a collaborator invite card in the DM conversation."

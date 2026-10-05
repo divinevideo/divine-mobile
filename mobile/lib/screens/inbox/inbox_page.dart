@@ -9,14 +9,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/dm/conversation_actions/conversation_actions_cubit.dart';
 import 'package:openvine/blocs/dm/conversation_list/conversation_list_bloc.dart';
-import 'package:openvine/blocs/dm/conversation_mute/conversation_mute_cubit.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
-import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/inbox/inbox_view.dart';
 
@@ -40,7 +38,6 @@ class InboxPage extends ConsumerWidget {
     final dmRepository = ref.watch(dmRepositoryProvider);
     final followRepository = ref.watch(followRepositoryProvider);
     final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
-    final prefs = ref.watch(sharedPreferencesProvider);
     final reportingService = ref.watch(contentReportingServiceProvider).value;
     // Read once for constructor seeding; subsequent changes are handled by
     // ref.listen below via _InboxRepositorySync, avoiding page rebuild on
@@ -75,7 +72,7 @@ class InboxPage extends ConsumerWidget {
       // reportingService is deliberately NOT in this tuple: it resolves
       // from null asynchronously shortly after every inbox mount, and
       // keying the whole MultiBlocProvider on it tore down and recreated
-      // all five blocs (double ConversationListStarted + list reload)
+      // every bloc (double ConversationListStarted + list reload)
       // right after every open. Only its consumer — the
       // ConversationActionsCubit provider below — is re-keyed on it.
       key: ValueKey((
@@ -125,7 +122,6 @@ class InboxPage extends ConsumerWidget {
             contentBlocklistRepository: blocklistRepository,
           )..add(const MyFollowingListLoadRequested()),
         ),
-        BlocProvider(create: (_) => ConversationMuteCubit(prefs: prefs)),
         // Re-keyed on the async-resolving reportingService alone (last in
         // the list so the swap recreates the smallest possible subtree):
         // the actions cubit is action-only state and cheap to rebuild,

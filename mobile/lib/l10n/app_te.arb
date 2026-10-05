@@ -3307,7 +3307,6 @@
     "description": "Shown in place of the conversation list when an inbox search matches nothing."
   },
   "inboxSearchEmptySubtitle": "వేరే పేరు లేదా పదాన్ని ప్రయత్నించండి.",
-  "inboxActionMute": "సంభాషణను మ్యూట్ చేయండి",
   "inboxActionReport": "నివేదిక {displayName}",
   "@inboxActionReport": {
     "placeholders": {
@@ -3347,8 +3346,6 @@
     "description": "Body of the remove-conversation confirmation for a GROUP thread. Names nobody, because a group has no single counterparty — the 1:1 wording `inboxRemoveConfirmBody` says 'your conversation with {displayName}', which would read as a conversation with the room's title. Mirrors `inboxRemoveConfirmBodyVanishedAccount`, which is name-free for the same reason."
   },
   "inboxRemoveConfirmConfirm": "తీసివేయి",
-  "inboxConversationMuted": "సంభాషణ మ్యూట్ చేయబడింది",
-  "inboxConversationUnmuted": "సంభాషణ అన్‌మ్యూట్ చేయబడింది",
   "inboxCollabInviteCardTitle": "సహకారి ఆహ్వానం",
   "@inboxCollabInviteCardTitle": {
     "description": "Header label on a collaborator invite card in the DM conversation."

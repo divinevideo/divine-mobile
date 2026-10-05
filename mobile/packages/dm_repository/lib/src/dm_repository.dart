@@ -8131,7 +8131,7 @@ class DmRepository {
   /// omitted. Divine does not support a conversation with only yourself
   /// (#8261), and the row is unusable: every caller resolves the counterparty
   /// by dropping the viewer, so it renders as a chat with yourself, with
-  /// Report, Block and Mute all addressing the viewer's own account.
+  /// Report and Block addressing the viewer's own account.
   ///
   /// [classifyPotentialRequests] already drops the same shape, but it only
   /// ever sees conversations the user has NOT sent to. Legacy self-wrap bugs

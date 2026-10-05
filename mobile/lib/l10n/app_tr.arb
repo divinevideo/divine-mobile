@@ -1918,7 +1918,6 @@
             }
         }
     },
-    "inboxActionMute": "Sohbeti sessize al",
     "inboxActionRemove": "Sohbeti kaldır",
     "inboxActionReport": "{displayName} kullanıcısını bildir",
     "@inboxActionReport": {
@@ -1968,8 +1967,6 @@
     "@inboxCollabInviteSentStatus": {
         "description": "Shown on the inviter's own outgoing collaborator invite card in their DM with the collaborator. Replaces Accept/Ignore which are recipient-only actions."
     },
-    "inboxConversationMuted": "Sohbet sessize alındı",
-    "inboxConversationUnmuted": "Sohbet sessizden çıkarıldı",
     "inboxEmptySubtitle": "+ tuşu ısırmaz.",
     "inboxEmptyTitle": "Henüz mesaj yok",
     "inboxLoadErrorTitle": "Mesajlar yüklenemedi",

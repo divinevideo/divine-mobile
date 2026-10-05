@@ -5962,9 +5962,6 @@ class AppLocalizationsTe extends AppLocalizations {
       'వేరే పేరు లేదా పదాన్ని ప్రయత్నించండి.';
 
   @override
-  String get inboxActionMute => 'సంభాషణను మ్యూట్ చేయండి';
-
-  @override
   String inboxActionReport(String displayName) {
     return 'నివేదిక $displayName';
   }
@@ -5996,12 +5993,6 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get inboxRemoveConfirmConfirm => 'తీసివేయి';
-
-  @override
-  String get inboxConversationMuted => 'సంభాషణ మ్యూట్ చేయబడింది';
-
-  @override
-  String get inboxConversationUnmuted => 'సంభాషణ అన్‌మ్యూట్ చేయబడింది';
 
   @override
   String get inboxCollabInviteCardTitle => 'సహకారి ఆహ్వానం';

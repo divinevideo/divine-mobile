@@ -2320,7 +2320,6 @@
     "inboxSupportRowSubtitle": "ሳንካዎች፣ ማጣራት፣ የመለያ ጉዳዮች — እያዳመጥን ነው።",
     "inboxSearchEmptyTitle": "ምንም አልተገኘም",
     "inboxSearchEmptySubtitle": "ሌላ ስም ወይም ቃል ሞክር።",
-    "inboxActionMute": "ውይይት ድምጸ-ከል አድርግ",
     "inboxActionReport": "ሪፖርት {displayName}",
     "@inboxActionReport": {
         "placeholders": {
@@ -2357,8 +2356,6 @@
     },
     "inboxRemoveConfirmBodyGroup": "ይህ የቡድን ውይይቱን ከመልእክት ሳጥንዎ ያስወግዳል። ማንኛውም ሰው እንደገና ለቡድኑ መልእክት ከላከ አዲስ ውይይት ይጀምራል።",
     "inboxRemoveConfirmConfirm": "አስወግድ",
-    "inboxConversationMuted": "ውይይት ድምጸ-ከል ተደርጓል",
-    "inboxConversationUnmuted": "ውይይቱ ድምጸ-ከል ተነስቷል።",
     "inboxCollabInviteCardTitle": "የተባባሪ ግብዣ",
     "@inboxCollabInviteCardTitle": {
         "description": "Header label on a collaborator invite card in the DM conversation."

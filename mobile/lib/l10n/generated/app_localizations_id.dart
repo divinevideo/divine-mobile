@@ -5705,9 +5705,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get inboxSearchEmptySubtitle => 'Coba nama atau kata lain.';
 
   @override
-  String get inboxActionMute => 'Bisukan percakapan';
-
-  @override
   String inboxActionReport(String displayName) {
     return 'Laporkan $displayName';
   }
@@ -5739,12 +5736,6 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get inboxRemoveConfirmConfirm => 'Hapus';
-
-  @override
-  String get inboxConversationMuted => 'Percakapan dibisukan';
-
-  @override
-  String get inboxConversationUnmuted => 'Bisu percakapan dibatalkan';
 
   @override
   String get inboxCollabInviteCardTitle => 'Undangan kolaborasi';

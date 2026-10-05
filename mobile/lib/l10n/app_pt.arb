@@ -1921,7 +1921,6 @@
             }
         }
     },
-    "inboxActionMute": "Silenciar conversa",
     "inboxActionRemove": "Remover conversa",
     "inboxActionReport": "Denunciar {displayName}",
     "@inboxActionReport": {
@@ -1971,8 +1970,6 @@
     "@inboxCollabInviteSentStatus": {
         "description": "Shown on the inviter's own outgoing collaborator invite card in their DM with the collaborator. Replaces Accept/Ignore which are recipient-only actions."
     },
-    "inboxConversationMuted": "Conversa silenciada",
-    "inboxConversationUnmuted": "Conversa com som ativado",
     "inboxEmptySubtitle": "O botão + não morde.",
     "inboxEmptyTitle": "Ainda sem mensagens",
     "inboxLoadErrorTitle": "As mensagens não carregaram",

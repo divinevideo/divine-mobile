@@ -1921,7 +1921,6 @@
             }
         }
     },
-    "inboxActionMute": "Unterhaltung stummschalten",
     "inboxActionRemove": "Unterhaltung entfernen",
     "inboxActionReport": "{displayName} melden",
     "@inboxActionReport": {
@@ -1971,8 +1970,6 @@
     "@inboxCollabInviteSentStatus": {
         "description": "Shown on the inviter's own outgoing collaborator invite card in their DM with the collaborator. Replaces Accept/Ignore which are recipient-only actions."
     },
-    "inboxConversationMuted": "Unterhaltung stummgeschaltet",
-    "inboxConversationUnmuted": "Unterhaltung nicht mehr stummgeschaltet",
     "inboxEmptySubtitle": "Der + Button beißt nicht.",
     "inboxEmptyTitle": "Noch keine Nachrichten",
     "inboxLoadErrorTitle": "Nachrichten konnten nicht geladen werden",

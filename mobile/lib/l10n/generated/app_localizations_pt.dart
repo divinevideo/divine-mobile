@@ -5816,9 +5816,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get inboxSearchEmptySubtitle => 'Tente outro nome ou outra palavra.';
 
   @override
-  String get inboxActionMute => 'Silenciar conversa';
-
-  @override
   String inboxActionReport(String displayName) {
     return 'Denunciar $displayName';
   }
@@ -5850,12 +5847,6 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get inboxRemoveConfirmConfirm => 'Remover';
-
-  @override
-  String get inboxConversationMuted => 'Conversa silenciada';
-
-  @override
-  String get inboxConversationUnmuted => 'Conversa com som ativado';
 
   @override
   String get inboxCollabInviteCardTitle => 'Convite para colaborar';

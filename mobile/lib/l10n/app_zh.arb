@@ -2758,7 +2758,6 @@
     "description": "Shown in place of the conversation list when an inbox search matches nothing."
   },
   "inboxSearchEmptySubtitle": "换个名字或词试试。",
-  "inboxActionMute": "静音会话",
   "inboxActionReport": "举报 {displayName}",
   "@inboxActionReport": {
     "placeholders": {
@@ -2795,8 +2794,6 @@
   },
   "inboxRemoveConfirmBodyGroup": "这会从你的收件箱中移除这个群聊会话。如果有人再次在群里发消息，会开始一个新会话。",
   "inboxRemoveConfirmConfirm": "删除",
-  "inboxConversationMuted": "会话已静音",
-  "inboxConversationUnmuted": "会话已取消静音",
   "inboxCollabInviteCardTitle": "合作邀请",
   "@inboxCollabInviteCardTitle": {
     "description": "Header label on a collaborator invite card in the DM conversation."
