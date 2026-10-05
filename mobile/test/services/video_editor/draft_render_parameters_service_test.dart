@@ -18,12 +18,12 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show ChromaKey, EditorVideo;
 
-DivineVideoClip _clip() => DivineVideoClip(
+DivineVideoClip _clip({double originalAspectRatio = 9 / 16}) => DivineVideoClip(
   id: 'clip_1',
   video: EditorVideo.file('/tmp/test.mp4'),
   duration: const Duration(seconds: 6),
   recordedAt: DateTime(2025),
-  originalAspectRatio: 9 / 16,
+  originalAspectRatio: originalAspectRatio,
   targetAspectRatio: .vertical,
 );
 
@@ -31,9 +31,10 @@ DivineVideoDraft _draft({
   Map<String, dynamic> editorStateHistory = const {},
   Map<String, dynamic> editorEditingParameters = const {},
   AudioEvent? selectedSound,
+  DivineVideoClip? clip,
 }) => DivineVideoDraft(
   id: 'draft_1',
-  clips: [_clip()],
+  clips: [clip ?? _clip()],
   title: '',
   description: '',
   hashtags: const {},
@@ -426,6 +427,36 @@ void main() {
       );
       expect(parameters!.capturedLayers, hasLength(1));
     });
+
+    test('wraps text layers inside the bounds the editor canvas used', () async {
+      // A landscape clip cropped to vertical: its body is wider than the video
+      // the viewer sees, so a text layer has to wrap at the visible width, as
+      // it did on the canvas, not at the body's.
+      final stub = _StubLayerRasterizer();
+      addTearDown(stub.dispose);
+
+      const bodySize = Size(640, 360);
+      final draft = _draft(
+        clip: _clip(originalAspectRatio: 16 / 9),
+        editorEditingParameters: _persistedParameters(bodySize: bodySize),
+        editorStateHistory: _historyWithTextLayer(),
+      );
+
+      await DraftRenderParametersService(rasterizer: stub).buildForDraft(draft);
+
+      final layerBounds = stub.configs?.textEditor.layerBounds;
+      expect(layerBounds, isNotNull);
+      expect(
+        layerBounds!(bodySize),
+        equals(
+          Rect.fromCenter(
+            center: const Offset(320, 180),
+            width: 360 * 9 / 16,
+            height: 360,
+          ),
+        ),
+      );
+    });
   });
 }
 
@@ -442,6 +473,7 @@ class _StubLayerRasterizer extends LayerRasterizer {
   int? capturedLayerCount;
   Size? editorBodySize;
   double? basePixelRatio;
+  ProImageEditorConfigs? configs;
 
   @override
   Future<List<ExportedLayer>> capture({
@@ -457,6 +489,7 @@ class _StubLayerRasterizer extends LayerRasterizer {
     capturedLayerCount = layers.length;
     this.editorBodySize = editorBodySize;
     this.basePixelRatio = basePixelRatio;
+    this.configs = configs;
     await awaitContentReady?.call();
     if (dropLayers) return const [];
     return [
