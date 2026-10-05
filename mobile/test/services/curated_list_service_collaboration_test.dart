@@ -1,6 +1,7 @@
 // ABOUTME: Unit tests for CuratedListService collaboration features
 // ABOUTME: Tests adding/removing collaborators and permission checks
 
+import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -193,7 +194,7 @@ void main() {
 
         await service.addCollaborator(list.id, 'collaborator_1');
 
-        verify(() => mockNostr.publishEvent(any())).called(1);
+        verify(() => mockNostr.publishEventAwaitOk(any())).called(1);
       });
 
       test('updates updatedAt timestamp', () async {
@@ -273,7 +274,7 @@ void main() {
 
         await service.removeCollaborator(list.id, 'collaborator_1');
 
-        verify(() => mockNostr.publishEvent(any())).called(1);
+        verify(() => mockNostr.publishEventAwaitOk(any())).called(1);
       });
 
       test('handles removing last collaborator', () async {
@@ -413,20 +414,30 @@ void main() {
         );
       });
 
-      test('many collaborators (100)', () async {
-        final list = await service.createList(
-          name: 'Test List',
-          isCollaborative: true,
-        );
-        final listId = list!.id;
-
-        for (var i = 0; i < 100; i++) {
-          await service.addCollaborator(listId, 'collaborator_$i');
-        }
-
-        final updatedList = service.getListById(listId);
-        expect(updatedList!.allowedCollaborators.length, 100);
-      });
+      test(
+        'many acknowledged collaborators (100) as the clock advances',
+        () async {
+          var now = DateTime.now();
+          await withClock(Clock(() => now), () async {
+            final list = (await service.createList(
+              name: 'Test List',
+              isCollaborative: true,
+            ))!;
+            for (var i = 0; i < 100; i++) {
+              now = now.add(const Duration(seconds: 1));
+              final collaborator = (i + 1).toRadixString(16).padLeft(64, '0');
+              expect(
+                await service.addCollaborator(list.id, collaborator),
+                isTrue,
+              );
+            }
+            expect(
+              service.getListById(list.id)!.allowedCollaborators,
+              hasLength(100),
+            );
+          });
+        },
+      );
 
       test('canCollaborate with null pubkey', () {
         expect(service.canCollaborate('any_list', ''), isFalse);

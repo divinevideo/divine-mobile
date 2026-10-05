@@ -1753,9 +1753,9 @@ void main() {
           );
 
           expect(flipped, isTrue);
-          final redaction =
-              verify(() => mockNostr.publishEvent(captureAny())).captured.single
-                  as Event;
+          final redaction = verify(
+            () => mockNostr.publishEventAwaitOk(captureAny()),
+          ).captured.cast<Event>().singleWhere((event) => event.kind == 5);
           expect(redaction.kind, EventKind.eventDeletion);
           expect(redaction.tags, contains(equals(['e', plaintextEventId])));
           expect(redaction.tags, contains(equals(['k', '30005'])));
@@ -1821,11 +1821,9 @@ void main() {
         // Kind 30005 is addressable: republishing under the same d-tag
         // replaces the public copy, with the items moved out of plain tags
         // into sealed content.
-        final published =
-            verify(
-                  () => mockNostr.publishEventAwaitOk(captureAny()),
-                ).captured.single
-                as Event;
+        final published = verify(
+          () => mockNostr.publishEventAwaitOk(captureAny()),
+        ).captured.cast<Event>().singleWhere((event) => event.kind == 30005);
         expect(published.kind, 30005);
         expect(published.tags, contains(equals(['d', list.id])));
         expect(
@@ -1862,9 +1860,9 @@ void main() {
         // to be an `e` tag on the old event id: NIP-09 honours an `a` tag on
         // the coordinate for every version up to the request, which would
         // take the sealed replacement down with the original.
-        final redaction =
-            verify(() => mockNostr.publishEvent(captureAny())).captured.single
-                as Event;
+        final redaction = verify(
+          () => mockNostr.publishEventAwaitOk(captureAny()),
+        ).captured.cast<Event>().singleWhere((event) => event.kind == 5);
         expect(redaction.kind, EventKind.eventDeletion);
         expect(redaction.tags, contains(equals(['e', plaintextEventId])));
         expect(redaction.tags, contains(equals(['k', '30005'])));
@@ -1900,7 +1898,7 @@ void main() {
         // flip commits and the relays that rejected it get the redaction.
         expect(result, isTrue);
         expect(service.getListById(list.id)!.isPublic, isFalse);
-        verify(() => mockNostr.publishEvent(any())).called(1);
+        verify(() => mockNostr.publishEventAwaitOk(any())).called(2);
       });
 
       test('keeps a list private when its redaction fails', () async {
@@ -1908,8 +1906,10 @@ void main() {
         reset(mockNostr);
         when(() => mockNostr.signer).thenReturn(mockSigner);
         when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
-          (invocation) async =>
-              _accepted(invocation.positionalArguments[0] as Event),
+          (invocation) async {
+            final event = invocation.positionalArguments.single as Event;
+            return event.kind == 5 ? _rejected(event) : _accepted(event);
+          },
         );
         when(
           () => mockNostr.publishEvent(any()),
@@ -1924,6 +1924,10 @@ void main() {
         // depend on it — the sealed replacement is already accepted.
         expect(result, isTrue);
         expect(service.getListById(list.id)!.isPublic, isFalse);
+        expect(
+          service.getListById(list.id)!.pendingPlaintextEventIds,
+          isNotEmpty,
+        );
       });
 
       test('unsets the description when the edit clears it', () async {
@@ -2203,8 +2207,8 @@ void main() {
         expect(await pendingPrivacy, isTrue);
         expect(await pendingAdd, isTrue);
 
-        // The flip also fires a kind 5 redaction of the plaintext event
-        // through the same unconfirmed path, so pick the list event out.
+        // The flip's kind-5 redaction uses confirmed publishing. The queued
+        // item write is the only unconfirmed list event captured here.
         final addEvent = verify(
           () => mockNostr.publishEvent(captureAny()),
         ).captured.cast<Event>().singleWhere((event) => event.kind == 30005);

@@ -206,8 +206,10 @@ void main() {
           Event? event;
           var publishCalls = 0;
           when(() => nostr.publishEventAwaitOk(any())).thenAnswer((i) {
+            final signed = i.positionalArguments.first as Event;
+            if (signed.kind == 5) return Future.value(acceptedOutcome(signed));
             publishCalls++;
-            event = i.positionalArguments.first as Event;
+            event = signed;
             return gate.future;
           });
           final saving = cubit.submitted();

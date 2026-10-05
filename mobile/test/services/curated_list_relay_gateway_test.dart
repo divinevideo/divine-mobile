@@ -300,6 +300,7 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).thenAnswer(
           (i) async => Event(
@@ -309,8 +310,8 @@ void main() {
             i.namedArguments[#content] as String,
           ),
         );
-        when(() => mockNostr.publishEvent(any())).thenAnswer(
-          (i) async => PublishSuccess(event: i.positionalArguments[0] as Event),
+        when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
+          (i) async => acceptedOutcome(i.positionalArguments.single as Event),
         );
       });
 
@@ -318,7 +319,9 @@ void main() {
         await gateway.redactPlaintextListEvent(_plaintextEventId);
 
         final redaction =
-            verify(() => mockNostr.publishEvent(captureAny())).captured.single
+            verify(() => mockNostr.publishEventAwaitOk(captureAny()))
+                    .captured
+                    .single
                 as Event;
         expect(redaction.kind, EventKind.eventDeletion);
         expect(redaction.tags, contains(equals(['e', _plaintextEventId])));
@@ -340,6 +343,7 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).thenAnswer((_) async => null);
 
@@ -347,7 +351,7 @@ void main() {
           gateway.redactPlaintextListEvent(_plaintextEventId),
           completes,
         );
-        verifyNever(() => mockNostr.publishEvent(any()));
+        verifyNever(() => mockNostr.publishEventAwaitOk(any()));
       });
     });
 
