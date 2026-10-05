@@ -31,6 +31,18 @@ class _RefusingPrefs extends Fake implements SharedPreferences {
   }
 }
 
+class _FirstWriteRejectsPrefs extends Fake implements SharedPreferences {
+  final _stored = <String, String>{};
+  var _writes = 0;
+  @override
+  String? getString(String key) => _stored[key];
+  @override
+  Future<bool> setString(String key, String value) async {
+    _stored[key] = value;
+    return _writes++ != 0;
+  }
+}
+
 const _owner =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const _otherOwner =
@@ -321,6 +333,184 @@ void main() {
           _expectUnreadableLog(logs, what: 'lists');
         });
       });
+    });
+
+    group('transaction outcomes', () {
+      test(
+        'overlapping removal uses the baseline from the completed save',
+        () async {
+          final store = _store(prefs);
+          final crew = _list('crew');
+          final friends = _list('friends');
+          final first = store.saveLists([crew, friends]);
+          final second = store.saveLists([crew]);
+          expect(await Future.wait([first, second]), [true, true]);
+          expect(_storedLists(prefs), [crew]);
+          final restarted = _store(prefs)..listsLoaded(_storedLists(prefs));
+          expect(await restarted.saveLists([]), isTrue);
+          expect(_storedLists(prefs), isEmpty);
+        },
+      );
+
+      test(
+        'overlapping unsubscribe does not leave a removed follow stored',
+        () async {
+          final store = _store(prefs);
+          final first = store.saveSubscriptions({'crew', 'friends'});
+          final second = store.saveSubscriptions({'crew'});
+          expect(await Future.wait([first, second]), [true, true]);
+          expect(_storedSubscriptions(prefs), {'crew'});
+        },
+      );
+
+      test(
+        'physical rejection reports no confirmed persisted snapshot',
+        () async {
+          final refusing = _RefusingPrefs(cachesRefusedWrites: true);
+          final store = _store(refusing);
+          final result = await store.saveListsWithResult([_list('crew')]);
+          expect(result.status, CuratedCacheWriteStatus.storageRejected);
+          expect(result.persisted, isNull);
+          expect(result.baseline, isEmpty);
+          expect(_storedLists(refusing), [_list('crew')]);
+          refusing.accepts = true;
+          expect(await store.saveLists([_list('crew')]), isTrue);
+        },
+      );
+
+      test(
+        'a later writer does not flush another rejected optimistic row',
+        () async {
+          final refusing = _RefusingPrefs(cachesRefusedWrites: true);
+          final coordinator = CuratedListCacheWriteCoordinator();
+          final first = _store(refusing, coordinator: coordinator);
+          final second = _store(refusing, coordinator: coordinator);
+          final crew = _list('crew');
+          final friends = _list('friends');
+          expect(await first.saveLists([crew, friends]), isFalse);
+          refusing.accepts = true;
+          expect(await second.saveLists([crew]), isTrue);
+          expect(_storedLists(refusing), [crew]);
+        },
+      );
+
+      test(
+        'a later writer does not persist a rejected optimistic follow',
+        () async {
+          final refusing = _RefusingPrefs(cachesRefusedWrites: true);
+          final coordinator = CuratedListCacheWriteCoordinator();
+          final first = _store(refusing, coordinator: coordinator);
+          final second = _store(refusing, coordinator: coordinator);
+          expect(await first.saveSubscriptions({'crew', 'friends'}), isFalse);
+          refusing.accepts = true;
+          expect(await second.saveSubscriptions({'crew'}), isTrue);
+          expect(_storedSubscriptions(refusing), {'crew'});
+        },
+      );
+
+      test(
+        'account-cleared storage never restores rejected old-account data',
+        () async {
+          final refusing = _RefusingPrefs(cachesRefusedWrites: true);
+          final coordinator = CuratedListCacheWriteCoordinator();
+          final first = _store(refusing, coordinator: coordinator);
+          expect(await first.saveLists([_list('old')]), isFalse);
+          refusing.accepts = true;
+          await refusing.setString(_listsKey, '[]');
+          final second = _store(refusing, coordinator: coordinator);
+          final other = _list('new').copyWith(pubkey: _otherOwner);
+          expect(await second.saveLists([other]), isTrue);
+          expect(_storedLists(refusing), [other]);
+        },
+      );
+
+      test('conflict returns the winner and does not authorize a queued stale edit', () async {
+        final original = _list('crew');
+        final latest = _list('crew', revision: 5, name: 'Newer');
+        await prefs.setString(_listsKey, jsonEncode([latest.toJson()]));
+        final store = _store(prefs)..listsLoaded([original]);
+        final stale = _list('crew', revision: 2, name: 'Stale');
+        final first = store.saveListsWithResult([stale]);
+        final second = store.saveListsWithResult([stale]);
+        final result = await first;
+        expect(result.status, CuratedCacheWriteStatus.conflict);
+        expect(result.conflictedIds, {original.authorScopedId});
+        expect(result.persisted, [latest]);
+        expect(result.reconcile([stale]), [latest]);
+        final queued = await second;
+        expect(queued.status, CuratedCacheWriteStatus.saved);
+        expect(queued.requested, [original]);
+        expect(queued.persisted, [latest]);
+        expect(await store.saveLists([stale]), isFalse);
+        expect(_storedLists(prefs), [latest]);
+        expect(await store.saveLists([latest]), isTrue);
+        expect(await store.saveLists([]), isTrue);
+        expect(_storedLists(prefs), isEmpty);
+      });
+
+      test(
+        'rollback preserves local edits newer than the rejected snapshot',
+        () async {
+          final refusing = _RefusingPrefs();
+          final original = _list('crew');
+          final attempted = _list('crew', revision: 2);
+          final newer = _list('crew', revision: 3);
+          final store = _store(refusing)..listsLoaded([original]);
+          final result = await store.saveListsWithResult([attempted]);
+          expect(result.reconcile([newer, _list('unrelated')]), [
+            newer,
+            _list('unrelated'),
+          ]);
+          expect(result.reconcile([attempted]), [original]);
+        },
+      );
+
+      test(
+        'superseded session reports failure without saving or rolling back',
+        () async {
+          final local = [_list('crew')];
+          final store = _store(prefs);
+          await expectLater(
+            store.saveListsOrThrow(local, isCurrent: () => false),
+            throwsA(
+              isA<CuratedCacheWriteException>().having(
+                (error) => error.status,
+                'status',
+                CuratedCacheWriteStatus.superseded,
+              ),
+            ),
+          );
+          expect(prefs.getKeys(), isEmpty);
+          expect(local, [_list('crew')]);
+        },
+      );
+
+      test(
+        'unpersisted follow is restored before reporting storage failure',
+        () async {
+          final refusing = _RefusingPrefs();
+          final ids = {'crew', 'unrelated'};
+          final store = _store(refusing)..subscriptionsLoaded({'crew'});
+          await expectLater(
+            store.saveSubscriptionsOrThrow(ids, isCurrent: () => true),
+            throwsA(isA<CuratedCacheWriteException>()),
+          );
+          expect(ids, {'crew'});
+        },
+      );
+    });
+
+    test('queued follow does not retry a rejected earlier follow', () async {
+      final backing = _FirstWriteRejectsPrefs();
+      final store = _store(backing);
+      final first = store.saveSubscriptions({'rejected'});
+      final next = store.saveSubscriptions({'rejected', 'accepted'});
+      expect(await first, isFalse);
+      expect(await next, isTrue);
+      expect(_storedSubscriptions(backing), {'accepted'});
+      // Explicit retry after settlement still expresses its full new intent.
+      expect(await store.saveSubscriptions({'rejected', 'accepted'}), isTrue);
+      expect(_storedSubscriptions(backing), {'rejected', 'accepted'});
     });
 
     group('saveSubscriptions', () {

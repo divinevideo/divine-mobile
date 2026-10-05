@@ -1,6 +1,7 @@
 // ABOUTME: Adapts SharedPreferences to the shared curated cache write coordinator.
 // ABOUTME: Also keeps the record of deleted lists and the default-list flag.
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:curated_list_repository/curated_list_repository.dart';
@@ -48,6 +49,11 @@ class PrefsCuratedListStore {
   final String _defaultListDeletedKey;
   List<CuratedList> _savedLists = const [];
   Set<String> _savedSubscriptions = const {};
+  Future<void> _tail = Future<void>.value();
+  List<CuratedList>? _lastRequestedLists;
+  Set<String>? _lastRequestedSubscriptions;
+  var _pendingLists = 0;
+  var _pendingSubscriptions = 0;
 
   /// Sets [lists], as just loaded from storage, as the baseline the next
   /// [saveLists] diffs against.
@@ -66,42 +72,134 @@ class PrefsCuratedListStore {
   /// every change was stored.
   ///
   /// Stored lists that cannot be decoded are logged and replaced by [lists].
-  Future<bool> saveLists(List<CuratedList> lists) async {
+  Future<bool> saveLists(List<CuratedList> lists) async =>
+      (await saveListsWithResult(lists)).succeeded;
+
+  /// Serializes the baseline read, coordinated write and baseline advancement.
+  Future<CuratedCacheWriteResult<List<CuratedList>>> saveListsWithResult(
+    List<CuratedList> lists, {
+    bool Function()? isCurrent,
+  }) {
     final snapshot = List<CuratedList>.unmodifiable(lists);
-    final baseline = _savedLists;
-    final saved = await _writes.saveLists(
-      baseline: baseline,
-      current: snapshot,
-      read: () => _storedLists(fallback: baseline),
-      write: (merged) => _prefs.setString(
-        _listsKey,
-        jsonEncode(merged.map((list) => list.toJson()).toList(growable: false)),
-      ),
-    );
-    if (saved) _savedLists = snapshot;
-    return saved;
+    final preceding = _pendingLists == 0 ? null : _lastRequestedLists;
+    _lastRequestedLists = snapshot;
+    _pendingLists++;
+    return _serialize(() async {
+      final baseline = _savedLists;
+      final requested = preceding == null
+          ? snapshot
+          : CuratedCacheWriteSnapshots.rebaseLists(
+              baseline,
+              preceding,
+              snapshot,
+            );
+      final result = await _writes.saveListsWithResult(
+        baseline: baseline,
+        current: requested,
+        cacheKey: _listsKey,
+        isCurrent: isCurrent,
+        read: () => _storedLists(fallback: baseline),
+        write: (merged) => _prefs.setString(
+          _listsKey,
+          jsonEncode(
+            merged.map((list) => list.toJson()).toList(growable: false),
+          ),
+        ),
+      );
+      _savedLists = result.nextBaseline;
+      return result;
+    }).whenComplete(() {
+      _pendingLists--;
+      if (_pendingLists == 0) _lastRequestedLists = null;
+    });
   }
 
-  /// Saves what changed in [ids] since the last load or successful save,
-  /// keeping subscriptions another writer stored in the meantime. Returns
-  /// whether the change was stored.
+  /// Saves and reconciles only this request's coordinates in [lists].
   ///
-  /// Stored subscriptions that cannot be decoded are logged and replaced by
-  /// [ids].
-  Future<bool> saveSubscriptions(Set<String> ids) async {
+  /// Callers with a failure-returning public API can catch the typed exception;
+  /// they must not publish or return success after an unpersisted local edit.
+  Future<void> saveListsOrThrow(
+    List<CuratedList> lists, {
+    required bool Function() isCurrent,
+  }) async {
+    final result = await saveListsWithResult(lists, isCurrent: isCurrent);
+    if (isCurrent()) {
+      final reconciled = result.reconcile(lists);
+      lists
+        ..clear()
+        ..addAll(reconciled);
+    }
+    if (!result.succeeded) throw CuratedCacheWriteException(result.status);
+  }
+
+  /// Saves subscription deltas and reports confirmed backing-store success.
+  Future<bool> saveSubscriptions(Set<String> ids) async =>
+      (await saveSubscriptionsWithResult(ids)).succeeded;
+
+  /// Serializes subscription baseline capture and advancement with its save.
+  Future<CuratedCacheWriteResult<Set<String>>> saveSubscriptionsWithResult(
+    Set<String> ids, {
+    bool Function()? isCurrent,
+  }) {
     final snapshot = Set<String>.unmodifiable(ids);
-    final baseline = _savedSubscriptions;
-    final saved = await _writes.saveSubscriptions(
-      baseline: baseline,
-      current: snapshot,
-      read: () => _storedSubscriptions(fallback: baseline),
-      write: (merged) => _prefs.setString(
-        _subscriptionsKey,
-        jsonEncode(merged.toList(growable: false)),
-      ),
-    );
-    if (saved) _savedSubscriptions = snapshot;
-    return saved;
+    final preceding = _pendingSubscriptions == 0
+        ? null
+        : _lastRequestedSubscriptions;
+    _lastRequestedSubscriptions = snapshot;
+    _pendingSubscriptions++;
+    return _serialize(() async {
+      final baseline = _savedSubscriptions;
+      final requested = preceding == null
+          ? snapshot
+          : CuratedCacheWriteSnapshots.rebaseSubscriptions(
+              baseline,
+              preceding,
+              snapshot,
+            );
+      final result = await _writes.saveSubscriptionsWithResult(
+        baseline: baseline,
+        current: requested,
+        cacheKey: _subscriptionsKey,
+        isCurrent: isCurrent,
+        read: () => _storedSubscriptions(fallback: baseline),
+        write: (merged) => _prefs.setString(
+          _subscriptionsKey,
+          jsonEncode(merged.toList(growable: false)),
+        ),
+      );
+      if (result.succeeded) _savedSubscriptions = requested;
+      return result;
+    }).whenComplete(() {
+      _pendingSubscriptions--;
+      if (_pendingSubscriptions == 0) _lastRequestedSubscriptions = null;
+    });
+  }
+
+  /// Restores failed subscription deltas without touching unrelated follows.
+  Future<void> saveSubscriptionsOrThrow(
+    Set<String> ids, {
+    required bool Function() isCurrent,
+  }) async {
+    final result = await saveSubscriptionsWithResult(ids, isCurrent: isCurrent);
+    if (isCurrent()) {
+      final reconciled = result.reconcile(ids);
+      ids
+        ..clear()
+        ..addAll(reconciled);
+    }
+    if (!result.succeeded) throw CuratedCacheWriteException(result.status);
+  }
+
+  Future<T> _serialize<T>(Future<T> Function() operation) async {
+    final previous = _tail;
+    final completed = Completer<void>();
+    _tail = completed.future;
+    try {
+      await previous;
+      return await operation();
+    } finally {
+      completed.complete();
+    }
   }
 
   /// Whether the signed-in account deleted its default list.
@@ -121,10 +219,10 @@ class PrefsCuratedListStore {
       _deletedCoordinates().contains(_coordinate(ownerPubkey, listId));
 
   /// Remembers that [ownerPubkey]'s list [listId] was deleted.
-  Future<void> recordListDeletion(String ownerPubkey, String listId) async {
+  Future<bool> recordListDeletion(String ownerPubkey, String listId) async {
     final coordinates = _deletedCoordinates()
       ..add(_coordinate(ownerPubkey, listId));
-    await _prefs.setStringList(
+    return _prefs.setStringList(
       deletedCoordinatesStorageKey,
       coordinates.toList(growable: false),
     );

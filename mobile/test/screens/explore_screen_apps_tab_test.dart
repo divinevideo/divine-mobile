@@ -74,10 +74,6 @@ void main() {
               exploreTabVideosProvider.overrideWith((ref) => null),
               classicVinesAvailableProvider.overrideWith((ref) async => false),
               forYouAvailableProvider.overrideWithValue(false),
-              allListsProvider.overrideWith(
-                (ref) async =>
-                    (userLists: <UserList>[], curatedLists: <CuratedList>[]),
-              ),
               curatedListsStateProvider.overrideWith(
                 _FakeCuratedListsState.new,
               ),
@@ -113,10 +109,6 @@ void main() {
               exploreTabVideosProvider.overrideWith((ref) => null),
               classicVinesAvailableProvider.overrideWith((ref) async => false),
               forYouAvailableProvider.overrideWithValue(false),
-              allListsProvider.overrideWith(
-                (ref) async =>
-                    (userLists: <UserList>[], curatedLists: <CuratedList>[]),
-              ),
               curatedListsStateProvider.overrideWith(
                 _FakeCuratedListsState.new,
               ),
