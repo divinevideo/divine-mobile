@@ -409,9 +409,77 @@ void main() {
           DateTime.fromMillisecondsSinceEpoch(importedAt * 1000, isUtc: true),
         );
         expect(find.text(importedDate), findsNothing);
-        expect(find.text('Classic vine'), findsOneWidget);
+        expect(find.text('From the archive'), findsOneWidget);
       },
     );
+
+    testWidgetsWithSurfaceSize('shows the caption once for an original Vine', (
+      tester,
+    ) async {
+      final video = _makeVideo(
+        title: 'Same caption',
+        content: 'Same caption',
+        rawTags: const {'platform': 'vine'},
+      );
+
+      await tester.pumpWidget(
+        buildSubject(child: MetadataExpandedSheet(video: video)),
+      );
+
+      expect(find.text('Same caption'), findsOneWidget);
+    });
+
+    testWidgetsWithSurfaceSize(
+      'shows only the description when an original Vine caption is followed '
+      'by stats',
+      (tester) async {
+        final video = _makeVideo(
+          title: 'Same caption',
+          content: 'Same caption\n\nOriginal stats: 3 loops - 2 likes',
+          rawTags: const {'platform': 'vine'},
+        );
+
+        await tester.pumpWidget(
+          buildSubject(child: MetadataExpandedSheet(video: video)),
+        );
+
+        // Exact match: only a separate headline renders the bare caption.
+        expect(find.text('Same caption'), findsNothing);
+        expect(
+          find.text('Same caption\n\nOriginal stats: 3 loops - 2 likes'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgetsWithSurfaceSize('trims blank lines around the description', (
+      tester,
+    ) async {
+      final video = _makeVideo(
+        title: 'Vine video',
+        content: '\n\nOriginal stats: 3 loops - 2 likes\n',
+        rawTags: const {'platform': 'vine'},
+      );
+
+      await tester.pumpWidget(
+        buildSubject(child: MetadataExpandedSheet(video: video)),
+      );
+
+      expect(find.text('Original stats: 3 loops - 2 likes'), findsOneWidget);
+    });
+
+    testWidgetsWithSurfaceSize('omits a whitespace-only description', (
+      tester,
+    ) async {
+      final video = _makeVideo(title: 'Who knew?', content: ' \n\n ');
+
+      await tester.pumpWidget(
+        buildSubject(child: MetadataExpandedSheet(video: video)),
+      );
+
+      // Only the title is a LinkifiedText; a blank description adds no row.
+      expect(find.byType(LinkifiedText), findsOneWidget);
+    });
 
     testWidgetsWithSurfaceSize(
       'renders farewell-day date when original Vine has a published_at tag',

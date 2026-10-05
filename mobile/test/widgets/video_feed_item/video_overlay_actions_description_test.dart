@@ -116,15 +116,7 @@ void main() {
   });
 
   group('renders', () {
-    testWidgets('hides inspired-by attribution from the player overlay', (
-      tester,
-    ) async {
-      final npub = normalizeToNpub('d' * 64)!;
-      testVideo = testVideo.copyWith(
-        content: 'Visible caption\n\n${inspiredByAttributionLine(npub)}',
-        inspiredByNpub: npub,
-      );
-
+    Future<void> pumpOverlay(WidgetTester tester) async {
       await tester.pumpWidget(
         testProviderScope(
           additionalOverrides: [
@@ -146,8 +138,58 @@ void main() {
           ),
         ),
       );
-
       await tester.pumpAndSettle();
+    }
+
+    testWidgets('shows title and description for a non-classic video', (
+      tester,
+    ) async {
+      await pumpOverlay(tester);
+
+      expect(find.text('Test Video'), findsOneWidget);
+      expect(find.text('Tap this description'), findsOneWidget);
+    });
+
+    testWidgets('shows the caption once for a classic Vine', (tester) async {
+      testVideo = testVideo.copyWith(
+        title: 'Same caption',
+        content: 'Same caption',
+        rawTags: const {'platform': 'vine'},
+      );
+
+      await pumpOverlay(tester);
+
+      expect(find.text('Same caption'), findsOneWidget);
+    });
+
+    testWidgets('shows only the description when a classic Vine caption is '
+        'followed by stats', (tester) async {
+      testVideo = testVideo.copyWith(
+        title: 'Same caption',
+        content: 'Same caption\n\nOriginal stats: 3 loops - 2 likes',
+        rawTags: const {'platform': 'vine'},
+      );
+
+      await pumpOverlay(tester);
+
+      // Exact match: only a separate title row renders the bare caption.
+      expect(find.text('Same caption'), findsNothing);
+      expect(
+        find.text('Same caption\n\nOriginal stats: 3 loops - 2 likes'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('hides inspired-by attribution from the player overlay', (
+      tester,
+    ) async {
+      final npub = normalizeToNpub('d' * 64)!;
+      testVideo = testVideo.copyWith(
+        content: 'Visible caption\n\n${inspiredByAttributionLine(npub)}',
+        inspiredByNpub: npub,
+      );
+
+      await pumpOverlay(tester);
 
       // Exact match: an unstripped line would lengthen the caption text.
       expect(find.text('Visible caption'), findsOneWidget);
@@ -251,9 +293,7 @@ void main() {
       expect(tester.widget<DivineIcon>(heartFinder).color, VineTheme.vineGreen);
     });
 
-    testWidgets('author line uses localized plural loop label', (
-      tester,
-    ) async {
+    testWidgets('author line uses localized plural loop label', (tester) async {
       // A large total resolves through the plural ICU form.
       await tester.pumpWidget(
         testProviderScope(

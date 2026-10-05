@@ -1157,6 +1157,14 @@ class VideoEvent {
   /// Display-sanitized video title. Returns `null` when no title is set.
   String? get displayTitle => title != null ? sanitizeForDisplay(title!) : null;
 
+  /// Title to show above the description in surfaces that render both.
+  ///
+  /// Returns `null` for recovered original Vines that have a description:
+  /// Vine had a single caption field, so the archive import copied it into
+  /// both [title] and [content], and showing both would repeat the caption.
+  String? get captionTitle =>
+      isOriginalVine && displayContent.trim().isNotEmpty ? null : displayTitle;
+
   /// Zalgo-safe embedded author name for display.
   ///
   /// Returns `null` when no embedded author name is set. Profile display-name
