@@ -897,12 +897,14 @@ void main() {
           expect(cubit.state.videos.map((v) => v.id), ['b', 'a']);
 
           // A repeat snapshot with the same set produces no further change.
-          final before = cubit.state.videos.length;
+          clearInteractions(h.ves);
+          final before = cubit.state;
           h.onChanged!();
           clock.elapse(const Duration(milliseconds: 20));
           clock.flushMicrotasks();
           clock.elapse(Duration.zero);
-          expect(cubit.state.videos.length, before);
+          verify(() => h.ves.authorVideos(_author)).called(1);
+          expect(cubit.state, same(before));
           unawaited(cubit.close());
           clock.flushMicrotasks();
         });
