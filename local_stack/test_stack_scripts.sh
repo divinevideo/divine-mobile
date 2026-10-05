@@ -152,6 +152,7 @@ case "${1:-}" in
           exit "$(stub_rc config)"
           ;;
         up)
+          printf '%s\n' "$@" >"${STUB_FIXTURES}/up_args.txt"
           up_count_file="${STUB_FIXTURES}/up_count"
           if [[ -f "$up_count_file" ]]; then
             up_count="$(cat "$up_count_file")"
@@ -772,6 +773,7 @@ run_up_sh
 rm -f "$ENV_FILE"
 
 assert_status 0 "$last_status" "up.sh should load .env overrides"
+assert_file_matches '^name-server$' "${FIXTURES}/up_args.txt" "normal startup must include the username registry"
 assert_stderr_lacks 'the default funnelcake images are stale' ".env image overrides should suppress the stale-image warning"
 
 # --- A failed seed reports the seed, not the healthy services ---------------
@@ -981,4 +983,5 @@ if ((failures > 0)); then
     exit 1
 fi
 
+bash "$SCRIPT_DIR/test_name_server_launcher.sh"
 echo "local stack script checks passed"

@@ -4,6 +4,35 @@
 # The `:latest` images keep `always` to follow new builds, so a plain `up` still
 # needs the network; `mise run local_up_cached` starts from the cache alone.
 services:
+  # Local username registry. Upstream source and npm dependencies are pinned
+  # in name-server/Dockerfile; runtime has only local D1/KV bindings.
+  name-server:
+    image: localhost/divine-name-server:ec9da72
+    pull_policy: build
+    build: ./name-server
+    ports:
+      - "127.0.0.1:43005:8787"
+    volumes:
+      - name-server-data:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8787/api/username/check/localhealth').then(async r => { if (!r.ok || !(await r.json()).ok) process.exit(1) }).catch(() => process.exit(1))"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 15s
+
+  # Signed HTTP smoke through the published port, including Android's Host.
+  name-server-smoke:
+    image: localhost/divine-name-server:ec9da72
+    pull_policy: never
+    profiles: ["tools"]
+    entrypoint: ["node", "/app/smoke.mjs"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      name-server:
+        condition: service_healthy
+
   # ---------------------------------------------------------------------------
   # Keycast (OAuth + NIP-46 bunker signer)
   # ---------------------------------------------------------------------------
@@ -337,5 +366,6 @@ services:
     restart: "no"
 
 volumes:
+  name-server-data:
   keycast-pg-data:
   funnelcake-ch-data:

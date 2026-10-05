@@ -18,10 +18,6 @@ import 'package:profile_repository/profile_repository.dart';
 import 'package:profile_repository/src/identity_event_selection.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-// TODO(e2e): Add divine-name-server to local_stack Docker dependencies
-// so username check/claim flows can be tested against it in E2E tests.
-// Tracked by #7692.
-
 // How long a Divine-identity determination is trusted before re-querying.
 //
 // Kept equal to ModerationPubkeyResolver._resolvedPubkeyTtl (24h) so the app
@@ -96,9 +92,8 @@ const defaultProfileIndexerRelays = [
 /// Origin of the divine-name-server that owns `@divine.video` usernames.
 ///
 /// Production wiring overrides this via
-/// `EnvironmentConfig.nameServerBaseUrl`. There is no staging deployment of
-/// divine-name-server today, so every environment resolves to this host; the
-/// parameter exists so tests can substitute a fake.
+/// `EnvironmentConfig.nameServerBaseUrl`: LOCAL uses the local-stack registry,
+/// while other environments use this host. Tests can inject their own endpoint.
 const defaultNameServerBaseUrl = 'https://names.divine.video';
 
 /// Keycast NIP-05 document consulted as a second username-availability

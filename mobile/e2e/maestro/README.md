@@ -3,6 +3,11 @@
 End-to-end UI tests written with **Maestro**, driving a real build against
 **STAGING**.
 
+The manual `tests/localUsername.yaml` flow runs against **LOCAL** instead.
+Use `bash local_stack/test_username_ui.sh <emulator-id>` from the repository
+root; the runner builds a LOCAL app and seeds synthetic username fixtures.
+See [local username setup](../../../local_stack/name-server/README.md).
+
 They exist for fast, high-signal regression detection on critical user flows.
 They are not a replacement for unit or widget tests.
 
