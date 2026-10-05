@@ -5024,5 +5024,6 @@
     "listPrivateCollaboratorsWarning": "Dacă faci această listă privată, colaboratorii ei vor fi eliminați. Doar tu vei putea adăuga videoclipuri.",
     "listVideoPendingSync": "Lista și videoclipul tău sunt salvate aici. Videoclipul așteaptă sincronizarea.",
     "listRetrySync": "Sincronizează acum",
-    "listPermissionsUnconfirmed": "Nu am putut confirma această schimbare. Încearcă din nou."
+    "listPermissionsUnconfirmed": "Nu am putut confirma această schimbare. Încearcă din nou.",
+    "listRecoveryPending": "Această listă are modificări care așteaptă sincronizarea."
 }

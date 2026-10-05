@@ -13340,4 +13340,8 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get listPermissionsUnconfirmed =>
       'Не можахме да потвърдим тази промяна. Опитай отново.';
+
+  @override
+  String get listRecoveryPending =>
+      'Този списък има промени, които чакат синхронизиране.';
 }

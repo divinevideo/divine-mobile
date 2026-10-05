@@ -5024,5 +5024,6 @@
     "listPrivateCollaboratorsWarning": "Als je deze lijst privé maakt, worden ook de bijdragers verwijderd. Alleen jij kunt dan video’s toevoegen.",
     "listVideoPendingSync": "Je lijst en video zijn hier opgeslagen. De video wacht op synchronisatie.",
     "listRetrySync": "Nu synchroniseren",
-    "listPermissionsUnconfirmed": "Deze wijziging kon niet worden bevestigd. Probeer het opnieuw."
+    "listPermissionsUnconfirmed": "Deze wijziging kon niet worden bevestigd. Probeer het opnieuw.",
+    "listRecoveryPending": "Deze lijst heeft wijzigingen die nog gesynchroniseerd moeten worden."
 }

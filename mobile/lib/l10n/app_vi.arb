@@ -6784,5 +6784,6 @@
   "listVideoNotAdded": "Danh sách của bạn đã được tạo, nhưng video này chưa được thêm.",
   "listVideoPendingSync": "Danh sách và video của bạn đã được lưu tại đây. Video đang chờ đồng bộ.",
   "listRetrySync": "Đồng bộ ngay",
-  "listPermissionsUnconfirmed": "Không thể xác nhận thay đổi này. Hãy thử lại."
+  "listPermissionsUnconfirmed": "Không thể xác nhận thay đổi này. Hãy thử lại.",
+  "listRecoveryPending": "Danh sách này có các thay đổi đang chờ đồng bộ."
 }

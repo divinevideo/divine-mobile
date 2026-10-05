@@ -13481,4 +13481,8 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get listPermissionsUnconfirmed =>
       'Nu am putut confirma această schimbare. Încearcă din nou.';
+
+  @override
+  String get listRecoveryPending =>
+      'Această listă are modificări care așteaptă sincronizarea.';
 }

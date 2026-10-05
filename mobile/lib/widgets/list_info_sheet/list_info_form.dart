@@ -7,9 +7,12 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/curated_list_info/curated_list_info_cubit.dart';
 import 'package:openvine/extensions/modal_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_collaborators_row.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_failure_message.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_fields.dart';
+import 'package:openvine/widgets/list_info_sheet/list_info_recovery_pending_message.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// The form inside the list info sheet.
 ///
@@ -62,6 +65,7 @@ class _ListInfoFormState extends State<ListInfoForm> {
             // Outside the scroll view: Save sits in the pinned header, so the
             // failure it reports must not scroll out of sight.
             const _SaveFailedMessage(),
+            const _RecoveryMessage(),
             Flexible(
               child: SingleChildScrollView(
                 child: Column(
@@ -122,6 +126,37 @@ class _SaveFailedMessage extends StatelessWidget {
   }
 }
 
+class _RecoveryMessage extends StatelessWidget {
+  const _RecoveryMessage();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<CuratedListInfoCubit>().state;
+    if (!state.needsSync) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const ListInfoRecoveryPendingMessage(),
+          DivineButton(
+            label: context.l10n.listRetrySync,
+            type: DivineButtonType.link,
+            onPressed: state.isSaving
+                ? null
+                : () => runDetached(
+                    context.read<CuratedListInfoCubit>().retrySync(),
+                    'recover list sync',
+                    logName: 'ListInfoForm',
+                    category: LogCategory.ui,
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _NameField extends StatelessWidget {
   const _NameField({required this.controller});
 
@@ -130,7 +165,7 @@ class _NameField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isSaving = context.select(
-      (CuratedListInfoCubit cubit) => cubit.state.isSaving,
+      (CuratedListInfoCubit cubit) => !cubit.state.canEdit,
     );
     return ListNameField(
       controller: controller,
@@ -148,7 +183,7 @@ class _DescriptionField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isSaving = context.select(
-      (CuratedListInfoCubit cubit) => cubit.state.isSaving,
+      (CuratedListInfoCubit cubit) => !cubit.state.canEdit,
     );
     return ListDescriptionField(
       controller: controller,
@@ -168,7 +203,7 @@ class _VisibilityTile extends StatelessWidget {
       (CuratedListInfoCubit cubit) => cubit.state.isPublic,
     );
     final isSaving = context.select(
-      (CuratedListInfoCubit cubit) => cubit.state.isSaving,
+      (CuratedListInfoCubit cubit) => !cubit.state.canEdit,
     );
     // The sheet paints its surface with a ColoredBox, which would hide the
     // tile's ink; its own Material puts the ink back on top.

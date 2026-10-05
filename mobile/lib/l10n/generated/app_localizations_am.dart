@@ -12874,4 +12874,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get listPermissionsUnconfirmed => 'ይህን ለውጥ ማረጋገጥ አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get listRecoveryPending => 'ይህ ዝርዝር መመሳሰል የሚጠብቁ ለውጦች አሉት።';
 }

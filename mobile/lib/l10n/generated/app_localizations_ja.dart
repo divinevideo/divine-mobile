@@ -12558,4 +12558,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get listPermissionsUnconfirmed => 'この変更を確認できませんでした。もう一度お試しください。';
+
+  @override
+  String get listRecoveryPending => 'このリストには同期を待っている変更があります。';
 }

@@ -13205,4 +13205,8 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get listPermissionsUnconfirmed =>
       'اس تبدیلی کی تصدیق نہیں ہو سکی۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get listRecoveryPending =>
+      'اس فہرست میں ایسی تبدیلیاں ہیں جو ہم آہنگی کی منتظر ہیں۔';
 }

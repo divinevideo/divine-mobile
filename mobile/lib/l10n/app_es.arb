@@ -5024,5 +5024,6 @@
     "listPrivateCollaboratorsWarning": "Al hacer privada esta lista, también se eliminan sus colaboradores. Solo vos vas a poder añadir videos.",
     "listVideoPendingSync": "Tu lista y tu video están guardados acá. El video está esperando a sincronizarse.",
     "listRetrySync": "Sincronizar ahora",
-    "listPermissionsUnconfirmed": "No se pudo confirmar este cambio. Probá de nuevo."
+    "listPermissionsUnconfirmed": "No se pudo confirmar este cambio. Probá de nuevo.",
+    "listRecoveryPending": "Esta lista tiene cambios pendientes de sincronización."
 }

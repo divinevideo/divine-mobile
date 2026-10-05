@@ -13414,4 +13414,8 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get listPermissionsUnconfirmed =>
       'Impossible de confirmer ce changement. Réessaie.';
+
+  @override
+  String get listRecoveryPending =>
+      'Cette liste a des modifications en attente de synchronisation.';
 }

@@ -4570,5 +4570,6 @@
     "listPrivateCollaboratorsWarning": "이 목록을 비공개로 만들면 공동 작업자도 삭제돼요. 나만 동영상을 추가할 수 있게 돼요.",
     "listVideoPendingSync": "목록과 동영상이 여기에 저장되었어요. 동영상이 동기화를 기다리고 있어요.",
     "listRetrySync": "지금 동기화",
-    "listPermissionsUnconfirmed": "이 변경 사항을 확인하지 못했어요. 다시 시도해 주세요."
+    "listPermissionsUnconfirmed": "이 변경 사항을 확인하지 못했어요. 다시 시도해 주세요.",
+    "listRecoveryPending": "이 목록에 동기화를 기다리는 변경 사항이 있어요."
 }

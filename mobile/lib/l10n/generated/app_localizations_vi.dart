@@ -13154,4 +13154,8 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get listPermissionsUnconfirmed =>
       'Không thể xác nhận thay đổi này. Hãy thử lại.';
+
+  @override
+  String get listRecoveryPending =>
+      'Danh sách này có các thay đổi đang chờ đồng bộ.';
 }

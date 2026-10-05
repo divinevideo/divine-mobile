@@ -5024,5 +5024,6 @@
     "listPrivateCollaboratorsWarning": "جعل هذه القائمة خاصة يزيل المتعاونين معها أيضًا. ستكون أنت الوحيد القادر على إضافة الفيديوهات.",
     "listVideoPendingSync": "تم حفظ قائمتك وفيديوك هنا. الفيديو بانتظار المزامنة.",
     "listRetrySync": "زامن الآن",
-    "listPermissionsUnconfirmed": "تعذّر تأكيد هذا التغيير. حاول مرة أخرى."
+    "listPermissionsUnconfirmed": "تعذّر تأكيد هذا التغيير. حاول مرة أخرى.",
+    "listRecoveryPending": "تحتوي هذه القائمة على تغييرات بانتظار المزامنة."
 }
