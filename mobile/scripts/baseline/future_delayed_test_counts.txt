@@ -54,7 +54,6 @@ test/features/people_lists/bloc/add_people_to_list_cubit_test.dart	1
 test/features/people_lists/bloc/people_lists_bloc_test.dart	1
 test/helpers/autofill_context_mock_test.dart	1
 test/helpers/test_helpers.dart	1
-test/helpers/test_subscription_manager.dart	1
 test/helpers/video_feed_builder_streaming_test.dart	2
 test/manual/relay_subscription_acceptance_test.dart	1
 test/manual/upload_publish_e2e_acceptance_test.dart	3
