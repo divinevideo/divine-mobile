@@ -457,7 +457,13 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
     if (current is! DivineAuthFormState) return;
     if (current.isSubmitting || current.isSkipping) return;
 
-    emit(current.copyWith(isSkipping: true, clearGeneralError: true));
+    emit(
+      current.copyWith(
+        isSkipping: true,
+        clearGeneralError: true,
+        clearSignInFailureReason: true,
+      ),
+    );
 
     try {
       await _authService.createAnonymousAccount();
@@ -473,6 +479,17 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
       // this cubit. Nothing is lost: the redirect runs off auth state, and
       // no listener acts on DivineAuthSuccess here.
       emitIfOpen(const DivineAuthSuccess());
+    } on UserDataCleanupException catch (error, stackTrace) {
+      addError(error, stackTrace);
+      final currentState = state;
+      if (currentState is DivineAuthFormState) {
+        emitIfOpen(
+          currentState.copyWith(
+            isSkipping: false,
+            signInFailureReason: SignInFailureReason.accountCleanupFailed,
+          ),
+        );
+      }
     } catch (e, stackTrace) {
       Log.error(
         'Anonymous account creation failed: $e',

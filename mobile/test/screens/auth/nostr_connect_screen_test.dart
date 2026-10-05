@@ -13,12 +13,15 @@ import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/auth/nostr_connect_screen.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../helpers/test_provider_overrides.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
+
+class _MockNostrConnectSession extends Mock implements NostrConnectSession {}
 
 /// The [GestureDetector] wrapping the action-bar button labelled [label].
 /// `onTap` is `null` while the session is loading, so this reads the fix that
@@ -181,6 +184,98 @@ void main() {
 
       await tester.pumpWidget(const SizedBox());
     });
+
+    testWidgets('QR cleanup failure shows account recovery copy and '
+        'a retry clears it before a different failure', (tester) async {
+      const connectUrl =
+          'nostrconnect://abc123?relay=wss://relay.example.com&secret=xyz';
+      when(() => mockAuthService.nostrConnectUrl).thenReturn(connectUrl);
+      when(() => mockAuthService.nostrConnectState).thenReturn(
+        NostrConnectState.listening,
+      );
+      when(() => mockAuthService.waitForNostrConnectResponse()).thenAnswer(
+        (_) async => const AuthResult(
+          success: false,
+          failureReason: AuthFailureReason.accountCleanupFailed,
+        ),
+      );
+
+      await tester.pumpWidget(createTestWidget());
+      await tester.pump();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l10n.authAccountCleanupFailed), findsOneWidget);
+      expect(find.text(l10n.authNostrConnectSetupFailed), findsNothing);
+      expect(find.text(l10n.authUnknownError), findsNothing);
+      expect(find.byType(NostrConnectScreen), findsOneWidget);
+
+      final session = _MockNostrConnectSession();
+      when(() => session.connectUrl).thenReturn(connectUrl);
+      when(() => session.stateStream).thenAnswer(
+        (_) => const Stream<NostrConnectState>.empty(),
+      );
+      when(() => mockAuthService.initiateNostrConnect()).thenAnswer(
+        (_) async => session,
+      );
+      when(() => mockAuthService.waitForNostrConnectResponse()).thenAnswer(
+        (_) async => AuthResult.nostrConnectFailure(
+          NostrConnectFailureReason.postConnectFailed,
+        ),
+      );
+      await tester.tap(find.text(l10n.authTryAgain));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text(l10n.authAccountCleanupFailed), findsNothing);
+      expect(find.text(l10n.authNostrConnectSetupFailed), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    for (final throwsCleanup in [false, true]) {
+      testWidgets('paste-bunker cleanup failure shows account recovery copy '
+          '(throws: $throwsCleanup)', (tester) async {
+        const connectUrl =
+            'nostrconnect://abc123?relay=wss://relay.example.com&secret=xyz';
+        const bunkerUrl =
+            'bunker://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+            '?relay=wss://relay.example.com';
+        when(() => mockAuthService.nostrConnectUrl).thenReturn(connectUrl);
+        when(() => mockAuthService.nostrConnectState).thenReturn(
+          NostrConnectState.listening,
+        );
+        when(() => mockAuthService.waitForNostrConnectResponse()).thenAnswer(
+          (_) => Completer<AuthResult>().future,
+        );
+        when(() => mockAuthService.cancelNostrConnect()).thenReturn(null);
+        when(() => mockAuthService.connectWithBunker(bunkerUrl)).thenAnswer(
+          (_) async {
+            if (throwsCleanup) {
+              throw const UserDataCleanupException('Private storage detail');
+            }
+            return const AuthResult(
+              success: false,
+              failureReason: AuthFailureReason.accountCleanupFailed,
+            );
+          },
+        );
+
+        await tester.pumpWidget(createTestWidget());
+        await tester.pump();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.ensureVisible(find.text(l10n.authAddBunker));
+        await tester.tap(find.text(l10n.authAddBunker));
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.enterText(find.byType(TextField), bunkerUrl);
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(find.text(l10n.authAccountCleanupFailed), findsOneWidget);
+        expect(find.text(l10n.authFailedToConnect), findsNothing);
+        expect(find.text('Private storage detail'), findsNothing);
+        expect(find.byType(NostrConnectScreen), findsOneWidget);
+        await tester.pumpWidget(const SizedBox());
+      });
+    }
 
     testWidgets(
       'does not set state after disposal while cancelling a signer subscription',

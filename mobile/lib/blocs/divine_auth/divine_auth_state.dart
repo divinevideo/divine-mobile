@@ -3,7 +3,7 @@
 
 part of 'divine_auth_cubit.dart';
 
-/// Why an email/password sign-in failed, mapped to localized copy by the UI.
+/// Why authentication failed, mapped to localized copy by the UI.
 ///
 /// Kept out of [KeycastLoginFailure] so the presentation layer never imports
 /// the client package's taxonomy. Never carries a message string — the rule in
@@ -25,7 +25,7 @@ enum SignInFailureReason {
   /// A network/transport problem prevented a verdict.
   network,
 
-  /// Outgoing account data could not be cleared before signing in.
+  /// Outgoing account data could not be cleared before activating an account.
   accountCleanupFailed,
 
   /// Any other unexpected failure.
@@ -92,10 +92,11 @@ class DivineAuthFormState extends DivineAuthState {
   /// General error message (e.g., network error, auth failure)
   final String? generalError;
 
-  /// Typed reason the last email/password sign-in failed, or null.
+  /// Typed reason sign-in or anonymous account activation failed, or null.
   ///
-  /// Sign-in failures use this instead of [generalError] so the UI can map to
-  /// localized copy; other auth flows still use [generalError] pending #4336.
+  /// Cleanup failures and sign-in failures use this instead of [generalError]
+  /// so the UI can map to localized copy. Other errors still use [generalError]
+  /// pending #4336.
   final SignInFailureReason? signInFailureReason;
 
   /// Whether the UI should route the user to sign in instead.
