@@ -9359,6 +9359,24 @@ class AppLocalizationsFr extends AppLocalizations {
       'Impossible de détacher ce clip. Ta timeline est inchangée.';
 
   @override
+  String get videoEditorFreezeFrameLabel => 'Figer';
+
+  @override
+  String get videoEditorFreezeFrameSemanticLabel =>
+      'Figer l\'image sous la tête de lecture';
+
+  @override
+  String get videoEditorFreezeFrameProgressLabel => 'Figeage de l\'image…';
+
+  @override
+  String get videoEditorFreezeFrameFailed =>
+      'Impossible de figer cette image. Ta timeline est inchangée.';
+
+  @override
+  String get videoEditorFreezeFramePlayheadOutsideClip =>
+      'Place la tête de lecture sur le clip sélectionné pour figer une image.';
+
+  @override
   String get videoEditorDetachImagePickFailed =>
       'Impossible de charger cette photo.';
 

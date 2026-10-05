@@ -9323,6 +9323,25 @@ class AppLocalizationsIt extends AppLocalizations {
       'Non è stato possibile staccare quella clip. La timeline resta invariata.';
 
   @override
+  String get videoEditorFreezeFrameLabel => 'Congela';
+
+  @override
+  String get videoEditorFreezeFrameSemanticLabel =>
+      'Congela il fotogramma sotto la testina di riproduzione';
+
+  @override
+  String get videoEditorFreezeFrameProgressLabel =>
+      'Sto congelando il fotogramma…';
+
+  @override
+  String get videoEditorFreezeFrameFailed =>
+      'Non è stato possibile congelare quel fotogramma. La timeline resta invariata.';
+
+  @override
+  String get videoEditorFreezeFramePlayheadOutsideClip =>
+      'Sposta la testina di riproduzione sulla clip selezionata per congelare un fotogramma.';
+
+  @override
   String get videoEditorDetachImagePickFailed =>
       'Impossibile caricare quella foto.';
 

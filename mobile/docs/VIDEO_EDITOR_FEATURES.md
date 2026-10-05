@@ -39,6 +39,7 @@ Drafts are stored in the local database. The editor saves the current session au
 Clip actions ([`video_editor_timeline_clip_controls.dart`](../lib/widgets/video_editor/timeline_editor/controls/video_editor_timeline_clip_controls.dart)):
 
 - **Split** at the playhead. Minimum segment 30 ms.
+- **Freeze** the frame under the playhead: the clip is cut there and a still of that frame holds for 0.5 s before the clip continues. On a clip's first or last frame the still goes in front of or after the clip instead. Its trim handles set how long it holds, up to 6.3 s. The clip's own sound pauses during the freeze; music and voice-over keep playing. The freeze counts toward the 6.3 s maximum.
 - **Trim** with handles on each clip. Minimum length 60 ms.
 - **Reorder** by long-press and drag.
 - **Duplicate** (the copy lands right after the original) and **delete**. At least one clip always remains.
@@ -135,7 +136,7 @@ Open feature requests for things the editor does not do yet:
 
 - Audio: fade in and out ([#9557](https://github.com/divinevideo/divine-mobile/issues/9557)), voice effects and noise reduction for voice-overs ([#9565](https://github.com/divinevideo/divine-mobile/issues/9565)), volume above 100 % ([#4906](https://github.com/divinevideo/divine-mobile/issues/4906)), loudness equalization ([#3789](https://github.com/divinevideo/divine-mobile/issues/3789)), a larger sound library ([#8338](https://github.com/divinevideo/divine-mobile/issues/8338)).
 - Text and captions: outline and shadow ([#9558](https://github.com/divinevideo/divine-mobile/issues/9558)), word-by-word highlighted captions ([#9564](https://github.com/divinevideo/divine-mobile/issues/9564)), a link in the text overlay ([#3111](https://github.com/divinevideo/divine-mobile/issues/3111)).
-- Clips: speed presets ([#9559](https://github.com/divinevideo/divine-mobile/issues/9559)), freeze frame ([#9561](https://github.com/divinevideo/divine-mobile/issues/9561)), zoom over time ([#4951](https://github.com/divinevideo/divine-mobile/issues/4951)).
+- Clips: speed presets ([#9559](https://github.com/divinevideo/divine-mobile/issues/9559)), zoom over time ([#4951](https://github.com/divinevideo/divine-mobile/issues/4951)).
 - Detach: opacity ([#9563](https://github.com/divinevideo/divine-mobile/issues/9563)).
 - Privacy: blur or pixelate part of the picture ([#9562](https://github.com/divinevideo/divine-mobile/issues/9562)).
 - Stickers: NIP-30 stickers ([#2265](https://github.com/divinevideo/divine-mobile/issues/2265)).

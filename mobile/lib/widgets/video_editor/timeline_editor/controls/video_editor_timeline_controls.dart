@@ -13,6 +13,8 @@ class VideoEditorTimelineControls extends StatelessWidget {
     this.hasVoiceEffect = false,
     this.onDuplicated,
     this.onSplit,
+    this.onFreezeFrame,
+    this.isFreezingFrame = false,
     this.onDetach,
     this.isDetaching = false,
     this.onReattach,
@@ -64,6 +66,13 @@ class VideoEditorTimelineControls extends StatelessWidget {
   final bool hasVoiceEffect;
   final VoidCallback? onDuplicated;
   final VoidCallback? onSplit;
+
+  /// Holds the frame under the playhead still for a beat.
+  final VoidCallback? onFreezeFrame;
+
+  /// Whether that still is currently rendering. Shows the action as a
+  /// spinner, matching the other render actions.
+  final bool isFreezingFrame;
 
   /// Lifts the active clip off the timeline and onto the canvas as a layer.
   final VoidCallback? onDetach;
@@ -285,6 +294,14 @@ class VideoEditorTimelineControls extends StatelessWidget {
                 context.l10n.videoEditorExtractAudioFromClipSemanticLabel,
             onPressed: isExtractingAudio ? null : onExtractAudio,
             isLoading: isExtractingAudio,
+          ),
+        if (onFreezeFrame != null)
+          TimelineActionButton(
+            icon: .pauseCircle,
+            label: context.l10n.videoEditorFreezeFrameLabel,
+            semanticLabel: context.l10n.videoEditorFreezeFrameSemanticLabel,
+            onPressed: isFreezingFrame ? null : onFreezeFrame,
+            isLoading: isFreezingFrame,
           ),
         if (onSaveToLibrary != null)
           TimelineActionButton(

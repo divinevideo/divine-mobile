@@ -9404,6 +9404,24 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nie udało się odłączyć tego klipu. Twoja oś czasu pozostaje bez zmian.';
 
   @override
+  String get videoEditorFreezeFrameLabel => 'Zamroź';
+
+  @override
+  String get videoEditorFreezeFrameSemanticLabel =>
+      'Zamroź klatkę pod głowicą odtwarzania';
+
+  @override
+  String get videoEditorFreezeFrameProgressLabel => 'Zamrażanie klatki…';
+
+  @override
+  String get videoEditorFreezeFrameFailed =>
+      'Nie udało się zamrozić tej klatki. Twoja oś czasu pozostaje bez zmian.';
+
+  @override
+  String get videoEditorFreezeFramePlayheadOutsideClip =>
+      'Aby zamrozić klatkę, ustaw głowicę odtwarzania w wybranym klipie.';
+
+  @override
   String get videoEditorDetachImagePickFailed =>
       'Nie udało się wczytać tego zdjęcia.';
 

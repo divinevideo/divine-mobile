@@ -135,6 +135,19 @@ List<Duration> rebaseTimelineMarkersForClipState({
   return rebased.toList()..sort();
 }
 
+/// Moves every marker at or after [at] later by [by]: what inserting a span
+/// of [by] into the timeline at [at] does to them.
+///
+/// For an insertion that also cuts a clip into new ids, which
+/// [rebaseTimelineMarkersForClipState] cannot follow. A marker sitting
+/// exactly on [at] belongs to the frame that now plays after the inserted
+/// span, so it moves with it.
+List<Duration> shiftTimelineMarkersForInsertion({
+  required List<Duration> markers,
+  required Duration at,
+  required Duration by,
+}) => markers.map((marker) => marker < at ? marker : marker + by).toList();
+
 /// Re-aligns anchored (extracted, not-yet-moved) audio tracks to their
 /// source clips after a clip edit (trim, reorder, or ripple from an earlier
 /// clip's trim).

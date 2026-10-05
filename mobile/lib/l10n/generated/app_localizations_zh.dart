@@ -8699,6 +8699,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorDetachFailed => '没能分离那个片段。你的时间线没有改动。';
 
   @override
+  String get videoEditorFreezeFrameLabel => '定格';
+
+  @override
+  String get videoEditorFreezeFrameSemanticLabel => '定格播放头所在的画面';
+
+  @override
+  String get videoEditorFreezeFrameProgressLabel => '正在定格画面…';
+
+  @override
+  String get videoEditorFreezeFrameFailed => '没能定格那个画面。你的时间线没有改动。';
+
+  @override
+  String get videoEditorFreezeFramePlayheadOutsideClip => '把播放头移到选中的片段内才能定格画面。';
+
+  @override
   String get videoEditorDetachImagePickFailed => '这张照片加载不了。';
 
   @override

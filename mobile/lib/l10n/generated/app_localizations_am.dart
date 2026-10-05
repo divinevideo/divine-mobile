@@ -9014,6 +9014,23 @@ class AppLocalizationsAm extends AppLocalizations {
       'ያንን ቅንጥብ መንጠል አልተቻለም። የጊዜ መስመርዎ ሳይለወጥ ይቆያል።';
 
   @override
+  String get videoEditorFreezeFrameLabel => 'አቁም';
+
+  @override
+  String get videoEditorFreezeFrameSemanticLabel => 'በመጫወቻ ቦታው ላይ ያለውን ፍሬም አቁም';
+
+  @override
+  String get videoEditorFreezeFrameProgressLabel => 'ፍሬሙ እየቆመ ነው…';
+
+  @override
+  String get videoEditorFreezeFrameFailed =>
+      'ያንን ፍሬም ማቆም አልተቻለም። የጊዜ መስመርዎ ሳይለወጥ ይቆያል።';
+
+  @override
+  String get videoEditorFreezeFramePlayheadOutsideClip =>
+      'ፍሬም ለማቆም የመጫወቻ ቦታውን ወደ ተመረጠው ቅንጥብ ያንቀሳቅሱ።';
+
+  @override
   String get videoEditorDetachImagePickFailed => 'ያንን ፎቶ መጫን አልተቻለም።';
 
   @override

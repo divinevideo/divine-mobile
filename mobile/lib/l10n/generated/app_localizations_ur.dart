@@ -9219,6 +9219,24 @@ class AppLocalizationsUr extends AppLocalizations {
       'وہ کلپ الگ نہیں ہو سکا۔ آپ کی ٹائم لائن ویسی ہی ہے۔';
 
   @override
+  String get videoEditorFreezeFrameLabel => 'فریز کریں';
+
+  @override
+  String get videoEditorFreezeFrameSemanticLabel =>
+      'پلے ہیڈ کے نیچے والا فریم فریز کریں';
+
+  @override
+  String get videoEditorFreezeFrameProgressLabel => 'فریم فریز کیا جا رہا ہے…';
+
+  @override
+  String get videoEditorFreezeFrameFailed =>
+      'وہ فریم فریز نہیں ہو سکا۔ آپ کی ٹائم لائن ویسی ہی ہے۔';
+
+  @override
+  String get videoEditorFreezeFramePlayheadOutsideClip =>
+      'فریم فریز کرنے کے لیے پلے ہیڈ کو منتخب کلپ پر لے جائیں۔';
+
+  @override
   String get videoEditorDetachImagePickFailed => 'وہ تصویر لوڈ نہیں ہو سکی۔';
 
   @override

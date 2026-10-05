@@ -20,6 +20,7 @@ import 'package:openvine/services/audio_extraction_service.dart';
 import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
 import 'package:openvine/services/video_editor/chroma_key_bake_service.dart';
 import 'package:openvine/services/video_editor/clip_placeholder_render_service.dart';
+import 'package:openvine/services/video_editor/freeze_frame_render_service.dart';
 import 'package:openvine/services/video_editor/stop_motion_frame_sample_service.dart';
 import 'package:openvine/services/video_editor/stop_motion_frame_transform_service.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
@@ -126,6 +127,15 @@ typedef RenderClipPlaceholderFn = Future<DivineVideoClip?> Function({
   String? taskId,
 });
 
+/// Function signature matching [FreezeFrameRenderService.render], the
+/// injectable seam that turns the frame under the playhead into a still clip,
+/// so tests can freeze a frame without a decoder or renderer.
+typedef RenderFreezeFrameFn = Future<DivineVideoClip?> Function({
+  required DivineVideoClip source,
+  required Duration framePosition,
+  String? taskId,
+});
+
 /// Function signature matching [StopMotionRenderService.materialize], the
 /// injectable seam that renders a stop-motion set's stills into an mp4 so the
 /// set can join a video composition, so tests can hand back a rendered clip
@@ -209,6 +219,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     CleanupFlattenedClipFn? cleanupFlattenedClip,
     DeferFileCleanupFn? deferFileCleanup,
     RenderClipPlaceholderFn? renderClipPlaceholder,
+    RenderFreezeFrameFn? renderFreezeFrame,
     MaterializeStopMotionClipFn? materializeStopMotionClip,
     SampleStopMotionFramesFn? sampleStopMotionFrames,
     CleanupSampledFramesFn? cleanupSampledFrames,
@@ -237,6 +248,8 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
        _deferFileCleanup = deferFileCleanup ?? _noopDeferFileCleanup,
        _renderClipPlaceholder =
            renderClipPlaceholder ?? ClipPlaceholderRenderService.render,
+       _renderFreezeFrame =
+           renderFreezeFrame ?? FreezeFrameRenderService.render,
        _materializeStopMotionClip =
            materializeStopMotionClip ?? StopMotionRenderService.materialize,
        _sampleStopMotionFrames =
@@ -357,6 +370,13 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       transformer: sequential(),
     );
 
+    // Hold the frame under the playhead still. sequential for the same reason
+    // as the detach above: a second freeze is queued, not silently dropped.
+    on<ClipEditorFreezeFrameRequested>(
+      _onFreezeFrameRequested,
+      transformer: sequential(),
+    );
+
     // Save a single clip to the persistent clip library
     on<ClipEditorSaveClipToLibraryRequested>(
       _onSaveClipToLibraryRequested,
@@ -402,6 +422,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
   final CapturedChromaKeysBakedFn? _onCapturedChromaKeysBaked;
   final ExtractPosterFn _extractPoster;
   final RenderClipPlaceholderFn _renderClipPlaceholder;
+  final RenderFreezeFrameFn _renderFreezeFrame;
   final MaterializeStopMotionClipFn _materializeStopMotionClip;
   final SampleStopMotionFramesFn _sampleStopMotionFrames;
   final CleanupSampledFramesFn _cleanupSampledFrames;
@@ -2118,6 +2139,174 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
           previousClips: currentClips,
           detachedClip: clip,
           placeholder: placeholder,
+        ),
+      ),
+    );
+  }
+
+  /// Holds the frame under the playhead still for a beat, then lets the clip
+  /// continue.
+  ///
+  /// The still goes where the frame was: between the two halves of the clip
+  /// cut at the playhead, or in front of / after the whole clip when the
+  /// playhead sits on its first or last frame. It is selected afterwards, so
+  /// its trim handles — which set how long the freeze holds — are right there.
+  /// Committing the longer timeline to editor history is the widget layer's
+  /// half, driven by [ClipEditorState.lastFreezeFrameResult].
+  Future<void> _onFreezeFrameRequested(
+    ClipEditorFreezeFrameRequested event,
+    Emitter<ClipEditorState> emit,
+  ) async {
+    final clip = state.clips.firstWhereOrNull((c) => c.id == event.clipId);
+    if (clip == null) return;
+    // The action bar offers this only on footage; a still has no other frame
+    // to hold.
+    if (clip.isStopMotion || clip.isPlaceholder || clip.isFreezeFrame) {
+      Log.warning(
+        '⚠️ Refusing to freeze a frame of clip ${clip.id}: not footage',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+      );
+      return;
+    }
+
+    final plan = FreezeFrameRenderService.plan(clip, event.position);
+    final renderId = '${clip.id}_freeze';
+    emit(
+      state.copyWith(
+        isFreezingFrame: true,
+        freezingFrameClipId: clip.id,
+        freezingFrameRenderId: renderId,
+      ),
+    );
+
+    DivineVideoClip? freeze;
+    try {
+      freeze = await _renderFreezeFrame(
+        source: clip,
+        framePosition: plan.framePosition,
+        taskId: renderId,
+      );
+    } catch (e, stackTrace) {
+      final error = switch (e) {
+        StateError() ||
+        TypeError() ||
+        RangeError() => Reportable(e, context: '_onFreezeFrameRequested'),
+        _ => e,
+      };
+      addError(error, stackTrace);
+      Log.error(
+        '❌ Failed to freeze a frame of clip ${clip.id}: $e',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+      );
+    }
+
+    // Leaving the editor mid-render still wrote documents-dir files; hand them
+    // to the reaper rather than orphaning them.
+    if (isClosed) {
+      _deferOrphanedPaths(freeze?.ownedFilePaths ?? const <String?>[]);
+      return;
+    }
+
+    if (freeze == null) {
+      emit(
+        state.copyWith(
+          isFreezingFrame: false,
+          clearFreezingFrameClipId: true,
+          lastFreezeFrameResult: ClipFreezeFrameFailure(),
+        ),
+      );
+      return;
+    }
+
+    final currentClips = state.clips;
+    final index = currentClips.indexWhere((c) => c.id == clip.id);
+    final current = index == -1 ? null : currentClips[index];
+    // The frame was read from the clip as it was when the user asked. A clip
+    // that has since been removed, re-rendered or re-trimmed no longer has
+    // that frame where the plan put it.
+    if (current == null ||
+        current.video?.file?.path != clip.video?.file?.path ||
+        current.trimStart != clip.trimStart ||
+        current.trimEnd != clip.trimEnd) {
+      Log.warning(
+        '⚠️ Freeze frame discarded: clip ${clip.id} changed during the render',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+      );
+      _deferOrphanedPaths(freeze.ownedFilePaths);
+      emit(
+        state.copyWith(
+          isFreezingFrame: false,
+          clearFreezingFrameClipId: true,
+          lastFreezeFrameResult: ClipFreezeFrameDiscarded(),
+        ),
+      );
+      return;
+    }
+
+    final newClips = List<DivineVideoClip>.of(currentClips);
+    ClipSplitEvent? split;
+    final int freezeIndex;
+    switch (plan.placement) {
+      case FreezeFramePlacement.before:
+        freezeIndex = index;
+        newClips.insert(freezeIndex, freeze);
+      case FreezeFramePlacement.after:
+        // The freeze now owns the boundary into the next clip (or the loop
+        // back to the first), so the transition moves onto it.
+        freezeIndex = index + 1;
+        newClips
+          ..[index] = current.copyWith(clearTransition: true)
+          ..insert(
+            freezeIndex,
+            freeze.copyWith(transition: current.transition),
+          );
+      case FreezeFramePlacement.split:
+        final (startClip, endClip) = VideoEditorSplitService.trimSplit(
+          sourceClip: current,
+          splitPosition: plan.framePosition - current.trimStart,
+        );
+        freezeIndex = index + 1;
+        newClips
+          ..[index] = startClip
+          ..insert(freezeIndex, freeze)
+          // The held frame is the end half's first frame, so it is also the
+          // poster a split would otherwise decode for it.
+          ..insert(
+            freezeIndex + 1,
+            endClip.copyWith(thumbnailPath: freeze.thumbnailPath),
+          );
+        split = ClipSplitEvent(
+          sourceClipId: current.id,
+          startClipId: startClip.id,
+          endClipId: endClip.id,
+          absoluteSplitPosition: plan.framePosition,
+          sourceDuration: current.duration,
+          sourceTrimStart: current.trimStart,
+          sourceTrimEnd: current.trimEnd,
+        );
+    }
+
+    Log.info(
+      '🧊 Froze ${plan.framePosition.inMilliseconds}ms of clip ${clip.id} '
+      '(${plan.placement.name}) as ${freeze.id}',
+      name: 'ClipEditorBloc',
+      category: LogCategory.video,
+    );
+
+    emit(
+      state.copyWith(
+        clips: List.unmodifiable(newClips),
+        currentClipIndex: freezeIndex,
+        isEditing: true,
+        lastSplit: split,
+        isFreezingFrame: false,
+        clearFreezingFrameClipId: true,
+        lastFreezeFrameResult: ClipFreezeFrameSuccess(
+          previousClips: currentClips,
+          freezeClipId: freeze.id,
         ),
       ),
     );

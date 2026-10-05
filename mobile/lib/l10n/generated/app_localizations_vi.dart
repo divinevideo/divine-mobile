@@ -9184,6 +9184,25 @@ class AppLocalizationsVi extends AppLocalizations {
       'Không tách được clip đó. Timeline của bạn vẫn nguyên.';
 
   @override
+  String get videoEditorFreezeFrameLabel => 'Đóng băng';
+
+  @override
+  String get videoEditorFreezeFrameSemanticLabel =>
+      'Đóng băng khung hình tại đầu phát';
+
+  @override
+  String get videoEditorFreezeFrameProgressLabel =>
+      'Đang đóng băng khung hình…';
+
+  @override
+  String get videoEditorFreezeFrameFailed =>
+      'Không đóng băng được khung hình đó. Timeline của bạn vẫn nguyên.';
+
+  @override
+  String get videoEditorFreezeFramePlayheadOutsideClip =>
+      'Di chuyển đầu phát vào clip đã chọn để đóng băng một khung hình.';
+
+  @override
   String get videoEditorDetachImagePickFailed => 'Không tải được ảnh đó.';
 
   @override

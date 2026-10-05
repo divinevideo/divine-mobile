@@ -9302,6 +9302,24 @@ class AppLocalizationsBg extends AppLocalizations {
       'Клипът не можа да се откачи. Времевата ти линия остава непроменена.';
 
   @override
+  String get videoEditorFreezeFrameLabel => 'Замрази';
+
+  @override
+  String get videoEditorFreezeFrameSemanticLabel =>
+      'Замрази кадъра под главата за възпроизвеждане';
+
+  @override
+  String get videoEditorFreezeFrameProgressLabel => 'Кадърът се замразява…';
+
+  @override
+  String get videoEditorFreezeFrameFailed =>
+      'Кадърът не можа да се замрази. Времевата ти линия остава непроменена.';
+
+  @override
+  String get videoEditorFreezeFramePlayheadOutsideClip =>
+      'Премести главата за възпроизвеждане върху избрания клип, за да замразиш кадър.';
+
+  @override
   String get videoEditorDetachImagePickFailed =>
       'Снимката не можа да се зареди.';
 

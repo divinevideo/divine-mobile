@@ -9180,6 +9180,24 @@ class AppLocalizationsAr extends AppLocalizations {
       'تعذّر فصل هذا المقطع. الجدول الزمني كما هو دون تغيير.';
 
   @override
+  String get videoEditorFreezeFrameLabel => 'تجميد';
+
+  @override
+  String get videoEditorFreezeFrameSemanticLabel =>
+      'تجميد الإطار عند رأس التشغيل';
+
+  @override
+  String get videoEditorFreezeFrameProgressLabel => 'جارٍ تجميد الإطار…';
+
+  @override
+  String get videoEditorFreezeFrameFailed =>
+      'تعذّر تجميد هذا الإطار. الجدول الزمني كما هو دون تغيير.';
+
+  @override
+  String get videoEditorFreezeFramePlayheadOutsideClip =>
+      'انقل رأس التشغيل إلى المقطع المحدد لتجميد إطار.';
+
+  @override
   String get videoEditorDetachImagePickFailed => 'تعذّر تحميل هذه الصورة.';
 
   @override

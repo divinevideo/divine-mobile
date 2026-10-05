@@ -59,6 +59,10 @@ class ClipEditorState extends Equatable {
     this.refillingPlaceholderClipId,
     this.refillingPlaceholderRenderId,
     this.lastPlaceholderFillResult,
+    this.isFreezingFrame = false,
+    this.freezingFrameClipId,
+    this.freezingFrameRenderId,
+    this.lastFreezeFrameResult,
     this.isImportingLibraryClips = false,
     this.libraryImportRenderId,
     this.libraryImportProgress,
@@ -302,6 +306,25 @@ class ClipEditorState extends Equatable {
   /// the same player-sync listener a transform goes through.
   final ClipPlaceholderFillResult? lastPlaceholderFillResult;
 
+  /// Whether the still for a freeze frame is currently rendering.
+  final bool isFreezingFrame;
+
+  /// Id of the clip a frame is being frozen from. Non-`null` while
+  /// [isFreezingFrame] is `true`, so the action bar can show the spinner on
+  /// the clip it belongs to.
+  final String? freezingFrameClipId;
+
+  /// Render id keying the freeze encoder's progress stream, namespaced from
+  /// the clip id (`<clipId>_freeze`) so it cannot collide with another render
+  /// on the same clip.
+  final String? freezingFrameRenderId;
+
+  /// Last completed freeze frame.
+  ///
+  /// Consumed by the widget layer, which commits a success to editor history
+  /// and surfaces a failure snackbar.
+  final ClipFreezeFrameResult? lastFreezeFrameResult;
+
   /// Whether library clips are being converted so they can join the timeline.
   ///
   /// Only true while a stop-motion set picked into a video composition is
@@ -420,6 +443,11 @@ class ClipEditorState extends Equatable {
     String? refillingPlaceholderRenderId,
     bool clearRefillingPlaceholderClipId = false,
     ClipPlaceholderFillResult? lastPlaceholderFillResult,
+    bool? isFreezingFrame,
+    String? freezingFrameClipId,
+    String? freezingFrameRenderId,
+    bool clearFreezingFrameClipId = false,
+    ClipFreezeFrameResult? lastFreezeFrameResult,
     int? selectedFrameIndex,
     bool clearSelectedFrameIndex = false,
     Set<int>? selectedFrameIndexes,
@@ -524,6 +552,15 @@ class ClipEditorState extends Equatable {
           : (refillingPlaceholderRenderId ?? this.refillingPlaceholderRenderId),
       lastPlaceholderFillResult:
           lastPlaceholderFillResult ?? this.lastPlaceholderFillResult,
+      isFreezingFrame: isFreezingFrame ?? this.isFreezingFrame,
+      freezingFrameClipId: clearFreezingFrameClipId
+          ? null
+          : (freezingFrameClipId ?? this.freezingFrameClipId),
+      freezingFrameRenderId: clearFreezingFrameClipId
+          ? null
+          : (freezingFrameRenderId ?? this.freezingFrameRenderId),
+      lastFreezeFrameResult:
+          lastFreezeFrameResult ?? this.lastFreezeFrameResult,
       isImportingLibraryClips:
           isImportingLibraryClips ?? this.isImportingLibraryClips,
       libraryImportRenderId: clearLibraryImportRenderId
@@ -599,6 +636,11 @@ class ClipEditorState extends Equatable {
     refillingPlaceholderRenderId,
     // Identity-only: each ClipPlaceholderFillResult is a fresh instance.
     identityHashCode(lastPlaceholderFillResult),
+    isFreezingFrame,
+    freezingFrameClipId,
+    freezingFrameRenderId,
+    // Identity-only: each ClipFreezeFrameResult is a fresh instance.
+    identityHashCode(lastFreezeFrameResult),
     isImportingLibraryClips,
     libraryImportRenderId,
     libraryImportProgress,
@@ -909,6 +951,40 @@ final class ClipPlaceholderFillFailure extends ClipPlaceholderFillResult {}
 ///
 /// Silent by design: the user deleted the slot they asked to refill.
 final class ClipPlaceholderFillDiscarded extends ClipPlaceholderFillResult {}
+
+// === FREEZE FRAME RESULT ===
+
+/// One-shot signal describing the outcome of freezing a frame.
+///
+/// Emitted into [ClipEditorState.lastFreezeFrameResult] after each attempt,
+/// and identity-compared like every other one-shot result here.
+sealed class ClipFreezeFrameResult {}
+
+/// The still is on the timeline; [ClipEditorState.clips] already holds it, and
+/// the clip it came from is cut around it when the playhead sat inside it.
+///
+/// [previousClips] is the list as it was immediately before, so the widget
+/// layer can carry sounds that ran to the old end onto the new one.
+/// [freezeClipId] is the id of the still, which marks where the timeline grew.
+final class ClipFreezeFrameSuccess extends ClipFreezeFrameResult {
+  ClipFreezeFrameSuccess({
+    required this.previousClips,
+    required this.freezeClipId,
+  });
+
+  final List<DivineVideoClip> previousClips;
+  final String freezeClipId;
+}
+
+/// Reading the frame or rendering the still failed; the timeline is untouched.
+final class ClipFreezeFrameFailure extends ClipFreezeFrameResult {}
+
+/// The render finished but the clip had been removed or replaced meanwhile,
+/// so the still was dropped.
+///
+/// Silent by design: the frame the user asked for is no longer on the
+/// timeline.
+final class ClipFreezeFrameDiscarded extends ClipFreezeFrameResult {}
 
 // === DETACHED-CLIP TRANSFORM RESULT ===
 
