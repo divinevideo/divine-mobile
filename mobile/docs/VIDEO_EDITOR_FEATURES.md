@@ -27,7 +27,7 @@ Recorder modes ([`VideoRecorderMode`](../lib/models/video_recorder/video_recorde
 | Capture | Yes | Default mode. |
 | Stop Motion | Yes | Output must be at least 1 s. |
 | Lip Sync | Yes | A sound is picked before recording; recorded clips are muted. |
-| Chroma Key | Yes | The viewfinder shows the swapped background live while recording; each take is keyed right after recording. Only offered on devices whose renderer can draw the live key. |
+| Color mask | Yes | The viewfinder shows the swapped background live while recording; each take is keyed right after recording. Only offered on devices whose renderer can draw the live key. |
 | Classic | No | Square by default, has a recording limit, goes straight to the post screen and renders in the background. |
 | Upload | No | Explainer screen only. |
 
@@ -69,7 +69,7 @@ Detach (picture-in-picture):
 
 Color mask (chroma key, formerly "Green screen"):
 
-- Key color: auto-detect, green, blue, or a custom color. A plain white wall can be keyed too: for a neutral key the matte also weighs brightness, so shadows on the wall survive.
+- Key color: auto-detect, green, blue, or a custom color. A plain white wall can be keyed too: for a neutral key the matte also weighs brightness, so a white key does not also remove black and grey. The wall has to be evenly lit: a shadow on it survives the mask.
 - Controls for amount, edge softness and color spill.
 - Background on a timeline clip: transparent (black in the exported video), a color, a camera photo, or a library clip. On a detached layer, transparent shows whatever is underneath, and a library clip is not offered.
 - On a timeline clip the key is baked into the clip; on a detached layer it is applied live.
@@ -94,11 +94,11 @@ Timeline:
 
 Every overlay below sits on the timeline, where it can be moved, trimmed to show for only part of the video, split, duplicated and deleted.
 
-- **Text:** 128 fonts (`VideoEditorConstants.textFontCatalogue`) grouped by style in the picker, left, center or right alignment, four background modes (none, solid, highlight, transparent), 11 preset colors plus a custom picker with recent colors, an outline and a drop shadow (each with its own color and a strength slider, off at the far left). Size is set by pinching the text on the canvas, and lines wrap at the visible edges of the video instead of running off them. Saved title styles keep font, colors, background, alignment, size, outline, shadow and animations; names are up to 40 characters.
+- **Text:** 128 fonts (`VideoEditorConstants.textFontCatalogue`) grouped by style in the picker, left, center or right alignment, four background modes (none, solid, highlight, transparent), 11 preset colors plus a custom picker with recent colors, an outline and a drop shadow (each with its own color and a strength slider, off at the far left). Size is set by pinching the text on the canvas, and lines wrap at the visible edges of the video instead of running off them. Saved title styles keep font, colors, background, alignment, outline, shadow and animations, but not the pinched size; names are up to 40 characters.
 - **Drawing:** pencil, marker, arrow and eraser, each with a fixed width. Undo and redo inside the tool. Several drawing layers can be merged into one.
 - **Stickers:** 71 bundled OpenMoji stickers, searchable by keyword and by their localized names.
 - **Filters:** 56 looks plus "None" (40 classic presets, 8 styled looks, 8 color tints), picked one at a time with a strength slider. Each confirmed filter is kept, so several can stack.
-- **Effects:** 21 timeline effects, each with an intensity slider: glitch, block glitch, RGB split, VHS, TV static, old film, film grain, signal interference, CRT, pixelate, pixel pulse, shake, zoom pulse, mirror, kaleidoscope, split screen, wave, glow, vignette, strobe and negative flash. A new effect covers the whole video; on the timeline it is a bar that can be moved, trimmed, edited, split, duplicated and deleted, and overlapping effects combine. Strobe and negative flash flash on whole-second boundaries and only one of them can run at a time, because overlapping ones would pass three flashes a second. A video that uses either is always published with the Flashing Lights content warning, which the creator cannot remove.
+- **Effects:** 21 timeline effects, each with an intensity slider: glitch, block glitch, RGB split, VHS, static, old film, film grain, interference, CRT, pixelate, pixel pulse, shake, zoom pulse, mirror, kaleidoscope, split screen, wave, glow, vignette, strobe and negative flash. A new effect covers the whole video; on the timeline it is a bar that can be moved, trimmed, edited, split, duplicated and deleted, and overlapping effects combine. A flashing effect (strobe or negative flash) starts on a whole second and cannot be duplicated, and only one of them can run at a time, because overlapping ones would pass three flashes a second. A video that uses either is always published with the Flashing Lights content warning, which the creator cannot remove.
 - **Adjustments:** brightness, contrast, saturation, exposure, hue, temperature, tint and fade. One adjustment session shares a single time window on the timeline.
 
 Enter and leave animations, per layer:
@@ -122,9 +122,9 @@ Enter and leave animations, per layer:
 - **Import** of `aac`, `m4a`, `mp3` and `wav` files from the device.
 - **Several sound tracks at once.** Adding a sound adds a track rather than replacing the previous one. Each track can be moved and trimmed, and its start point inside the sound chosen.
 - **Voice-over:** records takes over the muted preview. Takes are placed one after another; the last take can be deleted.
-- **Volume** per clip and per sound track, from silent to 300 %. The timeline arc turns orange above 100 % and red above 200 %. Boosted audio is limited at −1 dBFS in the export, and the preview limits at the same ceiling.
+- **Volume** per clip and per sound track, from silent to 300 %. The timeline arc turns orange above 100 % and red above 200 %. Boosted audio is limited at −1 dBFS in the export, and the Android preview limits at the same ceiling; the iOS preview plays the boost without a limiter.
 - **Fade in and out** per sound track, in 100 ms steps. The envelope is linear, and the preview plays the same one the export bakes in.
-- **Voice effects and noise reduction** on any sound in the timeline, not only voice-overs: one-tap presets (original, high pitch, low pitch, robot, echo) or sliders for pitch (−12 to +12 semitones), robot (0–100 %) and echo (0–100 %), plus a noise reduction toggle. Settings loop while the sheet is open and are processed offline when confirmed. The track keeps the original, so the effect can be changed or removed later.
+- **Voice effects and noise reduction** on any sound track, not only voice-overs (a clip's own sound needs Extract audio first): one-tap presets (original, high pitch, low pitch, robot, echo) or sliders for pitch (−12 to +12 semitones), robot (0–100 %) and echo (0–100 %), plus a noise reduction toggle. Settings loop while the sheet is open and are processed offline when confirmed. The track keeps the original, so the effect can be changed or removed later.
 - **Waveforms** on clips and sound tracks, and live while recording a voice-over.
 - Creators choose whether others may reuse the audio of their published video.
 
