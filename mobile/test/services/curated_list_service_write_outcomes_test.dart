@@ -25,9 +25,26 @@ class _Auth extends Mock implements AuthService {}
 
 class _Client extends Mock implements NostrClient {}
 
+class _NotificationTrackingService extends CuratedListService {
+  _NotificationTrackingService({
+    required super.nostrService,
+    required super.authService,
+    required super.prefs,
+  });
+
+  int notifications = 0;
+
+  @override
+  void notifyListeners() {
+    notifications++;
+    super.notifyListeners();
+  }
+}
+
 class _ControlledPrefs extends Fake implements SharedPreferences {
   _ControlledPrefs(this.backing);
   final SharedPreferences backing;
+  int setterCalls = 0;
   bool rejectLists = false;
   bool rejectSubscriptions = false;
   bool rejectDeletions = false;
@@ -48,6 +65,7 @@ class _ControlledPrefs extends Fake implements SharedPreferences {
 
   @override
   Future<bool> setString(String key, String value) {
+    setterCalls++;
     if ((throwLists && key == CuratedListService.listsStorageKey) ||
         (throwSubscriptions &&
             key == CuratedListService.subscribedListsStorageKey)) {
@@ -72,11 +90,18 @@ class _ControlledPrefs extends Fake implements SharedPreferences {
   }
 
   @override
-  Future<bool> setStringList(String key, List<String> value) =>
-      rejectDeletions ? Future.value(false) : backing.setStringList(key, value);
+  Future<bool> setStringList(String key, List<String> value) {
+    setterCalls++;
+    return rejectDeletions
+        ? Future.value(false)
+        : backing.setStringList(key, value);
+  }
 
   @override
-  Future<bool> setBool(String key, bool value) => backing.setBool(key, value);
+  Future<bool> setBool(String key, bool value) {
+    setterCalls++;
+    return backing.setBool(key, value);
+  }
 }
 
 const _owner =
@@ -261,14 +286,16 @@ void main() {
     });
 
     test(
-      'disposed mutation reports superseded before notifying or saving',
+      'disposed mutations return false before notifying, saving, or publishing',
       () async {
-        final service = CuratedListService(
+        final service = _NotificationTrackingService(
           nostrService: client,
           authService: auth,
           prefs: prefs,
         );
         final before = prefs.getString(CuratedListService.listsStorageKey);
+        final settersBefore = prefs.setterCalls;
+        final notificationsBefore = service.notifications;
         final logs = LogCaptureService();
         await logs.clearAllLogs();
         addTearDown(logs.clearAllLogs);
@@ -283,12 +310,22 @@ void main() {
           prefs.getString(CuratedListService.subscribedListsStorageKey),
           isNull,
         );
+        expect(prefs.setterCalls, settersBefore);
+        expect(service.notifications, notificationsBefore);
         final messages = logs
             .getRecentLogs()
             .map((entry) => entry.message)
             .join(' ');
-        expect(messages, contains('superseded'));
         expect(messages, isNot(contains('after being disposed')));
+        verifyNever(
+          () => auth.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
+          ),
+        );
+        verifyNever(() => client.publishEvent(any()));
         verifyNever(() => client.publishEventAwaitOk(any()));
       },
     );
