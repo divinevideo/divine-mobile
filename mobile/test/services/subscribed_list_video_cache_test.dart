@@ -339,6 +339,36 @@ void main() {
         final videos = cache.getVideos();
         expect(videos.length, 2);
       });
+
+      test('caches a followed list under its author-scoped id', () async {
+        final videoId = 'a1' * 32;
+        final author = 'b' * 64;
+        final followed = '$author:dtag';
+        final list = CuratedList(
+          id: 'dtag',
+          name: 'Followed',
+          pubkey: author,
+          videoEventIds: [videoId],
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        when(
+          () => mockCuratedListService.subscribedListIds,
+        ).thenReturn({followed});
+        when(() => mockCuratedListService.subscribedLists).thenReturn([list]);
+        when(
+          () => mockVideoEventService.getVideoById(videoId),
+        ).thenReturn(TestVideoEventBuilder.create(id: videoId));
+        when(
+          () => mockNostrService.subscribe(any(), closeOnEose: true),
+        ).thenAnswer((_) => const Stream<Event>.empty());
+
+        await cache.syncAllSubscribedLists();
+
+        expect(cache.getListsForVideo(videoId), {followed});
+        cache.removeList(followed);
+        expect(cache.getVideos(), isEmpty);
+      });
     });
 
     group('removeList', () {
