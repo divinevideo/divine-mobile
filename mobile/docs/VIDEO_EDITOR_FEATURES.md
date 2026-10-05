@@ -1,7 +1,7 @@
 # Video Editor Features
 
 Status: Current
-Validated against: `main` at `5b208c9911f347f78f82625d70036870ebbd550d` on 2026-09-26.
+Validated against: `main` at `ea87468a621d7e824f8feab2c1b1f5482aab0005` on 2026-10-05.
 
 What a creator can do in the video editor today, grouped by area, with the limits that apply. Use it to answer "can the editor already do X?" before filing or building a feature, and update it in the same pull request that adds, removes, or changes an editor capability.
 
@@ -14,8 +14,8 @@ None of the editor tools sit behind a feature flag.
 These shape what the editor offers, and explain several things it deliberately does not do:
 
 - **6.3 seconds maximum.** `VideoEditorConstants.maxDuration`. The timeline shades everything past it and the export truncates to it.
-- **Camera-first.** There is no import from the camera roll. The recorder's Upload mode only explains why (ProofMode verification of camera-captured content). Both photo picks in the editor, a green-screen backdrop and the still that fills a detached clip's gap, open the camera, not the gallery.
-- **No generative or ML effects.** Green screen is true chroma key; the decision is recorded, pending ratification, in issue [#8543](https://github.com/divinevideo/divine-mobile/issues/8543).
+- **Camera-first.** There is no import from the camera roll. The recorder's Upload mode only explains why (ProofMode verification of camera-captured content). Both photo picks in the editor, a color mask backdrop and the still that fills a detached clip's gap, open the camera, not the gallery.
+- **No generative or ML effects.** The color mask (shown to creators as "Color mask", formerly "Green screen") is a true chroma key, not background segmentation; the name is settled, but whether the tool should grow beyond a chroma key is still open in issue [#8543](https://github.com/divinevideo/divine-mobile/issues/8543).
 - **Two aspect ratios,** square and 9:16, chosen when recording. The editor has no control to change it.
 
 ## Getting into the editor
@@ -27,6 +27,7 @@ Recorder modes ([`VideoRecorderMode`](../lib/models/video_recorder/video_recorde
 | Capture | Yes | Default mode. |
 | Stop Motion | Yes | Output must be at least 1 s. |
 | Lip Sync | Yes | A sound is picked before recording; recorded clips are muted. |
+| Color mask | Yes | The viewfinder shows the swapped background live while recording; each take is keyed right after recording. Only offered on devices whose renderer can draw the live key. |
 | Classic | No | Square by default, has a recording limit, goes straight to the post screen and renders in the background. |
 | Upload | No | Explainer screen only. |
 
@@ -45,12 +46,12 @@ Clip actions ([`video_editor_timeline_clip_controls.dart`](../lib/widgets/video_
 - **Duplicate** (the copy lands right after the original) and **delete**. At least one clip always remains.
 - **Merge** two or more clips into one, through multi-select.
 - **Reverse**, as a toggle.
-- **Speed** from 0.25× to 3.0× in 0.05 steps, on a slider.
+- **Speed** from 0.25× to 3.0× in 0.05 steps, on a slider, with one-tap presets for 0.25×, 0.5×, 1×, 1.5×, 2× and 3×.
 - **Transform:** crop (locked to the video's aspect ratio), rotate by 90°, flip.
 - **Extract audio:** moves the clip's sound to its own track and mutes the clip.
 - **Save to library:** renders the trimmed clip, overlays included, into a standalone clip in the library.
 - **Add clips** from the library or the camera.
-- **Volume** per clip. Long-pressing any volume control mutes all clips and sound tracks, or unmutes them if everything is already muted.
+- **Volume** per clip, up to 300 % (see [Audio](#audio)). Long-pressing any volume control mutes all clips and sound tracks, or unmutes them if everything is already muted.
 
 Transitions between clips ([`video_editor_transition_sheet.dart`](../lib/widgets/video_editor/timeline_editor/controls/video_editor_transition_sheet.dart)):
 
@@ -63,12 +64,12 @@ Detach (picture-in-picture):
 
 - Lifts a clip off the timeline onto the canvas as a freely placed layer.
 - The gap it leaves can be closed, or held with a solid color or a photo.
-- A detached layer can be moved, resized, split, duplicated, deleted, cropped to any aspect ratio, and green-screened. It has no enter or leave animation.
-- Back to timeline puts the clip back as a timeline clip: into the color or photo slot it left if that is still there, otherwise at the playhead. Only the part its layer showed comes back, as trim. Its placement and live green screen stay behind, a free crop fills the frame, and its length counts toward the 6.3 s maximum again.
+- A detached layer can be moved, resized, split, duplicated, deleted, cropped to any aspect ratio, made see-through (opacity 0–100 %), and color-masked. It has no enter or leave animation.
+- Back to timeline puts the clip back as a timeline clip: into the color or photo slot it left if that is still there, otherwise at the playhead. Only the part its layer showed comes back, as trim. Its placement, opacity and live color mask stay behind, a free crop fills the frame, and its length counts toward the 6.3 s maximum again.
 
-Green screen (chroma key):
+Color mask (chroma key, formerly "Green screen"):
 
-- Key color: auto-detect, green, blue, or a custom color.
+- Key color: auto-detect, green, blue, or a custom color. A plain white wall can be keyed too: for a neutral key the matte also weighs brightness, so a white key does not also remove black and grey. The wall has to be evenly lit: a shadow on it survives the mask.
 - Controls for amount, edge softness and color spill.
 - Background on a timeline clip: transparent (black in the exported video), a color, a camera photo, or a library clip. On a detached layer, transparent shows whatever is underneath, and a library clip is not offered.
 - On a timeline clip the key is baked into the clip; on a detached layer it is applied live.
@@ -76,6 +77,8 @@ Green screen (chroma key):
 Timeline:
 
 - Pinch to zoom, from 1 to 600 pixels per second (2400 for stop motion).
+- Dragging the playhead past either end wraps around to the other, so the loop restart can be scrubbed across.
+- Clip and overlay actions appear as labelled tiles in a bar below the timeline.
 - Markers at the playhead; they move with clip edits.
 - Undo and redo.
 - Overlay items snap to clip edges, markers and the playhead, with haptic feedback. Clip trims do not snap.
@@ -91,10 +94,11 @@ Timeline:
 
 Every overlay below sits on the timeline, where it can be moved, trimmed to show for only part of the video, split, duplicated and deleted.
 
-- **Text:** 79 fonts (`VideoEditorConstants.textFontCatalogue`), left, center or right alignment, four background modes (none, solid, highlight, transparent), 11 preset colors plus a custom picker with recent colors, size from 0.5× to 4×. Saved title styles keep font, colors, background, alignment, size and animations; names are up to 40 characters.
+- **Text:** 128 fonts (`VideoEditorConstants.textFontCatalogue`) grouped by style in the picker, left, center or right alignment, four background modes (none, solid, highlight, transparent), 11 preset colors plus a custom picker with recent colors, an outline and a drop shadow (each with its own color and a strength slider, off at the far left). Size is set by pinching the text on the canvas, and lines wrap at the visible edges of the video instead of running off them. Saved title styles keep font, colors, background, alignment, outline, shadow and animations, but not the pinch scale, position or rotation of the layer it came from (a style saved before the text size slider was removed in #9779 can still carry a font size); names are up to 40 characters.
 - **Drawing:** pencil, marker, arrow and eraser, each with a fixed width. Undo and redo inside the tool. Several drawing layers can be merged into one.
 - **Stickers:** 71 bundled OpenMoji stickers, searchable by keyword and by their localized names.
 - **Filters:** 56 looks plus "None" (40 classic presets, 8 styled looks, 8 color tints), picked one at a time with a strength slider. Each confirmed filter is kept, so several can stack.
+- **Effects:** 21 timeline effects, each with an intensity slider: glitch, block glitch, RGB split, VHS, static, old film, film grain, interference, CRT, pixelate, pixel pulse, shake, zoom pulse, mirror, kaleidoscope, split screen, wave, glow, vignette, strobe and negative flash. A new effect covers the whole video; on the timeline it is a bar that can be moved, trimmed, edited, split, duplicated and deleted, and overlapping effects combine. A flashing effect (strobe or negative flash) starts on a whole second of the exported video (an effect with no whole second before its end is left out of the export) and cannot be duplicated, and only one of them can run at a time, because overlapping ones would pass three flashes a second: adding or moving one cuts any other flashing effect out of its window, shortening or splitting it, instead of refusing the new one. A video that uses either at an intensity above zero is always published with the Flashing Lights content warning, which the creator cannot remove.
 - **Adjustments:** brightness, contrast, saturation, exposure, hue, temperature, tint and fade. One adjustment session shares a single time window on the timeline.
 
 Enter and leave animations, per layer:
@@ -107,7 +111,8 @@ Enter and leave animations, per layer:
 
 - **Auto captions:** the audio is transcribed on Divine's server first, with a fallback to the platform's speech recognition: Apple's on iOS, which runs on the device when it supports the language and on Apple's servers otherwise; Android 14 or later with language packs installed, on the device. Clip audio is transcribed; music and voice-over are not. The language is the app's language.
 - **Editing:** change a caption's text and timing, add and remove captions. Minimum caption length 200 ms. Captions can be typed by hand when recognition finds nothing.
-- **Styles:** 20 presets, a custom style (font, text color, background, animation: none, fade, pop or spring), and saved caption styles.
+- **Styles:** 21 presets, a custom style (font, text color, background, outline and shadow, animation: none, fade, pop, spring or karaoke), and saved caption styles.
+- **Word highlight:** the karaoke animation, also a built-in preset, lights each word in a highlight color as it is spoken. Word timings come from the recognizer; for Divine's server, which only times whole cues, they are spread by word length. The published subtitle track stays cue-level.
 - **Output:** burning captions into the picture is optional. The app also publishes them as a separate subtitle track, best effort: if that upload fails or times out, the video is published without it.
 - **After publishing,** the subtitle editor lets the author fix the text and timing of a published video's captions.
 
@@ -117,7 +122,9 @@ Enter and leave animations, per layer:
 - **Import** of `aac`, `m4a`, `mp3` and `wav` files from the device.
 - **Several sound tracks at once.** Adding a sound adds a track rather than replacing the previous one. Each track can be moved and trimmed, and its start point inside the sound chosen.
 - **Voice-over:** records takes over the muted preview. Takes are placed one after another; the last take can be deleted.
-- **Volume** per clip and per sound track, from silent to 100 %.
+- **Volume** per clip and per sound track, from silent to 300 %. The timeline arc turns orange above 100 % and red above 200 %. Boosted audio is limited at −1 dBFS in the export, and the Android preview limits at the same ceiling; the iOS preview plays the boost without a limiter.
+- **Fade in and out** per sound track, in 100 ms steps. The envelope is linear, and the preview plays the same one the export bakes in.
+- **Voice effects and noise reduction** on any sound track, not only voice-overs (a clip's own sound needs Extract audio first): one-tap presets (original, high pitch, low pitch, robot, echo) or sliders for pitch (−12 to +12 semitones), robot (0–100 %) and echo (0–100 %), plus a noise reduction toggle. Settings loop while the sheet is open and are processed offline when confirmed. The track keeps the original, so the effect can be changed or removed later.
 - **Waveforms** on clips and sound tracks, and live while recording a voice-over.
 - Creators choose whether others may reuse the audio of their published video.
 
@@ -134,10 +141,12 @@ Enter and leave animations, per layer:
 
 Open feature requests for things the editor does not do yet:
 
-- Audio: fade in and out ([#9557](https://github.com/divinevideo/divine-mobile/issues/9557)), voice effects and noise reduction for voice-overs ([#9565](https://github.com/divinevideo/divine-mobile/issues/9565)), volume above 100 % ([#4906](https://github.com/divinevideo/divine-mobile/issues/4906)), loudness equalization ([#3789](https://github.com/divinevideo/divine-mobile/issues/3789)), a larger sound library ([#8338](https://github.com/divinevideo/divine-mobile/issues/8338)).
-- Text and captions: outline and shadow ([#9558](https://github.com/divinevideo/divine-mobile/issues/9558)), word-by-word highlighted captions ([#9564](https://github.com/divinevideo/divine-mobile/issues/9564)), a link in the text overlay ([#3111](https://github.com/divinevideo/divine-mobile/issues/3111)).
-- Clips: speed presets ([#9559](https://github.com/divinevideo/divine-mobile/issues/9559)), zoom over time ([#4951](https://github.com/divinevideo/divine-mobile/issues/4951)).
-- Detach: opacity ([#9563](https://github.com/divinevideo/divine-mobile/issues/9563)).
+- Audio: loudness equalization ([#3789](https://github.com/divinevideo/divine-mobile/issues/3789)), an equalizer for bass and treble ([#9851](https://github.com/divinevideo/divine-mobile/issues/9851)), an audio visualizer overlay ([#9852](https://github.com/divinevideo/divine-mobile/issues/9852)), a larger sound library ([#8338](https://github.com/divinevideo/divine-mobile/issues/8338)).
+- Text: a link in the text overlay ([#3111](https://github.com/divinevideo/divine-mobile/issues/3111)), animated text styles such as typewriter and shake ([#9850](https://github.com/divinevideo/divine-mobile/issues/9850)).
+- Clips: a ping-pong (boomerang) loop ([#9845](https://github.com/divinevideo/divine-mobile/issues/9845)), timeline-based zoom controls ([#4951](https://github.com/divinevideo/divine-mobile/issues/4951)), ghost mode for smoother transitions and loops ([#9573](https://github.com/divinevideo/divine-mobile/issues/9573)), a smoother jump when the video loops back to its start ([#9587](https://github.com/divinevideo/divine-mobile/issues/9587)).
+- Effects: an echo trail effect ([#9708](https://github.com/divinevideo/divine-mobile/issues/9708)), effects that fire on the beat of the music ([#9710](https://github.com/divinevideo/divine-mobile/issues/9710)).
+- Layers: keyframes for position, size and rotation ([#9846](https://github.com/divinevideo/divine-mobile/issues/9846)), masks that show a clip or layer in a shape or gradient ([#9847](https://github.com/divinevideo/divine-mobile/issues/9847)).
+- Motion analysis (touches the no-ML decision in [#8543](https://github.com/divinevideo/divine-mobile/issues/8543)): video stabilization ([#9848](https://github.com/divinevideo/divine-mobile/issues/9848)), text and stickers that follow a moving object ([#9849](https://github.com/divinevideo/divine-mobile/issues/9849)).
 - Privacy: blur or pixelate part of the picture ([#9562](https://github.com/divinevideo/divine-mobile/issues/9562)).
 - Stickers: NIP-30 stickers ([#2265](https://github.com/divinevideo/divine-mobile/issues/2265)).
 - Frames around the video ([#7099](https://github.com/divinevideo/divine-mobile/issues/7099)).
