@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
 import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Refuses writes until [accepts] is set.
@@ -56,6 +57,20 @@ class _ThrowingPrefs extends Fake implements SharedPreferences {
     _stored[key] = value;
     if (throws) throw error;
     return true;
+  }
+}
+
+class _RejectingPlatformStore extends InMemorySharedPreferencesStore {
+  _RejectingPlatformStore() : super.empty();
+  bool rejectLists = false;
+  bool throwLists = false;
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) async {
+    if (valueType == 'StringList' && rejectLists) return false;
+    if (valueType == 'StringList' && throwLists) {
+      throw PlatformException(code: 'storage_failed', message: _storedText);
+    }
+    return super.setValue(valueType, key, value);
   }
 }
 
@@ -799,6 +814,96 @@ void main() {
 
         expect(prefs.getKeys(), isEmpty);
       });
+    });
+
+    group('deletion record backing failures', () {
+      late _RejectingPlatformStore backing;
+      setUp(() async {
+        final previous = SharedPreferencesStorePlatform.instance;
+        backing = _RejectingPlatformStore();
+        SharedPreferences.resetStatic();
+        SharedPreferencesStorePlatform.instance = backing;
+        addTearDown(() {
+          SharedPreferences.resetStatic();
+          SharedPreferencesStorePlatform.instance = previous;
+        });
+        prefs = await SharedPreferences.getInstance();
+      });
+
+      test(
+        'rejected optimistic tombstone does not hide or later flush a list',
+        () async {
+          final coordinator = CuratedListCacheWriteCoordinator();
+          final first = _store(prefs, coordinator: coordinator);
+          final second = _store(prefs, coordinator: coordinator);
+          backing.rejectLists = true;
+          expect(await first.recordListDeletion(_owner, 'crew'), isFalse);
+          expect(
+            prefs.getStringList(
+              PrefsCuratedListStore.deletedCoordinatesStorageKey,
+            ),
+            ['$_owner:crew'],
+            reason: 'real SharedPreferences cache is optimistic',
+          );
+          expect(first.wasListDeleted(_owner, 'crew'), isFalse);
+          expect(second.wasListDeleted(_owner, 'crew'), isFalse);
+          backing.rejectLists = false;
+          expect(
+            await second.recordListDeletion(_otherOwner, 'friends'),
+            isTrue,
+          );
+          await prefs.reload();
+          expect(first.wasListDeleted(_owner, 'crew'), isFalse);
+          expect(first.wasListDeleted(_otherOwner, 'friends'), isTrue);
+        },
+      );
+
+      test(
+        'throwing optimistic tombstone becomes a safe rejected outcome',
+        () async {
+          final store = _store(prefs);
+          backing.throwLists = true;
+          expect(await store.recordListDeletion(_owner, 'crew'), isFalse);
+          expect(store.wasListDeleted(_owner, 'crew'), isFalse);
+          backing.throwLists = false;
+          expect(
+            await store.recordListDeletion(_otherOwner, 'friends'),
+            isTrue,
+          );
+          await prefs.reload();
+          expect(store.wasListDeleted(_owner, 'crew'), isFalse);
+          expect(store.wasListDeleted(_otherOwner, 'friends'), isTrue);
+        },
+      );
+
+      test(
+        'failed optimistic lifting retains the acknowledged tombstone',
+        () async {
+          final store = _store(prefs);
+          expect(await store.recordListDeletion(_owner, 'crew'), isTrue);
+          backing.rejectLists = true;
+          await expectLater(
+            store.forgetListDeletion(_owner, 'crew'),
+            throwsA(isA<CuratedCacheWriteException>()),
+          );
+          expect(
+            prefs.getStringList(
+              PrefsCuratedListStore.deletedCoordinatesStorageKey,
+            ),
+            isEmpty,
+            reason: 'platform rejection still changed prefs read cache',
+          );
+          expect(store.wasListDeleted(_owner, 'crew'), isTrue);
+          backing.rejectLists = false;
+          expect(
+            await store.recordListDeletion(_otherOwner, 'friends'),
+            isTrue,
+          );
+          await prefs.reload();
+          expect(store.wasListDeleted(_owner, 'crew'), isTrue);
+          expect(store.wasListDeleted(_otherOwner, 'friends'), isTrue);
+        },
+      );
     });
 
     group('default list flag', () {
