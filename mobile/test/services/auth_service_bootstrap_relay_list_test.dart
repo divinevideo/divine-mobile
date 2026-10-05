@@ -346,7 +346,9 @@ void main() {
           );
 
           // Launch the operation (signer hangs forever).
-          authService.debugDiscoverUserRelays(testNpub);
+          // The operation runs while fake time advances; its timeout and
+          // resulting side effects are asserted below.
+          unawaited(authService.debugDiscoverUserRelays(testNpub));
 
           // Drive past the 10s bootstrap sign timeout.
           async.elapse(const Duration(seconds: 15));
@@ -356,9 +358,11 @@ void main() {
           expect(recorder.invocations, isEmpty);
 
           late bool flagValue;
-          SharedPreferences.getInstance().then((prefs) {
-            flagValue = prefs.getBool(flagKey) ?? false;
-          });
+          unawaited(
+            SharedPreferences.getInstance().then((prefs) {
+              flagValue = prefs.getBool(flagKey) ?? false;
+            }),
+          );
           async.flushMicrotasks();
           expect(flagValue, isFalse);
         });

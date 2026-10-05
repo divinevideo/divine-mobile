@@ -58,7 +58,6 @@ discarded_futures|lib/widgets/vine_bottom_nav.dart	2
 discarded_futures|lib/widgets/watermark_download_progress_sheet.dart	1
 discarded_futures|test/repositories/community_content_label_repository_test.dart	1
 discarded_futures|test/router/providers/last_tab_position_provider_test.dart	1
-discarded_futures|test/services/auth_service_bootstrap_relay_list_test.dart	2
 discarded_futures|test/services/auth_service_signout_cleanup_test.dart	1
 discarded_futures|test/services/upload_manager_recovery_test.dart	1
 discarded_futures|test/services/video_event_service_home_feed_streaming_test.dart	3
