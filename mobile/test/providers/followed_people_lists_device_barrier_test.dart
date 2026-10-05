@@ -125,6 +125,10 @@ void main() {
     });
 
     setUp(() async {
+      final originalStore = SharedPreferencesStorePlatform.instance;
+      addTearDown(() {
+        SharedPreferencesStorePlatform.instance = originalStore;
+      });
       final dir = await Directory.systemTemp.createTemp(
         'follow-device-barrier-',
       );
