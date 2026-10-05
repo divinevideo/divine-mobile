@@ -99,7 +99,7 @@ class PrefsCuratedListStore {
         cacheKey: _listsKey,
         isCurrent: isCurrent,
         read: () => _storedLists(fallback: baseline),
-        write: (merged) => _prefs.setString(
+        write: (merged) => _writeString(
           _listsKey,
           jsonEncode(
             merged.map((list) => list.toJson()).toList(growable: false),
@@ -162,7 +162,7 @@ class PrefsCuratedListStore {
         cacheKey: _subscriptionsKey,
         isCurrent: isCurrent,
         read: () => _storedSubscriptions(fallback: baseline),
-        write: (merged) => _prefs.setString(
+        write: (merged) => _writeString(
           _subscriptionsKey,
           jsonEncode(merged.toList(growable: false)),
         ),
@@ -188,6 +188,22 @@ class PrefsCuratedListStore {
         ..addAll(reconciled);
     }
     if (!result.succeeded) throw CuratedCacheWriteException(result.status);
+  }
+
+  Future<bool> _writeString(String key, String value) async {
+    try {
+      return await _prefs.setString(key, value);
+    } on Exception catch (error, stackTrace) {
+      // Platform errors can include private cache fragments in their message.
+      // Programming Errors still propagate instead of becoming disk failures.
+      Log.error(
+        'Failed to persist curated cache (${error.runtimeType})',
+        name: 'PrefsCuratedListStore',
+        category: LogCategory.system,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
   }
 
   Future<T> _serialize<T>(Future<T> Function() operation) async {

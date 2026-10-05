@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:curated_list_repository/curated_list_repository.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -28,6 +29,8 @@ class _ControlledPrefs extends Fake implements SharedPreferences {
   bool rejectLists = false;
   bool rejectSubscriptions = false;
   bool rejectDeletions = false;
+  bool throwLists = false;
+  bool throwSubscriptions = false;
   Completer<void>? listWriteStarted;
   Completer<bool>? firstListWrite;
   bool _gated = false;
@@ -43,6 +46,14 @@ class _ControlledPrefs extends Fake implements SharedPreferences {
 
   @override
   Future<bool> setString(String key, String value) {
+    if ((throwLists && key == CuratedListService.listsStorageKey) ||
+        (throwSubscriptions &&
+            key == CuratedListService.subscribedListsStorageKey)) {
+      throw PlatformException(
+        code: 'disk_write_failed',
+        message: 'private-data',
+      );
+    }
     if (key == CuratedListService.listsStorageKey &&
         firstListWrite != null &&
         !_gated) {
@@ -170,6 +181,35 @@ void main() {
       expect(await service.deleteOwnedList('crew'), isFalse);
       expect(service.getListById('crew'), _list());
       expect(open().getListById('crew'), _list());
+    });
+
+    test('platform exception restores a rename before another save', () async {
+      final service = open();
+      prefs.throwLists = true;
+      expect(
+        await service.updateList(listId: 'crew', name: 'Rejected'),
+        isFalse,
+      );
+      expect(service.getListById('crew')?.name, 'Original');
+      prefs.throwLists = false;
+      expect(await service.createList(name: 'Unrelated'), isNotNull);
+      expect(open().getListById('crew')?.name, 'Original');
+    });
+
+    test('platform exception restores a follow before another save', () async {
+      final other = _list().copyWith(id: 'other', name: 'Other');
+      await prefs.setString(
+        CuratedListService.listsStorageKey,
+        jsonEncode([_list().toJson(), other.toJson()]),
+      );
+      final service = open();
+      prefs.throwSubscriptions = true;
+      expect(await service.subscribeToList('crew'), isFalse);
+      expect(service.isSubscribedToList('crew'), isFalse);
+      prefs.throwSubscriptions = false;
+      expect(await service.subscribeToList('other'), isTrue);
+      expect(open().isSubscribedToList('crew'), isFalse);
+      expect(open().isSubscribedToList('other'), isTrue);
     });
 
     test('rejected unfollow keeps the last stored subscription', () async {

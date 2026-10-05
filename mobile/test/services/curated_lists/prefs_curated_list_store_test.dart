@@ -4,6 +4,7 @@
 import 'dart:convert';
 
 import 'package:curated_list_repository/curated_list_repository.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
 import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
@@ -40,6 +41,21 @@ class _FirstWriteRejectsPrefs extends Fake implements SharedPreferences {
   Future<bool> setString(String key, String value) async {
     _stored[key] = value;
     return _writes++ != 0;
+  }
+}
+
+class _ThrowingPrefs extends Fake implements SharedPreferences {
+  _ThrowingPrefs(this.error);
+  final Object error;
+  final _stored = <String, String>{};
+  bool throws = true;
+  @override
+  String? getString(String key) => _stored[key];
+  @override
+  Future<bool> setString(String key, String value) async {
+    _stored[key] = value;
+    if (throws) throw error;
+    return true;
   }
 }
 
@@ -511,6 +527,93 @@ void main() {
       // Explicit retry after settlement still expresses its full new intent.
       expect(await store.saveSubscriptions({'rejected', 'accepted'}), isTrue);
       expect(_storedSubscriptions(backing), {'rejected', 'accepted'});
+    });
+
+    group('write exceptions', () {
+      test(
+        'platform failure reconciles lists and keeps retries possible',
+        () async {
+          final backing = _ThrowingPrefs(
+            PlatformException(
+              code: 'storage_failure',
+              message: _storedText,
+            ),
+          );
+          final store = _store(backing);
+          final lists = [_list('crew')];
+          final logs = await _freshLogs();
+          await expectLater(
+            store.saveListsOrThrow(lists, isCurrent: () => true),
+            throwsA(
+              isA<CuratedCacheWriteException>().having(
+                (error) => error.status,
+                'status',
+                CuratedCacheWriteStatus.storageRejected,
+              ),
+            ),
+          );
+          expect(lists, isEmpty);
+          final entries = logs.getRecentLogs().where(
+            (entry) => entry.name == 'PrefsCuratedListStore',
+          );
+          expect(entries, hasLength(1));
+          expect(entries.single.message, contains('PlatformException'));
+          expect(entries.single.stackTrace, isNotNull);
+          expect(
+            jsonEncode(entries.single.toJson()),
+            isNot(contains(_storedText)),
+          );
+          backing.throws = false;
+          expect(await store.saveLists([_list('other')]), isTrue);
+          expect(_storedLists(backing), [_list('other')]);
+          expect(
+            await store.saveLists([_list('crew'), _list('other')]),
+            isTrue,
+          );
+          expect(
+            _storedLists(backing),
+            unorderedEquals([_list('crew'), _list('other')]),
+          );
+        },
+      );
+
+      test(
+        'platform failure reconciles follows before an unrelated write',
+        () async {
+          final backing = _ThrowingPrefs(
+            PlatformException(code: 'storage_failure'),
+          );
+          final store = _store(backing);
+          final ids = {'rejected'};
+          await expectLater(
+            store.saveSubscriptionsOrThrow(ids, isCurrent: () => true),
+            throwsA(isA<CuratedCacheWriteException>()),
+          );
+          expect(ids, isEmpty);
+          backing.throws = false;
+          expect(await store.saveSubscriptions({'accepted'}), isTrue);
+          expect(_storedSubscriptions(backing), {'accepted'});
+        },
+      );
+
+      test(
+        'programming errors are not turned into physical write rejections',
+        () async {
+          final backing = _ThrowingPrefs(TypeError());
+          final store = _store(backing);
+          await expectLater(
+            store.saveLists([_list('crew')]),
+            throwsA(isA<TypeError>()),
+          );
+          await expectLater(
+            store.saveSubscriptions({'crew'}),
+            throwsA(isA<TypeError>()),
+          );
+          backing.throws = false;
+          expect(await store.saveLists([_list('accepted')]), isTrue);
+          expect(_storedLists(backing), [_list('accepted')]);
+        },
+      );
     });
 
     group('saveSubscriptions', () {
