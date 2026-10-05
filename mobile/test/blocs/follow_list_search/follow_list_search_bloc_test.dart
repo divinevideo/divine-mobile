@@ -507,19 +507,25 @@ void main() {
       'drops terms resolved through the previous profile repository',
       () {
         fakeAsync((clock) {
-          // This repository cannot reach Alice, so she is only matchable by her
-          // generated name until a better one arrives.
+          // This repository only knows Alice by a name the query does not
+          // match, so the pass pins her to it until the repository changes.
           when(
             () => profileRepository.fetchBatchProfiles(
               pubkeys: any(named: 'pubkeys'),
             ),
-          ).thenAnswer((_) async => const {});
+          ).thenAnswer(
+            (_) async => {
+              _alicePubkey: _profile(pubkey: _alicePubkey, displayName: 'Zed'),
+            },
+          );
 
           final bloc = createBloc();
 
           bloc.add(const FollowListSearchQueryChanged('ali', _allPubkeys));
           clock.elapse(_pastDebounce);
           clock.flushMicrotasks();
+          expect(bloc.state.searchTerms[_alicePubkey], contains('zed'));
+          expect(bloc.state.visibleFrom(_allPubkeys), isEmpty);
 
           final replacement = _MockProfileRepository();
           when(
