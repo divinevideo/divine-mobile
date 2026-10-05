@@ -251,5 +251,251 @@ void main() {
         );
       },
     );
+    group('typed outcomes and optimistic cache', () {
+      test(
+        'reports a real version conflict with the confirmed merged winner',
+        () async {
+          final writer = CuratedListCacheWriteCoordinator();
+          final original = list(author);
+          final winner = list(author, revision: 5);
+          final stale = list(author, revision: 2);
+          final result = await writer.saveListsWithResult(
+            baseline: [original],
+            current: [stale],
+            read: () => [winner],
+            write: (_) async => true,
+          );
+          expect(result.status, CuratedCacheWriteStatus.conflict);
+          expect(result.persisted, [winner]);
+          expect(result.conflictedIds, {original.authorScopedId});
+        },
+      );
+
+      test(
+        'a refused optimistic list write is not flushed by another delta',
+        () async {
+          final writer = CuratedListCacheWriteCoordinator();
+          var stored = <CuratedList>[];
+          final rejected = list(author);
+          final accepted = list(other);
+          final failed = await writer.saveListsWithResult(
+            baseline: [],
+            current: [rejected],
+            cacheKey: 'lists',
+            read: () => stored,
+            write: (value) async {
+              stored = value;
+              return false;
+            },
+          );
+          expect(failed.status, CuratedCacheWriteStatus.storageRejected);
+          expect(failed.persisted, isNull);
+          await writer.saveListsWithResult(
+            baseline: [],
+            current: [accepted],
+            cacheKey: 'lists',
+            read: () => stored,
+            write: (value) async {
+              stored = value;
+              return true;
+            },
+          );
+          expect(stored, [accepted]);
+        },
+      );
+
+      test(
+        'changed cached rows supersede the rejected snapshot overlay',
+        () async {
+          final writer = CuratedListCacheWriteCoordinator();
+          final rejected = list(author);
+          var stored = [rejected];
+          await writer.saveListsWithResult(
+            baseline: [],
+            current: [rejected],
+            cacheKey: 'lists',
+            read: () => <CuratedList>[],
+            write: (value) async {
+              stored = value;
+              return false;
+            },
+          );
+          final external = list(author, revision: 5);
+          stored = [external];
+          await writer.saveListsWithResult(
+            baseline: [],
+            current: [list(other)],
+            cacheKey: 'lists',
+            read: () => stored,
+            write: (value) async {
+              stored = value;
+              return true;
+            },
+          );
+          expect(stored, [external, list(other)]);
+        },
+      );
+
+      test(
+        'throwing optimistic writes release the queue without leaking rows',
+        () async {
+          final writer = CuratedListCacheWriteCoordinator();
+          var stored = <CuratedList>[];
+          await expectLater(
+            writer.saveListsWithResult(
+              baseline: [],
+              current: [list(author)],
+              cacheKey: 'lists',
+              read: () => stored,
+              write: (value) async {
+                stored = value;
+                throw StateError('rejected');
+              },
+            ),
+            throwsStateError,
+          );
+          await writer.saveListsWithResult(
+            baseline: [],
+            current: [],
+            cacheKey: 'lists',
+            read: () => stored,
+            write: (value) async {
+              stored = value;
+              return true;
+            },
+          );
+          expect(stored, isEmpty);
+        },
+      );
+
+      test(
+        'throwing optimistic subscription writes do not become saved follows',
+        () async {
+          final writer = CuratedListCacheWriteCoordinator();
+          var stored = <String>{};
+          await expectLater(
+            writer.saveSubscriptionsWithResult(
+              baseline: {},
+              current: {'rejected'},
+              cacheKey: 'subscriptions',
+              read: () => stored,
+              write: (value) async {
+                stored = value;
+                throw StateError('rejected');
+              },
+            ),
+            throwsStateError,
+          );
+          final retried = await writer.saveSubscriptionsWithResult(
+            baseline: {},
+            current: {'accepted'},
+            cacheKey: 'subscriptions',
+            read: () => stored,
+            write: (value) async {
+              stored = value;
+              return true;
+            },
+          );
+          expect(retried.persisted, {'accepted'});
+          expect(stored, {'accepted'});
+        },
+      );
+
+      test(
+        'refused optimistic subscriptions and replacement snapshots '
+        'are distinct',
+        () async {
+          final writer = CuratedListCacheWriteCoordinator();
+          var stored = <String>{};
+          Future<CuratedCacheWriteResult<Set<String>>> save(
+            Set<String> ids, {
+            required bool accepts,
+          }) => writer.saveSubscriptionsWithResult(
+            baseline: {},
+            current: ids,
+            cacheKey: 'subscriptions',
+            read: () => stored,
+            write: (value) async {
+              stored = value;
+              return accepts;
+            },
+          );
+          expect((await save({'rejected'}, accepts: false)).persisted, isNull);
+          expect((await save({'accepted'}, accepts: true)).persisted, {
+            'accepted',
+          });
+          await save({'another rejected'}, accepts: false);
+          stored = {'replacement'};
+          expect((await save({'replacement'}, accepts: true)).persisted, {
+            'replacement',
+          });
+        },
+      );
+
+      for (final lists in [true, false]) {
+        test(
+          'superseded ${lists ? 'lists' : 'subscriptions'} '
+          'are never read or written',
+          () async {
+            final writer = CuratedListCacheWriteCoordinator();
+            if (lists) {
+              final result = await writer.saveListsWithResult(
+                baseline: [],
+                current: [list(author)],
+                isCurrent: () => false,
+                read: () => throw StateError('must not read'),
+                write: (_) async => throw StateError('must not write'),
+              );
+              expect(result.status, CuratedCacheWriteStatus.superseded);
+            } else {
+              final result = await writer.saveSubscriptionsWithResult(
+                baseline: {},
+                current: {'follow'},
+                isCurrent: () => false,
+                read: () => throw StateError('must not read'),
+                write: (_) async => throw StateError('must not write'),
+              );
+              expect(result.status, CuratedCacheWriteStatus.superseded);
+            }
+          },
+        );
+
+        test(
+          'an account replacement during ${lists ? 'list' : 'subscription'} '
+          'save is not reported accepted',
+          () async {
+            final writer = CuratedListCacheWriteCoordinator();
+            var active = true;
+            if (lists) {
+              final result = await writer.saveListsWithResult(
+                baseline: [],
+                current: [list(author)],
+                isCurrent: () => active,
+                read: () => [],
+                write: (_) async {
+                  active = false;
+                  return true;
+                },
+              );
+              expect(result.status, CuratedCacheWriteStatus.superseded);
+              expect(result.persisted, isNull);
+            } else {
+              final result = await writer.saveSubscriptionsWithResult(
+                baseline: {},
+                current: {'follow'},
+                isCurrent: () => active,
+                read: () => {},
+                write: (_) async {
+                  active = false;
+                  return true;
+                },
+              );
+              expect(result.status, CuratedCacheWriteStatus.superseded);
+              expect(result.persisted, isNull);
+            }
+          },
+        );
+      }
+    });
   });
 }
