@@ -686,6 +686,39 @@ class VideoOverlayActions extends ConsumerWidget {
   }
 }
 
+/// One field of the video meta line, split around its emphasized count.
+class _MetaLineField {
+  const _MetaLineField.plain(this.before) : count = null, after = '';
+
+  /// Locates [count] by rendering [format] with a marker in its place, so the
+  /// emphasis cannot land on the same digits elsewhere, e.g. in a name.
+  factory _MetaLineField.counted(
+    String count,
+    String Function(String count) format,
+  ) {
+    final marked = format(_countMarker);
+    final offset = marked.indexOf(_countMarker);
+    if (offset < 0) return _MetaLineField.plain(format(count));
+    return _MetaLineField._(
+      before: marked.substring(0, offset),
+      count: count,
+      after: marked.substring(offset + _countMarker.length),
+    );
+  }
+
+  const _MetaLineField._({
+    required this.before,
+    required this.count,
+    required this.after,
+  });
+
+  static const _countMarker = '\uE000';
+
+  final String before;
+  final String? count;
+  final String after;
+}
+
 /// Viewer-selected creator total, video loops, and publish date under the name.
 class _VideoCardMetaLine extends ConsumerWidget {
   const _VideoCardMetaLine({
@@ -771,41 +804,29 @@ class _VideoMetaLineContent extends ConsumerWidget {
     final compactVideo = showVideoCount
         ? StringUtils.formatCompactNumber(video.totalLoops)
         : null;
-    final parts = <({String text, String? count})>[
+    final l10n = context.l10n;
+    final parts = <_MetaLineField>[
       if (totalLoops != null && totalLoops > 0 && showVideoCount)
-        (
-          text: context.l10n.videoOverlayTotalLoops(
-            compactTotal!,
-            totalLoops,
-            authorName,
-          ),
-          count: compactTotal,
+        _MetaLineField.counted(
+          compactTotal!,
+          (count) => l10n.videoOverlayTotalLoops(count, totalLoops, authorName),
         ),
       if (totalLoops != null && totalLoops > 0 && !showVideoCount)
-        (
-          text: context.l10n.videoFeedLoopCountLine(compactTotal!, totalLoops),
-          count: compactTotal,
+        _MetaLineField.counted(
+          compactTotal!,
+          (count) => l10n.videoFeedLoopCountLine(count, totalLoops),
         ),
       if (showVideoCount)
-        (
-          text: context.l10n.videoOverlayVideoLoops(
-            compactVideo!,
-            video.totalLoops,
-          ),
-          count: compactVideo,
+        _MetaLineField.counted(
+          compactVideo!,
+          (count) => l10n.videoOverlayVideoLoops(count, video.totalLoops),
         ),
       if (publishedAt != null)
-        (
-          text:
-              (publishedAt.year == clock.now().toUtc().year
-                      ? DateFormat.MMMd(
-                          Localizations.localeOf(context).toString(),
-                        )
-                      : DateFormat.yMd(
-                          Localizations.localeOf(context).toString(),
-                        ))
-                  .format(publishedAt),
-          count: null,
+        _MetaLineField.plain(
+          (publishedAt.year == clock.now().toUtc().year
+                  ? DateFormat.MMMd(Localizations.localeOf(context).toString())
+                  : DateFormat.yMd(Localizations.localeOf(context).toString()))
+              .format(publishedAt),
         ),
     ];
     if (parts.isEmpty) return const SizedBox.shrink();
@@ -823,17 +844,14 @@ class _VideoMetaLineContent extends ConsumerWidget {
         color: VineTheme.whiteText.withValues(alpha: 0.5),
       ),
     );
-    TextSpan fieldSpan(({String text, String? count}) part) {
+    TextSpan fieldSpan(_MetaLineField part) {
       final count = part.count;
-      final countOffset = count == null ? -1 : part.text.indexOf(count);
-      if (countOffset < 0) {
-        return TextSpan(text: part.text);
-      }
+      if (count == null) return TextSpan(text: part.before);
       return TextSpan(
         children: [
-          TextSpan(text: part.text.substring(0, countOffset)),
+          TextSpan(text: part.before),
           TextSpan(text: count, style: countStyle),
-          TextSpan(text: part.text.substring(countOffset + count!.length)),
+          TextSpan(text: part.after),
         ],
       );
     }

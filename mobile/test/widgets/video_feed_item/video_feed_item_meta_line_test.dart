@@ -108,6 +108,7 @@ void main() {
     bool eligibilityIsLoading = false,
     SharedPreferences? prefs,
     void Function()? onAuthorStatsLookup,
+    Locale? locale,
   }) async {
     await tester.pumpWidget(
       testProviderScope(
@@ -133,6 +134,7 @@ void main() {
           }),
         ],
         child: MaterialApp(
+          locale: locale,
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
@@ -255,6 +257,57 @@ void main() {
       final content = _metaLine(tester);
       expect(content, _l10n(tester).videoOverlayVideoLoops('1', 1));
       expect(content, "1 this video's loop");
+    });
+
+    testWidgets('emphasizes the count, not matching digits in the name', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: true,
+        StatsVisibilityPreferences.showVideoLoopsKey: true,
+        StatsVisibilityPreferences.showPublishedDateKey: false,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      // Japanese puts the creator name before the count, so the name's digits
+      // come first in the rendered text.
+      await pump(
+        tester,
+        video: _video(
+          authorName: 'Creator 123',
+          rawTags: {'views': '5'},
+          createdAt: 1735689600,
+        ),
+        authorTotalLoops: 123,
+        prefs: prefs,
+        locale: const Locale('ja'),
+      );
+
+      final spans = <TextSpan>[];
+      tester
+          .widget<Text>(find.byKey(const Key('video_meta_line')))
+          .textSpan!
+          .visitChildren((span) {
+            if (span is TextSpan && span.text != null) spans.add(span);
+            return true;
+          });
+      final emphasized = spans
+          .where((span) => span.style?.fontWeight == FontWeight.w600)
+          .toList();
+      final total = lookupAppLocalizations(
+        const Locale('ja'),
+      ).videoOverlayTotalLoops('123', 123, 'Creator 123');
+      final totalCount = emphasized.first;
+      final before = spans[spans.indexOf(totalCount) - 1].text!;
+
+      expect(totalCount.text, '123');
+      expect(before, startsWith('Creator 123'));
+      expect(total, startsWith(before + totalCount.text!));
     });
 
     testWidgets('uses the singular for a creator total of one loop', (

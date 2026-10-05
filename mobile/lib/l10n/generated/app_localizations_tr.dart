@@ -315,6 +315,7 @@ class AppLocalizationsTr extends AppLocalizations {
       count,
       locale: localeName,
       other: '$authorName: $compactCount döngü',
+      one: '$authorName: $compactCount döngü',
     );
     return '$_temp0';
   }
@@ -325,6 +326,7 @@ class AppLocalizationsTr extends AppLocalizations {
       count,
       locale: localeName,
       other: 'döngü',
+      one: 'döngü',
     );
     return 'bu videoda $compactCount $_temp0';
   }

@@ -377,6 +377,7 @@ class AppLocalizationsUr extends AppLocalizations {
       count,
       locale: localeName,
       other: '$authorName کے $compactCount لوپس',
+      one: '$authorName کا $compactCount لوپ',
     );
     return '$_temp0';
   }
@@ -386,9 +387,10 @@ class AppLocalizationsUr extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'لوپس',
+      other: 'اس ویڈیو کے $compactCount لوپس',
+      one: 'اس ویڈیو کا $compactCount لوپ',
     );
-    return 'اس ویڈیو کے $compactCount $_temp0';
+    return '$_temp0';
   }
 
   @override

@@ -380,6 +380,8 @@ class AppLocalizationsIt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$compactCount loop di $authorName',
+      many: '$compactCount loop di $authorName',
+      one: '$compactCount loop di $authorName',
     );
     return '$_temp0';
   }
@@ -390,6 +392,8 @@ class AppLocalizationsIt extends AppLocalizations {
       count,
       locale: localeName,
       other: 'loop',
+      many: 'loop',
+      one: 'loop',
     );
     return '$compactCount $_temp0 di questo video';
   }

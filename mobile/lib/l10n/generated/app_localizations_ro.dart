@@ -395,7 +395,8 @@ class AppLocalizationsRo extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'bucle',
+      other: 'de bucle',
+      few: 'bucle',
       one: 'buclă',
     );
     return '$authorName: $compactCount $_temp0';
@@ -406,7 +407,8 @@ class AppLocalizationsRo extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'bucle ale acestui videoclip',
+      other: 'de bucle ale acestui videoclip',
+      few: 'bucle ale acestui videoclip',
       one: 'buclă a acestui videoclip',
     );
     return '$compactCount $_temp0';

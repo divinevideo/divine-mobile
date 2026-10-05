@@ -361,8 +361,12 @@ class AppLocalizationsAr extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'تكرارات',
+      other: 'تكرار',
+      many: 'تكرارًا',
+      few: 'تكرارات',
+      two: 'تكرار',
       one: 'تكرار',
+      zero: 'تكرار',
     );
     return '$compactCount $_temp0 لـ$authorName';
   }
@@ -372,8 +376,12 @@ class AppLocalizationsAr extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'دورات',
+      other: 'دورة',
+      many: 'دورةً',
+      few: 'دورات',
+      two: 'دورة',
       one: 'دورة',
+      zero: 'دورة',
     );
     return '$compactCount $_temp0 لهذا الفيديو';
   }

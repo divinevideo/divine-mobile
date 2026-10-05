@@ -379,6 +379,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: 'loops',
+      many: 'loops',
       one: 'loop',
     );
     return '$compactCount $_temp0 de $authorName';
@@ -390,6 +391,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: 'loops',
+      many: 'loops',
       one: 'loop',
     );
     return '$compactCount $_temp0 deste vídeo';

@@ -377,6 +377,7 @@ class AppLocalizationsEs extends AppLocalizations {
       count,
       locale: localeName,
       other: 'bucles',
+      many: 'bucles',
       one: 'bucle',
     );
     return '$compactCount $_temp0 de $authorName';
@@ -388,6 +389,7 @@ class AppLocalizationsEs extends AppLocalizations {
       count,
       locale: localeName,
       other: 'bucles',
+      many: 'bucles',
       one: 'bucle',
     );
     return '$compactCount $_temp0 de este video';

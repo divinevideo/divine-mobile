@@ -346,6 +346,7 @@ class AppLocalizationsFil extends AppLocalizations {
       count,
       locale: localeName,
       other: '$compactCount loop ni $authorName',
+      one: '$compactCount loop ni $authorName',
     );
     return '$_temp0';
   }
