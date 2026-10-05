@@ -278,7 +278,10 @@ class PrefsCuratedListStore {
   /// and the lists of the previous account must not be written back.
   List<CuratedList> _storedLists({required List<CuratedList> fallback}) {
     final json = _prefs.getString(_listsKey);
-    if (json == null) return const [];
+    if (json == null) {
+      _writes.cacheKeyRemoved(_listsKey);
+      return const [];
+    }
     try {
       return (jsonDecode(json) as List<dynamic>)
           .map((row) => CuratedList.fromJson(row as Map<String, dynamic>))
@@ -292,7 +295,10 @@ class PrefsCuratedListStore {
   /// The stored ids, or [fallback] when they cannot be decoded.
   Set<String> _storedSubscriptions({required Set<String> fallback}) {
     final json = _prefs.getString(_subscriptionsKey);
-    if (json == null) return const {};
+    if (json == null) {
+      _writes.cacheKeyRemoved(_subscriptionsKey);
+      return const {};
+    }
     try {
       return (jsonDecode(json) as List<dynamic>).cast<String>().toSet();
     } on Object catch (error, stackTrace) {
@@ -333,6 +339,12 @@ class PrefsCuratedListStore {
     read: _rawDeletedCoordinates,
   );
 
-  Set<String> _rawDeletedCoordinates() =>
-      (_prefs.getStringList(deletedCoordinatesStorageKey) ?? const []).toSet();
+  Set<String> _rawDeletedCoordinates() {
+    final coordinates = _prefs.getStringList(deletedCoordinatesStorageKey);
+    if (coordinates == null) {
+      _writes.cacheKeyRemoved(deletedCoordinatesStorageKey);
+      return const {};
+    }
+    return coordinates.toSet();
+  }
 }
