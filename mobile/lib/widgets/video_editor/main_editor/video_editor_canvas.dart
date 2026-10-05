@@ -41,6 +41,7 @@ import 'package:openvine/services/video_editor/preview_composition.dart';
 import 'package:openvine/services/video_editor/stop_motion_audio_preview.dart';
 import 'package:openvine/utils/await_push_transition.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/editor_text_layer_bounds.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:openvine/utils/video_editor_playhead.dart';
@@ -2787,6 +2788,16 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                     ),
                   ];
                 },
+              ),
+            ),
+            textEditor: TextEditorConfigs(
+              // Scaling a text layer up or moving it towards an edge wraps its
+              // lines at the edges of the visible video instead of pushing
+              // them off the canvas. The draft re-render passes the same
+              // bounds, since they are not stored in the layers.
+              layerBounds: (bodySize) => editorTextLayerBounds(
+                bodySize,
+                targetAspectRatio: targetAspectRatio.value,
               ),
             ),
             paintEditor: PaintEditorConfigs(

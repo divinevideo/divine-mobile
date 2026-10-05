@@ -19,6 +19,7 @@ import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/utils/editor_text_fonts.dart';
+import 'package:openvine/utils/editor_text_layer_bounds.dart';
 import 'package:openvine/utils/open_vine_image_cache.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
@@ -276,14 +277,16 @@ class DraftRenderParametersService {
     );
 
     try {
-      // `configs` is deliberately left at the package default. Only a few
-      // values change how a layer *renders* rather than how it is edited —
-      // `textEditor.initFontSize` (which scales text and emoji layers),
-      // `textEditor.style.leadingDistribution`, `emojiEditor.style.textStyle`,
-      // `stickerEditor.initWidth` and `paintEditor.censorConfigs` — and the
-      // editor canvas overrides none of them. Both sides reading the same
-      // defaults is what keeps a re-render identical to what the user saw; if
-      // the canvas ever overrides one, mirror it here.
+      // `configs` is deliberately left at the package default apart from
+      // `textEditor.layerBounds`. Only a few values change how a layer
+      // *renders* rather than how it is edited — `textEditor.initFontSize`
+      // (which scales text and emoji layers), `textEditor.layerBounds`
+      // (where text lines wrap), `textEditor.style.leadingDistribution`,
+      // `emojiEditor.style.textStyle`, `stickerEditor.initWidth` and
+      // `paintEditor.censorConfigs` — and of those the editor canvas
+      // overrides only `layerBounds`, which is mirrored here. Both sides
+      // reading the same values is what keeps a re-render identical to what
+      // the user saw; if the canvas ever overrides another, mirror it too.
       //
       // `configs.theme` is the one exception, and it is deliberate. The canvas
       // does override it (so its subtree can resolve `context.vineColors`
@@ -298,6 +301,14 @@ class DraftRenderParametersService {
       final captured = await _rasterizer.capture(
         layers: layers,
         editorBodySize: bodySize,
+        configs: ProImageEditorConfigs(
+          textEditor: TextEditorConfigs(
+            layerBounds: (editorBodySize) => editorTextLayerBounds(
+              editorBodySize,
+              targetAspectRatio: aspectRatio.value,
+            ),
+          ),
+        ),
         // The render scales each layer by `videoSize.width / bodySize.width`
         // (see VideoEditorRenderService.buildImageLayers), so capturing at
         // that ratio lands one raster pixel per output pixel.
