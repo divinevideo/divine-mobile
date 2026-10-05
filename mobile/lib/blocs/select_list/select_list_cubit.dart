@@ -57,7 +57,16 @@ class SelectListCubit extends Cubit<SelectListState>
       ).any((list) => list.id == listId);
 
   SelectListStatus _sessionFailure() {
-    emitIfOpen(state.copyWith(status: SelectListStatus.failure));
+    emitIfOpen(
+      state.copyWith(
+        lists: const [],
+        memberListIds: const {},
+        selectedListIds: const {},
+        syncingListIds: const {},
+        failedSyncListIds: const {},
+        status: SelectListStatus.failure,
+      ),
+    );
     return SelectListStatus.failure;
   }
 
@@ -174,28 +183,57 @@ class SelectListCubit extends Cubit<SelectListState>
   }
 
   void createdListWithVideoPendingSync() {
-    if (state.isSaving || !isSessionCurrent) return;
-    emitIfOpen(state.copyWith(status: SelectListStatus.videoPendingSync));
+    if (isClosed || state.isSaving || !isSessionCurrent) return;
+    _listsChanged();
+    emitIfOpen(
+      state.copyWith(
+        status: state.pendingSyncListIds.isEmpty
+            ? SelectListStatus.editing
+            : SelectListStatus.videoPendingSync,
+      ),
+    );
   }
 
   /// Retries publication of the existing local membership.
   Future<void> syncRequested(String listId) async {
-    if (state.isSaving ||
+    if (isClosed ||
+        state.isSaving ||
         !_canMutate(listId) ||
         !state.pendingSyncListIds.contains(listId)) {
       return;
     }
-    emitIfOpen(state.copyWith(status: SelectListStatus.saving));
-    final synced = await _service.retryListSync(listId);
+    emitIfOpen(
+      state.copyWith(
+        status: SelectListStatus.saving,
+        syncingListIds: {listId},
+        failedSyncListIds: state.failedSyncListIds.difference({listId}),
+      ),
+    );
+    var synced = false;
+    try {
+      synced = await _service.retryListSync(listId);
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
+    }
     if (!isSessionCurrent) {
       _sessionFailure();
       return;
     }
+    // A service may settle before its listener notification; read its durable
+    // membership again rather than treating the retry bool as a row snapshot.
+    _listsChanged();
+    final pending = state.pendingSyncListIds;
+    final failed = state.failedSyncListIds.intersection(pending);
+    if (!synced && pending.contains(listId)) failed.add(listId);
     emitIfOpen(
       state.copyWith(
-        status: synced
-            ? SelectListStatus.editing
-            : SelectListStatus.videoPendingSync,
+        status: failed.isNotEmpty
+            ? SelectListStatus.syncFailed
+            : pending.isNotEmpty
+            ? SelectListStatus.videoPendingSync
+            : SelectListStatus.editing,
+        syncingListIds: const {},
+        failedSyncListIds: failed,
       ),
     );
   }
@@ -206,6 +244,7 @@ class SelectListCubit extends Cubit<SelectListState>
   /// lost it is unpicked, and one that is gone drops out of the picks; every
   /// other pick stands, so a save in progress keeps what was chosen.
   void _listsChanged() {
+    if (isClosed) return;
     if (!isSessionCurrent) {
       emitIfOpen(
         state.copyWith(
@@ -213,6 +252,8 @@ class SelectListCubit extends Cubit<SelectListState>
           memberListIds: const {},
           selectedListIds: const {},
           status: SelectListStatus.failure,
+          syncingListIds: const {},
+          failedSyncListIds: const {},
         ),
       );
       return;
@@ -226,11 +267,28 @@ class SelectListCubit extends Cubit<SelectListState>
         .union(gained)
         .difference(lost)
         .intersection(offered);
+    final pending = {
+      for (final list in lists)
+        if (list.pendingRepublish && members.contains(list.id)) list.id,
+    };
+    final failed = state.failedSyncListIds.intersection(pending);
+    final followsSync =
+        state.status == SelectListStatus.videoPendingSync ||
+        state.status == SelectListStatus.syncFailed;
+    final status = followsSync
+        ? failed.isNotEmpty
+              ? SelectListStatus.syncFailed
+              : pending.isNotEmpty
+              ? SelectListStatus.videoPendingSync
+              : SelectListStatus.editing
+        : state.status;
     emitIfOpen(
       state.copyWith(
         lists: lists,
         memberListIds: members,
         selectedListIds: selected,
+        status: status,
+        failedSyncListIds: failed,
       ),
     );
   }
