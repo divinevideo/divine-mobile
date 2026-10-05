@@ -292,10 +292,12 @@ void main() {
         );
         await tester.pump();
         expect(find.byType(EmailVerificationScreen), findsOneWidget);
+        expect(find.text('Explore popular'), findsNothing);
 
         authStateController.add(AuthState.authenticated);
         await tester.pump();
         expect(find.byType(EmailVerificationScreen), findsOneWidget);
+        expect(find.text('Explore popular'), findsNothing);
 
         states.add(
           const EmailVerificationState(status: EmailVerificationStatus.success),
@@ -304,6 +306,7 @@ void main() {
         await tester.pump();
         await tester.pump();
         expect(find.byType(EmailVerificationScreen), findsOneWidget);
+        expect(find.text('Explore popular'), findsNothing);
 
         when(() => mockAuthService.isAnonymous).thenReturn(false);
         authStateController.add(AuthState.authenticated);
