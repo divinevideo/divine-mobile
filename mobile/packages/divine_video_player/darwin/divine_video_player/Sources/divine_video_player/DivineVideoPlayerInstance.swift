@@ -1306,14 +1306,22 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         if currentStatus == "completed" { currentStatus = "ready" }
         seekGeneration += 1
         let generation = seekGeneration
-        guard let seekingPlayer = player, let seekingItem = seekingPlayer.currentItem else {
+        // A failed item never completes a seek: answer now instead of leaving
+        // the call, and the block AVPlayer would hold for it, pending.
+        guard let seekingPlayer = player, let seekingItem = seekingPlayer.currentItem,
+            seekingItem.status != .failed
+        else {
             result(nil)
             return
         }
-        seekingPlayer.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] finished in
+        // Weak, so a seek that never completes cannot keep the player alive
+        // after `dispose()`.
+        seekingPlayer.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero) {
+            [weak self, weak seekingPlayer, weak seekingItem] finished in
             guard let self, finished, !self.diagnosticDisposed,
-                self.seekGeneration == generation, self.player === seekingPlayer,
-                seekingPlayer.currentItem === seekingItem
+                self.seekGeneration == generation,
+                let seekingPlayer, self.player === seekingPlayer,
+                let seekingItem, seekingPlayer.currentItem === seekingItem
             else {
                 result(nil)
                 return
