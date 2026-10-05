@@ -11,8 +11,14 @@ void main() {
   });
 
   test('missing or malformed deployment input has no valid policy', () {
-    for (final input in ['', '[]', 'null', '{}', '[4]', '[" "]', 'invalid']) {
+    for (final input in ['', 'null', '{}', '[4]', '[" "]', 'invalid']) {
       expect(AppConfig.parsePublicPeopleListExcludedDTags(input), isNull);
     }
+  });
+
+  test('an explicitly empty deployment policy is valid and immutable', () {
+    final tags = AppConfig.parsePublicPeopleListExcludedDTags('[]');
+    expect(tags, isEmpty);
+    expect(() => tags!.add('synthetic-machine-set'), throwsUnsupportedError);
   });
 }
