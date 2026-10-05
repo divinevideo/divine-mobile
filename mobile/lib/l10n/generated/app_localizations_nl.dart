@@ -13244,4 +13244,8 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get listSearchVideosUnavailable =>
       'Videolijsten zijn momenteel niet beschikbaar.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'De gegevens van het vorige account konden niet worden gewist. Probeer het opnieuw.';
 }

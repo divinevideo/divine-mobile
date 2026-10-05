@@ -105,6 +105,37 @@ void main() {
         },
       );
 
+      test('refused cleanup prevents restored Amber authentication', () async {
+        channels.secureStorage['amber_pubkey'] = freshPubkeyHex();
+        channels.secureStorage['amber_package'] = 'com.greenart7c3.nostrsigner';
+        SharedPreferences.setMockInitialValues({
+          'authentication_source': 'amber',
+          'current_user_pubkey_hex': 'a' * 64,
+          kKnownAccountsKey: '[]',
+        });
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        when(() => mockCleanupService.shouldClearDataForUser(any()))
+            .thenReturn(true);
+        when(
+          () => mockCleanupService.clearUserSpecificData(
+            reason: any(named: 'reason'),
+            isIdentityChange: any(named: 'isIdentityChange'),
+            userPubkey: any(named: 'userPubkey'),
+            deleteUserData: any(named: 'deleteUserData'),
+          ),
+        ).thenThrow(
+          const UserDataCleanupException('Could not clear account cache'),
+        );
+        final authService = createAuthService();
+        addTearDown(authService.dispose);
+        await authService.initialize();
+        expect(authService.authState, AuthState.unauthenticated);
+        expect(authService.currentIdentity, isNull);
+        expect(authService.currentPublicKeyHex, isNull);
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getString('current_user_pubkey_hex'), 'a' * 64);
+      });
+
       test(
         'stays unauthenticated when the signer app is gone on restore',
         () async {

@@ -25,6 +25,9 @@ enum SignInFailureReason {
   /// A network/transport problem prevented a verdict.
   network,
 
+  /// Outgoing account data could not be cleared before signing in.
+  accountCleanupFailed,
+
   /// Any other unexpected failure.
   unknown,
 }

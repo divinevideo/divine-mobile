@@ -5000,5 +5000,6 @@
     "listsDiscoveryEmpty": "Inga listor dök upp den här gången. Dra för att uppdatera.",
     "listsDiscoveryLoadingLabel": "Läser in listor",
     "listSearchPeopleUnavailable": "Personlistor är inte tillgängliga just nu.",
-    "listSearchVideosUnavailable": "Videolistor är inte tillgängliga just nu."
+    "listSearchVideosUnavailable": "Videolistor är inte tillgängliga just nu.",
+    "authAccountCleanupFailed": "Det gick inte att rensa det förra kontots data. Försök igen."
 }

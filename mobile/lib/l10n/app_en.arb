@@ -9678,5 +9678,9 @@
   "@listSearchPeopleUnavailable": {
     "description": "People-list search source could not answer; shown beside healthy video results with retry."
   },
-  "listSearchVideosUnavailable": "Video lists are unavailable right now."
+  "listSearchVideosUnavailable": "Video lists are unavailable right now.",
+  "@authAccountCleanupFailed": {
+    "description": "Error shown when local account cleanup fails during sign-in or switching accounts. The user can retry."
+  },
+  "authAccountCleanupFailed": "Couldn't clear the previous account's data. Try again."
 }

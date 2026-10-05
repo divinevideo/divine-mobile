@@ -13337,4 +13337,8 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get listSearchVideosUnavailable =>
       'Videolisten sind gerade nicht verfügbar.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Die Daten des vorherigen Kontos konnten nicht gelöscht werden. Versuche es erneut.';
 }

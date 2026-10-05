@@ -13289,4 +13289,8 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get listSearchVideosUnavailable =>
       'Hindi available ang mga listahan ng video ngayon.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Hindi ma-clear ang data ng nakaraang account. Subukan ulit.';
 }

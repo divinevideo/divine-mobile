@@ -22028,6 +22028,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Video lists are unavailable right now.'**
   String get listSearchVideosUnavailable;
+
+  /// Error shown when local account cleanup fails during sign-in or switching accounts. The user can retry.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t clear the previous account\'s data. Try again.'**
+  String get authAccountCleanupFailed;
 }
 
 class _AppLocalizationsDelegate

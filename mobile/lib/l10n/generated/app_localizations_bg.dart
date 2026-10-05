@@ -13302,4 +13302,8 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get listSearchVideosUnavailable =>
       'Списъците с видеа не са достъпни в момента.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Данните на предишния акаунт не могат да бъдат изчистени. Опитай отново.';
 }

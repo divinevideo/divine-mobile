@@ -13080,4 +13080,8 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get listSearchVideosUnavailable =>
       'Daftar video sedang tidak tersedia.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Data akun sebelumnya tidak dapat dihapus. Coba lagi.';
 }

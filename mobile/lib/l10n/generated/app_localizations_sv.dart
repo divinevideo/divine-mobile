@@ -13179,4 +13179,8 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get listSearchVideosUnavailable =>
       'Videolistor är inte tillgängliga just nu.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Det gick inte att rensa det förra kontots data. Försök igen.';
 }

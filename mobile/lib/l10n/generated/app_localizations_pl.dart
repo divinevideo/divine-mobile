@@ -13438,4 +13438,8 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get listSearchVideosUnavailable =>
       'Listy filmów są teraz niedostępne.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Nie udało się usunąć danych poprzedniego konta. Spróbuj ponownie.';
 }

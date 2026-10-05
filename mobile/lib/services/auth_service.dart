@@ -1288,7 +1288,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       _lastError = 'Failed to create identity: $e';
       _setAuthState(AuthState.unauthenticated);
 
-      return AuthResult.failure(_lastError!);
+      return _authFailureResult(e);
     }
   }
 
@@ -1597,7 +1597,11 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         );
         final amberInfo = await _loadAmberInfo();
         if (amberInfo != null) {
-          await _reconnectAmber(amberInfo.pubkey, amberInfo.package);
+          await _reconnectAmber(
+            amberInfo.pubkey,
+            amberInfo.package,
+            claimLegacyRows: claimLegacyRows,
+          );
         } else {
           Log.error(
             'signInForAccount: no archived Amber info for ${pubkeyForLogs(pubkeyHex)}',
@@ -1615,7 +1619,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         );
         final bunkerInfo = await _loadBunkerInfo();
         if (bunkerInfo != null) {
-          await _reconnectBunker(bunkerInfo);
+          await _reconnectBunker(bunkerInfo, claimLegacyRows: claimLegacyRows);
         } else {
           Log.error(
             'signInForAccount: no archived bunker info for ${pubkeyForLogs(pubkeyHex)}',
@@ -1632,7 +1636,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
           category: LogCategory.auth,
         );
         if (kIsWeb) {
-          await _reconnectNip07();
+          await _reconnectNip07(claimLegacyRows: claimLegacyRows);
         } else {
           Log.error(
             'signInForAccount: persisted nip07 source on non-web platform',
@@ -1934,6 +1938,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   Future<void> _reconnectBunker(
     NostrRemoteSignerInfo info, {
     bool boundedByStartupTimeout = false,
+    bool claimLegacyRows = true,
   }) async {
     Log.info(
       'Reconnecting to bunker...',
@@ -1979,32 +1984,21 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         throw Exception('Failed to get public key from bunker');
       }
 
-      _currentKeyContainer = SecureKeyContainer.fromPublicKey(userPubkey);
-      _authSource = AuthenticationSource.bunker;
-      _currentIdentity = _buildIdentity();
-
-      // Create a minimal profile for the bunker user
-      final npub = NostrKeyUtils.encodePubKey(userPubkey);
-      _currentProfile = UserProfile(
-        npub: npub,
-        publicKeyHex: userPubkey,
-        displayName: npub,
+      await _setupUserSession(
+        SecureKeyContainer.fromPublicKey(userPubkey),
+        AuthenticationSource.bunker,
+        claimLegacyRows: claimLegacyRows,
       );
-
-      _setAuthState(AuthState.authenticated);
-      _profileController.add(_currentProfile);
-
-      // Register in known accounts
-      await _knownAccounts.upsert(userPubkey, AuthenticationSource.bunker);
-
-      // Run discovery in background - not needed for home feed
-      unawaited(_performDiscovery());
 
       Log.info(
         'Bunker reconnection successful for user: ${pubkeyForLogs(userPubkey)}',
         name: 'AuthService',
         category: LogCategory.auth,
       );
+    } on UserDataCleanupException {
+      _bunkerSigner?.close();
+      _bunkerSigner = null;
+      rethrow;
     } catch (e) {
       Log.error(
         'Bunker reconnection failed: $e',
@@ -2097,7 +2091,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       _lastError = 'Amber connection failed: $e';
       _setAuthState(AuthState.unauthenticated);
 
-      return AuthResult.failure(_lastError!);
+      return _authFailureResult(e);
     }
   }
 
@@ -2155,7 +2149,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       _lastError = 'NIP-07 connection failed: $e';
       _setAuthState(AuthState.unauthenticated);
 
-      return AuthResult.failure(_lastError!);
+      return _authFailureResult(e);
     }
   }
 
@@ -2183,7 +2177,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   /// Browser extensions remember per-origin grants, so we can hydrate the
   /// session by calling getPublicKey() again. If the extension is no
   /// longer present or refuses, fall back to unauthenticated.
-  Future<void> _reconnectNip07() async {
+  Future<void> _reconnectNip07({bool claimLegacyRows = true}) async {
     final service = _nip07Extension;
     if (service == null || !service.isAvailable) {
       Log.info(
@@ -2211,7 +2205,11 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       await _setupUserSession(
         SecureKeyContainer.fromPublicKey(result.publicKey!),
         AuthenticationSource.nip07,
+        claimLegacyRows: claimLegacyRows,
       );
+    } on UserDataCleanupException {
+      _nip07Service = null;
+      rethrow;
     } catch (e, stackTrace) {
       Log.error(
         'NIP-07 reconnect failed: $e',
@@ -2225,7 +2223,11 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   }
 
   /// Reconnect to Amber using saved connection info
-  Future<void> _reconnectAmber(String pubkey, String? package) async {
+  Future<void> _reconnectAmber(
+    String pubkey,
+    String? package, {
+    bool claimLegacyRows = true,
+  }) async {
     Log.info(
       'Reconnecting to Amber...',
       name: 'AuthService',
@@ -2251,32 +2253,20 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       // Recreate signer with saved pubkey and package
       _amberSigner = AndroidNostrSigner(pubkey: pubkey, package: package);
 
-      _currentKeyContainer = SecureKeyContainer.fromPublicKey(pubkey);
-      _authSource = AuthenticationSource.amber;
-      _currentIdentity = _buildIdentity();
-
-      // Create a minimal profile for the Amber user
-      final npub = NostrKeyUtils.encodePubKey(pubkey);
-      _currentProfile = UserProfile(
-        npub: npub,
-        publicKeyHex: pubkey,
-        displayName: npub,
+      await _setupUserSession(
+        SecureKeyContainer.fromPublicKey(pubkey),
+        AuthenticationSource.amber,
+        claimLegacyRows: claimLegacyRows,
       );
-
-      _setAuthState(AuthState.authenticated);
-      _profileController.add(_currentProfile);
-
-      // Register in known accounts
-      await _knownAccounts.upsert(pubkey, AuthenticationSource.amber);
-
-      // Run discovery in background - not needed for home feed
-      unawaited(_performDiscovery());
 
       Log.info(
         'Amber reconnection successful for user: ${pubkeyForLogs(pubkey)}',
         name: 'AuthService',
         category: LogCategory.auth,
       );
+    } on UserDataCleanupException {
+      _amberSigner = null;
+      rethrow;
     } catch (e) {
       Log.error(
         'Amber reconnection failed: $e',
@@ -2332,7 +2322,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       _lastError = 'Failed to import identity: $e';
       _setAuthState(AuthState.unauthenticated);
 
-      return AuthResult.failure(_lastError!);
+      return _authFailureResult(e);
     }
   }
 
@@ -2406,7 +2396,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       _lastError = 'Failed to import from hex: $e';
       _setAuthState(AuthState.unauthenticated);
 
-      return AuthResult.failure(_lastError!);
+      return _authFailureResult(e);
     }
   }
 
@@ -2556,7 +2546,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       _lastError = 'Bunker connection failed: $e';
       _setAuthState(AuthState.unauthenticated);
 
-      return AuthResult.failure(_lastError!);
+      return _authFailureResult(e);
     }
   }
 
@@ -2824,6 +2814,9 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         name: 'AuthService',
         category: LogCategory.auth,
       );
+    } on UserDataCleanupException {
+      _setAuthState(AuthState.unauthenticated);
+      rethrow;
     } catch (e) {
       Log.error(
         'Failed to integrate oauth session: $e',
@@ -3634,6 +3627,8 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
           category: LogCategory.auth,
         );
       }
+    } on UserDataCleanupException {
+      rethrow;
     } catch (e, stack) {
       Log.warning(
         '_restoreLastUsedAccountOrFallback: error reading last-used npub: $e '
@@ -3683,6 +3678,8 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
             );
             await signInForAccount(account.pubkeyHex, account.authSource);
             return true;
+          } on UserDataCleanupException {
+            rethrow;
           } catch (e) {
             Log.warning(
               '_tryRestoreFromKnownAccounts: '
@@ -3716,6 +3713,8 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         name: 'AuthService',
         category: LogCategory.auth,
       );
+    } on UserDataCleanupException {
+      rethrow;
     } catch (e) {
       Log.warning(
         '_tryRestoreFromKnownAccounts: scan failed: $e',
@@ -3942,7 +3941,18 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     await _userDataCleanupService.claimLegacyRows(pubkeyHex);
   }
 
-  /// Set up user session after successful authentication
+  AuthResult _authFailureResult(Object error) =>
+      error is UserDataCleanupException
+      ? const AuthResult(
+          success: false,
+          failureReason: AuthFailureReason.accountCleanupFailed,
+        )
+      : AuthResult.failure(_lastError!);
+
+  /// Set up user session after successful authentication.
+  ///
+  /// Throws [UserDataCleanupException] if the outgoing account's data cannot
+  /// be cleared. The incoming account must not be activated in that case.
   Future<void> _setupUserSession(
     SecureKeyContainer keyContainer,
     AuthenticationSource source, {
@@ -4140,6 +4150,16 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       // loading. Discovery results (relay list, blossom servers) are only used
       // when editing profile or publishing content.
       unawaited(_performDiscovery());
+    } on UserDataCleanupException {
+      // Storage cleanup must finish before any incoming identity becomes live.
+      // Terms acceptance cannot repair a refused cache removal.
+      _currentIdentity = null;
+      _currentKeyContainer = null;
+      _currentProfile = null;
+      _authSource = AuthenticationSource.none;
+      _profileController.add(null);
+      _setAuthState(AuthState.unauthenticated);
+      rethrow;
     } catch (e) {
       Log.warning(
         'error in _setupUserSession: $e',

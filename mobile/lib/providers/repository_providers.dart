@@ -621,6 +621,13 @@ class CuratedListsState extends _$CuratedListsState {
         !service.isCurrentSession) {
       return [];
     }
+    final initializationError = service.initializationError;
+    if (initializationError != null) {
+      Error.throwWithStackTrace(
+        initializationError,
+        service.initializationStackTrace ?? StackTrace.current,
+      );
+    }
     service.addListener(onServiceChanged);
     return service.lists;
   }

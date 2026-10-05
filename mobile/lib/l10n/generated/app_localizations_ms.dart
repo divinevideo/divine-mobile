@@ -13175,4 +13175,8 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get listSearchVideosUnavailable =>
       'Senarai video tidak tersedia buat masa ini.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Data akaun sebelumnya tidak dapat dipadamkan. Cuba lagi.';
 }

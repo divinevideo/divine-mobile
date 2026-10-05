@@ -6767,5 +6767,6 @@
   "listsDiscoveryLoadingLabel": "Memuatkan senarai",
   "listsDiscoveryEmpty": "Tiada senarai yang muncul kali ini. Tarik untuk muat semula.",
     "listSearchPeopleUnavailable": "Senarai orang tidak tersedia buat masa ini.",
-    "listSearchVideosUnavailable": "Senarai video tidak tersedia buat masa ini."
+    "listSearchVideosUnavailable": "Senarai video tidak tersedia buat masa ini.",
+  "authAccountCleanupFailed": "Data akaun sebelumnya tidak dapat dipadamkan. Cuba lagi."
 }

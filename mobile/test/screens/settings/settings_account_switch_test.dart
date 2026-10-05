@@ -40,6 +40,7 @@ import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/feed_aspect_ratio_preference_service.dart';
 import 'package:openvine/services/language_preference_service.dart';
 import 'package:openvine/services/moderation_label_service.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
@@ -467,6 +468,26 @@ void main() {
           (l10n) => l10n.settingsAccountRestoreFailedSwitchMessage,
         ),
       };
+
+  testWidgets('cleanup failure keeps the current account and offers a retry', (
+    tester,
+  ) async {
+    when(() => deviceScope.switchController).thenThrow(
+      const UserDataCleanupException('Could not clear account cache'),
+    );
+    final l10n = await pumpAndTapSwitch(tester);
+    await tester.tap(accountTile(otherPubkey));
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.authAccountCleanupFailed), findsOneWidget);
+    expect(
+      find.text(l10n.settingsAccountRestoreFailedSwitchMessage),
+      findsNothing,
+    );
+    expect(find.text(l10n.settingsSessionExpiredSwitchMessage), findsNothing);
+    verifyNever(() => authService.signOut());
+    verifyNever(() => authService.pendingAccountSwitchPubkey = any());
+  });
 
   group('switching hits an unusable session', () {
     for (final entry in unusableSessionFailures.entries) {

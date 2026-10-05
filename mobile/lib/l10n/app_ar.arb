@@ -5000,5 +5000,6 @@
     "listsDiscoveryEmpty": "لم تظهر أي قوائم هذه المرة. يمكن السحب للتحديث.",
     "listsDiscoveryLoadingLabel": "جارٍ تحميل القوائم",
     "listSearchPeopleUnavailable": "قوائم الأشخاص غير متاحة الآن.",
-    "listSearchVideosUnavailable": "قوائم الفيديو غير متاحة الآن."
+    "listSearchVideosUnavailable": "قوائم الفيديو غير متاحة الآن.",
+    "authAccountCleanupFailed": "تعذّر مسح بيانات الحساب السابق. حاول مرة أخرى."
 }

@@ -13117,4 +13117,8 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get listSearchVideosUnavailable =>
       'Danh sách video hiện không khả dụng.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Không thể xóa dữ liệu của tài khoản trước. Hãy thử lại.';
 }

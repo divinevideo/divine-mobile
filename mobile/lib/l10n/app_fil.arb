@@ -4006,5 +4006,6 @@
     "listsDiscoveryEmpty": "Walang lumabas na list ngayon. Hilahin pababa para mag-refresh.",
     "listsDiscoveryLoadingLabel": "Naglo-load ng mga list",
     "listSearchPeopleUnavailable": "Hindi available ang mga listahan ng tao ngayon.",
-    "listSearchVideosUnavailable": "Hindi available ang mga listahan ng video ngayon."
+    "listSearchVideosUnavailable": "Hindi available ang mga listahan ng video ngayon.",
+    "authAccountCleanupFailed": "Hindi ma-clear ang data ng nakaraang account. Subukan ulit."
 }

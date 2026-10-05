@@ -13168,4 +13168,8 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get listSearchVideosUnavailable =>
       'ویڈیو کی فہرستیں فی الحال دستیاب نہیں ہیں۔';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'پچھلے اکاؤنٹ کا ڈیٹا صاف نہیں کیا جا سکا۔ دوبارہ کوشش کریں۔';
 }

@@ -12837,4 +12837,8 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get listSearchVideosUnavailable => 'የቪዲዮ ዝርዝሮች በአሁኑ ጊዜ አይገኙም።';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'የቀድሞውን መለያ ውሂብ ማጽዳት አልተቻለም። እንደገና ሞክር።';
 }

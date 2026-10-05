@@ -5000,5 +5000,6 @@
     "listsDiscoveryEmpty": "Bu sefer hiç liste çıkmadı. Yenilemek için aşağı çek.",
     "listsDiscoveryLoadingLabel": "Listeler yükleniyor",
     "listSearchPeopleUnavailable": "Kişi listeleri şu anda kullanılamıyor.",
-    "listSearchVideosUnavailable": "Video listeleri şu anda kullanılamıyor."
+    "listSearchVideosUnavailable": "Video listeleri şu anda kullanılamıyor.",
+    "authAccountCleanupFailed": "Önceki hesabın verileri temizlenemedi. Tekrar dene."
 }

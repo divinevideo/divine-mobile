@@ -5000,5 +5000,6 @@
     "listsDiscoveryEmpty": "Er doken deze keer geen lijsten op. Trek omlaag om te vernieuwen.",
     "listsDiscoveryLoadingLabel": "Lijsten laden",
     "listSearchPeopleUnavailable": "Personenlijsten zijn momenteel niet beschikbaar.",
-    "listSearchVideosUnavailable": "Videolijsten zijn momenteel niet beschikbaar."
+    "listSearchVideosUnavailable": "Videolijsten zijn momenteel niet beschikbaar.",
+    "authAccountCleanupFailed": "De gegevens van het vorige account konden niet worden gewist. Probeer het opnieuw."
 }
