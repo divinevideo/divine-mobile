@@ -637,17 +637,16 @@ class CuratedListRelayGateway {
   /// version up to the request's `created_at`, which would take the sealed
   /// replacement down with the original.
   ///
-  /// Best effort by contract. NIP-09 is a request relays SHOULD honour, and
-  /// anything that already read the public copy keeps it, so the caller must
-  /// not gate the flip on the result — the flip is already committed by the
-  /// time this runs.
-  Future<void> redactPlaintextListEvent(
+  /// Relay acceptance confirms the request, not erasure. NIP-09 is advisory,
+  /// and anything that already read the public copy keeps it. A false result
+  /// retains the caller's durable retry; it never undoes accepted privacy.
+  Future<bool> redactPlaintextListEvent(
     String plaintextEventId, {
     String? ownerPubkey,
     int? createdAt,
   }) async {
     final owner = ownerPubkey ?? currentAuthenticatedPubkey();
-    if (owner == null || currentAuthenticatedPubkey() != owner) return;
+    if (owner == null || currentAuthenticatedPubkey() != owner) return false;
     final event = await _authService.createAndSignEvent(
       kind: EventKind.eventDeletion,
       content: '',
@@ -665,19 +664,19 @@ class CuratedListRelayGateway {
         name: 'CuratedListRelayGateway',
         category: LogCategory.system,
       );
-      return;
+      return false;
     }
 
-    final result = await _nostrService.publishEvent(event);
-    final failureReason = result.failureReason;
-    if (failureReason != null) {
+    final outcome = await _nostrService.publishEventAwaitOk(event);
+    if (!outcome.acceptedByAny) {
       Log.warning(
         'Failed to redact public list event $plaintextEventId: '
-        '$failureReason',
+        '${outcome.summary}',
         name: 'CuratedListRelayGateway',
         category: LogCategory.system,
       );
     }
+    return outcome.acceptedByAny;
   }
 
   /// Signs public tags or sealed private items after validating the owner.

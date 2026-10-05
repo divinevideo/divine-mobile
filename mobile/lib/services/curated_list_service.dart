@@ -15,6 +15,7 @@ import 'package:openvine/models/curated_list_callbacks.dart';
 import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_relay_gateway.dart';
+import 'package:openvine/services/curated_lists/curated_list_publisher.dart';
 import 'package:openvine/services/curated_lists/curated_list_relay_snapshot_reader.dart';
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:openvine/services/curated_lists/curated_list_subscription_metadata.dart';
@@ -103,6 +104,13 @@ class CuratedListService extends ChangeNotifier {
       defaultListDeletedStorageKey: defaultListDeletedStorageKey,
       isCurrentSession: () => isCurrentSession,
     );
+    _publisher = CuratedListPublisher(
+      client: _nostrService,
+      gateway: _relayGateway,
+      publishClock: _publishClock,
+      findList: (id) => isCurrentSession ? getListById(id) : null,
+      persistList: _persistPublication,
+    );
     if (isCurrentSession) {
       _loadLists();
       _loadSubscribedListIds();
@@ -124,6 +132,7 @@ class CuratedListService extends ChangeNotifier {
   final Duration _relaySyncTimeout;
   late final CuratedListRelayGateway _relayGateway;
   final CuratedListPublishClock _publishClock;
+  late final CuratedListPublisher _publisher;
 
   /// Callback invoked when a list is subscribed (for video cache sync)
   OnListSubscribedCallback? _onListSubscribed;
@@ -189,7 +198,7 @@ class CuratedListService extends ChangeNotifier {
     Future<T> Function() operation, {
     T? cancelled,
   }) => _mutations.run(
-    listId,
+    getListById(listId)?.authorScopedId ?? listId,
     operation,
     currentOwner: () => _authService.currentPublicKeyHex,
     cancelled: cancelled,
@@ -480,13 +489,22 @@ class CuratedListService extends ChangeNotifier {
       pubkey: updatedList.pubkey ?? _relayGateway.currentAuthenticatedPubkey(),
     );
     _publishClock.observe(previous);
-    _lists[listIndex] = ownedUpdate;
+    final changesPermissions =
+        CuratedListVisibility.fromList(previous) !=
+        CuratedListVisibility.fromList(ownedUpdate);
+    if (changesPermissions && !_authService.isAuthenticated) return false;
+    final locallySaved = ownedUpdate.stageVisibilityFrom(previous);
+    _lists[listIndex] = locallySaved;
     if (!await _saveLists(
       ownershipClaims: previous.pubkey == null && ownedUpdate.pubkey != null
           ? {ownedUpdate.authorScopedId: previous}
           : const {},
     )) {
-      _restoreList(previous);
+      if (!_isDisposed &&
+          _prefs.getString(listsStorageKey) != null &&
+          getListById(previous.authorScopedId) == locallySaved) {
+        _restoreList(previous);
+      }
       return false;
     }
 
@@ -495,7 +513,7 @@ class CuratedListService extends ChangeNotifier {
       final currentIndex = _lists.indexWhere(
         (list) => list.authorScopedId == ownedUpdate.authorScopedId,
       );
-      if (currentIndex != -1) {
+      if (currentIndex != -1 && _lists[currentIndex] == locallySaved) {
         _lists[currentIndex] = _lists[currentIndex].copyWith(
           pendingRepublish: true,
         );
@@ -622,6 +640,12 @@ class CuratedListService extends ChangeNotifier {
     () async {
       final list = getListById(listId);
       if (list == null || !isOwnedList(listId)) return false;
+      if (list.nostrEventId != null &&
+          !list.pendingRepublish &&
+          list.pendingVisibility == null &&
+          list.pendingPlaintextEventIds.isNotEmpty) {
+        return _publisher.retryPlaintextRedactions(list.authorScopedId);
+      }
       return _publishListToNostr(list, confirmed: true);
     },
     cancelled: false,
@@ -668,6 +692,7 @@ class CuratedListService extends ChangeNotifier {
     String? thumbnailEventId,
     PlayOrder? playOrder,
     void Function()? onLocalSaved,
+    void Function()? onPublicationUnconfirmed,
   }) => updateListWithResult(
     listId: listId,
     name: name,
@@ -680,6 +705,7 @@ class CuratedListService extends ChangeNotifier {
     thumbnailEventId: thumbnailEventId,
     playOrder: playOrder,
     onLocalSaved: onLocalSaved,
+    onPublicationUnconfirmed: onPublicationUnconfirmed,
   ).then((result) => result.succeeded);
 
   /// Updates metadata while identifying an impossible new private target.
@@ -696,6 +722,7 @@ class CuratedListService extends ChangeNotifier {
     String? thumbnailEventId,
     PlayOrder? playOrder,
     void Function()? onLocalSaved,
+    void Function()? onPublicationUnconfirmed,
   }) {
     if (isReadyForMutations) {
       final cached = getListById(listId);
@@ -728,6 +755,7 @@ class CuratedListService extends ChangeNotifier {
         thumbnailEventId: thumbnailEventId,
         playOrder: playOrder,
         onLocalSaved: onLocalSaved,
+        onPublicationUnconfirmed: onPublicationUnconfirmed,
       ),
       cancelled: const CuratedListUpdateResult.failed(),
     );
@@ -745,6 +773,7 @@ class CuratedListService extends ChangeNotifier {
     String? thumbnailEventId,
     PlayOrder? playOrder,
     void Function()? onLocalSaved,
+    void Function()? onPublicationUnconfirmed,
   }) async {
     try {
       final listIndex = _listIndex(listId);
@@ -794,6 +823,11 @@ class CuratedListService extends ChangeNotifier {
         );
         return const CuratedListUpdateResult.failed();
       }
+      if (!_authService.isAuthenticated &&
+          CuratedListVisibility.fromList(list) !=
+              CuratedListVisibility.fromList(updatedList)) {
+        return const CuratedListUpdateResult.failed();
+      }
 
       if (visibilityChanged &&
           !updatedList.isPublic &&
@@ -802,26 +836,31 @@ class CuratedListService extends ChangeNotifier {
       }
 
       // Metadata saves locally; visibility and permissions await acceptance.
-      _lists[listIndex] = updatedList.stageVisibilityFrom(list);
+      final locallySaved = updatedList.stageVisibilityFrom(list);
+      _lists[listIndex] = locallySaved;
       if (!await _saveLists(
         ownershipClaims: list.pubkey == null && updatedList.pubkey != null
             ? {updatedList.authorScopedId: list}
             : const {},
       )) {
-        _restoreList(list);
+        if (!_isDisposed &&
+            _prefs.getString(listsStorageKey) != null &&
+            getListById(list.authorScopedId) == locallySaved) {
+          _restoreList(list);
+        }
         return const CuratedListUpdateResult.failed();
       }
       onLocalSaved?.call();
 
-      final becamePrivate =
-          list.isPublic && !updatedList.publicationTarget.isPublic;
-      final plaintextEventId = becamePrivate ? list.nostrEventId : null;
-
       if (_authService.isAuthenticated &&
-          !await _publishListToNostr(updatedList, confirmed: true)) {
+          !await _publishListToNostr(
+            updatedList,
+            confirmed: true,
+            onPublicationUnconfirmed: onPublicationUnconfirmed,
+          )) {
         if (!visibilityChanged) {
           final currentIndex = _listIndex(list.authorScopedId);
-          if (currentIndex != -1) {
+          if (currentIndex != -1 && _lists[currentIndex] == locallySaved) {
             _lists[currentIndex] = _lists[currentIndex].copyWith(
               pendingRepublish: true,
             );
@@ -829,25 +868,6 @@ class CuratedListService extends ChangeNotifier {
           }
         }
         return const CuratedListUpdateResult.failed();
-      }
-
-      if (plaintextEventId != null &&
-          _authService.currentPublicKeyHex == list.pubkey) {
-        try {
-          await _relayGateway.redactPlaintextListEvent(
-            plaintextEventId,
-            ownerPubkey: list.pubkey,
-            createdAt: _publishClock.next(
-              ownerPubkey: list.pubkey!,
-              listId: list.id,
-            ),
-          );
-        } on CuratedListClockException catch (error) {
-          Log.warning(
-            'Privacy replacement accepted; redaction deferred: $error',
-            category: LogCategory.system,
-          );
-        }
       }
 
       return const CuratedListUpdateResult.saved();
@@ -942,7 +962,11 @@ class CuratedListService extends ChangeNotifier {
     _lists.removeWhere((item) => item.authorScopedId == list.authorScopedId);
     // Keep the follow until the list removal is durably saved.
     if (!await _saveLists()) {
-      _restoreList(list);
+      if (!_isDisposed &&
+          _prefs.getString(listsStorageKey) != null &&
+          getListById(list.authorScopedId) == null) {
+        _restoreList(list);
+      }
       return false;
     }
     _subscribedListIds.remove(list.authorScopedId);
@@ -1249,135 +1273,36 @@ class CuratedListService extends ChangeNotifier {
     );
   }
 
-  /// Confirmed writes await acceptance; queued item changes stay local for retry.
+  /// Confirmed writes await acceptance; ordinary item edits stay local for retry.
   Future<bool> _publishListToNostr(
     CuratedList sourceList, {
     bool confirmed = false,
-  }) async {
-    try {
-      final list = sourceList.publicationTarget;
-      final ownerPubkey = _relayGateway.currentAuthenticatedPubkey();
-      if (ownerPubkey == null || list.pubkey != ownerPubkey) {
-        Log.warning(
-          'Cannot publish list - authenticated owner does not match',
-          name: 'CuratedListService',
-          category: LogCategory.system,
-        );
-        return false;
-      }
+    void Function()? onPublicationUnconfirmed,
+  }) => _publisher.publish(
+    sourceList,
+    confirmed: confirmed,
+    onPublicationUnconfirmed: onPublicationUnconfirmed,
+  );
 
-      final event = await _relayGateway.signList(
-        list,
-        ownerPubkey: ownerPubkey,
-        createdAt: () => _publishClock.next(
-          ownerPubkey: ownerPubkey,
-          listId: list.id,
-        ),
-      );
-
-      if (event == null ||
-          event.pubkey != ownerPubkey ||
-          _relayGateway.currentAuthenticatedPubkey() != ownerPubkey) {
-        Log.warning(
-          'Failed to sign curated list event: ${list.name} (${list.id})',
-          name: 'CuratedListService',
-          category: LogCategory.system,
-        );
-        return false;
-      }
-
-      final sendingIndex = _lists.indexWhere(
-        (l) => l.authorScopedId == list.authorScopedId,
-      );
-      if (sendingIndex != -1) {
-        final current = _lists[sendingIndex];
-        final signedAt = event.createdAtDateTime;
-        _lists[sendingIndex] = list
-            .stageVisibilityFrom(current, stageProposal: true)
-            .copyWith(
-              updatedAt: signedAt.isAfter(current.updatedAt)
-                  ? signedAt
-                  : current.updatedAt,
-              pendingRepublish: true,
-            );
-        if (!await _saveLists()) return false;
-      }
-      if (confirmed) {
-        final outcome = await _nostrService.publishEventAwaitOk(event);
-        // A privacy transition commits once any relay accepts it.
-        if (!outcome.acceptedByAny) {
-          final rejected = getListById(list.authorScopedId);
-          if (outcome.rejectedBy.isNotEmpty &&
-              outcome.noResponseFrom.isEmpty &&
-              rejected != null) {
-            _restoreList(rejected.copyWith(clearPendingVisibility: true));
-            await _saveLists();
-          }
-          if (outcome.rejectedBy.values.any(
-            (reason) => reason.toLowerCase().contains('future'),
-          )) {
-            _publishClock.rejectedFuture(
-              ownerPubkey: ownerPubkey,
-              listId: list.id,
-              createdAt: event.createdAt,
-            );
-          }
-          Log.warning(
-            'Failed to publish curated list: ${list.name} (${list.id}): '
-            '${outcome.summary}',
-            name: 'CuratedListService',
-            category: LogCategory.system,
-          );
-          return false;
-        }
-      } else {
-        final publishResult = await _nostrService.publishEvent(event);
-        final failureReason = publishResult.failureReason;
-        if (failureReason != null) {
-          Log.warning(
-            'Failed to publish curated list: ${list.name} (${list.id}): '
-            '$failureReason',
-            name: 'CuratedListService',
-            category: LogCategory.system,
-          );
-          return false;
-        }
-      }
-
-      final listIndex = _lists.indexWhere(
-        (l) => l.authorScopedId == list.authorScopedId,
-      );
-      if (listIndex != -1) {
-        final current = _lists[listIndex];
-        final commitsVisibility = current.isPublic != list.isPublic;
-        final signedAt = event.createdAtDateTime;
-        _lists[listIndex] = current.copyWith(
-          nostrEventId: event.id,
-          updatedAt: signedAt.isAfter(current.updatedAt)
-              ? signedAt
-              : current.updatedAt,
-          isPublic: list.isPublic,
-          isCollaborative: commitsVisibility ? list.isCollaborative : null,
-          allowedCollaborators: commitsVisibility
-              ? list.allowedCollaborators
-              : null,
-          pendingRepublish: false,
-          clearPendingVisibility: true,
-        );
-        if (!await _saveLists()) {
-          _restoreList(current);
-          return false;
-        }
-      }
-      return true;
-    } catch (e) {
-      Log.error(
-        'Failed to publish list to Nostr: $e',
-        name: 'CuratedListService',
-        category: LogCategory.system,
-      );
-      return false;
+  Future<bool> _persistPublication(
+    CuratedList current,
+    CuratedList replacement,
+  ) async {
+    // A disposed account service or an explicitly cleared cache must not
+    // recreate old rows when an in-flight acknowledgement arrives.
+    if (_isDisposed || _prefs.getString(listsStorageKey) == null) return false;
+    final index = _listIndex(current.authorScopedId);
+    if (index == -1 || _lists[index] != current) return false;
+    _lists[index] = replacement;
+    if (await _saveLists()) return true;
+    // A rejected backing write can leave optimistic prefs cached. Restore
+    // this candidate only; a newer reconciled row must never be overwritten.
+    if (!_isDisposed &&
+        _prefs.getString(listsStorageKey) != null &&
+        getListById(current.authorScopedId) == replacement) {
+      _restoreList(current);
     }
+    return false;
   }
 
   void _loadLists() {
@@ -1580,7 +1505,9 @@ class CuratedListService extends ChangeNotifier {
     final stranded = _lists
         .where(
           (list) =>
-              (list.nostrEventId == null || list.pendingRepublish) &&
+              (list.nostrEventId == null ||
+                  list.pendingRepublish ||
+                  list.pendingPlaintextEventIds.isNotEmpty) &&
               (list.pubkey == owner || _isUnpublishedLocalList(list)),
         )
         .toList(growable: false);
@@ -1599,7 +1526,10 @@ class CuratedListService extends ChangeNotifier {
         var current = getListById(list.authorScopedId);
         if (current == null) return;
         if (!_cacheStore.hasUnambiguousOwnerEvidence(current)) return;
-        if (current.nostrEventId != null && !current.pendingRepublish) return;
+        if (current.nostrEventId != null && !current.pendingRepublish) {
+          await _publisher.retryPlaintextRedactions(current.authorScopedId);
+          return;
+        }
         if (_isUnpublishedLocalList(current)) {
           final currentId = current.id;
           final currentIndex = _listIndex(currentId);
@@ -1727,6 +1657,7 @@ class CuratedListService extends ChangeNotifier {
             isPublic: isPublic,
             clearNostrEventId: true,
             pendingRepublish: false,
+            pendingPlaintextEventIds: existingList.pendingPlaintextEventIds,
           );
           Log.info(
             'Merged unpublished local and relay copies of list $dTag',
@@ -1744,8 +1675,16 @@ class CuratedListService extends ChangeNotifier {
             category: LogCategory.system,
           );
 
+          final plaintextIds = <String>{
+            ...existingList.pendingPlaintextEventIds,
+            if (existingList.isPublic &&
+                !curatedList.isPublic &&
+                existingList.nostrEventId != null)
+              existingList.nostrEventId!,
+          };
           _lists[existingListIndex] = curatedList.copyWith(
             createdAt: existingList.createdAt,
+            pendingPlaintextEventIds: plaintextIds.toList(growable: false),
           );
         } else {
           Log.debug(

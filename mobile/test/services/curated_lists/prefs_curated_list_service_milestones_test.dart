@@ -198,7 +198,9 @@ void main() {
           sent.add(event);
           return acceptedOutcome(event);
         });
-        acceptsWrite = (count) => count <= 2;
+        // Local metadata, attempted timestamp, then the acknowledged target
+        // journal succeed. Reject the final acceptance commit only.
+        acceptsWrite = (count) => count <= 3;
         expect(
           await service.updateList(
             listId: 'crew',
@@ -217,6 +219,7 @@ void main() {
               'the disk snapshot retains the last durably accepted visibility',
         );
         expect(persisted().pendingVisibility!.isPublic, isFalse);
+        expect(persisted().pendingVisibility!.relayAccepted, isTrue);
         expect(persisted().pendingRepublish, isTrue);
         final reloaded = CuratedListService(
           nostrService: client,

@@ -126,7 +126,11 @@ void main() {
                 isCollaborative: false,
                 allowedCollaborators: const [],
               )
-              .stageVisibilityFrom(accepted, stageProposal: true);
+              .stageVisibilityFrom(
+                accepted,
+                stageProposal: true,
+                relayAccepted: true,
+              );
           final restored = CuratedList.fromJson(staged.toJson());
           expect(restored, staged);
           expect(restored.isPublic, isTrue);
@@ -144,7 +148,11 @@ void main() {
         final accepted = createSubject();
         final staged = accepted
             .copyWith(isPublic: false)
-            .stageVisibilityFrom(accepted, stageProposal: true);
+            .stageVisibilityFrom(
+              accepted,
+              stageProposal: true,
+              relayAccepted: true,
+            );
         final renamed = staged.copyWith(name: 'New name');
         expect(renamed.pendingVisibility, staged.pendingVisibility);
         expect(renamed.publicationTarget.name, 'New name');
@@ -153,6 +161,60 @@ void main() {
           isNull,
         );
         expect(renamed.copyWith(clearPendingVisibility: true), isNot(renamed));
+      });
+
+      test('legacy unconfirmed proposal cannot change a later publication', () {
+        final accepted = createSubject(isPublic: false);
+        final legacy = accepted.copyWith(
+          pendingVisibility: const CuratedListVisibility(
+            isPublic: true,
+            isCollaborative: true,
+            allowedCollaborators: [],
+          ),
+        );
+        final restored = CuratedList.fromJson(legacy.toJson());
+        expect(restored.pendingVisibility!.relayAccepted, isFalse);
+        expect(restored.publicationTarget.isPublic, isFalse);
+        expect(restored.publicationTarget.isCollaborative, isFalse);
+        expect(restored.publicationTarget.pendingVisibility, isNull);
+      });
+
+      test('permissions-only change remains acceptance gated', () {
+        final accepted = createSubject();
+        final staged = accepted
+            .copyWith(isCollaborative: true, allowedCollaborators: ['b' * 64])
+            .stageVisibilityFrom(
+              accepted,
+              stageProposal: true,
+              relayAccepted: true,
+            );
+        expect(staged.isPublic, isTrue);
+        expect(staged.isCollaborative, isFalse);
+        expect(staged.allowedCollaborators, isEmpty);
+        expect(staged.publicationTarget.isCollaborative, isTrue);
+        expect(staged.publicationTarget.allowedCollaborators, ['b' * 64]);
+      });
+    });
+
+    group('pendingPlaintextEventIds', () {
+      test('older JSON defaults to no local redaction outbox', () {
+        final json = createSubject().toJson();
+        expect(json.containsKey('pendingPlaintextEventIds'), isFalse);
+        expect(CuratedList.fromJson(json).pendingPlaintextEventIds, isEmpty);
+      });
+
+      test('outbox survives JSON and metadata copies and can be cleared', () {
+        final pending = createSubject().copyWith(
+          pendingPlaintextEventIds: ['c' * 64],
+        );
+        final restored = CuratedList.fromJson(pending.toJson());
+        expect(restored, pending);
+        expect(restored.copyWith(name: 'Renamed').pendingPlaintextEventIds, [
+          'c' * 64,
+        ]);
+        final completed = restored.copyWith(pendingPlaintextEventIds: const []);
+        expect(completed.pendingPlaintextEventIds, isEmpty);
+        expect(completed, isNot(restored));
       });
     });
 
