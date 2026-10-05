@@ -813,15 +813,17 @@ void main() {
             const Duration(seconds: 5),
             onTimeout: () => fail('load more never reached the repository'),
           );
+          // The seed is already `success`, so wait for the replacement result
+          // rather than a status the sort change's first emission satisfies.
           final recent = bloc.stream.firstWhere(
             (s) =>
                 s.sort == VideoSearchSort.recent &&
-                s.status == VideoSearchStatus.success,
+                s.videos.any((video) => video.id == 'recent-1'),
           );
           bloc.add(const VideoSearchSortChanged(VideoSearchSort.recent));
           await recent.timeout(
             const Duration(seconds: 5),
-            onTimeout: () => fail('sort change never reached success'),
+            onTimeout: () => fail('replacement search never delivered'),
           );
           loadMoreCompleter.complete((
             videos: [createVideo(id: 'old-page-2', title: 'Old Page 2')],
