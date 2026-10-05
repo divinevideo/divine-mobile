@@ -778,11 +778,12 @@ class CuratedListService extends ChangeNotifier {
   /// positional remove would drop the wrong one.
   Future<void> _removeListAndSubscription(CuratedList list) async {
     _lists.removeWhere((item) => item.authorScopedId == list.authorScopedId);
+    // A refused list save restores the list, so its follow stays until then.
+    await _saveLists();
     _subscribedListIds.remove(list.authorScopedId);
     if (!_lists.any((item) => item.id == list.id)) {
       _subscribedListIds.remove(list.id);
     }
-    await _saveLists();
     await _saveSubscribedListIds();
     _onListUnsubscribed?.call(list.authorScopedId);
   }
