@@ -997,6 +997,10 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
     let state = try XCTUnwrap(latestState())
     XCTAssertEqual(state["status"] as? String, "idle")
     XCTAssertEqual(state["clipCount"] as? Int, 0)
+    // A stopped player reports nothing more, so a resume the cancelled seek
+    // left behind only shows once media is loaded again: it plays at once.
+    _ = try invoke("setClips", ["clips": [["uri": clipURL.path, "startMs": 0]]])
+    try waitForState("the next media loads paused") { $0["status"] as? String == "paused" }
   }
 
   func testReplacementDuringSeekFromTheEndStaysPaused() throws {
