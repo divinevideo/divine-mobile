@@ -237,7 +237,7 @@ void main() {
 
       test('clears all user-specific keys from SharedPreferences', () async {
         // Set up some user-specific data
-        await prefs.setStringList('curated_lists', ['list1']);
+        await prefs.setString('curated_lists', '[]');
         await prefs.setStringList('subscribed_list_ids', ['sub1']);
         await prefs.setString('seen_video_ids', 'video1');
         await prefs.setBool('age_verified_16_plus', true);
@@ -587,7 +587,7 @@ void main() {
 
       test('returns count of cleared keys', () async {
         // Set up some user-specific data
-        await prefs.setStringList('curated_lists', ['list1']);
+        await prefs.setString('curated_lists', '[]');
         await prefs.setString('seen_video_ids', 'video1');
         await prefs.setBool('age_verified_16_plus', true);
 
@@ -603,7 +603,7 @@ void main() {
       });
 
       test('accepts reason parameter for tracking', () async {
-        await prefs.setStringList('curated_lists', ['list1']);
+        await prefs.setString('curated_lists', '[]');
 
         // Should complete without error with various reasons
         final count1 = await service.clearUserSpecificData(
@@ -612,7 +612,7 @@ void main() {
         expect(count1, equals(1));
 
         // Reset data
-        await prefs.setStringList('curated_lists', ['list1']);
+        await prefs.setString('curated_lists', '[]');
 
         final count2 = await service.clearUserSpecificData(
           reason: 'identity_change',
@@ -630,7 +630,7 @@ void main() {
           );
           await prefs.setString('relay_discovery_npub1abc', 'relay_data');
           // Also set a static user-specific key
-          await prefs.setStringList('curated_lists', ['list1']);
+          await prefs.setString('curated_lists', '[]');
 
           // Default isIdentityChange=false (same-user logout)
           await service.clearUserSpecificData(reason: 'explicit_logout');
@@ -678,7 +678,7 @@ void main() {
       test(
         'does not include scoped cache keys in identity-change count',
         () async {
-          await prefs.setStringList('curated_lists', ['list1']);
+          await prefs.setString('curated_lists', '[]');
           await prefs.setString('vine_drafts', '{"drafts": []}');
           await prefs.setString('following_list_abc123', '["pubkey1"]');
           await prefs.setString('relay_discovery_npub1abc', 'data');
