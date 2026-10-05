@@ -610,11 +610,16 @@ void main() {
           ..add(const NewMessageSearchPeerLabelsChanged(labels))
           ..add(const NewMessageSearchStarted());
         await pumpEventQueue();
-        final searched = bloc.stream.firstWhere(
-          (state) => state.status == NewMessageSearchStatus.searchSuccess,
+        final settled = bloc.stream.firstWhere(
+          (state) =>
+              state.status == NewMessageSearchStatus.searchSuccess ||
+              state.status == NewMessageSearchStatus.searchFailure,
         );
         bloc.add(NewMessageSearchQueryChanged(query));
-        await searched;
+        expect(
+          (await settled).status,
+          equals(NewMessageSearchStatus.searchSuccess),
+        );
       }
 
       blocTest<NewMessageSearchBloc, NewMessageSearchState>(
@@ -735,15 +740,7 @@ void main() {
             await vanished.close();
           });
 
-          bloc
-            ..add(const NewMessageSearchPeerLabelsChanged(labels))
-            ..add(const NewMessageSearchStarted());
-          await pumpEventQueue();
-          final searched = bloc.stream.firstWhere(
-            (state) => state.status == NewMessageSearchStatus.searchSuccess,
-          );
-          bloc.add(const NewMessageSearchQueryChanged('Aeontropy'));
-          await searched;
+          await loadThenSearch(bloc, 'Aeontropy');
           expect(
             bloc.state.results.map((p) => p.pubkey),
             contains(vanishedPubkey),
