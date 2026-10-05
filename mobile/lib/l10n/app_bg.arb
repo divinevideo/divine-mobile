@@ -3160,7 +3160,6 @@
     },
     "settingsGeneralTitle": "Общи настройки",
     "settingsContentSafetyTitle": "Съдържание и безопасност",
-    "settingsPrivacyTitle": "Поверителност",
     "settingsPrivacySubtitle": "Избери какви данни за ползване споделяш",
     "privacySettingsAnalyticsSection": "АНАЛИТИКА",
     "privacySettingsShareUsage": "Споделяй данни за ползване",
@@ -3344,8 +3343,6 @@
     "nostrSettingsCouldNotRemoveKeys": "Не успяхме да махнем този акаунт от това устройство. Опитай пак.",
     "nostrSettingsDeleteAccount": "Изтрий акаунта и данните",
     "nostrSettingsDeleteAccountSubtitle": "Изпраща заявки за изтриване на съдържанието ти и те отписва на това устройство. Релетата, клиентите, индексите за търсене и другите устройства с вход може да запазят копия.",
-    "safetySettingsWhatYouSee": "КАКВО ВИЖДАШ",
-    "safetySettingsWhatYouPublish": "КАКВО ПУБЛИКУВАШ",
     "listPersonCount": "{count, plural, =1{1 човек} other{{count} души}}",
     "@listPersonCount": {
         "placeholders": {
@@ -4968,5 +4965,23 @@
   "commonReload": "Презареди",
   "analyticsSocialCountsInfoTitle": "За броя на последователите ти",
   "analyticsSocialCountsLearnMoreSemantics": "Научи повече на {url}",
-  "metadataStatsLineWithoutVideoLoops": "{likes} харесвания · {comments} коментари · {reposts} репоста"
+  "metadataStatsLineWithoutVideoLoops": "{likes} харесвания · {comments} коментари · {reposts} репоста",
+  "settingsAccountTitle": "Акаунт",
+  "settingsWhatYouSeeTitle": "Какво виждате",
+  "settingsCreateShareTitle": "Създаване и споделяне",
+  "settingsPrivacySafetyTitle": "Поверителност и безопасност",
+  "settingsAppPreferencesTitle": "Настройки на приложението",
+  "settingsConnectionsTitle": "Връзки",
+  "settingsHelpAboutTitle": "Помощ и за Divine",
+  "settingsCreatorToolsSection": "Инструменти за творци",
+  "settingsNostrNetworkSection": "Мрежа Nostr",
+  "settingsAboutDivineSection": "За Divine",
+  "settingsAdvancedSection": "Разширени",
+  "settingsAccountSubtitle": "Вход, самоличност, ключове и данни за акаунта",
+  "settingsWhatYouSeeSubtitle": "Език, субтитри, оформление на видео и филтри",
+  "settingsCreateShareSubtitle": "Записване, публикуване и инструменти за творци",
+  "settingsPrivacySafetySubtitle": "Данни за употреба, модериране и блокирани акаунти",
+  "settingsAppPreferencesSubtitle": "Външен вид, език, хранилище и разширени опции",
+  "settingsConnectionsSubtitle": "Приложения, релета, медийни сървъри и разрешения",
+  "settingsHelpAboutSubtitle": "Поддръжка, правна информация и данни за приложението"
 }

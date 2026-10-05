@@ -3006,7 +3006,6 @@
     "peopleListsViewProfileHint": "Profiel van {name} bekijken",
     "settingsGeneralTitle": "Algemene instellingen",
     "settingsContentSafetyTitle": "Inhoud & veiligheid",
-    "settingsPrivacyTitle": "Privacy",
     "settingsPrivacySubtitle": "Kies welke gebruiksgegevens je deelt",
     "privacySettingsAnalyticsSection": "STATISTIEKEN",
     "privacySettingsShareUsage": "Gebruiksgegevens delen",
@@ -3227,8 +3226,6 @@
     "nostrSettingsCouldNotRemoveKeys": "Dit account kon niet van dit apparaat verwijderd worden. Probeer het opnieuw.",
     "nostrSettingsDeleteAccount": "Account en data verwijderen",
     "nostrSettingsDeleteAccountSubtitle": "Stuurt verwijderverzoeken voor je content en meldt je op dit apparaat af. Relays, clients, zoekindexen en andere aangemelde apparaten kunnen kopieën bewaren.",
-    "safetySettingsWhatYouSee": "WAT JIJ ZIET",
-    "safetySettingsWhatYouPublish": "WAT JIJ PUBLICEERT",
     "listPersonCount": "{count, plural, =1{1 persoon} other{{count} personen}}",
     "@listPersonCount": {
         "placeholders": {
@@ -4844,5 +4841,23 @@
   "commonReload": "Opnieuw laden",
   "analyticsSocialCountsInfoTitle": "Over je aantal volgers",
   "analyticsSocialCountsLearnMoreSemantics": "Meer weten op {url}",
-  "metadataStatsLineWithoutVideoLoops": "{likes} likes · {comments} reacties · {reposts} reposts"
+  "metadataStatsLineWithoutVideoLoops": "{likes} likes · {comments} reacties · {reposts} reposts",
+  "settingsAccountTitle": "Account",
+  "settingsWhatYouSeeTitle": "Wat je ziet",
+  "settingsCreateShareTitle": "Maken en delen",
+  "settingsPrivacySafetyTitle": "Privacy en veiligheid",
+  "settingsAppPreferencesTitle": "Appvoorkeuren",
+  "settingsConnectionsTitle": "Verbindingen",
+  "settingsHelpAboutTitle": "Hulp en over Divine",
+  "settingsCreatorToolsSection": "Tools voor makers",
+  "settingsNostrNetworkSection": "Nostr-netwerk",
+  "settingsAboutDivineSection": "Over Divine",
+  "settingsAdvancedSection": "Geavanceerd",
+  "settingsAccountSubtitle": "Inloggen, identiteit, sleutels en accountgegevens",
+  "settingsWhatYouSeeSubtitle": "Taal, ondertiteling, video-indeling en filters",
+  "settingsCreateShareSubtitle": "Opnemen, publiceren en tools voor makers",
+  "settingsPrivacySafetySubtitle": "Gebruiksgegevens, moderatie en geblokkeerde accounts",
+  "settingsAppPreferencesSubtitle": "Weergave, taal, opslag en geavanceerde opties",
+  "settingsConnectionsSubtitle": "Apps, relays, mediaservers en machtigingen",
+  "settingsHelpAboutSubtitle": "Ondersteuning, juridische informatie en appgegevens"
 }

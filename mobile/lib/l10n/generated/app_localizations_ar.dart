@@ -291,9 +291,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settingsContentSafetyTitle => 'المحتوى والأمان';
 
   @override
-  String get settingsPrivacyTitle => 'الخصوصية';
-
-  @override
   String get settingsPrivacySubtitle =>
       'التحكم في بيانات الاستخدام التي تتم مشاركتها';
 
@@ -2833,12 +2830,6 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get notificationSettingsAboutDescription =>
       'الإشعارات مدعومة ببروتوكول Nostr. التحديثات الفورية تعتمد على اتصالك بمحولات Nostr. قد تواجه بعض الإشعارات تأخيرًا.';
-
-  @override
-  String get safetySettingsWhatYouSee => 'ما تراه';
-
-  @override
-  String get safetySettingsWhatYouPublish => 'ما تنشره';
 
   @override
   String get safetySettingsShowDivineHostedOnly =>
@@ -12785,4 +12776,64 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => 'تفعيل التلقائي';
+
+  @override
+  String get settingsAccountTitle => 'الحساب';
+
+  @override
+  String get settingsWhatYouSeeTitle => 'ما تراه';
+
+  @override
+  String get settingsCreateShareTitle => 'أنشئ وشارك';
+
+  @override
+  String get settingsPrivacySafetyTitle => 'الخصوصية والأمان';
+
+  @override
+  String get settingsAppPreferencesTitle => 'تفضيلات التطبيق';
+
+  @override
+  String get settingsConnectionsTitle => 'الاتصالات';
+
+  @override
+  String get settingsHelpAboutTitle => 'المساعدة وحول Divine';
+
+  @override
+  String get settingsCreatorToolsSection => 'أدوات المبدعين';
+
+  @override
+  String get settingsNostrNetworkSection => 'شبكة Nostr';
+
+  @override
+  String get settingsAboutDivineSection => 'حول Divine';
+
+  @override
+  String get settingsAdvancedSection => 'متقدم';
+
+  @override
+  String get settingsAccountSubtitle =>
+      'تسجيل الدخول والهوية والمفاتيح وبيانات الحساب';
+
+  @override
+  String get settingsWhatYouSeeSubtitle =>
+      'اللغة والترجمة وتخطيط الفيديو والفلاتر';
+
+  @override
+  String get settingsCreateShareSubtitle => 'التسجيل والنشر وأدوات المبدعين';
+
+  @override
+  String get settingsPrivacySafetySubtitle =>
+      'بيانات الاستخدام والإشراف والحسابات المحظورة';
+
+  @override
+  String get settingsAppPreferencesSubtitle =>
+      'المظهر واللغة والتخزين والخيارات المتقدمة';
+
+  @override
+  String get settingsConnectionsSubtitle =>
+      'التطبيقات والمرحّلات وخوادم الوسائط والأذونات';
+
+  @override
+  String get settingsHelpAboutSubtitle =>
+      'الدعم والمعلومات القانونية وتفاصيل التطبيق';
 }

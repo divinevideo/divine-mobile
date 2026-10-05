@@ -274,9 +274,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get settingsContentSafetyTitle => 'Kandungan & Keselamatan';
 
   @override
-  String get settingsPrivacyTitle => 'Privasi';
-
-  @override
   String get settingsPrivacySubtitle =>
       'Pilih data penggunaan yang anda kongsi';
 
@@ -2832,12 +2829,6 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get notificationSettingsAboutDescription =>
       'Pemberitahuan dikuasakan oleh protokol Nostr. Kemas kini masa nyata bergantung pada sambungan anda ke relay Nostr. Sesetengah pemberitahuan mungkin lewat.';
-
-  @override
-  String get safetySettingsWhatYouSee => 'APA YANG ANDA LIHAT';
-
-  @override
-  String get safetySettingsWhatYouPublish => 'APA YANG ANDA TERBITKAN';
 
   @override
   String get safetySettingsShowDivineHostedOnly =>
@@ -12854,4 +12845,65 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => 'Hidupkan automatik';
+
+  @override
+  String get settingsAccountTitle => 'Akaun';
+
+  @override
+  String get settingsWhatYouSeeTitle => 'Perkara yang anda lihat';
+
+  @override
+  String get settingsCreateShareTitle => 'Cipta dan kongsi';
+
+  @override
+  String get settingsPrivacySafetyTitle => 'Privasi dan keselamatan';
+
+  @override
+  String get settingsAppPreferencesTitle => 'Keutamaan aplikasi';
+
+  @override
+  String get settingsConnectionsTitle => 'Sambungan';
+
+  @override
+  String get settingsHelpAboutTitle => 'Bantuan dan tentang Divine';
+
+  @override
+  String get settingsCreatorToolsSection => 'Alat pencipta';
+
+  @override
+  String get settingsNostrNetworkSection => 'Rangkaian Nostr';
+
+  @override
+  String get settingsAboutDivineSection => 'Tentang Divine';
+
+  @override
+  String get settingsAdvancedSection => 'Lanjutan';
+
+  @override
+  String get settingsAccountSubtitle =>
+      'Log masuk, identiti, kunci dan data akaun';
+
+  @override
+  String get settingsWhatYouSeeSubtitle =>
+      'Bahasa, sari kata, susun atur video dan penapis';
+
+  @override
+  String get settingsCreateShareSubtitle =>
+      'Rakaman, penerbitan dan alat pencipta';
+
+  @override
+  String get settingsPrivacySafetySubtitle =>
+      'Data penggunaan, penyederhanaan dan akaun disekat';
+
+  @override
+  String get settingsAppPreferencesSubtitle =>
+      'Paparan, bahasa, storan dan pilihan lanjutan';
+
+  @override
+  String get settingsConnectionsSubtitle =>
+      'Aplikasi, geganti, pelayan media dan kebenaran';
+
+  @override
+  String get settingsHelpAboutSubtitle =>
+      'Sokongan, maklumat undang-undang dan butiran aplikasi';
 }

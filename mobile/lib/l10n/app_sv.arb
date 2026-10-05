@@ -3006,7 +3006,6 @@
     "peopleListsViewProfileHint": "Visa profil för {name}",
     "settingsGeneralTitle": "Allmänna inställningar",
     "settingsContentSafetyTitle": "Innehåll och säkerhet",
-    "settingsPrivacyTitle": "Integritet",
     "settingsPrivacySubtitle": "Välj vilken användningsdata du delar",
     "privacySettingsAnalyticsSection": "STATISTIK",
     "privacySettingsShareUsage": "Dela användningsdata",
@@ -3227,8 +3226,6 @@
     "nostrSettingsCouldNotRemoveKeys": "Kunde inte ta bort det här kontot från enheten. Försök igen.",
     "nostrSettingsDeleteAccount": "Radera konto och data",
     "nostrSettingsDeleteAccountSubtitle": "Skickar raderingsförfrågningar för ditt innehåll och loggar ut dig på den här enheten. Reläer, klienter, sökindex och andra inloggade enheter kan behålla kopior.",
-    "safetySettingsWhatYouSee": "VAD DU SER",
-    "safetySettingsWhatYouPublish": "VAD DU PUBLICERAR",
     "listPersonCount": "{count, plural, =1{1 person} other{{count} personer}}",
     "@listPersonCount": {
         "placeholders": {
@@ -4844,5 +4841,23 @@
   "commonReload": "Ladda om",
   "analyticsSocialCountsInfoTitle": "Om ditt antal följare",
   "analyticsSocialCountsLearnMoreSemantics": "Läs mer på {url}",
-  "metadataStatsLineWithoutVideoLoops": "{likes} gillamarkeringar · {comments} kommentarer · {reposts} återpubliceringar"
+  "metadataStatsLineWithoutVideoLoops": "{likes} gillamarkeringar · {comments} kommentarer · {reposts} återpubliceringar",
+  "settingsAccountTitle": "Konto",
+  "settingsWhatYouSeeTitle": "Det du ser",
+  "settingsCreateShareTitle": "Skapa och dela",
+  "settingsPrivacySafetyTitle": "Integritet och säkerhet",
+  "settingsAppPreferencesTitle": "Appinställningar",
+  "settingsConnectionsTitle": "Anslutningar",
+  "settingsHelpAboutTitle": "Hjälp och om Divine",
+  "settingsCreatorToolsSection": "Verktyg för kreatörer",
+  "settingsNostrNetworkSection": "Nostr-nätverk",
+  "settingsAboutDivineSection": "Om Divine",
+  "settingsAdvancedSection": "Avancerat",
+  "settingsAccountSubtitle": "Inloggning, identitet, nycklar och kontodata",
+  "settingsWhatYouSeeSubtitle": "Språk, undertexter, videolayout och filter",
+  "settingsCreateShareSubtitle": "Inspelning, publicering och verktyg för kreatörer",
+  "settingsPrivacySafetySubtitle": "Användningsdata, moderering och blockerade konton",
+  "settingsAppPreferencesSubtitle": "Utseende, språk, lagring och avancerade alternativ",
+  "settingsConnectionsSubtitle": "Appar, reläer, medieservrar och behörigheter",
+  "settingsHelpAboutSubtitle": "Support, juridisk information och appdetaljer"
 }

@@ -7,6 +7,13 @@ appId: co.openvine.app.staging
 - runFlow: ../utils/openSettings.yaml
 - scrollUntilVisible:
     element:
+      id: settings_app_preferences_tile
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: settings_app_preferences_tile
+- scrollUntilVisible:
+    element:
       id: experimental_features_tile
     direction: DOWN
     timeout: 30000
@@ -40,6 +47,14 @@ appId: co.openvine.app.staging
       id: feature_flag_account_switching
       checked: true
     timeout: 10000
+
+# Feature flags -> App preferences -> Settings, where the switcher lives.
+- tapOn:
+    id: back_button
+- extendedWaitUntil:
+    visible:
+      id: experimental_features_tile
+    timeout: 30000
 - tapOn:
     id: back_button
 
@@ -91,6 +106,13 @@ appId: co.openvine.app.staging
 - runFlow: ../utils/openSettings.yaml
 - scrollUntilVisible:
     element:
+      id: settings_app_preferences_tile
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: settings_app_preferences_tile
+- scrollUntilVisible:
+    element:
       id: experimental_features_tile
     direction: DOWN
     timeout: 30000
@@ -113,12 +135,18 @@ appId: co.openvine.app.staging
     timeout: 10000
 
 # Back out to the profile so the next flow's openSettings starts where it
-# expects: feature flags -> Settings -> own profile.
+# expects: feature flags -> App preferences -> Settings -> own profile.
 - tapOn:
     id: back_button
 - extendedWaitUntil:
     visible:
-      id: nostr_settings_tile
+      id: experimental_features_tile
+    timeout: 30000
+- tapOn:
+    id: back_button
+- extendedWaitUntil:
+    visible:
+      id: settings_account_tile
     timeout: 30000
 - tapOn:
     id: back_button

@@ -308,9 +308,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsContentSafetyTitle => 'Inhalte & Sicherheit';
 
   @override
-  String get settingsPrivacyTitle => 'Datenschutz';
-
-  @override
   String get settingsPrivacySubtitle => 'Wähle, welche Nutzungsdaten du teilst';
 
   @override
@@ -2882,12 +2879,6 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get notificationSettingsAboutDescription =>
       'Benachrichtigungen werden über das Nostr-Protokoll bereitgestellt. Echtzeit-Updates hängen von deiner Verbindung zu den Nostr-Relays ab. Manche Benachrichtigungen können verzögert sein.';
-
-  @override
-  String get safetySettingsWhatYouSee => 'WAS DU SIEHST';
-
-  @override
-  String get safetySettingsWhatYouPublish => 'WAS DU VERÖFFENTLICHST';
 
   @override
   String get safetySettingsShowDivineHostedOnly =>
@@ -13013,4 +13004,65 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get crosspostingAutoEnable => 'Automatik einschalten';
+
+  @override
+  String get settingsAccountTitle => 'Konto';
+
+  @override
+  String get settingsWhatYouSeeTitle => 'Was du siehst';
+
+  @override
+  String get settingsCreateShareTitle => 'Erstellen und teilen';
+
+  @override
+  String get settingsPrivacySafetyTitle => 'Datenschutz und Sicherheit';
+
+  @override
+  String get settingsAppPreferencesTitle => 'App-Einstellungen';
+
+  @override
+  String get settingsConnectionsTitle => 'Verbindungen';
+
+  @override
+  String get settingsHelpAboutTitle => 'Hilfe und über Divine';
+
+  @override
+  String get settingsCreatorToolsSection => 'Creator-Tools';
+
+  @override
+  String get settingsNostrNetworkSection => 'Nostr-Netzwerk';
+
+  @override
+  String get settingsAboutDivineSection => 'Über Divine';
+
+  @override
+  String get settingsAdvancedSection => 'Erweitert';
+
+  @override
+  String get settingsAccountSubtitle =>
+      'Anmeldung, Identität, Schlüssel und Kontodaten';
+
+  @override
+  String get settingsWhatYouSeeSubtitle =>
+      'Sprache, Untertitel, Videoformat und Filter';
+
+  @override
+  String get settingsCreateShareSubtitle =>
+      'Aufnehmen, Veröffentlichen und Creator-Tools';
+
+  @override
+  String get settingsPrivacySafetySubtitle =>
+      'Nutzungsdaten, Moderation und blockierte Konten';
+
+  @override
+  String get settingsAppPreferencesSubtitle =>
+      'Darstellung, Sprache, Speicher und erweiterte Optionen';
+
+  @override
+  String get settingsConnectionsSubtitle =>
+      'Apps, Relays, Medienserver und Berechtigungen';
+
+  @override
+  String get settingsHelpAboutSubtitle =>
+      'Support, Rechtliches und App-Informationen';
 }

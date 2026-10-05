@@ -3014,7 +3014,6 @@
     "peopleListsViewProfileHint": "Ver perfil de {name}",
     "settingsGeneralTitle": "Ajustes generales",
     "settingsContentSafetyTitle": "Contenido y seguridad",
-    "settingsPrivacyTitle": "Privacidad",
     "settingsPrivacySubtitle": "Elegí qué datos de uso compartís",
     "privacySettingsAnalyticsSection": "ANALÍTICAS",
     "privacySettingsShareUsage": "Compartir datos de uso",
@@ -3231,8 +3230,6 @@
     "nostrSettingsCouldNotRemoveKeys": "No se pudo quitar esta cuenta de este dispositivo. Probá de nuevo.",
     "nostrSettingsDeleteAccount": "Eliminar cuenta y datos",
     "nostrSettingsDeleteAccountSubtitle": "Envía solicitudes de eliminación de tu contenido y cierra tu sesión en este dispositivo. Los relays, clientes, índices de búsqueda y otros dispositivos con la sesión iniciada pueden conservar copias.",
-    "safetySettingsWhatYouSee": "LO QUE VES",
-    "safetySettingsWhatYouPublish": "LO QUE PUBLICÁS",
     "listPersonCount": "{count, plural, =1{1 persona} other{{count} personas}}",
     "@listPersonCount": {
         "placeholders": {
@@ -4844,5 +4841,23 @@
   "commonReload": "Recargar",
   "analyticsSocialCountsInfoTitle": "Sobre tu cantidad de seguidores",
   "analyticsSocialCountsLearnMoreSemantics": "Más información en {url}",
-  "metadataStatsLineWithoutVideoLoops": "{likes} me gusta · {comments} comentarios · {reposts} reposts"
+  "metadataStatsLineWithoutVideoLoops": "{likes} me gusta · {comments} comentarios · {reposts} reposts",
+  "settingsAccountTitle": "Cuenta",
+  "settingsWhatYouSeeTitle": "Lo que ves",
+  "settingsCreateShareTitle": "Crear y compartir",
+  "settingsPrivacySafetyTitle": "Privacidad y seguridad",
+  "settingsAppPreferencesTitle": "Preferencias de la app",
+  "settingsConnectionsTitle": "Conexiones",
+  "settingsHelpAboutTitle": "Ayuda y acerca de Divine",
+  "settingsCreatorToolsSection": "Herramientas para creadores",
+  "settingsNostrNetworkSection": "Red Nostr",
+  "settingsAboutDivineSection": "Acerca de Divine",
+  "settingsAdvancedSection": "Avanzado",
+  "settingsAccountSubtitle": "Inicio de sesión, identidad, claves y datos de la cuenta",
+  "settingsWhatYouSeeSubtitle": "Idioma, subtítulos, formato de video y filtros",
+  "settingsCreateShareSubtitle": "Grabación, publicación y herramientas para creadores",
+  "settingsPrivacySafetySubtitle": "Datos de uso, moderación y cuentas bloqueadas",
+  "settingsAppPreferencesSubtitle": "Apariencia, idioma, almacenamiento y opciones avanzadas",
+  "settingsConnectionsSubtitle": "Apps, relés, servidores multimedia y permisos",
+  "settingsHelpAboutSubtitle": "Soporte, información legal y detalles de la app"
 }

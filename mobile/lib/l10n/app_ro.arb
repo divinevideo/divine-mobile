@@ -3006,7 +3006,6 @@
     "peopleListsViewProfileHint": "Vezi profilul lui {name}",
     "settingsGeneralTitle": "Setări generale",
     "settingsContentSafetyTitle": "Conținut și siguranță",
-    "settingsPrivacyTitle": "Confidențialitate",
     "settingsPrivacySubtitle": "Alege ce date de utilizare partajezi",
     "privacySettingsAnalyticsSection": "STATISTICI",
     "privacySettingsShareUsage": "Partajează datele de utilizare",
@@ -3227,8 +3226,6 @@
     "nostrSettingsCouldNotRemoveKeys": "N-am putut elimina acest cont de pe acest dispozitiv. Încearcă din nou.",
     "nostrSettingsDeleteAccount": "Șterge contul și datele",
     "nostrSettingsDeleteAccountSubtitle": "Trimite cereri de ștergere pentru conținutul tău și te deconectează pe acest dispozitiv. Relay-urile, clienții, indexurile de căutare și alte dispozitive conectate pot păstra copii.",
-    "safetySettingsWhatYouSee": "CE VEZI",
-    "safetySettingsWhatYouPublish": "CE PUBLICI",
     "listPersonCount": "{count, plural, =1{1 persoană} few{{count} persoane} other{{count} de persoane}}",
     "@listPersonCount": {
         "placeholders": {
@@ -4844,5 +4841,23 @@
   "commonReload": "Reîncarcă",
   "analyticsSocialCountsInfoTitle": "Despre numărul tău de urmăritori",
   "analyticsSocialCountsLearnMoreSemantics": "Află mai multe pe {url}",
-  "metadataStatsLineWithoutVideoLoops": "{likes} aprecieri · {comments} comentarii · {reposts} redistribuiri"
+  "metadataStatsLineWithoutVideoLoops": "{likes} aprecieri · {comments} comentarii · {reposts} redistribuiri",
+  "settingsAccountTitle": "Cont",
+  "settingsWhatYouSeeTitle": "Ce vezi",
+  "settingsCreateShareTitle": "Creează și distribuie",
+  "settingsPrivacySafetyTitle": "Confidențialitate și siguranță",
+  "settingsAppPreferencesTitle": "Preferințele aplicației",
+  "settingsConnectionsTitle": "Conexiuni",
+  "settingsHelpAboutTitle": "Ajutor și despre Divine",
+  "settingsCreatorToolsSection": "Instrumente pentru creatori",
+  "settingsNostrNetworkSection": "Rețeaua Nostr",
+  "settingsAboutDivineSection": "Despre Divine",
+  "settingsAdvancedSection": "Avansat",
+  "settingsAccountSubtitle": "Autentificare, identitate, chei și datele contului",
+  "settingsWhatYouSeeSubtitle": "Limbă, subtitrări, format video și filtre",
+  "settingsCreateShareSubtitle": "Înregistrare, publicare și instrumente pentru creatori",
+  "settingsPrivacySafetySubtitle": "Date de utilizare, moderare și conturi blocate",
+  "settingsAppPreferencesSubtitle": "Aspect, limbă, stocare și opțiuni avansate",
+  "settingsConnectionsSubtitle": "Aplicații, relee, servere media și permisiuni",
+  "settingsHelpAboutSubtitle": "Asistență, informații legale și detalii despre aplicație"
 }

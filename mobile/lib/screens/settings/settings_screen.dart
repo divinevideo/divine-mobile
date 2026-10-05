@@ -1,5 +1,5 @@
-// ABOUTME: New settings hub screen matching Figma design
-// ABOUTME: Central entry point for all app settings, accessed via gear icon on profile
+// ABOUTME: Task-based settings hub and account destination.
+// ABOUTME: Shares the account switcher and urgent account warnings across both views.
 
 import 'dart:async';
 
@@ -17,10 +17,9 @@ import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/settings_account/settings_account_cubit.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/constants/semantic_ids.dart';
+import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
-import 'package:openvine/features/feature_flags/screens/feature_flag_screen.dart';
-import 'package:openvine/features/monetization/monetization_storefront_policy.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
@@ -33,25 +32,19 @@ import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/providers/swap_account.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
-import 'package:openvine/screens/apps/apps_directory_screen.dart';
-import 'package:openvine/screens/apps/apps_permissions_screen.dart';
 import 'package:openvine/screens/auth/secure_account_screen.dart';
-import 'package:openvine/screens/badges/badges_screen.dart';
-import 'package:openvine/screens/creator_analytics_screen.dart';
-import 'package:openvine/screens/developer_options_screen.dart';
+import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/screens/notification_settings_screen.dart';
-import 'package:openvine/screens/safety_settings_screen.dart';
+import 'package:openvine/screens/settings/account/change_email_screen.dart';
+import 'package:openvine/screens/settings/account/change_password_screen.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
-import 'package:openvine/screens/settings/general_settings_screen.dart';
-import 'package:openvine/screens/settings/legal_screen.dart';
-import 'package:openvine/screens/settings/monetization_links_settings_screen.dart';
 import 'package:openvine/screens/settings/nostr_settings_screen.dart';
 import 'package:openvine/screens/settings/privacy_settings_screen.dart';
-import 'package:openvine/screens/settings/support_center_screen.dart';
+import 'package:openvine/screens/settings/settings_categories_screen.dart';
+import 'package:openvine/screens/verify/verify_screen.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/utils/deferred_login_options_navigator.dart';
 import 'package:openvine/utils/detached_future.dart';
-import 'package:openvine/utils/nostr_apps_platform_support.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/utils/user_identifier_line_resolver.dart';
@@ -64,7 +57,10 @@ class SettingsScreen extends ConsumerStatefulWidget {
   static const routeName = 'settings';
   static const String path = RoutePaths.settings;
 
-  const SettingsScreen({super.key});
+  const SettingsScreen({this.accountOnly = false, super.key});
+
+  /// Reuses the account switcher for the Account destination and deep links.
+  final bool accountOnly;
 
   @override
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
@@ -353,23 +349,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final accountSwitchingEnabled = ref.watch(
       isFeatureEnabledProvider(FeatureFlag.accountSwitching),
     );
-    final monetizationLinksEnabled = ref.watch(
-      isFeatureEnabledProvider(FeatureFlag.profileMonetizationLinks),
-    );
     final supporterVerificationAvailable = ref.watch(
       supporterApiConfiguredProvider,
     );
-    // Watched here (not just in _VersionTile) so the Developer Options tile
-    // appears immediately when dev mode is unlocked via the version tap.
-    final isDeveloperMode = ref.watch(isDeveloperModeEnabledProvider);
-    final appStoreTipPolicy = usesAppleAppStoreTipPolicy;
     return BlocProvider.value(
       value: _accountCubit,
       child: Scaffold(
         appBar: DiVineAppBar(
-          title: context.l10n.settingsTitle,
+          title: widget.accountOnly
+              ? context.l10n.settingsAccountTitle
+              : context.l10n.settingsTitle,
           showBackButton: true,
-          onBackPressed: context.pop,
+          onBackPressed: widget.accountOnly
+              ? () => context.safePop(fallback: RoutePaths.settings)
+              : context.safePop,
         ),
         backgroundColor: context.vineColors.surface,
         body: Align(
@@ -410,111 +403,93 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                 ],
 
-                DivineListTile(
-                  title: context.l10n.settingsCreatorAnalytics,
-                  icon: DivineIconName.trendUp,
-                  onTap: () => context.push(CreatorAnalyticsScreen.path),
-                ),
-                if (isAuthenticated && monetizationLinksEnabled)
-                  DivineListTile(
-                    title: appStoreTipPolicy
-                        ? context.l10n.monetizationTipsSettingsTitle
-                        : context.l10n.monetizationSettingsTitle,
-                    icon: DivineIconName.heart,
-                    subtitle: appStoreTipPolicy
-                        ? context.l10n.monetizationTipsSettingsSubtitle
-                        : context.l10n.monetizationSettingsSubtitle,
-                    onTap: () =>
-                        context.push(MonetizationLinksSettingsScreen.path),
-                  ),
-                if (supporterVerificationAvailable) const SupporterMembership(),
-                DivineListTile(
-                  title: context.l10n.settingsSupportCenter,
-                  leading: const Icon(Icons.support_agent),
-                  onTap: () => context.push(SupportCenterScreen.path),
-                ),
-
-                DivineListTile(
-                  title: context.l10n.settingsNotifications,
-                  icon: DivineIconName.bellSimple,
-                  onTap: () => context.push(NotificationSettingsScreen.path),
-                ),
-                DivineListTile(
-                  title: context.l10n.settingsGeneralTitle,
-                  icon: DivineIconName.globe,
-                  onTap: () => context.push(GeneralSettingsScreen.path),
-                ),
-                DivineListTile(
-                  title: context.l10n.settingsContentSafetyTitle,
-                  icon: DivineIconName.faders,
-                  onTap: () => context.push(SafetySettingsScreen.path),
-                ),
-                DivineListTile(
-                  title: context.l10n.settingsPrivacyTitle,
-                  icon: DivineIconName.shieldCheck,
-                  subtitle: context.l10n.settingsPrivacySubtitle,
-                  onTap: () => context.push(PrivacySettingsScreen.path),
-                ),
-                DivineListTile(
-                  title: context.l10n.settingsNostrSettings,
-                  icon: DivineIconName.graph,
-                  semanticIdentifier: SemanticIds.settingsNostrRow,
-                  onTap: () => context.push(NostrSettingsScreen.path),
-                ),
-                DivineListTile(
-                  title: context.l10n.settingsBadgesTitle,
-                  icon: DivineIconName.sealCheck,
-                  subtitle: context.l10n.settingsBadgesSubtitle,
-                  onTap: () => context.push(BadgesScreen.path),
-                ),
-                if (nostrAppsSandboxSupported)
-                  DivineListTile(
-                    leading: Icon(
-                      Icons.apps,
-                      size: DivineIcon.scaleSize(context, 24),
+                if (widget.accountOnly) ...[
+                  if (!isAuthenticated)
+                    DivineListTile(
+                      icon: DivineIconName.userPlus,
+                      title: context.l10n.authSignInTitle,
+                      onTap: () => context.go(WelcomeScreen.path),
                     ),
-                    title: context.l10n.settingsIntegratedApps,
-                    subtitle: context.l10n.settingsIntegratedAppsSubtitle,
-                    onTap: () => context.push(AppsDirectoryScreen.path),
-                  ),
-                DivineListTile(
-                  title: context.l10n.settingsLegal,
-                  leading: Icon(
-                    Icons.gavel,
-                    size: DivineIcon.scaleSize(context, 24),
-                  ),
-                  onTap: () => context.push(LegalScreen.path),
-                ),
-                DivineListTile(
-                  leading: Icon(
-                    Icons.lock_open,
-                    size: DivineIcon.scaleSize(context, 24),
-                  ),
-                  title: context.l10n.settingsIntegrationPermissions,
-                  subtitle: context.l10n.settingsIntegrationPermissionsSubtitle,
-                  onTap: () => context.push(AppsPermissionsScreen.path),
-                ),
-                DivineListTile(
-                  leading: Icon(
-                    Icons.science,
-                    size: DivineIcon.scaleSize(context, 24),
-                  ),
-                  title: context.l10n.settingsExperimentalFeatures,
-                  subtitle: context.l10n.settingsExperimentalFeaturesSubtitle,
-                  semanticIdentifier:
-                      SemanticIds.settingsExperimentalFeaturesRow,
-                  onTap: () => context.push(FeatureFlagScreen.path),
-                ),
-                if (isDeveloperMode) ...[
+                  if (isAuthenticated &&
+                      authService.authenticationSource ==
+                          AuthenticationSource.divineOAuth) ...[
+                    DivineListTile(
+                      icon: DivineIconName.envelope,
+                      title: context.l10n.accountSettingsChangeEmail,
+                      subtitle: context.l10n.accountSettingsChangeEmailSubtitle,
+                      onTap: () => context.push(ChangeEmailScreen.path),
+                    ),
+                    DivineListTile(
+                      icon: DivineIconName.lockSimple,
+                      title: context.l10n.accountSettingsChangePassword,
+                      subtitle:
+                          context.l10n.accountSettingsChangePasswordSubtitle,
+                      onTap: () => context.push(ChangePasswordScreen.path),
+                    ),
+                  ],
+                  if (isAuthenticated)
+                    DivineListTile(
+                      icon: DivineIconName.sealCheck,
+                      title: context.l10n.verifyTitle,
+                      subtitle: context.l10n.verifyIntro,
+                      onTap: () => context.pushNamed(VerifyPage.routeName),
+                    ),
+                  if (supporterVerificationAvailable)
+                    const SupporterMembership(),
+                  const NostrAccountSettingsSection(),
+                ] else ...[
                   DivineListTile(
-                    icon: DivineIconName.bracketsAngle,
-                    title: context.l10n.settingsDeveloperOptions,
-                    subtitle: context.l10n.settingsDeveloperOptionsSubtitle,
-                    iconColor: VineTheme.warning,
-                    onTap: () => context.push(DeveloperOptionsScreen.path),
+                    icon: DivineIconName.userFocus,
+                    title: context.l10n.settingsAccountTitle,
+                    subtitle: context.l10n.settingsAccountSubtitle,
+                    semanticIdentifier: SemanticIds.settingsAccountRow,
+                    onTap: () => context.push(RoutePaths.settingsAccount),
+                  ),
+                  DivineListTile(
+                    icon: DivineIconName.play,
+                    title: context.l10n.settingsWhatYouSeeTitle,
+                    subtitle: context.l10n.settingsWhatYouSeeSubtitle,
+                    onTap: () => context.push(ViewingSettingsScreen.path),
+                  ),
+                  DivineListTile(
+                    icon: DivineIconName.cameraRetro,
+                    title: context.l10n.settingsCreateShareTitle,
+                    subtitle: context.l10n.settingsCreateShareSubtitle,
+                    onTap: () => context.push(CreatingSettingsScreen.path),
+                  ),
+                  DivineListTile(
+                    icon: DivineIconName.bellSimple,
+                    title: context.l10n.settingsNotifications,
+                    onTap: () => context.push(NotificationSettingsScreen.path),
+                  ),
+                  DivineListTile(
+                    icon: DivineIconName.shieldCheck,
+                    title: context.l10n.settingsPrivacySafetyTitle,
+                    subtitle: context.l10n.settingsPrivacySafetySubtitle,
+                    onTap: () => context.push(PrivacySettingsScreen.path),
+                  ),
+                  DivineListTile(
+                    icon: DivineIconName.sun,
+                    title: context.l10n.settingsAppPreferencesTitle,
+                    subtitle: context.l10n.settingsAppPreferencesSubtitle,
+                    semanticIdentifier: SemanticIds.settingsAppPreferencesRow,
+                    onTap: () =>
+                        context.push(AppPreferencesSettingsScreen.path),
+                  ),
+                  DivineListTile(
+                    icon: DivineIconName.graph,
+                    title: context.l10n.settingsConnectionsTitle,
+                    subtitle: context.l10n.settingsConnectionsSubtitle,
+                    semanticIdentifier: SemanticIds.settingsConnectionsRow,
+                    onTap: () => context.push(ConnectionsSettingsScreen.path),
+                  ),
+                  DivineListTile(
+                    icon: DivineIconName.question,
+                    title: context.l10n.settingsHelpAboutTitle,
+                    subtitle: context.l10n.settingsHelpAboutSubtitle,
+                    onTap: () => context.push(HelpAboutSettingsScreen.path),
                   ),
                 ],
-
                 const SizedBox(height: 24),
                 _VersionTile(appVersion: _appVersion),
               ],

@@ -3006,7 +3006,6 @@
     "peopleListsViewProfileHint": "Zobacz profil {name}",
     "settingsGeneralTitle": "Ustawienia ogólne",
     "settingsContentSafetyTitle": "Treści i bezpieczeństwo",
-    "settingsPrivacyTitle": "Prywatność",
     "settingsPrivacySubtitle": "Wybierz, jakie dane o użyciu udostępniasz",
     "privacySettingsAnalyticsSection": "STATYSTYKI",
     "privacySettingsShareUsage": "Udostępniaj dane o użyciu",
@@ -3227,8 +3226,6 @@
     "nostrSettingsCouldNotRemoveKeys": "Nie udało się usunąć tego konta z tego urządzenia. Spróbuj ponownie.",
     "nostrSettingsDeleteAccount": "Usuń konto i dane",
     "nostrSettingsDeleteAccountSubtitle": "Wysyła żądania usunięcia twoich treści i wylogowuje cię na tym urządzeniu. Przekaźniki, klienty, indeksy wyszukiwania i inne zalogowane urządzenia mogą zachować kopie.",
-    "safetySettingsWhatYouSee": "CO WIDZISZ",
-    "safetySettingsWhatYouPublish": "CO PUBLIKUJESZ",
     "listPersonCount": "{count, plural, =1{1 osoba} few{{count} osoby} many{{count} osób} other{{count} osoby}}",
     "@listPersonCount": {
         "placeholders": {
@@ -4844,5 +4841,23 @@
   "commonReload": "Wczytaj ponownie",
   "analyticsSocialCountsInfoTitle": "O liczbie osób, które cię obserwują",
   "analyticsSocialCountsLearnMoreSemantics": "Więcej informacji na {url}",
-  "metadataStatsLineWithoutVideoLoops": "{likes} polubień · {comments} komentarzy · {reposts} repostów"
+  "metadataStatsLineWithoutVideoLoops": "{likes} polubień · {comments} komentarzy · {reposts} repostów",
+  "settingsAccountTitle": "Konto",
+  "settingsWhatYouSeeTitle": "To, co widzisz",
+  "settingsCreateShareTitle": "Tworzenie i udostępnianie",
+  "settingsPrivacySafetyTitle": "Prywatność i bezpieczeństwo",
+  "settingsAppPreferencesTitle": "Ustawienia aplikacji",
+  "settingsConnectionsTitle": "Połączenia",
+  "settingsHelpAboutTitle": "Pomoc i informacje o Divine",
+  "settingsCreatorToolsSection": "Narzędzia twórcy",
+  "settingsNostrNetworkSection": "Sieć Nostr",
+  "settingsAboutDivineSection": "O Divine",
+  "settingsAdvancedSection": "Zaawansowane",
+  "settingsAccountSubtitle": "Logowanie, tożsamość, klucze i dane konta",
+  "settingsWhatYouSeeSubtitle": "Język, napisy, układ wideo i filtry",
+  "settingsCreateShareSubtitle": "Nagrywanie, publikowanie i narzędzia twórcy",
+  "settingsPrivacySafetySubtitle": "Dane użytkowania, moderacja i zablokowane konta",
+  "settingsAppPreferencesSubtitle": "Wygląd, język, pamięć i opcje zaawansowane",
+  "settingsConnectionsSubtitle": "Aplikacje, przekaźniki, serwery mediów i uprawnienia",
+  "settingsHelpAboutSubtitle": "Pomoc, informacje prawne i szczegóły aplikacji"
 }

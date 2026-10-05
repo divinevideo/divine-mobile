@@ -1,9 +1,10 @@
-// ABOUTME: Privacy settings screen — the user-facing analytics consent control.
-// ABOUTME: Reads and writes AnalyticsService's stored consent preference.
+// ABOUTME: Privacy and safety entry with the user-facing analytics consent control.
+// ABOUTME: Reads and writes consent and links to the existing safety controls.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/analytics_consent/analytics_consent_cubit.dart';
 import 'package:openvine/blocs/analytics_consent/analytics_consent_state.dart';
@@ -11,10 +12,11 @@ import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/screens/safety_settings_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Settings → Privacy.
+/// Settings → Privacy & safety.
 ///
 /// Until #7982 the analytics consent preference had no affordance at all — it
 /// could only be changed by calling `AnalyticsService.setAnalyticsEnabled`
@@ -31,7 +33,7 @@ class PrivacySettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: DiVineAppBar(
-        title: context.l10n.settingsPrivacyTitle,
+        title: context.l10n.settingsPrivacySafetyTitle,
         showBackButton: true,
         // Reachable by deep link, where the stack has nothing to pop.
         onBackPressed: () => context.safePop(fallback: RoutePaths.settings),
@@ -44,7 +46,21 @@ class PrivacySettingsScreen extends StatelessWidget {
           child: ListView(
             children: [
               DivineSectionHeader(context.l10n.privacySettingsAnalyticsSection),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  context.l10n.settingsPrivacySubtitle,
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.mutedText,
+                  ),
+                ),
+              ),
               const _AnalyticsConsentToggle(),
+              DivineListTile(
+                icon: DivineIconName.shieldCheck,
+                title: context.l10n.settingsContentSafetyTitle,
+                onTap: () => context.push(SafetySettingsScreen.path),
+              ),
             ],
           ),
         ),

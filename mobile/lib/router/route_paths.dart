@@ -75,6 +75,13 @@ abstract final class RoutePaths {
   static const safetySettings = '/safety-settings';
   static const secureAccount = '/secure-account';
   static const settings = '/settings';
+  static const settingsAccount = '/settings/account';
+  static const settingsAppPreferences = '/settings/app-preferences';
+  static const settingsViewing = '/settings/viewing';
+  static const settingsCreating = '/settings/creating';
+  static const settingsConnections = '/settings/connections';
+  static const settingsNostrNetwork = '/settings/connections/nostr';
+  static const settingsHelpAbout = '/settings/help-about';
   static const soundDetailBase = '/sound';
   static const soundUpload = '$librarySounds/$soundUploadSubpath';
   static const soundUploadSubpath = 'upload';

@@ -42,16 +42,16 @@ class ContentPreferencesScreen extends ConsumerWidget {
           constraints: const BoxConstraints(maxWidth: 600),
           child: ListView(
             children: [
-              const _LanguageSetting(),
+              const ContentLanguageSetting(),
               const _ContentFiltersTile(),
               const AccountContentLabelsTile(),
               const _AudioSharingToggle(),
               if (!kIsWeb &&
                   (defaultTargetPlatform == TargetPlatform.iOS ||
                       defaultTargetPlatform == TargetPlatform.android))
-                const _MusicModeToggle(),
+                const MusicModeSetting(),
               if (!kIsWeb && defaultTargetPlatform != TargetPlatform.linux)
-                const _AudioDeviceSelector(),
+                const AudioDeviceSetting(),
             ],
           ),
         ),
@@ -87,8 +87,8 @@ class _ContentFiltersTile extends StatelessWidget {
   }
 }
 
-class _LanguageSetting extends ConsumerWidget {
-  const _LanguageSetting();
+class ContentLanguageSetting extends ConsumerWidget {
+  const ContentLanguageSetting({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -105,13 +105,13 @@ class _LanguageSetting extends ConsumerWidget {
         );
         return cubit;
       },
-      child: const _LanguageSettingTile(),
+      child: const _ContentLanguageSettingTile(),
     );
   }
 }
 
-class _LanguageSettingTile extends StatelessWidget {
-  const _LanguageSettingTile();
+class _ContentLanguageSettingTile extends StatelessWidget {
+  const _ContentLanguageSettingTile();
 
   @override
   Widget build(BuildContext context) {
@@ -276,8 +276,8 @@ class _AudioSharingToggleTile extends StatelessWidget {
 ///
 /// iOS-only for now: it maps to the recording audio-session mode, and no
 /// other platform acts on the preference yet (#7796).
-class _MusicModeToggle extends ConsumerWidget {
-  const _MusicModeToggle();
+class MusicModeSetting extends ConsumerWidget {
+  const MusicModeSetting({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -285,13 +285,13 @@ class _MusicModeToggle extends ConsumerWidget {
     return BlocProvider(
       key: ValueKey(service),
       create: (_) => MusicModeCubit(service: service)..load(),
-      child: const _MusicModeToggleTile(),
+      child: const _MusicModeSettingTile(),
     );
   }
 }
 
-class _MusicModeToggleTile extends StatelessWidget {
-  const _MusicModeToggleTile();
+class _MusicModeSettingTile extends StatelessWidget {
+  const _MusicModeSettingTile();
 
   @override
   Widget build(BuildContext context) {
@@ -308,8 +308,8 @@ class _MusicModeToggleTile extends StatelessWidget {
   }
 }
 
-class _AudioDeviceSelector extends ConsumerWidget {
-  const _AudioDeviceSelector();
+class AudioDeviceSetting extends ConsumerWidget {
+  const AudioDeviceSetting({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -326,13 +326,13 @@ class _AudioDeviceSelector extends ConsumerWidget {
         );
         return cubit;
       },
-      child: const _AudioDeviceSelectorTile(),
+      child: const _AudioDeviceSettingTile(),
     );
   }
 }
 
-class _AudioDeviceSelectorTile extends StatelessWidget {
-  const _AudioDeviceSelectorTile();
+class _AudioDeviceSettingTile extends StatelessWidget {
+  const _AudioDeviceSettingTile();
 
   @override
   Widget build(BuildContext context) {
