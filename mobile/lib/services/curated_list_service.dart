@@ -28,6 +28,8 @@ import 'package:unified_logger/unified_logger.dart';
 
 export 'package:openvine/models/curated_list_callbacks.dart';
 
+part 'curated_lists/curated_list_playlist.dart';
+
 /// Service for managing NIP-51 curated lists.
 ///
 /// Sanctioned ChangeNotifier per the "Sanctioned Riverpod (STAYS)" list in
@@ -905,77 +907,8 @@ class CuratedListService extends ChangeNotifier {
     );
   }
 
-  Future<bool> _reorderVideos(String listId, List<String> newOrder) async {
-    try {
-      final listIndex = _lists.indexWhere((list) => list.id == listId);
-      if (listIndex == -1) {
-        Log.warning(
-          'List not found: $listId',
-          name: 'CuratedListService',
-          category: LogCategory.system,
-        );
-        return false;
-      }
-
-      final list = _lists[listIndex];
-
-      // Validate that all current videos are included in the new order
-      final currentVideos = Set<String>.from(list.videoEventIds);
-      final newOrderSet = Set<String>.from(newOrder);
-
-      if (currentVideos.difference(newOrderSet).isNotEmpty ||
-          newOrderSet.difference(currentVideos).isNotEmpty) {
-        Log.warning(
-          'Invalid reorder: video lists do not match',
-          name: 'CuratedListService',
-          category: LogCategory.system,
-        );
-        return false;
-      }
-
-      final updatedList = list.copyWith(
-        videoEventIds: newOrder,
-        playOrder: PlayOrder.manual, // Set to manual when reordering
-        updatedAt: DateTime.now(),
-      );
-
-      if (!await _commitListMutation(updatedList)) return false;
-
-      Log.debug(
-        '📱 Reordered videos in list "${list.name}"',
-        name: 'CuratedListService',
-        category: LogCategory.system,
-      );
-
-      return true;
-    } catch (e) {
-      Log.error(
-        'Failed to reorder videos: $e',
-        name: 'CuratedListService',
-        category: LogCategory.system,
-      );
-      return false;
-    }
-  }
-
   /// Get ordered video list based on play order setting
-  List<String> getOrderedVideoIds(String listId) {
-    final list = getListById(listId);
-    if (list == null) return [];
-
-    switch (list.playOrder) {
-      case PlayOrder.chronological:
-        return list.videoEventIds; // Already in chronological order
-      case PlayOrder.reverse:
-        return list.videoEventIds.reversed.toList();
-      case PlayOrder.manual:
-        return list.videoEventIds; // Manual order as stored
-      case PlayOrder.shuffle:
-        final shuffled = List<String>.from(list.videoEventIds);
-        shuffled.shuffle();
-        return shuffled;
-    }
-  }
+  List<String> getOrderedVideoIds(String listId) => _getOrderedVideoIds(listId);
 
   /// Add collaborator to a list
   Future<bool> addCollaborator(String listId, String pubkey) {
