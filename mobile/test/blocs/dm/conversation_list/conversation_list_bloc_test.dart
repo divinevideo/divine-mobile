@@ -1456,7 +1456,9 @@ void main() {
           'applies the request split once history recovery completes',
           setUp: () {
             recoveryController = StreamController<bool>();
-            addTearDown(recoveryController.close);
+            // Not awaited: close() on a controller nobody listened to never
+            // completes, which hangs teardown if the bloc never subscribes.
+            addTearDown(() => unawaited(recoveryController.close()));
             when(
               () => mockFollowRepository.isFollowing(any()),
             ).thenReturn(false);
@@ -1479,7 +1481,10 @@ void main() {
               (s) => s.status == ConversationListStatus.loaded,
             );
             bloc.add(const ConversationListStarted());
-            await withheld;
+            await withheld.timeout(
+              const Duration(seconds: 5),
+              onTimeout: () => fail('inbox never loaded'),
+            );
             expect(bloc.state.requestsWithheld, isTrue);
             final split = bloc.stream.firstWhere(
               (s) => s.requestConversations.length == 1,
@@ -1487,7 +1492,10 @@ void main() {
             when(() => mockDmRepository.hasCompletedHistoryRecoveryBefore)
                 .thenReturn(true);
             recoveryController.add(false);
-            await split;
+            await split.timeout(
+              const Duration(seconds: 5),
+              onTimeout: () => fail('held-back request never split out'),
+            );
           },
           verify: (bloc) {
             // After recovery completes, the unfollowed/never-replied chat is
@@ -1574,7 +1582,10 @@ void main() {
               (s) => s.status == ConversationListStatus.loaded,
             );
             bloc.add(const ConversationListStarted());
-            await loaded;
+            await loaded.timeout(
+              const Duration(seconds: 5),
+              onTimeout: () => fail('inbox never loaded'),
+            );
             // The drain succeeded this time.
             when(
               () => mockDmRepository.hasCompletedHistoryRecoveryBefore,
