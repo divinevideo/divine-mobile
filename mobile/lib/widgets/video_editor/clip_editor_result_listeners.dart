@@ -23,8 +23,9 @@ import 'package:pro_image_editor/pro_image_editor.dart'
 /// Reacts to the result of each [ClipEditorBloc] operation.
 ///
 /// Every operation the user can wait on — split, reverse, transform, merge,
-/// detach, backdrop change, detached-clip transform and reattach, remove, audio
-/// extraction, library save, library import, recorded chroma key — reports its
+/// detach, backdrop change, freeze frame, detached-clip transform and reattach,
+/// remove, audio extraction, library save, library import, recorded chroma
+/// key — reports its
 /// outcome through a `last*Result` field on [ClipEditorState].
 /// The listeners below turn those into user-visible feedback and, for the
 /// operations that change the timeline, into one editor-history step.
@@ -44,14 +45,16 @@ class ClipEditorResultListeners extends StatelessWidget {
           child: _ClipMergeResultListener(
             child: _ClipDetachResultListener(
               child: _ClipPlaceholderFillResultListener(
-                child: _DetachedClipTransformResultListener(
-                  child: _DetachedClipReattachResultListener(
-                    child: _ClipsRemovedResultListener(
-                      child: _AudioExtractionResultListener(
-                        child: _ClipLibrarySaveResultListener(
-                          child: _ClipLibraryImportResultListener(
-                            child: _CapturedChromaKeyBakeResultListener(
-                              child: child,
+                child: _ClipFreezeFrameResultListener(
+                  child: _DetachedClipTransformResultListener(
+                    child: _DetachedClipReattachResultListener(
+                      child: _ClipsRemovedResultListener(
+                        child: _AudioExtractionResultListener(
+                          child: _ClipLibrarySaveResultListener(
+                            child: _ClipLibraryImportResultListener(
+                              child: _CapturedChromaKeyBakeResultListener(
+                                child: child,
+                              ),
                             ),
                           ),
                         ),
@@ -448,6 +451,81 @@ class _ClipPlaceholderFillResultListener extends StatelessWidget {
       case null:
         break;
     }
+  }
+}
+
+/// Listens to [ClipEditorState.lastFreezeFrameResult] and commits a freeze to
+/// editor history, or surfaces a snackbar when it failed.
+///
+/// The bloc has already put the still on the timeline. The entry is written
+/// with [VideoEditorExtensions.setLengthenedClipState] because a freeze only
+/// makes the composition longer: music and voice-over that ran to the old end
+/// keep playing through to the new one (#6401). Markers after the freeze move
+/// with the footage they sit on.
+///
+/// Kept at the scaffold level (always mounted) so the commit survives the
+/// timeline controls unmounting while the still renders.
+class _ClipFreezeFrameResultListener extends StatelessWidget {
+  const _ClipFreezeFrameResultListener({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<ClipEditorBloc, ClipEditorState>(
+      listenWhen: (prev, curr) =>
+          !identical(prev.lastFreezeFrameResult, curr.lastFreezeFrameResult) &&
+          curr.lastFreezeFrameResult != null,
+      listener: _onFreezeFrameResult,
+      child: child,
+    );
+  }
+
+  void _onFreezeFrameResult(BuildContext context, ClipEditorState state) {
+    switch (state.lastFreezeFrameResult) {
+      case ClipFreezeFrameSuccess(:final previousClips, :final freezeClipId):
+        _commitFreeze(context, state, previousClips, freezeClipId);
+      case ClipFreezeFrameFailure():
+        ScaffoldMessenger.of(context).showSnackBar(
+          DivineSnackbarContainer.snackBar(
+            context.l10n.videoEditorFreezeFrameFailed,
+          ),
+        );
+      case ClipFreezeFrameDiscarded():
+      // The clip changed or went away while the still rendered — nothing to
+      // commit, and no action that warrants a snackbar.
+      case null:
+        break;
+    }
+  }
+
+  void _commitFreeze(
+    BuildContext context,
+    ClipEditorState state,
+    List<DivineVideoClip> previousClips,
+    String freezeClipId,
+  ) {
+    final editor = VideoEditorScope.of(context).editor;
+    if (editor == null) return;
+    final overlayBloc = context.read<TimelineOverlayBloc>();
+
+    final freezeIndex = state.clips.indexWhere((c) => c.id == freezeClipId);
+    if (freezeIndex == -1) return;
+    final insertedAt = state.clips
+        .take(freezeIndex)
+        .fold(Duration.zero, (total, c) => total + c.playbackDuration);
+    final markers = shiftTimelineMarkersForInsertion(
+      markers: overlayBloc.state.timelineMarkers,
+      at: insertedAt,
+      by: state.clips[freezeIndex].playbackDuration,
+    );
+
+    overlayBloc.add(TimelineMarkersRebased(markers));
+    editor.setLengthenedClipState(
+      previousClips: previousClips,
+      clips: state.clips,
+      timelineMarkers: markers,
+    );
   }
 }
 

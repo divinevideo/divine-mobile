@@ -8786,6 +8786,23 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorDetachFailed => 'そのクリップを切り離せませんでした。タイムラインは変更されていません。';
 
   @override
+  String get videoEditorFreezeFrameLabel => 'フリーズ';
+
+  @override
+  String get videoEditorFreezeFrameSemanticLabel => '再生ヘッド位置のフレームをフリーズ';
+
+  @override
+  String get videoEditorFreezeFrameProgressLabel => 'フレームをフリーズしています…';
+
+  @override
+  String get videoEditorFreezeFrameFailed =>
+      'そのフレームをフリーズできませんでした。タイムラインは変更されていません。';
+
+  @override
+  String get videoEditorFreezeFramePlayheadOutsideClip =>
+      'フレームをフリーズするには再生ヘッドを選択したクリップ内に置いてください。';
+
+  @override
   String get videoEditorDetachImagePickFailed => 'その写真を読み込めませんでした。';
 
   @override

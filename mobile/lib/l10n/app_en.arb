@@ -6163,6 +6163,20 @@
     "description": "Shown under the progress spinner while the still that replaces a detached clip is being rendered."
   },
   "videoEditorDetachFailed": "Couldn't detach that clip. Your timeline is unchanged.",
+  "videoEditorFreezeFrameLabel": "Freeze",
+  "@videoEditorFreezeFrameLabel": {
+    "description": "Clip action-bar button that holds the frame under the playhead still for a moment, then lets the clip continue (a freeze frame)."
+  },
+  "videoEditorFreezeFrameSemanticLabel": "Freeze the frame under the playhead",
+  "videoEditorFreezeFrameProgressLabel": "Freezing the frame…",
+  "@videoEditorFreezeFrameProgressLabel": {
+    "description": "Shown under the progress spinner while the still for a freeze frame is being rendered."
+  },
+  "videoEditorFreezeFrameFailed": "Couldn't freeze that frame. Your timeline is unchanged.",
+  "videoEditorFreezeFramePlayheadOutsideClip": "Move the playhead onto the selected clip to freeze a frame.",
+  "@videoEditorFreezeFramePlayheadOutsideClip": {
+    "description": "Snackbar when the user taps Freeze while the playhead is not on the selected clip."
+  },
   "videoEditorDetachImagePickFailed": "Couldn't load that photo.",
   "videoEditorReattachLabel": "Back to timeline",
   "@videoEditorReattachLabel": {

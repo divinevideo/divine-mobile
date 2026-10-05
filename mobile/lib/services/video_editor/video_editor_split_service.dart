@@ -29,6 +29,39 @@ class VideoEditorSplitService {
         clip.trimmedDuration - splitPosition >= minClipDuration;
   }
 
+  /// The two halves of [sourceClip] cut at [splitPosition] (relative to the
+  /// trimmed clip), without validating the position or touching any file.
+  ///
+  /// Both halves keep the source video; only their trim windows differ. Shared
+  /// by [splitClip] and the freeze frame, which cuts the same way and puts a
+  /// still between the halves.
+  static (DivineVideoClip startClip, DivineVideoClip endClip) trimSplit({
+    required DivineVideoClip sourceClip,
+    required Duration splitPosition,
+  }) {
+    final absoluteSplitPos = sourceClip.trimStart + splitPosition;
+    final timestampMs = clock.now().microsecondsSinceEpoch;
+
+    // Start half: source start → split point. [duration] caps the visible end
+    // at the split, and it drops the source's outgoing transition — only the
+    // end half (which now owns the boundary into the next clip) keeps it.
+    final startClip = sourceClip.copyWith(
+      id: '${timestampMs}_start',
+      duration: absoluteSplitPos,
+      trimEnd: Duration.zero,
+      clearTransition: true,
+    );
+    // End half: split point → source end. [minTrimStart] pins its left trim
+    // handle at the split so it can't be dragged back into the start half's
+    // frames (both halves share the same source file).
+    final endClip = sourceClip.copyWith(
+      id: '${timestampMs}_end',
+      trimStart: absoluteSplitPos,
+      minTrimStart: absoluteSplitPos,
+    );
+    return (startClip, endClip);
+  }
+
   /// Splits a clip at the specified position — a pure trim-based cut.
   ///
   /// Both halves keep the **same** source video; only their trim windows
@@ -78,24 +111,9 @@ class VideoEditorSplitService {
       category: .video,
     );
 
-    final timestampMs = clock.now().microsecondsSinceEpoch;
-
-    // Start half: source start → split point. [duration] caps the visible end
-    // at the split, and it drops the source's outgoing transition — only the
-    // end half (which now owns the boundary into the next clip) keeps it.
-    final startClip = sourceClip.copyWith(
-      id: '${timestampMs}_start',
-      duration: absoluteSplitPos,
-      trimEnd: Duration.zero,
-      clearTransition: true,
-    );
-    // End half: split point → source end. [minTrimStart] pins its left trim
-    // handle at the split so it can't be dragged back into the start half's
-    // frames (both halves share the same source file).
-    final endClip = sourceClip.copyWith(
-      id: '${timestampMs}_end',
-      trimStart: absoluteSplitPos,
-      minTrimStart: absoluteSplitPos,
+    final (startClip, endClip) = trimSplit(
+      sourceClip: sourceClip,
+      splitPosition: splitPosition,
     );
 
     onClipsCreated?.call(startClip, endClip);

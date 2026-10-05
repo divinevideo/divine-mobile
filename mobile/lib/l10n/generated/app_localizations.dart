@@ -15737,6 +15737,36 @@ abstract class AppLocalizations {
   /// **'Couldn\'t detach that clip. Your timeline is unchanged.'**
   String get videoEditorDetachFailed;
 
+  /// Clip action-bar button that holds the frame under the playhead still for a moment, then lets the clip continue (a freeze frame).
+  ///
+  /// In en, this message translates to:
+  /// **'Freeze'**
+  String get videoEditorFreezeFrameLabel;
+
+  /// No description provided for @videoEditorFreezeFrameSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Freeze the frame under the playhead'**
+  String get videoEditorFreezeFrameSemanticLabel;
+
+  /// Shown under the progress spinner while the still for a freeze frame is being rendered.
+  ///
+  /// In en, this message translates to:
+  /// **'Freezing the frame…'**
+  String get videoEditorFreezeFrameProgressLabel;
+
+  /// No description provided for @videoEditorFreezeFrameFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t freeze that frame. Your timeline is unchanged.'**
+  String get videoEditorFreezeFrameFailed;
+
+  /// Snackbar when the user taps Freeze while the playhead is not on the selected clip.
+  ///
+  /// In en, this message translates to:
+  /// **'Move the playhead onto the selected clip to freeze a frame.'**
+  String get videoEditorFreezeFramePlayheadOutsideClip;
+
   /// No description provided for @videoEditorDetachImagePickFailed.
   ///
   /// In en, this message translates to:

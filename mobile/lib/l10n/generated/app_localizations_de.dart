@@ -9348,6 +9348,24 @@ class AppLocalizationsDe extends AppLocalizations {
       'Der Clip konnte nicht abgelöst werden. Deine Timeline bleibt unverändert.';
 
   @override
+  String get videoEditorFreezeFrameLabel => 'Einfrieren';
+
+  @override
+  String get videoEditorFreezeFrameSemanticLabel =>
+      'Bild unter dem Abspielkopf einfrieren';
+
+  @override
+  String get videoEditorFreezeFrameProgressLabel => 'Bild wird eingefroren …';
+
+  @override
+  String get videoEditorFreezeFrameFailed =>
+      'Das Bild konnte nicht eingefroren werden. Deine Timeline bleibt unverändert.';
+
+  @override
+  String get videoEditorFreezeFramePlayheadOutsideClip =>
+      'Setz den Abspielkopf auf den ausgewählten Clip, um ein Bild einzufrieren.';
+
+  @override
   String get videoEditorDetachImagePickFailed =>
       'Das Foto konnte nicht geladen werden.';
 

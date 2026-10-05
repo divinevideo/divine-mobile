@@ -70,6 +70,8 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       isPlaceholderClip,
       placeholderFill,
       isChangingBackdropCurrentClip,
+      isFreezeFrameClip,
+      isFreezingCurrentClip,
     ) = context.select((ClipEditorBloc b) {
       final state = b.state;
       final index = state.currentClipIndex;
@@ -109,6 +111,10 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
         state.isRefillingPlaceholder &&
             currentClipId != null &&
             state.refillingPlaceholderClipId == currentClipId,
+        hasClip && state.clips[index].isFreezeFrame,
+        state.isFreezingFrame &&
+            currentClipId != null &&
+            state.freezingFrameClipId == currentClipId,
       );
     });
     final isLastClip = clipCount <= 1;
@@ -129,12 +135,29 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       );
     }
 
+    // A held frame is a still too, so it gets no footage actions. Its trim
+    // handles set how long it holds; what is offered here is removing it,
+    // repeating it, and cropping in on it.
+    if (isFreezeFrameClip) {
+      return VideoEditorTimelineControls(
+        onDelete: isLastClip ? null : () => _deleteClip(context),
+        onDuplicated: () => _duplicateClip(context),
+        onTransform: () => _transformClip(context),
+        onMultiSelect: isLastClip ? null : () => _startMultiSelect(context),
+        onDone: () => context.read<ClipEditorBloc>().add(
+          const ClipEditorEditingStopped(),
+        ),
+      );
+    }
+
     return VideoEditorTimelineControls(
       onDelete: isLastClip ? null : () => _deleteClip(context),
       onDuplicated: () => _duplicateClip(context),
       // Split/Speed stay mounted and are shown disabled (not removed) while
       // busy, so the control set doesn't visibly reshuffle mid-operation.
       onSplit: () => _splitClip(context),
+      onFreezeFrame: () => _freezeFrame(context),
+      isFreezingFrame: isFreezingCurrentClip,
       onDetach: () => _detachClip(context),
       isDetaching: isDetachingCurrentClip,
       onSpeed: () => _setPlaybackSpeed(context),
@@ -586,11 +609,10 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
     );
   }
 
-  void _splitClip(BuildContext context) {
-    final bloc = context.read<ClipEditorBloc>();
-    final state = bloc.state;
-    if (state.currentClipIndex >= state.clips.length) return;
-
+  /// The playhead's offset into the selected clip in source time, measured
+  /// from its trimmed start — the coordinate a split or a freeze takes — or
+  /// `null` when the playhead is outside the clip.
+  Duration? _playheadSourcePosition(ClipEditorState state) {
     final selectedClip = state.clips[state.currentClipIndex];
 
     // The playhead is in playback time; preceding clips must be accumulated
@@ -606,6 +628,22 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
     // Bounds-check in playback time.
     if (localPlaybackPosition < Duration.zero ||
         localPlaybackPosition > selectedClip.playbackDuration) {
+      return null;
+    }
+
+    // Convert to source time: source = playback × speed (since
+    // playbackDuration = trimmedDuration / speed).
+    return selectedClip.playbackDurationToSourceDuration(localPlaybackPosition);
+  }
+
+  void _splitClip(BuildContext context) {
+    final bloc = context.read<ClipEditorBloc>();
+    final state = bloc.state;
+    if (state.currentClipIndex >= state.clips.length) return;
+
+    final selectedClip = state.clips[state.currentClipIndex];
+    final localPosition = _playheadSourcePosition(state);
+    if (localPosition == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         DivineSnackbarContainer.snackBar(
           context.l10n.videoEditorSplitPlayheadOutsideClip,
@@ -613,17 +651,6 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       );
       return;
     }
-
-    // The split service and bloc expect a source-time offset relative to
-    // trimmedDuration.  Convert: source = playback × speed
-    // (since playbackDuration = trimmedDuration / speed).
-    final speed = selectedClip.playbackSpeed ?? 1.0;
-    final localPosition = speed == 1.0
-        ? localPlaybackPosition
-        : Duration(
-            microseconds: (localPlaybackPosition.inMicroseconds * speed)
-                .round(),
-          );
 
     if (!VideoEditorSplitService.isValidSplitPosition(
       selectedClip,
@@ -652,6 +679,32 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
           splitPosition: localPosition,
         ),
       );
+  }
+
+  /// Holds the frame under the playhead still for a beat. The bloc renders the
+  /// still and puts it on the timeline; `_ClipFreezeFrameResultListener` in the
+  /// scaffold commits it, so the work survives these controls unmounting.
+  void _freezeFrame(BuildContext context) {
+    final bloc = context.read<ClipEditorBloc>();
+    final state = bloc.state;
+    if (state.currentClipIndex >= state.clips.length) return;
+
+    final position = _playheadSourcePosition(state);
+    if (position == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        DivineSnackbarContainer.snackBar(
+          context.l10n.videoEditorFreezeFramePlayheadOutsideClip,
+        ),
+      );
+      return;
+    }
+
+    bloc.add(
+      ClipEditorFreezeFrameRequested(
+        clipId: state.clips[state.currentClipIndex].id,
+        position: position,
+      ),
+    );
   }
 }
 

@@ -8802,6 +8802,22 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorDetachFailed => '그 클립을 분리하지 못했어요. 타임라인은 그대로예요.';
 
   @override
+  String get videoEditorFreezeFrameLabel => '정지';
+
+  @override
+  String get videoEditorFreezeFrameSemanticLabel => '재생 헤드 위치의 프레임 정지';
+
+  @override
+  String get videoEditorFreezeFrameProgressLabel => '프레임을 정지하는 중…';
+
+  @override
+  String get videoEditorFreezeFrameFailed => '그 프레임을 정지하지 못했어요. 타임라인은 그대로예요.';
+
+  @override
+  String get videoEditorFreezeFramePlayheadOutsideClip =>
+      '프레임을 정지하려면 재생 헤드를 선택한 클립 안으로 옮기세요.';
+
+  @override
   String get videoEditorDetachImagePickFailed => '그 사진을 불러오지 못했어요.';
 
   @override

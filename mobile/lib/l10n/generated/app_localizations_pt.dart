@@ -9297,6 +9297,24 @@ class AppLocalizationsPt extends AppLocalizations {
       'Não foi possível separar esse clipe. Sua linha do tempo fica igual.';
 
   @override
+  String get videoEditorFreezeFrameLabel => 'Congelar';
+
+  @override
+  String get videoEditorFreezeFrameSemanticLabel =>
+      'Congelar o quadro sob a cabeça de reprodução';
+
+  @override
+  String get videoEditorFreezeFrameProgressLabel => 'Congelando o quadro…';
+
+  @override
+  String get videoEditorFreezeFrameFailed =>
+      'Não foi possível congelar esse quadro. Sua linha do tempo fica igual.';
+
+  @override
+  String get videoEditorFreezeFramePlayheadOutsideClip =>
+      'Mova a cabeça de reprodução para o clipe selecionado para congelar um quadro.';
+
+  @override
   String get videoEditorDetachImagePickFailed =>
       'Não foi possível carregar essa foto.';
 

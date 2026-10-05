@@ -9436,6 +9436,24 @@ class AppLocalizationsRo extends AppLocalizations {
       'Clipul nu a putut fi desprins. Cronologia ta rămâne neschimbată.';
 
   @override
+  String get videoEditorFreezeFrameLabel => 'Îngheață';
+
+  @override
+  String get videoEditorFreezeFrameSemanticLabel =>
+      'Îngheață cadrul de sub capul de redare';
+
+  @override
+  String get videoEditorFreezeFrameProgressLabel => 'Se îngheață cadrul…';
+
+  @override
+  String get videoEditorFreezeFrameFailed =>
+      'Cadrul nu a putut fi înghețat. Cronologia ta rămâne neschimbată.';
+
+  @override
+  String get videoEditorFreezeFramePlayheadOutsideClip =>
+      'Mută capul de redare pe clipul selectat ca să îngheți un cadru.';
+
+  @override
   String get videoEditorDetachImagePickFailed =>
       'Fotografia nu a putut fi încărcată.';
 

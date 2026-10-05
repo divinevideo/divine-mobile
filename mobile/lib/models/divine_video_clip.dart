@@ -40,6 +40,7 @@ class DivineVideoClip {
     this.reversed = false,
     this.isPlaceholder = false,
     this.placeholderFill,
+    this.isFreezeFrame = false,
     this.forwardVideoPath,
     this.reversedVideoPath,
     this.proofManifestJson,
@@ -164,6 +165,16 @@ class DivineVideoClip {
   /// recorded; the backdrop is still changeable then, just without the
   /// current choice pre-selected.
   final ClipPlaceholderFill? placeholderFill;
+
+  /// Whether this clip is a frame held still for a beat — the frame under the
+  /// playhead of another clip, rendered to video by `FreezeFrameRenderService`.
+  ///
+  /// The still is rendered longer than it plays and trimmed down to the length
+  /// the user picked, so the trim handles change how long it holds without a
+  /// second render. That makes [duration] a reserve rather than footage, which
+  /// is why [budgetDuration] counts only the visible part. Like [isPlaceholder]
+  /// it also keeps actions that are meaningless on a still off the clip.
+  final bool isFreezeFrame;
 
   /// Cached forward file path used to restore the clip after a reverse toggle.
   final String? forwardVideoPath;
@@ -310,7 +321,10 @@ class DivineVideoClip {
   /// region before the split ([minTrimStart]) is already counted by the start
   /// half — subtract it here so summing clips doesn't double-count the split
   /// region against the recording cap.
+  ///
+  /// A freeze frame counts only what plays: see [isFreezeFrame].
   Duration get budgetDuration {
+    if (isFreezeFrame) return trimmedDuration;
     final result = duration - minTrimStart;
     return result.isNegative ? Duration.zero : result;
   }
@@ -483,6 +497,7 @@ class DivineVideoClip {
     bool? reversed,
     bool? isPlaceholder,
     ClipPlaceholderFill? placeholderFill,
+    bool? isFreezeFrame,
     String? forwardVideoPath,
     bool clearForwardVideoPath = false,
     String? reversedVideoPath,
@@ -541,6 +556,7 @@ class DivineVideoClip {
       reversed: reversed ?? this.reversed,
       isPlaceholder: isPlaceholder ?? this.isPlaceholder,
       placeholderFill: placeholderFill ?? this.placeholderFill,
+      isFreezeFrame: isFreezeFrame ?? this.isFreezeFrame,
       forwardVideoPath: isNewLogicalClip
           ? null
           : clearForwardVideoPath
@@ -610,6 +626,7 @@ class DivineVideoClip {
       if (reversed) 'reversed': true,
       if (isPlaceholder) 'isPlaceholder': true,
       if (placeholderFill case final fill?) 'placeholderFill': fill.toJson(),
+      if (isFreezeFrame) 'isFreezeFrame': true,
       if (forwardVideoPath != null)
         'forwardVideoPath': p.basename(forwardVideoPath!),
       if (reversedVideoPath != null)
@@ -739,6 +756,7 @@ class DivineVideoClip {
         documentsPath,
         useOriginalPath: useOriginalPath,
       ),
+      isFreezeFrame: (json['isFreezeFrame'] as bool?) ?? false,
       forwardVideoPath: resolvePath(
         json['forwardVideoPath'] as String?,
         documentsPath,

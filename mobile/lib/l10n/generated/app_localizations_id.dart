@@ -9144,6 +9144,24 @@ class AppLocalizationsId extends AppLocalizations {
       'Klip itu tidak bisa dilepas. Timeline-mu tidak berubah.';
 
   @override
+  String get videoEditorFreezeFrameLabel => 'Bekukan';
+
+  @override
+  String get videoEditorFreezeFrameSemanticLabel =>
+      'Bekukan frame di bawah playhead';
+
+  @override
+  String get videoEditorFreezeFrameProgressLabel => 'Membekukan frame…';
+
+  @override
+  String get videoEditorFreezeFrameFailed =>
+      'Frame itu tidak bisa dibekukan. Timeline-mu tidak berubah.';
+
+  @override
+  String get videoEditorFreezeFramePlayheadOutsideClip =>
+      'Pindahkan playhead ke klip yang dipilih untuk membekukan frame.';
+
+  @override
   String get videoEditorDetachImagePickFailed => 'Foto itu tidak bisa dimuat.';
 
   @override

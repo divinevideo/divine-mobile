@@ -27,6 +27,8 @@ import 'package:pro_image_editor/features/main_editor/services/sizes_manager.dar
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
+import '../../../../helpers/scroll.dart';
+
 class _MockClipEditorBloc extends MockBloc<ClipEditorEvent, ClipEditorState>
     implements ClipEditorBloc {}
 
@@ -62,7 +64,7 @@ void main() {
       when(() => bloc.isClosed).thenReturn(false);
     });
 
-    Widget build() {
+    Widget build({Duration playhead = Duration.zero}) {
       return ProviderScope(
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
@@ -71,7 +73,7 @@ void main() {
             body: BlocProvider<ClipEditorBloc>.value(
               value: bloc,
               child: TimelineClipControls(
-                playheadPosition: ValueNotifier(Duration.zero),
+                playheadPosition: ValueNotifier(playhead),
               ),
             ),
           ),
@@ -618,6 +620,58 @@ void main() {
       );
       expect(controls.onSplit, isNotNull);
       expect(controls.isSplitting, isFalse);
+    });
+
+    testWidgets('Freeze holds the frame under the playhead in source time', (
+      tester,
+    ) async {
+      when(() => bloc.state).thenReturn(
+        ClipEditorState(
+          clips: [clip('clip-1'), clip('clip-2').copyWith(playbackSpeed: 2)],
+          currentClipIndex: 1,
+        ),
+      );
+      // Half a second into the double-speed clip is a full second of its file.
+      await tester.pumpWidget(
+        build(playhead: const Duration(milliseconds: 3500)),
+      );
+
+      // The action sits towards the end of the bar, past the visible width.
+      await scrollUntilTappable(tester, find.text('Freeze'), 100);
+      await tester.tap(find.text('Freeze'));
+
+      verify(
+        () => bloc.add(
+          const ClipEditorFreezeFrameRequested(
+            clipId: 'clip-2',
+            position: Duration(seconds: 1),
+          ),
+        ),
+      ).called(1);
+    });
+
+    testWidgets('a freeze frame offers no footage actions', (tester) async {
+      when(() => bloc.state).thenReturn(
+        ClipEditorState(
+          clips: [clip('clip-1'), clip('freeze').copyWith(isFreezeFrame: true)],
+          currentClipIndex: 1,
+        ),
+      );
+      await tester.pumpWidget(build());
+
+      // Its trim handles set how long it holds; cutting, speeding up,
+      // reversing or freezing a still would only dress no-ops as actions.
+      final controls = tester.widget<VideoEditorTimelineControls>(
+        find.byType(VideoEditorTimelineControls),
+      );
+      expect(controls.onDelete, isNotNull);
+      expect(controls.onTransform, isNotNull);
+      expect(controls.onSplit, isNull);
+      expect(controls.onFreezeFrame, isNull);
+      expect(controls.onSpeed, isNull);
+      expect(controls.onReversed, isNull);
+      expect(controls.onDetach, isNull);
+      expect(controls.onExtractAudio, isNull);
     });
 
     testWidgets('Select button is hidden for a single clip', (tester) async {

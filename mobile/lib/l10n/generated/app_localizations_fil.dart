@@ -9300,6 +9300,24 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi ma-detach ang clip na iyon. Hindi nagbago ang timeline mo.';
 
   @override
+  String get videoEditorFreezeFrameLabel => 'I-freeze';
+
+  @override
+  String get videoEditorFreezeFrameSemanticLabel =>
+      'I-freeze ang frame sa ilalim ng playhead';
+
+  @override
+  String get videoEditorFreezeFrameProgressLabel => 'Ini-freeze ang frame…';
+
+  @override
+  String get videoEditorFreezeFrameFailed =>
+      'Hindi ma-freeze ang frame na iyon. Hindi nagbago ang timeline mo.';
+
+  @override
+  String get videoEditorFreezeFramePlayheadOutsideClip =>
+      'Ilipat ang playhead sa napiling clip para mag-freeze ng frame.';
+
+  @override
   String get videoEditorDetachImagePickFailed =>
       'Hindi ma-load ang larawang iyon.';
 

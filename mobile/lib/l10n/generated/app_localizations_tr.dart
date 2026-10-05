@@ -9149,6 +9149,24 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bu klip ayrılamadı. Zaman çizelgen değişmedi.';
 
   @override
+  String get videoEditorFreezeFrameLabel => 'Dondur';
+
+  @override
+  String get videoEditorFreezeFrameSemanticLabel =>
+      'Oynatma kafasının altındaki kareyi dondur';
+
+  @override
+  String get videoEditorFreezeFrameProgressLabel => 'Kare donduruluyor…';
+
+  @override
+  String get videoEditorFreezeFrameFailed =>
+      'Bu kare dondurulamadı. Zaman çizelgen değişmedi.';
+
+  @override
+  String get videoEditorFreezeFramePlayheadOutsideClip =>
+      'Kare dondurmak için oynatma kafasını seçili klibe taşı.';
+
+  @override
   String get videoEditorDetachImagePickFailed => 'Bu fotoğraf yüklenemedi.';
 
   @override

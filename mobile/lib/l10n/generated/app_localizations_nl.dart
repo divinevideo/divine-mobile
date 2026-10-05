@@ -9270,6 +9270,24 @@ class AppLocalizationsNl extends AppLocalizations {
       'Kon die clip niet losmaken. Je tijdlijn blijft ongewijzigd.';
 
   @override
+  String get videoEditorFreezeFrameLabel => 'Bevriezen';
+
+  @override
+  String get videoEditorFreezeFrameSemanticLabel =>
+      'Frame onder de afspeelkop bevriezen';
+
+  @override
+  String get videoEditorFreezeFrameProgressLabel => 'Frame wordt bevroren…';
+
+  @override
+  String get videoEditorFreezeFrameFailed =>
+      'Kon dat frame niet bevriezen. Je tijdlijn blijft ongewijzigd.';
+
+  @override
+  String get videoEditorFreezeFramePlayheadOutsideClip =>
+      'Zet de afspeelkop op de geselecteerde clip om een frame te bevriezen.';
+
+  @override
   String get videoEditorDetachImagePickFailed => 'Kon die foto niet laden.';
 
   @override

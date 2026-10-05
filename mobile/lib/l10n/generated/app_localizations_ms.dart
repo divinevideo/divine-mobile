@@ -9236,6 +9236,24 @@ class AppLocalizationsMs extends AppLocalizations {
       'Klip itu tidak dapat ditanggalkan. Garis masa anda tidak berubah.';
 
   @override
+  String get videoEditorFreezeFrameLabel => 'Bekukan';
+
+  @override
+  String get videoEditorFreezeFrameSemanticLabel =>
+      'Bekukan bingkai di bawah kepala main';
+
+  @override
+  String get videoEditorFreezeFrameProgressLabel => 'Membekukan bingkai…';
+
+  @override
+  String get videoEditorFreezeFrameFailed =>
+      'Bingkai itu tidak dapat dibekukan. Garis masa anda tidak berubah.';
+
+  @override
+  String get videoEditorFreezeFramePlayheadOutsideClip =>
+      'Alihkan kepala main ke klip yang dipilih untuk membekukan bingkai.';
+
+  @override
   String get videoEditorDetachImagePickFailed =>
       'Foto itu tidak dapat dimuatkan.';
 

@@ -1,5 +1,5 @@
-// ABOUTME: Tests for the listeners that finish a detach and its way back —
-// ABOUTME: the layer and the clip list land in one editor-history entry
+// ABOUTME: Tests for the listeners that finish a detach, its way back and a
+// ABOUTME: freeze frame — each lands in one editor-history entry
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -210,6 +210,55 @@ void main() {
                   .clipsStateHistoryKey]
               as List<dynamic>;
       expect(clips.map((c) => (c as Map<String, dynamic>)['id']), ['a', 'b']);
+    });
+
+    testWidgets('a freeze moves the markers after it and commits the clips', (
+      tester,
+    ) async {
+      final freeze = _clip('freeze_1').copyWith(
+        isFreezeFrame: true,
+        trimEnd: const Duration(milliseconds: 1500),
+      );
+      when(() => overlayBloc.state).thenReturn(
+        const TimelineOverlayState(
+          timelineMarkers: [Duration(seconds: 1), Duration(seconds: 3)],
+        ),
+      );
+      whenListen(
+        clipBloc,
+        Stream.value(
+          ClipEditorState(
+            clips: [_clip('a'), freeze, _clip('b')],
+            lastFreezeFrameResult: ClipFreezeFrameSuccess(
+              previousClips: [_clip('a'), _clip('b')],
+              freezeClipId: 'freeze_1',
+            ),
+          ),
+        ),
+        initialState: const ClipEditorState(),
+      );
+
+      await tester.pumpWidget(build());
+      await tester.pump();
+
+      // The marker on the clip after the freeze follows its footage half a
+      // second later; the one before it stays put.
+      const markers = [Duration(seconds: 1), Duration(milliseconds: 3500)];
+      verify(
+        () => overlayBloc.add(const TimelineMarkersRebased(markers)),
+      ).called(1);
+      final meta =
+          verify(
+                () => editor.addHistory(meta: captureAny(named: 'meta')),
+              ).captured.single
+              as Map<String, dynamic>;
+      final clips =
+          meta[VideoEditorConstants.clipsStateHistoryKey] as List<dynamic>;
+      expect(clips.map((c) => (c as Map<String, dynamic>)['id']), [
+        'a',
+        'freeze_1',
+        'b',
+      ]);
     });
   });
 }

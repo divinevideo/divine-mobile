@@ -9490,6 +9490,25 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఆ క్లిప్‌ని వేరు చేయడం సాధ్యపడలేదు. మీ టైమ్‌లైన్ మారలేదు.';
 
   @override
+  String get videoEditorFreezeFrameLabel => 'ఫ్రీజ్';
+
+  @override
+  String get videoEditorFreezeFrameSemanticLabel =>
+      'ప్లేహెడ్ కింద ఉన్న ఫ్రేమ్‌ను ఫ్రీజ్ చేయండి';
+
+  @override
+  String get videoEditorFreezeFrameProgressLabel =>
+      'ఫ్రేమ్‌ను ఫ్రీజ్ చేస్తోంది…';
+
+  @override
+  String get videoEditorFreezeFrameFailed =>
+      'ఆ ఫ్రేమ్‌ను ఫ్రీజ్ చేయడం సాధ్యపడలేదు. మీ టైమ్‌లైన్ మారలేదు.';
+
+  @override
+  String get videoEditorFreezeFramePlayheadOutsideClip =>
+      'ఫ్రేమ్‌ను ఫ్రీజ్ చేయడానికి ప్లేహెడ్‌ను ఎంచుకున్న క్లిప్‌లోకి తరలించండి.';
+
+  @override
   String get videoEditorDetachImagePickFailed =>
       'ఆ ఫోటోను లోడ్ చేయడం సాధ్యపడలేదు.';
 

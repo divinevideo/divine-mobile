@@ -639,6 +639,34 @@ void main() {
         equals(const Duration(seconds: 5)),
       );
     });
+
+    test('counts only the part of a freeze frame that plays', () {
+      // A freeze is rendered long and trimmed short so its handle can stretch
+      // it; the unplayed reserve is not recording time.
+      final freeze = clip('/videos/freeze.mp4').copyWith(
+        isFreezeFrame: true,
+        trimEnd: const Duration(milliseconds: 4500),
+      );
+
+      expect(freeze.budgetDuration, const Duration(milliseconds: 500));
+    });
+  });
+
+  group('DivineVideoClip.isFreezeFrame', () {
+    test('round-trips through JSON', () {
+      final freeze = clip('/videos/freeze.mp4').copyWith(isFreezeFrame: true);
+
+      final restored = DivineVideoClip.fromJson(freeze.toJson(), '/videos');
+
+      expect(restored.isFreezeFrame, isTrue);
+    });
+
+    test('is absent from JSON and false on legacy drafts', () {
+      final json = clip('/videos/clip.mp4').toJson();
+      expect(json.containsKey('isFreezeFrame'), isFalse);
+
+      expect(DivineVideoClip.fromJson(json, '/videos').isFreezeFrame, isFalse);
+    });
   });
 
   group('DivineVideoClip.ownedFilePaths', () {

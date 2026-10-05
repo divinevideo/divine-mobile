@@ -9226,6 +9226,24 @@ class AppLocalizationsSv extends AppLocalizations {
       'Det gick inte att lossa klippet. Din tidslinje är oförändrad.';
 
   @override
+  String get videoEditorFreezeFrameLabel => 'Frys';
+
+  @override
+  String get videoEditorFreezeFrameSemanticLabel =>
+      'Frys bildrutan under uppspelningshuvudet';
+
+  @override
+  String get videoEditorFreezeFrameProgressLabel => 'Fryser bildrutan …';
+
+  @override
+  String get videoEditorFreezeFrameFailed =>
+      'Det gick inte att frysa bildrutan. Din tidslinje är oförändrad.';
+
+  @override
+  String get videoEditorFreezeFramePlayheadOutsideClip =>
+      'Flytta uppspelningshuvudet till det valda klippet för att frysa en bildruta.';
+
+  @override
   String get videoEditorDetachImagePickFailed =>
       'Det gick inte att läsa in fotot.';
 

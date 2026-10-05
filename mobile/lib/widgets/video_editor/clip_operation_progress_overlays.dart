@@ -1,6 +1,6 @@
 // ABOUTME: Full-screen progress overlays for the long-running clip operations
-// ABOUTME: (reverse, transform, detach, backdrop, merge, library import,
-// ABOUTME: recorded chroma key) that block the editor.
+// ABOUTME: (reverse, transform, detach, backdrop, freeze frame, merge, library
+// ABOUTME: import, recorded chroma key) that block the editor.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -30,6 +30,7 @@ class ClipOperationProgressOverlays extends StatelessWidget {
         _TransformProgressOverlay(),
         _DetachProgressOverlay(),
         _BackdropProgressOverlay(),
+        _FreezeFrameProgressOverlay(),
         _MergeProgressOverlay(),
         _LibraryImportProgressOverlay(),
         _CapturedChromaKeyProgressOverlay(),
@@ -148,6 +149,35 @@ class _BackdropProgressOverlay extends StatelessWidget {
               : _RenderProgressContent(
                   renderId: renderId,
                   label: context.l10n.videoEditorBackdropProgressLabel,
+                ),
+        );
+      },
+    );
+  }
+}
+
+/// Full-screen progress overlay shown while the still for a freeze frame is
+/// encoded.
+///
+/// Covers the editor for the same reason as the detach overlay: the freeze
+/// cuts the clip and lengthens the timeline, so nothing underneath may start a
+/// competing edit until it lands.
+class _FreezeFrameProgressOverlay extends StatelessWidget {
+  const _FreezeFrameProgressOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<ClipEditorBloc, ClipEditorState, String?>(
+      selector: (state) =>
+          state.isFreezingFrame ? state.freezingFrameRenderId : null,
+      builder: (context, renderId) {
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: renderId == null
+              ? const SizedBox.shrink()
+              : _RenderProgressContent(
+                  renderId: renderId,
+                  label: context.l10n.videoEditorFreezeFrameProgressLabel,
                 ),
         );
       },

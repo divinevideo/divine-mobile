@@ -697,6 +697,29 @@ void main() {
     });
   });
 
+  group(shiftTimelineMarkersForInsertion, () {
+    test('moves markers from the insertion point on, keeps earlier ones', () {
+      expect(
+        shiftTimelineMarkersForInsertion(
+          markers: const [
+            Duration(seconds: 1),
+            Duration(seconds: 2),
+            Duration(seconds: 3),
+          ],
+          at: const Duration(seconds: 2),
+          by: const Duration(milliseconds: 500),
+        ),
+        // The marker on the insertion point sits on the frame that now plays
+        // after the inserted span, so it moves too.
+        equals(const [
+          Duration(seconds: 1),
+          Duration(milliseconds: 2500),
+          Duration(milliseconds: 3500),
+        ]),
+      );
+    });
+  });
+
   group('DivineVideoClip.playbackDuration', () {
     test('null speed → same as trimmedDuration', () {
       final clip = _clip('a', 10);

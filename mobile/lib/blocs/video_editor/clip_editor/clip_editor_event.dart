@@ -443,6 +443,31 @@ class ClipEditorClipDetachRequested extends ClipEditorEvent {
   List<Object?> get props => [clipId, replacement];
 }
 
+// === FREEZE FRAME ===
+
+/// Hold the frame of the clip with [clipId] at [position] still for a beat,
+/// then let the clip continue.
+///
+/// [position] is the playhead's offset into the clip in source time, measured
+/// from its trimmed start — the coordinate a split takes. Captured at dispatch
+/// so a queued request still freezes the frame the user was looking at.
+///
+/// The bloc renders the still and puts it on the timeline, cutting the clip
+/// there unless the playhead sits on its first or last frame; the widget layer
+/// consumes [ClipFreezeFrameResult] to commit the change to editor history.
+class ClipEditorFreezeFrameRequested extends ClipEditorEvent {
+  const ClipEditorFreezeFrameRequested({
+    required this.clipId,
+    required this.position,
+  });
+
+  final String clipId;
+  final Duration position;
+
+  @override
+  List<Object?> get props => [clipId, position];
+}
+
 /// Re-render the backdrop the placeholder clip with [clipId] holds, filling it
 /// with [fill] instead.
 ///

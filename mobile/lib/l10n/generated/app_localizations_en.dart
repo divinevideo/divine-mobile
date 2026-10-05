@@ -9321,6 +9321,24 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t detach that clip. Your timeline is unchanged.';
 
   @override
+  String get videoEditorFreezeFrameLabel => 'Freeze';
+
+  @override
+  String get videoEditorFreezeFrameSemanticLabel =>
+      'Freeze the frame under the playhead';
+
+  @override
+  String get videoEditorFreezeFrameProgressLabel => 'Freezing the frame…';
+
+  @override
+  String get videoEditorFreezeFrameFailed =>
+      'Couldn\'t freeze that frame. Your timeline is unchanged.';
+
+  @override
+  String get videoEditorFreezeFramePlayheadOutsideClip =>
+      'Move the playhead onto the selected clip to freeze a frame.';
+
+  @override
   String get videoEditorDetachImagePickFailed => 'Couldn\'t load that photo.';
 
   @override
