@@ -168,7 +168,8 @@ class UserAvatar extends StatelessWidget {
     name: name,
   );
 
-  /// Decode width for this avatar's slot, in device pixels.
+  /// Decode width in device pixels: [logicalSize] when given, else
+  /// [decodeSize], else this avatar's [size].
   ///
   /// An avatar URL is an arbitrary user-supplied kind-0 `picture` at an
   /// arbitrary resolution, and the slot is usually 32-44pt. Without a hint
@@ -177,8 +178,8 @@ class UserAvatar extends StatelessWidget {
   /// above bounds layout, not decode. Height is deliberately left to
   /// [ResizeImage] so the aspect ratio survives.
   ///
-  /// Returns null for a non-finite or non-positive [size], leaving the
-  /// framework to decode at native resolution. A `double.infinity` slot
+  /// Returns null when that logical width is non-finite or non-positive, leaving
+  /// the framework to decode at native resolution. A `double.infinity` slot
   /// (an avatar told to fill its cell) would otherwise reach
   /// `(size * dpr).ceil()`, which throws. Mirrors
   /// `_VideoThumbnailWidgetState._decodeWidth`.
