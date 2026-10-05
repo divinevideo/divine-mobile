@@ -143,18 +143,16 @@ void main() {
             reason: 'ConversationView should mount after route push',
           );
 
-          // ── Phase 4: Type + submit via the keyboard send action ──
+          // ── Phase 4: Type + tap the composer send button ──
           //
-          // MessageInputBar wires `TextInputAction.send` →
-          // `onSubmitted: (_) => _handleSend()`, so receiveAction triggers
-          // the same path as tapping the send button without depending on
-          // the unlabelled GestureDetector for it.
+          // Return inserts a newline. Use the send button's stable semantic
+          // identifier to exercise the same action as a user tap.
           logPhase('── Phase 4: Submit message ──');
           final input = find.byType(TextField);
           expect(input, findsOneWidget);
           await tester.enterText(input, 'race window check');
           await tester.pump(const Duration(milliseconds: 100));
-          await tester.testTextInput.receiveAction(TextInputAction.send);
+          await tapSemantic(tester, 'dm_message_send_button');
 
           // ── Phase 5: Pin the optimistic during the sending window ──
           //

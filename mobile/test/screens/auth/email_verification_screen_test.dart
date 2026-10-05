@@ -15,11 +15,16 @@ import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/email_verification/email_verification_cubit.dart';
+import 'package:openvine/blocs/saved_sounds/saved_sounds_scope.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/auth/email_verification_screen.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/geo_blocking_service.dart';
 import 'package:openvine/services/pending_verification_service.dart';
+import 'package:openvine/services/saved_sounds_service.dart';
+import 'package:openvine/widgets/geo_blocking_gate.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 import '../../helpers/test_provider_overrides.dart';
@@ -30,6 +35,8 @@ class _MockEmailVerificationCubit extends MockCubit<EmailVerificationState>
 class _MockAuthService extends Mock implements AuthService {}
 
 class _MockKeycastOAuth extends Mock implements KeycastOAuth {}
+
+class _MockGeoBlockingService extends Mock implements GeoBlockingService {}
 
 class _MockPendingVerificationService extends Mock
     implements PendingVerificationService {}
@@ -789,6 +796,72 @@ void main() {
     });
 
     group('concurrent exit handling', () {
+      testWidgets(
+        'sign-in completes when saved-sound storage switches accounts',
+        (tester) async {
+          SharedPreferences.setMockInitialValues({});
+          final preferences = await SharedPreferences.getInstance();
+          final service = ValueNotifier(SavedSoundsService(preferences));
+          addTearDown(service.dispose);
+          final geoBlocking = _MockGeoBlockingService();
+          when(geoBlocking.checkGeoBlock).thenAnswer(
+            (_) async => GeoBlockResponse(
+              blocked: false,
+              country: '',
+              region: '',
+              city: '',
+            ),
+          );
+          final clearCompleter = Completer<void>();
+          when(
+            () => mockPendingVerification.clear(),
+          ).thenAnswer((_) => clearCompleter.future);
+
+          await tester.binding.setSurfaceSize(const Size(800, 1200));
+          addTearDown(() => tester.binding.setSurfaceSize(null));
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                geoBlockingServiceProvider.overrideWithValue(geoBlocking),
+              ],
+              child: ValueListenableBuilder<SavedSoundsService>(
+                valueListenable: service,
+                builder: (_, service, child) => SavedSoundsScope(
+                  service: service,
+                  child: GeoBlockingGate(child: child!),
+                ),
+                child: createTestWidget(
+                  deviceCode: 'test-device-code',
+                  verifier: 'test-verifier',
+                  initialState: const EmailVerificationState(
+                    status: EmailVerificationStatus.polling,
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+
+          authStateController.add(AuthState.authenticated);
+          await tester.pump();
+          // The account bucket changes while navigation awaits secure storage.
+          // Re-keying the scope here disposes the screen that owns that await.
+          service.value = SavedSoundsService(
+            preferences,
+            pubkeyHex: '1111111111111111111111111111111111111111111111111111111111111111',
+          );
+          await tester.pump();
+          clearCompleter.complete();
+          for (var frame = 0; frame < 8; frame++) {
+            await tester.pump(const Duration(milliseconds: 250));
+          }
+
+          expect(find.byType(EmailVerificationScreen), findsNothing);
+          expect(find.text('Explore popular'), findsOneWidget);
+        },
+      );
+
       // Two independent signals can each decide to leave this screen: the
       // auth-state listener and the user's own Cancel tap. `mounted` alone
       // doesn't close the race, because `context.go`/`context.pop` don't
