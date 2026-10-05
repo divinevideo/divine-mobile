@@ -357,6 +357,7 @@ void main() {
       final upload = await seedUpload();
 
       var uploadCallCount = 0;
+      final uploadStarted = Completer<void>();
       final blockGate = Completer<void>();
       when(
         () => mockBlossomService.uploadVideoWithResume(
@@ -375,6 +376,7 @@ void main() {
         ),
       ).thenAnswer((_) async {
         uploadCallCount++;
+        if (!uploadStarted.isCompleted) uploadStarted.complete();
         await blockGate.future;
         return _okResult;
       });
@@ -387,15 +389,20 @@ void main() {
         timeout: const Duration(seconds: 2),
         checkInterval: const Duration(milliseconds: 20),
       );
-      await pumpEventQueue();
+      // The in-flight marker precedes the awaited persistence write. Wait
+      // for the upload callback itself before checking single-flight behavior.
+      try {
+        await uploadStarted.future;
+        expect(uploadCallCount, equals(1));
+      } finally {
+        blockGate.complete();
+        await TestHelpers.waitForCondition(
+          () => !uploadManager.isUploadInFlight(upload.id),
+          timeout: const Duration(seconds: 2),
+          checkInterval: const Duration(milliseconds: 20),
+        );
+      }
       expect(uploadCallCount, equals(1));
-
-      blockGate.complete();
-      await TestHelpers.waitForCondition(
-        () => !uploadManager.isUploadInFlight(upload.id),
-        timeout: const Duration(seconds: 2),
-        checkInterval: const Duration(milliseconds: 20),
-      );
     });
 
     test(
