@@ -205,6 +205,59 @@ void main() {
     DivineSwitchTile visibilityTile(WidgetTester tester) =>
         tester.widget<DivineSwitchTile>(find.byType(DivineSwitchTile));
 
+    testWidgets(
+      'acknowledged recovery shows neutral Sync now and blocks editing until settled',
+      (tester) async {
+        final pending = list(isPublic: false).copyWith(
+          pendingVisibility: const CuratedListVisibility(
+            isPublic: true,
+            isCollaborative: false,
+            allowedCollaborators: [],
+            relayAccepted: true,
+          ),
+        );
+        var current = pending;
+        when(() => service.getListById(any())).thenAnswer((_) => current);
+        when(() => service.retryListSync(_listId)).thenAnswer((_) async {
+          current = pending.copyWith(
+            isPublic: true,
+            clearPendingVisibility: true,
+          );
+          return true;
+        });
+        await openSheet(tester, existingList: pending);
+        expect(find.text(l10n.listRecoveryPending), findsOneWidget);
+        expect(find.text(l10n.listRetrySync), findsOneWidget);
+        expect(visibilityTile(tester).value, isTrue);
+        expect(visibilityTile(tester).onChanged, isNull);
+        final fields = tester.widgetList<TextField>(find.byType(TextField));
+        expect(fields.every((field) => field.enabled == false), isTrue);
+        await tester.tap(find.text(l10n.listRetrySync));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listRecoveryPending), findsNothing);
+        expect(visibilityTile(tester).onChanged, isNotNull);
+        expect(
+          find.byType(ListInfoForm),
+          findsOneWidget,
+          reason: 'Recovery leaves the form open for intentional edits',
+        );
+      },
+    );
+
+    testWidgets(
+      'deletion-only recovery does not claim failure or disable edits',
+      (tester) async {
+        final pending = list(isPublic: false)
+            .copyWith(pendingPlaintextEventIds: ['a' * 64]);
+        when(() => service.getListById(any())).thenReturn(pending);
+        await openSheet(tester, existingList: pending);
+        expect(find.text(l10n.listRecoveryPending), findsOneWidget);
+        expect(find.text(l10n.listRetrySync), findsOneWidget);
+        expect(find.byType(ListInfoFailureMessage), findsNothing);
+        expect(visibilityTile(tester).onChanged, isNotNull);
+      },
+    );
+
     group('renders', () {
       testWidgets('the create form, public and without collaborators', (
         tester,

@@ -6992,6 +6992,7 @@
   "listVideoPendingSync": "你的列表和视频已保存在此设备上。视频正在等待同步。",
   "listRetrySync": "立即同步",
   "listPermissionsUnconfirmed": "无法确认此更改。请重试。",
+  "listRecoveryPending": "此列表有等待同步的更改。",
   "soundRequestAction": "请求使用此声音",
   "soundRequestTitle": "有人想使用你的声音",
   "soundRequestDescription": "允许重复使用此视频的声音，让任何人都能用它进行混剪。",
