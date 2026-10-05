@@ -4548,13 +4548,20 @@ void main() {
           stopMotionFrames: [frameAPath, frameBPath],
         ),
         act: (bloc) async {
+          final removed = Completer<void>();
+          when(
+            () => clipManager.removeStopMotionSessionFromLibrary('clip_sm_a'),
+          ).thenAnswer((_) async => removed.complete());
           bloc.add(
             const VideoRecorderRecorderModeSet(VideoRecorderMode.classic),
           );
-          await pumpEventQueue();
+          // The mode change emits before the abandoned files are deleted.
+          await removed.future;
         },
         verify: (bloc) {
           expect(bloc.state.stopMotionFrames, isEmpty);
+          expect(File(frameAPath).existsSync(), isFalse);
+          expect(File(frameBPath).existsSync(), isFalse);
           // Files deleted AND the eager-saved row removed — no orphan.
           verify(
             () => clipManager.removeStopMotionSessionFromLibrary('clip_sm_a'),
