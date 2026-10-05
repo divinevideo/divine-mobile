@@ -11,7 +11,12 @@ import kotlin.math.abs
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.ThreadFactory
+import android.graphics.Bitmap
+import android.graphics.Matrix
+import android.media.MediaMetadataRetriever
 import androidx.media3.common.C
+import androidx.media3.common.util.Size
+import androidx.media3.exoplayer.Renderer
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
@@ -165,6 +170,42 @@ internal class DivineVideoPlayerInstance(
      * this player loops is not yet known while the clips are applied.
      */
     private var lastClipsRaw: List<Map<String, Any?>> = emptyList()
+
+    /**
+     * The frame effects Dart switched on, shared with the effect stage on the
+     * player's GL thread. Null until `setFrameEffects` first asks for one:
+     * only then does the player route its frames through that stage, so a
+     * player without frame effects plays exactly as before.
+     */
+    private var frameEffectsState: FrameEffectsState? = null
+
+    /**
+     * The last real video size, which the frame-effect stage needs as its
+     * output size. Kept apart from [videoWidth] / [videoHeight], which a
+     * stop or seek resets to 0 for a moment.
+     */
+    private var frameEffectOutputSize: Size? = null
+
+    /** The size reported to Dart while frame effects draw the frames. */
+    private val frameEffectReportedSize: Size?
+        get() = if (frameEffectsState != null) frameEffectOutputSize else null
+
+    /** The buffer size the output surface was set to for frame effects. */
+    private var frameEffectSurfaceSize: Size? = null
+
+    /** Decodes the earlier frames frame effects need after a seek. */
+    private val frameEffectsFillExecutor = java.util.concurrent.Executors.newSingleThreadExecutor()
+
+    /** The newest seek, as clip and local source ms, still to be decoded for frame effects. */
+    @Volatile
+    private var frameEffectsFillRequest: Pair<Int, Long>? = null
+
+    /** The seek being decoded for frame effects now. */
+    private var frameEffectsFillRunning: Pair<Int, Long>? = null
+
+    /** The last seek frame effects heard of, which a redraw returns to. */
+    private var frameEffectsSeekTarget: Pair<Int, Long>? = null
+    private var lastFrameEffectsSeekMs = 0L
 
     private var isLooping = false
 
@@ -331,6 +372,7 @@ internal class DivineVideoPlayerInstance(
 
     private val positionUpdater = object : Runnable {
         override fun run() {
+            updateFrameEffectWindows()
             syncAudioOverlays()
             sendStateUpdate()
             mainHandler.postDelayed(this, POSITION_UPDATE_INTERVAL_MS)
@@ -376,6 +418,7 @@ internal class DivineVideoPlayerInstance(
             legacySurface = surface
             needsSurface = false
             player?.setVideoSurface(surface)
+            sendFrameEffectOutputResolution()
             return entry.id()
         }
         val producer = registry.createSurfaceProducer()
@@ -385,6 +428,7 @@ internal class DivineVideoPlayerInstance(
         needsSurface = surface == null
         if (surface != null) {
             player?.setVideoSurface(surface)
+            sendFrameEffectOutputResolution()
         }
         return producer.id()
     }
@@ -393,12 +437,14 @@ internal class DivineVideoPlayerInstance(
         return player ?: (playerFactory?.invoke(context) ?: buildDefaultPlayer())
             .also { newPlayer ->
                 player = newPlayer
+                frameEffectsState?.let { newPlayer.setVideoEffects(listOf(FrameEffectsGlEffect(it))) }
                 newPlayer.setSeekParameters(SeekParameters.EXACT)
                 newPlayer.addListener(playerListener)
                 newPlayer.setVideoFrameMetadataListener(renderedFrameListener)
                 val surface = activeSurface
                 if (surface != null) {
                     newPlayer.setVideoSurface(surface)
+                    sendFrameEffectOutputResolution()
                     needsSurface = false
                 }
             }
@@ -500,6 +546,7 @@ internal class DivineVideoPlayerInstance(
             val p = player
             if (p != null) {
                 p.setVideoSurface(surface)
+                sendFrameEffectOutputResolution()
                 needsSurface = false
                 // ExoPlayer does not re-render the current frame after a surface
                 // reattach when the player is paused — the surface stays black
@@ -537,6 +584,7 @@ internal class DivineVideoPlayerInstance(
             "setAudioTracks" -> handleSetAudioTracks(call, result)
             "removeAllAudioTracks" -> handleRemoveAllAudioTracks(result)
             "setAudioTrackVolume" -> handleSetAudioTrackVolume(call, result)
+            "setFrameEffects" -> handleSetFrameEffects(call, result)
             else -> result.notImplemented()
         }
     }
@@ -1215,6 +1263,7 @@ internal class DivineVideoPlayerInstance(
         // whatever the next stream starts with. Tell it that is the seek target
         // and not the start of the video, so the fade out stays on the join.
         declickProcessor.nextStreamStartUs = resolved.second * 1000L
+        onFrameEffectsSeek(targetIndex, resolved.second)
         exoPlayer.seekTo(targetIndex, resolved.second)
         if (seekAwaitsFrame) {
             val generation = seekFrameGeneration
@@ -1239,6 +1288,7 @@ internal class DivineVideoPlayerInstance(
         exoPlayer.setPlaybackParameters(
             PlaybackParameters(clipSpeeds.getOrElse(targetIndex) { 1.0f }),
         )
+        updateFrameEffectWindows(globalMs)
 
         syncAudioOverlays()
 
@@ -1381,10 +1431,329 @@ internal class DivineVideoPlayerInstance(
         get() = isLooping &&
             lastClipsRaw.any { (it["uri"] as? String)?.let(::isForeignHlsSource) == true }
 
+    // -- frame effects --
+
+    /**
+     * Switches the frame effects to the list Dart sent, each with an `id`,
+     * `params` and a `startUs` / `endUs` window on the player's timeline.
+     *
+     * The first non-empty list routes the player's frames through the effect
+     * stage. Media3 only builds that pipeline at `prepare()`, so the player
+     * is prepared again once, at the same position.
+     */
+    private fun handleSetFrameEffects(call: MethodCall, result: MethodChannel.Result) {
+        val raw = call.argument<List<Map<String, Any?>>>("effects") ?: emptyList()
+        val configs = raw.mapNotNull { map ->
+            val id = map["id"] as? String ?: return@mapNotNull null
+            @Suppress("UNCHECKED_CAST")
+            FrameEffectsState.Config(
+                id = id,
+                params = (map["params"] as? Map<String, Any?>) ?: emptyMap(),
+                startMs = (map["startUs"] as? Number)?.toLong()?.div(1000),
+                endMs = (map["endUs"] as? Number)?.toLong()?.div(1000),
+            )
+        }
+        val existing = frameEffectsState
+        // An unchanged list must not start the history over, or every
+        // rebuild on the Dart side would flash the trail away.
+        if ((existing == null && configs.isEmpty()) || existing?.configs == configs) {
+            result.success(null)
+            return
+        }
+        val state = existing ?: FrameEffectsState()
+        state.setConfigs(configs)
+        frameEffectsState = state
+        val exoPlayer = player
+        if (exoPlayer != null) {
+            if (existing == null) installFrameEffects(exoPlayer, state)
+            updateFrameEffectWindows()
+            val index = exoPlayer.currentMediaItemIndex
+            state.speed = clipSpeeds.getOrElse(index) { 1.0f }
+            // While playing the history keeps growing on its own. Paused, it
+            // has to be decoded, or a newly picked effect shows no trail.
+            if (existing == null || !exoPlayer.playWhenReady) {
+                onFrameEffectsSeek(index, exoPlayer.currentPosition)
+            }
+        }
+        result.success(null)
+    }
+
+    private fun installFrameEffects(exoPlayer: ExoPlayer, state: FrameEffectsState) {
+        val index = exoPlayer.currentMediaItemIndex
+        if (videoWidth > 0 && videoHeight > 0) {
+            frameEffectOutputSize = Size(videoWidth, videoHeight)
+        } else if (frameEffectOutputSize == null) {
+            // A player that has not shown a frame yet has no size, and the
+            // effect pipeline cannot draw its first frame without one.
+            frameEffectOutputSize = probeDisplaySize(index)
+        }
+        val positionMs = exoPlayer.currentPosition
+        val playWhenReady = exoPlayer.playWhenReady
+        isResettingPlayer = true
+        exoPlayer.stop()
+        exoPlayer.setVideoEffects(listOf(FrameEffectsGlEffect(state)))
+        exoPlayer.prepare()
+        exoPlayer.seekTo(index, positionMs)
+        exoPlayer.playWhenReady = playWhenReady
+        isResettingPlayer = false
+        sendFrameEffectOutputResolution()
+        DivineVideoPlayerLog.info(
+            "$logTarget routes frames through the frame-effect stage",
+            name = "DivineVideoPlayer.Effects",
+        )
+    }
+
+    /**
+     * The slow way to [FrameEffectsHistoryDecoder.decode]'s frames: each
+     * decoded on its own from its keyframe, for clips that decoder cannot
+     * read.
+     */
+    private fun decodeHistoryFramesOneByOne(
+        path: String,
+        targetsUs: List<Long>,
+        width: Int,
+        height: Int,
+        isCancelled: () -> Boolean,
+    ): List<FrameEffectsState.DecodedFrame> {
+        val frames = mutableListOf<FrameEffectsState.DecodedFrame>()
+        val longSide = maxOf(width, height)
+        val retriever = MediaMetadataRetriever()
+        try {
+            retriever.setDataSource(path)
+            val rotation = retriever
+                .extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
+                ?.toIntOrNull() ?: 0
+            for (targetUs in targetsUs) {
+                if (isCancelled()) return emptyList()
+                val raw = retriever.getScaledFrameAtTime(
+                    targetUs, MediaMetadataRetriever.OPTION_CLOSEST, longSide, longSide,
+                ) ?: continue
+                frames += FrameEffectsState.DecodedFrame(targetUs, targetUs, toHistoryFrame(raw, width, height, rotation))
+            }
+        } catch (e: Exception) {
+            DivineVideoPlayerLog.warning(
+                "$logTarget could not decode earlier frames for frame effects: $e",
+                name = "DivineVideoPlayer.Effects",
+            )
+        } finally {
+            retriever.release()
+        }
+        return frames
+    }
+
+    /**
+     * Turns a frame [MediaMetadataRetriever] decoded into the history's
+     * shape: in the display orientation, [width] x [height], and flipped
+     * upside down, because a bitmap starts at the top row and a frame
+     * texture at the bottom. The retriever may hand the frame over before
+     * its [rotation] is applied, which shows as the wrong orientation.
+     */
+    private fun toHistoryFrame(raw: Bitmap, width: Int, height: Int, rotation: Int): Bitmap {
+        val turn = (raw.width > raw.height) != (width > height)
+        val turnedWidth = if (turn) raw.height else raw.width
+        val turnedHeight = if (turn) raw.width else raw.height
+        val matrix = Matrix()
+        if (turn) matrix.postRotate((if (rotation % 180 != 0) rotation else 90).toFloat())
+        matrix.postScale(width.toFloat() / turnedWidth, -height.toFloat() / turnedHeight)
+        return Bitmap.createBitmap(raw, 0, 0, raw.width, raw.height, matrix, true)
+    }
+
+    /** The display size of clip [index], read from its file's metadata. */
+    private fun probeDisplaySize(index: Int): Size? {
+        val uri = lastClipsRaw.getOrNull(index)?.get("uri") as? String ?: return null
+        val path = when {
+            uri.startsWith("/") -> uri
+            uri.startsWith("file:") -> Uri.parse(uri).path
+            else -> null
+        } ?: return null
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(path)
+            val width = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
+                ?.toIntOrNull() ?: return null
+            val height = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
+                ?.toIntOrNull() ?: return null
+            val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
+                ?.toIntOrNull() ?: 0
+            if (rotation % 180 != 0) Size(height, width) else Size(width, height)
+        } catch (e: Exception) {
+            null
+        } finally {
+            retriever.release()
+        }
+    }
+
+    /**
+     * Tells the video renderer the output size, which Media3 needs when its
+     * effect pipeline draws into a surface handed over directly.
+     */
+    private fun sendFrameEffectOutputResolution() {
+        if (frameEffectsState == null) return
+        val exoPlayer = player ?: return
+        if (videoWidth > 0 && videoHeight > 0) frameEffectOutputSize = Size(videoWidth, videoHeight)
+        val size = frameEffectOutputSize ?: return
+        applyFrameEffectSurfaceSize(size)
+        for (i in 0 until exoPlayer.rendererCount) {
+            if (exoPlayer.getRendererType(i) != C.TRACK_TYPE_VIDEO) continue
+            exoPlayer.createMessage(exoPlayer.getRenderer(i))
+                .setType(Renderer.MSG_SET_VIDEO_OUTPUT_RESOLUTION)
+                .setPayload(size)
+                .send()
+        }
+    }
+
+    /**
+     * Draws the paused frame at [positionMs] of clip [index] through the
+     * effect stage again by seeking to it, the same way the seek that
+     * showed it did. Media3's own redraw needs a frame processor built with
+     * a replayable cache, which ExoPlayer's is not, and ExoPlayer skips a
+     * seek to where it already is, so this steps a millisecond on and back.
+     * While playing, the next frame does it anyway.
+     */
+    private fun redrawPausedFrame(index: Int, positionMs: Long) {
+        val exoPlayer = player ?: return
+        if (exoPlayer.playWhenReady) return
+        // A seek of its own: the redrawn frame can come on another timestamp
+        // base than the seek that first showed it, and has to be tied anew.
+        frameEffectsState?.seekTo(index, frameEffectsSourceUs(index, positionMs))
+        exoPlayer.seekTo(index, positionMs + 1)
+        exoPlayer.seekTo(index, positionMs)
+    }
+
+    /** Redraws the paused frame at the last seek, so frames decoded after it show. */
+    private val frameEffectsRedraw = Runnable {
+        val (index, positionMs) = frameEffectsSeekTarget ?: return@Runnable
+        redrawPausedFrame(index, positionMs)
+    }
+
+    /**
+     * Sizes the output surface's buffers to [size]. The effect pipeline
+     * draws into them through EGL, which takes their size as the canvas;
+     * left to themselves they keep the decoder's coded, unrotated size.
+     */
+    private fun applyFrameEffectSurfaceSize(size: Size) {
+        if (frameEffectSurfaceSize == size) return
+        frameEffectSurfaceSize = size
+        legacyEntry?.surfaceTexture()?.setDefaultBufferSize(size.width, size.height)
+        val producer = surfaceProducer ?: return
+        producer.setSize(size.width, size.height)
+        val surface = producer.surface ?: return
+        player?.setVideoSurface(surface)
+    }
+
+    /** Switches each frame effect on or off by whether the playhead is in its window. */
+    private fun updateFrameEffectWindows(globalMs: Long? = null) {
+        val state = frameEffectsState ?: return
+        val exoPlayer = player ?: return
+        val position = globalMs ?: currentGlobalPlaybackMs(exoPlayer)
+        state.enabled = state.configs.map { config ->
+            (config.startMs == null || position >= config.startMs) &&
+                (config.endMs == null || position < config.endMs)
+        }.toBooleanArray()
+        state.speed = clipSpeeds.getOrElse(exoPlayer.currentMediaItemIndex) { 1.0f }
+    }
+
+    /**
+     * Tells the frame effects about a seek to [localSourceMs] of clip
+     * [index], before the player makes it, and asks for the earlier frames
+     * the effects need there to be decoded from the clip's file.
+     */
+    private fun onFrameEffectsSeek(index: Int, localSourceMs: Long) {
+        val state = frameEffectsState ?: return
+        state.seekTo(index, frameEffectsSourceUs(index, localSourceMs))
+        frameEffectsSeekTarget = index to localSourceMs
+        lastFrameEffectsSeekMs = android.os.SystemClock.uptimeMillis()
+        // This seek draws with whatever was decoded so far; a redraw is only
+        // owed once newer frames arrive after it.
+        mainHandler.removeCallbacks(frameEffectsRedraw)
+        frameEffectsFillRequest = index to localSourceMs
+        startFrameEffectsFill()
+    }
+
+    /** Where [localSourceMs] of clip [index] lies in its file, in µs. */
+    private fun frameEffectsSourceUs(index: Int, localSourceMs: Long): Long {
+        val clipStartMs = (lastClipsRaw.getOrNull(index)?.get("startMs") as? Number)?.toLong() ?: 0L
+        return (clipStartMs + localSourceMs) * 1000L
+    }
+
+    /**
+     * Decodes the earlier frames for the newest seek, unless a decode is
+     * running. A running decode is not dropped for a seek close to it: while
+     * scrubbing slowly every seek would otherwise cancel the one before, and
+     * no frames would ever arrive. Its frames serve the positions near it,
+     * and the newest seek is decoded right after.
+     */
+    private fun startFrameEffectsFill() {
+        if (frameEffectsFillRunning != null) return
+        val request = frameEffectsFillRequest ?: return
+        frameEffectsFillRequest = null
+        val state = frameEffectsState ?: return
+        val offsets = state.historyOffsetsUs
+        if (offsets.isEmpty()) return
+        val (index, localSourceMs) = request
+        val clip = lastClipsRaw.getOrNull(index) ?: return
+        val uri = clip["uri"] as? String ?: return
+        val path = when {
+            uri.startsWith("/") -> uri
+            uri.startsWith("file:") -> Uri.parse(uri).path
+            else -> null
+        } ?: return
+        val clipStartUs = ((clip["startMs"] as? Number)?.toLong() ?: 0L) * 1000L
+        val speed = clipSpeeds.getOrElse(index) { 1.0f }
+        // With frame effects Media3 reports no video size, so [videoWidth]
+        // stays 0; the display size the effect stage draws is known here.
+        val display = frameEffectOutputSize ?: return
+        val scale = state.historyScale
+        val width = (display.width * scale).toInt().coerceAtLeast(1)
+        val height = (display.height * scale).toInt().coerceAtLeast(1)
+        val seekUs = frameEffectsSourceUs(index, localSourceMs)
+        val targets = offsets.toList()
+            .map { offsetUs -> seekUs - (offsetUs * speed).toLong() }
+            .filter { it >= clipStartUs }
+        if (targets.isEmpty()) return
+        frameEffectsFillRunning = request
+        frameEffectsFillExecutor.execute {
+            val isCancelled = {
+                val newer = frameEffectsFillRequest
+                frameEffectsState !== state || (newer != null &&
+                    (newer.first != index || abs(newer.second - localSourceMs) > FILL_KEEP_DISTANCE_MS))
+            }
+            val frames = if (isCancelled()) {
+                emptyList()
+            } else {
+                try {
+                    FrameEffectsHistoryDecoder(width, height).decode(path, targets, isCancelled)
+                } catch (e: Exception) {
+                    DivineVideoPlayerLog.warning(
+                        "$logTarget falls back to decoding earlier frames one by one: $e",
+                        name = "DivineVideoPlayer.Effects",
+                    )
+                    decodeHistoryFramesOneByOne(path, targets, width, height, isCancelled)
+                }
+            }
+            mainHandler.post {
+                frameEffectsFillRunning = null
+                if (frameEffectsState === state && frames.isNotEmpty()) {
+                    state.pendingFill.set(FrameEffectsState.Fill(index, frames))
+                    if (player?.playWhenReady == false) {
+                        val sinceSeek = android.os.SystemClock.uptimeMillis() - lastFrameEffectsSeekMs
+                        mainHandler.removeCallbacks(frameEffectsRedraw)
+                        mainHandler.postDelayed(
+                            frameEffectsRedraw,
+                            (FRAME_EFFECTS_REDRAW_DELAY_MS - sinceSeek).coerceAtLeast(0L),
+                        )
+                    }
+                }
+                startFrameEffectsFill()
+            }
+        }
+    }
+
     private fun handleJumpToClip(call: MethodCall, result: MethodChannel.Result) {
         val index = (call.argument<Number>("index"))?.toInt() ?: 0
         val exoPlayer = ensurePlayer()
         if (index in 0 until clipCount) {
+            onFrameEffectsSeek(index, 0L)
             exoPlayer.seekTo(index, 0)
             syncAudioOverlays()
         }
@@ -1524,10 +1893,13 @@ internal class DivineVideoPlayerInstance(
             "volume" to volume,
             "playbackSpeed" to speed,
             "isFirstFrameRendered" to firstFrameRendered,
-            "videoWidth" to videoWidth,
-            "videoHeight" to videoHeight,
-            "pixelWidthHeightRatio" to pixelWidthHeightRatio,
-            "rotationDegrees" to rotationDegrees,
+            // With frame effects, Media3 reports no video size (b/292111083)
+            // and its pipeline hands over upright frames: report the display
+            // size it draws, unrotated.
+            "videoWidth" to (frameEffectReportedSize?.width ?: videoWidth),
+            "videoHeight" to (frameEffectReportedSize?.height ?: videoHeight),
+            "pixelWidthHeightRatio" to if (frameEffectReportedSize != null) 1.0 else pixelWidthHeightRatio,
+            "rotationDegrees" to if (frameEffectReportedSize != null) 0 else rotationDegrees,
         )
         exoPlayer.playerError?.let { error ->
             map["errorMessage"] = error.localizedMessage
@@ -1879,6 +2251,7 @@ internal class DivineVideoPlayerInstance(
                 if (surface != null && !needsSurface) {
                     player?.setVideoSurface(null)
                     player?.setVideoSurface(surface)
+                    sendFrameEffectOutputResolution()
                 }
             }
             // Apply per-clip volume and speed for the clip that just started.
@@ -1973,6 +2346,7 @@ internal class DivineVideoPlayerInstance(
                 pixelWidthHeightRatio = videoSize.pixelWidthHeightRatio
                     .takeIf { it.isFinite() && it > 0f }?.toDouble() ?: 1.0
                 rotationDegrees = newRotation
+                sendFrameEffectOutputResolution()
             } else {
                 // Keep all display-dimension fields coherent during Media3's
                 // transient reset between clips and seeks.
@@ -2126,6 +2500,7 @@ internal class DivineVideoPlayerInstance(
         cancelDecoderRetry()
         releaseClipAudioLoop()
         metadataExecutor.shutdownNow()
+        frameEffectsFillExecutor.shutdownNow()
         seekCompletionResult?.success(null)
         seekCompletionResult = null
         pendingSetClipsResult?.success(null)
@@ -2177,6 +2552,18 @@ internal class DivineVideoPlayerInstance(
         private const val NO_ARMED_SEEK = -1
 
         private const val POSITION_UPDATE_INTERVAL_MS = 200L
+
+        /**
+         * How far a newer seek may lie from a running frame-effect decode
+         * before that decode is dropped; closer, its frames still serve.
+         */
+        private const val FILL_KEEP_DISTANCE_MS = 500L
+
+        /**
+         * How long after a seek decoded frames wait before redrawing the
+         * paused frame. While scrubbing the next seek draws with them anyway.
+         */
+        private const val FRAME_EFFECTS_REDRAW_DELAY_MS = 100L
 
         /** How often a playing loop track is measured against the picture. */
         private const val CLIP_AUDIO_SYNC_INTERVAL_MS = 250L

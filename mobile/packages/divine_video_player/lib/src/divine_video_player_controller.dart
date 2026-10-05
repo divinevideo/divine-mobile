@@ -595,6 +595,24 @@ class DivineVideoPlayerController {
     });
   }
 
+  /// Draws the frame effects the app registered natively under each
+  /// effect's `id` on the video, for a preview of what an export renders.
+  ///
+  /// Each entry is a map of `id`, `params`, and `startUs` / `endUs` on the
+  /// player's timeline (null for open). An empty list switches them off.
+  /// Effects that look at earlier frames get them from what the player shows
+  /// while playing, and after a seek from frames decoded for them.
+  ///
+  /// **Note:** Android, iOS and macOS; elsewhere this does nothing. On Android
+  /// the first non-empty list prepares the player again once.
+  Future<void> setFrameEffects(List<Map<String, Object?>> effects) async {
+    _ensureInitialized();
+    if (_isWebBackend || _isLinuxBackend) return;
+    await _methodChannel.invokeMethod<void>('setFrameEffects', {
+      'effects': effects,
+    });
+  }
+
   /// Enables or disables looping.
   ///
   /// When enabled, playback restarts from the beginning after all

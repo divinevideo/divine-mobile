@@ -34,6 +34,8 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer-hls:1.10.0")
     implementation("androidx.media3:media3-datasource:1.10.0")
     implementation("androidx.media3:media3-ui:1.10.0")
+    // Frame effects drawn on the preview (see VideoFrameEffects).
+    implementation("androidx.media3:media3-effect:1.10.0")
 
     testImplementation("io.mockk:mockk:1.13.13")
     testImplementation("junit:junit:4.13.2")
