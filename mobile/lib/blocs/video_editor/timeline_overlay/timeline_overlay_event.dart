@@ -273,7 +273,8 @@ class TimelineOverlayWaveformLoaded extends TimelineOverlayEvent {
 }
 
 /// Update the volume of a custom audio track by its [AudioEvent.id].
-/// [volume] is clamped to [0.0, 1.0] by the handler.
+/// [volume] is clamped to [0.0, VideoEditorConstants.volumeMax] by the
+/// handler.
 class TimelineOverlayAudioVolumeChanged extends TimelineOverlayEvent {
   const TimelineOverlayAudioVolumeChanged({
     required this.trackId,
@@ -289,7 +290,8 @@ class TimelineOverlayAudioVolumeChanged extends TimelineOverlayEvent {
 
 /// Set the same [volume] on every audio track except clip-anchored original
 /// sound.
-/// [volume] is clamped to [0.0, 1.0] by the handler.
+/// [volume] is clamped to [0.0, VideoEditorConstants.volumeMax] by the
+/// handler.
 class TimelineOverlayAllAudioVolumeChanged extends TimelineOverlayEvent {
   const TimelineOverlayAllAudioVolumeChanged({required this.volume});
 

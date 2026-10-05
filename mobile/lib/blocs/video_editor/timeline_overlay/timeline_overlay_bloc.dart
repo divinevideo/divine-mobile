@@ -828,7 +828,7 @@ class TimelineOverlayBloc
       (track) => track.id == event.trackId,
     );
     if (index == -1) return;
-    final nextVolume = event.volume.clamp(0.0, 1.0);
+    final nextVolume = event.volume.clamp(0.0, VideoEditorConstants.volumeMax);
     if (state.audioTracks[index].volume == nextVolume) return;
     final updated = List<AudioEvent>.of(state.audioTracks);
     updated[index] = updated[index].copyWith(volume: nextVolume);
@@ -844,7 +844,7 @@ class TimelineOverlayBloc
     TimelineOverlayAllAudioVolumeChanged event,
     Emitter<TimelineOverlayState> emit,
   ) {
-    final nextVolume = event.volume.clamp(0.0, 1.0);
+    final nextVolume = event.volume.clamp(0.0, VideoEditorConstants.volumeMax);
     final affected = state.audioTracks.where(
       (t) => !t.isClipAnchoredOriginalSound,
     );

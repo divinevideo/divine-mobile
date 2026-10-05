@@ -65,7 +65,7 @@ final class AudioOverlayManager {
             )
             overlays.append(entry)
             applyVolume(to: entry)
-            attachFadeMix(to: entry)
+            attachMix(to: entry)
         }
     }
 
@@ -82,8 +82,11 @@ final class AudioOverlayManager {
             "Audio overlay track \(overlays[index].trackIndex): volume set to \(volume)",
             name: logName
         )
-        overlays[index].baseVolume = volume
-        applyVolume(to: overlays[index])
+        let entry = overlays[index]
+        let previousBoost = entry.boost
+        entry.baseVolume = volume
+        applyVolume(to: entry)
+        if entry.boost != previousBoost { attachMix(to: entry) }
     }
 
     /// Resumes playback of currently active overlays at the given speed.
@@ -208,29 +211,45 @@ final class AudioOverlayManager {
         overlays.removeAll()
     }
 
-    /// Sets the player's own volume: the track's level, or silence while a
-    /// fade in waits for its mix, so a start inside the fade does not play
-    /// its first moments at full level.
+    /// Sets the player's own volume: the track's level up to 100 %, or
+    /// silence while a fade in waits for its mix, so a start inside the fade
+    /// does not play its first moments at full level. The level above 100 %
+    /// is the mix's; see [attachMix].
     private func applyVolume(to entry: AudioOverlayEntry) {
-        let holdsSilent = entry.isAwaitingFadeMix && entry.fade.fadeInSec > 0
-        entry.player.volume = holdsSilent ? 0 : entry.baseVolume
+        let holdsSilent = entry.isAwaitingMix && entry.fade.fadeInSec > 0
+        entry.player.volume = holdsSilent ? 0 : min(entry.baseVolume, 1)
     }
 
-    /// Puts the track's fade on its player item as an `AVAudioMix`.
+    /// Puts the track's fade and its boost above 100 % on its player item as
+    /// an `AVAudioMix`, which amplifies where `AVPlayer.volume` is not known
+    /// to: the export applies the same mix volumes.
     ///
     /// The mix needs the file's audio track and duration, which load
     /// asynchronously; a local file resolves them long before the 0.2 s
-    /// position sync first starts the overlay.
-    private func attachFadeMix(to entry: AudioOverlayEntry) {
-        guard !entry.fade.isNone, let item = entry.player.currentItem else { return }
-        entry.isAwaitingFadeMix = true
+    /// position sync first starts the overlay. The fade and boost are read
+    /// once they have, so the latest of overlapping calls wins. They are kept
+    /// after that, so a later call — a volume dragged live — swaps the mix in
+    /// at once and never holds a fading track silent while it reloads.
+    private func attachMix(to entry: AudioOverlayEntry) {
+        guard let item = entry.player.currentItem else { return }
+        guard !entry.fade.isNone || entry.boost > 1 else {
+            item.audioMix = nil
+            return
+        }
+        // Once the track is loaded the mix is rebuilt at once, so a volume
+        // dragged live never waits on, or goes silent for, a reload.
+        if let inputs = entry.mixInputs, inputs.item === item {
+            setMix(on: item, for: entry, track: inputs.track, fileDuration: inputs.fileDuration)
+            return
+        }
+        entry.isAwaitingMix = true
         applyVolume(to: entry)
         let asset = item.asset
         Task { @MainActor [weak self, weak entry] in
             let track = try? await asset.loadTracks(withMediaType: .audio).first
             let fileDuration = try? await asset.load(.duration)
             guard let self, let entry, entry.player.currentItem === item else { return }
-            entry.isAwaitingFadeMix = false
+            entry.isAwaitingMix = false
             defer { self.applyVolume(to: entry) }
             guard let track else {
                 self.log.warning(
@@ -239,26 +258,45 @@ final class AudioOverlayManager {
                 )
                 return
             }
-            let parameters = AVMutableAudioMixInputParameters(track: track)
-            for ramp in self.fadeRamps(for: entry, fileDuration: fileDuration) {
-                parameters.setVolumeRamp(
-                    fromStartVolume: Float(ramp.fromGain),
-                    toEndVolume: Float(ramp.toGain),
-                    timeRange: CMTimeRange(
-                        start: self.itemTime(entry.trackStartSec + ramp.startSec),
-                        end: self.itemTime(entry.trackStartSec + ramp.endSec)
-                    )
+            entry.mixInputs = (item, track, fileDuration)
+            self.setMix(on: item, for: entry, track: track, fileDuration: fileDuration)
+        }
+    }
+
+    /// Puts `entry`'s current fade and boost on `item` as its audio mix.
+    private func setMix(
+        on item: AVPlayerItem,
+        for entry: AudioOverlayEntry,
+        track: AVAssetTrack,
+        fileDuration: CMTime?
+    ) {
+        let boost = entry.boost
+        let ramps = fadeRamps(for: entry, fileDuration: fileDuration)
+        let parameters = AVMutableAudioMixInputParameters(track: track)
+        // The level the track holds between ramps. Only set where no ramp
+        // starts: AVFoundation rejects overlapping volume changes with an
+        // Objective-C exception, which aborts the process.
+        if boost > 1, ramps.first.map({ entry.trackStartSec + $0.startSec > 0 }) ?? true {
+            parameters.setVolume(boost, at: .zero)
+        }
+        for ramp in ramps {
+            parameters.setVolumeRamp(
+                fromStartVolume: Float(ramp.fromGain),
+                toEndVolume: Float(ramp.toGain),
+                timeRange: CMTimeRange(
+                    start: itemTime(entry.trackStartSec + ramp.startSec),
+                    end: itemTime(entry.trackStartSec + ramp.endSec)
                 )
-            }
-            let mix = AVMutableAudioMix()
-            mix.inputParameters = [parameters]
-            item.audioMix = mix
-            self.log.debug(
-                "Audio overlay track \(entry.trackIndex): fade in \(entry.fade.fadeInSec)s, " +
-                    "fade out \(entry.fade.fadeOutSec)s attached",
-                name: self.logName
             )
         }
+        let mix = AVMutableAudioMix()
+        mix.inputParameters = [parameters]
+        item.audioMix = mix
+        log.debug(
+            "Audio overlay track \(entry.trackIndex): fade in \(entry.fade.fadeInSec)s, " +
+                "fade out \(entry.fade.fadeOutSec)s, boost \(boost) attached",
+            name: logName
+        )
     }
 
     /// The fade ramps of `entry`, in seconds from its trim start.
@@ -277,11 +315,12 @@ final class AudioOverlayManager {
         if let fileDuration, fileDuration.isNumeric, fileDuration.seconds.isFinite {
             ends.append(fileDuration.seconds - entry.trackStartSec)
         }
+        let level = Double(entry.boost)
         guard let audibleSec = ends.min() else {
             let fadeInOnly = AudioOverlayFade(fadeInSec: entry.fade.fadeInSec, fadeOutSec: 0)
-            return fadeInOnly.ramps(audibleSec: entry.fade.fadeInSec)
+            return fadeInOnly.ramps(audibleSec: entry.fade.fadeInSec, level: level)
         }
-        return entry.fade.ramps(audibleSec: audibleSec)
+        return entry.fade.ramps(audibleSec: audibleSec, level: level)
     }
 
     private func itemTime(_ seconds: Double) -> CMTime {
@@ -360,11 +399,16 @@ final class AudioOverlayEntry {
     let trackEndSec: Double?
     var isActive: Bool = false
     let trackIndex: Int
-    /// The track's volume before its fade is applied.
+    /// The track's volume before its fade is applied, above 1 when boosted.
     var baseVolume: Float
     let fade: AudioOverlayFade
-    /// Whether the fade's audio mix is still loading.
-    var isAwaitingFadeMix: Bool = false
+    /// Whether the fade and boost's audio mix is still loading.
+    var isAwaitingMix: Bool = false
+    /// What the mix is built from, once loaded for `item`; see `attachMix`.
+    var mixInputs: (item: AVPlayerItem, track: AVAssetTrack, fileDuration: CMTime?)?
+
+    /// The part of [baseVolume] above 100 %, as a gain; 1 when there is none.
+    var boost: Float { max(baseVolume, 1) }
     var lastPlayerStatus: AVPlayer.Status?
     var lastItemStatus: AVPlayerItem.Status?
     var lastItemErrorDescription: String?

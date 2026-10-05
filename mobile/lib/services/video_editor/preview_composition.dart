@@ -267,13 +267,39 @@ class PreviewComposition {
   /// composition that was actually loaded — including a speed body that landed
   /// while playing whose swap was deferred to the next pause.
   List<VideoClip> buildPlayerClips(List<DivineVideoClip> clips) {
+    final owners = <String?>[];
     final playerClips = buildSeamAwarePlayerClips(
       clips,
       _seamService,
       speedRenders: _speedRenderService,
+      owners: owners,
     );
+    _builtClipVolumes = [
+      for (var i = 0; i < playerClips.length; i++)
+        (clipId: owners[i], volume: playerClips[i].volume),
+    ];
     _refreshSeamTimeline(clips);
     return playerClips;
+  }
+
+  /// Per clip of the last [buildPlayerClips]: the editor clip it plays, null
+  /// for a seam, and its volume.
+  List<({String? clipId, double volume})> _builtClipVolumes = const [];
+
+  /// The per-clip volumes of the last composition [buildPlayerClips] built,
+  /// with every part of [clipId] at [volume] — what
+  /// `DivineVideoPlayerController.setClipVolumes` takes to play a volume that
+  /// is still being dragged. Null when that composition does not play
+  /// [clipId].
+  ///
+  /// A seam keeps the volume it was rendered with until the committed volume
+  /// renders it again.
+  List<double>? clipVolumesWith(String clipId, double volume) {
+    if (!_builtClipVolumes.any((c) => c.clipId == clipId)) return null;
+    return [
+      for (final c in _builtClipVolumes)
+        if (c.clipId == clipId) volume else c.volume,
+    ];
   }
 
   SeamTimeline _refreshSeamTimeline(List<DivineVideoClip> clips) {

@@ -2,6 +2,7 @@
 // ABOUTME: Allows child widgets to call editor methods directly without callbacks.
 
 import 'package:flutter/widgets.dart';
+import 'package:openvine/models/video_editor/live_volume.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas_fit.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
@@ -37,6 +38,7 @@ class VideoEditorScope extends InheritedWidget {
     this.canvasBodyKey,
     this.editorOverride,
     this.awaitPushCoverTransition,
+    this.liveVolumeNotifier,
     super.child = const SizedBox.shrink(),
     super.key,
   });
@@ -116,6 +118,10 @@ class VideoEditorScope extends InheritedWidget {
   /// the playhead with this `false`: the frame under the finger has to follow,
   /// but nothing should be *playing*.
   final ValueNotifier<bool> playheadAdvancingNotifier;
+
+  /// The volume being dragged in the timeline's volume panel, null while
+  /// none is. The canvas plays it before it is committed on release.
+  final ValueNotifier<LiveVolume?>? liveVolumeNotifier;
 
   /// Callback to open the text editor.
   final Future<TextLayer?> Function([TextLayer? layer]) onAddEditTextLayer;
@@ -244,5 +250,6 @@ class VideoEditorScope extends InheritedWidget {
       originalClipAspectRatio != oldWidget.originalClipAspectRatio ||
       targetClipAspectRatio != oldWidget.targetClipAspectRatio ||
       canvasBodyKey != oldWidget.canvasBodyKey ||
-      zoomMatrixNotifier != oldWidget.zoomMatrixNotifier;
+      zoomMatrixNotifier != oldWidget.zoomMatrixNotifier ||
+      liveVolumeNotifier != oldWidget.liveVolumeNotifier;
 }

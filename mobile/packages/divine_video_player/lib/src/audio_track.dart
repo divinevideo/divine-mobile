@@ -128,7 +128,8 @@ class AudioTrack {
   /// File path or network URL of the audio source.
   final String uri;
 
-  /// Volume for this audio track (0.0 silent, 1.0 full).
+  /// Volume for this audio track (0.0 silent, 1.0 original, above 1.0
+  /// amplified).
   final double volume;
 
   /// When in the video timeline this audio starts playing.

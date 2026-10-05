@@ -304,6 +304,26 @@ void main() {
       });
     });
 
+    group('clipVolumesWith', () {
+      test('sets every part of the dragged clip and keeps the seam rendered '
+          'volume', () {
+        final a = _clip('a', transition: _dissolve);
+        final b = _clip('b');
+        clips = [a, b];
+        seams.cacheSeamForTest(a, b, _dissolve, _seam);
+        composition.buildPlayerClips(clips);
+
+        expect(composition.clipVolumesWith('b', 2.5), [1.0, 1.0, 2.5]);
+      });
+
+      test('returns null for a clip the built composition does not play', () {
+        clips = [_clip('a')];
+        composition.buildPlayerClips(clips);
+
+        expect(composition.clipVolumesWith('gone', 2.5), isNull);
+      });
+    });
+
     test('a render landing after dispose neither resyncs nor touches the '
         'disposed overlay counter', () async {
       final a = _clip('a', transition: _dissolve);

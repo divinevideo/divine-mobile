@@ -8,8 +8,10 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/live_volume.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_volume.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -19,6 +21,7 @@ void main() {
     late ClipEditorBloc clipBloc;
     late TimelineOverlayBloc overlayBloc;
     late ValueNotifier<double?> volumePreviewNotifier;
+    late ValueNotifier<LiveVolume?> liveVolumeNotifier;
 
     setUp(() {
       clipBloc = ClipEditorBloc(
@@ -27,10 +30,12 @@ void main() {
       );
       overlayBloc = TimelineOverlayBloc();
       volumePreviewNotifier = ValueNotifier<double?>(null);
+      liveVolumeNotifier = ValueNotifier<LiveVolume?>(null);
     });
 
     tearDown(() async {
       volumePreviewNotifier.dispose();
+      liveVolumeNotifier.dispose();
       await clipBloc.close();
       await overlayBloc.close();
     });
@@ -47,6 +52,7 @@ void main() {
             ],
             child: VideoEditorTimelineVolume(
               volumePreviewNotifier: volumePreviewNotifier,
+              liveVolumeNotifier: liveVolumeNotifier,
             ),
           ),
         ),
@@ -108,28 +114,147 @@ void main() {
       expect(clipBloc.state.clipsVolumeRevision, 1);
     });
 
-    testWidgets('drag previews and commits custom audio volume on release', (
+    group('vertical drag', () {
+      testWidgets('down lowers custom audio volume and commits on release', (
+        tester,
+      ) async {
+        overlayBloc.add(
+          TimelineOverlayItemsUpdate(
+            layers: const <Layer>[],
+            filters: const <FilterState>[],
+            audioTracks: [_audioTrack(id: 'custom-1', title: 'Beat')],
+            totalVideoDuration: const Duration(seconds: 10),
+          ),
+        );
+
+        await tester.pumpWidget(buildWidget());
+        await tester.pump();
+
+        await tester.drag(find.bySemanticsLabel('Beat'), const Offset(0, 400));
+        await tester.pump();
+
+        expect(volumePreviewNotifier.value, isNull);
+        expect(overlayBloc.state.audioTracks.first.volume, 0.0);
+        expect(overlayBloc.state.audioTracksRevision, 1);
+      });
+
+      testWidgets('up boosts clip volume and caps it at the maximum', (
+        tester,
+      ) async {
+        clipBloc.add(ClipEditorInitialized([_createTestClip(id: 'clip-a')]));
+
+        await tester.pumpWidget(buildWidget());
+        await tester.pump();
+
+        await tester.drag(
+          find.bySemanticsLabel('Clip 1'),
+          const Offset(0, -400),
+        );
+        await tester.pump();
+
+        expect(
+          clipBloc.state.clips.first.volume,
+          VideoEditorConstants.volumeMax,
+        );
+      });
+
+      testWidgets('reports the clip volume live and commits it on release', (
+        tester,
+      ) async {
+        clipBloc.add(ClipEditorInitialized([_createTestClip(id: 'clip-a')]));
+
+        await tester.pumpWidget(buildWidget());
+        await tester.pump();
+
+        final gesture = await tester.startGesture(
+          tester.getCenter(find.bySemanticsLabel('Clip 1')),
+        );
+        await gesture.moveBy(const Offset(0, -30));
+        await gesture.moveBy(const Offset(0, -60));
+        await tester.pump();
+
+        final live = liveVolumeNotifier.value;
+        expect(live?.clipId, 'clip-a');
+        expect(live?.volume, greaterThan(1));
+        expect(clipBloc.state.clipsVolumeRevision, 0);
+
+        await gesture.up();
+        await tester.pump();
+
+        expect(liveVolumeNotifier.value, isNull);
+        expect(clipBloc.state.clips.first.volume, live?.volume);
+      });
+
+      testWidgets('starts from the current volume instead of 100 %', (
+        tester,
+      ) async {
+        clipBloc.add(
+          ClipEditorInitialized([_createTestClip(id: 'clip-a', volume: 0.5)]),
+        );
+
+        await tester.pumpWidget(buildWidget());
+        await tester.pump();
+
+        await tester.drag(
+          find.bySemanticsLabel('Clip 1'),
+          const Offset(0, -40),
+        );
+        await tester.pump();
+
+        expect(
+          clipBloc.state.clips.first.volume,
+          allOf(greaterThan(0.5), lessThan(1.0)),
+        );
+      });
+    });
+
+    testWidgets('screen-reader increase steps a clip above 100 %', (
       tester,
     ) async {
-      overlayBloc.add(
-        TimelineOverlayItemsUpdate(
-          layers: const <Layer>[],
-          filters: const <FilterState>[],
-          audioTracks: [_audioTrack(id: 'custom-1', title: 'Beat')],
-          totalVideoDuration: const Duration(seconds: 10),
-        ),
-      );
+      clipBloc.add(ClipEditorInitialized([_createTestClip(id: 'clip-a')]));
 
+      final handle = tester.ensureSemantics();
       await tester.pumpWidget(buildWidget());
       await tester.pump();
 
-      final beatFinder = find.bySemanticsLabel('Beat');
-      await tester.drag(beatFinder, const Offset(200, 0));
+      final node = tester.getSemantics(find.bySemanticsLabel('Clip 1'));
+      expect(node.getSemanticsData().increasedValue, '110%');
+      node.owner!.performAction(node.id, SemanticsAction.increase);
       await tester.pump();
 
-      expect(volumePreviewNotifier.value, isNull);
-      expect(overlayBloc.state.audioTracks.first.volume, lessThan(0.1));
-      expect(overlayBloc.state.audioTracksRevision, 1);
+      expect(clipBloc.state.clips.first.volume, 1.1);
+
+      handle.dispose();
+    });
+
+    testWidgets('screen reader is offered no step past 0 % or 300 %', (
+      tester,
+    ) async {
+      clipBloc.add(
+        ClipEditorInitialized([
+          _createTestClip(id: 'clip-a', volume: VideoEditorConstants.volumeMax),
+          _createTestClip(id: 'clip-b', volume: 0),
+        ]),
+      );
+
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(buildWidget());
+      await tester.pump();
+
+      final loudest = tester
+          .getSemantics(find.bySemanticsLabel('Clip 1'))
+          .getSemanticsData();
+      expect(loudest.hasAction(SemanticsAction.increase), isFalse);
+      expect(loudest.hasAction(SemanticsAction.decrease), isTrue);
+      expect(loudest.decreasedValue, '290%');
+
+      final muted = tester
+          .getSemantics(find.bySemanticsLabel('Clip 2'))
+          .getSemanticsData();
+      expect(muted.hasAction(SemanticsAction.decrease), isFalse);
+      expect(muted.increasedValue, '10%');
+
+      handle.dispose();
     });
 
     testWidgets('clip arc exposes long-press semantic action and hint', (
@@ -152,9 +277,10 @@ void main() {
   });
 }
 
-DivineVideoClip _createTestClip({required String id}) {
+DivineVideoClip _createTestClip({required String id, double volume = 1}) {
   return DivineVideoClip(
     id: id,
+    volume: volume,
     video: EditorVideo.file('/tmp/$id.mp4'),
     duration: const Duration(seconds: 3),
     recordedAt: DateTime(2025),

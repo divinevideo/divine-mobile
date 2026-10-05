@@ -12,6 +12,7 @@ enum AudioOverlayFadeTests {
         crossesOverlappingFadesAtTheQuieterLevel()
         cutsAFadeLongerThanTheAudioShort()
         needsNoRampWithoutAFade()
+        playsTheEnvelopeAtABoostedLevel()
         readsTheFadeFromTheChannelMap()
         print("Audio overlay fade tests passed")
     }
@@ -56,6 +57,14 @@ enum AudioOverlayFadeTests {
         let fade = AudioOverlayFade(fadeInSec: 0, fadeOutSec: 0)
         precondition(fade.isNone)
         precondition(fade.ramps(audibleSec: 5).isEmpty)
+    }
+
+    static func playsTheEnvelopeAtABoostedLevel() {
+        let fade = AudioOverlayFade(fadeInSec: 1, fadeOutSec: 2)
+        precondition(
+            fade.ramps(audibleSec: 5, level: 3) == [ramp(0, 1, 0, 3), ramp(3, 5, 3, 0)],
+            "\(fade.ramps(audibleSec: 5, level: 3))"
+        )
     }
 
     static func readsTheFadeFromTheChannelMap() {

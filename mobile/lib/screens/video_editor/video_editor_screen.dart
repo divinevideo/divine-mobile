@@ -31,6 +31,7 @@ import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/video_editor/caption_layer_mapping.dart';
 import 'package:openvine/models/video_editor/caption_style_preset.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
+import 'package:openvine/models/video_editor/live_volume.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
@@ -174,6 +175,9 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   /// every playhead tick so canvas overlays track playback smoothly.
   final _playTimeNotifier = ValueNotifier<Duration>(Duration.zero);
   final _playheadAdvancingNotifier = ValueNotifier<bool>(false);
+
+  /// The volume being dragged in the timeline, which the canvas previews.
+  final _liveVolumeNotifier = ValueNotifier<LiveVolume?>(null);
 
   /// Track ids whose missing duration we already tried to backfill, so a
   /// failed probe isn't retried on every audio-track change.
@@ -399,6 +403,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     _zoomMatrixNotifier.dispose();
     _playTimeNotifier.dispose();
     _playheadAdvancingNotifier.dispose();
+    _liveVolumeNotifier.dispose();
     super.dispose();
   }
 
@@ -1123,6 +1128,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
               zoomMatrixNotifier: _zoomMatrixNotifier,
               playTimeNotifier: _playTimeNotifier,
               playheadAdvancingNotifier: _playheadAdvancingNotifier,
+              liveVolumeNotifier: _liveVolumeNotifier,
               fromLibrary: widget.fromLibrary,
               onOpenCamera: () => _runDetached(
                 _openCamera(

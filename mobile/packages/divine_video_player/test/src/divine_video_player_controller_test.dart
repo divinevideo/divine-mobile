@@ -507,6 +507,16 @@ void main() {
         );
       });
 
+      test('setClipVolumes sends every volume, negatives as 0', () async {
+        await controller.setClipVolumes([2.5, -1, 0.4]);
+
+        expect(playerCalls.last.method, equals('setClipVolumes'));
+        expect(
+          playerCalls.last.arguments,
+          containsPair('volumes', [2.5, 0.0, 0.4]),
+        );
+      });
+
       test('setVolume clamps and sends value', () async {
         await controller.setVolume(0.5);
 
@@ -769,7 +779,7 @@ void main() {
         );
       });
 
-      test('setAudioTrackVolume sends index and clamped volume', () async {
+      test('setAudioTrackVolume sends index and volume', () async {
         await controller.setAudioTrackVolume(1, 0.7);
 
         expect(
@@ -795,12 +805,12 @@ void main() {
         );
       });
 
-      test('setAudioTrackVolume clamps above 1', () async {
-        await controller.setAudioTrackVolume(0, 10);
+      test('setAudioTrackVolume passes a boost above 1 through', () async {
+        await controller.setAudioTrackVolume(0, 2.5);
 
         expect(
           playerCalls.last.arguments,
-          containsPair('volume', 1.0),
+          containsPair('volume', 2.5),
         );
       });
 
