@@ -4570,11 +4570,19 @@ void main() {
           stopMotionFrames: [frameAPath, frameBPath],
         ),
         act: (bloc) async {
+          final removed = Completer<void>();
+          when(
+            () => clipManager.removeStopMotionSessionFromLibrary('clip_sm_a'),
+          ).thenAnswer((_) async => removed.complete());
           bloc.add(const VideoRecorderResetRequested());
-          await pumpEventQueue();
+          // Reset emits before file deletion finishes. Wait for the actual
+          // cleanup boundary, not a fixed number of event-loop turns.
+          await removed.future;
         },
         verify: (bloc) {
           expect(bloc.state.stopMotionFrames, isEmpty);
+          expect(File(frameAPath).existsSync(), isFalse);
+          expect(File(frameBPath).existsSync(), isFalse);
           verify(
             () => clipManager.removeStopMotionSessionFromLibrary('clip_sm_a'),
           ).called(1);
