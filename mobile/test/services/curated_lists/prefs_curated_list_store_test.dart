@@ -5,24 +5,28 @@ import 'dart:convert';
 
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Shows only what it accepted, like storage that confirms each write.
-class _RefusingPrefs extends Mock implements SharedPreferences {
+/// Refuses writes until [accepts] is set.
+///
+/// A refused write stays readable when [cachesRefusedWrites] is set, the way
+/// [SharedPreferences] updates its cache before the platform write.
+class _RefusingPrefs extends Fake implements SharedPreferences {
+  _RefusingPrefs({this.cachesRefusedWrites = false});
+
+  final bool cachesRefusedWrites;
   bool accepts = false;
-  final _accepted = <String, String>{};
+  final _stored = <String, String>{};
 
   @override
-  String? getString(String key) => _accepted[key];
+  String? getString(String key) => _stored[key];
 
   @override
   Future<bool> setString(String key, String value) async {
-    if (!accepts) return false;
-    _accepted[key] = value;
-    return true;
+    if (accepts || cachesRefusedWrites) _stored[key] = value;
+    return accepts;
   }
 }
 
@@ -178,6 +182,50 @@ void main() {
           expect(_storedLists(refusing), [crew]);
         },
       );
+
+      group('with a list that is already stored', () {
+        test('accepts overlapping saves that add the same list', () async {
+          final store = _store(prefs);
+          final crew = _list('crew');
+          final friends = _list('friends');
+
+          final first = store.saveLists([crew]);
+          final second = store.saveLists([crew, friends]);
+
+          expect(await first, isTrue);
+          expect(await second, isTrue);
+          await store.saveLists([crew]);
+          expect(_storedLists(prefs), [crew]);
+        });
+
+        test('accepts the retry of a write the storage refused', () async {
+          final refusing = _RefusingPrefs(cachesRefusedWrites: true);
+          final store = _store(refusing);
+          final crew = _list('crew');
+          expect(await store.saveLists([crew]), isFalse);
+
+          refusing.accepts = true;
+          final retried = await store.saveLists([crew]);
+
+          expect(retried, isTrue);
+          await store.saveLists([]);
+          expect(_storedLists(refusing), isEmpty);
+        });
+
+        test('accepts a list another writer already stored', () async {
+          final coordinator = CuratedListCacheWriteCoordinator();
+          final first = _store(prefs, coordinator: coordinator);
+          final second = _store(prefs, coordinator: coordinator);
+          final crew = _list('crew');
+          await first.saveLists([crew]);
+
+          final saved = await second.saveLists([crew]);
+
+          expect(saved, isTrue);
+          await second.saveLists([]);
+          expect(_storedLists(prefs), isEmpty);
+        });
+      });
     });
 
     group('saveSubscriptions', () {
