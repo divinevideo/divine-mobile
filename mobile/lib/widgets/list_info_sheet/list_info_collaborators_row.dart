@@ -56,7 +56,7 @@ class ListInfoCollaboratorsRow extends ConsumerWidget {
       // from its result, so closing it without confirming changes nothing.
       onUserToggled: (_) {},
     );
-    if (picked == null) return;
+    if (picked == null || cubit.isClosed || !cubit.isSessionCurrent) return;
 
     cubit.collaboratorsPicked(
       offered: {for (final profile in offered) profile.pubkey},

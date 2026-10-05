@@ -96,16 +96,17 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
   /// Replaces the collaborators with [picked], keeping any the picker was
   /// never offered.
   ///
-  /// A collaborator whose profile has not resolved cannot be shown in the
-  /// picker, so its absence from [picked] is not a removal. [offered] is what
-  /// the picker opened with. [viewerPubkey] is dropped from the result: the
+  /// [offered] is the full set the picker opened with, including fallback
+  /// profiles whose names have not resolved. A caller that intentionally
+  /// offers only part of that set must not remove permissions it did not offer.
+  /// [viewerPubkey] is dropped from the result: the
   /// owner is not their own collaborator.
   void collaboratorsPicked({
     required Set<String> offered,
     required Set<String> picked,
     String? viewerPubkey,
   }) {
-    if (state.isSaving) return;
+    if (state.isSaving || isClosed || !isSessionCurrent) return;
     final neverOffered = state.collaboratorPubkeys.where(
       (pubkey) => !offered.contains(pubkey),
     );
@@ -128,8 +129,12 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
   /// Ends in [CuratedListInfoStatus.saved] or
   /// [CuratedListInfoStatus.failure]. A creation whose list exists but did
   /// not take the video ends in [CuratedListInfoStatus.createdWithoutVideo].
-  /// An edit that leaves visibility alone passes through
-  /// [CuratedListInfoStatus.savedAwaitingRelay] first and can end in
+  /// A locally added video awaiting publication ends in
+  /// [CuratedListInfoStatus.createdWithVideoPendingSync]. Permissions edits
+  /// without a confirmed relay outcome end in
+  /// [CuratedListInfoStatus.permissionsUnconfirmed].
+  /// An edit that leaves visibility and collaborator permissions unchanged
+  /// passes through [CuratedListInfoStatus.savedAwaitingRelay] first and can end in
   /// [CuratedListInfoStatus.publishFailed] instead.
   Future<void> submitted() async {
     if (!state.canSubmit) return;
@@ -216,6 +221,8 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
           );
       // Only a flip sends visibility: the list may have changed since the
       // sheet opened, and resending the opening value would undo that.
+      final permissionsWillChange = visibilityWillChange || writesCollaborators;
+      var publicationUnconfirmed = false;
       final update = service.updateList(
         listId: listId,
         name: name,
@@ -223,7 +230,10 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
         isPublic: visibilityWillChange ? isPublic : null,
         isCollaborative: writesCollaborators ? collaborators.isNotEmpty : null,
         allowedCollaborators: writesCollaborators ? collaborators : null,
-        onLocalSaved: visibilityWillChange
+        onPublicationUnconfirmed: permissionsWillChange
+            ? () => publicationUnconfirmed = true
+            : null,
+        onLocalSaved: permissionsWillChange
             ? null
             : () {
                 if (isSessionCurrent) {
@@ -236,10 +246,10 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
               },
       );
 
-      // Visibility is the one field updateList holds back until a relay
-      // accepts the change, so a rejection means the switch the user flipped
-      // did not take. Wait for the answer and keep the form open on failure.
-      if (visibilityWillChange) {
+      // Explicit visibility and collaborator changes wait for relay acceptance.
+      // A missing acknowledgement is not proof that the relay did not receive
+      // the change, so keep that outcome separate from a rejected/local save.
+      if (permissionsWillChange) {
         final updated = await update;
         if (!isSessionCurrent) {
           emitIfOpen(state.copyWith(status: CuratedListInfoStatus.failure));
@@ -249,6 +259,8 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
           state.copyWith(
             status: updated
                 ? CuratedListInfoStatus.saved
+                : publicationUnconfirmed
+                ? CuratedListInfoStatus.permissionsUnconfirmed
                 : CuratedListInfoStatus.failure,
           ),
         );

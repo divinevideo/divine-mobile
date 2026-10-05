@@ -503,8 +503,9 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
     final disabledPubkeys = widget.onUserToggled == null
         ? widget.excludePubkeys
         : const <String>{};
-    // Only the capped mode moves a pick out of the list and into the chips
-    // row; the callback mode has no chips, so a picked row has to stay put
+    // Capped picks move into the chips row and leave the candidate list.
+    // Callback picks may also show removable chips, but keep their candidate
+    // rows visible so the same user can still be toggled from either place
     // and just render as checked.
     final hidePubkeys = widget.maxCount == null
         ? const <String>{}

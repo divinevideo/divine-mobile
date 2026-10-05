@@ -79,6 +79,7 @@ void main() {
           isCollaborative: any(named: 'isCollaborative'),
           allowedCollaborators: any(named: 'allowedCollaborators'),
           onLocalSaved: any(named: 'onLocalSaved'),
+          onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
         ),
       ).thenAnswer((invocation) {
         (invocation.namedArguments[#onLocalSaved] as void Function()?)?.call();
@@ -107,6 +108,66 @@ void main() {
     );
 
     test(
+      'discarded picker results cannot alter permissions after account change',
+      () async {
+        var owner = _viewer;
+        final cubit = CuratedListInfoCubit(
+          resolveService: () => service,
+          currentOwnerPubkey: () => owner,
+          existingList: _list(collaborators: [_alice]),
+        );
+        addTearDown(cubit.close);
+        owner = _bob;
+        cubit.collaboratorsPicked(offered: {_alice}, picked: {_bob});
+        expect(cubit.state.collaboratorPubkeys, [_alice]);
+        verifyZeroInteractions(service);
+      },
+    );
+
+    for (final changesVisibility in [true, false]) {
+      test(
+        changesVisibility
+            ? 'missing relay confirmation keeps a visibility edit open'
+            : 'missing relay confirmation keeps a collaborator edit open',
+        () async {
+          final existing = _list();
+          when(() => service.getListById(existing.id)).thenReturn(existing);
+          when(
+            () => service.updateList(
+              listId: any(named: 'listId'),
+              name: any(named: 'name'),
+              description: any(named: 'description'),
+              isPublic: any(named: 'isPublic'),
+              isCollaborative: any(named: 'isCollaborative'),
+              allowedCollaborators: any(named: 'allowedCollaborators'),
+              onLocalSaved: any(named: 'onLocalSaved'),
+              onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+            ),
+          ).thenAnswer((invocation) async {
+            expect(invocation.namedArguments[#onLocalSaved], isNull);
+            (invocation.namedArguments[#onPublicationUnconfirmed]
+                as void Function())();
+            return false;
+          });
+          final cubit = buildCubit(existingList: existing);
+          addTearDown(cubit.close);
+          if (changesVisibility) {
+            cubit.visibilityChanged(isPublic: false);
+          } else {
+            cubit.collaboratorsPicked(offered: {}, picked: {_alice});
+          }
+          await cubit.submitted();
+          expect(
+            cubit.state.status,
+            CuratedListInfoStatus.permissionsUnconfirmed,
+          );
+          expect(cubit.state.canClose, isFalse);
+          expect(cubit.state.canSubmit, isTrue);
+        },
+      );
+    }
+
+    test(
       'a direct editor visit cannot save after its account changes',
       () async {
         var owner = _viewer;
@@ -129,6 +190,7 @@ void main() {
             isCollaborative: any(named: 'isCollaborative'),
             allowedCollaborators: any(named: 'allowedCollaborators'),
             onLocalSaved: any(named: 'onLocalSaved'),
+            onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
           ),
         );
       },
@@ -285,11 +347,11 @@ void main() {
       );
 
       blocTest<CuratedListInfoCubit, CuratedListInfoState>(
-        'keeps a collaborator the picker was never offered',
+        'preserves permissions outside an explicitly limited picker offer',
         build: () =>
             buildCubit(existingList: _list(collaborators: [_alice, _bob])),
         act: (cubit) => cubit.collaboratorsPicked(
-          // Bob's profile had not resolved, so the picker never showed him.
+          // A consumer intentionally offered only Alice; Bob remains out of scope.
           offered: {_alice},
           picked: {_alice, _carol},
         ),
@@ -493,6 +555,7 @@ void main() {
             name: 'Marionettes',
             description: 'Strings attached',
             onLocalSaved: any(named: 'onLocalSaved'),
+            onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
           ),
         ).called(1),
       );
@@ -514,6 +577,7 @@ void main() {
             name: 'Marionettes',
             description: 'Strings attached',
             onLocalSaved: any(named: 'onLocalSaved'),
+            onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
           ),
         ).called(1),
       );
@@ -532,6 +596,7 @@ void main() {
             name: 'Marionettes',
             description: 'Strings attached',
             onLocalSaved: any(named: 'onLocalSaved'),
+            onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
           ),
         ).called(1),
       );
@@ -558,6 +623,7 @@ void main() {
             name: 'Marionettes',
             description: 'Strings attached',
             onLocalSaved: any(named: 'onLocalSaved'),
+            onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
           ),
         ).called(1),
       );
@@ -584,6 +650,7 @@ void main() {
               that: unorderedEquals([_alice, _bob]),
             ),
             onLocalSaved: any(named: 'onLocalSaved'),
+            onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
           ),
         ).called(1),
       );
@@ -604,6 +671,7 @@ void main() {
             isCollaborative: false,
             allowedCollaborators: const [],
             onLocalSaved: any(named: 'onLocalSaved'),
+            onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
           ),
         ).called(1),
       );
@@ -625,6 +693,7 @@ void main() {
             isCollaborative: false,
             allowedCollaborators: const [],
             onLocalSaved: any(named: 'onLocalSaved'),
+            onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
           ),
         ).called(1),
       );

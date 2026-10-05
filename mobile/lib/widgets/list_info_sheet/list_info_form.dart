@@ -100,18 +100,24 @@ class _SaveFailedMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final failed = context.select(
-      (CuratedListInfoCubit cubit) =>
-          cubit.state.status == CuratedListInfoStatus.failure,
+    final status = context.select(
+      (CuratedListInfoCubit cubit) => cubit.state.status,
     );
     final isEditing = context.select(
       (CuratedListInfoCubit cubit) => cubit.state.isEditing,
     );
-    if (!failed) return const SizedBox.shrink();
+    if (status != CuratedListInfoStatus.failure &&
+        status != CuratedListInfoStatus.permissionsUnconfirmed) {
+      return const SizedBox.shrink();
+    }
 
     final l10n = context.l10n;
     return ListInfoFailureMessage(
-      isEditing ? l10n.listUpdateFailed : l10n.listCreateFailed,
+      status == CuratedListInfoStatus.permissionsUnconfirmed
+          ? l10n.listPermissionsUnconfirmed
+          : isEditing
+          ? l10n.listUpdateFailed
+          : l10n.listCreateFailed,
     );
   }
 }
