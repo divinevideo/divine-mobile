@@ -96,36 +96,23 @@ void main() {
       when(() => mockKeyStorage.clearCache()).thenReturn(null);
       when(() => mockKeyStorage.dispose()).thenReturn(null);
       when(() => mockKeyStorage.deleteKeys()).thenAnswer((_) async {});
-      when(
-        () => mockKeyStorage.deleteIdentityKeyContainer(
-          any(),
-        ),
-      ).thenAnswer((_) async {});
-      when(
-        () => mockKeyStorage.generateAndStoreKeys(),
-      ).thenAnswer((_) async => newKeyContainer);
-      when(
-        () => mockKeyStorage.storeIdentityKeyContainer(any(), any()),
-      ).thenAnswer((_) async {});
-      when(
-        () => mockKeyStorage.getIdentityKeyContainer(
-          any(),
-        ),
-      ).thenAnswer((_) async => newKeyContainer);
-      when(
-        () => mockKeyStorage.getKeyContainer(),
-      ).thenAnswer((_) async => newKeyContainer);
-      when(
-        () => mockKeyStorage.switchToIdentity(
-          any(),
-        ),
-      ).thenAnswer((_) async => true);
+      when(() => mockKeyStorage.deleteIdentityKeyContainer(any()))
+          .thenAnswer((_) async {});
+      when(() => mockKeyStorage.generateAndStoreKeys())
+          .thenAnswer((_) async => newKeyContainer);
+      when(() => mockKeyStorage.storeIdentityKeyContainer(any(), any()))
+          .thenAnswer((_) async {});
+      when(() => mockKeyStorage.getIdentityKeyContainer(any()))
+          .thenAnswer((_) async => newKeyContainer);
+      when(() => mockKeyStorage.getKeyContainer())
+          .thenAnswer((_) async => newKeyContainer);
+      when(() => mockKeyStorage.switchToIdentity(any()))
+          .thenAnswer((_) async => true);
 
       // Cleanup service stubs: shouldClearDataForUser returns true (different
       // user), and clearUserSpecificData/claimLegacyRows complete normally.
-      when(
-        () => mockCleanupService.shouldClearDataForUser(any()),
-      ).thenReturn(true);
+      when(() => mockCleanupService.shouldClearDataForUser(any()))
+          .thenReturn(true);
       when(
         () => mockCleanupService.clearUserSpecificData(
           reason: any(named: 'reason'),
@@ -135,12 +122,10 @@ void main() {
           forgetAccount: any(named: 'forgetAccount'),
         ),
       ).thenAnswer((_) async => 0);
-      when(
-        () => mockCleanupService.claimLegacyRows(any()),
-      ).thenAnswer((_) async {});
-      when(
-        () => mockCleanupService.markOwnerScopedLegacyDataForUser(any()),
-      ).thenAnswer((_) async {});
+      when(() => mockCleanupService.claimLegacyRows(any()))
+          .thenAnswer((_) async {});
+      when(() => mockCleanupService.markOwnerScopedLegacyDataForUser(any()))
+          .thenAnswer((_) async {});
 
       authService = AuthService(
         backgroundActivityManager: BackgroundActivityManager(),
@@ -209,14 +194,11 @@ void main() {
       expect(captured.single, equals(oldPubkeyHex));
     });
 
-    test(
-      'remove-device signOut (deleteKeys: true) preserves user data by default',
-      () async {
-        // First sign in so there is a current identity to sign out from.
-        when(
-          () => mockCleanupService.shouldClearDataForUser(any()),
-        ).thenReturn(false);
-        await _ignoringDiscoveryErrors(authService.createNewIdentity);
+    test('remove-device signOut (deleteKeys: true) preserves user data by default', () async {
+      // First sign in so there is a current identity to sign out from.
+      when(() => mockCleanupService.shouldClearDataForUser(any()))
+          .thenReturn(false);
+      await _ignoringDiscoveryErrors(authService.createNewIdentity);
 
         // Now remove local login material. This must not delete device-local
         // drafts/clips because they are scoped by ownerPubkey.
@@ -229,7 +211,7 @@ void main() {
           ),
         ).thenAnswer((_) async => 0);
 
-        await authService.signOut(deleteKeys: true);
+      await authService.signOut(deleteKeys: true);
 
         // The explicit-logout path preserves owner-scoped local data by default.
         verify(
@@ -249,9 +231,8 @@ void main() {
       final cacheDao = _MockCacheDao();
       when(() => cacheDao.deletePrefix(any())).thenAnswer((_) async {});
       await CacheSync.init(dao: cacheDao);
-      when(
-        () => mockCleanupService.shouldClearDataForUser(any()),
-      ).thenReturn(false);
+      when(() => mockCleanupService.shouldClearDataForUser(any()))
+          .thenReturn(false);
       await _ignoringDiscoveryErrors(authService.createNewIdentity);
 
       when(
@@ -279,9 +260,8 @@ void main() {
       'non-destructive signOut (account switch) passes deleteUserData: false',
       () async {
         // Sign in first.
-        when(
-          () => mockCleanupService.shouldClearDataForUser(any()),
-        ).thenReturn(false);
+        when(() => mockCleanupService.shouldClearDataForUser(any()))
+            .thenReturn(false);
         await _ignoringDiscoveryErrors(authService.createNewIdentity);
 
         when(
@@ -308,6 +288,32 @@ void main() {
         ).called(1);
       },
     );
+
+    test('a failed identity-change sweep leaves the old identity recorded '
+        'and the session awaiting terms', () async {
+      when(
+        () => mockCleanupService.clearUserSpecificData(
+          reason: any(named: 'reason'),
+          isIdentityChange: any(named: 'isIdentityChange'),
+          userPubkey: any(named: 'userPubkey'),
+          deleteUserData: any(named: 'deleteUserData'),
+        ),
+      ).thenThrow(
+        const UserDataCleanupException('Could not clear account cache'),
+      );
+
+      await _ignoringDiscoveryErrors(authService.createNewIdentity);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getString('current_user_pubkey_hex'),
+        equals(oldPubkeyHex),
+        reason:
+            'the incoming identity must not be recorded over the old '
+            "account's data when the sweep failed",
+      );
+      expect(authService.authState, equals(AuthState.awaitingTosAcceptance));
+    });
 
     test('identity-change: isIdentityChange=true is still passed '
         'so legacy and database cleanup stays fail-closed', () async {
