@@ -1260,7 +1260,10 @@ void main() {
             (s) => s.query == 'alice' && s.status == UserSearchStatus.success,
           );
           bloc.add(const UserSearchQueryChanged('alice'));
-          await first;
+          await first.timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => fail('search for alice never succeeded'),
+          );
           bloc.add(const UserSearchQueryChanged('error'));
         },
         wait: debounceDuration,
@@ -1335,7 +1338,10 @@ void main() {
             (s) => s.query == 'alice' && s.status == UserSearchStatus.success,
           );
           bloc.add(const UserSearchQueryChanged('alice'));
-          await first;
+          await first.timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => fail('search for alice never succeeded'),
+          );
           bloc.add(const UserSearchQueryChanged('bob'));
         },
         wait: debounceDuration,
