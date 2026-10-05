@@ -121,244 +121,195 @@ void _actor(_Auth auth, _Client client, String owner) {
 }
 
 void main() {
-  late _Preferences prefs;
-  late _Auth authA;
-  late _Client clientA;
+  group('CuratedListService account isolation', () {
+    late _Preferences prefs;
+    late _Auth authA;
+    late _Client clientA;
 
-  setUp(() async {
-    SharedPreferences.setMockInitialValues({
-      CuratedListService.listsStorageKey: jsonEncode([_row(_ownerA).toJson()]),
-      'current_user_pubkey_hex': _ownerA,
-    });
-    prefs = _Preferences(await SharedPreferences.getInstance());
-    authA = _Auth();
-    clientA = _Client();
-    _actor(authA, clientA, _ownerA);
-  });
-
-  CuratedListService open(
-    _Auth auth,
-    _Client client, {
-    OnListUnsubscribedCallback? onUnsubscribed,
-  }) {
-    final service = CuratedListService(
-      nostrService: client,
-      authService: auth,
-      prefs: prefs,
-      onListUnsubscribed: onUnsubscribed,
-    );
-    addTearDown(service.dispose);
-    return service;
-  }
-
-  test(
-    'late outgoing ACK cannot enter B cache after wipe and startup',
-    () async {
-      final old = open(authA, clientA);
-      final published = Completer<Event>();
-      final ack = Completer<PublishOutcome>();
-      when(() => clientA.publishEventAwaitOk(any())).thenAnswer((call) {
-        published.complete(call.positionalArguments.first as Event);
-        return ack.future;
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({
+        CuratedListService.listsStorageKey: jsonEncode([
+          _row(_ownerA).toJson(),
+        ]),
+        'current_user_pubkey_hex': _ownerA,
       });
-      final edit = old.updateList(listId: 'crew', isPublic: true);
-      final signed = await published.future;
-      final queued = old.addVideoToList('crew', 'd' * 64);
-      await UserDataCleanupService(prefs).clearUserSpecificData(
-        userPubkey: _ownerA,
-        isIdentityChange: true,
-      );
-      final authB = _Auth();
-      final clientB = _Client();
-      _actor(authB, clientB, _ownerB);
-      final incoming = open(authB, clientB);
-      await incoming.initialize();
-      await incoming.fetchUserListsFromRelays(force: true);
-      final incomingRows = prefs.getString(CuratedListService.listsStorageKey);
-      ack.complete(acceptedOutcome(signed));
-      expect(await edit, isFalse);
-      expect(await queued, isFalse);
-      expect(old.isCurrentSession, isFalse);
-      expect(prefs.getString(CuratedListService.listsStorageKey), incomingRows);
-      final restarted = open(authB, clientB);
-      expect(restarted.getDefaultList()?.pubkey, _ownerB);
-      expect(restarted.lists.any((list) => list.pubkey == _ownerA), isFalse);
-      expect(authA.currentPublicKeyHex, _ownerA);
-    },
-  );
+      prefs = _Preferences(await SharedPreferences.getInstance());
+      authA = _Auth();
+      clientA = _Client();
+      _actor(authA, clientA, _ownerA);
+    });
 
-  for (final key in [
-    CuratedListService.listsStorageKey,
-    CuratedListService.subscribedListsStorageKey,
-    CuratedListService.defaultListDeletedStorageKey,
-  ]) {
+    CuratedListService open(
+      _Auth auth,
+      _Client client, {
+      OnListUnsubscribedCallback? onUnsubscribed,
+    }) {
+      final service = CuratedListService(
+        nostrService: client,
+        authService: auth,
+        prefs: prefs,
+        onListUnsubscribed: onUnsubscribed,
+      );
+      addTearDown(service.dispose);
+      return service;
+    }
+
     test(
-      'wipe waits for dispatched $key and old completion cannot refill it',
+      'late outgoing ACK cannot enter B cache after wipe and startup',
       () async {
         final old = open(authA, clientA);
-        prefs.gateKey = key;
-        final Future<bool> operation;
-        if (key == CuratedListService.listsStorageKey) {
-          operation = old.updateList(
-            listId: 'crew',
-            name: 'Pending old metadata',
-          );
-        } else if (key == CuratedListService.subscribedListsStorageKey) {
-          operation = old.subscribeToList('$_ownerA:crew');
-        } else {
-          final defaultRow = _row(
-            _ownerA,
-            id: CuratedListService.defaultListId,
-          );
-          await prefs.backing.setString(
-            CuratedListService.listsStorageKey,
-            jsonEncode([defaultRow.toJson()]),
-          );
-          final withDefault = open(authA, clientA);
-          operation = withDefault.deleteOwnedList(defaultRow.authorScopedId);
-        }
-        await prefs.writeStarted.future;
-        var wiped = false;
-        final cleaning = UserDataCleanupService(prefs)
-            .clearUserSpecificData(
-              userPubkey: _ownerA,
-              isIdentityChange: true,
-            )
-            .then((_) => wiped = true);
-        expect(old.isCurrentSession, isFalse);
-        expect(wiped, isFalse);
-        prefs.releaseWrite.complete();
-        expect(await operation, isFalse);
-        await cleaning;
-        expect(wiped, isTrue);
-        expect(prefs.containsKey(key), isFalse);
+        final published = Completer<Event>();
+        final ack = Completer<PublishOutcome>();
+        when(() => clientA.publishEventAwaitOk(any())).thenAnswer((call) {
+          published.complete(call.positionalArguments.first as Event);
+          return ack.future;
+        });
+        final edit = old.updateList(listId: 'crew', isPublic: true);
+        final signed = await published.future;
+        final queued = old.addVideoToList('crew', 'd' * 64);
+        await UserDataCleanupService(prefs).clearUserSpecificData(
+          userPubkey: _ownerA,
+          isIdentityChange: true,
+        );
         final authB = _Auth();
         final clientB = _Client();
         _actor(authB, clientB, _ownerB);
         final incoming = open(authB, clientB);
         await incoming.initialize();
-        expect(incoming.getDefaultList()?.pubkey, _ownerB);
-        expect(incoming.lists.any((list) => list.pubkey == _ownerA), isFalse);
+        await incoming.fetchUserListsFromRelays(force: true);
+        final incomingRows = prefs.getString(
+          CuratedListService.listsStorageKey,
+        );
+        ack.complete(acceptedOutcome(signed));
+        expect(await edit, isFalse);
+        expect(await queued, isFalse);
+        expect(old.isCurrentSession, isFalse);
+        expect(
+          prefs.getString(CuratedListService.listsStorageKey),
+          incomingRows,
+        );
+        final restarted = open(authB, clientB);
+        expect(restarted.getDefaultList()?.pubkey, _ownerB);
+        expect(restarted.lists.any((list) => list.pubkey == _ownerA), isFalse);
+        expect(authA.currentPublicKeyHex, _ownerA);
       },
     );
-  }
 
-  test(
-    'late create ACK cannot return an outgoing list to the incoming UI',
-    () async {
-      final old = open(authA, clientA);
-      final entered = Completer<Event>();
-      final ack = Completer<PublishOutcome>();
-      when(() => clientA.publishEventAwaitOk(any())).thenAnswer((call) {
-        entered.complete(call.positionalArguments.first as Event);
-        return ack.future;
-      });
-      final creating = old.createList(name: 'Outgoing creation');
-      final signed = await entered.future;
-      await UserDataCleanupService(prefs)
-          .clearUserSpecificData(userPubkey: _ownerA);
-      final authB = _Auth();
-      final clientB = _Client();
-      _actor(authB, clientB, _ownerB);
-      final incoming = open(authB, clientB);
-      await incoming.initialize();
-      final before = prefs.getString(CuratedListService.listsStorageKey);
-      ack.complete(acceptedOutcome(signed));
-      expect(await creating, isNull);
-      expect(prefs.getString(CuratedListService.listsStorageKey), before);
-      expect(
-        open(authB, clientB).lists.any((row) => row.pubkey == _ownerA),
-        isFalse,
-      );
-    },
-  );
-
-  test(
-    'failed cache removal retires outgoing work and reports failure',
-    () async {
-      final old = open(authA, clientA);
-      prefs.rejectRemoval = true;
-      await expectLater(
-        UserDataCleanupService(prefs).clearUserSpecificData(
-          userPubkey: _ownerA,
-          isIdentityChange: true,
-        ),
-        throwsA(isA<UserDataCleanupException>()),
-      );
-      expect(old.isCurrentSession, isFalse);
-      expect(await old.updateList(listId: 'crew', name: 'Stale'), isFalse);
-      final retry = open(authA, clientA);
-      prefs.rejectRemoval = false;
-      expect(
-        await retry.updateList(listId: 'crew', name: 'Restored account'),
-        isTrue,
-      );
-    },
-  );
-
-  test('restart cleans a refused follow removal without recreating deleted default', () async {
-    final row = _row(_ownerA, id: CuratedListService.defaultListId);
-    await prefs.backing.setString(
+    for (final key in [
       CuratedListService.listsStorageKey,
-      jsonEncode([row.toJson()]),
-    );
-    await prefs.backing.setString(
       CuratedListService.subscribedListsStorageKey,
-      jsonEncode([row.authorScopedId]),
-    );
-    final callbacks = <String>[];
-    final service = open(authA, clientA, onUnsubscribed: callbacks.add);
-    prefs.rejectSubscriptions = true;
-    expect(await service.deleteOwnedList(row.authorScopedId), isFalse);
-    expect(service.getDefaultList(), isNull);
-    expect(service.subscribedListIds, contains(row.authorScopedId));
-    expect(callbacks, isEmpty);
-    expect(
-      prefs.getBool(CuratedListService.defaultListDeletedStorageKey),
-      isTrue,
-    );
-    prefs.rejectSubscriptions = false;
-    final restarted = open(authA, clientA, onUnsubscribed: callbacks.add);
-    await restarted.initialize();
-    expect(restarted.getDefaultList(), isNull);
-    expect(restarted.subscribedListIds, isEmpty);
-    expect(callbacks, [row.authorScopedId]);
-    expect(open(authA, clientA).subscribedListIds, isEmpty);
-    expect(await restarted.deleteOwnedList(row.authorScopedId), isTrue);
-    expect(callbacks, [row.authorScopedId]);
-  });
+      CuratedListService.defaultListDeletedStorageKey,
+    ]) {
+      test(
+        'wipe waits for dispatched $key and old completion cannot refill it',
+        () async {
+          final old = open(authA, clientA);
+          prefs.gateKey = key;
+          final Future<bool> operation;
+          if (key == CuratedListService.listsStorageKey) {
+            operation = old.updateList(
+              listId: 'crew',
+              name: 'Pending old metadata',
+            );
+          } else if (key == CuratedListService.subscribedListsStorageKey) {
+            operation = old.subscribeToList('$_ownerA:crew');
+          } else {
+            final defaultRow = _row(
+              _ownerA,
+              id: CuratedListService.defaultListId,
+            );
+            await prefs.backing.setString(
+              CuratedListService.listsStorageKey,
+              jsonEncode([defaultRow.toJson()]),
+            );
+            final withDefault = open(authA, clientA);
+            operation = withDefault.deleteOwnedList(defaultRow.authorScopedId);
+          }
+          await prefs.writeStarted.future;
+          var wiped = false;
+          final cleaning = UserDataCleanupService(prefs)
+              .clearUserSpecificData(
+                userPubkey: _ownerA,
+                isIdentityChange: true,
+              )
+              .then((_) => wiped = true);
+          expect(old.isCurrentSession, isFalse);
+          expect(wiped, isFalse);
+          prefs.releaseWrite.complete();
+          expect(await operation, isFalse);
+          await cleaning;
+          expect(wiped, isTrue);
+          expect(prefs.containsKey(key), isFalse);
+          final authB = _Auth();
+          final clientB = _Client();
+          _actor(authB, clientB, _ownerB);
+          final incoming = open(authB, clientB);
+          await incoming.initialize();
+          expect(incoming.getDefaultList()?.pubkey, _ownerB);
+          expect(incoming.lists.any((list) => list.pubkey == _ownerA), isFalse);
+        },
+      );
+    }
 
-  test(
-    'orphan follow recovery preserves another author and shared legacy alias',
-    () async {
-      final foreign = _row(_ownerB);
-      final ownDefault = _row(_ownerA, id: CuratedListService.defaultListId);
+    test(
+      'late create ACK cannot return an outgoing list to the incoming UI',
+      () async {
+        final old = open(authA, clientA);
+        final entered = Completer<Event>();
+        final ack = Completer<PublishOutcome>();
+        when(() => clientA.publishEventAwaitOk(any())).thenAnswer((call) {
+          entered.complete(call.positionalArguments.first as Event);
+          return ack.future;
+        });
+        final creating = old.createList(name: 'Outgoing creation');
+        final signed = await entered.future;
+        await UserDataCleanupService(prefs)
+            .clearUserSpecificData(userPubkey: _ownerA);
+        final authB = _Auth();
+        final clientB = _Client();
+        _actor(authB, clientB, _ownerB);
+        final incoming = open(authB, clientB);
+        await incoming.initialize();
+        final before = prefs.getString(CuratedListService.listsStorageKey);
+        ack.complete(acceptedOutcome(signed));
+        expect(await creating, isNull);
+        expect(prefs.getString(CuratedListService.listsStorageKey), before);
+        expect(
+          open(authB, clientB).lists.any((row) => row.pubkey == _ownerA),
+          isFalse,
+        );
+      },
+    );
+
+    test(
+      'failed cache removal retires outgoing work and reports failure',
+      () async {
+        final old = open(authA, clientA);
+        prefs.rejectRemoval = true;
+        await expectLater(
+          UserDataCleanupService(prefs).clearUserSpecificData(
+            userPubkey: _ownerA,
+            isIdentityChange: true,
+          ),
+          throwsA(isA<UserDataCleanupException>()),
+        );
+        expect(old.isCurrentSession, isFalse);
+        expect(await old.updateList(listId: 'crew', name: 'Stale'), isFalse);
+        final retry = open(authA, clientA);
+        prefs.rejectRemoval = false;
+        expect(
+          await retry.updateList(listId: 'crew', name: 'Restored account'),
+          isTrue,
+        );
+      },
+    );
+
+    test('restart cleans a refused follow removal without recreating deleted default', () async {
+      final row = _row(_ownerA, id: CuratedListService.defaultListId);
       await prefs.backing.setString(
         CuratedListService.listsStorageKey,
-        jsonEncode([foreign.toJson(), ownDefault.toJson()]),
+        jsonEncode([row.toJson()]),
       );
-      await prefs.backing.setString(
-        CuratedListService.subscribedListsStorageKey,
-        jsonEncode(['$_ownerA:crew', '$_ownerB:crew', 'crew']),
-      );
-      await prefs.backing.setStringList(
-        PrefsCuratedListStore.deletedCoordinatesStorageKey,
-        ['$_ownerA:crew'],
-      );
-      final callbacks = <String>[];
-      final service = open(authA, clientA, onUnsubscribed: callbacks.add);
-      await service.initialize();
-      expect(service.subscribedListIds, {'$_ownerB:crew', 'crew'});
-      expect(service.getListById('$_ownerB:crew'), foreign);
-      expect(callbacks, ['$_ownerA:crew']);
-      expect(open(authA, clientA).subscribedListIds, {'$_ownerB:crew', 'crew'});
-    },
-  );
-
-  test(
-    'qualified delete retry completes only the refused follow removal',
-    () async {
-      final row = _row(_ownerA);
       await prefs.backing.setString(
         CuratedListService.subscribedListsStorageKey,
         jsonEncode([row.authorScopedId]),
@@ -367,172 +318,266 @@ void main() {
       final service = open(authA, clientA, onUnsubscribed: callbacks.add);
       prefs.rejectSubscriptions = true;
       expect(await service.deleteOwnedList(row.authorScopedId), isFalse);
-      expect(service.getListById(row.authorScopedId), isNull);
+      expect(service.getDefaultList(), isNull);
+      expect(service.subscribedListIds, contains(row.authorScopedId));
       expect(callbacks, isEmpty);
+      expect(
+        prefs.getBool(CuratedListService.defaultListDeletedStorageKey),
+        isTrue,
+      );
       prefs.rejectSubscriptions = false;
-      expect(await service.deleteOwnedList(row.authorScopedId), isTrue);
-      expect(service.subscribedListIds, isEmpty);
+      final restarted = open(authA, clientA, onUnsubscribed: callbacks.add);
+      await restarted.initialize();
+      expect(restarted.getDefaultList(), isNull);
+      expect(restarted.subscribedListIds, isEmpty);
       expect(callbacks, [row.authorScopedId]);
-      verify(() => clientA.publishEventAwaitOk(any())).called(1);
-    },
-  );
+      expect(open(authA, clientA).subscribedListIds, isEmpty);
+      expect(await restarted.deleteOwnedList(row.authorScopedId), isTrue);
+      expect(callbacks, [row.authorScopedId]);
+    });
 
-  test(
-    'ABA with separate auth objects never revives the first A service',
-    () async {
-      final old = open(authA, clientA);
-      final published = Completer<Event>();
-      final ack = Completer<PublishOutcome>();
-      when(() => clientA.publishEventAwaitOk(any())).thenAnswer((call) {
-        published.complete(call.positionalArguments.first as Event);
-        return ack.future;
-      });
-      final edit = old.updateList(listId: 'crew', isPublic: true);
-      final signed = await published.future;
-      await UserDataCleanupService(prefs)
-          .clearUserSpecificData(userPubkey: _ownerA);
-      final authB = _Auth();
-      final clientB = _Client();
-      _actor(authB, clientB, _ownerB);
-      await open(authB, clientB).initialize();
-      await UserDataCleanupService(prefs)
-          .clearUserSpecificData(userPubkey: _ownerB);
-      final restoredAuth = _Auth();
-      final restoredClient = _Client();
-      _actor(restoredAuth, restoredClient, _ownerA);
-      final restored = open(restoredAuth, restoredClient);
-      await restored.initialize();
-      final before = prefs.getString(CuratedListService.listsStorageKey);
-      ack.complete(acceptedOutcome(signed));
-      expect(await edit, isFalse);
-      expect(prefs.getString(CuratedListService.listsStorageKey), before);
-      expect(old.isCurrentSession, isFalse);
-      expect(restored.isCurrentSession, isTrue);
-      expect(restored.getListById('crew'), isNull);
-      expect(restored.getDefaultList()?.pubkey, _ownerA);
-    },
-  );
+    test(
+      'orphan follow recovery preserves another author and shared legacy alias',
+      () async {
+        final foreign = _row(_ownerB);
+        final ownDefault = _row(_ownerA, id: CuratedListService.defaultListId);
+        await prefs.backing.setString(
+          CuratedListService.listsStorageKey,
+          jsonEncode([foreign.toJson(), ownDefault.toJson()]),
+        );
+        await prefs.backing.setString(
+          CuratedListService.subscribedListsStorageKey,
+          jsonEncode(['$_ownerA:crew', '$_ownerB:crew', 'crew']),
+        );
+        await prefs.backing.setStringList(
+          PrefsCuratedListStore.deletedCoordinatesStorageKey,
+          ['$_ownerA:crew'],
+        );
+        final callbacks = <String>[];
+        final service = open(authA, clientA, onUnsubscribed: callbacks.add);
+        await service.initialize();
+        expect(service.subscribedListIds, {'$_ownerB:crew', 'crew'});
+        expect(service.getListById('$_ownerB:crew'), foreign);
+        expect(callbacks, ['$_ownerA:crew']);
+        expect(open(authA, clientA).subscribedListIds, {
+          '$_ownerB:crew',
+          'crew',
+        });
+      },
+    );
 
-  test(
-    'retirement during signer lookup prevents encryption and signing',
-    () async {
-      final signer = stubListSigner(clientA, _ownerA);
-      final started = Completer<void>();
-      final owner = Completer<String?>();
-      when(signer.getPublicKey).thenAnswer((_) {
-        started.complete();
-        return owner.future;
-      });
-      final service = open(authA, clientA);
-      final adding = service.addVideoToList('crew', 'd' * 64);
-      await started.future;
-      await UserDataCleanupService(prefs)
-          .clearUserSpecificData(userPubkey: _ownerA);
-      owner.complete(_ownerA);
-      expect(await adding, isFalse);
-      verifyNever(() => signer.nip44Encrypt(any(), any()));
-      verifyNever(
+    test(
+      'qualified delete retry completes only the refused follow removal',
+      () async {
+        final row = _row(_ownerA);
+        await prefs.backing.setString(
+          CuratedListService.subscribedListsStorageKey,
+          jsonEncode([row.authorScopedId]),
+        );
+        final callbacks = <String>[];
+        final service = open(authA, clientA, onUnsubscribed: callbacks.add);
+        prefs.rejectSubscriptions = true;
+        expect(await service.deleteOwnedList(row.authorScopedId), isFalse);
+        expect(service.getListById(row.authorScopedId), isNull);
+        expect(callbacks, isEmpty);
+        prefs.rejectSubscriptions = false;
+        expect(await service.deleteOwnedList(row.authorScopedId), isTrue);
+        expect(service.subscribedListIds, isEmpty);
+        expect(callbacks, [row.authorScopedId]);
+        verify(() => clientA.publishEventAwaitOk(any())).called(1);
+      },
+    );
+
+    test(
+      'ABA with separate auth objects never revives the first A service',
+      () async {
+        final old = open(authA, clientA);
+        final published = Completer<Event>();
+        final ack = Completer<PublishOutcome>();
+        when(() => clientA.publishEventAwaitOk(any())).thenAnswer((call) {
+          published.complete(call.positionalArguments.first as Event);
+          return ack.future;
+        });
+        final edit = old.updateList(listId: 'crew', isPublic: true);
+        final signed = await published.future;
+        await UserDataCleanupService(prefs)
+            .clearUserSpecificData(userPubkey: _ownerA);
+        final authB = _Auth();
+        final clientB = _Client();
+        _actor(authB, clientB, _ownerB);
+        await open(authB, clientB).initialize();
+        await UserDataCleanupService(prefs)
+            .clearUserSpecificData(userPubkey: _ownerB);
+        final restoredAuth = _Auth();
+        final restoredClient = _Client();
+        _actor(restoredAuth, restoredClient, _ownerA);
+        final restored = open(restoredAuth, restoredClient);
+        await restored.initialize();
+        final before = prefs.getString(CuratedListService.listsStorageKey);
+        ack.complete(acceptedOutcome(signed));
+        expect(await edit, isFalse);
+        expect(prefs.getString(CuratedListService.listsStorageKey), before);
+        expect(old.isCurrentSession, isFalse);
+        expect(restored.isCurrentSession, isTrue);
+        expect(restored.getListById('crew'), isNull);
+        expect(restored.getDefaultList()?.pubkey, _ownerA);
+      },
+    );
+
+    test(
+      'retirement during signer lookup prevents encryption and signing',
+      () async {
+        final signer = stubListSigner(clientA, _ownerA);
+        final started = Completer<void>();
+        final owner = Completer<String?>();
+        when(signer.getPublicKey).thenAnswer((_) {
+          started.complete();
+          return owner.future;
+        });
+        final service = open(authA, clientA);
+        final adding = service.addVideoToList('crew', 'd' * 64);
+        await started.future;
+        await UserDataCleanupService(prefs)
+            .clearUserSpecificData(userPubkey: _ownerA);
+        owner.complete(_ownerA);
+        expect(await adding, isFalse);
+        verifyNever(() => signer.nip44Encrypt(any(), any()));
+        verifyNever(
+          () => authA.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        );
+        expect(prefs.containsKey(CuratedListService.listsStorageKey), isFalse);
+      },
+    );
+
+    test('retired signing result cannot be dispatched to a relay', () async {
+      final entered = Completer<void>();
+      final signing = Completer<Event?>();
+      when(
         () => authA.createAndSignEvent(
           kind: any(named: 'kind'),
           content: any(named: 'content'),
           tags: any(named: 'tags'),
         ),
-      );
+      ).thenAnswer((_) {
+        entered.complete();
+        return signing.future;
+      });
+      final service = open(authA, clientA);
+      final editing = service.updateList(listId: 'crew', isPublic: true);
+      await entered.future;
+      await UserDataCleanupService(prefs)
+          .clearUserSpecificData(userPubkey: _ownerA);
+      signing.complete(Event(_ownerA, 30005, const [], 'superseded'));
+      expect(await editing, isFalse);
+      verifyNever(() => clientA.publishEventAwaitOk(any()));
       expect(prefs.containsKey(CuratedListService.listsStorageKey), isFalse);
-    },
-  );
-
-  test('retired signing result cannot be dispatched to a relay', () async {
-    final entered = Completer<void>();
-    final signing = Completer<Event?>();
-    when(
-      () => authA.createAndSignEvent(
-        kind: any(named: 'kind'),
-        content: any(named: 'content'),
-        tags: any(named: 'tags'),
-      ),
-    ).thenAnswer((_) {
-      entered.complete();
-      return signing.future;
     });
-    final service = open(authA, clientA);
-    final editing = service.updateList(listId: 'crew', isPublic: true);
-    await entered.future;
-    await UserDataCleanupService(prefs)
-        .clearUserSpecificData(userPubkey: _ownerA);
-    signing.complete(Event(_ownerA, 30005, const [], 'superseded'));
-    expect(await editing, isFalse);
-    verifyNever(() => clientA.publishEventAwaitOk(any()));
-    expect(prefs.containsKey(CuratedListService.listsStorageKey), isFalse);
-  });
 
-  test('owner recovery markers survive swap and scoped deletion removes only target', () async {
-    final ownKey = PrefsCuratedListStore.pendingDefaultDeletionKey(_ownerA);
-    final foreignKey = PrefsCuratedListStore.pendingDefaultDeletionKey(_ownerB);
-    await prefs.backing.setBool(ownKey, true);
-    await prefs.backing.setBool(foreignKey, true);
-    final cleanup = UserDataCleanupService(prefs);
-    await cleanup.clearUserSpecificData(
-      userPubkey: _ownerA,
-      isIdentityChange: true,
-    );
-    expect(prefs.getBool(ownKey), isTrue);
-    expect(prefs.getBool(foreignKey), isTrue);
-    await cleanup.deleteAccountData(
-      _ownerA,
-      userNpub: 'inactive',
-      preserveActiveSession: true,
-    );
-    expect(prefs.containsKey(ownKey), isFalse);
-    expect(prefs.getBool(foreignKey), isTrue);
-  });
+    test('owner recovery markers survive swap and scoped deletion removes only target', () async {
+      final ownKey = PrefsCuratedListStore.pendingDefaultDeletionKey(_ownerA);
+      final foreignKey = PrefsCuratedListStore.pendingDefaultDeletionKey(
+        _ownerB,
+      );
+      await prefs.backing.setBool(ownKey, true);
+      await prefs.backing.setBool(foreignKey, true);
+      final cleanup = UserDataCleanupService(prefs);
+      await cleanup.clearUserSpecificData(
+        userPubkey: _ownerA,
+        isIdentityChange: true,
+      );
+      expect(prefs.getBool(ownKey), isTrue);
+      expect(prefs.getBool(foreignKey), isTrue);
+      await cleanup.deleteAccountData(
+        _ownerA,
+        userNpub: 'inactive',
+        preserveActiveSession: true,
+      );
+      expect(prefs.containsKey(ownKey), isFalse);
+      expect(prefs.getBool(foreignKey), isTrue);
+    });
 
-  for (final followed in [false, true]) {
+    for (final followed in [false, true]) {
+      test(
+        'rejected default flag recovers durable removal, followed=$followed',
+        () async {
+          final row = _row(_ownerA, id: CuratedListService.defaultListId);
+          await prefs.backing.setString(
+            CuratedListService.listsStorageKey,
+            jsonEncode([row.toJson()]),
+          );
+          if (followed) {
+            await prefs.backing.setString(
+              CuratedListService.subscribedListsStorageKey,
+              jsonEncode([row.authorScopedId]),
+            );
+          }
+          final callbacks = <String>[];
+          final service = open(authA, clientA, onUnsubscribed: callbacks.add);
+          prefs.rejectDefaultFlag = true;
+          expect(await service.deleteOwnedList(row.authorScopedId), isFalse);
+          await prefs.backing.reload();
+          expect(
+            prefs.getBool(CuratedListService.defaultListDeletedStorageKey),
+            isNull,
+          );
+          expect(
+            prefs.getBool(
+              PrefsCuratedListStore.pendingDefaultDeletionKey(_ownerA),
+            ),
+            isTrue,
+          );
+          expect(open(authA, clientA).getDefaultList(), isNull);
+          final blocked = open(authA, clientA);
+          await blocked.initialize();
+          expect(blocked.isInitialized, isFalse);
+          expect(blocked.getDefaultList(), isNull);
+          prefs.rejectDefaultFlag = false;
+          final recovered = open(authA, clientA, onUnsubscribed: callbacks.add);
+          await recovered.initialize();
+          await prefs.backing.reload();
+          expect(recovered.isInitialized, isTrue);
+          expect(recovered.getDefaultList(), isNull);
+          expect(recovered.subscribedListIds, isEmpty);
+          expect(callbacks, followed ? [row.authorScopedId] : isEmpty);
+          expect(
+            prefs.getBool(CuratedListService.defaultListDeletedStorageKey),
+            isTrue,
+          );
+          expect(
+            prefs.containsKey(
+              PrefsCuratedListStore.pendingDefaultDeletionKey(_ownerA),
+            ),
+            isFalse,
+          );
+          expect(open(authA, clientA).getDefaultList(), isNull);
+        },
+      );
+    }
+
     test(
-      'rejected default flag recovers durable removal, followed=$followed',
+      'rejected deletion recovery marker leaves the durable row and follow',
       () async {
         final row = _row(_ownerA, id: CuratedListService.defaultListId);
         await prefs.backing.setString(
           CuratedListService.listsStorageKey,
           jsonEncode([row.toJson()]),
         );
-        if (followed) {
-          await prefs.backing.setString(
-            CuratedListService.subscribedListsStorageKey,
-            jsonEncode([row.authorScopedId]),
-          );
-        }
-        final callbacks = <String>[];
-        final service = open(authA, clientA, onUnsubscribed: callbacks.add);
-        prefs.rejectDefaultFlag = true;
+        await prefs.backing.setString(
+          CuratedListService.subscribedListsStorageKey,
+          jsonEncode([row.authorScopedId]),
+        );
+        final service = open(authA, clientA);
+        prefs.rejectDefaultRecovery = true;
         expect(await service.deleteOwnedList(row.authorScopedId), isFalse);
         await prefs.backing.reload();
+        expect(open(authA, clientA).getDefaultList(), row);
         expect(
-          prefs.getBool(CuratedListService.defaultListDeletedStorageKey),
-          isNull,
-        );
-        expect(
-          prefs.getBool(
-            PrefsCuratedListStore.pendingDefaultDeletionKey(_ownerA),
-          ),
-          isTrue,
-        );
-        expect(open(authA, clientA).getDefaultList(), isNull);
-        final blocked = open(authA, clientA);
-        await blocked.initialize();
-        expect(blocked.isInitialized, isFalse);
-        expect(blocked.getDefaultList(), isNull);
-        prefs.rejectDefaultFlag = false;
-        final recovered = open(authA, clientA, onUnsubscribed: callbacks.add);
-        await recovered.initialize();
-        await prefs.backing.reload();
-        expect(recovered.isInitialized, isTrue);
-        expect(recovered.getDefaultList(), isNull);
-        expect(recovered.subscribedListIds, isEmpty);
-        expect(callbacks, followed ? [row.authorScopedId] : isEmpty);
-        expect(
-          prefs.getBool(CuratedListService.defaultListDeletedStorageKey),
-          isTrue,
+          open(authA, clientA).subscribedListIds,
+          contains(row.authorScopedId),
         );
         expect(
           prefs.containsKey(
@@ -540,113 +585,82 @@ void main() {
           ),
           isFalse,
         );
-        expect(open(authA, clientA).getDefaultList(), isNull);
       },
     );
-  }
 
-  test(
-    'rejected deletion recovery marker leaves the durable row and follow',
-    () async {
-      final row = _row(_ownerA, id: CuratedListService.defaultListId);
-      await prefs.backing.setString(
-        CuratedListService.listsStorageKey,
-        jsonEncode([row.toJson()]),
-      );
-      await prefs.backing.setString(
-        CuratedListService.subscribedListsStorageKey,
-        jsonEncode([row.authorScopedId]),
-      );
-      final service = open(authA, clientA);
-      prefs.rejectDefaultRecovery = true;
-      expect(await service.deleteOwnedList(row.authorScopedId), isFalse);
-      await prefs.backing.reload();
-      expect(open(authA, clientA).getDefaultList(), row);
-      expect(
-        open(authA, clientA).subscribedListIds,
-        contains(row.authorScopedId),
-      );
-      expect(
-        prefs.containsKey(
-          PrefsCuratedListStore.pendingDefaultDeletionKey(_ownerA),
-        ),
-        isFalse,
-      );
-    },
-  );
+    test(
+      'refused marker cleanup cannot lose the eventual unsubscribe callback',
+      () async {
+        final row = _row(_ownerA, id: CuratedListService.defaultListId);
+        await prefs.backing.setString(
+          CuratedListService.listsStorageKey,
+          jsonEncode([row.toJson()]),
+        );
+        await prefs.backing.setString(
+          CuratedListService.subscribedListsStorageKey,
+          jsonEncode([row.authorScopedId]),
+        );
+        final callbacks = <String>[];
+        final service = open(authA, clientA, onUnsubscribed: callbacks.add);
+        prefs.rejectRecoveryRemoval = true;
+        expect(await service.deleteOwnedList(row.authorScopedId), isFalse);
+        await prefs.backing.reload();
+        expect(open(authA, clientA).getDefaultList(), isNull);
+        expect(
+          open(authA, clientA).subscribedListIds,
+          contains(row.authorScopedId),
+        );
+        expect(callbacks, isEmpty);
+        prefs.rejectRecoveryRemoval = false;
+        expect(await service.deleteOwnedList(row.authorScopedId), isTrue);
+        expect(open(authA, clientA).subscribedListIds, isEmpty);
+        expect(callbacks, [row.authorScopedId]);
+        expect(await service.deleteOwnedList(row.authorScopedId), isTrue);
+        expect(callbacks, [row.authorScopedId]);
+      },
+    );
 
-  test(
-    'refused marker cleanup cannot lose the eventual unsubscribe callback',
-    () async {
-      final row = _row(_ownerA, id: CuratedListService.defaultListId);
-      await prefs.backing.setString(
-        CuratedListService.listsStorageKey,
-        jsonEncode([row.toJson()]),
-      );
-      await prefs.backing.setString(
-        CuratedListService.subscribedListsStorageKey,
-        jsonEncode([row.authorScopedId]),
-      );
-      final callbacks = <String>[];
-      final service = open(authA, clientA, onUnsubscribed: callbacks.add);
-      prefs.rejectRecoveryRemoval = true;
-      expect(await service.deleteOwnedList(row.authorScopedId), isFalse);
-      await prefs.backing.reload();
-      expect(open(authA, clientA).getDefaultList(), isNull);
-      expect(
-        open(authA, clientA).subscribedListIds,
-        contains(row.authorScopedId),
-      );
-      expect(callbacks, isEmpty);
-      prefs.rejectRecoveryRemoval = false;
-      expect(await service.deleteOwnedList(row.authorScopedId), isTrue);
-      expect(open(authA, clientA).subscribedListIds, isEmpty);
-      expect(callbacks, [row.authorScopedId]);
-      expect(await service.deleteOwnedList(row.authorScopedId), isTrue);
-      expect(callbacks, [row.authorScopedId]);
-    },
-  );
-
-  test(
-    'provider disposal retires service while shared barrier survives',
-    () async {
-      await prefs.backing.setString(
-        CuratedListService.listsStorageKey,
-        jsonEncode([
-          _row(_ownerA, id: CuratedListService.defaultListId).toJson(),
-        ]),
-      );
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-          authServiceProvider.overrideWithValue(authA),
-          nostrServiceProvider.overrideWithValue(clientA),
-        ],
-      );
-      final subscription = container.listen(
-        curatedListsStateProvider,
-        (_, _) {},
-      );
-      await container.read(curatedListsStateProvider.future);
-      final service = container
-          .read(curatedListsStateProvider.notifier)
-          .service!;
-      final writes = container.read(curatedListCacheWriteCoordinatorProvider);
-      expect(service.isCurrentSession, isTrue);
-      subscription.close();
-      container.dispose();
-      expect(service.isCurrentSession, isFalse);
-      expect(
-        await service.updateList(
-          listId: CuratedListService.defaultListId,
-          name: 'Disposed metadata',
-        ),
-        isFalse,
-      );
-      expect(
-        CuratedListSessionCoordinator.forPreferences(prefs).writes,
-        same(writes),
-      );
-    },
-  );
+    test(
+      'provider disposal retires service while shared barrier survives',
+      () async {
+        await prefs.backing.setString(
+          CuratedListService.listsStorageKey,
+          jsonEncode([
+            _row(_ownerA, id: CuratedListService.defaultListId).toJson(),
+          ]),
+        );
+        final container = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            authServiceProvider.overrideWithValue(authA),
+            nostrServiceProvider.overrideWithValue(clientA),
+          ],
+        );
+        final subscription = container.listen(
+          curatedListsStateProvider,
+          (_, _) {},
+        );
+        await container.read(curatedListsStateProvider.future);
+        final service = container
+            .read(curatedListsStateProvider.notifier)
+            .service!;
+        final writes = container.read(curatedListCacheWriteCoordinatorProvider);
+        expect(service.isCurrentSession, isTrue);
+        subscription.close();
+        container.dispose();
+        expect(service.isCurrentSession, isFalse);
+        expect(
+          await service.updateList(
+            listId: CuratedListService.defaultListId,
+            name: 'Disposed metadata',
+          ),
+          isFalse,
+        );
+        expect(
+          CuratedListSessionCoordinator.forPreferences(prefs).writes,
+          same(writes),
+        );
+      },
+    );
+  });
 }
