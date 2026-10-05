@@ -47,7 +47,10 @@ jobs:
         run: flutter pub get
 
       - name: Build Flutter web preview
+        env:
+          DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS: ${{ vars.DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS }}
         run: |
+          python3 scripts/write_public_people_list_defines.py --output build/public_people_list_defines.json
           flutter build web \
             --release \
             --tree-shake-icons \
@@ -55,6 +58,7 @@ jobs:
             --pwa-strategy=none \
             --dart-define=BACKEND_URL=https://api.divine.video \
             --dart-define=ENVIRONMENT=production \
+            --dart-define-from-file=build/public_people_list_defines.json \
             --no-source-maps
 
       - name: Check web bundle file sizes
