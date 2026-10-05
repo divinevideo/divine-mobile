@@ -15,6 +15,7 @@ import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/npub_hex.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -243,6 +244,9 @@ Future<void> swapAccount({
       // cleanup that wipes the shared DM tables. See #7318.
       outgoingDmIngestQuiesced = await _quiesceOutgoingDmIngest(current);
       suspendedOutgoingLists = _suspendOutgoingCuratedLists(current);
+      await CuratedListSessionCoordinator.forPreferences(
+        deviceScope.sharedPreferences,
+      ).retireAndDrain();
       await signIn(container, account);
       await controller.swapTo(
         container,
@@ -305,6 +309,11 @@ Future<void> swapAccount({
           stackTrace: rollbackStack,
         );
       } finally {
+        // Never re-enable the retired service: old ACKs must remain invalid
+        // even when this failed switch restores the same account.
+        if (current != null && current.exists(curatedListsStateProvider)) {
+          current.invalidate(curatedListsStateProvider);
+        }
         container.dispose();
       }
       rethrow;
