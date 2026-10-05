@@ -227,11 +227,19 @@ final class AudioOverlayManager {
     /// The mix needs the file's audio track and duration, which load
     /// asynchronously; a local file resolves them long before the 0.2 s
     /// position sync first starts the overlay. The fade and boost are read
-    /// once they have, so the latest of overlapping calls wins.
+    /// once they have, so the latest of overlapping calls wins. They are kept
+    /// after that, so a later call — a volume dragged live — swaps the mix in
+    /// at once and never holds a fading track silent while it reloads.
     private func attachMix(to entry: AudioOverlayEntry) {
         guard let item = entry.player.currentItem else { return }
         guard !entry.fade.isNone || entry.boost > 1 else {
             item.audioMix = nil
+            return
+        }
+        // Once the track is loaded the mix is rebuilt at once, so a volume
+        // dragged live never waits on, or goes silent for, a reload.
+        if let inputs = entry.mixInputs, inputs.item === item {
+            setMix(on: item, for: entry, track: inputs.track, fileDuration: inputs.fileDuration)
             return
         }
         entry.isAwaitingMix = true
@@ -250,34 +258,45 @@ final class AudioOverlayManager {
                 )
                 return
             }
-            let boost = entry.boost
-            let ramps = self.fadeRamps(for: entry, fileDuration: fileDuration)
-            let parameters = AVMutableAudioMixInputParameters(track: track)
-            // The level the track holds between ramps. Only set where no ramp
-            // starts: AVFoundation rejects overlapping volume changes with an
-            // Objective-C exception, which aborts the process.
-            if boost > 1, ramps.first.map({ entry.trackStartSec + $0.startSec > 0 }) ?? true {
-                parameters.setVolume(boost, at: .zero)
-            }
-            for ramp in ramps {
-                parameters.setVolumeRamp(
-                    fromStartVolume: Float(ramp.fromGain),
-                    toEndVolume: Float(ramp.toGain),
-                    timeRange: CMTimeRange(
-                        start: self.itemTime(entry.trackStartSec + ramp.startSec),
-                        end: self.itemTime(entry.trackStartSec + ramp.endSec)
-                    )
+            entry.mixInputs = (item, track, fileDuration)
+            self.setMix(on: item, for: entry, track: track, fileDuration: fileDuration)
+        }
+    }
+
+    /// Puts `entry`'s current fade and boost on `item` as its audio mix.
+    private func setMix(
+        on item: AVPlayerItem,
+        for entry: AudioOverlayEntry,
+        track: AVAssetTrack,
+        fileDuration: CMTime?
+    ) {
+        let boost = entry.boost
+        let ramps = fadeRamps(for: entry, fileDuration: fileDuration)
+        let parameters = AVMutableAudioMixInputParameters(track: track)
+        // The level the track holds between ramps. Only set where no ramp
+        // starts: AVFoundation rejects overlapping volume changes with an
+        // Objective-C exception, which aborts the process.
+        if boost > 1, ramps.first.map({ entry.trackStartSec + $0.startSec > 0 }) ?? true {
+            parameters.setVolume(boost, at: .zero)
+        }
+        for ramp in ramps {
+            parameters.setVolumeRamp(
+                fromStartVolume: Float(ramp.fromGain),
+                toEndVolume: Float(ramp.toGain),
+                timeRange: CMTimeRange(
+                    start: itemTime(entry.trackStartSec + ramp.startSec),
+                    end: itemTime(entry.trackStartSec + ramp.endSec)
                 )
-            }
-            let mix = AVMutableAudioMix()
-            mix.inputParameters = [parameters]
-            item.audioMix = mix
-            self.log.debug(
-                "Audio overlay track \(entry.trackIndex): fade in \(entry.fade.fadeInSec)s, " +
-                    "fade out \(entry.fade.fadeOutSec)s, boost \(boost) attached",
-                name: self.logName
             )
         }
+        let mix = AVMutableAudioMix()
+        mix.inputParameters = [parameters]
+        item.audioMix = mix
+        log.debug(
+            "Audio overlay track \(entry.trackIndex): fade in \(entry.fade.fadeInSec)s, " +
+                "fade out \(entry.fade.fadeOutSec)s, boost \(boost) attached",
+            name: logName
+        )
     }
 
     /// The fade ramps of `entry`, in seconds from its trim start.
@@ -385,6 +404,8 @@ final class AudioOverlayEntry {
     let fade: AudioOverlayFade
     /// Whether the fade and boost's audio mix is still loading.
     var isAwaitingMix: Bool = false
+    /// What the mix is built from, once loaded for `item`; see `attachMix`.
+    var mixInputs: (item: AVPlayerItem, track: AVAssetTrack, fileDuration: CMTime?)?
 
     /// The part of [baseVolume] above 100 %, as a gain; 1 when there is none.
     var boost: Float { max(baseVolume, 1) }
