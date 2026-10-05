@@ -762,7 +762,7 @@ class ProfileRepository implements ProfileReader {
     return dao.watchStats(pubkey).map(_statsFromRowOrNull);
   }
 
-  /// Returns fresh cached stats with a known lifetime view total for [pubkey].
+  /// Returns fresh cached stats with a known lifetime loop total for [pubkey].
   ///
   /// Unlike [watchProfileStats], this read is for deciding whether the card
   /// should start a fetch. It reads the row without deleting it, then applies
@@ -819,12 +819,9 @@ class ProfileRepository implements ProfileReader {
 
     if (stats == null && engagement == null && social == null) return;
 
-    int? publicViewCount;
-    if (engagement != null) {
-      publicViewCount = engagement.totalViews > 0
-          ? engagement.totalViews
-          : engagement.totalLoops.round();
-    }
+    final lifetimeTotal = engagement == null
+        ? null
+        : await _lifetimeTotalToCache(pubkey, dao, engagement);
 
     // A zero field is not data. `/api/users/{pubkey}/social` answers 200 for
     // every pubkey, and funnelcake collapses ClickHouse failures into
@@ -854,8 +851,40 @@ class ProfileRepository implements ProfileReader {
       // (#8403).
       videoCount: (stats?.videoCount ?? 0) > 0 ? stats!.videoCount : null,
       totalLikes: engagement?.totalReactions,
-      totalViews: publicViewCount,
+      totalViews: lifetimeTotal,
     );
+  }
+
+  /// Returns the creator's lifetime loop total to cache from [engagement],
+  /// or `null` to keep whatever total the row already holds.
+  ///
+  /// The total is archived Vine loops plus Divine-era views. Funnelcake
+  /// reports the archive as `engagement.archived_loops`; while it does not
+  /// (an older backend, or one that could not compute it), the response
+  /// carries Divine-era views only, and is therefore not allowed to lower a
+  /// cached total, such as the archived total the classic Vine seed writes
+  /// into this row while that row stays cached.
+  ///
+  /// A null `total_views` means funnelcake could not complete the view lookup.
+  /// A reported zero is valid data. An incomplete response may raise a cached
+  /// total but never lower it. When the view lookup failed and the archive
+  /// adds nothing, the response knows no part of the total and caches nothing.
+  Future<int?> _lifetimeTotalToCache(
+    String pubkey,
+    ProfileStatsDao dao,
+    ProfileEngagementData engagement,
+  ) async {
+    final totalViews = engagement.totalViews;
+    final archivedLoops = engagement.archivedLoops;
+    if (totalViews == null && (archivedLoops ?? 0) == 0) return null;
+
+    final divineViews = totalViews ?? 0;
+    final total = (archivedLoops ?? 0) + divineViews;
+    final isIncomplete = archivedLoops == null || totalViews == null;
+    if (!isIncomplete) return total;
+
+    final cachedTotal = (await dao.getStatsRaw(pubkey))?.totalViews ?? 0;
+    return total < cachedTotal ? null : total;
   }
 
   /// Fetches a fresh profile and updates the local cache.

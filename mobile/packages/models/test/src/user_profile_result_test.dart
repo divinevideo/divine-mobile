@@ -1,5 +1,7 @@
 // ABOUTME: Tests for UserProfileResult sealed class and its sub-models.
 
+import 'dart:convert';
+
 import 'package:models/models.dart';
 import 'package:test/test.dart';
 
@@ -177,6 +179,126 @@ void main() {
       expect(data.totalReactions, equals(100));
       expect(data.totalLoops, equals(50.5));
       expect(data.totalViews, equals(200));
+    });
+
+    test('preserves a failed views lookup as null', () {
+      final data = ProfileEngagementData.fromJson(const {
+        'total_views': null,
+      });
+
+      expect(data.totalViews, isNull);
+    });
+
+    test('preserves a successful zero views lookup as zero', () {
+      final data = ProfileEngagementData.fromJson(const {
+        'total_views': 0,
+      });
+
+      expect(data.totalViews, 0);
+    });
+
+    group('archivedLoops', () {
+      test('parses the archived Vine loop sum', () {
+        final data = ProfileEngagementData.fromJson(const {
+          'total_views': 292000,
+          'archived_loops': 8130000000,
+        });
+
+        expect(data.archivedLoops, equals(8130000000));
+      });
+
+      test('keeps a reported zero as zero', () {
+        final data = ProfileEngagementData.fromJson(const {
+          'archived_loops': 0,
+        });
+
+        expect(data.archivedLoops, equals(0));
+      });
+
+      test('parses a whole-number double', () {
+        final data = ProfileEngagementData.fromJson(const {
+          'archived_loops': 12.0,
+        });
+
+        expect(data.archivedLoops, equals(12));
+      });
+
+      test('parses a numeric string', () {
+        final data = ProfileEngagementData.fromJson(const {
+          'archived_loops': '34',
+        });
+
+        expect(data.archivedLoops, equals(34));
+      });
+
+      test('is null when the field is absent', () {
+        final data = ProfileEngagementData.fromJson(const {
+          'total_views': 5,
+        });
+
+        expect(data.archivedLoops, isNull);
+      });
+
+      test('is null when the server could not compute it', () {
+        final data = ProfileEngagementData.fromJson(const {
+          'archived_loops': null,
+        });
+
+        expect(data.archivedLoops, isNull);
+      });
+
+      test('is null for a negative value', () {
+        final data = ProfileEngagementData.fromJson(const {
+          'archived_loops': -1,
+        });
+
+        expect(data.archivedLoops, isNull);
+      });
+
+      test('is null for an unparseable value', () {
+        final data = ProfileEngagementData.fromJson(const {
+          'archived_loops': 'lots',
+        });
+
+        expect(data.archivedLoops, isNull);
+      });
+
+      test('is null for a max-int sentinel', () {
+        // A u64 sentinel decodes to a double that clamps to the int64 max,
+        // which would overflow when added to Divine-era views.
+        final data = ProfileEngagementData.fromJson(
+          jsonDecode('{"archived_loops": 18446744073709551615}')
+              as Map<String, dynamic>,
+        );
+
+        expect(data.archivedLoops, isNull);
+      });
+
+      group('identity', () {
+        const withArchive = ProfileEngagementData(
+          totalReactions: 1,
+          totalLoops: 2,
+          totalViews: 3,
+          archivedLoops: 4,
+        );
+        const withoutArchive = ProfileEngagementData(
+          totalReactions: 1,
+          totalLoops: 2,
+          totalViews: 3,
+        );
+
+        test('participates in equality', () {
+          expect(withArchive, isNot(equals(withoutArchive)));
+        });
+
+        test('participates in hashCode', () {
+          expect(withArchive.hashCode, isNot(equals(withoutArchive.hashCode)));
+        });
+
+        test('appears in toString', () {
+          expect(withArchive.toString(), contains('archivedLoops: 4'));
+        });
+      });
     });
   });
 
