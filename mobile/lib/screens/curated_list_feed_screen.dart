@@ -621,18 +621,24 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     if (service == null || _isTogglingSubscription) {
       return;
     }
+    final openingOwner = ref.read(authServiceProvider).currentPublicKeyHex;
+    bool isSessionCurrent() =>
+        mounted &&
+        ref.read(authServiceProvider).currentPublicKeyHex == openingOwner &&
+        identical(
+          ref.read(curatedListsStateProvider.notifier).service,
+          service,
+        );
 
     setState(() {
       _isTogglingSubscription = true;
     });
 
     try {
-      if (service.isSubscribedToList(widget.listId)) {
-        await service.unsubscribeFromList(widget.listId);
-        Log.info(
-          'Unsubscribed from list: ${widget.listName}',
-          category: LogCategory.ui,
-        );
+      final wasSubscribed = service.isSubscribedToList(_cacheListId);
+      final bool didUpdate;
+      if (wasSubscribed) {
+        didUpdate = await service.unsubscribeFromList(_cacheListId);
       } else {
         // Prefer the relay-resolved record: the synthetic fallback has no
         // description or image, and whatever subscribes here is what the
@@ -648,25 +654,24 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
               createdAt: DateTime.now(),
               updatedAt: DateTime.now(),
             );
-        await service.subscribeToList(widget.listId, list);
-        Log.info(
-          'Subscribed to list: ${widget.listName}',
-          category: LogCategory.ui,
-        );
+        didUpdate = await service.subscribeToList(_cacheListId, list);
       }
+      if (!isSessionCurrent()) return;
+      if (!didUpdate) {
+        _showSubscriptionFailure();
+        return;
+      }
+      Log.info(
+        '${wasSubscribed ? 'Unsubscribed from' : 'Subscribed to'} list: '
+        '${widget.listName}',
+        category: LogCategory.ui,
+      );
 
       // Invalidate providers so the Lists tab updates
       ref.invalidate(curatedListsProvider);
     } catch (e) {
       Log.error('Failed to toggle subscription: $e', category: LogCategory.ui);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.discoverListsFailedToUpdateSubscription),
-            backgroundColor: VineTheme.likeRed,
-          ),
-        );
-      }
+      if (isSessionCurrent()) _showSubscriptionFailure();
     } finally {
       if (mounted) {
         setState(() {
@@ -674,6 +679,15 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
         });
       }
     }
+  }
+
+  void _showSubscriptionFailure() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(context.l10n.discoverListsFailedToUpdateSubscription),
+        backgroundColor: VineTheme.likeRed,
+      ),
+    );
   }
 }
 
