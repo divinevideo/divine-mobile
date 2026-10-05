@@ -352,13 +352,18 @@ class CuratedListService extends ChangeNotifier {
   /// Unreadable accepted evidence must be repaired before changing lists.
   bool get recoveryNeedsRepair {
     final owner = _relayGateway.currentAuthenticatedPubkey();
-    return owner != null && _recovery.needsRepair(owner);
+    return _recovery.legacyNeedsRepair ||
+        (owner != null && _recovery.needsRepair(owner));
   }
 
   /// Preserves unreadable evidence and reports a typed initialization error.
   Future<void> prepareRecovery() async {
     final owner = _relayGateway.currentAuthenticatedPubkey();
-    if (owner != null) await _recovery.prepare(owner);
+    if (owner != null) {
+      await _recovery.prepare(owner);
+    } else {
+      _recovery.validateLegacy();
+    }
   }
 
   /// Generates a list ID that is unique within the cached lists.
@@ -1324,7 +1329,9 @@ class CuratedListService extends ChangeNotifier {
 
   void _loadLists() {
     final owner = _relayGateway.currentAuthenticatedPubkey();
-    final loaded = _cacheStore.loadLists();
+    final loaded = _recovery.legacyNeedsRepair
+        ? const <CuratedList>[]
+        : _cacheStore.loadLists();
     _cacheStore.listsLoaded(loaded);
     _lists
       ..clear()
