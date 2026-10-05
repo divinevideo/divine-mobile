@@ -128,7 +128,7 @@ void main() {
       test('stays ambient across an await and inside a parallel leg', () async {
         await timeline.run(() async {
           final leg = Future<PublishTimeline?>(() => PublishTimeline.current);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           expect(PublishTimeline.current, same(timeline));
           expect(await leg, same(timeline));
         });

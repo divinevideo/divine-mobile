@@ -27,7 +27,6 @@ test/screens/settings/settings_taxonomy_test.dart	26
 test/screens/video_detail_screen_test.dart	14
 test/services/account_deletion_service_test.dart	10
 test/services/auth_service_data_cleanup_ordering_test.dart	12
-test/services/auth_service_multi_account_test.dart	19
 test/services/auth_service_nip07_test.dart	15
 test/services/auth_service_oauth_local_signing_test.dart	12
 test/services/auth_service_oauth_recovery_test.dart	17

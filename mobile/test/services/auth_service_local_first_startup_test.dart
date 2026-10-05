@@ -302,15 +302,14 @@ void main() {
 
       final pubkey = arrangeExpiredSessionWithMatchingLocalKeys();
 
-      // refreshSession stays slow enough for local-first auth to win.
+      final refresh = Completer<KeycastSession?>();
+      // Hold refresh until local-first auth has been asserted.
       when(
         () => mockOAuthClient.refreshSession(
           userPubkey: any(named: 'userPubkey'),
         ),
       ).thenAnswer(
-        (_) => Future<KeycastSession?>.delayed(
-          const Duration(milliseconds: 20),
-        ),
+        (_) => refresh.future,
       );
 
       final authService = createAuthService();
@@ -336,6 +335,9 @@ void main() {
           // Ignore background errors
         },
       );
+      refresh.complete(null);
+      await pumpEventQueue();
+      expect(authService.isRpcUpgradeInProgress, isFalse);
     });
 
     test('stale background RPC refresh does not resurrect the previous '
@@ -628,7 +630,7 @@ void main() {
         expect(authService.authState, equals(AuthState.unauthenticated));
 
         final retry = authService.tryRefreshExpiredSession();
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         verify(
           () => mockOAuthClient.refreshSession(

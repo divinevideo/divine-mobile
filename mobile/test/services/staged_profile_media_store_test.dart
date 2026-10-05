@@ -92,7 +92,7 @@ void main() {
       );
 
       expect(store.load(pubkeyA), isNull);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       expect(preferences.getKeys(), isEmpty);
     });
 

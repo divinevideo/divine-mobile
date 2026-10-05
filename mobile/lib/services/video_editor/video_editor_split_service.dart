@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:clock/clock.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -77,7 +78,7 @@ class VideoEditorSplitService {
       category: .video,
     );
 
-    final timestampMs = DateTime.now().microsecondsSinceEpoch;
+    final timestampMs = clock.now().microsecondsSinceEpoch;
 
     // Start half: source start → split point. [duration] caps the visible end
     // at the split, and it drops the source's outgoing transition — only the

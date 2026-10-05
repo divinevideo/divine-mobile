@@ -218,7 +218,7 @@ void main() {
 
       const live = 'pve-stream-live-unique';
       controller.add(entry(NativeLogLevel.warning, live));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       expect(latestWithMessage(live), isNotNull);
       expect(reporter.breadcrumbs.single, contains(live));
 
@@ -226,7 +226,7 @@ void main() {
 
       const afterStop = 'pve-stream-afterstop-unique';
       controller.add(entry(NativeLogLevel.warning, afterStop));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       expect(latestWithMessage(afterStop), isNull);
       expect(reporter.breadcrumbs, hasLength(1));
 

@@ -106,23 +106,7 @@ void main() {
     await CacheSync.init(dao: _NoOpCacheDao());
     testKeyContainer = SecureKeyContainer.fromNsec(_testNsec);
 
-    // Default stubs
-    when(() => mockKeyStorage.initialize()).thenAnswer((_) async {});
     when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => false);
-    when(() => mockKeyStorage.clearCache()).thenReturn(null);
-    when(() => mockKeyStorage.dispose()).thenReturn(null);
-    when(() => mockKeyStorage.deleteKeys()).thenAnswer((_) async {});
-    when(
-      () => mockKeyStorage.deleteIdentityKeyContainer(
-        any(),
-      ),
-    ).thenAnswer((_) async {});
-    when(
-      () => mockKeyStorage.generateAndStoreKeys(),
-    ).thenAnswer((_) async => testKeyContainer);
-    when(
-      () => mockKeyStorage.storeIdentityKeyContainer(any(), any()),
-    ).thenAnswer((_) async {});
     when(
       () => mockKeyStorage.getIdentityKeyContainer(
         any(),
@@ -130,43 +114,11 @@ void main() {
     ).thenAnswer((_) async => testKeyContainer);
     when(() => mockKeyStorage.getKeyContainer()).thenAnswer((_) async => null);
     when(
-      () => mockKeyStorage.switchToIdentity(
-        any(),
-      ),
-    ).thenAnswer((_) async => true);
-
-    when(
       () => mockCleanupService.shouldClearDataForUser(any()),
     ).thenReturn(false);
     when(
-      () => mockCleanupService.clearUserSpecificData(
-        reason: any(named: 'reason'),
-        isIdentityChange: any(named: 'isIdentityChange'),
-        userPubkey: any(named: 'userPubkey'),
-        deleteUserData: any(named: 'deleteUserData'),
-      ),
-    ).thenAnswer((_) async => 0);
-    when(
-      () => mockCleanupService.claimLegacyRows(any()),
-    ).thenAnswer((_) async {});
-    when(
-      () => mockCleanupService.markOwnerScopedLegacyDataForUser(any()),
-    ).thenAnswer((_) async {});
-
-    // Default flutter secure storage stubs
-    when(
       () => mockSecureStorage.read(key: any(named: 'key')),
     ).thenAnswer((_) async => null);
-    when(
-      () => mockSecureStorage.write(
-        key: any(named: 'key'),
-        value: any(named: 'value'),
-      ),
-    ).thenAnswer((_) async {});
-    when(
-      () => mockSecureStorage.delete(key: any(named: 'key')),
-    ).thenAnswer((_) async {});
-    when(() => mockOAuthClient.logout()).thenAnswer((_) async {});
 
     authService = AuthService(
       backgroundActivityManager: BackgroundActivityManager(),
@@ -176,11 +128,79 @@ void main() {
     );
   });
 
+  void stubKeyInitialization() {
+    when(() => mockKeyStorage.initialize()).thenAnswer((_) async {});
+  }
+
+  void stubIdentityCreation() {
+    when(
+      () => mockKeyStorage.generateAndStoreKeys(),
+    ).thenAnswer((_) async => testKeyContainer);
+  }
+
+  void stubIdentitySwitching() {
+    when(
+      () => mockKeyStorage.switchToIdentity(
+        any(),
+      ),
+    ).thenAnswer((_) async => true);
+  }
+
+  void stubAccountCleanup() {
+    when(() => mockKeyStorage.deleteKeys()).thenAnswer((_) async {});
+    when(
+      () => mockKeyStorage.deleteIdentityKeyContainer(
+        any(),
+      ),
+    ).thenAnswer((_) async {});
+    when(
+      () => mockCleanupService.clearUserSpecificData(
+        reason: any(named: 'reason'),
+        isIdentityChange: any(named: 'isIdentityChange'),
+        userPubkey: any(named: 'userPubkey'),
+        deleteUserData: any(named: 'deleteUserData'),
+      ),
+    ).thenAnswer((_) async => 0);
+    when(
+      () => mockCleanupService.markOwnerScopedLegacyDataForUser(any()),
+    ).thenAnswer((_) async {});
+  }
+
+  void stubSessionPersistence() {
+    when(
+      () => mockKeyStorage.storeIdentityKeyContainer(any(), any()),
+    ).thenAnswer((_) async {});
+
+    when(
+      () => mockCleanupService.claimLegacyRows(any()),
+    ).thenAnswer((_) async {});
+    when(
+      () => mockSecureStorage.write(
+        key: any(named: 'key'),
+        value: any(named: 'value'),
+      ),
+    ).thenAnswer((_) async {});
+    when(
+      () => mockSecureStorage.delete(key: any(named: 'key')),
+    ).thenAnswer((_) async {});
+  }
+
+  void stubSignerLogout() {
+    when(() => mockOAuthClient.logout()).thenAnswer((_) async {});
+  }
+
   tearDown(() async {
     await authService.dispose();
   });
 
   group('initialize', () {
+    setUp(() {
+      stubKeyInitialization();
+      stubIdentitySwitching();
+      stubAccountCleanup();
+      stubSessionPersistence();
+    });
+
     test('fresh install with no auth source stays unauthenticated', () async {
       SharedPreferences.setMockInitialValues({});
 
@@ -514,6 +534,8 @@ void main() {
       expect(migrated, hasLength(1));
 
       // Simulate removing the account (sets key to "[]")
+      when(() => mockSecureStorage.delete(key: any(named: 'key')))
+          .thenAnswer((_) async {});
       await authService.removeKnownAccount(testKeyContainer.publicKeyHex);
 
       // Subsequent call should NOT re-migrate
@@ -541,6 +563,12 @@ void main() {
   });
 
   group('_addToKnownAccounts (via _setupUserSession)', () {
+    setUp(() {
+      stubIdentityCreation();
+      stubAccountCleanup();
+      stubSessionPersistence();
+    });
+
     test('adds account to known accounts after createNewIdentity', () async {
       await _ignoringDiscoveryErrors(authService.createNewIdentity);
 
@@ -564,22 +592,32 @@ void main() {
     test('updates lastUsedAt when re-adding existing account', () async {
       await _ignoringDiscoveryErrors(authService.createNewIdentity);
       final firstAccounts = await authService.getKnownAccounts();
-      final firstUsedAt = firstAccounts[0].lastUsedAt;
-
-      // Small delay to ensure timestamp changes
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+      final firstUsedAt = DateTime.utc(2000);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        kKnownAccountsKey,
+        jsonEncode([
+          firstAccounts.single.copyWith(lastUsedAt: firstUsedAt).toJson(),
+        ]),
+      );
       await _ignoringDiscoveryErrors(authService.createNewIdentity);
 
       final secondAccounts = await authService.getKnownAccounts();
       expect(secondAccounts, hasLength(1));
       expect(
         secondAccounts[0].lastUsedAt.millisecondsSinceEpoch,
-        greaterThanOrEqualTo(firstUsedAt.millisecondsSinceEpoch),
+        greaterThan(firstUsedAt.millisecondsSinceEpoch),
       );
     });
   });
 
   group('createAnonymousAccount', () {
+    setUp(() {
+      stubIdentityCreation();
+      stubAccountCleanup();
+      stubSessionPersistence();
+    });
+
     test('deletes existing keys before creating new identity', () async {
       await _ignoringDiscoveryErrors(authService.createAnonymousAccount);
 
@@ -624,6 +662,13 @@ void main() {
   });
 
   group('_archiveSignerInfo (via signOut)', () {
+    setUp(() {
+      stubIdentityCreation();
+      stubAccountCleanup();
+      stubSessionPersistence();
+      stubSignerLogout();
+    });
+
     setUp(() async {
       // Create an authenticated session first
       await _ignoringDiscoveryErrors(authService.createNewIdentity);
@@ -796,6 +841,12 @@ void main() {
   });
 
   group('archiveCurrentSignerInfo', () {
+    setUp(() {
+      stubIdentityCreation();
+      stubAccountCleanup();
+      stubSessionPersistence();
+    });
+
     setUp(() async {
       await _ignoringDiscoveryErrors(authService.createNewIdentity);
     });
@@ -855,6 +906,12 @@ void main() {
   });
 
   group('restoreSignerInfoForCurrentAccount', () {
+    setUp(() {
+      stubIdentityCreation();
+      stubAccountCleanup();
+      stubSessionPersistence();
+    });
+
     setUp(() async {
       await _ignoringDiscoveryErrors(authService.createNewIdentity);
     });
@@ -878,6 +935,12 @@ void main() {
   });
 
   group('_restoreSignerInfo (via signInForAccount)', () {
+    setUp(() {
+      stubIdentitySwitching();
+      stubAccountCleanup();
+      stubSessionPersistence();
+    });
+
     test('restores Amber info for amber auth source', () async {
       final pubkeyHex = testKeyContainer.publicKeyHex;
 
@@ -1188,6 +1251,12 @@ void main() {
   });
 
   group('signInForAccount', () {
+    setUp(() {
+      stubIdentitySwitching();
+      stubAccountCleanup();
+      stubSessionPersistence();
+    });
+
     test('signs in with automatic source using stored identity keys', () async {
       final pubkeyHex = testKeyContainer.publicKeyHex;
 
@@ -1477,6 +1546,14 @@ void main() {
   });
 
   group('round-trip: archive then restore', () {
+    setUp(() {
+      stubIdentityCreation();
+      stubAccountCleanup();
+      stubIdentitySwitching();
+      stubSessionPersistence();
+      stubSignerLogout();
+    });
+
     test('Amber info survives archive-then-restore cycle', () async {
       final pubkeyHex = testKeyContainer.publicKeyHex;
 
@@ -1617,6 +1694,13 @@ void main() {
   // ---------------------------------------------------------------------------
 
   group('initialize (divineOAuth): divergence tiebreaker', () {
+    setUp(() {
+      stubKeyInitialization();
+      stubIdentitySwitching();
+      stubAccountCleanup();
+      stubSessionPersistence();
+    });
+
     late SecureKeyContainer localKeyContainer;
 
     setUp(() {
@@ -1845,6 +1929,15 @@ void main() {
   // ---------------------------------------------------------------------------
 
   group('initialize: restores last-used account (not primary key)', () {
+    setUp(() {
+      stubKeyInitialization();
+      stubIdentitySwitching();
+      stubAccountCleanup();
+      stubIdentityCreation();
+      stubSessionPersistence();
+      stubSignerLogout();
+    });
+
     late SecureKeyContainer accountBContainer;
 
     setUp(() {
@@ -2700,6 +2793,13 @@ void main() {
   // ---------------------------------------------------------------------------
 
   group('session recovery anchor', () {
+    setUp(() {
+      stubIdentityCreation();
+      stubAccountCleanup();
+      stubSessionPersistence();
+      stubSignerLogout();
+    });
+
     test(
       'signOut records the signed-in npub as the session recovery anchor',
       () async {
@@ -2799,6 +2899,13 @@ void main() {
   // ---------------------------------------------------------------------------
 
   group('initialize (divineOAuth): cross-account cold-start restore guard', () {
+    setUp(() {
+      stubKeyInitialization();
+      stubIdentitySwitching();
+      stubAccountCleanup();
+      stubSessionPersistence();
+    });
+
     late SecureKeyContainer accountA;
     late SecureKeyContainer accountB;
 

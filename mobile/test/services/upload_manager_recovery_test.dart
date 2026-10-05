@@ -294,9 +294,7 @@ void main() {
     test('onAppResumed does not re-drive failed uploads', () async {
       final upload = seedUpload(status: UploadStatus.failed);
 
-      uploadManager.onAppResumed();
-      // Give the sweep a chance to run; a failed upload must be skipped.
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await uploadManager.recoverInterruptedUploads();
 
       verifyNever(
         () => mockBlossomService.uploadVideoWithResume(
@@ -389,7 +387,7 @@ void main() {
         timeout: const Duration(seconds: 2),
         checkInterval: const Duration(milliseconds: 20),
       );
-      await Future<void>.delayed(const Duration(milliseconds: 20));
+      await pumpEventQueue();
       expect(uploadCallCount, equals(1));
 
       blockGate.complete();

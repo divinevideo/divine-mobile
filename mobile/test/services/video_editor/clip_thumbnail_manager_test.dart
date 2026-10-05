@@ -340,8 +340,11 @@ void main() {
         // the seeded target still points at the source video until render
         // completes. Borrowed files must survive stale source cleanup;
         // files nobody borrowed are deleted.
+        final removed = unborrowedThumbnail.parent
+            .watch(events: FileSystemEvent.delete)
+            .firstWhere((event) => event.path == unborrowedThumbnail.path);
         manager.sync(clips: [targetClip], devicePixelRatio: 1);
-        await Future<void>.delayed(Duration.zero);
+        await removed;
 
         expect(borrowedThumbnail.existsSync(), isTrue);
         expect(unborrowedThumbnail.existsSync(), isFalse);

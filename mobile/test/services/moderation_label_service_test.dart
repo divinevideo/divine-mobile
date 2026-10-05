@@ -1120,7 +1120,7 @@ void main() {
 
         final firstSubscribe = service.subscribeToLabeler(labeler);
         final secondSubscribe = service.subscribeToLabeler(labeler);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         verify(
           () => mockNostrClient.queryEventsDetailed(
@@ -1651,7 +1651,7 @@ void main() {
         ).thenAnswer((_) => inFlight.future);
 
         final pending = service.subscribeToLabeler(labeler);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         service.dispose();
 

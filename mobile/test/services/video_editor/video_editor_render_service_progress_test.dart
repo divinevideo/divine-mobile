@@ -173,7 +173,7 @@ class _RecordingCrashReporter implements CrashReporter {
   }
 }
 
-Future<void> _flushStreamEvents() => Future<void>.delayed(Duration.zero);
+Future<void> _flushStreamEvents() => pumpEventQueue();
 
 DivineVideoClip _createClip(int index) {
   return DivineVideoClip(

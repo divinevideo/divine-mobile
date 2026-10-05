@@ -15,11 +15,11 @@ import 'package:openvine/services/video_event_service.dart';
 import 'package:path/path.dart' as p;
 
 /// Mock NostrService that tracks event delivery order
-class MockNostrServiceWithDelay implements NostrClient {
+class MockNostrServiceWithHeldEose implements NostrClient {
   final StreamController<Event> _eventController =
       StreamController<Event>.broadcast();
   final List<String> _eventDeliveryOrder = []; // Track when events arrive
-  final List<Timer> _pendingTimers = [];
+  final List<void Function()> _pendingEose = [];
   final bool _isInitialized = true;
   bool _eoseCalled = false;
 
@@ -44,21 +44,22 @@ class MockNostrServiceWithDelay implements NostrClient {
     bool closeOnEose = false,
     bool handleDeletionRequests = true,
   }) {
-    // Simulate relay delay: call onEose after 100ms. Tracked as a cancellable
-    // Timer so dispose() stops it firing onEose on a torn-down service.
-    if (onEose != null) {
-      _pendingTimers.add(
-        Timer(const Duration(milliseconds: 100), () {
-          _eoseCalled = true;
-          onEose();
-        }),
-      );
-    }
+    // The test releases EOSE after observing cache delivery.
+    if (onEose != null) _pendingEose.add(onEose);
 
     return _eventController.stream;
   }
 
-  /// Emit event from "relay" (simulating network delay)
+  void completeEose() {
+    final callbacks = List<void Function()>.of(_pendingEose);
+    _pendingEose.clear();
+    for (final callback in callbacks) {
+      _eoseCalled = true;
+      callback();
+    }
+  }
+
+  /// Deliver a controlled relay event.
   void emitRelayEvent(Event event) {
     _eventDeliveryOrder.add('relay:${event.id}');
     _eventController.add(event);
@@ -71,10 +72,7 @@ class MockNostrServiceWithDelay implements NostrClient {
 
   @override
   Future<void> dispose() async {
-    for (final timer in _pendingTimers) {
-      timer.cancel();
-    }
-    _pendingTimers.clear();
+    _pendingEose.clear();
     await _eventController.close();
   }
 
@@ -413,7 +411,7 @@ void main() {
   group('Cache-First Integration with VideoEventService', () {
     late AppDatabase db;
     late EventRouter eventRouter;
-    late MockNostrServiceWithDelay mockNostrService;
+    late MockNostrServiceWithHeldEose mockNostrService;
     late VideoEventService videoEventService;
     late String testDbPath;
 
@@ -427,7 +425,7 @@ void main() {
         db,
         config: const EventRouterConfig(autoStart: false),
       );
-      mockNostrService = MockNostrServiceWithDelay();
+      mockNostrService = MockNostrServiceWithHeldEose();
       videoEventService = VideoEventService(
         mockNostrService,
         crashReporter: const SilentCrashReporter(),
@@ -485,8 +483,8 @@ void main() {
         limit: 100,
       );
 
-      // Give cached events time to arrive (they should be instant)
-      await Future.delayed(const Duration(milliseconds: 50));
+      // Settle cached event delivery before releasing EOSE.
+      await pumpEventQueue();
 
       // Cached events should already be available
       expect(receivedEvents.length, 2);
@@ -495,11 +493,10 @@ void main() {
         containsAll([toHex64('cached1'), toHex64('cached2')]),
       );
 
-      // But EOSE should NOT have been called yet (100ms delay)
+      // EOSE remains held until cached delivery has been observed.
       expect(mockNostrService.eoseCalled, false);
 
-      // Wait for EOSE
-      await Future.delayed(const Duration(milliseconds: 100));
+      mockNostrService.completeEose();
       expect(mockNostrService.eoseCalled, true);
     });
 
@@ -519,7 +516,7 @@ void main() {
       );
 
       // Wait for cached events to load
-      await Future.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
 
       // Now emit SAME event from relay (should be deduplicated)
       mockNostrService.emitRelayEvent(cachedEvent);
@@ -533,7 +530,7 @@ void main() {
       mockNostrService.emitRelayEvent(relayOnlyEvent);
 
       // Wait for relay events to process
-      await Future.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
 
       final allEvents = videoEventService.getVideos(SubscriptionType.discovery);
 
@@ -575,7 +572,7 @@ void main() {
         limit: 100,
       );
 
-      await Future.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
 
       final events = videoEventService.getVideos(SubscriptionType.homeFeed);
 
@@ -608,7 +605,7 @@ void main() {
         limit: 100,
       );
 
-      await Future.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
 
       final events = videoEventService.getVideos(SubscriptionType.hashtag);
 
@@ -625,7 +622,7 @@ void main() {
       );
 
       // Should have zero cached events
-      await Future.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
       expect(videoEventService.getVideos(SubscriptionType.discovery).length, 0);
 
       // Now emit relay event
@@ -636,7 +633,7 @@ void main() {
       );
       mockNostrService.emitRelayEvent(relayEvent);
 
-      await Future.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
 
       // Relay event should be received normally
       final events = videoEventService.getVideos(SubscriptionType.discovery);

@@ -377,7 +377,7 @@ void main() {
       );
       // Let that sync run up to (and suspend in) the seek await, so it is past
       // the point where it reads the pending-seek flag.
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       // A scrub lands while the sync is in flight: dropped, but remembered.
       await preview.syncTo(

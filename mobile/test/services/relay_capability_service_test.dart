@@ -1,6 +1,7 @@
 // ABOUTME: Test for RelayCapabilityService - validates NIP-11 relay information fetching and parsing
 // ABOUTME: Covers divine_extensions detection for sorted query support
 
+import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
@@ -291,42 +292,45 @@ void main() {
       });
 
       test('respects cache TTL and refetches after expiration', () async {
-        final shortTtlService = RelayCapabilityService(
-          httpClient: mockHttpClient,
-          cacheTtl: const Duration(milliseconds: 100),
-        );
+        var now = DateTime.utc(2026);
+        await withClock(Clock(() => now), () async {
+          final shortTtlService = RelayCapabilityService(
+            httpClient: mockHttpClient,
+            cacheTtl: const Duration(milliseconds: 100),
+          );
 
-        const nip11Response = '{"name": "Test Relay"}';
+          const nip11Response = '{"name": "Test Relay"}';
 
-        when(
-          () => mockHttpClient.get(
-            Uri.parse('https://staging-relay.divine.video'),
-            headers: {'Accept': 'application/nostr+json'},
-          ),
-        ).thenAnswer((_) async => http.Response(nip11Response, 200));
+          when(
+            () => mockHttpClient.get(
+              Uri.parse('https://staging-relay.divine.video'),
+              headers: {'Accept': 'application/nostr+json'},
+            ),
+          ).thenAnswer((_) async => http.Response(nip11Response, 200));
 
-        // First call
-        await shortTtlService.getRelayCapabilities(
-          'wss://staging-relay.divine.video',
-        );
+          // First call
+          await shortTtlService.getRelayCapabilities(
+            'wss://staging-relay.divine.video',
+          );
 
-        // Wait for cache to expire
-        await Future.delayed(const Duration(milliseconds: 150));
+          // Wait for cache to expire
+          now = now.add(const Duration(milliseconds: 101));
 
-        // Second call after expiration
-        await shortTtlService.getRelayCapabilities(
-          'wss://staging-relay.divine.video',
-        );
+          // Second call after expiration
+          await shortTtlService.getRelayCapabilities(
+            'wss://staging-relay.divine.video',
+          );
 
-        // Should fetch twice
-        verify(
-          () => mockHttpClient.get(
-            Uri.parse('https://staging-relay.divine.video'),
-            headers: {'Accept': 'application/nostr+json'},
-          ),
-        ).called(2);
+          // Should fetch twice
+          verify(
+            () => mockHttpClient.get(
+              Uri.parse('https://staging-relay.divine.video'),
+              headers: {'Accept': 'application/nostr+json'},
+            ),
+          ).called(2);
 
-        shortTtlService.dispose();
+          shortTtlService.dispose();
+        });
       });
 
       test('clearCache removes all cached capabilities', () async {

@@ -388,7 +388,7 @@ void main() {
       addTearDown(sub.cancel);
 
       await svc.isApprovedMinorDmRecipient(modHex);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(fired, hasLength(1));
     });
@@ -407,7 +407,7 @@ void main() {
 
         // matched == the pin-trusted default (approved), so no observable flip.
         await svc.isApprovedMinorDmRecipient(modHex);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(fired, isEmpty);
       },

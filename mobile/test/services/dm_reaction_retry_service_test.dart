@@ -196,7 +196,7 @@ void main() {
       await service.initialize();
       foregroundController.add(true);
       // Let the async sweep run.
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       verify(
         () => repository.retry(
@@ -381,7 +381,7 @@ void main() {
         final service = buildService();
         final first = service.sweep();
         // Let the first sweep reach the awaiting retry() call.
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         // Second sweep sees _isSweeping and returns immediately.
         await service.sweep();
 
@@ -409,7 +409,7 @@ void main() {
       );
       await service.initialize();
       triggerController.add(null);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       verify(
         () => repository.retry(

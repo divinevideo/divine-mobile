@@ -6,6 +6,7 @@ import 'dart:async';
 
 import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
@@ -67,18 +68,6 @@ void main() {
         queuedAt: DateTime.utc(2026, 7, 13),
       ),
     );
-  }
-
-  // Poll a real (short-backoff) service until [cond] holds, so timer- and
-  // watch-driven tests prove work happens on its own without a second trigger.
-  Future<void> pumpUntil(
-    Future<bool> Function() cond, {
-    Duration timeout = const Duration(seconds: 2),
-  }) async {
-    final deadline = DateTime.now().add(timeout);
-    while (!await cond() && DateTime.now().isBefore(deadline)) {
-      await Future<void>.delayed(const Duration(milliseconds: 5));
-    }
   }
 
   setUp(() {
@@ -275,7 +264,7 @@ void main() {
       clearInteractions(repository);
 
       foreground.add(true);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       verify(
         () => repository.drivePendingSave(
@@ -299,7 +288,7 @@ void main() {
       clearInteractions(repository);
 
       retryTrigger.add(null);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       verify(
         () => repository.drivePendingSave(
@@ -323,7 +312,7 @@ void main() {
       clearInteractions(repository);
 
       foreground.add(false);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       verifyNever(
         () => repository.drivePendingSave(
@@ -360,7 +349,7 @@ void main() {
 
       foreground.add(true);
       retryTrigger.add(null);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       verifyNever(
         () => repository.drivePendingSave(
@@ -376,8 +365,13 @@ void main() {
       'or arm a timer',
       () async {
         await seed();
-        final driveStarted = Completer<void>();
-        final releaseDrive = Completer<void>();
+        final fake = FakeAsync();
+        late Completer<void> driveStarted;
+        late Completer<void> releaseDrive;
+        fake.run((_) {
+          driveStarted = Completer<void>();
+          releaseDrive = Completer<void>();
+        });
         var driveCalls = 0;
         when(
           () => repository.drivePendingSave(
@@ -391,9 +385,7 @@ void main() {
           return PendingSaveDriveOutcome.retryableFailure;
         });
 
-        // Real clock + tiny backoff: were the disposal guard missing, a retry
-        // timer would arm and fire within the test rather than 2s later, so the
-        // final assertion can actually catch the regression.
+        // Capture retry timers in virtual time while keeping database I/O real.
         final service = ProfileSaveRetryService(
           crashReporting: CrashReportingService(),
           profileRepository: repository,
@@ -408,11 +400,20 @@ void main() {
           ),
         );
 
-        final sweepFuture = service.sweep();
-        await driveStarted.future; // the publish is in flight
+        var sweepDone = false;
+        fake.run(
+          (_) => unawaited(service.sweep().then((_) => sweepDone = true)),
+        );
+        while (!driveStarted.isCompleted) {
+          fake.flushMicrotasks();
+          await pumpEventQueue();
+        }
         await service.dispose(); // teardown mid-drive
         releaseDrive.complete(); // the drive returns a retryable failure
-        await sweepFuture; // the sweep must bail without rescheduling
+        while (!sweepDone) {
+          fake.flushMicrotasks();
+          await pumpEventQueue();
+        }
 
         expect(driveCalls, 1, reason: 'no second drive after dispose');
         final entry = await dao.get(pubkey);
@@ -422,8 +423,10 @@ void main() {
           reason: 'incrementRetry never ran past disposal',
         );
 
-        // Give any (wrongly) armed retry timer time to fire — it must not.
-        await Future<void>.delayed(const Duration(milliseconds: 30));
+        // Advance any wrongly armed retry after the drive has returned.
+        fake.elapse(const Duration(milliseconds: 30));
+        await pumpEventQueue();
+        fake.flushMicrotasks();
         expect(driveCalls, 1, reason: 'no timer-driven retry after dispose');
       },
     );
@@ -474,6 +477,8 @@ void main() {
         // First attempt fails (relay pool not reconnected yet), the retry the
         // armed timer schedules confirms — with no further external signal.
         var calls = 0;
+        final firstDrive = Completer<void>();
+        final retryCleared = Completer<void>();
         when(
           () => repository.drivePendingSave(
             pubkey,
@@ -481,8 +486,12 @@ void main() {
           ),
         ).thenAnswer((_) async {
           calls++;
-          if (calls == 1) return PendingSaveDriveOutcome.retryableFailure;
+          if (calls == 1) {
+            firstDrive.complete();
+            return PendingSaveDriveOutcome.retryableFailure;
+          }
           await dao.clear(pubkey);
+          if (!retryCleared.isCompleted) retryCleared.complete();
           return PendingSaveDriveOutcome.confirmed;
         });
 
@@ -508,11 +517,11 @@ void main() {
 
         // A single offline→online recovery signal.
         retryTrigger.add(null);
-        await pumpUntil(() async => calls >= 1);
+        await firstDrive.future;
         expect(calls, 1, reason: 'the signal drives the first attempt');
 
         // No second signal — the armed timer must drive the retry that lands.
-        await pumpUntil(() async => calls >= 2);
+        await retryCleared.future;
         expect(
           calls,
           greaterThanOrEqualTo(2),
@@ -588,6 +597,7 @@ void main() {
       'a fresh enqueue re-drives an idle service with no foreground or '
       'connectivity signal',
       () async {
+        final slotCleared = Completer<void>();
         when(
           () => repository.drivePendingSave(
             pubkey,
@@ -595,6 +605,7 @@ void main() {
           ),
         ).thenAnswer((_) async {
           await dao.clear(pubkey);
+          if (!slotCleared.isCompleted) slotCleared.complete();
           return PendingSaveDriveOutcome.confirmed;
         });
 
@@ -620,7 +631,7 @@ void main() {
         // No foreground / connectivity event — just enqueue a save.
         await seed();
 
-        await pumpUntil(() async => (await dao.get(pubkey)) == null);
+        await slotCleared.future;
 
         verify(
           () => repository.drivePendingSave(

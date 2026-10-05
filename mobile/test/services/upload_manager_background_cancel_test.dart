@@ -181,7 +181,7 @@ void main() {
 Future<void> _pumpUntil(bool Function() predicate) async {
   for (var i = 0; i < 200; i++) {
     if (predicate()) return;
-    await Future<void>.delayed(Duration.zero);
+    await pumpEventQueue();
   }
   fail('Condition was not met in time');
 }

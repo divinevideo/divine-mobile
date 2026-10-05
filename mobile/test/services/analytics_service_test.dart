@@ -886,7 +886,7 @@ void main() {
           eventType: 'view_end',
           watchDuration: const Duration(seconds: 2),
         );
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         verifyNever(() => dao.enqueue(any()));
         verifyNever(
@@ -1138,7 +1138,7 @@ void main() {
         ),
         completes,
       );
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       verify(
         () => publisher.publishViewEvent(

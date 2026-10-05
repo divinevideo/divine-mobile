@@ -106,7 +106,7 @@ void main() {
       signer.capturedAuthUrlCallback!('https://bunker.example/denied');
       await launcherCalled.future;
       // Flush the callback's remaining microtasks (the Log.error branch).
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
     });
 
     test('never records the approval URL in support logs', () async {
@@ -122,7 +122,7 @@ void main() {
 
       signer.capturedAuthUrlCallback!(approvalUrl);
       await launcherCalled.future;
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       final messages = LogCaptureService()
           .getRecentLogs()
@@ -141,7 +141,7 @@ void main() {
       signer.capturedAuthUrlCallback!('https://bunker.example/unwired');
       // Flush the callback's async body — must complete without a platform
       // channel throw (the pre-port code hit url_launcher here).
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
     });
   });
 }

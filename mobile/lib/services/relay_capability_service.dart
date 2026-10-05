@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:clock/clock.dart';
 import 'package:http/http.dart' as http;
 import 'package:openvine/utils/relay_url_utils.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -205,7 +206,7 @@ class RelayCapabilityService {
       // Cache the result
       _cache[relayWsUrl] = _CachedCapability(
         capabilities,
-        DateTime.now().add(_cacheTtl),
+        clock.now().add(_cacheTtl),
       );
 
       if (capabilities.hasDivineExtensions) {
@@ -259,5 +260,5 @@ class _CachedCapability {
 
   _CachedCapability(this.capabilities, this.expiresAt);
 
-  bool get isExpired => DateTime.now().isAfter(expiresAt);
+  bool get isExpired => clock.now().isAfter(expiresAt);
 }

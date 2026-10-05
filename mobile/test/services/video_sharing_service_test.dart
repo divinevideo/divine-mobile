@@ -237,7 +237,7 @@ void main() {
       );
       // The recents update is now fire-and-forget (see #5391); drain the
       // event loop so the background insert completes before asserting.
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       final result = service.recentlySharedWith;
 
@@ -292,7 +292,7 @@ void main() {
 
       // The recents update is now fire-and-forget (see #5391); drain the
       // event loop so all background inserts complete before asserting.
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       final result = service.recentlySharedWith;
 
