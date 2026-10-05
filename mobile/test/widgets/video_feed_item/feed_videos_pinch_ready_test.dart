@@ -1,5 +1,5 @@
-// ABOUTME: Pinch-to-pin tests on a ready player, where the tap and double-tap
-// ABOUTME: recognizers exist and a pinch can be followed by a tap or a like.
+// ABOUTME: Pinch-to-pin and press-and-hold tests on a ready player, where the
+// ABOUTME: tap and double-tap recognizers exist and playback can be observed.
 
 import 'dart:async';
 
@@ -7,7 +7,8 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:comments_repository/comments_repository.dart';
 import 'package:divine_video_player/divine_video_player.dart'
     show DivineVideoPlayerController;
-import 'package:flutter/gestures.dart' show kDoubleTapTimeout;
+import 'package:flutter/gestures.dart'
+    show kDoubleTapTimeout, kLongPressTimeout;
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -34,6 +35,7 @@ import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/connection_status_service.dart';
 import 'package:openvine/services/seen_videos_service.dart';
 import 'package:openvine/services/video_moderation_status_service.dart';
+import 'package:openvine/widgets/video_feed_item/center_playback_control.dart';
 import 'package:openvine/widgets/video_feed_item/feed_immersive_chrome.dart';
 import 'package:openvine/widgets/video_feed_item/feed_videos.dart';
 import 'package:reposts_repository/reposts_repository.dart';
@@ -147,6 +149,22 @@ class _NativePlayerHarness {
     }
   }
 
+  /// Pushes a native player state with [status], as the platform does when
+  /// playback starts or stops.
+  Future<void> emitStatus(String status, {int playerId = 0}) async {
+    await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+      'divine_video_player/player_$playerId/events',
+      _codec.encodeSuccessEnvelope(<Object?, Object?>{
+        'status': status,
+        'videoWidth': 1280,
+        'videoHeight': 720,
+        'isFirstFrameRendered': true,
+      }),
+      (_) {},
+    );
+    await tester.pump();
+  }
+
   int countCalls(String method) =>
       methodCalls.where((call) => call == method).length;
 
@@ -184,9 +202,15 @@ VideoEvent _makeVideo() => VideoEvent(
 );
 
 class _Rig {
-  _Rig({required this.harness, required this.immersive, required this.likes});
+  _Rig({
+    required this.harness,
+    required this.immersive,
+    required this.likes,
+    required this.container,
+  });
 
   final _NativePlayerHarness harness;
+  final ProviderContainer container;
   final FeedImmersiveCubit immersive;
   final _MockLikesRepository likes;
 }
@@ -295,13 +319,35 @@ Future<_Rig> _pumpReadyFeed(WidgetTester tester) async {
     greaterThanOrEqualTo(1),
     reason: 'the video must be playing before a gesture can toggle playback',
   );
-  return _Rig(harness: harness, immersive: immersive, likes: likes);
+  return _Rig(
+    harness: harness,
+    immersive: immersive,
+    likes: likes,
+    container: container,
+  );
 }
 
 /// Unmounts the feed so its timers do not outlive the test.
 Future<void> _unmount(WidgetTester tester) async {
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pump();
+}
+
+/// The play button and toggles shown over a video the viewer paused.
+Finder get _pausedControls =>
+    find.byKey(const ValueKey('paused-playback-controls'));
+
+/// Pumps [duration] in short frames, asserting that no play or pause control
+/// is on screen in any of them — a flash between two checkpoints is the bug.
+Future<void> _expectNoPlaybackControlsFor(
+  WidgetTester tester,
+  Duration duration,
+) async {
+  const frame = Duration(milliseconds: 20);
+  for (var elapsed = Duration.zero; elapsed < duration; elapsed += frame) {
+    await tester.pump(frame);
+    expect(find.byType(CenterPlaybackControl), findsNothing);
+  }
 }
 
 /// Lets a tap resolve past the double-tap window and the chrome fade finish.
@@ -462,6 +508,145 @@ void main() {
         reason: 'the restore tap must not also pause the video',
       );
       expect(rig.harness.countCalls('play') - playsBefore, isZero);
+      await _unmount(tester);
+    });
+  });
+
+  group('press and hold on a ready player', () {
+    testWidgets('pauses a playing video and resumes it on release', (
+      tester,
+    ) async {
+      final rig = await _pumpReadyFeed(tester);
+      await rig.harness.emitStatus('playing');
+      final center = tester.getCenter(find.byType(InfiniteVideoFeed));
+      final playsBefore = rig.harness.countCalls('play');
+      final pausesBefore = rig.harness.countCalls('pause');
+
+      final gesture = await tester.startGesture(center, pointer: 1);
+      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+
+      expect(rig.immersive.state.isHolding, isTrue);
+      expect(rig.harness.countCalls('pause') - pausesBefore, equals(1));
+      expect(rig.harness.countCalls('play') - playsBefore, isZero);
+
+      await rig.harness.emitStatus('paused');
+      await gesture.up();
+      await tester.pump();
+
+      expect(rig.immersive.state.isHolding, isFalse);
+      expect(rig.harness.countCalls('play') - playsBefore, equals(1));
+      await _unmount(tester);
+    });
+
+    testWidgets('resumes the video when the hold is cancelled', (tester) async {
+      final rig = await _pumpReadyFeed(tester);
+      await rig.harness.emitStatus('playing');
+      final center = tester.getCenter(find.byType(InfiniteVideoFeed));
+      final playsBefore = rig.harness.countCalls('play');
+
+      final gesture = await tester.startGesture(center, pointer: 1);
+      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+      await rig.harness.emitStatus('paused');
+      await gesture.cancel();
+      await tester.pump();
+
+      expect(rig.immersive.state.isHolding, isFalse);
+      expect(rig.harness.countCalls('play') - playsBefore, equals(1));
+      await _unmount(tester);
+    });
+
+    testWidgets('leaves a video the viewer paused paused after release', (
+      tester,
+    ) async {
+      final rig = await _pumpReadyFeed(tester);
+      await rig.harness.emitStatus('paused');
+      final center = tester.getCenter(find.byType(InfiniteVideoFeed));
+      final playsBefore = rig.harness.countCalls('play');
+      final pausesBefore = rig.harness.countCalls('pause');
+
+      final gesture = await tester.startGesture(center, pointer: 1);
+      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+      expect(rig.immersive.state.isHolding, isTrue);
+      await gesture.up();
+      await tester.pump();
+
+      expect(rig.harness.countCalls('pause') - pausesBefore, isZero);
+      expect(rig.harness.countCalls('play') - playsBefore, isZero);
+      await _unmount(tester);
+    });
+
+    testWidgets('does not resume when the feed goes inactive mid-hold', (
+      tester,
+    ) async {
+      final rig = await _pumpReadyFeed(tester);
+      await rig.harness.emitStatus('playing');
+      final center = tester.getCenter(find.byType(InfiniteVideoFeed));
+      final playsBefore = rig.harness.countCalls('play');
+
+      final gesture = await tester.startGesture(center, pointer: 1);
+      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+      await rig.harness.emitStatus('paused');
+      // An incoming call or the app switcher backgrounds the app mid-hold.
+      rig.container.read(appForegroundProvider.notifier).setForeground(false);
+      await tester.pump();
+      await gesture.up();
+      await tester.pump();
+
+      expect(rig.immersive.state.isHolding, isFalse);
+      expect(
+        rig.harness.countCalls('play') - playsBefore,
+        isZero,
+        reason: 'a backgrounded feed must not start playing on release',
+      );
+      await _unmount(tester);
+    });
+
+    testWidgets('shows no playback controls while a hold pauses and resumes', (
+      tester,
+    ) async {
+      final rig = await _pumpReadyFeed(tester);
+      await rig.harness.emitStatus('playing');
+      final center = tester.getCenter(find.byType(InfiniteVideoFeed));
+
+      final gesture = await tester.startGesture(center, pointer: 1);
+      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+      await rig.harness.emitStatus('paused');
+      // The chrome is still fading out here, so a play button would show.
+      await _expectNoPlaybackControlsFor(tester, kFeedImmersiveFadeDuration);
+
+      await gesture.up();
+      // Released, but the player has not reported playing yet.
+      await _expectNoPlaybackControlsFor(
+        tester,
+        const Duration(milliseconds: 60),
+      );
+      await rig.harness.emitStatus('playing');
+      // Long enough to cover the chrome fading back in and the pause flash
+      // an ordinary resume shows.
+      await _expectNoPlaybackControlsFor(
+        tester,
+        const Duration(milliseconds: 600),
+      );
+      await _unmount(tester);
+    });
+
+    testWidgets('keeps the play button on a video the viewer paused', (
+      tester,
+    ) async {
+      final rig = await _pumpReadyFeed(tester);
+      await rig.harness.emitStatus('playing');
+      await rig.harness.emitStatus('paused');
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(_pausedControls, findsOneWidget);
+      final center = tester.getCenter(find.byType(InfiniteVideoFeed));
+
+      final gesture = await tester.startGesture(center, pointer: 1);
+      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+      await gesture.up();
+      await tester.pump();
+      await tester.pump(kFeedImmersiveFadeDuration);
+
+      expect(_pausedControls, findsOneWidget);
       await _unmount(tester);
     });
   });

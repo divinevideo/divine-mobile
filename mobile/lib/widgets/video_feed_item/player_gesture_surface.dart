@@ -37,7 +37,7 @@ class PlayerGestureSurface extends StatelessWidget {
   /// Publish a like, anchored at the tap position.
   final void Function(TapDownDetails details) onDoubleTapDown;
 
-  /// Enter immersive mode — hide chrome while the press is held.
+  /// Enter immersive mode — hide chrome and pause while the press is held.
   final VoidCallback onLongPressStart;
 
   /// Restores pinned-hidden chrome on a tap while the player is not yet
@@ -72,8 +72,9 @@ class PlayerGestureSurface extends StatelessWidget {
           behavior: HitTestBehavior.translucent,
           // Press and hold to peek at the unobstructed frame. Deliberately
           // not gated on [interactiveReady] the way tap and double-tap are:
-          // those mutate the player or publish a like, while this only hides
-          // chrome, which is just as valid over a still-loading frame.
+          // those mutate the player or publish a like, while this hides
+          // chrome — just as valid over a still-loading frame — and pauses
+          // only a player that is already playing.
           //
           // Excluded from semantics, and kept on its own detector so the tap
           // action above is still published. A `GestureDetector` publishes

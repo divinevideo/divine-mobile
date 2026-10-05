@@ -594,6 +594,16 @@ class __OverlayState extends ConsumerState<_Overlay> {
   /// unrelated pointer can't clear a hold we never started.
   bool _isHoldingForImmersive = false;
 
+  /// The player this item paused when a hold began, or `null` when no hold
+  /// pause is in effect. Only a pause the hold made is undone on release, and
+  /// only on that same player, so a video the viewer paused stays paused and a
+  /// recycled controller is never resumed for a video it no longer shows.
+  ///
+  /// Listenable so the paused-playback affordance can stand down for it: the
+  /// hold undoes this pause itself, so a play button over it, or a pause
+  /// flash as it ends, would contradict the gesture.
+  final _pausedForHold = ValueNotifier<DivineVideoPlayerController?>(null);
+
   /// Pointers currently down over this item, with each one's latest local
   /// position. The peek ends only when the last one lifts, so an incidental
   /// second finger (a resting thumb, a pinch attempt) can't restore the chrome
@@ -635,13 +645,18 @@ class __OverlayState extends ConsumerState<_Overlay> {
     if (oldWidget.video.id != widget.video.id) {
       _prefetchCommunityLabels();
       // A pin belongs to the video it was made on, not to the item's index.
+      // So does a hold's pause.
       _clearPinnedImmersive();
+      _pausedForHold.value = null;
     }
     // Swiping away from this item must not leave the next video's chrome
     // pinned hidden — the cubit is shared across the feed page, so the pin is
     // released by the item that owns it as that item deactivates.
     if (oldWidget.isActive && !widget.isActive) {
       _clearPinnedImmersive();
+      // The feed pauses an inactive item on its own; releasing the hold must
+      // not start it again off-screen.
+      _pausedForHold.value = null;
     }
   }
 
@@ -675,11 +690,13 @@ class __OverlayState extends ConsumerState<_Overlay> {
     // the same failure mode — a pinned item disposed without clearing would
     // pin every later video too.
     _clearPinnedImmersive();
+    _pausedForHold.value = null;
     _exitImmersive();
     // [didUpdateWidget] re-points this State at a different video, so the
     // pointers must not outlive the item that filled them.
     _immersivePointers.clear();
     _heartTrigger.dispose();
+    _pausedForHold.dispose();
     super.dispose();
   }
 
@@ -691,6 +708,43 @@ class __OverlayState extends ConsumerState<_Overlay> {
     // Confirms the hold registered — the gesture has no other affordance.
     unawaited(HapticService.immersiveModeFeedback());
     cubit.enter();
+    _pauseForHold();
+  }
+
+  /// Freezes the frame the hold is peeking at, if the video was playing.
+  ///
+  /// Buffering counts as playing, as it does for a tap: the viewer did not
+  /// pause it, so it must come back on release.
+  void _pauseForHold() {
+    final controller = widget.controller;
+    if (controller == null) return;
+    if (resolvePlayerTapAction(controller.state.status) !=
+        PlayerTapAction.pause) {
+      return;
+    }
+    _pausedForHold.value = controller;
+    runDetached(
+      controller.pause(),
+      'pause video for hold',
+      logName: 'FeedVideos',
+      category: LogCategory.ui,
+    );
+  }
+
+  /// Resumes the player [_pauseForHold] paused, provided it still belongs to
+  /// this visible item.
+  void _resumeAfterHold() {
+    final controller = _pausedForHold.value;
+    _pausedForHold.value = null;
+    if (controller == null || !mounted) return;
+    if (controller != widget.controller) return;
+    if (!widget.isActive || !widget.isFeedActive) return;
+    runDetached(
+      controller.play(),
+      'resume video after hold',
+      logName: 'FeedVideos',
+      category: LogCategory.ui,
+    );
   }
 
   /// Drops a lifted/cancelled pointer, resets any in-progress pinch once the
@@ -789,6 +843,7 @@ class __OverlayState extends ConsumerState<_Overlay> {
   void _exitImmersive() {
     if (!_isHoldingForImmersive) return;
     _isHoldingForImmersive = false;
+    _resumeAfterHold();
     final cubit = _immersiveCubit;
     if (cubit == null || cubit.isClosed) return;
     cubit.exit();
@@ -1164,10 +1219,10 @@ class __OverlayState extends ConsumerState<_Overlay> {
                       if (widget.controller != null)
                         // The paused play indicator is chrome too — it
                         // covers the frame the peek is meant to reveal,
-                        // and holding never resumes playback, so leaving
-                        // it up would contradict the gesture.
+                        // and the pause a hold makes is undone on release,
+                        // so showing it would contradict the gesture.
                         FeedImmersiveChrome(
-                          child: PausedVideoOverlay(
+                          child: _HoldAwarePausedVideoOverlay(
                             controller: widget.controller!,
                             // Only a pause the user can undo gets the
                             // affordance. A comments/share sheet, a pushed
@@ -1175,6 +1230,7 @@ class __OverlayState extends ConsumerState<_Overlay> {
                             // too, but resumes it on its own — showing a play
                             // button behind the sheet just reads as broken.
                             isVisible: widget.isActive && widget.isFeedActive,
+                            pausedForHold: _pausedForHold,
                           ),
                         ),
                       FeedImmersiveChrome(
@@ -1247,6 +1303,37 @@ class _PinAwareGestureSurface extends StatelessWidget {
       onDoubleTapDown: onDoubleTapDown,
       onLongPressStart: onLongPressStart,
       onRestoreChrome: isChromePinned ? onRestoreChrome : null,
+    );
+  }
+}
+
+/// [PausedVideoOverlay] that stands down while a hold has the player paused.
+/// It watches the hold's pause itself, so starting or ending one rebuilds this
+/// overlay alone rather than the whole item.
+class _HoldAwarePausedVideoOverlay extends StatelessWidget {
+  const _HoldAwarePausedVideoOverlay({
+    required this.controller,
+    required this.isVisible,
+    required this.pausedForHold,
+  });
+
+  final DivineVideoPlayerController controller;
+  final bool isVisible;
+
+  /// The player a hold has paused, or `null` when no hold pause is in effect.
+  final ValueListenable<DivineVideoPlayerController?> pausedForHold;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<DivineVideoPlayerController?>(
+      valueListenable: pausedForHold,
+      builder: (context, pausedFor, _) => PausedVideoOverlay(
+        controller: controller,
+        // A hold's pause ends on release, the way a sheet's ends on dismiss,
+        // so it gets neither the play button nor the pause flash that an
+        // ordinary resume shows.
+        isVisible: isVisible && pausedFor == null,
+      ),
     );
   }
 }
