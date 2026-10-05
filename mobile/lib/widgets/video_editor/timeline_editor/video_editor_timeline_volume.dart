@@ -345,7 +345,8 @@ class _VolumeArcState extends State<_VolumeArc> {
   void _onPointerCancel(PointerCancelEvent event) {
     // Accepted PointerCancel is reported as drag end by the recognizer. This
     // raw listener runs first so that end cannot commit a cancelled drag.
-    if (_dragPointer == event.pointer) {
+    // The recognizer can hand the drag to another finger on the same arc.
+    if (_isDragging || _dragPointer == event.pointer) {
       _cancelDrag();
       _dragPointer = null;
     }
@@ -364,7 +365,7 @@ class _VolumeArcState extends State<_VolumeArc> {
     final onCancelled = widget.onPreviewCancelled;
     _lastLivePreview = null;
     _restoreCommittedVolume();
-    // Recognizers can cancel during teardown. Notify the owners only after
+    // A pointer can cancel during teardown. Notify the owners only after
     // ancestor builds/disposal finish, using callbacks captured while alive.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (expected != null) onCancelled(expected);
@@ -424,7 +425,6 @@ class _VolumeArcState extends State<_VolumeArc> {
               onVerticalDragStart: _onDragStart,
               onVerticalDragUpdate: _onDragUpdate,
               onVerticalDragEnd: _onDragEnd,
-              onVerticalDragCancel: _cancelDrag,
               child: Stack(
                 alignment: Alignment.center,
                 children: [

@@ -204,6 +204,29 @@ void main() {
         },
       );
 
+      testVolume('$label second-pointer cancellation restores saved gain', (
+        tester,
+      ) async {
+        await mount(tester);
+        final first = await drag(tester, label: label);
+        final second = await tester.startGesture(
+          tester.getCenter(find.bySemanticsLabel(label)),
+          pointer: 7,
+        );
+        await tester.pump();
+        await first.up();
+        await second.moveBy(const Offset(0, -10));
+        await second.cancel();
+        await tester.pump();
+        await deliverBlocStates(tester);
+        await settlePlayer(tester);
+        restored(1);
+        expect(probe.header.value, isNull);
+        expect(clips.state.clipsVolumeRevision, 0);
+        expect(overlays.state.audioTracksRevision, 0);
+        expect(tester.takeException(), isNull);
+      });
+
       for (final duringExit in [false, true]) {
         testVolume('$label release commits once (during exit: $duringExit)', (
           tester,
@@ -304,6 +327,100 @@ void main() {
       expect(clips.state.clipsVolumeRevision, 1);
       expect(tester.takeException(), isNull);
     });
+
+    testVolume('stale cleanup cannot reset a boosted new drag before release', (
+      tester,
+    ) async {
+      await mount(tester);
+      final first = await drag(tester);
+      await first.cancel();
+      // Start and boost the next drag before the old cleanup gets a frame.
+      final second = await tester.startGesture(
+        tester.getCenter(find.bySemanticsLabel('Clip 1')),
+      );
+      await second.moveBy(const Offset(0, -30));
+      await second.moveBy(const Offset(0, -60));
+      final next = probe.live.value!;
+      expect(next.volume, greaterThan(1));
+      await tester.pump();
+      expect(identical(probe.live.value, next), isTrue);
+      expect(probe.header.value, next.volume);
+      expect(
+        tester
+            .getSemantics(find.bySemanticsLabel('Clip 1'))
+            .getSemanticsData()
+            .value,
+        '${(next.volume * 100).round()}%',
+      );
+      // No additional move can mask a local-volume reset before commit.
+      await second.up();
+      await deliverBlocStates(tester);
+      expect(clips.state.clips.first.volume, next.volume);
+      expect(clips.state.clipsVolumeRevision, 1);
+      expect(probe.accepted, 0);
+      expect(tester.takeException(), isNull);
+    });
+
+    for (final isClip in [true, false]) {
+      testVolume(
+        '${isClip ? 'clip' : 'track'} drag survives preceding removal',
+        (
+          tester,
+        ) async {
+          await tester.runAsync(pumpEventQueue);
+          final originalClip = clips.state.clips.single;
+          final originalTrack = overlays.state.audioTracks.single;
+          if (isClip) {
+            clips.add(
+              ClipEditorInitialized([
+                originalClip.copyWith(id: 'preceding-clip'),
+                originalClip,
+              ]),
+            );
+          } else {
+            overlays.add(
+              TimelineOverlayItemsUpdate(
+                layers: const <Layer>[],
+                filters: const <FilterState>[],
+                audioTracks: [
+                  originalTrack.copyWith(id: 'preceding-track', title: 'Other'),
+                  originalTrack,
+                ],
+                totalVideoDuration: const Duration(seconds: 3),
+              ),
+            );
+          }
+          await mount(tester);
+          final gesture = await drag(tester, label: isClip ? 'Clip 2' : 'Beat');
+          final live = probe.live.value!;
+          if (isClip) {
+            clips.add(const ClipEditorClipRemoved('preceding-clip'));
+          } else {
+            overlays.add(
+              TimelineOverlayItemsUpdate(
+                layers: const <Layer>[],
+                filters: const <FilterState>[],
+                audioTracks: [originalTrack],
+                totalVideoDuration: const Duration(seconds: 3),
+              ),
+            );
+          }
+          await deliverBlocStates(tester);
+          await tester.pump();
+          expect(identical(probe.live.value, live), isTrue);
+          expect(probe.accepted, 0);
+          await gesture.up();
+          await deliverBlocStates(tester);
+          expect(
+            isClip
+                ? clips.state.clips.single.volume
+                : overlays.state.audioTracks.single.volume,
+            live.volume,
+          );
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
 
     testVolume('removed target clears without restoring an invented gain', (
       tester,
