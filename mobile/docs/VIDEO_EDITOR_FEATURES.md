@@ -49,7 +49,7 @@ Clip actions ([`video_editor_timeline_clip_controls.dart`](../lib/widgets/video_
 - **Speed** from 0.25× to 3.0× in 0.05 steps, on a slider, with one-tap presets for 0.25×, 0.5×, 1×, 1.5×, 2× and 3×.
 - **Transform:** crop (locked to the video's aspect ratio), rotate by 90°, flip.
 - **Extract audio:** moves the clip's sound to its own track and mutes the clip.
-- **Save to library:** renders the trimmed clip, with the visual overlays that were over it, into a standalone clip in the library. Flashing effects and the project's music and voice-over are left out.
+- **Save to library:** renders the trimmed clip, with the visual overlays that were over it, into a standalone clip in the library. Flashing effects and every sound track (music, voice-over, extracted audio) are left out, so a clip whose sound was extracted is saved silent.
 - **Add clips** from the library or the camera.
 - **Volume** per clip, up to 300 % (see [Audio](#audio)). Long-pressing any volume control mutes all clips and sound tracks, or unmutes them if everything is already muted.
 
