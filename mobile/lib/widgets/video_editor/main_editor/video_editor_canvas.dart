@@ -1490,8 +1490,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// don't repeat the null-player guard; see that method for the failure
   /// contract.
   ///
-  /// The frame effects are handed over again after every load: their windows
-  /// sit on the player's timeline, which a trim, speed or order change moves.
+  /// The frame effects are handed over again after every successful load:
+  /// their windows are mapped from the editor timeline onto the player's,
+  /// which a rendered seam or speed body moves.
   Future<bool> _setClipsSafely(
     DivineVideoPlayerController? player,
     List<VideoClip> clips, {

@@ -487,8 +487,9 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     }
     #endif
 
-    /// Switches the frame effects to `configs` and redraws the frame on
-    /// screen with them, so a paused preview shows the change at once.
+    /// Switches the frame effects to `configs` and, when the list changed,
+    /// redraws the frame on screen with them, so a paused preview shows the
+    /// change at once.
     func setFrameEffects(_ configs: [[String: Any]]) {
         frameEffects.playerItem = attachedItem
         frameEffects.onHistoryFilled = { [weak self] in self?.redrawWithEffects() }

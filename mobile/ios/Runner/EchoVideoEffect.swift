@@ -4,7 +4,7 @@ import divine_video_player
 import pro_video_editor
 
 /// The echo trail (#9708): moving subjects leave fading copies of where they
-/// were 100, 200, 300 ms ago.
+/// were 100 ms, 200 ms, ... ago, as many as the intensity asks for.
 ///
 /// Every copy is an earlier source frame of the same clip, which
 /// pro_video_editor hands over, so the export looks the same however the clip

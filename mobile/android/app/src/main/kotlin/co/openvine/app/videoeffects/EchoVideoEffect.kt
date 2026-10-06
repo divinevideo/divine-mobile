@@ -11,7 +11,7 @@ import kotlin.math.roundToInt
 
 /**
  * The echo trail (#9708): moving subjects leave fading copies of where they
- * were 100, 200, 300 ms ago.
+ * were 100 ms, 200 ms, ... ago, as many as the intensity asks for.
  *
  * Every copy is an earlier source frame of the same clip, which
  * pro_video_editor hands over, so the export looks the same however the clip
@@ -96,7 +96,7 @@ class EchoVideoEffect(params: Map<String, Any?>) : CustomVideoEffectRenderer(), 
             append("varying vec2 vTexCoord;\n")
             append("void main() {\n")
             append("  vec4 color = texture2D(uFrame, vTexCoord);\n")
-            // Oldest copy first, the way the mockup layers them.
+            // Oldest copy first, so newer copies layer over older ones.
             for (k in copies - 1 downTo 0) {
                 append("  color = mix(color, max(color, texture2D(uCopy$k, vTexCoord)), uWeight$k);\n")
             }

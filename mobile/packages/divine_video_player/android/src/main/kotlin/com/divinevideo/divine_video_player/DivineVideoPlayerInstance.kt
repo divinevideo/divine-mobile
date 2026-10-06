@@ -180,9 +180,9 @@ internal class DivineVideoPlayerInstance(
     private var frameEffectsState: FrameEffectsState? = null
 
     /**
-     * The last real video size, which the frame-effect stage needs as its
-     * output size. Kept apart from [videoWidth] / [videoHeight], which a
-     * stop or seek resets to 0 for a moment.
+     * The display size of the clip playing, which the frame-effect stage
+     * needs as its output size. Kept apart from [videoWidth] / [videoHeight],
+     * which a stop or seek resets to 0 for a moment.
      */
     private var frameEffectOutputSize: Size? = null
 
@@ -1624,8 +1624,9 @@ internal class DivineVideoPlayerInstance(
      * showed it did. Media3's own redraw needs a frame processor built with
      * a replayable cache, which ExoPlayer's is not, and ExoPlayer skips a
      * seek to where it already is, so this steps a millisecond back and on
-     * again; stepping on could pass the clip's end and end the item. While
-     * playing, the next frame does it anyway.
+     * again, or on and back from the clip's start; stepping on at the end
+     * could pass it and end the item. While playing, the next frame does it
+     * anyway.
      */
     private fun redrawPausedFrame(index: Int, positionMs: Long) {
         val exoPlayer = player ?: return
@@ -1673,16 +1674,17 @@ internal class DivineVideoPlayerInstance(
         state.speed = clipSpeeds.getOrElse(exoPlayer.currentMediaItemIndex) { 1.0f }
     }
 
-    /** The display size of clip [index], read once from its file. */
+    /**
+     * The display size of clip [index], read from its file the first time it
+     * is needed. A clip whose size cannot be read is read again.
+     */
     private fun frameEffectClipSize(index: Int): Size? =
         frameEffectClipSizes.getOrPut(index) { probeDisplaySize(index) }
 
     /**
-     * Sizes the effect stage's output to the clip at [index] when its shape
-     * differs from the last one. Without the stage each clip reaches the
-     * texture at its own size, and the editor fits every clip by its own
-     * shape; with one fixed output size a clip of another shape would be
-     * drawn on the previous clip's canvas.
+     * Sizes the effect stage's output to the clip at [index] when its size
+     * differs from the last one. A fixed output size would draw a clip of
+     * another shape on the previous clip's canvas.
      */
     private fun syncFrameEffectOutputSize(index: Int) {
         if (frameEffectsState == null) return

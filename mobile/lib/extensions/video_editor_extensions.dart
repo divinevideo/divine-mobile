@@ -47,8 +47,8 @@ bool _burnInHighlightsWords(CaptionTrack track) =>
 
 extension VideoEditorExtensions on ProImageEditorState {
   /// Captures the overlays currently over the composition — layers, colour
-  /// filters, tune adjustments and blur — so they can be baked into a render
-  /// mid-session.
+  /// filters, tune adjustments, video effects and blur — so they can be baked
+  /// into a render mid-session.
   ///
   /// The export path gets the same data handed to it in `CompleteParameters`,
   /// but only once the user taps Done; anything that renders *during* editing
