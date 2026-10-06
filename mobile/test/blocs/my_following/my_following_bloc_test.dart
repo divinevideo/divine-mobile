@@ -531,8 +531,13 @@ void main() {
             await pumpEventQueue();
 
             verify(() => mockFollowRepository.toggleFollow(pubkey)).called(1);
-          } finally {
+
             finishToggle.complete();
+            await pumpEventQueue();
+            // A sequential transformer would defer the second write until now.
+            verifyNever(() => mockFollowRepository.toggleFollow(pubkey));
+          } finally {
+            if (!finishToggle.isCompleted) finishToggle.complete();
             await bloc.close();
           }
         },
