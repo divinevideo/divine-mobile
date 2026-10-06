@@ -141,6 +141,10 @@ class _SearchResultsScope extends ConsumerWidget {
     final peopleListSearchEnabled =
         profileListFeaturesEnabled && curatedListsEnabled;
 
+    // Bind discovery to the current viewer, including before their first post.
+    ref.watch(currentAuthStateProvider);
+    final viewerPubkey = ref.watch(authServiceProvider).currentPublicKeyHex;
+
     return MultiBlocProvider(
       // Recreate the search blocs when an auth-sensitive repository or flag
       // changes so no bloc remains bound to stale dependencies or visible previews.
@@ -153,6 +157,7 @@ class _SearchResultsScope extends ConsumerWidget {
         curatedListRepository,
         peopleListsRepository,
         peopleListSearchEnabled,
+        viewerPubkey,
       )),
       providers: [
         BlocProvider(
@@ -178,8 +183,7 @@ class _SearchResultsScope extends ConsumerWidget {
         peopleListSearchEnabled: peopleListSearchEnabled,
         policy: listThumbnailPolicy,
         controller: controller,
-        // The viewer's own lists remain discoverable before posting.
-        viewerPubkey: ref.watch(authServiceProvider).currentPublicKeyHex,
+        viewerPubkey: viewerPubkey,
         child: _BlocklistRefreshListener(
           child: Scaffold(
             // bg/surface — matches SearchResultsView's body background so the

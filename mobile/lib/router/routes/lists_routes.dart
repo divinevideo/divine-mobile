@@ -70,7 +70,11 @@ List<RouteBase> listsRoutes(Ref ref) {
             listId.isEmpty) {
           return RouteErrorScreen(message: ctx.l10n.routeInvalidListId);
         }
-        return CuratedListByAuthorScreen(authorPubkey: pubkey, listId: listId);
+        return CuratedListByAuthorScreen(
+          authorPubkey: pubkey,
+          listId: listId,
+          discoveredList: extraAs<CuratedListRouteExtra>(st.extra)?.list,
+        );
       },
     ),
 
