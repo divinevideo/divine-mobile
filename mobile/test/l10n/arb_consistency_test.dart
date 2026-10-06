@@ -48,6 +48,32 @@ void main() {
       );
     });
 
+    test('readonly recovery feedback is translated in every locale', () {
+      final english = _readArb(File('lib/l10n/app_en.arb'));
+      const key = 'listRecoveryReadOnly';
+      for (final file in Directory('lib/l10n').listSync().whereType<File>()) {
+        if (!file.path.endsWith('.arb')) continue;
+        final value = _readArb(file)[key];
+        expect(
+          value,
+          isA<String>().having(
+            (value) => value.trim().isNotEmpty,
+            'nonempty',
+            isTrue,
+          ),
+          reason: '${file.path} must define $key',
+        );
+        if (!file.path.endsWith('app_en.arb')) {
+          expect(
+            value,
+            isNot(english[key]),
+            reason: '${file.path} must translate $key',
+          );
+        }
+      }
+      expect(_knownUntranslatedDebt, isNot(contains(key)));
+    });
+
     test(
       'commercial sponsorship disclosures are localized in every locale',
       () {
