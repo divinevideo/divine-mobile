@@ -44,6 +44,8 @@ class SelectListState extends Equatable {
     this.status = SelectListStatus.editing,
     this.syncingListIds = const {},
     this.failedSyncListIds = const {},
+    this.recoveryReadOnly = false,
+    this.serviceAvailable = true,
   });
 
   /// The lists the viewer can put the video in.
@@ -63,13 +65,21 @@ class SelectListState extends Equatable {
   /// Outstanding memberships whose latest retry did not confirm publication.
   final Set<String> failedSyncListIds;
 
+  /// Saved recovery records must be verified before any changes are made.
+  final bool recoveryReadOnly;
+
+  /// Whether this picker is bound to the current initialized service.
+  final bool serviceAvailable;
+
+  bool get canEdit => serviceAvailable && !recoveryReadOnly && !isSaving;
+
   /// Whether the picks are being written.
   bool get isSaving => status == SelectListStatus.saving;
 
   /// Whether the picks can be written: no save is running, and a list is
   /// picked or one that holds the video is unpicked.
   bool get canSubmit =>
-      !isSaving && (selectedListIds.isNotEmpty || listIdsToRemove.isNotEmpty);
+      canEdit && (selectedListIds.isNotEmpty || listIdsToRemove.isNotEmpty);
 
   /// Any pending list recovery; retry does not toggle the pick.
   Set<String> get pendingSyncListIds => {
@@ -96,6 +106,8 @@ class SelectListState extends Equatable {
     SelectListStatus? status,
     Set<String>? syncingListIds,
     Set<String>? failedSyncListIds,
+    bool? recoveryReadOnly,
+    bool? serviceAvailable,
   }) {
     return SelectListState(
       lists: lists ?? this.lists,
@@ -104,6 +116,8 @@ class SelectListState extends Equatable {
       status: status ?? this.status,
       syncingListIds: syncingListIds ?? this.syncingListIds,
       failedSyncListIds: failedSyncListIds ?? this.failedSyncListIds,
+      recoveryReadOnly: recoveryReadOnly ?? this.recoveryReadOnly,
+      serviceAvailable: serviceAvailable ?? this.serviceAvailable,
     );
   }
 
@@ -115,5 +129,7 @@ class SelectListState extends Equatable {
     status,
     syncingListIds,
     failedSyncListIds,
+    recoveryReadOnly,
+    serviceAvailable,
   ];
 }
