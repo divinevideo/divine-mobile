@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:badge_repository/badge_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -355,6 +357,59 @@ void main() {
           throwsA(isA<StateError>()),
         );
       });
+
+      test(
+        'bounds concurrent holder walks and stops scheduling after timeout',
+        () async {
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+            ),
+          ).thenAnswer(
+            (_) async => (
+              events: [
+                _event(
+                  id: _eventId(1),
+                  pubkey: _pubkey(1),
+                  kind: EventKind.appSpecificData,
+                  tags: [
+                    ['d', 'divine.badge_subscriptions'],
+                    for (var i = 0; i < 6; i++)
+                      [
+                        'a',
+                        BadgeCoordinate(
+                          pubkey: _pubkey(2),
+                          identifier: 'badge-$i',
+                        ).value,
+                      ],
+                  ],
+                ),
+              ],
+              timedOut: false,
+              noRelays: false,
+            ),
+          );
+          final pending = Completer<PagedQueryResult>();
+          var reads = 0;
+          when(() => nostrClient.readAllEvents(any())).thenAnswer((_) {
+            reads++;
+            return pending.future;
+          });
+          await expectLater(
+            repository.loadSubscribedHolders(
+              timeout: const Duration(milliseconds: 10),
+            ),
+            throwsA(isA<TimeoutException>()),
+          );
+          expect(reads, 2);
+          pending.complete(
+            const PagedQueryResult(events: [], isComplete: true, pages: 1),
+          );
+          await pumpEventQueue();
+          expect(reads, 2);
+        },
+      );
 
       test('unions the accepted holders of every subscribed badge', () async {
         final daily = BadgeCoordinate(
