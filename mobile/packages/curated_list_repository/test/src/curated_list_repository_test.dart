@@ -1115,10 +1115,11 @@ void main() {
       }
 
       test(
-        'clears prefilled thumbnails when no videos can be resolved',
+        'clears stale previews without fetching for an empty video list',
         () async {
           final list = createList(
             id: 'empty',
+            videoEventIds: const [],
           ).copyWith(thumbnailUrls: ['https://example.com/stale.jpg']);
           expect(
             (await repository.resolveListThumbnails([
@@ -1126,6 +1127,8 @@ void main() {
             ])).single.thumbnailUrls,
             isEmpty,
           );
+          verifyZeroInteractions(funnelcakeApiClient);
+          verifyZeroInteractions(nostrClient);
         },
       );
       test('enriches lists with resolved thumbnail URLs', () async {
@@ -1158,7 +1161,7 @@ void main() {
       });
 
       test('leaves a list without videos untouched', () async {
-        final list = createList(id: 'list-1');
+        final list = createList(id: 'list-1', videoEventIds: const []);
 
         final enriched = await repository.resolveListThumbnails([list]);
 
