@@ -9806,6 +9806,33 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'Мащаб от';
 
   @override
+  String get videoEditorLayerAnimationLoop => 'Цикъл';
+
+  @override
+  String get videoEditorLayerAnimationWiggle => 'Поклащане';
+
+  @override
+  String get videoEditorLayerAnimationBounce => 'Подскачане';
+
+  @override
+  String get videoEditorLayerAnimationTypewriter => 'Пишеща машина';
+
+  @override
+  String get videoEditorLayerAnimationWordByWord => 'Дума по дума';
+
+  @override
+  String get videoEditorLayerAnimationPulse => 'Пулсиране';
+
+  @override
+  String get videoEditorLayerAnimationPulseTo => 'Свиване до';
+
+  @override
+  String get videoEditorLayerAnimationWiggleAngle => 'Наклон';
+
+  @override
+  String get videoEditorLayerAnimationBounceHeight => 'Височина';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'По избор';
 
   @override

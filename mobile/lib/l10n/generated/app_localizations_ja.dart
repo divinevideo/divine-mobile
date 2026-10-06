@@ -9240,6 +9240,33 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => '開始スケール';
 
   @override
+  String get videoEditorLayerAnimationLoop => 'ループ';
+
+  @override
+  String get videoEditorLayerAnimationWiggle => '揺れ';
+
+  @override
+  String get videoEditorLayerAnimationBounce => 'バウンス';
+
+  @override
+  String get videoEditorLayerAnimationTypewriter => 'タイプライター';
+
+  @override
+  String get videoEditorLayerAnimationWordByWord => '単語ごと';
+
+  @override
+  String get videoEditorLayerAnimationPulse => 'パルス';
+
+  @override
+  String get videoEditorLayerAnimationPulseTo => '縮小サイズ';
+
+  @override
+  String get videoEditorLayerAnimationWiggleAngle => '傾き';
+
+  @override
+  String get videoEditorLayerAnimationBounceHeight => '高さ';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'カスタム';
 
   @override

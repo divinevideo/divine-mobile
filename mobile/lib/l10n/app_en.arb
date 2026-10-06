@@ -6620,6 +6620,42 @@
   "@videoEditorLayerAnimationScaleFrom": {
     "description": "Section label above the slider that sets the starting size for a scale animation (0% to 100%)."
   },
+  "videoEditorLayerAnimationLoop": "Loop",
+  "@videoEditorLayerAnimationLoop": {
+    "description": "Tab/segment label for the animations a layer repeats for as long as it is visible, next to Enter and Leave."
+  },
+  "videoEditorLayerAnimationWiggle": "Wiggle",
+  "@videoEditorLayerAnimationWiggle": {
+    "description": "Layer animation type that tilts the layer back and forth around its center; in the Loop tab it keeps wiggling while visible."
+  },
+  "videoEditorLayerAnimationBounce": "Bounce",
+  "@videoEditorLayerAnimationBounce": {
+    "description": "Layer animation type that drops the layer onto its place with a bounce (Enter), lifts it off (Leave), or makes it hop (Loop)."
+  },
+  "videoEditorLayerAnimationTypewriter": "Typewriter",
+  "@videoEditorLayerAnimationTypewriter": {
+    "description": "Layer animation type, text layers only: the text appears letter by letter (Enter) or disappears letter by letter (Leave)."
+  },
+  "videoEditorLayerAnimationWordByWord": "Word by word",
+  "@videoEditorLayerAnimationWordByWord": {
+    "description": "Layer animation type, text layers only: the text appears word by word (Enter) or disappears word by word (Leave)."
+  },
+  "videoEditorLayerAnimationPulse": "Pulse",
+  "@videoEditorLayerAnimationPulse": {
+    "description": "Label of the scale animation in the Loop tab: the layer keeps shrinking a little and growing back while visible."
+  },
+  "videoEditorLayerAnimationPulseTo": "Shrink to",
+  "@videoEditorLayerAnimationPulseTo": {
+    "description": "Section label above the slider that sets how small a pulsing layer gets at its smallest (0% to 100% of its size)."
+  },
+  "videoEditorLayerAnimationWiggleAngle": "Tilt",
+  "@videoEditorLayerAnimationWiggleAngle": {
+    "description": "Section label above the slider that sets how far a wiggling layer tilts to each side, in degrees."
+  },
+  "videoEditorLayerAnimationBounceHeight": "Height",
+  "@videoEditorLayerAnimationBounceHeight": {
+    "description": "Section label above the slider that sets how high a bouncing layer is lifted, as a percentage of its own height."
+  },
   "videoEditorLayerAnimationCustomPoint": "Custom",
   "@videoEditorLayerAnimationCustomPoint": {
     "description": "Direction option for a slide animation that starts (or ends) at a point the creator taps on the video, instead of travelling to or from a canvas edge."

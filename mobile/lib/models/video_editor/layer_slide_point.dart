@@ -75,11 +75,14 @@ class LayerSlidePoints {
   /// edge.
   ///
   /// [AnimationPhase.animateInOut] plays the same motion at both ends, so it
-  /// reads whichever point is set, preferring the enter one.
+  /// reads whichever point is set, preferring the enter one. A
+  /// [AnimationPhase.loop] never slides to a point of its own: the editor
+  /// does not offer a slide that repeats.
   Offset? fractionFor(AnimationPhase phase) => switch (phase) {
     AnimationPhase.animateIn => enter,
     AnimationPhase.animateOut => leave,
     AnimationPhase.animateInOut => enter ?? leave,
+    AnimationPhase.loop => null,
   };
 
   /// [phase]'s point in canvas coordinates for a canvas of [canvasSize],

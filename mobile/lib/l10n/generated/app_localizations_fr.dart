@@ -9867,6 +9867,33 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'Échelle depuis';
 
   @override
+  String get videoEditorLayerAnimationLoop => 'Boucle';
+
+  @override
+  String get videoEditorLayerAnimationWiggle => 'Balancement';
+
+  @override
+  String get videoEditorLayerAnimationBounce => 'Rebond';
+
+  @override
+  String get videoEditorLayerAnimationTypewriter => 'Machine à écrire';
+
+  @override
+  String get videoEditorLayerAnimationWordByWord => 'Mot à mot';
+
+  @override
+  String get videoEditorLayerAnimationPulse => 'Pulsation';
+
+  @override
+  String get videoEditorLayerAnimationPulseTo => 'Réduire à';
+
+  @override
+  String get videoEditorLayerAnimationWiggleAngle => 'Inclinaison';
+
+  @override
+  String get videoEditorLayerAnimationBounceHeight => 'Hauteur';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'Point personnalisé';
 
   @override

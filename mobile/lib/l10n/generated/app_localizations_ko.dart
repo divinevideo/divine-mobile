@@ -9258,6 +9258,33 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => '시작 크기';
 
   @override
+  String get videoEditorLayerAnimationLoop => '반복';
+
+  @override
+  String get videoEditorLayerAnimationWiggle => '흔들기';
+
+  @override
+  String get videoEditorLayerAnimationBounce => '튕기기';
+
+  @override
+  String get videoEditorLayerAnimationTypewriter => '타자기';
+
+  @override
+  String get videoEditorLayerAnimationWordByWord => '단어별';
+
+  @override
+  String get videoEditorLayerAnimationPulse => '맥박';
+
+  @override
+  String get videoEditorLayerAnimationPulseTo => '축소 크기';
+
+  @override
+  String get videoEditorLayerAnimationWiggleAngle => '기울기';
+
+  @override
+  String get videoEditorLayerAnimationBounceHeight => '높이';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => '사용자 지정';
 
   @override

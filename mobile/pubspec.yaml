@@ -393,6 +393,13 @@ dependencies:
   # extra Flutter-specific native SQLite providers can make plain SQLite win.
   sqlite3: ^3.3.3
   audio_session: ^0.2.2
+  # 2.27.0 is the first release that renders the wiggle, bounce and loop
+  # layer animations and lets the steps of a typing text share one run of
+  # animations through `ImageLayer.animationStartTime` (#9849,
+  # hm21/pro_video_editor#233). Self-enforcing: the animation sheet switches
+  # over every `LayerAnimationType` and `AnimationPhase`, and the render
+  # service passes `animationStartTime:`, so a relaxed floor is a compile
+  # error.
   # 2.25.0 is the first release with ImageLayer.censor, which the censor tool
   # exports a hidden area as (#9562, hm21/pro_video_editor#231).
   # Self-enforcing: censorImageLayer passes `censor:`, which does not exist
@@ -461,7 +468,7 @@ dependencies:
   # is load-bearing and Android-only — no CI job builds Android, and a fallback
   # hard cut is indistinguishable from a working transition in the UI, so
   # relaxing it back to ^2.13.0 would reintroduce #9321 with no signal at all.
-  pro_video_editor: ^2.25.0
+  pro_video_editor: ^2.27.0
   # 14.0.0 is the first release built on material_ui; before it the editor's
   # ThemeData is the framework's and no longer interchangeable with ours.
   # 14.2.0 adds the paint-layer raster cache the video editor turns on.
@@ -477,7 +484,10 @@ dependencies:
   # the export draws (#9562). Self-enforcing: videoEditorCensorConfigs passes
   # pixelateInLayerSpace and the draw editor calls setCensorStrength, so a
   # relaxed floor is a compile error.
-  pro_image_editor: ^14.8.0
+  # 14.9.0 adds the typewriter and word-by-word text reveals with
+  # ExportedLayer.revealBytes, and previews wiggle, bounce and loops with the
+  # export's own easing (#9849, hm21/pro_image_editor#883).
+  pro_image_editor: ^14.9.0
   sensors_plus: ^7.0.0
   stream_transform: ^2.1.1
   flutter_staggered_grid_view: ^0.7.0

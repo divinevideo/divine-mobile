@@ -9717,6 +9717,33 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'Skala från';
 
   @override
+  String get videoEditorLayerAnimationLoop => 'Loop';
+
+  @override
+  String get videoEditorLayerAnimationWiggle => 'Vicka';
+
+  @override
+  String get videoEditorLayerAnimationBounce => 'Studs';
+
+  @override
+  String get videoEditorLayerAnimationTypewriter => 'Skrivmaskin';
+
+  @override
+  String get videoEditorLayerAnimationWordByWord => 'Ord för ord';
+
+  @override
+  String get videoEditorLayerAnimationPulse => 'Puls';
+
+  @override
+  String get videoEditorLayerAnimationPulseTo => 'Krymp till';
+
+  @override
+  String get videoEditorLayerAnimationWiggleAngle => 'Lutning';
+
+  @override
+  String get videoEditorLayerAnimationBounceHeight => 'Höjd';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'Egen punkt';
 
   @override

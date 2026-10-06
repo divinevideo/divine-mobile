@@ -45,11 +45,19 @@ void main() {
       expect(Layer().divineAnimations, isEmpty);
     });
 
-    test('exposes the enter and leave animations by phase', () {
-      final layer = Layer(animations: [leave, enter].toLayerAnimations());
+    test('exposes the enter, leave and loop animations by phase', () {
+      const wiggle = editor.LayerAnimation(
+        type: editor.LayerAnimationType.wiggle,
+        phase: editor.AnimationPhase.loop,
+        duration: Duration(milliseconds: 600),
+      );
+      final layer = Layer(
+        animations: [leave, wiggle, enter].toLayerAnimations(),
+      );
 
       expect(layer.divineEnterAnimations, equals([enter]));
       expect(layer.divineLeaveAnimations, equals([leave]));
+      expect(layer.divineLoopAnimations, equals([wiggle]));
     });
 
     test('exposes every animation of a phase when several are combined', () {
@@ -141,6 +149,8 @@ void main() {
                 ? editor.SlideDirection.top
                 : null,
             scaleFrom: type == editor.LayerAnimationType.scale ? 0.25 : null,
+            wiggleAngle: type == editor.LayerAnimationType.wiggle ? 0.3 : null,
+            bounceHeight: type == editor.LayerAnimationType.bounce ? 1.5 : null,
           );
           final layer = Layer(animations: [animation].toLayerAnimations());
 

@@ -1,7 +1,8 @@
 // ABOUTME: Looped animated preview of a TitleStyle: sample text in the
 // ABOUTME: style's font, colors and pill, entering, holding and leaving with
-// ABOUTME: its animations — fade, scale and slide composed like the export.
+// ABOUTME: its animations, composed like the export.
 
+import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
 import 'package:divine_ui/divine_ui.dart';
@@ -17,11 +18,14 @@ import 'package:pro_video_editor/pro_video_editor.dart'
 /// it animates in at the start of the loop, holds, and animates out at the
 /// end, so a row in the saved styles sheet shows the whole treatment.
 ///
-/// Fade, scale and slide are composed the way the export renderer and the
-/// in-editor `LayerTimelineVisibility` combine per-layer animations. A slide
+/// Fade, scale, slide, wiggle and bounce are composed the way the export
+/// renderer and the in-editor `LayerTimelineVisibility` combine per-layer
+/// animations, and the style's loop animations run throughout. A slide
 /// travels the width or height of the preview — far enough to leave it —
 /// from the edge its direction names, or along the line a custom point makes
-/// with the resting place.
+/// with the resting place. A typewriter or word-by-word reveal wipes the text
+/// in from its start, one letter or word at a time; the text itself is not
+/// rebuilt per frame (see `build`).
 class TitleStylePreview extends StatelessWidget {
   /// Creates a preview driven by [loop] (0..1) over a [loopMs] loop.
   const TitleStylePreview({
@@ -94,18 +98,25 @@ class TitleStylePreview extends StatelessWidget {
               child: AnimatedBuilder(
                 animation: loop,
                 builder: (context, child) {
-                  final (:opacity, :scale, :translation) = _transform(
-                    loop.value,
+                  final frame = _transform(loop.value);
+                  Widget sample = Opacity(
+                    opacity: frame.opacity.clamp(0.0, 1.0),
+                    child: frame.reveal < 1
+                        ? ClipRect(
+                            clipper: _RevealClipper(frame.reveal),
+                            child: child,
+                          )
+                        : child,
                   );
+                  if (frame.rotation != 0) {
+                    sample = Transform.rotate(
+                      angle: frame.rotation,
+                      child: sample,
+                    );
+                  }
                   return Transform.translate(
-                    offset: translation,
-                    child: Transform.scale(
-                      scale: scale,
-                      child: Opacity(
-                        opacity: opacity.clamp(0.0, 1.0),
-                        child: child,
-                      ),
-                    ),
+                    offset: frame.translation,
+                    child: Transform.scale(scale: frame.scale, child: sample),
                   );
                 },
                 // Only the transform changes between frames. The pill and its
@@ -138,29 +149,67 @@ class TitleStylePreview extends StatelessWidget {
 
   /// Visual transform of the text at [local] (0..1 within the loop): enter
   /// animations play at the start, leave animations at the end, with a hold
-  /// in between.
-  ({double opacity, double scale, Offset translation}) _transform(
-    double local,
-  ) {
+  /// in between, and loop animations throughout.
+  ///
+  /// `reveal` is the share of the text a typewriter or word-by-word reveal
+  /// shows, stepped to whole letters or words.
+  ({
+    double opacity,
+    double scale,
+    Offset translation,
+    double rotation,
+    double reveal,
+  })
+  _transform(double local) {
     var opacity = 1.0;
     var scale = 1.0;
     var translation = Offset.zero;
+    var rotation = 0.0;
+    var reveal = 1.0;
 
-    for (final animation in style.enter) {
-      final frac = _phaseFraction(animation);
-      if (frac <= 0) continue;
-      final progress = flutterCurveFor(
-        animation.curve,
-      ).transform((local / frac).clamp(0.0, 1.0));
+    void apply(
+      LayerAnimation animation,
+      double progress, {
+      Offset? point,
+      double swing = 1,
+    }) {
+      final away = 1 - progress;
       switch (animation.type) {
         case LayerAnimationType.fade:
           opacity *= progress;
         case LayerAnimationType.scale:
           scale *= lerpDouble(animation.scaleFrom ?? 0, 1, progress) ?? 1;
         case LayerAnimationType.slide:
-          translation +=
-              _slideOffset(animation, style.enterPoint) * (1 - progress);
+          translation += _slideOffset(animation, point) * away;
+        case LayerAnimationType.wiggle:
+          rotation +=
+              swing *
+              away *
+              (animation.wiggleAngle ?? LayerAnimation.defaultWiggleAngle);
+        case LayerAnimationType.bounce:
+          translation -= Offset(
+            0,
+            away *
+                (animation.bounceHeight ?? LayerAnimation.defaultBounceHeight) *
+                _fontSize *
+                _lineHeight,
+          );
+        case LayerAnimationType.typewriter:
+        case LayerAnimationType.wordByWord:
+          reveal = math.min(reveal, _revealed(animation.type, progress));
       }
+    }
+
+    for (final animation in style.enter) {
+      final frac = _phaseFraction(animation);
+      if (frac <= 0) continue;
+      apply(
+        animation,
+        flutterCurveFor(
+          animation.curve,
+        ).transform((local / frac).clamp(0.0, 1.0)),
+        point: style.enterPoint,
+      );
     }
 
     for (final animation in style.leave) {
@@ -168,20 +217,50 @@ class TitleStylePreview extends StatelessWidget {
       if (frac <= 0) continue;
       final start = 1 - frac;
       if (local <= start) continue;
-      final progress = flutterCurveFor(
-        animation.curve,
-      ).transform(((local - start) / frac).clamp(0.0, 1.0));
-      switch (animation.type) {
-        case LayerAnimationType.fade:
-          opacity *= 1 - progress;
-        case LayerAnimationType.scale:
-          scale *= lerpDouble(1, animation.scaleFrom ?? 0, progress) ?? 1;
-        case LayerAnimationType.slide:
-          translation += _slideOffset(animation, style.leavePoint) * progress;
-      }
+      apply(
+        animation,
+        flutterCurveFor(
+          animation.curve,
+        ).transform((1 - (local - start) / frac).clamp(0.0, 1.0)),
+        point: style.leavePoint,
+      );
     }
 
-    return (opacity: opacity, scale: scale, translation: translation);
+    for (final animation in style.loop) {
+      final durationMs = animation.duration.inMilliseconds;
+      if (durationMs <= 0) continue;
+      final cycle = (local * loopMs % durationMs) / durationMs;
+      // A wiggle swings out and back once to each side per cycle.
+      final wiggle = animation.type == LayerAnimationType.wiggle;
+      final half = wiggle ? (2 * cycle) % 1 : cycle;
+      apply(
+        animation,
+        flutterCurveFor(animation.curve).transform((1 - 2 * half).abs()),
+        swing: wiggle && cycle >= 0.5 ? -1 : 1,
+      );
+    }
+
+    return (
+      opacity: opacity,
+      scale: scale,
+      translation: translation,
+      rotation: rotation,
+      reveal: reveal,
+    );
+  }
+
+  /// Line height of the sample relative to its font size, which a bounce
+  /// lifts it by multiples of.
+  static const double _lineHeight = 1.4;
+
+  /// The share of [text] a reveal of [type] at [progress] shows, stepped to
+  /// whole letters or words as the export steps them.
+  double _revealed(LayerAnimationType type, double progress) {
+    final steps = type == LayerAnimationType.wordByWord
+        ? RegExp(r'\S+').allMatches(text).length
+        : text.characters.where((c) => c.trim().isNotEmpty).length;
+    if (steps == 0) return 1;
+    return ((progress * steps - 1e-9).ceil().clamp(0, steps)) / steps;
   }
 
   /// The share of the loop [animation] plays over, capped so the text holds.
@@ -243,4 +322,20 @@ class _StyledSample extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Clips its child to the leading [fraction] of its width, so a reveal wipes
+/// the text in without laying it out again.
+class _RevealClipper extends CustomClipper<Rect> {
+  const _RevealClipper(this.fraction);
+
+  final double fraction;
+
+  @override
+  Rect getClip(Size size) =>
+      Rect.fromLTWH(0, 0, size.width * fraction.clamp(0.0, 1.0), size.height);
+
+  @override
+  bool shouldReclip(_RevealClipper oldClipper) =>
+      oldClipper.fraction != fraction;
 }

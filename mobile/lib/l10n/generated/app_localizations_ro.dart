@@ -9928,6 +9928,33 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'Scalare de la';
 
   @override
+  String get videoEditorLayerAnimationLoop => 'Buclă';
+
+  @override
+  String get videoEditorLayerAnimationWiggle => 'Legănare';
+
+  @override
+  String get videoEditorLayerAnimationBounce => 'Săritură';
+
+  @override
+  String get videoEditorLayerAnimationTypewriter => 'Mașină de scris';
+
+  @override
+  String get videoEditorLayerAnimationWordByWord => 'Cuvânt cu cuvânt';
+
+  @override
+  String get videoEditorLayerAnimationPulse => 'Pulsare';
+
+  @override
+  String get videoEditorLayerAnimationPulseTo => 'Micșorare la';
+
+  @override
+  String get videoEditorLayerAnimationWiggleAngle => 'Înclinare';
+
+  @override
+  String get videoEditorLayerAnimationBounceHeight => 'Înălțime';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'Punct personalizat';
 
   @override

@@ -9908,6 +9908,33 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'Skaluj od';
 
   @override
+  String get videoEditorLayerAnimationLoop => 'Pętla';
+
+  @override
+  String get videoEditorLayerAnimationWiggle => 'Kołysanie';
+
+  @override
+  String get videoEditorLayerAnimationBounce => 'Odbijanie';
+
+  @override
+  String get videoEditorLayerAnimationTypewriter => 'Maszyna do pisania';
+
+  @override
+  String get videoEditorLayerAnimationWordByWord => 'Słowo po słowie';
+
+  @override
+  String get videoEditorLayerAnimationPulse => 'Pulsowanie';
+
+  @override
+  String get videoEditorLayerAnimationPulseTo => 'Zmniejsz do';
+
+  @override
+  String get videoEditorLayerAnimationWiggleAngle => 'Nachylenie';
+
+  @override
+  String get videoEditorLayerAnimationBounceHeight => 'Wysokość';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'Własny punkt';
 
   @override

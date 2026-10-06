@@ -1,5 +1,5 @@
 // ABOUTME: The look of a free-form text overlay — font, colors, background
-// ABOUTME: mode, alignment, size, outline and shadow, and enter/leave
+// ABOUTME: mode, alignment, size, outline and shadow, and enter/leave/loop
 // ABOUTME: animation — as one serializable unit that can be lifted off a layer
 // ABOUTME: and applied to another (#7742).
 
@@ -43,6 +43,7 @@ class TitleStyle extends Equatable {
     this.effects = TextEffects.none,
     this.enter = const [],
     this.leave = const [],
+    this.loop = const [],
     this.enterPoint,
     this.leavePoint,
   });
@@ -65,6 +66,7 @@ class TitleStyle extends Equatable {
       effects: TextEffects.of(layer),
       enter: layer.divineEnterAnimations,
       leave: layer.divineLeaveAnimations,
+      loop: layer.divineLoopAnimations,
       enterPoint: points.enter,
       leavePoint: points.leave,
     );
@@ -81,7 +83,8 @@ class TitleStyle extends Equatable {
 
     final enter = _animationsFromJson(json['enter']);
     final leave = _animationsFromJson(json['leave']);
-    if (enter == null || leave == null) return null;
+    final loop = _animationsFromJson(json['loop']);
+    if (enter == null || leave == null || loop == null) return null;
 
     final fontScale = json['fontScale'];
     if (fontScale != null && fontScale is! num) return null;
@@ -103,6 +106,7 @@ class TitleStyle extends Equatable {
       effects: TextEffects.fromJson(json['effects']),
       enter: enter,
       leave: leave,
+      loop: loop,
       enterPoint: _offsetFromJson(json['enterPoint']),
       leavePoint: _offsetFromJson(json['leavePoint']),
     );
@@ -138,6 +142,10 @@ class TitleStyle extends Equatable {
 
   /// Animations played when the layer disappears.
   final List<pve.LayerAnimation> leave;
+
+  /// Animations repeated for as long as the layer is visible, such as a
+  /// wiggle.
+  final List<pve.LayerAnimation> loop;
 
   /// Where the enter slide starts, as a canvas fraction; `null` slides in
   /// from a canvas edge. See [LayerSlidePoints].
@@ -189,6 +197,7 @@ class TitleStyle extends Equatable {
     return restyled.withDivineAnimations(
       enter: enter,
       leave: leave,
+      loop: loop,
       points: slidePoints,
       canvasSize: canvasSize,
       totalDuration: totalDuration,
@@ -207,6 +216,7 @@ class TitleStyle extends Equatable {
     'effects': effects.toJson(),
     'enter': [for (final animation in enter) animation.toMap()],
     'leave': [for (final animation in leave) animation.toMap()],
+    'loop': [for (final animation in loop) animation.toMap()],
     if (enterPoint case final point?) 'enterPoint': _offsetToJson(point),
     if (leavePoint case final point?) 'leavePoint': _offsetToJson(point),
   };
@@ -223,6 +233,7 @@ class TitleStyle extends Equatable {
     effects,
     enter,
     leave,
+    loop,
     enterPoint,
     leavePoint,
   ];
@@ -275,6 +286,10 @@ pve.LayerAnimation? _animationFromJson(Object? json) {
 
   final scaleFrom = json['scaleFrom'];
   if (scaleFrom != null && scaleFrom is! num) return null;
+  final wiggleAngle = json['wiggleAngle'];
+  if (wiggleAngle != null && wiggleAngle is! num) return null;
+  final bounceHeight = json['bounceHeight'];
+  if (bounceHeight != null && bounceHeight is! num) return null;
 
   return pve.LayerAnimation(
     type: type,
@@ -283,6 +298,8 @@ pve.LayerAnimation? _animationFromJson(Object? json) {
     curve: curve,
     slideDirection: slideDirection,
     scaleFrom: (scaleFrom as num?)?.toDouble(),
+    wiggleAngle: (wiggleAngle as num?)?.toDouble(),
+    bounceHeight: (bounceHeight as num?)?.toDouble(),
   );
 }
 

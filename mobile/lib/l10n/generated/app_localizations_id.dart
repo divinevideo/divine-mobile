@@ -9634,6 +9634,33 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'Skala dari';
 
   @override
+  String get videoEditorLayerAnimationLoop => 'Berulang';
+
+  @override
+  String get videoEditorLayerAnimationWiggle => 'Goyang';
+
+  @override
+  String get videoEditorLayerAnimationBounce => 'Pantul';
+
+  @override
+  String get videoEditorLayerAnimationTypewriter => 'Mesin ketik';
+
+  @override
+  String get videoEditorLayerAnimationWordByWord => 'Kata demi kata';
+
+  @override
+  String get videoEditorLayerAnimationPulse => 'Denyut';
+
+  @override
+  String get videoEditorLayerAnimationPulseTo => 'Mengecil ke';
+
+  @override
+  String get videoEditorLayerAnimationWiggleAngle => 'Kemiringan';
+
+  @override
+  String get videoEditorLayerAnimationBounceHeight => 'Tinggi';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'Kustom';
 
   @override

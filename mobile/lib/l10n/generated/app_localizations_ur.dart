@@ -9718,6 +9718,33 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'اسکیل آغاز';
 
   @override
+  String get videoEditorLayerAnimationLoop => 'لوپ';
+
+  @override
+  String get videoEditorLayerAnimationWiggle => 'ہلنا';
+
+  @override
+  String get videoEditorLayerAnimationBounce => 'اچھلنا';
+
+  @override
+  String get videoEditorLayerAnimationTypewriter => 'ٹائپ رائٹر';
+
+  @override
+  String get videoEditorLayerAnimationWordByWord => 'لفظ بہ لفظ';
+
+  @override
+  String get videoEditorLayerAnimationPulse => 'دھڑکن';
+
+  @override
+  String get videoEditorLayerAnimationPulseTo => 'یہاں تک چھوٹا کریں';
+
+  @override
+  String get videoEditorLayerAnimationWiggleAngle => 'جھکاؤ';
+
+  @override
+  String get videoEditorLayerAnimationBounceHeight => 'اونچائی';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'اپنی مرضی کا';
 
   @override

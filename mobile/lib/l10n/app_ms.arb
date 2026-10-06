@@ -5137,6 +5137,15 @@
     "description": "Layer animation type that scales the layer from a smaller size up to full size (or back)."
   },
   "videoEditorLayerAnimationScaleFrom": "Skala daripada",
+  "videoEditorLayerAnimationLoop": "Ulang",
+  "videoEditorLayerAnimationWiggle": "Goyang",
+  "videoEditorLayerAnimationBounce": "Lantun",
+  "videoEditorLayerAnimationTypewriter": "Mesin taip",
+  "videoEditorLayerAnimationWordByWord": "Perkataan demi perkataan",
+  "videoEditorLayerAnimationPulse": "Denyut",
+  "videoEditorLayerAnimationPulseTo": "Kecut ke",
+  "videoEditorLayerAnimationWiggleAngle": "Kecondongan",
+  "videoEditorLayerAnimationBounceHeight": "Ketinggian",
   "@videoEditorLayerAnimationScaleFrom": {
     "description": "Section label above the slider that sets the starting size for a scale animation (0% to 100%)."
   },

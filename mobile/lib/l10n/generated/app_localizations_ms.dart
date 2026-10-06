@@ -9728,6 +9728,33 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'Skala daripada';
 
   @override
+  String get videoEditorLayerAnimationLoop => 'Ulang';
+
+  @override
+  String get videoEditorLayerAnimationWiggle => 'Goyang';
+
+  @override
+  String get videoEditorLayerAnimationBounce => 'Lantun';
+
+  @override
+  String get videoEditorLayerAnimationTypewriter => 'Mesin taip';
+
+  @override
+  String get videoEditorLayerAnimationWordByWord => 'Perkataan demi perkataan';
+
+  @override
+  String get videoEditorLayerAnimationPulse => 'Denyut';
+
+  @override
+  String get videoEditorLayerAnimationPulseTo => 'Kecut ke';
+
+  @override
+  String get videoEditorLayerAnimationWiggleAngle => 'Kecondongan';
+
+  @override
+  String get videoEditorLayerAnimationBounceHeight => 'Ketinggian';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'Tersuai';
 
   @override

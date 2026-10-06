@@ -9795,6 +9795,33 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'Scale mula sa';
 
   @override
+  String get videoEditorLayerAnimationLoop => 'Loop';
+
+  @override
+  String get videoEditorLayerAnimationWiggle => 'Pag-uga';
+
+  @override
+  String get videoEditorLayerAnimationBounce => 'Talbog';
+
+  @override
+  String get videoEditorLayerAnimationTypewriter => 'Makinilya';
+
+  @override
+  String get videoEditorLayerAnimationWordByWord => 'Bawat salita';
+
+  @override
+  String get videoEditorLayerAnimationPulse => 'Pulso';
+
+  @override
+  String get videoEditorLayerAnimationPulseTo => 'Paliitin hanggang';
+
+  @override
+  String get videoEditorLayerAnimationWiggleAngle => 'Hilig';
+
+  @override
+  String get videoEditorLayerAnimationBounceHeight => 'Taas';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'Custom';
 
   @override

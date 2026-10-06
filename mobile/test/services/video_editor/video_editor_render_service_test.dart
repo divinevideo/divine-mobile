@@ -383,7 +383,10 @@ void main() {
         expect(layers.map((l) => l.size).toSet(), hasLength(1));
       });
 
-      test('play the enter animation first and the leave animation last', () {
+      // Each frame carries every animation and counts it from the layer's own
+      // range, so a fade or a wiggle runs on across the words instead of being
+      // cut off at the first frame or restarting at each one.
+      test('play every animation over the whole layer on every frame', () {
         final layers = VideoEditorRenderService.buildImageLayers(
           capturedLayers: [karaoke()],
           bodySize: const Size(100, 200),
@@ -392,14 +395,120 @@ void main() {
           timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
         )!;
 
-        expect(
-          layers.map((l) => l.animations.map((a) => a.phase.name).toList()),
-          [
-            ['animateIn'],
-            <String>[],
-            ['animateOut'],
+        expect(layers, hasLength(3));
+        for (final layer in layers) {
+          expect(layer.animations.map((a) => a.phase.name), [
+            'animateIn',
+            'animateOut',
+          ]);
+          expect(layer.animationStartTime, const Duration(seconds: 1));
+          expect(layer.animationEndTime, const Duration(seconds: 3));
+        }
+      });
+
+      test('leave the range unset on a layer that is not split', () {
+        final layers = VideoEditorRenderService.buildImageLayers(
+          capturedLayers: [
+            pie.ExportedLayer(
+              layer: pie.TextLayer(
+                text: 'Hello',
+                startTime: const Duration(seconds: 1),
+                endTime: const Duration(seconds: 3),
+              ),
+              bytes: Uint8List.fromList(const [0]),
+              logicalSize: const Size(10, 20),
+            ),
           ],
-        );
+          bodySize: const Size(100, 200),
+          videoSize: const Size(300, 600),
+          targetAspectRatio: vertical,
+          timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
+        )!;
+
+        expect(layers.single.animationStartTime, isNull);
+        expect(layers.single.animationEndTime, isNull);
+      });
+
+      test('count a reveal from the video start when the layer has none', () {
+        final layers = VideoEditorRenderService.buildImageLayers(
+          capturedLayers: [
+            pie.ExportedLayer(
+              layer: pie.TextLayer(
+                text: 'Hello world',
+                endTime: const Duration(seconds: 3),
+                animations: const [
+                  pie.LayerAnimation(
+                    type: pie.LayerAnimationType.typewriter,
+                    phase: pie.AnimationPhase.animateIn,
+                    duration: Duration(seconds: 1),
+                  ),
+                ],
+              ),
+              bytes: Uint8List.fromList(const [0]),
+              logicalSize: const Size(10, 20),
+              revealBytes: {
+                const pie.ExportedTextState(revealedLength: 0):
+                    Uint8List.fromList(const [1]),
+              },
+            ),
+          ],
+          bodySize: const Size(100, 200),
+          videoSize: const Size(300, 600),
+          targetAspectRatio: vertical,
+          timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
+        )!;
+
+        // The reveal becomes one overlay per step, and a null layer start
+        // means "begins with the video": every step counts its animations
+        // from the output origin, not from its own start, or a fade or a
+        // loop would restart at each step.
+        expect(layers.length, greaterThan(1));
+        for (final layer in layers) {
+          expect(layer.animationStartTime, Duration.zero);
+        }
+      });
+
+      test('anchor a leave to the output end when the layer has none', () {
+        final timelineMap = TransitionTimelineMap.fromClips(noTransitionClips);
+        final layers = VideoEditorRenderService.buildImageLayers(
+          capturedLayers: [
+            pie.ExportedLayer(
+              layer: pie.TextLayer(
+                text: 'Hello world',
+                animations: const [
+                  pie.LayerAnimation(
+                    type: pie.LayerAnimationType.typewriter,
+                    phase: pie.AnimationPhase.animateIn,
+                    duration: Duration(seconds: 1),
+                  ),
+                  pie.LayerAnimation(
+                    type: pie.LayerAnimationType.fade,
+                    phase: pie.AnimationPhase.animateOut,
+                    duration: Duration(milliseconds: 300),
+                  ),
+                ],
+              ),
+              bytes: Uint8List.fromList(const [0]),
+              logicalSize: const Size(10, 20),
+              revealBytes: {
+                const pie.ExportedTextState(revealedLength: 0):
+                    Uint8List.fromList(const [1]),
+              },
+            ),
+          ],
+          bodySize: const Size(100, 200),
+          videoSize: const Size(300, 600),
+          targetAspectRatio: vertical,
+          timelineMap: timelineMap,
+        )!;
+
+        // A null layer end means "lasts until the video ends": every step
+        // anchors its leave to the output end, never to its own end, which
+        // would play the leave at the end of each reveal step.
+        expect(layers.length, greaterThan(1));
+        for (final layer in layers) {
+          expect(layer.animationEndTime, timelineMap.outputDuration);
+        }
       });
     });
   });

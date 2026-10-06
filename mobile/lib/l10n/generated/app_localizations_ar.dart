@@ -9672,6 +9672,33 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'التحجيم من';
 
   @override
+  String get videoEditorLayerAnimationLoop => 'تكرار';
+
+  @override
+  String get videoEditorLayerAnimationWiggle => 'اهتزاز';
+
+  @override
+  String get videoEditorLayerAnimationBounce => 'ارتداد';
+
+  @override
+  String get videoEditorLayerAnimationTypewriter => 'آلة كاتبة';
+
+  @override
+  String get videoEditorLayerAnimationWordByWord => 'كلمة بكلمة';
+
+  @override
+  String get videoEditorLayerAnimationPulse => 'نبض';
+
+  @override
+  String get videoEditorLayerAnimationPulseTo => 'التصغير إلى';
+
+  @override
+  String get videoEditorLayerAnimationWiggleAngle => 'الميل';
+
+  @override
+  String get videoEditorLayerAnimationBounceHeight => 'الارتفاع';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'مخصص';
 
   @override

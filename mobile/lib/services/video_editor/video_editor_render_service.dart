@@ -32,9 +32,6 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
-import 'package:pro_video_editor/pro_video_editor.dart'
-    as pve
-    show AnimationPhase;
 import 'package:unified_logger/unified_logger.dart';
 
 export 'package:openvine/services/video_editor/video_render_failures.dart';
@@ -1069,11 +1066,14 @@ class VideoEditorRenderService {
   /// library — therefore leaves them out rather than freezing them into the
   /// file.
   ///
-  /// A text layer with word highlights (karaoke captions) becomes one overlay
-  /// per [ExportedLayer.frames] entry: the renderer draws a fixed image per
-  /// overlay, so each lit word needs its own. Its enter animations go on the
-  /// first frame and its leave animations on the last, where they would play
-  /// on the unsplit layer.
+  /// A text layer with word highlights (karaoke captions) or a text reveal
+  /// (typewriter, word by word) becomes one overlay per [ExportedLayer.frames]
+  /// entry: the renderer draws a fixed image per overlay, so each lit word
+  /// and each reveal step needs its own. Every frame carries all of the
+  /// layer's animations together with the layer's own time range as
+  /// `ImageLayer.animationStartTime` / `animationEndTime`, so they play as
+  /// they would on the unsplit layer: a fade in carries on across the first
+  /// steps of a reveal and a wiggle does not restart at every word.
   ///
   /// A censor layer (an area hidden behind a blur or pixelation) becomes a
   /// censor [ImageLayer] built from the layer itself, see [censorImageLayer];
@@ -1143,6 +1143,7 @@ class VideoEditorRenderService {
       mapping: mapping,
     );
     final frames = item.frames;
+    final split = frames.length > 1;
     return [
       for (final (index, frame) in frames.indexed)
         ImageLayer(
@@ -1158,16 +1159,21 @@ class VideoEditorRenderService {
               : timelineMap.editorToOutputOrNull(frame.endTime),
           offset: offset,
           size: size,
-          animations: frames.length == 1
-              ? animations
-              : [
-                  for (final animation in animations)
-                    if ((index == 0 &&
-                            animation.phase == pve.AnimationPhase.animateIn) ||
-                        (index == frames.length - 1 &&
-                            animation.phase == pve.AnimationPhase.animateOut))
-                      animation,
-                ],
+          animations: animations,
+          // A layer without a start or end begins or ends with the video, so
+          // its implicit range is the output's. Left null, the native
+          // renderer falls back to each split frame's own start or end: an
+          // enter or a loop restarts at every reveal step, and a leave plays
+          // at the end of each one.
+          animationStartTime: split
+              ? timelineMap.editorToOutput(
+                  item.layer.startTime ?? Duration.zero,
+                )
+              : null,
+          animationEndTime: split
+              ? timelineMap.editorToOutputOrNull(item.layer.endTime) ??
+                    timelineMap.outputDuration
+              : null,
         ),
     ];
   }

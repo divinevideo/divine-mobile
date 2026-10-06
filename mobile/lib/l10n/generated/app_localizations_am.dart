@@ -9491,6 +9491,33 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'ከመጠን';
 
   @override
+  String get videoEditorLayerAnimationLoop => 'ድግግሞሽ';
+
+  @override
+  String get videoEditorLayerAnimationWiggle => 'መወዛወዝ';
+
+  @override
+  String get videoEditorLayerAnimationBounce => 'መዝለል';
+
+  @override
+  String get videoEditorLayerAnimationTypewriter => 'የጽሕፈት መኪና';
+
+  @override
+  String get videoEditorLayerAnimationWordByWord => 'ቃል በቃል';
+
+  @override
+  String get videoEditorLayerAnimationPulse => 'ምት';
+
+  @override
+  String get videoEditorLayerAnimationPulseTo => 'አሳንስ እስከ';
+
+  @override
+  String get videoEditorLayerAnimationWiggleAngle => 'ዘንበል';
+
+  @override
+  String get videoEditorLayerAnimationBounceHeight => 'ቁመት';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'ብጁ';
 
   @override

@@ -9995,6 +9995,33 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'స్కేల్ నుండి';
 
   @override
+  String get videoEditorLayerAnimationLoop => 'లూప్';
+
+  @override
+  String get videoEditorLayerAnimationWiggle => 'ఊగడం';
+
+  @override
+  String get videoEditorLayerAnimationBounce => 'ఎగరడం';
+
+  @override
+  String get videoEditorLayerAnimationTypewriter => 'టైప్‌రైటర్';
+
+  @override
+  String get videoEditorLayerAnimationWordByWord => 'పదం పదంగా';
+
+  @override
+  String get videoEditorLayerAnimationPulse => 'పల్స్';
+
+  @override
+  String get videoEditorLayerAnimationPulseTo => 'ఇంతవరకు కుదించు';
+
+  @override
+  String get videoEditorLayerAnimationWiggleAngle => 'వంపు';
+
+  @override
+  String get videoEditorLayerAnimationBounceHeight => 'ఎత్తు';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'అనుకూలం';
 
   @override

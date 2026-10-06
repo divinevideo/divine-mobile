@@ -9637,6 +9637,33 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'Ölçek başlangıcı';
 
   @override
+  String get videoEditorLayerAnimationLoop => 'Döngü';
+
+  @override
+  String get videoEditorLayerAnimationWiggle => 'Sallanma';
+
+  @override
+  String get videoEditorLayerAnimationBounce => 'Zıplama';
+
+  @override
+  String get videoEditorLayerAnimationTypewriter => 'Daktilo';
+
+  @override
+  String get videoEditorLayerAnimationWordByWord => 'Kelime kelime';
+
+  @override
+  String get videoEditorLayerAnimationPulse => 'Nabız';
+
+  @override
+  String get videoEditorLayerAnimationPulseTo => 'Küçülme boyutu';
+
+  @override
+  String get videoEditorLayerAnimationWiggleAngle => 'Eğim';
+
+  @override
+  String get videoEditorLayerAnimationBounceHeight => 'Yükseklik';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'Özel nokta';
 
   @override

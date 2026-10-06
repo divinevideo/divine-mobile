@@ -52,6 +52,13 @@ extension LayerAnimationStorage on Layer {
     for (final animation in divineAnimations)
       if (animation.phase == pve.AnimationPhase.animateOut) animation,
   ];
+
+  /// All [pve.AnimationPhase.loop] animations, which repeat for as long as
+  /// the layer is visible. Empty when the layer has none.
+  List<pve.LayerAnimation> get divineLoopAnimations => [
+    for (final animation in divineAnimations)
+      if (animation.phase == pve.AnimationPhase.loop) animation,
+  ];
 }
 
 /// Converts the picker's pro_video_editor animations into pro_image_editor
@@ -229,4 +236,6 @@ pve.LayerAnimation _withSlideFrom(pve.LayerAnimation animation, Offset from) =>
       slideDirection: animation.slideDirection,
       slideFrom: from,
       scaleFrom: animation.scaleFrom,
+      wiggleAngle: animation.wiggleAngle,
+      bounceHeight: animation.bounceHeight,
     );

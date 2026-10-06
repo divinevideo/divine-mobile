@@ -5982,6 +5982,15 @@
     "description": "Layer animation type that scales the layer from a smaller size up to full size (or back)."
   },
   "videoEditorLayerAnimationScaleFrom": "స్కేల్ నుండి",
+  "videoEditorLayerAnimationLoop": "లూప్",
+  "videoEditorLayerAnimationWiggle": "ఊగడం",
+  "videoEditorLayerAnimationBounce": "ఎగరడం",
+  "videoEditorLayerAnimationTypewriter": "టైప్‌రైటర్",
+  "videoEditorLayerAnimationWordByWord": "పదం పదంగా",
+  "videoEditorLayerAnimationPulse": "పల్స్",
+  "videoEditorLayerAnimationPulseTo": "ఇంతవరకు కుదించు",
+  "videoEditorLayerAnimationWiggleAngle": "వంపు",
+  "videoEditorLayerAnimationBounceHeight": "ఎత్తు",
   "@videoEditorLayerAnimationScaleFrom": {
     "description": "Section label above the slider that sets the starting size for a scale animation (0% to 100%)."
   },
