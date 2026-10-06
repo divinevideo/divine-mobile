@@ -9,6 +9,7 @@ import 'package:nostr_client/nostr_client.dart'
     show NostrClient, RelaySubscriptionRefusedException;
 import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
+import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/repository_providers.dart';
