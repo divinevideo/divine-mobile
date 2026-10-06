@@ -183,6 +183,7 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
+        expect(find.text(l10n.peopleListsPeopleCount(39)), findsOneWidget);
         expect(
           tester
               .state<ScrollableState>(find.byType(Scrollable))
@@ -365,6 +366,7 @@ void main() {
       );
       await tester.pump();
       await tester.pump();
+      expect(rosterOrder(tester), [_busiest, _busy, _quiet]);
       await tester.tap(find.text(l10n.peopleListsRemove));
       await tester.pumpAndSettle();
       verify(

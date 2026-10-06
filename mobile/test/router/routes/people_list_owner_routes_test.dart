@@ -359,6 +359,7 @@ void main() {
         );
         expect(find.byTooltip(strings.peopleListsActionsTooltip), findsNothing);
         expect(find.text('Own cached list'), findsNothing);
+        expect(find.text('Public list'), findsWidgets);
         verify(
           () => repository.fetchPublicList(
             ownerPubkey: _foreignOwner,
