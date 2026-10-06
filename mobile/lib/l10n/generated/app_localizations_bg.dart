@@ -13539,4 +13539,11 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Оставям това тук.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Видеото е изпратено';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Видеото ти е изпратено за преглед.';
 }

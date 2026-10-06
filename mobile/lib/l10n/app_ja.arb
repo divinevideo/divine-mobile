@@ -5019,5 +5019,7 @@
   "ideasTitleFive": "説明はほどほどに",
   "ideasDescriptionFive": "ただシェアしたかっただけ。",
   "ideasTitleSix": "今日のかけら",
-  "ideasDescriptionSix": "ここに置いておきます。"
+  "ideasDescriptionSix": "ここに置いておきます。",
+  "minorAccountReviewVideoSubmittedTitle": "動画を送信しました",
+  "minorAccountReviewVideoSubmittedBody": "動画を確認のために送信しました。"
 }

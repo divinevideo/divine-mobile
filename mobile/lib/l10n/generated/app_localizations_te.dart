@@ -13754,4 +13754,11 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'దీన్ని ఇక్కడ వదిలేస్తున్నాను.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'వీడియో సమర్పించబడింది';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'మీ వీడియో సమీక్ష కోసం సమర్పించబడింది.';
 }

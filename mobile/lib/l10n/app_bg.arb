@@ -5143,5 +5143,7 @@
   "ideasTitleFive": "Без много обяснения",
   "ideasDescriptionFive": "Просто исках да споделя.",
   "ideasTitleSix": "Малко от днес",
-  "ideasDescriptionSix": "Оставям това тук."
+  "ideasDescriptionSix": "Оставям това тук.",
+  "minorAccountReviewVideoSubmittedTitle": "Видеото е изпратено",
+  "minorAccountReviewVideoSubmittedBody": "Видеото ти е изпратено за преглед."
 }

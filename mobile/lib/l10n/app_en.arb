@@ -9705,5 +9705,7 @@
   },
   "@ideasDescriptionSix": {
     "description": "Inline publishing ideas: DescriptionSix"
-  }
+  },
+  "minorAccountReviewVideoSubmittedTitle": "Video submitted",
+  "minorAccountReviewVideoSubmittedBody": "Your video has been submitted for review."
 }

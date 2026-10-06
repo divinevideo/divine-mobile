@@ -13356,4 +13356,11 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Để điều này ở đây.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Đã gửi video';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Video của bạn đã được gửi để xem xét.';
 }

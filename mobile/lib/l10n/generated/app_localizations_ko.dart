@@ -12773,4 +12773,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => '여기에 남겨 둘게요.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => '동영상 제출 완료';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody => '검토를 위해 동영상을 제출했어요.';
 }

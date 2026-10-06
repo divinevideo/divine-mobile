@@ -13519,4 +13519,11 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Vou deixar isso aqui.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Vídeo enviado';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Seu vídeo foi enviado para análise.';
 }

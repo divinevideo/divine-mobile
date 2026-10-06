@@ -5019,5 +5019,7 @@
   "ideasTitleFive": "Uzun açıklama yok",
   "ideasDescriptionFive": "Sadece paylaşmak istedim.",
   "ideasTitleSix": "Bugünden bir parça",
-  "ideasDescriptionSix": "Bunu buraya bırakıyorum."
+  "ideasDescriptionSix": "Bunu buraya bırakıyorum.",
+  "minorAccountReviewVideoSubmittedTitle": "Video gönderildi",
+  "minorAccountReviewVideoSubmittedBody": "Videon incelenmek üzere gönderildi."
 }

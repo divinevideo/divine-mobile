@@ -13416,4 +13416,11 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Lämnar det här.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Videon har skickats';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Din video har skickats för granskning.';
 }

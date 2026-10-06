@@ -13482,4 +13482,11 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Dit laat ik hier achter.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Video ingediend';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Je video is ingediend voor beoordeling.';
 }

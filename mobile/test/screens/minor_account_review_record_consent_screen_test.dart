@@ -139,6 +139,7 @@ class _FakePermissions implements PermissionsService {
   PermissionStatus cameraStatus;
   PermissionStatus microphoneStatus;
   bool throwOnCameraCheck;
+  int settingsOpened = 0;
 
   @override
   Future<PermissionStatus> checkCameraStatus() async {
@@ -159,7 +160,10 @@ class _FakePermissions implements PermissionsService {
       microphoneStatus;
 
   @override
-  Future<bool> openAppSettings() async => true;
+  Future<bool> openAppSettings() async {
+    settingsOpened++;
+    return true;
+  }
 
   @override
   Future<PermissionStatus> checkGalleryStatus() async =>
@@ -235,6 +239,33 @@ Future<void> _pumpRecordConsentScreen(
 
 void main() {
   group('MinorAccountReviewRecordConsentScreen permissions', () {
+    testWidgets('permissions can be restored in Settings', (tester) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final recorder = _FakeRecorder();
+      final permissions = _FakePermissions(
+        cameraStatus: PermissionStatus.requiresSettings,
+      );
+      await _pumpRecordConsentScreen(
+        tester,
+        recorder: recorder,
+        permissions: permissions,
+      );
+
+      await tester.tap(find.text(l10n.cameraPermissionGoToSettings));
+      await tester.pumpAndSettle();
+      expect(permissions.settingsOpened, 1);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      permissions.cameraStatus = PermissionStatus.granted;
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await _pumpFrames(tester);
+
+      expect(recorder.initialized, isTrue);
+      expect(
+        find.text(l10n.minorAccountReviewRecordConsentDeniedTitle),
+        findsNothing,
+      );
+    });
+
     testWidgets('camera denial offers the email fallback', (tester) async {
       final l10n = lookupAppLocalizations(const Locale('en'));
       final recorder = _FakeRecorder();
@@ -487,8 +518,18 @@ void main() {
       expect(repository.submittedEmail, 'parent@example.com');
       expect(repository.submittedVideoPath, '/tmp/consent.mp4');
       expect(
-        find.text(l10n.minorAccountReviewSubmissionReceivedTitle),
+        find.text(l10n.minorAccountReviewVideoSubmittedTitle),
         findsOneWidget,
+      );
+      expect(
+        find.text(l10n.minorAccountReviewVideoSubmittedBody),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          l10n.minorAccountReviewSubmissionReceivedBody('parent@example.com'),
+        ),
+        findsNothing,
       );
       expect(fallbackTapped, isFalse);
     });
@@ -550,7 +591,7 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.text(l10n.minorAccountReviewSubmissionReceivedTitle),
+        find.text(l10n.minorAccountReviewVideoSubmittedTitle),
         findsNothing,
       );
 
@@ -564,7 +605,7 @@ void main() {
 
       expect(repository.submittedVideoPath, '/tmp/consent.mp4');
       expect(
-        find.text(l10n.minorAccountReviewSubmissionReceivedTitle),
+        find.text(l10n.minorAccountReviewVideoSubmittedTitle),
         findsOneWidget,
       );
     });
@@ -639,7 +680,7 @@ void main() {
 
         expect(repository.submittedVideoPath, '/tmp/consent.mp4');
         expect(
-          find.text(l10n.minorAccountReviewSubmissionReceivedTitle),
+          find.text(l10n.minorAccountReviewVideoSubmittedTitle),
           findsOneWidget,
         );
       },

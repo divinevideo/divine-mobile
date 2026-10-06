@@ -13075,4 +13075,10 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'ይህን እዚህ እተዋለሁ።';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'ቪዲዮው ተልኳል';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody => 'ቪዲዮዎ ለግምገማ ተልኳል።';
 }

@@ -5019,5 +5019,7 @@
   "ideasTitleFive": "Sin grandes explicaciones",
   "ideasDescriptionFive": "Solo quería compartirlo.",
   "ideasTitleSix": "Un poquito de hoy",
-  "ideasDescriptionSix": "Lo dejo por aquí."
+  "ideasDescriptionSix": "Lo dejo por aquí.",
+  "minorAccountReviewVideoSubmittedTitle": "Video enviado",
+  "minorAccountReviewVideoSubmittedBody": "Tu video se envió para revisión."
 }

@@ -12760,4 +12760,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'ここに置いておきます。';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => '動画を送信しました';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody => '動画を確認のために送信しました。';
 }

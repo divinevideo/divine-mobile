@@ -13575,4 +13575,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Das lasse ich hier.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Video eingereicht';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Dein Video wurde zur Prüfung eingereicht.';
 }

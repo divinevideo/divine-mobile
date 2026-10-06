@@ -13615,4 +13615,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Je laisse ça ici.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Vidéo envoyée';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Ta vidéo a été envoyée pour examen.';
 }

@@ -4565,5 +4565,7 @@
   "ideasTitleFive": "긴 설명 없이",
   "ideasDescriptionFive": "그냥 나누고 싶었어요.",
   "ideasTitleSix": "오늘의 한 조각",
-  "ideasDescriptionSix": "여기에 남겨 둘게요."
+  "ideasDescriptionSix": "여기에 남겨 둘게요.",
+  "minorAccountReviewVideoSubmittedTitle": "동영상 제출 완료",
+  "minorAccountReviewVideoSubmittedBody": "검토를 위해 동영상을 제출했어요."
 }

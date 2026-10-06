@@ -13678,4 +13678,11 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Zostawiam to tutaj.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Film przesłany';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Twój film został przesłany do sprawdzenia.';
 }

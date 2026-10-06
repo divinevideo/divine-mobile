@@ -13413,4 +13413,11 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Saya tinggalkan ini di sini.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Video dihantar';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Video anda telah dihantar untuk semakan.';
 }

@@ -13682,4 +13682,11 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Las asta aici.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Videoclip trimis';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Videoclipul tău a fost trimis pentru verificare.';
 }

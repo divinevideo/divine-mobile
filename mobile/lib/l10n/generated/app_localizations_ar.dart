@@ -13373,4 +13373,11 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'أترك هذا هنا.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'تم إرسال الفيديو';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'تم إرسال الفيديو للمراجعة.';
 }

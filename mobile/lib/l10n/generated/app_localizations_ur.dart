@@ -13405,4 +13405,11 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'یہ یہاں چھوڑ رہا ہوں۔';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'ویڈیو جمع ہو گئی';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'آپ کی ویڈیو جائزے کے لیے جمع ہو گئی ہے۔';
 }

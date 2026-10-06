@@ -5019,5 +5019,7 @@
   "ideasTitleFive": "بلا شرح طويل",
   "ideasDescriptionFive": "أردت المشاركة فقط.",
   "ideasTitleSix": "القليل من اليوم",
-  "ideasDescriptionSix": "أترك هذا هنا."
+  "ideasDescriptionSix": "أترك هذا هنا.",
+  "minorAccountReviewVideoSubmittedTitle": "تم إرسال الفيديو",
+  "minorAccountReviewVideoSubmittedBody": "تم إرسال الفيديو للمراجعة."
 }

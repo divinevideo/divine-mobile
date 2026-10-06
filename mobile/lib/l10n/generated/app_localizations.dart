@@ -22448,6 +22448,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Leaving this here.'**
   String get ideasDescriptionSix;
+
+  /// No description provided for @minorAccountReviewVideoSubmittedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Video submitted'**
+  String get minorAccountReviewVideoSubmittedTitle;
+
+  /// No description provided for @minorAccountReviewVideoSubmittedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your video has been submitted for review.'**
+  String get minorAccountReviewVideoSubmittedBody;
 }
 
 class _AppLocalizationsDelegate

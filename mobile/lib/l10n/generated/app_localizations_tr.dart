@@ -13337,4 +13337,11 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Bunu buraya bırakıyorum.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Video gönderildi';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Videon incelenmek üzere gönderildi.';
 }

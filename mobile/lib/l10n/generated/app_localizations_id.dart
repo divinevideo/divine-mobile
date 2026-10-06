@@ -13316,4 +13316,11 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Kutinggalkan ini di sini.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Video terkirim';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Videomu telah dikirim untuk ditinjau.';
 }

@@ -12610,4 +12610,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => '把这个留在这里。';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => '视频已提交';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody => '你的视频已提交审核。';
 }

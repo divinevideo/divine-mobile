@@ -13527,4 +13527,11 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Iiwan ko ito rito.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Naipasa na ang video';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Naipasa na ang video mo para sa pagsusuri.';
 }
