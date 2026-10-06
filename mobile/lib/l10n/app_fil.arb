@@ -4032,5 +4032,6 @@
     "listRetrySync": "I-sync ngayon",
     "listPermissionsUnconfirmed": "Hindi makumpirma ang pagbabagong ito. Subukan ulit.",
     "listRecoveryPending": "May mga pagbabago sa listahang ito na naghihintay ma-sync.",
-    "listPermissionsRecoveryPending": "Tinanggap ang pagbabago mo. I-tap ang I-sync ngayon para tapusin ang pag-save. Naka-pause ang pag-edit hanggang matapos ito."
+    "listPermissionsRecoveryPending": "Tinanggap ang pagbabago mo. I-tap ang I-sync ngayon para tapusin ang pag-save. Naka-pause ang pag-edit hanggang matapos ito.",
+    "listRecoveryReadOnly": "Kailangang i-recover ang ilang naka-save na pagbabago sa mga video list. Puwede mong tingnan ang mga video list, pero naka-pause ang pag-edit."
 }

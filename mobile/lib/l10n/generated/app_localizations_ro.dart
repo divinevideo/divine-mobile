@@ -13489,4 +13489,8 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get listPermissionsRecoveryPending =>
       'Modificarea a fost acceptată. Apasă Sincronizează acum pentru a termina salvarea. Editarea este suspendată până atunci.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Unele modificări salvate în listele de videoclipuri trebuie recuperate. Poți vedea listele de videoclipuri, dar editarea este suspendată.';
 }

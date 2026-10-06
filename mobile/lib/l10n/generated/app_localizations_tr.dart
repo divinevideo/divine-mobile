@@ -13144,4 +13144,8 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get listPermissionsRecoveryPending =>
       'Değişikliğin kabul edildi. Kaydetmeyi tamamlamak için Şimdi eşitle seçeneğine dokun. O zamana kadar düzenleme duraklatılır.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Video listelerindeki bazı kayıtlı değişikliklerin kurtarılması gerekiyor. Video listelerini görüntüleyebilirsin, ancak düzenleme duraklatıldı.';
 }

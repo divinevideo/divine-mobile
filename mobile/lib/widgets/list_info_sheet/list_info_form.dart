@@ -8,6 +8,7 @@ import 'package:openvine/blocs/curated_list_info/curated_list_info_cubit.dart';
 import 'package:openvine/extensions/modal_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/curated_list_recovery_read_only_notice.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_collaborators_row.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_failure_message.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_fields.dart';
@@ -113,8 +114,13 @@ class _SaveFailedMessage extends StatelessWidget {
     final permissionRecoveryPending = context.select(
       (CuratedListInfoCubit cubit) => cubit.state.permissionRecoveryPending,
     );
+    final recoveryReadOnly = context.select(
+      (CuratedListInfoCubit cubit) => cubit.state.recoveryReadOnly,
+    );
     // An accepted change needs recovery, not a second permissions submission.
-    if (permissionRecoveryPending) return const SizedBox.shrink();
+    if (permissionRecoveryPending || recoveryReadOnly) {
+      return const SizedBox.shrink();
+    }
     if (status != CuratedListInfoStatus.failure &&
         status != CuratedListInfoStatus.permissionsUnconfirmed) {
       return const SizedBox.shrink();
@@ -137,6 +143,9 @@ class _RecoveryMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<CuratedListInfoCubit>().state;
+    if (state.recoveryReadOnly) {
+      return const CuratedListRecoveryReadOnlyNotice();
+    }
     if (!state.needsSync) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.all(16),

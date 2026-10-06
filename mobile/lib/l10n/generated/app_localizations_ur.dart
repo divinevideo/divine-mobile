@@ -13213,4 +13213,8 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get listPermissionsRecoveryPending =>
       'آپ کی تبدیلی قبول کر لی گئی ہے۔ اسے محفوظ کرنے کے لیے اب ہم آہنگ کریں پر ٹیپ کریں۔ تب تک ترمیم موقوف ہے۔';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'ویڈیو فہرستوں میں محفوظ کی گئی کچھ تبدیلیوں کو بحال کرنے کی ضرورت ہے۔ آپ ویڈیو فہرستیں دیکھ سکتے ہیں، لیکن ترمیم عارضی طور پر روک دی گئی ہے۔';
 }

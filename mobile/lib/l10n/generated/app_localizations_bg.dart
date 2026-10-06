@@ -13348,4 +13348,8 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get listPermissionsRecoveryPending =>
       'Промяната е приета. Докосни Синхронизирай сега, за да завършиш запазването. Редактирането е спряно дотогава.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Някои запазени промени във видеосписъците трябва да бъдат възстановени. Можеш да разглеждаш видеосписъците, но редактирането е временно спряно.';
 }

@@ -10,6 +10,7 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/curated_list_info/curated_list_info_cubit.dart';
 import 'package:openvine/extensions/modal_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/curated_list_editor_session_provider.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
@@ -63,6 +64,10 @@ Future<ListInfoSheetOutcome> showListInfoSheet(
     videoEventId: video?.id,
   );
   final formKey = GlobalKey();
+  final recoverySubscription = container.listen(
+    curatedListsStateProvider,
+    (_, _) => cubit.refreshRecoveryReadOnly(),
+  );
 
   try {
     await context.showVideoPausingVineBottomSheet<void>(
@@ -141,6 +146,7 @@ Future<ListInfoSheetOutcome> showListInfoSheet(
         ListInfoSheetOutcome.dismissed,
     };
   } finally {
+    recoverySubscription.close();
     await cubit.close();
   }
 }

@@ -13382,4 +13382,8 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get listPermissionsRecoveryPending =>
       'Deine Änderung wurde angenommen. Tippe auf Jetzt synchronisieren, um das Speichern abzuschließen. Bis dahin ist die Bearbeitung pausiert.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Einige gespeicherte Änderungen an Videolisten müssen wiederhergestellt werden. Du kannst Videolisten ansehen, aber die Bearbeitung ist vorübergehend pausiert.';
 }

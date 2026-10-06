@@ -30,7 +30,10 @@ import 'package:profile_repository/profile_repository.dart';
 
 import '../../helpers/test_provider_overrides.dart';
 
-class _MockCuratedListService extends Mock implements CuratedListService {}
+class _MockCuratedListService extends Mock implements CuratedListService {
+  @override
+  bool recoveryNeedsRepair = false;
+}
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
@@ -48,6 +51,8 @@ class _FakeCuratedListsState extends CuratedListsState {
 
   @override
   Future<List<CuratedList>> build() async => const [];
+
+  void notifyRecoveryChanged() => state = AsyncData(List<CuratedList>.empty());
 }
 
 // Full-length 64-char identifiers — never truncate.
@@ -205,6 +210,64 @@ void main() {
     DivineSwitchTile visibilityTile(WidgetTester tester) =>
         tester.widget<DivineSwitchTile>(find.byType(DivineSwitchTile));
 
+    testWidgets('unreadable recovery keeps the form readable and inert', (
+      tester,
+    ) async {
+      service.recoveryNeedsRepair = true;
+      final pending = list(collaborators: [_collaborator]).copyWith(
+        pendingRepublish: true,
+      );
+      await openSheet(tester, existingList: pending);
+      expect(find.text(l10n.listRecoveryReadOnly), findsOneWidget);
+      expect(find.text(l10n.listRetrySync), findsNothing);
+      expect(find.text('Puppets'), findsOneWidget);
+      final fields = tester.widgetList<TextField>(find.byType(TextField));
+      expect(fields.every((field) => field.enabled == false), isTrue);
+      expect(visibilityTile(tester).onChanged, isNull);
+      final collaboratorRow = tester.widget<InkWell>(
+        find.descendant(
+          of: find.byType(ListInfoCollaboratorsRow),
+          matching: find.byType(InkWell),
+        ),
+      );
+      expect(collaboratorRow.onTap, isNull);
+      final semantics = tester.ensureSemantics();
+      expect(
+        saveButtonNode(editing: true),
+        isSemantics(hasEnabledState: true, isEnabled: false),
+      );
+      await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+      await tester.pumpAndSettle();
+      expect(find.byType(ListInfoForm), findsNothing);
+      verifyNever(() => service.updateList(listId: any(named: 'listId')));
+      verifyNever(() => service.retryListSync(any()));
+      semantics.dispose();
+    });
+
+    testWidgets('an open form follows the service recovery hold and repair', (
+      tester,
+    ) async {
+      await openSheet(tester, existingList: list());
+      expect(visibilityTile(tester).onChanged, isNotNull);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(ListInfoForm)),
+      );
+      final notifier = container.read(
+        curatedListsStateProvider.notifier,
+      ) as _FakeCuratedListsState;
+      service.recoveryNeedsRepair = true;
+      notifier.notifyRecoveryChanged();
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.listRecoveryReadOnly), findsOneWidget);
+      expect(visibilityTile(tester).onChanged, isNull);
+      service.recoveryNeedsRepair = false;
+      notifier.notifyRecoveryChanged();
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.listRecoveryReadOnly), findsNothing);
+      expect(visibilityTile(tester).onChanged, isNotNull);
+      expect(find.text('Puppets'), findsOneWidget);
+    });
+
     testWidgets(
       'accepted permissions explain Sync now and block editing until settled',
       (tester) async {
@@ -257,8 +320,9 @@ void main() {
           ),
         );
         when(() => service.getListById(any())).thenReturn(pending);
-        when(() => service.retryListSync(_listId))
-            .thenAnswer((_) async => false);
+        when(
+          () => service.retryListSync(_listId),
+        ).thenAnswer((_) async => false);
         await openSheet(tester, existingList: pending);
         await tester.tap(find.text(l10n.listRetrySync));
         await tester.pumpAndSettle();
@@ -274,8 +338,9 @@ void main() {
     testWidgets(
       'deletion-only recovery does not claim failure or disable edits',
       (tester) async {
-        final pending = list(isPublic: false)
-            .copyWith(pendingPlaintextEventIds: ['a' * 64]);
+        final pending = list(
+          isPublic: false,
+        ).copyWith(pendingPlaintextEventIds: ['a' * 64]);
         when(() => service.getListById(any())).thenReturn(pending);
         await openSheet(tester, existingList: pending);
         expect(find.text(l10n.listRecoveryPending), findsOneWidget);
@@ -1145,12 +1210,14 @@ void main() {
         (tester) async {
           stubUpdate(() async => true);
           final profiles = _MockProfileRepository();
-          when(() => profiles.getCachedProfiles(pubkeys: any(named: 'pubkeys')))
-              .thenAnswer((_) async => []);
+          when(
+            () => profiles.getCachedProfiles(pubkeys: any(named: 'pubkeys')),
+          ).thenAnswer((_) async => []);
           final follows = _MockFollowRepository();
           when(() => follows.followingPubkeys).thenReturn([]);
-          when(follows.streamMyFollowers)
-              .thenAnswer((_) => Stream.value(<String>[]));
+          when(
+            follows.streamMyFollowers,
+          ).thenAnswer((_) => Stream.value(<String>[]));
           await openSheet(
             tester,
             existingList: list(collaborators: [_collaborator]),
@@ -1160,8 +1227,9 @@ void main() {
               vanishedProfilePubkeysProvider.overrideWith(
                 (ref) => Stream.value(const <String>{}),
               ),
-              userProfileReactiveProvider(_collaborator)
-                  .overrideWith((ref) => Stream.value(null)),
+              userProfileReactiveProvider(
+                _collaborator,
+              ).overrideWith((ref) => Stream.value(null)),
             ],
           );
           await tester.tap(collaboratorsRow());

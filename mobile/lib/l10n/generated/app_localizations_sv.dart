@@ -13225,4 +13225,8 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get listPermissionsRecoveryPending =>
       'Din ändring har godkänts. Tryck på Synkronisera nu för att slutföra sparandet. Redigering är pausad tills dess.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Vissa sparade ändringar i videolistor behöver återställas. Du kan visa videolistor, men redigeringen är pausad.';
 }

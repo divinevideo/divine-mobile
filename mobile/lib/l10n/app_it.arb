@@ -5026,5 +5026,6 @@
     "listRetrySync": "Sincronizza ora",
     "listPermissionsUnconfirmed": "Non è stato possibile confermare questa modifica. Riprova.",
     "listRecoveryPending": "Questa lista ha modifiche in attesa di sincronizzazione.",
-    "listPermissionsRecoveryPending": "La modifica è stata accettata. Tocca Sincronizza ora per completare il salvataggio. Le modifiche sono sospese fino ad allora."
+    "listPermissionsRecoveryPending": "La modifica è stata accettata. Tocca Sincronizza ora per completare il salvataggio. Le modifiche sono sospese fino ad allora.",
+    "listRecoveryReadOnly": "Alcune modifiche salvate alle liste di video devono essere recuperate. Puoi vedere le liste di video, ma la modifica è sospesa."
 }

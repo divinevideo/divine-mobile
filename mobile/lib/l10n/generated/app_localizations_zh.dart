@@ -12415,4 +12415,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get listPermissionsRecoveryPending => '更改已被接受。点击立即同步以完成保存。在此之前，编辑将暂停。';
+
+  @override
+  String get listRecoveryReadOnly => '视频列表中保存的部分更改需要恢复。你可以查看视频列表，但编辑已暂停。';
 }

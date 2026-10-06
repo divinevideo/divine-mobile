@@ -5026,5 +5026,6 @@
     "listRetrySync": "Sinkronkan sekarang",
     "listPermissionsUnconfirmed": "Perubahan ini belum bisa dikonfirmasi. Coba lagi.",
     "listRecoveryPending": "Daftar ini memiliki perubahan yang menunggu sinkronisasi.",
-    "listPermissionsRecoveryPending": "Perubahanmu diterima. Ketuk Sinkronkan sekarang untuk menyelesaikan penyimpanan. Pengeditan dijeda sampai selesai."
+    "listPermissionsRecoveryPending": "Perubahanmu diterima. Ketuk Sinkronkan sekarang untuk menyelesaikan penyimpanan. Pengeditan dijeda sampai selesai.",
+    "listRecoveryReadOnly": "Beberapa perubahan tersimpan pada daftar video perlu dipulihkan. Kamu bisa melihat daftar video, tetapi pengeditan dijeda."
 }

@@ -5119,5 +5119,6 @@
     "listRetrySync": "አሁን አመሳስል",
     "listPermissionsUnconfirmed": "ይህን ለውጥ ማረጋገጥ አልተቻለም። እንደገና ይሞክሩ።",
     "listRecoveryPending": "ይህ ዝርዝር መመሳሰል የሚጠብቁ ለውጦች አሉት።",
-    "listPermissionsRecoveryPending": "ለውጥዎ ተቀባይነት አግኝቷል። ማስቀመጡን ለማጠናቀቅ አሁን አመሳስልን ይንኩ። እስከዚያ ድረስ ማርትዕ ቆሟል።"
+    "listPermissionsRecoveryPending": "ለውጥዎ ተቀባይነት አግኝቷል። ማስቀመጡን ለማጠናቀቅ አሁን አመሳስልን ይንኩ። እስከዚያ ድረስ ማርትዕ ቆሟል።",
+    "listRecoveryReadOnly": "በቪዲዮ ዝርዝሮች ላይ የተቀመጡ አንዳንድ ለውጦች መመለስ ያስፈልጋቸዋል። የቪዲዮ ዝርዝሮችን ማየት ይችላሉ፣ ግን ማርትዕ ለጊዜው ቆሟል።"
 }

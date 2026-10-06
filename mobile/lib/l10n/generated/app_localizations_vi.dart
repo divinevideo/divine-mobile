@@ -13162,4 +13162,8 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get listPermissionsRecoveryPending =>
       'Thay đổi đã được chấp nhận. Nhấn Đồng bộ ngay để hoàn tất lưu. Việc chỉnh sửa tạm dừng cho đến lúc đó.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Một số thay đổi đã lưu trong danh sách video cần được khôi phục. Bạn có thể xem danh sách video, nhưng việc chỉnh sửa đang tạm dừng.';
 }

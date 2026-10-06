@@ -108,6 +108,8 @@ class _MockCuratedListService extends Mock implements CuratedListService {
     when(() => subscribedLists).thenReturn(const <CuratedList>[]);
     when(() => subscribedListIds).thenReturn(const <String>{});
   }
+  @override
+  bool recoveryNeedsRepair = false;
 }
 
 /// Serves a mock service without running the real relay-backed build.

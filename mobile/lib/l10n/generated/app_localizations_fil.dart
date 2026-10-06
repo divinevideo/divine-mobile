@@ -13334,4 +13334,8 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get listPermissionsRecoveryPending =>
       'Tinanggap ang pagbabago mo. I-tap ang I-sync ngayon para tapusin ang pag-save. Naka-pause ang pag-edit hanggang matapos ito.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Kailangang i-recover ang ilang naka-save na pagbabago sa mga video list. Puwede mong tingnan ang mga video list, pero naka-pause ang pag-edit.';
 }

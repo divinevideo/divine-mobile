@@ -13483,4 +13483,8 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get listPermissionsRecoveryPending =>
       'Zmiana została zaakceptowana. Dotknij Synchronizuj teraz, aby dokończyć zapisywanie. Do tego czasu edycja jest wstrzymana.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Niektóre zapisane zmiany na listach filmów wymagają odzyskania. Możesz przeglądać listy filmów, ale edycja jest wstrzymana.';
 }

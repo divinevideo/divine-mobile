@@ -12579,4 +12579,8 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get listPermissionsRecoveryPending =>
       '변경 사항이 승인되었습니다. 지금 동기화를 눌러 저장을 완료하세요. 그때까지 편집이 일시 중지됩니다.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      '동영상 목록에 저장된 일부 변경 사항을 복구해야 해요. 동영상 목록은 볼 수 있지만 편집은 잠시 중단돼요.';
 }
