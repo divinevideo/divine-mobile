@@ -8,7 +8,11 @@ import 'package:openvine/widgets/list_picker_row.dart';
 
 void main() {
   group(ListPickerRow, () {
-    Widget buildSubject({required bool isSelected, VoidCallback? onTap}) {
+    Widget buildSubject({
+      required bool isSelected,
+      VoidCallback? onTap,
+      bool canChange = true,
+    }) {
       return MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -18,7 +22,7 @@ void main() {
             title: 'Close Friends',
             meta: '1 member',
             isSelected: isSelected,
-            onTap: onTap ?? () {},
+            onTap: canChange ? onTap ?? () {} : null,
           ),
         ),
       );
@@ -36,6 +40,8 @@ void main() {
             label: 'Close Friends\n1 member',
             hasCheckedState: true,
             isChecked: true,
+            hasEnabledState: true,
+            isEnabled: true,
             isImage: false,
             hasTapAction: true,
           ),
@@ -53,8 +59,30 @@ void main() {
             label: 'Close Friends\n1 member',
             hasCheckedState: true,
             isChecked: false,
+            hasEnabledState: true,
+            isEnabled: true,
             isImage: false,
             hasTapAction: true,
+          ),
+        );
+      });
+
+      testWidgets('reads a row whose pick cannot change as disabled', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(isSelected: true, canChange: false),
+        );
+
+        expect(
+          tester.getSemantics(find.byType(ListPickerRow)),
+          isSemantics(
+            label: 'Close Friends\n1 member',
+            hasCheckedState: true,
+            isChecked: true,
+            hasEnabledState: true,
+            isEnabled: false,
+            hasTapAction: false,
           ),
         );
       });
