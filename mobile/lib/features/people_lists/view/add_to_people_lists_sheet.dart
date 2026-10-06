@@ -243,7 +243,12 @@ class _PeopleListRows extends StatelessWidget {
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(context.l10n.peopleListsLoadFailed),
+            Text(
+              context.l10n.peopleListsLoadFailed,
+              style: VineTheme.bodyMediumFont(
+                color: context.vineColors.onSurfaceVariant,
+              ),
+            ),
             DivineButton(
               label: context.l10n.peopleListsAddPeopleRetry,
               onPressed: () => context.read<PeopleListsBloc>().add(
