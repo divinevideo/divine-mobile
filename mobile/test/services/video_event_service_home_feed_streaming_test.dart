@@ -78,7 +78,7 @@ void main() {
           onEose: any(named: 'onEose'),
         ),
       ).thenAnswer((invocation) {
-        // Fire onEose immediately to complete the seed
+        // Fire onEose from a microtask to complete the seed
         final onEose =
             invocation.namedArguments[const Symbol('onEose')]
                 as void Function()?;
@@ -153,7 +153,7 @@ void main() {
           onEose: any(named: 'onEose'),
         ),
       ).thenAnswer((invocation) {
-        // Add an error then close
+        // Deliver an error from a microtask
         scheduleMicrotask(() {
           controller.addError(Exception('Test error'));
         });
