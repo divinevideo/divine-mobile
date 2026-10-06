@@ -8,14 +8,14 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/auth_result.dart';
+import 'package:openvine/models/authentication_source.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/device_authentication_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/key_management/keycast_key_export_card.dart';
-import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 class KeyManagementScreen extends ConsumerStatefulWidget {
@@ -278,6 +278,7 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
     if (confirmed != true) return;
 
     setState(() => _isImporting = true);
+    AuthFailureReason? failureReason;
 
     try {
       // Use AuthService for proper session setup and relay discovery
@@ -289,11 +290,7 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
       final result = await authService.importFromNsec(nsec);
 
       if (!result.success) {
-        if (result.failureReason == AuthFailureReason.accountCleanupFailed) {
-          throw const UserDataCleanupException(
-            'Could not clear account data safely',
-          );
-        }
+        failureReason = result.failureReason;
         throw Exception(result.errorMessage ?? 'Failed to import key');
       }
 
@@ -328,7 +325,7 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           DivineSnackbarContainer.snackBar(
-            e is UserDataCleanupException
+            failureReason == AuthFailureReason.accountCleanupFailed
                 ? context.l10n.authAccountCleanupFailed
                 : context.l10n.keyManagementImportFailed,
             error: true,
