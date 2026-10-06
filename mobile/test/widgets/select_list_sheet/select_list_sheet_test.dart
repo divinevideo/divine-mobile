@@ -24,6 +24,7 @@ import 'package:openvine/widgets/list_picker_create_button.dart';
 import 'package:openvine/widgets/list_picker_row.dart';
 import 'package:openvine/widgets/select_list_sheet/select_list_sheet.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../helpers/test_provider_overrides.dart';
 
@@ -135,6 +136,7 @@ void main() {
       WidgetTester tester, {
       CuratedListsState Function() listsState = _FakeCuratedListsState.new,
       List<CuratedList>? thumbnails = const [],
+      Override? hydrationOverride,
       Locale locale = const Locale('en'),
     }) async {
       await tester.binding.setSurfaceSize(const Size(800, 1200));
@@ -146,11 +148,12 @@ void main() {
           additionalOverrides: [
             authServiceProvider.overrideWithValue(auth),
             curatedListsStateProvider.overrideWith(listsState),
-            myListsWithThumbnailsProvider.overrideWith(
-              (ref) => thumbnails == null
-                  ? neverResolves.future
-                  : Future.value(thumbnails),
-            ),
+            hydrationOverride ??
+                myListsWithThumbnailsProvider.overrideWith(
+                  (ref) => thumbnails == null
+                      ? neverResolves.future
+                      : Future.value(thumbnails),
+                ),
           ],
           home: Builder(
             builder: (context) => Scaffold(
@@ -300,6 +303,158 @@ void main() {
           find.byType(ListSkeletonizer),
         );
         expect(skeleton.enabled, isTrue);
+      });
+
+      testWidgets('fans keep author-colliding IDs on their own list', (
+        tester,
+      ) async {
+        final own = list('Own', videoEventIds: const [_videoEventId]);
+        final foreign = own.copyWith(pubkey: 'b' * 64);
+        when(() => service.myLists).thenReturn([own]);
+        await openSheet(
+          tester,
+          thumbnails: [
+            own.copyWith(thumbnailUrls: ['https://example.com/own.jpg']),
+            foreign.copyWith(
+              thumbnailUrls: ['https://example.com/foreign.jpg'],
+            ),
+          ],
+        );
+        expect(find.text('Own'), findsOneWidget);
+        expect(
+          tester
+              .widget<PassiveAuthThumbnailImage>(
+                find.byType(PassiveAuthThumbnailImage),
+              )
+              .url,
+          'https://example.com/own.jpg',
+        );
+      });
+
+      testWidgets('fans retire old and durable images during policy reload', (
+        tester,
+      ) async {
+        final own = list(
+          'Own',
+          videoEventIds: const [_videoEventId],
+          thumbnailUrls: ['https://example.com/durable.jpg'],
+        );
+        when(() => service.myLists).thenReturn([own]);
+        var pass = 0;
+        final reload = Completer<List<CuratedList>>();
+        await openSheet(
+          tester,
+          hydrationOverride: myListsWithThumbnailsProvider.overrideWith((ref) {
+            ref.watch(blocklistVersionProvider);
+            if (pass++ == 0) {
+              return Future.value([
+                own.copyWith(
+                  thumbnailUrls: ['https://example.com/previous.jpg'],
+                ),
+              ]);
+            }
+            return reload.future;
+          }),
+        );
+        expect(
+          tester
+              .widget<PassiveAuthThumbnailImage>(
+                find.byType(PassiveAuthThumbnailImage),
+              )
+              .url,
+          'https://example.com/previous.jpg',
+        );
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(SelectListSheetBody)),
+        );
+        container.read(blocklistVersionProvider.notifier).increment();
+        await tester.pump();
+        expect(container.read(myListsWithThumbnailsProvider).isLoading, isTrue);
+        expect(find.byType(PassiveAuthThumbnailImage), findsNothing);
+        expect(
+          tester
+              .widget<ListSkeletonizer>(find.byType(ListSkeletonizer))
+              .enabled,
+          isTrue,
+        );
+        reload.complete([
+          own.copyWith(thumbnailUrls: ['https://example.com/current.jpg']),
+        ]);
+        await tester.pump();
+        await tester.pump();
+        expect(
+          tester
+              .widget<PassiveAuthThumbnailImage>(
+                find.byType(PassiveAuthThumbnailImage),
+              )
+              .url,
+          'https://example.com/current.jpg',
+        );
+        expect(
+          tester
+              .widget<ListSkeletonizer>(find.byType(ListSkeletonizer))
+              .enabled,
+          isFalse,
+        );
+      });
+
+      testWidgets('fans retire retained error images and stop shimmering', (
+        tester,
+      ) async {
+        final own = list(
+          'Own',
+          videoEventIds: const [_videoEventId],
+          thumbnailUrls: ['https://example.com/durable.jpg'],
+        );
+        when(() => service.myLists).thenReturn([own]);
+        var pass = 0;
+        await openSheet(
+          tester,
+          hydrationOverride: myListsWithThumbnailsProvider.overrideWith((
+            ref,
+          ) async {
+            ref.watch(blocklistVersionProvider);
+            if (pass++ == 1) throw StateError('Hydration failed');
+            return [
+              own.copyWith(
+                thumbnailUrls: [
+                  if (pass == 1)
+                    'https://example.com/previous.jpg'
+                  else
+                    'https://example.com/current.jpg',
+                ],
+              ),
+            ];
+          }),
+        );
+        expect(find.byType(PassiveAuthThumbnailImage), findsOneWidget);
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(SelectListSheetBody)),
+        );
+        container.read(blocklistVersionProvider.notifier).increment();
+        await tester.pump();
+        await tester.pump();
+        expect(container.read(myListsWithThumbnailsProvider).hasError, isTrue);
+        expect(find.byType(PassiveAuthThumbnailImage), findsNothing);
+        expect(
+          tester
+              .widget<ListSkeletonizer>(find.byType(ListSkeletonizer))
+              .enabled,
+          isFalse,
+        );
+        container.read(blocklistVersionProvider.notifier).increment();
+        await tester.pump();
+        await tester.pump();
+        expect(
+          tester
+              .widget<PassiveAuthThumbnailImage>(
+                find.byType(PassiveAuthThumbnailImage),
+              )
+              .url,
+          'https://example.com/current.jpg',
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
       });
 
       testWidgets("a list waiting to sync says so in the rows' font", (
