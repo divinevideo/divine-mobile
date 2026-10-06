@@ -429,6 +429,49 @@ void main() {
           expect(layer.animationStartTime, Duration.zero);
         }
       });
+
+      test('anchor a leave to the output end when the layer has none', () {
+        final timelineMap = TransitionTimelineMap.fromClips(noTransitionClips);
+        final layers = VideoEditorRenderService.buildImageLayers(
+          capturedLayers: [
+            pie.ExportedLayer(
+              layer: pie.TextLayer(
+                text: 'Hello world',
+                animations: const [
+                  pie.LayerAnimation(
+                    type: pie.LayerAnimationType.typewriter,
+                    phase: pie.AnimationPhase.animateIn,
+                    duration: Duration(seconds: 1),
+                  ),
+                  pie.LayerAnimation(
+                    type: pie.LayerAnimationType.fade,
+                    phase: pie.AnimationPhase.animateOut,
+                    duration: Duration(milliseconds: 300),
+                  ),
+                ],
+              ),
+              bytes: Uint8List.fromList(const [0]),
+              logicalSize: const Size(10, 20),
+              revealBytes: {
+                const pie.ExportedTextState(revealedLength: 0):
+                    Uint8List.fromList(const [1]),
+              },
+            ),
+          ],
+          bodySize: const Size(100, 200),
+          videoSize: const Size(300, 600),
+          targetAspectRatio: vertical,
+          timelineMap: timelineMap,
+        )!;
+
+        // A null layer end means "lasts until the video ends": every step
+        // anchors its leave to the output end, never to its own end, which
+        // would play the leave at the end of each reveal step.
+        expect(layers.length, greaterThan(1));
+        for (final layer in layers) {
+          expect(layer.animationEndTime, timelineMap.outputDuration);
+        }
+      });
     });
   });
 

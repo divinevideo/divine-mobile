@@ -1143,17 +1143,19 @@ class VideoEditorRenderService {
           offset: offset,
           size: size,
           animations: animations,
-          // A layer without a start begins with the video, so its implicit
-          // origin is the output origin. Left null, the native renderer falls
-          // back to each split frame's own start and restarts an enter or a
-          // loop at every reveal step.
+          // A layer without a start or end begins or ends with the video, so
+          // its implicit range is the output's. Left null, the native
+          // renderer falls back to each split frame's own start or end: an
+          // enter or a loop restarts at every reveal step, and a leave plays
+          // at the end of each one.
           animationStartTime: split
               ? timelineMap.editorToOutput(
                   item.layer.startTime ?? Duration.zero,
                 )
               : null,
           animationEndTime: split
-              ? timelineMap.editorToOutputOrNull(item.layer.endTime)
+              ? timelineMap.editorToOutputOrNull(item.layer.endTime) ??
+                    timelineMap.outputDuration
               : null,
         ),
     ];
