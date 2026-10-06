@@ -141,6 +141,7 @@ void main() {
     }
 
     setUp(() {
+      registerFallbackValue(Duration.zero);
       nostrClient = _MockNostrClient();
       funnelcakeApiClient = _MockFunnelcakeApiClient();
       repository = CuratedListRepository(
