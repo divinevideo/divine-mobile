@@ -340,7 +340,10 @@ class _PeopleCollageMedia extends ConsumerWidget {
               pubkey: slot < pubkeys.length ? pubkeys[slot] : null,
               pictureUrl: vanishedAccountPictureUrl(
                 isVanished: slot < vanished.length && vanished[slot],
-                pictureUrl: profile?.value?.picture,
+                pictureUrl: switch (profile) {
+                  AsyncData(isLoading: false, :final value) => value?.picture,
+                  _ => null,
+                },
               ),
               slot: slot,
               seams: seams,

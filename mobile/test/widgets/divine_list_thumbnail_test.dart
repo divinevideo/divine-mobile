@@ -637,6 +637,69 @@ void main() {
         }
       });
 
+      testWidgets('retires the previous avatar when the profile stream fails', (
+        tester,
+      ) async {
+        final member = 'a' * 64;
+        const oldPicture = 'https://example.com/previous-member.jpg';
+        final profiles = StreamController<UserProfile?>();
+        await tester.pumpWidget(
+          buildSubject(
+            userList: createUserList(pubkeys: [member]),
+            profileOverrides: [
+              userProfileReactiveProvider(member).overrideWith(
+                (ref) => profiles.stream,
+              ),
+            ],
+          ),
+        );
+        try {
+          profiles.add(
+            profileFor(
+              member,
+              displayName: 'Cached member',
+              picture: oldPicture,
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+          expect(find.text('Cached member'), findsOneWidget);
+          expect(
+            tester.widget<UserAvatar>(find.byType(UserAvatar)).imageUrl,
+            oldPicture,
+          );
+
+          profiles.addError(StateError('Profile stream failed'));
+          await tester.pump();
+          await tester.pump();
+          final state = ProviderScope.containerOf(
+            tester.element(find.byType(DivineListThumbnail)),
+          ).read(userProfileReactiveProvider(member));
+          expect(state, isA<AsyncError<UserProfile?>>());
+          expect(state.value?.picture, oldPicture);
+          expect(find.byType(UserAvatar), findsNothing);
+          expect(find.byType(VineCachedImage), findsNothing);
+          expect(find.text('Cached member'), findsNothing);
+          expect(
+            find.text(UserProfile.defaultDisplayNameFor(member)),
+            findsOneWidget,
+          );
+          expect(
+            tester
+                .widget<ListSkeletonizer>(find.byType(ListSkeletonizer))
+                .enabled,
+            isFalse,
+          );
+        } finally {
+          // Deliver done before the nested family override pauses at unmount.
+          final closed = profiles.close();
+          await tester.pump();
+          await closed;
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+        }
+      });
+
       testWidgets('names its members when the list has no description', (
         tester,
       ) async {
