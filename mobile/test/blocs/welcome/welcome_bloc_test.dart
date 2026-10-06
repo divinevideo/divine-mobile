@@ -13,6 +13,7 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/welcome/welcome_bloc.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 
 class _MockUserProfilesDao extends Mock implements UserProfilesDao {}
@@ -343,6 +344,43 @@ void main() {
         expect: () => [const WelcomeState(status: WelcomeStatus.loaded)],
       );
     });
+
+    for (final event in <WelcomeEvent>[
+      const WelcomeLogBackInRequested(),
+      const WelcomeCancelSwitchRequested(),
+    ]) {
+      blocTest<WelcomeBloc, WelcomeState>(
+        '$event preserves typed cleanup failure and a retryable account',
+        setUp: () {
+          when(() => mockAuthService.signInForAccount(any(), any())).thenThrow(
+            const UserDataCleanupException(
+              'Could not clear account data safely',
+            ),
+          );
+        },
+        build: buildBloc,
+        seed: () => const WelcomeState(
+          status: WelcomeStatus.loaded,
+          previousAccounts: [_testPreviousAccount],
+        ),
+        act: (bloc) => bloc.add(event),
+        expect: () => [
+          const WelcomeState(
+            status: WelcomeStatus.accepting,
+            previousAccounts: [_testPreviousAccount],
+            signingInPubkeyHex: _testPubkeyHex,
+          ),
+          const WelcomeState(
+            status: WelcomeStatus.accountCleanupFailed,
+            previousAccounts: [_testPreviousAccount],
+          ),
+        ],
+        errors: () => [isA<UserDataCleanupException>()],
+        verify: (_) {
+          verifyNever(() => mockAuthService.acceptTerms());
+        },
+      );
+    }
 
     group('$WelcomeLogBackInRequested', () {
       blocTest<WelcomeBloc, WelcomeState>(
