@@ -2,6 +2,7 @@
 // ABOUTME: the timeline can move, trim, edit and delete it.
 
 import 'package:equatable/equatable.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
@@ -67,9 +68,10 @@ class EditorVideoEffect extends Equatable {
 ///
 /// A `null` start or end stays open, so a whole-video effect runs from the
 /// first output frame. A flashing effect starts on [flashingEffectStartGrid]
-/// instead, and is left out when no whole grid step fits before its end. The
-/// export and the live preview both time effects this way, so the preview
-/// shows what the file will.
+/// instead, and is left out when no whole grid step fits before its end. When
+/// the video flashes from its first frame, flashing effects also end on the
+/// last grid step before the loop point. The export and the live preview both
+/// time effects this way, so the preview shows what the file will.
 List<VideoEffect> videoEffectsOnOutput(
   List<VideoEffect> effects,
   TransitionTimelineMap timelineMap,
@@ -91,7 +93,53 @@ List<VideoEffect> videoEffectsOnOutput(
       ),
     );
   }
-  return result;
+  // The posted video ends, and starts over, where the export is capped.
+  final outputDuration = timelineMap.outputDuration;
+  return _endFlashingBeforeLoopPoint(
+    result,
+    loopPoint: outputDuration < VideoEditorConstants.maxDuration
+        ? outputDuration
+        : VideoEditorConstants.maxDuration,
+  );
+}
+
+/// [effects] with every flashing effect ended on the last
+/// [flashingEffectStartGrid] step before [loopPoint], if the video flashes
+/// from its first frame.
+///
+/// The grid keeps flashes in step within one pass, but a [loopPoint] off the
+/// grid restarts them off it. A negative flash's echo a quarter second after
+/// its last onset then lands right next to the first flashes of the next
+/// pass: a 5.5 s video flashed at 5.0, 5.25, 5.5 and 5.75 s (#9873). Stopping
+/// on the grid step before the loop point keeps both passes together at three
+/// flashes a second or fewer.
+List<VideoEffect> _endFlashingBeforeLoopPoint(
+  List<VideoEffect> effects, {
+  required Duration loopPoint,
+}) {
+  final lastStep = _roundDown(loopPoint, flashingEffectStartGrid);
+  if (lastStep == loopPoint) return effects;
+  final flashesFromStart = effects.any(
+    (effect) =>
+        isFlashingVideoEffect(effect.type) &&
+        effect.intensity > 0 &&
+        (effect.startTime ?? Duration.zero) == Duration.zero,
+  );
+  if (!flashesFromStart) return effects;
+  return [
+    for (final effect in effects)
+      if (!isFlashingVideoEffect(effect.type))
+        effect
+      else if ((effect.startTime ?? Duration.zero) < lastStep)
+        VideoEffect(
+          type: effect.type,
+          intensity: effect.intensity,
+          startTime: effect.startTime,
+          endTime: effect.endTime == null || effect.endTime! > lastStep
+              ? lastStep
+              : effect.endTime,
+        ),
+  ];
 }
 
 /// Where flashing effects may start in the exported video: on whole seconds.
@@ -103,7 +151,8 @@ List<VideoEffect> videoEffectsOnOutput(
 /// 1.25, 1.3 and 1.55 s. On a shared grid, split pieces, the parts left
 /// around a replacing effect and neighbouring flashing effects stay in step,
 /// so together they flash no more than three times a second, the WCAG 2.3.1
-/// limit, whatever an overlap transition does to their windows.
+/// limit, whatever an overlap transition does to their windows. Where the
+/// video loops, [videoEffectsOnOutput] ends them on the grid as well.
 const flashingEffectStartGrid = Duration(seconds: 1);
 
 Duration _roundUp(Duration value, Duration step) {
@@ -111,6 +160,11 @@ Duration _roundUp(Duration value, Duration step) {
   return Duration(
     microseconds: (value.inMicroseconds + micros - 1) ~/ micros * micros,
   );
+}
+
+Duration _roundDown(Duration value, Duration step) {
+  final micros = step.inMicroseconds;
+  return Duration(microseconds: value.inMicroseconds ~/ micros * micros);
 }
 
 /// Whether [type] flashes.
