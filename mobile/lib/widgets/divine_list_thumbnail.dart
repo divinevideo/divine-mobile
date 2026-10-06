@@ -73,8 +73,8 @@ class DivineListThumbnail extends StatelessWidget {
 
   /// Card for a people list (kind 30000).
   ///
-  /// Public search keeps [showMemberIdentities] false: member identities are
-  /// only resolved after opening a list, not exposed by its search preview.
+  /// Public search keeps [showMemberIdentities] false and does not resolve
+  /// member identities in its preview.
   DivineListThumbnail.people({
     required UserList userList,
     required this.onTap,
