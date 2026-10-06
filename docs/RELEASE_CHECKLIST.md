@@ -103,7 +103,7 @@ section 7).
 
 - [ ] Use `RELEASE_CHANNEL=BETA` for the store-review candidate; keep Production off during review and staged rollout.
 - [ ] Verify this version is live in **both App Store and Google Play**, available to all users who receive update prompts. Internal testing, approval without release, and a partial rollout are not sufficient.
-- [ ] Only after that verification, start any `RELEASE_CHANNEL=PRODUCTION` run (including macOS), retry production publication, or use `--promote-from` to publish the tested beta's original artifacts without rebuilding. Follow [the publication runbook](../release-notes/README.md).
+- [ ] After that verification, use `--promote-from` to publish the tested iOS/Android beta's original artifacts without rebuilding, then perform manual Zapstore publication. Only macOS can use a new `RELEASE_CHANNEL=PRODUCTION` build for this version. Publication retries reuse original files, not new store builds. Follow [the publication runbook](../release-notes/README.md).
 - [ ] Record the store-availability verification with the candidate source SHA. GitHub stable publication automatically selects Latest and triggers in-app update prompts for store installs too; the publisher does not check store availability.
 
 ## 9. Final Sign-Off

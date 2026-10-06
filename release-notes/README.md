@@ -71,8 +71,12 @@ applies to a production retry and `--promote-from`.
 Build and submit the candidate using BETA first, promote the original store
 artifacts through App Store Connect and Play Console, verify availability, then
 promote the tested production-backend beta on GitHub without rebuilding as
-described below. A Production run is permitted only after that availability
-check; it is not the way to obtain the initial store-review candidate.
+described below, then publish the stable release to Zapstore with the signed
+manual command. Do not start another iOS or Android build with PRODUCTION:
+iOS preflight rejects a version already live in the store, and Android would
+create and upload another build rather than promote the tested artifacts.
+Only macOS can use a new Production build after that availability check.
+Publication retries reuse the original files; they are not new store builds.
 
 Production publishing uses GitHub’s automatic Latest selection instead of
 forcing its own release over a concurrently published newer version. Latest is

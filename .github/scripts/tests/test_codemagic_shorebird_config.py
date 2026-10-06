@@ -331,6 +331,20 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertNotIn('--pre-release', command.group(1))
         self.assertIn('RELEASE_CHANNEL=PRODUCTION', (root / 'README.md').read_text())
 
+    def test_store_candidates_use_beta_and_promote_without_rebuilding(self) -> None:
+        workflows = self._resolved_config()['workflows']
+        for name in ('ios-build', 'android-build'):
+            with self.subTest(workflow=name):
+                description = workflows[name]['inputs']['RELEASE_CHANNEL']['description']
+                self.assertIn('Use BETA for store builds', description)
+                self.assertIn('--promote-from', description)
+                self.assertIn('Do not rebuild with PRODUCTION', description)
+        root = CODEMAGIC_PATH.parent
+        checklist = (root / 'docs' / 'RELEASE_CHECKLIST.md').read_text()
+        self.assertIn('Only macOS can use a new `RELEASE_CHANNEL=PRODUCTION` build', checklist)
+        for path in ('AGENTS.md', 'README.md'):
+            self.assertIn('manual Zapstore publication', (root / path).read_text())
+
     def test_zapstore_publish_is_pinned_and_fails_closed(self) -> None:
         definition = self._definition_block("publish_zapstore")
         release = self._definition_block("publish_github_release")

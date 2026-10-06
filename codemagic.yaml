@@ -980,7 +980,7 @@ workflows:
           - STAGING
           - POC
       RELEASE_CHANNEL:
-        description: GitHub release channel; PRODUCTION sets Latest and triggers update prompts. Run only after this version is available to all users in App Store and Google Play.
+        description: Use BETA for store builds. After both stores are available to prompted users, use --promote-from for GitHub Latest without rebuilding. Do not rebuild with PRODUCTION.
         type: choice
         default: BETA
         options:
@@ -1118,7 +1118,7 @@ workflows:
           - STAGING
           - POC
       RELEASE_CHANNEL:
-        description: GitHub release channel; PRODUCTION sets Latest and triggers update prompts. Run only after this version is available to all users in App Store and Google Play.
+        description: Use BETA for store builds. After both stores are available to prompted users, use --promote-from for GitHub Latest without rebuilding. Do not rebuild with PRODUCTION.
         type: choice
         default: BETA
         options:

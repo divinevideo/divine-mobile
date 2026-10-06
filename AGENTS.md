@@ -354,7 +354,7 @@ These issues stay report-only regardless of assignee; see `<context-dir>/AGENT_T
 
 ## Zapstore Publishing Notes
 
-- When `PUBLISH_TO_GITHUB=YES` and `RELEASE_CHANNEL=PRODUCTION`, the Android build publishes its stable GitHub release to Zapstore automatically. Beta builds never publish to Zapstore. The workflow runs a pinned `zsp` against the tracked root `zapstore.yaml`, so normal release builds need no manual publish step.
+- Store candidates use `RELEASE_CHANNEL=BETA`; beta builds never publish to Zapstore. After both stores are available to prompted users, promote the original beta on GitHub and perform manual Zapstore publication using the signed command below. Do not rebuild Android with PRODUCTION to trigger Zapstore. The Android workflow's automatic Zapstore step runs only when `PUBLISH_TO_GITHUB=YES` and `RELEASE_CHANNEL=PRODUCTION`; it is not the beta-promotion path. See `release-notes/README.md` before publication.
 - The workflow signs with `ZAPSTORE_NSEC` from the `zapstore_credentials` Codemagic group. Never paste that `nsec` into chat, a shell command, a log, or a file that would land in history.
 - Publish only stable GitHub releases to Zapstore. Never add `--pre-release`: that flag makes beta downloads eligible for signing and publication.
 - The workflow refuses to publish when the newest non-draft, non-prerelease GitHub release does not match the version it just cut.
