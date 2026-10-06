@@ -65,6 +65,7 @@ class DivineListThumbnail extends StatelessWidget {
        _count = curatedList.videoEventIds.length,
        _kind = _ListKind.videos,
        _memberPubkeys = const [],
+       _resolveDescriptionMentions = true,
        _media = _VideoFanMedia(
          thumbnailUrls: curatedList.thumbnailUrls,
          videoCount: curatedList.videoEventIds.length,
@@ -87,6 +88,7 @@ class DivineListThumbnail extends StatelessWidget {
        _count = userList.pubkeys.length,
        _kind = _ListKind.people,
        _memberPubkeys = showMemberIdentities ? userList.pubkeys : const [],
+       _resolveDescriptionMentions = showMemberIdentities,
        _media = _PeopleCollageMedia(
          memberPubkeys: showMemberIdentities ? userList.pubkeys : const [],
          memberCount: userList.pubkeys.length,
@@ -108,6 +110,7 @@ class DivineListThumbnail extends StatelessWidget {
   /// A people list's members, so a card without a description can name
   /// them in the footer instead of leaving the box blank.
   final List<String> _memberPubkeys;
+  final bool _resolveDescriptionMentions;
   final Widget _media;
 
   /// One spoken sentence for the whole card: the name, its visibility when
@@ -157,6 +160,7 @@ class DivineListThumbnail extends StatelessWidget {
               description: description,
               isPrivate: isPrivate,
               memberPubkeys: _memberPubkeys,
+              resolveDescriptionMentions: _resolveDescriptionMentions,
             ),
           ],
         ),
@@ -546,12 +550,14 @@ class _Footer extends StatelessWidget {
     required this.description,
     required this.isPrivate,
     required this.memberPubkeys,
+    required this.resolveDescriptionMentions,
   });
 
   final String title;
   final String? description;
   final bool isPrivate;
   final List<String> memberPubkeys;
+  final bool resolveDescriptionMentions;
 
   @override
   Widget build(BuildContext context) {
@@ -563,6 +569,7 @@ class _Footer extends StatelessWidget {
         switch (description) {
           final text? when text.trim().isNotEmpty => _Description(
             description: text,
+            resolveMentions: resolveDescriptionMentions,
           ),
           _ when memberPubkeys.isNotEmpty => _MemberNames(
             pubkeys: memberPubkeys.take(_memberNameCount).toList(),
@@ -677,9 +684,10 @@ class _Title extends StatelessWidget {
 /// with an ellipsis), fits on one line, or is absent — that reserved space
 /// is what keeps gallery rows level.
 class _Description extends StatelessWidget {
-  const _Description({required this.description});
+  const _Description({required this.description, this.resolveMentions = true});
 
   final String? description;
+  final bool resolveMentions;
 
   @override
   Widget build(BuildContext context) {
@@ -690,7 +698,14 @@ class _Description extends StatelessWidget {
       style: style,
       child: switch (description) {
         final text? when text.isNotEmpty => ClipRect(
-          child: _PlainLinkText(text: text, style: style),
+          child: resolveMentions
+              ? _PlainLinkText(text: text, style: style)
+              : Text(
+                  text,
+                  style: style,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
         ),
         _ => null,
       },
@@ -715,9 +730,9 @@ class _DescriptionBox extends StatelessWidget {
   }
 }
 
-/// [LinkifiedText] keeps its resolution behaviour (nostr mentions render as
-/// display names) but drops the accent link styling: in a card preview the
-/// whole card is the tap target, so links are plain description text.
+/// Descriptions that allow identity resolution retain the existing inline
+/// links with neutral styling. Public people previews use passive text
+/// instead so mentions cannot fetch profiles or navigate out of the card.
 class _PlainLinkText extends StatelessWidget {
   const _PlainLinkText({required this.text, required this.style});
 
