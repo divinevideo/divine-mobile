@@ -1,13 +1,28 @@
 import 'package:equatable/equatable.dart';
+import 'package:openvine/models/live/live_media_state.dart';
 import 'package:openvine/models/live/live_presence.dart';
 import 'package:openvine/models/live/live_role.dart';
 import 'package:openvine/models/live/live_room.dart';
 import 'package:openvine/models/live/live_session.dart';
-import 'package:openvine/services/livekit_room_service.dart';
 
 enum LiveRoomStatus { initial, loading, ready, failure }
 
 const int maxActiveVideoSpeakers = 4;
+
+enum LiveRoomError {
+  requestFailed,
+  connectionFailed,
+  subscriptionFailed,
+  cameraBlocked,
+  cameraRequired,
+  cameraUnavailable,
+  cameraPromptBlocked,
+  microphoneBlocked,
+  microphoneRequired,
+  microphoneUnavailable,
+  microphonePromptBlocked,
+  speakerCapacityReached,
+}
 
 class LiveRoomState extends Equatable {
   const LiveRoomState({
@@ -17,7 +32,7 @@ class LiveRoomState extends Equatable {
     this.role,
     this.presence = const <LivePresence>[],
     this.mediaState = const LiveMediaState(),
-    this.errorMessage,
+    this.error,
     this.stageSpeakerPubkeys,
     this.dismissedHandPubkeys = const <String>[],
     this.hiddenChatParticipantPubkeys = const <String>[],
@@ -31,7 +46,7 @@ class LiveRoomState extends Equatable {
   final LiveRole? role;
   final List<LivePresence> presence;
   final LiveMediaState mediaState;
-  final String? errorMessage;
+  final LiveRoomError? error;
   final List<String>? stageSpeakerPubkeys;
   final List<String> dismissedHandPubkeys;
   final List<String> hiddenChatParticipantPubkeys;
@@ -106,8 +121,8 @@ class LiveRoomState extends Equatable {
     LiveRole? role,
     List<LivePresence>? presence,
     LiveMediaState? mediaState,
-    String? errorMessage,
-    bool clearErrorMessage = false,
+    LiveRoomError? error,
+    bool clearError = false,
     List<String>? stageSpeakerPubkeys,
     bool clearStageSpeakerPubkeys = false,
     List<String>? dismissedHandPubkeys,
@@ -125,9 +140,7 @@ class LiveRoomState extends Equatable {
       role: role ?? this.role,
       presence: presence ?? this.presence,
       mediaState: mediaState ?? this.mediaState,
-      errorMessage: clearErrorMessage
-          ? null
-          : (errorMessage ?? this.errorMessage),
+      error: clearError ? null : (error ?? this.error),
       stageSpeakerPubkeys: clearStageSpeakerPubkeys
           ? null
           : (stageSpeakerPubkeys ?? this.stageSpeakerPubkeys),
@@ -153,7 +166,7 @@ class LiveRoomState extends Equatable {
     role,
     presence,
     mediaState,
-    errorMessage,
+    error,
     stageSpeakerPubkeys,
     dismissedHandPubkeys,
     hiddenChatParticipantPubkeys,

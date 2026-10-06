@@ -65,14 +65,47 @@ void main() {
       await messagesController.close();
     });
 
+    test('does not subscribe after close interrupts restart', () async {
+      final cancelled = Completer<void>();
+      final first = StreamController<List<LiveChatMessage>>(
+        onCancel: () => cancelled.future,
+      );
+      final next = StreamController<List<LiveChatMessage>>.broadcast();
+      addTearDown(first.close);
+      addTearDown(next.close);
+      when(
+        () => mockRepository.watchChatMessages(sessionAddress: sessionAddress),
+      ).thenAnswer((_) => first.stream);
+      when(
+        () => mockRepository.watchChatMessages(
+          sessionAddress: nextSessionAddress,
+        ),
+      ).thenAnswer((_) => next.stream);
+      final bloc = LiveChatBloc(liveChatRepository: mockRepository);
+      bloc.add(const LiveChatStarted(sessionAddress: sessionAddress));
+      await pumpEventQueue();
+      bloc.add(const LiveChatStarted(sessionAddress: nextSessionAddress));
+      await pumpEventQueue();
+      final closing = bloc.close();
+      await pumpEventQueue();
+      cancelled.complete();
+      await closing;
+      expect(next.hasListener, isFalse);
+      verifyNever(
+        () => mockRepository.watchChatMessages(
+          sessionAddress: nextSessionAddress,
+        ),
+      );
+    });
+
     test('start subscribes to chat updates and exposes ready state', () async {
       final bloc = LiveChatBloc(liveChatRepository: mockRepository);
 
       bloc.add(const LiveChatStarted(sessionAddress: sessionAddress));
-      await _flush();
+      await pumpEventQueue();
 
       messagesController.add(<LiveChatMessage>[firstMessage]);
-      await _flush();
+      await pumpEventQueue();
 
       expect(bloc.state.status, LiveChatStatus.ready);
       expect(bloc.state.sessionAddress, sessionAddress);
@@ -85,20 +118,37 @@ void main() {
       await bloc.close();
     });
 
+    test('send failure stores a typed error instead of service text', () async {
+      when(
+        () => mockRepository.publishMessage(
+          sessionAddress: sessionAddress,
+          content: 'Hello room',
+        ),
+      ).thenThrow(StateError('service unavailable'));
+      final bloc = LiveChatBloc(liveChatRepository: mockRepository);
+      bloc.add(const LiveChatStarted(sessionAddress: sessionAddress));
+      await pumpEventQueue();
+      bloc.add(const LiveChatMessageSendRequested('Hello room'));
+      await pumpEventQueue();
+      expect(bloc.state.error, LiveChatError.sendFailed);
+      expect(bloc.state.isSending, isFalse);
+      await bloc.close();
+    });
+
     test('send request trims content and publishes the message', () async {
       final bloc = LiveChatBloc(liveChatRepository: mockRepository);
 
       bloc.add(const LiveChatStarted(sessionAddress: sessionAddress));
-      await _flush();
+      await pumpEventQueue();
 
       messagesController.add(<LiveChatMessage>[firstMessage]);
-      await _flush();
+      await pumpEventQueue();
 
       bloc.add(const LiveChatMessageSendRequested('  Hello room  '));
-      await _flush();
+      await pumpEventQueue();
 
       expect(bloc.state.isSending, isFalse);
-      expect(bloc.state.errorMessage, isNull);
+      expect(bloc.state.error, isNull);
       expect(
         bloc.state.messages,
         <LiveChatMessage>[firstMessage, sentMessage],
@@ -127,15 +177,15 @@ void main() {
         final bloc = LiveChatBloc(liveChatRepository: mockRepository);
 
         bloc.add(const LiveChatStarted(sessionAddress: sessionAddress));
-        await _flush();
+        await pumpEventQueue();
 
         messagesController.add(<LiveChatMessage>[firstMessage]);
-        await _flush();
+        await pumpEventQueue();
 
         bloc
           ..add(const LiveChatMessageSendRequested('Hello room'))
           ..add(const LiveChatMessageSendRequested('Hello room'));
-        await _flush();
+        await pumpEventQueue();
 
         verify(
           () => mockRepository.publishMessage(
@@ -145,7 +195,7 @@ void main() {
         ).called(1);
 
         publishCompleter.complete(sentMessage);
-        await _flush();
+        await pumpEventQueue();
 
         expect(bloc.state.isSending, isFalse);
         expect(
@@ -163,14 +213,14 @@ void main() {
         final bloc = LiveChatBloc(liveChatRepository: mockRepository);
 
         bloc.add(const LiveChatStarted(sessionAddress: sessionAddress));
-        await _flush();
+        await pumpEventQueue();
 
         messagesController.add(<LiveChatMessage>[firstMessage]);
-        await _flush();
+        await pumpEventQueue();
         expect(bloc.state.messages, <LiveChatMessage>[firstMessage]);
 
         bloc.add(const LiveChatStarted(sessionAddress: nextSessionAddress));
-        await _flush();
+        await pumpEventQueue();
 
         expect(bloc.state.sessionAddress, nextSessionAddress);
         expect(bloc.state.messages, isEmpty);
@@ -181,7 +231,7 @@ void main() {
             messages: <LiveChatMessage>[firstMessage],
           ),
         );
-        await _flush();
+        await pumpEventQueue();
 
         expect(bloc.state.sessionAddress, nextSessionAddress);
         expect(bloc.state.messages, isEmpty);
@@ -192,7 +242,7 @@ void main() {
             messages: <LiveChatMessage>[secondMessage],
           ),
         );
-        await _flush();
+        await pumpEventQueue();
 
         expect(bloc.state.messages, <LiveChatMessage>[secondMessage]);
 
@@ -200,9 +250,4 @@ void main() {
       },
     );
   });
-}
-
-Future<void> _flush() async {
-  await Future<void>.delayed(Duration.zero);
-  await Future<void>.delayed(Duration.zero);
 }

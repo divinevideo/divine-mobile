@@ -1,5 +1,6 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 
 class LiveLocalMediaControls extends StatelessWidget {
   const LiveLocalMediaControls({
@@ -38,13 +39,13 @@ class LiveLocalMediaControls extends StatelessWidget {
           onPressed: onToggleCamera,
         ),
         DivineButton(
-          label: 'Flip camera',
+          label: context.l10n.liveFlipCamera,
           size: DivineButtonSize.small,
           type: DivineButtonType.secondary,
           onPressed: onSwitchCamera,
         ),
         DivineButton(
-          label: 'Audio only',
+          label: context.l10n.liveAudioOnly,
           size: DivineButtonSize.small,
           type: DivineButtonType.secondary,
           onPressed: onEnableAudioOnly,

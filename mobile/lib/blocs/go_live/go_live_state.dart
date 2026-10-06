@@ -4,6 +4,10 @@ import 'package:openvine/models/live/live_session.dart';
 
 enum GoLiveStatus { initial, submitting, success, failure }
 
+enum GoLiveTitleError { required }
+
+enum GoLiveError { startFailed }
+
 class GoLiveState extends Equatable {
   const GoLiveState({
     this.status = GoLiveStatus.initial,
@@ -13,7 +17,7 @@ class GoLiveState extends Equatable {
     this.room,
     this.session,
     this.titleError,
-    this.errorMessage,
+    this.error,
   });
 
   final GoLiveStatus status;
@@ -22,8 +26,8 @@ class GoLiveState extends Equatable {
   final String? imageUrl;
   final LiveRoom? room;
   final LiveSession? session;
-  final String? titleError;
-  final String? errorMessage;
+  final GoLiveTitleError? titleError;
+  final GoLiveError? error;
 
   bool get isValid => title.trim().isNotEmpty;
 
@@ -35,10 +39,10 @@ class GoLiveState extends Equatable {
     bool clearImageUrl = false,
     LiveRoom? room,
     LiveSession? session,
-    String? titleError,
+    GoLiveTitleError? titleError,
     bool clearTitleError = false,
-    String? errorMessage,
-    bool clearErrorMessage = false,
+    GoLiveError? error,
+    bool clearError = false,
   }) {
     return GoLiveState(
       status: status ?? this.status,
@@ -48,9 +52,7 @@ class GoLiveState extends Equatable {
       room: room ?? this.room,
       session: session ?? this.session,
       titleError: clearTitleError ? null : (titleError ?? this.titleError),
-      errorMessage: clearErrorMessage
-          ? null
-          : (errorMessage ?? this.errorMessage),
+      error: clearError ? null : (error ?? this.error),
     );
   }
 
@@ -63,6 +65,6 @@ class GoLiveState extends Equatable {
     room,
     session,
     titleError,
-    errorMessage,
+    error,
   ];
 }

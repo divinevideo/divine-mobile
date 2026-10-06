@@ -270,6 +270,55 @@ void main() {
       ).called(1);
     });
 
+    test(
+      'signs and sends the same encoded path for reserved identifiers',
+      () async {
+        when(
+          () => mockNip98AuthService.createAuthToken(
+            url: any(named: 'url'),
+            method: any(named: 'method'),
+            payload: any(named: 'payload'),
+          ),
+        ).thenAnswer((_) async => authToken);
+        when(
+          () => mockClient.post(
+            any(),
+            headers: any(named: 'headers'),
+            body: any(named: 'body'),
+          ),
+        ).thenAnswer((_) async => http.Response('', 200));
+        await service.endSession(
+          roomId: 'room/a ?#%',
+          sessionId: 'session:b/c',
+        );
+        final uri =
+            verify(
+                  () => mockClient.post(
+                    captureAny(),
+                    headers: any(named: 'headers'),
+                    body: any(named: 'body'),
+                  ),
+                ).captured.single
+                as Uri;
+        expect(uri.pathSegments, [
+          'v1',
+          'live',
+          'rooms',
+          'room/a ?#%',
+          'sessions',
+          'session:b/c',
+          'end',
+        ]);
+        verify(
+          () => mockNip98AuthService.createAuthToken(
+            url: uri.toString(),
+            method: HttpMethod.post,
+            payload: '{}',
+          ),
+        ).called(1);
+      },
+    );
+
     test('endSession signs the empty JSON body it posts', () async {
       when(
         () => mockNip98AuthService.createAuthToken(

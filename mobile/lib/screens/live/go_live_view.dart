@@ -1,9 +1,9 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/go_live/go_live_cubit.dart';
-import 'package:openvine/models/live/live_role.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/live/live_discovery_page.dart';
 import 'package:openvine/screens/live/live_room_page.dart';
 import 'package:openvine/screens/live/live_route_data.dart';
@@ -58,15 +58,17 @@ class _GoLiveViewState extends State<GoLiveView> {
           extra: LiveRoomRouteData(
             room: room,
             session: session,
-            role: LiveRole.host,
           ),
         );
       },
       child: Scaffold(
-        backgroundColor: VineTheme.surfaceBackground,
+        backgroundColor: context.vineColors.surface,
         appBar: AppBar(
-          backgroundColor: VineTheme.surfaceBackground,
-          leading: BackButton(
+          backgroundColor: context.vineColors.surface,
+          leading: DivineIconButton(
+            icon: DivineIconName.arrowLeft,
+            tooltip: context.l10n.commonBack,
+            type: DivineIconButtonType.ghostSecondary,
             onPressed: () {
               if (context.canPop()) {
                 context.pop();
@@ -77,8 +79,10 @@ class _GoLiveViewState extends State<GoLiveView> {
             },
           ),
           title: Text(
-            'Go live',
-            style: VineTheme.headlineSmallFont(),
+            context.l10n.liveGoLive,
+            style: VineTheme.headlineSmallFont(
+              color: context.vineColors.onSurface,
+            ),
           ),
         ),
         body: Padding(
@@ -88,21 +92,23 @@ class _GoLiveViewState extends State<GoLiveView> {
               return ListView(
                 children: [
                   Text(
-                    'Start a public room in one shot.',
+                    context.l10n.liveStartAPublicRoomInOneShot,
                     style: VineTheme.bodyLargeFont(
-                      color: VineTheme.onSurfaceVariant,
+                      color: context.vineColors.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: 20),
                   DivineAuthTextField(
-                    label: 'Room title',
+                    label: context.l10n.liveRoomTitle,
                     controller: _titleController,
-                    errorText: state.titleError,
+                    errorText: state.titleError == null
+                        ? null
+                        : context.l10n.liveTitleRequired,
                     onChanged: context.read<GoLiveCubit>().titleChanged,
                   ),
                   const SizedBox(height: 16),
                   DivineAuthTextField(
-                    label: 'What are you going live about?',
+                    label: context.l10n.liveWhatAreYouGoingLiveAbout,
                     controller: _summaryController,
                     onChanged: context.read<GoLiveCubit>().summaryChanged,
                   ),
@@ -111,7 +117,7 @@ class _GoLiveViewState extends State<GoLiveView> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: VineTheme.surfaceContainer,
+                        color: context.vineColors.surfaceContainer,
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child: Row(
@@ -128,14 +134,18 @@ class _GoLiveViewState extends State<GoLiveView> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Default thumbnail',
-                                  style: VineTheme.bodyLargeFont(),
+                                  context.l10n.liveDefaultThumbnail,
+                                  style: VineTheme.bodyLargeFont(
+                                    color: context.vineColors.onSurface,
+                                  ),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Using your profile photo as the starting thumbnail.',
+                                  context
+                                      .l10n
+                                      .liveUsingYourProfilePhotoAsTheStartingThumbnail,
                                   style: VineTheme.bodyMediumFont(
-                                    color: VineTheme.onSurfaceVariant,
+                                    color: context.vineColors.onSurfaceVariant,
                                   ),
                                 ),
                               ],
@@ -147,23 +157,32 @@ class _GoLiveViewState extends State<GoLiveView> {
                   ],
                   const SizedBox(height: 16),
                   DivineAuthTextField(
-                    label: 'Cover image URL',
+                    label: context.l10n.liveCoverImageURL,
                     controller: _imageController,
                     onChanged: context.read<GoLiveCubit>().imageUrlChanged,
                   ),
-                  if (state.errorMessage != null) ...[
+                  if (state.error != null) ...[
                     const SizedBox(height: 16),
-                    Text(
-                      state.errorMessage!,
-                      style: VineTheme.bodyMediumFont(color: VineTheme.error),
+                    Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        context.l10n.liveStartFailed,
+                        style: VineTheme.bodyMediumFont(color: VineTheme.error),
+                      ),
                     ),
                   ],
                   const SizedBox(height: 24),
-                  DivineButton(
-                    label: 'Start live now',
-                    expanded: true,
-                    isLoading: state.status == GoLiveStatus.submitting,
-                    onPressed: context.read<GoLiveCubit>().submit,
+                  Semantics(
+                    liveRegion: true,
+                    value: state.status == GoLiveStatus.submitting
+                        ? context.l10n.commonLoading
+                        : null,
+                    child: DivineButton(
+                      label: context.l10n.liveStartLiveNow,
+                      expanded: true,
+                      isLoading: state.status == GoLiveStatus.submitting,
+                      onPressed: context.read<GoLiveCubit>().submit,
+                    ),
                   ),
                 ],
               );

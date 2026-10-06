@@ -1,4 +1,5 @@
 import 'package:bloc/bloc.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/go_live/go_live_state.dart';
 import 'package:openvine/models/live/live_room.dart';
 import 'package:openvine/models/live/live_session.dart';
@@ -7,7 +8,8 @@ import 'package:openvine/services/live_api_service.dart';
 
 export 'package:openvine/blocs/go_live/go_live_state.dart';
 
-class GoLiveCubit extends Cubit<GoLiveState> {
+class GoLiveCubit extends Cubit<GoLiveState>
+    with CloseGuardedEmit<GoLiveState> {
   GoLiveCubit({
     required LiveApiService liveApiService,
     required LiveRepository liveRepository,
@@ -43,7 +45,7 @@ class GoLiveCubit extends Cubit<GoLiveState> {
       state.copyWith(
         title: title,
         clearTitleError: true,
-        clearErrorMessage: true,
+        clearError: true,
       ),
     );
   }
@@ -52,7 +54,7 @@ class GoLiveCubit extends Cubit<GoLiveState> {
     emit(
       state.copyWith(
         summary: summary,
-        clearErrorMessage: true,
+        clearError: true,
       ),
     );
   }
@@ -63,7 +65,7 @@ class GoLiveCubit extends Cubit<GoLiveState> {
       state.copyWith(
         imageUrl: trimmedImageUrl,
         clearImageUrl: trimmedImageUrl == null || trimmedImageUrl.isEmpty,
-        clearErrorMessage: true,
+        clearError: true,
       ),
     );
   }
@@ -73,8 +75,8 @@ class GoLiveCubit extends Cubit<GoLiveState> {
     if (trimmedTitle.isEmpty) {
       emit(
         state.copyWith(
-          titleError: 'Enter a title to go live.',
-          clearErrorMessage: true,
+          titleError: GoLiveTitleError.required,
+          clearError: true,
         ),
       );
       return;
@@ -87,7 +89,7 @@ class GoLiveCubit extends Cubit<GoLiveState> {
       state.copyWith(
         status: GoLiveStatus.submitting,
         clearTitleError: true,
-        clearErrorMessage: true,
+        clearError: true,
       ),
     );
 
@@ -108,19 +110,20 @@ class GoLiveCubit extends Cubit<GoLiveState> {
 
       if (roomDraft.status == LiveRoomDraftStatus.existingActive) {
         final session = roomDraft.activeSession!;
-        emit(
+        emitIfOpen(
           state.copyWith(
             status: GoLiveStatus.success,
             room: room,
             session: session,
             clearTitleError: true,
-            clearErrorMessage: true,
+            clearError: true,
           ),
         );
         return;
       }
 
       final session = LiveSession(
+        title: room.title,
         id: _sessionIdBuilder(),
         roomId: room.id,
         status: LiveSessionStatus.live,
@@ -155,20 +158,21 @@ class GoLiveCubit extends Cubit<GoLiveState> {
         rethrow;
       }
 
-      emit(
+      emitIfOpen(
         state.copyWith(
           status: GoLiveStatus.success,
           room: room,
           session: session,
           clearTitleError: true,
-          clearErrorMessage: true,
+          clearError: true,
         ),
       );
-    } catch (error) {
-      emit(
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
+      emitIfOpen(
         state.copyWith(
           status: GoLiveStatus.failure,
-          errorMessage: '$error',
+          error: GoLiveError.startFailed,
         ),
       );
     }

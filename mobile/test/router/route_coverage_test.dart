@@ -500,6 +500,16 @@ void main() {
         expect(context.type, RouteType.liveDiscovery);
       });
 
+      test('live identifiers survive parser and normalizer round trip', () {
+        const roomId = 'room/a ?#% 雪';
+        const sessionId = 'session/b ?#%';
+        final location = LiveRoomPage.pathFor(roomId, sessionId);
+        final context = parseRoute(location);
+        expect(context.roomId, roomId);
+        expect(context.sessionId, sessionId);
+        expect(buildRoute(context), location);
+      });
+
       test('${GoLivePage.path} parses to RouteType.goLive', () {
         final context = parseRoute(GoLivePage.path);
         expect(context.type, RouteType.goLive);

@@ -29,7 +29,7 @@ class LiveDiscoveryBloc extends Bloc<LiveDiscoveryEvent, LiveDiscoveryState> {
     emit(
       state.copyWith(
         status: LiveDiscoveryStatus.loading,
-        clearErrorMessage: true,
+        clearError: true,
       ),
     );
 
@@ -60,14 +60,15 @@ class LiveDiscoveryBloc extends Bloc<LiveDiscoveryEvent, LiveDiscoveryState> {
           rooms: rooms,
           activeSessions: activeSessions,
           upcomingSessions: upcomingSessions,
-          clearErrorMessage: true,
+          clearError: true,
         ),
       );
-    } catch (error) {
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
       emit(
         state.copyWith(
           status: LiveDiscoveryStatus.failure,
-          errorMessage: '$error',
+          error: LiveDiscoveryError.loadFailed,
         ),
       );
     }

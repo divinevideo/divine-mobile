@@ -23,6 +23,26 @@ class LiveRepository {
   final LiveNostrCodec _codec;
   final LiveApiService? _liveApiService;
 
+  /// Resolves a direct link without relying on the discovery window.
+  Future<LiveRoom?> fetchRoom(String roomId) async {
+    final events = await _nostrClient.queryEvents([
+      Filter(kinds: const [30312], d: [roomId]),
+    ]);
+    final rooms = <String, LiveRoom>{};
+    final versions = <String, Event>{};
+    for (final event in events) {
+      final room = _tryParseRoom(event);
+      if (room == null ||
+          room.id != roomId ||
+          !_acceptVersion(versions, room.address, event)) {
+        continue;
+      }
+      rooms[room.address] = room;
+    }
+    // A d tag alone cannot distinguish conflicting authors.
+    return rooms.length == 1 ? rooms.values.single : null;
+  }
+
   Future<List<LiveRoom>> fetchPublicRooms({int limit = 50}) async {
     final events = await _nostrClient.queryEvents([
       Filter(kinds: const <int>[30312], limit: limit),
@@ -66,12 +86,14 @@ class LiveRepository {
 
   Future<List<LiveSession>> fetchSessions({
     String? roomAddress,
+    String? sessionId,
     int limit = 50,
   }) async {
     final events = await _nostrClient.queryEvents([
       Filter(
         kinds: const <int>[30313],
         a: roomAddress == null ? null : <String>[roomAddress],
+        d: sessionId == null ? null : [sessionId],
         limit: limit,
       ),
     ]);
@@ -91,12 +113,14 @@ class LiveRepository {
 
   Stream<List<LiveSession>> watchSessions({
     String? roomAddress,
+    String? sessionId,
     int limit = 50,
   }) {
     final filters = <Filter>[
       Filter(
         kinds: const <int>[30313],
         a: roomAddress == null ? null : <String>[roomAddress],
+        d: sessionId == null ? null : [sessionId],
         limit: limit,
       ),
     ];

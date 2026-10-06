@@ -1,18 +1,21 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/live_chat/live_chat_bloc.dart';
 import 'package:openvine/blocs/live_room/live_room_bloc.dart';
+import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/live/live_media_state.dart';
 import 'package:openvine/models/live/live_presence.dart';
 import 'package:openvine/models/live/live_role.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/live/live_discovery_page.dart';
 import 'package:openvine/screens/live/widgets/live_chat_panel.dart';
 import 'package:openvine/screens/live/widgets/live_host_controls_sheet.dart';
 import 'package:openvine/screens/live/widgets/live_local_media_controls.dart';
+import 'package:openvine/screens/live/widgets/live_room_error_banner.dart';
 import 'package:openvine/screens/live/widgets/live_room_stage.dart';
-import 'package:openvine/services/livekit_room_service.dart';
 import 'package:share_plus/share_plus.dart';
 
 class LiveRoomView extends StatefulWidget {
@@ -26,10 +29,13 @@ class _LiveRoomViewState extends State<LiveRoomView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: VineTheme.surfaceBackground,
+      backgroundColor: context.vineColors.surface,
       appBar: AppBar(
-        backgroundColor: VineTheme.surfaceBackground,
-        leading: BackButton(
+        backgroundColor: context.vineColors.surface,
+        leading: DivineIconButton(
+          icon: DivineIconName.arrowLeft,
+          tooltip: context.l10n.commonBack,
+          type: DivineIconButtonType.ghostSecondary,
           onPressed: () {
             if (context.canPop()) {
               context.pop();
@@ -42,8 +48,10 @@ class _LiveRoomViewState extends State<LiveRoomView> {
         title: BlocBuilder<LiveRoomBloc, LiveRoomState>(
           builder: (context, state) {
             return Text(
-              state.room?.title ?? 'Live room',
-              style: VineTheme.titleLargeFont(),
+              state.room?.title ?? context.l10n.liveLiveRoom,
+              style: VineTheme.titleLargeFont(
+                color: context.vineColors.onSurface,
+              ),
             );
           },
         ),
@@ -51,19 +59,30 @@ class _LiveRoomViewState extends State<LiveRoomView> {
       body: BlocBuilder<LiveRoomBloc, LiveRoomState>(
         builder: (context, roomState) {
           final mediaState = roomState.mediaState;
-          final cameraButtonLabel = _cameraMediaButtonLabel(mediaState);
-          final microphoneButtonLabel = _microphoneMediaButtonLabel(mediaState);
+          final cameraButtonLabel = _cameraMediaButtonLabel(
+            context,
+            mediaState,
+          );
+          final microphoneButtonLabel = _microphoneMediaButtonLabel(
+            context,
+            mediaState,
+          );
           final cameraBusy = _isCameraStarting(mediaState);
           final microphoneBusy = _isMicrophoneStarting(mediaState);
 
           return switch (roomState.status) {
             LiveRoomStatus.initial || LiveRoomStatus.loading => const Center(
-              child: CircularProgressIndicator(color: VineTheme.primary),
+              child: DivineCircularProgressIndicator(color: VineTheme.primary),
             ),
             LiveRoomStatus.failure => Center(
-              child: Text(
-                roomState.errorMessage ?? 'Unable to open this live room.',
-                style: VineTheme.bodyMediumFont(),
+              child: Semantics(
+                liveRegion: true,
+                child: Text(
+                  liveRoomErrorLabel(context, roomState.error),
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.onSurface,
+                  ),
+                ),
               ),
             ),
             LiveRoomStatus.ready => SingleChildScrollView(
@@ -71,8 +90,10 @@ class _LiveRoomViewState extends State<LiveRoomView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (roomState.errorMessage != null) ...[
-                    _LiveRoomErrorBanner(message: roomState.errorMessage!),
+                  if (roomState.error != null) ...[
+                    LiveRoomErrorBanner(
+                      message: liveRoomErrorLabel(context, roomState.error),
+                    ),
                     const SizedBox(height: 16),
                   ],
                   LiveRoomStage(
@@ -80,7 +101,20 @@ class _LiveRoomViewState extends State<LiveRoomView> {
                     audienceCount:
                         roomState.session?.audienceCount ??
                         roomState.presence.length,
-                    statusLabel: roomState.mediaState.status.name,
+                    statusLabel: switch (roomState.mediaState.status) {
+                      LiveMediaConnectionStatus.disconnected =>
+                        context.l10n.relaySettingsDisconnected,
+                      LiveMediaConnectionStatus.connecting =>
+                        context.l10n.commonLoading,
+                      LiveMediaConnectionStatus.connected =>
+                        context.l10n.relaySettingsConnected,
+                      LiveMediaConnectionStatus.reconnecting =>
+                        context.l10n.liveConnectionLooksShaky,
+                      LiveMediaConnectionStatus.audioOnly =>
+                        context.l10n.liveLiveAudioOnly,
+                      LiveMediaConnectionStatus.failed =>
+                        context.l10n.authFailedToConnect,
+                    },
                   ),
                   const SizedBox(height: 16),
                   if (roomState.canPublish &&
@@ -153,15 +187,15 @@ class _LiveRoomViewState extends State<LiveRoomView> {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: DivineButton(
-                        label: 'Host controls',
+                        label: context.l10n.liveHostControls,
                         type: DivineButtonType.secondary,
                         size: DivineButtonSize.small,
                         onPressed: () {
-                          showModalBottomSheet<void>(
+                          VineBottomSheet.show<void>(
                             context: context,
-                            backgroundColor: VineTheme.surfaceBackground,
-                            isScrollControlled: true,
-                            builder: (_) => BlocProvider.value(
+                            scrollable: false,
+                            showHeader: false,
+                            body: BlocProvider.value(
                               value: context.read<LiveRoomBloc>(),
                               child: const LiveHostControlsSheet(),
                             ),
@@ -195,10 +229,13 @@ class _LiveRoomViewState extends State<LiveRoomView> {
     }
 
     final roomUrl =
-        'https://divine.video/live/room/${room.id}/session/${session.id}';
+        'https://divine.video${RoutePaths.liveRoomFor(room.id, session.id)}';
     try {
       await SharePlus.instance.share(
-        ShareParams(text: roomUrl, subject: 'Live room: ${room.title}'),
+        ShareParams(
+          text: roomUrl,
+          subject: context.l10n.liveRoomShareSubject(room.title),
+        ),
       );
     } catch (_) {
       // Ignore share errors here and fall through to clipboard copy.
@@ -210,25 +247,35 @@ class _LiveRoomViewState extends State<LiveRoomView> {
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Room link copied to clipboard')),
+      SnackBar(content: Text(context.l10n.liveRoomLinkCopiedToClipboard)),
     );
   }
 }
 
-String _cameraMediaButtonLabel(LiveMediaState mediaState) {
+String _cameraMediaButtonLabel(
+  BuildContext context,
+  LiveMediaState mediaState,
+) {
   if (_isCameraStarting(mediaState)) {
-    return 'Starting camera...';
+    return context.l10n.liveStartingCamera;
   }
 
-  return mediaState.cameraEnabled ? 'Turn camera off' : 'Turn camera on';
+  return mediaState.cameraEnabled
+      ? context.l10n.liveTurnCameraOff
+      : context.l10n.liveTurnCameraOn;
 }
 
-String _microphoneMediaButtonLabel(LiveMediaState mediaState) {
+String _microphoneMediaButtonLabel(
+  BuildContext context,
+  LiveMediaState mediaState,
+) {
   if (_isMicrophoneStarting(mediaState)) {
-    return 'Starting microphone...';
+    return context.l10n.liveStartingMicrophone;
   }
 
-  return mediaState.microphoneEnabled ? 'Turn mic off' : 'Turn mic on';
+  return mediaState.microphoneEnabled
+      ? context.l10n.liveTurnMicOff
+      : context.l10n.liveTurnMicOn;
 }
 
 bool _isCameraStarting(LiveMediaState mediaState) {
@@ -237,31 +284,6 @@ bool _isCameraStarting(LiveMediaState mediaState) {
 
 bool _isMicrophoneStarting(LiveMediaState mediaState) {
   return mediaState.microphoneBusy && mediaState.requestedMicrophoneEnabled;
-}
-
-class _LiveRoomErrorBanner extends StatelessWidget {
-  const _LiveRoomErrorBanner({
-    required this.message,
-  });
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: VineTheme.errorContainer,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: VineTheme.error),
-      ),
-      child: Text(
-        message,
-        style: VineTheme.bodyMediumFont(color: VineTheme.onErrorContainer),
-      ),
-    );
-  }
 }
 
 class _LiveRoomActionRow extends StatelessWidget {
@@ -284,7 +306,7 @@ class _LiveRoomActionRow extends StatelessWidget {
         SizedBox(
           width: double.infinity,
           child: DivineButton(
-            label: 'Share room',
+            label: context.l10n.liveShareRoom,
             type: DivineButtonType.secondary,
             onPressed: onShareRoom,
           ),
@@ -294,10 +316,10 @@ class _LiveRoomActionRow extends StatelessWidget {
           width: double.infinity,
           child: DivineButton(
             label: canPublish
-                ? 'You are on stage'
+                ? context.l10n.liveYouAreOnStage
                 : currentUserHandRaised
-                ? 'Lower hand'
-                : 'Raise hand',
+                ? context.l10n.liveLowerHand
+                : context.l10n.liveRaiseHand,
             onPressed: canPublish ? null : onToggleRequestToSpeak,
             expanded: true,
           ),
@@ -357,7 +379,7 @@ class _LiveParticipantRoster extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: VineTheme.surfaceContainerHigh,
+        color: context.vineColors.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(28),
       ),
       padding: const EdgeInsets.all(16),
@@ -369,18 +391,25 @@ class _LiveParticipantRoster extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Participants',
-                  style: VineTheme.titleLargeFont(),
+                  context.l10n.liveParticipants,
+                  style: VineTheme.titleLargeFont(
+                    color: context.vineColors.onSurface,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
               Flexible(
                 child: Text(
-                  '$hostCount host, $moderatorCount moderators, $speakerCount speakers, $audienceCount audience',
+                  context.l10n.liveRoleCounts(
+                    hostCount,
+                    moderatorCount,
+                    speakerCount,
+                    audienceCount,
+                  ),
                   textAlign: TextAlign.end,
                   softWrap: true,
                   style: VineTheme.labelMediumFont(
-                    color: VineTheme.onSurfaceVariant,
+                    color: context.vineColors.onSurfaceVariant,
                   ),
                 ),
               ),
@@ -389,9 +418,9 @@ class _LiveParticipantRoster extends StatelessWidget {
           const SizedBox(height: 12),
           if (orderedPresence.isEmpty)
             Text(
-              'No one has joined the room yet.',
+              context.l10n.liveNoOneHasJoinedTheRoomYet,
               style: VineTheme.bodyMediumFont(
-                color: VineTheme.onSurfaceVariant,
+                color: context.vineColors.onSurfaceVariant,
               ),
             )
           else
@@ -399,22 +428,24 @@ class _LiveParticipantRoster extends StatelessWidget {
               children: orderedPresence
                   .map((member) {
                     final roleLabel = switch (member.role) {
-                      LiveRole.host => 'Host',
-                      LiveRole.moderator => 'Moderator',
-                      LiveRole.speaker => 'Speaker',
+                      LiveRole.host => context.l10n.liveHost,
+                      LiveRole.moderator => context.l10n.liveModerator,
+                      LiveRole.speaker => context.l10n.liveSpeaker,
                       LiveRole.audience =>
                         speakerPubkeys.contains(member.pubkey)
-                            ? 'Speaker'
-                            : 'Audience',
+                            ? context.l10n.liveSpeaker
+                            : context.l10n.liveAudience,
                     };
                     return Container(
                       width: double.infinity,
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: VineTheme.surfaceContainer,
+                        color: context.vineColors.surfaceContainer,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: VineTheme.outlineMuted),
+                        border: Border.all(
+                          color: context.vineColors.outlineMuted,
+                        ),
                       ),
                       child: Row(
                         children: [
@@ -426,7 +457,9 @@ class _LiveParticipantRoster extends StatelessWidget {
                                   member.pubkey,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: VineTheme.labelLargeFont(),
+                                  style: VineTheme.labelLargeFont(
+                                    color: context.vineColors.onSurface,
+                                  ),
                                 ),
                                 const SizedBox(height: 4),
                                 Wrap(
@@ -435,7 +468,9 @@ class _LiveParticipantRoster extends StatelessWidget {
                                   children: [
                                     _LiveRoleChip(label: roleLabel),
                                     if (member.handRaised)
-                                      const _LiveRoleChip(label: 'Hand raised'),
+                                      _LiveRoleChip(
+                                        label: context.l10n.liveHandRaised,
+                                      ),
                                   ],
                                 ),
                               ],
@@ -469,7 +504,7 @@ class _LiveRoleChip extends StatelessWidget {
       child: Text(
         label,
         style: VineTheme.labelSmallFont(
-          color: VineTheme.onSurfaceVariant,
+          color: context.vineColors.onSurfaceVariant,
         ),
       ),
     );
@@ -483,16 +518,16 @@ class _LiveRequestPendingBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: VineTheme.surfaceContainer,
+        color: context.vineColors.surfaceContainer,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: VineTheme.outlineMuted),
+        border: Border.all(color: context.vineColors.outlineMuted),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Text(
-          'Your hand is raised. The host can bring you on stage from the speaker queue.',
+          context.l10n.liveHandRaisedDescription,
           style: VineTheme.bodyMediumFont(
-            color: VineTheme.onSurfaceVariant,
+            color: context.vineColors.onSurfaceVariant,
           ),
         ),
       ),
@@ -507,9 +542,9 @@ class _LiveNetworkDegradationBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: VineTheme.surfaceContainer,
+        color: context.vineColors.surfaceContainer,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: VineTheme.outlineMuted),
+        border: Border.all(color: context.vineColors.outlineMuted),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -517,19 +552,21 @@ class _LiveNetworkDegradationBanner extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Connection looks shaky',
-              style: VineTheme.titleSmallFont(),
+              context.l10n.liveConnectionLooksShaky,
+              style: VineTheme.titleSmallFont(
+                color: context.vineColors.onSurface,
+              ),
             ),
             const SizedBox(height: 6),
             Text(
-              'Keep the room stable by switching to audio only until the network settles.',
+              context.l10n.liveAudioOnlySuggestion,
               style: VineTheme.bodyMediumFont(
-                color: VineTheme.onSurfaceVariant,
+                color: context.vineColors.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 12),
             DivineButton(
-              label: 'Switch to audio only',
+              label: context.l10n.liveSwitchToAudioOnly,
               type: DivineButtonType.secondary,
               size: DivineButtonSize.small,
               onPressed: () {

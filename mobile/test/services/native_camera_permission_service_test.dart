@@ -16,152 +16,153 @@ void main() {
         .setMockMethodCallHandler(channel, null);
   });
 
-  test('maps a granted native request correctly', () async {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(channel, (methodCall) async {
-          methodCalls.add(methodCall);
-          if (methodCall.method == 'requestPermission') {
-            return true;
-          }
-          return null;
-        });
-
-    final result = await service.requestPermission();
-
-    expect(result, NativeCameraPermissionStatus.granted);
-    expect(methodCalls.single.method, 'requestPermission');
-  });
-
-  test('maps native authorization status values', () async {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(channel, (methodCall) async {
-          methodCalls.add(methodCall);
-          if (methodCall.method == 'getAuthorizationStatus') {
-            return 'notDetermined';
-          }
-          return null;
-        });
-
-    final result = await service.authorizationStatus();
-
-    expect(result, NativeCameraAuthorizationStatus.notDetermined);
-    expect(methodCalls.single.method, 'getAuthorizationStatus');
-  });
-
-  test('maps native microphone authorization status values', () async {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(channel, (methodCall) async {
-          methodCalls.add(methodCall);
-          if (methodCall.method == 'getMicrophoneAuthorizationStatus') {
-            return 'restricted';
-          }
-          return null;
-        });
-
-    final result = await service.microphoneAuthorizationStatus();
-
-    expect(result, NativeCameraAuthorizationStatus.restricted);
-    expect(methodCalls.single.method, 'getMicrophoneAuthorizationStatus');
-  });
-
-  test('maps a granted native microphone request correctly', () async {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(channel, (methodCall) async {
-          methodCalls.add(methodCall);
-          if (methodCall.method == 'requestMicrophonePermission') {
-            return true;
-          }
-          return null;
-        });
-
-    final result = await service.requestMicrophonePermission();
-
-    expect(result, NativeCameraPermissionStatus.granted);
-    expect(methodCalls.single.method, 'requestMicrophonePermission');
-  });
-
-  test('maps native permission denied into requires settings', () async {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(channel, (methodCall) async {
-          methodCalls.add(methodCall);
-          throw PlatformException(
-            code: 'PERMISSION_DENIED',
-            message: 'Camera access denied',
-          );
-        });
-
-    final result = await service.requestPermission();
-
-    expect(result, NativeCameraPermissionStatus.requiresSettings);
-    expect(methodCalls.single.method, 'requestPermission');
-  });
-
-  test(
-    'maps a false native camera request that stays not determined into prompt blocked',
-    () async {
+  group('native permission methods', () {
+    test('maps a granted native request correctly', () async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (methodCall) async {
             methodCalls.add(methodCall);
-            if (methodCall.method == 'requestPermission') {
-              return false;
-            }
-            if (methodCall.method == 'getAuthorizationStatus') {
-              return 'notDetermined';
+            if (methodCall.method == 'requestCameraPermission') {
+              return 'authorized';
             }
             return null;
           });
 
       final result = await service.requestPermission();
 
-      expect(result, NativeCameraPermissionStatus.promptBlocked);
-      expect(
-        methodCalls.map((call) => call.method),
-        <String>['requestPermission', 'getAuthorizationStatus'],
-      );
-    },
-  );
+      expect(result, NativeCameraPermissionStatus.granted);
+      expect(methodCalls.single.method, 'requestCameraPermission');
+    });
 
-  test(
-    'maps a false native microphone request that stays not determined into prompt blocked',
-    () async {
+    test('maps native authorization status values', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (methodCall) async {
+            methodCalls.add(methodCall);
+            if (methodCall.method == 'cameraPermissionStatus') {
+              return 'notDetermined';
+            }
+            return null;
+          });
+
+      final result = await service.authorizationStatus();
+
+      expect(result, NativeCameraAuthorizationStatus.notDetermined);
+      expect(methodCalls.single.method, 'cameraPermissionStatus');
+    });
+
+    test('maps native microphone authorization status values', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (methodCall) async {
+            methodCalls.add(methodCall);
+            if (methodCall.method == 'microphonePermissionStatus') {
+              return 'restricted';
+            }
+            return null;
+          });
+
+      final result = await service.microphoneAuthorizationStatus();
+
+      expect(result, NativeCameraAuthorizationStatus.restricted);
+      expect(methodCalls.single.method, 'microphonePermissionStatus');
+    });
+
+    test('maps a granted native microphone request correctly', () async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (methodCall) async {
             methodCalls.add(methodCall);
             if (methodCall.method == 'requestMicrophonePermission') {
-              return false;
-            }
-            if (methodCall.method == 'getMicrophoneAuthorizationStatus') {
-              return 'notDetermined';
+              return 'authorized';
             }
             return null;
           });
 
       final result = await service.requestMicrophonePermission();
 
-      expect(result, NativeCameraPermissionStatus.promptBlocked);
-      expect(
-        methodCalls.map((call) => call.method),
-        <String>[
-          'requestMicrophonePermission',
-          'getMicrophoneAuthorizationStatus',
-        ],
-      );
-    },
-  );
+      expect(result, NativeCameraPermissionStatus.granted);
+      expect(methodCalls.single.method, 'requestMicrophonePermission');
+    });
 
-  test('opens native camera system settings', () async {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(channel, (methodCall) async {
-          methodCalls.add(methodCall);
-          if (methodCall.method == 'openSystemSettings') {
-            return true;
-          }
-          return null;
-        });
+    test('maps native permission denied into requires settings', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (methodCall) async {
+            methodCalls.add(methodCall);
+            throw PlatformException(
+              code: 'PERMISSION_DENIED',
+              message: 'Camera access denied',
+            );
+          });
 
-    final opened = await service.openSystemSettings();
+      final result = await service.requestPermission();
 
-    expect(opened, isTrue);
-    expect(methodCalls.single.method, 'openSystemSettings');
+      expect(result, NativeCameraPermissionStatus.requiresSettings);
+      expect(methodCalls.single.method, 'requestCameraPermission');
+    });
+
+    test(
+      'maps a native camera request that stays not determined into prompt blocked',
+      () async {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (methodCall) async {
+              methodCalls.add(methodCall);
+              if (methodCall.method == 'requestCameraPermission') {
+                return 'notDetermined';
+              }
+              if (methodCall.method == 'cameraPermissionStatus') {
+                return 'notDetermined';
+              }
+              return null;
+            });
+
+        final result = await service.requestPermission();
+
+        expect(result, NativeCameraPermissionStatus.promptBlocked);
+        expect(
+          methodCalls.map((call) => call.method),
+          <String>['requestCameraPermission'],
+        );
+      },
+    );
+
+    test(
+      'maps a native microphone request that stays not determined into prompt blocked',
+      () async {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (methodCall) async {
+              methodCalls.add(methodCall);
+              if (methodCall.method == 'requestMicrophonePermission') {
+                return 'notDetermined';
+              }
+              if (methodCall.method == 'microphonePermissionStatus') {
+                return 'notDetermined';
+              }
+              return null;
+            });
+
+        final result = await service.requestMicrophonePermission();
+
+        expect(result, NativeCameraPermissionStatus.promptBlocked);
+        expect(
+          methodCalls.map((call) => call.method),
+          <String>[
+            'requestMicrophonePermission',
+          ],
+        );
+      },
+    );
+
+    test('opens native camera system settings', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (methodCall) async {
+            methodCalls.add(methodCall);
+            if (methodCall.method == 'openSystemSettings') {
+              return true;
+            }
+            return null;
+          });
+
+      final opened = await service.openSystemSettings();
+
+      expect(opened, isTrue);
+      expect(methodCalls.single.method, 'openSystemSettings');
+    });
   });
 }
