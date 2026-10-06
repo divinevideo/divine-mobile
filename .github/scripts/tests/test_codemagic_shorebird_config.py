@@ -348,8 +348,11 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertIn('--exclude-drafts --exclude-pre-releases', definition)
         self.assertIn('if [ "$REMOTE_TAG" != "$TAG" ]; then', definition)
         self.assertIn('"$ZSP_BIN" publish --check zapstore.yaml', definition)
-        self.assertIn('--quiet --skip-preview', definition)
-        self.assertIn('--skip-certificate-linking', definition)
+        self.assertRegex(
+            definition,
+            r'"\$ZSP_BIN" publish zapstore\.yaml --quiet --skip-preview\s*\\\s*'
+            r'--skip-certificate-linking',
+        )
         self.assertNotIn('--pre-release', definition)
 
         # The release asset name drops the tag's leading "v"; deriving it from
