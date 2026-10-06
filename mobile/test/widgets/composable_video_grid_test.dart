@@ -120,6 +120,8 @@ void main() {
     late broken_tracker.BrokenVideoTracker mockTracker;
 
     setUp(() {
+      SharedPreferences.setMockInitialValues({});
+
       final now = DateTime.now();
       final nowTimestamp = now.millisecondsSinceEpoch ~/ 1000;
       testVideos = [
@@ -193,7 +195,6 @@ void main() {
       tester,
     ) async {
       // Mark video as broken
-      SharedPreferences.setMockInitialValues({});
       await mockTracker.initialize();
       await mockTracker.markVideoBroken('broken_video', 'Test broken');
 
