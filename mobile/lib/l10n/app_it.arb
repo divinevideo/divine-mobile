@@ -5137,5 +5137,10 @@
     "inboxRequestDismiss": "Accantona",
     "inboxRequestRestore": "Ripristina",
     "inboxThreadMarkRead": "Segna come letto",
-    "inboxThreadMarkedRead": "Segnato come letto"
+    "inboxThreadMarkedRead": "Segnato come letto",
+  "liveTabLabel": "In diretta",
+  "liveHideParticipantLocally": "Nascondi dalla mia vista",
+  "liveHideChatLocally": "Nascondi la chat per me",
+  "liveLocalHidingExplanation": "Nascondere una persona o la sua chat cambia solo la tua vista. Il suo audio resta attivo e gli altri continuano a vederla.",
+  "liveHiddenChatNotice": "I messaggi nascosti restano visibili agli altri."
 }

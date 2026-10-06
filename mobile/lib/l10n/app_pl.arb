@@ -5137,5 +5137,10 @@
     "inboxRequestDismiss": "Odłóż",
     "inboxRequestRestore": "Przywróć",
     "inboxThreadMarkRead": "Oznacz jako przeczytane",
-    "inboxThreadMarkedRead": "Oznaczono jako przeczytane"
+    "inboxThreadMarkedRead": "Oznaczono jako przeczytane",
+  "liveTabLabel": "Na żywo",
+  "liveHideParticipantLocally": "Ukryj w moim widoku",
+  "liveHideChatLocally": "Ukryj czat dla mnie",
+  "liveLocalHidingExplanation": "Ukrycie osoby lub jej czatu zmienia tylko Twój widok. Jej dźwięk pozostaje włączony, a inni nadal ją widzą.",
+  "liveHiddenChatNotice": "Ukryte wiadomości są nadal widoczne dla innych."
 }

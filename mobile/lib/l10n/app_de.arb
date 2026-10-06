@@ -5137,5 +5137,10 @@
     "inboxRequestDismiss": "Zurücklegen",
     "inboxRequestRestore": "Wiederherstellen",
     "inboxThreadMarkRead": "Als gelesen markieren",
-    "inboxThreadMarkedRead": "Als gelesen markiert"
+    "inboxThreadMarkedRead": "Als gelesen markiert",
+  "liveTabLabel": "Live",
+  "liveHideParticipantLocally": "Für mich ausblenden",
+  "liveHideChatLocally": "Chat für mich ausblenden",
+  "liveLocalHidingExplanation": "Wenn du eine Person oder ihren Chat ausblendest, ändert sich nur deine Ansicht. Ihr Audio bleibt an und alle anderen sehen sie weiterhin.",
+  "liveHiddenChatNotice": "Ausgeblendete Nachrichten bleiben für alle anderen sichtbar."
 }

@@ -5137,5 +5137,10 @@
     "inboxRequestDismiss": "Kenara ayır",
     "inboxRequestRestore": "Geri getir",
     "inboxThreadMarkRead": "Okundu olarak işaretle",
-    "inboxThreadMarkedRead": "Okundu olarak işaretlendi"
+    "inboxThreadMarkedRead": "Okundu olarak işaretlendi",
+  "liveTabLabel": "Canlı",
+  "liveHideParticipantLocally": "Benim görünümümden gizle",
+  "liveHideChatLocally": "Sohbeti benim için gizle",
+  "liveLocalHidingExplanation": "Bir katılımcıyı veya sohbetini gizlemek yalnızca senin görünümünü değiştirir. Sesi açık kalır ve diğer herkes onu görmeye devam eder.",
+  "liveHiddenChatNotice": "Gizlenen mesajlar diğer herkes tarafından görülebilir."
 }

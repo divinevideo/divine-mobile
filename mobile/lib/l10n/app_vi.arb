@@ -6901,5 +6901,10 @@
   "inboxRequestDismiss": "Để sang bên",
   "inboxRequestRestore": "Khôi phục",
   "inboxThreadMarkRead": "Đánh dấu đã đọc",
-  "inboxThreadMarkedRead": "Đã đánh dấu đã đọc"
+  "inboxThreadMarkedRead": "Đã đánh dấu đã đọc",
+  "liveTabLabel": "Trực tiếp",
+  "liveHideParticipantLocally": "Ẩn khỏi chế độ xem của tôi",
+  "liveHideChatLocally": "Ẩn trò chuyện với tôi",
+  "liveLocalHidingExplanation": "Ẩn người tham gia hoặc cuộc trò chuyện chỉ thay đổi chế độ xem của bạn. Âm thanh của họ vẫn bật và những người khác vẫn thấy họ.",
+  "liveHiddenChatNotice": "Tin nhắn đã ẩn vẫn hiển thị với những người khác."
 }

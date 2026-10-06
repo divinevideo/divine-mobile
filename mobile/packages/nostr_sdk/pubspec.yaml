@@ -25,7 +25,6 @@ dependencies:
   dio_cookie_manager: ^3.1.1
   device_info_plus: ^10.1.0
   bech32: ^0.2.2
-  kepler: ^1.0.3
   cryptography: ^2.7.0
   synchronized: ^3.3.0+3
   web_socket_channel: ^3.0.2
@@ -42,7 +41,7 @@ dependencies:
   path: ^1.8.3
   convert: ^3.1.1
   crypto: ^3.0.3
-  pointycastle: ^3.7.3
+  pointycastle: ^4.0.0
   cookie_jar: ^4.0.8
 
   clock: ^1.1.2

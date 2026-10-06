@@ -6901,5 +6901,10 @@
   "inboxRequestDismiss": "Ketepikan",
   "inboxRequestRestore": "Pulihkan",
   "inboxThreadMarkRead": "Tandakan sudah dibaca",
-  "inboxThreadMarkedRead": "Ditandakan sudah dibaca"
+  "inboxThreadMarkedRead": "Ditandakan sudah dibaca",
+  "liveTabLabel": "Langsung",
+  "liveHideParticipantLocally": "Sembunyikan daripada paparan saya",
+  "liveHideChatLocally": "Sembunyikan sembang untuk saya",
+  "liveLocalHidingExplanation": "Menyembunyikan peserta atau sembang mereka hanya mengubah paparan anda. Audio mereka kekal aktif dan orang lain masih melihat mereka.",
+  "liveHiddenChatNotice": "Mesej yang disembunyikan masih kelihatan kepada orang lain."
 }

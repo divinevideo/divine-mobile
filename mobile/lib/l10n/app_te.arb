@@ -8636,5 +8636,10 @@
   "inboxRequestDismiss": "పక్కన పెట్టండి",
   "inboxRequestRestore": "తిరిగి తీసుకురండి",
   "inboxThreadMarkRead": "చదివినట్లు గుర్తించండి",
-  "inboxThreadMarkedRead": "చదివినట్లు గుర్తించబడింది"
+  "inboxThreadMarkedRead": "చదివినట్లు గుర్తించబడింది",
+  "liveTabLabel": "ప్రత్యక్షం",
+  "liveHideParticipantLocally": "నా వీక్షణలో దాచు",
+  "liveHideChatLocally": "నా కోసం చాట్ దాచు",
+  "liveLocalHidingExplanation": "పాల్గొనేవారిని లేదా వారి చాట్‌ను దాచడం వల్ల మీ వీక్షణ మాత్రమే మారుతుంది. వారి ఆడియో కొనసాగుతుంది, ఇతరులకు వారు కనిపిస్తూనే ఉంటారు.",
+  "liveHiddenChatNotice": "దాచిన సందేశాలు ఇతరులందరికీ కనిపిస్తూనే ఉంటాయి."
 }

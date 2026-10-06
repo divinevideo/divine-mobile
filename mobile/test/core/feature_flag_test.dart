@@ -5,6 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 
 void main() {
+  test('livestream flag stays available', () {
+    expect(FeatureFlag.livestreamingBeta.displayName, 'Livestream');
+  });
   group('FeatureFlag enum', () {
     test('should have display names', () {
       expect(FeatureFlag.debugTools.displayName, equals('Debug Tools'));

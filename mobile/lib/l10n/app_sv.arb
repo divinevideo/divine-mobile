@@ -5137,5 +5137,10 @@
     "inboxRequestDismiss": "Lägg åt sidan",
     "inboxRequestRestore": "Återställ",
     "inboxThreadMarkRead": "Markera som läst",
-    "inboxThreadMarkedRead": "Markerat som läst"
+    "inboxThreadMarkedRead": "Markerat som läst",
+  "liveTabLabel": "Live",
+  "liveHideParticipantLocally": "Dölj för mig",
+  "liveHideChatLocally": "Dölj chatten för mig",
+  "liveLocalHidingExplanation": "Att dölja en deltagare eller deras chatt ändrar bara din vy. Ljudet är fortfarande på och alla andra ser deltagaren.",
+  "liveHiddenChatNotice": "Dolda meddelanden är synliga för alla andra."
 }

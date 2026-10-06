@@ -5137,5 +5137,10 @@
     "inboxRequestDismiss": "Pune deoparte",
     "inboxRequestRestore": "Restabilește",
     "inboxThreadMarkRead": "Marchează ca citit",
-    "inboxThreadMarkedRead": "Marcat ca citit"
+    "inboxThreadMarkedRead": "Marcat ca citit",
+  "liveTabLabel": "În direct",
+  "liveHideParticipantLocally": "Ascunde din vizualizarea mea",
+  "liveHideChatLocally": "Ascunde chatul pentru mine",
+  "liveLocalHidingExplanation": "Ascunderea unei persoane sau a chatului ei schimbă doar vizualizarea ta. Sunetul rămâne activ, iar ceilalți o văd în continuare.",
+  "liveHiddenChatNotice": "Mesajele ascunse rămân vizibile pentru ceilalți."
 }

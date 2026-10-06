@@ -6901,5 +6901,10 @@
   "inboxRequestDismiss": "ایک طرف رکھیں",
   "inboxRequestRestore": "واپس لائیں",
   "inboxThreadMarkRead": "پڑھا ہوا نشان زد کریں",
-  "inboxThreadMarkedRead": "پڑھا ہوا نشان زد کر دیا گیا"
+  "inboxThreadMarkedRead": "پڑھا ہوا نشان زد کر دیا گیا",
+  "liveTabLabel": "لائیو",
+  "liveHideParticipantLocally": "میرے منظر سے چھپائیں",
+  "liveHideChatLocally": "میرے لیے چیٹ چھپائیں",
+  "liveLocalHidingExplanation": "کسی شریک یا اس کی چیٹ کو چھپانے سے صرف آپ کا منظر بدلتا ہے۔ اس کی آواز چلتی رہتی ہے اور باقی سب اسے دیکھ سکتے ہیں۔",
+  "liveHiddenChatNotice": "چھپائے گئے پیغامات باقی سب کو نظر آتے رہتے ہیں۔"
 }

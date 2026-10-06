@@ -5137,5 +5137,10 @@
     "inboxRequestDismiss": "Wegleggen",
     "inboxRequestRestore": "Terugzetten",
     "inboxThreadMarkRead": "Als gelezen markeren",
-    "inboxThreadMarkedRead": "Als gelezen gemarkeerd"
+    "inboxThreadMarkedRead": "Als gelezen gemarkeerd",
+  "liveTabLabel": "Live",
+  "liveHideParticipantLocally": "Verbergen voor mij",
+  "liveHideChatLocally": "Chat verbergen voor mij",
+  "liveLocalHidingExplanation": "Een deelnemer of diens chat verbergen verandert alleen jouw weergave. De audio blijft aan en anderen blijven de deelnemer zien.",
+  "liveHiddenChatNotice": "Verborgen berichten blijven zichtbaar voor anderen."
 }

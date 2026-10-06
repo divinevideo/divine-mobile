@@ -5137,5 +5137,10 @@
     "inboxRequestDismiss": "تأجيل",
     "inboxRequestRestore": "استعادة",
     "inboxThreadMarkRead": "تحديد كمقروء",
-    "inboxThreadMarkedRead": "تم التحديد كمقروء"
+    "inboxThreadMarkedRead": "تم التحديد كمقروء",
+  "liveTabLabel": "مباشر",
+  "liveHideParticipantLocally": "إخفاء من عرضي",
+  "liveHideChatLocally": "إخفاء الدردشة لدي",
+  "liveLocalHidingExplanation": "إخفاء مشارك أو دردشته يغيّر عرضك فقط. يظل صوته مسموعًا ويظل الآخرون يرونه.",
+  "liveHiddenChatNotice": "تظل الرسائل المخفية مرئية للآخرين."
 }

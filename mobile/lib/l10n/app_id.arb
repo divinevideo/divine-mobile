@@ -5137,5 +5137,10 @@
     "inboxRequestDismiss": "Sisihkan",
     "inboxRequestRestore": "Pulihkan",
     "inboxThreadMarkRead": "Tandai dibaca",
-    "inboxThreadMarkedRead": "Ditandai dibaca"
+    "inboxThreadMarkedRead": "Ditandai dibaca",
+  "liveTabLabel": "Langsung",
+  "liveHideParticipantLocally": "Sembunyikan dari tampilan saya",
+  "liveHideChatLocally": "Sembunyikan chat untuk saya",
+  "liveLocalHidingExplanation": "Menyembunyikan peserta atau chat mereka hanya mengubah tampilan Anda. Audio mereka tetap aktif dan orang lain tetap melihat mereka.",
+  "liveHiddenChatNotice": "Pesan yang disembunyikan tetap terlihat oleh orang lain."
 }

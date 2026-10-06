@@ -5237,5 +5237,10 @@
     "inboxRequestDismiss": "ወደ ጎን ማስቀመጥ",
     "inboxRequestRestore": "መመለስ",
     "inboxThreadMarkRead": "እንደተነበበ ምልክት ማድረግ",
-    "inboxThreadMarkedRead": "እንደተነበበ ምልክት ተደርጓል"
+    "inboxThreadMarkedRead": "እንደተነበበ ምልክት ተደርጓል",
+  "liveTabLabel": "ቀጥታ",
+  "liveHideParticipantLocally": "ከእኔ እይታ ደብቅ",
+  "liveHideChatLocally": "ውይይቱን ለእኔ ደብቅ",
+  "liveLocalHidingExplanation": "ተሳታፊን ወይም ውይይቱን መደበቅ የአንተን እይታ ብቻ ይቀይራል። ድምፁ አይጠፋም፤ ሌሎችም ማየታቸውን ይቀጥላሉ።",
+  "liveHiddenChatNotice": "የተደበቁ መልዕክቶች ለሌሎች ሁሉ ይታያሉ።"
 }
