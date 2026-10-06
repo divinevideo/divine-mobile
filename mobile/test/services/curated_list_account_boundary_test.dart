@@ -340,6 +340,45 @@ void main() {
       expect(callbacks, [row.authorScopedId]);
     });
 
+    test(
+      'public list reads stay available while initialization awaits the '
+      'default list publish',
+      () async {
+        final published = Completer<Event>();
+        final ack = Completer<PublishOutcome>();
+        when(() => clientA.publishEventAwaitOk(any())).thenAnswer((call) {
+          published.complete(call.positionalArguments.first as Event);
+          return ack.future;
+        });
+        final service = open(authA, clientA);
+
+        final initialization = service.initialize();
+        final signed = await published.future;
+        expect(service.isReadyForMutations, isFalse);
+        expect(service.initializationError, isNull);
+        when(
+          () => clientA.subscribe(
+            any(),
+            closeOnEose: any(named: 'closeOnEose'),
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer((_) => const Stream.empty());
+
+        await service.streamPublicListsFromRelays().toList();
+
+        verify(
+          () => clientA.subscribe(
+            any(),
+            closeOnEose: any(named: 'closeOnEose'),
+            onEose: any(named: 'onEose'),
+          ),
+        ).called(1);
+        ack.complete(acceptedOutcome(signed));
+        await initialization;
+        expect(service.isInitialized, isTrue);
+      },
+    );
+
     test('refused subscription recovery is observable and a same-service retry succeeds', () async {
       final row = _row(_ownerA, id: CuratedListService.defaultListId);
       await prefs.backing.setString(
