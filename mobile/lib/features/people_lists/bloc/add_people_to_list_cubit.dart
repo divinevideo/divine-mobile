@@ -216,6 +216,7 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
     for (final pk in pubkeys) {
       try {
         final cached = await repo.getCachedProfile(pubkey: pk);
+        if (isClosed) return;
         // Only a miss goes to the network. A refresh re-reads every kept
         // candidate, and a cached profile it has already applied changes
         // nothing.

@@ -186,10 +186,12 @@ void main() {
       Map<String, String> names = threeNames,
       List<Override> additionalOverrides = const [],
       PeopleListsBloc? peopleListsBloc,
+      ThemeData? theme,
     }) async {
       when(() => cubit.state).thenReturn(cubitState);
       await tester.pumpWidget(
         testMaterialApp(
+          theme: theme,
           additionalOverrides: [
             ..._tileOverrides(names),
             ...additionalOverrides,
@@ -867,6 +869,38 @@ void main() {
             const Offset(0, 300),
             1000,
           );
+          await tester.pumpAndSettle();
+
+          verify(() => cubit.started()).called(1);
+        });
+      }
+
+      for (final count in [1, 20]) {
+        testWidgets('refreshes $count populated rows with clamping physics', (
+          tester,
+        ) async {
+          final list = _buildList(id: 'list-1', name: 'Close Friends');
+          when(() => bloc.state).thenReturn(_stateWith(lists: [list]));
+          when(() => cubit.started()).thenAnswer((_) async {});
+          final names = {
+            for (var index = 1; index <= count; index++)
+              index.toRadixString(16).padLeft(64, '0'): 'Person $index',
+          };
+          await pumpView(
+            tester,
+            userList: list,
+            cubitState: AddPeopleToListState(
+              status: AddPeopleToListStatus.ready,
+              candidates: [
+                for (final entry in names.entries)
+                  _candidate(entry.key, displayName: entry.value),
+              ],
+            ),
+            names: names,
+            theme: ThemeData.dark().copyWith(platform: TargetPlatform.linux),
+          );
+
+          await tester.fling(find.byType(ListView), const Offset(0, 300), 1000);
           await tester.pumpAndSettle();
 
           verify(() => cubit.started()).called(1);
