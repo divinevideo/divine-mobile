@@ -119,7 +119,7 @@ void main() {
     late List<VideoEvent> testVideos;
     late broken_tracker.BrokenVideoTracker mockTracker;
 
-    setUp(() {
+    setUp(() async {
       SharedPreferences.setMockInitialValues({});
 
       final now = DateTime.now();
@@ -165,6 +165,7 @@ void main() {
 
       // Create mock tracker with no broken videos
       mockTracker = broken_tracker.BrokenVideoTracker();
+      await mockTracker.initialize();
     });
 
     testWidgets('renders grid with provided videos', (tester) async {
@@ -195,7 +196,6 @@ void main() {
       tester,
     ) async {
       // Mark video as broken
-      await mockTracker.initialize();
       await mockTracker.markVideoBroken('broken_video', 'Test broken');
 
       final persistedTracker = broken_tracker.BrokenVideoTracker();
