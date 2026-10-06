@@ -68,6 +68,9 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
   /// second recording.
   bool _starting = false;
 
+  /// Prevents overlapping native stop calls while the clip is finalized.
+  bool _stopping = false;
+
   /// True after a manual stop returned no file. At the 60-second cap the
   /// platform may answer that stop empty and deliver the clip through the
   /// auto-stop callback just after, so that clip is still accepted.
@@ -120,8 +123,14 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
   /// untouched rather than overwritten by an error from a second stop.
   Future<void> stop() async {
     if (_disposed || isClosed) return;
-    if (state is MinorConsentCaptureReview) return;
-    final path = await _recorder.stop();
+    if (_stopping || state is MinorConsentCaptureReview) return;
+    _stopping = true;
+    final String? path;
+    try {
+      path = await _recorder.stop();
+    } finally {
+      _stopping = false;
+    }
     if (isClosed || _disposed) {
       // Left mid-stop: nothing will surface this clip, so do not strand it.
       await _discardClip(path);
