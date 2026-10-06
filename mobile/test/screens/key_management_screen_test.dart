@@ -77,11 +77,12 @@ class _FakeKeyManagementAuthService extends Fake implements AuthService {
   }
 
   int importFromNsecCallCount = 0;
+  AuthResult importResult = const AuthResult(success: true);
 
   @override
   Future<AuthResult> importFromNsec(String nsec) async {
     importFromNsecCallCount++;
-    return const AuthResult(success: true);
+    return importResult;
   }
 }
 
@@ -741,6 +742,59 @@ void main() {
       expect(find.text(l10n.authPasswordRequired), findsOne);
       expect(find.text(l10n.keyManagementKeycastPasswordPrompt), findsOne);
     });
+
+    testWidgets(
+      'import cleanup refusal shows specific recovery and can retry',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        authService =
+            _FakeKeyManagementAuthService(
+                currentNpub: testNpub,
+                authenticationSource: AuthenticationSource.importedKeys,
+                canExportLocalNsec: true,
+              )
+              ..importResult = const AuthResult(
+                success: false,
+                failureReason: AuthFailureReason.accountCleanupFailed,
+              );
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final router = GoRouter(
+          routes: [
+            GoRoute(path: '/', builder: (_, _) => const KeyManagementScreen()),
+          ],
+        );
+        await tester.pumpWidget(
+          testProviderScope(
+            mockAuthService: authService,
+            additionalOverrides: [
+              isKeyManagementRestrictedProvider.overrideWithValue(false),
+            ],
+            child: MaterialApp.router(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              routerConfig: router,
+              theme: ThemeData.dark(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField), 'nsec1${'0' * 58}');
+        for (var attempt = 0; attempt < 2; attempt++) {
+          await tester.ensureVisible(find.text(l10n.keyManagementImportButton));
+          await tester.tap(find.text(l10n.keyManagementImportButton));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.keyManagementImportConfirm));
+          await tester.pumpAndSettle();
+          expect(find.text(l10n.authAccountCleanupFailed), findsOneWidget);
+          expect(find.text(l10n.keyManagementImportFailed), findsNothing);
+          expect(find.text(l10n.keyManagementImportSuccess), findsNothing);
+        }
+        expect(authService.importFromNsecCallCount, 2);
+      },
+    );
 
     testWidgets('hides nsec export and key import for a protected minor', (
       tester,
