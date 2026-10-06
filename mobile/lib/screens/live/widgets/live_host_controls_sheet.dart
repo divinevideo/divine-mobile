@@ -1,15 +1,17 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/live_room/live_room_bloc.dart';
+import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/content_moderation.dart';
 import 'package:openvine/models/live/live_room.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/live/widgets/live_local_media_controls.dart';
+import 'package:openvine/screens/live/widgets/live_room_error_banner.dart';
 import 'package:openvine/screens/live/widgets/live_speaker_queue_sheet.dart';
-import 'package:openvine/services/content_moderation_types.dart';
 
 class LiveHostControlsSheet extends ConsumerStatefulWidget {
   const LiveHostControlsSheet({super.key});
@@ -75,29 +77,39 @@ class _LiveHostControlsSheetState extends ConsumerState<LiveHostControlsSheet> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (state.error != null) ...[
+                    LiveRoomErrorBanner(
+                      message: liveRoomErrorLabel(context, state.error),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   Text(
-                    'Host controls',
-                    style: VineTheme.headlineSmallFont(),
+                    context.l10n.liveHostControls,
+                    style: VineTheme.headlineSmallFont(
+                      color: context.vineColors.onSurface,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Keep the stage tight, work the raised hands, and degrade cleanly when the network gets weird.',
+                    context.l10n.liveHostControlsDescription,
                     style: VineTheme.bodyMediumFont(
-                      color: VineTheme.onSurfaceVariant,
+                      color: context.vineColors.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: 20),
                   _HostSection(
-                    title: 'Room details',
+                    title: context.l10n.liveRoomDetails,
                     children: [
                       TextField(
                         controller: _titleController,
-                        style: VineTheme.bodyMediumFont(),
+                        style: VineTheme.bodyMediumFont(
+                          color: context.vineColors.onSurface,
+                        ),
                         decoration: InputDecoration(
-                          labelText: 'Title',
-                          hintText: 'Update the room title',
+                          labelText: context.l10n.videoMetadataTitleLabel,
+                          hintText: context.l10n.liveUpdateTheRoomTitle,
                           filled: true,
-                          fillColor: VineTheme.surfaceContainer,
+                          fillColor: context.vineColors.surfaceContainer,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(18),
                             borderSide: BorderSide.none,
@@ -107,12 +119,14 @@ class _LiveHostControlsSheetState extends ConsumerState<LiveHostControlsSheet> {
                       const SizedBox(height: 12),
                       TextField(
                         controller: _statusController,
-                        style: VineTheme.bodyMediumFont(),
+                        style: VineTheme.bodyMediumFont(
+                          color: context.vineColors.onSurface,
+                        ),
                         decoration: InputDecoration(
-                          labelText: 'Status',
-                          hintText: 'open, private, or closed',
+                          labelText: context.l10n.blueskyStatus,
+                          hintText: context.l10n.liveRoomStatusHint,
                           filled: true,
-                          fillColor: VineTheme.surfaceContainer,
+                          fillColor: context.vineColors.surfaceContainer,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(18),
                             borderSide: BorderSide.none,
@@ -121,7 +135,7 @@ class _LiveHostControlsSheetState extends ConsumerState<LiveHostControlsSheet> {
                       ),
                       const SizedBox(height: 12),
                       DivineButton(
-                        label: 'Update title/status',
+                        label: context.l10n.liveUpdateTitleStatus,
                         type: DivineButtonType.secondary,
                         expanded: true,
                         onPressed: () {
@@ -183,18 +197,18 @@ class _LiveHostControlsSheetState extends ConsumerState<LiveHostControlsSheet> {
                     const SizedBox(height: 20),
                   ],
                   _HostSection(
-                    title: 'Moderation',
+                    title: context.l10n.liveModeration,
                     children: [
                       DivineButton(
-                        label: 'Manage participants',
+                        label: context.l10n.liveManageParticipants,
                         type: DivineButtonType.secondary,
                         expanded: true,
                         onPressed: () {
-                          showModalBottomSheet<void>(
+                          VineBottomSheet.show<void>(
                             context: context,
-                            backgroundColor: VineTheme.surfaceBackground,
-                            isScrollControlled: true,
-                            builder: (_) => BlocProvider.value(
+                            scrollable: false,
+                            showHeader: false,
+                            body: BlocProvider.value(
                               value: context.read<LiveRoomBloc>(),
                               child: LiveSpeakerQueueSheet(
                                 hostPubkey: state.room?.hostPubkey ?? '',
@@ -245,45 +259,28 @@ class _LiveHostControlsSheetState extends ConsumerState<LiveHostControlsSheet> {
                   ),
                   const SizedBox(height: 16),
                   _HostSection(
-                    title: 'Session',
+                    title: context.l10n.liveSession,
                     children: [
                       DivineButton(
-                        label: 'End session',
+                        label: context.l10n.liveEndSession,
                         type: DivineButtonType.error,
                         expanded: true,
                         onPressed: () async {
                           final liveRoomBloc = context.read<LiveRoomBloc>();
                           final navigator = Navigator.of(context);
-                          final confirmed = await showDialog<bool>(
-                            context: context,
-                            builder: (dialogContext) {
-                              return AlertDialog(
-                                backgroundColor: VineTheme.surfaceContainerHigh,
-                                title: Text(
-                                  'End this live session?',
-                                  style: VineTheme.titleMediumFont(),
-                                ),
-                                content: Text(
-                                  'This ends the room for everyone and closes the stage.',
-                                  style: VineTheme.bodyMediumFont(),
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.of(dialogContext).pop(false);
-                                    },
-                                    child: const Text('Cancel'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.of(dialogContext).pop(true);
-                                    },
-                                    child: const Text('End session'),
-                                  ),
-                                ],
+                          final confirmed =
+                              await VineBottomSheetPrompt.show<bool>(
+                                context: context,
+                                sticker: DivineStickerName.alert,
+                                title: context.l10n.liveEndThisLiveSession,
+                                subtitle:
+                                    context.l10n.liveEndSessionConfirmation,
+                                primaryButtonText: context.l10n.liveEndSession,
+                                primaryButtonType: DivineButtonType.error,
+                                onPrimaryPressed: () => navigator.pop(true),
+                                secondaryButtonText: context.l10n.commonCancel,
+                                onSecondaryPressed: () => navigator.pop(false),
                               );
-                            },
-                          );
                           if (!mounted || confirmed != true) {
                             return;
                           }
@@ -309,10 +306,12 @@ class _LiveHostControlsSheetState extends ConsumerState<LiveHostControlsSheet> {
     required bool requestedCameraEnabled,
   }) {
     if (_isCameraStarting(cameraBusy, requestedCameraEnabled)) {
-      return 'Starting camera...';
+      return context.l10n.liveStartingCamera;
     }
 
-    return cameraEnabled ? 'Turn camera off' : 'Turn camera on';
+    return cameraEnabled
+        ? context.l10n.liveTurnCameraOff
+        : context.l10n.liveTurnCameraOn;
   }
 
   String _microphoneMediaButtonLabel({
@@ -321,10 +320,12 @@ class _LiveHostControlsSheetState extends ConsumerState<LiveHostControlsSheet> {
     required bool requestedMicrophoneEnabled,
   }) {
     if (_isMicrophoneStarting(microphoneBusy, requestedMicrophoneEnabled)) {
-      return 'Starting microphone...';
+      return context.l10n.liveStartingMicrophone;
     }
 
-    return microphoneEnabled ? 'Turn mic off' : 'Turn mic on';
+    return microphoneEnabled
+        ? context.l10n.liveTurnMicOff
+        : context.l10n.liveTurnMicOn;
   }
 
   bool _isCameraStarting(bool cameraBusy, bool requestedCameraEnabled) {
@@ -355,7 +356,9 @@ class _LiveHostControlsSheetState extends ConsumerState<LiveHostControlsSheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            result.success ? 'User reported' : 'Failed to report user',
+            result.success
+                ? context.l10n.liveUserReported
+                : context.l10n.liveFailedToReportUser,
           ),
         ),
       );
@@ -365,7 +368,7 @@ class _LiveHostControlsSheetState extends ConsumerState<LiveHostControlsSheet> {
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to report user: $error')),
+        SnackBar(content: Text(context.l10n.liveFailedToReportUser)),
       );
     }
   }
@@ -389,7 +392,7 @@ class _LiveHostControlsSheetState extends ConsumerState<LiveHostControlsSheet> {
         ..add(HideChatLocallyRequested(pubkey))
         ..add(HideParticipantLocallyRequested(pubkey));
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('User blocked')),
+        SnackBar(content: Text(context.l10n.liveUserBlocked)),
       );
     } catch (error) {
       if (!mounted) {
@@ -397,7 +400,7 @@ class _LiveHostControlsSheetState extends ConsumerState<LiveHostControlsSheet> {
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to block user: $error')),
+        SnackBar(content: Text(context.l10n.liveBlockFailed)),
       );
     }
   }
@@ -418,16 +421,18 @@ class _HostSection extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: VineTheme.surfaceContainerHigh,
+        color: context.vineColors.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: VineTheme.outlineMuted),
+        border: Border.all(color: context.vineColors.outlineMuted),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: VineTheme.titleMediumFont(),
+            style: VineTheme.titleMediumFont(
+              color: context.vineColors.onSurface,
+            ),
           ),
           const SizedBox(height: 12),
           ...children,

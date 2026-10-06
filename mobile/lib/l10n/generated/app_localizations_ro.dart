@@ -13631,4 +13631,519 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get liveHiddenChatNotice =>
       'Mesajele ascunse rămân vizibile pentru ceilalți.';
+
+  @override
+  String get liveFeaturedHostsDescription =>
+      'Vezi rapid cine transmite acum și cine urmează.';
+
+  @override
+  String get liveActiveSpeakers => 'Vorbitori activi';
+
+  @override
+  String get liveApprove => 'Aprobă';
+
+  @override
+  String get liveAudience => 'Public';
+
+  @override
+  String get liveAudioOnly => 'Doar audio';
+
+  @override
+  String get liveBlockUser => 'Blochează utilizatorul';
+
+  @override
+  String get liveCameraAndMicAreOff => 'Camera și microfonul sunt oprite';
+
+  @override
+  String get liveChat => 'Chat';
+
+  @override
+  String get liveConnectionLooksShaky => 'Conexiunea pare instabilă';
+
+  @override
+  String get liveCoverImageURL => 'URL-ul imaginii de copertă';
+
+  @override
+  String get liveDefaultThumbnail => 'Miniatură implicită';
+
+  @override
+  String get liveDemote => 'Coboară rolul';
+
+  @override
+  String get liveDeny => 'Refuză';
+
+  @override
+  String get liveDropIntoRoomsThatAreAlreadyRolling =>
+      'Intră în camerele unde conversația a început deja.';
+
+  @override
+  String get liveEndSession => 'Încheie sesiunea';
+
+  @override
+  String get liveEndThisLiveSession => 'Închei această sesiune live?';
+
+  @override
+  String get liveFailedToReportUser => 'Nu s-a putut raporta utilizatorul';
+
+  @override
+  String get liveFeaturedHosts => 'Gazde recomandate';
+
+  @override
+  String get liveFlipCamera => 'Schimbă camera';
+
+  @override
+  String get liveGoLive => 'Transmite live';
+
+  @override
+  String get liveHandRaised => 'Mână ridicată';
+
+  @override
+  String get liveHost => 'Gazdă';
+
+  @override
+  String get liveHostControls => 'Comenzile gazdei';
+
+  @override
+  String get liveJoinLive => 'Intră în live';
+
+  @override
+  String get liveAudioOnlySuggestion =>
+      'Păstrează camera stabilă trecând doar la audio până când rețeaua își revine.';
+
+  @override
+  String get liveHostControlsDescription =>
+      'Organizează scena, urmărește mâinile ridicate și redu transmisia video când rețeaua are probleme.';
+
+  @override
+  String get liveLiveAudioOnly => 'Live doar audio';
+
+  @override
+  String get liveLiveNow => 'Live acum';
+
+  @override
+  String get liveLiveRoom => 'Cameră live';
+
+  @override
+  String get liveLiveRoomsAreUnavailable =>
+      'Camerele live nu sunt disponibile.';
+
+  @override
+  String get liveLiveVideo => 'Video live';
+
+  @override
+  String get liveLiveVideoAndAudio => 'Video și audio live';
+
+  @override
+  String get liveLowerHand => 'Coboară mâna';
+
+  @override
+  String get liveManageParticipants => 'Gestionează participanții';
+
+  @override
+  String get liveModeration => 'Moderare';
+
+  @override
+  String get liveModerator => 'Moderator';
+
+  @override
+  String get liveNoActiveSpeakersYet => 'Încă nu există vorbitori activi.';
+
+  @override
+  String get liveNoAudienceMembersToModerateRightNow =>
+      'Nu există membri ai publicului de moderat acum.';
+
+  @override
+  String get liveNoMessagesYetBreakTheSilence =>
+      'Încă nu există mesaje. Sparge tăcerea.';
+
+  @override
+  String get liveNoOneHasJoinedTheRoomYet =>
+      'Nu a intrat nimeni în cameră încă.';
+
+  @override
+  String get liveNoOneIsWaitingToSpeak => 'Nimeni nu așteaptă să vorbească.';
+
+  @override
+  String get liveNoRoomsYetStartTheFirstOne =>
+      'Încă nu există camere. Deschide-o pe prima.';
+
+  @override
+  String get liveNoSessionHasBeenScheduledYet =>
+      'Încă nu este programată nicio sesiune.';
+
+  @override
+  String get liveNothingHereYet => 'Încă nu e nimic aici.';
+
+  @override
+  String get liveOnStage => 'Pe scenă';
+
+  @override
+  String get liveOpenReplay => 'Deschide reluarea';
+
+  @override
+  String get liveOpenRoom => 'Deschide camera';
+
+  @override
+  String get liveParticipants => 'Participanți';
+
+  @override
+  String get livePromote => 'Ridică rolul';
+
+  @override
+  String get liveRaiseHand => 'Ridică mâna';
+
+  @override
+  String get liveRaisedHands => 'Mâini ridicate';
+
+  @override
+  String get liveReplayProcessing => 'Reluarea se procesează';
+
+  @override
+  String get liveReplayQueued => 'Reluarea este în așteptare';
+
+  @override
+  String get liveReplayReady => 'Reluarea este gata';
+
+  @override
+  String get liveReplayUnavailable => 'Reluarea nu este disponibilă';
+
+  @override
+  String get liveReportUser => 'Raportează utilizatorul';
+
+  @override
+  String get liveRoomDetail => 'Detaliu cameră';
+
+  @override
+  String get liveRoomDetails => 'Detaliile camerei';
+
+  @override
+  String get liveRoomLinkCopiedToClipboard =>
+      'Linkul camerei a fost copiat în clipboard';
+
+  @override
+  String get liveRoomTitle => 'Titlul camerei';
+
+  @override
+  String get liveRoomUnavailable => 'Camera nu este disponibilă.';
+
+  @override
+  String get liveSaySomething => 'Spune ceva';
+
+  @override
+  String get liveSeeWhatIsLinedUpNext => 'Vezi ce urmează.';
+
+  @override
+  String get liveDiscoveryDescription =>
+      'Vezi cine transmite acum sau deschide propria cameră.';
+
+  @override
+  String get liveSend => 'Trimite';
+
+  @override
+  String get liveSession => 'Sesiune';
+
+  @override
+  String get liveShareRoom => 'Distribuie camera';
+
+  @override
+  String get liveSpeaker => 'Vorbitor';
+
+  @override
+  String get liveSpeakerHandRaised => 'Vorbitor, mână ridicată';
+
+  @override
+  String get liveSpeakers => 'Vorbitori';
+
+  @override
+  String get liveStage => 'Scenă';
+
+  @override
+  String get liveStartAPublicRoomInOneShot =>
+      'Deschide o cameră publică dintr-un singur pas.';
+
+  @override
+  String get liveStartLiveNow => 'Începe live acum';
+
+  @override
+  String get liveStartingCameraAndMicrophone =>
+      'Se pornesc camera și microfonul...';
+
+  @override
+  String get liveStartingCamera => 'Se pornește camera...';
+
+  @override
+  String get liveStartingMicrophone => 'Se pornește microfonul...';
+
+  @override
+  String get liveSwitchToAudioOnly => 'Treci doar la audio';
+
+  @override
+  String get liveReplayReadyDescription =>
+      'Transmisiunea s-a încheiat, dar reluarea poate fi vizionată.';
+
+  @override
+  String get liveReplayProcessingDescription =>
+      'Transmisiunea s-a încheiat. Încă procesăm reluarea.';
+
+  @override
+  String get liveEndSessionConfirmation =>
+      'Aceasta închide camera pentru toată lumea și încheie scena.';
+
+  @override
+  String get liveTurnCameraOff => 'Oprește camera';
+
+  @override
+  String get liveTurnCameraOn => 'Pornește camera';
+
+  @override
+  String get liveTurnMicOff => 'Oprește microfonul';
+
+  @override
+  String get liveTurnMicOn => 'Pornește microfonul';
+
+  @override
+  String get liveUnableToOpenThisLiveRoom =>
+      'Nu se poate deschide această cameră live.';
+
+  @override
+  String get liveUpcoming => 'În curând';
+
+  @override
+  String get liveUpdateTheRoomTitle => 'Actualizează titlul camerei';
+
+  @override
+  String get liveUpdateTitleStatus => 'Actualizează titlul/starea';
+
+  @override
+  String get liveUserBlocked => 'Utilizator blocat';
+
+  @override
+  String get liveUserReported => 'Utilizator raportat';
+
+  @override
+  String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>
+      'Fotografia ta de profil va fi folosită ca miniatură inițială.';
+
+  @override
+  String get liveWaitingForMedia => 'Se așteaptă conținutul media';
+
+  @override
+  String get liveWaitingForSpeakersToJoinTheStage =>
+      'Se așteaptă intrarea vorbitorilor pe scenă.';
+
+  @override
+  String get liveWhatAreYouGoingLiveAbout =>
+      'Despre ce vrei să transmiți live?';
+
+  @override
+  String get liveYouAreOnStage => 'Ești pe scenă';
+
+  @override
+  String get liveHandRaisedDescription =>
+      'Ai mâna ridicată. Gazda te poate aduce pe scenă din coada de vorbitori.';
+
+  @override
+  String liveDefaultRoomTitle(String displayName) {
+    return '$displayName transmite live';
+  }
+
+  @override
+  String liveDefaultRoomSummary(String displayName) {
+    return 'Vino la o discuție live cu $displayName pe Divine.';
+  }
+
+  @override
+  String liveHostLabel(String pubkey) {
+    return 'Gazdă: $pubkey';
+  }
+
+  @override
+  String liveParticipantCounts(int speakers, int listeners) {
+    String _temp0 = intl.Intl.pluralLogic(
+      speakers,
+      locale: localeName,
+      other: '$speakers de vorbitori',
+      few: '$speakers vorbitori',
+      one: '$speakers vorbitor',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      listeners,
+      locale: localeName,
+      other: '$listeners de ascultători',
+      few: '$listeners ascultători',
+      one: '$listeners ascultător',
+    );
+    return '$_temp0 · $_temp1';
+  }
+
+  @override
+  String liveStartedAt(String time) {
+    return 'A început la $time';
+  }
+
+  @override
+  String liveEndedAt(String time) {
+    return 'S-a încheiat la $time';
+  }
+
+  @override
+  String liveScheduledFor(String time) {
+    return 'Programat pentru $time';
+  }
+
+  @override
+  String liveShareSubject(String title) {
+    return 'Participă la $title live pe Divine';
+  }
+
+  @override
+  String liveRoomShareSubject(String title) {
+    return 'Cameră live: $title';
+  }
+
+  @override
+  String liveRoleCounts(int hosts, int moderators, int speakers, int audience) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hosts,
+      locale: localeName,
+      other: '$hosts de gazde',
+      few: '$hosts gazde',
+      one: '$hosts gazdă',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      moderators,
+      locale: localeName,
+      other: '$moderators de moderatori',
+      few: '$moderators moderatori',
+      one: '$moderators moderator',
+    );
+    String _temp2 = intl.Intl.pluralLogic(
+      speakers,
+      locale: localeName,
+      other: '$speakers de vorbitori',
+      few: '$speakers vorbitori',
+      one: '$speakers vorbitor',
+    );
+    String _temp3 = intl.Intl.pluralLogic(
+      audience,
+      locale: localeName,
+      other: '$audience de ascultători',
+      few: '$audience ascultători',
+      one: '$audience ascultător',
+    );
+    return '$_temp0, $_temp1, $_temp2, $_temp3';
+  }
+
+  @override
+  String liveSpeakerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de vorbitori',
+      few: '$count vorbitori',
+      one: '$count vorbitor',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveListeningCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de ascultători',
+      few: '$count ascultători',
+      one: '$count ascultător',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveRoomListenerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de ascultători în cameră',
+      few: '$count ascultători în cameră',
+      one: '$count ascultător în cameră',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveChatMessageSemantics(String displayName) {
+    return 'Mesaj în chatul live de la $displayName';
+  }
+
+  @override
+  String get liveShareFailed =>
+      'Nu se poate distribui această cameră. Încearcă din nou.';
+
+  @override
+  String get liveBlockFailed =>
+      'Nu se poate bloca acest utilizator. Încearcă din nou.';
+
+  @override
+  String get liveRoomStatusHint => 'Folosește open, private sau closed';
+
+  @override
+  String get liveErrorRequestFailed =>
+      'Nu se poate actualiza această cameră. Încearcă din nou.';
+
+  @override
+  String get liveErrorConnectionFailed =>
+      'Nu se poate conecta la această cameră. Încearcă din nou.';
+
+  @override
+  String get liveErrorSubscriptionFailed =>
+      'Nu se pot încărca actualizările camerei. Încearcă din nou.';
+
+  @override
+  String get liveErrorCameraBlocked =>
+      'Accesul la cameră este blocat. Activează-l în Setări.';
+
+  @override
+  String get liveErrorCameraRequired =>
+      'Permite accesul la cameră pentru a o porni.';
+
+  @override
+  String get liveErrorCameraUnavailable => 'Nu este disponibilă nicio cameră.';
+
+  @override
+  String get liveErrorCameraPromptBlocked =>
+      'Nu se poate solicita accesul la cameră. Verifică Setările.';
+
+  @override
+  String get liveErrorMicrophoneBlocked =>
+      'Accesul la microfon este blocat. Activează-l în Setări.';
+
+  @override
+  String get liveErrorMicrophoneRequired =>
+      'Permite accesul la microfon pentru a-l porni.';
+
+  @override
+  String get liveErrorMicrophoneUnavailable =>
+      'Nu este disponibil niciun microfon.';
+
+  @override
+  String get liveErrorMicrophonePromptBlocked =>
+      'Nu se poate solicita accesul la microfon. Verifică Setările.';
+
+  @override
+  String get liveErrorSpeakerCapacityReached =>
+      'Scena este plină. Așteaptă să plece un vorbitor.';
+
+  @override
+  String get liveTitleRequired => 'Introdu un titlu pentru cameră.';
+
+  @override
+  String get liveStartFailed =>
+      'Nu se poate porni această cameră. Încearcă din nou.';
+
+  @override
+  String get liveSendFailed => 'Nu se poate trimite mesajul. Încearcă din nou.';
+
+  @override
+  String get liveChatLoadFailed =>
+      'Nu se poate încărca chatul. Încearcă din nou.';
 }

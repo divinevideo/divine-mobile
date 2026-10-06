@@ -1,10 +1,12 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/live/live_room.dart';
 import 'package:openvine/models/live/live_room_recording.dart';
 import 'package:openvine/models/live/live_session.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/live/live_discovery_page.dart';
 import 'package:openvine/screens/live/live_route_data.dart';
 import 'package:openvine/screens/live/widgets/live_replay_banner.dart';
@@ -30,10 +32,13 @@ class LiveRoomDetailView extends StatelessWidget {
     final speakerPubkeys = _speakerPubkeys(room, currentSession);
 
     return Scaffold(
-      backgroundColor: VineTheme.surfaceBackground,
+      backgroundColor: context.vineColors.surface,
       appBar: AppBar(
-        backgroundColor: VineTheme.surfaceBackground,
-        leading: BackButton(
+        backgroundColor: context.vineColors.surface,
+        leading: DivineIconButton(
+          icon: DivineIconName.arrowLeft,
+          tooltip: context.l10n.commonBack,
+          type: DivineIconButtonType.ghostSecondary,
           onPressed: () {
             if (context.canPop()) {
               context.pop();
@@ -44,8 +49,8 @@ class LiveRoomDetailView extends StatelessWidget {
           },
         ),
         title: Text(
-          'Room detail',
-          style: VineTheme.titleLargeFont(),
+          context.l10n.liveRoomDetail,
+          style: VineTheme.titleLargeFont(color: context.vineColors.onSurface),
         ),
       ),
       body: ListView(
@@ -59,10 +64,10 @@ class LiveRoomDetailView extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(32),
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 colors: <Color>[
-                  Color(0xFF111A16),
-                  Color(0xFF1E2A22),
+                  context.vineColors.surfaceContainerHigh,
+                  context.vineColors.surfaceContainer,
                 ],
               ),
             ),
@@ -77,37 +82,49 @@ class LiveRoomDetailView extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: isLive
                         ? VineTheme.primary
-                        : VineTheme.surfaceContainer,
+                        : context.vineColors.surfaceContainer,
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    isLive ? 'Live now' : 'Scheduled',
+                    isLive
+                        ? context.l10n.liveLiveNow
+                        : context.l10n.libraryScheduledSectionTitle,
                     style: VineTheme.labelLargeFont(
-                      color: isLive ? VineTheme.onPrimary : VineTheme.onSurface,
+                      color: isLive
+                          ? VineTheme.onPrimary
+                          : context.vineColors.onSurface,
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
-                Text(room.title, style: VineTheme.headlineSmallFont()),
+                Text(
+                  room.title,
+                  style: VineTheme.headlineSmallFont(
+                    color: context.vineColors.onSurface,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Text(
                   room.summary,
                   style: VineTheme.bodyLargeFont(
-                    color: VineTheme.onSurfaceVariant,
+                    color: context.vineColors.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Host: ${room.hostPubkey}',
+                  context.l10n.liveHostLabel(room.hostPubkey),
                   style: VineTheme.bodyMediumFont(
-                    color: VineTheme.onSurfaceVariant,
+                    color: context.vineColors.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${speakerPubkeys.length} speakers · ${currentSession?.audienceCount ?? 0} listeners',
+                  context.l10n.liveParticipantCounts(
+                    speakerPubkeys.length,
+                    currentSession?.audienceCount ?? 0,
+                  ),
                   style: VineTheme.bodyMediumFont(
-                    color: VineTheme.onSurfaceVariant,
+                    color: context.vineColors.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -115,17 +132,17 @@ class LiveRoomDetailView extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           _DetailSection(
-            title: 'Schedule',
+            title: context.l10n.videoMetadataScheduleButton,
             child: Text(
-              _scheduleLabel(currentSession),
+              _scheduleLabel(context, currentSession),
               style: VineTheme.bodyMediumFont(
-                color: VineTheme.onSurfaceVariant,
+                color: context.vineColors.onSurfaceVariant,
               ),
             ),
           ),
           const SizedBox(height: 16),
           _DetailSection(
-            title: 'Speakers',
+            title: context.l10n.liveSpeakers,
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -133,7 +150,7 @@ class LiveRoomDetailView extends StatelessWidget {
                   .map(
                     (pubkey) => Chip(
                       label: Text(pubkey),
-                      backgroundColor: VineTheme.surfaceContainerHigh,
+                      backgroundColor: context.vineColors.surfaceContainerHigh,
                     ),
                   )
                   .toList(growable: false),
@@ -141,7 +158,9 @@ class LiveRoomDetailView extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           DivineButton(
-            label: isLive ? 'Join live' : 'Open room',
+            label: isLive
+                ? context.l10n.liveJoinLive
+                : context.l10n.liveOpenRoom,
             expanded: true,
             onPressed: () {
               context.push(
@@ -155,7 +174,7 @@ class LiveRoomDetailView extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           DivineButton(
-            label: 'Share room',
+            label: context.l10n.liveShareRoom,
             expanded: true,
             type: DivineButtonType.secondary,
             onPressed: () => _shareRoom(context, room),
@@ -180,14 +199,19 @@ class _DetailSection extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: VineTheme.surfaceContainerHigh,
+        color: context.vineColors.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: VineTheme.outlineMuted),
+        border: Border.all(color: context.vineColors.outlineMuted),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: VineTheme.titleMediumFont()),
+          Text(
+            title,
+            style: VineTheme.titleMediumFont(
+              color: context.vineColors.onSurface,
+            ),
+          ),
           const SizedBox(height: 12),
           child,
         ],
@@ -209,35 +233,37 @@ List<String> _speakerPubkeys(LiveRoom room, LiveSession? session) {
   return speakers;
 }
 
-String _scheduleLabel(LiveSession? session) {
+String _scheduleLabel(BuildContext context, LiveSession? session) {
   final currentSession = session;
   if (currentSession == null) {
-    return 'No session has been scheduled yet.';
+    return context.l10n.liveNoSessionHasBeenScheduledYet;
   }
 
-  final formatter = DateFormat('EEE, MMM d • h:mm a');
+  final formatter = DateFormat.yMMMEd(
+    Localizations.localeOf(context).toLanguageTag(),
+  ).add_jm();
   final startedAt = formatter.format(currentSession.startedAt.toLocal());
   if (currentSession.isLive) {
-    return 'Started $startedAt';
+    return context.l10n.liveStartedAt(startedAt);
   }
   if (currentSession.hasEnded) {
     final endedAt = currentSession.endedAt == null
         ? startedAt
         : formatter.format(currentSession.endedAt!.toLocal());
-    return 'Ended $endedAt';
+    return context.l10n.liveEndedAt(endedAt);
   }
-  return 'Scheduled for $startedAt';
+  return context.l10n.liveScheduledFor(startedAt);
 }
 
 Future<void> _shareRoom(BuildContext context, LiveRoom room) async {
-  final shareText = '${room.title}\nhttps://divine.video/live/room/${room.id}';
-  const subjectPrefix = 'Join';
+  final shareText =
+      '${room.title}\nhttps://divine.video${RoutePaths.liveRoomDetailFor(room.id)}';
 
   try {
     await SharePlus.instance.share(
       ShareParams(
         text: shareText,
-        subject: '$subjectPrefix ${room.title} live on Divine',
+        subject: context.l10n.liveShareSubject(room.title),
       ),
     );
   } catch (error) {
@@ -246,7 +272,7 @@ Future<void> _shareRoom(BuildContext context, LiveRoom room) async {
     }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Failed to share room: $error'),
+        content: Text(context.l10n.liveShareFailed),
       ),
     );
   }

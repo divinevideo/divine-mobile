@@ -16,7 +16,7 @@ Last synced against: `../divine-live-server` `main` at `64a497c` on 2026-04-08.
 ## Current Status
 
 - Hosted LiveKit Cloud is authenticated locally for the `divine` project
-- the backend repo already exists at `/Users/rabble/code/divine/divine-live-server`
+- the backend repo already exists at `../divine-live-server`
 - runtime startup in `src/main.rs` loads config, connects to Postgres, applies migrations, and serves the Axum app
 - the router in `src/app.rs` exposes:
   - `GET /health`
@@ -118,7 +118,7 @@ Last synced against: `../divine-live-server` `main` at `64a497c` on 2026-04-08.
 
 ## Suggested Verification Commands
 
-Run from `/Users/rabble/code/divine/divine-live-server`:
+Run from `../divine-live-server`:
 
 ```bash
 cargo fmt --all --check

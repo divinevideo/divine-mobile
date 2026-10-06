@@ -2,12 +2,17 @@ import 'dart:async';
 
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/blocs/live_room/live_room_bloc.dart';
+import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/content_moderation.dart';
 import 'package:openvine/models/live/live_chat_message.dart';
+import 'package:openvine/models/live/live_media_state.dart';
 import 'package:openvine/models/live/live_presence.dart';
 import 'package:openvine/models/live/live_role.dart';
 import 'package:openvine/models/live/live_room.dart';
@@ -19,8 +24,8 @@ import 'package:openvine/repositories/live_chat_repository.dart';
 import 'package:openvine/repositories/live_repository.dart';
 import 'package:openvine/screens/live/live_discovery_page.dart';
 import 'package:openvine/screens/live/live_room_page.dart';
+import 'package:openvine/screens/live/live_room_view.dart';
 import 'package:openvine/screens/live/live_route_data.dart';
-import 'package:openvine/services/content_moderation_types.dart';
 import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/services/live_api_service.dart';
 import 'package:openvine/services/livekit_room_service.dart';
@@ -128,7 +133,10 @@ void main() {
         (_) => Stream<LiveMediaState>.value(const LiveMediaState()),
       );
       when(
-        () => mockLiveRepository.watchSessions(roomAddress: room.address),
+        () => mockLiveRepository.watchSessions(
+          roomAddress: room.address,
+          sessionId: any(named: 'sessionId'),
+        ),
       ).thenAnswer(
         (_) => Stream<List<LiveSession>>.value(<LiveSession>[session]),
       );
@@ -222,6 +230,109 @@ void main() {
       ).thenAnswer((_) async => speakerToken);
     });
 
+    testWidgets(
+      'dependency replacement waits for old media cleanup before joining',
+      (tester) async {
+        SharedPreferences.setMockInitialValues(<String, Object>{});
+        final preferences = await SharedPreferences.getInstance();
+        final auth = createMockAuthService();
+        when(() => auth.currentPublicKeyHex).thenReturn('host-pubkey');
+        Stream<T> liveStream<T>(T value) {
+          late final StreamController<T> controller;
+          controller = StreamController<T>(
+            onListen: () => controller.add(value),
+            onCancel: () async {},
+          );
+          addTearDown(controller.close);
+          return controller.stream;
+        }
+
+        when(
+          () => mockLiveRepository.watchSessions(
+            roomAddress: room.address,
+            sessionId: session.id,
+          ),
+        ).thenAnswer((_) => liveStream([session]));
+        when(
+          () =>
+              mockLiveRepository.watchPresence(sessionAddress: sessionAddress),
+        ).thenAnswer((_) => liveStream(<LivePresence>[]));
+        when(mockLiveKitRoomService.watchState)
+            .thenAnswer((_) => liveStream(const LiveMediaState()));
+        when(
+          () => mockLiveChatRepository.watchChatMessages(
+            sessionAddress: sessionAddress,
+          ),
+        ).thenAnswer((_) => liveStream(<LiveChatMessage>[]));
+        final replacement = _MockLiveRepository();
+        when(
+          () => replacement.watchSessions(
+            roomAddress: room.address,
+            sessionId: session.id,
+          ),
+        ).thenAnswer((_) => liveStream([session]));
+        when(
+          () => replacement.watchPresence(
+            sessionAddress: any(named: 'sessionAddress'),
+          ),
+        ).thenAnswer((_) => liveStream(<LivePresence>[]));
+        Widget page(LiveRepository repository) => testMaterialApp(
+          mockSharedPreferences: preferences,
+          mockAuthService: auth,
+          additionalOverrides: [
+            liveRepositoryProvider.overrideWithValue(repository),
+            liveChatRepositoryProvider.overrideWithValue(
+              mockLiveChatRepository,
+            ),
+            liveApiServiceProvider.overrideWithValue(mockLiveApiService),
+            liveKitRoomServiceProvider.overrideWithValue(
+              mockLiveKitRoomService,
+            ),
+          ],
+          home: LiveRoomPage(
+            roomId: room.id,
+            sessionId: session.id,
+            initialRoom: room,
+            initialSession: session,
+          ),
+        );
+        await tester.pumpWidget(page(mockLiveRepository));
+        await tester.pumpAndSettle();
+        final oldBloc = tester
+            .element(find.byType(LiveRoomView))
+            .read<LiveRoomBloc>();
+        final disconnected = Completer<void>();
+        when(() => mockLiveKitRoomService.disconnect())
+            .thenAnswer((_) => disconnected.future);
+        await tester.pumpWidget(page(replacement));
+        await tester.pump();
+        expect(oldBloc.isClosed, isTrue);
+        verifyNever(
+          () => replacement.watchSessions(
+            roomAddress: room.address,
+            sessionId: session.id,
+          ),
+        );
+        disconnected.complete();
+        // Source cancellation runs outside the widget clock; complete that
+        // boundary before pumping the replacement frame and chat cancellation.
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+        await tester.runAsync(pumpEventQueue);
+        await tester.pumpAndSettle();
+        final newBloc = tester
+            .element(find.byType(LiveRoomView))
+            .read<LiveRoomBloc>();
+        expect(newBloc, isNot(same(oldBloc)));
+        verify(
+          () => replacement.watchSessions(
+            roomAddress: room.address,
+            sessionId: session.id,
+          ),
+        ).called(1);
+      },
+    );
+
     testWidgets('host controls appear for hosts, not audience members', (
       tester,
     ) async {
@@ -274,6 +385,7 @@ void main() {
         200,
         scrollable: find.byType(Scrollable).first,
       );
+      await tester.pump();
       await tester.tap(find.text('Host controls'));
       await tester.pumpAndSettle();
 
@@ -309,11 +421,11 @@ void main() {
               MethodChannelNativeCameraPermissionService.channel,
               (methodCall) async {
                 nativeMethodCalls.add(methodCall);
-                if (methodCall.method == 'getAuthorizationStatus') {
+                if (methodCall.method == 'cameraPermissionStatus') {
                   return 'notDetermined';
                 }
-                if (methodCall.method == 'requestPermission') {
-                  return true;
+                if (methodCall.method == 'requestCameraPermission') {
+                  return 'authorized';
                 }
                 return null;
               },
@@ -390,6 +502,7 @@ void main() {
           200,
           scrollable: find.byType(Scrollable).first,
         );
+        await tester.pump();
         await tester.tap(find.text('Turn camera on'));
         await tester.pump();
         await tester.pump();
@@ -399,8 +512,8 @@ void main() {
         expect(
           nativeMethodCalls.map((call) => call.method),
           containsAllInOrder(<String>[
-            'getAuthorizationStatus',
-            'requestPermission',
+            'cameraPermissionStatus',
+            'requestCameraPermission',
           ]),
         );
         expect(
@@ -509,6 +622,7 @@ void main() {
           200,
           scrollable: find.byType(Scrollable).first,
         );
+        await tester.pump();
         await tester.tap(find.text('Host controls'));
         await tester.pumpAndSettle();
 
@@ -682,7 +796,11 @@ void main() {
                 mockContentBlocklistRepository,
               ),
             ],
-            child: MaterialApp.router(routerConfig: router),
+            child: MaterialApp.router(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              routerConfig: router,
+            ),
           ),
         );
         await tester.pumpAndSettle();
@@ -691,9 +809,9 @@ void main() {
         await tester.pump();
         await tester.pumpAndSettle();
 
-        expect(find.byType(BackButton), findsOneWidget);
+        expect(find.byTooltip('Back'), findsOneWidget);
 
-        await tester.tap(find.byType(BackButton));
+        await tester.tap(find.byTooltip('Back'));
         await tester.pumpAndSettle();
 
         expect(find.text('live discovery'), findsOneWidget);
@@ -831,7 +949,10 @@ void main() {
       );
 
       when(
-        () => mockLiveRepository.watchSessions(roomAddress: room.address),
+        () => mockLiveRepository.watchSessions(
+          roomAddress: room.address,
+          sessionId: any(named: 'sessionId'),
+        ),
       ).thenAnswer((_) => sessionsController.stream);
       when(
         () => mockLiveRepository.watchPresence(sessionAddress: sessionAddress),

@@ -3,7 +3,7 @@
 
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:openvine/services/content_moderation_types.dart';
+import 'package:openvine/models/content_moderation.dart';
 import 'package:openvine/services/content_reporting_service.dart';
 
 /// What a report targets, and how its moderation DM is labelled.

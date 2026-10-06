@@ -13703,4 +13703,505 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get liveHiddenChatNotice =>
       'దాచిన సందేశాలు ఇతరులందరికీ కనిపిస్తూనే ఉంటాయి.';
+
+  @override
+  String get liveFeaturedHostsDescription =>
+      'ఇప్పుడు లైవ్‌లో ఉన్న లేదా తర్వాత రాబోయే హోస్ట్‌లను త్వరగా చూడండి.';
+
+  @override
+  String get liveActiveSpeakers => 'చురుకుగా మాట్లాడేవారు';
+
+  @override
+  String get liveApprove => 'ఆమోదించండి';
+
+  @override
+  String get liveAudience => 'ప్రేక్షకులు';
+
+  @override
+  String get liveAudioOnly => 'ఆడియో మాత్రమే';
+
+  @override
+  String get liveBlockUser => 'వినియోగదారుని బ్లాక్ చేయండి';
+
+  @override
+  String get liveCameraAndMicAreOff => 'కెమెరా, మైక్రోఫోన్ ఆఫ్‌లో ఉన్నాయి';
+
+  @override
+  String get liveChat => 'చాట్';
+
+  @override
+  String get liveConnectionLooksShaky => 'కనెక్షన్ స్థిరంగా ఉన్నట్లు లేదు';
+
+  @override
+  String get liveCoverImageURL => 'కవర్ చిత్రం URL';
+
+  @override
+  String get liveDefaultThumbnail => 'డిఫాల్ట్ థంబ్‌నెయిల్';
+
+  @override
+  String get liveDemote => 'పాత్రను తగ్గించండి';
+
+  @override
+  String get liveDeny => 'తిరస్కరించండి';
+
+  @override
+  String get liveDropIntoRoomsThatAreAlreadyRolling =>
+      'ఇప్పటికే కొనసాగుతున్న గదుల్లో చేరండి.';
+
+  @override
+  String get liveEndSession => 'సెషన్‌ను ముగించండి';
+
+  @override
+  String get liveEndThisLiveSession => 'ఈ లైవ్ సెషన్‌ను ముగించాలా?';
+
+  @override
+  String get liveFailedToReportUser => 'వినియోగదారుని రిపోర్ట్ చేయలేకపోయాం';
+
+  @override
+  String get liveFeaturedHosts => 'ఎంపిక చేసిన హోస్ట్‌లు';
+
+  @override
+  String get liveFlipCamera => 'కెమెరా మార్చండి';
+
+  @override
+  String get liveGoLive => 'లైవ్ ప్రారంభించండి';
+
+  @override
+  String get liveHandRaised => 'చేయి ఎత్తారు';
+
+  @override
+  String get liveHost => 'హోస్ట్';
+
+  @override
+  String get liveHostControls => 'హోస్ట్ నియంత్రణలు';
+
+  @override
+  String get liveJoinLive => 'లైవ్‌లో చేరండి';
+
+  @override
+  String get liveAudioOnlySuggestion =>
+      'నెట్‌వర్క్ మెరుగయ్యే వరకు ఆడియో మాత్రమే ఉపయోగించి గదిని స్థిరంగా ఉంచండి.';
+
+  @override
+  String get liveHostControlsDescription =>
+      'వేదికను నిర్వహించండి, చేయి ఎత్తినవారిని గమనించండి, నెట్‌వర్క్ సమస్యలప్పుడు వీడియో వినియోగాన్ని తగ్గించండి.';
+
+  @override
+  String get liveLiveAudioOnly => 'ఆడియో మాత్రమే లైవ్';
+
+  @override
+  String get liveLiveNow => 'ఇప్పుడు లైవ్‌లో';
+
+  @override
+  String get liveLiveRoom => 'లైవ్ గది';
+
+  @override
+  String get liveLiveRoomsAreUnavailable => 'లైవ్ గదులు అందుబాటులో లేవు.';
+
+  @override
+  String get liveLiveVideo => 'లైవ్ వీడియో';
+
+  @override
+  String get liveLiveVideoAndAudio => 'లైవ్ వీడియో, ఆడియో';
+
+  @override
+  String get liveLowerHand => 'చేయి దించండి';
+
+  @override
+  String get liveManageParticipants => 'పాల్గొనేవారిని నిర్వహించండి';
+
+  @override
+  String get liveModeration => 'మోడరేషన్';
+
+  @override
+  String get liveModerator => 'మోడరేటర్';
+
+  @override
+  String get liveNoActiveSpeakersYet => 'ఇంకా ఎవరూ చురుకుగా మాట్లాడటం లేదు.';
+
+  @override
+  String get liveNoAudienceMembersToModerateRightNow =>
+      'ప్రస్తుతం మోడరేట్ చేయడానికి ప్రేక్షకులు లేరు.';
+
+  @override
+  String get liveNoMessagesYetBreakTheSilence =>
+      'ఇంకా సందేశాలు లేవు. సంభాషణ మొదలుపెట్టండి.';
+
+  @override
+  String get liveNoOneHasJoinedTheRoomYet => 'ఇంకా ఎవరూ గదిలో చేరలేదు.';
+
+  @override
+  String get liveNoOneIsWaitingToSpeak => 'మాట్లాడటానికి ఎవరూ వేచి ఉండటం లేదు.';
+
+  @override
+  String get liveNoRoomsYetStartTheFirstOne =>
+      'ఇంకా గదులు లేవు. మొదటి గదిని ప్రారంభించండి.';
+
+  @override
+  String get liveNoSessionHasBeenScheduledYet =>
+      'ఇంకా ఏ సెషన్ షెడ్యూల్ చేయలేదు.';
+
+  @override
+  String get liveNothingHereYet => 'ఇక్కడ ఇంకా ఏమీ లేదు.';
+
+  @override
+  String get liveOnStage => 'వేదికపై';
+
+  @override
+  String get liveOpenReplay => 'రీప్లే తెరవండి';
+
+  @override
+  String get liveOpenRoom => 'గదిని తెరవండి';
+
+  @override
+  String get liveParticipants => 'పాల్గొనేవారు';
+
+  @override
+  String get livePromote => 'పాత్రను పెంచండి';
+
+  @override
+  String get liveRaiseHand => 'చేయి ఎత్తండి';
+
+  @override
+  String get liveRaisedHands => 'ఎత్తిన చేతులు';
+
+  @override
+  String get liveReplayProcessing => 'రీప్లే ప్రాసెస్ అవుతోంది';
+
+  @override
+  String get liveReplayQueued => 'రీప్లే వరుసలో ఉంది';
+
+  @override
+  String get liveReplayReady => 'రీప్లే సిద్ధంగా ఉంది';
+
+  @override
+  String get liveReplayUnavailable => 'రీప్లే అందుబాటులో లేదు';
+
+  @override
+  String get liveReportUser => 'వినియోగదారుని రిపోర్ట్ చేయండి';
+
+  @override
+  String get liveRoomDetail => 'గది వివరాలు';
+
+  @override
+  String get liveRoomDetails => 'గది వివరాలు';
+
+  @override
+  String get liveRoomLinkCopiedToClipboard =>
+      'గది లింక్ క్లిప్‌బోర్డ్‌కు కాపీ అయింది';
+
+  @override
+  String get liveRoomTitle => 'గది శీర్షిక';
+
+  @override
+  String get liveRoomUnavailable => 'గది అందుబాటులో లేదు.';
+
+  @override
+  String get liveSaySomething => 'ఏదైనా చెప్పండి';
+
+  @override
+  String get liveSeeWhatIsLinedUpNext => 'తర్వాత ఏమి ఉందో చూడండి.';
+
+  @override
+  String get liveDiscoveryDescription =>
+      'ఇప్పుడు ఎవరు లైవ్‌లో ఉన్నారో చూడండి లేదా మీ సొంత గదిని ప్రారంభించండి.';
+
+  @override
+  String get liveSend => 'పంపండి';
+
+  @override
+  String get liveSession => 'సెషన్';
+
+  @override
+  String get liveShareRoom => 'గదిని పంచుకోండి';
+
+  @override
+  String get liveSpeaker => 'మాట్లాడేవారు';
+
+  @override
+  String get liveSpeakerHandRaised => 'మాట్లాడేవారు, చేయి ఎత్తారు';
+
+  @override
+  String get liveSpeakers => 'మాట్లాడేవారు';
+
+  @override
+  String get liveStage => 'వేదిక';
+
+  @override
+  String get liveStartAPublicRoomInOneShot =>
+      'ఒకే దశలో పబ్లిక్ గదిని ప్రారంభించండి.';
+
+  @override
+  String get liveStartLiveNow => 'ఇప్పుడే లైవ్ ప్రారంభించండి';
+
+  @override
+  String get liveStartingCameraAndMicrophone =>
+      'కెమెరా, మైక్రోఫోన్ ప్రారంభమవుతున్నాయి...';
+
+  @override
+  String get liveStartingCamera => 'కెమెరా ప్రారంభమవుతోంది...';
+
+  @override
+  String get liveStartingMicrophone => 'మైక్రోఫోన్ ప్రారంభమవుతోంది...';
+
+  @override
+  String get liveSwitchToAudioOnly => 'ఆడియో మాత్రమే ఉపయోగించండి';
+
+  @override
+  String get liveReplayReadyDescription =>
+      'లైవ్ ముగిసింది, కానీ రీప్లే చూడటానికి సిద్ధంగా ఉంది.';
+
+  @override
+  String get liveReplayProcessingDescription =>
+      'లైవ్ ముగిసింది. మేము ఇంకా రీప్లేను ప్రాసెస్ చేస్తున్నాం.';
+
+  @override
+  String get liveEndSessionConfirmation =>
+      'ఇది అందరికీ గదిని ముగించి వేదికను మూసివేస్తుంది.';
+
+  @override
+  String get liveTurnCameraOff => 'కెమెరా ఆఫ్ చేయండి';
+
+  @override
+  String get liveTurnCameraOn => 'కెమెరా ఆన్ చేయండి';
+
+  @override
+  String get liveTurnMicOff => 'మైక్రోఫోన్ ఆఫ్ చేయండి';
+
+  @override
+  String get liveTurnMicOn => 'మైక్రోఫోన్ ఆన్ చేయండి';
+
+  @override
+  String get liveUnableToOpenThisLiveRoom => 'ఈ లైవ్ గదిని తెరవలేకపోయాం.';
+
+  @override
+  String get liveUpcoming => 'రాబోయేవి';
+
+  @override
+  String get liveUpdateTheRoomTitle => 'గది శీర్షికను నవీకరించండి';
+
+  @override
+  String get liveUpdateTitleStatus => 'శీర్షిక/స్థితిని నవీకరించండి';
+
+  @override
+  String get liveUserBlocked => 'వినియోగదారు బ్లాక్ అయ్యారు';
+
+  @override
+  String get liveUserReported => 'వినియోగదారుపై రిపోర్ట్ పంపబడింది';
+
+  @override
+  String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>
+      'మీ ప్రొఫైల్ ఫోటోను ప్రారంభ థంబ్‌నెయిల్‌గా ఉపయోగిస్తున్నాం.';
+
+  @override
+  String get liveWaitingForMedia => 'మీడియా కోసం వేచి ఉన్నాం';
+
+  @override
+  String get liveWaitingForSpeakersToJoinTheStage =>
+      'మాట్లాడేవారు వేదికపై చేరేందుకు వేచి ఉన్నాం.';
+
+  @override
+  String get liveWhatAreYouGoingLiveAbout => 'మీ లైవ్ ఏ విషయం గురించి?';
+
+  @override
+  String get liveYouAreOnStage => 'మీరు వేదికపై ఉన్నారు';
+
+  @override
+  String get liveHandRaisedDescription =>
+      'మీరు చేయి ఎత్తారు. హోస్ట్ మాట్లాడేవారి వరుస నుంచి మిమ్మల్ని వేదికపైకి తీసుకురావచ్చు.';
+
+  @override
+  String liveDefaultRoomTitle(String displayName) {
+    return '$displayName లైవ్‌లో ఉన్నారు';
+  }
+
+  @override
+  String liveDefaultRoomSummary(String displayName) {
+    return 'Divineలో $displayNameతో లైవ్‌లో మాట్లాడండి.';
+  }
+
+  @override
+  String liveHostLabel(String pubkey) {
+    return 'హోస్ట్: $pubkey';
+  }
+
+  @override
+  String liveParticipantCounts(int speakers, int listeners) {
+    String _temp0 = intl.Intl.pluralLogic(
+      speakers,
+      locale: localeName,
+      other: '$speakers మాట్లాడేవారు',
+      one: '$speakers మాట్లాడే వ్యక్తి',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      listeners,
+      locale: localeName,
+      other: '$listeners వినేవారు',
+      one: '$listeners వినే వ్యక్తి',
+    );
+    return '$_temp0 · $_temp1';
+  }
+
+  @override
+  String liveStartedAt(String time) {
+    return 'ప్రారంభ సమయం $time';
+  }
+
+  @override
+  String liveEndedAt(String time) {
+    return 'ముగింపు సమయం $time';
+  }
+
+  @override
+  String liveScheduledFor(String time) {
+    return 'షెడ్యూల్ చేసిన సమయం $time';
+  }
+
+  @override
+  String liveShareSubject(String title) {
+    return 'Divineలో $title లైవ్‌లో చేరండి';
+  }
+
+  @override
+  String liveRoomShareSubject(String title) {
+    return 'లైవ్ గది: $title';
+  }
+
+  @override
+  String liveRoleCounts(int hosts, int moderators, int speakers, int audience) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hosts,
+      locale: localeName,
+      other: '$hosts హోస్ట్‌లు',
+      one: '$hosts హోస్ట్',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      moderators,
+      locale: localeName,
+      other: '$moderators మోడరేటర్‌లు',
+      one: '$moderators మోడరేటర్',
+    );
+    String _temp2 = intl.Intl.pluralLogic(
+      speakers,
+      locale: localeName,
+      other: '$speakers మాట్లాడేవారు',
+      one: '$speakers మాట్లాడే వ్యక్తి',
+    );
+    String _temp3 = intl.Intl.pluralLogic(
+      audience,
+      locale: localeName,
+      other: '$audience వినేవారు',
+      one: '$audience వినే వ్యక్తి',
+    );
+    return '$_temp0, $_temp1, $_temp2, $_temp3';
+  }
+
+  @override
+  String liveSpeakerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count మాట్లాడేవారు',
+      one: '$count మాట్లాడే వ్యక్తి',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveListeningCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count వినేవారు',
+      one: '$count వినే వ్యక్తి',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveRoomListenerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'గదిలో $count వినేవారు',
+      one: 'గదిలో $count వినే వ్యక్తి',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveChatMessageSemantics(String displayName) {
+    return '$displayName నుంచి లైవ్ చాట్ సందేశం';
+  }
+
+  @override
+  String get liveShareFailed => 'ఈ గదిని పంచుకోలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get liveBlockFailed =>
+      'ఈ వినియోగదారుని బ్లాక్ చేయలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get liveRoomStatusHint => 'open, private లేదా closed ఉపయోగించండి';
+
+  @override
+  String get liveErrorRequestFailed =>
+      'ఈ గదిని నవీకరించలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get liveErrorConnectionFailed =>
+      'ఈ గదికి కనెక్ట్ కాలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get liveErrorSubscriptionFailed =>
+      'గది నవీకరణలను లోడ్ చేయలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get liveErrorCameraBlocked =>
+      'కెమెరా యాక్సెస్ బ్లాక్ అయింది. సెట్టింగ్‌లలో అనుమతించండి.';
+
+  @override
+  String get liveErrorCameraRequired =>
+      'మీ కెమెరాను ఆన్ చేయడానికి కెమెరా యాక్సెస్‌ను అనుమతించండి.';
+
+  @override
+  String get liveErrorCameraUnavailable => 'కెమెరా అందుబాటులో లేదు.';
+
+  @override
+  String get liveErrorCameraPromptBlocked =>
+      'కెమెరా యాక్సెస్‌ను అడగలేకపోయాం. సెట్టింగ్‌లను చూడండి.';
+
+  @override
+  String get liveErrorMicrophoneBlocked =>
+      'మైక్రోఫోన్ యాక్సెస్ బ్లాక్ అయింది. సెట్టింగ్‌లలో అనుమతించండి.';
+
+  @override
+  String get liveErrorMicrophoneRequired =>
+      'మీ మైక్రోఫోన్‌ను ఆన్ చేయడానికి మైక్రోఫోన్ యాక్సెస్‌ను అనుమతించండి.';
+
+  @override
+  String get liveErrorMicrophoneUnavailable => 'మైక్రోఫోన్ అందుబాటులో లేదు.';
+
+  @override
+  String get liveErrorMicrophonePromptBlocked =>
+      'మైక్రోఫోన్ యాక్సెస్‌ను అడగలేకపోయాం. సెట్టింగ్‌లను చూడండి.';
+
+  @override
+  String get liveErrorSpeakerCapacityReached =>
+      'వేదిక నిండిపోయింది. మాట్లాడేవారిలో ఒకరు వెళ్లే వరకు వేచి ఉండండి.';
+
+  @override
+  String get liveTitleRequired => 'గది శీర్షికను నమోదు చేయండి.';
+
+  @override
+  String get liveStartFailed =>
+      'ఈ గదిని ప్రారంభించలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get liveSendFailed =>
+      'మీ సందేశాన్ని పంపలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get liveChatLoadFailed =>
+      'చాట్‌ను లోడ్ చేయలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
 }

@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/live_discovery/live_discovery_bloc.dart';
 import 'package:openvine/providers/live_providers.dart';
 import 'package:openvine/screens/live/live_discovery_view.dart';

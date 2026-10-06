@@ -1,16 +1,18 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/live_chat/live_chat_bloc.dart';
 import 'package:openvine/blocs/live_room/live_room_bloc.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/live/live_role.dart';
 import 'package:openvine/models/live/live_room.dart';
 import 'package:openvine/models/live/live_session.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/live_providers.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/live/live_room_view.dart';
 
 class LiveRoomPage extends ConsumerStatefulWidget {
@@ -19,7 +21,6 @@ class LiveRoomPage extends ConsumerStatefulWidget {
     required this.sessionId,
     this.initialRoom,
     this.initialSession,
-    this.initialRole,
     super.key,
   });
 
@@ -27,20 +28,21 @@ class LiveRoomPage extends ConsumerStatefulWidget {
   static const String pathPattern = '/live/room/:roomId/session/:sessionId';
 
   static String pathFor(String roomId, String sessionId) =>
-      '/live/room/$roomId/session/$sessionId';
+      RoutePaths.liveRoomFor(roomId, sessionId);
 
   final String roomId;
   final String sessionId;
   final LiveRoom? initialRoom;
   final LiveSession? initialSession;
-  final LiveRole? initialRole;
 
   @override
   ConsumerState<LiveRoomPage> createState() => _LiveRoomPageState();
 }
 
 class _LiveRoomPageState extends ConsumerState<LiveRoomPage> {
-  late final Future<_LiveRoomPayload?> _payloadFuture = _loadPayload();
+  Future<_LiveRoomPayload?>? _payloadFuture;
+  Object? _dependencyKey;
+  Future<void> _pendingClose = Future<void>.value();
 
   LiveRoomBloc? _liveRoomBloc;
   LiveChatBloc? _liveChatBloc;
@@ -50,14 +52,31 @@ class _LiveRoomPageState extends ConsumerState<LiveRoomPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(currentAuthStateProvider);
+    final dependencyKey = (
+      widget.roomId,
+      widget.sessionId,
+      widget.initialRoom,
+      widget.initialSession,
+      ref.watch(authServiceProvider).currentPublicKeyHex,
+      ref.watch(liveRepositoryProvider),
+      ref.watch(liveApiServiceProvider),
+      ref.watch(liveKitRoomServiceProvider),
+      ref.watch(permissionsServiceProvider),
+      ref.watch(liveChatRepositoryProvider),
+    );
+    if (_dependencyKey != dependencyKey) {
+      _dependencyKey = dependencyKey;
+      _payloadFuture = _restartPayload();
+    }
     return FutureBuilder<_LiveRoomPayload?>(
       future: _payloadFuture,
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Scaffold(
-            backgroundColor: VineTheme.surfaceBackground,
-            body: Center(
-              child: CircularProgressIndicator(color: VineTheme.primary),
+        if (snapshot.connectionState != ConnectionState.done) {
+          return Scaffold(
+            backgroundColor: context.vineColors.surface,
+            body: const Center(
+              child: DivineCircularProgressIndicator(color: VineTheme.primary),
             ),
           );
         }
@@ -65,12 +84,14 @@ class _LiveRoomPageState extends ConsumerState<LiveRoomPage> {
         final payload = snapshot.data;
         if (payload == null) {
           return Scaffold(
-            backgroundColor: VineTheme.surfaceBackground,
-            appBar: AppBar(backgroundColor: VineTheme.surfaceBackground),
+            backgroundColor: context.vineColors.surface,
+            appBar: AppBar(backgroundColor: context.vineColors.surface),
             body: Center(
               child: Text(
-                'Room unavailable.',
-                style: VineTheme.bodyMediumFont(),
+                context.l10n.liveRoomUnavailable,
+                style: VineTheme.bodyMediumFont(
+                  color: context.vineColors.onSurface,
+                ),
               ),
             ),
           );
@@ -104,6 +125,24 @@ class _LiveRoomPageState extends ConsumerState<LiveRoomPage> {
     );
   }
 
+  Future<_LiveRoomPayload?> _restartPayload() async {
+    final roomBloc = _liveRoomBloc;
+    final chatBloc = _liveChatBloc;
+    _liveRoomBloc = null;
+    _liveChatBloc = null;
+    _activePayloadKey = null;
+    _syncedChatSessionAddress = null;
+    _lifecycleListener?.dispose();
+    _lifecycleListener = null;
+    _pendingClose = _pendingClose.then((_) async {
+      await roomBloc?.close();
+      await chatBloc?.close();
+    });
+    await _pendingClose;
+    if (!mounted) return null;
+    return _loadPayload();
+  }
+
   void _syncChatSession(LiveRoomBloc liveRoomBloc, LiveChatBloc liveChatBloc) {
     final sessionAddress = liveRoomBloc.state.sessionAddress;
     if (sessionAddress == null) {
@@ -132,7 +171,8 @@ class _LiveRoomPageState extends ConsumerState<LiveRoomPage> {
   }
 
   void _ensureBlocs(_LiveRoomPayload payload) {
-    final payloadKey = '${payload.room.id}:${payload.role.name}';
+    final payloadKey =
+        '${payload.room.address}:${widget.sessionId}:${payload.role.name}';
     if (_activePayloadKey == payloadKey &&
         _liveRoomBloc != null &&
         _liveChatBloc != null) {
@@ -156,6 +196,7 @@ class _LiveRoomPageState extends ConsumerState<LiveRoomPage> {
           LiveRoomJoinRequested(
             room: payload.room,
             role: payload.role,
+            sessionId: widget.sessionId,
           ),
         );
     final liveChatBloc = LiveChatBloc(
@@ -176,39 +217,41 @@ class _LiveRoomPageState extends ConsumerState<LiveRoomPage> {
   Future<_LiveRoomPayload?> _loadPayload() async {
     final currentUserPubkey =
         ref.read(authServiceProvider).currentPublicKeyHex ?? '';
-    final initialRoom = widget.initialRoom;
+    final initialRoom = widget.initialRoom?.id == widget.roomId
+        ? widget.initialRoom
+        : null;
     if (initialRoom != null) {
       return _LiveRoomPayload(
         room: initialRoom,
-        role:
-            widget.initialRole ??
-            _deriveRole(
-              room: initialRoom,
-              sessions: widget.initialSession == null
-                  ? const <LiveSession>[]
-                  : <LiveSession>[widget.initialSession!],
-              currentUserPubkey: currentUserPubkey,
-            ),
+        role: _deriveRole(
+          room: initialRoom,
+          sessions:
+              widget.initialSession == null ||
+                  widget.initialSession!.id != widget.sessionId
+              ? const <LiveSession>[]
+              : <LiveSession>[widget.initialSession!],
+          currentUserPubkey: currentUserPubkey,
+        ),
       );
     }
 
     final repository = ref.read(liveRepositoryProvider);
-    final rooms = await repository.fetchPublicRooms();
-    final room = rooms.where((item) => item.id == widget.roomId).firstOrNull;
+    final room = await repository.fetchRoom(widget.roomId);
     if (room == null) {
       return null;
     }
 
-    final sessions = await repository.fetchSessions(roomAddress: room.address);
+    final sessions = await repository.fetchSessions(
+      roomAddress: room.address,
+      sessionId: widget.sessionId,
+    );
     return _LiveRoomPayload(
       room: room,
-      role:
-          widget.initialRole ??
-          _deriveRole(
-            room: room,
-            sessions: sessions,
-            currentUserPubkey: currentUserPubkey,
-          ),
+      role: _deriveRole(
+        room: room,
+        sessions: sessions,
+        currentUserPubkey: currentUserPubkey,
+      ),
     );
   }
 

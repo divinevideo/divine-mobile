@@ -261,7 +261,6 @@ List<RouteBase> buildLiveRoutes({
           sessionId: state.pathParameters['sessionId'] ?? '',
           initialRoom: roomData?.room,
           initialSession: roomData?.session,
-          initialRole: roomData?.role,
         );
       },
     ),

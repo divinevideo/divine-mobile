@@ -1,10 +1,12 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/live/live_room.dart';
 import 'package:openvine/models/live/live_room_recording.dart';
 import 'package:openvine/models/live/live_session.dart';
 import 'package:openvine/providers/live_providers.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/live/live_room_detail_view.dart';
 
 class LiveRoomDetailPage extends ConsumerStatefulWidget {
@@ -18,7 +20,7 @@ class LiveRoomDetailPage extends ConsumerStatefulWidget {
   static const String routeName = 'liveRoomDetail';
   static const String pathPattern = '/live/room/:roomId';
 
-  static String pathFor(String roomId) => '/live/room/$roomId';
+  static String pathFor(String roomId) => RoutePaths.liveRoomDetailFor(roomId);
 
   final String roomId;
   final LiveRoom? initialRoom;
@@ -29,18 +31,29 @@ class LiveRoomDetailPage extends ConsumerStatefulWidget {
 }
 
 class _LiveRoomDetailPageState extends ConsumerState<LiveRoomDetailPage> {
-  late final Future<_LiveRoomDetailPayload?> _payloadFuture = _loadPayload();
+  Future<_LiveRoomDetailPayload?>? _payloadFuture;
+  Object? _dependencyKey;
 
   @override
   Widget build(BuildContext context) {
+    final dependencyKey = (
+      widget.roomId,
+      widget.initialRoom,
+      widget.initialSession,
+      ref.watch(liveRepositoryProvider),
+    );
+    if (_dependencyKey != dependencyKey) {
+      _dependencyKey = dependencyKey;
+      _payloadFuture = _loadPayload();
+    }
     return FutureBuilder<_LiveRoomDetailPayload?>(
       future: _payloadFuture,
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Scaffold(
-            backgroundColor: VineTheme.surfaceBackground,
-            body: Center(
-              child: CircularProgressIndicator(color: VineTheme.primary),
+        if (snapshot.connectionState != ConnectionState.done) {
+          return Scaffold(
+            backgroundColor: context.vineColors.surface,
+            body: const Center(
+              child: DivineCircularProgressIndicator(color: VineTheme.primary),
             ),
           );
         }
@@ -48,12 +61,14 @@ class _LiveRoomDetailPageState extends ConsumerState<LiveRoomDetailPage> {
         final payload = snapshot.data;
         if (payload == null) {
           return Scaffold(
-            backgroundColor: VineTheme.surfaceBackground,
-            appBar: AppBar(backgroundColor: VineTheme.surfaceBackground),
+            backgroundColor: context.vineColors.surface,
+            appBar: AppBar(backgroundColor: context.vineColors.surface),
             body: Center(
               child: Text(
-                'Room unavailable.',
-                style: VineTheme.bodyMediumFont(),
+                context.l10n.liveRoomUnavailable,
+                style: VineTheme.bodyMediumFont(
+                  color: context.vineColors.onSurface,
+                ),
               ),
             ),
           );
@@ -70,7 +85,9 @@ class _LiveRoomDetailPageState extends ConsumerState<LiveRoomDetailPage> {
 
   Future<_LiveRoomDetailPayload?> _loadPayload() async {
     final repository = ref.read(liveRepositoryProvider);
-    final initialRoom = widget.initialRoom;
+    final initialRoom = widget.initialRoom?.id == widget.roomId
+        ? widget.initialRoom
+        : null;
     if (initialRoom != null) {
       final recording = widget.initialSession?.hasEnded == true
           ? await repository.fetchRecording(roomId: initialRoom.id)
@@ -82,8 +99,7 @@ class _LiveRoomDetailPageState extends ConsumerState<LiveRoomDetailPage> {
       );
     }
 
-    final rooms = await repository.fetchPublicRooms();
-    final room = rooms.where((item) => item.id == widget.roomId).firstOrNull;
+    final room = await repository.fetchRoom(widget.roomId);
     if (room == null) {
       return null;
     }

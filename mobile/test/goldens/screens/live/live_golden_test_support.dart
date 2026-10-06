@@ -1,7 +1,13 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
+
+import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/live/live_chat_message.dart';
+import 'package:openvine/models/live/live_media_state.dart';
 import 'package:openvine/models/live/live_presence.dart';
 import 'package:openvine/models/live/live_role.dart';
 import 'package:openvine/models/live/live_room.dart';
@@ -33,6 +39,17 @@ class _MockLiveApiService extends Mock implements LiveApiService {}
 class _MockLiveKitRoomService extends Mock implements LiveKitRoomService {}
 
 class LiveGoldenFixtures {
+  static Widget wrap(Widget child) =>
+      testProviderScope(child: _app(Material(child: child)));
+
+  static Widget _app(Widget home) => MaterialApp(
+    debugShowCheckedModeBanner: false,
+    theme: VineTheme.theme,
+    localizationsDelegates: appLocalizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: home,
+  );
+
   static const hostPubkey = 'host-pubkey';
   static const speakerPubkey = 'speaker-pubkey';
   static const audiencePubkey = 'audience-pubkey';
@@ -199,13 +216,13 @@ class LiveGoldenFixtures {
       liveRepository.fetchSessions,
     ).thenAnswer((_) async => sessions);
 
-    return testMaterialApp(
+    return testProviderScope(
       mockSharedPreferences: sharedPreferences,
       mockNip05VerificationService: createMockNip05VerificationService(),
       additionalOverrides: [
         liveRepositoryProvider.overrideWithValue(liveRepository),
       ],
-      home: const LiveDiscoveryPage(),
+      child: _app(const LiveDiscoveryPage()),
     );
   }
 
@@ -257,23 +274,32 @@ class LiveGoldenFixtures {
       canPublish: true,
     );
 
-    when(liveKitRoomService.watchState).thenAnswer(
-      (_) => Stream<LiveMediaState>.value(
-        const LiveMediaState(
+    final media = StreamController<LiveMediaState>.broadcast(sync: true);
+    addTearDown(media.close);
+    when(liveKitRoomService.watchState).thenAnswer((_) => media.stream);
+    Future<void> connected(LiveRoomToken token) async {
+      media.add(
+        LiveMediaState(
           status: LiveMediaConnectionStatus.connected,
-          canPublish: true,
-          cameraEnabled: true,
-          microphoneEnabled: true,
+          canPublish: token.canPublish,
+          localParticipantIdentity: token.participantIdentity,
+          stageParticipants: [
+            for (final identity in [hostPubkey, speakerPubkey])
+              LiveStageParticipant(
+                identity: identity,
+                isLocal: identity == currentUserPubkey,
+              ),
+          ],
         ),
-      ),
-    );
-    when(
-      () => liveKitRoomService.connect(audienceToken),
-    ).thenAnswer((_) async {});
-    when(() => liveKitRoomService.connect(hostToken)).thenAnswer((_) async {});
-    when(() => liveKitRoomService.connect(speakerToken)).thenAnswer(
-      (_) async {},
-    );
+      );
+    }
+
+    when(() => liveKitRoomService.connect(audienceToken))
+        .thenAnswer((_) => connected(audienceToken));
+    when(() => liveKitRoomService.connect(hostToken))
+        .thenAnswer((_) => connected(hostToken));
+    when(() => liveKitRoomService.connect(speakerToken))
+        .thenAnswer((_) => connected(speakerToken));
     when(liveKitRoomService.disconnect).thenAnswer((_) async {});
     when(
       () => liveKitRoomService.publishLocalTracks(
@@ -282,7 +308,10 @@ class LiveGoldenFixtures {
       ),
     ).thenAnswer((_) async {});
     when(
-      () => liveRepository.watchSessions(roomAddress: room.address),
+      () => liveRepository.watchSessions(
+        roomAddress: room.address,
+        sessionId: any(named: 'sessionId'),
+      ),
     ).thenAnswer(
       (_) => Stream<List<LiveSession>>.value(<LiveSession>[liveSession]),
     );
@@ -338,7 +367,7 @@ class LiveGoldenFixtures {
       ),
     );
 
-    return testMaterialApp(
+    return testProviderScope(
       mockSharedPreferences: sharedPreferences,
       mockAuthService: authService,
       mockProfileRepository: profileRepository,
@@ -352,11 +381,13 @@ class LiveGoldenFixtures {
         liveApiServiceProvider.overrideWithValue(liveApiService),
         liveKitRoomServiceProvider.overrideWithValue(liveKitRoomService),
       ],
-      home: LiveRoomPage(
-        roomId: room.id,
-        sessionId: liveSession.id,
-        initialRoom: room,
-        initialSession: liveSession,
+      child: _app(
+        LiveRoomPage(
+          roomId: room.id,
+          sessionId: liveSession.id,
+          initialRoom: room,
+          initialSession: liveSession,
+        ),
       ),
     );
   }
@@ -371,7 +402,7 @@ class LiveGoldenFixtures {
     final liveRepository = _MockLiveRepository();
     final liveApiService = _MockLiveApiService();
 
-    return testMaterialApp(
+    return testProviderScope(
       mockSharedPreferences: sharedPreferences,
       mockAuthService: authService,
       mockProfileRepository: profileRepository,
@@ -380,7 +411,7 @@ class LiveGoldenFixtures {
         liveRepositoryProvider.overrideWithValue(liveRepository),
         liveApiServiceProvider.overrideWithValue(liveApiService),
       ],
-      home: const GoLivePage(),
+      child: _app(const GoLivePage()),
     );
   }
 }

@@ -182,11 +182,12 @@ void main() {
               LiveDiscoveryStatus.failure,
             )
             .having(
-              (state) => state.errorMessage,
-              'errorMessage',
-              contains('network down'),
+              (state) => state.error,
+              'error',
+              LiveDiscoveryError.loadFailed,
             ),
       ],
+      errors: () => [isA<Exception>()],
     );
   });
 }

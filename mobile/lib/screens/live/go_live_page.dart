@@ -1,76 +1,97 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/go_live/go_live_cubit.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/live_providers.dart';
 import 'package:openvine/screens/live/go_live_view.dart';
 
-class GoLivePage extends ConsumerStatefulWidget {
+class GoLivePage extends ConsumerWidget {
   const GoLivePage({super.key});
 
   static const String routeName = 'goLive';
   static const String path = '/live/go';
 
   @override
-  ConsumerState<GoLivePage> createState() => _GoLivePageState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(currentAuthStateProvider);
+    final auth = ref.watch(authServiceProvider);
+    final pubkey = auth.currentPublicKeyHex ?? '';
+    final api = ref.watch(liveApiServiceProvider);
+    final repository = ref.watch(liveRepositoryProvider);
+    final profileRepository = ref.watch(profileRepositoryProvider);
+    return _GoLiveScope(
+      key: ValueKey((pubkey, api, repository, profileRepository)),
+      currentUserPubkey: pubkey,
+    );
+  }
 }
 
-class _GoLivePageState extends ConsumerState<GoLivePage> {
+class _GoLiveScope extends ConsumerStatefulWidget {
+  const _GoLiveScope({required this.currentUserPubkey, super.key});
+  final String currentUserPubkey;
+
+  @override
+  ConsumerState<_GoLiveScope> createState() => _GoLivePageState();
+}
+
+class _GoLivePageState extends ConsumerState<_GoLiveScope> {
   late final String _currentUserPubkey;
-  late final Future<_GoLivePrefill> _prefillFuture;
+  late final Future<UserProfile?> _prefillFuture;
 
   @override
   void initState() {
     super.initState();
-    _currentUserPubkey =
-        ref.read(authServiceProvider).currentPublicKeyHex ?? '';
+    _currentUserPubkey = widget.currentUserPubkey;
     _prefillFuture = _loadPrefill();
   }
 
-  Future<_GoLivePrefill> _loadPrefill() async {
+  Future<UserProfile?> _loadPrefill() async {
     if (_currentUserPubkey.isEmpty) {
-      return _GoLivePrefill.empty;
+      return null;
     }
 
     final profileRepository = ref.read(profileRepositoryProvider);
     if (profileRepository == null) {
-      return _GoLivePrefill.empty;
+      return null;
     }
 
     final profile = await profileRepository.getCachedProfile(
       pubkey: _currentUserPubkey,
     );
-    return _GoLivePrefill.fromProfile(profile);
+    return profile;
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<_GoLivePrefill>(
+    return FutureBuilder<UserProfile?>(
       future: _prefillFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return Scaffold(
-            backgroundColor: VineTheme.surfaceBackground,
+            backgroundColor: context.vineColors.surface,
             appBar: AppBar(
-              backgroundColor: VineTheme.surfaceBackground,
+              backgroundColor: context.vineColors.surface,
               title: Text(
-                'Go live',
-                style: VineTheme.headlineSmallFont(),
+                context.l10n.liveGoLive,
+                style: VineTheme.headlineSmallFont(
+                  color: context.vineColors.onSurface,
+                ),
               ),
             ),
-            body: const Center(child: CircularProgressIndicator()),
+            body: const Center(child: DivineCircularProgressIndicator()),
           );
         }
 
-        final prefill = snapshot.data ?? _GoLivePrefill.empty;
+        final prefill = _GoLivePrefill.fromProfile(context, snapshot.data);
 
         return BlocProvider(
           create: (_) => GoLiveCubit(
-            liveApiService: ref.watch(liveApiServiceProvider),
-            liveRepository: ref.watch(liveRepositoryProvider),
+            liveApiService: ref.read(liveApiServiceProvider),
+            liveRepository: ref.read(liveRepositoryProvider),
             currentUserPubkey: _currentUserPubkey,
             initialTitle: prefill.title,
             initialSummary: prefill.summary,
@@ -96,15 +117,18 @@ class _GoLivePrefill {
   final String summary;
   final String? imageUrl;
 
-  factory _GoLivePrefill.fromProfile(UserProfile? profile) {
+  factory _GoLivePrefill.fromProfile(
+    BuildContext context,
+    UserProfile? profile,
+  ) {
     if (profile == null) {
       return empty;
     }
 
     final displayName = profile.bestDisplayName;
     return _GoLivePrefill(
-      title: '$displayName is live',
-      summary: 'Come hang out with $displayName live on Divine.',
+      title: context.l10n.liveDefaultRoomTitle(displayName),
+      summary: context.l10n.liveDefaultRoomSummary(displayName),
       imageUrl: _normalizeImageUrl(profile.picture),
     );
   }

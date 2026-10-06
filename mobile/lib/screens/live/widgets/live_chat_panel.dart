@@ -1,6 +1,6 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/live_chat/live_chat_bloc.dart';
 import 'package:openvine/blocs/live_room/live_room_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -28,7 +28,7 @@ class _LiveChatPanelState extends State<LiveChatPanel> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: VineTheme.surfaceContainerHigh,
+        color: context.vineColors.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(28),
       ),
       padding: const EdgeInsets.all(16),
@@ -38,8 +38,10 @@ class _LiveChatPanelState extends State<LiveChatPanel> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Chat',
-                style: VineTheme.titleLargeFont(),
+                context.l10n.liveChat,
+                style: VineTheme.titleLargeFont(
+                  color: context.vineColors.onSurface,
+                ),
               ),
               const SizedBox(height: 12),
               Expanded(
@@ -47,8 +49,21 @@ class _LiveChatPanelState extends State<LiveChatPanel> {
                   builder: (context, state) {
                     if (state.status == LiveChatStatus.loading) {
                       return const Center(
-                        child: CircularProgressIndicator(
+                        child: DivineCircularProgressIndicator(
                           color: VineTheme.primary,
+                        ),
+                      );
+                    }
+
+                    if (state.error != null) {
+                      return Center(
+                        child: Semantics(
+                          liveRegion: true,
+                          child: Text(
+                            state.error == LiveChatError.sendFailed
+                                ? context.l10n.liveSendFailed
+                                : context.l10n.liveChatLoadFailed,
+                          ),
                         ),
                       );
                     }
@@ -77,10 +92,10 @@ class _LiveChatPanelState extends State<LiveChatPanel> {
                                         activeSessionAddress,
                                   )
                                   .isEmpty
-                              ? 'No messages yet. Break the silence.'
+                              ? context.l10n.liveNoMessagesYetBreakTheSilence
                               : context.l10n.liveHiddenChatNotice,
                           style: VineTheme.bodyMediumFont(
-                            color: VineTheme.onSurfaceVariant,
+                            color: context.vineColors.onSurfaceVariant,
                           ),
                         ),
                       );
@@ -106,14 +121,16 @@ class _LiveChatPanelState extends State<LiveChatPanel> {
                   Expanded(
                     child: TextField(
                       controller: _controller,
-                      style: VineTheme.bodyMediumFont(),
+                      style: VineTheme.bodyMediumFont(
+                        color: context.vineColors.onSurface,
+                      ),
                       decoration: InputDecoration(
-                        hintText: 'Say something',
+                        hintText: context.l10n.liveSaySomething,
                         hintStyle: VineTheme.bodyMediumFont(
-                          color: VineTheme.onSurfaceVariant,
+                          color: context.vineColors.onSurfaceVariant,
                         ),
                         filled: true,
-                        fillColor: VineTheme.surfaceContainer,
+                        fillColor: context.vineColors.surfaceContainer,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(18),
                           borderSide: BorderSide.none,
@@ -125,7 +142,7 @@ class _LiveChatPanelState extends State<LiveChatPanel> {
                   BlocBuilder<LiveChatBloc, LiveChatState>(
                     builder: (context, state) {
                       return DivineButton(
-                        label: 'Send',
+                        label: context.l10n.liveSend,
                         onPressed: state.isSending
                             ? null
                             : () {

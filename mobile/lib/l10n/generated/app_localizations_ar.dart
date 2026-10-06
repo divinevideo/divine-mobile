@@ -13321,4 +13321,535 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get liveHiddenChatNotice => 'تظل الرسائل المخفية مرئية للآخرين.';
+
+  @override
+  String get liveFeaturedHostsDescription =>
+      'نظرة سريعة على من يستضيفون البث الآن أو يستعدون للبدء.';
+
+  @override
+  String get liveActiveSpeakers => 'المتحدثون النشطون';
+
+  @override
+  String get liveApprove => 'الموافقة';
+
+  @override
+  String get liveAudience => 'الجمهور';
+
+  @override
+  String get liveAudioOnly => 'صوت فقط';
+
+  @override
+  String get liveBlockUser => 'حظر الحساب';
+
+  @override
+  String get liveCameraAndMicAreOff => 'الكاميرا والميكروفون متوقفان';
+
+  @override
+  String get liveChat => 'الدردشة';
+
+  @override
+  String get liveConnectionLooksShaky => 'يبدو الاتصال غير مستقر';
+
+  @override
+  String get liveCoverImageURL => 'رابط صورة الغلاف';
+
+  @override
+  String get liveDefaultThumbnail => 'الصورة المصغرة الافتراضية';
+
+  @override
+  String get liveDemote => 'خفض الدور';
+
+  @override
+  String get liveDeny => 'الرفض';
+
+  @override
+  String get liveDropIntoRoomsThatAreAlreadyRolling =>
+      'الانضمام إلى غرف بدأت بالفعل.';
+
+  @override
+  String get liveEndSession => 'إنهاء الجلسة';
+
+  @override
+  String get liveEndThisLiveSession => 'إنهاء هذه الجلسة المباشرة؟';
+
+  @override
+  String get liveFailedToReportUser => 'تعذّر الإبلاغ عن الحساب';
+
+  @override
+  String get liveFeaturedHosts => 'استضافات مميزة';
+
+  @override
+  String get liveFlipCamera => 'تبديل الكاميرا';
+
+  @override
+  String get liveGoLive => 'بدء البث المباشر';
+
+  @override
+  String get liveHandRaised => 'اليد مرفوعة';
+
+  @override
+  String get liveHost => 'الاستضافة';
+
+  @override
+  String get liveHostControls => 'أدوات الاستضافة';
+
+  @override
+  String get liveJoinLive => 'الانضمام إلى البث';
+
+  @override
+  String get liveAudioOnlySuggestion =>
+      'يمكن الحفاظ على استقرار الغرفة بالانتقال إلى الصوت فقط حتى يستقر الاتصال.';
+
+  @override
+  String get liveHostControlsDescription =>
+      'تنظيم المنصة وإدارة الأيدي المرفوعة وتخفيف جودة البث بسلاسة عند اضطراب الشبكة.';
+
+  @override
+  String get liveLiveAudioOnly => 'بث مباشر بالصوت فقط';
+
+  @override
+  String get liveLiveNow => 'مباشر الآن';
+
+  @override
+  String get liveLiveRoom => 'غرفة مباشرة';
+
+  @override
+  String get liveLiveRoomsAreUnavailable => 'الغرف المباشرة غير متاحة.';
+
+  @override
+  String get liveLiveVideo => 'فيديو مباشر';
+
+  @override
+  String get liveLiveVideoAndAudio => 'فيديو وصوت مباشران';
+
+  @override
+  String get liveLowerHand => 'خفض اليد';
+
+  @override
+  String get liveManageParticipants => 'إدارة المشاركين';
+
+  @override
+  String get liveModeration => 'الإشراف';
+
+  @override
+  String get liveModerator => 'الإشراف';
+
+  @override
+  String get liveNoActiveSpeakersYet => 'لا أحد يتحدث بعد.';
+
+  @override
+  String get liveNoAudienceMembersToModerateRightNow =>
+      'لا يوجد أحد في الجمهور للإشراف عليه الآن.';
+
+  @override
+  String get liveNoMessagesYetBreakTheSilence =>
+      'لا توجد رسائل بعد. لنبدأ الحديث.';
+
+  @override
+  String get liveNoOneHasJoinedTheRoomYet => 'لم ينضم أحد إلى الغرفة بعد.';
+
+  @override
+  String get liveNoOneIsWaitingToSpeak => 'لا أحد ينتظر التحدث.';
+
+  @override
+  String get liveNoRoomsYetStartTheFirstOne =>
+      'لا توجد غرف بعد. يمكن إنشاء الغرفة الأولى.';
+
+  @override
+  String get liveNoSessionHasBeenScheduledYet => 'لم تُجدول أي جلسة بعد.';
+
+  @override
+  String get liveNothingHereYet => 'لا شيء هنا بعد.';
+
+  @override
+  String get liveOnStage => 'على المنصة';
+
+  @override
+  String get liveOpenReplay => 'فتح الإعادة';
+
+  @override
+  String get liveOpenRoom => 'فتح الغرفة';
+
+  @override
+  String get liveParticipants => 'المشاركون';
+
+  @override
+  String get livePromote => 'ترقية الدور';
+
+  @override
+  String get liveRaiseHand => 'رفع اليد';
+
+  @override
+  String get liveRaisedHands => 'الأيدي المرفوعة';
+
+  @override
+  String get liveReplayProcessing => 'جارٍ تجهيز الإعادة';
+
+  @override
+  String get liveReplayQueued => 'الإعادة في قائمة الانتظار';
+
+  @override
+  String get liveReplayReady => 'الإعادة جاهزة';
+
+  @override
+  String get liveReplayUnavailable => 'الإعادة غير متاحة';
+
+  @override
+  String get liveReportUser => 'الإبلاغ عن الحساب';
+
+  @override
+  String get liveRoomDetail => 'تفصيل الغرفة';
+
+  @override
+  String get liveRoomDetails => 'تفاصيل الغرفة';
+
+  @override
+  String get liveRoomLinkCopiedToClipboard => 'نُسخ رابط الغرفة إلى الحافظة';
+
+  @override
+  String get liveRoomTitle => 'عنوان الغرفة';
+
+  @override
+  String get liveRoomUnavailable => 'الغرفة غير متاحة.';
+
+  @override
+  String get liveSaySomething => 'كتابة رسالة';
+
+  @override
+  String get liveSeeWhatIsLinedUpNext => 'الاطلاع على ما هو قادم.';
+
+  @override
+  String get liveDiscoveryDescription =>
+      'معرفة من يبث الآن أو إنشاء غرفة خاصة بك.';
+
+  @override
+  String get liveSend => 'إرسال';
+
+  @override
+  String get liveSession => 'جلسة';
+
+  @override
+  String get liveShareRoom => 'مشاركة الغرفة';
+
+  @override
+  String get liveSpeaker => 'التحدث';
+
+  @override
+  String get liveSpeakerHandRaised => 'التحدث، اليد مرفوعة';
+
+  @override
+  String get liveSpeakers => 'المتحدثون';
+
+  @override
+  String get liveStage => 'المنصة';
+
+  @override
+  String get liveStartAPublicRoomInOneShot => 'إنشاء غرفة عامة بخطوة واحدة.';
+
+  @override
+  String get liveStartLiveNow => 'بدء البث الآن';
+
+  @override
+  String get liveStartingCameraAndMicrophone =>
+      'جارٍ تشغيل الكاميرا والميكروفون...';
+
+  @override
+  String get liveStartingCamera => 'جارٍ تشغيل الكاميرا...';
+
+  @override
+  String get liveStartingMicrophone => 'جارٍ تشغيل الميكروفون...';
+
+  @override
+  String get liveSwitchToAudioOnly => 'التبديل إلى الصوت فقط';
+
+  @override
+  String get liveReplayReadyDescription =>
+      'انتهى البث، لكن الإعادة جاهزة للمشاهدة.';
+
+  @override
+  String get liveReplayProcessingDescription =>
+      'انتهى البث. ما زلنا نجهّز الإعادة.';
+
+  @override
+  String get liveEndSessionConfirmation =>
+      'يؤدي هذا إلى إنهاء الغرفة للجميع وإغلاق المنصة.';
+
+  @override
+  String get liveTurnCameraOff => 'إيقاف الكاميرا';
+
+  @override
+  String get liveTurnCameraOn => 'تشغيل الكاميرا';
+
+  @override
+  String get liveTurnMicOff => 'إيقاف الميكروفون';
+
+  @override
+  String get liveTurnMicOn => 'تشغيل الميكروفون';
+
+  @override
+  String get liveUnableToOpenThisLiveRoom => 'تعذّر فتح هذه الغرفة المباشرة.';
+
+  @override
+  String get liveUpcoming => 'قريبًا';
+
+  @override
+  String get liveUpdateTheRoomTitle => 'تحديث عنوان الغرفة';
+
+  @override
+  String get liveUpdateTitleStatus => 'تحديث العنوان/الحالة';
+
+  @override
+  String get liveUserBlocked => 'تم حظر الحساب';
+
+  @override
+  String get liveUserReported => 'تم الإبلاغ عن الحساب';
+
+  @override
+  String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>
+      'تُستخدم صورة ملفك الشخصي كصورة مصغرة أولية.';
+
+  @override
+  String get liveWaitingForMedia => 'بانتظار الوسائط';
+
+  @override
+  String get liveWaitingForSpeakersToJoinTheStage =>
+      'بانتظار انضمام المتحدثين إلى المنصة.';
+
+  @override
+  String get liveWhatAreYouGoingLiveAbout => 'ما موضوع بثك المباشر؟';
+
+  @override
+  String get liveYouAreOnStage => 'أنت على المنصة';
+
+  @override
+  String get liveHandRaisedDescription =>
+      'يدك مرفوعة. يمكن لمن يستضيف الجلسة دعوتك إلى المنصة من قائمة انتظار التحدث.';
+
+  @override
+  String liveDefaultRoomTitle(String displayName) {
+    return '$displayName في بث مباشر';
+  }
+
+  @override
+  String liveDefaultRoomSummary(String displayName) {
+    return 'لنقضِ بعض الوقت مع $displayName مباشرة على Divine.';
+  }
+
+  @override
+  String liveHostLabel(String pubkey) {
+    return 'الاستضافة: $pubkey';
+  }
+
+  @override
+  String liveParticipantCounts(int speakers, int listeners) {
+    String _temp0 = intl.Intl.pluralLogic(
+      speakers,
+      locale: localeName,
+      other: 'التحدث: $speakers',
+      many: 'التحدث: $speakers',
+      few: 'التحدث: $speakers',
+      two: 'التحدث: $speakers',
+      one: 'التحدث: $speakers',
+      zero: 'التحدث: $speakers',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      listeners,
+      locale: localeName,
+      other: 'الاستماع: $listeners',
+      many: 'الاستماع: $listeners',
+      few: 'الاستماع: $listeners',
+      two: 'الاستماع: $listeners',
+      one: 'الاستماع: $listeners',
+      zero: 'الاستماع: $listeners',
+    );
+    return '$_temp0 · $_temp1';
+  }
+
+  @override
+  String liveStartedAt(String time) {
+    return 'البداية: $time';
+  }
+
+  @override
+  String liveEndedAt(String time) {
+    return 'النهاية: $time';
+  }
+
+  @override
+  String liveScheduledFor(String time) {
+    return 'الموعد المحدد: $time';
+  }
+
+  @override
+  String liveShareSubject(String title) {
+    return 'الانضمام إلى $title مباشرة على Divine';
+  }
+
+  @override
+  String liveRoomShareSubject(String title) {
+    return 'غرفة مباشرة: $title';
+  }
+
+  @override
+  String liveRoleCounts(int hosts, int moderators, int speakers, int audience) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hosts,
+      locale: localeName,
+      other: 'الاستضافة: $hosts',
+      many: 'الاستضافة: $hosts',
+      few: 'الاستضافة: $hosts',
+      two: 'الاستضافة: $hosts',
+      one: 'الاستضافة: $hosts',
+      zero: 'الاستضافة: $hosts',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      moderators,
+      locale: localeName,
+      other: 'الإشراف: $moderators',
+      many: 'الإشراف: $moderators',
+      few: 'الإشراف: $moderators',
+      two: 'الإشراف: $moderators',
+      one: 'الإشراف: $moderators',
+      zero: 'الإشراف: $moderators',
+    );
+    String _temp2 = intl.Intl.pluralLogic(
+      speakers,
+      locale: localeName,
+      other: 'التحدث: $speakers',
+      many: 'التحدث: $speakers',
+      few: 'التحدث: $speakers',
+      two: 'التحدث: $speakers',
+      one: 'التحدث: $speakers',
+      zero: 'التحدث: $speakers',
+    );
+    String _temp3 = intl.Intl.pluralLogic(
+      audience,
+      locale: localeName,
+      other: 'الاستماع: $audience',
+      many: 'الاستماع: $audience',
+      few: 'الاستماع: $audience',
+      two: 'الاستماع: $audience',
+      one: 'الاستماع: $audience',
+      zero: 'الاستماع: $audience',
+    );
+    return '$_temp0, $_temp1, $_temp2, $_temp3';
+  }
+
+  @override
+  String liveSpeakerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'التحدث: $count',
+      many: 'التحدث: $count',
+      few: 'التحدث: $count',
+      two: 'التحدث: $count',
+      one: 'التحدث: $count',
+      zero: 'التحدث: $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveListeningCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'الاستماع: $count',
+      many: 'الاستماع: $count',
+      few: 'الاستماع: $count',
+      two: 'الاستماع: $count',
+      one: 'الاستماع: $count',
+      zero: 'الاستماع: $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveRoomListenerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'عدد من يستمعون في الغرفة: $count',
+      many: 'عدد من يستمعون في الغرفة: $count',
+      few: 'عدد من يستمعون في الغرفة: $count',
+      two: 'عدد من يستمعون في الغرفة: $count',
+      one: 'عدد من يستمعون في الغرفة: $count',
+      zero: 'عدد من يستمعون في الغرفة: $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveChatMessageSemantics(String displayName) {
+    return 'رسالة دردشة مباشرة من $displayName';
+  }
+
+  @override
+  String get liveShareFailed =>
+      'تعذّرت مشاركة هذه الغرفة. يمكن المحاولة مجددًا.';
+
+  @override
+  String get liveBlockFailed => 'تعذّر حظر هذا الحساب. يمكن المحاولة مجددًا.';
+
+  @override
+  String get liveRoomStatusHint => 'القيم المتاحة: open أو private أو closed';
+
+  @override
+  String get liveErrorRequestFailed =>
+      'تعذّر تحديث هذه الغرفة. يمكن المحاولة مجددًا.';
+
+  @override
+  String get liveErrorConnectionFailed =>
+      'تعذّر الاتصال بهذه الغرفة. يمكن المحاولة مجددًا.';
+
+  @override
+  String get liveErrorSubscriptionFailed =>
+      'تعذّر تحميل تحديثات الغرفة. يمكن المحاولة مجددًا.';
+
+  @override
+  String get liveErrorCameraBlocked =>
+      'الوصول إلى الكاميرا محظور. يمكن تفعيله في الإعدادات.';
+
+  @override
+  String get liveErrorCameraRequired =>
+      'يلزم السماح بالوصول إلى الكاميرا لتشغيلها.';
+
+  @override
+  String get liveErrorCameraUnavailable => 'لا توجد كاميرا متاحة.';
+
+  @override
+  String get liveErrorCameraPromptBlocked =>
+      'تعذّر طلب الوصول إلى الكاميرا. يُرجى التحقق من الإعدادات.';
+
+  @override
+  String get liveErrorMicrophoneBlocked =>
+      'الوصول إلى الميكروفون محظور. يمكن تفعيله في الإعدادات.';
+
+  @override
+  String get liveErrorMicrophoneRequired =>
+      'يلزم السماح بالوصول إلى الميكروفون لتشغيله.';
+
+  @override
+  String get liveErrorMicrophoneUnavailable => 'لا يوجد ميكروفون متاح.';
+
+  @override
+  String get liveErrorMicrophonePromptBlocked =>
+      'تعذّر طلب الوصول إلى الميكروفون. يُرجى التحقق من الإعدادات.';
+
+  @override
+  String get liveErrorSpeakerCapacityReached =>
+      'المنصة ممتلئة. يُرجى الانتظار حتى يغادر أحد المتحدثين.';
+
+  @override
+  String get liveTitleRequired => 'يُرجى إدخال عنوان للغرفة.';
+
+  @override
+  String get liveStartFailed => 'تعذّر بدء هذه الغرفة. يمكن المحاولة مجددًا.';
+
+  @override
+  String get liveSendFailed => 'تعذّر إرسال رسالتك. يمكن المحاولة مجددًا.';
+
+  @override
+  String get liveChatLoadFailed => 'تعذّر تحميل الدردشة. يمكن المحاولة مجددًا.';
 }

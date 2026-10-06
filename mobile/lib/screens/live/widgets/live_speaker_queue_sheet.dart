@@ -1,5 +1,5 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/live/live_presence.dart';
 
@@ -43,7 +43,7 @@ class LiveSpeakerQueueSheet extends StatelessWidget {
         .map(
           (member) => _QueueEntry(
             pubkey: member.pubkey,
-            subtitle: 'Hand raised',
+            subtitle: context.l10n.liveHandRaised,
           ),
         )
         .toList(growable: false);
@@ -61,8 +61,8 @@ class LiveSpeakerQueueSheet extends StatelessWidget {
                 presence.any(
                   (member) => member.pubkey == pubkey && member.handRaised,
                 )
-                ? 'Speaker, hand raised'
-                : 'Speaker',
+                ? context.l10n.liveSpeakerHandRaised
+                : context.l10n.liveSpeaker,
           ),
         )
         .toList(growable: false);
@@ -76,7 +76,7 @@ class LiveSpeakerQueueSheet extends StatelessWidget {
         .map(
           (member) => _QueueEntry(
             pubkey: member.pubkey,
-            subtitle: 'Audience',
+            subtitle: context.l10n.liveAudience,
           ),
         )
         .toList(growable: false);
@@ -88,20 +88,22 @@ class LiveSpeakerQueueSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Manage participants',
-              style: VineTheme.titleMediumFont(),
+              context.l10n.liveManageParticipants,
+              style: VineTheme.titleMediumFont(
+                color: context.vineColors.onSurface,
+              ),
             ),
             const SizedBox(height: 12),
             Text(
               context.l10n.liveLocalHidingExplanation,
               style: VineTheme.bodyMediumFont(
-                color: VineTheme.onSurfaceVariant,
+                color: context.vineColors.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 20),
             _QueueSection(
-              title: 'Raised hands',
-              emptyText: 'No one is waiting to speak.',
+              title: context.l10n.liveRaisedHands,
+              emptyText: context.l10n.liveNoOneIsWaitingToSpeak,
               children: raisedHands
                   .map(
                     (member) => _QueueItem(
@@ -109,12 +111,12 @@ class LiveSpeakerQueueSheet extends StatelessWidget {
                       subtitle: member.subtitle,
                       actions: <_QueueAction>[
                         _QueueAction(
-                          label: 'Approve',
+                          label: context.l10n.liveApprove,
                           type: DivineButtonType.secondary,
                           onPressed: () => onApprove(member.pubkey),
                         ),
                         _QueueAction(
-                          label: 'Deny',
+                          label: context.l10n.liveDeny,
                           type: DivineButtonType.error,
                           onPressed: () => onDeny(member.pubkey),
                         ),
@@ -124,12 +126,12 @@ class LiveSpeakerQueueSheet extends StatelessWidget {
                           onPressed: () => onMuteChat(member.pubkey),
                         ),
                         _QueueAction(
-                          label: 'Report user',
+                          label: context.l10n.liveReportUser,
                           type: DivineButtonType.secondary,
                           onPressed: () => onReport(member.pubkey),
                         ),
                         _QueueAction(
-                          label: 'Block user',
+                          label: context.l10n.liveBlockUser,
                           type: DivineButtonType.error,
                           onPressed: () => onBlock(member.pubkey),
                         ),
@@ -140,8 +142,8 @@ class LiveSpeakerQueueSheet extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             _QueueSection(
-              title: 'Active speakers',
-              emptyText: 'No active speakers yet.',
+              title: context.l10n.liveActiveSpeakers,
+              emptyText: context.l10n.liveNoActiveSpeakersYet,
               children: activeSpeakers
                   .map(
                     (member) => _QueueItem(
@@ -149,7 +151,7 @@ class LiveSpeakerQueueSheet extends StatelessWidget {
                       subtitle: member.subtitle,
                       actions: <_QueueAction>[
                         _QueueAction(
-                          label: 'Demote',
+                          label: context.l10n.liveDemote,
                           type: DivineButtonType.secondary,
                           onPressed: () => onDemote(member.pubkey),
                         ),
@@ -164,12 +166,12 @@ class LiveSpeakerQueueSheet extends StatelessWidget {
                           onPressed: () => onMuteChat(member.pubkey),
                         ),
                         _QueueAction(
-                          label: 'Report user',
+                          label: context.l10n.liveReportUser,
                           type: DivineButtonType.secondary,
                           onPressed: () => onReport(member.pubkey),
                         ),
                         _QueueAction(
-                          label: 'Block user',
+                          label: context.l10n.liveBlockUser,
                           type: DivineButtonType.error,
                           onPressed: () => onBlock(member.pubkey),
                         ),
@@ -180,8 +182,8 @@ class LiveSpeakerQueueSheet extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             _QueueSection(
-              title: 'Audience',
-              emptyText: 'No audience members to moderate right now.',
+              title: context.l10n.liveAudience,
+              emptyText: context.l10n.liveNoAudienceMembersToModerateRightNow,
               children: audienceMembers
                   .map(
                     (member) => _QueueItem(
@@ -189,7 +191,7 @@ class LiveSpeakerQueueSheet extends StatelessWidget {
                       subtitle: member.subtitle,
                       actions: <_QueueAction>[
                         _QueueAction(
-                          label: 'Promote',
+                          label: context.l10n.livePromote,
                           type: DivineButtonType.secondary,
                           onPressed: () => onPromote(member.pubkey),
                         ),
@@ -199,12 +201,12 @@ class LiveSpeakerQueueSheet extends StatelessWidget {
                           onPressed: () => onMuteChat(member.pubkey),
                         ),
                         _QueueAction(
-                          label: 'Report user',
+                          label: context.l10n.liveReportUser,
                           type: DivineButtonType.secondary,
                           onPressed: () => onReport(member.pubkey),
                         ),
                         _QueueAction(
-                          label: 'Block user',
+                          label: context.l10n.liveBlockUser,
                           type: DivineButtonType.error,
                           onPressed: () => onBlock(member.pubkey),
                         ),
@@ -253,14 +255,14 @@ class _QueueSection extends StatelessWidget {
       children: [
         Text(
           title,
-          style: VineTheme.titleSmallFont(),
+          style: VineTheme.titleSmallFont(color: context.vineColors.onSurface),
         ),
         const SizedBox(height: 12),
         if (children.isEmpty)
           Text(
             emptyText,
             style: VineTheme.bodyMediumFont(
-              color: VineTheme.onSurfaceVariant,
+              color: context.vineColors.onSurfaceVariant,
             ),
           )
         else
@@ -296,22 +298,24 @@ class _QueueItem extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: VineTheme.surfaceContainerHigh,
+        color: context.vineColors.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: VineTheme.outlineMuted),
+        border: Border.all(color: context.vineColors.outlineMuted),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: VineTheme.labelLargeFont(),
+            style: VineTheme.labelLargeFont(
+              color: context.vineColors.onSurface,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             subtitle,
             style: VineTheme.bodySmallFont(
-              color: VineTheme.onSurfaceVariant,
+              color: context.vineColors.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 12),

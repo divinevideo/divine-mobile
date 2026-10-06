@@ -7,7 +7,6 @@ lib/screens/apps/web_iframe_sandbox_screen_web.dart
 lib/screens/auth/email_verification_screen.dart
 lib/screens/auth/nostr_connect_screen.dart
 lib/screens/auth/welcome_screen.dart
-lib/screens/comments/widgets/comment_options_modal.dart
 lib/screens/content_filters_screen.dart
 lib/screens/developer_options_screen.dart
 lib/screens/feed/pooled_fullscreen_video_feed_screen.dart
@@ -33,14 +32,12 @@ lib/screens/web_auth_screen.dart
 lib/widgets/add_to_list_dialog.dart
 lib/widgets/app_lifecycle_handler.dart
 lib/widgets/bug_report_dialog.dart
-lib/widgets/content_warning.dart
 lib/widgets/delete_account_dialog.dart
 lib/widgets/divine_video_metrics_tracker.dart
 lib/widgets/find_people_sheet.dart
 lib/widgets/gallery_permission_sheet.dart
 lib/widgets/geo_blocking_gate.dart
 lib/widgets/profile_editor/username_status_indicator.dart
-lib/widgets/report_content_dialog.dart
 lib/widgets/save_original_progress_sheet.dart
 lib/widgets/upload_failure_sheet.dart
 lib/widgets/video_clip/video_clip_preview.dart

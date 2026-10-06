@@ -14,9 +14,10 @@
 abstract final class RoutePaths {
   static const liveDiscovery = '/live';
   static const goLive = '/live/go';
-  static String liveRoomDetailFor(String roomId) => '/live/room/$roomId';
+  static String liveRoomDetailFor(String roomId) =>
+      '/live/room/${Uri.encodeComponent(roomId)}';
   static String liveRoomFor(String roomId, String sessionId) =>
-      '/live/room/$roomId/session/$sessionId';
+      '/live/room/${Uri.encodeComponent(roomId)}/session/${Uri.encodeComponent(sessionId)}';
 
   static const accountDeletionRecovery = '/account-deletion-recovery';
   static const appLanguage = '/app-language';

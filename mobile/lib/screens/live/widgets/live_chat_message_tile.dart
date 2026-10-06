@@ -1,7 +1,8 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/live/live_chat_message.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/widgets/user_avatar.dart';
@@ -30,12 +31,12 @@ class LiveChatMessageTile extends ConsumerWidget {
     );
 
     return Semantics(
-      label: '$displayName live chat message',
+      label: context.l10n.liveChatMessageSemantics(displayName),
       container: true,
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: VineTheme.surfaceContainer,
+          color: context.vineColors.surfaceContainer,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
@@ -77,7 +78,7 @@ class LiveChatMessageTile extends ConsumerWidget {
                         Text(
                           relativeTime,
                           style: VineTheme.bodySmallFont(
-                            color: VineTheme.onSurfaceVariant,
+                            color: context.vineColors.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -86,7 +87,9 @@ class LiveChatMessageTile extends ConsumerWidget {
                   const SizedBox(height: 4),
                   Text(
                     message.content,
-                    style: VineTheme.bodyMediumFont(),
+                    style: VineTheme.bodyMediumFont(
+                      color: context.vineColors.onSurface,
+                    ),
                   ),
                 ],
               ),

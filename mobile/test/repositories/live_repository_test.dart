@@ -557,6 +557,29 @@ void main() {
       },
     );
 
+    test('fetchRoom queries its d tag outside the discovery window', () async {
+      final event = Event.fromJson(_eventJson(kind: 30312));
+      const room = LiveRoom(
+        id: roomId,
+        hostPubkey: hostPubkey,
+        title: 'Direct link',
+        summary: '',
+        imageUrl: null,
+        relays: [],
+        visibility: LiveRoomVisibility.public,
+      );
+      when(() => mockNostrClient.queryEvents(any()))
+          .thenAnswer((invocation) async {
+            final filter =
+                (invocation.positionalArguments.first as List<Filter>).single;
+            expect(filter.d, [roomId]);
+            expect(filter.kinds, [30312]);
+            return [event];
+          });
+      when(() => mockCodec.parseRoom(event)).thenReturn(room);
+      expect(await repository.fetchRoom(roomId), room);
+    });
+
     for (final sameTimestamp in <bool>[false, true]) {
       test(
         'fetchSessions retains newest replacement (tie: $sameTimestamp)',

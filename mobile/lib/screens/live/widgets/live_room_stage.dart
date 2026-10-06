@@ -1,9 +1,10 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/live_room/live_room_bloc.dart';
+import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/live/live_media_state.dart';
 import 'package:openvine/screens/live/widgets/live_room_stage_media_tile.dart';
-import 'package:openvine/services/livekit_room_service.dart';
 
 class LiveRoomStage extends StatelessWidget {
   const LiveRoomStage({
@@ -54,10 +55,10 @@ class LiveRoomStage extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(32),
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           colors: <Color>[
-            Color(0xFF1B1711),
-            Color(0xFF243528),
+            context.vineColors.surfaceContainerHigh,
+            context.vineColors.surfaceContainer,
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -67,28 +68,41 @@ class LiveRoomStage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(
-                'Stage',
-                style: VineTheme.titleLargeFont(),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
+          SizedBox(
+            width: double.infinity,
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              spacing: 12,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(
+                  context.l10n.liveStage,
+                  style: VineTheme.titleLargeFont(
+                    color: context.vineColors.onSurface,
+                  ),
                 ),
-                decoration: BoxDecoration(
-                  color: VineTheme.scrim15,
-                  borderRadius: BorderRadius.circular(999),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: VineTheme.scrim15,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Semantics(
+                    liveRegion: true,
+                    child: Text(
+                      statusLabel,
+                      style: VineTheme.labelLargeFont(
+                        color: context.vineColors.onSurface,
+                      ),
+                    ),
+                  ),
                 ),
-                child: Text(
-                  statusLabel,
-                  style: VineTheme.labelLargeFont(),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(height: 16),
           Wrap(
@@ -97,9 +111,9 @@ class LiveRoomStage extends StatelessWidget {
             children: stageParticipants.isEmpty
                 ? <Widget>[
                     Text(
-                      'Waiting for speakers to join the stage.',
+                      context.l10n.liveWaitingForSpeakersToJoinTheStage,
                       style: VineTheme.bodyMediumFont(
-                        color: VineTheme.onSurfaceVariant,
+                        color: context.vineColors.onSurfaceVariant,
                       ),
                     ),
                   ]
@@ -117,9 +131,9 @@ class LiveRoomStage extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            '$audienceCount listeners in the room',
+            context.l10n.liveRoomListenerCount(audienceCount),
             style: VineTheme.bodyMediumFont(
-              color: VineTheme.onSurfaceVariant,
+              color: context.vineColors.onSurfaceVariant,
             ),
           ),
         ],

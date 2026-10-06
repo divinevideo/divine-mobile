@@ -13564,4 +13564,516 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get liveHiddenChatNotice =>
       'Les messages masqués restent visibles pour les autres.';
+
+  @override
+  String get liveFeaturedHostsDescription =>
+      'Un aperçu des personnes qui animent un live ou passent bientôt à l\'antenne.';
+
+  @override
+  String get liveActiveSpeakers => 'Personnes qui parlent';
+
+  @override
+  String get liveApprove => 'Accepter';
+
+  @override
+  String get liveAudience => 'Public';
+
+  @override
+  String get liveAudioOnly => 'Audio uniquement';
+
+  @override
+  String get liveBlockUser => 'Bloquer cette personne';
+
+  @override
+  String get liveCameraAndMicAreOff => 'La caméra et le micro sont coupés';
+
+  @override
+  String get liveChat => 'Discussion';
+
+  @override
+  String get liveConnectionLooksShaky => 'La connexion semble instable';
+
+  @override
+  String get liveCoverImageURL => 'URL de l\'image de couverture';
+
+  @override
+  String get liveDefaultThumbnail => 'Miniature par défaut';
+
+  @override
+  String get liveDemote => 'Rétrograder';
+
+  @override
+  String get liveDeny => 'Refuser';
+
+  @override
+  String get liveDropIntoRoomsThatAreAlreadyRolling =>
+      'Rejoins des salons où ça bouge déjà.';
+
+  @override
+  String get liveEndSession => 'Terminer la session';
+
+  @override
+  String get liveEndThisLiveSession => 'Terminer cette session en direct ?';
+
+  @override
+  String get liveFailedToReportUser => 'Impossible de signaler cette personne';
+
+  @override
+  String get liveFeaturedHosts => 'Personnes à l\'affiche';
+
+  @override
+  String get liveFlipCamera => 'Changer de caméra';
+
+  @override
+  String get liveGoLive => 'Passer en direct';
+
+  @override
+  String get liveHandRaised => 'Main levée';
+
+  @override
+  String get liveHost => 'Animation';
+
+  @override
+  String get liveHostControls => 'Commandes d\'animation';
+
+  @override
+  String get liveJoinLive => 'Rejoindre le direct';
+
+  @override
+  String get liveAudioOnlySuggestion =>
+      'Passe à l\'audio seul pour garder le salon stable le temps que la connexion s\'améliore.';
+
+  @override
+  String get liveHostControlsDescription =>
+      'Gère la scène et les mains levées, et adapte la diffusion quand la connexion fait des siennes.';
+
+  @override
+  String get liveLiveAudioOnly => 'En direct, audio uniquement';
+
+  @override
+  String get liveLiveNow => 'En direct maintenant';
+
+  @override
+  String get liveLiveRoom => 'Salon en direct';
+
+  @override
+  String get liveLiveRoomsAreUnavailable =>
+      'Les salons en direct sont indisponibles.';
+
+  @override
+  String get liveLiveVideo => 'Vidéo en direct';
+
+  @override
+  String get liveLiveVideoAndAudio => 'Vidéo et audio en direct';
+
+  @override
+  String get liveLowerHand => 'Baisser la main';
+
+  @override
+  String get liveManageParticipants => 'Gérer les personnes participantes';
+
+  @override
+  String get liveModeration => 'Modération';
+
+  @override
+  String get liveModerator => 'Modération';
+
+  @override
+  String get liveNoActiveSpeakersYet => 'Personne ne parle pour le moment.';
+
+  @override
+  String get liveNoAudienceMembersToModerateRightNow =>
+      'Personne dans le public à modérer pour le moment.';
+
+  @override
+  String get liveNoMessagesYetBreakTheSilence =>
+      'Pas encore de messages. Brise le silence.';
+
+  @override
+  String get liveNoOneHasJoinedTheRoomYet =>
+      'Personne n\'a encore rejoint le salon.';
+
+  @override
+  String get liveNoOneIsWaitingToSpeak =>
+      'Personne n\'attend de prendre la parole.';
+
+  @override
+  String get liveNoRoomsYetStartTheFirstOne =>
+      'Pas encore de salons. Lance le premier.';
+
+  @override
+  String get liveNoSessionHasBeenScheduledYet =>
+      'Aucune session n\'est encore programmée.';
+
+  @override
+  String get liveNothingHereYet => 'Rien ici pour le moment.';
+
+  @override
+  String get liveOnStage => 'Sur scène';
+
+  @override
+  String get liveOpenReplay => 'Ouvrir le replay';
+
+  @override
+  String get liveOpenRoom => 'Ouvrir le salon';
+
+  @override
+  String get liveParticipants => 'Personnes participantes';
+
+  @override
+  String get livePromote => 'Promouvoir';
+
+  @override
+  String get liveRaiseHand => 'Lever la main';
+
+  @override
+  String get liveRaisedHands => 'Mains levées';
+
+  @override
+  String get liveReplayProcessing => 'Traitement du replay';
+
+  @override
+  String get liveReplayQueued => 'Replay en attente';
+
+  @override
+  String get liveReplayReady => 'Replay prêt';
+
+  @override
+  String get liveReplayUnavailable => 'Replay indisponible';
+
+  @override
+  String get liveReportUser => 'Signaler cette personne';
+
+  @override
+  String get liveRoomDetail => 'Détail du salon';
+
+  @override
+  String get liveRoomDetails => 'Détails du salon';
+
+  @override
+  String get liveRoomLinkCopiedToClipboard =>
+      'Lien du salon copié dans le presse-papiers';
+
+  @override
+  String get liveRoomTitle => 'Titre du salon';
+
+  @override
+  String get liveRoomUnavailable => 'Salon indisponible.';
+
+  @override
+  String get liveSaySomething => 'Dis quelque chose';
+
+  @override
+  String get liveSeeWhatIsLinedUpNext => 'Regarde ce qui arrive bientôt.';
+
+  @override
+  String get liveDiscoveryDescription =>
+      'Regarde qui est en direct ou lance ton propre salon.';
+
+  @override
+  String get liveSend => 'Envoyer';
+
+  @override
+  String get liveSession => 'Session';
+
+  @override
+  String get liveShareRoom => 'Partager le salon';
+
+  @override
+  String get liveSpeaker => 'Prise de parole';
+
+  @override
+  String get liveSpeakerHandRaised => 'Prise de parole, main levée';
+
+  @override
+  String get liveSpeakers => 'Personnes qui parlent';
+
+  @override
+  String get liveStage => 'Scène';
+
+  @override
+  String get liveStartAPublicRoomInOneShot =>
+      'Lance un salon public en un clin d\'œil.';
+
+  @override
+  String get liveStartLiveNow => 'Lancer le direct maintenant';
+
+  @override
+  String get liveStartingCameraAndMicrophone =>
+      'Démarrage de la caméra et du micro...';
+
+  @override
+  String get liveStartingCamera => 'Démarrage de la caméra...';
+
+  @override
+  String get liveStartingMicrophone => 'Démarrage du micro...';
+
+  @override
+  String get liveSwitchToAudioOnly => 'Passer à l\'audio uniquement';
+
+  @override
+  String get liveReplayReadyDescription =>
+      'Le direct est terminé, mais le replay est prêt.';
+
+  @override
+  String get liveReplayProcessingDescription =>
+      'Le direct est terminé. Nous préparons encore le replay.';
+
+  @override
+  String get liveEndSessionConfirmation =>
+      'Cela termine le salon pour tout le monde et ferme la scène.';
+
+  @override
+  String get liveTurnCameraOff => 'Couper la caméra';
+
+  @override
+  String get liveTurnCameraOn => 'Activer la caméra';
+
+  @override
+  String get liveTurnMicOff => 'Couper le micro';
+
+  @override
+  String get liveTurnMicOn => 'Activer le micro';
+
+  @override
+  String get liveUnableToOpenThisLiveRoom =>
+      'Impossible d\'ouvrir ce salon en direct.';
+
+  @override
+  String get liveUpcoming => 'À venir';
+
+  @override
+  String get liveUpdateTheRoomTitle => 'Modifier le titre du salon';
+
+  @override
+  String get liveUpdateTitleStatus => 'Modifier le titre/statut';
+
+  @override
+  String get liveUserBlocked => 'Personne bloquée';
+
+  @override
+  String get liveUserReported => 'Personne signalée';
+
+  @override
+  String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>
+      'Ta photo de profil sert de miniature de départ.';
+
+  @override
+  String get liveWaitingForMedia => 'En attente du média';
+
+  @override
+  String get liveWaitingForSpeakersToJoinTheStage =>
+      'En attendant que des personnes montent sur scène pour parler.';
+
+  @override
+  String get liveWhatAreYouGoingLiveAbout => 'De quoi parlera ton direct ?';
+
+  @override
+  String get liveYouAreOnStage => 'Tu es sur scène';
+
+  @override
+  String get liveHandRaisedDescription =>
+      'Ta main est levée. La personne qui anime peut te faire monter sur scène depuis la file d\'attente.';
+
+  @override
+  String liveDefaultRoomTitle(String displayName) {
+    return '$displayName est en direct';
+  }
+
+  @override
+  String liveDefaultRoomSummary(String displayName) {
+    return 'Viens passer un moment avec $displayName en direct sur Divine.';
+  }
+
+  @override
+  String liveHostLabel(String pubkey) {
+    return 'Animation : $pubkey';
+  }
+
+  @override
+  String liveParticipantCounts(int speakers, int listeners) {
+    String _temp0 = intl.Intl.pluralLogic(
+      speakers,
+      locale: localeName,
+      other: '$speakers personnes qui parlent',
+      many: '$speakers personnes qui parlent',
+      one: '$speakers personne qui parle',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      listeners,
+      locale: localeName,
+      other: '$listeners personnes à l’écoute',
+      many: '$listeners personnes à l’écoute',
+      one: '$listeners personne à l’écoute',
+    );
+    return '$_temp0 · $_temp1';
+  }
+
+  @override
+  String liveStartedAt(String time) {
+    return 'Début : $time';
+  }
+
+  @override
+  String liveEndedAt(String time) {
+    return 'Fin : $time';
+  }
+
+  @override
+  String liveScheduledFor(String time) {
+    return 'Prévu pour $time';
+  }
+
+  @override
+  String liveShareSubject(String title) {
+    return 'Rejoins $title en direct sur Divine';
+  }
+
+  @override
+  String liveRoomShareSubject(String title) {
+    return 'Salon en direct : $title';
+  }
+
+  @override
+  String liveRoleCounts(int hosts, int moderators, int speakers, int audience) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hosts,
+      locale: localeName,
+      other: '$hosts personnes à l’animation',
+      many: '$hosts personnes à l’animation',
+      one: '$hosts personne à l’animation',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      moderators,
+      locale: localeName,
+      other: '$moderators personnes à la modération',
+      many: '$moderators personnes à la modération',
+      one: '$moderators personne à la modération',
+    );
+    String _temp2 = intl.Intl.pluralLogic(
+      speakers,
+      locale: localeName,
+      other: '$speakers personnes qui parlent',
+      many: '$speakers personnes qui parlent',
+      one: '$speakers personne qui parle',
+    );
+    String _temp3 = intl.Intl.pluralLogic(
+      audience,
+      locale: localeName,
+      other: '$audience personnes à l’écoute',
+      many: '$audience personnes à l’écoute',
+      one: '$audience personne à l’écoute',
+    );
+    return '$_temp0, $_temp1, $_temp2, $_temp3';
+  }
+
+  @override
+  String liveSpeakerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count personnes qui parlent',
+      many: '$count personnes qui parlent',
+      one: '$count personne qui parle',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveListeningCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count personnes à l’écoute',
+      many: '$count personnes à l’écoute',
+      one: '$count personne à l’écoute',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveRoomListenerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count personnes à l’écoute dans le salon',
+      many: '$count personnes à l’écoute dans le salon',
+      one: '$count personne à l’écoute dans le salon',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveChatMessageSemantics(String displayName) {
+    return 'Message du chat en direct de $displayName';
+  }
+
+  @override
+  String get liveShareFailed => 'Impossible de partager ce salon. Réessaie.';
+
+  @override
+  String get liveBlockFailed =>
+      'Impossible de bloquer cette personne. Réessaie.';
+
+  @override
+  String get liveRoomStatusHint => 'Utilise open, private ou closed';
+
+  @override
+  String get liveErrorRequestFailed =>
+      'Impossible de modifier ce salon. Réessaie.';
+
+  @override
+  String get liveErrorConnectionFailed =>
+      'Impossible de se connecter à ce salon. Réessaie.';
+
+  @override
+  String get liveErrorSubscriptionFailed =>
+      'Impossible de charger les mises à jour du salon. Réessaie.';
+
+  @override
+  String get liveErrorCameraBlocked =>
+      'L\'accès à la caméra est bloqué. Active-le dans les paramètres.';
+
+  @override
+  String get liveErrorCameraRequired =>
+      'Autorise l\'accès à la caméra pour l\'activer.';
+
+  @override
+  String get liveErrorCameraUnavailable => 'Aucune caméra disponible.';
+
+  @override
+  String get liveErrorCameraPromptBlocked =>
+      'Impossible de demander l\'accès à la caméra. Vérifie les paramètres.';
+
+  @override
+  String get liveErrorMicrophoneBlocked =>
+      'L\'accès au micro est bloqué. Active-le dans les paramètres.';
+
+  @override
+  String get liveErrorMicrophoneRequired =>
+      'Autorise l\'accès au micro pour l\'activer.';
+
+  @override
+  String get liveErrorMicrophoneUnavailable => 'Aucun micro disponible.';
+
+  @override
+  String get liveErrorMicrophonePromptBlocked =>
+      'Impossible de demander l\'accès au micro. Vérifie les paramètres.';
+
+  @override
+  String get liveErrorSpeakerCapacityReached =>
+      'La scène est pleine. Attends qu\'une personne la quitte.';
+
+  @override
+  String get liveTitleRequired => 'Saisis un titre pour le salon.';
+
+  @override
+  String get liveStartFailed => 'Impossible de lancer ce salon. Réessaie.';
+
+  @override
+  String get liveSendFailed => 'Impossible d\'envoyer ton message. Réessaie.';
+
+  @override
+  String get liveChatLoadFailed =>
+      'Impossible de charger la discussion. Réessaie.';
 }

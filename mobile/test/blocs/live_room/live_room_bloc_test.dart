@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/live_room/live_room_bloc.dart';
+import 'package:openvine/models/live/live_media_state.dart';
 import 'package:openvine/models/live/live_presence.dart';
 import 'package:openvine/models/live/live_role.dart';
 import 'package:openvine/models/live/live_room.dart';
@@ -236,6 +237,79 @@ void main() {
       await mediaController.close();
     });
 
+    test('a session deep link never joins another live session', () async {
+      when(
+        () => mockRepository.watchSessions(
+          roomAddress: room.address,
+          sessionId: 'missing-session',
+        ),
+      ).thenAnswer((_) => sessionsController.stream);
+      final bloc = LiveRoomBloc(
+        liveRepository: mockRepository,
+        liveApiService: mockApiService,
+        liveKitRoomService: mockMediaService,
+      );
+      addTearDown(bloc.close);
+      bloc.add(
+        const LiveRoomJoinRequested(
+          room: room,
+          role: LiveRole.audience,
+          sessionId: 'missing-session',
+        ),
+      );
+      await pumpEventQueue();
+      sessionsController.add([liveSession]);
+      await pumpEventQueue();
+      expect(bloc.state.session, isNull);
+      verifyNever(
+        () => mockApiService.fetchJoinToken(
+          roomId: room.id,
+          role: any(named: 'role'),
+        ),
+      );
+    });
+
+    for (final pendingConnection in [false, true]) {
+      test('closing during ${pendingConnection ? 'connection' : 'token fetch'} '
+          'does not leave media connected', () async {
+        final token = Completer<LiveRoomToken>();
+        final connected = Completer<void>();
+        when(
+          () => mockApiService.fetchJoinToken(
+            roomId: room.id,
+            role: LiveRole.host,
+          ),
+        ).thenAnswer(
+          (_) => pendingConnection ? Future.value(joinToken) : token.future,
+        );
+        if (pendingConnection) {
+          when(() => mockMediaService.connect(joinToken))
+              .thenAnswer((_) => connected.future);
+        }
+        final bloc = LiveRoomBloc(
+          liveRepository: mockRepository,
+          liveApiService: mockApiService,
+          liveKitRoomService: mockMediaService,
+        );
+        bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
+        await pumpEventQueue();
+        sessionsController.add([liveSession]);
+        await pumpEventQueue();
+        await bloc.close();
+        if (pendingConnection) {
+          connected.complete();
+        } else {
+          token.complete(joinToken);
+        }
+        await pumpEventQueue();
+        if (pendingConnection) {
+          verify(() => mockMediaService.disconnect()).called(2);
+        } else {
+          verifyNever(() => mockMediaService.connect(joinToken));
+        }
+      });
+    }
+
     test(
       'join request watches room state, fetches a token, and exposes host speaker state',
       () async {
@@ -246,14 +320,14 @@ void main() {
         );
 
         bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
-        await _flush();
+        await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
-        await _flush();
+        await pumpEventQueue();
 
         presenceController.add(<LivePresence>[hostPresence, speakerPresence]);
         mediaController.add(connectedMediaState);
-        await _flush();
+        await pumpEventQueue();
 
         expect(bloc.state.status, LiveRoomStatus.ready);
         expect(bloc.state.room, room);
@@ -296,10 +370,10 @@ void main() {
         );
 
         bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
-        await _flush();
+        await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
-        await _flush();
+        await pumpEventQueue();
 
         presenceController.add(<LivePresence>[hostPresence, speakerPresence]);
         mediaController.add(
@@ -308,7 +382,7 @@ void main() {
             canPublish: true,
           ),
         );
-        await _flush();
+        await pumpEventQueue();
 
         verifyNever(
           () => mockMediaService.publishLocalTracks(
@@ -336,13 +410,13 @@ void main() {
       );
 
       bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
-      await _flush();
+      await pumpEventQueue();
 
       sessionsController.add(<LiveSession>[liveSession]);
-      await _flush();
+      await pumpEventQueue();
 
       expect(bloc.state.status, LiveRoomStatus.failure);
-      expect(bloc.state.errorMessage, contains('token failed'));
+      expect(bloc.state.error, LiveRoomError.connectionFailed);
       verifyNever(() => mockMediaService.connect(any()));
 
       await bloc.close();
@@ -356,20 +430,20 @@ void main() {
       );
 
       bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
-      await _flush();
+      await pumpEventQueue();
 
       sessionsController.add(<LiveSession>[liveSession]);
-      await _flush();
+      await pumpEventQueue();
 
       mediaController.add(connectedMediaState);
-      await _flush();
+      await pumpEventQueue();
 
       bloc
         ..add(const ToggleMicrophoneRequested())
         ..add(const ToggleCameraRequested())
         ..add(const SwitchCameraRequested())
         ..add(const EnableAudioOnlyRequested());
-      await _flush();
+      await pumpEventQueue();
 
       verify(() => mockMediaService.setMicrophoneEnabled(false)).called(1);
       verify(() => mockMediaService.setCameraEnabled(false)).called(1);
@@ -389,10 +463,10 @@ void main() {
         );
 
         bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
-        await _flush();
+        await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
-        await _flush();
+        await pumpEventQueue();
 
         mediaController.add(
           const LiveMediaState(
@@ -402,10 +476,10 @@ void main() {
             cameraBusy: true,
           ),
         );
-        await _flush();
+        await pumpEventQueue();
 
         bloc.add(const ToggleCameraRequested());
-        await _flush();
+        await pumpEventQueue();
 
         verifyNever(() => mockMediaService.setCameraEnabled(any()));
 
@@ -416,10 +490,10 @@ void main() {
             requestedCameraEnabled: true,
           ),
         );
-        await _flush();
+        await pumpEventQueue();
 
         bloc.add(const ToggleCameraRequested());
-        await _flush();
+        await pumpEventQueue();
 
         verify(() => mockMediaService.setCameraEnabled(false)).called(1);
 
@@ -441,23 +515,23 @@ void main() {
         );
 
         bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
-        await _flush();
+        await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
-        await _flush();
+        await pumpEventQueue();
 
         mediaController.add(connectedMediaState);
-        await _flush();
+        await pumpEventQueue();
 
         bloc
           ..add(const ToggleCameraRequested())
           ..add(const ToggleCameraRequested());
-        await _flush();
+        await pumpEventQueue();
 
         verify(() => mockMediaService.setCameraEnabled(false)).called(1);
 
         cameraCompleter.complete();
-        await _flush();
+        await pumpEventQueue();
 
         await bloc.close();
       },
@@ -473,10 +547,10 @@ void main() {
         );
 
         bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
-        await _flush();
+        await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
-        await _flush();
+        await pumpEventQueue();
 
         mediaController.add(
           const LiveMediaState(
@@ -486,10 +560,10 @@ void main() {
             microphoneBusy: true,
           ),
         );
-        await _flush();
+        await pumpEventQueue();
 
         bloc.add(const ToggleMicrophoneRequested());
-        await _flush();
+        await pumpEventQueue();
 
         verifyNever(() => mockMediaService.setMicrophoneEnabled(any()));
 
@@ -500,10 +574,10 @@ void main() {
             requestedMicrophoneEnabled: true,
           ),
         );
-        await _flush();
+        await pumpEventQueue();
 
         bloc.add(const ToggleMicrophoneRequested());
-        await _flush();
+        await pumpEventQueue();
 
         verify(() => mockMediaService.setMicrophoneEnabled(false)).called(1);
 
@@ -544,10 +618,10 @@ void main() {
         );
 
         bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
-        await _flush();
+        await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
-        await _flush();
+        await pumpEventQueue();
 
         mediaController.add(
           const LiveMediaState(
@@ -555,15 +629,15 @@ void main() {
             canPublish: true,
           ),
         );
-        await _flush();
+        await pumpEventQueue();
 
         bloc.add(const ToggleCameraRequested());
-        await _flush();
+        await pumpEventQueue();
 
         verify(mockNativeCameraPermissionService.authorizationStatus).called(1);
         verify(mockNativeCameraPermissionService.requestPermission).called(1);
         verify(() => mockMediaService.setCameraEnabled(true)).called(1);
-        expect(bloc.state.errorMessage, isNull);
+        expect(bloc.state.error, isNull);
 
         await bloc.close();
       },
@@ -596,10 +670,10 @@ void main() {
         );
 
         bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
-        await _flush();
+        await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
-        await _flush();
+        await pumpEventQueue();
 
         mediaController.add(
           const LiveMediaState(
@@ -607,17 +681,17 @@ void main() {
             canPublish: true,
           ),
         );
-        await _flush();
+        await pumpEventQueue();
 
         bloc.add(const ToggleCameraRequested());
-        await _flush();
+        await pumpEventQueue();
 
         verify(mockNativeCameraPermissionService.authorizationStatus).called(1);
         verify(mockNativeCameraPermissionService.requestPermission).called(1);
         verifyNever(() => mockMediaService.setCameraEnabled(true));
         expect(
-          bloc.state.errorMessage,
-          'macOS blocked the camera prompt for this terminal-launched build. Open Divine directly from Finder or Xcode, then try again.',
+          bloc.state.error,
+          LiveRoomError.cameraPromptBlocked,
         );
 
         await bloc.close();
@@ -663,10 +737,10 @@ void main() {
         );
 
         bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
-        await _flush();
+        await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
-        await _flush();
+        await pumpEventQueue();
 
         mediaController.add(
           const LiveMediaState(
@@ -674,10 +748,10 @@ void main() {
             canPublish: true,
           ),
         );
-        await _flush();
+        await pumpEventQueue();
 
         bloc.add(const ToggleMicrophoneRequested());
-        await _flush();
+        await pumpEventQueue();
 
         verify(
           mockNativeCameraPermissionService.microphoneAuthorizationStatus,
@@ -692,7 +766,7 @@ void main() {
           mockPermissionsService.requestMicrophonePermission,
         );
         verify(() => mockMediaService.setMicrophoneEnabled(true)).called(1);
-        expect(bloc.state.errorMessage, isNull);
+        expect(bloc.state.error, isNull);
 
         await bloc.close();
       },
@@ -725,10 +799,10 @@ void main() {
         );
 
         bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
-        await _flush();
+        await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
-        await _flush();
+        await pumpEventQueue();
 
         mediaController.add(
           const LiveMediaState(
@@ -736,10 +810,10 @@ void main() {
             canPublish: true,
           ),
         );
-        await _flush();
+        await pumpEventQueue();
 
         bloc.add(const ToggleMicrophoneRequested());
-        await _flush();
+        await pumpEventQueue();
 
         verify(
           mockNativeCameraPermissionService.microphoneAuthorizationStatus,
@@ -749,8 +823,8 @@ void main() {
         ).called(1);
         verifyNever(() => mockMediaService.setMicrophoneEnabled(true));
         expect(
-          bloc.state.errorMessage,
-          'Microphone access is required to speak in the room.',
+          bloc.state.error,
+          LiveRoomError.microphoneRequired,
         );
 
         await bloc.close();
@@ -784,10 +858,10 @@ void main() {
         );
 
         bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
-        await _flush();
+        await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
-        await _flush();
+        await pumpEventQueue();
 
         mediaController.add(
           const LiveMediaState(
@@ -795,10 +869,10 @@ void main() {
             canPublish: true,
           ),
         );
-        await _flush();
+        await pumpEventQueue();
 
         bloc.add(const ToggleMicrophoneRequested());
-        await _flush();
+        await pumpEventQueue();
 
         verify(
           mockNativeCameraPermissionService.microphoneAuthorizationStatus,
@@ -808,8 +882,8 @@ void main() {
         ).called(1);
         verifyNever(() => mockMediaService.setMicrophoneEnabled(true));
         expect(
-          bloc.state.errorMessage,
-          'macOS blocked the microphone prompt for this terminal-launched build. Open Divine directly from Finder or Xcode, then try again.',
+          bloc.state.error,
+          LiveRoomError.microphonePromptBlocked,
         );
 
         await bloc.close();
@@ -846,10 +920,10 @@ void main() {
         );
 
         bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
-        await _flush();
+        await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
-        await _flush();
+        await pumpEventQueue();
 
         mediaController.add(
           const LiveMediaState(
@@ -857,10 +931,10 @@ void main() {
             canPublish: true,
           ),
         );
-        await _flush();
+        await pumpEventQueue();
 
         bloc.add(const ToggleMicrophoneRequested());
-        await _flush();
+        await pumpEventQueue();
 
         verify(
           mockNativeCameraPermissionService.microphoneAuthorizationStatus,
@@ -873,8 +947,8 @@ void main() {
         );
         verifyNever(() => mockMediaService.setMicrophoneEnabled(true));
         expect(
-          bloc.state.errorMessage,
-          'Microphone access is blocked. Allow it in system settings.',
+          bloc.state.error,
+          LiveRoomError.microphoneBlocked,
         );
 
         await bloc.close();
@@ -901,15 +975,15 @@ void main() {
         bloc.add(
           const LiveRoomJoinRequested(room: room, role: LiveRole.audience),
         );
-        await _flush();
+        await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
-        await _flush();
+        await pumpEventQueue();
 
         expect(bloc.state.canPublish, isFalse);
 
         sessionsController.add(<LiveSession>[promotedSession]);
-        await _flush();
+        await pumpEventQueue();
 
         expect(bloc.state.role, LiveRole.speaker);
         expect(bloc.state.canPublish, isTrue);
@@ -935,10 +1009,10 @@ void main() {
         );
 
         bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
-        await _flush();
+        await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
-        await _flush();
+        await pumpEventQueue();
 
         presenceController.add(<LivePresence>[
           hostPresence,
@@ -947,12 +1021,12 @@ void main() {
           audienceTwoPresence,
           audienceThreePresence,
         ]);
-        await _flush();
+        await pumpEventQueue();
 
         bloc
           ..add(const PromoteSpeakerRequested(audiencePubkey))
           ..add(const PromoteSpeakerRequested(audienceTwoPubkey));
-        await _flush();
+        await pumpEventQueue();
 
         expect(
           bloc.state.speakerPubkeys,
@@ -965,15 +1039,15 @@ void main() {
         );
 
         bloc.add(const PromoteSpeakerRequested(audienceThreePubkey));
-        await _flush();
+        await pumpEventQueue();
 
         expect(bloc.state.speakerPubkeys, isNot(contains(audienceThreePubkey)));
-        expect(bloc.state.errorMessage, contains('4 active video speakers'));
+        expect(bloc.state.error, LiveRoomError.speakerCapacityReached);
 
         bloc.add(const DemoteSpeakerRequested(audiencePubkey));
-        await _flush();
+        await pumpEventQueue();
         bloc.add(const PromoteSpeakerRequested(audienceThreePubkey));
-        await _flush();
+        await pumpEventQueue();
 
         expect(bloc.state.speakerPubkeys, isNot(contains(audiencePubkey)));
         expect(bloc.state.speakerPubkeys, contains(audienceThreePubkey));
@@ -1021,15 +1095,15 @@ void main() {
       bloc.add(
         const LiveRoomJoinRequested(room: room, role: LiveRole.audience),
       );
-      await _flush();
+      await pumpEventQueue();
 
       sessionsController.add(<LiveSession>[liveSession]);
-      await _flush();
+      await pumpEventQueue();
 
       bloc
         ..add(const LiveRoomAppForegroundChanged(false))
         ..add(const LiveRoomAppForegroundChanged(true));
-      await _flush();
+      await pumpEventQueue();
 
       verify(
         () => mockApiService.fetchJoinToken(
@@ -1087,15 +1161,15 @@ void main() {
         bloc.add(
           const LiveRoomJoinRequested(room: room, role: LiveRole.audience),
         );
-        await _flush();
+        await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
-        await _flush();
+        await pumpEventQueue();
 
         bloc
           ..add(const LiveRoomAppForegroundChanged(false))
           ..add(const LiveRoomAppForegroundChanged(true));
-        await _flush();
+        await pumpEventQueue();
 
         verify(
           () => mockApiService.fetchJoinToken(
@@ -1177,10 +1251,10 @@ void main() {
         bloc.add(
           const LiveRoomJoinRequested(room: room, role: LiveRole.audience),
         );
-        await _flush();
+        await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
-        await _flush();
+        await pumpEventQueue();
 
         verify(() => mockMediaService.connect(audienceJoinToken)).called(1);
 
@@ -1190,10 +1264,10 @@ void main() {
             role: LiveRole.audience,
           ),
         );
-        await _flush();
+        await pumpEventQueue();
 
         secondSessionsController.add(<LiveSession>[secondSession]);
-        await _flush();
+        await pumpEventQueue();
 
         verify(() => mockMediaService.disconnect()).called(1);
         verify(
@@ -1238,20 +1312,20 @@ void main() {
         bloc.add(
           const LiveRoomJoinRequested(room: room, role: LiveRole.audience),
         );
-        await _flush();
+        await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
-        await _flush();
+        await pumpEventQueue();
 
         verify(() => mockMediaService.connect(audienceJoinToken)).called(1);
 
         bloc.add(
           const LiveRoomJoinRequested(room: quietRoom, role: LiveRole.audience),
         );
-        await _flush();
+        await pumpEventQueue();
 
         quietSessionsController.add(const <LiveSession>[]);
-        await _flush();
+        await pumpEventQueue();
 
         verify(() => mockMediaService.disconnect()).called(1);
         verifyNever(
@@ -1275,10 +1349,10 @@ void main() {
       );
 
       bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
-      await _flush();
+      await pumpEventQueue();
 
       sessionsController.add(<LiveSession>[liveSession]);
-      await _flush();
+      await pumpEventQueue();
 
       final endedStateFuture = bloc.stream.firstWhere(
         (state) => state.session?.status == LiveSessionStatus.ended,
@@ -1306,10 +1380,10 @@ void main() {
       );
 
       bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
-      await _flush();
+      await pumpEventQueue();
 
       sessionsController.add(<LiveSession>[liveSession]);
-      await _flush();
+      await pumpEventQueue();
 
       bloc.add(
         const UpdateRoomMetadataRequested(
@@ -1318,7 +1392,7 @@ void main() {
           visibility: LiveRoomVisibility.private,
         ),
       );
-      await _flush();
+      await pumpEventQueue();
 
       verify(
         () => mockRepository.publishRoom(
@@ -1349,22 +1423,22 @@ void main() {
       );
 
       bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
-      await _flush();
+      await pumpEventQueue();
 
       sessionsController.add(<LiveSession>[liveSession]);
-      await _flush();
+      await pumpEventQueue();
 
       presenceController.add(<LivePresence>[
         hostPresence,
         speakerPresence,
         raisedHandPresence,
       ]);
-      await _flush();
+      await pumpEventQueue();
 
       bloc
         ..add(const DenyRaisedHandRequested(audiencePubkey))
         ..add(const ApproveRaisedHandRequested(audiencePubkey));
-      await _flush();
+      await pumpEventQueue();
 
       expect(bloc.state.raisedHands, isEmpty);
       expect(bloc.state.speakerPubkeys, contains(audiencePubkey));
@@ -1383,16 +1457,16 @@ void main() {
       bloc.add(
         const LiveRoomJoinRequested(room: room, role: LiveRole.audience),
       );
-      await _flush();
+      await pumpEventQueue();
 
       sessionsController.add(<LiveSession>[liveSession]);
-      await _flush();
+      await pumpEventQueue();
 
       presenceController.add(<LivePresence>[hostPresence, speakerPresence]);
-      await _flush();
+      await pumpEventQueue();
 
       bloc.add(const ToggleHandRaiseRequested());
-      await _flush();
+      await pumpEventQueue();
 
       verify(
         () => mockRepository.publishPresence(
@@ -1424,20 +1498,20 @@ void main() {
         );
 
         bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
-        await _flush();
+        await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
-        await _flush();
+        await pumpEventQueue();
 
         presenceController.add(<LivePresence>[
           hostPresence,
           speakerPresence,
           raisedHandPresence,
         ]);
-        await _flush();
+        await pumpEventQueue();
 
         bloc.add(const HideParticipantLocallyRequested(speakerPubkey));
-        await _flush();
+        await pumpEventQueue();
 
         expect(bloc.state.hiddenParticipantPubkeys, contains(speakerPubkey));
         verifyNever(
@@ -1462,23 +1536,17 @@ void main() {
       );
 
       bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
-      await _flush();
+      await pumpEventQueue();
 
       sessionsController.add(<LiveSession>[liveSession]);
-      await _flush();
+      await pumpEventQueue();
 
       bloc.add(const LiveRoomAppForegroundChanged(false));
-      await _flush();
+      await pumpEventQueue();
 
       verifyNever(() => mockMediaService.disconnect());
 
       await bloc.close();
     });
   });
-}
-
-Future<void> _flush() async {
-  await Future<void>.delayed(Duration.zero);
-  await Future<void>.delayed(Duration.zero);
-  await Future<void>.delayed(Duration.zero);
 }

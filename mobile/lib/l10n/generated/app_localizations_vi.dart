@@ -13305,4 +13305,494 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get liveHiddenChatNotice =>
       'Tin nhắn đã ẩn vẫn hiển thị với những người khác.';
+
+  @override
+  String get liveFeaturedHostsDescription =>
+      'Xem nhanh những người chủ trì đang phát trực tiếp hoặc sắp lên sóng.';
+
+  @override
+  String get liveActiveSpeakers => 'Người đang nói';
+
+  @override
+  String get liveApprove => 'Chấp thuận';
+
+  @override
+  String get liveAudience => 'Khán giả';
+
+  @override
+  String get liveAudioOnly => 'Chỉ âm thanh';
+
+  @override
+  String get liveBlockUser => 'Chặn người dùng';
+
+  @override
+  String get liveCameraAndMicAreOff => 'Máy ảnh và micrô đang tắt';
+
+  @override
+  String get liveChat => 'Trò chuyện';
+
+  @override
+  String get liveConnectionLooksShaky => 'Kết nối có vẻ không ổn định';
+
+  @override
+  String get liveCoverImageURL => 'URL ảnh bìa';
+
+  @override
+  String get liveDefaultThumbnail => 'Ảnh thu nhỏ mặc định';
+
+  @override
+  String get liveDemote => 'Hạ vai trò';
+
+  @override
+  String get liveDeny => 'Từ chối';
+
+  @override
+  String get liveDropIntoRoomsThatAreAlreadyRolling =>
+      'Ghé vào những phòng đang diễn ra.';
+
+  @override
+  String get liveEndSession => 'Kết thúc phiên';
+
+  @override
+  String get liveEndThisLiveSession => 'Kết thúc phiên trực tiếp này?';
+
+  @override
+  String get liveFailedToReportUser => 'Không thể báo cáo người dùng';
+
+  @override
+  String get liveFeaturedHosts => 'Người chủ trì nổi bật';
+
+  @override
+  String get liveFlipCamera => 'Đổi máy ảnh';
+
+  @override
+  String get liveGoLive => 'Phát trực tiếp';
+
+  @override
+  String get liveHandRaised => 'Đã giơ tay';
+
+  @override
+  String get liveHost => 'Người chủ trì';
+
+  @override
+  String get liveHostControls => 'Công cụ của người chủ trì';
+
+  @override
+  String get liveJoinLive => 'Tham gia trực tiếp';
+
+  @override
+  String get liveAudioOnlySuggestion =>
+      'Chuyển sang chỉ âm thanh để giữ phòng ổn định cho đến khi mạng ổn định lại.';
+
+  @override
+  String get liveHostControlsDescription =>
+      'Quản lý sân khấu, lượt giơ tay và chuyển chế độ phù hợp khi mạng không ổn định.';
+
+  @override
+  String get liveLiveAudioOnly => 'Trực tiếp chỉ âm thanh';
+
+  @override
+  String get liveLiveNow => 'Đang trực tiếp';
+
+  @override
+  String get liveLiveRoom => 'Phòng trực tiếp';
+
+  @override
+  String get liveLiveRoomsAreUnavailable =>
+      'Các phòng trực tiếp hiện không khả dụng.';
+
+  @override
+  String get liveLiveVideo => 'Video trực tiếp';
+
+  @override
+  String get liveLiveVideoAndAudio => 'Video và âm thanh trực tiếp';
+
+  @override
+  String get liveLowerHand => 'Hạ tay';
+
+  @override
+  String get liveManageParticipants => 'Quản lý người tham gia';
+
+  @override
+  String get liveModeration => 'Kiểm duyệt';
+
+  @override
+  String get liveModerator => 'Người kiểm duyệt';
+
+  @override
+  String get liveNoActiveSpeakersYet => 'Chưa có ai đang nói.';
+
+  @override
+  String get liveNoAudienceMembersToModerateRightNow =>
+      'Hiện không có khán giả nào cần kiểm duyệt.';
+
+  @override
+  String get liveNoMessagesYetBreakTheSilence =>
+      'Chưa có tin nhắn. Hãy mở lời nhé.';
+
+  @override
+  String get liveNoOneHasJoinedTheRoomYet => 'Chưa có ai tham gia phòng.';
+
+  @override
+  String get liveNoOneIsWaitingToSpeak => 'Không có ai đang chờ phát biểu.';
+
+  @override
+  String get liveNoRoomsYetStartTheFirstOne =>
+      'Chưa có phòng nào. Hãy mở phòng đầu tiên.';
+
+  @override
+  String get liveNoSessionHasBeenScheduledYet =>
+      'Chưa có phiên nào được lên lịch.';
+
+  @override
+  String get liveNothingHereYet => 'Chưa có gì ở đây.';
+
+  @override
+  String get liveOnStage => 'Trên sân khấu';
+
+  @override
+  String get liveOpenReplay => 'Mở bản phát lại';
+
+  @override
+  String get liveOpenRoom => 'Mở phòng';
+
+  @override
+  String get liveParticipants => 'Người tham gia';
+
+  @override
+  String get livePromote => 'Nâng vai trò';
+
+  @override
+  String get liveRaiseHand => 'Giơ tay';
+
+  @override
+  String get liveRaisedHands => 'Lượt giơ tay';
+
+  @override
+  String get liveReplayProcessing => 'Đang xử lý bản phát lại';
+
+  @override
+  String get liveReplayQueued => 'Bản phát lại đang chờ xử lý';
+
+  @override
+  String get liveReplayReady => 'Bản phát lại đã sẵn sàng';
+
+  @override
+  String get liveReplayUnavailable => 'Bản phát lại không khả dụng';
+
+  @override
+  String get liveReportUser => 'Báo cáo người dùng';
+
+  @override
+  String get liveRoomDetail => 'Chi tiết phòng';
+
+  @override
+  String get liveRoomDetails => 'Thông tin phòng';
+
+  @override
+  String get liveRoomLinkCopiedToClipboard =>
+      'Đã sao chép liên kết phòng vào bộ nhớ tạm';
+
+  @override
+  String get liveRoomTitle => 'Tiêu đề phòng';
+
+  @override
+  String get liveRoomUnavailable => 'Phòng không khả dụng.';
+
+  @override
+  String get liveSaySomething => 'Nói gì đó';
+
+  @override
+  String get liveSeeWhatIsLinedUpNext => 'Xem những gì sắp diễn ra.';
+
+  @override
+  String get liveDiscoveryDescription =>
+      'Xem ai đang trực tiếp hoặc mở phòng của riêng bạn.';
+
+  @override
+  String get liveSend => 'Gửi';
+
+  @override
+  String get liveSession => 'Phiên';
+
+  @override
+  String get liveShareRoom => 'Chia sẻ phòng';
+
+  @override
+  String get liveSpeaker => 'Người nói';
+
+  @override
+  String get liveSpeakerHandRaised => 'Người nói, đã giơ tay';
+
+  @override
+  String get liveSpeakers => 'Người nói';
+
+  @override
+  String get liveStage => 'Sân khấu';
+
+  @override
+  String get liveStartAPublicRoomInOneShot => 'Mở ngay một phòng công khai.';
+
+  @override
+  String get liveStartLiveNow => 'Bắt đầu trực tiếp ngay';
+
+  @override
+  String get liveStartingCameraAndMicrophone =>
+      'Đang khởi động máy ảnh và micrô...';
+
+  @override
+  String get liveStartingCamera => 'Đang khởi động máy ảnh...';
+
+  @override
+  String get liveStartingMicrophone => 'Đang khởi động micrô...';
+
+  @override
+  String get liveSwitchToAudioOnly => 'Chuyển sang chỉ âm thanh';
+
+  @override
+  String get liveReplayReadyDescription =>
+      'Buổi trực tiếp đã kết thúc, nhưng bản phát lại đã sẵn sàng để xem.';
+
+  @override
+  String get liveReplayProcessingDescription =>
+      'Buổi trực tiếp đã kết thúc. Chúng tôi vẫn đang xử lý để cung cấp bản phát lại.';
+
+  @override
+  String get liveEndSessionConfirmation =>
+      'Thao tác này kết thúc phòng cho tất cả mọi người và đóng sân khấu.';
+
+  @override
+  String get liveTurnCameraOff => 'Tắt máy ảnh';
+
+  @override
+  String get liveTurnCameraOn => 'Bật máy ảnh';
+
+  @override
+  String get liveTurnMicOff => 'Tắt micrô';
+
+  @override
+  String get liveTurnMicOn => 'Bật micrô';
+
+  @override
+  String get liveUnableToOpenThisLiveRoom =>
+      'Không thể mở phòng trực tiếp này.';
+
+  @override
+  String get liveUpcoming => 'Sắp diễn ra';
+
+  @override
+  String get liveUpdateTheRoomTitle => 'Cập nhật tiêu đề phòng';
+
+  @override
+  String get liveUpdateTitleStatus => 'Cập nhật tiêu đề/trạng thái';
+
+  @override
+  String get liveUserBlocked => 'Đã chặn người dùng';
+
+  @override
+  String get liveUserReported => 'Đã báo cáo người dùng';
+
+  @override
+  String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>
+      'Dùng ảnh hồ sơ của bạn làm ảnh thu nhỏ ban đầu.';
+
+  @override
+  String get liveWaitingForMedia => 'Đang chờ nội dung nghe nhìn';
+
+  @override
+  String get liveWaitingForSpeakersToJoinTheStage =>
+      'Đang chờ người nói lên sân khấu.';
+
+  @override
+  String get liveWhatAreYouGoingLiveAbout => 'Bạn sẽ trực tiếp về chủ đề gì?';
+
+  @override
+  String get liveYouAreOnStage => 'Bạn đang trên sân khấu';
+
+  @override
+  String get liveHandRaisedDescription =>
+      'Bạn đã giơ tay. Người chủ trì có thể mời bạn lên sân khấu từ danh sách chờ phát biểu.';
+
+  @override
+  String liveDefaultRoomTitle(String displayName) {
+    return '$displayName đang trực tiếp';
+  }
+
+  @override
+  String liveDefaultRoomSummary(String displayName) {
+    return 'Ghé trò chuyện trực tiếp cùng $displayName trên Divine.';
+  }
+
+  @override
+  String liveHostLabel(String pubkey) {
+    return 'Người chủ trì: $pubkey';
+  }
+
+  @override
+  String liveParticipantCounts(int speakers, int listeners) {
+    String _temp0 = intl.Intl.pluralLogic(
+      speakers,
+      locale: localeName,
+      other: '$speakers người nói',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      listeners,
+      locale: localeName,
+      other: '$listeners người nghe',
+    );
+    return '$_temp0 · $_temp1';
+  }
+
+  @override
+  String liveStartedAt(String time) {
+    return 'Bắt đầu lúc $time';
+  }
+
+  @override
+  String liveEndedAt(String time) {
+    return 'Kết thúc lúc $time';
+  }
+
+  @override
+  String liveScheduledFor(String time) {
+    return 'Đã lên lịch lúc $time';
+  }
+
+  @override
+  String liveShareSubject(String title) {
+    return 'Tham gia $title trực tiếp trên Divine';
+  }
+
+  @override
+  String liveRoomShareSubject(String title) {
+    return 'Phòng trực tiếp: $title';
+  }
+
+  @override
+  String liveRoleCounts(int hosts, int moderators, int speakers, int audience) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hosts,
+      locale: localeName,
+      other: '$hosts người chủ trì',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      moderators,
+      locale: localeName,
+      other: '$moderators người kiểm duyệt',
+    );
+    String _temp2 = intl.Intl.pluralLogic(
+      speakers,
+      locale: localeName,
+      other: '$speakers người nói',
+    );
+    String _temp3 = intl.Intl.pluralLogic(
+      audience,
+      locale: localeName,
+      other: '$audience người nghe',
+    );
+    return '$_temp0, $_temp1, $_temp2, $_temp3';
+  }
+
+  @override
+  String liveSpeakerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count người nói',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveListeningCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count người nghe',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveRoomListenerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count người nghe trong phòng',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveChatMessageSemantics(String displayName) {
+    return 'Tin nhắn trò chuyện trực tiếp từ $displayName';
+  }
+
+  @override
+  String get liveShareFailed => 'Không thể chia sẻ phòng này. Hãy thử lại.';
+
+  @override
+  String get liveBlockFailed => 'Không thể chặn người dùng này. Hãy thử lại.';
+
+  @override
+  String get liveRoomStatusHint => 'Dùng open, private hoặc closed';
+
+  @override
+  String get liveErrorRequestFailed =>
+      'Không thể cập nhật phòng này. Hãy thử lại.';
+
+  @override
+  String get liveErrorConnectionFailed =>
+      'Không thể kết nối với phòng này. Hãy thử lại.';
+
+  @override
+  String get liveErrorSubscriptionFailed =>
+      'Không thể tải cập nhật của phòng. Hãy thử lại.';
+
+  @override
+  String get liveErrorCameraBlocked =>
+      'Quyền truy cập máy ảnh bị chặn. Hãy bật trong Cài đặt.';
+
+  @override
+  String get liveErrorCameraRequired =>
+      'Cho phép truy cập máy ảnh để bật máy ảnh của bạn.';
+
+  @override
+  String get liveErrorCameraUnavailable => 'Không có máy ảnh khả dụng.';
+
+  @override
+  String get liveErrorCameraPromptBlocked =>
+      'Không thể yêu cầu quyền truy cập máy ảnh. Hãy kiểm tra Cài đặt.';
+
+  @override
+  String get liveErrorMicrophoneBlocked =>
+      'Quyền truy cập micrô bị chặn. Hãy bật trong Cài đặt.';
+
+  @override
+  String get liveErrorMicrophoneRequired =>
+      'Cho phép truy cập micrô để bật micrô của bạn.';
+
+  @override
+  String get liveErrorMicrophoneUnavailable => 'Không có micrô khả dụng.';
+
+  @override
+  String get liveErrorMicrophonePromptBlocked =>
+      'Không thể yêu cầu quyền truy cập micrô. Hãy kiểm tra Cài đặt.';
+
+  @override
+  String get liveErrorSpeakerCapacityReached =>
+      'Sân khấu đã đầy. Hãy chờ một người nói rời đi.';
+
+  @override
+  String get liveTitleRequired => 'Nhập tiêu đề phòng.';
+
+  @override
+  String get liveStartFailed => 'Không thể mở phòng này. Hãy thử lại.';
+
+  @override
+  String get liveSendFailed => 'Không thể gửi tin nhắn của bạn. Hãy thử lại.';
+
+  @override
+  String get liveChatLoadFailed =>
+      'Không thể tải cuộc trò chuyện. Hãy thử lại.';
 }

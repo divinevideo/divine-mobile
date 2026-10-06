@@ -13,6 +13,7 @@ class LiveNostrCodec {
     final roomId = _requiredTagValue(event.tags, 'd', 'room id');
 
     return LiveRoom(
+      serviceUrl: _firstTagValue(event.tags, 'service'),
       id: roomId,
       hostPubkey: event.pubkey,
       title:
@@ -42,6 +43,12 @@ class LiveNostrCodec {
     final tags = <List<String>>[
       ['d', room.id],
       ['room', room.title],
+      [
+        'service',
+        room.serviceUrl ??
+            'https://divine.video/live/room/${Uri.encodeComponent(room.id)}',
+      ],
+      ['p', room.hostPubkey, '', LiveRole.host.nostrRoleLabel],
       ['status', room.visibility.nostrStatusValue],
     ];
 
@@ -77,6 +84,7 @@ class LiveNostrCodec {
 
     final tags = <List<String>>[
       ['d', session.id],
+      ['title', if (session.title.isEmpty) session.roomId else session.title],
       ['a', roomAddress],
       ['status', session.status.tagValue],
       ['starts', _unixSeconds(session.startedAt)],
@@ -91,7 +99,7 @@ class LiveNostrCodec {
       final role = speakerPubkey == hostPubkey
           ? LiveRole.host
           : LiveRole.speaker;
-      tags.add(['p', speakerPubkey, '', role.name]);
+      tags.add(['p', speakerPubkey, '', role.nostrRoleLabel]);
     }
 
     return _signEvent(
@@ -180,6 +188,7 @@ class LiveNostrCodec {
     }
 
     return LiveSession(
+      title: _firstTagValue(event.tags, 'title') ?? '',
       id: sessionId,
       roomId: _dTagFromAddress(roomAddress),
       hostPubkey: event.pubkey,
@@ -307,7 +316,7 @@ class LiveNostrCodec {
 
   String _dTagFromAddress(String address) {
     final parts = address.split(':');
-    return parts.length > 2 ? parts[2] : '';
+    return parts.length > 2 ? parts.sublist(2).join(':') : '';
   }
 
   String _authorFromAddress(String address) {

@@ -9,9 +9,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:likes_repository/likes_repository.dart';
 import 'package:nostr_sdk/event_kind.dart';
 import 'package:openvine/blocs/comments/comment_reactions/reportable_sites.dart';
+import 'package:openvine/models/content_moderation.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/content_moderation_types.dart';
 import 'package:openvine/services/content_reporting_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 

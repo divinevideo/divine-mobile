@@ -59,7 +59,7 @@ class LiveApiService {
     required String sessionId,
   }) async {
     await _sendJson(
-      '/v1/live/rooms/$roomId/sessions',
+      '/v1/live/rooms/${Uri.encodeComponent(roomId)}/sessions',
       method: HttpMethod.post,
       body: <String, dynamic>{'sessionId': sessionId},
       actionLabel: 'start live session',
@@ -71,7 +71,7 @@ class LiveApiService {
     required LiveRole role,
   }) async {
     final json = await _sendJson(
-      '/v1/live/rooms/$roomId/join',
+      '/v1/live/rooms/${Uri.encodeComponent(roomId)}/join',
       method: HttpMethod.post,
       body: <String, dynamic>{'role': role.name},
       actionLabel: 'fetch live room join token',
@@ -85,7 +85,7 @@ class LiveApiService {
     required String sessionId,
   }) async {
     await _sendJson(
-      '/v1/live/rooms/$roomId/sessions/$sessionId/end',
+      '/v1/live/rooms/${Uri.encodeComponent(roomId)}/sessions/${Uri.encodeComponent(sessionId)}/end',
       method: HttpMethod.post,
       body: const <String, dynamic>{},
       actionLabel: 'end live session',
@@ -98,7 +98,7 @@ class LiveApiService {
     required LiveRole role,
   }) async {
     await _sendJson(
-      '/v1/live/rooms/$roomId/participants/$pubkey/role',
+      '/v1/live/rooms/${Uri.encodeComponent(roomId)}/participants/${Uri.encodeComponent(pubkey)}/role',
       method: HttpMethod.put,
       body: <String, dynamic>{'role': role.name},
       actionLabel: 'update live participant role',
@@ -108,7 +108,7 @@ class LiveApiService {
   Future<LiveRoomRecording?> fetchRecording({
     required String roomId,
   }) async {
-    final uri = _uri('/v1/live/rooms/$roomId/recording');
+    final uri = _uri('/v1/live/rooms/${Uri.encodeComponent(roomId)}/recording');
 
     try {
       final response = await _client

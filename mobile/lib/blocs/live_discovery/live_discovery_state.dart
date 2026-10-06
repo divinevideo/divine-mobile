@@ -4,20 +4,22 @@ import 'package:openvine/models/live/live_session.dart';
 
 enum LiveDiscoveryStatus { initial, loading, success, failure }
 
+enum LiveDiscoveryError { loadFailed }
+
 class LiveDiscoveryState extends Equatable {
   const LiveDiscoveryState({
     this.status = LiveDiscoveryStatus.initial,
     this.rooms = const <LiveRoom>[],
     this.activeSessions = const <LiveSession>[],
     this.upcomingSessions = const <LiveSession>[],
-    this.errorMessage,
+    this.error,
   });
 
   final LiveDiscoveryStatus status;
   final List<LiveRoom> rooms;
   final List<LiveSession> activeSessions;
   final List<LiveSession> upcomingSessions;
-  final String? errorMessage;
+  final LiveDiscoveryError? error;
 
   List<LiveRoom> get activeRooms => _roomsFor(activeSessions);
 
@@ -28,17 +30,15 @@ class LiveDiscoveryState extends Equatable {
     List<LiveRoom>? rooms,
     List<LiveSession>? activeSessions,
     List<LiveSession>? upcomingSessions,
-    String? errorMessage,
-    bool clearErrorMessage = false,
+    LiveDiscoveryError? error,
+    bool clearError = false,
   }) {
     return LiveDiscoveryState(
       status: status ?? this.status,
       rooms: rooms ?? this.rooms,
       activeSessions: activeSessions ?? this.activeSessions,
       upcomingSessions: upcomingSessions ?? this.upcomingSessions,
-      errorMessage: clearErrorMessage
-          ? null
-          : (errorMessage ?? this.errorMessage),
+      error: clearError ? null : (error ?? this.error),
     );
   }
 
@@ -66,6 +66,6 @@ class LiveDiscoveryState extends Equatable {
     rooms,
     activeSessions,
     upcomingSessions,
-    errorMessage,
+    error,
   ];
 }

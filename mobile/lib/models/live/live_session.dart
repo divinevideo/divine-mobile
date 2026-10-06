@@ -42,8 +42,10 @@ class LiveSession extends Equatable {
     required this.speakerPubkeys,
     required this.audienceCount,
     this.hostPubkey,
+    this.title = '',
   });
 
+  final String title;
   final String id;
   final String roomId;
   final String? hostPubkey;
@@ -67,6 +69,7 @@ class LiveSession extends Equatable {
   String get roomAddressKey => _hasHostPubkey ? roomAddress : roomId;
 
   LiveSession copyWith({
+    String? title,
     String? id,
     String? roomId,
     String? hostPubkey,
@@ -77,6 +80,7 @@ class LiveSession extends Equatable {
     int? audienceCount,
   }) {
     return LiveSession(
+      title: title ?? this.title,
       id: id ?? this.id,
       roomId: roomId ?? this.roomId,
       hostPubkey: hostPubkey ?? this.hostPubkey,
@@ -92,6 +96,7 @@ class LiveSession extends Equatable {
 
   @override
   List<Object?> get props => [
+    title,
     id,
     roomId,
     hostPubkey,

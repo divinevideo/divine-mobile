@@ -13354,4 +13354,505 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get liveHiddenChatNotice =>
       'چھپائے گئے پیغامات باقی سب کو نظر آتے رہتے ہیں۔';
+
+  @override
+  String get liveFeaturedHostsDescription =>
+      'ایک نظر میں دیکھیں کہ کون سے میزبان ابھی براہِ راست ہیں یا اگلی باری پر ہیں۔';
+
+  @override
+  String get liveActiveSpeakers => 'فعال مقررین';
+
+  @override
+  String get liveApprove => 'منظور کریں';
+
+  @override
+  String get liveAudience => 'سامعین';
+
+  @override
+  String get liveAudioOnly => 'صرف آڈیو';
+
+  @override
+  String get liveBlockUser => 'صارف کو بلاک کریں';
+
+  @override
+  String get liveCameraAndMicAreOff => 'کیمرا اور مائیکروفون بند ہیں';
+
+  @override
+  String get liveChat => 'چیٹ';
+
+  @override
+  String get liveConnectionLooksShaky => 'کنکشن غیر مستحکم لگ رہا ہے';
+
+  @override
+  String get liveCoverImageURL => 'سرورق کی تصویر کا URL';
+
+  @override
+  String get liveDefaultThumbnail => 'پہلے سے طے شدہ تھمب نیل';
+
+  @override
+  String get liveDemote => 'کردار کم کریں';
+
+  @override
+  String get liveDeny => 'مسترد کریں';
+
+  @override
+  String get liveDropIntoRoomsThatAreAlreadyRolling =>
+      'ان کمروں میں شامل ہوں جہاں گفتگو شروع ہو چکی ہے۔';
+
+  @override
+  String get liveEndSession => 'سیشن ختم کریں';
+
+  @override
+  String get liveEndThisLiveSession => 'یہ براہِ راست سیشن ختم کریں؟';
+
+  @override
+  String get liveFailedToReportUser => 'صارف کی رپورٹ نہیں ہو سکی';
+
+  @override
+  String get liveFeaturedHosts => 'نمایاں میزبان';
+
+  @override
+  String get liveFlipCamera => 'کیمرا بدلیں';
+
+  @override
+  String get liveGoLive => 'براہِ راست شروع کریں';
+
+  @override
+  String get liveHandRaised => 'ہاتھ اٹھا ہوا ہے';
+
+  @override
+  String get liveHost => 'میزبان';
+
+  @override
+  String get liveHostControls => 'میزبان کے کنٹرولز';
+
+  @override
+  String get liveJoinLive => 'براہِ راست شامل ہوں';
+
+  @override
+  String get liveAudioOnlySuggestion =>
+      'نیٹ ورک بہتر ہونے تک صرف آڈیو پر منتقل ہو کر کمرے کا رابطہ مستحکم رکھیں۔';
+
+  @override
+  String get liveHostControlsDescription =>
+      'اسٹیج کو منظم رکھیں، اٹھے ہوئے ہاتھ دیکھیں اور نیٹ ورک خراب ہونے پر ویڈیو کم کریں۔';
+
+  @override
+  String get liveLiveAudioOnly => 'صرف آڈیو براہِ راست';
+
+  @override
+  String get liveLiveNow => 'ابھی براہِ راست';
+
+  @override
+  String get liveLiveRoom => 'براہِ راست کمرہ';
+
+  @override
+  String get liveLiveRoomsAreUnavailable => 'براہِ راست کمرے دستیاب نہیں ہیں۔';
+
+  @override
+  String get liveLiveVideo => 'براہِ راست ویڈیو';
+
+  @override
+  String get liveLiveVideoAndAudio => 'براہِ راست ویڈیو اور آڈیو';
+
+  @override
+  String get liveLowerHand => 'ہاتھ نیچے کریں';
+
+  @override
+  String get liveManageParticipants => 'شرکاء کو منظم کریں';
+
+  @override
+  String get liveModeration => 'نگرانی';
+
+  @override
+  String get liveModerator => 'نگران';
+
+  @override
+  String get liveNoActiveSpeakersYet => 'ابھی کوئی فعال مقرر نہیں۔';
+
+  @override
+  String get liveNoAudienceMembersToModerateRightNow =>
+      'اس وقت نگرانی کے لیے کوئی سامع نہیں۔';
+
+  @override
+  String get liveNoMessagesYetBreakTheSilence =>
+      'ابھی کوئی پیغام نہیں۔ خاموشی توڑیں۔';
+
+  @override
+  String get liveNoOneHasJoinedTheRoomYet =>
+      'ابھی کوئی کمرے میں شامل نہیں ہوا۔';
+
+  @override
+  String get liveNoOneIsWaitingToSpeak => 'کوئی بولنے کا منتظر نہیں ہے۔';
+
+  @override
+  String get liveNoRoomsYetStartTheFirstOne =>
+      'ابھی کوئی کمرہ نہیں۔ پہلا کمرہ شروع کریں۔';
+
+  @override
+  String get liveNoSessionHasBeenScheduledYet => 'ابھی کوئی سیشن طے نہیں ہوا۔';
+
+  @override
+  String get liveNothingHereYet => 'یہاں ابھی کچھ نہیں۔';
+
+  @override
+  String get liveOnStage => 'اسٹیج پر';
+
+  @override
+  String get liveOpenReplay => 'دوبارہ نشریات کھولیں';
+
+  @override
+  String get liveOpenRoom => 'کمرہ کھولیں';
+
+  @override
+  String get liveParticipants => 'شرکاء';
+
+  @override
+  String get livePromote => 'کردار بڑھائیں';
+
+  @override
+  String get liveRaiseHand => 'ہاتھ اٹھائیں';
+
+  @override
+  String get liveRaisedHands => 'اٹھے ہوئے ہاتھ';
+
+  @override
+  String get liveReplayProcessing => 'دوبارہ نشریات تیار ہو رہی ہیں';
+
+  @override
+  String get liveReplayQueued => 'دوبارہ نشریات قطار میں ہیں';
+
+  @override
+  String get liveReplayReady => 'دوبارہ نشریات تیار ہیں';
+
+  @override
+  String get liveReplayUnavailable => 'دوبارہ نشریات دستیاب نہیں';
+
+  @override
+  String get liveReportUser => 'صارف کی رپورٹ کریں';
+
+  @override
+  String get liveRoomDetail => 'کمرے کی تفصیل';
+
+  @override
+  String get liveRoomDetails => 'کمرے کی تفصیلات';
+
+  @override
+  String get liveRoomLinkCopiedToClipboard =>
+      'کمرے کا لنک کلپ بورڈ پر کاپی ہو گیا';
+
+  @override
+  String get liveRoomTitle => 'کمرے کا عنوان';
+
+  @override
+  String get liveRoomUnavailable => 'کمرہ دستیاب نہیں ہے۔';
+
+  @override
+  String get liveSaySomething => 'کچھ کہیں';
+
+  @override
+  String get liveSeeWhatIsLinedUpNext => 'دیکھیں اگلی باری میں کیا ہے۔';
+
+  @override
+  String get liveDiscoveryDescription =>
+      'دیکھیں ابھی کون براہِ راست ہے یا اپنا کمرہ شروع کریں۔';
+
+  @override
+  String get liveSend => 'بھیجیں';
+
+  @override
+  String get liveSession => 'سیشن';
+
+  @override
+  String get liveShareRoom => 'کمرہ شیئر کریں';
+
+  @override
+  String get liveSpeaker => 'مقرر';
+
+  @override
+  String get liveSpeakerHandRaised => 'مقرر، ہاتھ اٹھا ہوا ہے';
+
+  @override
+  String get liveSpeakers => 'مقررین';
+
+  @override
+  String get liveStage => 'اسٹیج';
+
+  @override
+  String get liveStartAPublicRoomInOneShot =>
+      'ایک ہی مرحلے میں عوامی کمرہ شروع کریں۔';
+
+  @override
+  String get liveStartLiveNow => 'ابھی براہِ راست شروع کریں';
+
+  @override
+  String get liveStartingCameraAndMicrophone =>
+      'کیمرا اور مائیکروفون شروع ہو رہے ہیں...';
+
+  @override
+  String get liveStartingCamera => 'کیمرا شروع ہو رہا ہے...';
+
+  @override
+  String get liveStartingMicrophone => 'مائیکروفون شروع ہو رہا ہے...';
+
+  @override
+  String get liveSwitchToAudioOnly => 'صرف آڈیو پر منتقل ہوں';
+
+  @override
+  String get liveReplayReadyDescription =>
+      'براہِ راست نشریات ختم ہو گئیں، مگر دوبارہ دیکھنے کے لیے تیار ہیں۔';
+
+  @override
+  String get liveReplayProcessingDescription =>
+      'براہِ راست نشریات ختم ہو گئیں۔ ہم ابھی دوبارہ نشریات تیار کر رہے ہیں۔';
+
+  @override
+  String get liveEndSessionConfirmation =>
+      'اس سے کمرہ سب کے لیے ختم ہو جائے گا اور اسٹیج بند ہو جائے گا۔';
+
+  @override
+  String get liveTurnCameraOff => 'کیمرا بند کریں';
+
+  @override
+  String get liveTurnCameraOn => 'کیمرا چلائیں';
+
+  @override
+  String get liveTurnMicOff => 'مائیکروفون بند کریں';
+
+  @override
+  String get liveTurnMicOn => 'مائیکروفون چلائیں';
+
+  @override
+  String get liveUnableToOpenThisLiveRoom =>
+      'یہ براہِ راست کمرہ کھولا نہیں جا سکا۔';
+
+  @override
+  String get liveUpcoming => 'آنے والے';
+
+  @override
+  String get liveUpdateTheRoomTitle => 'کمرے کا عنوان بدلیں';
+
+  @override
+  String get liveUpdateTitleStatus => 'عنوان/حالت بدلیں';
+
+  @override
+  String get liveUserBlocked => 'صارف بلاک ہو گیا';
+
+  @override
+  String get liveUserReported => 'صارف کی رپورٹ ہو گئی';
+
+  @override
+  String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>
+      'آپ کی پروفائل تصویر ابتدائی تھمب نیل کے طور پر استعمال ہو رہی ہے۔';
+
+  @override
+  String get liveWaitingForMedia => 'میڈیا کا انتظار ہے';
+
+  @override
+  String get liveWaitingForSpeakersToJoinTheStage =>
+      'مقررین کے اسٹیج پر آنے کا انتظار ہے۔';
+
+  @override
+  String get liveWhatAreYouGoingLiveAbout =>
+      'آپ کی براہِ راست نشریات کس بارے میں ہوں گی؟';
+
+  @override
+  String get liveYouAreOnStage => 'آپ اسٹیج پر ہیں';
+
+  @override
+  String get liveHandRaisedDescription =>
+      'آپ کا ہاتھ اٹھا ہوا ہے۔ میزبان آپ کو مقررین کی قطار سے اسٹیج پر لا سکتا ہے۔';
+
+  @override
+  String liveDefaultRoomTitle(String displayName) {
+    return '$displayName براہِ راست ہیں';
+  }
+
+  @override
+  String liveDefaultRoomSummary(String displayName) {
+    return 'Divine پر $displayName کے ساتھ براہِ راست گفتگو کریں۔';
+  }
+
+  @override
+  String liveHostLabel(String pubkey) {
+    return 'میزبان: $pubkey';
+  }
+
+  @override
+  String liveParticipantCounts(int speakers, int listeners) {
+    String _temp0 = intl.Intl.pluralLogic(
+      speakers,
+      locale: localeName,
+      other: '$speakers مقررین',
+      one: '$speakers مقرر',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      listeners,
+      locale: localeName,
+      other: '$listeners سامعین',
+      one: '$listeners سامع',
+    );
+    return '$_temp0 · $_temp1';
+  }
+
+  @override
+  String liveStartedAt(String time) {
+    return 'شروع ہوا: $time';
+  }
+
+  @override
+  String liveEndedAt(String time) {
+    return 'ختم ہوا: $time';
+  }
+
+  @override
+  String liveScheduledFor(String time) {
+    return 'طے شدہ وقت: $time';
+  }
+
+  @override
+  String liveShareSubject(String title) {
+    return 'Divine پر $title میں براہِ راست شامل ہوں';
+  }
+
+  @override
+  String liveRoomShareSubject(String title) {
+    return 'براہِ راست کمرہ: $title';
+  }
+
+  @override
+  String liveRoleCounts(int hosts, int moderators, int speakers, int audience) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hosts,
+      locale: localeName,
+      other: '$hosts میزبان',
+      one: '$hosts میزبان',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      moderators,
+      locale: localeName,
+      other: '$moderators نگران',
+      one: '$moderators نگران',
+    );
+    String _temp2 = intl.Intl.pluralLogic(
+      speakers,
+      locale: localeName,
+      other: '$speakers مقررین',
+      one: '$speakers مقرر',
+    );
+    String _temp3 = intl.Intl.pluralLogic(
+      audience,
+      locale: localeName,
+      other: '$audience سامعین',
+      one: '$audience سامع',
+    );
+    return '$_temp0, $_temp1, $_temp2, $_temp3';
+  }
+
+  @override
+  String liveSpeakerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count مقررین',
+      one: '$count مقرر',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveListeningCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count سامعین',
+      one: '$count سامع',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveRoomListenerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'کمرے میں $count سامعین',
+      one: 'کمرے میں $count سامع',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveChatMessageSemantics(String displayName) {
+    return '$displayName کی طرف سے براہِ راست چیٹ کا پیغام';
+  }
+
+  @override
+  String get liveShareFailed => 'یہ کمرہ شیئر نہیں ہو سکا۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get liveBlockFailed => 'یہ صارف بلاک نہیں ہو سکا۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get liveRoomStatusHint => 'open، private یا closed استعمال کریں';
+
+  @override
+  String get liveErrorRequestFailed =>
+      'یہ کمرہ اپ ڈیٹ نہیں ہو سکا۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get liveErrorConnectionFailed =>
+      'اس کمرے سے رابطہ نہیں ہو سکا۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get liveErrorSubscriptionFailed =>
+      'کمرے کی اپ ڈیٹس لوڈ نہیں ہو سکیں۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get liveErrorCameraBlocked =>
+      'کیمرا تک رسائی مسدود ہے۔ اسے ترتیبات میں فعال کریں۔';
+
+  @override
+  String get liveErrorCameraRequired =>
+      'اپنا کیمرا چلانے کے لیے کیمرا تک رسائی کی اجازت دیں۔';
+
+  @override
+  String get liveErrorCameraUnavailable => 'کوئی کیمرا دستیاب نہیں ہے۔';
+
+  @override
+  String get liveErrorCameraPromptBlocked =>
+      'کیمرا تک رسائی کی درخواست نہیں ہو سکی۔ ترتیبات دیکھیں۔';
+
+  @override
+  String get liveErrorMicrophoneBlocked =>
+      'مائیکروفون تک رسائی مسدود ہے۔ اسے ترتیبات میں فعال کریں۔';
+
+  @override
+  String get liveErrorMicrophoneRequired =>
+      'اپنا مائیکروفون چلانے کے لیے مائیکروفون تک رسائی کی اجازت دیں۔';
+
+  @override
+  String get liveErrorMicrophoneUnavailable =>
+      'کوئی مائیکروفون دستیاب نہیں ہے۔';
+
+  @override
+  String get liveErrorMicrophonePromptBlocked =>
+      'مائیکروفون تک رسائی کی درخواست نہیں ہو سکی۔ ترتیبات دیکھیں۔';
+
+  @override
+  String get liveErrorSpeakerCapacityReached =>
+      'اسٹیج بھرا ہوا ہے۔ کسی مقرر کے جانے کا انتظار کریں۔';
+
+  @override
+  String get liveTitleRequired => 'کمرے کا عنوان درج کریں۔';
+
+  @override
+  String get liveStartFailed => 'یہ کمرہ شروع نہیں ہو سکا۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get liveSendFailed =>
+      'آپ کا پیغام بھیجا نہیں جا سکا۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get liveChatLoadFailed => 'چیٹ لوڈ نہیں ہو سکی۔ دوبارہ کوشش کریں۔';
 }

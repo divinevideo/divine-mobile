@@ -40,13 +40,13 @@ class MethodChannelNativeCameraPermissionService
 
   @override
   Future<bool> hasPermission() async {
-    final hasPermission = await channel.invokeMethod<bool>('hasPermission');
-    return hasPermission ?? false;
+    return await authorizationStatus() ==
+        NativeCameraAuthorizationStatus.authorized;
   }
 
   @override
   Future<NativeCameraAuthorizationStatus> authorizationStatus() async {
-    final status = await channel.invokeMethod<String>('getAuthorizationStatus');
+    final status = await channel.invokeMethod<String>('cameraPermissionStatus');
     return switch (status) {
       'authorized' => NativeCameraAuthorizationStatus.authorized,
       'notDetermined' => NativeCameraAuthorizationStatus.notDetermined,
@@ -60,7 +60,7 @@ class MethodChannelNativeCameraPermissionService
   Future<NativeCameraAuthorizationStatus>
   microphoneAuthorizationStatus() async {
     final status = await channel.invokeMethod<String>(
-      'getMicrophoneAuthorizationStatus',
+      'microphonePermissionStatus',
     );
     return switch (status) {
       'authorized' => NativeCameraAuthorizationStatus.authorized,
@@ -72,61 +72,27 @@ class MethodChannelNativeCameraPermissionService
   }
 
   @override
-  Future<NativeCameraPermissionStatus> requestPermission() async {
-    try {
-      final granted = await channel.invokeMethod<bool>('requestPermission');
-      if (granted == true) {
-        return NativeCameraPermissionStatus.granted;
-      }
-
-      final status = await authorizationStatus();
-      return switch (status) {
-        NativeCameraAuthorizationStatus.authorized =>
-          NativeCameraPermissionStatus.granted,
-        NativeCameraAuthorizationStatus.denied ||
-        NativeCameraAuthorizationStatus.restricted =>
-          NativeCameraPermissionStatus.requiresSettings,
-        NativeCameraAuthorizationStatus.notDetermined =>
-          NativeCameraPermissionStatus.promptBlocked,
-        NativeCameraAuthorizationStatus.unavailable =>
-          NativeCameraPermissionStatus.unavailable,
-      };
-    } on PlatformException catch (error) {
-      if (error.code == 'PERMISSION_DENIED') {
-        return NativeCameraPermissionStatus.requiresSettings;
-      }
-
-      return NativeCameraPermissionStatus.unavailable;
-    }
-  }
+  Future<NativeCameraPermissionStatus> requestPermission() =>
+      _request('requestCameraPermission');
 
   @override
-  Future<NativeCameraPermissionStatus> requestMicrophonePermission() async {
-    try {
-      final granted = await channel.invokeMethod<bool>(
-        'requestMicrophonePermission',
-      );
-      if (granted == true) {
-        return NativeCameraPermissionStatus.granted;
-      }
+  Future<NativeCameraPermissionStatus> requestMicrophonePermission() =>
+      _request('requestMicrophonePermission');
 
-      final status = await microphoneAuthorizationStatus();
+  Future<NativeCameraPermissionStatus> _request(String method) async {
+    try {
+      final status = await channel.invokeMethod<String>(method);
       return switch (status) {
-        NativeCameraAuthorizationStatus.authorized =>
-          NativeCameraPermissionStatus.granted,
-        NativeCameraAuthorizationStatus.denied ||
-        NativeCameraAuthorizationStatus.restricted =>
-          NativeCameraPermissionStatus.requiresSettings,
-        NativeCameraAuthorizationStatus.notDetermined =>
-          NativeCameraPermissionStatus.promptBlocked,
-        NativeCameraAuthorizationStatus.unavailable =>
-          NativeCameraPermissionStatus.unavailable,
+        'authorized' => NativeCameraPermissionStatus.granted,
+        'denied' ||
+        'restricted' => NativeCameraPermissionStatus.requiresSettings,
+        'notDetermined' => NativeCameraPermissionStatus.promptBlocked,
+        _ => NativeCameraPermissionStatus.unavailable,
       };
     } on PlatformException catch (error) {
       if (error.code == 'PERMISSION_DENIED') {
         return NativeCameraPermissionStatus.requiresSettings;
       }
-
       return NativeCameraPermissionStatus.unavailable;
     }
   }

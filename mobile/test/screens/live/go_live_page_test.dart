@@ -1,12 +1,16 @@
-import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/go_live/go_live_cubit.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/live_providers.dart';
 import 'package:openvine/repositories/live_repository.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/live/go_live_page.dart';
+import 'package:openvine/screens/live/go_live_view.dart';
 import 'package:openvine/screens/live/live_discovery_page.dart';
 import 'package:openvine/services/live_api_service.dart';
 import 'package:openvine/widgets/user_avatar.dart';
@@ -45,6 +49,60 @@ void main() {
           _flattenPaths(buildLiveRoutes(liveEnabled: false)),
           isNot(contains(GoLivePage.path)),
         );
+      },
+    );
+
+    testWidgets(
+      'recreates the host cubit when repository or account identity changes',
+      (
+        tester,
+      ) async {
+        SharedPreferences.setMockInitialValues(<String, Object>{});
+        final preferences = await SharedPreferences.getInstance();
+        var auth = createMockAuthService();
+        final profileRepository = _MockProfileRepository();
+        when(
+          () =>
+              profileRepository.getCachedProfile(pubkey: any(named: 'pubkey')),
+        ).thenAnswer((_) async => null);
+        final api = _MockLiveApiService();
+        final first = _MockLiveRepository();
+        final second = _MockLiveRepository();
+        Widget page(LiveRepository repository) => testMaterialApp(
+          mockSharedPreferences: preferences,
+          mockAuthService: auth,
+          mockProfileRepository: profileRepository,
+          additionalOverrides: [
+            liveRepositoryProvider.overrideWithValue(repository),
+            liveApiServiceProvider.overrideWithValue(api),
+          ],
+          home: const GoLivePage(),
+        );
+        await tester.pumpWidget(page(first));
+        await tester.pumpAndSettle();
+        final oldCubit = tester
+            .element(find.byType(GoLiveView))
+            .read<GoLiveCubit>();
+        await tester.pumpWidget(page(second));
+        await tester.pumpAndSettle();
+        final newCubit = tester
+            .element(find.byType(GoLiveView))
+            .read<GoLiveCubit>();
+        expect(newCubit, isNot(same(oldCubit)));
+        expect(oldCubit.isClosed, isTrue);
+        auth = createMockAuthService();
+        const nextPubkey =
+            'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+        when(() => auth.currentPublicKeyHex).thenReturn(nextPubkey);
+        await tester.pumpWidget(page(second));
+        await tester.pumpAndSettle();
+        expect(
+          tester.element(find.byType(GoLiveView)).read<GoLiveCubit>(),
+          isNot(same(newCubit)),
+        );
+        expect(newCubit.isClosed, isTrue);
+        verify(() => profileRepository.getCachedProfile(pubkey: nextPubkey))
+            .called(1);
       },
     );
 
@@ -217,15 +275,19 @@ void main() {
               liveRepositoryProvider.overrideWithValue(mockLiveRepository),
               liveApiServiceProvider.overrideWithValue(mockLiveApiService),
             ],
-            child: MaterialApp.router(routerConfig: router),
+            child: MaterialApp.router(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              routerConfig: router,
+            ),
           ),
         );
         await tester.pump();
         await tester.pumpAndSettle();
 
-        expect(find.byType(BackButton), findsOneWidget);
+        expect(find.byTooltip('Back'), findsOneWidget);
 
-        await tester.tap(find.byType(BackButton));
+        await tester.tap(find.byTooltip('Back'));
         await tester.pumpAndSettle();
 
         expect(find.text('live discovery'), findsOneWidget);
