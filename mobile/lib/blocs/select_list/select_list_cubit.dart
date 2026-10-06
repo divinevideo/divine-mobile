@@ -74,13 +74,13 @@ class SelectListCubit extends Cubit<SelectListState>
     List<CuratedList>? lists,
     Set<String>? members,
   }) =>
-      (lists ?? state.lists).any(
-        (list) =>
-            list.needsSync &&
-            (list.hasPendingPermissionRecovery ||
-                !list.pendingRepublish ||
-                !(members ?? state.memberListIds).contains(list.id)),
-      )
+      (lists ?? state.lists).any((list) {
+        final notice = SelectListState.syncNoticeOf(
+          list,
+          members ?? state.memberListIds,
+        );
+        return notice != null && notice != SelectListSyncNotice.videoPending;
+      })
       ? SelectListStatus.recoveryPendingSync
       : SelectListStatus.videoPendingSync;
 

@@ -36,6 +36,20 @@ enum SelectListStatus {
   recoveryPendingSync,
 }
 
+/// What a list waiting to sync says on its row in the picker.
+enum SelectListSyncNotice {
+  /// A relay accepted a permission change that still needs its local commit;
+  /// the row cannot change until it syncs.
+  permissionRecovery,
+
+  /// Changes other than holding the video wait to sync, such as a deletion
+  /// request.
+  recovery,
+
+  /// The video is saved in the list here and waits for the relay.
+  videoPending,
+}
+
 class SelectListState extends Equatable {
   const SelectListState({
     required this.lists,
@@ -92,6 +106,25 @@ class SelectListState extends Equatable {
 
   /// Whether the list with [listId] is picked.
   bool isSelected(String listId) => selectedListIds.contains(listId);
+
+  /// What the row of [list] says while it waits to sync; null when it has
+  /// nothing to sync.
+  SelectListSyncNotice? syncNoticeFor(CuratedList list) =>
+      syncNoticeOf(list, memberListIds);
+
+  /// [syncNoticeFor] against [memberListIds] the state has not taken yet.
+  static SelectListSyncNotice? syncNoticeOf(
+    CuratedList list,
+    Set<String> memberListIds,
+  ) {
+    if (!list.needsSync) return null;
+    if (list.hasPendingPermissionRecovery) {
+      return SelectListSyncNotice.permissionRecovery;
+    }
+    return list.pendingRepublish && memberListIds.contains(list.id)
+        ? SelectListSyncNotice.videoPending
+        : SelectListSyncNotice.recovery;
+  }
 
   /// Ids of the lists a save adds the video to.
   Set<String> get listIdsToAdd => selectedListIds.difference(memberListIds);
