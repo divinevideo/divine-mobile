@@ -10,6 +10,7 @@ import 'package:models/models.dart' as model show AspectRatio, ClipSourceCredit;
 import 'package:openvine/extensions/complete_parameters_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
+import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/services/video_editor/video_editor_clip_library_save_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
@@ -314,6 +315,43 @@ void main() {
       expect(forwardedParameters, isNotNull);
       expect(forwardedParameters!.videoEffectsFromCompleteMeta, const [
         VideoEffect.vhs(intensity: 0.5),
+      ]);
+    });
+
+    test('bakes the echo trail over the clip', () async {
+      CompleteParameters? forwardedParameters;
+      VideoEditorRenderService.renderVideoOverride =
+          ({
+            required clips,
+            required usePersistentStorage,
+            aspectRatio,
+            parameters,
+            taskId,
+            maxOutputDuration,
+          }) async {
+            forwardedParameters = parameters;
+            return '/documents/divine_1.mp4';
+          };
+
+      await VideoEditorClipLibrarySaveService.flattenClipForLibrary(
+        clip: _createClip(),
+        renderId: 'save-1',
+        overlays: const EditorOverlaySnapshot(
+          customEffects: [
+            CustomVideoEffect(
+              id: echoVideoEffectId,
+              params: {EditorVideoEffect.intensityParam: 0.5},
+            ),
+          ],
+        ),
+      );
+
+      expect(forwardedParameters, isNotNull);
+      expect(forwardedParameters!.customVideoEffectsFromCompleteMeta, const [
+        CustomVideoEffect(
+          id: echoVideoEffectId,
+          params: {EditorVideoEffect.intensityParam: 0.5},
+        ),
       ]);
     });
 

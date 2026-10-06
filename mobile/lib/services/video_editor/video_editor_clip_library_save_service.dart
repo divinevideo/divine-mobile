@@ -7,6 +7,7 @@ import 'dart:typed_data';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
+import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:pro_image_editor/pro_image_editor.dart' show CompleteParameters;
@@ -162,9 +163,11 @@ class VideoEditorClipLibrarySaveService {
       bodySize: overlays.bodySize,
       // The render reads effects from the history meta, as in a full export.
       meta: {
-        if (overlays.effects.isNotEmpty)
+        if (overlays.effects.isNotEmpty || overlays.customEffects.isNotEmpty)
           VideoEditorConstants.effectsStateHistoryKey: [
             for (final effect in overlays.effects) effect.toMap(),
+            for (final effect in overlays.customEffects)
+              {EditorVideoEffect.customKey: effect.toMap()},
           ],
       },
       // Geometry: the render pipeline *does* read these into its ExportTransform,

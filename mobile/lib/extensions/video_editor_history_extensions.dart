@@ -37,6 +37,11 @@ extension VideoEditorHistoryExtensions on StateManager {
     activeMeta[VideoEditorConstants.effectsStateHistoryKey],
   );
 
+  /// The effects of [videoEffectEntries] Divine renders itself.
+  List<CustomVideoEffect> get customVideoEffects => [
+    for (final entry in videoEffectEntries) ?entry.custom,
+  ];
+
   /// Restores timeline marker positions from the current history metadata.
   List<Duration> get timelineMarkers {
     final raw = activeMeta[VideoEditorConstants.timelineMarkersStateHistoryKey];

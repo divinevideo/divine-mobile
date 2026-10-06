@@ -77,6 +77,7 @@ extension VideoEditorExtensions on ProImageEditorState {
         for (final entry in stateManager.videoEffectEntries)
           if (!entry.onBeat) ?entry.effect,
       ],
+      customEffects: stateManager.customVideoEffects,
       blur: stateManager.activeBlur,
       bodySize: sizesManager.bodySize,
     );

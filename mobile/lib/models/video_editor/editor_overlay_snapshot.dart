@@ -5,7 +5,8 @@ import 'dart:ui';
 
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show VideoEffect;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show CustomVideoEffect, VideoEffect;
 
 /// The overlays sitting over the composition at one moment: captured layers
 /// (text / stickers / drawings), colour filters, tune adjustments, video
@@ -22,6 +23,7 @@ class EditorOverlaySnapshot {
     this.filterStates = const [],
     this.tuneAdjustments = const [],
     this.effects = const [],
+    this.customEffects = const [],
     this.blur = 0,
     this.bodySize,
   });
@@ -38,6 +40,9 @@ class EditorOverlaySnapshot {
   /// Video effects (glitch, VHS, pixelate), each with its own window.
   final List<VideoEffect> effects;
 
+  /// Effects Divine renders itself (the echo trail), each with its own window.
+  final List<CustomVideoEffect> customEffects;
+
   /// Blur strength applied to the whole composition. Carries no time window.
   final double blur;
 
@@ -51,6 +56,7 @@ class EditorOverlaySnapshot {
       filterStates.isEmpty &&
       tuneAdjustments.isEmpty &&
       effects.isEmpty &&
+      customEffects.isEmpty &&
       blur == 0;
 
   /// A copy without the flashing effects (see [isFlashingVideoEffect]).
@@ -62,6 +68,7 @@ class EditorOverlaySnapshot {
       for (final effect in effects)
         if (!isFlashingVideoEffect(effect.type)) effect,
     ],
+    customEffects: customEffects,
     blur: blur,
     bodySize: bodySize,
   );
@@ -116,6 +123,17 @@ class EditorOverlaySnapshot {
           if (_windowFor(effect.startTime, effect.endTime, start, end)
               case final w?)
             effect.copyWith(startTime: w.start, endTime: w.end),
+      ],
+      customEffects: [
+        for (final effect in customEffects)
+          if (_windowFor(effect.startTime, effect.endTime, start, end)
+              case final w?)
+            CustomVideoEffect(
+              id: effect.id,
+              params: effect.params,
+              startTime: w.start,
+              endTime: w.end,
+            ),
       ],
       blur: blur,
       bodySize: bodySize,
