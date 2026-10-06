@@ -91,26 +91,30 @@ class PeopleListMemberTile extends ConsumerWidget {
     final handle = verification == Nip05VerificationStatus.failed
         ? npub
         : (profile?.shortDisplayNip05 ?? npub);
+    final onTap = validPubkey
+        ? () => runDetached(
+            context.push<void>(OtherProfileScreen.pathForNpub(npub)),
+            'open people list member profile',
+            logName: 'PeopleListMemberTile',
+            category: LogCategory.ui,
+          )
+        : null;
+    final onLongPress = canRemove
+        ? () => _confirmRemove(context, displayName)
+        : null;
 
     return Semantics(
       button: true,
       excludeSemantics: true,
+      onTap: onTap,
+      onLongPress: onLongPress,
       label: canRemove
           ? l10n.peopleListsProfileLongPressHint(displayName)
           : l10n.peopleListsViewProfileHint(displayName),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: validPubkey
-            ? () => runDetached(
-                context.push<void>(OtherProfileScreen.pathForNpub(npub)),
-                'open people list member profile',
-                logName: 'PeopleListMemberTile',
-                category: LogCategory.ui,
-              )
-            : null,
-        onLongPress: canRemove
-            ? () => _confirmRemove(context, displayName)
-            : null,
+        onTap: onTap,
+        onLongPress: onLongPress,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(

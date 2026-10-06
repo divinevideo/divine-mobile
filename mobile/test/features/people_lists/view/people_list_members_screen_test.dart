@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -452,14 +453,37 @@ void main() {
           ),
         );
 
-        semantics.dispose();
-
         expect(
           node.label,
           l10n.peopleListsProfileLongPressHint(
             UserProfile.defaultDisplayNameFor(_quiet),
           ),
         );
+        expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+        expect(
+          node.getSemanticsData().hasAction(SemanticsAction.longPress),
+          isTrue,
+        );
+        SemanticsOwner? semanticsOwner;
+        tester.binding.rootPipelineOwner.visitChildren((child) {
+          semanticsOwner ??= child.semanticsOwner;
+        });
+        semanticsOwner!.performAction(
+          node.id,
+          SemanticsAction.longPress,
+        );
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.peopleListsRemove), findsOneWidget);
+        await tester.tap(find.text(l10n.commonCancel));
+        await tester.pumpAndSettle();
+        semanticsOwner!.performAction(
+          node.id,
+          SemanticsAction.tap,
+        );
+        await tester.pumpAndSettle();
+        expect(pushedLocations, hasLength(1));
+        expect(pushedLocations.single, startsWith('/profile-view/'));
+        semantics.dispose();
       },
     );
 
