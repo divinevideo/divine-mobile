@@ -353,7 +353,7 @@ class BadgeRepository {
   /// repository wants — there is no blocklist to consult.
   final BadgeHiddenPubkeyReader? _isHiddenPubkey;
 
-  /// Relay used for public definitions when no account has initialized relays.
+  /// Relay added to every public definition read, including before sign-in.
   final String? _definitionRelayUrl;
 
   /// The profile badge list this repository last published, and whose it is.
@@ -486,17 +486,37 @@ class BadgeRepository {
   /// Every accepted holder of the badges the current account subscribes to.
   ///
   /// Empty when signed out or subscribed to nothing. Throws when the
-  /// subscription list or a holder set cannot be fully loaded.
-  Future<Set<String>> loadSubscribedHolders() async {
+  /// subscription list or a holder set cannot be fully loaded within [timeout].
+  /// At most two badge holder walks run concurrently.
+  Future<Set<String>> loadSubscribedHolders({
+    Duration timeout = const Duration(seconds: 10),
+  }) async {
     final pubkey = _currentPubkey();
     if (pubkey == null || pubkey.isEmpty) return const {};
-    // A timed-out read must throw, not read as "subscribed to nothing", so
-    // Following falls back with a warning instead of quietly losing badges.
-    final subscriptions = await loadSubscriptions(requireComplete: true);
-    final holderSets = await Future.wait(
-      subscriptions.map(loadAcceptedHolders),
+    var expired = false;
+    Future<Set<String>> load() async {
+      final subscriptions = (await loadSubscriptions(
+        requireComplete: true,
+      )).toList();
+      final holders = <String>{};
+      // Leave the client's remaining query slots available for other screens.
+      for (var offset = 0; offset < subscriptions.length; offset += 2) {
+        if (expired) break;
+        final batch = subscriptions.skip(offset).take(2);
+        final results = await Future.wait(batch.map(loadAcceptedHolders));
+        results.forEach(holders.addAll);
+      }
+      return Set.unmodifiable(holders);
+    }
+
+    return load().timeout(
+      timeout,
+      onTimeout: () {
+        // In-flight relay reads settle themselves; do not queue another batch.
+        expired = true;
+        throw TimeoutException('Badge subscriptions could not be fully loaded');
+      },
     );
-    return Set.unmodifiable({for (final holders in holderSets) ...holders});
   }
 
   /// Public, account-synced badge subscriptions stored in a NIP-78 event.
