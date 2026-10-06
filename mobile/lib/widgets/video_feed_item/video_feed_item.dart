@@ -626,9 +626,6 @@ class VideoOverlayActions extends ConsumerWidget {
                 // These are video relationships, not caption content. Keep
                 // them visible when stripping wire-format attribution leaves
                 // an otherwise captionless video.
-                // The row can filter every tagged collaborator out (e.g.
-                // unconfirmed invites for a third-party viewer), so it owns
-                // its gap instead of reserving one here.
                 if (video != null && video.hasCollaborators)
                   CollaboratorAvatarRow(
                     video: video,
@@ -642,9 +639,8 @@ class VideoOverlayActions extends ConsumerWidget {
                     onInteracted: onInteracted,
                   ),
                 ],
-                // Audio attribution renders nothing without an audio
-                // reference, so its gap is gated on the same check to keep
-                // the caption flush with the bottom of the overlay.
+                // The row renders nothing without an audio reference, so the
+                // gap above it is gated on the same check.
                 if (video != null && video.hasAudioReference) ...[
                   const SizedBox(height: 4),
                   AudioAttributionRow(video: video),
