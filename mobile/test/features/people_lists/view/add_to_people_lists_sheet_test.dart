@@ -5,7 +5,7 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/semantics.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -197,6 +197,27 @@ void main() {
       await tester.tap(find.text(l10n.peopleListsAddPeopleRetry));
       verify(() => bloc.add(any(that: isA<PeopleListsOwnerSyncRequested>())))
           .called(1);
+    });
+
+    testWidgets("the failed owner read is said in the sheet's font", (
+      tester,
+    ) async {
+      whenListen(
+        bloc,
+        const Stream<PeopleListsState>.empty(),
+        initialState: _stateWith(lists: const [])
+            .copyWith(ownerReadStatus: PeopleListsOwnerReadStatus.failed),
+      );
+      await tester.pumpWidget(buildSubject(pubkey: _targetPubkey));
+      await tester.pump();
+
+      final message = tester.renderObject<RenderParagraph>(
+        find.text(l10n.peopleListsLoadFailed),
+      );
+      expect(
+        message.text.style?.fontFamily,
+        VineTheme.bodyMediumFont().fontFamily,
+      );
     });
 
     testWidgets('cached lists stay visible when the owner read fails', (
