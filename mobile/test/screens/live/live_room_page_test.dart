@@ -1073,7 +1073,8 @@ void main() {
         await tester.pump();
         await tester.pump();
 
-        expect(find.text('Connection looks shaky'), findsOneWidget);
+        // Both the stage status and the actionable suggestion describe reconnecting.
+        expect(find.text('Connection looks shaky'), findsNWidgets(2));
         expect(find.text('Switch to audio only'), findsOneWidget);
 
         await tester.tap(find.text('Switch to audio only'));
