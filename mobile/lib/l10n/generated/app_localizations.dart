@@ -21949,7 +21949,7 @@ abstract class AppLocalizations {
   /// **', '**
   String get listMemberNamesSeparator;
 
-  /// Screen-reader label for a list card, read as one sentence: the list's name, 'Private' when it is a device-only list, and its count as already localized by listVideoCount or listMemberCount. The order and the punctuation between them are the locale's to choose.
+  /// Screen-reader label for a list card, read as one sentence: the list's name, 'Private' for a private list, and its count as already localized by listVideoCount or listMemberCount. A private list encrypts its video contents; its title, description and tags are published. Do not translate 'Private' as device-only. The order and the punctuation between them are the locale's to choose.
   ///
   /// In en, this message translates to:
   /// **'{visibility, select, private{{name}, Private, {count}} other{{name}, {count}}}'**
