@@ -10,7 +10,7 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/live/live_discovery_page.dart';
 import 'package:openvine/screens/live/live_route_data.dart';
 import 'package:openvine/screens/live/widgets/live_replay_banner.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:openvine/utils/share_sheet.dart';
 
 class LiveRoomDetailView extends StatelessWidget {
   const LiveRoomDetailView({
@@ -263,7 +263,8 @@ Future<void> _shareRoom(BuildContext context, LiveRoom room) async {
       '${room.title}\nhttps://divine.video${RoutePaths.liveRoomDetailFor(room.id)}';
 
   try {
-    await SharePlus.instance.share(
+    await showShareSheet(
+      context,
       ShareParams(
         text: shareText,
         subject: context.l10n.liveShareSubject(room.title),

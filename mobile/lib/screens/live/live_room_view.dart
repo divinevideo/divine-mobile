@@ -16,7 +16,7 @@ import 'package:openvine/screens/live/widgets/live_host_controls_sheet.dart';
 import 'package:openvine/screens/live/widgets/live_local_media_controls.dart';
 import 'package:openvine/screens/live/widgets/live_room_error_banner.dart';
 import 'package:openvine/screens/live/widgets/live_room_stage.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:openvine/utils/share_sheet.dart';
 
 class LiveRoomView extends StatefulWidget {
   const LiveRoomView({super.key});
@@ -231,7 +231,8 @@ class _LiveRoomViewState extends State<LiveRoomView> {
     final roomUrl =
         'https://divine.video${RoutePaths.liveRoomFor(room.id, session.id)}';
     try {
-      await SharePlus.instance.share(
+      await showShareSheet(
+        context,
         ShareParams(
           text: roomUrl,
           subject: context.l10n.liveRoomShareSubject(room.title),
