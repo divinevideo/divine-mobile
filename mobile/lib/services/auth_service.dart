@@ -27,6 +27,7 @@ import 'package:openvine/models/key_import_failed_exception.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/models/signer_readiness.dart';
 import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/services/auth/account_session_store.dart';
 import 'package:openvine/services/auth/following_prefetch_marker.dart';
 import 'package:openvine/services/auth/known_accounts_registry.dart';
 import 'package:openvine/services/auth/nostr_connect_coordinator.dart';
@@ -61,16 +62,6 @@ export 'package:openvine/services/auth/relay_discovery_orchestrator.dart'
     show BootstrapRelayListCallback, UserRelaysDiscoveredCallback;
 
 part 'auth/account_cleanup_failure.dart';
-
-// Key for the last-used account npub (used to restore the correct identity on restart)
-const _kLastUsedNpubKey = 'last_used_npub';
-
-// Key for the session recovery anchor: the npub that was actively signed in at
-// the time of the most recent sign-out. Written at the start of signOut() so
-// the welcome screen can detect cross-account cold-start restores and surface
-// a confirmation banner before silently completing a switch. Cleared by
-// _setupUserSession() once the user has explicitly signed back in.
-const _kSessionRecoveryAnchorKey = 'session_recovery_anchor_npub';
 
 const _accountDeletionSessionExpiryMargin = Duration(minutes: 10);
 
@@ -509,7 +500,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     // user adding a Keycast account originally registered on another
     // device (their local PRIMARY has a different device-only key).
     //
-    // Use _kLastUsedNpubKey as the tiebreaker to decide which side is
+    // Use kLastUsedNpubKey as the tiebreaker to decide which side is
     // authoritative. Whichever matches last-used wins. If neither
     // matches, safe default: clear the session.
     //
@@ -521,7 +512,9 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
           sessionPubkey == null || sessionPubkey != localKey.publicKeyHex;
       if (diverged) {
         final prefs = await SharedPreferences.getInstance();
-        final lastUsedNpub = prefs.getString(_kLastUsedNpubKey);
+        final lastUsedNpub = prefs.getString(
+          kLastUsedNpubKey,
+        );
         final localNpub = NostrKeyUtils.encodePubKey(localKey.publicKeyHex);
         final sessionNpub = sessionPubkey != null
             ? NostrKeyUtils.encodePubKey(sessionPubkey)
@@ -772,7 +765,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     // Read the session recovery anchor once. Both the direct-restore and the
     // refresh paths below use it to detect cross-account cold-start restores.
     final prefs = await SharedPreferences.getInstance();
-    final anchorNpub = prefs.getString(_kSessionRecoveryAnchorKey);
+    final anchorNpub = prefs.getString(kSessionRecoveryAnchorKey);
 
     // If session is valid with RPC access, check whether it belongs to the
     // same account the user was signed into when they last signed out.
@@ -949,7 +942,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   /// [_setupUserSession] once the user has explicitly signed back in.
   Future<String?> getSessionRecoveryAnchorNpub() async =>
       (await SharedPreferences.getInstance()).getString(
-        _kSessionRecoveryAnchorKey,
+        kSessionRecoveryAnchorKey,
       );
 
   /// Shared OAuth session refresh logic used by both [initialize] and
@@ -1284,8 +1277,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     );
 
     _setAuthState(AuthState.authenticating);
-    _lastError = null;
-    _lastFailureReason = null;
+    clearError();
 
     try {
       // Generate new secure key container
@@ -1384,8 +1376,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     );
 
     _setAuthState(AuthState.authenticating);
-    _lastError = null;
-    _lastFailureReason = null;
+    clearError();
 
     try {
       await _keyStorage.deleteKeys();
@@ -1489,8 +1480,8 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     }
     if (_currentKeyContainer == null) {
       try {
-        if (prefs.getString(_kSessionRecoveryAnchorKey) == npub &&
-            !await prefs.remove(_kSessionRecoveryAnchorKey)) {
+        if (prefs.getString(kSessionRecoveryAnchorKey) == npub &&
+            !await prefs.remove(kSessionRecoveryAnchorKey)) {
           throw StateError('Could not clear the session recovery anchor');
         }
         await _resetRecoveryAfterLocalAccountRemoval(prefs, strict: true);
@@ -2062,8 +2053,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     );
 
     _setAuthState(AuthState.authenticating);
-    _lastError = null;
-    _lastFailureReason = null;
+    clearError();
 
     try {
       // Check platform
@@ -2153,8 +2143,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     }
 
     _setAuthState(AuthState.authenticating);
-    _lastError = null;
-    _lastFailureReason = null;
+    clearError();
 
     try {
       final result = await service.connect();
@@ -2383,8 +2372,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       category: LogCategory.auth,
     );
     _setAuthState(AuthState.authenticating);
-    _lastError = null;
-    _lastFailureReason = null;
+    clearError();
 
     if (!isValid) {
       _lastError = 'Failed to import $label: $invalidFormat';
@@ -2438,8 +2426,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     );
 
     _setAuthState(AuthState.authenticating);
-    _lastError = null;
-    _lastFailureReason = null;
+    clearError();
 
     try {
       // Parse the bunker URL
@@ -2704,8 +2691,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     );
 
     _setAuthState(AuthState.authenticating);
-    _lastError = null;
-    _lastFailureReason = null;
+    clearError();
     _hasExpiredOAuthSession = false;
     _authRpcCapabilityInitialized = false;
 
@@ -3087,7 +3073,10 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
 
       final leavingNpub = _currentKeyContainer?.npub;
       if (!deleteKeys && leavingNpub != null) {
-        await prefs.setString(_kSessionRecoveryAnchorKey, leavingNpub);
+        await prefs.setString(
+          kSessionRecoveryAnchorKey,
+          leavingNpub,
+        );
         Log.debug(
           'signOut: recorded session recovery anchor=${pubkeyForLogs(leavingNpub)}',
           name: 'AuthService',
@@ -3097,7 +3086,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         // Destructive sign-out: clear any stale anchor so the remaining
         // account's automatic restore is not blocked by the guard in
         // _restoreDivineRpcOrFallbackUnauthenticated.
-        await prefs.remove(_kSessionRecoveryAnchorKey);
+        await prefs.remove(kSessionRecoveryAnchorKey);
         Log.debug(
           'signOut: cleared session recovery anchor '
           '(deleteKeys=$deleteKeys)',
@@ -3245,8 +3234,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       _currentKeyContainer?.dispose();
       _currentKeyContainer = null;
       _currentProfile = null;
-      _lastError = null;
-      _lastFailureReason = null;
+      clearError();
 
       _onUserRelaysDiscovered = null;
       _onBootstrapRelayListRequested = null;
@@ -3440,8 +3428,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     _currentKeyContainer?.dispose();
     _currentKeyContainer = null;
     _currentProfile = null;
-    _lastError = null;
-    _lastFailureReason = null;
+    clearError();
     _onUserRelaysDiscovered = null;
     _onBootstrapRelayListRequested = null;
     _userRelays = [];
@@ -3457,7 +3444,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
 
     await _clearOAuthSessionForSignOut();
 
-    await prefs.remove(_kSessionRecoveryAnchorKey);
+    await prefs.remove(kSessionRecoveryAnchorKey);
     await prefs.remove(TermsAcceptanceKeys.ageVerified16Plus);
     await prefs.remove(TermsAcceptanceKeys.termsAcceptedAt);
     await prefs.remove(SharedPreferencesRelayStorage.defaultKey);
@@ -3479,7 +3466,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   }) async {
     try {
       final restorableCount = await _knownAccounts.resetRecoveryPreferences(
-        lastUsedNpubKey: _kLastUsedNpubKey,
+        lastUsedNpubKey: kLastUsedNpubKey,
       );
       _authSource = AuthenticationSource.none;
 
@@ -3512,7 +3499,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         kAuthenticationSourceKey,
         AuthenticationSource.none.code,
       );
-      await prefs.remove(_kLastUsedNpubKey);
+      await prefs.remove(kLastUsedNpubKey);
     }
   }
 
@@ -3606,7 +3593,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final lastNpub = prefs.getString(_kLastUsedNpubKey);
+      final lastNpub = prefs.getString(kLastUsedNpubKey);
 
       if (lastNpub != null && lastNpub.isNotEmpty) {
         Log.info(
@@ -3815,8 +3802,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         category: LogCategory.auth,
       );
       _storageErrorOccurred = false;
-      _lastError = null;
-      _lastFailureReason = null;
+      clearError();
       _setAuthState(AuthState.unauthenticated);
       return;
     } else {
@@ -3934,19 +3920,8 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     _setAuthState(AuthState.unauthenticated);
   }
 
-  Future<void> acceptTerms() async {
-    Log.debug(
-      'acceptTerms: marking terms accepted and age verified',
-      name: 'AuthService',
-      category: LogCategory.auth,
-    );
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      TermsAcceptanceKeys.termsAcceptedAt,
-      DateTime.now().toIso8601String(),
-    );
-    await prefs.setBool(TermsAcceptanceKeys.ageVerified16Plus, true);
-  }
+  Future<void> acceptTerms() async =>
+      AccountSessionStore(await SharedPreferences.getInstance()).acceptTerms();
 
   /// Builds a [NostrIdentity] from the current mutable signer fields.
   ///
@@ -4107,14 +4082,10 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         await claimLegacyRowsForCurrentUser();
       }
 
-      await prefs.setString(kAuthenticationSourceKey, source.code);
-
-      await prefs.setString(_kLastUsedNpubKey, keyContainer.npub);
-
-      // Clear the session recovery anchor now that the user has explicitly
-      // signed in. A stale anchor must not persist to interfere with future
-      // welcome-screen mismatch detection after the next sign-out.
-      await prefs.remove(_kSessionRecoveryAnchorKey);
+      await AccountSessionStore(prefs).recordAuthentication(
+        source: source,
+        npub: keyContainer.npub,
+      );
 
       final hasFollowingCache = await prepareFollowingAuthRedirect(
         prefs,

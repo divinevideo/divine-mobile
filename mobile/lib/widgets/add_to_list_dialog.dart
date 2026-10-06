@@ -125,9 +125,11 @@ class SelectListDialog extends StatelessWidget {
             onRetry: () => ref.invalidate(curatedListsStateProvider),
           ),
           actions: [
-            TextButton(
+            DivineButton(
+              label: context.l10n.listDone,
+              type: DivineButtonType.secondary,
+              size: DivineButtonSize.small,
               onPressed: () => Navigator.of(context).pop(),
-              child: Text(context.l10n.listDone),
             ),
           ],
         ),
