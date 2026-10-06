@@ -194,9 +194,8 @@ class _ListRow extends StatelessWidget {
     final syncing = context.select(
       (SelectListCubit cubit) => cubit.state.syncingListIds.contains(list.id),
     );
-    final pendingSync = context.select(
-      (SelectListCubit cubit) =>
-          cubit.state.pendingSyncListIds.contains(list.id),
+    final syncNotice = context.select(
+      (SelectListCubit cubit) => cubit.state.syncNoticeFor(list),
     );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -216,23 +215,20 @@ class _ListRow extends StatelessWidget {
               ? null
               : () => context.read<SelectListCubit>().toggled(list.id),
         ),
-        if (pendingSync)
+        if (syncNotice != null)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  list.hasPendingPermissionRecovery
-                      ? l10n.listPermissionsRecoveryPending
-                      : !list.pendingRepublish ||
-                            !context
-                                .read<SelectListCubit>()
-                                .state
-                                .memberListIds
-                                .contains(list.id)
-                      ? l10n.listRecoveryPending
-                      : l10n.listVideoPendingSync,
+                  switch (syncNotice) {
+                    SelectListSyncNotice.permissionRecovery =>
+                      l10n.listPermissionsRecoveryPending,
+                    SelectListSyncNotice.recovery => l10n.listRecoveryPending,
+                    SelectListSyncNotice.videoPending =>
+                      l10n.listVideoPendingSync,
+                  },
                   style: VineTheme.bodyMediumFont(
                     color: context.vineColors.onSurfaceVariant,
                   ),
