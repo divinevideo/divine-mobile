@@ -5746,5 +5746,7 @@
       }
     }
   },
-  "userRowPosted": "Opublikowano {time}"
+  "userRowPosted": "Opublikowano {time}",
+  "minorAccountReviewVideoSubmittedBody": "Twój film został przesłany do sprawdzenia.",
+  "minorAccountReviewVideoSubmittedTitle": "Film przesłany"
 }

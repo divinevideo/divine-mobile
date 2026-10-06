@@ -4752,5 +4752,7 @@
       }
     }
   },
-  "userRowPosted": "Na-post {time}"
+  "userRowPosted": "Na-post {time}",
+  "minorAccountReviewVideoSubmittedBody": "Naipasa na ang video mo para sa pagsusuri.",
+  "minorAccountReviewVideoSubmittedTitle": "Naipasa na ang video"
 }

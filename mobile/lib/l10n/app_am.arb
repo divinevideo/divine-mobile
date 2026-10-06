@@ -5806,5 +5806,7 @@
       }
     }
   },
-  "userRowPosted": "የተለጠፈው {time}"
+  "userRowPosted": "የተለጠፈው {time}",
+  "minorAccountReviewVideoSubmittedBody": "ቪዲዮዎ ለግምገማ ተልኳል።",
+  "minorAccountReviewVideoSubmittedTitle": "ቪዲዮው ተልኳል"
 }

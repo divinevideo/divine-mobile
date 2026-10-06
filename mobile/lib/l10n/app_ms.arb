@@ -7047,5 +7047,7 @@
       }
     }
   },
-  "userRowPosted": "Disiarkan {time}"
+  "userRowPosted": "Disiarkan {time}",
+  "minorAccountReviewVideoSubmittedBody": "Video anda telah dihantar untuk semakan.",
+  "minorAccountReviewVideoSubmittedTitle": "Video dihantar"
 }

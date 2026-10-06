@@ -5292,5 +5292,7 @@
       }
     }
   },
-  "userRowPosted": "{time} 게시"
+  "userRowPosted": "{time} 게시",
+  "minorAccountReviewVideoSubmittedBody": "검토를 위해 동영상을 제출했어요.",
+  "minorAccountReviewVideoSubmittedTitle": "동영상 제출 완료"
 }

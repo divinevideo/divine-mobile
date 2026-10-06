@@ -5746,5 +5746,7 @@
       }
     }
   },
-  "userRowPosted": "Publicat {time}"
+  "userRowPosted": "Publicat {time}",
+  "minorAccountReviewVideoSubmittedBody": "Videoclipul tău a fost trimis pentru verificare.",
+  "minorAccountReviewVideoSubmittedTitle": "Videoclip trimis"
 }

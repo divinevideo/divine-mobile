@@ -5746,5 +5746,7 @@
       }
     }
   },
-  "userRowPosted": "Publicerat {time}"
+  "userRowPosted": "Publicerat {time}",
+  "minorAccountReviewVideoSubmittedBody": "Din video har skickats för granskning.",
+  "minorAccountReviewVideoSubmittedTitle": "Videon har skickats"
 }

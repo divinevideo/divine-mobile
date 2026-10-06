@@ -8679,5 +8679,7 @@
       }
     }
   },
-  "userRowPosted": "{time} పోస్ట్ చేయబడింది"
+  "userRowPosted": "{time} పోస్ట్ చేయబడింది",
+  "minorAccountReviewVideoSubmittedBody": "మీ వీడియో సమీక్ష కోసం సమర్పించబడింది.",
+  "minorAccountReviewVideoSubmittedTitle": "వీడియో సమర్పించబడింది"
 }

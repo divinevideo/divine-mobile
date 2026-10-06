@@ -5746,5 +5746,7 @@
       }
     }
   },
-  "userRowPosted": "Publié {time}"
+  "userRowPosted": "Publié {time}",
+  "minorAccountReviewVideoSubmittedBody": "Ta vidéo a été envoyée pour examen.",
+  "minorAccountReviewVideoSubmittedTitle": "Vidéo envoyée"
 }

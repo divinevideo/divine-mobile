@@ -107,6 +107,35 @@ void main() {
           const CameraPermissionLoading(),
           const CameraPermissionLoaded(CameraPermissionStatus.authorized),
         ],
+        verify: (_) {
+          verify(() => mockPermissionsService.requestGalleryPermission())
+              .called(1);
+        },
+      );
+
+      blocTest<CameraPermissionBloc, CameraPermissionState>(
+        'private captures can request camera and microphone without gallery',
+        setUp: () {
+          when(() => mockPermissionsService.requestCameraPermission())
+              .thenAnswer((_) async => PermissionStatus.granted);
+          when(() => mockPermissionsService.requestMicrophonePermission())
+              .thenAnswer((_) async => PermissionStatus.granted);
+        },
+        build: () => CameraPermissionBloc(
+          permissionsService: mockPermissionsService,
+          requestGalleryPermission: false,
+          skipLinuxBypass: true,
+        ),
+        seed: () =>
+            const CameraPermissionLoaded(CameraPermissionStatus.canRequest),
+        act: (bloc) => bloc.add(const CameraPermissionRequest()),
+        expect: () => [
+          const CameraPermissionLoading(),
+          const CameraPermissionLoaded(CameraPermissionStatus.authorized),
+        ],
+        verify: (_) {
+          verifyNever(() => mockPermissionsService.requestGalleryPermission());
+        },
       );
 
       blocTest<CameraPermissionBloc, CameraPermissionState>(

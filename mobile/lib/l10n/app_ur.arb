@@ -7047,5 +7047,7 @@
       }
     }
   },
-  "userRowPosted": "{time} پوسٹ کی گئی"
+  "userRowPosted": "{time} پوسٹ کی گئی",
+  "minorAccountReviewVideoSubmittedBody": "آپ کی ویڈیو جائزے کے لیے جمع ہو گئی ہے۔",
+  "minorAccountReviewVideoSubmittedTitle": "ویڈیو جمع ہو گئی"
 }

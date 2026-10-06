@@ -5870,5 +5870,7 @@
       }
     }
   },
-  "userRowPosted": "Публикувано {time}"
+  "userRowPosted": "Публикувано {time}",
+  "minorAccountReviewVideoSubmittedBody": "Видеото ти е изпратено за преглед.",
+  "minorAccountReviewVideoSubmittedTitle": "Видеото е изпратено"
 }

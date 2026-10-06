@@ -10649,5 +10649,7 @@
       }
     }
   },
-  "userRowPosted": "Posted {time}"
+  "userRowPosted": "Posted {time}",
+  "minorAccountReviewVideoSubmittedBody": "Your video has been submitted for review.",
+  "minorAccountReviewVideoSubmittedTitle": "Video submitted"
 }

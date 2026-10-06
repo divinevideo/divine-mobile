@@ -5746,5 +5746,7 @@
       }
     }
   },
-  "userRowPosted": "Geplaatst {time}"
+  "userRowPosted": "Geplaatst {time}",
+  "minorAccountReviewVideoSubmittedBody": "Je video is ingediend voor beoordeling.",
+  "minorAccountReviewVideoSubmittedTitle": "Video ingediend"
 }

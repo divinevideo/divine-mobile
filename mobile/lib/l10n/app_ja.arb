@@ -5746,5 +5746,7 @@
       }
     }
   },
-  "userRowPosted": "{time}に投稿"
+  "userRowPosted": "{time}に投稿",
+  "minorAccountReviewVideoSubmittedBody": "動画を確認のために送信しました。",
+  "minorAccountReviewVideoSubmittedTitle": "動画を送信しました"
 }

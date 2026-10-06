@@ -5746,5 +5746,7 @@
       }
     }
   },
-  "userRowPosted": "نُشر {time}"
+  "userRowPosted": "نُشر {time}",
+  "minorAccountReviewVideoSubmittedBody": "تم إرسال الفيديو للمراجعة.",
+  "minorAccountReviewVideoSubmittedTitle": "تم إرسال الفيديو"
 }

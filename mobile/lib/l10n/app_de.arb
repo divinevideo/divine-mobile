@@ -5746,5 +5746,7 @@
       }
     }
   },
-  "userRowPosted": "Gepostet {time}"
+  "userRowPosted": "Gepostet {time}",
+  "minorAccountReviewVideoSubmittedBody": "Dein Video wurde zur Prüfung eingereicht.",
+  "minorAccountReviewVideoSubmittedTitle": "Video eingereicht"
 }

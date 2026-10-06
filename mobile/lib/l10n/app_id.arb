@@ -5746,5 +5746,7 @@
       }
     }
   },
-  "userRowPosted": "Diposting {time}"
+  "userRowPosted": "Diposting {time}",
+  "minorAccountReviewVideoSubmittedBody": "Videomu telah dikirim untuk ditinjau.",
+  "minorAccountReviewVideoSubmittedTitle": "Video terkirim"
 }

@@ -5746,5 +5746,7 @@
       }
     }
   },
-  "userRowPosted": "{time} paylaşıldı"
+  "userRowPosted": "{time} paylaşıldı",
+  "minorAccountReviewVideoSubmittedBody": "Videon incelenmek üzere gönderildi.",
+  "minorAccountReviewVideoSubmittedTitle": "Video gönderildi"
 }
