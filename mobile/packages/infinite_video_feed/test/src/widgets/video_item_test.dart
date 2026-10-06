@@ -148,6 +148,75 @@ void main() {
       },
     );
 
+    testWidgets(
+      'undoes the stretch of a legacy 16:9 derivative of a square video',
+      (tester) async {
+        final controller = FakeController();
+        addTearDown(controller.dispose);
+
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: VideoItemWidget(
+              controller: controller,
+              declaredWidth: 480,
+              declaredHeight: 480,
+            ),
+          ),
+        );
+
+        controller.pushState(
+          const DivineVideoPlayerState(videoWidth: 1280, videoHeight: 720),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        final fittedBox = tester.widget<FittedBox>(find.byType(FittedBox));
+        final fittedSize = tester.widget<SizedBox>(
+          find.descendant(
+            of: find.byType(FittedBox),
+            matching: find.byType(SizedBox),
+          ),
+        );
+        expect(fittedBox.fit, equals(BoxFit.contain));
+        expect(fittedSize.width! / fittedSize.height!, equals(1.0));
+      },
+    );
+
+    testWidgets('keeps the decoded ratio when the declared dim agrees', (
+      tester,
+    ) async {
+      final controller = FakeController();
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: VideoItemWidget(
+            controller: controller,
+            declaredWidth: 1920,
+            declaredHeight: 1080,
+          ),
+        ),
+      );
+
+      controller.pushState(
+        const DivineVideoPlayerState(videoWidth: 1280, videoHeight: 720),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      final fittedBox = tester.widget<FittedBox>(find.byType(FittedBox));
+      final fittedSize = tester.widget<SizedBox>(
+        find.descendant(
+          of: find.byType(FittedBox),
+          matching: find.byType(SizedBox),
+        ),
+      );
+      expect(fittedBox.fit, equals(BoxFit.cover));
+      expect(fittedSize.width! / fittedSize.height!, closeTo(16 / 9, 1e-9));
+    });
+
     testWidgets('uses BoxFit.contain when shouldPortraitExpand is false', (
       tester,
     ) async {

@@ -15,6 +15,7 @@ import 'package:infinite_video_feed/src/services/disk_prefetcher.dart';
 import 'package:infinite_video_feed/src/services/load_watchdog.dart';
 import 'package:infinite_video_feed/src/services/playback_source_registry.dart';
 import 'package:infinite_video_feed/src/services/stale_playback_detector.dart';
+import 'package:infinite_video_feed/src/utils/display_aspect_ratio.dart';
 import 'package:infinite_video_feed/src/utils/playback_failure_log.dart';
 import 'package:infinite_video_feed/src/utils/playback_sources.dart';
 import 'package:infinite_video_feed/src/utils/source_loader.dart';
@@ -2007,11 +2008,18 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
 
   // Determine if the video is square from the controller's resolved
   // dimensions. False until dimensions are available.
-  bool _isSquareVideo(DivineVideoPlayerController? controller) {
+  bool _isSquareVideo(
+    DivineVideoPlayerController? controller,
+    VideoEvent video,
+  ) {
     if (controller == null) return false;
-    final state = controller.state;
+    final aspectRatio = displayAspectRatio(
+      decodedAspectRatio: controller.state.aspectRatio,
+      declaredWidth: video.width,
+      declaredHeight: video.height,
+    );
     // Media3 pixel ratios arrive rounded to float32 precision.
-    return (state.aspectRatio - 1.0).abs() < 1e-6;
+    return (aspectRatio - 1.0).abs() < 1e-6;
   }
 
   // ─── Build ──────────────────────────────────────────────────────────────
@@ -2046,9 +2054,12 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       controller,
       isActive: index == _currentIndex,
     );
+    final video = widget.videos[index];
     final videoItem = VideoItemWidget(
       controller: controller,
       shouldPortraitExpand: widget.shouldPortraitExpand,
+      declaredWidth: video.width,
+      declaredHeight: video.height,
     );
 
     final hasVideoSize =
@@ -2064,7 +2075,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
           ?widget.loadingBuilder?.call(
             context,
             index,
-            isSquare: _isSquareVideo(controller),
+            isSquare: _isSquareVideo(controller, video),
           ),
 
         if (!hasError && hasVideoSize)
