@@ -183,8 +183,8 @@ class SelectListCubit extends Cubit<SelectListState>
 
   /// Picks the list with [listId], or unpicks it when it is picked.
   ///
-  /// Ignored during read-only recovery or a save, for an unavailable list, and for
-  /// one waiting on an accepted permission change. Clears the sheet instead
+  /// Ignored during read-only recovery or a save, for an unavailable list, and
+  /// for one waiting on an accepted permission change. Clears the sheet instead
   /// once the account it opened for is no longer current.
   void toggled(String listId) {
     if (state.isSaving) return;
@@ -221,8 +221,7 @@ class SelectListCubit extends Cubit<SelectListState>
   /// current or no longer owns a list it would change. Ignored while
   /// [SelectListState.canSubmit] is false, as the sheet's check is then
   /// disabled. Read-only recovery also blocks every write. Returns the outcome
-  /// so a caller can report failure even after
-  /// the sheet closes.
+  /// so a caller can report failure even after the sheet closes.
   Future<SelectListStatus?> submitted() async {
     if (!isSessionCurrent) return _sessionFailure();
     if (_writesPaused() || !state.canSubmit) return null;
