@@ -13,6 +13,7 @@ import 'package:openvine/extensions/complete_parameters_extensions.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
@@ -1074,6 +1075,10 @@ class VideoEditorRenderService {
   /// first frame and its leave animations on the last, where they would play
   /// on the unsplit layer.
   ///
+  /// A censor layer (an area hidden behind a blur or pixelation) becomes a
+  /// censor [ImageLayer] built from the layer itself, see [censorImageLayer];
+  /// it hides whatever is composited before it, in its place in the list.
+  ///
   /// Public because the detached-clip pass builds the layers that go over its
   /// composition with the same geometry, and both have to agree exactly.
   static List<ImageLayer>? buildImageLayers({
@@ -1110,6 +1115,18 @@ class VideoEditorRenderService {
     required ExportLayerMapping mapping,
     required TransitionTimelineMap timelineMap,
   }) {
+    final layer = item.layer;
+    if (layer is PaintLayer && layer.isCensor) {
+      return [
+        censorImageLayer(
+          layer,
+          bodySize: bodySize,
+          mapping: mapping,
+          startTime: timelineMap.editorToOutputOrNull(layer.startTime),
+          endTime: timelineMap.editorToOutputOrNull(layer.endTime),
+        ),
+      ];
+    }
     final offset = exportedLayerTopLeft(
       anchor: item.layer.offset,
       bodySize: bodySize,

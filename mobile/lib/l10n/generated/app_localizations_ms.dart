@@ -8592,6 +8592,12 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorDrawLabel => 'Lukis';
 
   @override
+  String get videoEditorCensorLabel => 'Sensor';
+
+  @override
+  String get videoEditorBlurLabel => 'Kaburkan';
+
+  @override
   String get videoEditorFilterLabel => 'Tapis';
 
   @override
@@ -8976,6 +8982,10 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorOpenDrawSemanticLabel => 'Buka penyunting lukisan';
 
   @override
+  String get videoEditorOpenBlurSemanticLabel =>
+      'Kaburkan atau pikselkan sebahagian video';
+
+  @override
   String get videoEditorOpenFilterSemanticLabel => 'Buka penyunting penapis';
 
   @override
@@ -9122,6 +9132,10 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get videoEditorVoiceOverHint =>
       'Ketik untuk merakam. Tambah seberapa banyak take yang anda suka.';
+
+  @override
+  String get videoEditorCensorHint =>
+      'Seret di atas bahagian yang anda mahu sembunyikan.';
 
   @override
   String videoEditorVoiceOverRecordingsCount(int count) {

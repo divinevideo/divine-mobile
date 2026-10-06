@@ -8661,6 +8661,12 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorDrawLabel => 'Начертайте';
 
   @override
+  String get videoEditorCensorLabel => 'Цензура';
+
+  @override
+  String get videoEditorBlurLabel => 'Замъгляване';
+
+  @override
   String get videoEditorFilterLabel => 'Филтър';
 
   @override
@@ -9048,6 +9054,10 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorOpenDrawSemanticLabel => 'Отвори редактора за рисуване';
 
   @override
+  String get videoEditorOpenBlurSemanticLabel =>
+      'Замъгли или пикселизирай част от видеото';
+
+  @override
   String get videoEditorOpenFilterSemanticLabel =>
       'Отвори редактора на филтъра';
 
@@ -9196,6 +9206,10 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get videoEditorVoiceOverHint =>
       'Докосни, за да записваш. Добави колкото дубъла искаш.';
+
+  @override
+  String get videoEditorCensorHint =>
+      'Плъзни върху това, което искаш да скриеш.';
 
   @override
   String videoEditorVoiceOverRecordingsCount(int count) {

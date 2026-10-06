@@ -8388,6 +8388,12 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorDrawLabel => 'ይሳሉ';
 
   @override
+  String get videoEditorCensorLabel => 'ሳንሱር';
+
+  @override
+  String get videoEditorBlurLabel => 'ማደብዘዝ';
+
+  @override
   String get videoEditorFilterLabel => 'አጣራ';
 
   @override
@@ -8768,6 +8774,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorOpenDrawSemanticLabel => 'የስዕል አርታዒን ክፈት';
 
   @override
+  String get videoEditorOpenBlurSemanticLabel =>
+      'የቪዲዮውን ክፍል አደብዝዝ ወይም ፒክሰሌት አድርግ';
+
+  @override
   String get videoEditorOpenFilterSemanticLabel => 'የማጣሪያ አርታዒን ክፈት';
 
   @override
@@ -8912,6 +8922,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorVoiceOverHint => 'ለመቅዳት ንካ። የፈለግከውን ያህል ቅረጻዎች አክል።';
+
+  @override
+  String get videoEditorCensorHint => 'መደበቅ በምትፈልገው ላይ ጎትት።';
 
   @override
   String videoEditorVoiceOverRecordingsCount(int count) {

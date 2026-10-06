@@ -15,6 +15,7 @@ import 'package:openvine/extensions/complete_parameters_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
@@ -272,6 +273,16 @@ class DraftRenderParametersService {
       );
     }
 
+    // A censor layer (an area hidden behind a blur or pixelation) is a
+    // backdrop filter: mounted behind the app it captures nothing, and its
+    // export is built from the layer alone, see `censorImageLayer`. So it is
+    // not mounted, and `withCensorLayers` puts it back in its place.
+    final drawn = [
+      for (final layer in layers)
+        if (!isCensorLayer(layer)) layer,
+    ];
+    if (drawn.isEmpty) return withCensorLayers(layers, const []);
+
     final videoSize = VideoEditorConstants.quality.resolutionForAspectRatio(
       aspectRatio,
     );
@@ -284,9 +295,10 @@ class DraftRenderParametersService {
       // (where text lines wrap), `textEditor.style.leadingDistribution`,
       // `emojiEditor.style.textStyle`, `stickerEditor.initWidth` and
       // `paintEditor.censorConfigs` — and of those the editor canvas
-      // overrides only `layerBounds`, which is mirrored here. Both sides
-      // reading the same values is what keeps a re-render identical to what
-      // the user saw; if the canvas ever overrides another, mirror it too.
+      // overrides `layerBounds`, which is mirrored here, and `censorConfigs`,
+      // whose layers are never mounted here. Both sides reading the same
+      // values is what keeps a re-render identical to what the user saw; if
+      // the canvas ever overrides another, mirror it too.
       //
       // `configs.theme` is the one exception, and it is deliberate. The canvas
       // does override it (so its subtree can resolve `context.vineColors`
@@ -299,7 +311,7 @@ class DraftRenderParametersService {
       // an emoji layer, or a text layer with a null `textStyle`, makes the two
       // sides diverge and this has to be mirrored after all.
       final captured = await _rasterizer.capture(
-        layers: layers,
+        layers: drawn,
         editorBodySize: bodySize,
         configs: ProImageEditorConfigs(
           textEditor: TextEditorConfigs(
@@ -313,19 +325,19 @@ class DraftRenderParametersService {
         // (see VideoEditorRenderService.buildImageLayers), so capturing at
         // that ratio lands one raster pixel per output pixel.
         basePixelRatio: (videoSize.width / bodySize.width).clamp(1.0, 10.0),
-        awaitContentReady: () => _prepareLayerContent(layers, stickers),
+        awaitContentReady: () => _prepareLayerContent(drawn, stickers),
       );
 
       // `captureAllLayers` drops a layer whose repaint boundary produced no
       // image rather than reporting it, so a short result is a silent partial
       // bake — the exact degrade this service exists to prevent.
-      if (captured.length != layers.length) {
+      if (captured.length != drawn.length) {
         throw DraftOverlayRestoreException(
-          'Only ${captured.length} of ${layers.length} layer(s) could be '
+          'Only ${captured.length} of ${drawn.length} layer(s) could be '
           'rasterized',
         );
       }
-      return captured;
+      return withCensorLayers(layers, captured);
     } on DraftOverlayRestoreException {
       rethrow;
     } catch (error, stackTrace) {

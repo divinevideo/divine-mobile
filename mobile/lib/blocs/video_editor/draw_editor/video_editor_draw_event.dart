@@ -45,7 +45,32 @@ class VideoEditorDrawColorSelected extends VideoEditorDrawEvent {
   List<Object?> get props => [color];
 }
 
+/// Triggered when the creator sets how strongly the selected censor tool
+/// hides an area, from 0 to 1.
+class VideoEditorDrawCensorIntensityChanged extends VideoEditorDrawEvent {
+  const VideoEditorDrawCensorIntensityChanged(this.intensity);
+
+  final double intensity;
+
+  @override
+  List<Object?> get props => [intensity];
+}
+
 /// Triggered when the draw editor opens to reset undo/redo capabilities.
 class VideoEditorDrawReset extends VideoEditorDrawEvent {
   const VideoEditorDrawReset();
+}
+
+/// Triggered right before the draw editor opens, to draw on the video or, with
+/// [censor], to hide areas of it.
+///
+/// Keeps the last tool of that kind and otherwise picks its first one, so
+/// opening one kind never starts with the other kind's tool.
+class VideoEditorDrawOpened extends VideoEditorDrawEvent {
+  const VideoEditorDrawOpened({required this.censor});
+
+  final bool censor;
+
+  @override
+  List<Object?> get props => [censor];
 }

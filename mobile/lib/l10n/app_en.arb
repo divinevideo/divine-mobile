@@ -5719,6 +5719,14 @@
   "videoEditorLibraryLabel": "Library",
   "videoEditorTextLabel": "Text",
   "videoEditorDrawLabel": "Draw",
+  "videoEditorCensorLabel": "Censor",
+  "@videoEditorCensorLabel": {
+    "description": "Label of the video editor tool that hides part of the picture, such as a face or a license plate, behind a blur or a pixelation. Its two options are videoEditorBlurLabel and videoEditorEffectPixelate."
+  },
+  "videoEditorBlurLabel": "Blur",
+  "@videoEditorBlurLabel": {
+    "description": "Label of the blur option of the video editor tool that hides part of the picture (videoEditorCensorLabel). The other option reuses videoEditorEffectPixelate."
+  },
   "videoEditorFilterLabel": "Filter",
   "videoEditorTuneLabel": "Adjust",
   "videoEditorEffectsLabel": "Effects",
@@ -6016,6 +6024,10 @@
   "videoEditorCaptionsPresetStamp": "Stamp",
   "videoEditorOpenTextSemanticLabel": "Open text editor",
   "videoEditorOpenDrawSemanticLabel": "Open draw editor",
+  "videoEditorOpenBlurSemanticLabel": "Blur or pixelate part of the video",
+  "@videoEditorOpenBlurSemanticLabel": {
+    "description": "Screen reader label of the button that opens the tool to hide part of the picture behind a blur or pixelation."
+  },
   "videoEditorOpenFilterSemanticLabel": "Open filter editor",
   "videoEditorOpenStickerSemanticLabel": "Open sticker editor",
   "videoEditorSaveDraftTitle": "Save your draft?",
@@ -6102,6 +6114,10 @@
   "videoEditorVoiceOverRecordSemanticLabel": "Start recording",
   "videoEditorVoiceOverStopSemanticLabel": "Stop recording",
   "videoEditorVoiceOverHint": "Tap to record. Add as many takes as you like.",
+  "videoEditorCensorHint": "Drag over what you want to hide.",
+  "@videoEditorCensorHint": {
+    "description": "Hint in the blur tool: dragging a finger over the video draws a box that is blurred or pixelated."
+  },
   "videoEditorVoiceOverRecordingsCount": "{count, plural, =0{No recordings yet} =1{1 recording} other{{count} recordings}}",
   "@videoEditorVoiceOverRecordingsCount": {
     "description": "Counts the voice-over takes recorded so far in the recorder screen.",

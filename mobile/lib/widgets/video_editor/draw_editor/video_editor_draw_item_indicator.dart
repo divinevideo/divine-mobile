@@ -24,6 +24,8 @@ class VideoEditorDrawItemIndicator extends StatelessWidget {
       .marker => 1,
       .arrow => 2,
       .eraser => 3,
+      // The hide tools have their own bar without this indicator.
+      .blur || .pixelate => 0,
     };
 
     return Align(
