@@ -22,9 +22,9 @@ void main() {
     container.listen(pageContextProvider, (_, _) {});
   });
 
-  tearDown(() {
+  tearDown(() async {
     container.dispose();
-    locations.close();
+    await locations.close();
   });
 
   Future<void> visit(List<String> paths) async {
