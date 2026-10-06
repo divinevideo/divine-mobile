@@ -390,6 +390,45 @@ void main() {
         expect(layers.single.animationStartTime, isNull);
         expect(layers.single.animationEndTime, isNull);
       });
+
+      test('count a reveal from the video start when the layer has none', () {
+        final layers = VideoEditorRenderService.buildImageLayers(
+          capturedLayers: [
+            pie.ExportedLayer(
+              layer: pie.TextLayer(
+                text: 'Hello world',
+                endTime: const Duration(seconds: 3),
+                animations: const [
+                  pie.LayerAnimation(
+                    type: pie.LayerAnimationType.typewriter,
+                    phase: pie.AnimationPhase.animateIn,
+                    duration: Duration(seconds: 1),
+                  ),
+                ],
+              ),
+              bytes: Uint8List.fromList(const [0]),
+              logicalSize: const Size(10, 20),
+              revealBytes: {
+                const pie.ExportedTextState(revealedLength: 0):
+                    Uint8List.fromList(const [1]),
+              },
+            ),
+          ],
+          bodySize: const Size(100, 200),
+          videoSize: const Size(300, 600),
+          targetAspectRatio: vertical,
+          timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
+        )!;
+
+        // The reveal becomes one overlay per step, and a null layer start
+        // means "begins with the video": every step counts its animations
+        // from the output origin, not from its own start, or a fade or a
+        // loop would restart at each step.
+        expect(layers.length, greaterThan(1));
+        for (final layer in layers) {
+          expect(layer.animationStartTime, Duration.zero);
+        }
+      });
     });
   });
 
