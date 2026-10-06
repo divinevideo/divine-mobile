@@ -48,6 +48,7 @@ import 'package:openvine/widgets/composable_video_grid.dart';
 // Override lives in riverpod's misc barrel; flutter_riverpod does not
 // re-export the type name even though it accepts List<Override>.
 import 'package:riverpod/misc.dart' show Override;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/test_provider_overrides.dart';
 
@@ -192,11 +193,17 @@ void main() {
       tester,
     ) async {
       // Mark video as broken
-      mockTracker.markVideoBroken('broken_video', 'Test broken');
+      SharedPreferences.setMockInitialValues({});
+      await mockTracker.initialize();
+      await mockTracker.markVideoBroken('broken_video', 'Test broken');
+
+      final persistedTracker = broken_tracker.BrokenVideoTracker();
+      await persistedTracker.initialize();
+      expect(persistedTracker.isVideoBroken('broken_video'), isTrue);
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: _gridOverrides(mockTracker),
+          overrides: _gridOverrides(persistedTracker),
           child: MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
