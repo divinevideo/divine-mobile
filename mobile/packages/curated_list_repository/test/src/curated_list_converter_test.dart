@@ -33,6 +33,58 @@ Event _makeEvent({
 
 void main() {
   group(CuratedListConverter, () {
+    group('latestRevisions', () {
+      test('keeps authors separate and ignores events without a d-tag', () {
+        final older = _makeEvent(
+          tags: [
+            ['d', 'shared'],
+          ],
+          createdAt: 1,
+        );
+        final newer = _makeEvent(
+          tags: [
+            ['d', 'shared'],
+          ],
+          createdAt: 2,
+        );
+        final foreign = Event(
+          'b' * 64,
+          30005,
+          [
+            ['d', 'shared'],
+          ],
+          '',
+          createdAt: 1,
+        );
+        final results = CuratedListConverter.latestRevisions([
+          _makeEvent(),
+          older,
+          foreign,
+          newer,
+          older,
+        ]);
+        expect(results, [newer, foreign]);
+      });
+
+      test('equal timestamps select the lowest event ID in either order', () {
+        final first = _makeEvent(
+          tags: [
+            ['d', 'shared'],
+          ],
+          content: 'one',
+        );
+        final second = _makeEvent(
+          tags: [
+            ['d', 'shared'],
+          ],
+          content: 'two',
+        );
+        final winner = first.id.compareTo(second.id) < 0 ? first : second;
+        expect(CuratedListConverter.latestRevisions([first, second]), [winner]);
+        expect(CuratedListConverter.latestRevisions([second, first]), [winner]);
+      });
+    });
+
     group('fromEvent', () {
       test('returns null when d-tag is missing', () {
         final event = _makeEvent(

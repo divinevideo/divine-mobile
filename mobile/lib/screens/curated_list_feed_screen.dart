@@ -116,7 +116,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     final useFrozenIds = widget.videoIds != null && localList == null;
     final videosAsync = useFrozenIds
         ? ref.watch(videoEventsByIdsProvider(widget.videoIds!))
-        : ref.watch(curatedListVideoEventsProvider(widget.listId));
+        : ref.watch(curatedListVideoEventsProvider(_cacheListId));
 
     // Managing posts needs loaded, non-empty content: an empty list has
     // nothing to remove and an error view has no posts to manage.
@@ -129,12 +129,12 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     final service = ref.read(curatedListsStateProvider.notifier).service;
     final isOwned =
         serviceAsync.whenOrNull(
-          data: (_) => service?.isOwnedList(widget.listId),
+          data: (_) => service?.isOwnedList(_cacheListId),
         ) ??
         false;
     final isSubscribed =
         serviceAsync.whenOrNull(
-          data: (_) => service?.isSubscribedToList(widget.listId),
+          data: (_) => service?.isSubscribedToList(_cacheListId),
         ) ??
         false;
     final list = localList ?? widget.discoveredList;
@@ -414,8 +414,8 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
   /// tile on screen.
   void _refreshListVideos() {
     ref
-      ..invalidate(curatedListVideosProvider(widget.listId))
-      ..invalidate(curatedListVideoEventsProvider(widget.listId));
+      ..invalidate(curatedListVideosProvider(_cacheListId))
+      ..invalidate(curatedListVideoEventsProvider(_cacheListId));
     // The discovered-list path watches the frozen-ids provider instead, and
     // Retry after a fetch error has to re-run that one.
     if (widget.videoIds case final ids?) {
@@ -508,10 +508,24 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     );
   }
 
+  /// Keep existing local IDs usable, but never let another author's same
+  /// d-tag satisfy an author-scoped route. New discovered records are cached
+  /// under their coordinate so following them cannot select a colliding list.
+  String get _cacheListId {
+    final author = widget.authorPubkey;
+    if (author == null) return widget.listId;
+    final local = ref
+        .read(curatedListsStateProvider.notifier)
+        .service
+        ?.getListById(widget.listId);
+    if (local?.pubkey == author) return widget.listId;
+    return '$author:${widget.listId}';
+  }
+
   CuratedList? _localList() => ref
       .read(curatedListsStateProvider.notifier)
       .service
-      ?.getListById(widget.listId);
+      ?.getListById(_cacheListId);
 
   Future<void> _showOwnerActions({required bool canManagePosts}) async {
     final list = _localList();
@@ -722,7 +736,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
         // description or image, and whatever subscribes here is what the
         // cache serves from then on.
         final list =
-            service.getListById(widget.listId) ??
+            _localList() ??
             widget.discoveredList ??
             CuratedList(
               id: widget.listId,

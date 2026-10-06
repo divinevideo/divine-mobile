@@ -31,8 +31,6 @@ Future<List<CuratedList>> curatedLists(Ref ref) async {
   return service;
 }
 
-/// State class for discovered public lists
-
 /// Provider for videos in a specific curated list
 @riverpod
 Future<List<String>> curatedListVideos(Ref ref, String listId) async {

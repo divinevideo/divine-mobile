@@ -4,6 +4,7 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -26,6 +27,7 @@ class CuratedListByAuthorScreen extends ConsumerWidget {
   const CuratedListByAuthorScreen({
     required this.authorPubkey,
     required this.listId,
+    this.discoveredList,
     super.key,
   });
 
@@ -46,8 +48,23 @@ class CuratedListByAuthorScreen extends ConsumerWidget {
   /// List d-tag identifier.
   final String listId;
 
+  /// Discovery data for a warm route; accepted only for this exact author and ID.
+  final CuratedList? discoveredList;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final initial = discoveredList;
+    if (initial != null &&
+        initial.pubkey == authorPubkey &&
+        initial.id == listId) {
+      return CuratedListFeedScreen(
+        listId: initial.id,
+        listName: initial.name,
+        videoIds: initial.videoEventIds,
+        authorPubkey: authorPubkey,
+        discoveredList: initial,
+      );
+    }
     final listAsync = ref.watch(
       publicCuratedListProvider(authorPubkey: authorPubkey, listId: listId),
     );

@@ -152,7 +152,14 @@ class SubscribedListVideoCache extends ChangeNotifier {
 
     // Sync all lists in parallel for faster loading
     await Future.wait(
-      subscribedLists.map((list) => syncList(list.id, list.videoEventIds)),
+      subscribedLists.map(
+        (list) => syncList(
+          subscribedIds.contains(list.authorScopedId)
+              ? list.authorScopedId
+              : list.id,
+          list.videoEventIds,
+        ),
+      ),
     );
 
     Log.info(
