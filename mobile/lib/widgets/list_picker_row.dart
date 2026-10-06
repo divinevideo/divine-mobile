@@ -18,7 +18,8 @@ const double _checkSize = 24;
 /// Both pickers render their rows through this so they look the same by
 /// construction. [media] is the list's [DivineListMedia], sized here;
 /// [meta] is the line under the name, the count and, for a video list, its
-/// visibility. Reads to assistive tech as a checkable row.
+/// visibility. Reads to assistive tech as a checkable row, and as disabled
+/// while [onTap] is null.
 class ListPickerRow extends StatelessWidget {
   /// Creates the row.
   const ListPickerRow({
@@ -50,6 +51,7 @@ class ListPickerRow extends StatelessWidget {
     final colors = context.vineColors;
     return Semantics(
       checked: isSelected,
+      enabled: onTap != null,
       child: InkWell(
         onTap: onTap,
         child: DecoratedBox(
