@@ -93,6 +93,24 @@ void main() {
       );
     });
 
+    test('a second stop does not interrupt the pending clip', () async {
+      final recorder = _FakeRecorder(stopResult: null)
+        ..stopGate = Completer<String?>();
+      final cubit = MinorConsentCaptureCubit(recorder: recorder);
+
+      await cubit.start(outputDirectory: '/tmp');
+      final first = cubit.stop();
+      await cubit.stop();
+      final pendingState = cubit.state;
+      recorder.stopGate!.complete('/tmp/consent.mp4');
+      await first;
+
+      expect(recorder.stopCount, 1);
+      expect(pendingState, isA<MinorConsentCaptureRecording>());
+      expect(cubit.state, isA<MinorConsentCaptureReview>());
+      await cubit.close();
+    });
+
     test('start caps recording at 60 seconds', () async {
       final recorder = _FakeRecorder();
       final cubit = MinorConsentCaptureCubit(recorder: recorder);
