@@ -11820,6 +11820,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get badgesTitle => 'Badges';
 
   @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
   String get badgeSubscribeAction => 'Subscribe to badge';
 
   @override
