@@ -19,6 +19,7 @@ import 'package:openvine/services/minor_consent_recorder.dart';
 import 'package:openvine/services/support_email_composer.dart';
 import 'package:openvine/services/video_recorder/camera/camera_base_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 typedef MinorAccountReviewComposeEmail = Future<void> Function({
   required String toEmail,
@@ -99,6 +100,7 @@ final minorAccountReviewStatusStoreProvider =
         prefs: ref.watch(sharedPreferencesProvider),
       );
     });
+
 /// Recorder used by the in-app parent-consent capture flow.
 ///
 /// Auto-disposed so leaving the capture screen releases the camera and the next
@@ -120,3 +122,10 @@ final Provider<MinorConsentRecorder> minorConsentRecorderProvider =
       ref.onDispose(() => recorder.dispose().ignore());
       return recorder;
     });
+
+/// Keeps the display awake only while a consent recording is active.
+final minorConsentWakelockProvider = Provider<Future<void> Function(bool)>((
+  ref,
+) {
+  return (enabled) => WakelockPlus.toggle(enable: enabled);
+});
