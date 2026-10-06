@@ -7420,5 +7420,7 @@
   "videoEditorLoopRepairProgress": "Đang căn chỉnh vòng lặp…",
   "videoEditorLoopRepairTrimmed": "Đã làm mượt vòng lặp. Đã cắt {seconds} giây.",
   "notificationFromDivine": "Từ Divine",
-  "announcementUnavailable": "Thông báo này không còn khả dụng."
+  "announcementUnavailable": "Thông báo này không còn khả dụng.",
+  "minorAccountReviewVideoSubmittedBody": "Video của bạn đã được gửi để xem xét.",
+  "minorAccountReviewVideoSubmittedTitle": "Đã gửi video"
 }

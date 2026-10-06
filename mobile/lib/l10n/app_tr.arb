@@ -6129,5 +6129,7 @@
   "videoEditorLoopRepairProgress": "Döngün hizalanıyor…",
   "videoEditorLoopRepairTrimmed": "Döngü yumuşatıldı. {seconds} sn kaldırıldı.",
   "notificationFromDivine": "Divine’dan",
-  "announcementUnavailable": "Bu duyuru artık kullanılamıyor."
+  "announcementUnavailable": "Bu duyuru artık kullanılamıyor.",
+  "minorAccountReviewVideoSubmittedBody": "Videon incelenmek üzere gönderildi.",
+  "minorAccountReviewVideoSubmittedTitle": "Video gönderildi"
 }

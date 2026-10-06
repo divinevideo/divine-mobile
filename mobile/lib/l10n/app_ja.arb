@@ -6129,5 +6129,7 @@
   "videoEditorLoopRepairProgress": "ループを揃えています…",
   "videoEditorLoopRepairTrimmed": "ループを滑らかにしました。{seconds}秒を削除しました。",
   "notificationFromDivine": "Divineからのお知らせ",
-  "announcementUnavailable": "このお知らせは現在ご覧いただけません。"
+  "announcementUnavailable": "このお知らせは現在ご覧いただけません。",
+  "minorAccountReviewVideoSubmittedBody": "動画を確認のために送信しました。",
+  "minorAccountReviewVideoSubmittedTitle": "動画を送信しました"
 }

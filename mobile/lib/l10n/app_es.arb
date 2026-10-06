@@ -6129,5 +6129,7 @@
   "videoEditorLoopRepairProgress": "Alineando tu bucle…",
   "videoEditorLoopRepairTrimmed": "Bucle suavizado. Se quitaron {seconds} s.",
   "notificationFromDivine": "De Divine",
-  "announcementUnavailable": "Este anuncio ya no está disponible."
+  "announcementUnavailable": "Este anuncio ya no está disponible.",
+  "minorAccountReviewVideoSubmittedBody": "Tu video se envió para revisión.",
+  "minorAccountReviewVideoSubmittedTitle": "Video enviado"
 }

@@ -6246,5 +6246,7 @@
   "videoEditorLoopRepairProgress": "Подравняване на цикъла…",
   "videoEditorLoopRepairTrimmed": "Цикълът е изгладен. Премахнати са {seconds} сек.",
   "notificationFromDivine": "От Divine",
-  "announcementUnavailable": "Това съобщение вече не е налично."
+  "announcementUnavailable": "Това съобщение вече не е налично.",
+  "minorAccountReviewVideoSubmittedBody": "Видеото ти е изпратено за преглед.",
+  "minorAccountReviewVideoSubmittedTitle": "Видеото е изпратено"
 }

@@ -6129,5 +6129,7 @@
   "videoEditorLoopRepairProgress": "Se aliniază bucla…",
   "videoEditorLoopRepairTrimmed": "Buclă netezită. S-au eliminat {seconds} s.",
   "notificationFromDivine": "De la Divine",
-  "announcementUnavailable": "Acest anunț nu mai este disponibil."
+  "announcementUnavailable": "Acest anunț nu mai este disponibil.",
+  "minorAccountReviewVideoSubmittedBody": "Videoclipul tău a fost trimis pentru verificare.",
+  "minorAccountReviewVideoSubmittedTitle": "Videoclip trimis"
 }

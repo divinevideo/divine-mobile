@@ -5156,5 +5156,7 @@
   "videoEditorLoopRepairProgress": "Inihahanay ang loop mo…",
   "videoEditorLoopRepairTrimmed": "Mas maayos na ang loop. Inalis ang {seconds} s.",
   "notificationFromDivine": "Mula sa Divine",
-  "announcementUnavailable": "Hindi na available ang anunsyong ito."
+  "announcementUnavailable": "Hindi na available ang anunsyong ito.",
+  "minorAccountReviewVideoSubmittedBody": "Naipasa na ang video mo para sa pagsusuri.",
+  "minorAccountReviewVideoSubmittedTitle": "Naipasa na ang video"
 }

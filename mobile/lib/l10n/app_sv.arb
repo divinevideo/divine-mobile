@@ -6129,5 +6129,7 @@
   "videoEditorLoopRepairProgress": "Justerar din loop…",
   "videoEditorLoopRepairTrimmed": "Loopen är mjukare. Tog bort {seconds} s.",
   "notificationFromDivine": "Från Divine",
-  "announcementUnavailable": "Det här meddelandet är inte längre tillgängligt."
+  "announcementUnavailable": "Det här meddelandet är inte längre tillgängligt.",
+  "minorAccountReviewVideoSubmittedBody": "Din video har skickats för granskning.",
+  "minorAccountReviewVideoSubmittedTitle": "Videon har skickats"
 }

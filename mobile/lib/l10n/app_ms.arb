@@ -7420,5 +7420,7 @@
   "videoEditorLoopRepairProgress": "Menjajarkan gelung anda…",
   "videoEditorLoopRepairTrimmed": "Gelung dilancarkan. {seconds} s dibuang.",
   "notificationFromDivine": "Daripada Divine",
-  "announcementUnavailable": "Pengumuman ini tidak lagi tersedia."
+  "announcementUnavailable": "Pengumuman ini tidak lagi tersedia.",
+  "minorAccountReviewVideoSubmittedBody": "Video anda telah dihantar untuk semakan.",
+  "minorAccountReviewVideoSubmittedTitle": "Video dihantar"
 }

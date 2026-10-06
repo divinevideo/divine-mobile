@@ -7420,5 +7420,7 @@
   "videoEditorLoopRepairProgress": "آپ کا لوپ سیدھا کیا جا رہا ہے…",
   "videoEditorLoopRepairTrimmed": "لوپ ہموار ہو گیا۔ {seconds} سیکنڈ ہٹا دیے گئے۔",
   "notificationFromDivine": "Divine کی طرف سے",
-  "announcementUnavailable": "یہ اعلان اب دستیاب نہیں ہے۔"
+  "announcementUnavailable": "یہ اعلان اب دستیاب نہیں ہے۔",
+  "minorAccountReviewVideoSubmittedBody": "آپ کی ویڈیو جائزے کے لیے جمع ہو گئی ہے۔",
+  "minorAccountReviewVideoSubmittedTitle": "ویڈیو جمع ہو گئی"
 }

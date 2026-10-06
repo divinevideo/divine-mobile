@@ -7420,5 +7420,7 @@
   "videoEditorLoopRepairProgress": "正在对齐循环…",
   "videoEditorLoopRepairTrimmed": "循环已优化。已移除 {seconds} 秒。",
   "notificationFromDivine": "来自 Divine",
-  "announcementUnavailable": "此公告已不可用。"
+  "announcementUnavailable": "此公告已不可用。",
+  "minorAccountReviewVideoSubmittedBody": "你的视频已提交审核。",
+  "minorAccountReviewVideoSubmittedTitle": "视频已提交"
 }

@@ -6129,5 +6129,7 @@
   "videoEditorLoopRepairProgress": "Alinhando seu loop…",
   "videoEditorLoopRepairTrimmed": "Loop suavizado. {seconds} s removidos.",
   "notificationFromDivine": "Da Divine",
-  "announcementUnavailable": "Este anúncio não está mais disponível."
+  "announcementUnavailable": "Este anúncio não está mais disponível.",
+  "minorAccountReviewVideoSubmittedBody": "Seu vídeo foi enviado para análise.",
+  "minorAccountReviewVideoSubmittedTitle": "Vídeo enviado"
 }
