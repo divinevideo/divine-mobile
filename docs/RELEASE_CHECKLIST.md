@@ -93,7 +93,7 @@ section 7).
 
 - [ ] Confirm app ID is still `co.openvine.app`.
 - [ ] Confirm the manifest still removes Advertising ID and unused location/Bluetooth permissions.
-- [ ] Verify the current release notes and tester notes are ready.
+- [ ] Verify the current release notes and tester notes are ready. Follow [release notes and channels](../release-notes/README.md) for reviewed copy, Codemagic beta/production selection, and promotion without rebuilding.
 - [ ] Cut the release through the Codemagic `android-build` workflow: it publishes the signed, Shorebird-enabled AAB to Play's **internal testing** track. Do not rebuild for broader distribution; promote that exact Play artifact after internal testing passes.
 - [ ] Verify the new release is live on the internal testing track in Play Console and available to internal testers.
 - [ ] Promote the artifact deliberately in Play Console — internal testing to broader testing or production — with a staged production rollout, verifying each hop, and advance the staged rollout to 100% or record why it is being held. This promotion is the release decision; the Codemagic build alone ships nothing to production.
