@@ -51,16 +51,16 @@ void main() {
       );
     }
 
-    // Resolving the file is real I/O, so the failure needs real time to
-    // arrive. Polled rather than slept on: a single fixed delay is a coin
-    // flip once the CI box is running four shards at once.
+    // File resolution performs real I/O. Yield to it and pump frames until
+    // the placeholder renders, keeping the original one-second failure budget.
     Future<void> pumpUntil(
       WidgetTester tester,
       bool Function() resolved,
     ) async {
-      for (var attempt = 0; attempt < 50 && !resolved(); attempt++) {
+      final elapsed = Stopwatch()..start();
+      while (!resolved() && elapsed.elapsed < const Duration(seconds: 1)) {
         await tester.runAsync(
-          () => Future<void>.delayed(const Duration(milliseconds: 20)),
+          pumpEventQueue,
         );
         await tester.pump();
       }

@@ -178,7 +178,7 @@ void main() {
       );
 
       await tester.runAsync(() async {
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
       });
 
       final contentContext = tester.element(find.byType(FullscreenFeedContent));
@@ -335,7 +335,7 @@ void main() {
 
         fullscreenBloc.add(const FullscreenFeedLoadMoreRequested());
         await tester.runAsync(() async {
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         });
 
         expect(fullscreenBloc.state.videos, containsAll(liveFirstPage));

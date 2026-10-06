@@ -35,6 +35,8 @@ import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../helpers/observe_until.dart';
+
 // Local-stack constants (funnelcake-proxy maps the relay WebSocket to host
 // port 47777; nginx forwards "/" to funnelcake-relay:7777 with an upgrade).
 const _localHost = 'localhost';
@@ -425,13 +427,13 @@ Future<List<Event>> _queryUntil(
   Map<String, dynamic> filter,
   bool Function(List<Event>) ready,
 ) async {
-  final deadline = DateTime.now().add(_consistencyTimeout);
-  var results = await _query(filter);
-  while (!ready(results) && DateTime.now().isBefore(deadline)) {
-    await Future<void>.delayed(_pollInterval);
-    results = await _query(filter);
-  }
-  return results;
+  return observeUntil<List<Event>>(
+    probe: () => _query(filter),
+    ready: ready,
+    initialValue: const [],
+    interval: _pollInterval,
+    timeout: _consistencyTimeout,
+  );
 }
 
 /// Returns whether [eventId] is still returned by [filter] after waiting for the

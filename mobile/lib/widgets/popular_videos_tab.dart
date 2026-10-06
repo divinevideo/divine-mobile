@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:analytics/analytics.dart';
+import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -57,9 +58,8 @@ class PopularVideosTab extends ConsumerStatefulWidget {
 
   /// Elapsed load time past which the load is reported as slow.
   ///
-  /// Overridable because the elapsed time comes from the wall clock, which
-  /// `fakeAsync` cannot advance — a test would otherwise have to sleep for
-  /// [_slowFeedLoadThresholdMs] to reach the branch.
+  /// Overridable to exercise slow-load reporting at different thresholds.
+  /// Elapsed time uses [clock], so tests can advance it without sleeping.
   final int slowLoadThresholdMs;
 
   @override
@@ -110,7 +110,7 @@ class _PopularVideosTabState extends ConsumerState<PopularVideosTab> {
 
     // Track feed loading start
     if (feedAsync.isLoading && _feedLoadStartTime == null) {
-      _feedLoadStartTime = DateTime.now();
+      _feedLoadStartTime = clock.now();
       _slowFeedLoadReported = false;
       _feedLoad = _feedTracker.startFeedLoad('popular');
     }
@@ -210,7 +210,7 @@ class _PopularVideosTabState extends ConsumerState<PopularVideosTab> {
     );
 
     final loadTime = _feedLoadStartTime != null
-        ? DateTime.now().difference(_feedLoadStartTime!).inMilliseconds
+        ? clock.now().difference(_feedLoadStartTime!).inMilliseconds
         : null;
     _feedTracker.trackFeedError(
       'popular',
@@ -253,7 +253,7 @@ class _PopularVideosTabState extends ConsumerState<PopularVideosTab> {
     final startedAt = _feedLoadStartTime;
     if (startedAt == null || _slowFeedLoadReported) return;
 
-    final elapsed = DateTime.now().difference(startedAt).inMilliseconds;
+    final elapsed = clock.now().difference(startedAt).inMilliseconds;
     if (elapsed <= widget.slowLoadThresholdMs) return;
 
     _slowFeedLoadReported = true;

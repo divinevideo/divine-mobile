@@ -15,6 +15,7 @@ import 'package:openvine/services/upload_initialization_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+import 'observe_until.dart';
 import 'service_init_helper.dart';
 
 /// Test helper utilities for video system testing
@@ -317,13 +318,17 @@ class TestHelpers {
     Duration checkInterval = const Duration(milliseconds: 100),
     String description = 'condition',
   }) async {
-    final stopwatch = Stopwatch()..start();
+    final satisfied = await observeUntil<bool>(
+      probe: condition,
+      ready: (value) => value,
+      initialValue: false,
+      interval: checkInterval,
+      timeout: timeout,
+    );
 
-    while (!condition() && stopwatch.elapsed < timeout) {
-      await Future.delayed(checkInterval);
-    }
-
-    if (!condition()) {
+    // observeUntil returns the last completed probe at the deadline, so check
+    // once more for a condition that turned true after it.
+    if (!satisfied && !condition()) {
       throw TimeoutException(
         'Timed out after ${timeout.inSeconds}s waiting for $description.',
         timeout,

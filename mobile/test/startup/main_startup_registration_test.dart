@@ -60,7 +60,7 @@ void main() {
         // lines before `runApp`, so anything that only ran on the first frame
         // was stranded by a Dart-side failure in between — the launch a patch
         // most often exists to repair.
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(updaterCreations, 1);
         expect(updateCalls, 1);

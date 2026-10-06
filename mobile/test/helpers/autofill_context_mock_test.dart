@@ -11,7 +11,7 @@ void main() {
       TextInput.finishAutofillContext();
 
       // Let the async channel microtask drain.
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(recorder.didFinishAutofillContext, isTrue);
     });

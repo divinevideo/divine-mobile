@@ -609,9 +609,17 @@ void main() {
         bloc
           ..add(const NewMessageSearchPeerLabelsChanged(labels))
           ..add(const NewMessageSearchStarted());
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await pumpEventQueue();
+        final settled = bloc.stream.firstWhere(
+          (state) =>
+              state.status == NewMessageSearchStatus.searchSuccess ||
+              state.status == NewMessageSearchStatus.searchFailure,
+        );
         bloc.add(NewMessageSearchQueryChanged(query));
-        await Future<void>.delayed(debounceDuration * 2);
+        expect(
+          (await settled).status,
+          equals(NewMessageSearchStatus.searchSuccess),
+        );
       }
 
       blocTest<NewMessageSearchBloc, NewMessageSearchState>(
@@ -732,19 +740,14 @@ void main() {
             await vanished.close();
           });
 
-          bloc
-            ..add(const NewMessageSearchPeerLabelsChanged(labels))
-            ..add(const NewMessageSearchStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
-          bloc.add(const NewMessageSearchQueryChanged('Aeontropy'));
-          await Future<void>.delayed(debounceDuration * 2);
+          await loadThenSearch(bloc, 'Aeontropy');
           expect(
             bloc.state.results.map((p) => p.pubkey),
             contains(vanishedPubkey),
           );
 
           vanished.add({vanishedPubkey});
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
 
           expect(bloc.state.results, isEmpty);
         },
@@ -774,7 +777,7 @@ void main() {
               ),
             ),
           );
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
 
           expect(
             bloc.state.results.map((p) => p.pubkey),
@@ -820,7 +823,7 @@ void main() {
           bloc
             ..add(const NewMessageSearchPeerLabelsChanged(labels))
             ..add(const NewMessageSearchStarted());
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
         },
         verify: (bloc) {
           expect(

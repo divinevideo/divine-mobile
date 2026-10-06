@@ -44,58 +44,45 @@ void main() {
       coordinator.dispose();
     });
 
-    test('should track startup timing for each service', () async {
-      // Arrange
-      final startTime = DateTime.now();
-      var service1Initialized = false;
-      var service2Initialized = false;
-
-      coordinator.registerService(
-        name: 'TestService1',
-        phase: StartupPhase.critical,
-        initialize: () async {
-          await Future.delayed(const Duration(milliseconds: 50));
-          service1Initialized = true;
-        },
-      );
-
-      coordinator.registerService(
-        name: 'TestService2',
-        phase: StartupPhase.essential,
-        initialize: () async {
-          await Future.delayed(const Duration(milliseconds: 30));
-          service2Initialized = true;
-        },
-      );
-
-      // Act
-      await coordinator.initialize();
-      final endTime = DateTime.now();
-
-      // Assert
-      expect(service1Initialized, isTrue);
-      expect(service2Initialized, isTrue);
-
-      final metrics = coordinator.metrics;
-      expect(metrics.serviceTimings['TestService1'], isNotNull);
-      expect(metrics.serviceTimings['TestService2'], isNotNull);
-
-      // Verify timing is reasonable
-      expect(
-        metrics.serviceTimings['TestService1']!.inMilliseconds,
-        greaterThanOrEqualTo(50),
-      );
-      expect(
-        metrics.serviceTimings['TestService2']!.inMilliseconds,
-        greaterThanOrEqualTo(30),
-      );
-
-      // Total duration should be at least the sum of services
-      expect(metrics.totalDuration.inMilliseconds, greaterThanOrEqualTo(80));
-      expect(
-        endTime.difference(startTime).inMilliseconds,
-        greaterThanOrEqualTo(80),
-      );
+    test('should track startup timing for each service', () {
+      fakeAsync((async) {
+        coordinator = StartupCoordinator(crashReporter: mockCrashReporting);
+        final first = Completer<void>();
+        final second = Completer<void>();
+        coordinator.registerService(
+          name: 'TestService1',
+          phase: StartupPhase.critical,
+          initialize: () => first.future,
+        );
+        coordinator.registerService(
+          name: 'TestService2',
+          phase: StartupPhase.essential,
+          initialize: () => second.future,
+        );
+        var initialized = false;
+        unawaited(coordinator.initialize().then((_) => initialized = true));
+        async.flushMicrotasks();
+        async.elapse(const Duration(milliseconds: 50));
+        first.complete();
+        async.flushMicrotasks();
+        expect(initialized, isFalse);
+        async.elapse(const Duration(milliseconds: 30));
+        second.complete();
+        async.flushMicrotasks();
+        expect(initialized, isTrue);
+        expect(
+          coordinator.metrics.serviceTimings['TestService1'],
+          const Duration(milliseconds: 50),
+        );
+        expect(
+          coordinator.metrics.serviceTimings['TestService2'],
+          const Duration(milliseconds: 30),
+        );
+        expect(
+          coordinator.metrics.totalDuration,
+          const Duration(milliseconds: 80),
+        );
+      });
     });
 
     test('should log breadcrumbs for each initialization step', () async {
@@ -103,17 +90,13 @@ void main() {
       coordinator.registerService(
         name: 'AuthService',
         phase: StartupPhase.critical,
-        initialize: () async {
-          await Future.delayed(const Duration(milliseconds: 10));
-        },
+        initialize: () async {},
       );
 
       coordinator.registerService(
         name: 'NostrService',
         phase: StartupPhase.essential,
-        initialize: () async {
-          await Future.delayed(const Duration(milliseconds: 10));
-        },
+        initialize: () async {},
       );
 
       // Act
@@ -151,7 +134,7 @@ void main() {
         expect(coordinator.isPhaseComplete(StartupPhase.deferred), isFalse);
 
         final remainingFuture = coordinator.initializeRemaining();
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         expect(coordinator.isPhaseComplete(StartupPhase.deferred), isFalse);
 
         deferredCompleter.complete();
@@ -165,17 +148,13 @@ void main() {
       coordinator.registerService(
         name: 'FastService',
         phase: StartupPhase.critical,
-        initialize: () async {
-          await Future.delayed(const Duration(milliseconds: 10));
-        },
+        initialize: () async {},
       );
 
       coordinator.registerService(
         name: 'DeferredService',
         phase: StartupPhase.deferred,
-        initialize: () async {
-          await Future.delayed(const Duration(milliseconds: 5));
-        },
+        initialize: () async {},
         optional: true,
       );
 
@@ -191,6 +170,7 @@ void main() {
     test('should detect and warn about slow initialization', () {
       fakeAsync((async) {
         final completer = Completer<void>();
+        final slowWork = Completer<void>();
         final warnings = <String>[];
         Timer? timeoutTimer;
 
@@ -208,8 +188,7 @@ void main() {
               );
             });
 
-            // Simulate slow initialization
-            await Future.delayed(const Duration(seconds: 3));
+            await slowWork.future;
             timeoutTimer?.cancel();
             completer.complete();
           },
@@ -225,9 +204,9 @@ void main() {
           contains('WARNING: SlowService initialization taking > 2 seconds'),
         );
 
-        // Elapse past the 3s simulated work so the service — and the
-        // whole coordinator — complete.
-        async.elapse(const Duration(seconds: 1));
+        // Release the service at exactly three seconds.
+        async.elapse(const Duration(milliseconds: 900));
+        slowWork.complete();
         async.flushMicrotasks();
 
         expect(completer.isCompleted, isTrue);
@@ -246,7 +225,6 @@ void main() {
         name: 'FailingService',
         phase: StartupPhase.critical,
         initialize: () async {
-          await Future.delayed(const Duration(milliseconds: 10));
           throw Exception('Service initialization failed');
         },
       );

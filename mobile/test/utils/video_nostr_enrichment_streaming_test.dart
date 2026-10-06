@@ -253,8 +253,8 @@ void main() {
       // Should still return original videos
       expect(result, same(videos));
 
-      // Wait a bit to ensure callback isn't called
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      // Settle detached work before checking the absent callback.
+      await pumpEventQueue();
       expect(onEnrichedCalled, isFalse);
     });
 
@@ -284,8 +284,8 @@ void main() {
 
         expect(result, same(videos));
 
-        // Wait to ensure no callback
-        await Future<void>.delayed(const Duration(milliseconds: 100));
+        // Settle detached work before checking the absent query.
+        await pumpEventQueue();
 
         verifyNever(() => mockNostrService.queryEvents(any()));
       },

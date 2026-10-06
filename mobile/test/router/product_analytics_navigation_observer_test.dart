@@ -94,7 +94,7 @@ void main() {
 
       observer.didPush(profile, feed);
       observer.didPop(profile, feed);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(analytics.records, [
         (

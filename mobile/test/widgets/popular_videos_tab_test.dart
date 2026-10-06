@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:analytics/analytics.dart';
+import 'package:clock/clock.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
@@ -41,10 +42,9 @@ void main() {
     // The grid paints thumbnails through VineCachedImage, which resolves
     // against the process-global openVineImageCache. That lookup answers off a
     // real file read and then arms a 10s cleanup timer inside the fake-async
-    // zone; the wall-clock wait in the slow-load test is exactly what gives the
-    // read time to land mid-test, and the pending timer fails the test on the
-    // widget-tree teardown assert. Stub the cache (#5158 seam) so no real
-    // cache-manager work runs here at all.
+    // zone, and a pending timer fails the test on the widget-tree teardown
+    // assert. Stub the cache (#5158 seam) so no real cache-manager work runs
+    // here at all.
     setUp(() => debugImageCacheOverride = createMockMediaCacheManager());
     tearDown(() => debugImageCacheOverride = null);
 
@@ -162,93 +162,88 @@ void main() {
     testWidgets('reports a slow variant switch once, not once per rebuild', (
       tester,
     ) async {
-      final errorTracker = _MockErrorAnalyticsTracker();
-      final classicCompleter = Completer<PopularVideosPage>();
-      when(
-        () => errorTracker.trackSlowOperation(
-          operation: any(named: 'operation'),
-          durationMs: any(named: 'durationMs'),
-          thresholdMs: any(named: 'thresholdMs'),
-          location: any(named: 'location'),
-        ),
-      ).thenReturn(null);
+      var now = DateTime.utc(2026, 10, 4);
+      await withClock(Clock(() => now), () async {
+        final errorTracker = _MockErrorAnalyticsTracker();
+        final classicCompleter = Completer<PopularVideosPage>();
+        when(
+          () => errorTracker.trackSlowOperation(
+            operation: any(named: 'operation'),
+            durationMs: any(named: 'durationMs'),
+            thresholdMs: any(named: 'thresholdMs'),
+            location: any(named: 'location'),
+          ),
+        ).thenReturn(null);
 
-      when(
-        () => videosRepository.getPopularVideosPage(
-          limit: any(named: 'limit'),
-          until: any(named: 'until'),
-          cursor: any(named: 'cursor'),
-          variant: any(named: 'variant'),
-          skipCache: any(named: 'skipCache'),
-          preferredLanguages: any(named: 'preferredLanguages'),
-          viewerCountry: any(named: 'viewerCountry'),
-        ),
-      ).thenAnswer((invocation) {
-        final variant =
-            invocation.namedArguments[#variant] as PopularVideosVariant;
-        if (variant == PopularVideosVariant.native) {
-          return Future.value(_popularPage([_video('popular-native')]));
-        }
-        // Held open until the assertion so the switch stays in flight.
-        return classicCompleter.future;
-      });
+        when(
+          () => videosRepository.getPopularVideosPage(
+            limit: any(named: 'limit'),
+            until: any(named: 'until'),
+            cursor: any(named: 'cursor'),
+            variant: any(named: 'variant'),
+            skipCache: any(named: 'skipCache'),
+            preferredLanguages: any(named: 'preferredLanguages'),
+            viewerCountry: any(named: 'viewerCountry'),
+          ),
+        ).thenAnswer((invocation) {
+          final variant =
+              invocation.namedArguments[#variant] as PopularVideosVariant;
+          if (variant == PopularVideosVariant.native) {
+            return Future.value(_popularPage([_video('popular-native')]));
+          }
+          // Held open until the assertion so the switch stays in flight.
+          return classicCompleter.future;
+        });
 
-      await tester.pumpWidget(
-        testMaterialApp(
-          additionalOverrides: [
-            appReadyProvider.overrideWithValue(true),
-            videosRepositoryProvider.overrideWithValue(videosRepository),
-            videoEventServiceProvider.overrideWithValue(videoEventService),
-            contentBlocklistRepositoryProvider.overrideWithValue(
-              blocklistRepository,
-            ),
-          ],
-          home: Scaffold(
-            body: PopularVideosTab(
-              errorTracker: errorTracker,
-              slowLoadThresholdMs: 0,
+        await tester.pumpWidget(
+          testMaterialApp(
+            additionalOverrides: [
+              appReadyProvider.overrideWithValue(true),
+              videosRepositoryProvider.overrideWithValue(videosRepository),
+              videoEventServiceProvider.overrideWithValue(videoEventService),
+              contentBlocklistRepositoryProvider.overrideWithValue(
+                blocklistRepository,
+              ),
+            ],
+            home: Scaffold(
+              body: PopularVideosTab(
+                errorTracker: errorTracker,
+                slowLoadThresholdMs: 0,
+              ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // A zero threshold makes the *first* load slow too, and whether that
-      // one spans a rebuild depends on how warm the isolate is — cold, the
-      // first page takes ~90ms and reports; warm, it lands inside a single
-      // build and does not. Only the variant switch is under test here, so
-      // the initial load is dropped rather than counted.
-      clearInteractions(errorTracker);
+        // Count only the variant switch, after the initial page has loaded.
+        clearInteractions(errorTracker);
 
-      final l10n = lookupAppLocalizations(const Locale('en'));
-      await tester.tap(find.text(l10n.categoryGallerySortClassic));
-      await tester.pump();
-
-      // Wall-clock time, because the threshold is measured with DateTime.now()
-      // and fakeAsync cannot advance it.
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 20)),
-      );
-
-      // Stands in for any rebuild while the page is held — a provider tick,
-      // a MediaQuery aspect change, a parent rebuild. The held-page branch
-      // never clears _feedLoadStartTime, so each one reaches the report.
-      for (var i = 0; i < 3; i++) {
-        tester.element(find.byType(PopularVideosTab)).markNeedsBuild();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.categoryGallerySortClassic));
         await tester.pump();
-      }
 
-      verify(
-        () => errorTracker.trackSlowOperation(
-          operation: 'popular_feed_load',
-          durationMs: any(named: 'durationMs'),
-          thresholdMs: 0,
-          location: 'explore_popular',
-        ),
-      ).called(1);
+        now = now.add(const Duration(milliseconds: 20));
 
-      classicCompleter.complete(_popularPage([_video('popular-classic')]));
-      await tester.pumpAndSettle();
+        // Stands in for any rebuild while the page is held — a provider tick,
+        // a MediaQuery aspect change, a parent rebuild. The held-page branch
+        // never clears _feedLoadStartTime, so each one reaches the report.
+        for (var i = 0; i < 3; i++) {
+          tester.element(find.byType(PopularVideosTab)).markNeedsBuild();
+          await tester.pump();
+        }
+
+        verify(
+          () => errorTracker.trackSlowOperation(
+            operation: 'popular_feed_load',
+            durationMs: any(named: 'durationMs'),
+            thresholdMs: 0,
+            location: 'explore_popular',
+          ),
+        ).called(1);
+
+        classicCompleter.complete(_popularPage([_video('popular-classic')]));
+        await tester.pumpAndSettle();
+      });
     });
   });
 }

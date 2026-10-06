@@ -42,6 +42,7 @@ class CreatorDeleteEnforcementRepository {
     Duration requestTimeout = const Duration(seconds: 15),
     Duration pollTimeout = const Duration(seconds: 30),
     bool Function()? shouldBoundSigning,
+    Stopwatch Function() stopwatchFactory = Stopwatch.new,
     Future<void> Function(Duration) delay = Future<void>.delayed,
     void Function(Object, StackTrace)? reportError,
   }) : _baseUrl = baseUrl.endsWith('/')
@@ -54,6 +55,7 @@ class CreatorDeleteEnforcementRepository {
        _requestTimeout = requestTimeout,
        _pollTimeout = pollTimeout,
        _shouldBoundSigning = shouldBoundSigning ?? _alwaysBoundSigning,
+       _stopwatchFactory = stopwatchFactory,
        _delay = delay,
        _reportError = reportError;
 
@@ -68,6 +70,7 @@ class CreatorDeleteEnforcementRepository {
   final Duration _requestTimeout;
   final Duration _pollTimeout;
   final bool Function() _shouldBoundSigning;
+  final Stopwatch Function() _stopwatchFactory;
   final Future<void> Function(Duration) _delay;
   final void Function(Object, StackTrace)? _reportError;
 
@@ -235,7 +238,7 @@ class CreatorDeleteEnforcementRepository {
     String? body,
   }) async {
     final requestBudget = timeout ?? _requestTimeout;
-    final stopwatch = Stopwatch()..start();
+    final stopwatch = _stopwatchFactory()..start();
     final phaseTimer = Stopwatch()..start();
     var signing = true;
     timing.requests++;

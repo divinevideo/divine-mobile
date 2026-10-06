@@ -141,23 +141,29 @@ void main() {
               },
         );
 
-        bloc.add(const UserSearchQueryChanged('first'));
-        clock.elapse(const Duration(milliseconds: 300));
-        clock.flushMicrotasks();
-        bloc.add(const UserSearchQueryChanged('second'));
-        clock.elapse(const Duration(milliseconds: 300));
-        clock.flushMicrotasks();
-
-        expect(tokens, hasLength(2));
-        expect(tokens.first.isCancelled, isTrue);
-        expect(tokens.last.isCancelled, isFalse);
-        unawaited(bloc.close());
-        clock.flushMicrotasks();
-        expect(tokens.last.isCancelled, isTrue);
-        for (final controller in controllers) {
-          unawaited(controller.close());
+        try {
+          bloc.add(const UserSearchQueryChanged('first'));
+          clock.elapse(const Duration(milliseconds: 300));
           clock.flushMicrotasks();
+          expect(tokens, hasLength(1));
+          expect(tokens.single.isCancelled, isFalse);
+
+          bloc.add(const UserSearchQueryChanged('second'));
+          clock.elapse(const Duration(milliseconds: 300));
+          clock.flushMicrotasks();
+
+          expect(tokens, hasLength(2));
+          expect(tokens.first.isCancelled, isTrue);
+          expect(tokens.last.isCancelled, isFalse);
+        } finally {
+          unawaited(bloc.close());
+          clock.flushMicrotasks();
+          for (final controller in controllers) {
+            unawaited(controller.close());
+            clock.flushMicrotasks();
+          }
         }
+        expect(tokens.last.isCancelled, isTrue);
       });
     });
 

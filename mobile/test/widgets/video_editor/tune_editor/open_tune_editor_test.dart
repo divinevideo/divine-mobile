@@ -51,7 +51,7 @@ void main() {
         expect(mainBloc.state.openSubEditor, isNull);
 
         openTuneEditor(mainBloc, tuneBloc, buildScope());
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         expect(mainBloc.state.openSubEditor, SubEditorType.tune);
         expect(mainBloc.state.isSubEditorOpen, isTrue);
@@ -66,7 +66,7 @@ void main() {
       addTearDown(tuneBloc.close);
 
       openTuneEditor(mainBloc, tuneBloc, buildScope(), editSetId: 'set-1');
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(mainBloc.state.openSubEditor, SubEditorType.tune);
       expect(tuneBloc.state.editingSetId, 'set-1');

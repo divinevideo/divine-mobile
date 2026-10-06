@@ -43,7 +43,7 @@ void main() {
     http.Client client, {
     Duration timeout = const Duration(seconds: 15),
     Duration retryBaseDelay = const Duration(milliseconds: 500),
-    Future<void> Function(Duration) delay = Future<void>.delayed,
+    Future<void> Function(Duration)? delay,
     String? Function()? currentPubkey,
   }) => AccountDeletionRecoveryRepository(
     baseUrl: 'https://api.divine.video/',
@@ -56,7 +56,7 @@ void main() {
             '385c3a6ec0b9d57a4330dbd6284989be5bd00e41c535f9ca39b6ae7c521b81cd',
     timeout: timeout,
     retryBaseDelay: retryBaseDelay,
-    delay: delay,
+    delay: delay ?? (_) async {},
   );
 
   http.Response coordinatorPreparing(http.Request request) => http.Response(
@@ -142,7 +142,6 @@ void main() {
                   503,
                 ),
               ),
-              delay: (_) async {},
             ).fetchStatus(
               attemptId: 'attempt-1',
               pubkeyHex: '385c3a6ec0b9d57a4330dbd6284989be5bd00e41c535f9ca39b6ae7c521b81cd',
@@ -265,7 +264,6 @@ void main() {
               503,
             ),
           ),
-          delay: (_) async {},
         ).prepare(username: 'alice'),
         throwsA(
           isA<AccountDeletionRecoveryException>()
@@ -297,7 +295,6 @@ void main() {
               503,
             ),
           ),
-          delay: (_) async {},
         ).prepare(username: 'alice'),
         throwsA(
           isA<AccountDeletionRecoveryException>()
@@ -417,7 +414,6 @@ void main() {
             }
             return coordinatorPreparing(request);
           }),
-          delay: (_) async {},
         ).prepare(username: 'alice'),
         throwsA(
           isA<AccountDeletionRecoveryException>()
@@ -480,7 +476,6 @@ void main() {
             }
             return http.Response('{}', 503);
           }),
-          delay: (_) async {},
         ).prepare(username: 'alice'),
         throwsA(
           isA<AccountDeletionRecoveryException>()
@@ -686,7 +681,6 @@ void main() {
             ),
           };
         }),
-        delay: (_) async {},
       ).cancelAndWait(attemptId: 'attempt-1');
 
       expect(result.status, AccountDeletionAttemptStatus.cancelled);
@@ -787,7 +781,6 @@ void main() {
       expect(
         () => repository(
           MockClient((_) async => http.Response('{}', 429)),
-          delay: (_) async {},
         ).prepare(),
         throwsA(
           isA<AccountDeletionRecoveryException>()

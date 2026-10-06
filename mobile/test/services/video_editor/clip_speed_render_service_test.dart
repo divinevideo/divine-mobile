@@ -8,6 +8,7 @@ import 'package:models/models.dart' as model;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/video_editor/clip_speed_render_service.dart';
+import 'package:openvine/services/video_editor/native_render_task_registry.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
@@ -146,6 +147,10 @@ void main() {
     });
 
     tearDown(() async {
+      // Watchdog tests deliberately leave fake native renders unresolved.
+      // Those tasks cannot settle after their fakeAsync zone is gone, so clear
+      // their process-global tracking before another merged-isolate test runs.
+      NativeRenderTaskRegistry.reset();
       PathProviderPlatform.instance = originalPathProvider;
       editor.ProVideoEditor.instance = originalProVideoEditor;
       if (tempDir.existsSync()) await tempDir.delete(recursive: true);
@@ -314,6 +319,10 @@ void main() {
     });
 
     group('render bound', () {
+      setUp(() {
+        expect(NativeRenderTaskRegistry.activeTaskIds, isEmpty);
+      });
+
       test('a render that never settles fails at the preview bound, gives its '
           'slot back and cancels its own native task', () {
         fakeAsync((async) {
