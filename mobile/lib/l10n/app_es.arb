@@ -5108,5 +5108,7 @@
   "soundReadyDescription": "Úsalo en tu próximo video o guárdalo en tu biblioteca de sonidos.",
   "soundReadyUse": "Usar este sonido",
   "soundReadySave": "Guardar en Mis sonidos",
-  "soundRequestSaved": "Guardado"
+  "soundRequestSaved": "Guardado",
+  "minorAccountReviewVideoSubmittedBody": "Tu video se envió para revisión.",
+  "minorAccountReviewVideoSubmittedTitle": "Video enviado"
 }

@@ -10125,5 +10125,7 @@
   },
   "@soundRequestSaved": {
     "description": "Sound request DM flow: Saved"
-  }
+  },
+  "minorAccountReviewVideoSubmittedBody": "Your video has been submitted for review.",
+  "minorAccountReviewVideoSubmittedTitle": "Video submitted"
 }

@@ -4114,5 +4114,7 @@
   "soundReadyDescription": "Gamitin ito sa susunod mong video o i-save sa library ng mga tunog mo.",
   "soundReadyUse": "Gamitin ang tunog na ito",
   "soundReadySave": "I-save sa Mga Tunog Ko",
-  "soundRequestSaved": "Na-save"
+  "soundRequestSaved": "Na-save",
+  "minorAccountReviewVideoSubmittedBody": "Naipasa na ang video mo para sa pagsusuri.",
+  "minorAccountReviewVideoSubmittedTitle": "Naipasa na ang video"
 }

@@ -6872,5 +6872,7 @@
   "soundReadyDescription": "Dùng trong video tiếp theo hoặc lưu vào thư viện âm thanh của bạn.",
   "soundReadyUse": "Dùng âm thanh này",
   "soundReadySave": "Lưu vào Âm thanh của tôi",
-  "soundRequestSaved": "Đã lưu"
+  "soundRequestSaved": "Đã lưu",
+  "minorAccountReviewVideoSubmittedBody": "Video của bạn đã được gửi để xem xét.",
+  "minorAccountReviewVideoSubmittedTitle": "Đã gửi video"
 }

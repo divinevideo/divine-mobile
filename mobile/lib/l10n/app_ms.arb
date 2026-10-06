@@ -6872,5 +6872,7 @@
   "soundReadyDescription": "Gunakannya dalam video seterusnya atau simpan ke pustaka bunyi anda.",
   "soundReadyUse": "Gunakan bunyi ini",
   "soundReadySave": "Simpan ke Bunyi Saya",
-  "soundRequestSaved": "Disimpan"
+  "soundRequestSaved": "Disimpan",
+  "minorAccountReviewVideoSubmittedBody": "Video anda telah dihantar untuk semakan.",
+  "minorAccountReviewVideoSubmittedTitle": "Video dihantar"
 }

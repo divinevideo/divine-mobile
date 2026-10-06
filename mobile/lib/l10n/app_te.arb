@@ -8607,5 +8607,7 @@
   "soundReadyDescription": "దీన్ని మీ తదుపరి వీడియోలో ఉపయోగించండి లేదా మీ సౌండ్ లైబ్రరీలో సేవ్ చేయండి.",
   "soundReadyUse": "ఈ సౌండ్‌ను ఉపయోగించండి",
   "soundReadySave": "నా సౌండ్స్‌లో సేవ్ చేయండి",
-  "soundRequestSaved": "సేవ్ చేయబడింది"
+  "soundRequestSaved": "సేవ్ చేయబడింది",
+  "minorAccountReviewVideoSubmittedBody": "మీ వీడియో సమీక్ష కోసం సమర్పించబడింది.",
+  "minorAccountReviewVideoSubmittedTitle": "వీడియో సమర్పించబడింది"
 }

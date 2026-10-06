@@ -5108,5 +5108,7 @@
   "soundReadyDescription": "Använd det i din nästa video eller spara det i ditt ljudbibliotek.",
   "soundReadyUse": "Använd det här ljudet",
   "soundReadySave": "Spara i Mina ljud",
-  "soundRequestSaved": "Sparat"
+  "soundRequestSaved": "Sparat",
+  "minorAccountReviewVideoSubmittedBody": "Din video har skickats för granskning.",
+  "minorAccountReviewVideoSubmittedTitle": "Videon har skickats"
 }

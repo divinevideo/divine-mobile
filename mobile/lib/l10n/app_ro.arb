@@ -5108,5 +5108,7 @@
   "soundReadyDescription": "Folosește-l în următorul videoclip sau salvează-l în biblioteca ta de sunete.",
   "soundReadyUse": "Folosește acest sunet",
   "soundReadySave": "Salvează în Sunetele mele",
-  "soundRequestSaved": "Salvat"
+  "soundRequestSaved": "Salvat",
+  "minorAccountReviewVideoSubmittedBody": "Videoclipul tău a fost trimis pentru verificare.",
+  "minorAccountReviewVideoSubmittedTitle": "Videoclip trimis"
 }

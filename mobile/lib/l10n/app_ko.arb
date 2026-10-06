@@ -4654,5 +4654,7 @@
   "soundReadyDescription": "다음 동영상에서 사용하거나 사운드 라이브러리에 저장하세요.",
   "soundReadyUse": "이 사운드 사용",
   "soundReadySave": "내 사운드에 저장",
-  "soundRequestSaved": "저장됨"
+  "soundRequestSaved": "저장됨",
+  "minorAccountReviewVideoSubmittedBody": "검토를 위해 동영상을 제출했어요.",
+  "minorAccountReviewVideoSubmittedTitle": "동영상 제출 완료"
 }
