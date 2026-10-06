@@ -13,6 +13,7 @@ import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
+import 'package:openvine/widgets/curated_list_initialization_failure.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 class _LoadingIndicator extends StatelessWidget {
@@ -117,7 +118,19 @@ class SelectListDialog extends StatelessWidget {
           );
         },
         loading: () => const _LoadingIndicator(),
-        error: (_, _) => Center(child: Text(context.l10n.listErrorLoading)),
+        error: (_, _) => AlertDialog(
+          backgroundColor: context.vineColors.card,
+          title: Text(context.l10n.listAddToList),
+          content: CuratedListInitializationFailure(
+            onRetry: () => ref.invalidate(curatedListsStateProvider),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(context.l10n.listDone),
+            ),
+          ],
+        ),
       );
     },
   );

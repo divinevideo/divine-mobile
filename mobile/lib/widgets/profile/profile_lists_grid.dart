@@ -22,6 +22,7 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:openvine/widgets/curated_list_initialization_failure.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
 
 /// Independently loaded people and video lists owned by the profile viewer.
@@ -149,7 +150,7 @@ class _VideoListsSection extends ConsumerWidget {
             );
           },
           loading: () => const _ListLoading(),
-          error: (_, _) => _ListReadFailure(
+          error: (_, _) => CuratedListInitializationFailure(
             onRetry: () => ref.invalidate(curatedListsStateProvider),
           ),
         ),

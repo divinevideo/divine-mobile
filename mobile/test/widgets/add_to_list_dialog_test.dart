@@ -19,6 +19,8 @@ class _MockCuratedListService extends Mock implements CuratedListService {}
 
 /// Test data for the fake notifier - set before each test
 List<CuratedList> _fakeLists = [];
+bool _failInitialization = false;
+int _initializationAttempts = 0;
 
 Finder _divineIcon(DivineIconName name) =>
     find.byWidgetPredicate((w) => w is DivineIcon && w.icon == name);
@@ -32,10 +34,20 @@ class _FakeCuratedListsState extends CuratedListsState {
   CuratedListService? get service => _fakeService;
 
   @override
-  Future<List<CuratedList>> build() async => _fakeLists;
+  Future<List<CuratedList>> build() async {
+    _initializationAttempts++;
+    if (_failInitialization && _initializationAttempts == 1) {
+      throw StateError('local list initialization failed');
+    }
+    return _fakeLists;
+  }
 }
 
 void main() {
+  setUp(() {
+    _failInitialization = false;
+    _initializationAttempts = 0;
+  });
   group(SelectListDialog, () {
     late VideoEvent testVideo;
     late _MockCuratedListService mockListService;
@@ -65,6 +77,36 @@ void main() {
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(body: SelectListDialog(video: testVideo)),
       ),
+    );
+
+    testWidgets(
+      'failed initialization can retry locally without exposing mutations',
+      (tester) async {
+        _failInitialization = true;
+        _fakeLists = [
+          CuratedList(
+            id: 'retry-list',
+            name: 'Retry list',
+            videoEventIds: const [],
+            createdAt: DateTime(2026),
+            updatedAt: DateTime(2026),
+          ),
+        ];
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.listErrorLoading), findsOneWidget);
+        expect(find.text(l10n.listNewList), findsNothing);
+        expect(find.byType(ListTile), findsNothing);
+        expect(find.text(l10n.listDone), findsOneWidget);
+
+        await tester.tap(find.text(l10n.searchTryAgain));
+        await tester.pumpAndSettle();
+        expect(_initializationAttempts, 2);
+        expect(find.text(l10n.listErrorLoading), findsNothing);
+        expect(find.text('Retry list'), findsOneWidget);
+        expect(find.text(l10n.listNewList), findsOneWidget);
+      },
     );
 
     testWidgets('renders Add to List title', (tester) async {

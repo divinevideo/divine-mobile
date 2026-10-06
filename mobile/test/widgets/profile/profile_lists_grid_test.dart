@@ -37,14 +37,21 @@ class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
 List<CuratedList> _fakeLists = [];
 Completer<List<CuratedList>>? _videoLoad;
 _MockCuratedListService? _fakeService;
+bool _failInitialization = false;
+int _initializationAttempts = 0;
 
 class _FakeCuratedListsState extends CuratedListsState {
   @override
   CuratedListService? get service => _fakeService;
 
   @override
-  Future<List<CuratedList>> build() async =>
-      _videoLoad == null ? _fakeLists : await _videoLoad!.future;
+  Future<List<CuratedList>> build() async {
+    _initializationAttempts++;
+    if (_failInitialization && _initializationAttempts == 1) {
+      throw StateError('local list initialization failed');
+    }
+    return _videoLoad == null ? _fakeLists : await _videoLoad!.future;
+  }
 }
 
 CuratedList _videoList(String id) => CuratedList(
@@ -82,6 +89,8 @@ void main() {
     setUp(() {
       _fakeLists = [];
       _videoLoad = null;
+      _failInitialization = false;
+      _initializationAttempts = 0;
       enabled = true;
       peopleBloc = _MockPeopleListsBloc();
       when(() => peopleBloc.state).thenReturn(
@@ -388,6 +397,48 @@ void main() {
       expect(pushedRoute, equals(SavedVideosScreen.path));
     });
     group('renders', () {
+      testWidgets(
+        'initialization failure offers local retry before video list actions',
+        (tester) async {
+          _failInitialization = true;
+          _fakeLists = [_videoList('retry-list')];
+          when(() => mockListService.myLists).thenReturn(_fakeLists);
+          when(() => peopleBloc.state).thenReturn(
+            PeopleListsState(
+              status: PeopleListsStatus.ready,
+              ownerPubkey: owner,
+              lists: [personList],
+            ),
+          );
+          await tester.pumpWidget(buildSubject());
+          await tester.pumpAndSettle();
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          expect(find.text(l10n.listErrorLoading), findsOneWidget);
+          expect(find.text('Video retry-list'), findsNothing);
+          expect(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is DivineListThumbnail &&
+                  widget.name == 'Video retry-list',
+            ),
+            findsNothing,
+          );
+          // Independent Main affordances survive a video recovery failure.
+          expect(find.text(l10n.listNewVideoList), findsOneWidget);
+          expect(find.text(l10n.listNewPeopleList), findsOneWidget);
+          expect(find.text('Friends'), findsOneWidget);
+          expect(find.text(l10n.shareMenuBookmarks), findsOneWidget);
+
+          await tester.tap(find.text(l10n.searchTryAgain));
+          await tester.pumpAndSettle();
+          expect(_initializationAttempts, 2);
+          expect(find.text(l10n.listErrorLoading), findsNothing);
+          expect(find.text(l10n.listNewVideoList), findsOneWidget);
+          expect(find.text('Video retry-list'), findsOneWidget);
+          expect(find.text('Friends'), findsOneWidget);
+        },
+      );
+
       testWidgets("shows both columns of the viewer's lists", (tester) async {
         when(
           () => mockListService.myLists,

@@ -98,7 +98,11 @@ class WelcomeScreen extends ConsumerWidget {
           ),
       child: _WelcomeView(
         isAuthLoading: isAuthLoading,
-        lastError: authService.lastError,
+        lastError:
+            authService.lastFailureReason ==
+                AuthFailureReason.accountCleanupFailed
+            ? context.l10n.authAccountCleanupFailed
+            : authService.lastError,
       ),
     );
   }
@@ -123,7 +127,8 @@ class _WelcomeView extends ConsumerWidget {
           current.status == WelcomeStatus.navigatingToAccountDeletionRecovery ||
           current.status == WelcomeStatus.error ||
           current.status == WelcomeStatus.sessionExpired ||
-          current.status == WelcomeStatus.accountRestoreFailed,
+          current.status == WelcomeStatus.accountRestoreFailed ||
+          current.status == WelcomeStatus.accountCleanupFailed,
       listener: (context, state) {
         switch (state.status) {
           case WelcomeStatus.navigatingToCreateAccount:
@@ -153,6 +158,13 @@ class _WelcomeView extends ConsumerWidget {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(context.l10n.authAccountRestoreFailed),
+                backgroundColor: VineTheme.error,
+              ),
+            );
+          case WelcomeStatus.accountCleanupFailed:
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(context.l10n.authAccountCleanupFailed),
                 backgroundColor: VineTheme.error,
               ),
             );
