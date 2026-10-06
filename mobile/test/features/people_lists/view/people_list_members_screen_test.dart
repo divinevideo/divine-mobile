@@ -374,6 +374,60 @@ void main() {
       ).called(1);
     });
 
+    testWidgets(
+      'removal goes through when its row is disposed behind the sheet',
+      (
+        tester,
+      ) async {
+        final members = List.generate(
+          40,
+          (index) => index.toRadixString(16).padLeft(64, '0'),
+        );
+        when(() => profileRepository.getBulkProfilesFromApi(any()))
+            .thenAnswer((_) async => null);
+        await pumpRoster(
+          tester,
+          blocState: PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: _ownerPubkey,
+            lists: [_list(pubkeys: members)],
+          ),
+        );
+        Finder rowOf(String pubkey) => find.byWidgetPredicate(
+          (widget) => widget is PeopleListMemberTile && widget.pubkey == pubkey,
+        );
+        await tester.longPress(rowOf(members.first));
+        await tester.pumpAndSettle();
+
+        final position = tester
+            .state<ScrollableState>(
+              find
+                  .descendant(
+                    of: find.byType(PeopleListMembersScreen),
+                    matching: find.byType(Scrollable),
+                  )
+                  .first,
+            )
+            .position;
+        position.jumpTo(position.maxScrollExtent);
+        await tester.pump();
+        expect(rowOf(members.first), findsNothing);
+
+        await tester.tap(find.text(l10n.peopleListsRemove));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => bloc.add(
+            PeopleListsPubkeyRemoveRequested(
+              listId: 'crew',
+              pubkey: members.first,
+            ),
+          ),
+        ).called(1);
+        expect(find.byType(SnackBar), findsOneWidget);
+      },
+    );
+
     test('exposes route name and path constants', () {
       expect(PeopleListMembersScreen.routeName, equals('people-list-roster'));
       expect(

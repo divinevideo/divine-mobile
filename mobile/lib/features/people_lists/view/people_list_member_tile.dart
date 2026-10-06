@@ -37,6 +37,8 @@ class PeopleListMemberTile extends ConsumerWidget {
 
   Future<void> _confirmRemove(BuildContext context, String displayName) async {
     final l10n = context.l10n;
+    final bloc = context.read<PeopleListsBloc>();
+    final messenger = ScaffoldMessenger.of(context);
     final shouldRemove = await context.showVideoPausingVineBottomSheet<bool>(
       scrollable: false,
       showHeaderDivider: false,
@@ -53,12 +55,13 @@ class PeopleListMemberTile extends ConsumerWidget {
       ),
     );
 
-    if (shouldRemove != true || !context.mounted) return;
+    // The roster can scroll or re-rank behind the sheet and dispose this row;
+    // the owner's confirmation still stands.
+    if (shouldRemove != true) return;
 
-    final bloc = context.read<PeopleListsBloc>()
-      ..add(PeopleListsPubkeyRemoveRequested(listId: listId, pubkey: pubkey));
+    bloc.add(PeopleListsPubkeyRemoveRequested(listId: listId, pubkey: pubkey));
 
-    ScaffoldMessenger.of(context).showSnackBar(
+    messenger.showSnackBar(
       SnackBar(
         content: Text(l10n.peopleListsRemovedFromList(displayName)),
         action: SnackBarAction(
