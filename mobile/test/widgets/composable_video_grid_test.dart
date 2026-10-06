@@ -198,6 +198,7 @@ void main() {
       // Mark video as broken
       await mockTracker.markVideoBroken('broken_video', 'Test broken');
 
+      // Reload from storage so the grid sees the persisted mark
       final persistedTracker = broken_tracker.BrokenVideoTracker();
       await persistedTracker.initialize();
       expect(persistedTracker.isVideoBroken('broken_video'), isTrue);
