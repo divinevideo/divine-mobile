@@ -1,6 +1,7 @@
-// ABOUTME: Regression test for tapping descriptions in VideoOverlayActions.
-// ABOUTME: Verifies the inline description opens the metadata sheet.
+// ABOUTME: Widget tests for VideoOverlayActions' author line and caption block.
+// ABOUTME: Covers description taps, caption text, and the block's spacing.
 
+import 'package:collaborator_repository/collaborator_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,6 +14,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/services/auth_service.dart' show AuthService;
 import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/utils/string_utils.dart';
@@ -20,6 +22,7 @@ import 'package:openvine/widgets/video_feed_item/collaborator_avatar_row.dart';
 import 'package:openvine/widgets/video_feed_item/video_feed_item.dart';
 import 'package:openvine/widgets/video_reply_parent_link.dart';
 import 'package:reposts_repository/reposts_repository.dart';
+import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers/test_provider_overrides.dart';
@@ -35,6 +38,9 @@ class _MockVideoInteractionsBloc extends Mock
     implements VideoInteractionsBloc {}
 
 class _MockRepostsRepository extends Mock implements RepostsRepository {}
+
+class _MockCollaboratorConfirmationRepository extends Mock
+    implements CollaboratorConfirmationRepository {}
 
 void main() {
   late _MockVideoInteractionsBloc mockInteractionsBloc;
@@ -116,11 +122,17 @@ void main() {
   });
 
   group('renders', () {
-    Future<void> pumpOverlay(WidgetTester tester) async {
+    Future<void> pumpOverlay(
+      WidgetTester tester, {
+      AuthService? authService,
+      List<Override> overrides = const [],
+    }) async {
       await tester.pumpWidget(
         testProviderScope(
+          mockAuthService: authService,
           additionalOverrides: [
             repostsRepositoryProvider.overrideWithValue(mockRepostsRepository),
+            ...overrides,
           ],
           child: MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
@@ -208,6 +220,103 @@ void main() {
         ),
       );
       expect(description.maxLines, equals(2));
+    });
+
+    group('caption block', () {
+      // The overlay column holding the author row and the caption. Its bottom
+      // edge is where the caption block ends on screen.
+      Finder captionBlock() => find
+          .ancestor(
+            of: find.bySemanticsIdentifier('video_description'),
+            matching: find.byType(Column),
+          )
+          .first;
+
+      double descriptionBottom(WidgetTester tester) => tester
+          .getRect(find.bySemanticsIdentifier('video_description'))
+          .bottom;
+
+      const collaboratorPubkey =
+          'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+
+      testWidgets('ends at the description when nothing renders below it', (
+        tester,
+      ) async {
+        await pumpOverlay(tester);
+
+        expect(
+          tester.getRect(captionBlock()).bottom,
+          equals(descriptionBottom(tester)),
+        );
+      });
+
+      testWidgets('keeps a 4 pt gap above a visible collaborator row', (
+        tester,
+      ) async {
+        // No confirmation repository in this scope, so the row falls back to
+        // showing every tagged collaborator.
+        testVideo = testVideo.copyWith(
+          collaboratorPubkeys: const [collaboratorPubkey],
+        );
+
+        await pumpOverlay(tester);
+
+        final rowTop = tester
+            .getRect(find.bySemanticsIdentifier('collaborator_avatar_row'))
+            .top;
+        expect(rowTop - descriptionBottom(tester), equals(4));
+      });
+
+      testWidgets('reserves no gap for collaborators the viewer cannot see', (
+        tester,
+      ) async {
+        const viewerPubkey =
+            'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+        testVideo = testVideo.copyWith(
+          collaboratorPubkeys: const [collaboratorPubkey],
+          addressableDTag: 'caption-block',
+        );
+        final repository = _MockCollaboratorConfirmationRepository();
+        when(() => repository.release(any())).thenReturn(null);
+        when(
+          () => repository.watch(
+            any(),
+            creatorPubkey: any(named: 'creatorPubkey'),
+            taggedPubkeys: any(named: 'taggedPubkeys'),
+          ),
+        ).thenAnswer(
+          (_) => Stream.value(
+            VideoCollaboratorStatus(
+              videoAddress: testVideo.addressableId!,
+              statusByPubkey: const {
+                collaboratorPubkey: CollaboratorStatus.pending,
+              },
+              isResolved: true,
+            ),
+          ),
+        );
+
+        await pumpOverlay(
+          tester,
+          authService: createMockAuthService(currentPublicKeyHex: viewerPubkey),
+          overrides: [
+            collaboratorConfirmationRepositoryProvider.overrideWithValue(
+              repository,
+            ),
+          ],
+        );
+
+        // The row is mounted but shows the third-party viewer nothing.
+        expect(find.byType(CollaboratorAvatarRow), findsOneWidget);
+        expect(
+          find.bySemanticsIdentifier('collaborator_avatar_row'),
+          findsNothing,
+        );
+        expect(
+          tester.getRect(captionBlock()).bottom,
+          equals(descriptionBottom(tester)),
+        );
+      });
     });
 
     testWidgets('hides inspired-by attribution from the player overlay', (
