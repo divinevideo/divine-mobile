@@ -65,7 +65,7 @@ Detach (picture-in-picture):
 - Lifts a clip off the timeline onto the canvas as a freely placed layer.
 - The gap it leaves can be closed, or held with a solid color or a photo.
 - A detached layer can be moved, resized and rotated on the canvas, split, duplicated, deleted, cropped to any aspect ratio, turned by 90° or flipped (Transform), made see-through (opacity 0–100 %), and color-masked. It has no enter or leave animation.
-- Back to timeline puts the clip back as a timeline clip: into the color or photo slot it left if that is still there, otherwise at the playhead: on a boundary between clips it goes in there, and inside a clip right after that clip. Only the part its layer showed comes back, as trim. Its placement, opacity and live color mask stay behind, a free crop fills the frame, and its length counts toward the 6.3 s maximum again.
+- Back to timeline puts the clip back as a timeline clip, into the color or photo slot it left if that is still there. Otherwise it goes in at the playhead: at the clip boundary under it, or right after the clip the playhead is inside. Only the part its layer showed comes back, as trim. Its placement, opacity and live color mask stay behind, a free crop fills the frame, and its length counts toward the 6.3 s maximum again.
 
 Color mask (chroma key, formerly "Green screen"):
 
