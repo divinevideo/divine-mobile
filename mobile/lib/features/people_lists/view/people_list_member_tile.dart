@@ -94,6 +94,7 @@ class PeopleListMemberTile extends ConsumerWidget {
 
     return Semantics(
       button: true,
+      excludeSemantics: true,
       label: canRemove
           ? l10n.peopleListsProfileLongPressHint(displayName)
           : l10n.peopleListsViewProfileHint(displayName),

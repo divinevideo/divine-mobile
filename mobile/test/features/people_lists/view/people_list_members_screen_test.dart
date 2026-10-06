@@ -428,6 +428,39 @@ void main() {
       },
     );
 
+    testWidgets(
+      'a roster row reads as one labelled button, not its text twice',
+      (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        await pumpRoster(
+          tester,
+          blocState: PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: _ownerPubkey,
+            lists: [_list()],
+          ),
+        );
+
+        final node = tester.getSemantics(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is PeopleListMemberTile && widget.pubkey == _quiet,
+          ),
+        );
+
+        semantics.dispose();
+
+        expect(
+          node.label,
+          l10n.peopleListsProfileLongPressHint(
+            UserProfile.defaultDisplayNameFor(_quiet),
+          ),
+        );
+      },
+    );
+
     test('exposes route name and path constants', () {
       expect(PeopleListMembersScreen.routeName, equals('people-list-roster'));
       expect(
