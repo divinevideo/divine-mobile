@@ -1489,16 +1489,21 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// Thin instance wrapper over [VideoEditorCanvas.guardClipLoad] so callers
   /// don't repeat the null-player guard; see that method for the failure
   /// contract.
+  ///
+  /// The frame effects are handed over again after every load: their windows
+  /// sit on the player's timeline, which a trim, speed or order change moves.
   Future<bool> _setClipsSafely(
     DivineVideoPlayerController? player,
     List<VideoClip> clips, {
     Duration? startPosition,
-  }) {
-    return VideoEditorCanvas.guardClipLoad(
+  }) async {
+    final loaded = await VideoEditorCanvas.guardClipLoad(
       () =>
           player?.setClips(clips, startPosition: startPosition) ??
           Future<void>.value(),
     );
+    if (loaded) _syncFrameEffects();
+    return loaded;
   }
 
   Future<bool> _setClipsForGeneration(
@@ -1601,7 +1606,6 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     }
 
     _endClipLoad(generation, isReady: true);
-    _syncFrameEffects();
 
     // Setup state stream listener
     _videoPlayerSubscription = player.stateStream.listen(_onPlayerStateChanged);
