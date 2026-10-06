@@ -102,8 +102,9 @@ void main() {
 
       test('cancels the subscription even when close is not awaited', () async {
         final bloc = createBloc();
+        addTearDown(bloc.close);
         bloc.add(const MyFollowingListLoadRequested());
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         expect(followingStream.hasListener, isTrue);
 
         // The cancel is issued before `super.close()`, so the listener is
@@ -342,15 +343,17 @@ void main() {
           });
 
           final bloc = createBloc();
+          addTearDown(bloc.close);
           final isFollowingStates = <bool>[];
           final sub = bloc.stream.listen(
             (state) => isFollowingStates.add(state.isFollowing(pubkey)),
           );
+          addTearDown(sub.cancel);
 
           bloc.add(const MyFollowingListLoadRequested());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(MyFollowingToggleRequested(pubkey));
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
 
           final firstFollowed = isFollowingStates.indexOf(true);
           expect(
@@ -365,9 +368,6 @@ void main() {
                 'follow state must never revert to not-following after a '
                 'successful toggle (#5144)',
           );
-
-          await sub.cancel();
-          await bloc.close();
         },
       );
 
@@ -403,22 +403,24 @@ void main() {
           });
 
           final bloc = createBloc();
+          addTearDown(bloc.close);
           final isFollowingStates = <bool>[];
           final sub = bloc.stream.listen(
             (state) => isFollowingStates.add(state.isFollowing(pubkey)),
           );
+          addTearDown(sub.cancel);
 
           bloc.add(const MyFollowingListLoadRequested());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(MyFollowingToggleRequested(pubkey));
-          await Future<void>.delayed(const Duration(milliseconds: 10));
+          await pumpEventQueue();
 
           // The in-flight load's network revalidation now resolves with the
           // relay-lagged pre-follow (stale) list — the surviving #5144 race.
           loadController.add(
             const CacheResult.live(FollowingSnapshot(pubkeys: [], count: 0)),
           );
-          await Future<void>.delayed(const Duration(milliseconds: 10));
+          await pumpEventQueue();
 
           final firstFollowed = isFollowingStates.indexOf(true);
           expect(
@@ -433,9 +435,6 @@ void main() {
                 'a stale in-flight load emission must not revert the button '
                 'after a successful toggle (#5144)',
           );
-
-          await sub.cancel();
-          await bloc.close();
         },
       );
 
@@ -459,13 +458,21 @@ void main() {
         () async {
           final pubkey = validPubkey('user');
           final toggleCompleter = Completer<void>();
+          final toggleStarted = Completer<void>();
           when(
             () => mockFollowRepository.toggleFollow(pubkey),
-          ).thenAnswer((_) => toggleCompleter.future);
+          ).thenAnswer((_) {
+            toggleStarted.complete();
+            return toggleCompleter.future;
+          });
 
           final bloc = createBloc();
+          addTearDown(() async {
+            if (!toggleCompleter.isCompleted) toggleCompleter.complete();
+            await bloc.close();
+          });
           bloc.add(MyFollowingToggleRequested(pubkey));
-          await Future<void>.delayed(Duration.zero);
+          await toggleStarted.future;
 
           final closeFuture = bloc.close();
           toggleCompleter.complete();
@@ -480,13 +487,21 @@ void main() {
       test('does not emit after close when a toggle fails', () async {
         final pubkey = validPubkey('user');
         final toggleCompleter = Completer<void>();
+        final toggleStarted = Completer<void>();
         when(
           () => mockFollowRepository.toggleFollow(pubkey),
-        ).thenAnswer((_) => toggleCompleter.future);
+        ).thenAnswer((_) {
+          toggleStarted.complete();
+          return toggleCompleter.future;
+        });
 
         final bloc = createBloc();
+        addTearDown(() async {
+          if (!toggleCompleter.isCompleted) toggleCompleter.complete();
+          await bloc.close();
+        });
         bloc.add(MyFollowingToggleRequested(pubkey));
-        await Future<void>.delayed(Duration.zero);
+        await toggleStarted.future;
 
         final closeFuture = bloc.close();
         toggleCompleter.completeError(Exception('Network error'));
@@ -495,39 +510,38 @@ void main() {
         expect(bloc.state.status, MyFollowingStatus.initial);
       });
 
-      blocTest<MyFollowingBloc, MyFollowingState>(
+      test(
         'uses droppable transformer — second rapid toggle is dropped',
-        setUp: () {
-          var callCount = 0;
-          when(() => mockFollowRepository.toggleFollow(any())).thenAnswer((
-            _,
-          ) async {
-            callCount++;
-            if (callCount == 1) {
-              await Future<void>.delayed(const Duration(milliseconds: 50));
-            }
+        () async {
+          final pubkey = validPubkey('user');
+          final toggleStarted = Completer<void>();
+          final finishToggle = Completer<void>();
+          when(() => mockFollowRepository.toggleFollow(pubkey)).thenAnswer((_) {
+            if (!toggleStarted.isCompleted) toggleStarted.complete();
+            return finishToggle.future;
           });
-          when(
-            () => mockFollowRepository.watchMyFollowingCached(),
-          ).thenAnswer((_) => const Stream.empty());
-        },
-        build: createBloc,
-        act: (bloc) async {
-          bloc
-            ..add(MyFollowingToggleRequested(validPubkey('user')))
-            ..add(MyFollowingToggleRequested(validPubkey('user')));
-          await Future<void>.delayed(const Duration(milliseconds: 100));
-        },
-        verify: (_) {
-          verify(
-            () => mockFollowRepository.toggleFollow(validPubkey('user')),
-          ).called(1);
+
+          final bloc = createBloc();
+          try {
+            bloc.add(MyFollowingToggleRequested(pubkey));
+            await toggleStarted.future;
+            // Keep the first repository write pending while the second event
+            // drains, so the assertion checks overlap rather than elapsed time.
+            bloc.add(MyFollowingToggleRequested(pubkey));
+            await pumpEventQueue();
+
+            verify(() => mockFollowRepository.toggleFollow(pubkey)).called(1);
+          } finally {
+            finishToggle.complete();
+            await bloc.close();
+          }
         },
       );
     });
 
     test('applies live repository updates after initial load', () async {
       final controller = StreamController<List<String>>.broadcast();
+      addTearDown(controller.close);
       when(
         () => mockFollowRepository.followingStream,
       ).thenAnswer((_) => controller.stream);
@@ -536,11 +550,12 @@ void main() {
       ).thenAnswer((_) => const Stream.empty());
 
       final bloc = createBloc();
+      addTearDown(bloc.close);
       bloc.add(const MyFollowingListLoadRequested());
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       controller.add([validPubkey('live1'), validPubkey('live2')]);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(bloc.state.status, MyFollowingStatus.success);
       // A follow the repository appended is the newest, so it leads.
@@ -548,9 +563,6 @@ void main() {
         validPubkey('live2'),
         validPubkey('live1'),
       ]);
-
-      await bloc.close();
-      await controller.close();
     });
 
     group('blocklist filtering', () {
@@ -606,7 +618,7 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const MyFollowingListLoadRequested());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           when(
             () => mockBlocklistRepository.isBlocked(validPubkey('toBlock')),
           ).thenReturn(true);
@@ -650,7 +662,7 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const MyFollowingListLoadRequested());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(
             const MyFollowingSortOrderChanged(FollowSortOrder.oldestFirst),
           );
@@ -671,11 +683,11 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const MyFollowingListLoadRequested());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(
             const MyFollowingSortOrderChanged(FollowSortOrder.oldestFirst),
           );
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
         },
         verify: (_) {
           verify(() => mockFollowRepository.watchMyFollowingCached()).called(1);
@@ -688,7 +700,7 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const MyFollowingListLoadRequested());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(
             const MyFollowingSortOrderChanged(FollowSortOrder.newestFirst),
           );
@@ -705,7 +717,7 @@ void main() {
           bloc.add(
             const MyFollowingSortOrderChanged(FollowSortOrder.oldestFirst),
           );
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(const MyFollowingListLoadRequested());
         },
         verify: (bloc) {
@@ -723,11 +735,11 @@ void main() {
         build: createBloc,
         act: (bloc) async {
           bloc.add(const MyFollowingListLoadRequested());
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(
             const MyFollowingSortOrderChanged(FollowSortOrder.oldestFirst),
           );
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           bloc.add(const MyFollowingBlocklistChanged());
         },
         verify: (bloc) {
