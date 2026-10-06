@@ -11723,6 +11723,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get badgesTitle => 'بیجز';
 
   @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
   String get badgeSubscribeAction => 'بیج سبسکرائب کریں';
 
   @override
