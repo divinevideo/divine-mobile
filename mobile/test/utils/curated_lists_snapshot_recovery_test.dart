@@ -18,7 +18,7 @@ void main() {
         id: 'recovery-shape',
         pubkey: owner,
         name: 'Recovery shape',
-        videoEventIds: [event],
+        videoEventIds: const [event],
         createdAt: DateTime.utc(2026),
         updatedAt: DateTime.utc(2026),
         pendingVisibility: CuratedListVisibility(
