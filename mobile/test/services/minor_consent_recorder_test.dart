@@ -1,6 +1,9 @@
 // ABOUTME: Tests for the MinorConsentRecorder port over CameraService
 // ABOUTME: Verifies start forwards the cap and stop returns the recorded path
 
+import 'dart:async';
+
+import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/minor_consent_recorder.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -17,6 +20,14 @@ class _FakeCameraService extends MockCameraService {
   EditorVideo? stopResult = EditorVideo.file('/tmp/consent.mp4');
   Duration? lastMaxDuration;
   String? lastOutputDirectory;
+  final lifecycleStates = <AppLifecycleState>[];
+  Completer<void>? lifecycleGate;
+
+  @override
+  Future<void> handleAppLifecycleState(AppLifecycleState state) async {
+    lifecycleStates.add(state);
+    await lifecycleGate?.future;
+  }
 
   @override
   Future<bool> startRecording({
@@ -57,6 +68,34 @@ void main() {
       final path = await recorder.stop();
 
       expect(path, isNull);
+    });
+
+    test('forwards lifecycle until the camera is disposed', () async {
+      final camera = _FakeCameraService();
+      final recorder = CameraMinorConsentRecorder(camera: camera);
+      await recorder.handleAppLifecycleState(AppLifecycleState.paused);
+      await recorder.handleAppLifecycleState(AppLifecycleState.resumed);
+      await recorder.dispose();
+      await recorder.handleAppLifecycleState(AppLifecycleState.resumed);
+      expect(camera.lifecycleStates, [
+        AppLifecycleState.paused,
+        AppLifecycleState.resumed,
+      ]);
+    });
+
+    test('provider disposal waits for a native lifecycle operation', () async {
+      final camera = _FakeCameraService()..lifecycleGate = Completer<void>();
+      await camera.initialize();
+      final recorder = CameraMinorConsentRecorder(camera: camera);
+      final resuming = recorder.handleAppLifecycleState(
+        AppLifecycleState.resumed,
+      );
+      final disposing = recorder.dispose();
+      final initializedWhileResuming = camera.isInitialized;
+      camera.lifecycleGate!.complete();
+      await Future.wait([resuming, disposing]);
+      expect(initializedWhileResuming, isTrue);
+      expect(camera.isInitialized, isFalse);
     });
 
     test('dispose releases the wrapped camera', () async {

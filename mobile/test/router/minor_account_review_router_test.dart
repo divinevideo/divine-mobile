@@ -66,6 +66,9 @@ class _PendingRecorder implements MinorConsentRecorder {
   Future<String?> stop() async => null;
 
   @override
+  Future<void> handleAppLifecycleState(AppLifecycleState state) async {}
+
+  @override
   Future<void> dispose() async {}
 }
 
@@ -623,6 +626,7 @@ void main() {
           currentMinorAccountReviewStatusProvider.overrideWith(
             (ref) async => restrictedStatus(),
           ),
+          minorConsentWakelockProvider.overrideWithValue((_) async {}),
           minorConsentRecorderProvider.overrideWithValue(_PendingRecorder()),
           permissionsServiceProvider.overrideWithValue(_GrantedPermissions()),
           minorAccountReviewRepositoryProvider.overrideWithValue(
