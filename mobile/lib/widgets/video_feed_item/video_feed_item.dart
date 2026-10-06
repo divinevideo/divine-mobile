@@ -153,9 +153,13 @@ class VideoOverlayActions extends ConsumerWidget {
     final titleText = trimmedTitle == null || trimmedTitle.isEmpty
         ? null
         : trimmedTitle;
-    final descriptionText = previewData != null
-        ? UserProfile.sanitizeDisplayName(previewData.description).trim()
-        : video!.displayContent.trim();
+    // Blank lines are dropped here only; the metadata sheet keeps the full
+    // description with its original line breaks.
+    final descriptionText = StringUtils.removeBlankLines(
+      previewData != null
+          ? UserProfile.sanitizeDisplayName(previewData.description)
+          : video!.displayContent,
+    ).trim();
 
     // Check if there's meaningful text content to display
     final hasTextContent =
@@ -613,7 +617,7 @@ class VideoOverlayActions extends ConsumerWidget {
                           linkStyle: VineTheme.bodySmallFont(
                             color: VineTheme.whiteText,
                           ).copyWith(shadows: VineTheme.buttonShadows),
-                          maxLines: 3,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),

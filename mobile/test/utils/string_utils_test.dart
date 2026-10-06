@@ -49,6 +49,29 @@ void main() {
       });
     });
 
+    group('removeBlankLines', () {
+      test('drops empty and whitespace-only lines', () {
+        expect(
+          StringUtils.removeBlankLines('First line\n\n  \nSecond line'),
+          equals('First line\nSecond line'),
+        );
+      });
+
+      test('handles Windows and classic Mac line endings', () {
+        expect(
+          StringUtils.removeBlankLines('One\r\n\r\nTwo\r\rThree'),
+          equals('One\nTwo\nThree'),
+        );
+      });
+
+      test('keeps text without blank lines unchanged', () {
+        expect(
+          StringUtils.removeBlankLines('One\nTwo'),
+          equals('One\nTwo'),
+        );
+      });
+    });
+
     group('compactPlural', () {
       test('selects the plural form from the raw value', () {
         String plural(int n, String display) =>

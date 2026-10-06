@@ -174,10 +174,40 @@ void main() {
 
       // Exact match: only a separate title row renders the bare caption.
       expect(find.text('Same caption'), findsNothing);
+      // The overlay drops the blank line between caption and stats.
       expect(
-        find.text('Same caption\n\nOriginal stats: 3 loops - 2 likes'),
+        find.text('Same caption\nOriginal stats: 3 loops - 2 likes'),
         findsOneWidget,
       );
+    });
+
+    testWidgets('drops blank lines from the description', (tester) async {
+      testVideo = testVideo.copyWith(
+        content: 'First line\n\n   \nSecond line\n\nThird line',
+      );
+
+      await pumpOverlay(tester);
+
+      expect(
+        find.text('First line\nSecond line\nThird line'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('caps the description at two lines', (tester) async {
+      testVideo = testVideo.copyWith(
+        content: 'First line\nSecond line\nThird line',
+      );
+
+      await pumpOverlay(tester);
+
+      final description = tester.widget<RichText>(
+        find.descendant(
+          of: find.bySemanticsIdentifier('video_description'),
+          matching: find.byType(RichText),
+        ),
+      );
+      expect(description.maxLines, equals(2));
     });
 
     testWidgets('hides inspired-by attribution from the player overlay', (

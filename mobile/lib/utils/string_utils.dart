@@ -36,4 +36,13 @@ class StringUtils {
   /// Returns [input] unchanged when it is already well-formed.
   static String sanitizeUtf16(String input) =>
       text_sanitizer.sanitizeUtf16(input);
+
+  /// Removes every line of [input] that is empty or only whitespace.
+  ///
+  /// Compact surfaces cap text at a few lines, so a blank line there spends
+  /// a whole line on nothing and reads as stray spacing.
+  static String removeBlankLines(String input) => input
+      .split(RegExp(r'\r\n|\r|\n'))
+      .where((line) => line.trim().isNotEmpty)
+      .join('\n');
 }
