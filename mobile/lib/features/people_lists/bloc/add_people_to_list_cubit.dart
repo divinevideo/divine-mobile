@@ -445,10 +445,10 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
       try {
         final cached = await repo.getCachedProfile(pubkey: pk);
         if (!_isCurrent(revision)) return;
-        if (cached != null && _applyProfile(pk, cached)) {
-          changed = true;
-        } else {
+        if (cached == null) {
           unawaited(_fetchFreshAndApply(pk, revision));
+        } else if (_applyProfile(pk, cached)) {
+          changed = true;
         }
       } catch (error, stackTrace) {
         if (!_isCurrent(revision)) return;
