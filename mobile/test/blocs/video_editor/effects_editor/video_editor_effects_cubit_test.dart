@@ -27,6 +27,15 @@ void main() {
       id: 'vignette',
       effect: VideoEffect.vignette(),
     );
+    const echo = EditorVideoEffect.custom(
+      id: 'echo',
+      custom: CustomVideoEffect(
+        id: echoVideoEffectId,
+        params: {EditorVideoEffect.intensityParam: 0.5},
+        startTime: Duration(seconds: 2),
+        endTime: Duration(seconds: 4),
+      ),
+    );
 
     VideoEditorEffectsCubit buildCubit() =>
         VideoEditorEffectsCubit(createId: () => 'new');
@@ -176,6 +185,59 @@ void main() {
             [for (final e in cubit.state.previewEffects) e.effect],
             [vhs.effect],
           );
+        },
+      );
+
+      blocTest<VideoEditorEffectsCubit, VideoEditorEffectsState>(
+        'feeds a newly picked echo to the native preview after the '
+        'committed one, and keeps it out of the built-in preview',
+        build: buildCubit,
+        seed: () => const VideoEditorEffectsState(applied: [vhs, echo]),
+        act: (cubit) => cubit
+          ..startEditing()
+          ..selectType(EditorEffectType.echo)
+          ..setIntensity(0.8),
+        verify: (cubit) {
+          expect(cubit.state.previewCustomEffects, [
+            echo.custom,
+            const CustomVideoEffect(
+              id: echoVideoEffectId,
+              params: {EditorVideoEffect.intensityParam: 0.8},
+            ),
+          ]);
+          expect(cubit.state.previewEffects, const [vhs]);
+        },
+      );
+
+      blocTest<VideoEditorEffectsCubit, VideoEditorEffectsState>(
+        'feeds an edited echo to the native preview in place of its '
+        'committed copy',
+        build: buildCubit,
+        seed: () => const VideoEditorEffectsState(applied: [echo, vhs]),
+        act: (cubit) => cubit
+          ..startEditing(effectId: 'echo')
+          ..setIntensity(0.9),
+        verify: (cubit) {
+          expect(cubit.state.previewCustomEffects, [
+            const CustomVideoEffect(
+              id: echoVideoEffectId,
+              params: {EditorVideoEffect.intensityParam: 0.9},
+            ),
+          ]);
+        },
+      );
+
+      blocTest<VideoEditorEffectsCubit, VideoEditorEffectsState>(
+        'cancel goes back to feeding the committed echo to the native '
+        'preview',
+        build: buildCubit,
+        seed: () => const VideoEditorEffectsState(applied: [echo]),
+        act: (cubit) => cubit
+          ..startEditing(effectId: 'echo')
+          ..setIntensity(0.9)
+          ..cancel(),
+        verify: (cubit) {
+          expect(cubit.state.previewCustomEffects, [echo.custom]);
         },
       );
     });
