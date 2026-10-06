@@ -21711,7 +21711,7 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{{count} person} other{{count} people}}'**
   String peopleListsPeopleCount(int count);
 
-  /// Screen-reader count spoken for a people-list card, after the list name.
+  /// Member total, the first figure in a people list's stats line on its detail screen, ahead of the video and loop totals.
   ///
   /// In en, this message translates to:
   /// **'{count, plural, =1{{count} member} other{{count} members}}'**
