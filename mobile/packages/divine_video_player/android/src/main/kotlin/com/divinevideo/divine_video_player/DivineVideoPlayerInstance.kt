@@ -1662,7 +1662,14 @@ internal class DivineVideoPlayerInstance(
         player?.setVideoSurface(surface)
     }
 
-    /** Switches each frame effect on or off by whether the playhead is in its window. */
+    /**
+     * Switches each frame effect on or off by whether the playhead is in its
+     * window. While playing this runs on the position tick, so in the preview
+     * a window edge can switch up to one tick late and a window shorter than
+     * a tick can be skipped; the export checks every frame. Checking every
+     * frame here would need each frame's place on the timeline in the GL
+     * stage, which only knows it after a seek.
+     */
     private fun updateFrameEffectWindows(globalMs: Long? = null) {
         val state = frameEffectsState ?: return
         val exoPlayer = player ?: return
