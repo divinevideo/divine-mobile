@@ -15,7 +15,7 @@ These shape what the editor offers, and explain several things it deliberately d
 
 - **6.3 seconds maximum.** `VideoEditorConstants.maxDuration`. The timeline shades everything past it and the export truncates to it.
 - **Camera-first.** There is no import from the camera roll. The recorder's Upload mode only explains why (ProofMode verification of camera-captured content). Both photo picks in the editor, a color mask backdrop and the still that fills a detached clip's gap, open the camera, not the gallery.
-- **No generative or ML effects.** The color mask (shown to creators as "Color mask", formerly "Green screen") is a true chroma key, not background segmentation; the name is settled, but whether the tool should grow beyond a chroma key is still open in issue [#8543](https://github.com/divinevideo/divine-mobile/issues/8543).
+- **No generative or ML effects.** The color mask (shown to creators as "Color mask", formerly "Green screen") is a true chroma key, not background segmentation; the name is settled, and the decision to stay a chroma key is recorded, pending ratification, in issue [#8543](https://github.com/divinevideo/divine-mobile/issues/8543).
 - **Two aspect ratios,** square and 9:16, chosen when recording. The editor has no control to change it.
 
 ## Getting into the editor
@@ -49,7 +49,7 @@ Clip actions ([`video_editor_timeline_clip_controls.dart`](../lib/widgets/video_
 - **Speed** from 0.25× to 3.0× in 0.05 steps, on a slider, with one-tap presets for 0.25×, 0.5×, 1×, 1.5×, 2× and 3×.
 - **Transform:** crop (locked to the video's aspect ratio), rotate by 90°, flip.
 - **Extract audio:** moves the clip's sound to its own track and mutes the clip.
-- **Save to library:** renders the trimmed clip, overlays included, into a standalone clip in the library.
+- **Save to library:** renders the trimmed clip, with the visual overlays that were over it, into a standalone clip in the library. Flashing effects and every sound track (music, voice-over, extracted audio) are left out, so a clip whose sound was extracted is saved silent.
 - **Add clips** from the library or the camera.
 - **Volume** per clip, up to 300 % (see [Audio](#audio)). Long-pressing any volume control mutes all clips and sound tracks, or unmutes them if everything is already muted.
 
@@ -64,8 +64,8 @@ Detach (picture-in-picture):
 
 - Lifts a clip off the timeline onto the canvas as a freely placed layer.
 - The gap it leaves can be closed, or held with a solid color or a photo.
-- A detached layer can be moved, resized, split, duplicated, deleted, cropped to any aspect ratio, made see-through (opacity 0–100 %), and color-masked. It has no enter or leave animation.
-- Back to timeline puts the clip back as a timeline clip: into the color or photo slot it left if that is still there, otherwise at the playhead. Only the part its layer showed comes back, as trim. Its placement, opacity and live color mask stay behind, a free crop fills the frame, and its length counts toward the 6.3 s maximum again.
+- A detached layer can be moved, resized and rotated on the canvas, split, duplicated, deleted, cropped to any aspect ratio, turned by 90° or flipped (Transform), made see-through (opacity 0–100 %), and color-masked. It has no enter or leave animation.
+- Back to timeline puts the clip back as a timeline clip, into the color or photo slot it left if that is still there. Otherwise it goes in at the playhead: at the clip boundary under it, or right after the clip the playhead is inside. Only the part its layer showed comes back, as trim. Its placement, opacity and live color mask stay behind, a free crop fills the frame, and its length counts toward the 6.3 s maximum again.
 
 Color mask (chroma key, formerly "Green screen"):
 
@@ -78,7 +78,7 @@ Timeline:
 
 - Pinch to zoom, from 1 to 600 pixels per second (2400 for stop motion).
 - Dragging the playhead past either end wraps around to the other, so the loop restart can be scrubbed across.
-- Clip and overlay actions appear as labelled tiles in a bar below the timeline.
+- Clip and overlay actions appear as labelled tiles in a bar at the bottom of the timeline.
 - Markers at the playhead; they move with clip edits.
 - Undo and redo.
 - Overlay items snap to clip edges, markers and the playhead, with haptic feedback. Clip trims do not snap.
@@ -98,7 +98,7 @@ Every overlay below sits on the timeline, where it can be moved, trimmed to show
 - **Drawing:** pencil, marker, arrow and eraser, each with a fixed width. Undo and redo inside the tool. Several drawing layers can be merged into one.
 - **Stickers:** 71 bundled OpenMoji stickers, searchable by keyword and by their localized names.
 - **Filters:** 56 looks plus "None" (40 classic presets, 8 styled looks, 8 color tints), picked one at a time with a strength slider. Each confirmed filter is kept, so several can stack.
-- **Effects:** 21 timeline effects, each with an intensity slider: glitch, block glitch, RGB split, VHS, static, old film, film grain, interference, CRT, pixelate, pixel pulse, shake, zoom pulse, mirror, kaleidoscope, split screen, wave, glow, vignette, strobe and negative flash. A new effect covers the whole video; on the timeline it is a bar that can be moved, trimmed, edited, split, duplicated and deleted, and overlapping effects combine. A flashing effect (strobe or negative flash) starts on a whole second of the exported video (an effect with no whole second before its end is left out of the export) and cannot be duplicated, and only one of them can run at a time, because overlapping ones would pass three flashes a second: adding or moving one cuts any other flashing effect out of its window, shortening or splitting it, instead of refusing the new one. A video that uses either at an intensity above zero is always published with the Flashing Lights content warning, which the creator cannot remove.
+- **Effects:** 21 timeline effects, each with an intensity slider: glitch, block glitch, RGB split, VHS, static, old film, film grain, interference, CRT, pixelate, pixel pulse, shake, zoom pulse, mirror, kaleidoscope, split screen, wave, glow, vignette, strobe and negative flash. A new effect covers the whole video; on the timeline it is a bar that can be moved, trimmed, edited, split, duplicated and deleted, and overlapping effects combine. A flashing effect (strobe or negative flash) starts on a whole second of the exported video (an effect with no whole second before its end is left out of the export) and cannot be duplicated, and only one of them can run at a time, because overlapping ones would pass three flashes a second. Adding one removes every other flashing effect, since a new effect covers the whole video; moving, trimming or editing one cuts the others out of its window instead, shortening or splitting them (pieces under 100 ms are dropped). A video that uses either at an intensity above zero is published with the Flashing Lights content warning, locked on in the metadata screen until the video is posted; editing the published video later treats it as an ordinary label that can be removed.
 - **Adjustments:** brightness, contrast, saturation, exposure, hue, temperature, tint and fade. One adjustment session shares a single time window on the timeline.
 
 Enter and leave animations, per layer:
@@ -111,7 +111,7 @@ Enter and leave animations, per layer:
 
 - **Auto captions:** the audio is transcribed on Divine's server first, with a fallback to the platform's speech recognition: Apple's on iOS, which runs on the device when it supports the language and on Apple's servers otherwise; Android 14 or later with language packs installed, on the device. Clip audio is transcribed; music and voice-over are not. The language is the app's language.
 - **Editing:** change a caption's text and timing, add and remove captions. Minimum caption length 200 ms. Captions can be typed by hand when recognition finds nothing.
-- **Styles:** 21 presets, a custom style (font, text color, background, outline and shadow, animation: none, fade, pop, spring or karaoke), and saved caption styles.
+- **Styles:** 21 presets, a custom style (font, text color, background, outline and shadow, animation: none, fade, pop, spring or karaoke), and saved caption styles, picked with a button that appears once "Burn into video" is on.
 - **Word highlight:** the karaoke animation, also a built-in preset, lights each word in a highlight color as it is spoken. Word timings come from the recognizer; for Divine's server, which only times whole cues, they are spread by word length. The published subtitle track stays cue-level.
 - **Output:** burning captions into the picture is optional. The app also publishes them as a separate subtitle track, best effort: if that upload fails or times out, the video is published without it.
 - **After publishing,** the subtitle editor lets the author fix the text and timing of a published video's captions.
@@ -124,7 +124,7 @@ Enter and leave animations, per layer:
 - **Voice-over:** records takes over the muted preview. Takes are placed one after another; the last take can be deleted.
 - **Volume** per clip and per sound track, from silent to 300 %. The timeline arc turns orange above 100 % and red above 200 %. Boosted audio is limited at −1 dBFS in the export, and the Android preview limits at the same ceiling; the iOS preview plays the boost without a limiter.
 - **Fade in and out** per sound track, in 100 ms steps. The envelope is linear, and the preview plays the same one the export bakes in.
-- **Voice effects and noise reduction** on any sound track, not only voice-overs (a clip's own sound needs Extract audio first): one-tap presets (original, high pitch, low pitch, robot, echo) or sliders for pitch (−12 to +12 semitones), robot (0–100 %) and echo (0–100 %), plus a noise reduction toggle. Settings loop while the sheet is open and are processed offline when confirmed. The track keeps the original, so the effect can be changed or removed later.
+- **Voice effects and noise reduction** on any sound track, not only voice-overs (a clip's own sound needs Extract audio first): one-tap presets (original, high pitch, low pitch, robot, echo) or sliders for pitch (−12 to +12 semitones), robot (0–100 %) and echo (0–100 %), plus a noise reduction toggle. Settings loop while the sheet is open and are processed offline when confirmed. Processing downmixes the track to mono. The track keeps the original, so the effect can be changed or removed later.
 - **Waveforms** on clips and sound tracks, and live while recording a voice-over.
 - Creators choose whether others may reuse the audio of their published video.
 
