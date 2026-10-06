@@ -28,14 +28,20 @@ const _curatedListKind = 30005;
 /// Well-known d-tag for the user's default "My List".
 const defaultListId = 'my_vine_list';
 
-/// Newest kind-30005 events asked of each relay per search.
+/// Newest NIP-51 list events asked of each relay per read, for search and
+/// discovery alike.
 ///
 /// Every new account publishes an empty default list, and on production those
 /// placeholders are all but a percent or two of the newest events, so a
-/// 50-event window held nothing but placeholders whatever the query. 500 is
-/// the relay gateway's default discovery window; the placeholders drop out
-/// below because they carry no videos.
-const _relaySearchWindow = 500;
+/// 50-event window held nothing but placeholders whatever the query. The
+/// placeholders drop out of every read because they carry no videos.
+const kPublicListsRelayWindow = 500;
+
+/// How long a relay read of public lists waits before giving up.
+///
+/// Shared by search and discovery, so a user-typed search is not cut off by
+/// the client's default query budget while startup work holds the relay pool.
+const kPublicCuratedListsRelayReadTimeout = Duration(seconds: 12);
 
 /// {@template curated_list_repository}
 /// Repository for managing curated video list subscriptions.
@@ -150,14 +156,16 @@ class CuratedListRepository {
   /// subscribed ones, by [query] against name, description, and tags
   /// (case-insensitive).
   ///
-  /// Returns an empty list when [query] is blank.
+  /// A list with no videos is left out, as it is from relay results: search
+  /// only surfaces lists with something to watch. Returns an empty list when
+  /// [query] is blank.
   List<CuratedList> searchLists(String query) {
     if (query.trim().isEmpty) return [];
 
     final lowerQuery = query.toLowerCase();
     final matches = <String, CuratedList>{};
     for (final list in [..._ownLists.values, ..._subscribedLists.values]) {
-      if (!list.isPublic) continue;
+      if (!list.isPublic || !list.hasVideos) continue;
       if (_isBlocked(list.pubkey)) continue;
       if (!_matchesQuery(list, lowerQuery)) continue;
       matches.putIfAbsent(list.authorScopedId, () => list);
@@ -241,7 +249,7 @@ class CuratedListRepository {
   /// resolving thumbnails.
   Future<List<CuratedList>> _queryListsFromRelays({
     required String query,
-    int limit = _relaySearchWindow,
+    int limit = kPublicListsRelayWindow,
     Set<String>? excludeAuthorScopedIds,
   }) async {
     if (query.trim().isEmpty) return [];
@@ -249,9 +257,12 @@ class CuratedListRepository {
     final lowerQuery = query.toLowerCase();
     final excluded = excludeAuthorScopedIds ?? const {};
 
-    final events = await _nostrClient.queryEvents([
-      Filter(kinds: [_curatedListKind], limit: limit),
-    ]);
+    final events = await _nostrClient.queryEvents(
+      [
+        Filter(kinds: [_curatedListKind], limit: limit),
+      ],
+      timeout: kPublicCuratedListsRelayReadTimeout,
+    );
 
     final seen = <String, CuratedList>{};
     for (final event in events) {
