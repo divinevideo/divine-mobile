@@ -745,6 +745,45 @@ void main() {
         }
       });
     });
+
+    group('customVideoEffectsOnOutput', () {
+      const echo = CustomVideoEffect(
+        id: echoVideoEffectId,
+        params: {EditorVideoEffect.intensityParam: 0.6},
+        startTime: Duration(seconds: 1),
+        endTime: Duration(seconds: 4),
+      );
+
+      test('moves the window onto the shorter exported video', () {
+        expect(customVideoEffectsOnOutput(const [echo], compressed), [
+          CustomVideoEffect(
+            id: echoVideoEffectId,
+            params: echo.params,
+            startTime: ms(1000),
+            endTime: ms(3600),
+          ),
+        ]);
+      });
+
+      test('leaves the window alone when no transition shortens the '
+          'video', () {
+        expect(customVideoEffectsOnOutput(const [echo], plain), const [echo]);
+      });
+
+      test('keeps an end that reaches the end of the video open', () {
+        const untilTheEnd = CustomVideoEffect(
+          id: echoVideoEffectId,
+          startTime: Duration(seconds: 1),
+        );
+
+        final onOutput = customVideoEffectsOnOutput(const [
+          untilTheEnd,
+        ], compressed);
+
+        expect(onOutput.single.startTime, ms(1000));
+        expect(onOutput.single.endTime, isNull);
+      });
+    });
   });
 
   group('EditorVideoEffect custom', () {
