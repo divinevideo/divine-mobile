@@ -74,7 +74,7 @@ void main() {
     Widget buildSubject({
       String listId = 'external-list',
       String listName = 'External List',
-      String? authorPubkey = 'external-pubkey',
+      String? authorPubkey,
       List<String>? videoIds = const [],
       bool isPublic = true,
       MockGoRouter? goRouter,
@@ -214,7 +214,6 @@ void main() {
           buildSubject(
             listId: 'owned-list',
             listName: 'Puppets',
-            authorPubkey: null,
             videoIds: null,
             isPublic: false,
           ),
@@ -248,7 +247,6 @@ void main() {
         await tester.pumpWidget(
           buildSubject(
             listName: 'Subscribed List',
-            authorPubkey: null,
             videoIds: null,
           ),
         );
@@ -285,6 +283,67 @@ void main() {
     });
 
     group('viewer actions', () {
+      testWidgets(
+        'a discovered list cannot use a different author local list',
+        (
+          tester,
+        ) async {
+          final author = 'a' * 64;
+          final viewer = 'b' * 64;
+          const listId = 'my_vine_list';
+          final local = CuratedList(
+            id: listId,
+            name: 'My own list',
+            pubkey: viewer,
+            videoEventIds: const [],
+            createdAt: DateTime(2026),
+            updatedAt: DateTime(2026),
+          );
+          final discovered = local.copyWith(
+            name: 'Discovered list',
+            pubkey: author,
+            description: 'The selected author list.',
+            videoEventIds: const ['selected-video'],
+          );
+          when(() => mockService.getListById(listId)).thenReturn(local);
+          when(() => mockService.isOwnedList(listId)).thenReturn(true);
+          when(() => mockService.isSubscribedToList(listId)).thenReturn(true);
+          when(() => mockService.isOwnedList('$author:$listId'))
+              .thenReturn(false);
+          when(() => mockService.isSubscribedToList('$author:$listId'))
+              .thenReturn(false);
+          var selectedVideoReads = 0;
+          var localVideoReads = 0;
+          await tester.pumpWidget(
+            buildSubject(
+              listId: listId,
+              listName: discovered.name,
+              authorPubkey: author,
+              videoIds: discovered.videoEventIds,
+              discoveredList: discovered,
+              overrideVideoEvents: false,
+              extraOverrides: [
+                videoEventsByIdsProvider(discovered.videoEventIds)
+                    .overrideWith((ref) {
+                      selectedVideoReads++;
+                      return Stream.value(const []);
+                    }),
+                curatedListVideoEventsProvider(listId).overrideWith((ref) {
+                  localVideoReads++;
+                  return Stream.value(const []);
+                }),
+              ],
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(selectedVideoReads, 1);
+          expect(localVideoReads, 0);
+          expect(find.text('The selected author list.'), findsOneWidget);
+          expect(find.text(l10n.listFollowButton), findsOneWidget);
+          expect(findByTooltip(l10n.curatedListActionsTooltip), findsNothing);
+        },
+      );
+
       testWidgets('shows follow pill and share action for a public list', (
         tester,
       ) async {

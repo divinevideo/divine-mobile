@@ -21,6 +21,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/search_results/view/search_results_page.dart';
 import 'package:openvine/screens/search_results/view/search_results_view.dart';
 import 'package:openvine/screens/search_results/widgets/widgets.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod/misc.dart' show Override;
@@ -70,9 +71,11 @@ void main() {
       Override? curatedRepositoryOverride,
       Override? listThumbnailPolicyOverride,
       List<Override> flagOverrides = const [],
+      AuthService? authService,
     }) {
       return testMaterialApp(
         home: const SearchResultsPage(),
+        mockAuthService: authService,
         mockProfileRepository: profileRepositoryOverride == null
             ? mockProfileRepository
             : null,
@@ -512,6 +515,39 @@ void main() {
 
       final contextAfter = tester.element(find.byType(SearchResultsView));
       final blocAfter = BlocProvider.of<VideoSearchBloc>(contextAfter);
+      expect(blocAfter, isNot(same(blocBefore)));
+      expect(blocBefore.isClosed, isTrue);
+    });
+
+    testWidgets('recreates the list search bloc when the viewer changes', (
+      tester,
+    ) async {
+      // The list search keeps the viewer's own lists past the Divine author
+      // check, so the viewer is a dependency like the repositories are.
+      final authStates = StreamController<AuthState>.broadcast();
+      addTearDown(authStates.close);
+      final authService = createMockAuthService(
+        authState: AuthState.authenticated,
+        currentPublicKeyHex: 'a' * 64,
+      );
+      when(
+        () => authService.authStateStream,
+      ).thenAnswer((_) => authStates.stream);
+      await tester.pumpWidget(createTestWidget(authService: authService));
+
+      final blocBefore = BlocProvider.of<ListSearchBloc>(
+        tester.element(find.byType(SearchResultsView)),
+      );
+
+      when(() => authService.currentPublicKeyHex).thenReturn('b' * 64);
+      authStates.add(AuthState.authenticating);
+      await tester.pump();
+      authStates.add(AuthState.authenticated);
+      await tester.pump();
+
+      final blocAfter = BlocProvider.of<ListSearchBloc>(
+        tester.element(find.byType(SearchResultsView)),
+      );
       expect(blocAfter, isNot(same(blocBefore)));
       expect(blocBefore.isClosed, isTrue);
     });

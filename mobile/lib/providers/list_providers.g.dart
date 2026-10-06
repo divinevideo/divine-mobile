@@ -54,13 +54,11 @@ final class CuratedListsProvider
 
 String _$curatedListsHash() => r'74de3f9b86d5444e78e7f2c797370ca75f29f9f5';
 
-/// State class for discovered public lists
 /// Provider for videos in a specific curated list
 
 @ProviderFor(curatedListVideos)
 final curatedListVideosProvider = CuratedListVideosFamily._();
 
-/// State class for discovered public lists
 /// Provider for videos in a specific curated list
 
 final class CuratedListVideosProvider
@@ -71,7 +69,6 @@ final class CuratedListVideosProvider
           FutureOr<List<String>>
         >
     with $FutureModifier<List<String>>, $FutureProvider<List<String>> {
-  /// State class for discovered public lists
   /// Provider for videos in a specific curated list
   CuratedListVideosProvider._({
     required CuratedListVideosFamily super.from,
@@ -119,7 +116,6 @@ final class CuratedListVideosProvider
 
 String _$curatedListVideosHash() => r'ce7db4b5ea59279d88325cdc9e928dc5a89a92b0';
 
-/// State class for discovered public lists
 /// Provider for videos in a specific curated list
 
 final class CuratedListVideosFamily extends $Family
@@ -133,7 +129,6 @@ final class CuratedListVideosFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// State class for discovered public lists
   /// Provider for videos in a specific curated list
 
   CuratedListVideosProvider call(String listId) =>

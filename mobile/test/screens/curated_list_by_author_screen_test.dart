@@ -48,10 +48,11 @@ void main() {
       when(() => mockService.isSubscribedToList(any())).thenReturn(false);
     });
 
-    Widget buildSubject({MockGoRouter? goRouter}) {
-      const screen = CuratedListByAuthorScreen(
+    Widget buildSubject({MockGoRouter? goRouter, CuratedList? discoveredList}) {
+      final screen = CuratedListByAuthorScreen(
         authorPubkey: _authorPubkey,
         listId: 'my-vines',
+        discoveredList: discoveredList,
       );
       return ProviderScope(
         overrides: [
@@ -67,6 +68,64 @@ void main() {
               ? screen
               : MockGoRouterProvider(goRouter: goRouter, child: screen),
         ),
+      );
+    }
+
+    testWidgets('opens matching discovery data without a second relay read', (
+      tester,
+    ) async {
+      final list = CuratedList(
+        id: 'my-vines',
+        name: 'Warm Vines',
+        pubkey: _authorPubkey,
+        videoEventIds: const [],
+        createdAt: DateTime.utc(2026),
+        updatedAt: DateTime.utc(2026),
+      );
+      await tester.pumpWidget(buildSubject(discoveredList: list));
+      await tester.pumpAndSettle();
+      final feed = tester.widget<CuratedListFeedScreen>(
+        find.byType(CuratedListFeedScreen),
+      );
+      expect(feed.discoveredList, list);
+      expect(feed.authorPubkey, _authorPubkey);
+      verifyNever(
+        () => mockService.fetchPublicList(
+          authorPubkey: any(named: 'authorPubkey'),
+          listId: any(named: 'listId'),
+        ),
+      );
+    });
+
+    for (final wrongAuthor in [true, false]) {
+      testWidgets(
+        'rejects discovery data with a different ${wrongAuthor ? 'author' : 'ID'}',
+        (tester) async {
+          when(
+            () => mockService.fetchPublicList(
+              authorPubkey: _authorPubkey,
+              listId: 'my-vines',
+            ),
+          ).thenAnswer((_) async => null);
+          final wrongList = CuratedList(
+            id: wrongAuthor ? 'my-vines' : 'other-list',
+            name: 'Wrong list',
+            pubkey: wrongAuthor ? 'b' * 64 : _authorPubkey,
+            videoEventIds: const [],
+            createdAt: DateTime.utc(2026),
+            updatedAt: DateTime.utc(2026),
+          );
+          await tester.pumpWidget(buildSubject(discoveredList: wrongList));
+          await tester.pumpAndSettle();
+          expect(find.text('Wrong list'), findsNothing);
+          expect(find.byType(RouteErrorScreen), findsOneWidget);
+          verify(
+            () => mockService.fetchPublicList(
+              authorPubkey: _authorPubkey,
+              listId: 'my-vines',
+            ),
+          ).called(1);
+        },
       );
     }
 
