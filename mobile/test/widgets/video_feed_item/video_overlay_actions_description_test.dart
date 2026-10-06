@@ -30,6 +30,10 @@ import '../../helpers/test_provider_overrides.dart';
 AppLocalizations _l10n(WidgetTester tester) =>
     AppLocalizations.of(tester.element(find.byType(Scaffold).first));
 
+// Offsets come from summing fractional line heights, so compare within a
+// hair instead of for exact equality.
+const _layoutTolerance = 0.01;
+
 Finder _specialCheckmark() => find.byWidgetPredicate(
   (w) => w is DivineIcon && w.icon == DivineIconName.check,
 );
@@ -246,7 +250,7 @@ void main() {
 
         expect(
           tester.getRect(captionBlock()).bottom,
-          equals(descriptionBottom(tester)),
+          closeTo(descriptionBottom(tester), _layoutTolerance),
         );
       });
 
@@ -264,7 +268,10 @@ void main() {
         final rowTop = tester
             .getRect(find.bySemanticsIdentifier('collaborator_avatar_row'))
             .top;
-        expect(rowTop - descriptionBottom(tester), equals(4));
+        expect(
+          rowTop - descriptionBottom(tester),
+          closeTo(4, _layoutTolerance),
+        );
       });
 
       testWidgets('reserves no gap for collaborators the viewer cannot see', (
@@ -314,7 +321,7 @@ void main() {
         );
         expect(
           tester.getRect(captionBlock()).bottom,
-          equals(descriptionBottom(tester)),
+          closeTo(descriptionBottom(tester), _layoutTolerance),
         );
       });
     });
