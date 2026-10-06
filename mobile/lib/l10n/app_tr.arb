@@ -5126,6 +5126,7 @@
   "liveHostLabel": "Sunucu: {pubkey}",
   "liveParticipantCounts": "{speakers, plural, one{{speakers} konuşmacı} other{{speakers} konuşmacı}} · {listeners, plural, one{{listeners} dinleyici} other{{listeners} dinleyici}}",
   "liveStartedAt": "Başlangıç: {time}",
+  "liveEnded": "Sona erdi",
   "liveEndedAt": "Bitiş: {time}",
   "liveScheduledFor": "Planlanan zaman: {time}",
   "liveShareSubject": "Divine'da {title} canlı yayınına katıl",

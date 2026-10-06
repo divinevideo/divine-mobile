@@ -13611,6 +13611,9 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String get liveEnded => 'Berakhir';
+
+  @override
   String liveEndedAt(String time) {
     return 'Berakhir $time';
   }

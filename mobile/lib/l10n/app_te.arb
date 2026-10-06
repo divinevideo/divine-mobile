@@ -8631,6 +8631,7 @@
   "liveHostLabel": "హోస్ట్: {pubkey}",
   "liveParticipantCounts": "{speakers, plural, one{{speakers} మాట్లాడే వ్యక్తి} other{{speakers} మాట్లాడేవారు}} · {listeners, plural, one{{listeners} వినే వ్యక్తి} other{{listeners} వినేవారు}}",
   "liveStartedAt": "ప్రారంభ సమయం {time}",
+  "liveEnded": "ముగిసింది",
   "liveEndedAt": "ముగింపు సమయం {time}",
   "liveScheduledFor": "షెడ్యూల్ చేసిన సమయం {time}",
   "liveShareSubject": "Divineలో {title} లైవ్‌లో చేరండి",

@@ -5126,6 +5126,7 @@
   "liveHostLabel": "Gazdă: {pubkey}",
   "liveParticipantCounts": "{speakers, plural, one{{speakers} vorbitor} few{{speakers} vorbitori} other{{speakers} de vorbitori}} · {listeners, plural, one{{listeners} ascultător} few{{listeners} ascultători} other{{listeners} de ascultători}}",
   "liveStartedAt": "A început la {time}",
+  "liveEnded": "Încheiat",
   "liveEndedAt": "S-a încheiat la {time}",
   "liveScheduledFor": "Programat pentru {time}",
   "liveShareSubject": "Participă la {title} live pe Divine",

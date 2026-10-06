@@ -5126,6 +5126,7 @@
   "liveHostLabel": "Värd: {pubkey}",
   "liveParticipantCounts": "{speakers, plural, one{{speakers} talare} other{{speakers} talare}} · {listeners, plural, one{{listeners} lyssnare} other{{listeners} lyssnare}}",
   "liveStartedAt": "Startade {time}",
+  "liveEnded": "Avslutat",
   "liveEndedAt": "Slutade {time}",
   "liveScheduledFor": "Planerat till {time}",
   "liveShareSubject": "Gå med i {title} live på Divine",

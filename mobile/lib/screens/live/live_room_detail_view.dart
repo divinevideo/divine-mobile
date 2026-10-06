@@ -86,9 +86,12 @@ class LiveRoomDetailView extends StatelessWidget {
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    isLive
-                        ? context.l10n.liveLiveNow
-                        : context.l10n.libraryScheduledSectionTitle,
+                    switch (currentSession?.status) {
+                      LiveSessionStatus.live => context.l10n.liveLiveNow,
+                      LiveSessionStatus.ended => context.l10n.liveEnded,
+                      LiveSessionStatus.planned ||
+                      null => context.l10n.libraryScheduledSectionTitle,
+                    },
                     style: VineTheme.labelLargeFont(
                       color: isLive
                           ? VineTheme.onPrimary
@@ -164,7 +167,7 @@ class LiveRoomDetailView extends StatelessWidget {
             expanded: true,
             onPressed: () {
               context.push(
-                '/live/room/${room.id}/session/$sessionId',
+                RoutePaths.liveRoomFor(room.id, sessionId),
                 extra: LiveRoomRouteData(
                   room: room,
                   session: currentSession,

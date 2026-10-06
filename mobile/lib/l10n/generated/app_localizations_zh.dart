@@ -12884,6 +12884,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get liveEnded => '已结束';
+
+  @override
   String liveEndedAt(String time) {
     return '结束于 $time';
   }

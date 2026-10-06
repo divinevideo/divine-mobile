@@ -13776,6 +13776,9 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
+  String get liveEnded => 'Afgelopen';
+
+  @override
   String liveEndedAt(String time) {
     return 'Geëindigd $time';
   }

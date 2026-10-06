@@ -13649,6 +13649,9 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String get liveEnded => 'Đã kết thúc';
+
+  @override
   String liveEndedAt(String time) {
     return 'Kết thúc lúc $time';
   }

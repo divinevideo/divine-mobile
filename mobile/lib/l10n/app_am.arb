@@ -5226,6 +5226,7 @@
   "liveHostLabel": "አስተናጋጅ፦ {pubkey}",
   "liveParticipantCounts": "{speakers, plural, one{{speakers} ተናጋሪ} other{{speakers} ተናጋሪዎች}} · {listeners, plural, one{{listeners} አድማጭ} other{{listeners} አድማጮች}}",
   "liveStartedAt": "የጀመረው፦ {time}",
+  "liveEnded": "አብቅቷል",
   "liveEndedAt": "ያበቃው፦ {time}",
   "liveScheduledFor": "ለ{time} የተያዘ",
   "liveShareSubject": "{title}ን በDivine በቀጥታ ይቀላቀሉ",

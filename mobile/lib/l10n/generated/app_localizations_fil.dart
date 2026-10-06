@@ -13822,6 +13822,9 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
+  String get liveEnded => 'Natapos na';
+
+  @override
   String liveEndedAt(String time) {
     return 'Natapos noong $time';
   }

@@ -5126,6 +5126,7 @@
   "liveHostLabel": "الاستضافة: {pubkey}",
   "liveParticipantCounts": "{speakers, plural, zero{التحدث: {speakers}} one{التحدث: {speakers}} two{التحدث: {speakers}} few{التحدث: {speakers}} many{التحدث: {speakers}} other{التحدث: {speakers}}} · {listeners, plural, zero{الاستماع: {listeners}} one{الاستماع: {listeners}} two{الاستماع: {listeners}} few{الاستماع: {listeners}} many{الاستماع: {listeners}} other{الاستماع: {listeners}}}",
   "liveStartedAt": "البداية: {time}",
+  "liveEnded": "انتهى",
   "liveEndedAt": "النهاية: {time}",
   "liveScheduledFor": "الموعد المحدد: {time}",
   "liveShareSubject": "الانضمام إلى {title} مباشرة على Divine",

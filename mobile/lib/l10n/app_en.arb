@@ -10387,6 +10387,10 @@
   "liveHostLabel": "Host: {pubkey}",
   "liveParticipantCounts": "{speakers, plural, one{{speakers} speaker} other{{speakers} speakers}} · {listeners, plural, one{{listeners} listener} other{{listeners} listeners}}",
   "liveStartedAt": "Started {time}",
+  "liveEnded": "Ended",
+  "@liveEnded": {
+    "description": "Status badge for a live session that has ended"
+  },
   "liveEndedAt": "Ended {time}",
   "liveScheduledFor": "Scheduled for {time}",
   "liveShareSubject": "Join {title} live on Divine",

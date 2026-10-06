@@ -13833,6 +13833,9 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String get liveEnded => 'Приключило';
+
+  @override
   String liveEndedAt(String time) {
     return 'Край: $time';
   }

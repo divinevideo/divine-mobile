@@ -14048,6 +14048,9 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String get liveEnded => 'ముగిసింది';
+
+  @override
   String liveEndedAt(String time) {
     return 'ముగింపు సమయం $time';
   }

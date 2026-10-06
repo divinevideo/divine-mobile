@@ -6893,6 +6893,7 @@
   "liveHostLabel": "Hos: {pubkey}",
   "liveParticipantCounts": "{speakers, plural, other{{speakers} penutur}} · {listeners, plural, other{{listeners} pendengar}}",
   "liveStartedAt": "Bermula {time}",
+  "liveEnded": "Tamat",
   "liveEndedAt": "Tamat {time}",
   "liveScheduledFor": "Dijadualkan pada {time}",
   "liveShareSubject": "Sertai {title} secara langsung di Divine",

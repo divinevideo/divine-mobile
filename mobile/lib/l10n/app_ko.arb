@@ -4672,6 +4672,7 @@
   "liveHostLabel": "호스트: {pubkey}",
   "liveParticipantCounts": "{speakers, plural, other{발언자: {speakers}명}} · {listeners, plural, other{청취자: {listeners}명}}",
   "liveStartedAt": "시작: {time}",
+  "liveEnded": "종료됨",
   "liveEndedAt": "종료: {time}",
   "liveScheduledFor": "예정: {time}",
   "liveShareSubject": "Divine에서 {title} 라이브에 참여해요",

@@ -5250,6 +5250,7 @@
   "liveHostLabel": "Домакин: {pubkey}",
   "liveParticipantCounts": "{speakers, plural, one{{speakers} говорещ човек} other{{speakers} говорещи}} · {listeners, plural, one{{listeners} слушащ човек} other{{listeners} слушащи}}",
   "liveStartedAt": "Начало: {time}",
+  "liveEnded": "Приключило",
   "liveEndedAt": "Край: {time}",
   "liveScheduledFor": "Насрочено за {time}",
   "liveShareSubject": "Присъедини се към {title} на живо в Divine",

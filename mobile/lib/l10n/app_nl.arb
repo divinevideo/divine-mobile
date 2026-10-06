@@ -5126,6 +5126,7 @@
   "liveHostLabel": "Host: {pubkey}",
   "liveParticipantCounts": "{speakers, plural, one{{speakers} spreker} other{{speakers} sprekers}} · {listeners, plural, one{{listeners} luisteraar} other{{listeners} luisteraars}}",
   "liveStartedAt": "Begonnen {time}",
+  "liveEnded": "Afgelopen",
   "liveEndedAt": "Geëindigd {time}",
   "liveScheduledFor": "Gepland voor {time}",
   "liveShareSubject": "Doe live mee met {title} op Divine",

@@ -4125,6 +4125,7 @@
   "liveHostLabel": "Host: {pubkey}",
   "liveParticipantCounts": "{speakers, plural, one{{speakers} speaker} other{{speakers} mga speaker}} · {listeners, plural, one{{listeners} nakikinig} other{{listeners} nakikinig}}",
   "liveStartedAt": "Nagsimula noong {time}",
+  "liveEnded": "Natapos na",
   "liveEndedAt": "Natapos noong {time}",
   "liveScheduledFor": "Naka-schedule sa {time}",
   "liveShareSubject": "Sumali sa {title} nang live sa Divine",

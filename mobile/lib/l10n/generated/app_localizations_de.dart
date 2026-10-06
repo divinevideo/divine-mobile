@@ -13870,6 +13870,9 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get liveEnded => 'Beendet';
+
+  @override
   String liveEndedAt(String time) {
     return 'Beendet: $time';
   }

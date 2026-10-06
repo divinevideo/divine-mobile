@@ -5126,6 +5126,7 @@
   "liveHostLabel": "Animation : {pubkey}",
   "liveParticipantCounts": "{speakers, plural, one{{speakers} personne qui parle} many{{speakers} personnes qui parlent} other{{speakers} personnes qui parlent}} · {listeners, plural, one{{listeners} personne à l’écoute} many{{listeners} personnes à l’écoute} other{{listeners} personnes à l’écoute}}",
   "liveStartedAt": "Début : {time}",
+  "liveEnded": "Terminé",
   "liveEndedAt": "Fin : {time}",
   "liveScheduledFor": "Prévu pour {time}",
   "liveShareSubject": "Rejoins {title} en direct sur Divine",

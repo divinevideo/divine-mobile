@@ -5126,6 +5126,7 @@
   "liveHostLabel": "Host: {pubkey}",
   "liveParticipantCounts": "{speakers, plural, other{{speakers} pembicara}} · {listeners, plural, other{{listeners} pendengar}}",
   "liveStartedAt": "Dimulai {time}",
+  "liveEnded": "Berakhir",
   "liveEndedAt": "Berakhir {time}",
   "liveScheduledFor": "Dijadwalkan untuk {time}",
   "liveShareSubject": "Gabung {title} live di Divine",

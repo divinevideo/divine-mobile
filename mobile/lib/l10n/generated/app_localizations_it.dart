@@ -13871,6 +13871,9 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String get liveEnded => 'Terminato';
+
+  @override
   String liveEndedAt(String time) {
     return 'Fine: $time';
   }

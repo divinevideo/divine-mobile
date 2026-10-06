@@ -13050,6 +13050,9 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get liveEnded => '종료됨';
+
+  @override
   String liveEndedAt(String time) {
     return '종료: $time';
   }

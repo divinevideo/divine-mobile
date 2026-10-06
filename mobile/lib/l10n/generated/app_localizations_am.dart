@@ -13361,6 +13361,9 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String get liveEnded => 'አብቅቷል';
+
+  @override
   String liveEndedAt(String time) {
     return 'ያበቃው፦ $time';
   }

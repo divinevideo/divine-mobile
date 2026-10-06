@@ -13915,6 +13915,9 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get liveEnded => 'Terminé';
+
+  @override
   String liveEndedAt(String time) {
     return 'Fin : $time';
   }

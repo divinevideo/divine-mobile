@@ -13671,6 +13671,9 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get liveEnded => 'انتهى';
+
+  @override
   String liveEndedAt(String time) {
     return 'النهاية: $time';
   }

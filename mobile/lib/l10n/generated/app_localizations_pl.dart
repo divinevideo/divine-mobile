@@ -13978,6 +13978,9 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String get liveEnded => 'Zakończono';
+
+  @override
   String liveEndedAt(String time) {
     return 'Zakończono $time';
   }

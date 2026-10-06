@@ -13632,6 +13632,9 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String get liveEnded => 'Sona erdi';
+
+  @override
   String liveEndedAt(String time) {
     return 'Bitiş: $time';
   }

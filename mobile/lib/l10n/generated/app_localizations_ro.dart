@@ -13982,6 +13982,9 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String get liveEnded => 'Încheiat';
+
+  @override
   String liveEndedAt(String time) {
     return 'S-a încheiat la $time';
   }

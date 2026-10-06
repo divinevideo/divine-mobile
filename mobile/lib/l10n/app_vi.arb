@@ -6893,6 +6893,7 @@
   "liveHostLabel": "Người chủ trì: {pubkey}",
   "liveParticipantCounts": "{speakers, plural, other{{speakers} người nói}} · {listeners, plural, other{{listeners} người nghe}}",
   "liveStartedAt": "Bắt đầu lúc {time}",
+  "liveEnded": "Đã kết thúc",
   "liveEndedAt": "Kết thúc lúc {time}",
   "liveScheduledFor": "Đã lên lịch lúc {time}",
   "liveShareSubject": "Tham gia {title} trực tiếp trên Divine",

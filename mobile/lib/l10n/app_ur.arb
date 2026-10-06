@@ -6893,6 +6893,7 @@
   "liveHostLabel": "میزبان: {pubkey}",
   "liveParticipantCounts": "{speakers, plural, one{{speakers} مقرر} other{{speakers} مقررین}} · {listeners, plural, one{{listeners} سامع} other{{listeners} سامعین}}",
   "liveStartedAt": "شروع ہوا: {time}",
+  "liveEnded": "ختم ہو گیا",
   "liveEndedAt": "ختم ہوا: {time}",
   "liveScheduledFor": "طے شدہ وقت: {time}",
   "liveShareSubject": "Divine پر {title} میں براہِ راست شامل ہوں",

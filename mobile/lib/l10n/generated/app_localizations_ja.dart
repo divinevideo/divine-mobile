@@ -13035,6 +13035,9 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get liveEnded => '終了';
+
+  @override
   String liveEndedAt(String time) {
     return '終了：$time';
   }

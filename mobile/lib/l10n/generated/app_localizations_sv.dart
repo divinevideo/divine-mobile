@@ -13713,6 +13713,9 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
+  String get liveEnded => 'Avslutat';
+
+  @override
   String liveEndedAt(String time) {
     return 'Slutade $time';
   }

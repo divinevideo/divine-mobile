@@ -6893,6 +6893,7 @@
   "liveHostLabel": "主持人：{pubkey}",
   "liveParticipantCounts": "{speakers, plural, other{{speakers} 位发言者}} · {listeners, plural, other{{listeners} 位听众}}",
   "liveStartedAt": "开始于 {time}",
+  "liveEnded": "已结束",
   "liveEndedAt": "结束于 {time}",
   "liveScheduledFor": "预定于 {time}",
   "liveShareSubject": "在 Divine 加入 {title} 直播",

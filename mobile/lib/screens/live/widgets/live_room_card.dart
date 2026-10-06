@@ -57,9 +57,12 @@ class LiveRoomCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
-                        isLive
-                            ? context.l10n.liveLiveNow
-                            : context.l10n.libraryScheduledSectionTitle,
+                        switch (session?.status) {
+                          LiveSessionStatus.live => context.l10n.liveLiveNow,
+                          LiveSessionStatus.ended => context.l10n.liveEnded,
+                          LiveSessionStatus.planned ||
+                          null => context.l10n.libraryScheduledSectionTitle,
+                        },
                         style: VineTheme.labelLargeFont(
                           color: isLive
                               ? VineTheme.onPrimary

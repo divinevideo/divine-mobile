@@ -13701,6 +13701,9 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
+  String get liveEnded => 'ختم ہو گیا';
+
+  @override
   String liveEndedAt(String time) {
     return 'ختم ہوا: $time';
   }

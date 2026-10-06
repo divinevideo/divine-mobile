@@ -22965,6 +22965,12 @@ abstract class AppLocalizations {
   /// **'Started {time}'**
   String liveStartedAt(String time);
 
+  /// Status badge for a live session that has ended
+  ///
+  /// In en, this message translates to:
+  /// **'Ended'**
+  String get liveEnded;
+
   /// Live room UI message. Preserve all placeholders.
   ///
   /// In en, this message translates to:

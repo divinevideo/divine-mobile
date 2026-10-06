@@ -5126,6 +5126,7 @@
   "liveHostLabel": "ホスト：{pubkey}",
   "liveParticipantCounts": "{speakers, plural, other{スピーカー：{speakers}人}} · {listeners, plural, other{リスナー：{listeners}人}}",
   "liveStartedAt": "開始：{time}",
+  "liveEnded": "終了",
   "liveEndedAt": "終了：{time}",
   "liveScheduledFor": "予定：{time}",
   "liveShareSubject": "Divineで{title}のライブに参加",
