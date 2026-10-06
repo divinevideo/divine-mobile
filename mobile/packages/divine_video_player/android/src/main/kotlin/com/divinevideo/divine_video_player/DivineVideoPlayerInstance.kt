@@ -1778,6 +1778,12 @@ internal class DivineVideoPlayerInstance(
                     decodeHistoryFramesOneByOne(path, targets, width, height, isCancelled)
                 }
             }
+            if (frames.isEmpty() && !isCancelled()) {
+                DivineVideoPlayerLog.warning(
+                    "$logTarget decoded none of the ${targets.size} earlier frames for clip $index",
+                    name = "DivineVideoPlayer.Effects",
+                )
+            }
             mainHandler.post {
                 frameEffectsFillRunning = null
                 if (frameEffectsState === state && frames.isNotEmpty()) {

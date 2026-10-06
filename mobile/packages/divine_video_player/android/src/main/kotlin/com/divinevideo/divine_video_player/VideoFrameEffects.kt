@@ -283,7 +283,14 @@ internal class FrameEffectsGlEffect(private val state: FrameEffectsState) : GlEf
             version = current
             effects.forEach { it?.release() }
             effects = state.configs.map { config ->
-                VideoFrameEffects.factory(config.id)?.invoke(config.params)
+                val effect = VideoFrameEffects.factory(config.id)?.invoke(config.params)
+                if (effect == null) {
+                    DivineVideoPlayerLog.warning(
+                        "No frame effect is registered under ${config.id}",
+                        name = "DivineVideoPlayer.Effects",
+                    )
+                }
+                effect
             }
             val offsets = effects.filterNotNull().flatMap { it.historyOffsetsUs.toList() }
             maxOffsetUs = offsets.maxOrNull() ?: 0L

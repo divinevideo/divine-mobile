@@ -135,17 +135,21 @@ final class VideoFrameEffectProcessor {
 
   /// Replaces the effects with those in `configs`, each a map of `id`,
   /// `params`, `startUs` and `endUs` on the player's timeline. Ids nothing
-  /// is registered under are skipped. Returns whether anything changed: an
-  /// unchanged list keeps the effects and their earlier frames as they are.
+  /// is registered under are skipped, with a warning. Returns whether
+  /// anything changed: an unchanged list keeps the effects and their earlier
+  /// frames as they are.
   @discardableResult
   func setEffects(_ configs: [[String: Any]]) -> Bool {
     let incoming = configs as NSArray
     if let lastConfigs, lastConfigs.isEqual(incoming) { return false }
     lastConfigs = incoming
     stages = configs.compactMap { config in
-      guard let id = config["id"] as? String,
-        let factory = VideoFrameEffects.factory(for: id)
-      else { return nil }
+      guard let id = config["id"] as? String else { return nil }
+      guard let factory = VideoFrameEffects.factory(for: id) else {
+        DivineVideoPlayerLog.shared.warning(
+          "No frame effect is registered under \(id)", name: "DivineVideoPlayer.Effects")
+        return nil
+      }
       let effect = factory(config["params"] as? [String: Any] ?? [:])
       return Stage(
         effect: effect,
@@ -295,15 +299,25 @@ final class VideoFrameEffectProcessor {
     let pending = PendingFill(count: times.count)
     generator.generateCGImagesAsynchronously(
       forTimes: times.map { NSValue(time: CMTime(value: $0, timescale: 1_000_000)) }
-    ) { [weak self] requestedTime, image, actualTime, result, _ in
+    ) { [weak self] requestedTime, image, actualTime, result, error in
       let frame = result == .succeeded ? image : nil
+      let failure = result == .failed ? error : nil
       let targetUs = Int64((CMTimeGetSeconds(requestedTime) * 1_000_000).rounded())
       let frameUs = Int64((CMTimeGetSeconds(actualTime) * 1_000_000).rounded())
       DispatchQueue.main.async {
         guard let self, generation == self.fillGeneration else { return }
-        if let frame { pending.decoded.append((targetUs, frameUs, frame)) }
+        if let frame {
+          pending.decoded.append((targetUs, frameUs, frame))
+        } else if pending.failure == nil {
+          pending.failure = failure
+        }
         pending.remaining -= 1
         guard pending.remaining == 0 else { return }
+        if pending.decoded.isEmpty, let cause = pending.failure {
+          DivineVideoPlayerLog.shared.warning(
+            "Frame effects could not decode earlier frames: \(cause)",
+            name: "DivineVideoPlayer.Effects")
+        }
         self.generator = nil
         self.fillRunning = nil
         self.replaceDecoded(with: pending.decoded, clip: clip)
@@ -316,6 +330,8 @@ final class VideoFrameEffectProcessor {
   /// The frames of one fill decoded so far; touched on the main thread only.
   private final class PendingFill: @unchecked Sendable {
     var decoded: [(targetUs: Int64, frameUs: Int64, image: CGImage)] = []
+    /// The first error a frame failed with, to report when none decoded.
+    var failure: Error?
     var remaining: Int
 
     init(count: Int) { remaining = count }
