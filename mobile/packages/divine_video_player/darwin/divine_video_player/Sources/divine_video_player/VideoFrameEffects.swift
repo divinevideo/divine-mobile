@@ -92,6 +92,8 @@ final class VideoFrameEffectProcessor {
   private static let fillKeepDistanceUs: Int64 = 500_000
 
   private var stages: [Stage] = []
+  /// The configs the stages were built from, to tell a repeated list apart.
+  private var lastConfigs: NSArray?
   private var maxOffsetUs: Int64 = 0
   private var historyScale: CGFloat = 1
   private var clipOffsetsUs: [Int64] = []
@@ -133,8 +135,13 @@ final class VideoFrameEffectProcessor {
 
   /// Replaces the effects with those in `configs`, each a map of `id`,
   /// `params`, `startUs` and `endUs` on the player's timeline. Ids nothing
-  /// is registered under are skipped.
-  func setEffects(_ configs: [[String: Any]]) {
+  /// is registered under are skipped. Returns whether anything changed: an
+  /// unchanged list keeps the effects and their earlier frames as they are.
+  @discardableResult
+  func setEffects(_ configs: [[String: Any]]) -> Bool {
+    let incoming = configs as NSArray
+    if let lastConfigs, lastConfigs.isEqual(incoming) { return false }
+    lastConfigs = incoming
     stages = configs.compactMap { config in
       guard let id = config["id"] as? String,
         let factory = VideoFrameEffects.factory(for: id)
@@ -160,6 +167,7 @@ final class VideoFrameEffectProcessor {
       decoded.removeAll()
     }
     needsFill = true
+    return true
   }
 
   /// Where each clip starts on the player's timeline, in seconds, so the
@@ -182,6 +190,7 @@ final class VideoFrameEffectProcessor {
     fillGeneration += 1
     fillRequest = nil
     fillRunning = nil
+    lastConfigs = nil
     stages = []
     history.removeAll()
     decoded.removeAll()

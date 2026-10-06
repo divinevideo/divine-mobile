@@ -492,7 +492,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     func setFrameEffects(_ configs: [[String: Any]]) {
         frameEffects.playerItem = attachedItem
         frameEffects.onHistoryFilled = { [weak self] in self?.redrawWithEffects() }
-        frameEffects.setEffects(configs)
+        guard frameEffects.setEffects(configs) else { return }
         redrawWithEffects()
     }
 

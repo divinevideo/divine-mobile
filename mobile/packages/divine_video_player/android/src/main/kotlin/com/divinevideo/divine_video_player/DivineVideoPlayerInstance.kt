@@ -196,6 +196,13 @@ internal class DivineVideoPlayerInstance(
     /** Decodes the earlier frames frame effects need after a seek. */
     private val frameEffectsFillExecutor = java.util.concurrent.Executors.newSingleThreadExecutor()
 
+    /**
+     * The display size of each clip, read from its file. With the effect
+     * stage installed Media3 reports no video size, so the stage's output
+     * follows the clip playing from these instead.
+     */
+    private val frameEffectClipSizes = HashMap<Int, Size?>()
+
     /** The newest seek, as clip and local source ms, still to be decoded for frame effects. */
     @Volatile
     private var frameEffectsFillRequest: Pair<Int, Long>? = null
@@ -720,6 +727,7 @@ internal class DivineVideoPlayerInstance(
         }
 
         lastClipsRaw = clipsRaw
+        frameEffectClipSizes.clear()
         // The repeat mode depends on how many clips are loaded, so a clip list
         // that arrives without a following `setLooping` has to reapply it here.
         applyRepeatMode()
@@ -1460,7 +1468,11 @@ internal class DivineVideoPlayerInstance(
             result.success(null)
             return
         }
-        val state = existing ?: FrameEffectsState()
+        val state = existing ?: FrameEffectsState().also { created ->
+            created.onConfigPublished = {
+                mainHandler.post { if (frameEffectsState === created) startFrameEffectsFill() }
+            }
+        }
         state.setConfigs(configs)
         frameEffectsState = state
         val exoPlayer = player
@@ -1472,7 +1484,12 @@ internal class DivineVideoPlayerInstance(
             // While playing the history keeps growing on its own. Paused, it
             // has to be decoded, or a newly picked effect shows no trail.
             if (existing == null || !exoPlayer.playWhenReady) {
-                onFrameEffectsSeek(index, exoPlayer.currentPosition)
+                val positionMs = exoPlayer.currentPosition
+                onFrameEffectsSeek(index, positionMs)
+                // Paused, nothing draws a frame that would build the new
+                // effects and publish what they need decoded. Installing
+                // prepares the player, which draws one anyway.
+                if (existing != null) redrawPausedFrame(index, positionMs)
             }
         }
         result.success(null)
@@ -1590,7 +1607,6 @@ internal class DivineVideoPlayerInstance(
     private fun sendFrameEffectOutputResolution() {
         if (frameEffectsState == null) return
         val exoPlayer = player ?: return
-        if (videoWidth > 0 && videoHeight > 0) frameEffectOutputSize = Size(videoWidth, videoHeight)
         val size = frameEffectOutputSize ?: return
         applyFrameEffectSurfaceSize(size)
         for (i in 0 until exoPlayer.rendererCount) {
@@ -1607,8 +1623,9 @@ internal class DivineVideoPlayerInstance(
      * effect stage again by seeking to it, the same way the seek that
      * showed it did. Media3's own redraw needs a frame processor built with
      * a replayable cache, which ExoPlayer's is not, and ExoPlayer skips a
-     * seek to where it already is, so this steps a millisecond on and back.
-     * While playing, the next frame does it anyway.
+     * seek to where it already is, so this steps a millisecond back and on
+     * again; stepping on could pass the clip's end and end the item. While
+     * playing, the next frame does it anyway.
      */
     private fun redrawPausedFrame(index: Int, positionMs: Long) {
         val exoPlayer = player ?: return
@@ -1616,7 +1633,7 @@ internal class DivineVideoPlayerInstance(
         // A seek of its own: the redrawn frame can come on another timestamp
         // base than the seek that first showed it, and has to be tied anew.
         frameEffectsState?.seekTo(index, frameEffectsSourceUs(index, positionMs))
-        exoPlayer.seekTo(index, positionMs + 1)
+        exoPlayer.seekTo(index, if (positionMs > 0) positionMs - 1 else positionMs + 1)
         exoPlayer.seekTo(index, positionMs)
     }
 
@@ -1638,6 +1655,9 @@ internal class DivineVideoPlayerInstance(
         val producer = surfaceProducer ?: return
         producer.setSize(size.width, size.height)
         val surface = producer.surface ?: return
+        // Media3 keeps drawing at the size it measured when the surface was
+        // attached; detaching first makes it measure the resized one.
+        player?.setVideoSurface(null)
         player?.setVideoSurface(surface)
     }
 
@@ -1651,6 +1671,26 @@ internal class DivineVideoPlayerInstance(
                 (config.endMs == null || position < config.endMs)
         }.toBooleanArray()
         state.speed = clipSpeeds.getOrElse(exoPlayer.currentMediaItemIndex) { 1.0f }
+    }
+
+    /** The display size of clip [index], read once from its file. */
+    private fun frameEffectClipSize(index: Int): Size? =
+        frameEffectClipSizes.getOrPut(index) { probeDisplaySize(index) }
+
+    /**
+     * Sizes the effect stage's output to the clip at [index] when its shape
+     * differs from the last one. Without the stage each clip reaches the
+     * texture at its own size, and the editor fits every clip by its own
+     * shape; with one fixed output size a clip of another shape would be
+     * drawn on the previous clip's canvas.
+     */
+    private fun syncFrameEffectOutputSize(index: Int) {
+        if (frameEffectsState == null) return
+        val size = frameEffectClipSize(index) ?: return
+        if (size == frameEffectOutputSize) return
+        frameEffectOutputSize = size
+        sendFrameEffectOutputResolution()
+        sendStateUpdate()
     }
 
     /**
@@ -1686,8 +1726,12 @@ internal class DivineVideoPlayerInstance(
     private fun startFrameEffectsFill() {
         if (frameEffectsFillRunning != null) return
         val request = frameEffectsFillRequest ?: return
-        frameEffectsFillRequest = null
         val state = frameEffectsState ?: return
+        // The offsets come from the effects the GL thread builds on its next
+        // frame; until then they are the previous effects' or none. The
+        // request waits, and the GL thread starts it once it published them.
+        if (state.publishedConfigVersion != state.configVersion) return
+        frameEffectsFillRequest = null
         val offsets = state.historyOffsetsUs
         if (offsets.isEmpty()) return
         val (index, localSourceMs) = request
@@ -1701,8 +1745,8 @@ internal class DivineVideoPlayerInstance(
         val clipStartUs = ((clip["startMs"] as? Number)?.toLong() ?: 0L) * 1000L
         val speed = clipSpeeds.getOrElse(index) { 1.0f }
         // With frame effects Media3 reports no video size, so [videoWidth]
-        // stays 0; the display size the effect stage draws is known here.
-        val display = frameEffectOutputSize ?: return
+        // stays 0; the clip's own display size is read from its file.
+        val display = frameEffectClipSize(index) ?: frameEffectOutputSize ?: return
         val scale = state.historyScale
         val width = (display.width * scale).toInt().coerceAtLeast(1)
         val height = (display.height * scale).toInt().coerceAtLeast(1)
@@ -1711,6 +1755,7 @@ internal class DivineVideoPlayerInstance(
             .map { offsetUs -> seekUs - (offsetUs * speed).toLong() }
             .filter { it >= clipStartUs }
         if (targets.isEmpty()) return
+        if (frameEffectsFillExecutor.isShutdown) return
         frameEffectsFillRunning = request
         frameEffectsFillExecutor.execute {
             val isCancelled = {
@@ -2241,6 +2286,7 @@ internal class DivineVideoPlayerInstance(
         }
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            player?.let { syncFrameEffectOutputSize(it.currentMediaItemIndex) }
             // When ExoPlayer auto-advances to the next playlist item it reuses the
             // decoder without reconfiguring the output surface rotation. Force a
             // detach+reattach so the decoder re-initialises its rotation transform
@@ -2500,6 +2546,11 @@ internal class DivineVideoPlayerInstance(
         cancelDecoderRetry()
         releaseClipAudioLoop()
         metadataExecutor.shutdownNow()
+        // A decode still running posts its result back; with no state and no
+        // request left, that result is dropped and starts nothing new.
+        frameEffectsState = null
+        frameEffectsFillRequest = null
+        mainHandler.removeCallbacks(frameEffectsRedraw)
         frameEffectsFillExecutor.shutdownNow()
         seekCompletionResult?.success(null)
         seekCompletionResult = null

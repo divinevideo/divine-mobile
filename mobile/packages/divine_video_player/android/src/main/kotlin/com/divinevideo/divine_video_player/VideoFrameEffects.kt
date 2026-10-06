@@ -95,6 +95,12 @@ internal class FrameEffectsState {
     @Volatile var historyOffsetsUs: LongArray = LongArray(0)
     @Volatile var historyScale = 1f
 
+    /** The [configVersion] [historyOffsetsUs] and [historyScale] belong to. */
+    @Volatile var publishedConfigVersion = -1
+
+    /** Called on the GL thread once it published the offsets of new effects. */
+    @Volatile var onConfigPublished: (() -> Unit)? = null
+
     /** The last seek, which the first frame the player shows after it belongs to. */
     @Volatile var seek = Seek(0, NO_CLIP, 0L)
         private set
@@ -217,7 +223,11 @@ internal class FrameEffectsGlEffect(private val state: FrameEffectsState) : GlEf
                     }
                 }
 
-                if (maxOffsetUs > 0 && history.none { it.timeUs == presentationTimeUs }) {
+                // One frame per [KEEP_INTERVAL_US] of playback is plenty for
+                // a trail and bounds the history: a fast clip at a high frame
+                // rate would otherwise keep a hundred frames and more.
+                val keepIntervalUs = (KEEP_INTERVAL_US * speed).toLong()
+                if (maxOffsetUs > 0 && history.none { abs(it.timeUs - presentationTimeUs) < keepIntervalUs }) {
                     keep(inputTexId, presentationTimeUs, speed)
                 }
                 GlUtil.focusFramebufferUsingCurrentContext(outputFbo, width, height)
@@ -282,6 +292,8 @@ internal class FrameEffectsGlEffect(private val state: FrameEffectsState) : GlEf
             state.historyScale = scale.coerceIn(0.05f, 1f)
             // The frames kept so far stay useful: the history is keyed by time.
             updateHistorySize()
+            state.publishedConfigVersion = current
+            state.onConfigPublished?.invoke()
         }
 
         private fun updateHistorySize() {
@@ -418,7 +430,8 @@ internal class FrameEffectsGlEffect(private val state: FrameEffectsState) : GlEf
             private const val TOLERANCE_US = 1_000L
             private const val REDRAW_SLACK_US = 100_000L
 
-            private const val MAX_FRAMES = 240
+            private const val KEEP_INTERVAL_US = 30_000L
+            private const val MAX_FRAMES = 64
 
             private const val VERTEX_SHADER =
                 "attribute vec4 aFramePosition;\n" +
