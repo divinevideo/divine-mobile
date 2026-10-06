@@ -88,6 +88,20 @@ internal class FrameEffectsState {
     /** Per config, whether the playhead is inside its window. */
     @Volatile var enabled: BooleanArray = BooleanArray(0)
 
+    /** Whether any effect has a window, so which ones are on changes as the video plays. */
+    val hasWindows: Boolean
+        get() = configs.any { it.startMs != null || it.endMs != null }
+
+    /** Per config, whether [positionMs] on the player's timeline is inside its window. */
+    fun enabledAt(positionMs: Long): BooleanArray {
+        val configs = configs
+        return BooleanArray(configs.size) { index ->
+            val config = configs[index]
+            (config.startMs == null || positionMs >= config.startMs) &&
+                (config.endMs == null || positionMs < config.endMs)
+        }
+    }
+
     /** The current clip's speed, which turns playback offsets into media time. */
     @Volatile var speed = 1f
 

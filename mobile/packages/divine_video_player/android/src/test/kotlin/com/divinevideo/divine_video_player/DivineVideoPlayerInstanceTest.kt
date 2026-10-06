@@ -2044,6 +2044,52 @@ class DivineVideoPlayerInstanceTest {
         }
     }
 
+
+    private fun setFrameEffectsCall(startUs: Long?, endUs: Long?) = MethodCall(
+        "setFrameEffects",
+        mapOf(
+            "effects" to listOf(
+                mapOf(
+                    "id" to "test.effect",
+                    "params" to emptyMap<String, Any>(),
+                    "startUs" to startUs,
+                    "endUs" to endUs,
+                ),
+            ),
+        ),
+    )
+
+    @Test
+    fun `setFrameEffects ticks the effect windows once a frame while an effect has a window`() {
+        materializePlayer()
+        clearMocks(mockHandler, answers = false, recordedCalls = true)
+        val posted = mutableListOf<Runnable>()
+        every { mockHandler.post(capture(posted)) } returns true
+
+        instance.onMethodCall(
+            setFrameEffectsCall(startUs = 1_050_000L, endUs = 1_150_000L),
+            mockk(relaxed = true),
+        )
+        posted.toList().forEach { it.run() }
+
+        verify(exactly = 1) { mockHandler.postDelayed(any(), 16L) }
+    }
+
+    @Test
+    fun `setFrameEffects does not tick when no effect has a window`() {
+        materializePlayer()
+        clearMocks(mockHandler, answers = false, recordedCalls = true)
+        val posted = mutableListOf<Runnable>()
+        every { mockHandler.post(capture(posted)) } returns true
+
+        instance.onMethodCall(
+            setFrameEffectsCall(startUs = null, endUs = null),
+            mockk(relaxed = true),
+        )
+        posted.toList().forEach { it.run() }
+
+        verify(exactly = 0) { mockHandler.postDelayed(any(), 16L) }
+    }
 }
 
 /** Runs submitted work on the calling thread so tests stay deterministic. */
@@ -2105,4 +2151,5 @@ private class HeldExecutorService : java.util.concurrent.AbstractExecutorService
         timeout: Long,
         unit: java.util.concurrent.TimeUnit,
     ): Boolean = true
+
 }

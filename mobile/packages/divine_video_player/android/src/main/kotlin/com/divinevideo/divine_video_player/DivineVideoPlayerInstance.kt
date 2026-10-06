@@ -386,6 +386,22 @@ internal class DivineVideoPlayerInstance(
         }
     }
 
+    /**
+     * Refreshes which frame effects are in their window once a frame while the
+     * video plays. The position updater only does it every
+     * [POSITION_UPDATE_INTERVAL_MS], so a window shorter than that could fall
+     * between two updates and never switch on. Stops itself when no effect has
+     * a window; `setFrameEffects` starts it again.
+     */
+    private val frameEffectWindowUpdater = object : Runnable {
+        override fun run() {
+            val state = frameEffectsState ?: return
+            if (!state.hasWindows) return
+            if (player?.isPlaying == true) updateFrameEffectWindows()
+            mainHandler.postDelayed(this, FRAME_EFFECT_WINDOW_INTERVAL_MS)
+        }
+    }
+
     init {
         methodChannel.setMethodCallHandler(this)
         eventChannel.setStreamHandler(this)
@@ -1475,6 +1491,8 @@ internal class DivineVideoPlayerInstance(
         }
         state.setConfigs(configs)
         frameEffectsState = state
+        mainHandler.removeCallbacks(frameEffectWindowUpdater)
+        if (state.hasWindows) mainHandler.post(frameEffectWindowUpdater)
         val exoPlayer = player
         if (exoPlayer != null) {
             if (existing == null) installFrameEffects(exoPlayer, state)
@@ -1667,10 +1685,7 @@ internal class DivineVideoPlayerInstance(
         val state = frameEffectsState ?: return
         val exoPlayer = player ?: return
         val position = globalMs ?: currentGlobalPlaybackMs(exoPlayer)
-        state.enabled = state.configs.map { config ->
-            (config.startMs == null || position >= config.startMs) &&
-                (config.endMs == null || position < config.endMs)
-        }.toBooleanArray()
+        state.enabled = state.enabledAt(position)
         state.speed = clipSpeeds.getOrElse(exoPlayer.currentMediaItemIndex) { 1.0f }
     }
 
@@ -2559,6 +2574,7 @@ internal class DivineVideoPlayerInstance(
         frameEffectsState = null
         frameEffectsFillRequest = null
         mainHandler.removeCallbacks(frameEffectsRedraw)
+        mainHandler.removeCallbacks(frameEffectWindowUpdater)
         frameEffectsFillExecutor.shutdownNow()
         seekCompletionResult?.success(null)
         seekCompletionResult = null
@@ -2611,6 +2627,9 @@ internal class DivineVideoPlayerInstance(
         private const val NO_ARMED_SEEK = -1
 
         private const val POSITION_UPDATE_INTERVAL_MS = 200L
+
+        /** About one frame at 60 fps. */
+        private const val FRAME_EFFECT_WINDOW_INTERVAL_MS = 16L
 
         /**
          * How far a newer seek may lie from a running frame-effect decode
