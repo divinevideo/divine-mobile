@@ -387,6 +387,29 @@ void main() {
         },
       );
 
+      testWidgets(
+        'localizes startup cleanup failure and retains login actions',
+        (tester) async {
+          await useTallSurface(tester);
+          when(() => mockAuthService.lastError)
+              .thenReturn('Could not clear account data safely');
+          when(() => mockAuthService.lastFailureReason)
+              .thenReturn(AuthFailureReason.accountCleanupFailed);
+          await tester.pumpWidget(createTestWidget());
+          await tester.pumpAndSettle();
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          expect(find.text(l10n.authAccountCleanupFailed), findsOneWidget);
+          expect(
+            find.text('Could not clear account data safely'),
+            findsNothing,
+          );
+          expect(
+            find.bySemanticsIdentifier(SemanticIds.authSignInButton),
+            findsOneWidget,
+          );
+        },
+      );
+
       testWidgets('shows error when lastError is set', (tester) async {
         await useTallSurface(tester);
         when(() => mockAuthService.lastError).thenReturn('Auth failed');

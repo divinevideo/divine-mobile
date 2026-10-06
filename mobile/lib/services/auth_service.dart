@@ -237,6 +237,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   SecureKeyContainer? _currentKeyContainer;
   UserProfile? _currentProfile;
   String? _lastError;
+  AuthFailureReason? _lastFailureReason;
   bool _storageErrorOccurred = false;
   // Every change notifies [expiredOAuthSessionListenable] (#9943). Never
   // disposed: [dispose] must stay repeatable and late async writers may land
@@ -1071,12 +1072,16 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   /// Last authentication error
   String? get lastError => _lastError;
 
+  /// Recoverable auth failure classification for localized UI feedback.
+  AuthFailureReason? get lastFailureReason => _lastFailureReason;
+
   /// Clear the last authentication error
   ///
   /// Call this when navigating away from screens that displayed the error,
   /// to prevent stale errors from being shown on other screens.
   void clearError() {
     _lastError = null;
+    _lastFailureReason = null;
   }
 
   /// Report a secure storage error to Crashlytics with auth context.
@@ -1117,6 +1122,8 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       category: LogCategory.auth,
     );
 
+    // A retry must replace the previous failure classification.
+    clearError();
     // Set checking state immediately - we're starting the auth check now
     _setAuthState(AuthState.checking);
 
@@ -1227,6 +1234,10 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         name: 'AuthService',
         category: LogCategory.auth,
       );
+    } on UserDataCleanupException {
+      _lastFailureReason = AuthFailureReason.accountCleanupFailed;
+      _lastError = 'Could not clear account data safely';
+      _resetTentativeSessionAfterCleanupFailure();
     } catch (e) {
       Log.error(
         'SecureAuthService initialization failed: $e',
@@ -1274,6 +1285,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
 
     _setAuthState(AuthState.authenticating);
     _lastError = null;
+    _lastFailureReason = null;
 
     try {
       // Generate new secure key container
@@ -1373,6 +1385,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
 
     _setAuthState(AuthState.authenticating);
     _lastError = null;
+    _lastFailureReason = null;
 
     try {
       await _keyStorage.deleteKeys();
@@ -2050,6 +2063,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
 
     _setAuthState(AuthState.authenticating);
     _lastError = null;
+    _lastFailureReason = null;
 
     try {
       // Check platform
@@ -2140,6 +2154,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
 
     _setAuthState(AuthState.authenticating);
     _lastError = null;
+    _lastFailureReason = null;
 
     try {
       final result = await service.connect();
@@ -2369,6 +2384,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     );
     _setAuthState(AuthState.authenticating);
     _lastError = null;
+    _lastFailureReason = null;
 
     if (!isValid) {
       _lastError = 'Failed to import $label: $invalidFormat';
@@ -2423,6 +2439,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
 
     _setAuthState(AuthState.authenticating);
     _lastError = null;
+    _lastFailureReason = null;
 
     try {
       // Parse the bunker URL
@@ -2688,6 +2705,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
 
     _setAuthState(AuthState.authenticating);
     _lastError = null;
+    _lastFailureReason = null;
     _hasExpiredOAuthSession = false;
     _authRpcCapabilityInitialized = false;
 
@@ -3227,6 +3245,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       _currentKeyContainer = null;
       _currentProfile = null;
       _lastError = null;
+      _lastFailureReason = null;
 
       _onUserRelaysDiscovered = null;
       _onBootstrapRelayListRequested = null;
@@ -3421,6 +3440,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     _currentKeyContainer = null;
     _currentProfile = null;
     _lastError = null;
+    _lastFailureReason = null;
     _onUserRelaysDiscovered = null;
     _onBootstrapRelayListRequested = null;
     _userRelays = [];
@@ -3795,6 +3815,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       );
       _storageErrorOccurred = false;
       _lastError = null;
+      _lastFailureReason = null;
       _setAuthState(AuthState.unauthenticated);
       return;
     } else {
@@ -3851,6 +3872,10 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
             );
             return;
           }
+        } on UserDataCleanupException {
+          // The key was loaded successfully; retrying cleanup must not be
+          // mistaken for damaged secure storage or disable future restores.
+          rethrow;
         } catch (e, stack) {
           Log.error(
             'Failed to load key container from storage: $e. '

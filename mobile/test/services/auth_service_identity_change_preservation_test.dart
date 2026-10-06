@@ -33,6 +33,9 @@ class _RefusingPreferences extends Fake implements SharedPreferences {
   Set<String> getKeys() => backing.getKeys();
   @override
   Future<bool> remove(String key) async => false;
+  @override
+  Future<bool> setString(String key, String value) =>
+      backing.setString(key, value);
 }
 
 class _MockCacheDao extends Mock implements CacheDao {}
@@ -329,6 +332,85 @@ void main() {
       );
       expect(authService.authState, equals(AuthState.unauthenticated));
     });
+
+    test(
+      'startup primary-key fallback preserves cleanup reason and retry',
+      () async {
+        // No usable per-account container: startup must reach the PRIMARY
+        // fallback even if the registry migrates the primary key into a row.
+        when(() => mockKeyStorage.getIdentityKeyContainer(any()))
+            .thenAnswer((_) async => null);
+
+        when(
+          () => mockCleanupService.clearUserSpecificData(
+            reason: any(named: 'reason'),
+            isIdentityChange: any(named: 'isIdentityChange'),
+            userPubkey: any(named: 'userPubkey'),
+            deleteUserData: any(named: 'deleteUserData'),
+          ),
+        ).thenThrow(
+          const UserDataCleanupException('Could not clear account cache'),
+        );
+
+        await authService.initialize();
+        expect(authService.authState, AuthState.unauthenticated);
+        expect(
+          authService.lastFailureReason,
+          AuthFailureReason.accountCleanupFailed,
+        );
+        expect(authService.lastError, 'Could not clear account data safely');
+        verifyNever(() => mockKeyStorage.generateAndStoreKeys());
+        verify(() => mockKeyStorage.hasKeys()).called(1);
+
+        // A cleanup failure must not permanently set the key-storage failure
+        // latch: retry reaches the same primary-key restore and cleanup again.
+        await authService.initialize();
+        verify(() => mockKeyStorage.hasKeys()).called(1);
+        expect(
+          authService.lastFailureReason,
+          AuthFailureReason.accountCleanupFailed,
+        );
+        expect(authService.currentPublicKeyHex, isNull);
+        authService.clearError();
+        expect(authService.lastFailureReason, isNull);
+      },
+    );
+
+    test(
+      'orphaned preferences cannot hide a failed database sweep on retry',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('current_user_pubkey_hex');
+        await prefs.setString('curated_lists', 'orphaned cache');
+        final cleanup = UserDataCleanupService(prefs);
+        var attempts = 0;
+        cleanup.onDatabaseCleanup =
+            ({
+              userPubkey,
+              deleteUserData = false,
+              preserveActiveSession = false,
+            }) async {
+              attempts++;
+              throw StateError('database unavailable');
+            };
+        await authService.dispose();
+        authService = AuthService(
+          backgroundActivityManager: BackgroundActivityManager(),
+          userDataCleanupService: cleanup,
+          keyStorage: mockKeyStorage,
+        );
+
+        final first = await authService.createNewIdentity();
+        expect(first.failureReason, AuthFailureReason.accountCleanupFailed);
+        expect(prefs.containsKey('curated_lists'), isFalse);
+        final second = await authService.createNewIdentity();
+        expect(second.success, isFalse);
+        expect(second.failureReason, AuthFailureReason.accountCleanupFailed);
+        expect(attempts, 2);
+        expect(authService.currentPublicKeyHex, isNull);
+        expect(prefs.containsKey('current_user_pubkey_hex'), isFalse);
+      },
+    );
 
     for (final operation in [
       'create',

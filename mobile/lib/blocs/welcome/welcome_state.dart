@@ -20,6 +20,9 @@ enum WelcomeStatus {
   /// An auth action failed because stored local account keys could not restore.
   accountRestoreFailed,
 
+  /// Previous account data still needs safe cleanup; the action can retry.
+  accountCleanupFailed,
+
   /// An auth action failed for a generic reason.
   error,
 

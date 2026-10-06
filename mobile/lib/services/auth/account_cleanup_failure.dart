@@ -13,6 +13,7 @@ extension _AccountCleanupFailure on AuthService {
       : AuthResult.failure(_lastError!);
 
   void _resetTentativeSessionAfterCleanupFailure() {
+    _lastFailureReason = AuthFailureReason.accountCleanupFailed;
     // Storage cleanup must finish before any incoming identity becomes live.
     // Terms acceptance cannot repair a refused cache removal.
     _currentIdentity = null;
