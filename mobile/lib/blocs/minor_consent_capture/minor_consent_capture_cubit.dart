@@ -4,8 +4,10 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/services/minor_consent_recorder.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Best-effort deletion of a discarded consent clip.
 typedef MinorConsentClipDeleter = Future<void> Function(String path);
@@ -50,9 +52,11 @@ class MinorConsentCaptureError extends MinorConsentCaptureState {
 class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
   MinorConsentCaptureCubit({
     required MinorConsentRecorder recorder,
+    required Future<void> Function(bool enabled) setWakelock,
     MinorConsentClipDeleter? deleteClip,
   }) : _recorder = recorder,
        _deleteClip = deleteClip ?? _deleteClipFile,
+       _toggleWakelock = setWakelock,
        super(const MinorConsentCaptureIdle()) {
     _recorder.onAutoStopped = _handleAutoStopped;
   }
@@ -63,6 +67,10 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
   final MinorConsentRecorder _recorder;
   final MinorConsentClipDeleter _deleteClip;
   bool _disposed = false;
+  final Future<void> Function(bool enabled) _toggleWakelock;
+  Future<void> _wakelockOperation = Future<void>.value();
+  bool _wakelockEnabled = false;
+  Future<void> _lifecycleOperation = Future<void>.value();
 
   /// True while [start] awaits the camera, so a second tap cannot start a
   /// second recording.
@@ -115,6 +123,7 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
       return;
     }
     emit(const MinorConsentCaptureRecording());
+    await _setWakelock(true);
   }
 
   /// Stops recording and moves to review, or to error when no file was written.
@@ -129,6 +138,7 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
     try {
       path = await _recorder.stop();
     } finally {
+      await _setWakelock(false);
       _stopping = false;
     }
     if (isClosed || _disposed) {
@@ -186,6 +196,7 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
     }
     if (path == null && state is MinorConsentCaptureError) return;
     _stopReturnedEmpty = false;
+    unawaited(_setWakelock(false));
     if (path == null) {
       emit(const MinorConsentCaptureError());
       return;
@@ -207,6 +218,8 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
     if (state is MinorConsentCaptureRecording) {
       await _discardClip(await _safeStop());
     }
+    await _lifecycleOperation;
+    await _setWakelock(false);
     await _safeDispose();
   }
 
@@ -226,8 +239,46 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
     if (state is MinorConsentCaptureRecording) {
       await _discardClip(await _safeStop());
     }
+    await _lifecycleOperation;
+    await _setWakelock(false);
     await _safeDispose();
     return super.close();
+  }
+
+  /// Serializes preview pause/resume with teardown without changing the clip.
+  Future<void> handleAppLifecycleState(AppLifecycleState appState) {
+    return _lifecycleOperation = _lifecycleOperation.then((_) async {
+      if (_disposed || isClosed) return;
+      try {
+        await _recorder.handleAppLifecycleState(appState);
+      } catch (error) {
+        Log.warning(
+          'Consent camera lifecycle update failed: $error',
+          name: 'MinorConsentCaptureCubit',
+          category: LogCategory.video,
+        );
+      }
+    });
+  }
+
+  Future<void> _setWakelock(bool enabled) {
+    return _wakelockOperation = _wakelockOperation.then((_) async {
+      if (enabled &&
+          (_disposed || isClosed || state is! MinorConsentCaptureRecording)) {
+        return;
+      }
+      if (_wakelockEnabled == enabled) return;
+      try {
+        await _toggleWakelock(enabled);
+        _wakelockEnabled = enabled;
+      } catch (error) {
+        Log.warning(
+          'Consent recording wakelock update failed: $error',
+          name: 'MinorConsentCaptureCubit',
+          category: LogCategory.video,
+        );
+      }
+    });
   }
 
   /// Deletes a clip no part of the flow owns.

@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/blocs/minor_consent_capture/minor_consent_capture_cubit.dart';
 import 'package:openvine/services/minor_consent_recorder.dart';
@@ -22,6 +23,8 @@ class _FakeRecorder implements MinorConsentRecorder {
   bool disposed = false;
   int startCount = 0;
   int stopCount = 0;
+  final lifecycleStates = <AppLifecycleState>[];
+  Completer<void>? lifecycleGate;
 
   /// When set, [start] does not return until this completes.
   Completer<bool>? startGate;
@@ -65,6 +68,12 @@ class _FakeRecorder implements MinorConsentRecorder {
   }
 
   @override
+  Future<void> handleAppLifecycleState(AppLifecycleState state) async {
+    lifecycleStates.add(state);
+    await lifecycleGate?.future;
+  }
+
+  @override
   Future<void> dispose() async {
     disposed = true;
   }
@@ -72,15 +81,128 @@ class _FakeRecorder implements MinorConsentRecorder {
 
 void main() {
   group('MinorConsentCaptureCubit', () {
+    test('wakelock spans a recording and releases on manual stop', () async {
+      final toggles = <bool>[];
+      final cubit = MinorConsentCaptureCubit(
+        recorder: _FakeRecorder(),
+        setWakelock: (enabled) async => toggles.add(enabled),
+      );
+      await cubit.start(outputDirectory: '/tmp');
+      expect(toggles, [true]);
+      await cubit.stop();
+      expect(toggles, [true, false]);
+      await cubit.close();
+    });
+
+    test(
+      'auto-stop releases wakelock and keeps its clip across resume',
+      () async {
+        final toggles = <bool>[];
+        final recorder = _FakeRecorder();
+        final cubit = MinorConsentCaptureCubit(
+          recorder: recorder,
+          setWakelock: (enabled) async => toggles.add(enabled),
+        );
+        await cubit.start(outputDirectory: '/tmp');
+        await cubit.handleAppLifecycleState(AppLifecycleState.paused);
+        recorder.fireAutoStopped('/tmp/consent.mp4');
+        await cubit.handleAppLifecycleState(AppLifecycleState.resumed);
+        await pumpEventQueue();
+        expect(toggles, [true, false]);
+        expect(
+          (cubit.state as MinorConsentCaptureReview).filePath,
+          '/tmp/consent.mp4',
+        );
+        expect(recorder.lifecycleStates, [
+          AppLifecycleState.paused,
+          AppLifecycleState.resumed,
+        ]);
+        await cubit.close();
+      },
+    );
+
+    test('closing during wakelock enable leaves it disabled', () async {
+      final toggles = <bool>[];
+      final enabling = Completer<void>();
+      final startedEnabling = Completer<void>();
+      final cubit = MinorConsentCaptureCubit(
+        recorder: _FakeRecorder(),
+        setWakelock: (enabled) async {
+          toggles.add(enabled);
+          if (enabled) {
+            startedEnabling.complete();
+            await enabling.future;
+          }
+        },
+      );
+      final starting = cubit.start(outputDirectory: '/tmp');
+      await startedEnabling.future;
+      final closing = cubit.close();
+      enabling.complete();
+      await Future.wait([starting, closing]);
+      expect(toggles, [true, false]);
+    });
+
+    test(
+      'closing waits for lifecycle work and ignores a queued resume',
+      () async {
+        final recorder = _FakeRecorder()..lifecycleGate = Completer<void>();
+        final cubit = MinorConsentCaptureCubit(
+          setWakelock: (_) async {},
+          recorder: recorder,
+        );
+        final pausing = cubit.handleAppLifecycleState(AppLifecycleState.paused);
+        await pumpEventQueue();
+        final closing = cubit.close();
+        final resuming = cubit.handleAppLifecycleState(
+          AppLifecycleState.resumed,
+        );
+        expect(recorder.disposed, isFalse);
+        recorder.lifecycleGate!.complete();
+        await Future.wait([pausing, closing, resuming]);
+        expect(recorder.disposed, isTrue);
+        expect(recorder.lifecycleStates, [AppLifecycleState.paused]);
+      },
+    );
+
+    test('wakelock failure does not prevent stopping or disposing', () async {
+      final recorder = _FakeRecorder();
+      final cubit = MinorConsentCaptureCubit(
+        recorder: recorder,
+        setWakelock: (_) async => throw StateError('wakelock unavailable'),
+      );
+      await cubit.start(outputDirectory: '/tmp');
+      await cubit.stop();
+      expect(cubit.state, isA<MinorConsentCaptureReview>());
+      await cubit.close();
+      expect(recorder.disposed, isTrue);
+    });
+
+    test('closing without recording does not change the wakelock', () async {
+      final toggles = <bool>[];
+      final cubit = MinorConsentCaptureCubit(
+        recorder: _FakeRecorder(),
+        setWakelock: (enabled) async => toggles.add(enabled),
+      );
+      await cubit.close();
+      expect(toggles, isEmpty);
+    });
+
     test('starts idle', () {
-      final cubit = MinorConsentCaptureCubit(recorder: _FakeRecorder());
+      final cubit = MinorConsentCaptureCubit(
+        setWakelock: (_) async {},
+        recorder: _FakeRecorder(),
+      );
 
       expect(cubit.state, isA<MinorConsentCaptureIdle>());
     });
 
     test('start then stop lands in review with the recorded path', () async {
       final recorder = _FakeRecorder();
-      final cubit = MinorConsentCaptureCubit(recorder: recorder);
+      final cubit = MinorConsentCaptureCubit(
+        setWakelock: (_) async {},
+        recorder: recorder,
+      );
 
       await cubit.start(outputDirectory: '/tmp');
       expect(cubit.state, isA<MinorConsentCaptureRecording>());
@@ -96,7 +218,10 @@ void main() {
     test('a second stop does not interrupt the pending clip', () async {
       final recorder = _FakeRecorder(stopResult: null)
         ..stopGate = Completer<String?>();
-      final cubit = MinorConsentCaptureCubit(recorder: recorder);
+      final cubit = MinorConsentCaptureCubit(
+        setWakelock: (_) async {},
+        recorder: recorder,
+      );
 
       await cubit.start(outputDirectory: '/tmp');
       final first = cubit.stop();
@@ -113,7 +238,10 @@ void main() {
 
     test('start caps recording at 60 seconds', () async {
       final recorder = _FakeRecorder();
-      final cubit = MinorConsentCaptureCubit(recorder: recorder);
+      final cubit = MinorConsentCaptureCubit(
+        setWakelock: (_) async {},
+        recorder: recorder,
+      );
 
       await cubit.start(outputDirectory: '/tmp');
 
@@ -123,7 +251,10 @@ void main() {
 
     test('a second start while the first is in flight is ignored', () async {
       final recorder = _FakeRecorder()..startGate = Completer<bool>();
-      final cubit = MinorConsentCaptureCubit(recorder: recorder);
+      final cubit = MinorConsentCaptureCubit(
+        setWakelock: (_) async {},
+        recorder: recorder,
+      );
 
       final first = cubit.start(outputDirectory: '/tmp');
       final second = cubit.start(outputDirectory: '/tmp');
@@ -137,7 +268,10 @@ void main() {
 
     test('start while already recording is ignored', () async {
       final recorder = _FakeRecorder();
-      final cubit = MinorConsentCaptureCubit(recorder: recorder);
+      final cubit = MinorConsentCaptureCubit(
+        setWakelock: (_) async {},
+        recorder: recorder,
+      );
 
       await cubit.start(outputDirectory: '/tmp');
       await cubit.start(outputDirectory: '/tmp');
@@ -149,7 +283,10 @@ void main() {
 
     test('a denied start surfaces denied state', () async {
       final recorder = _FakeRecorder(startResult: false);
-      final cubit = MinorConsentCaptureCubit(recorder: recorder);
+      final cubit = MinorConsentCaptureCubit(
+        setWakelock: (_) async {},
+        recorder: recorder,
+      );
 
       await cubit.start(outputDirectory: '/tmp');
       expect(cubit.state, isA<MinorConsentCaptureDenied>());
@@ -157,7 +294,10 @@ void main() {
 
     test('a stop with no recorded file surfaces error state', () async {
       final recorder = _FakeRecorder(stopResult: null);
-      final cubit = MinorConsentCaptureCubit(recorder: recorder);
+      final cubit = MinorConsentCaptureCubit(
+        setWakelock: (_) async {},
+        recorder: recorder,
+      );
 
       await cubit.start(outputDirectory: '/tmp');
       await cubit.stop();
@@ -166,7 +306,10 @@ void main() {
     });
 
     test('retake returns to idle', () async {
-      final cubit = MinorConsentCaptureCubit(recorder: _FakeRecorder());
+      final cubit = MinorConsentCaptureCubit(
+        setWakelock: (_) async {},
+        recorder: _FakeRecorder(),
+      );
 
       await cubit.start(outputDirectory: '/tmp');
       await cubit.stop();
@@ -179,7 +322,10 @@ void main() {
 
     test('initialize prepares the camera behind the recorder', () async {
       final recorder = _FakeRecorder();
-      final cubit = MinorConsentCaptureCubit(recorder: recorder);
+      final cubit = MinorConsentCaptureCubit(
+        setWakelock: (_) async {},
+        recorder: recorder,
+      );
 
       await cubit.initialize();
 
@@ -190,7 +336,10 @@ void main() {
       'close stops a recording in progress and disposes the recorder',
       () async {
         final recorder = _FakeRecorder();
-        final cubit = MinorConsentCaptureCubit(recorder: recorder);
+        final cubit = MinorConsentCaptureCubit(
+          setWakelock: (_) async {},
+          recorder: recorder,
+        );
 
         await cubit.start(outputDirectory: '/tmp');
         expect(cubit.state, isA<MinorConsentCaptureRecording>());
@@ -204,7 +353,10 @@ void main() {
 
     test('close is idempotent and disposes an idle recorder', () async {
       final recorder = _FakeRecorder();
-      final cubit = MinorConsentCaptureCubit(recorder: recorder);
+      final cubit = MinorConsentCaptureCubit(
+        setWakelock: (_) async {},
+        recorder: recorder,
+      );
 
       await cubit.close();
       await cubit.close();
@@ -217,7 +369,10 @@ void main() {
       'releaseRecorder disposes the recorder and makes close a no-op',
       () async {
         final recorder = _FakeRecorder();
-        final cubit = MinorConsentCaptureCubit(recorder: recorder);
+        final cubit = MinorConsentCaptureCubit(
+          setWakelock: (_) async {},
+          recorder: recorder,
+        );
 
         await cubit.start(outputDirectory: '/tmp');
         await cubit.stop();
@@ -233,7 +388,10 @@ void main() {
 
     test('releaseRecorder is idempotent', () async {
       final recorder = _FakeRecorder();
-      final cubit = MinorConsentCaptureCubit(recorder: recorder);
+      final cubit = MinorConsentCaptureCubit(
+        setWakelock: (_) async {},
+        recorder: recorder,
+      );
 
       await cubit.releaseRecorder();
       await cubit.releaseRecorder();
@@ -245,7 +403,10 @@ void main() {
       'auto-stop while recording lands in review with the recorded path',
       () async {
         final recorder = _FakeRecorder();
-        final cubit = MinorConsentCaptureCubit(recorder: recorder);
+        final cubit = MinorConsentCaptureCubit(
+          setWakelock: (_) async {},
+          recorder: recorder,
+        );
 
         await cubit.start(outputDirectory: '/tmp');
         expect(cubit.state, isA<MinorConsentCaptureRecording>());
@@ -263,7 +424,10 @@ void main() {
 
     test('auto-stop with no captured clip surfaces error', () async {
       final recorder = _FakeRecorder();
-      final cubit = MinorConsentCaptureCubit(recorder: recorder);
+      final cubit = MinorConsentCaptureCubit(
+        setWakelock: (_) async {},
+        recorder: recorder,
+      );
 
       await cubit.start(outputDirectory: '/tmp');
       recorder.fireAutoStopped(null);
@@ -274,7 +438,10 @@ void main() {
 
     test('a stop after auto-stop keeps the auto-stopped clip', () async {
       final recorder = _FakeRecorder();
-      final cubit = MinorConsentCaptureCubit(recorder: recorder);
+      final cubit = MinorConsentCaptureCubit(
+        setWakelock: (_) async {},
+        recorder: recorder,
+      );
 
       await cubit.start(outputDirectory: '/tmp');
       recorder.fireAutoStopped('/tmp/auto-stopped.mp4');
@@ -294,6 +461,7 @@ void main() {
         final deleted = <String>[];
         final recorder = _FakeRecorder()..stopGate = Completer<String?>();
         final cubit = MinorConsentCaptureCubit(
+          setWakelock: (_) async {},
           recorder: recorder,
           deleteClip: (path) async => deleted.add(path),
         );
@@ -320,6 +488,7 @@ void main() {
           final deleted = <String>[];
           final recorder = _FakeRecorder(stopResult: null);
           final cubit = MinorConsentCaptureCubit(
+            setWakelock: (_) async {},
             recorder: recorder,
             deleteClip: (path) async => deleted.add(path),
           );
@@ -342,7 +511,10 @@ void main() {
 
     test('auto-stop after close is ignored and does not throw', () async {
       final recorder = _FakeRecorder();
-      final cubit = MinorConsentCaptureCubit(recorder: recorder);
+      final cubit = MinorConsentCaptureCubit(
+        setWakelock: (_) async {},
+        recorder: recorder,
+      );
 
       await cubit.start(outputDirectory: '/tmp');
       await cubit.close();
@@ -356,6 +528,7 @@ void main() {
     test('retake deletes the discarded clip', () async {
       final deleted = <String>[];
       final cubit = MinorConsentCaptureCubit(
+        setWakelock: (_) async {},
         recorder: _FakeRecorder(),
         deleteClip: (path) async => deleted.add(path),
       );
@@ -374,6 +547,7 @@ void main() {
     test('retake from idle does not delete anything', () async {
       final deleted = <String>[];
       final cubit = MinorConsentCaptureCubit(
+        setWakelock: (_) async {},
         recorder: _FakeRecorder(),
         deleteClip: (path) async => deleted.add(path),
       );
@@ -388,6 +562,7 @@ void main() {
       test('close deletes the clip it stops mid-recording', () async {
         final deleted = <String>[];
         final cubit = MinorConsentCaptureCubit(
+          setWakelock: (_) async {},
           recorder: _FakeRecorder(stopResult: '/tmp/mid-recording.mp4'),
           deleteClip: (path) async => deleted.add(path),
         );
@@ -403,6 +578,7 @@ void main() {
       test('releaseRecorder deletes a clip it stops mid-recording', () async {
         final deleted = <String>[];
         final cubit = MinorConsentCaptureCubit(
+          setWakelock: (_) async {},
           recorder: _FakeRecorder(stopResult: '/tmp/mid-recording.mp4'),
           deleteClip: (path) async => deleted.add(path),
         );
@@ -417,6 +593,7 @@ void main() {
       test('an accepted clip survives releaseRecorder and close', () async {
         final deleted = <String>[];
         final cubit = MinorConsentCaptureCubit(
+          setWakelock: (_) async {},
           recorder: _FakeRecorder(stopResult: '/tmp/accepted.mp4'),
           deleteClip: (path) async => deleted.add(path),
         );
@@ -435,6 +612,7 @@ void main() {
         final deleted = <String>[];
         final recorder = _FakeRecorder(stopResult: '/tmp/stopped-on-close.mp4');
         final cubit = MinorConsentCaptureCubit(
+          setWakelock: (_) async {},
           recorder: recorder,
           deleteClip: (path) async => deleted.add(path),
         );
@@ -457,6 +635,7 @@ void main() {
         final deleted = <String>[];
         final recorder = _FakeRecorder(stopResult: '/tmp/accepted.mp4');
         final cubit = MinorConsentCaptureCubit(
+          setWakelock: (_) async {},
           recorder: recorder,
           deleteClip: (path) async => deleted.add(path),
         );
@@ -478,6 +657,7 @@ void main() {
           final deleted = <String>[];
           final recorder = _FakeRecorder(stopResult: '/tmp/accepted.mp4');
           final cubit = MinorConsentCaptureCubit(
+            setWakelock: (_) async {},
             recorder: recorder,
             deleteClip: (path) async => deleted.add(path),
           );
@@ -499,6 +679,7 @@ void main() {
         final recorder = _FakeRecorder(stopResult: null)
           ..stopGate = Completer<String?>();
         final cubit = MinorConsentCaptureCubit(
+          setWakelock: (_) async {},
           recorder: recorder,
           deleteClip: (path) async => deleted.add(path),
         );
@@ -519,6 +700,7 @@ void main() {
         final deleted = <String>[];
         final recorder = _FakeRecorder(stopResult: '/tmp/aborted.mp4');
         final cubit = MinorConsentCaptureCubit(
+          setWakelock: (_) async {},
           recorder: recorder,
           deleteClip: (path) async => deleted.add(path),
         );

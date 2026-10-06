@@ -45,6 +45,7 @@ class MinorAccountReviewRecordConsentScreen extends ConsumerWidget {
     // screen's lifetime and is released when the screen unmounts.
     final recorder = ref.watch(minorConsentRecorderProvider);
     final permissions = ref.watch(permissionsServiceProvider);
+    final setWakelock = ref.watch(minorConsentWakelockProvider);
     return MultiBlocProvider(
       providers: [
         BlocProvider(
@@ -55,8 +56,11 @@ class MinorAccountReviewRecordConsentScreen extends ConsumerWidget {
           ),
         ),
         BlocProvider(
-          key: ValueKey(recorder),
-          create: (_) => MinorConsentCaptureCubit(recorder: recorder),
+          key: ValueKey((recorder, setWakelock)),
+          create: (_) => MinorConsentCaptureCubit(
+            recorder: recorder,
+            setWakelock: setWakelock,
+          ),
         ),
       ],
       child: const _RecordConsentView(),
@@ -107,6 +111,11 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_cameraReady) {
+      unawaited(
+        context.read<MinorConsentCaptureCubit>().handleAppLifecycleState(state),
+      );
+    }
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
       _wasInBackground = true;

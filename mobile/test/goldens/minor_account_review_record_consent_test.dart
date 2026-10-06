@@ -1,5 +1,6 @@
 // ABOUTME: Image goldens for the in-app parent-consent capture flow: the idle
 // ABOUTME: preview, the recorded-clip review, and the confirm-and-submit step.
+
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
@@ -44,6 +45,9 @@ class _PendingInitRecorder implements MinorConsentRecorder {
   Future<String?> stop() async => '/tmp/consent.mp4';
 
   @override
+  Future<void> handleAppLifecycleState(AppLifecycleState state) async {}
+
+  @override
   Future<void> dispose() async {}
 }
 
@@ -63,6 +67,9 @@ class _ReviewRecorder implements MinorConsentRecorder {
 
   @override
   Future<String?> stop() async => '/tmp/consent.mp4';
+
+  @override
+  Future<void> handleAppLifecycleState(AppLifecycleState state) async {}
 
   @override
   Future<void> dispose() async {}
@@ -290,6 +297,7 @@ Future<void> _pumpRecordConsentScreen(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        minorConsentWakelockProvider.overrideWithValue((_) async {}),
         minorConsentRecorderProvider.overrideWithValue(recorder),
         permissionsServiceProvider.overrideWithValue(permissions),
       ],

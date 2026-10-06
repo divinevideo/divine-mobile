@@ -107,6 +107,12 @@ class _FakeRecorder implements MinorConsentRecorder {
   final String? stopResult;
   bool initialized = false;
   bool disposed = false;
+  final lifecycleStates = <AppLifecycleState>[];
+
+  @override
+  Future<void> handleAppLifecycleState(AppLifecycleState state) async {
+    lifecycleStates.add(state);
+  }
 
   @override
   void Function(String? path)? onAutoStopped;
@@ -216,6 +222,7 @@ Future<void> _pumpRecordConsentScreen(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        minorConsentWakelockProvider.overrideWithValue((_) async {}),
         minorConsentRecorderProvider.overrideWithValue(recorder),
         permissionsServiceProvider.overrideWithValue(permissions),
         isFeatureEnabledProvider(
@@ -239,6 +246,29 @@ Future<void> _pumpRecordConsentScreen(
 
 void main() {
   group('MinorAccountReviewRecordConsentScreen permissions', () {
+    testWidgets('forwards camera pause and resume after initialization', (
+      tester,
+    ) async {
+      final recorder = _FakeRecorder();
+      await _pumpRecordConsentScreen(
+        tester,
+        recorder: recorder,
+        permissions: _FakePermissions(),
+        settle: false,
+      );
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await _pumpFrames(tester);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await _pumpFrames(tester);
+      expect(
+        recorder.lifecycleStates,
+        containsAllInOrder([
+          AppLifecycleState.paused,
+          AppLifecycleState.resumed,
+        ]),
+      );
+    });
+
     testWidgets('permissions can be restored in Settings', (tester) async {
       final l10n = lookupAppLocalizations(const Locale('en'));
       final recorder = _FakeRecorder();
@@ -367,6 +397,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              minorConsentWakelockProvider.overrideWithValue((_) async {}),
               minorConsentRecorderProvider.overrideWithValue(_FakeRecorder()),
               permissionsServiceProvider.overrideWithValue(
                 _FakePermissions(
@@ -434,6 +465,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            minorConsentWakelockProvider.overrideWithValue((_) async {}),
             minorConsentRecorderProvider.overrideWithValue(_FakeRecorder()),
             permissionsServiceProvider.overrideWithValue(
               _FakePermissions(cameraStatus: PermissionStatus.requiresSettings),
