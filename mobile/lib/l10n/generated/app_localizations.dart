@@ -14555,6 +14555,18 @@ abstract class AppLocalizations {
   /// **'Draw'**
   String get videoEditorDrawLabel;
 
+  /// Label of the video editor tool that hides part of the picture, such as a face or a license plate, behind a blur or a pixelation. Its two options are videoEditorBlurLabel and videoEditorEffectPixelate.
+  ///
+  /// In en, this message translates to:
+  /// **'Censor'**
+  String get videoEditorCensorLabel;
+
+  /// Label of the blur option of the video editor tool that hides part of the picture (videoEditorCensorLabel). The other option reuses videoEditorEffectPixelate.
+  ///
+  /// In en, this message translates to:
+  /// **'Blur'**
+  String get videoEditorBlurLabel;
+
   /// No description provided for @videoEditorFilterLabel.
   ///
   /// In en, this message translates to:
@@ -15269,6 +15281,12 @@ abstract class AppLocalizations {
   /// **'Open draw editor'**
   String get videoEditorOpenDrawSemanticLabel;
 
+  /// Screen reader label of the button that opens the tool to hide part of the picture behind a blur or pixelation.
+  ///
+  /// In en, this message translates to:
+  /// **'Blur or pixelate part of the video'**
+  String get videoEditorOpenBlurSemanticLabel;
+
   /// No description provided for @videoEditorOpenFilterSemanticLabel.
   ///
   /// In en, this message translates to:
@@ -15550,6 +15568,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tap to record. Add as many takes as you like.'**
   String get videoEditorVoiceOverHint;
+
+  /// Hint in the blur tool: dragging a finger over the video draws a box that is blurred or pixelated.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag over what you want to hide.'**
+  String get videoEditorCensorHint;
 
   /// Counts the voice-over takes recorded so far in the recorder screen.
   ///

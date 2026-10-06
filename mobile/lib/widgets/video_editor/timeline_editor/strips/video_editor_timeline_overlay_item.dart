@@ -10,8 +10,10 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/audio_fade.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/widgets/stereo_waveform_painter.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_strip_thumbnails.dart';
+import 'package:openvine/widgets/video_editor/draw_editor/video_editor_draw_censor_tools.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effects_bottom_bar.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
@@ -31,14 +33,22 @@ enum OverlayMultiSelectState {
   selected,
 }
 
-/// The name [item] is shown and announced by: an effect in the user's
-/// language, every other item by its own label.
+/// The name [item] is shown and announced by: an effect and a hidden area
+/// in the user's language, every other item by its own label.
 String timelineOverlayItemLabel(
   BuildContext context,
   TimelineOverlayItem item,
-) => item.type == .effect
-    ? videoEffectLabel(context, item.effectType)
-    : item.label;
+) {
+  final layer = item.layer;
+  if (item.type == .effect) return videoEffectLabel(context, item.effectType);
+  if (layer is PaintLayer && layer.isCensor) {
+    return censorToolLabel(
+      context,
+      isPixelateCensorLayer(layer) ? .pixelate : .blur,
+    );
+  }
+  return item.label;
+}
 
 /// Visual representation of a single overlay item.
 class TimelineOverlayItemTile extends StatelessWidget {
@@ -74,8 +84,15 @@ class TimelineOverlayItemTile extends StatelessWidget {
     final Color backgroundColor;
     final Color foregroundColor;
     String? fontFamily;
+    final layer = item.layer;
+    final censorLayer = layer is PaintLayer && layer.isCensor ? layer : null;
 
     switch (item.layer) {
+      case PaintLayer(isCensor: true):
+        // A hidden area has no color of its own.
+        foregroundColor = VineTheme.whiteText;
+        backgroundColor = color;
+
       case final TextLayer layer:
         foregroundColor = layer.color;
         backgroundColor = layer.background;
@@ -147,7 +164,13 @@ class TimelineOverlayItemTile extends StatelessWidget {
                     alignment: .centerLeft,
                     child: Padding(
                       padding: const .symmetric(horizontal: 6),
-                      child: item.layer is PaintLayer
+                      child: censorLayer != null
+                          ? _CensorAreaContent(
+                              layer: censorLayer,
+                              label: timelineOverlayItemLabel(context, item),
+                              color: foregroundColor,
+                            )
+                          : item.layer is PaintLayer
                           ? _PaintPreview(layer: item.layer! as PaintLayer)
                           : item.layer is WidgetLayer
                           ? _StickerPreview(item: item)
@@ -270,6 +293,43 @@ class _PaintPreview extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// An area hidden behind a blur or pixelation: its icon and name. Its stroke
+/// is a rectangle with nothing to draw, which [_PaintPreview] cannot show.
+class _CensorAreaContent extends StatelessWidget {
+  const _CensorAreaContent({
+    required this.layer,
+    required this.label,
+    required this.color,
+  });
+
+  final PaintLayer layer;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: .min,
+      spacing: 4,
+      children: [
+        DivineIcon(
+          icon: isPixelateCensorLayer(layer) ? .gridNine : .dropHalf,
+          size: 16,
+          color: color,
+        ),
+        Flexible(
+          child: Text(
+            label,
+            style: VineTheme.labelMediumFont(color: color),
+            maxLines: 1,
+            overflow: .ellipsis,
+          ),
+        ),
+      ],
     );
   }
 }

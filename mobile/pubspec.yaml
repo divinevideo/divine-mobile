@@ -400,6 +400,11 @@ dependencies:
   # over every `LayerAnimationType` and `AnimationPhase`, and the render
   # service passes `animationStartTime:`, so a relaxed floor is a compile
   # error.
+  # 2.25.0 is the first release with ImageLayer.censor, which the censor tool
+  # exports a hidden area as (#9562, hm21/pro_video_editor#231).
+  # Self-enforcing: censorImageLayer passes `censor:`, which does not exist
+  # before it, so a relaxed floor is a compile error rather than an export
+  # that shows what the creator hid.
   # 2.24.0 is the first release that limits a volume above 1.0 instead of
   # clipping it (hm21/pro_video_editor#230). The timeline goes up to 300 %
   # (#4906), and on an older release a boosted sound that is already loud, a
@@ -474,6 +479,11 @@ dependencies:
   # meant for the visible layer under it (#9736).
   # 14.7.0 adds TextEditorConfigs.layerBounds, which wraps text layers at the
   # edges of the visible video when they are scaled up or moved there.
+  # 14.8.0 adds CensorConfigs.pixelateInLayerSpace and per-area censor
+  # strength, which let the censor tool's preview show the blur and the blocks
+  # the export draws (#9562). Self-enforcing: videoEditorCensorConfigs passes
+  # pixelateInLayerSpace and the draw editor calls setCensorStrength, so a
+  # relaxed floor is a compile error.
   # 14.9.0 adds the typewriter and word-by-word text reveals with
   # ExportedLayer.revealBytes, and previews wiggle, bounce and loops with the
   # export's own easing (#9849, hm21/pro_image_editor#883).

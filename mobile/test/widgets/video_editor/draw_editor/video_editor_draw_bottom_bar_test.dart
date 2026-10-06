@@ -226,6 +226,51 @@ void main() {
       });
     });
 
+    group('Hide tools', () {
+      setUp(() {
+        when(() => mockBloc.state).thenReturn(
+          const VideoEditorDrawState(
+            selectedTool: DrawToolType.blur,
+            mode: PaintMode.blur,
+          ),
+        );
+      });
+
+      testWidgets('replace the drawing tools and the color picker', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget());
+        await tester.pump();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.byType(DrawToolPencil), findsNothing);
+        expect(
+          find.bySemanticsLabel(l10n.videoEditorColorPickerSemanticLabel),
+          findsNothing,
+        );
+        expect(find.text(l10n.videoEditorCensorHint), findsOneWidget);
+        expect(
+          find.bySemanticsLabel(l10n.videoEditorBlurLabel),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('tapping blur dispatches ToolSelected event', (tester) async {
+        await tester.pumpWidget(buildWidget(paintEditor: mockPaintEditor));
+        await tester.pump();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.bySemanticsLabel(l10n.videoEditorBlurLabel));
+        await tester.pump();
+
+        verify(
+          () => mockBloc.add(
+            const VideoEditorDrawToolSelected(DrawToolType.blur),
+          ),
+        ).called(1);
+      });
+    });
+
     group('State updates', () {
       testWidgets('updates tool selection when state changes', (tester) async {
         final controller = StreamController<VideoEditorDrawState>.broadcast();

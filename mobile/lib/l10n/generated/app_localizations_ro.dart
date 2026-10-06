@@ -8780,6 +8780,12 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorDrawLabel => 'Desen';
 
   @override
+  String get videoEditorCensorLabel => 'Cenzurare';
+
+  @override
+  String get videoEditorBlurLabel => 'Estompare';
+
+  @override
   String get videoEditorFilterLabel => 'Filtru';
 
   @override
@@ -9168,6 +9174,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorOpenDrawSemanticLabel => 'Deschide editorul de desen';
 
   @override
+  String get videoEditorOpenBlurSemanticLabel =>
+      'Estompează sau pixelează o parte din videoclip';
+
+  @override
   String get videoEditorOpenFilterSemanticLabel =>
       'Deschide editorul de filtre';
 
@@ -9321,6 +9331,9 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get videoEditorVoiceOverHint =>
       'Atinge pentru a înregistra. Adaugă câte cadre vrei.';
+
+  @override
+  String get videoEditorCensorHint => 'Trage peste ce vrei să ascunzi.';
 
   @override
   String videoEditorVoiceOverRecordingsCount(int count) {

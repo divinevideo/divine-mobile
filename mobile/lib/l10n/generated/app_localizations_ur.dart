@@ -8585,6 +8585,12 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorDrawLabel => 'ڈرائنگ';
 
   @override
+  String get videoEditorCensorLabel => 'سنسر';
+
+  @override
+  String get videoEditorBlurLabel => 'دھندلا';
+
+  @override
   String get videoEditorFilterLabel => 'فلٹر';
 
   @override
@@ -8968,6 +8974,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorOpenDrawSemanticLabel => 'ڈرائنگ ایڈیٹر کھولیں';
 
   @override
+  String get videoEditorOpenBlurSemanticLabel =>
+      'ویڈیو کے کسی حصے کو دھندلا یا پکسلیٹ کریں';
+
+  @override
   String get videoEditorOpenFilterSemanticLabel => 'فلٹر ایڈیٹر کھولیں';
 
   @override
@@ -9113,6 +9123,9 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get videoEditorVoiceOverHint =>
       'ریکارڈ کرنے کے لیے ٹیپ کریں۔ جتنے چاہیں ٹیک شامل کریں۔';
+
+  @override
+  String get videoEditorCensorHint => 'جو چھپانا چاہتے ہیں اس پر ڈریگ کریں۔';
 
   @override
   String videoEditorVoiceOverRecordingsCount(int count) {

@@ -8085,6 +8085,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorDrawLabel => '涂鸦';
 
   @override
+  String get videoEditorCensorLabel => '打码';
+
+  @override
+  String get videoEditorBlurLabel => '模糊';
+
+  @override
   String get videoEditorFilterLabel => '滤镜';
 
   @override
@@ -8459,6 +8465,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorOpenDrawSemanticLabel => '打开涂鸦编辑器';
 
   @override
+  String get videoEditorOpenBlurSemanticLabel => '模糊或像素化视频的一部分';
+
+  @override
   String get videoEditorOpenFilterSemanticLabel => '打开滤镜编辑器';
 
   @override
@@ -8602,6 +8611,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorVoiceOverHint => '点按录制。想录几条就录几条。';
+
+  @override
+  String get videoEditorCensorHint => '在想要隐藏的地方拖动。';
 
   @override
   String videoEditorVoiceOverRecordingsCount(int count) {

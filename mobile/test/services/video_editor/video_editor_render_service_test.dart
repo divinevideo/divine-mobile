@@ -6,7 +6,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
-import 'dart:ui' show Offset, Size;
+import 'dart:ui' show Color, Offset, Size;
 
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter/services.dart' show PlatformException;
@@ -269,6 +269,44 @@ void main() {
 
       expect(layers.single.startTime, isNull);
       expect(layers.single.endTime, isNull);
+    });
+
+    test('hides an area with a censor layer in its place, on the output '
+        'timeline', () {
+      final censor = pie.ExportedLayer(
+        layer: pie.PaintLayer(
+          item: pie.PaintedModel(
+            mode: pie.PaintMode.pixelate,
+            offsets: const [Offset.zero, Offset(40, 20)],
+            erasedOffsets: const [],
+            color: const Color(0xFFFFFFFF),
+            strokeWidth: 1,
+            opacity: 1,
+          ),
+          rawSize: const Size(40, 20),
+          opacity: 1,
+          startTime: const Duration(seconds: 1),
+          endTime: const Duration(seconds: 4),
+        ),
+        // A backdrop filter captures as an empty image; the export does not
+        // read it.
+        bytes: Uint8List(0),
+        logicalSize: const Size(40, 20),
+      );
+
+      final layers = VideoEditorRenderService.buildImageLayers(
+        capturedLayers: [layer(), censor, layer()],
+        bodySize: const Size(100, 200),
+        videoSize: const Size(300, 600),
+        targetAspectRatio: vertical,
+        timelineMap: TransitionTimelineMap.fromClips(overlapClips),
+      )!;
+
+      expect(layers.map((l) => l.censor != null), [false, true, false]);
+      final built = layers[1];
+      expect(built.offset, const Offset(90, 270));
+      expect(built.size, const Size(120, 60));
+      expect(built.endTime, const Duration(milliseconds: 3600));
     });
 
     group('word-highlighted captions', () {

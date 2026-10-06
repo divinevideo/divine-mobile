@@ -33,6 +33,7 @@ import 'package:openvine/models/video_editor/caption_layer_mapping.dart';
 import 'package:openvine/models/video_editor/clip_history_direction.dart';
 import 'package:openvine/models/video_editor/clip_snapshot_sync_op.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/live_volume.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
@@ -2081,7 +2082,14 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         );
       }
     }
-    notifier.updateEditorEditingParameters(parameters);
+    notifier.updateEditorEditingParameters(
+      parameters.copyWith(
+        capturedLayers: withCensorLayers(
+          parameters.layers,
+          parameters.capturedLayers,
+        ),
+      ),
+    );
     // Hold the export encoder back until [_handleDone] has released the preview
     // decoder (after the metadata screen covers the editor), so the two never
     // contend for the device's scarce hardware codecs (see #5522). The gate is
@@ -2874,6 +2882,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                   DrawToolType.eraser.config.strokeWidth /
                   scope.fittedBoxScale /
                   2,
+              censorConfigs: videoEditorCensorConfigs(),
               safeArea: const EditorSafeArea.none(),
               enableEdit: false,
               style: PaintEditorStyle(
@@ -3171,6 +3180,14 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                   )
                   ..setOpacity(toolConfig.opacity)
                   ..setMode(toolConfig.mode);
+                if (drawState.selectedTool.isCensor) {
+                  paintEditor?.setCensorStrength(
+                    censorStrengthOf(
+                      toolConfig.mode,
+                      drawState.censorIntensity,
+                    ),
+                  );
+                }
               },
               onDrawingDone: () => _syncDrawCapabilities(scope, drawBloc),
               onRedo: () => _syncDrawCapabilities(scope, drawBloc),

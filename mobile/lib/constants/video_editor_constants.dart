@@ -645,6 +645,23 @@ class VideoEditorConstants {
   /// Width of drawing tool items in the draw editor toolbar.
   static const double drawItemWidth = 48.0;
 
+  /// Standard deviation of the blur that hides an area, in logical pixels of
+  /// the editor canvas. The preview blurs with it, and the export scales it
+  /// to the video's pixels like the area itself.
+  static const double censorBlurSigma = 14.0;
+
+  /// Edge length of a pixelate block that hides an area, in logical pixels
+  /// of the editor canvas; see [censorBlurSigma].
+  static const double censorPixelBlockSize = 12.0;
+
+  /// Intensity a censor tool starts at, on its 0 to 1 slider: the strength of
+  /// [censorBlurSigma] and [censorPixelBlockSize].
+  static const double censorDefaultIntensity = 0.5;
+
+  /// How many times stronger the strongest censor intensity is than the
+  /// default, and weaker the weakest.
+  static const double censorIntensityRange = 4.0;
+
   /// Border radius applied to the video editor canvas.
   static const double canvasRadius = 8.0;
 

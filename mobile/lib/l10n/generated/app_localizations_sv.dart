@@ -8580,6 +8580,12 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorDrawLabel => 'Rita';
 
   @override
+  String get videoEditorCensorLabel => 'Censurera';
+
+  @override
+  String get videoEditorBlurLabel => 'Sudda';
+
+  @override
   String get videoEditorFilterLabel => 'Filter';
 
   @override
@@ -8965,6 +8971,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorOpenDrawSemanticLabel => 'Öppna ritredigerare';
 
   @override
+  String get videoEditorOpenBlurSemanticLabel =>
+      'Sudda ut eller pixla en del av videon';
+
+  @override
   String get videoEditorOpenFilterSemanticLabel => 'Öppna filtereditor';
 
   @override
@@ -9112,6 +9122,9 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get videoEditorVoiceOverHint =>
       'Tryck för att spela in. Lägg till hur många tagningar du vill.';
+
+  @override
+  String get videoEditorCensorHint => 'Dra över det du vill dölja.';
 
   @override
   String videoEditorVoiceOverRecordingsCount(int count) {

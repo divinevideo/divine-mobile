@@ -12,7 +12,13 @@ enum DrawToolType {
   arrow,
 
   /// Eraser tool.
-  eraser;
+  eraser,
+
+  /// Hides the area dragged over behind a blur.
+  blur,
+
+  /// Hides the area dragged over behind large square blocks.
+  pixelate;
 
   /// Returns the paint configuration (mode, opacity, stroke width) for this tool.
   DrawToolConfig get config => switch (this) {
@@ -20,7 +26,13 @@ enum DrawToolType {
     .marker => (mode: .freeStyle, opacity: 0.7, strokeWidth: 12.0),
     .arrow => (mode: .freeStyleArrowEnd, opacity: 1.0, strokeWidth: 8.0),
     .eraser => (mode: .eraser, opacity: 1.0, strokeWidth: 12.0),
+    // A censor area is a rectangle; it has no stroke.
+    .blur => (mode: .blur, opacity: 1.0, strokeWidth: 1.0),
+    .pixelate => (mode: .pixelate, opacity: 1.0, strokeWidth: 1.0),
   };
+
+  /// Whether this tool hides an area rather than drawing on the video.
+  bool get isCensor => this == .blur || this == .pixelate;
 }
 
 /// Paint configuration for a drawing tool.
@@ -36,6 +48,8 @@ class VideoEditorDrawState extends Equatable {
     this.selectedColor = VideoEditorConstants.primaryColor,
     this.selectedTool = .pencil,
     this.mode = .freeStyle,
+    this.blurIntensity = VideoEditorConstants.censorDefaultIntensity,
+    this.pixelateIntensity = VideoEditorConstants.censorDefaultIntensity,
   });
 
   /// Whether the undo action is available.
@@ -59,6 +73,22 @@ class VideoEditorDrawState extends Equatable {
   /// The current paint mode.
   final PaintMode mode;
 
+  /// How strongly the blur tool hides an area, from 0 to 1.
+  final double blurIntensity;
+
+  /// How strongly the pixelate tool hides an area, from 0 to 1.
+  final double pixelateIntensity;
+
+  /// How strongly the selected censor tool hides an area, from 0 to 1.
+  double get censorIntensity => censorIntensityOf(selectedTool);
+
+  /// How strongly [tool] hides an area, from 0 to 1.
+  double censorIntensityOf(DrawToolType tool) =>
+      tool == .pixelate ? pixelateIntensity : blurIntensity;
+
+  /// Whether the editor hides areas (blur, pixelate) instead of drawing.
+  bool get isCensorMode => selectedTool.isCensor;
+
   /// Creates a copy with the given fields replaced.
   VideoEditorDrawState copyWith({
     bool? canUndo,
@@ -68,6 +98,8 @@ class VideoEditorDrawState extends Equatable {
     double? opacity,
     Color? selectedColor,
     PaintMode? mode,
+    double? blurIntensity,
+    double? pixelateIntensity,
   }) {
     return VideoEditorDrawState(
       canUndo: canUndo ?? this.canUndo,
@@ -77,6 +109,8 @@ class VideoEditorDrawState extends Equatable {
       opacity: opacity ?? this.opacity,
       selectedColor: selectedColor ?? this.selectedColor,
       mode: mode ?? this.mode,
+      blurIntensity: blurIntensity ?? this.blurIntensity,
+      pixelateIntensity: pixelateIntensity ?? this.pixelateIntensity,
     );
   }
 
@@ -89,5 +123,7 @@ class VideoEditorDrawState extends Equatable {
     opacity,
     selectedColor,
     mode,
+    blurIntensity,
+    pixelateIntensity,
   ];
 }

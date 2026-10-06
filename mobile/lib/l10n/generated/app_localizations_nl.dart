@@ -8623,6 +8623,12 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorDrawLabel => 'Tekenen';
 
   @override
+  String get videoEditorCensorLabel => 'Censureren';
+
+  @override
+  String get videoEditorBlurLabel => 'Vervagen';
+
+  @override
   String get videoEditorFilterLabel => 'Filter';
 
   @override
@@ -9010,6 +9016,10 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorOpenDrawSemanticLabel => 'Tekeneditor openen';
 
   @override
+  String get videoEditorOpenBlurSemanticLabel =>
+      'Een deel van de video vervagen of pixeleren';
+
+  @override
   String get videoEditorOpenFilterSemanticLabel => 'Filtereditor openen';
 
   @override
@@ -9157,6 +9167,9 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get videoEditorVoiceOverHint =>
       'Tik om op te nemen. Voeg zoveel opnames toe als je wilt.';
+
+  @override
+  String get videoEditorCensorHint => 'Sleep over wat je wilt verbergen.';
 
   @override
   String videoEditorVoiceOverRecordingsCount(int count) {
