@@ -389,6 +389,9 @@ void main() {
 
       expect(shareCalls, hasLength(1));
       expect(shareCalls.single.method, 'share');
+      final arguments = shareCalls.single.arguments as Map;
+      expect(arguments['originWidth'], greaterThan(0));
+      expect(arguments['originHeight'], greaterThan(0));
       expect(
         shareCalls.single.arguments,
         isA<Map>().having(
