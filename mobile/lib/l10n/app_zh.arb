@@ -6706,7 +6706,7 @@
   },
   "listsDiscoveryLoadingLabel": "正在加载列表",
   "listsDiscoveryEmpty": "这次没找到列表。下拉刷新试试。",
-    "listSearchPeopleUnavailable": "人员列表暂时不可用。",
-    "listSearchVideosUnavailable": "视频列表暂时不可用。",
+  "listSearchPeopleUnavailable": "人员列表暂时不可用。",
+  "listSearchVideosUnavailable": "视频列表暂时不可用。",
   "authAccountCleanupFailed": "无法清除上一个账号的数据。请重试。"
 }
