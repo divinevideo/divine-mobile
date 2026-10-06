@@ -363,6 +363,7 @@ class _AcceptedHolders extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final blocklistVersion = ref.watch(blocklistVersionProvider);
     final badgeRepository = ref.watch(badgeRepositoryProvider);
     final followRepository = ref.watch(followRepositoryProvider);
     final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
@@ -372,7 +373,7 @@ class _AcceptedHolders extends ConsumerWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(
-          key: ValueKey((badgeRepository, signedIn)),
+          key: ValueKey((badgeRepository, signedIn, blocklistVersion)),
           create: (_) {
             final cubit = BadgeHoldersCubit(
               repository: badgeRepository,

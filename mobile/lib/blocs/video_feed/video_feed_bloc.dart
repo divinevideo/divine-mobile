@@ -1181,7 +1181,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       } catch (error, stackTrace) {
         // A later page keeps the merged feed's ordering; only the first page
         // may fall back without mixing two orderings in one list.
-        if (until != null) rethrow;
+        if (until != null || _followRepository.followingPubkeys.isEmpty) {
+          rethrow;
+        }
         Log.warning(
           'VideoFeedBloc: badge holder videos unavailable, showing follows',
           name: 'VideoFeedBloc',
@@ -1201,12 +1203,13 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     );
   }
 
-  /// Subscribed badge holders, or none when they cannot be resolved: a relay
-  /// failure there must not take the direct-follow feed down with it.
+  /// Subscribed badge holders, falling back only when direct follows exist.
+  /// Without direct follows, preserve failures so the feed offers a retry.
   Future<List<String>> _loadBadgeAuthors() async {
     try {
       return (await _badgeAuthors?.call())?.toList() ?? const <String>[];
     } catch (error, stackTrace) {
+      if (_followRepository.followingPubkeys.isEmpty) rethrow;
       Log.warning(
         'VideoFeedBloc: badge subscriptions unavailable, showing follows',
         name: 'VideoFeedBloc',

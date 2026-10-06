@@ -1287,6 +1287,40 @@ void main() {
         },
       );
 
+      for (final failVideos in [false, true]) {
+        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+          'shows retryable failure without direct follows when '
+          '${failVideos ? 'badge videos' : 'badge holders'} fail',
+          setUp: () {
+            when(() => mockFollowRepository.followingPubkeys).thenReturn([]);
+            final pager = _MockBadgeVideoPager();
+            when(() => mockVideosRepository.createBadgeVideoPager(any()))
+                .thenReturn(pager);
+            when(() => pager.loadMore(limit: 5))
+                .thenThrow(StateError('unavailable'));
+          },
+          build: () => VideoFeedBloc(
+            videosRepository: mockVideosRepository,
+            followRepository: mockFollowRepository,
+            curatedListRepository: mockCuratedListRepository,
+            badgeAuthors: () async {
+              if (!failVideos) throw StateError('unavailable');
+              return ['badge-holder'];
+            },
+          ),
+          act: (bloc) =>
+              bloc.add(const VideoFeedStarted(mode: FeedMode.following)),
+          expect: () => [
+            const VideoFeedBlocState(mode: FeedMode.following),
+            isA<VideoFeedBlocState>().having(
+              (s) => s.status,
+              'status',
+              VideoFeedStatus.failure,
+            ),
+          ],
+        );
+      }
+
       blocTest<VideoFeedBloc, VideoFeedBlocState>(
         'shows direct follows when badge subscriptions cannot be resolved',
         setUp: () {
