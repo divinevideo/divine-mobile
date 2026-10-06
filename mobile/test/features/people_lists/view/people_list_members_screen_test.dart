@@ -487,6 +487,63 @@ void main() {
       },
     );
 
+    for (final scenario
+        in <
+          ({
+            String name,
+            UserList list,
+            String member,
+            bool tap,
+            bool longPress,
+          })
+        >[
+          (
+            name: 'a read-only list offers opening the profile but not removal',
+            list: _list(isEditable: false),
+            member: _quiet,
+            tap: true,
+            longPress: false,
+          ),
+          (
+            name: 'a malformed member entry offers no profile action',
+            list: _list(pubkeys: ['not-a-key']),
+            member: 'not-a-key',
+            tap: false,
+            longPress: true,
+          ),
+        ]) {
+      testWidgets(
+        'a roster row only offers actions it can perform: ${scenario.name}',
+        (
+          tester,
+        ) async {
+          final semantics = tester.ensureSemantics();
+          await pumpRoster(
+            tester,
+            blocState: PeopleListsState(
+              status: PeopleListsStatus.ready,
+              ownerPubkey: _ownerPubkey,
+              lists: [scenario.list],
+            ),
+          );
+
+          final data = tester
+              .getSemantics(
+                find.byWidgetPredicate(
+                  (widget) =>
+                      widget is PeopleListMemberTile &&
+                      widget.pubkey == scenario.member,
+                ),
+              )
+              .getSemanticsData();
+          semantics.dispose();
+
+          expect(data.hasAction(SemanticsAction.tap), scenario.tap);
+          expect(data.hasAction(SemanticsAction.longPress), scenario.longPress);
+        },
+      );
+    }
+
     test('exposes route name and path constants', () {
       expect(PeopleListMembersScreen.routeName, equals('people-list-roster'));
       expect(
