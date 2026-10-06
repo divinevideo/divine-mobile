@@ -15,10 +15,12 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/repository_providers.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/video_event_service.dart'
     show VideoEventService;
+import 'package:openvine/utils/curated_lists_snapshot.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
@@ -365,12 +367,38 @@ Future<CuratedList?> publicCuratedList(
 /// resolver returns.
 @riverpod
 Future<List<CuratedList>> myListsWithThumbnails(Ref ref) async {
-  await ref.watch(curatedListsStateProvider.future);
-  final service = ref.watch(curatedListsStateProvider.notifier).service;
-  final lists = service?.myLists ?? const <CuratedList>[];
-  if (lists.isEmpty) return lists;
+  var disposed = false;
+  ref.onDispose(() => disposed = true);
+  final notifier = ref.watch(curatedListsStateProvider.notifier);
   final repository = ref.watch(curatedListRepositoryProvider);
-  return repository.resolveListThumbnails(lists);
+  final authService = ref.watch(authServiceProvider);
+  final owner = authService.currentPublicKeyHex;
+  // Service rebuilds retain the notifier, so its construction dependencies
+  // must also invalidate a pending thumbnail pass.
+  ref.watch(currentAuthStateProvider);
+  ref.watch(nostrServiceProvider);
+  ref.watch(sharedPreferencesProvider);
+  final selected = await ref.watch(
+    curatedListsStateProvider.selectAsync((_) {
+      final service = notifier.service;
+      return (
+        service: service,
+        snapshot: CuratedListsSnapshot(
+          service?.myLists ?? const <CuratedList>[],
+        ),
+      );
+    }),
+  );
+  bool isCurrent() =>
+      !disposed &&
+      ref.mounted &&
+      identical(notifier.service, selected.service) &&
+      authService.currentPublicKeyHex == owner;
+  if (!isCurrent()) return const <CuratedList>[];
+  final lists = selected.snapshot.lists;
+  if (lists.isEmpty) return lists;
+  final resolved = await repository.resolveListThumbnails(lists);
+  return isCurrent() ? resolved : const <CuratedList>[];
 }
 
 /// Provider that fetches actual VideoEvent objects for a curated list
