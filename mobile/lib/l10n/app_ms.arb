@@ -6994,6 +6994,7 @@
   "listPermissionsUnconfirmed": "Perubahan ini tidak dapat disahkan. Cuba lagi.",
   "listRecoveryPending": "Senarai ini mempunyai perubahan yang menunggu untuk disegerakkan.",
   "listPermissionsRecoveryPending": "Perubahan anda diterima. Ketik Segerakkan sekarang untuk menyelesaikan penyimpanan. Penyuntingan dijeda sehingga selesai.",
+  "listRecoveryReadOnly": "Sesetengah perubahan yang disimpan pada senarai video perlu dipulihkan. Anda boleh melihat senarai video, tetapi penyuntingan dijeda.",
   "soundRequestAction": "Minta bunyi ini",
   "soundRequestTitle": "Seseorang mahu menggunakan bunyi anda",
   "soundRequestDescription": "Benarkan penggunaan semula bunyi video ini supaya sesiapa sahaja boleh menghasilkan remix dengannya.",
