@@ -1,6 +1,7 @@
 // ABOUTME: Exercises the real people-list route table and its author boundary.
 // ABOUTME: Invalid author input cannot fall back to an editable same-ID list.
 
+import 'package:bech32/bech32.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -70,6 +71,33 @@ final ProviderFamily<GoRouter, (String, bool)> _routerProvider =
       ref.onDispose(router.dispose);
       return router;
     });
+
+/// Builds an nprofile with a valid checksum around arbitrary TLV payloads, so a
+/// test can hand the decoder a relay hint that is not valid UTF-8.
+String _nprofileWithRelayBytes(String pubkeyHex, List<int> relayBytes) {
+  final tlv = <int>[
+    0,
+    32,
+    for (var i = 0; i < 64; i += 2)
+      int.parse(pubkeyHex.substring(i, i + 2), radix: 16),
+    1,
+    relayBytes.length,
+    ...relayBytes,
+  ];
+  return Bech32Encoder().convert(
+    Bech32('nprofile', Nip19.convertBits(tlv, 8, 5, true)),
+    2000,
+  );
+}
+
+/// An nprofile whose first TLV entry is not a 32-byte public key.
+String _nprofileWithShortKey() {
+  final tlv = <int>[0, 2, 0xab, 0xcd];
+  return Bech32Encoder().convert(
+    Bech32('nprofile', Nip19.convertBits(tlv, 8, 5, true)),
+    2000,
+  );
+}
 
 UserList _list(String id, {bool editable = true}) => UserList(
   id: id,
@@ -191,6 +219,74 @@ void main() {
         );
       }
     }
+
+    for (final suffix in ['', '/members', '/add-people']) {
+      testWidgets(
+        'crew$suffix with an nprofile whose relay hint is not UTF-8 is rejected',
+        (tester) async {
+          final nprofile = _nprofileWithRelayBytes(_owner, const [0xff, 0xfe]);
+          await pumpRoute(
+            tester,
+            '/people-lists/crew$suffix?owner=$nprofile',
+            render: true,
+          );
+          expect(find.byType(RouteErrorScreen), findsOneWidget);
+          expect(find.text('Own cached list'), findsNothing);
+          verifyNever(
+            () => repository.fetchPublicList(
+              ownerPubkey: any(named: 'ownerPubkey'),
+              listId: any(named: 'listId'),
+            ),
+          );
+        },
+      );
+    }
+
+    for (final suffix in ['', '/members']) {
+      for (final upper in [false, true]) {
+        testWidgets(
+          'crew$suffix accepts a valid ${upper ? 'uppercase ' : ''}nprofile '
+          'author and resolves its public list',
+          (tester) async {
+            publicListAvailable('crew');
+            final nprofile = _nprofileWithRelayBytes(
+              _foreignOwner,
+              'wss://relay.example'.codeUnits,
+            );
+            await pumpRoute(
+              tester,
+              '/people-lists/crew$suffix'
+              '?owner=${upper ? nprofile.toUpperCase() : nprofile}',
+              render: true,
+            );
+            expect(find.byType(RouteErrorScreen), findsNothing);
+            verify(
+              () => repository.fetchPublicList(
+                ownerPubkey: _foreignOwner,
+                listId: 'crew',
+              ),
+            ).called(1);
+          },
+        );
+      }
+    }
+
+    testWidgets('an nprofile whose key is not 32 bytes is rejected', (
+      tester,
+    ) async {
+      await pumpRoute(
+        tester,
+        '/people-lists/crew?owner=${_nprofileWithShortKey()}',
+        render: true,
+      );
+      expect(find.byType(RouteErrorScreen), findsOneWidget);
+      verifyNever(
+        () => repository.fetchPublicList(
+          ownerPubkey: any(named: 'ownerPubkey'),
+          listId: any(named: 'listId'),
+        ),
+      );
+    });
 
     testWidgets('absent author retains the legacy own-list route', (
       tester,
