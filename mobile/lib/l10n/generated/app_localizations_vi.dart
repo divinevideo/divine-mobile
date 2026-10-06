@@ -10394,6 +10394,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get badgesTitle => 'Huy hiệu';
 
   @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
   String get badgeSubscribeAction => 'Theo dõi huy hiệu';
 
   @override

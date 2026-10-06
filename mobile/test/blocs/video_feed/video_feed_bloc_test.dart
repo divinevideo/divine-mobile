@@ -1305,7 +1305,9 @@ void main() {
             curatedListRepository: mockCuratedListRepository,
             badgeAuthors: () async {
               if (!failVideos) throw StateError('unavailable');
-              return ['badge-holder'];
+              return [
+                '0000000000000000000000000000000000000000000000000000000000000065',
+              ];
             },
           ),
           act: (bloc) =>

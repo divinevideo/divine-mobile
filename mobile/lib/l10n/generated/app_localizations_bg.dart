@@ -10541,6 +10541,10 @@ class AppLocalizationsBg extends AppLocalizations {
   String get badgesTitle => 'Значки';
 
   @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
   String get badgeSubscribeAction => 'Абониране за значката';
 
   @override

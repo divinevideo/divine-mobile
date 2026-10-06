@@ -10192,6 +10192,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get badgesTitle => 'ባጆች';
 
   @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
   String get badgeSubscribeAction => 'ባጁን ተከተል';
 
   @override

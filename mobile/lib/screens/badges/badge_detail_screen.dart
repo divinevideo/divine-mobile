@@ -506,18 +506,26 @@ class _SubscriptionAction extends StatelessWidget {
         message: context.l10n.badgesLoadError,
         onRetry: cubit.load,
       ),
-      _ => Align(
-        alignment: Alignment.centerLeft,
-        child: DivineButton(
-          label: subscribed
-              ? context.l10n.badgeSubscribedAction
-              : context.l10n.badgeSubscribeAction,
-          type: DivineButtonType.link,
-          size: DivineButtonSize.small,
-          onPressed: status == BadgeSubscriptionStatus.ready
-              ? cubit.toggleSubscription
-              : null,
-        ),
+      _ => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.l10n.badgeSubscriptionsPublicNotice,
+            style: VineTheme.bodySmallFont(
+              color: context.vineColors.onSurfaceVariant,
+            ),
+          ),
+          DivineButton(
+            label: subscribed
+                ? context.l10n.badgeSubscribedAction
+                : context.l10n.badgeSubscribeAction,
+            type: DivineButtonType.link,
+            size: DivineButtonSize.small,
+            onPressed: status == BadgeSubscriptionStatus.ready
+                ? cubit.toggleSubscription
+                : null,
+          ),
+        ],
       ),
     };
   }

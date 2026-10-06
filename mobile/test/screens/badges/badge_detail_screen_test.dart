@@ -636,6 +636,33 @@ void main() {
       expect(find.byType(VideoThumbnailWidget), findsNothing);
     });
 
+    testWidgets('discloses public subscriptions beside the subscribe action', (
+      tester,
+    ) async {
+      when(() => repository.loadBadgeDetail(any())).thenAnswer(
+        (_) async => _detail(definition: _definition(), isOwner: false),
+      );
+      when(() => repository.loadSubscriptions()).thenAnswer(
+        (_) async => <BadgeCoordinate>{},
+      );
+      await tester.pumpWidget(
+        buildSubject(
+          overrides: [
+            authServiceProvider.overrideWithValue(
+              createMockAuthService(currentPublicKeyHex: _pubkey(1)),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text(l10n.badgeSubscribeAction),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text(l10n.badgeSubscriptionsPublicNotice), findsOneWidget);
+    });
+
     testWidgets('offers a retry when the lookup fails', (tester) async {
       when(
         () => repository.loadBadgeDetail(any()),

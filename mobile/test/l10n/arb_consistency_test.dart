@@ -589,6 +589,9 @@ const _knownUntranslatedDebt = <String>{
   'peopleListsAllMembersHiddenTitle',
   'peopleListsAllMembersHiddenSubtitle',
 
+  // Public-subscription consent disclosure awaits speaker review (#7894).
+  // Keep English fallback per LOCALIZATION_STYLE_GUIDE load-bearing copy policy.
+  'badgeSubscriptionsPublicNotice',
   // Unavailable pinned-video recovery (#9443). These keys remain English in
   // all 21 non-English locales until a human translation pass.
   'profilePinReviewUnavailable',

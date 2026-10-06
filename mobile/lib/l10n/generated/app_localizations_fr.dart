@@ -10603,6 +10603,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get badgesTitle => 'Insignes';
 
   @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
   String get badgeSubscribeAction => 'S’abonner au badge';
 
   @override

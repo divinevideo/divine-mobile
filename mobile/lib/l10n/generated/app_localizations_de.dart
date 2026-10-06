@@ -10573,6 +10573,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get badgesTitle => 'Abzeichen';
 
   @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
   String get badgeSubscribeAction => 'Abzeichen abonnieren';
 
   @override

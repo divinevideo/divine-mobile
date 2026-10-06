@@ -10524,6 +10524,10 @@ class AppLocalizationsFil extends AppLocalizations {
   String get badgesTitle => 'Mga Badge';
 
   @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
   String get badgeSubscribeAction => 'Mag-subscribe sa badge';
 
   @override
