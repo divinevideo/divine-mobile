@@ -306,6 +306,16 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('Skipping Zapstore', result.stdout)
 
+    def test_zapstore_docs_require_production_and_manual_command_excludes_betas(self) -> None:
+        root = CODEMAGIC_PATH.parent
+        agents = (root / 'AGENTS.md').read_text()
+        section = agents.split('## Zapstore Publishing Notes\n', 1)[1].split('\n## ', 1)[0]
+        self.assertIn('RELEASE_CHANNEL=PRODUCTION', section)
+        command = re.search(r'`SIGN_WITH=\.\.\. zsp publish ([^`]+)`', section)
+        self.assertIsNotNone(command)
+        self.assertNotIn('--pre-release', command.group(1))
+        self.assertIn('RELEASE_CHANNEL=PRODUCTION', (root / 'README.md').read_text())
+
     def test_zapstore_publish_is_pinned_and_fails_closed(self) -> None:
         definition = self._definition_block("publish_zapstore")
         release = self._definition_block("publish_github_release")
