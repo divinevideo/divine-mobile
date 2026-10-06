@@ -304,9 +304,16 @@ class UserDataCleanupService {
       );
     } on UserDataCleanupException {
       rethrow;
-    } on Object {
+    } on Object catch (e, stackTrace) {
       // A cleanup failure must never become a partly established account.
-      // Its cause may contain unreadable private cache or database payloads.
+      // Its cause may contain unreadable private cache or database payloads,
+      // so only its type is logged.
+      Log.error(
+        'Account data cleanup failed (${e.runtimeType})',
+        name: 'UserDataCleanupService',
+        category: LogCategory.auth,
+        stackTrace: stackTrace,
+      );
       throw const UserDataCleanupException(
         'Could not clear account data safely',
       );

@@ -21,6 +21,7 @@ import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/services/video_provenance_filter_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockSyncIndexClient extends Mock implements SyncIndexClient {}
 
@@ -795,6 +796,34 @@ void main() {
           service.clearUserSpecificData(isIdentityChange: true),
           throwsA(isA<UserDataCleanupException>()),
         );
+      });
+
+      test('logs only the type of an unexpected cleanup failure', () async {
+        await LogCaptureService().clearAllLogs();
+        const privateContents = 'private cleanup cause sentinel';
+        service.onDatabaseCleanup =
+            ({
+              String? userPubkey,
+              bool deleteUserData = false,
+              bool preserveActiveSession = false,
+            }) async {
+              throw StateError(privateContents);
+            };
+
+        await expectLater(
+          service.clearUserSpecificData(isIdentityChange: true),
+          throwsA(isA<UserDataCleanupException>()),
+        );
+
+        final messages = LogCaptureService()
+            .getRecentLogs()
+            .map((entry) => entry.message)
+            .toList();
+        expect(
+          messages,
+          contains('Account data cleanup failed (StateError)'),
+        );
+        expect(messages.join('\n'), isNot(contains(privateContents)));
       });
 
       test('preserves an existing typed required cleanup failure', () async {
