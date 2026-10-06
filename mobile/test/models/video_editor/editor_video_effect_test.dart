@@ -791,7 +791,7 @@ void main() {
       id: 'echo-1',
       custom: CustomVideoEffect(
         id: echoVideoEffectId,
-        params: {EditorVideoEffect.intensityParam: 0.4, 'blend': 'average'},
+        params: {EditorVideoEffect.intensityParam: 0.4, 'unrelated': 'kept'},
         startTime: Duration(seconds: 1),
       ),
     );
