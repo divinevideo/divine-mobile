@@ -1,6 +1,7 @@
 // ABOUTME: Port over CameraService for the minor-consent recording flow so the
 // ABOUTME: capture screen is testable without native camera hardware.
 
+import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:openvine/services/video_recorder/camera/camera_base_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
@@ -37,6 +38,9 @@ abstract class MinorConsentRecorder {
   /// nothing was captured.
   Future<String?> stop();
 
+  /// Forwards app visibility changes to the camera preview and audio session.
+  Future<void> handleAppLifecycleState(AppLifecycleState state);
+
   /// Releases the underlying camera resources.
   Future<void> dispose();
 }
@@ -48,6 +52,7 @@ class CameraMinorConsentRecorder implements MinorConsentRecorder {
 
   final CameraService _camera;
   bool _disposed = false;
+  final _lifecycleOperations = <Future<void>>{};
 
   @override
   void Function(String? path)? onAutoStopped;
@@ -71,9 +76,25 @@ class CameraMinorConsentRecorder implements MinorConsentRecorder {
   }
 
   @override
+  Future<void> handleAppLifecycleState(AppLifecycleState state) async {
+    if (_disposed) return;
+    final operation = _camera.handleAppLifecycleState(state);
+    _lifecycleOperations.add(operation);
+    try {
+      await operation;
+    } finally {
+      _lifecycleOperations.remove(operation);
+    }
+  }
+
+  @override
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
-    await _camera.dispose();
+    try {
+      await Future.wait(_lifecycleOperations.toList());
+    } finally {
+      await _camera.dispose();
+    }
   }
 }

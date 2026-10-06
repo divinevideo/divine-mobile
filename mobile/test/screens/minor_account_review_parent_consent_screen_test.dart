@@ -35,6 +35,9 @@ class _FakeRecorder implements MinorConsentRecorder {
   Future<String?> stop() async => '/tmp/consent.mp4';
 
   @override
+  Future<void> handleAppLifecycleState(AppLifecycleState state) async {}
+
+  @override
   Future<void> dispose() async {}
 }
 
@@ -195,6 +198,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              minorConsentWakelockProvider.overrideWithValue((_) async {}),
               minorConsentRecorderProvider.overrideWithValue(_FakeRecorder()),
               permissionsServiceProvider.overrideWithValue(_FakePermissions()),
               ..._recordingEnabledOverrides(),
