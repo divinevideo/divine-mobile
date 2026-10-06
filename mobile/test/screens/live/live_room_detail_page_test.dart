@@ -145,7 +145,7 @@ void main() {
       verifyNever(repository.fetchPublicRooms);
     });
 
-    testWidgets('join button opens room page when live beta is enabled', (
+    testWidgets('join button preserves path-sensitive room and session IDs', (
       tester,
     ) async {
       await tester.binding.setSurfaceSize(const Size(430, 932));
@@ -153,19 +153,28 @@ void main() {
 
       SharedPreferences.setMockInitialValues(<String, Object>{});
       final sharedPreferences = await SharedPreferences.getInstance();
+      final linkedRoom = room.copyWith(id: 'room/with ?#% 雪');
+      final linkedSession = session.copyWith(
+        id: 'session/with ?#% 雪',
+        roomId: linkedRoom.id,
+      );
+      when(() => mockLiveRepository.fetchRecording(roomId: linkedRoom.id))
+          .thenAnswer((_) async => null);
+      Map<String, String>? joinedParameters;
       final router = GoRouter(
         routes: <RouteBase>[
           GoRoute(
             path: '/',
             builder: (context, state) => LiveRoomDetailPage(
-              roomId: room.id,
-              initialRoom: room,
-              initialSession: session,
+              roomId: linkedRoom.id,
+              initialRoom: linkedRoom,
+              initialSession: linkedSession,
             ),
           ),
           GoRoute(
             path: '/live/room/:roomId/session/:sessionId',
             builder: (context, state) {
+              joinedParameters = state.pathParameters;
               return const Scaffold(
                 body: Center(child: Text('room page')),
               );
@@ -209,6 +218,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('room page'), findsOneWidget);
+      expect(joinedParameters, {
+        'roomId': linkedRoom.id,
+        'sessionId': linkedSession.id,
+      });
     });
 
     testWidgets('ended rooms show a replay banner when recording exists', (
@@ -249,6 +262,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.pumpAndSettle();
 
+      expect(find.text('Ended'), findsOneWidget);
+      expect(find.text('Scheduled'), findsNothing);
       expect(find.text('Replay ready'), findsOneWidget);
       expect(find.text('Open replay'), findsOneWidget);
     });
