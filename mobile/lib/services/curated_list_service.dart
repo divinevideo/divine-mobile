@@ -1802,7 +1802,7 @@ class CuratedListService extends ChangeNotifier {
   /// See [CuratedListRelayGateway.streamPublicListsFromRelays].
   Stream<List<CuratedList>> streamPublicListsFromRelays({
     DateTime? until,
-    int limit = 500,
+    int limit = kPublicListsRelayWindow,
     Set<String>? excludeIds,
     Duration timeout = kPublicCuratedListsRelayReadTimeout,
   }) => _canReadPublicLists
