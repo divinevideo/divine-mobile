@@ -15,7 +15,7 @@ import 'package:openvine/screens/search_results/widgets/search_results_app_bar.d
 
 /// Page that creates and wires the search BLoCs, then renders
 /// [SearchResultsView].
-class SearchResultsPage extends ConsumerWidget {
+class SearchResultsPage extends ConsumerStatefulWidget {
   const SearchResultsPage({
     this.initialQuery,
     this.requestFocusOnMount = false,
@@ -61,7 +61,34 @@ class SearchResultsPage extends ConsumerWidget {
       uri.queryParameters[requestFocusQueryParameter] == '1';
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SearchResultsPage> createState() => _SearchResultsPageState();
+}
+
+class _SearchResultsPageState extends ConsumerState<SearchResultsPage> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialQuery ?? '');
+  }
+
+  @override
+  void didUpdateWidget(SearchResultsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialQuery != widget.initialQuery) {
+      _controller.text = widget.initialQuery ?? '';
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final profileRepository = ref.watch(profileRepositoryProvider);
     if (profileRepository == null) {
       return ColoredBox(
@@ -85,50 +112,53 @@ class SearchResultsPage extends ConsumerWidget {
     final peopleListSearchEnabled =
         profileListFeaturesEnabled && curatedListsEnabled;
 
-    return MultiBlocProvider(
-      // Recreate the search blocs when an auth-sensitive repository or flag
-      // changes so no bloc remains bound to stale dependencies.
-      // See `.claude/rules/state_management.md`.
-      key: ValueKey((
-        profileRepository,
-        videosRepository,
-        hashtagRepository,
-        curatedListRepository,
-        peopleListsRepository,
-        peopleListSearchEnabled,
-      )),
-      providers: [
-        BlocProvider(
-          create: (_) => VideoSearchBloc(
-            videosRepository: videosRepository,
+    // The chosen category is independent of the policy-bound result blocs.
+    return BlocProvider(
+      create: (_) => SearchResultsFilterCubit(),
+      child: MultiBlocProvider(
+        // Recreate the search blocs when an auth-sensitive repository or flag
+        // changes so no bloc remains bound to stale dependencies.
+        // See `.claude/rules/state_management.md`.
+        key: ValueKey((
+          profileRepository,
+          videosRepository,
+          hashtagRepository,
+          curatedListRepository,
+          peopleListsRepository,
+          peopleListSearchEnabled,
+        )),
+        providers: [
+          BlocProvider(
+            create: (_) => VideoSearchBloc(
+              videosRepository: videosRepository,
+            ),
           ),
-        ),
-        BlocProvider(
-          create: (_) => UserSearchBloc(profileRepository: profileRepository),
-        ),
-        BlocProvider(create: (_) => SearchResultsFilterCubit()),
-        BlocProvider(
-          create: (_) => HashtagSearchBloc(
-            hashtagRepository: hashtagRepository,
+          BlocProvider(
+            create: (_) => UserSearchBloc(profileRepository: profileRepository),
           ),
-        ),
-        BlocProvider(
-          create: (_) => ListSearchBloc(
-            curatedListRepository: curatedListRepository,
-            peopleListsRepository: peopleListsRepository,
-            peopleListSearchEnabled: peopleListSearchEnabled,
+          BlocProvider(
+            create: (_) => HashtagSearchBloc(
+              hashtagRepository: hashtagRepository,
+            ),
           ),
-        ),
-      ],
-      child: _BlocklistRefreshListener(
-        child: Scaffold(
-          // bg/surface — matches SearchResultsView's body background so the
-          // app bar area (which doesn't paint its own background) doesn't
-          // show through to the root scaffold's darker default.
-          backgroundColor: context.vineColors.surface,
-          body: _SearchResultsBody(
-            initialQuery: initialQuery ?? '',
-            requestFocusOnMount: requestFocusOnMount,
+          BlocProvider(
+            create: (_) => ListSearchBloc(
+              curatedListRepository: curatedListRepository,
+              peopleListsRepository: peopleListsRepository,
+              peopleListSearchEnabled: peopleListSearchEnabled,
+            ),
+          ),
+        ],
+        child: _BlocklistRefreshListener(
+          child: Scaffold(
+            // bg/surface — matches SearchResultsView's body background so the
+            // app bar area (which doesn't paint its own background) doesn't
+            // show through to the root scaffold's darker default.
+            backgroundColor: context.vineColors.surface,
+            body: _SearchResultsBody(
+              controller: _controller,
+              requestFocusOnMount: widget.requestFocusOnMount,
+            ),
           ),
         ),
       ),
@@ -168,52 +198,32 @@ class _BlocklistRefreshListener extends ConsumerWidget {
   }
 }
 
-/// Wires the app bar and body together, owning the search field's
-/// [TextEditingController] so both children read the same live value.
+/// Wires the app bar and body to the page-owned [TextEditingController].
 ///
-/// The controller is hoisted here (rather than created inside the app bar)
-/// so [SearchResultsView] can drive its idle-placeholder decision from the
-/// user's current input. Using the live text — not the route arg —
+/// Keeping the controller above the repository-keyed BLoC scope preserves
+/// typed input when policy or account changes replace the searches. Using
+/// the live text rather than the route argument for the idle placeholder
 /// correctly returns the view to the idle placeholder when the user clears
 /// or shortens a prefilled query after landing on /search-results/:query.
-class _SearchResultsBody extends StatefulWidget {
+class _SearchResultsBody extends StatelessWidget {
   const _SearchResultsBody({
-    required this.initialQuery,
+    required this.controller,
     required this.requestFocusOnMount,
   });
 
-  final String initialQuery;
+  final TextEditingController controller;
   final bool requestFocusOnMount;
-
-  @override
-  State<_SearchResultsBody> createState() => _SearchResultsBodyState();
-}
-
-class _SearchResultsBodyState extends State<_SearchResultsBody> {
-  late final TextEditingController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.initialQuery);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         SearchResultsAppBar(
-          controller: _controller,
-          initialQuery: widget.initialQuery,
-          requestFocusOnMount: widget.requestFocusOnMount,
+          controller: controller,
+          initialQuery: controller.text,
+          requestFocusOnMount: requestFocusOnMount,
         ),
-        Expanded(child: SearchResultsView(controller: _controller)),
+        Expanded(child: SearchResultsView(controller: controller)),
       ],
     );
   }

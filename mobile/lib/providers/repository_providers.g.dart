@@ -208,7 +208,70 @@ final class CuratedListRepositoryProvider
 }
 
 String _$curatedListRepositoryHash() =>
-    r'07ffe6c6329c6ffda437321f23711aeab2f77ebc';
+    r'2e5733df21aec4fa2c1a557f78c069801021e89c';
+
+/// Shared preview policy for My Lists and public list search.
+///
+/// Replacing a policy retires its captured callback, so late thumbnail reads
+/// cannot publish previews from an earlier policy or account session.
+
+@ProviderFor(curatedListThumbnailFilter)
+final curatedListThumbnailFilterProvider =
+    CuratedListThumbnailFilterProvider._();
+
+/// Shared preview policy for My Lists and public list search.
+///
+/// Replacing a policy retires its captured callback, so late thumbnail reads
+/// cannot publish previews from an earlier policy or account session.
+
+final class CuratedListThumbnailFilterProvider
+    extends
+        $FunctionalProvider<
+          CuratedListVideoFilter,
+          CuratedListVideoFilter,
+          CuratedListVideoFilter
+        >
+    with $Provider<CuratedListVideoFilter> {
+  /// Shared preview policy for My Lists and public list search.
+  ///
+  /// Replacing a policy retires its captured callback, so late thumbnail reads
+  /// cannot publish previews from an earlier policy or account session.
+  CuratedListThumbnailFilterProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'curatedListThumbnailFilterProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$curatedListThumbnailFilterHash();
+
+  @$internal
+  @override
+  $ProviderElement<CuratedListVideoFilter> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  CuratedListVideoFilter create(Ref ref) {
+    return curatedListThumbnailFilter(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CuratedListVideoFilter value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CuratedListVideoFilter>(value),
+    );
+  }
+}
+
+String _$curatedListThumbnailFilterHash() =>
+    r'f086b09e0afdca40a081f740368185891e57596a';
 
 /// Provider for HashtagRepository instance.
 ///

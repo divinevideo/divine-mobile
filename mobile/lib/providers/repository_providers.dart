@@ -257,10 +257,12 @@ final contactListDirtyBroadcastBridgeProvider = Provider<void>((ref) {
 /// until the repository owns its own persistence (Phase 1b).
 @Riverpod(keepAlive: true)
 CuratedListRepository curatedListRepository(Ref ref) {
+  final videoFilter = ref.watch(curatedListThumbnailFilterProvider);
   final repository = CuratedListRepository(
     nostrClient: ref.watch(nostrServiceProvider),
     funnelcakeApiClient: ref.watch(funnelcakeApiClientProvider),
     blockFilter: createBlockedAuthorFilter(ref),
+    videoFilter: videoFilter,
   );
 
   // Bridge: push curated list updates from legacy service into repository
@@ -282,10 +284,34 @@ CuratedListRepository curatedListRepository(Ref ref) {
                 ),
         );
     });
-  });
+  }, fireImmediately: true);
 
   ref.onDispose(repository.dispose);
   return repository;
+}
+
+/// Shared preview policy for My Lists and public list search.
+///
+/// Replacing a policy retires its captured callback, so late thumbnail reads
+/// cannot publish previews from an earlier policy or account session.
+@Riverpod(keepAlive: true)
+CuratedListVideoFilter curatedListThumbnailFilter(Ref ref) {
+  ref.watch(currentAuthStateProvider);
+  ref.watch(blocklistVersionProvider);
+  ref.watch(contentFilterVersionProvider);
+  ref.watch(divineHostFilterVersionProvider);
+  ref.watch(videoProvenanceFilterVersionProvider);
+  ref.watch(adultContentVerificationVersionProvider);
+  final videoService = ref.watch(videoEventServiceProvider);
+  final videos = ref.watch(videosRepositoryProvider);
+  var disposed = false;
+  ref.onDispose(() => disposed = true);
+  return (video) {
+    if (disposed || videoService.shouldHideVideo(video)) return true;
+    final permitted = videos.applyContentPreferences([video]);
+    // Cards carry plain URLs and cannot show the playback warning overlay.
+    return permitted.isEmpty || permitted.single.warnLabels.isNotEmpty;
+  };
 }
 
 @visibleForTesting

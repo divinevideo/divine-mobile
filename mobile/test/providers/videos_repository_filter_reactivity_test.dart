@@ -14,6 +14,7 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
 import 'package:openvine/services/feed_aspect_ratio_preference_service.dart';
+import 'package:openvine/services/video_provenance_filter_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -29,6 +30,9 @@ class _MockDivineHostFilterService extends Mock
     implements DivineHostFilterService {}
 
 class _FakeVideoEvent extends Fake implements VideoEvent {}
+
+class _MockProvenanceFilter extends Mock
+    implements VideoProvenanceFilterService {}
 
 /// Toggleable version counter that simulates contentFilterVersionProvider
 /// changing when the user changes a filter preference.
@@ -92,6 +96,9 @@ void main() {
       mockNostrClient = _MockNostrClient();
 
       when(() => mockNostrClient.isInitialized).thenReturn(true);
+      when(() => mockNostrClient.publicKey).thenReturn('d' * 64);
+      when(() => mockNostrClient.resolvePublicKey())
+          .thenAnswer((_) async => null);
       when(() => mockNostrClient.hasKeys).thenReturn(false);
       when(() => mockNostrClient.connectedRelayCount).thenReturn(1);
       when(() => mockNostrClient.configuredRelays).thenReturn(<String>[]);
@@ -99,6 +106,75 @@ void main() {
       when(() => mockDivineHost.showDivineHostedOnly).thenReturn(false);
       when(() => mockAspectRatio.shouldHideVideo(any())).thenReturn(false);
     });
+
+    for (final provenance in [false, true]) {
+      test(
+        'canonical filters replace ${provenance ? 'provenance' : 'host'} service instances',
+        () async {
+          final selection = StateProvider<bool>((ref) => false);
+          final nextHost = _MockDivineHostFilterService();
+          when(() => nextHost.showDivineHostedOnly).thenReturn(true);
+          final oldProvenance = _MockProvenanceFilter();
+          final nextProvenance = _MockProvenanceFilter();
+          when(() => oldProvenance.showVerifiedOnly).thenReturn(false);
+          when(() => nextProvenance.showVerifiedOnly).thenReturn(true);
+          final container = ProviderContainer(
+            overrides: [
+              appVersionProvider.overrideWithValue('test'),
+              sharedPreferencesProvider.overrideWithValue(mockPrefs),
+              nostrServiceProvider.overrideWithValue(mockNostrClient),
+              contentFilterServiceProvider.overrideWithValue(mockContentFilter),
+              feedAspectRatioPreferenceServiceProvider.overrideWithValue(
+                mockAspectRatio,
+              ),
+              contentFilterVersionProvider.overrideWith(
+                _StaticContentFilterVersion.new,
+              ),
+              divineHostFilterVersionProvider.overrideWith(
+                _StaticDivineHostFilterVersion.new,
+              ),
+              divineHostFilterServiceProvider.overrideWith(
+                (ref) => !provenance && ref.watch(selection)
+                    ? nextHost
+                    : mockDivineHost,
+              ),
+              videoProvenanceFilterServiceProvider.overrideWith(
+                (ref) => provenance && ref.watch(selection)
+                    ? nextProvenance
+                    : oldProvenance,
+              ),
+            ],
+          );
+          addTearDown(container.dispose);
+          final video = VideoEvent(
+            id: 'c' * 64,
+            pubkey: 'a' * 64,
+            createdAt: 1770000000,
+            timestamp: DateTime.utc(2026),
+            content: '',
+            videoUrl: 'https://example.com/video.mp4',
+          );
+          final firstService = container.read(videoEventServiceProvider);
+          final firstRepository = container.read(videosRepositoryProvider);
+          expect(firstService.shouldHideVideo(video), isFalse);
+          expect(firstRepository.applyContentPreferences([video]), [video]);
+          container.read(selection.notifier).state = true;
+          await container.pump();
+          final replacementService = container.read(videoEventServiceProvider);
+          final replacementRepository = container.read(
+            videosRepositoryProvider,
+          );
+          expect(replacementService, isNot(same(firstService)));
+          expect(replacementRepository, isNot(same(firstRepository)));
+          expect(replacementService.shouldHideVideo(video), isTrue);
+          expect(
+            replacementRepository.applyContentPreferences([video]),
+            isEmpty,
+          );
+          expect(container.read(divineHostFilterVersionProvider), 0);
+        },
+      );
+    }
 
     test(
       'rebuilds with fresh instance when contentFilterVersionProvider changes',

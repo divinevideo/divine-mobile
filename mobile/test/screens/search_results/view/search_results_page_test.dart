@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -9,6 +11,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/list_search/list_search_bloc.dart';
+import 'package:openvine/blocs/search_results_filter/search_results_filter.dart';
 import 'package:openvine/blocs/video_search/video_search_bloc.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
@@ -35,6 +38,7 @@ class _MockPeopleListsRepository extends Mock
 
 final _profileRepositoryAvailable = StateProvider<bool>((ref) => false);
 final _videosRepositorySelection = StateProvider<int>((ref) => 0);
+final _curatedRepositorySelection = StateProvider<int>((ref) => 0);
 
 void main() {
   setUpAll(() {
@@ -60,6 +64,7 @@ void main() {
     Widget createTestWidget({
       Override? profileRepositoryOverride,
       Override? videosRepositoryOverride,
+      Override? curatedRepositoryOverride,
       List<Override> flagOverrides = const [],
     }) {
       return testMaterialApp(
@@ -71,9 +76,10 @@ void main() {
           videosRepositoryOverride ??
               videosRepositoryProvider.overrideWithValue(mockVideosRepository),
           hashtagRepositoryProvider.overrideWithValue(mockHashtagRepository),
-          curatedListRepositoryProvider.overrideWithValue(
-            mockCuratedListRepository,
-          ),
+          curatedRepositoryOverride ??
+              curatedListRepositoryProvider.overrideWithValue(
+                mockCuratedListRepository,
+              ),
           peopleListsRepositoryProvider.overrideWithValue(
             mockPeopleListsRepository,
           ),
@@ -82,6 +88,113 @@ void main() {
         ],
       );
     }
+
+    testWidgets(
+      'policy replacement clears previews and preserves typed query and category',
+      (
+        tester,
+      ) async {
+        final replacement = _MockCuratedListRepository();
+        final pending = StreamController<List<CuratedList>>.broadcast();
+        addTearDown(pending.close);
+        final now = DateTime.utc(2026);
+        final row = CuratedList(
+          id: 'dance',
+          name: 'Dance',
+          pubkey: 'a' * 64,
+          videoEventIds: ['b' * 64],
+          thumbnailUrls: const ['https://example.com/visible.jpg'],
+          createdAt: now,
+          updatedAt: now,
+        );
+        when(() => mockCuratedListRepository.searchAllLists(any()))
+            .thenAnswer((_) => Stream.value([row]));
+        when(() => replacement.searchAllLists(any()))
+            .thenAnswer((_) => pending.stream);
+        when(
+          () => mockVideosRepository.searchVideos(
+            query: any(named: 'query'),
+            sort: any(named: 'sort'),
+          ),
+        ).thenAnswer((_) => Stream.value(const <VideoEvent>[]));
+        when(
+          () => mockHashtagRepository.searchHashtags(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) async => const <String>[]);
+        when(
+          () => mockProfileRepository.searchUsersProgressive(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            sortBy: any(named: 'sortBy'),
+            hasVideos: any(named: 'hasVideos'),
+            boostPubkeys: any(named: 'boostPubkeys'),
+            cancellationToken: any(named: 'cancellationToken'),
+          ),
+        ).thenAnswer((_) => const Stream<ProgressiveSearchResult>.empty());
+        await tester.pumpWidget(
+          createTestWidget(
+            curatedRepositoryOverride: curatedListRepositoryProvider
+                .overrideWith(
+                  (ref) => ref.watch(_curatedRepositorySelection) == 0
+                      ? mockCuratedListRepository
+                      : replacement,
+                ),
+          ),
+        );
+        await tester.enterText(find.byType(TextField), 'dance');
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.runAsync(() async {});
+        await tester.pump();
+        final oldBloc = BlocProvider.of<ListSearchBloc>(
+          tester.element(find.byType(SearchResultsView)),
+        );
+        expect(
+          oldBloc.state.videoResults.single.thumbnailUrls,
+          row.thumbnailUrls,
+        );
+        final category = BlocProvider.of<SearchResultsFilterCubit>(
+          tester.element(find.byType(SearchResultsView)),
+        );
+        category.filterChanged(SearchResultsFilter.lists);
+        await tester.pump();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(SearchResultsPage)),
+        );
+        container.read(_curatedRepositorySelection.notifier).state = 1;
+        await tester.pump();
+        final newBloc = BlocProvider.of<ListSearchBloc>(
+          tester.element(find.byType(SearchResultsView)),
+        );
+        expect(oldBloc.isClosed, isTrue);
+        expect(
+          BlocProvider.of<SearchResultsFilterCubit>(
+            tester.element(find.byType(SearchResultsView)),
+          ),
+          same(category),
+        );
+        expect(category.state, SearchResultsFilter.lists);
+        expect(newBloc.state.videoResults, isEmpty);
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          'dance',
+        );
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.runAsync(() async {});
+        await tester.pump();
+        verify(() => replacement.searchAllLists('dance')).called(1);
+        expect(newBloc.state.query, 'dance');
+        expect(newBloc.state.videoResults, isEmpty);
+        pending.add([row.copyWith(thumbnailUrls: const [])]);
+        await tester.pump();
+        expect(newBloc.state.videoResults.single.thumbnailUrls, isEmpty);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(milliseconds: 350));
+        expect(category.isClosed, isTrue);
+      },
+    );
 
     for (final master in [false, true]) {
       for (final profile in [false, true]) {

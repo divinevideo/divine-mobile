@@ -186,8 +186,8 @@ VideoEventService videoEventService(Ref ref) {
 
   final likesRepository = ref.watch(likesRepositoryProvider);
   final moderationLabelService = ref.watch(moderationLabelServiceProvider);
-  final divineHostFilterService = ref.read(divineHostFilterServiceProvider);
-  final provenanceFilterService = ref.read(
+  final divineHostFilterService = ref.watch(divineHostFilterServiceProvider);
+  final provenanceFilterService = ref.watch(
     videoProvenanceFilterServiceProvider,
   );
   final feedAspectRatioPreference = ref.watch(
@@ -652,8 +652,8 @@ VideosRepository videosRepository(Ref ref) {
       return true;
     }
   }();
-  final divineHostFilterService = ref.read(divineHostFilterServiceProvider);
-  final provenanceFilterService = ref.read(
+  final divineHostFilterService = ref.watch(divineHostFilterServiceProvider);
+  final provenanceFilterService = ref.watch(
     videoProvenanceFilterServiceProvider,
   );
   final feedAspectRatioPreference = ref.watch(
