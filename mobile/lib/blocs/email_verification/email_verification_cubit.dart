@@ -1078,6 +1078,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
             name: 'EmailVerificationCubit',
             category: LogCategory.auth,
           );
+          if (isClosed) return;
           emit(
             const EmailVerificationState(
               status: EmailVerificationStatus.failure,
