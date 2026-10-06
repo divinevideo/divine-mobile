@@ -190,8 +190,8 @@ class _LiveRoomViewState extends State<LiveRoomView> {
                         label: context.l10n.liveHostControls,
                         type: DivineButtonType.secondary,
                         size: DivineButtonSize.small,
-                        onPressed: () {
-                          VineBottomSheet.show<void>(
+                        onPressed: () async {
+                          await VineBottomSheet.show<void>(
                             context: context,
                             scrollable: false,
                             showHeader: false,

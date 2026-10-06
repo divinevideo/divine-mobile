@@ -165,8 +165,8 @@ class LiveRoomDetailView extends StatelessWidget {
                 ? context.l10n.liveJoinLive
                 : context.l10n.liveOpenRoom,
             expanded: true,
-            onPressed: () {
-              context.push(
+            onPressed: () async {
+              await context.push(
                 RoutePaths.liveRoomFor(room.id, sessionId),
                 extra: LiveRoomRouteData(
                   room: room,
