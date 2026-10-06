@@ -6,13 +6,13 @@ import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/services/build_configuration.dart';
 
 void main() {
-  test('livestream defaults off', () {
-    expect(
-      const BuildConfiguration().getDefault(FeatureFlag.livestreamingBeta),
-      isFalse,
-    );
-  });
   group('BuildConfiguration', () {
+    test('livestream defaults off', () {
+      expect(
+        const BuildConfiguration().getDefault(FeatureFlag.livestreamingBeta),
+        isFalse,
+      );
+    });
     test('should read from environment variables', () {
       // This tests compile-time constants
       const config = BuildConfiguration();

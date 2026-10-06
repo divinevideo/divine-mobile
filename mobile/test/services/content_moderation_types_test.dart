@@ -2,7 +2,7 @@
 // ABOUTME: severity, mute entries, moderation result).
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/services/content_moderation_types.dart';
+import 'package:openvine/models/content_moderation.dart';
 
 void main() {
   group(MuteListEntry, () {

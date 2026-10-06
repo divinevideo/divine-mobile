@@ -52,7 +52,7 @@ Add matching environment key expectations:
 
 Run:
 ```bash
-cd /Users/rabble/code/divine/divine-mobile/.worktrees/live-spaces-v1/mobile
+cd mobile
 flutter test test/core/feature_flag_test.dart test/services/build_config_test.dart
 ```
 
@@ -831,7 +831,7 @@ Cover:
 
 Run:
 ```bash
-cd /Users/rabble/code/divine/divine-mobile/.worktrees/live-spaces-v1/mobile
+cd mobile
 scripts/golden.sh verify
 ```
 

@@ -1,5 +1,6 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/live/live_room.dart';
 import 'package:openvine/models/live/live_session.dart';
 
@@ -29,10 +30,12 @@ class LiveRoomCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(28),
         child: Ink(
           decoration: BoxDecoration(
-            color: VineTheme.surfaceContainerHigh,
+            color: context.vineColors.surfaceContainerHigh,
             borderRadius: BorderRadius.circular(28),
             border: Border.all(
-              color: isLive ? VineTheme.primary : VineTheme.outlineMuted,
+              color: isLive
+                  ? VineTheme.primary
+                  : context.vineColors.outlineMuted,
             ),
           ),
           child: Padding(
@@ -50,23 +53,25 @@ class LiveRoomCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: isLive
                             ? VineTheme.primary
-                            : VineTheme.surfaceContainer,
+                            : context.vineColors.surfaceContainer,
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
-                        isLive ? 'Live now' : 'Scheduled',
+                        isLive
+                            ? context.l10n.liveLiveNow
+                            : context.l10n.libraryScheduledSectionTitle,
                         style: VineTheme.labelLargeFont(
                           color: isLive
                               ? VineTheme.onPrimary
-                              : VineTheme.onSurface,
+                              : context.vineColors.onSurface,
                         ),
                       ),
                     ),
                     const Spacer(),
                     Text(
-                      '$speakerCount speakers',
+                      context.l10n.liveSpeakerCount(speakerCount),
                       style: VineTheme.bodySmallFont(
-                        color: VineTheme.onSurfaceVariant,
+                        color: context.vineColors.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -74,13 +79,15 @@ class LiveRoomCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text(
                   room.title,
-                  style: VineTheme.titleLargeFont(),
+                  style: VineTheme.titleLargeFont(
+                    color: context.vineColors.onSurface,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   room.summary,
                   style: VineTheme.bodyMediumFont(
-                    color: VineTheme.onSurfaceVariant,
+                    color: context.vineColors.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -88,19 +95,19 @@ class LiveRoomCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        'Host: ${room.hostPubkey}',
+                        context.l10n.liveHostLabel(room.hostPubkey),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: VineTheme.bodySmallFont(
-                          color: VineTheme.onSurfaceVariant,
+                          color: context.vineColors.onSurfaceVariant,
                         ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      '$audienceCount listening',
+                      context.l10n.liveListeningCount(audienceCount),
                       style: VineTheme.bodySmallFont(
-                        color: VineTheme.onSurfaceVariant,
+                        color: context.vineColors.onSurfaceVariant,
                       ),
                     ),
                   ],

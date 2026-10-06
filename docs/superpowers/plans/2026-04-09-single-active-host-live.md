@@ -135,8 +135,8 @@
 ### Task 8: Push branches
 
 - [ ] Push server branch:
-  - `git -C /Users/rabble/code/divine/divine-live-server/.worktrees/single-active-host-live push -u origin codex/single-active-host-live`
+  - `git -C ../divine-live-server push -u origin codex/single-active-host-live`
 - [ ] Push mobile branch:
-  - `git -C /Users/rabble/code/divine/divine-mobile/.worktrees/live-spaces-v1 push`
+  - `git -C . push`
 
 Plan complete and saved to `docs/superpowers/plans/2026-04-09-single-active-host-live.md`. Ready to execute.

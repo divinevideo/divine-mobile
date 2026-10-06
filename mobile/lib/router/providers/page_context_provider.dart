@@ -805,7 +805,7 @@ String buildRoute(RouteContext context) {
       if (roomId == null || roomId.isEmpty) {
         return RoutePaths.liveDiscovery;
       }
-      return RoutePaths.liveRoomDetailFor(Uri.encodeComponent(roomId));
+      return RoutePaths.liveRoomDetailFor(roomId);
 
     case RouteType.liveRoom:
       final roomId = context.roomId;
@@ -817,8 +817,8 @@ String buildRoute(RouteContext context) {
         return RoutePaths.liveDiscovery;
       }
       return RoutePaths.liveRoomFor(
-        Uri.encodeComponent(roomId),
-        Uri.encodeComponent(sessionId),
+        roomId,
+        sessionId,
       );
 
     case RouteType.videoRecorder:

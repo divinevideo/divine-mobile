@@ -43,7 +43,7 @@ import 'package:openvine/screens/inbox/widgets/inbox_filter_chips.dart';
 import 'package:openvine/screens/inbox/widgets/inbox_segmented_toggle.dart';
 import 'package:openvine/screens/inbox/widgets/restore_paused_banner.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
-import 'package:openvine/services/content_moderation_types.dart';
+import 'package:openvine/models/content_moderation.dart';
 import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:riverpod/misc.dart' show Override;

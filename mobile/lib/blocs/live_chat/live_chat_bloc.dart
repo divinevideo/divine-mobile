@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 import 'package:bloc_concurrency/bloc_concurrency.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/live_chat/live_chat_event.dart';
 import 'package:openvine/blocs/live_chat/live_chat_state.dart';
 import 'package:openvine/models/live/live_chat_message.dart';
@@ -33,6 +34,7 @@ class LiveChatBloc extends Bloc<LiveChatEvent, LiveChatState> {
     Emitter<LiveChatState> emit,
   ) async {
     await _messagesSubscription?.cancel();
+    if (isClosed) return;
     final sessionAddress = event.sessionAddress;
 
     emit(
@@ -41,21 +43,21 @@ class LiveChatBloc extends Bloc<LiveChatEvent, LiveChatState> {
         sessionAddress: sessionAddress,
         messages: const <LiveChatMessage>[],
         isSending: false,
-        clearErrorMessage: true,
+        clearError: true,
       ),
     );
 
     _messagesSubscription = _liveChatRepository
         .watchChatMessages(sessionAddress: sessionAddress)
         .listen(
-          (messages) => add(
+          (messages) => addIfOpen(
             LiveChatMessagesUpdated(
               sessionAddress: sessionAddress,
               messages: messages,
             ),
           ),
           onError: (Object error, StackTrace _) {
-            add(
+            addIfOpen(
               LiveChatSubscriptionFailed(
                 sessionAddress: sessionAddress,
                 error: error,
@@ -78,7 +80,7 @@ class LiveChatBloc extends Bloc<LiveChatEvent, LiveChatState> {
         status: LiveChatStatus.ready,
         messages: event.messages,
         isSending: false,
-        clearErrorMessage: true,
+        clearError: true,
       ),
     );
   }
@@ -96,7 +98,7 @@ class LiveChatBloc extends Bloc<LiveChatEvent, LiveChatState> {
     emit(
       state.copyWith(
         isSending: true,
-        clearErrorMessage: true,
+        clearError: true,
       ),
     );
 
@@ -113,14 +115,15 @@ class LiveChatBloc extends Bloc<LiveChatEvent, LiveChatState> {
           status: LiveChatStatus.ready,
           messages: nextMessages,
           isSending: false,
-          clearErrorMessage: true,
+          clearError: true,
         ),
       );
-    } catch (error) {
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
       emit(
         state.copyWith(
           isSending: false,
-          errorMessage: '$error',
+          error: LiveChatError.sendFailed,
         ),
       );
     }
@@ -134,19 +137,23 @@ class LiveChatBloc extends Bloc<LiveChatEvent, LiveChatState> {
       return;
     }
 
+    addError(event.error);
     emit(
       state.copyWith(
         status: LiveChatStatus.failure,
         isSending: false,
-        errorMessage: '${event.error}',
+        error: LiveChatError.loadFailed,
       ),
     );
   }
 
   @override
   Future<void> close() async {
+    // Close event dispatch before awaiting cancellation, so a restart cannot
+    // install a new subscription while teardown is waiting on the old one.
+    final closing = super.close();
     await _messagesSubscription?.cancel();
-    return super.close();
+    return closing;
   }
 
   List<LiveChatMessage> _mergedMessages(

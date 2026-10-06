@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' as lk;
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/models/live/live_media_state.dart';
 import 'package:openvine/models/live/live_room_token.dart';
 import 'package:openvine/services/livekit_room_service.dart';
 
@@ -36,8 +37,8 @@ void main() {
             canPublish: true,
           ),
         );
-        await _flush();
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
+        await pumpEventQueue();
 
         expect(client.prepareCalls, 1);
         expect(client.connectCalls, 1);
@@ -88,7 +89,7 @@ void main() {
             canPublish: true,
           ),
         );
-        await _flush();
+        await pumpEventQueue();
 
         expect(
           service.currentState.stageParticipants,
@@ -117,7 +118,7 @@ void main() {
             canPublish: true,
           ),
         );
-        await _flush();
+        await pumpEventQueue();
 
         client.stageParticipants = const <LiveStageParticipant>[
           LiveStageParticipant(
@@ -133,7 +134,7 @@ void main() {
         ];
 
         client.emit(LiveKitRoomClientEvent.participantsChanged);
-        await _flush();
+        await pumpEventQueue();
 
         expect(
           service.currentState.stageParticipants,
@@ -155,7 +156,7 @@ void main() {
             canPublish: true,
           ),
         );
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         await service.publishLocalTracks(
           cameraEnabled: true,
@@ -183,10 +184,10 @@ void main() {
             canPublish: true,
           ),
         );
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
 
         await service.setCameraEnabled(true);
-        await _flush();
+        await pumpEventQueue();
 
         expect(service.currentState.requestedCameraEnabled, isTrue);
         expect(service.currentState.cameraEnabled, isFalse);
@@ -201,7 +202,7 @@ void main() {
         ];
 
         client.emit(LiveKitRoomClientEvent.participantsChanged);
-        await _flush();
+        await pumpEventQueue();
 
         expect(service.currentState.requestedCameraEnabled, isTrue);
         expect(service.currentState.cameraEnabled, isTrue);
@@ -218,7 +219,7 @@ void main() {
           canPublish: true,
         ),
       );
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       await service.switchCamera();
 
@@ -235,11 +236,11 @@ void main() {
           canPublish: true,
         ),
       );
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       client.emit(LiveKitRoomClientEvent.reconnecting);
-      await _flush();
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
+      await pumpEventQueue();
 
       expect(
         service.currentState.status,
@@ -265,14 +266,14 @@ void main() {
           canPublish: true,
         ),
       );
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       await service.publishLocalTracks(
         cameraEnabled: true,
         microphoneEnabled: true,
       );
 
       await service.enableAudioOnly();
-      await _flush();
+      await pumpEventQueue();
 
       expect(client.cameraEnabledCalls, [true, false]);
       expect(client.microphoneEnabledCalls, [true, true]);
@@ -313,7 +314,7 @@ void main() {
           canPublish: false,
         ),
       );
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       await service.disconnect();
 
@@ -330,10 +331,6 @@ void main() {
       expect(service.currentState.microphoneEnabled, isFalse);
     });
   });
-}
-
-Future<void> _flush() async {
-  await Future<void>.delayed(Duration.zero);
 }
 
 class _FakeLiveKitRoomClient implements LiveKitRoomClient {

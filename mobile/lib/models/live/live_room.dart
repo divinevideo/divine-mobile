@@ -42,8 +42,10 @@ class LiveRoom extends Equatable {
     required this.imageUrl,
     required this.relays,
     required this.visibility,
+    this.serviceUrl,
   });
 
+  final String? serviceUrl;
   final String id;
   final String hostPubkey;
   final String title;
@@ -62,8 +64,10 @@ class LiveRoom extends Equatable {
     String? imageUrl,
     List<String>? relays,
     LiveRoomVisibility? visibility,
+    String? serviceUrl,
   }) {
     return LiveRoom(
+      serviceUrl: serviceUrl ?? this.serviceUrl,
       id: id ?? this.id,
       hostPubkey: hostPubkey ?? this.hostPubkey,
       title: title ?? this.title,
@@ -76,6 +80,7 @@ class LiveRoom extends Equatable {
 
   @override
   List<Object?> get props => [
+    serviceUrl,
     id,
     hostPubkey,
     title,

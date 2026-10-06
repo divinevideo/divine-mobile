@@ -5,7 +5,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/report/report_submission_cubit.dart';
-import 'package:openvine/services/content_moderation_types.dart';
+import 'package:openvine/models/content_moderation.dart';
 import 'package:openvine/services/content_reporting_service.dart';
 
 class _Service extends Mock implements ContentReportingService {}

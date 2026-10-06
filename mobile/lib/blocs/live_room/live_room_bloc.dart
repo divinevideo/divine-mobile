@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:flutter/foundation.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/live_room/live_room_event.dart';
 import 'package:openvine/blocs/live_room/live_room_state.dart';
+import 'package:openvine/models/live/live_media_state.dart';
 import 'package:openvine/models/live/live_presence.dart';
 import 'package:openvine/models/live/live_role.dart';
 import 'package:openvine/models/live/live_room.dart';
@@ -85,9 +87,9 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
     on<LiveRoomAppForegroundChanged>(_onAppForegroundChanged);
 
     _mediaSubscription = _liveKitRoomService.watchState().listen(
-      (mediaState) => add(LiveRoomMediaStateChanged(mediaState)),
+      (mediaState) => addIfOpen(LiveRoomMediaStateChanged(mediaState)),
       onError: (Object error, StackTrace _) {
-        add(LiveRoomSubscriptionFailed(error));
+        addIfOpen(LiveRoomSubscriptionFailed(error));
       },
     );
   }
@@ -104,6 +106,7 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
   late final StreamSubscription<LiveMediaState> _mediaSubscription;
   String? _presenceSessionAddress;
   String? _connectedSessionKey;
+  String? _requestedSessionId;
   final Map<LiveRole, LiveRoomToken> _cachedJoinTokens =
       <LiveRole, LiveRoomToken>{};
 
@@ -114,9 +117,11 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
     await _disconnectActiveLiveSessionIfNeeded();
     await _sessionsSubscription?.cancel();
     await _presenceSubscription?.cancel();
+    if (isClosed) return;
     _presenceSessionAddress = null;
     _connectedSessionKey = null;
     _cachedJoinTokens.clear();
+    _requestedSessionId = event.sessionId;
 
     emit(
       state.copyWith(
@@ -126,7 +131,7 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
         clearSession: true,
         presence: const <LivePresence>[],
         mediaState: const LiveMediaState(),
-        clearErrorMessage: true,
+        clearError: true,
         clearStageSpeakerPubkeys: true,
         clearDismissedHandPubkeys: true,
         clearHiddenChatParticipantPubkeys: true,
@@ -136,11 +141,14 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
     );
 
     _sessionsSubscription = _liveRepository
-        .watchSessions(roomAddress: event.room.address)
+        .watchSessions(
+          roomAddress: event.room.address,
+          sessionId: event.sessionId,
+        )
         .listen(
-          (sessions) => add(LiveRoomSessionsUpdated(sessions)),
+          (sessions) => addIfOpen(LiveRoomSessionsUpdated(sessions)),
           onError: (Object error, StackTrace _) {
-            add(LiveRoomSubscriptionFailed(error));
+            addIfOpen(LiveRoomSubscriptionFailed(error));
           },
         );
   }
@@ -171,7 +179,7 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
         presence: nextSession == null || sessionChanged
             ? const <LivePresence>[]
             : state.presence,
-        clearErrorMessage: true,
+        clearError: true,
         clearStageSpeakerPubkeys: nextSession == null || sessionChanged,
         clearDismissedHandPubkeys: nextSession == null || sessionChanged,
         clearHiddenChatParticipantPubkeys:
@@ -193,13 +201,14 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
     final sessionAddress = _sessionAddress(currentRoom, nextSession);
     if (_presenceSessionAddress != sessionAddress) {
       await _presenceSubscription?.cancel();
+      if (isClosed) return;
       _presenceSessionAddress = sessionAddress;
       _presenceSubscription = _liveRepository
           .watchPresence(sessionAddress: sessionAddress)
           .listen(
-            (presence) => add(LiveRoomPresenceUpdated(presence)),
+            (presence) => addIfOpen(LiveRoomPresenceUpdated(presence)),
             onError: (Object error, StackTrace _) {
-              add(LiveRoomSubscriptionFailed(error));
+              addIfOpen(LiveRoomSubscriptionFailed(error));
             },
           );
     }
@@ -233,7 +242,7 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
       state.copyWith(
         role: nextRole,
         presence: event.presence,
-        clearErrorMessage: true,
+        clearError: true,
         currentUserHandRaised: _isCurrentUserHandRaised(event.presence),
       ),
     );
@@ -261,8 +270,7 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
     emit(
       state.copyWith(
         mediaState: event.mediaState,
-        clearErrorMessage:
-            event.mediaState.status != LiveMediaConnectionStatus.failed,
+        clearError: event.mediaState.status != LiveMediaConnectionStatus.failed,
       ),
     );
   }
@@ -271,10 +279,11 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
     LiveRoomSubscriptionFailed event,
     Emitter<LiveRoomState> emit,
   ) {
+    addError(event.error);
     emit(
       state.copyWith(
         status: LiveRoomStatus.failure,
-        errorMessage: '${event.error}',
+        error: LiveRoomError.subscriptionFailed,
       ),
     );
   }
@@ -296,7 +305,7 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
       if (enableMicrophone) {
         final permissionError = await _ensureMicrophonePermission();
         if (permissionError != null) {
-          emit(state.copyWith(errorMessage: permissionError));
+          emit(state.copyWith(error: permissionError));
           return;
         }
       }
@@ -304,8 +313,9 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
       await _liveKitRoomService.setMicrophoneEnabled(
         enableMicrophone,
       );
-    } catch (error) {
-      emit(state.copyWith(errorMessage: '$error'));
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
+      emit(state.copyWith(error: LiveRoomError.requestFailed));
     }
   }
 
@@ -326,14 +336,15 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
       if (enableCamera) {
         final permissionError = await _ensureCameraPermission();
         if (permissionError != null) {
-          emit(state.copyWith(errorMessage: permissionError));
+          emit(state.copyWith(error: permissionError));
           return;
         }
       }
 
       await _liveKitRoomService.setCameraEnabled(enableCamera);
-    } catch (error) {
-      emit(state.copyWith(errorMessage: '$error'));
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
+      emit(state.copyWith(error: LiveRoomError.requestFailed));
     }
   }
 
@@ -347,8 +358,9 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
 
     try {
       await _liveKitRoomService.switchCamera();
-    } catch (error) {
-      emit(state.copyWith(errorMessage: '$error'));
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
+      emit(state.copyWith(error: LiveRoomError.requestFailed));
     }
   }
 
@@ -384,12 +396,13 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
 
     try {
       await _liveKitRoomService.enableAudioOnly();
-    } catch (error) {
-      emit(state.copyWith(errorMessage: '$error'));
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
+      emit(state.copyWith(error: LiveRoomError.requestFailed));
     }
   }
 
-  Future<String?> _ensureCameraPermission() async {
+  Future<LiveRoomError?> _ensureCameraPermission() async {
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.macOS) {
       final nativeStatus = await _nativeCameraPermissionService
           .authorizationStatus();
@@ -398,7 +411,7 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
           return null;
         case NativeCameraAuthorizationStatus.denied:
         case NativeCameraAuthorizationStatus.restricted:
-          return 'Camera access is blocked. Allow it in system settings.';
+          return LiveRoomError.cameraBlocked;
         case NativeCameraAuthorizationStatus.notDetermined:
           return _mapCameraPermissionRequest(
             await _nativeCameraPermissionService.requestPermission(),
@@ -417,17 +430,16 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
       final requested = await _permissionsService.requestCameraPermission();
       return switch (requested) {
         PermissionStatus.granted => null,
-        PermissionStatus.requiresSettings =>
-          'Camera access is blocked. Allow it in system settings.',
-        PermissionStatus.canRequest =>
-          'Camera access is required to turn video on.',
+        PermissionStatus.requiresSettings => LiveRoomError.cameraBlocked,
+        PermissionStatus.canRequest => LiveRoomError.cameraRequired,
       };
-    } catch (_) {
-      return 'Unable to access the camera right now.';
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
+      return LiveRoomError.cameraUnavailable;
     }
   }
 
-  Future<String?> _ensureMicrophonePermission() async {
+  Future<LiveRoomError?> _ensureMicrophonePermission() async {
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.macOS) {
       final nativeStatus = await _nativeCameraPermissionService
           .microphoneAuthorizationStatus();
@@ -436,7 +448,7 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
           return null;
         case NativeCameraAuthorizationStatus.denied:
         case NativeCameraAuthorizationStatus.restricted:
-          return 'Microphone access is blocked. Allow it in system settings.';
+          return LiveRoomError.microphoneBlocked;
         case NativeCameraAuthorizationStatus.notDetermined:
           return _mapMicrophonePermissionRequest(
             await _nativeCameraPermissionService.requestMicrophonePermission(),
@@ -455,39 +467,42 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
       final requested = await _permissionsService.requestMicrophonePermission();
       return switch (requested) {
         PermissionStatus.granted => null,
-        PermissionStatus.requiresSettings =>
-          'Microphone access is blocked. Allow it in system settings.',
-        PermissionStatus.canRequest =>
-          'Microphone access is required to speak in the room.',
+        PermissionStatus.requiresSettings => LiveRoomError.microphoneBlocked,
+        PermissionStatus.canRequest => LiveRoomError.microphoneRequired,
       };
-    } catch (_) {
-      return 'Unable to access the microphone right now.';
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
+      return LiveRoomError.microphoneUnavailable;
     }
   }
 
-  String? _mapCameraPermissionRequest(NativeCameraPermissionStatus status) {
+  LiveRoomError? _mapCameraPermissionRequest(
+    NativeCameraPermissionStatus status,
+  ) {
     return switch (status) {
       NativeCameraPermissionStatus.granted => null,
-      NativeCameraPermissionStatus.denied =>
-        'Camera access is required to turn video on.',
+      NativeCameraPermissionStatus.denied => LiveRoomError.cameraRequired,
       NativeCameraPermissionStatus.requiresSettings =>
-        'Camera access is blocked. Allow it in system settings.',
-      NativeCameraPermissionStatus.promptBlocked => 'macOS blocked the camera prompt for this terminal-launched build. Open Divine directly from Finder or Xcode, then try again.',
+        LiveRoomError.cameraBlocked,
+      NativeCameraPermissionStatus.promptBlocked =>
+        LiveRoomError.cameraPromptBlocked,
       NativeCameraPermissionStatus.unavailable =>
-        'Unable to access the camera right now.',
+        LiveRoomError.cameraUnavailable,
     };
   }
 
-  String? _mapMicrophonePermissionRequest(NativeCameraPermissionStatus status) {
+  LiveRoomError? _mapMicrophonePermissionRequest(
+    NativeCameraPermissionStatus status,
+  ) {
     return switch (status) {
       NativeCameraPermissionStatus.granted => null,
-      NativeCameraPermissionStatus.denied =>
-        'Microphone access is required to speak in the room.',
+      NativeCameraPermissionStatus.denied => LiveRoomError.microphoneRequired,
       NativeCameraPermissionStatus.requiresSettings =>
-        'Microphone access is blocked. Allow it in system settings.',
-      NativeCameraPermissionStatus.promptBlocked => 'macOS blocked the microphone prompt for this terminal-launched build. Open Divine directly from Finder or Xcode, then try again.',
+        LiveRoomError.microphoneBlocked,
+      NativeCameraPermissionStatus.promptBlocked =>
+        LiveRoomError.microphonePromptBlocked,
       NativeCameraPermissionStatus.unavailable =>
-        'Unable to access the microphone right now.',
+        LiveRoomError.microphoneUnavailable,
     };
   }
 
@@ -537,11 +552,12 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
         state.copyWith(
           presence: nextPresence,
           currentUserHandRaised: nextHandRaised,
-          clearErrorMessage: true,
+          clearError: true,
         ),
       );
-    } catch (error) {
-      emit(state.copyWith(errorMessage: '$error'));
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
+      emit(state.copyWith(error: LiveRoomError.requestFailed));
     }
   }
 
@@ -585,11 +601,12 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
           clearHiddenChatParticipantPubkeys: true,
           clearHiddenParticipantPubkeys: true,
           currentUserHandRaised: false,
-          clearErrorMessage: true,
+          clearError: true,
         ),
       );
-    } catch (error) {
-      emit(state.copyWith(errorMessage: '$error'));
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
+      emit(state.copyWith(error: LiveRoomError.requestFailed));
     }
   }
 
@@ -613,11 +630,12 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
       emit(
         state.copyWith(
           room: nextRoom,
-          clearErrorMessage: true,
+          clearError: true,
         ),
       );
-    } catch (error) {
-      emit(state.copyWith(errorMessage: '$error'));
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
+      emit(state.copyWith(error: LiveRoomError.requestFailed));
     }
   }
 
@@ -657,7 +675,7 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
     emit(
       state.copyWith(
         hiddenChatParticipantPubkeys: nextMutedChatParticipants,
-        clearErrorMessage: true,
+        clearError: true,
       ),
     );
     return Future<void>.value();
@@ -705,6 +723,7 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
     required LiveRole role,
     required Emitter<LiveRoomState> emit,
   }) async {
+    if (isClosed) return;
     final sessionKey = '${_sessionAddress(room, session)}:${role.name}';
     if (_connectedSessionKey == sessionKey) {
       return;
@@ -714,6 +733,7 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
       if (_connectedSessionKey != null && _connectedSessionKey != sessionKey) {
         _connectedSessionKey = null;
         await _liveKitRoomService.disconnect();
+        if (isClosed) return;
       }
 
       var joinToken = _cachedJoinTokens[role];
@@ -722,11 +742,13 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
         roomId: room.id,
         role: role,
       );
+      if (isClosed) return;
       _cachedJoinTokens[role] = joinToken;
 
       try {
         await _liveKitRoomService.connect(joinToken);
       } catch (error) {
+        if (isClosed) return;
         if (!usedCachedToken) {
           rethrow;
         }
@@ -736,12 +758,19 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
           roomId: room.id,
           role: role,
         );
+        if (isClosed) return;
         _cachedJoinTokens[role] = joinToken;
         await _liveKitRoomService.connect(joinToken);
       }
 
+      if (isClosed) {
+        // A connection already in flight can finish after close disconnected.
+        await _liveKitRoomService.disconnect();
+        return;
+      }
       _connectedSessionKey = sessionKey;
-    } catch (error) {
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
       _connectedSessionKey = null;
       final mediaFailed =
           state.mediaState.status == LiveMediaConnectionStatus.failed;
@@ -754,7 +783,7 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
                   status: LiveMediaConnectionStatus.failed,
                   canPublish: role.canPublish,
                 ),
-          errorMessage: '$error',
+          error: LiveRoomError.connectionFailed,
         ),
       );
     }
@@ -772,6 +801,11 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
   }
 
   LiveSession? _selectSession(List<LiveSession> sessions) {
+    if (_requestedSessionId != null) {
+      return sessions
+          .where((session) => session.id == _requestedSessionId)
+          .firstOrNull;
+    }
     for (final session in sessions) {
       if (session.status == LiveSessionStatus.live) {
         return session;
@@ -849,8 +883,7 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
       if (nextSpeakerPubkeys.length >= maxActiveVideoSpeakers) {
         emit(
           state.copyWith(
-            errorMessage:
-                'Only $maxActiveVideoSpeakers active video speakers are supported in beta.',
+            error: LiveRoomError.speakerCapacityReached,
           ),
         );
         return;
@@ -878,7 +911,7 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
       state.copyWith(
         session: nextSession,
         stageSpeakerPubkeys: nextSpeakerPubkeys,
-        clearErrorMessage: true,
+        clearError: true,
       ),
     );
   }
@@ -923,7 +956,7 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
       state.copyWith(
         dismissedHandPubkeys: nextDismissedHands,
         hiddenParticipantPubkeys: nextRemovedParticipants,
-        clearErrorMessage: true,
+        clearError: true,
       ),
     );
   }
@@ -959,17 +992,18 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
         hiddenChatParticipantPubkeys: nextMutedChatParticipants,
         dismissedHandPubkeys: nextDismissedHands,
         hiddenParticipantPubkeys: nextRemovedParticipants,
-        clearErrorMessage: true,
+        clearError: true,
       ),
     );
   }
 
   @override
   Future<void> close() async {
+    final closing = super.close();
     await _sessionsSubscription?.cancel();
     await _presenceSubscription?.cancel();
     await _mediaSubscription.cancel();
     await _liveKitRoomService.disconnect();
-    return super.close();
+    return closing;
   }
 }

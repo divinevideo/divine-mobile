@@ -1,11 +1,12 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart' as widgets show AspectRatio;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart' as lk;
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show UserProfile;
+import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/live/live_media_state.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
-import 'package:openvine/services/livekit_room_service.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/user_name.dart';
 
@@ -29,17 +30,19 @@ class LiveRoomStageMediaTile extends ConsumerWidget {
         profile?.bestDisplayName ??
         UserProfile.defaultDisplayNameFor(participant.identity);
     final stageStatus = _liveStageStatusLabel(
+      context: context,
       participant: participant,
       mediaState: resolvedMediaState,
     );
 
+    // Stage labels overlay live video on fixed dark scrims in either theme.
     return widgets.AspectRatio(
       aspectRatio: 3 / 4,
       child: Container(
         decoration: BoxDecoration(
           color: VineTheme.scrim15,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: VineTheme.outlineMuted),
+          border: Border.all(color: context.vineColors.outlineMuted),
         ),
         clipBehavior: Clip.antiAlias,
         child: Stack(
@@ -52,11 +55,11 @@ class LiveRoomStageMediaTile extends ConsumerWidget {
               )
             else
               DecoratedBox(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: <Color>[
-                      Color(0xFF302B1F),
-                      Color(0xFF18231B),
+                      context.vineColors.surfaceContainerHigh,
+                      context.vineColors.surfaceContainer,
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -83,8 +86,10 @@ class LiveRoomStageMediaTile extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  participant.isLocal ? 'You' : 'On stage',
-                  style: VineTheme.labelLargeFont(),
+                  participant.isLocal
+                      ? context.l10n.commentAuthorYouIndicator
+                      : context.l10n.liveOnStage,
+                  style: VineTheme.labelLargeFont(color: VineTheme.whiteText),
                 ),
               ),
             ),
@@ -105,28 +110,32 @@ class LiveRoomStageMediaTile extends ConsumerWidget {
                     if (profile != null)
                       UserName.fromUserProfile(
                         profile,
-                        style: VineTheme.bodyMediumFont().copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style:
+                            VineTheme.bodyMediumFont(color: VineTheme.whiteText)
+                                .copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       )
                     else
                       UserName.fromPubKey(
                         participant.identity,
-                        style: VineTheme.bodyMediumFont().copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style:
+                            VineTheme.bodyMediumFont(color: VineTheme.whiteText)
+                                .copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     const SizedBox(height: 6),
                     Row(
                       children: <Widget>[
-                        Icon(
-                          participant.isMicrophoneEnabled
-                              ? Icons.mic_rounded
-                              : Icons.mic_off_rounded,
+                        DivineIcon(
+                          icon: participant.isMicrophoneEnabled
+                              ? DivineIconName.microphone
+                              : DivineIconName.speakerSimpleSlash,
                           size: 16,
                           color: participant.isMicrophoneEnabled
                               ? VineTheme.primary
@@ -155,6 +164,7 @@ class LiveRoomStageMediaTile extends ConsumerWidget {
 }
 
 String _liveStageStatusLabel({
+  required BuildContext context,
   required LiveStageParticipant participant,
   required LiveMediaState mediaState,
 }) {
@@ -163,31 +173,31 @@ String _liveStageStatusLabel({
         mediaState.requestedCameraEnabled &&
         mediaState.microphoneBusy &&
         mediaState.requestedMicrophoneEnabled) {
-      return 'Starting camera and microphone...';
+      return context.l10n.liveStartingCameraAndMicrophone;
     }
     if (mediaState.cameraBusy && mediaState.requestedCameraEnabled) {
-      return 'Starting camera...';
+      return context.l10n.liveStartingCamera;
     }
     if (mediaState.microphoneBusy && mediaState.requestedMicrophoneEnabled) {
-      return 'Starting microphone...';
+      return context.l10n.liveStartingMicrophone;
     }
   }
 
   if (participant.hasVideo && participant.isMicrophoneEnabled) {
-    return 'Live video and audio';
+    return context.l10n.liveLiveVideoAndAudio;
   }
 
   if (participant.hasVideo) {
-    return 'Live video';
+    return context.l10n.liveLiveVideo;
   }
 
   if (participant.isMicrophoneEnabled) {
-    return 'Live audio only';
+    return context.l10n.liveLiveAudioOnly;
   }
 
   if (participant.isLocal) {
-    return 'Camera and mic are off';
+    return context.l10n.liveCameraAndMicAreOff;
   }
 
-  return 'Waiting for media';
+  return context.l10n.liveWaitingForMedia;
 }

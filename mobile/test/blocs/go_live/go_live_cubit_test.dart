@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:bloc/bloc.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -13,6 +16,16 @@ class _MockLiveApiService extends Mock implements LiveApiService {}
 class _MockEvent extends Mock implements Event {}
 
 class _MockLiveRepository extends Mock implements LiveRepository {}
+
+class _RecordingObserver extends BlocObserver {
+  final errors = <Object>[];
+
+  @override
+  void onError(BlocBase<dynamic> bloc, Object error, StackTrace stackTrace) {
+    super.onError(bloc, error, stackTrace);
+    errors.add(error);
+  }
+}
 
 void main() {
   group('GoLiveCubit', () {
@@ -100,6 +113,52 @@ void main() {
       ).thenAnswer((_) async {});
     });
 
+    for (final outcome in ['existing', 'created', 'failure']) {
+      test(
+        'closing during submit safely handles $outcome completion',
+        () async {
+          final pendingDraft = Completer<LiveRoomDraftResponse>();
+          when(
+            () => mockApiService.createRoomDraft(
+              title: 'Divine Live',
+              summary: 'Public room for creators',
+            ),
+          ).thenAnswer((_) => pendingDraft.future);
+          final cubit = GoLiveCubit(
+            liveApiService: mockApiService,
+            liveRepository: mockRepository,
+            currentUserPubkey: hostPubkey,
+            initialTitle: 'Divine Live',
+            initialSummary: 'Public room for creators',
+            sessionIdBuilder: () => 'session-abc',
+          );
+          final submitted = cubit.submit();
+          expect(cubit.state.status, GoLiveStatus.submitting);
+          await cubit.close();
+          if (outcome == 'failure') {
+            pendingDraft.completeError(StateError('draft unavailable'));
+          } else {
+            pendingDraft.complete(
+              outcome == 'existing'
+                  ? existingActiveRoomDraftResponse
+                  : createdRoomDraftResponse,
+            );
+          }
+          await expectLater(submitted, completes);
+          expect(cubit.state.status, GoLiveStatus.submitting);
+          if (outcome == 'created') {
+            verify(
+              () => mockRepository.publishSession(
+                session: any(named: 'session'),
+                roomAddress: roomDraft.address,
+                hostPubkey: hostPubkey,
+              ),
+            ).called(1);
+          }
+        },
+      );
+    }
+
     test('title updates drive form validity', () {
       final cubit = GoLiveCubit(
         liveApiService: mockApiService,
@@ -125,7 +184,7 @@ void main() {
       act: (cubit) => cubit.submit(),
       expect: () => <GoLiveState>[
         const GoLiveState(
-          titleError: 'Enter a title to go live.',
+          titleError: GoLiveTitleError.required,
         ),
       ],
       verify: (_) {
@@ -189,6 +248,10 @@ void main() {
     );
 
     test('backend failure never announces a live session', () async {
+      final observer = _RecordingObserver();
+      final previousObserver = Bloc.observer;
+      Bloc.observer = observer;
+      addTearDown(() => Bloc.observer = previousObserver);
       when(
         () => mockApiService.startSession(
           roomId: roomDraft.id,
@@ -205,6 +268,8 @@ void main() {
       );
       await cubit.submit();
       expect(cubit.state.status, GoLiveStatus.failure);
+      expect(cubit.state.error, GoLiveError.startFailed);
+      expect(observer.errors, [isA<StateError>()]);
       verifyNever(
         () => mockRepository.publishSession(
           session: any(named: 'session'),

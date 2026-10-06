@@ -1,11 +1,12 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/feature_flags/services/build_configuration.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/live/live_room.dart';
 import 'package:openvine/models/live/live_session.dart';
 import 'package:openvine/providers/live_providers.dart';
@@ -67,6 +68,9 @@ void main() {
           UncontrolledProviderScope(
             container: container,
             child: const MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+
               home: Scaffold(
                 body: Consumer(
                   builder: _buildExploreLiveEntry,
@@ -75,7 +79,7 @@ void main() {
             ),
           ),
         );
-        await tester.pump();
+        await tester.pumpAndSettle();
 
         expect(find.byKey(LiveExploreEntryCard.entryKey), findsOneWidget);
       },
@@ -125,11 +129,15 @@ void main() {
           additionalOverrides: [
             liveRepositoryProvider.overrideWithValue(mockLiveRepository),
           ],
-          child: MaterialApp.router(routerConfig: router),
+          child: MaterialApp.router(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
         ),
       );
-      await tester.pump();
-      await tester.pump();
+      await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('live-room-card-room-123')), findsOneWidget);
 
@@ -176,11 +184,15 @@ void main() {
           additionalOverrides: [
             liveRepositoryProvider.overrideWithValue(mockLiveRepository),
           ],
-          child: const MaterialApp(home: LiveDiscoveryPage()),
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: LiveDiscoveryPage(),
+          ),
         ),
       );
-      await tester.pump();
-      await tester.pump();
+      await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
       expect(find.text('Featured hosts'), findsOneWidget);
       expect(find.text('Signal from the stage'), findsWidgets);

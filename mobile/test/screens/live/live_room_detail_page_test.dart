@@ -1,9 +1,11 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/live/live_chat_message.dart';
+import 'package:openvine/models/live/live_media_state.dart';
 import 'package:openvine/models/live/live_presence.dart';
 import 'package:openvine/models/live/live_role.dart';
 import 'package:openvine/models/live/live_room.dart';
@@ -95,7 +97,10 @@ void main() {
       ).thenAnswer((_) async {});
       when(() => mockLiveKitRoomService.disconnect()).thenAnswer((_) async {});
       when(
-        () => mockLiveRepository.watchSessions(roomAddress: room.address),
+        () => mockLiveRepository.watchSessions(
+          roomAddress: room.address,
+          sessionId: any(named: 'sessionId'),
+        ),
       ).thenAnswer(
         (_) => Stream<List<LiveSession>>.value(<LiveSession>[session]),
       );
@@ -119,6 +124,25 @@ void main() {
           const <LiveChatMessage>[],
         ),
       );
+    });
+
+    testWidgets('missing direct link finishes loading with unavailable state', (
+      tester,
+    ) async {
+      final repository = _MockLiveRepository();
+      when(() => repository.fetchRoom('missing')).thenAnswer((_) async => null);
+      await tester.pumpWidget(
+        testMaterialApp(
+          additionalOverrides: [
+            liveRepositoryProvider.overrideWithValue(repository),
+          ],
+          home: const LiveRoomDetailPage(roomId: 'missing'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Room unavailable.'), findsOneWidget);
+      verify(() => repository.fetchRoom('missing')).called(1);
+      verifyNever(repository.fetchPublicRooms);
     });
 
     testWidgets('join button opens room page when live beta is enabled', (
@@ -164,10 +188,14 @@ void main() {
               mockLiveKitRoomService,
             ),
           ],
-          child: MaterialApp.router(routerConfig: router),
+          child: MaterialApp.router(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
         ),
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(find.text('Join live'), findsOneWidget);
 
@@ -176,6 +204,7 @@ void main() {
         200,
         scrollable: find.byType(Scrollable).first,
       );
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Join live'));
       await tester.pumpAndSettle();
 
@@ -217,8 +246,8 @@ void main() {
           ),
         ),
       );
-      await tester.pump();
-      await tester.pump();
+      await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
       expect(find.text('Replay ready'), findsOneWidget);
       expect(find.text('Open replay'), findsOneWidget);
@@ -254,8 +283,8 @@ void main() {
           ),
         ),
       );
-      await tester.pump();
-      await tester.pump();
+      await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
       expect(find.text('Replay ready'), findsNothing);
       expect(find.text('Open replay'), findsNothing);
@@ -288,8 +317,8 @@ void main() {
           ),
         ),
       );
-      await tester.pump();
-      await tester.pump();
+      await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
       expect(find.text('Schedule'), findsOneWidget);
       expect(find.text('Speakers'), findsOneWidget);
@@ -331,14 +360,15 @@ void main() {
           ),
         ),
       );
-      await tester.pump();
-      await tester.pump();
+      await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
       await tester.scrollUntilVisible(
         find.text('Share room'),
         200,
         scrollable: find.byType(Scrollable).first,
       );
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Share room'));
       await tester.pumpAndSettle();
 
@@ -401,15 +431,19 @@ void main() {
                 mockLiveKitRoomService,
               ),
             ],
-            child: MaterialApp.router(routerConfig: router),
+            child: MaterialApp.router(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              routerConfig: router,
+            ),
           ),
         );
-        await tester.pump();
+        await tester.pumpAndSettle();
         await tester.pumpAndSettle();
 
-        expect(find.byType(BackButton), findsOneWidget);
+        expect(find.byTooltip('Back'), findsOneWidget);
 
-        await tester.tap(find.byType(BackButton));
+        await tester.tap(find.byTooltip('Back'));
         await tester.pumpAndSettle();
 
         expect(find.text('live discovery'), findsOneWidget);

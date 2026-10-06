@@ -3,20 +3,22 @@ import 'package:openvine/models/live/live_chat_message.dart';
 
 enum LiveChatStatus { initial, loading, ready, failure }
 
+enum LiveChatError { loadFailed, sendFailed }
+
 class LiveChatState extends Equatable {
   const LiveChatState({
     this.status = LiveChatStatus.initial,
     this.sessionAddress,
     this.messages = const <LiveChatMessage>[],
     this.isSending = false,
-    this.errorMessage,
+    this.error,
   });
 
   final LiveChatStatus status;
   final String? sessionAddress;
   final List<LiveChatMessage> messages;
   final bool isSending;
-  final String? errorMessage;
+  final LiveChatError? error;
 
   LiveChatState copyWith({
     LiveChatStatus? status,
@@ -24,8 +26,8 @@ class LiveChatState extends Equatable {
     bool clearSessionAddress = false,
     List<LiveChatMessage>? messages,
     bool? isSending,
-    String? errorMessage,
-    bool clearErrorMessage = false,
+    LiveChatError? error,
+    bool clearError = false,
   }) {
     return LiveChatState(
       status: status ?? this.status,
@@ -34,9 +36,7 @@ class LiveChatState extends Equatable {
           : (sessionAddress ?? this.sessionAddress),
       messages: messages ?? this.messages,
       isSending: isSending ?? this.isSending,
-      errorMessage: clearErrorMessage
-          ? null
-          : (errorMessage ?? this.errorMessage),
+      error: clearError ? null : (error ?? this.error),
     );
   }
 
@@ -46,6 +46,6 @@ class LiveChatState extends Equatable {
     sessionAddress,
     messages,
     isSending,
-    errorMessage,
+    error,
   ];
 }

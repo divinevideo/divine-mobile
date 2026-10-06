@@ -1,10 +1,11 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show UserProfile;
+import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/live/live_media_state.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/live/widgets/live_room_stage.dart';
 import 'package:openvine/screens/live/widgets/live_room_stage_media_tile.dart';
-import 'package:openvine/services/livekit_room_service.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 
 import '../../helpers/test_provider_overrides.dart';
@@ -93,7 +94,15 @@ void main() {
 
       expect(find.byType(LiveRoomStageMediaTile), findsNWidgets(2));
       expect(find.text('stale-speaker-pubkey'), findsNothing);
-      expect(find.text('24 listeners in the room'), findsOneWidget);
+      expect(
+        find.text(
+          tester
+              .element(find.byType(LiveRoomStage))
+              .l10n
+              .liveRoomListenerCount(24),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets(

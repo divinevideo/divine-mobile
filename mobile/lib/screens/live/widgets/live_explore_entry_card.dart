@@ -1,5 +1,6 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 
 class LiveExploreEntryCard extends StatelessWidget {
   const LiveExploreEntryCard({
@@ -22,15 +23,15 @@ class LiveExploreEntryCard extends StatelessWidget {
         child: Ink(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(28),
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               colors: <Color>[
-                Color(0xFF0F1B17),
-                Color(0xFF1B2D22),
+                context.vineColors.surfaceContainerHigh,
+                context.vineColors.surfaceContainer,
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            border: Border.all(color: VineTheme.outlineMuted),
+            border: Border.all(color: context.vineColors.outlineMuted),
           ),
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -43,38 +44,35 @@ class LiveExploreEntryCard extends StatelessWidget {
                     color: VineTheme.primary,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.podcasts_rounded,
+                  child: const DivineIcon(
+                    icon: DivineIconName.waveform,
                     color: VineTheme.onPrimary,
                     size: 28,
                   ),
                 ),
                 const SizedBox(width: 16),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Live',
-                        style: TextStyle(
-                          color: VineTheme.whiteText,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                        ),
+                        context.l10n.liveTabLabel,
+                        style: VineTheme.titleLargeFont(
+                          color: context.vineColors.onSurface,
+                        ).copyWith(fontWeight: FontWeight.w800),
                       ),
-                      SizedBox(height: 4),
+                      const SizedBox(height: 4),
                       Text(
-                        'See who is live right now or start your own room.',
-                        style: TextStyle(
-                          color: VineTheme.secondaryText,
-                          fontSize: 14,
+                        context.l10n.liveDiscoveryDescription,
+                        style: VineTheme.bodyMediumFont(
+                          color: context.vineColors.onSurfaceVariant,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const Icon(
-                  Icons.arrow_forward_rounded,
+                const DivineIcon(
+                  icon: DivineIconName.arrowRight,
                   color: VineTheme.primary,
                 ),
               ],

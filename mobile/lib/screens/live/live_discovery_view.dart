@@ -1,8 +1,9 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/live_discovery/live_discovery_bloc.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/live/live_room.dart';
 import 'package:openvine/models/live/live_session.dart';
 import 'package:openvine/screens/live/go_live_page.dart';
@@ -26,14 +27,16 @@ class LiveDiscoveryView extends StatelessWidget {
         return switch (state.status) {
           LiveDiscoveryStatus.initial ||
           LiveDiscoveryStatus.loading => const Center(
-            child: CircularProgressIndicator(color: VineTheme.primary),
+            child: DivineCircularProgressIndicator(color: VineTheme.primary),
           ),
           LiveDiscoveryStatus.failure => Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Text(
-                state.errorMessage ?? 'Live rooms are unavailable.',
-                style: VineTheme.bodyMediumFont(),
+                context.l10n.liveLiveRoomsAreUnavailable,
+                style: VineTheme.bodyMediumFont(
+                  color: context.vineColors.onSurface,
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -57,14 +60,14 @@ class LiveDiscoveryView extends StatelessWidget {
                     ],
                   ),
                 _DiscoverySection(
-                  title: 'Live now',
-                  subtitle: 'Drop into rooms that are already rolling.',
+                  title: context.l10n.liveLiveNow,
+                  subtitle: context.l10n.liveDropIntoRoomsThatAreAlreadyRolling,
                   rooms: state.activeRooms,
                   sessions: state.activeSessions,
                 ),
                 _DiscoverySection(
-                  title: 'Upcoming',
-                  subtitle: 'See what is lined up next.',
+                  title: context.l10n.liveUpcoming,
+                  subtitle: context.l10n.liveSeeWhatIsLinedUpNext,
                   rooms: state.upcomingRooms,
                   sessions: state.upcomingSessions,
                 ),
@@ -72,9 +75,9 @@ class LiveDiscoveryView extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.all(24),
                     child: Text(
-                      'No rooms yet. Start the first one.',
+                      context.l10n.liveNoRoomsYetStartTheFirstOne,
                       style: VineTheme.bodyMediumFont(
-                        color: VineTheme.onSurfaceVariant,
+                        color: context.vineColors.onSurfaceVariant,
                       ),
                     ),
                   ),
@@ -88,24 +91,26 @@ class LiveDiscoveryView extends StatelessWidget {
 
     if (embedded) {
       return ColoredBox(
-        color: VineTheme.surfaceBackground,
+        color: context.vineColors.surface,
         child: body,
       );
     }
 
     return Scaffold(
-      backgroundColor: VineTheme.surfaceBackground,
+      backgroundColor: context.vineColors.surface,
       appBar: AppBar(
-        backgroundColor: VineTheme.surfaceBackground,
+        backgroundColor: context.vineColors.surface,
         title: Text(
-          'Live',
-          style: VineTheme.headlineSmallFont(),
+          context.l10n.liveTabLabel,
+          style: VineTheme.headlineSmallFont(
+            color: context.vineColors.onSurface,
+          ),
         ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: DivineButton(
-              label: 'Go live',
+              label: context.l10n.liveGoLive,
               size: DivineButtonSize.small,
               onPressed: () => context.push(GoLivePage.path),
             ),
@@ -131,12 +136,17 @@ class _EmbeddedLiveHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Live', style: VineTheme.titleLargeFont()),
+                Text(
+                  context.l10n.liveTabLabel,
+                  style: VineTheme.titleLargeFont(
+                    color: context.vineColors.onSurface,
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Text(
-                  'See who is live right now or start your own room.',
+                  context.l10n.liveDiscoveryDescription,
                   style: VineTheme.bodyMediumFont(
-                    color: VineTheme.onSurfaceVariant,
+                    color: context.vineColors.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -144,7 +154,7 @@ class _EmbeddedLiveHeader extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           DivineButton(
-            label: 'Go live',
+            label: context.l10n.liveGoLive,
             size: DivineButtonSize.small,
             onPressed: () => context.push(GoLivePage.path),
           ),
@@ -186,19 +196,24 @@ class _DiscoverySection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: VineTheme.titleLargeFont()),
+            Text(
+              title,
+              style: VineTheme.titleLargeFont(
+                color: context.vineColors.onSurface,
+              ),
+            ),
             const SizedBox(height: 4),
             Text(
               subtitle,
               style: VineTheme.bodyMediumFont(
-                color: VineTheme.onSurfaceVariant,
+                color: context.vineColors.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 12),
             Text(
-              'Nothing here yet.',
+              context.l10n.liveNothingHereYet,
               style: VineTheme.bodyMediumFont(
-                color: VineTheme.onSurfaceVariant,
+                color: context.vineColors.onSurfaceVariant,
               ),
             ),
           ],
@@ -213,14 +228,19 @@ class _DiscoverySection extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Text(title, style: VineTheme.titleLargeFont()),
+            child: Text(
+              title,
+              style: VineTheme.titleLargeFont(
+                color: context.vineColors.onSurface,
+              ),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
             child: Text(
               subtitle,
               style: VineTheme.bodyMediumFont(
-                color: VineTheme.onSurfaceVariant,
+                color: context.vineColors.onSurfaceVariant,
               ),
             ),
           ),
@@ -276,14 +296,19 @@ class _FeaturedHostsSection extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Text('Featured hosts', style: VineTheme.titleLargeFont()),
+            child: Text(
+              context.l10n.liveFeaturedHosts,
+              style: VineTheme.titleLargeFont(
+                color: context.vineColors.onSurface,
+              ),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: Text(
-              'A quick scan of the hosts who are live or lined up next.',
+              context.l10n.liveFeaturedHostsDescription,
               style: VineTheme.bodyMediumFont(
-                color: VineTheme.onSurfaceVariant,
+                color: context.vineColors.onSurfaceVariant,
               ),
             ),
           ),
@@ -356,10 +381,12 @@ class _FeaturedHostCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         child: Ink(
           decoration: BoxDecoration(
-            color: VineTheme.surfaceContainerHigh,
+            color: context.vineColors.surfaceContainerHigh,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: isLive ? VineTheme.primary : VineTheme.outlineMuted,
+              color: isLive
+                  ? VineTheme.primary
+                  : context.vineColors.outlineMuted,
             ),
           ),
           child: Padding(
@@ -375,13 +402,17 @@ class _FeaturedHostCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: isLive
                         ? VineTheme.primary
-                        : VineTheme.surfaceContainer,
+                        : context.vineColors.surfaceContainer,
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    isLive ? 'Live now' : 'Scheduled',
+                    isLive
+                        ? context.l10n.liveLiveNow
+                        : context.l10n.libraryScheduledSectionTitle,
                     style: VineTheme.labelLargeFont(
-                      color: isLive ? VineTheme.onPrimary : VineTheme.onSurface,
+                      color: isLive
+                          ? VineTheme.onPrimary
+                          : context.vineColors.onSurface,
                     ),
                   ),
                 ),
@@ -390,7 +421,9 @@ class _FeaturedHostCard extends StatelessWidget {
                   room.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: VineTheme.titleMediumFont(),
+                  style: VineTheme.titleMediumFont(
+                    color: context.vineColors.onSurface,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -398,16 +431,16 @@ class _FeaturedHostCard extends StatelessWidget {
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: VineTheme.bodyMediumFont(
-                    color: VineTheme.onSurfaceVariant,
+                    color: context.vineColors.onSurfaceVariant,
                   ),
                 ),
                 const Spacer(),
                 Text(
-                  'Host: ${room.hostPubkey}',
+                  context.l10n.liveHostLabel(room.hostPubkey),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: VineTheme.bodySmallFont(
-                    color: VineTheme.onSurfaceVariant,
+                    color: context.vineColors.onSurfaceVariant,
                   ),
                 ),
               ],

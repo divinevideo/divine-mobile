@@ -36,6 +36,7 @@ void main() {
       expect(room.hostPubkey, hostPubkey);
       expect(room.title, 'Divine Live');
       expect(room.summary, 'Public room for mobile creators');
+      expect(room.serviceUrl, 'livekit');
       expect(room.imageUrl, 'https://example.com/cover.jpg');
       expect(
         room.relays,
@@ -87,11 +88,62 @@ void main() {
       expect(_tagValue(event.tags, 'room'), 'Divine Live');
       expect(_tagValue(event.tags, 'status'), 'open');
       expect(
+        _tagValue(event.tags, 'service'),
+        'https://divine.video/live/room/room-abc',
+      );
+      expect(event.tags, contains(equals(['p', hostPubkey, '', 'Host'])));
+      expect(
         _tagValues(event.tags, 'relays'),
         const ['wss://relay-one.example', 'wss://relay-two.example'],
       );
       expect(event.content, 'Public room for mobile creators');
       expect(event.isSigned, isTrue);
+      final customService = await codec.buildRoomEvent(
+        room.copyWith(serviceUrl: 'https://example.com/room'),
+        signer,
+      );
+      expect(
+        _tagValue(customService.tags, 'service'),
+        'https://example.com/room',
+      );
+      final encodedService = await codec.buildRoomEvent(
+        room.copyWith(id: 'room/a?b#c'),
+        signer,
+      );
+      expect(
+        _tagValue(encodedService.tags, 'service'),
+        'https://divine.video/live/room/room%2Fa%3Fb%23c',
+      );
+    });
+
+    test('publishes meeting title and displayable participant roles', () async {
+      final signer = LocalNostrSigner(_privateKeyFor('a'));
+      final hostPubkey = (await signer.getPublicKey())!;
+      final session = LiveSession(
+        id: 'session-abc',
+        roomId: 'room:abc',
+        status: LiveSessionStatus.live,
+        startedAt: DateTime.utc(2026),
+        endedAt: null,
+        speakerPubkeys: [hostPubkey],
+        audienceCount: 0,
+      );
+      final event = await codec.buildSessionEvent(
+        session: session,
+        roomAddress: '30312:$hostPubkey:room:abc',
+        hostPubkey: hostPubkey,
+        signer: signer,
+      );
+      expect(_tagValue(event.tags, 'title'), 'room:abc');
+      expect(codec.parseSession(event).roomId, 'room:abc');
+      final titled = await codec.buildSessionEvent(
+        session: session.copyWith(title: 'A meeting title'),
+        roomAddress: '30312:$hostPubkey:room:abc',
+        hostPubkey: hostPubkey,
+        signer: signer,
+      );
+      expect(codec.parseSession(titled).title, 'A meeting title');
+      expect(event.tags, contains(equals(['p', hostPubkey, '', 'Host'])));
     });
 
     test('parses a live session event from kind 30313', () async {
@@ -128,6 +180,7 @@ void main() {
       expect(session.startedAt, _dateTimeFromSeconds(1700000000));
       expect(session.endedAt, _dateTimeFromSeconds(1700003600));
       expect(session.speakerPubkeys, [hostPubkey, speakerPubkey]);
+      expect(session.title, 'Divine Live Beta');
       expect(session.audienceCount, 42);
     });
 

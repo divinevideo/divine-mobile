@@ -10125,5 +10125,603 @@
   },
   "@liveHiddenChatNotice": {
     "description": "Live rooms: labels and explanation for local-only display controls."
+  },
+  "@liveDefaultRoomTitle": {
+    "description": "Live room UI message. Preserve all placeholders.",
+    "placeholders": {
+      "displayName": {
+        "type": "String"
+      }
+    }
+  },
+  "@liveDefaultRoomSummary": {
+    "description": "Live room UI message. Preserve all placeholders.",
+    "placeholders": {
+      "displayName": {
+        "type": "String"
+      }
+    }
+  },
+  "@liveHostLabel": {
+    "description": "Live room UI message. Preserve all placeholders.",
+    "placeholders": {
+      "pubkey": {
+        "type": "String"
+      }
+    }
+  },
+  "@liveParticipantCounts": {
+    "description": "Live room UI message. Preserve all placeholders.",
+    "placeholders": {
+      "speakers": {
+        "type": "int"
+      },
+      "listeners": {
+        "type": "int"
+      }
+    }
+  },
+  "@liveStartedAt": {
+    "description": "Live room UI message. Preserve all placeholders.",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "@liveEndedAt": {
+    "description": "Live room UI message. Preserve all placeholders.",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "@liveScheduledFor": {
+    "description": "Live room UI message. Preserve all placeholders.",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "@liveShareSubject": {
+    "description": "Live room UI message. Preserve all placeholders.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "@liveRoomShareSubject": {
+    "description": "Live room UI message. Preserve all placeholders.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "@liveRoleCounts": {
+    "description": "Live room UI message. Preserve all placeholders.",
+    "placeholders": {
+      "hosts": {
+        "type": "int"
+      },
+      "moderators": {
+        "type": "int"
+      },
+      "speakers": {
+        "type": "int"
+      },
+      "audience": {
+        "type": "int"
+      }
+    }
+  },
+  "@liveSpeakerCount": {
+    "description": "Live room UI message. Preserve all placeholders.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@liveListeningCount": {
+    "description": "Live room UI message. Preserve all placeholders.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@liveRoomListenerCount": {
+    "description": "Live room UI message. Preserve all placeholders.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@liveChatMessageSemantics": {
+    "description": "Live room UI message. Preserve all placeholders.",
+    "placeholders": {
+      "displayName": {
+        "type": "String"
+      }
+    }
+  },
+  "liveFeaturedHostsDescription": "A quick scan of the hosts who are live or lined up next.",
+  "@liveFeaturedHostsDescription": {
+    "description": "Label or message in live rooms."
+  },
+  "liveActiveSpeakers": "Active speakers",
+  "@liveActiveSpeakers": {
+    "description": "Label or message in live rooms."
+  },
+  "liveApprove": "Approve",
+  "@liveApprove": {
+    "description": "Label or message in live rooms."
+  },
+  "liveAudience": "Audience",
+  "@liveAudience": {
+    "description": "Label or message in live rooms."
+  },
+  "liveAudioOnly": "Audio only",
+  "@liveAudioOnly": {
+    "description": "Label or message in live rooms."
+  },
+  "liveBlockUser": "Block user",
+  "@liveBlockUser": {
+    "description": "Label or message in live rooms."
+  },
+  "liveCameraAndMicAreOff": "Camera and mic are off",
+  "@liveCameraAndMicAreOff": {
+    "description": "Label or message in live rooms."
+  },
+  "liveChat": "Chat",
+  "@liveChat": {
+    "description": "Label or message in live rooms."
+  },
+  "liveConnectionLooksShaky": "Connection looks shaky",
+  "@liveConnectionLooksShaky": {
+    "description": "Label or message in live rooms."
+  },
+  "liveCoverImageURL": "Cover image URL",
+  "@liveCoverImageURL": {
+    "description": "Label or message in live rooms."
+  },
+  "liveDefaultThumbnail": "Default thumbnail",
+  "@liveDefaultThumbnail": {
+    "description": "Label or message in live rooms."
+  },
+  "liveDemote": "Demote",
+  "@liveDemote": {
+    "description": "Label or message in live rooms."
+  },
+  "liveDeny": "Deny",
+  "@liveDeny": {
+    "description": "Label or message in live rooms."
+  },
+  "liveDropIntoRoomsThatAreAlreadyRolling": "Drop into rooms that are already rolling.",
+  "@liveDropIntoRoomsThatAreAlreadyRolling": {
+    "description": "Label or message in live rooms."
+  },
+  "liveEndSession": "End session",
+  "@liveEndSession": {
+    "description": "Label or message in live rooms."
+  },
+  "liveEndThisLiveSession": "End this live session?",
+  "@liveEndThisLiveSession": {
+    "description": "Label or message in live rooms."
+  },
+  "liveFailedToReportUser": "Failed to report user",
+  "@liveFailedToReportUser": {
+    "description": "Label or message in live rooms."
+  },
+  "liveFeaturedHosts": "Featured hosts",
+  "@liveFeaturedHosts": {
+    "description": "Label or message in live rooms."
+  },
+  "liveFlipCamera": "Flip camera",
+  "@liveFlipCamera": {
+    "description": "Label or message in live rooms."
+  },
+  "liveGoLive": "Go live",
+  "@liveGoLive": {
+    "description": "Label or message in live rooms."
+  },
+  "liveHandRaised": "Hand raised",
+  "@liveHandRaised": {
+    "description": "Label or message in live rooms."
+  },
+  "liveHost": "Host",
+  "@liveHost": {
+    "description": "Label or message in live rooms."
+  },
+  "liveHostControls": "Host controls",
+  "@liveHostControls": {
+    "description": "Label or message in live rooms."
+  },
+  "liveJoinLive": "Join live",
+  "@liveJoinLive": {
+    "description": "Label or message in live rooms."
+  },
+  "liveAudioOnlySuggestion": "Keep the room stable by switching to audio only until the network settles.",
+  "@liveAudioOnlySuggestion": {
+    "description": "Label or message in live rooms."
+  },
+  "liveHostControlsDescription": "Keep the stage tight, work the raised hands, and degrade cleanly when the network gets weird.",
+  "@liveHostControlsDescription": {
+    "description": "Label or message in live rooms."
+  },
+  "liveLiveAudioOnly": "Live audio only",
+  "@liveLiveAudioOnly": {
+    "description": "Label or message in live rooms."
+  },
+  "liveLiveNow": "Live now",
+  "@liveLiveNow": {
+    "description": "Label or message in live rooms."
+  },
+  "liveLiveRoom": "Live room",
+  "@liveLiveRoom": {
+    "description": "Label or message in live rooms."
+  },
+  "liveLiveRoomsAreUnavailable": "Live rooms are unavailable.",
+  "@liveLiveRoomsAreUnavailable": {
+    "description": "Label or message in live rooms."
+  },
+  "liveLiveVideo": "Live video",
+  "@liveLiveVideo": {
+    "description": "Label or message in live rooms."
+  },
+  "liveLiveVideoAndAudio": "Live video and audio",
+  "@liveLiveVideoAndAudio": {
+    "description": "Label or message in live rooms."
+  },
+  "liveLowerHand": "Lower hand",
+  "@liveLowerHand": {
+    "description": "Label or message in live rooms."
+  },
+  "liveManageParticipants": "Manage participants",
+  "@liveManageParticipants": {
+    "description": "Label or message in live rooms."
+  },
+  "liveModeration": "Moderation",
+  "@liveModeration": {
+    "description": "Label or message in live rooms."
+  },
+  "liveModerator": "Moderator",
+  "@liveModerator": {
+    "description": "Label or message in live rooms."
+  },
+  "liveNoActiveSpeakersYet": "No active speakers yet.",
+  "@liveNoActiveSpeakersYet": {
+    "description": "Label or message in live rooms."
+  },
+  "liveNoAudienceMembersToModerateRightNow": "No audience members to moderate right now.",
+  "@liveNoAudienceMembersToModerateRightNow": {
+    "description": "Label or message in live rooms."
+  },
+  "liveNoMessagesYetBreakTheSilence": "No messages yet. Break the silence.",
+  "@liveNoMessagesYetBreakTheSilence": {
+    "description": "Label or message in live rooms."
+  },
+  "liveNoOneHasJoinedTheRoomYet": "No one has joined the room yet.",
+  "@liveNoOneHasJoinedTheRoomYet": {
+    "description": "Label or message in live rooms."
+  },
+  "liveNoOneIsWaitingToSpeak": "No one is waiting to speak.",
+  "@liveNoOneIsWaitingToSpeak": {
+    "description": "Label or message in live rooms."
+  },
+  "liveNoRoomsYetStartTheFirstOne": "No rooms yet. Start the first one.",
+  "@liveNoRoomsYetStartTheFirstOne": {
+    "description": "Label or message in live rooms."
+  },
+  "liveNoSessionHasBeenScheduledYet": "No session has been scheduled yet.",
+  "@liveNoSessionHasBeenScheduledYet": {
+    "description": "Label or message in live rooms."
+  },
+  "liveNothingHereYet": "Nothing here yet.",
+  "@liveNothingHereYet": {
+    "description": "Label or message in live rooms."
+  },
+  "liveOnStage": "On stage",
+  "@liveOnStage": {
+    "description": "Label or message in live rooms."
+  },
+  "liveOpenReplay": "Open replay",
+  "@liveOpenReplay": {
+    "description": "Label or message in live rooms."
+  },
+  "liveOpenRoom": "Open room",
+  "@liveOpenRoom": {
+    "description": "Label or message in live rooms."
+  },
+  "liveParticipants": "Participants",
+  "@liveParticipants": {
+    "description": "Label or message in live rooms."
+  },
+  "livePromote": "Promote",
+  "@livePromote": {
+    "description": "Label or message in live rooms."
+  },
+  "liveRaiseHand": "Raise hand",
+  "@liveRaiseHand": {
+    "description": "Label or message in live rooms."
+  },
+  "liveRaisedHands": "Raised hands",
+  "@liveRaisedHands": {
+    "description": "Label or message in live rooms."
+  },
+  "liveReplayProcessing": "Replay processing",
+  "@liveReplayProcessing": {
+    "description": "Label or message in live rooms."
+  },
+  "liveReplayQueued": "Replay queued",
+  "@liveReplayQueued": {
+    "description": "Label or message in live rooms."
+  },
+  "liveReplayReady": "Replay ready",
+  "@liveReplayReady": {
+    "description": "Label or message in live rooms."
+  },
+  "liveReplayUnavailable": "Replay unavailable",
+  "@liveReplayUnavailable": {
+    "description": "Label or message in live rooms."
+  },
+  "liveReportUser": "Report user",
+  "@liveReportUser": {
+    "description": "Label or message in live rooms."
+  },
+  "liveRoomDetail": "Room detail",
+  "@liveRoomDetail": {
+    "description": "Label or message in live rooms."
+  },
+  "liveRoomDetails": "Room details",
+  "@liveRoomDetails": {
+    "description": "Label or message in live rooms."
+  },
+  "liveRoomLinkCopiedToClipboard": "Room link copied to clipboard",
+  "@liveRoomLinkCopiedToClipboard": {
+    "description": "Label or message in live rooms."
+  },
+  "liveRoomTitle": "Room title",
+  "@liveRoomTitle": {
+    "description": "Label or message in live rooms."
+  },
+  "liveRoomUnavailable": "Room unavailable.",
+  "@liveRoomUnavailable": {
+    "description": "Label or message in live rooms."
+  },
+  "liveSaySomething": "Say something",
+  "@liveSaySomething": {
+    "description": "Label or message in live rooms."
+  },
+  "liveSeeWhatIsLinedUpNext": "See what is lined up next.",
+  "@liveSeeWhatIsLinedUpNext": {
+    "description": "Label or message in live rooms."
+  },
+  "liveDiscoveryDescription": "See who is live right now or start your own room.",
+  "@liveDiscoveryDescription": {
+    "description": "Label or message in live rooms."
+  },
+  "liveSend": "Send",
+  "@liveSend": {
+    "description": "Label or message in live rooms."
+  },
+  "liveSession": "Session",
+  "@liveSession": {
+    "description": "Label or message in live rooms."
+  },
+  "liveShareRoom": "Share room",
+  "@liveShareRoom": {
+    "description": "Label or message in live rooms."
+  },
+  "liveSpeaker": "Speaker",
+  "@liveSpeaker": {
+    "description": "Label or message in live rooms."
+  },
+  "liveSpeakerHandRaised": "Speaker, hand raised",
+  "@liveSpeakerHandRaised": {
+    "description": "Label or message in live rooms."
+  },
+  "liveSpeakers": "Speakers",
+  "@liveSpeakers": {
+    "description": "Label or message in live rooms."
+  },
+  "liveStage": "Stage",
+  "@liveStage": {
+    "description": "Label or message in live rooms."
+  },
+  "liveStartAPublicRoomInOneShot": "Start a public room in one shot.",
+  "@liveStartAPublicRoomInOneShot": {
+    "description": "Label or message in live rooms."
+  },
+  "liveStartLiveNow": "Start live now",
+  "@liveStartLiveNow": {
+    "description": "Label or message in live rooms."
+  },
+  "liveStartingCameraAndMicrophone": "Starting camera and microphone...",
+  "@liveStartingCameraAndMicrophone": {
+    "description": "Label or message in live rooms."
+  },
+  "liveStartingCamera": "Starting camera...",
+  "@liveStartingCamera": {
+    "description": "Label or message in live rooms."
+  },
+  "liveStartingMicrophone": "Starting microphone...",
+  "@liveStartingMicrophone": {
+    "description": "Label or message in live rooms."
+  },
+  "liveSwitchToAudioOnly": "Switch to audio only",
+  "@liveSwitchToAudioOnly": {
+    "description": "Label or message in live rooms."
+  },
+  "liveReplayReadyDescription": "The live ended, but the replay is ready to watch.",
+  "@liveReplayReadyDescription": {
+    "description": "Label or message in live rooms."
+  },
+  "liveReplayProcessingDescription": "The live ended. We are still processing the replay handoff.",
+  "@liveReplayProcessingDescription": {
+    "description": "Label or message in live rooms."
+  },
+  "liveEndSessionConfirmation": "This ends the room for everyone and closes the stage.",
+  "@liveEndSessionConfirmation": {
+    "description": "Label or message in live rooms."
+  },
+  "liveTurnCameraOff": "Turn camera off",
+  "@liveTurnCameraOff": {
+    "description": "Label or message in live rooms."
+  },
+  "liveTurnCameraOn": "Turn camera on",
+  "@liveTurnCameraOn": {
+    "description": "Label or message in live rooms."
+  },
+  "liveTurnMicOff": "Turn mic off",
+  "@liveTurnMicOff": {
+    "description": "Label or message in live rooms."
+  },
+  "liveTurnMicOn": "Turn mic on",
+  "@liveTurnMicOn": {
+    "description": "Label or message in live rooms."
+  },
+  "liveUnableToOpenThisLiveRoom": "Unable to open this live room.",
+  "@liveUnableToOpenThisLiveRoom": {
+    "description": "Label or message in live rooms."
+  },
+  "liveUpcoming": "Upcoming",
+  "@liveUpcoming": {
+    "description": "Label or message in live rooms."
+  },
+  "liveUpdateTheRoomTitle": "Update the room title",
+  "@liveUpdateTheRoomTitle": {
+    "description": "Label or message in live rooms."
+  },
+  "liveUpdateTitleStatus": "Update title/status",
+  "@liveUpdateTitleStatus": {
+    "description": "Label or message in live rooms."
+  },
+  "liveUserBlocked": "User blocked",
+  "@liveUserBlocked": {
+    "description": "Label or message in live rooms."
+  },
+  "liveUserReported": "User reported",
+  "@liveUserReported": {
+    "description": "Label or message in live rooms."
+  },
+  "liveUsingYourProfilePhotoAsTheStartingThumbnail": "Using your profile photo as the starting thumbnail.",
+  "@liveUsingYourProfilePhotoAsTheStartingThumbnail": {
+    "description": "Label or message in live rooms."
+  },
+  "liveWaitingForMedia": "Waiting for media",
+  "@liveWaitingForMedia": {
+    "description": "Label or message in live rooms."
+  },
+  "liveWaitingForSpeakersToJoinTheStage": "Waiting for speakers to join the stage.",
+  "@liveWaitingForSpeakersToJoinTheStage": {
+    "description": "Label or message in live rooms."
+  },
+  "liveWhatAreYouGoingLiveAbout": "What are you going live about?",
+  "@liveWhatAreYouGoingLiveAbout": {
+    "description": "Label or message in live rooms."
+  },
+  "liveYouAreOnStage": "You are on stage",
+  "@liveYouAreOnStage": {
+    "description": "Label or message in live rooms."
+  },
+  "liveHandRaisedDescription": "Your hand is raised. The host can bring you on stage from the speaker queue.",
+  "@liveHandRaisedDescription": {
+    "description": "Label or message in live rooms."
+  },
+  "liveDefaultRoomTitle": "{displayName} is live",
+  "liveDefaultRoomSummary": "Come hang out with {displayName} live on Divine.",
+  "liveHostLabel": "Host: {pubkey}",
+  "liveParticipantCounts": "{speakers, plural, one{{speakers} speaker} other{{speakers} speakers}} · {listeners, plural, one{{listeners} listener} other{{listeners} listeners}}",
+  "liveStartedAt": "Started {time}",
+  "liveEndedAt": "Ended {time}",
+  "liveScheduledFor": "Scheduled for {time}",
+  "liveShareSubject": "Join {title} live on Divine",
+  "liveRoomShareSubject": "Live room: {title}",
+  "liveRoleCounts": "{hosts, plural, one{{hosts} host} other{{hosts} hosts}}, {moderators, plural, one{{moderators} moderator} other{{moderators} moderators}}, {speakers, plural, one{{speakers} speaker} other{{speakers} speakers}}, {audience, plural, one{{audience} listener} other{{audience} listeners}}",
+  "liveSpeakerCount": "{count, plural, one{{count} speaker} other{{count} speakers}}",
+  "liveListeningCount": "{count, plural, one{{count} listener} other{{count} listeners}}",
+  "liveRoomListenerCount": "{count, plural, one{{count} listener in the room} other{{count} listeners in the room}}",
+  "liveChatMessageSemantics": "Live chat message from {displayName}",
+  "liveShareFailed": "Unable to share this room. Try again.",
+  "@liveShareFailed": {
+    "description": "Label or message in live rooms."
+  },
+  "liveBlockFailed": "Unable to block this user. Try again.",
+  "@liveBlockFailed": {
+    "description": "Label or message in live rooms."
+  },
+  "liveRoomStatusHint": "Use open, private, or closed",
+  "@liveRoomStatusHint": {
+    "description": "Label or message in live rooms."
+  },
+  "liveErrorRequestFailed": "Unable to update this room. Try again.",
+  "@liveErrorRequestFailed": {
+    "description": "Live room label or message."
+  },
+  "liveErrorConnectionFailed": "Unable to connect to this room. Try again.",
+  "@liveErrorConnectionFailed": {
+    "description": "Live room label or message."
+  },
+  "liveErrorSubscriptionFailed": "Unable to load room updates. Try again.",
+  "@liveErrorSubscriptionFailed": {
+    "description": "Live room label or message."
+  },
+  "liveErrorCameraBlocked": "Camera access is blocked. Enable it in Settings.",
+  "@liveErrorCameraBlocked": {
+    "description": "Live room label or message."
+  },
+  "liveErrorCameraRequired": "Allow camera access to turn on your camera.",
+  "@liveErrorCameraRequired": {
+    "description": "Live room label or message."
+  },
+  "liveErrorCameraUnavailable": "No camera is available.",
+  "@liveErrorCameraUnavailable": {
+    "description": "Live room label or message."
+  },
+  "liveErrorCameraPromptBlocked": "Unable to request camera access. Check Settings.",
+  "@liveErrorCameraPromptBlocked": {
+    "description": "Live room label or message."
+  },
+  "liveErrorMicrophoneBlocked": "Microphone access is blocked. Enable it in Settings.",
+  "@liveErrorMicrophoneBlocked": {
+    "description": "Live room label or message."
+  },
+  "liveErrorMicrophoneRequired": "Allow microphone access to turn on your microphone.",
+  "@liveErrorMicrophoneRequired": {
+    "description": "Live room label or message."
+  },
+  "liveErrorMicrophoneUnavailable": "No microphone is available.",
+  "@liveErrorMicrophoneUnavailable": {
+    "description": "Live room label or message."
+  },
+  "liveErrorMicrophonePromptBlocked": "Unable to request microphone access. Check Settings.",
+  "@liveErrorMicrophonePromptBlocked": {
+    "description": "Live room label or message."
+  },
+  "liveErrorSpeakerCapacityReached": "The stage is full. Wait for a speaker to leave.",
+  "@liveErrorSpeakerCapacityReached": {
+    "description": "Live room label or message."
+  },
+  "liveTitleRequired": "Enter a room title.",
+  "@liveTitleRequired": {
+    "description": "Live room label or message."
+  },
+  "liveStartFailed": "Unable to start this room. Try again.",
+  "@liveStartFailed": {
+    "description": "Live room label or message."
+  },
+  "liveSendFailed": "Unable to send your message. Try again.",
+  "@liveSendFailed": {
+    "description": "Live room label or message."
+  },
+  "liveChatLoadFailed": "Unable to load chat. Try again.",
+  "@liveChatLoadFailed": {
+    "description": "Live room label or message."
   }
 }

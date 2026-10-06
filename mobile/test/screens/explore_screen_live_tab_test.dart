@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
@@ -74,57 +74,59 @@ void main() {
     );
   });
 
-  testWidgets(
-    'ExploreScreen shows Live as a tab and removes the promo card',
-    (tester) async {
-      await tester.pumpWidget(
-        testProviderScope(
-          additionalOverrides: [
-            appForegroundProvider.overrideWith(_FakeAppForeground.new),
-            videoEventServiceProvider.overrideWithValue(videoEventService),
-            liveRepositoryProvider.overrideWithValue(liveRepository),
-            routerLocationStreamProvider.overrideWith(
-              (ref) => Stream.value(ExploreScreen.path),
-            ),
-            exploreTabVideosProvider.overrideWith((ref) => null),
-            classicVinesAvailableProvider.overrideWith(
-              (ref) async => false,
-            ),
-            forYouAvailableProvider.overrideWithValue(false),
-            allListsProvider.overrideWith(
-              (ref) async => (
-                userLists: <UserList>[],
-                curatedLists: <CuratedList>[],
+  group('renders', () {
+    testWidgets(
+      'ExploreScreen shows Live as a tab and removes the promo card',
+      (tester) async {
+        await tester.pumpWidget(
+          testProviderScope(
+            additionalOverrides: [
+              appForegroundProvider.overrideWith(_FakeAppForeground.new),
+              videoEventServiceProvider.overrideWithValue(videoEventService),
+              liveRepositoryProvider.overrideWithValue(liveRepository),
+              routerLocationStreamProvider.overrideWith(
+                (ref) => Stream.value(ExploreScreen.path),
               ),
+              exploreTabVideosProvider.overrideWith((ref) => null),
+              classicVinesAvailableProvider.overrideWith(
+                (ref) async => false,
+              ),
+              forYouAvailableProvider.overrideWithValue(false),
+              allListsProvider.overrideWith(
+                (ref) async => (
+                  userLists: <UserList>[],
+                  curatedLists: <CuratedList>[],
+                ),
+              ),
+              curatedListsStateProvider.overrideWith(
+                _FakeCuratedListsState.new,
+              ),
+              isFeatureEnabledProvider(
+                FeatureFlag.integratedApps,
+              ).overrideWithValue(false),
+              isFeatureEnabledProvider(
+                FeatureFlag.livestreamingBeta,
+              ).overrideWithValue(true),
+            ],
+            child: const MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(body: ExploreScreen()),
             ),
-            curatedListsStateProvider.overrideWith(
-              _FakeCuratedListsState.new,
-            ),
-            isFeatureEnabledProvider(
-              FeatureFlag.integratedApps,
-            ).overrideWithValue(false),
-            isFeatureEnabledProvider(
-              FeatureFlag.livestreamingBeta,
-            ).overrideWithValue(true),
-          ],
-          child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: ExploreScreen()),
           ),
-        ),
-      );
+        );
 
-      await tester.pumpAndSettle();
+        await tester.pumpAndSettle();
 
-      expect(find.widgetWithText(Tab, 'Live'), findsOneWidget);
-      expect(find.byKey(LiveExploreEntryCard.entryKey), findsNothing);
+        expect(find.widgetWithText(Tab, 'Live'), findsOneWidget);
+        expect(find.byKey(LiveExploreEntryCard.entryKey), findsNothing);
 
-      await tester.tap(find.widgetWithText(Tab, 'Live'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(Tab, 'Live'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Live now'), findsOneWidget);
-      expect(find.text('Upcoming'), findsOneWidget);
-    },
-  );
+        expect(find.text('Live now'), findsOneWidget);
+        expect(find.text('Upcoming'), findsOneWidget);
+      },
+    );
+  });
 }
