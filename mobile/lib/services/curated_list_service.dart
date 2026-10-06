@@ -137,6 +137,11 @@ class CuratedListService extends ChangeNotifier {
   bool get isReadyForMutations =>
       isCurrentSession && !_isInitializing && _initializationError == null;
 
+  /// Public relay reads write nothing, so only a failed recovery blocks them;
+  /// one still in progress must not leave discovery empty.
+  bool get _canReadPublicLists =>
+      isCurrentSession && _initializationError == null;
+
   /// The last startup recovery failure, cleared only after a successful retry.
   Object? get initializationError => _initializationError;
 
@@ -1777,7 +1782,7 @@ class CuratedListService extends ChangeNotifier {
     int limit = 500,
     Set<String>? excludeIds,
     Duration timeout = kPublicCuratedListsRelayReadTimeout,
-  }) => isReadyForMutations
+  }) => _canReadPublicLists
       ? _relayGateway.streamPublicListsFromRelays(
           until: until,
           limit: limit,
@@ -1790,7 +1795,7 @@ class CuratedListService extends ChangeNotifier {
   Future<CuratedList?> fetchPublicList({
     required String authorPubkey,
     required String listId,
-  }) => isReadyForMutations
+  }) => _canReadPublicLists
       ? _relayGateway.fetchPublicList(
           authorPubkey: authorPubkey,
           listId: listId,
@@ -1800,13 +1805,13 @@ class CuratedListService extends ChangeNotifier {
   /// See [CuratedListRelayGateway.fetchPublicListsContainingVideo].
   Future<List<CuratedList>> fetchPublicListsContainingVideo(
     String videoEventId,
-  ) => isReadyForMutations
+  ) => _canReadPublicLists
       ? _relayGateway.fetchPublicListsContainingVideo(videoEventId)
       : Future.value(const []);
 
   /// See [CuratedListRelayGateway.streamPublicListsContainingVideo].
   Stream<CuratedList> streamPublicListsContainingVideo(String videoEventId) =>
-      isReadyForMutations
+      _canReadPublicLists
       ? _relayGateway.streamPublicListsContainingVideo(videoEventId)
       : const Stream.empty();
 }
