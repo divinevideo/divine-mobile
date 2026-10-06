@@ -165,6 +165,8 @@ class _AddPeopleToListViewState extends State<AddPeopleToListView> {
             countLabel: (context, count) => context.l10n.listMemberCount(count),
           ),
           showBackButton: true,
+          // The add-people link and a web reload open this route as the only
+          // entry, so a raw pop would leave no page to show.
           onBackPressed: context.safePop,
           backButtonSemanticLabel: l10n.commonBack,
         ),
