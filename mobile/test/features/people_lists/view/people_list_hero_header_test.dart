@@ -23,6 +23,7 @@ Future<void> _pumpHeader(
   int? totalVideos,
   double? totalLoops,
   double textScale = 1,
+  TextDirection textDirection = TextDirection.ltr,
   List<Override> overrides = const [],
 }) async {
   await tester.pumpWidget(
@@ -36,16 +37,19 @@ Future<void> _pumpHeader(
               .copyWith(textScaler: TextScaler.linear(textScale)),
           child: child!,
         ),
-        home: Scaffold(
-          body: SingleChildScrollView(
-            child: PeopleListHeroHeader(
-              name: 'Approved',
-              memberCount: memberCount,
-              previewPubkeys: previewPubkeys,
-              onViewAll: onViewAll,
-              description: description,
-              totalVideos: totalVideos,
-              totalLoops: totalLoops,
+        home: Directionality(
+          textDirection: textDirection,
+          child: Scaffold(
+            body: SingleChildScrollView(
+              child: PeopleListHeroHeader(
+                name: 'Approved',
+                memberCount: memberCount,
+                previewPubkeys: previewPubkeys,
+                onViewAll: onViewAll,
+                description: description,
+                totalVideos: totalVideos,
+                totalLoops: totalLoops,
+              ),
             ),
           ),
         ),
@@ -210,6 +214,39 @@ void main() {
           equals(ranked.first),
         );
       });
+
+      for (final direction in TextDirection.values) {
+        testWidgets('the best-ranked avatar leads the pile in $direction', (
+          tester,
+        ) async {
+          final ranked = _members(3);
+          await _pumpHeader(
+            tester,
+            previewPubkeys: ranked,
+            onViewAll: () {},
+            textDirection: direction,
+          );
+
+          double leftOf(String pubkey) => tester
+              .getTopLeft(
+                find.byWidgetPredicate(
+                  (widget) =>
+                      widget is PeopleListMemberAvatar &&
+                      widget.pubkey == pubkey,
+                ),
+              )
+              .dx;
+
+          expect(
+            leftOf(ranked.first) < leftOf(ranked[1]),
+            direction == TextDirection.ltr,
+          );
+          expect(
+            leftOf(ranked[1]) < leftOf(ranked[2]),
+            direction == TextDirection.ltr,
+          );
+        });
+      }
 
       testWidgets('no description block when the list has none', (
         tester,

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -183,6 +184,7 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
+        expect(find.text(l10n.peopleListsPeopleCount(39)), findsOneWidget);
         expect(
           tester
               .state<ScrollableState>(find.byType(Scrollable))
@@ -365,6 +367,7 @@ void main() {
       );
       await tester.pump();
       await tester.pump();
+      expect(rosterOrder(tester), [_busiest, _busy, _quiet]);
       await tester.tap(find.text(l10n.peopleListsRemove));
       await tester.pumpAndSettle();
       verify(
@@ -373,6 +376,173 @@ void main() {
         ),
       ).called(1);
     });
+
+    testWidgets(
+      'removal goes through when its row is disposed behind the sheet',
+      (
+        tester,
+      ) async {
+        final members = List.generate(
+          40,
+          (index) => index.toRadixString(16).padLeft(64, '0'),
+        );
+        when(() => profileRepository.getBulkProfilesFromApi(any()))
+            .thenAnswer((_) async => null);
+        await pumpRoster(
+          tester,
+          blocState: PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: _ownerPubkey,
+            lists: [_list(pubkeys: members)],
+          ),
+        );
+        Finder rowOf(String pubkey) => find.byWidgetPredicate(
+          (widget) => widget is PeopleListMemberTile && widget.pubkey == pubkey,
+        );
+        await tester.longPress(rowOf(members.first));
+        await tester.pumpAndSettle();
+
+        final position = tester
+            .state<ScrollableState>(
+              find
+                  .descendant(
+                    of: find.byType(PeopleListMembersScreen),
+                    matching: find.byType(Scrollable),
+                  )
+                  .first,
+            )
+            .position;
+        position.jumpTo(position.maxScrollExtent);
+        await tester.pump();
+        expect(rowOf(members.first), findsNothing);
+
+        await tester.tap(find.text(l10n.peopleListsRemove));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => bloc.add(
+            PeopleListsPubkeyRemoveRequested(
+              listId: 'crew',
+              pubkey: members.first,
+            ),
+          ),
+        ).called(1);
+        expect(find.byType(SnackBar), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'a roster row reads as one labelled button, not its text twice',
+      (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        await pumpRoster(
+          tester,
+          blocState: PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: _ownerPubkey,
+            lists: [_list()],
+          ),
+        );
+
+        final node = tester.getSemantics(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is PeopleListMemberTile && widget.pubkey == _quiet,
+          ),
+        );
+
+        expect(
+          node.label,
+          l10n.peopleListsProfileLongPressHint(
+            UserProfile.defaultDisplayNameFor(_quiet),
+          ),
+        );
+        expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+        expect(
+          node.getSemanticsData().hasAction(SemanticsAction.longPress),
+          isTrue,
+        );
+        SemanticsOwner? semanticsOwner;
+        tester.binding.rootPipelineOwner.visitChildren((child) {
+          semanticsOwner ??= child.semanticsOwner;
+        });
+        semanticsOwner!.performAction(
+          node.id,
+          SemanticsAction.longPress,
+        );
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.peopleListsRemove), findsOneWidget);
+        await tester.tap(find.text(l10n.commonCancel));
+        await tester.pumpAndSettle();
+        semanticsOwner!.performAction(
+          node.id,
+          SemanticsAction.tap,
+        );
+        await tester.pumpAndSettle();
+        expect(pushedLocations, hasLength(1));
+        expect(pushedLocations.single, startsWith('/profile-view/'));
+        semantics.dispose();
+      },
+    );
+
+    for (final scenario
+        in <
+          ({
+            String name,
+            UserList list,
+            String member,
+            bool tap,
+            bool longPress,
+          })
+        >[
+          (
+            name: 'a read-only list offers opening the profile but not removal',
+            list: _list(isEditable: false),
+            member: _quiet,
+            tap: true,
+            longPress: false,
+          ),
+          (
+            name: 'a malformed member entry offers no profile action',
+            list: _list(pubkeys: ['not-a-key']),
+            member: 'not-a-key',
+            tap: false,
+            longPress: true,
+          ),
+        ]) {
+      testWidgets(
+        'a roster row only offers actions it can perform: ${scenario.name}',
+        (
+          tester,
+        ) async {
+          final semantics = tester.ensureSemantics();
+          await pumpRoster(
+            tester,
+            blocState: PeopleListsState(
+              status: PeopleListsStatus.ready,
+              ownerPubkey: _ownerPubkey,
+              lists: [scenario.list],
+            ),
+          );
+
+          final data = tester
+              .getSemantics(
+                find.byWidgetPredicate(
+                  (widget) =>
+                      widget is PeopleListMemberTile &&
+                      widget.pubkey == scenario.member,
+                ),
+              )
+              .getSemanticsData();
+          semantics.dispose();
+
+          expect(data.hasAction(SemanticsAction.tap), scenario.tap);
+          expect(data.hasAction(SemanticsAction.longPress), scenario.longPress);
+        },
+      );
+    }
 
     test('exposes route name and path constants', () {
       expect(PeopleListMembersScreen.routeName, equals('people-list-roster'));

@@ -9221,7 +9221,7 @@
   "peopleListsViewAllMembers": "View all",
   "peopleListsLoadFailed": "Couldn't load this list.",
   "@listMemberCount": {
-    "description": "Screen-reader count spoken for a people-list card, after the list name.",
+    "description": "Member total, the first figure in a people list's stats line on its detail screen, ahead of the video and loop totals.",
     "placeholders": {
       "count": {
         "type": "int"

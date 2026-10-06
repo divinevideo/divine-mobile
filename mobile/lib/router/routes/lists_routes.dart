@@ -200,7 +200,13 @@ String? _peopleListsRedirectIfDisabled(Ref ref, GoRouterState state) {
           identifier == identifier.toUpperCase()
       ? lowercase
       : identifier;
-  final normalized = normalizePublicIdentifier(publicIdentifier)?.hexPubkey;
+  final String? normalized;
+  try {
+    normalized = normalizePublicIdentifier(publicIdentifier)?.hexPubkey;
+  } on FormatException {
+    // An nprofile relay hint that is not UTF-8 throws from the decoder.
+    return (pubkey: null, invalid: true);
+  }
   if (normalized == null || !NostrKeyUtils.isValidKey(normalized)) {
     return (pubkey: null, invalid: true);
   }

@@ -1502,6 +1502,32 @@ void main() {
         expect(list, isNull);
       });
 
+      test("treats a blocked author's list as absent", () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(pubkey: secondOwner, dTag: 'crew', title: 'Crew'),
+          ],
+        );
+
+        final unblocked = await buildRepository(
+          nostrClient: client,
+        ).fetchPublicList(ownerPubkey: secondOwner, listId: 'crew');
+        final blocked = await buildRepository(
+          nostrClient: client,
+          blockFilter: (pubkey) => pubkey == secondOwner,
+        ).fetchPublicList(ownerPubkey: secondOwner, listId: 'crew');
+
+        expect(unblocked, isNotNull);
+        expect(blocked, isNull);
+      });
+
       test('returns null when relays hold nothing', () async {
         final client = _MockNostrClient();
         when(

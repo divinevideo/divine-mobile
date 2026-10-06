@@ -296,11 +296,12 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
   /// [_stopWatchingLists].
   ///
   /// A re-wire ([PeopleListsOwnerChanged.rewire]) reuses the owner already in
-  /// state and deliberately emits nothing: the repository swap fires on every
-  /// cold-start auth flip, and blanking the state would flicker
+  /// state and never blanks it: the repository swap fires on every cold-start
+  /// auth flip, and clearing the lists would flicker
   /// `PeopleListMembershipIndicator` on every profile header. The re-opened
   /// `watchLists` subscription re-emits the current snapshot immediately from
-  /// the shared cache.
+  /// the shared cache. Only the owner read goes back to pending while the new
+  /// repository syncs.
   void _onOwnerChanged(
     PeopleListsOwnerChanged event,
     Emitter<PeopleListsState> emit,

@@ -191,8 +191,13 @@ void main() {
           isTrue,
         );
         expect(pages.first.first, equals(pubkeys.first));
-        // Members past the cap are still in the roster, unranked.
-        expect(cubit.state.members, hasLength(pubkeys.length));
+        // Members past the cap are still in the roster, unranked, and tied
+        // members keep the list's own order even above the 32 elements where
+        // Dart's sort stops being stable.
+        expect(
+          cubit.state.members.map((member) => member.pubkey).toList(),
+          equals(pubkeys),
+        );
       });
 
       test('stops paging when Funnelcake is not configured', () async {
@@ -215,6 +220,62 @@ void main() {
         ).called(1);
         expect(cubit.state.status, equals(PeopleListMembersStatus.success));
         expect(cubit.state.totalVideos, isNull);
+      });
+
+      test('counts a member who answers with zero videos', () async {
+        when(
+          () => profileRepository.getBulkProfilesFromApi(any()),
+        ).thenAnswer(
+          (_) async => BulkProfilesResponse(
+            profiles: {
+              _quiet: _found(_quiet, videos: 0),
+              _busy: _found(_busy, videos: 5),
+            },
+          ),
+        );
+        final cubit = PeopleListMembersCubit(
+          profileRepository: profileRepository,
+          pubkeys: [_quiet, _unknown, _busy],
+        );
+        addTearDown(cubit.close);
+
+        await cubit.load();
+
+        // A zero is an answer: it outranks a member Funnelcake never answered
+        // for, and a list where everyone answered still has a total.
+        expect(
+          cubit.state.members.map((member) => member.pubkey),
+          equals([_busy, _quiet, _unknown]),
+        );
+        expect(cubit.state.totalVideos, isNull);
+
+        final answered = PeopleListMembersCubit(
+          profileRepository: profileRepository,
+          pubkeys: [_quiet, _busy],
+        );
+        addTearDown(answered.close);
+        await answered.load();
+        expect(answered.state.totalVideos, equals(5));
+      });
+
+      test('totals a list whose only member has no videos as zero', () async {
+        when(
+          () => profileRepository.getBulkProfilesFromApi(any()),
+        ).thenAnswer(
+          (_) async => BulkProfilesResponse(
+            profiles: {_quiet: _found(_quiet, videos: 0)},
+          ),
+        );
+        final cubit = PeopleListMembersCubit(
+          profileRepository: profileRepository,
+          pubkeys: [_quiet],
+        );
+        addTearDown(cubit.close);
+
+        await cubit.load();
+
+        expect(cubit.state.totalVideos, equals(0));
+        expect(cubit.state.totalLoops, equals(0));
       });
 
       test('counts vertical videos and ignores horizontal ones', () async {

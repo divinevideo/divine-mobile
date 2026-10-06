@@ -7,6 +7,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -631,6 +632,117 @@ void main() {
 
       expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
       expect(find.text(l10n.peopleListsListNotFoundTitle), findsNothing);
+    });
+
+    group('View all', () {
+      Future<List<String>> openRoster(
+        WidgetTester tester, {
+        required PeopleListsBloc bloc,
+        required String? ownerPubkey,
+        List<Override> overrides = const [],
+      }) async {
+        final pushed = <String>[];
+        final router = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, state) => UserListPeopleScreen(
+                listId: 'crew',
+                ownerPubkey: ownerPubkey,
+              ),
+            ),
+            GoRoute(
+              path: '/people-lists/:listId/members',
+              builder: (context, state) {
+                pushed.add(state.uri.toString());
+                return const Scaffold(body: Text('roster'));
+              },
+            ),
+          ],
+        );
+        await tester.pumpWidget(
+          testProviderScope(
+            additionalOverrides: overrides,
+            child: BlocProvider<PeopleListsBloc>.value(
+              value: bloc,
+              child: MaterialApp.router(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                routerConfig: router,
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        await tester.pump();
+        await tester.tap(find.text(l10n.peopleListsViewAllMembers));
+        await tester.pumpAndSettle();
+        return pushed;
+      }
+
+      testWidgets('carries the author of a discovered list to the roster', (
+        tester,
+      ) async {
+        final bloc = _MockPeopleListsBloc();
+        whenListen(
+          bloc,
+          const Stream<PeopleListsState>.empty(),
+          initialState: const PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: _ownerPubkey,
+          ),
+        );
+        final list = _buildList(
+          id: 'crew',
+          name: 'Crew',
+          pubkeys: [_otherOwnerPubkey],
+          isEditable: false,
+        );
+
+        final pushed = await openRoster(
+          tester,
+          bloc: bloc,
+          ownerPubkey: _otherOwnerPubkey,
+          overrides: [
+            publicPeopleListProvider(
+              ownerPubkey: _otherOwnerPubkey,
+              listId: 'crew',
+            ).overrideWith((ref) async => list),
+          ],
+        );
+
+        expect(pushed, ['/people-lists/crew/members?owner=$_otherOwnerPubkey']);
+      });
+
+      testWidgets("opens the viewer's own roster without an author", (
+        tester,
+      ) async {
+        final bloc = _MockPeopleListsBloc();
+        whenListen(
+          bloc,
+          const Stream<PeopleListsState>.empty(),
+          initialState: PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: _ownerPubkey,
+            lists: [
+              _buildList(
+                id: 'crew',
+                name: 'Crew',
+                pubkeys: [_otherOwnerPubkey],
+              ),
+            ],
+          ),
+        );
+
+        final pushed = await openRoster(
+          tester,
+          bloc: bloc,
+          ownerPubkey: null,
+        );
+
+        expect(pushed, ['/people-lists/crew/members']);
+      });
     });
 
     testWidgets('add people option opens the picker', (tester) async {

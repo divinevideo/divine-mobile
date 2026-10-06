@@ -1188,6 +1188,42 @@ void main() {
         () => repository.fetchPublicList(ownerPubkey: _ownerA, listId: 'crew'),
       ).called(1);
     });
+
+    test(
+      'surfaces a failed read at once instead of retrying behind a spinner',
+      () async {
+        final repository = _MockPeopleListsRepository();
+        when(
+          () => repository.fetchPublicList(
+            ownerPubkey: any(named: 'ownerPubkey'),
+            listId: any(named: 'listId'),
+          ),
+        ).thenThrow(Exception('relay timed out'));
+        final container = ProviderContainer(
+          overrides: [
+            peopleListsRepositoryProvider.overrideWithValue(repository),
+          ],
+        );
+        addTearDown(container.dispose);
+        final states = <AsyncValue<UserList?>>[];
+        container.listen(
+          publicPeopleListProvider(ownerPubkey: _ownerA, listId: 'crew'),
+          (_, next) => states.add(next),
+          fireImmediately: true,
+        );
+
+        await pumpEventQueue();
+
+        // The state type, not `hasError`: a provider that is quietly retrying
+        // is loading while carrying the error, which the screen renders as a
+        // spinner rather than its retry view.
+        expect(states.last, isA<AsyncError<UserList?>>());
+        verify(
+          () =>
+              repository.fetchPublicList(ownerPubkey: _ownerA, listId: 'crew'),
+        ).called(1);
+      },
+    );
   });
 
   group(publicCuratedListProvider, () {
