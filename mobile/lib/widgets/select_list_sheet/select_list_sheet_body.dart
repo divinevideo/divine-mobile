@@ -118,13 +118,17 @@ class _ListRows extends ConsumerWidget {
       );
     }
     if (lists.isEmpty) return const _EmptyHint();
-    // The resolver only supplies thumbnails and lags behind the service: a
-    // list it has not reached yet renders its fan with placeholder cards,
-    // shimmering until its first pass lands.
-    final hydrated = ref.watch(myListsWithThumbnailsProvider).value;
+    // Retained previews are retired while the current owner or policy is
+    // rechecked; only completed hydration may supply a row's images.
+    final hydration = ref.watch(myListsWithThumbnailsProvider);
+    final hydrated = switch (hydration) {
+      AsyncData(isLoading: false, :final value) => value,
+      _ => null,
+    };
     final thumbnailsById = {
       for (final list in hydrated ?? const <CuratedList>[])
-        if (list.thumbnailUrls.isNotEmpty) list.id: list.thumbnailUrls,
+        if (list.thumbnailUrls.isNotEmpty)
+          list.authorScopedId: list.thumbnailUrls,
     };
     // The sheet's own surface sits above the modal's Material, so the rows
     // need a transparent one of their own for their ink to show.
@@ -138,8 +142,8 @@ class _ListRows extends ConsumerWidget {
           final list = lists[index];
           return _ListRow(
             list: list,
-            thumbnailUrls: thumbnailsById[list.id] ?? const [],
-            thumbnailsPending: hydrated == null,
+            thumbnailUrls: thumbnailsById[list.authorScopedId] ?? const [],
+            thumbnailsPending: hydration.isLoading,
           );
         },
       ),
@@ -176,7 +180,7 @@ class _ListRow extends StatelessWidget {
   /// The list's resolved video thumbnails, in fan order.
   final List<String> thumbnailUrls;
 
-  /// Whether the resolver has yet to return for the viewer's lists.
+  /// Whether the current owner/policy thumbnail resolution is still running.
   final bool thumbnailsPending;
 
   @override
