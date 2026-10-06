@@ -13,11 +13,13 @@ import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
+import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/services/auth_service.dart' show AuthService;
 import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/utils/string_utils.dart';
+import 'package:openvine/widgets/video_feed_item/audio_attribution_row.dart';
 import 'package:openvine/widgets/video_feed_item/collaborator_avatar_row.dart';
 import 'package:openvine/widgets/video_feed_item/video_feed_item.dart';
 import 'package:openvine/widgets/video_reply_parent_link.dart';
@@ -257,6 +259,36 @@ void main() {
           closeTo(descriptionBottom(tester), _layoutTolerance),
         );
       });
+
+      testWidgets(
+        'keeps a 4 pt gap above the audio row and ends flush with it',
+        (
+          tester,
+        ) async {
+          const audioEventId =
+              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+          testVideo = testVideo.copyWith(audioEventId: audioEventId);
+
+          // An unresolved reference still renders a display-only credit.
+          await pumpOverlay(
+            tester,
+            overrides: [
+              soundByIdProvider(audioEventId).overrideWith((ref) async => null),
+            ],
+          );
+
+          final audioRow = tester.getRect(find.byType(AudioAttributionRow));
+          expect(audioRow.height, greaterThan(0));
+          expect(
+            audioRow.top - descriptionBottom(tester),
+            closeTo(4, _layoutTolerance),
+          );
+          expect(
+            tester.getRect(captionBlock()).bottom,
+            closeTo(audioRow.bottom, _layoutTolerance),
+          );
+        },
+      );
 
       testWidgets('keeps a 4 pt gap above a visible collaborator row', (
         tester,
