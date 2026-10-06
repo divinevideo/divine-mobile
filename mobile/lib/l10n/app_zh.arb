@@ -6786,5 +6786,10 @@
   "ideasTitleFive": "无需太多解释",
   "ideasDescriptionFive": "只是想分享。",
   "ideasTitleSix": "今天的一小段",
-  "ideasDescriptionSix": "把这个留在这里。"
+  "ideasDescriptionSix": "把这个留在这里。",
+  "liveTabLabel": "直播",
+  "liveHideParticipantLocally": "在我的视图中隐藏",
+  "liveHideChatLocally": "仅对我隐藏聊天",
+  "liveLocalHidingExplanation": "隐藏参与者或其聊天只会改变你的视图。他们的音频仍然开启，其他人仍然可以看到他们。",
+  "liveHiddenChatNotice": "隐藏的消息仍然对其他人可见。"
 }

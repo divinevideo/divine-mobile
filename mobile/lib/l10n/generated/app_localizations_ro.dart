@@ -13614,4 +13614,21 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Las asta aici.';
+
+  @override
+  String get liveTabLabel => 'În direct';
+
+  @override
+  String get liveHideParticipantLocally => 'Ascunde din vizualizarea mea';
+
+  @override
+  String get liveHideChatLocally => 'Ascunde chatul pentru mine';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      'Ascunderea unei persoane sau a chatului ei schimbă doar vizualizarea ta. Sunetul rămâne activ, iar ceilalți o văd în continuare.';
+
+  @override
+  String get liveHiddenChatNotice =>
+      'Mesajele ascunse rămân vizibile pentru ceilalți.';
 }

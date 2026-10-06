@@ -5019,5 +5019,10 @@
   "ideasTitleFive": "بلا شرح طويل",
   "ideasDescriptionFive": "أردت المشاركة فقط.",
   "ideasTitleSix": "القليل من اليوم",
-  "ideasDescriptionSix": "أترك هذا هنا."
+  "ideasDescriptionSix": "أترك هذا هنا.",
+  "liveTabLabel": "مباشر",
+  "liveHideParticipantLocally": "إخفاء من عرضي",
+  "liveHideChatLocally": "إخفاء الدردشة لدي",
+  "liveLocalHidingExplanation": "إخفاء مشارك أو دردشته يغيّر عرضك فقط. يظل صوته مسموعًا ويظل الآخرون يرونه.",
+  "liveHiddenChatNotice": "تظل الرسائل المخفية مرئية للآخرين."
 }

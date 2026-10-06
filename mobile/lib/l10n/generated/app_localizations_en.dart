@@ -13434,4 +13434,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Leaving this here.';
+
+  @override
+  String get liveTabLabel => 'Live';
+
+  @override
+  String get liveHideParticipantLocally => 'Hide from my view';
+
+  @override
+  String get liveHideChatLocally => 'Hide chat for me';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      'Hiding a participant or their chat only changes your view. Their audio stays on and everyone else still sees them.';
+
+  @override
+  String get liveHiddenChatNotice =>
+      'Hidden messages are visible to everyone else.';
 }

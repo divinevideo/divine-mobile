@@ -13459,4 +13459,21 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Iiwan ko ito rito.';
+
+  @override
+  String get liveTabLabel => 'Live';
+
+  @override
+  String get liveHideParticipantLocally => 'Itago sa aking view';
+
+  @override
+  String get liveHideChatLocally => 'Itago ang chat para sa akin';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      'Ang pagtatago ng kalahok o ng chat niya ay sa view mo lang. Naka-on pa rin ang audio niya at nakikita pa rin siya ng iba.';
+
+  @override
+  String get liveHiddenChatNotice =>
+      'Nakikita pa rin ng iba ang mga nakatagong mensahe.';
 }

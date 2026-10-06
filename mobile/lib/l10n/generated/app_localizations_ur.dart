@@ -13337,4 +13337,21 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'یہ یہاں چھوڑ رہا ہوں۔';
+
+  @override
+  String get liveTabLabel => 'لائیو';
+
+  @override
+  String get liveHideParticipantLocally => 'میرے منظر سے چھپائیں';
+
+  @override
+  String get liveHideChatLocally => 'میرے لیے چیٹ چھپائیں';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      'کسی شریک یا اس کی چیٹ کو چھپانے سے صرف آپ کا منظر بدلتا ہے۔ اس کی آواز چلتی رہتی ہے اور باقی سب اسے دیکھ سکتے ہیں۔';
+
+  @override
+  String get liveHiddenChatNotice =>
+      'چھپائے گئے پیغامات باقی سب کو نظر آتے رہتے ہیں۔';
 }

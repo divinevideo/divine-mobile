@@ -13414,4 +13414,21 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Dit laat ik hier achter.';
+
+  @override
+  String get liveTabLabel => 'Live';
+
+  @override
+  String get liveHideParticipantLocally => 'Verbergen voor mij';
+
+  @override
+  String get liveHideChatLocally => 'Chat verbergen voor mij';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      'Een deelnemer of diens chat verbergen verandert alleen jouw weergave. De audio blijft aan en anderen blijven de deelnemer zien.';
+
+  @override
+  String get liveHiddenChatNotice =>
+      'Verborgen berichten blijven zichtbaar voor anderen.';
 }

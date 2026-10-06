@@ -6786,5 +6786,10 @@
   "ideasTitleFive": "Tanpa penjelasan panjang",
   "ideasDescriptionFive": "Cuma hendak berkongsi.",
   "ideasTitleSix": "Sedikit tentang hari ini",
-  "ideasDescriptionSix": "Saya tinggalkan ini di sini."
+  "ideasDescriptionSix": "Saya tinggalkan ini di sini.",
+  "liveTabLabel": "Langsung",
+  "liveHideParticipantLocally": "Sembunyikan daripada paparan saya",
+  "liveHideChatLocally": "Sembunyikan sembang untuk saya",
+  "liveLocalHidingExplanation": "Menyembunyikan peserta atau sembang mereka hanya mengubah paparan anda. Audio mereka kekal aktif dan orang lain masih melihat mereka.",
+  "liveHiddenChatNotice": "Mesej yang disembunyikan masih kelihatan kepada orang lain."
 }

@@ -12705,4 +12705,20 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => '여기에 남겨 둘게요.';
+
+  @override
+  String get liveTabLabel => '라이브';
+
+  @override
+  String get liveHideParticipantLocally => '내 화면에서 숨기기';
+
+  @override
+  String get liveHideChatLocally => '나에게만 채팅 숨기기';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      '참가자나 채팅을 숨겨도 내 화면만 바뀝니다. 오디오는 계속 켜져 있고 다른 사람에게는 그대로 표시됩니다.';
+
+  @override
+  String get liveHiddenChatNotice => '숨긴 메시지는 다른 사람에게는 계속 표시됩니다.';
 }

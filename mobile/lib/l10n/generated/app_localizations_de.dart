@@ -13507,4 +13507,21 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Das lasse ich hier.';
+
+  @override
+  String get liveTabLabel => 'Live';
+
+  @override
+  String get liveHideParticipantLocally => 'Für mich ausblenden';
+
+  @override
+  String get liveHideChatLocally => 'Chat für mich ausblenden';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      'Wenn du eine Person oder ihren Chat ausblendest, ändert sich nur deine Ansicht. Ihr Audio bleibt an und alle anderen sehen sie weiterhin.';
+
+  @override
+  String get liveHiddenChatNotice =>
+      'Ausgeblendete Nachrichten bleiben für alle anderen sichtbar.';
 }

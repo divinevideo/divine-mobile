@@ -13471,4 +13471,21 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Оставям това тук.';
+
+  @override
+  String get liveTabLabel => 'На живо';
+
+  @override
+  String get liveHideParticipantLocally => 'Скрий от моя изглед';
+
+  @override
+  String get liveHideChatLocally => 'Скрий чата за мен';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      'Скриването на участник или неговия чат променя само твоя изглед. Звукът му остава включен и останалите продължават да го виждат.';
+
+  @override
+  String get liveHiddenChatNotice =>
+      'Скритите съобщения остават видими за всички останали.';
 }

@@ -13288,4 +13288,21 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Để điều này ở đây.';
+
+  @override
+  String get liveTabLabel => 'Trực tiếp';
+
+  @override
+  String get liveHideParticipantLocally => 'Ẩn khỏi chế độ xem của tôi';
+
+  @override
+  String get liveHideChatLocally => 'Ẩn trò chuyện với tôi';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      'Ẩn người tham gia hoặc cuộc trò chuyện chỉ thay đổi chế độ xem của bạn. Âm thanh của họ vẫn bật và những người khác vẫn thấy họ.';
+
+  @override
+  String get liveHiddenChatNotice =>
+      'Tin nhắn đã ẩn vẫn hiển thị với những người khác.';
 }

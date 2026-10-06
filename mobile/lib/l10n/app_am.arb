@@ -5119,5 +5119,10 @@
   "ideasTitleFive": "ያለ ረጅም ማብራሪያ",
   "ideasDescriptionFive": "ማጋራት ብቻ ፈለግሁ።",
   "ideasTitleSix": "ከዛሬ ትንሽ",
-  "ideasDescriptionSix": "ይህን እዚህ እተዋለሁ።"
+  "ideasDescriptionSix": "ይህን እዚህ እተዋለሁ።",
+  "liveTabLabel": "ቀጥታ",
+  "liveHideParticipantLocally": "ከእኔ እይታ ደብቅ",
+  "liveHideChatLocally": "ውይይቱን ለእኔ ደብቅ",
+  "liveLocalHidingExplanation": "ተሳታፊን ወይም ውይይቱን መደበቅ የአንተን እይታ ብቻ ይቀይራል። ድምፁ አይጠፋም፤ ሌሎችም ማየታቸውን ይቀጥላሉ።",
+  "liveHiddenChatNotice": "የተደበቁ መልዕክቶች ለሌሎች ሁሉ ይታያሉ።"
 }

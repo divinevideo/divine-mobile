@@ -5019,5 +5019,10 @@
   "ideasTitleFive": "Ohne große Erklärung",
   "ideasDescriptionFive": "Wollte ich einfach teilen.",
   "ideasTitleSix": "Ein bisschen Heute",
-  "ideasDescriptionSix": "Das lasse ich hier."
+  "ideasDescriptionSix": "Das lasse ich hier.",
+  "liveTabLabel": "Live",
+  "liveHideParticipantLocally": "Für mich ausblenden",
+  "liveHideChatLocally": "Chat für mich ausblenden",
+  "liveLocalHidingExplanation": "Wenn du eine Person oder ihren Chat ausblendest, ändert sich nur deine Ansicht. Ihr Audio bleibt an und alle anderen sehen sie weiterhin.",
+  "liveHiddenChatNotice": "Ausgeblendete Nachrichten bleiben für alle anderen sichtbar."
 }

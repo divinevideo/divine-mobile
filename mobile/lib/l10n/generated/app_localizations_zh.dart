@@ -12542,4 +12542,20 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => '把这个留在这里。';
+
+  @override
+  String get liveTabLabel => '直播';
+
+  @override
+  String get liveHideParticipantLocally => '在我的视图中隐藏';
+
+  @override
+  String get liveHideChatLocally => '仅对我隐藏聊天';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      '隐藏参与者或其聊天只会改变你的视图。他们的音频仍然开启，其他人仍然可以看到他们。';
+
+  @override
+  String get liveHiddenChatNotice => '隐藏的消息仍然对其他人可见。';
 }

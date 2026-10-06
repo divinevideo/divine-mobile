@@ -25,6 +25,7 @@ class ExploreScreen extends ConsumerWidget {
     explorePopularTabName,
     exploreCategoriesTabName,
     exploreForYouTabName,
+    'live',
     exploreListsTabName,
     exploreAppsTabName,
   };

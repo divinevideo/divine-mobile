@@ -13348,4 +13348,21 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Lämnar det här.';
+
+  @override
+  String get liveTabLabel => 'Live';
+
+  @override
+  String get liveHideParticipantLocally => 'Dölj för mig';
+
+  @override
+  String get liveHideChatLocally => 'Dölj chatten för mig';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      'Att dölja en deltagare eller deras chatt ändrar bara din vy. Ljudet är fortfarande på och alla andra ser deltagaren.';
+
+  @override
+  String get liveHiddenChatNotice =>
+      'Dolda meddelanden är synliga för alla andra.';
 }

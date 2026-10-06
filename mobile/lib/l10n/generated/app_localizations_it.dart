@@ -13504,4 +13504,21 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Lo lascio qui.';
+
+  @override
+  String get liveTabLabel => 'In diretta';
+
+  @override
+  String get liveHideParticipantLocally => 'Nascondi dalla mia vista';
+
+  @override
+  String get liveHideChatLocally => 'Nascondi la chat per me';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      'Nascondere una persona o la sua chat cambia solo la tua vista. Il suo audio resta attivo e gli altri continuano a vederla.';
+
+  @override
+  String get liveHiddenChatNotice =>
+      'I messaggi nascosti restano visibili agli altri.';
 }

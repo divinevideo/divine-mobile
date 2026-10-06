@@ -13345,4 +13345,21 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Saya tinggalkan ini di sini.';
+
+  @override
+  String get liveTabLabel => 'Langsung';
+
+  @override
+  String get liveHideParticipantLocally => 'Sembunyikan daripada paparan saya';
+
+  @override
+  String get liveHideChatLocally => 'Sembunyikan sembang untuk saya';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      'Menyembunyikan peserta atau sembang mereka hanya mengubah paparan anda. Audio mereka kekal aktif dan orang lain masih melihat mereka.';
+
+  @override
+  String get liveHiddenChatNotice =>
+      'Mesej yang disembunyikan masih kelihatan kepada orang lain.';
 }

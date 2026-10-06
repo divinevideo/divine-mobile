@@ -5019,5 +5019,10 @@
   "ideasTitleFive": "Sin grandes explicaciones",
   "ideasDescriptionFive": "Solo quería compartirlo.",
   "ideasTitleSix": "Un poquito de hoy",
-  "ideasDescriptionSix": "Lo dejo por aquí."
+  "ideasDescriptionSix": "Lo dejo por aquí.",
+  "liveTabLabel": "En directo",
+  "liveHideParticipantLocally": "Ocultar en mi vista",
+  "liveHideChatLocally": "Ocultar chat para mí",
+  "liveLocalHidingExplanation": "Ocultar a alguien o su chat solo cambia tu vista. Su audio sigue activo y los demás siguen viendo a esa persona.",
+  "liveHiddenChatNotice": "Los mensajes ocultos siguen siendo visibles para los demás."
 }

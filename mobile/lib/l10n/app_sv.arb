@@ -5019,5 +5019,10 @@
   "ideasTitleFive": "Ingen stor förklaring",
   "ideasDescriptionFive": "Ville bara dela.",
   "ideasTitleSix": "Lite av idag",
-  "ideasDescriptionSix": "Lämnar det här."
+  "ideasDescriptionSix": "Lämnar det här.",
+  "liveTabLabel": "Live",
+  "liveHideParticipantLocally": "Dölj för mig",
+  "liveHideChatLocally": "Dölj chatten för mig",
+  "liveLocalHidingExplanation": "Att dölja en deltagare eller deras chatt ändrar bara din vy. Ljudet är fortfarande på och alla andra ser deltagaren.",
+  "liveHiddenChatNotice": "Dolda meddelanden är synliga för alla andra."
 }

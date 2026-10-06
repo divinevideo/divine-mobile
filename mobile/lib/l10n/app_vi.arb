@@ -6786,5 +6786,10 @@
   "ideasTitleFive": "Không cần giải thích nhiều",
   "ideasDescriptionFive": "Chỉ muốn chia sẻ thôi.",
   "ideasTitleSix": "Một chút hôm nay",
-  "ideasDescriptionSix": "Để điều này ở đây."
+  "ideasDescriptionSix": "Để điều này ở đây.",
+  "liveTabLabel": "Trực tiếp",
+  "liveHideParticipantLocally": "Ẩn khỏi chế độ xem của tôi",
+  "liveHideChatLocally": "Ẩn trò chuyện với tôi",
+  "liveLocalHidingExplanation": "Ẩn người tham gia hoặc cuộc trò chuyện chỉ thay đổi chế độ xem của bạn. Âm thanh của họ vẫn bật và những người khác vẫn thấy họ.",
+  "liveHiddenChatNotice": "Tin nhắn đã ẩn vẫn hiển thị với những người khác."
 }

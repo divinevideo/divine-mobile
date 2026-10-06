@@ -13488,4 +13488,21 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Lo dejo por aquí.';
+
+  @override
+  String get liveTabLabel => 'En directo';
+
+  @override
+  String get liveHideParticipantLocally => 'Ocultar en mi vista';
+
+  @override
+  String get liveHideChatLocally => 'Ocultar chat para mí';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      'Ocultar a alguien o su chat solo cambia tu vista. Su audio sigue activo y los demás siguen viendo a esa persona.';
+
+  @override
+  String get liveHiddenChatNotice =>
+      'Los mensajes ocultos siguen siendo visibles para los demás.';
 }

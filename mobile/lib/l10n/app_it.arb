@@ -5019,5 +5019,10 @@
   "ideasTitleFive": "Senza grandi spiegazioni",
   "ideasDescriptionFive": "Volevo solo condividere.",
   "ideasTitleSix": "Un po’ di oggi",
-  "ideasDescriptionSix": "Lo lascio qui."
+  "ideasDescriptionSix": "Lo lascio qui.",
+  "liveTabLabel": "In diretta",
+  "liveHideParticipantLocally": "Nascondi dalla mia vista",
+  "liveHideChatLocally": "Nascondi la chat per me",
+  "liveLocalHidingExplanation": "Nascondere una persona o la sua chat cambia solo la tua vista. Il suo audio resta attivo e gli altri continuano a vederla.",
+  "liveHiddenChatNotice": "I messaggi nascosti restano visibili agli altri."
 }

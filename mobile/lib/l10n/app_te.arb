@@ -8524,5 +8524,10 @@
   "ideasTitleFive": "పెద్ద వివరణ లేకుండా",
   "ideasDescriptionFive": "ఊరికే పంచుకోవాలనుకున్నాను.",
   "ideasTitleSix": "ఈ రోజులో కొంత",
-  "ideasDescriptionSix": "దీన్ని ఇక్కడ వదిలేస్తున్నాను."
+  "ideasDescriptionSix": "దీన్ని ఇక్కడ వదిలేస్తున్నాను.",
+  "liveTabLabel": "ప్రత్యక్షం",
+  "liveHideParticipantLocally": "నా వీక్షణలో దాచు",
+  "liveHideChatLocally": "నా కోసం చాట్ దాచు",
+  "liveLocalHidingExplanation": "పాల్గొనేవారిని లేదా వారి చాట్‌ను దాచడం వల్ల మీ వీక్షణ మాత్రమే మారుతుంది. వారి ఆడియో కొనసాగుతుంది, ఇతరులకు వారు కనిపిస్తూనే ఉంటారు.",
+  "liveHiddenChatNotice": "దాచిన సందేశాలు ఇతరులందరికీ కనిపిస్తూనే ఉంటాయి."
 }

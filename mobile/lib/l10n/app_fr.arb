@@ -5019,5 +5019,10 @@
   "ideasTitleFive": "Pas de grande explication",
   "ideasDescriptionFive": "Juste envie de partager.",
   "ideasTitleSix": "Un peu d’aujourd’hui",
-  "ideasDescriptionSix": "Je laisse ça ici."
+  "ideasDescriptionSix": "Je laisse ça ici.",
+  "liveTabLabel": "En direct",
+  "liveHideParticipantLocally": "Masquer pour moi",
+  "liveHideChatLocally": "Masquer le chat pour moi",
+  "liveLocalHidingExplanation": "Masquer une personne ou son chat ne change que votre vue. Son audio reste actif et les autres la voient toujours.",
+  "liveHiddenChatNotice": "Les messages masqués restent visibles pour les autres."
 }

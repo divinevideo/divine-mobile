@@ -13686,4 +13686,21 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'దీన్ని ఇక్కడ వదిలేస్తున్నాను.';
+
+  @override
+  String get liveTabLabel => 'ప్రత్యక్షం';
+
+  @override
+  String get liveHideParticipantLocally => 'నా వీక్షణలో దాచు';
+
+  @override
+  String get liveHideChatLocally => 'నా కోసం చాట్ దాచు';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      'పాల్గొనేవారిని లేదా వారి చాట్‌ను దాచడం వల్ల మీ వీక్షణ మాత్రమే మారుతుంది. వారి ఆడియో కొనసాగుతుంది, ఇతరులకు వారు కనిపిస్తూనే ఉంటారు.';
+
+  @override
+  String get liveHiddenChatNotice =>
+      'దాచిన సందేశాలు ఇతరులందరికీ కనిపిస్తూనే ఉంటాయి.';
 }

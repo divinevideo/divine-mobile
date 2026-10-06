@@ -97,6 +97,7 @@ workspace:
 dependencies:
   publishing_suggestions:
     path: packages/publishing_suggestions
+  livekit_client: 2.10.0
   flutter:
     sdk: flutter
 
@@ -413,6 +414,7 @@ dependency_overrides:
   device_info_plus: ^10.1.2
 
 dev_dependencies:
+  share_plus_platform_interface: ^6.1.0
   flutter_test:
     sdk: flutter
   integration_test:

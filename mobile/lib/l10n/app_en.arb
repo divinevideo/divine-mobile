@@ -9685,5 +9685,25 @@
   },
   "@ideasDescriptionSix": {
     "description": "Inline publishing ideas: DescriptionSix"
+  },
+  "liveTabLabel": "Live",
+  "liveHideParticipantLocally": "Hide from my view",
+  "liveHideChatLocally": "Hide chat for me",
+  "liveLocalHidingExplanation": "Hiding a participant or their chat only changes your view. Their audio stays on and everyone else still sees them.",
+  "liveHiddenChatNotice": "Hidden messages are visible to everyone else.",
+  "@liveTabLabel": {
+    "description": "Live rooms: labels and explanation for local-only display controls."
+  },
+  "@liveHideParticipantLocally": {
+    "description": "Live rooms: labels and explanation for local-only display controls."
+  },
+  "@liveHideChatLocally": {
+    "description": "Live rooms: labels and explanation for local-only display controls."
+  },
+  "@liveLocalHidingExplanation": {
+    "description": "Live rooms: labels and explanation for local-only display controls."
+  },
+  "@liveHiddenChatNotice": {
+    "description": "Live rooms: labels and explanation for local-only display controls."
   }
 }

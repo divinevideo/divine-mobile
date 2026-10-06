@@ -13269,4 +13269,21 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Bunu buraya bırakıyorum.';
+
+  @override
+  String get liveTabLabel => 'Canlı';
+
+  @override
+  String get liveHideParticipantLocally => 'Benim görünümümden gizle';
+
+  @override
+  String get liveHideChatLocally => 'Sohbeti benim için gizle';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      'Bir katılımcıyı veya sohbetini gizlemek yalnızca senin görünümünü değiştirir. Sesi açık kalır ve diğer herkes onu görmeye devam eder.';
+
+  @override
+  String get liveHiddenChatNotice =>
+      'Gizlenen mesajlar diğer herkes tarafından görülebilir.';
 }

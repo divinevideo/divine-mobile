@@ -22328,6 +22328,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Leaving this here.'**
   String get ideasDescriptionSix;
+
+  /// Live rooms: labels and explanation for local-only display controls.
+  ///
+  /// In en, this message translates to:
+  /// **'Live'**
+  String get liveTabLabel;
+
+  /// Live rooms: labels and explanation for local-only display controls.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide from my view'**
+  String get liveHideParticipantLocally;
+
+  /// Live rooms: labels and explanation for local-only display controls.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide chat for me'**
+  String get liveHideChatLocally;
+
+  /// Live rooms: labels and explanation for local-only display controls.
+  ///
+  /// In en, this message translates to:
+  /// **'Hiding a participant or their chat only changes your view. Their audio stays on and everyone else still sees them.'**
+  String get liveLocalHidingExplanation;
+
+  /// Live rooms: labels and explanation for local-only display controls.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden messages are visible to everyone else.'**
+  String get liveHiddenChatNotice;
 }
 
 class _AppLocalizationsDelegate

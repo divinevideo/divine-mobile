@@ -5143,5 +5143,10 @@
   "ideasTitleFive": "Без много обяснения",
   "ideasDescriptionFive": "Просто исках да споделя.",
   "ideasTitleSix": "Малко от днес",
-  "ideasDescriptionSix": "Оставям това тук."
+  "ideasDescriptionSix": "Оставям това тук.",
+  "liveTabLabel": "На живо",
+  "liveHideParticipantLocally": "Скрий от моя изглед",
+  "liveHideChatLocally": "Скрий чата за мен",
+  "liveLocalHidingExplanation": "Скриването на участник или неговия чат променя само твоя изглед. Звукът му остава включен и останалите продължават да го виждат.",
+  "liveHiddenChatNotice": "Скритите съобщения остават видими за всички останали."
 }

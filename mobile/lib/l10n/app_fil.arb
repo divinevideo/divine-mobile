@@ -4018,5 +4018,10 @@
   "ideasTitleFive": "Walang mahabang paliwanag",
   "ideasDescriptionFive": "Gusto ko lang magbahagi.",
   "ideasTitleSix": "Kaunti mula sa araw na ito",
-  "ideasDescriptionSix": "Iiwan ko ito rito."
+  "ideasDescriptionSix": "Iiwan ko ito rito.",
+  "liveTabLabel": "Live",
+  "liveHideParticipantLocally": "Itago sa aking view",
+  "liveHideChatLocally": "Itago ang chat para sa akin",
+  "liveLocalHidingExplanation": "Ang pagtatago ng kalahok o ng chat niya ay sa view mo lang. Naka-on pa rin ang audio niya at nakikita pa rin siya ng iba.",
+  "liveHiddenChatNotice": "Nakikita pa rin ng iba ang mga nakatagong mensahe."
 }

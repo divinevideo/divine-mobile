@@ -12692,4 +12692,20 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'ここに置いておきます。';
+
+  @override
+  String get liveTabLabel => 'ライブ';
+
+  @override
+  String get liveHideParticipantLocally => '自分の画面で非表示';
+
+  @override
+  String get liveHideChatLocally => '自分だけチャットを非表示';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      '参加者やチャットを非表示にしても、自分の画面だけが変わります。音声は流れ続け、他の人には引き続き表示されます。';
+
+  @override
+  String get liveHiddenChatNotice => '非表示にしたメッセージは他の人には表示されます。';
 }

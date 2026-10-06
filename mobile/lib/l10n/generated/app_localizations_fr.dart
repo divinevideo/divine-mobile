@@ -13547,4 +13547,21 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Je laisse ça ici.';
+
+  @override
+  String get liveTabLabel => 'En direct';
+
+  @override
+  String get liveHideParticipantLocally => 'Masquer pour moi';
+
+  @override
+  String get liveHideChatLocally => 'Masquer le chat pour moi';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      'Masquer une personne ou son chat ne change que votre vue. Son audio reste actif et les autres la voient toujours.';
+
+  @override
+  String get liveHiddenChatNotice =>
+      'Les messages masqués restent visibles pour les autres.';
 }

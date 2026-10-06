@@ -31,6 +31,8 @@ String get localHost =>
     : loopbackHost;
 
 /// Local Docker stack port mappings.
+const localLiveApiPort = 8088;
+const productionLiveApiBaseUrl = 'https://live.api.divine.video';
 const localKeycastPort = 43000;
 const localRelayPort = 47777;
 

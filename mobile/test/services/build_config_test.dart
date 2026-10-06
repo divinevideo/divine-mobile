@@ -6,6 +6,12 @@ import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/services/build_configuration.dart';
 
 void main() {
+  test('livestream defaults off', () {
+    expect(
+      const BuildConfiguration().getDefault(FeatureFlag.livestreamingBeta),
+      isFalse,
+    );
+  });
   group('BuildConfiguration', () {
     test('should read from environment variables', () {
       // This tests compile-time constants
@@ -78,6 +84,10 @@ void main() {
       expect(
         config.getEnvironmentKey(FeatureFlag.videoReplies),
         equals('FF_VIDEO_REPLIES'),
+      );
+      expect(
+        config.getEnvironmentKey(FeatureFlag.livestreamingBeta),
+        equals('FF_LIVESTREAMING_BETA'),
       );
     });
 

@@ -5019,5 +5019,10 @@
   "ideasTitleFive": "Tanpa banyak penjelasan",
   "ideasDescriptionFive": "Cuma ingin berbagi.",
   "ideasTitleSix": "Sedikit tentang hari ini",
-  "ideasDescriptionSix": "Kutinggalkan ini di sini."
+  "ideasDescriptionSix": "Kutinggalkan ini di sini.",
+  "liveTabLabel": "Langsung",
+  "liveHideParticipantLocally": "Sembunyikan dari tampilan saya",
+  "liveHideChatLocally": "Sembunyikan chat untuk saya",
+  "liveLocalHidingExplanation": "Menyembunyikan peserta atau chat mereka hanya mengubah tampilan Anda. Audio mereka tetap aktif dan orang lain tetap melihat mereka.",
+  "liveHiddenChatNotice": "Pesan yang disembunyikan tetap terlihat oleh orang lain."
 }

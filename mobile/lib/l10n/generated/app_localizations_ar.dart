@@ -13305,4 +13305,20 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'أترك هذا هنا.';
+
+  @override
+  String get liveTabLabel => 'مباشر';
+
+  @override
+  String get liveHideParticipantLocally => 'إخفاء من عرضي';
+
+  @override
+  String get liveHideChatLocally => 'إخفاء الدردشة لدي';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      'إخفاء مشارك أو دردشته يغيّر عرضك فقط. يظل صوته مسموعًا ويظل الآخرون يرونه.';
+
+  @override
+  String get liveHiddenChatNotice => 'تظل الرسائل المخفية مرئية للآخرين.';
 }

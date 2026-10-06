@@ -13007,4 +13007,20 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'ይህን እዚህ እተዋለሁ።';
+
+  @override
+  String get liveTabLabel => 'ቀጥታ';
+
+  @override
+  String get liveHideParticipantLocally => 'ከእኔ እይታ ደብቅ';
+
+  @override
+  String get liveHideChatLocally => 'ውይይቱን ለእኔ ደብቅ';
+
+  @override
+  String get liveLocalHidingExplanation =>
+      'ተሳታፊን ወይም ውይይቱን መደበቅ የአንተን እይታ ብቻ ይቀይራል። ድምፁ አይጠፋም፤ ሌሎችም ማየታቸውን ይቀጥላሉ።';
+
+  @override
+  String get liveHiddenChatNotice => 'የተደበቁ መልዕክቶች ለሌሎች ሁሉ ይታያሉ።';
 }
