@@ -6,7 +6,7 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/utils/detached_future.dart';
-import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:openvine/utils/people_list_owner.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/utils/relay_url_utils.dart';
 import 'package:openvine/utils/sensitive_uri_for_logs.dart';
@@ -362,7 +362,7 @@ class DeepLinkService {
           pathSegments[0] == 'people-lists') {
         final listId = pathSegments[1];
         final listPubkey = owners != null && owners.length == 1
-            ? _peopleListOwner(owners.single)
+            ? normalizePeopleListOwner(owners.single)
             : null;
         if (listId.isEmpty || listPubkey == null) {
           Log.warning(
@@ -396,7 +396,7 @@ class DeepLinkService {
       // action sends and divine.video routes. It lands on the in-app route
       // above with the author moved into the query.
       if (pathSegments.length == 3 && pathSegments[0] == 'people-lists') {
-        final listPubkey = _peopleListOwner(pathSegments[1]);
+        final listPubkey = normalizePeopleListOwner(pathSegments[1]);
         final listId = pathSegments[2];
         if (listPubkey == null || listId.isEmpty) {
           Log.warning(
@@ -437,21 +437,6 @@ class DeepLinkService {
       );
       return const DeepLink(type: DeepLinkType.unknown);
     }
-  }
-
-  /// Only complete public authors are valid people-list coordinates. Keep
-  /// this boundary local; profile and other identifier policies are separate.
-  static String? _peopleListOwner(String identifier) {
-    final lowercase = identifier.toLowerCase();
-    final normalizedInput =
-        (lowercase.startsWith('npub1') || lowercase.startsWith('nprofile1')) &&
-            identifier == identifier.toUpperCase()
-        ? lowercase
-        : identifier;
-    final owner = normalizePublicIdentifier(normalizedInput)?.hexPubkey;
-    return owner != null && NostrKeyUtils.isValidKey(owner)
-        ? owner.toLowerCase()
-        : null;
   }
 
   /// Dispose the service

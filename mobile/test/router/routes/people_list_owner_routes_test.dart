@@ -12,6 +12,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/nip19.dart';
+import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/people_lists.dart';
@@ -26,6 +27,7 @@ import 'package:openvine/router/route_error_screen.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/lists_routes.dart';
 import 'package:openvine/screens/user_list_people_screen.dart';
+import 'package:openvine/services/deep_link_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 
@@ -237,6 +239,61 @@ void main() {
       expect(find.byType(RouteErrorScreen), findsOneWidget);
       expect(find.byType(TextFormField), findsNothing);
     });
+
+    final npub = NostrKeyUtils.encodePubKey(_owner);
+    final nprofile = NIP19Tlv.encodeNprofile(
+      Nprofile(pubkey: _owner, relays: const ['wss://example.invalid']),
+    );
+    for (final (label, identifier, accepted) in [
+      ('hex', _owner, true),
+      ('uppercase hex', _owner.toUpperCase(), true),
+      ('npub', npub, true),
+      ('uppercase npub', npub.toUpperCase(), true),
+      ('nprofile', nprofile, true),
+      ('uppercase nprofile', nprofile.toUpperCase(), true),
+      ('empty', '', false),
+      ('relative profile', 'me', false),
+      ('malformed', 'not-a-key', false),
+      ('short npub', NostrKeyUtils.encodePubKey('11'), false),
+      (
+        'short nprofile',
+        NIP19Tlv.encodeNprofile(Nprofile(pubkey: '11')),
+        false,
+      ),
+      ('private key', Nip19.encodePrivateKey(_owner), false),
+      ('event identifier', Nip19.encodeNoteId(_owner), false),
+      ('mixed-case npub', npub.replaceFirst('npub', 'Npub'), false),
+      (
+        'mixed-case nprofile',
+        nprofile.replaceFirst('nprofile', 'Nprofile'),
+        false,
+      ),
+    ]) {
+      testWidgets('raw $label has the same link and route author policy', (
+        tester,
+      ) async {
+        final location = Uri(
+          path: '/people-lists/crew',
+          queryParameters: {'owner': identifier},
+        ).toString();
+        final parsed = DeepLinkService.parseDeepLink(
+          'https://divine.video$location',
+        );
+        await pumpRoute(tester, location);
+
+        if (accepted) {
+          expect(parsed.type, DeepLinkType.peopleList);
+          expect(parsed.listPubkey, _owner);
+          expect(_selected, isA<UserListPeopleScreen>());
+          expect((_selected! as UserListPeopleScreen).ownerPubkey, _owner);
+        } else {
+          expect(parsed.type, DeepLinkType.unknown);
+          expect(parsed.listPubkey, isNull);
+          expect(_selected, isA<RouteErrorScreen>());
+        }
+        verifyNever(() => bloc.add(any()));
+      });
+    }
 
     for (final suffix in ['', '/members', '/add-people', '/edit']) {
       for (final query in [
