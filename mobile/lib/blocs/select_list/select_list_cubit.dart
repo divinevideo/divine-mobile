@@ -32,7 +32,8 @@ class SelectListCubit extends Cubit<SelectListState>
     _service.addListener(_listsChanged);
   }
 
-  final CuratedListService _service;
+  CuratedListService _service;
+  int _writeEpoch = 0;
   final String _videoEventId;
   final String? Function() _currentOwnerPubkey;
   final String? _openingOwnerPubkey;
@@ -51,6 +52,8 @@ class SelectListCubit extends Cubit<SelectListState>
       : service.myLists.where((list) => list.pubkey == owner).toList();
 
   bool _canMutate(String listId) =>
+      state.serviceAvailable &&
+      !_service.recoveryNeedsRepair &&
       isSessionCurrent &&
       _ownedLists(
         _service,
@@ -90,6 +93,7 @@ class SelectListCubit extends Cubit<SelectListState>
         syncingListIds: const {},
         failedSyncListIds: const {},
         status: SelectListStatus.failure,
+        serviceAvailable: false,
       ),
     );
     return SelectListStatus.failure;
@@ -108,6 +112,8 @@ class SelectListCubit extends Cubit<SelectListState>
       lists: lists,
       memberListIds: members,
       selectedListIds: members,
+      recoveryReadOnly: service.recoveryNeedsRepair,
+      serviceAvailable: service.isCurrentSession,
     );
   }
 
@@ -118,6 +124,63 @@ class SelectListCubit extends Cubit<SelectListState>
     };
   }
 
+  /// Follows the provider's current service without carrying staged picks
+  /// across service replacement. Missing services preserve a known recovery
+  /// hold and the last safe rows, while keeping all writes unavailable.
+  void serviceChanged(CuratedListService? service) {
+    if (isClosed) return;
+    if (_currentOwnerPubkey() != _openingOwnerPubkey) {
+      _writeEpoch++;
+      _sessionFailure();
+      return;
+    }
+    if (service == null) {
+      if (state.serviceAvailable) _writeEpoch++;
+      emitIfOpen(
+        state.copyWith(
+          serviceAvailable: false,
+          status: SelectListStatus.editing,
+          syncingListIds: const {},
+        ),
+      );
+      return;
+    }
+    if (!identical(service, _service)) {
+      _writeEpoch++;
+      _service.removeListener(_listsChanged);
+      _service = service;
+      _service.addListener(_listsChanged);
+      emitIfOpen(_initialState(service, _videoEventId, _openingOwnerPubkey));
+    } else {
+      emitIfOpen(state.copyWith(serviceAvailable: true));
+    }
+    _listsChanged();
+  }
+
+  /// Checks the live service as well as the rendered state, so callbacks
+  /// captured before a recovery hold cannot stage or publish a change.
+  void refreshRecoveryReadOnly() {
+    if (isClosed || !state.serviceAvailable) return;
+    final held = _service.recoveryNeedsRepair;
+    if (held == state.recoveryReadOnly) return;
+    if (held) _writeEpoch++;
+    emitIfOpen(
+      state.copyWith(
+        recoveryReadOnly: held,
+        selectedListIds: held ? state.memberListIds : state.selectedListIds,
+        status: SelectListStatus.editing,
+        syncingListIds: const {},
+      ),
+    );
+  }
+
+  bool _writesPaused() {
+    refreshRecoveryReadOnly();
+    return !state.serviceAvailable || state.recoveryReadOnly;
+  }
+
+  bool _writeInterrupted(int epoch) => _writesPaused() || epoch != _writeEpoch;
+
   /// Picks the list with [listId], or unpicks it when it is picked.
   ///
   /// Ignored while a save runs, and for a list the sheet does not offer.
@@ -127,6 +190,7 @@ class SelectListCubit extends Cubit<SelectListState>
       _sessionFailure();
       return;
     }
+    if (_writesPaused()) return;
     if (state.lists.none(
       (list) => list.id == listId && !list.hasPendingPermissionRecovery,
     )) {
@@ -153,8 +217,10 @@ class SelectListCubit extends Cubit<SelectListState>
   /// disabled. Returns the outcome so a caller can report failure even after
   /// the sheet closes.
   Future<SelectListStatus?> submitted() async {
-    if (!state.canSubmit) return null;
     if (!isSessionCurrent) return _sessionFailure();
+    if (_writesPaused() || !state.canSubmit) return null;
+    final epoch = _writeEpoch;
+    final service = _service;
     final toAdd = state.listIdsToAdd;
     final toRemove = state.listIdsToRemove;
     if (_permissionRecoveryBlocks({...toAdd, ...toRemove})) {
@@ -170,10 +236,12 @@ class SelectListCubit extends Cubit<SelectListState>
     var full = 0;
     try {
       for (final listId in toAdd) {
+        if (_writeInterrupted(epoch)) return null;
         if (!_canMutate(listId)) return _sessionFailure();
         if (_permissionRecoveryBlocks({listId})) return _recoveryRequired();
-        final added = await _service.addVideoToList(listId, _videoEventId);
+        final added = await service.addVideoToList(listId, _videoEventId);
         if (!isSessionCurrent) return _sessionFailure();
+        if (_writeInterrupted(epoch)) return null;
         if (added) continue;
         failed++;
         final list = state.lists.firstWhereOrNull((it) => it.id == listId);
@@ -186,13 +254,15 @@ class SelectListCubit extends Cubit<SelectListState>
         }
       }
       for (final listId in toRemove) {
+        if (_writeInterrupted(epoch)) return null;
         if (!_canMutate(listId)) return _sessionFailure();
         if (_permissionRecoveryBlocks({listId})) return _recoveryRequired();
-        final removed = await _service.removeVideoFromList(
+        final removed = await service.removeVideoFromList(
           listId,
           _videoEventId,
         );
         if (!isSessionCurrent) return _sessionFailure();
+        if (_writeInterrupted(epoch)) return null;
         if (!removed) {
           failed++;
         }
@@ -200,6 +270,7 @@ class SelectListCubit extends Cubit<SelectListState>
     } catch (error, stackTrace) {
       addError(error, stackTrace);
       if (!isSessionCurrent) return _sessionFailure();
+      if (_writeInterrupted(epoch)) return null;
       emitIfOpen(state.copyWith(status: SelectListStatus.failure));
       return SelectListStatus.failure;
     }
@@ -219,12 +290,14 @@ class SelectListCubit extends Cubit<SelectListState>
   /// is what covers the screen underneath, so the failure line shows here;
   /// the new list's row shows whether the video is in it.
   void createdListRefusedVideo() {
-    if (state.isSaving || !isSessionCurrent) return;
+    if (_writesPaused() || state.isSaving || !isSessionCurrent) return;
     emitIfOpen(state.copyWith(status: SelectListStatus.createdWithoutVideo));
   }
 
   void createdListWithVideoPendingSync() {
-    if (isClosed || state.isSaving || !isSessionCurrent) return;
+    if (isClosed || _writesPaused() || state.isSaving || !isSessionCurrent) {
+      return;
+    }
     _listsChanged();
     emitIfOpen(
       state.copyWith(
@@ -242,6 +315,7 @@ class SelectListCubit extends Cubit<SelectListState>
       _sessionFailure();
       return;
     }
+    if (_writesPaused()) return;
     if (state.isSaving ||
         !_canMutate(listId) ||
         !state.pendingSyncListIds.contains(listId)) {
@@ -254,9 +328,11 @@ class SelectListCubit extends Cubit<SelectListState>
         failedSyncListIds: state.failedSyncListIds.difference({listId}),
       ),
     );
+    final epoch = _writeEpoch;
+    final service = _service;
     var synced = false;
     try {
-      synced = await _service.retryListSync(listId);
+      synced = await service.retryListSync(listId);
     } catch (error, stackTrace) {
       addError(error, stackTrace);
     }
@@ -264,6 +340,7 @@ class SelectListCubit extends Cubit<SelectListState>
       _sessionFailure();
       return;
     }
+    if (_writeInterrupted(epoch)) return;
     // A service may settle before its listener notification; read its durable
     // membership again rather than treating the retry bool as a row snapshot.
     _listsChanged();
@@ -289,7 +366,8 @@ class SelectListCubit extends Cubit<SelectListState>
   /// lost it is unpicked, and one that is gone drops out of the picks; every
   /// other pick stands, so a save in progress keeps what was chosen.
   void _listsChanged() {
-    if (isClosed) return;
+    if (isClosed || !state.serviceAvailable) return;
+    refreshRecoveryReadOnly();
     if (!isSessionCurrent) {
       emitIfOpen(
         state.copyWith(
@@ -299,6 +377,7 @@ class SelectListCubit extends Cubit<SelectListState>
           status: SelectListStatus.failure,
           syncingListIds: const {},
           failedSyncListIds: const {},
+          serviceAvailable: false,
         ),
       );
       return;

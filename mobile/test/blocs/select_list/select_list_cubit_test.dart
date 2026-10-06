@@ -21,7 +21,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers/curated_list_publish_stubs.dart';
 
-class _MockCuratedListService extends Mock implements CuratedListService {}
+class _MockCuratedListService extends Mock implements CuratedListService {
+  @override
+  bool recoveryNeedsRepair = false;
+}
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
@@ -90,6 +93,191 @@ void main() {
         expect(cubit.state.status, SelectListStatus.editing);
         expect(cubit.state.listIdsToAdd, isEmpty);
         expect(cubit.state.listIdsToRemove, isEmpty);
+      });
+    });
+
+    group('read-only recovery', () {
+      test(
+        'keeps saved rows while blocking staging, submit and sync',
+        () async {
+          final pending = _list(
+            'holds',
+            videoEventIds: [_videoId],
+          ).copyWith(pendingRepublish: true);
+          stubLists([pending, _list('empty')]);
+          service.recoveryNeedsRepair = true;
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+
+          cubit.toggled('holds');
+          cubit.toggled('empty');
+          expect(await cubit.submitted(), isNull);
+          await cubit.syncRequested('holds');
+
+          expect(cubit.state.lists, [pending, _list('empty')]);
+          expect(cubit.state.selectedListIds, {'holds'});
+          expect(cubit.state.recoveryReadOnly, isTrue);
+          expect(cubit.state.canEdit, isFalse);
+          expect(cubit.state.canSubmit, isFalse);
+          expect(cubit.state.status, SelectListStatus.editing);
+          verifyNever(() => service.addVideoToList(any(), any()));
+          verifyNever(() => service.removeVideoFromList(any(), any()));
+          verifyNever(() => service.retryListSync(any()));
+        },
+      );
+
+      test(
+        'a live hold drops unsaved picks before a stale callback writes',
+        () async {
+          stubLists([
+            _list('holds', videoEventIds: [_videoId]),
+            _list('empty'),
+          ]);
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+          cubit.toggled('holds');
+          cubit.toggled('empty');
+          service.recoveryNeedsRepair = true;
+
+          expect(await cubit.submitted(), isNull);
+          cubit.toggled('empty');
+          expect(cubit.state.selectedListIds, {'holds'});
+          expect(cubit.state.listIdsToAdd, isEmpty);
+          expect(cubit.state.listIdsToRemove, isEmpty);
+          expect(cubit.state.status, SelectListStatus.editing);
+          verifyNever(() => service.addVideoToList(any(), any()));
+          verifyNever(() => service.removeVideoFromList(any(), any()));
+        },
+      );
+
+      test(
+        'a hold interrupts a batch even if repaired before its await ends',
+        () async {
+          stubLists([_list('first'), _list('second')]);
+          final gate = Completer<bool>();
+          when(() => service.addVideoToList('first', _videoId))
+              .thenAnswer((_) => gate.future);
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+          final listener = capturedListener();
+          cubit
+            ..toggled('first')
+            ..toggled('second');
+          final save = cubit.submitted();
+          service.recoveryNeedsRepair = true;
+          listener();
+          service.recoveryNeedsRepair = false;
+          listener();
+          gate.complete(true);
+
+          expect(await save, isNull);
+          expect(cubit.state.status, SelectListStatus.editing);
+          verifyNever(() => service.addVideoToList('second', _videoId));
+        },
+      );
+
+      test(
+        'a hold interrupts sync without reporting its stale outcome',
+        () async {
+          stubLists([
+            _list(
+              'holds',
+              videoEventIds: [_videoId],
+            ).copyWith(pendingRepublish: true),
+          ]);
+          final gate = Completer<bool>();
+          when(() => service.retryListSync('holds'))
+              .thenAnswer((_) => gate.future);
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+          final sync = cubit.syncRequested('holds');
+          service.recoveryNeedsRepair = true;
+          gate.complete(false);
+          await sync;
+
+          expect(cubit.state.recoveryReadOnly, isTrue);
+          expect(cubit.state.status, SelectListStatus.editing);
+          expect(cubit.state.syncingListIds, isEmpty);
+          expect(cubit.state.failedSyncListIds, isEmpty);
+        },
+      );
+
+      test(
+        'missing provider service preserves the known hold until a replacement',
+        () {
+          stubLists([
+            _list('holds', videoEventIds: [_videoId]),
+          ]);
+          service.recoveryNeedsRepair = true;
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+          cubit.serviceChanged(null);
+          service.recoveryNeedsRepair = false;
+          cubit.refreshRecoveryReadOnly();
+
+          expect(cubit.state.recoveryReadOnly, isTrue);
+          expect(cubit.state.serviceAvailable, isFalse);
+          expect(cubit.state.selectedListIds, {'holds'});
+          final replacement = _MockCuratedListService();
+          when(() => replacement.isCurrentSession).thenReturn(true);
+          when(() => replacement.myLists).thenReturn([_list('new')]);
+          cubit.serviceChanged(replacement);
+          expect(cubit.state.recoveryReadOnly, isFalse);
+          expect(cubit.state.serviceAvailable, isTrue);
+          expect(cubit.state.lists.single.id, 'new');
+          expect(cubit.state.selectedListIds, isEmpty);
+          expect(cubit.state.canEdit, isTrue);
+        },
+      );
+
+      test(
+        'replacement drops staging and prevents the previous batch continuing',
+        () async {
+          stubLists([_list('first'), _list('second')]);
+          final gate = Completer<bool>();
+          when(() => service.addVideoToList('first', _videoId))
+              .thenAnswer((_) => gate.future);
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+          cubit
+            ..toggled('first')
+            ..toggled('second');
+          final save = cubit.submitted();
+          final replacement = _MockCuratedListService()
+            ..recoveryNeedsRepair = true;
+          when(() => replacement.isCurrentSession).thenReturn(true);
+          when(() => replacement.myLists).thenReturn([
+            _list('replacement', videoEventIds: [_videoId]),
+          ]);
+          cubit.serviceChanged(replacement);
+          gate.complete(true);
+
+          expect(await save, isNull);
+          expect(cubit.state.recoveryReadOnly, isTrue);
+          expect(cubit.state.selectedListIds, {'replacement'});
+          expect(cubit.state.status, SelectListStatus.editing);
+          verifyNever(() => service.addVideoToList('second', _videoId));
+          verifyNever(() => replacement.addVideoToList(any(), any()));
+        },
+      );
+
+      test('immutable flags participate in copies and equality', () {
+        const initial = SelectListState(
+          lists: [],
+          memberListIds: {},
+          selectedListIds: {},
+        );
+        final held = initial.copyWith(
+          recoveryReadOnly: true,
+          serviceAvailable: false,
+        );
+        expect(held, isNot(initial));
+        expect(held.copyWith(), held);
+        expect(held.canEdit, isFalse);
+        expect(
+          held.copyWith(recoveryReadOnly: false, serviceAvailable: true),
+          initial,
+        );
       });
     });
 
@@ -388,6 +576,29 @@ void main() {
     });
 
     group('opening account', () {
+      test(
+        'a recovery hold never preserves rows after an account changes',
+        () async {
+          stubLists([
+            _list('private', isPublic: false, videoEventIds: [_videoId]),
+          ]);
+          service.recoveryNeedsRepair = true;
+          String? owner = _ownerPubkey;
+          final cubit = SelectListCubit(
+            service: service,
+            videoEventId: _videoId,
+            currentOwnerPubkey: () => owner,
+          );
+          addTearDown(cubit.close);
+          owner = 'e' * 64;
+          expect(await cubit.submitted(), SelectListStatus.failure);
+          expect(cubit.state.lists, isEmpty);
+          expect(cubit.state.selectedListIds, isEmpty);
+          expect(cubit.state.canEdit, isFalse);
+          verifyNever(() => service.addVideoToList(any(), any()));
+        },
+      );
+
       test('does not submit a visit after the account changes', () async {
         stubLists([_list('empty')]);
         String? owner = _ownerPubkey;

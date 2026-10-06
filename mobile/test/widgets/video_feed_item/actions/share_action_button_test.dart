@@ -52,7 +52,10 @@ class _MockVideoSharingService extends Mock implements VideoSharingService {}
 class _MockCrosspostingApiClient extends Mock
     implements CrosspostingApiClient {}
 
-class _MockCuratedListService extends Mock implements CuratedListService {}
+class _MockCuratedListService extends Mock implements CuratedListService {
+  @override
+  bool recoveryNeedsRepair = false;
+}
 
 /// Set before each test; read by [_FakeCuratedListsState].
 _MockCuratedListService? _fakeListService;
