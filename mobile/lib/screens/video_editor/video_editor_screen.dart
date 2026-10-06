@@ -57,6 +57,7 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dar
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_captions_sheet.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/utils/cancel_live_volume_preview.dart';
 import 'package:openvine/widgets/video_editor/video_editor_scaffold.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -405,6 +406,16 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     _playheadAdvancingNotifier.dispose();
     _liveVolumeNotifier.dispose();
     super.dispose();
+  }
+
+  bool _cancelLiveVolumePreview(LiveVolume expected) {
+    if (!mounted) return false;
+    return cancelLiveVolumePreview(
+      expected: expected,
+      notifier: _liveVolumeNotifier,
+      clipState: _clipEditorBloc.state,
+      overlayState: _timelineOverlayBloc.state,
+    );
   }
 
   void _runDetached(Future<void> operation, String description) {
@@ -1129,6 +1140,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
               playTimeNotifier: _playTimeNotifier,
               playheadAdvancingNotifier: _playheadAdvancingNotifier,
               liveVolumeNotifier: _liveVolumeNotifier,
+              cancelLiveVolumePreview: _cancelLiveVolumePreview,
               fromLibrary: widget.fromLibrary,
               onOpenCamera: () => _runDetached(
                 _openCamera(

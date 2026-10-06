@@ -16,6 +16,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/live_volume.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/flashing_effect_snack_bar.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
@@ -83,6 +84,7 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
   /// [didChangeDependencies]. Driven from the scroll offset while the user
   /// scrubs so canvas overlays (the CC caption pill) follow the scrub live.
   ValueNotifier<Duration>? _scopePlayTimeNotifier;
+  bool Function(LiveVolume)? _cancelScopeLiveVolumePreview;
 
   /// Active pointer positions — when ≥ 2 we compute pinch scale.
   final Map<int, Offset> _pointerPositions = {};
@@ -122,7 +124,9 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _scopePlayTimeNotifier = VideoEditorScope.of(context).playTimeNotifier;
+    final scope = VideoEditorScope.of(context);
+    _scopePlayTimeNotifier = scope.playTimeNotifier;
+    _cancelScopeLiveVolumePreview = scope.cancelLiveVolumePreview;
   }
 
   @override
@@ -135,6 +139,13 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
     _playheadPosition.dispose();
     _volumePreviewNotifier.dispose();
     super.dispose();
+  }
+
+  void _cancelVolumePreview(LiveVolume expected) {
+    // The screen checks its own lifetime even after this timeline unmounts.
+    // This captured callback must not look up a disposed context.
+    if (!(_cancelScopeLiveVolumePreview?.call(expected) ?? false)) return;
+    if (mounted) _volumePreviewNotifier.value = null;
   }
 
   double _contentWidth(Duration totalDuration) =>
@@ -418,6 +429,7 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
                       overlayStripsScrollController:
                           _overlayStripsScrollController,
                       volumePreviewNotifier: _volumePreviewNotifier,
+                      onVolumePreviewCancelled: _cancelVolumePreview,
                     ),
                   ),
                 ),

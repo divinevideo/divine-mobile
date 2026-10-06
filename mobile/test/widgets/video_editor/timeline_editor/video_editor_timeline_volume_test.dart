@@ -52,6 +52,7 @@ void main() {
             ],
             child: VideoEditorTimelineVolume(
               volumePreviewNotifier: volumePreviewNotifier,
+              onPreviewCancelled: (_) {},
               liveVolumeNotifier: liveVolumeNotifier,
             ),
           ),

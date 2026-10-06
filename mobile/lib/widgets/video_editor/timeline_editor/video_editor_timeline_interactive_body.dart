@@ -6,6 +6,7 @@ import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/live_volume.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_clip_strip.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_strip.dart';
@@ -56,6 +57,7 @@ class VideoEditorTimelineInteractiveBody extends StatelessWidget {
     required this.verticalScrollController,
     required this.overlayStripsScrollController,
     required this.volumePreviewNotifier,
+    required this.onVolumePreviewCancelled,
     super.key,
   });
 
@@ -94,6 +96,7 @@ class VideoEditorTimelineInteractiveBody extends StatelessWidget {
   final ScrollController verticalScrollController;
   final ScrollController overlayStripsScrollController;
   final ValueNotifier<double?> volumePreviewNotifier;
+  final ValueChanged<LiveVolume> onVolumePreviewCancelled;
 
   @override
   Widget build(BuildContext context) {
@@ -260,6 +263,7 @@ class VideoEditorTimelineInteractiveBody extends StatelessWidget {
                             ? VideoEditorTimelineVolume(
                                 key: const ValueKey('volume'),
                                 volumePreviewNotifier: volumePreviewNotifier,
+                                onPreviewCancelled: onVolumePreviewCancelled,
                                 liveVolumeNotifier: VideoEditorScope.maybeOf(
                                   context,
                                 )?.liveVolumeNotifier,
