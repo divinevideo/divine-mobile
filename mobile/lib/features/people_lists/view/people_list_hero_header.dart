@@ -214,8 +214,8 @@ class _AvatarPile extends StatelessWidget {
         children: [
           // Painted last to first so the best-ranked member tops the pile.
           for (var i = pubkeys.length - 1; i >= 0; i--)
-            Positioned(
-              left: step * i,
+            PositionedDirectional(
+              start: step * i,
               child: _PreviewAvatar(pubkey: pubkeys[i]),
             ),
         ],
