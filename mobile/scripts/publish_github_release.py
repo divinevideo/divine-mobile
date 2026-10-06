@@ -79,10 +79,16 @@ class GitHub:
         run('gh', 'release', 'upload', tag, '--repo', self.repo, *map(str, paths))
 
     def edit(self, tag, body, beta):
-        self.with_notes(['edit', tag, '--draft=false',
-                         f'--prerelease={str(beta).lower()}',
-                         f'--latest={str(not beta).lower()}',
-                         '--title', f'Divine {tag}'], body)
+        record = self.get_release(tag)
+        # GitHub selects Latest by date/semantic version. Forcing latest=true
+        # here could undo a newer release completed during our artifact upload.
+        payload = dict(name=f'Divine {tag}', body=body, draft=False,
+                       prerelease=beta, make_latest='false' if beta else 'legacy')
+        subprocess.run(
+            ['gh', 'api', '--method', 'PATCH',
+             f"repos/{self.repo}/releases/{record['id']}", '--input', '-'],
+            input=json.dumps(payload), text=True, capture_output=True, check=True,
+        )
 
     def download(self, tag, directory):
         run('gh', 'release', 'download', tag, '--repo', self.repo,
@@ -91,6 +97,18 @@ class GitHub:
     def latest_tag(self):
         release = self.api('releases/latest', optional=True)
         return release['tag_name'] if release else None
+
+
+def version_number(tag):
+    if tag and re.fullmatch(r'\d+\.\d+\.\d+', tag):
+        return tuple(map(int, tag.split('.')))
+    return None
+
+
+def check_newer_release(gh, version):
+    latest = version_number(gh.latest_tag())
+    if latest and latest > version_number(version):
+        raise ValueError('Cannot replace a newer Latest release with an older version')
 
 
 def publish(gh, version, sha, channel, backend, notes, artifacts):
@@ -128,10 +146,8 @@ def publish(gh, version, sha, channel, backend, notes, artifacts):
         raise ValueError('Existing draft targets a different commit; refusing publication')
     if current and beta and not current['prerelease']:
         raise ValueError('Cannot turn an existing stable release into a beta')
-    latest = gh.latest_tag() if not beta else None
-    if latest and re.fullmatch(r'\d+\.\d+\.\d+', latest):
-        if tuple(map(int, latest.split('.'))) > tuple(map(int, version.split('.'))):
-            raise ValueError('Cannot replace a newer Latest release with an older version')
+    if not beta:
+        check_newer_release(gh, version)
     existing = {a['name']: a for a in current['assets']} if current else {}
     missing = []
     for path in artifacts:
@@ -147,6 +163,8 @@ def publish(gh, version, sha, channel, backend, notes, artifacts):
     uploaded_assets = {a['name']: a.get('digest') for a in uploaded['assets']}
     if any(uploaded_assets.get(p.name) != digest(p) for p in artifacts):
         raise RuntimeError('Uploaded artifact verification failed; release not promoted')
+    if not beta:
+        check_newer_release(gh, version)
     gh.edit(tag, body, beta)
     saved = gh.get_release(tag)
     if (saved['draft'] or saved['prerelease'] != beta
@@ -156,8 +174,10 @@ def publish(gh, version, sha, channel, backend, notes, artifacts):
     saved_assets = {a['name']: a.get('digest') for a in saved['assets']}
     if any(saved_assets.get(p.name) != digest(p) for p in artifacts):
         raise RuntimeError('Published artifact verification failed')
-    if not beta and gh.latest_tag() != tag:
-        raise RuntimeError('Production release was not marked Latest')
+    if not beta:
+        latest = version_number(gh.latest_tag())
+        if latest is None or latest < version_number(version):
+            raise RuntimeError('Latest release verification failed')
     return tag
 
 

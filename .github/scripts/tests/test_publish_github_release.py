@@ -140,6 +140,26 @@ class PublicationTest(unittest.TestCase):
             self.publish()
         self.assertEqual(self.gh.calls, [])
 
+    def test_newer_release_during_upload_prevents_late_promotion(self):
+        upload = self.gh.upload
+        def newer_release(tag, paths):
+            upload(tag, paths)
+            self.gh.latest_tag = lambda: '1.2.4'
+        self.gh.upload = newer_release
+        with self.assertRaisesRegex(ValueError, 'newer'):
+            self.publish()
+        self.assertTrue(self.gh.record['draft'])
+        self.assertNotIn('edit', [c[0] for c in self.gh.calls])
+
+    def test_newer_latest_during_publication_is_preserved(self):
+        edit = self.gh.edit
+        def concurrent_release(tag, body, beta):
+            edit(tag, body, beta)
+            self.gh.latest_tag = lambda: '1.2.4'
+        self.gh.edit = concurrent_release
+        self.assertEqual(self.publish(), '1.2.3')
+        self.assertEqual(self.gh.latest_tag(), '1.2.4')
+
     def test_invalid_channel_and_version_fail_closed(self):
         for version, channel in [('1.2.3', ''), ('1.2.3-rc', 'PRODUCTION')]:
             with self.assertRaises(ValueError):
@@ -238,15 +258,26 @@ class GitHubAdapterTest(unittest.TestCase):
             return ''
         with patch.object(release, 'run', side_effect=capture):
             gh.create('1.2.3', SHA, 'Literal `text` and $values', False)
-            gh.edit('1.2.3', 'Finished notes', False)
-            gh.edit('1.2.3-beta.production.' + SHA, 'Beta notes', True)
         self.assertIn('--draft', calls[0][0])
         self.assertIn(SHA, calls[0][0])
         self.assertEqual(calls[0][1], 'Literal `text` and $values')
-        self.assertIn('--prerelease=false', calls[1][0])
-        self.assertIn('--latest=true', calls[1][0])
-        self.assertIn('--prerelease=true', calls[2][0])
-        self.assertIn('--latest=false', calls[2][0])
+        with patch.object(gh, 'get_release', return_value={'id': 42}), patch.object(
+            release.subprocess, 'run'
+        ) as execute:
+            gh.edit('1.2.3', 'Finished notes', False)
+            command = execute.call_args.args[0]
+            payload = json.loads(execute.call_args.kwargs['input'])
+            self.assertIn('PATCH', command)
+            self.assertIn('repos/owner/repo/releases/42', command)
+            self.assertFalse(payload['prerelease'])
+            self.assertFalse(payload['draft'])
+            self.assertEqual(payload['make_latest'], 'legacy')
+            self.assertEqual(payload['body'], 'Finished notes')
+            gh.edit('1.2.3-beta.production.' + SHA, 'Beta notes', True)
+            payload = json.loads(execute.call_args.kwargs['input'])
+            self.assertTrue(payload['prerelease'])
+            self.assertEqual(payload['make_latest'], 'false')
+
 
 
 if __name__ == '__main__':

@@ -42,12 +42,16 @@ The iOS, Android, and macOS build workflows expose `RELEASE_CHANNEL`:
 | Channel | GitHub | Zapstore |
 | --- | --- | --- |
 | `BETA` (default) | Prerelease, never Latest; tag `<version>-beta.<backend>.<full-source-sha>` | Not published |
-| `PRODUCTION` | Stable and Latest; tag `<version>`; requires finished notes and production backend | Android publishes the stable release |
+| `PRODUCTION` | Stable; GitHub selects Latest automatically by date/version; tag `<version>`; requires finished notes and production backend | Android publishes the stable release |
 
 `DEFAULT_ENV` selects the backend, independently of release readiness. A build
 using the production backend can still be a beta. Different beta backends and
 source commits get separate tags. iOS and Android from the same source/backend
 share the same beta release.
+
+Production publishing uses GitHub’s automatic Latest selection instead of
+forcing its own release over a concurrently published newer version. Latest is
+verified to be this version or a higher version.
 
 Production publishing stops if the version’s tag points to another commit,
 notes are missing or marked DRAFT, or a newer stable version is already Latest.
