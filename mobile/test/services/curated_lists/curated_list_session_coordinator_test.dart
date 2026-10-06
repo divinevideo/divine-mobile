@@ -171,5 +171,50 @@ void main() {
       );
       expect(current.isCurrent, isFalse);
     });
+    test(
+      'nested recovery holds notify live peers and exclude retired leases',
+      () async {
+        final seen = <bool>[];
+        final first = sessions.acquire(
+          onRecoveryReadinessChanged: () =>
+              seen.add(sessions.recoveryRepairInProgress),
+        );
+        var retiredNotifications = 0;
+        final retired = sessions.acquire(
+          onRecoveryReadinessChanged: () => retiredNotifications++,
+        );
+        retired.retire();
+        await sessions.holdRecoveryRepair(() async {
+          expect(sessions.recoveryRepairInProgress, isTrue);
+          await sessions.holdRecoveryRepair(() async {
+            expect(sessions.recoveryRepairInProgress, isTrue);
+          });
+          expect(sessions.recoveryRepairInProgress, isTrue);
+        });
+        expect(seen, [true, true, true, false]);
+        expect(retiredNotifications, 0);
+        expect(first.isCurrent, isTrue);
+      },
+    );
+
+    test('failed repair releases temporary depth but preserves unknown readback for new leases', () async {
+      await expectLater(
+        sessions.holdRecoveryRepair<void>(() async {
+          sessions.markRecoveryReadbackUnknown();
+          throw StateError('unverified backend');
+        }),
+        throwsStateError,
+      );
+      expect(sessions.recoveryRepairInProgress, isFalse);
+      expect(sessions.recoveryReadbackUnknown, isTrue);
+      expect(sessions.acquire().isCurrent, isTrue);
+      expect(
+        CuratedListSessionCoordinator.forPreferences(prefs)
+            .recoveryReadbackUnknown,
+        isTrue,
+      );
+      sessions.acknowledgeRecoveryReadback();
+      expect(sessions.recoveryReadbackUnknown, isFalse);
+    });
   });
 }
