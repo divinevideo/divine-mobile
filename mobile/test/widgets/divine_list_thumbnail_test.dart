@@ -87,6 +87,55 @@ void main() {
   );
 
   group(DivineListThumbnail, () {
+    testWidgets(
+      'public people media keeps the count without resolving identities',
+      (
+        tester,
+      ) async {
+        var identityReads = 0;
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              ...getStandardTestOverrides(),
+              fetchUserProfileProvider.overrideWith((ref, pubkey) async {
+                identityReads++;
+                return profileFor(pubkey, displayName: 'Cached member');
+              }),
+              userProfileReactiveProvider.overrideWith((ref, pubkey) {
+                identityReads++;
+                return Stream.value(
+                  profileFor(
+                    pubkey,
+                    displayName: 'Cached member',
+                    picture: 'https://example.com/cached-member.jpg',
+                  ),
+                );
+              }),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: SizedBox(
+                  width: 185,
+                  child: DivineListMedia.people(
+                    memberPubkeys: ['a' * 64, 'b' * 64],
+                    showMemberIdentities: false,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        expect(identityReads, 0);
+        expect(find.text('2'), findsOneWidget);
+        expect(find.text('Cached member'), findsNothing);
+        expect(find.byType(UserAvatar), findsNothing);
+        expect(find.byType(VineCachedImage), findsNothing);
+      },
+    );
+
     group('videos variant', () {
       Widget buildSubject({
         required CuratedList curatedList,
