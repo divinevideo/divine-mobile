@@ -6425,5 +6425,7 @@
   "badgeSubscribedAction": "Абониран",
   "badgeSubscribeAction": "Абониране за значката",
   "badgeAcceptedHoldersTitle": "Приели значката",
-  "badgeSubscriptionLoadError": "Абонаментите ви за значки не можаха да се заредят. Опитайте отново."
+  "badgeSubscriptionLoadError": "Абонаментите ви за значки не можаха да се заредят. Опитайте отново.",
+  "minorAccountReviewVideoSubmittedBody": "Видеото ти е изпратено за преглед.",
+  "minorAccountReviewVideoSubmittedTitle": "Видеото е изпратено"
 }

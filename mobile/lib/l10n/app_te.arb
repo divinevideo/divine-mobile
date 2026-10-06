@@ -9235,5 +9235,7 @@
   "creatorHighlightAnalytics": "మీ గణాంకాలను చూడండి",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  }
+  },
+  "minorAccountReviewVideoSubmittedBody": "మీ వీడియో సమీక్ష కోసం సమర్పించబడింది.",
+  "minorAccountReviewVideoSubmittedTitle": "వీడియో సమర్పించబడింది"
 }

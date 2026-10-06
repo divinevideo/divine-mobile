@@ -6308,5 +6308,7 @@
   "badgeSubscribedAction": "Abonné",
   "badgeSubscribeAction": "S’abonner au badge",
   "badgeAcceptedHoldersTitle": "Titulaires ayant accepté le badge",
-  "badgeSubscriptionLoadError": "Impossible de charger tes abonnements aux badges. Réessaie."
+  "badgeSubscriptionLoadError": "Impossible de charger tes abonnements aux badges. Réessaie.",
+  "minorAccountReviewVideoSubmittedBody": "Ta vidéo a été envoyée pour examen.",
+  "minorAccountReviewVideoSubmittedTitle": "Vidéo envoyée"
 }

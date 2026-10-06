@@ -6308,5 +6308,7 @@
   "badgeSubscribedAction": "Suscrito",
   "badgeSubscribeAction": "Suscribirse a la insignia",
   "badgeAcceptedHoldersTitle": "Personas que aceptaron la insignia",
-  "badgeSubscriptionLoadError": "No se pudieron cargar tus suscripciones a insignias. Inténtalo de nuevo."
+  "badgeSubscriptionLoadError": "No se pudieron cargar tus suscripciones a insignias. Inténtalo de nuevo.",
+  "minorAccountReviewVideoSubmittedBody": "Tu video se envió para revisión.",
+  "minorAccountReviewVideoSubmittedTitle": "Video enviado"
 }

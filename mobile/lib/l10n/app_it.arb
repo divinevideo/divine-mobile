@@ -6308,5 +6308,7 @@
   "badgeSubscribedAction": "Iscritto",
   "badgeSubscribeAction": "Iscriviti al badge",
   "badgeAcceptedHoldersTitle": "Persone che hanno accettato il badge",
-  "badgeSubscriptionLoadError": "Impossibile caricare i tuoi abbonamenti ai badge. Riprova."
+  "badgeSubscriptionLoadError": "Impossibile caricare i tuoi abbonamenti ai badge. Riprova.",
+  "minorAccountReviewVideoSubmittedBody": "Il tuo video è stato inviato per la revisione.",
+  "minorAccountReviewVideoSubmittedTitle": "Video inviato"
 }

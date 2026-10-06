@@ -11,6 +11,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/camera_permission/camera_permission_bloc.dart';
 import 'package:openvine/blocs/minor_consent_capture/minor_consent_capture_cubit.dart';
 import 'package:openvine/blocs/minor_consent_capture/minor_consent_submit_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -22,7 +23,6 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
 import 'package:openvine/utils/validators.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:permissions_service/permissions_service.dart';
 
 /// Records the parent-consent video in-app, then lets the parent review it.
 ///
@@ -44,8 +44,21 @@ class MinorAccountReviewRecordConsentScreen extends ConsumerWidget {
     // Watch (not read) so the auto-disposed recorder stays alive for this
     // screen's lifetime and is released when the screen unmounts.
     final recorder = ref.watch(minorConsentRecorderProvider);
-    return BlocProvider(
-      create: (_) => MinorConsentCaptureCubit(recorder: recorder),
+    final permissions = ref.watch(permissionsServiceProvider);
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          key: ValueKey(permissions),
+          create: (_) => CameraPermissionBloc(
+            permissionsService: permissions,
+            requestGalleryPermission: false,
+          ),
+        ),
+        BlocProvider(
+          key: ValueKey(recorder),
+          create: (_) => MinorConsentCaptureCubit(recorder: recorder),
+        ),
+      ],
       child: const _RecordConsentView(),
     );
   }
@@ -58,9 +71,14 @@ class _RecordConsentView extends ConsumerStatefulWidget {
   ConsumerState<_RecordConsentView> createState() => _RecordConsentViewState();
 }
 
-class _RecordConsentViewState extends ConsumerState<_RecordConsentView> {
+class _RecordConsentViewState extends ConsumerState<_RecordConsentView>
+    with WidgetsBindingObserver {
   bool _cameraReady = false;
   bool _accessDenied = false;
+  bool _requiresSettings = false;
+  bool _autoRequested = false;
+  bool _wasInBackground = false;
+  bool _initializingCamera = false;
   String? _pendingVideoPath;
   String? _lastRecordedPath;
   bool _uploadInFlight = false;
@@ -69,11 +87,16 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _prepareCamera());
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<CameraPermissionBloc>().add(const CameraPermissionRefresh());
+    });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _disposed = true;
     // The capture is local only until the parent submits; discard a clip they
     // exit without submitting. A clip whose upload is still in flight is kept
@@ -82,48 +105,69 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView> {
     super.dispose();
   }
 
-  /// Requests camera and microphone access, then initializes the preview.
-  ///
-  /// A refusal lands the screen on the email fallback rather than a dead end.
-  Future<void> _prepareCamera() async {
-    final permissions = ref.read(permissionsServiceProvider);
-    final bool allowed;
-    try {
-      allowed = await _ensureAccess(permissions);
-    } catch (_) {
-      // A platform permission check that throws must not strand the parent on a
-      // dead preview; treat it like a refusal and offer the email fallback.
-      if (!mounted) return;
-      setState(() => _accessDenied = true);
-      return;
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
+      _wasInBackground = true;
+    } else if (state == AppLifecycleState.resumed && _wasInBackground) {
+      _wasInBackground = false;
+      if (_accessDenied) {
+        context.read<CameraPermissionBloc>().add(
+          const CameraPermissionRefresh(),
+        );
+      }
     }
-    if (!mounted) return;
-    if (!allowed) {
-      setState(() => _accessDenied = true);
-      return;
-    }
-    try {
-      await context.read<MinorConsentCaptureCubit>().initialize();
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _accessDenied = true);
-      return;
-    }
-    if (!mounted) return;
-    setState(() => _cameraReady = true);
   }
 
-  Future<bool> _ensureAccess(PermissionsService permissions) async {
-    final camera = await permissions.checkCameraStatus();
-    final cameraGranted =
-        camera == PermissionStatus.granted ||
-        await permissions.requestCameraPermission() == PermissionStatus.granted;
-    if (!cameraGranted) return false;
+  void _onPermissionState(CameraPermissionState state) {
+    if (state is CameraPermissionError) {
+      setState(() => _accessDenied = true);
+    } else if (state is CameraPermissionLoaded) {
+      switch (state.status) {
+        case CameraPermissionStatus.authorized:
+          setState(() {
+            _accessDenied = false;
+            _requiresSettings = false;
+          });
+          unawaited(_initializeCamera());
+        case CameraPermissionStatus.canRequest:
+          if (!_autoRequested) {
+            _autoRequested = true;
+            context.read<CameraPermissionBloc>().add(
+              const CameraPermissionRequest(),
+            );
+          } else {
+            setState(() => _accessDenied = true);
+          }
+        case CameraPermissionStatus.requiresSettings:
+          setState(() {
+            _accessDenied = true;
+            _requiresSettings = true;
+          });
+      }
+    }
+  }
 
-    final microphone = await permissions.checkMicrophoneStatus();
-    return microphone == PermissionStatus.granted ||
-        await permissions.requestMicrophonePermission() ==
-            PermissionStatus.granted;
+  Future<void> _initializeCamera() async {
+    if (_cameraReady || _initializingCamera) return;
+    _initializingCamera = true;
+    try {
+      await context.read<MinorConsentCaptureCubit>().initialize();
+      if (!mounted) return;
+      setState(() => _cameraReady = true);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _accessDenied = true);
+    } finally {
+      _initializingCamera = false;
+    }
+  }
+
+  void _openSettings() {
+    context.read<CameraPermissionBloc>().add(
+      const CameraPermissionOpenSettings(),
+    );
   }
 
   Future<void> _onRecord() async {
@@ -209,71 +253,79 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: DiVineAppBar(
-        title: context.l10n.minorAccountReviewRecordConsentTitle,
-        showBackButton: true,
-      ),
-      backgroundColor: context.vineColors.background,
-      body: SafeArea(
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: _pendingVideoPath != null
-                ? MinorConsentSubmitView(
-                    videoPath: _pendingVideoPath!,
-                    onUseEmailFallback: _onUseEmailFallback,
-                    onUploadStarted: _onUploadStarted,
-                    onUploadFinished: _onUploadFinished,
-                  )
-                : BlocListener<
-                    MinorConsentCaptureCubit,
-                    MinorConsentCaptureState
-                  >(
-                    listenWhen: (_, current) =>
-                        current is MinorConsentCaptureReview,
-                    listener: (context, state) {
-                      if (state is MinorConsentCaptureReview) {
-                        _lastRecordedPath = state.filePath;
-                      }
-                    },
-                    child:
-                        BlocBuilder<
-                          MinorConsentCaptureCubit,
-                          MinorConsentCaptureState
-                        >(
-                          builder: (context, state) {
-                            return switch (state) {
-                              MinorConsentCaptureIdle() =>
-                                _accessDenied
-                                    ? _DeniedPane(
-                                        onUseEmailFallback: _onUseEmailFallback,
-                                      )
-                                    : _CapturePane(
-                                        cameraReady: _cameraReady,
-                                        onRecord: _onRecord,
-                                      ),
-                              MinorConsentCaptureRecording() => _RecordingPane(
-                                cameraReady: _cameraReady,
-                                onStop: _onStop,
-                              ),
-                              MinorConsentCaptureReview(:final filePath) =>
-                                _ReviewPane(
-                                  filePath: filePath,
-                                  onRetake: _onRetake,
-                                  onUseVideo: () => _onUseVideo(filePath),
+    return BlocListener<CameraPermissionBloc, CameraPermissionState>(
+      listener: (context, state) => _onPermissionState(state),
+      child: Scaffold(
+        appBar: DiVineAppBar(
+          title: context.l10n.minorAccountReviewRecordConsentTitle,
+          showBackButton: true,
+        ),
+        backgroundColor: context.vineColors.background,
+        body: SafeArea(
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: _pendingVideoPath != null
+                  ? MinorConsentSubmitView(
+                      videoPath: _pendingVideoPath!,
+                      onUseEmailFallback: _onUseEmailFallback,
+                      onUploadStarted: _onUploadStarted,
+                      onUploadFinished: _onUploadFinished,
+                    )
+                  : BlocListener<
+                      MinorConsentCaptureCubit,
+                      MinorConsentCaptureState
+                    >(
+                      listenWhen: (_, current) =>
+                          current is MinorConsentCaptureReview,
+                      listener: (context, state) {
+                        if (state is MinorConsentCaptureReview) {
+                          _lastRecordedPath = state.filePath;
+                        }
+                      },
+                      child:
+                          BlocBuilder<
+                            MinorConsentCaptureCubit,
+                            MinorConsentCaptureState
+                          >(
+                            builder: (context, state) {
+                              return switch (state) {
+                                MinorConsentCaptureIdle() =>
+                                  _accessDenied
+                                      ? _DeniedPane(
+                                          onUseEmailFallback:
+                                              _onUseEmailFallback,
+                                          onOpenSettings: _requiresSettings
+                                              ? _openSettings
+                                              : null,
+                                        )
+                                      : _CapturePane(
+                                          cameraReady: _cameraReady,
+                                          onRecord: _onRecord,
+                                        ),
+                                MinorConsentCaptureRecording() =>
+                                  _RecordingPane(
+                                    cameraReady: _cameraReady,
+                                    onStop: _onStop,
+                                  ),
+                                MinorConsentCaptureReview(:final filePath) =>
+                                  _ReviewPane(
+                                    filePath: filePath,
+                                    onRetake: _onRetake,
+                                    onUseVideo: () => _onUseVideo(filePath),
+                                  ),
+                                MinorConsentCaptureDenied() => _DeniedPane(
+                                  onUseEmailFallback: _onUseEmailFallback,
                                 ),
-                              MinorConsentCaptureDenied() => _DeniedPane(
-                                onUseEmailFallback: _onUseEmailFallback,
-                              ),
-                              MinorConsentCaptureError() => _ErrorPane(
-                                onRetry: _onRetake,
-                              ),
-                            };
-                          },
-                        ),
-                  ),
+                                MinorConsentCaptureError() => _ErrorPane(
+                                  onRetry: _onRetake,
+                                ),
+                              };
+                            },
+                          ),
+                    ),
+            ),
           ),
         ),
       ),
@@ -372,8 +424,8 @@ class _MinorConsentSubmitFormState
         // Only read when a developer override is simulating this case; the
         // repository decides, so the copy is resolved here where l10n lives.
         localReceipt: MinorReviewInstructions(
-          title: context.l10n.minorAccountReviewSubmissionReceivedTitle,
-          body: context.l10n.minorAccountReviewSubmissionReceivedLocalBody,
+          title: context.l10n.minorAccountReviewVideoSubmittedTitle,
+          body: context.l10n.minorAccountReviewVideoSubmittedBody,
         ),
       ),
     );
@@ -383,9 +435,8 @@ class _MinorConsentSubmitFormState
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final state = context.watch<MinorConsentSubmitCubit>().state;
-    final submittedEmail = state.submittedEmail;
-    if (submittedEmail != null) {
-      return _SubmitSuccessPane(email: submittedEmail);
+    if (state.submittedEmail != null) {
+      return const _SubmitSuccessPane();
     }
 
     final isSubmitting = state.status == MinorConsentSubmitStatus.submitting;
@@ -449,23 +500,21 @@ class _MinorConsentSubmitFormState
 
 /// Receipt shown once the consent video has been submitted.
 class _SubmitSuccessPane extends StatelessWidget {
-  const _SubmitSuccessPane({required this.email});
-
-  final String email;
+  const _SubmitSuccessPane();
 
   @override
   Widget build(BuildContext context) {
     return _Pane(
       children: [
         Text(
-          context.l10n.minorAccountReviewSubmissionReceivedTitle,
+          context.l10n.minorAccountReviewVideoSubmittedTitle,
           style: VineTheme.headlineMediumFont(
             color: context.vineColors.primaryText,
           ),
         ),
         const SizedBox(height: 12),
         Text(
-          context.l10n.minorAccountReviewSubmissionReceivedBody(email),
+          context.l10n.minorAccountReviewVideoSubmittedBody,
           style: VineTheme.bodyMediumFont(color: context.vineColors.mutedText),
         ),
       ],
@@ -613,9 +662,10 @@ class _ReviewPane extends StatelessWidget {
 
 /// Camera unavailable or refused: explain and route to the email fallback.
 class _DeniedPane extends StatelessWidget {
-  const _DeniedPane({required this.onUseEmailFallback});
+  const _DeniedPane({required this.onUseEmailFallback, this.onOpenSettings});
 
   final VoidCallback onUseEmailFallback;
+  final VoidCallback? onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -626,6 +676,14 @@ class _DeniedPane extends StatelessWidget {
           body: context.l10n.minorAccountReviewRecordConsentDeniedBody,
         ),
         const SizedBox(height: 24),
+        if (onOpenSettings != null) ...[
+          DivineButton(
+            label: context.l10n.cameraPermissionGoToSettings,
+            expanded: true,
+            onPressed: onOpenSettings,
+          ),
+          const SizedBox(height: 12),
+        ],
         DivineButton(
           label: context.l10n.minorAccountReviewRecordConsentEmailInsteadCta,
           leadingIcon: DivineIconName.envelope,

@@ -6308,5 +6308,7 @@
   "badgeSubscribedAction": "مشترك",
   "badgeSubscribeAction": "اشترك في الشارة",
   "badgeAcceptedHoldersTitle": "حاملو الشارة الذين قبلوها",
-  "badgeSubscriptionLoadError": "تعذر تحميل اشتراكات الشارات الخاصة بك. حاول مرة أخرى."
+  "badgeSubscriptionLoadError": "تعذر تحميل اشتراكات الشارات الخاصة بك. حاول مرة أخرى.",
+  "minorAccountReviewVideoSubmittedBody": "تم إرسال الفيديو للمراجعة.",
+  "minorAccountReviewVideoSubmittedTitle": "تم إرسال الفيديو"
 }

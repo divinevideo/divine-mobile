@@ -6308,5 +6308,7 @@
   "badgeSubscribedAction": "Abone olundu",
   "badgeSubscribeAction": "Rozete abone ol",
   "badgeAcceptedHoldersTitle": "Rozeti kabul edenler",
-  "badgeSubscriptionLoadError": "Rozet aboneliklerin yüklenemedi. Tekrar dene."
+  "badgeSubscriptionLoadError": "Rozet aboneliklerin yüklenemedi. Tekrar dene.",
+  "minorAccountReviewVideoSubmittedBody": "Videon incelenmek üzere gönderildi.",
+  "minorAccountReviewVideoSubmittedTitle": "Video gönderildi"
 }

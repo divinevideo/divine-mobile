@@ -7612,5 +7612,7 @@
   "creatorHighlightAnalytics": "查看你的数据",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  }
+  },
+  "minorAccountReviewVideoSubmittedBody": "你的视频已提交审核。",
+  "minorAccountReviewVideoSubmittedTitle": "视频已提交"
 }

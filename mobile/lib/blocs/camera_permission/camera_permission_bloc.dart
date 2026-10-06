@@ -41,8 +41,10 @@ class CameraPermissionBloc
     extends Bloc<CameraPermissionEvent, CameraPermissionState> {
   CameraPermissionBloc({
     required PermissionsService permissionsService,
+    bool requestGalleryPermission = true,
     @visibleForTesting bool? skipLinuxBypass,
   }) : _permissionsService = permissionsService,
+       _requestGalleryPermission = requestGalleryPermission,
        _skipLinuxBypass = skipLinuxBypass ?? false,
        super(const CameraPermissionInitial()) {
     on<CameraPermissionRequest>(_onRequest, transformer: restartable());
@@ -51,6 +53,9 @@ class CameraPermissionBloc
   }
 
   final PermissionsService _permissionsService;
+
+  // Private capture flows never save to the gallery and need no access to it.
+  final bool _requestGalleryPermission;
   final bool _skipLinuxBypass;
 
   Future<void> _onRequest(
@@ -97,7 +102,9 @@ class CameraPermissionBloc
       // Note: Gallery permission is optional. We don't block recording if
       // gallery access is denied - the video will still upload, just won't
       // be saved locally.
-      await _permissionsService.requestGalleryPermission();
+      if (_requestGalleryPermission) {
+        await _permissionsService.requestGalleryPermission();
+      }
 
       emit(const CameraPermissionLoaded(CameraPermissionStatus.authorized));
     } catch (e) {

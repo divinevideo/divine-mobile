@@ -6308,5 +6308,7 @@
   "badgeSubscribedAction": "Volgend",
   "badgeSubscribeAction": "Badge volgen",
   "badgeAcceptedHoldersTitle": "Geaccepteerde badgehouders",
-  "badgeSubscriptionLoadError": "Je badge-abonnementen konden niet worden geladen. Probeer het opnieuw."
+  "badgeSubscriptionLoadError": "Je badge-abonnementen konden niet worden geladen. Probeer het opnieuw.",
+  "minorAccountReviewVideoSubmittedBody": "Je video is ingediend voor beoordeling.",
+  "minorAccountReviewVideoSubmittedTitle": "Video ingediend"
 }

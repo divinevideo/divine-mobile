@@ -5328,5 +5328,7 @@
   "badgeSubscribedAction": "Naka-subscribe",
   "badgeSubscribeAction": "Mag-subscribe sa badge",
   "badgeAcceptedHoldersTitle": "Mga tumanggap ng badge",
-  "badgeSubscriptionLoadError": "Hindi ma-load ang iyong mga subscription sa badge. Subukan muli."
+  "badgeSubscriptionLoadError": "Hindi ma-load ang iyong mga subscription sa badge. Subukan muli.",
+  "minorAccountReviewVideoSubmittedBody": "Naipasa na ang video mo para sa pagsusuri.",
+  "minorAccountReviewVideoSubmittedTitle": "Naipasa na ang video"
 }

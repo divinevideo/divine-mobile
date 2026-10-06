@@ -6308,5 +6308,7 @@
   "badgeSubscribedAction": "Abonat",
   "badgeSubscribeAction": "Abonează-te la insignă",
   "badgeAcceptedHoldersTitle": "Persoane care au acceptat insigna",
-  "badgeSubscriptionLoadError": "Abonamentele tale la insigne nu au putut fi încărcate. Încearcă din nou."
+  "badgeSubscriptionLoadError": "Abonamentele tale la insigne nu au putut fi încărcate. Încearcă din nou.",
+  "minorAccountReviewVideoSubmittedBody": "Videoclipul tău a fost trimis pentru verificare.",
+  "minorAccountReviewVideoSubmittedTitle": "Videoclip trimis"
 }

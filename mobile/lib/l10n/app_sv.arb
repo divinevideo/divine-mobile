@@ -6308,5 +6308,7 @@
   "badgeSubscribedAction": "Prenumererar",
   "badgeSubscribeAction": "Prenumerera på märket",
   "badgeAcceptedHoldersTitle": "Personer som godkänt märket",
-  "badgeSubscriptionLoadError": "Det gick inte att läsa in dina märkprenumerationer. Försök igen."
+  "badgeSubscriptionLoadError": "Det gick inte att läsa in dina märkprenumerationer. Försök igen.",
+  "minorAccountReviewVideoSubmittedBody": "Din video har skickats för granskning.",
+  "minorAccountReviewVideoSubmittedTitle": "Videon har skickats"
 }
