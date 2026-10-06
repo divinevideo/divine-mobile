@@ -13,10 +13,9 @@ import pro_video_editor
 /// The editor preview draws the same blend through divine_video_player,
 /// whose earlier frames come from what the player showed while playing.
 ///
-/// Params, from the Dart `CustomVideoEffect`:
-/// - `intensity` (0–1): more and stronger copies.
-/// - `blend`: `lighten` (default) keeps the brighter of the frame and each
-///   copy, so the subject stays solid; `average` mixes them by weight.
+/// Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1):
+/// more and stronger copies. Each copy lightens the frame, so the subject
+/// stays solid where the copies overlap it.
 final class EchoVideoEffect: CustomVideoEffectRenderer, VideoFrameEffect {
   /// The id the Dart `CustomVideoEffect` names.
   static let id = "divine.echo"
@@ -31,8 +30,6 @@ final class EchoVideoEffect: CustomVideoEffectRenderer, VideoFrameEffect {
   // The copies fade anyway; Android keeps them at half size, so do the same.
   let historyScale = 0.5
 
-  private let average: Bool
-
   /// The weight of each copy, newest first: stronger copies, fading slower.
   private let weights: [CGFloat]
 
@@ -41,7 +38,6 @@ final class EchoVideoEffect: CustomVideoEffectRenderer, VideoFrameEffect {
       1, max(0, (params["intensity"] as? NSNumber)?.doubleValue ?? Self.defaultIntensity))
     let copies = min(Self.maxCopies, max(1, Int((1 + 6 * intensity).rounded())))
     historyOffsetsUs = (1...copies).map { Int64($0) * Self.spacingUs }
-    average = params["blend"] as? String == "average"
     weights = (0..<copies).map { k in
       CGFloat((0.25 + 0.55 * intensity) * pow(0.55 + 0.25 * intensity, Double(k)))
     }
@@ -63,32 +59,15 @@ final class EchoVideoEffect: CustomVideoEffectRenderer, VideoFrameEffect {
     blend(image, history)
   }
 
-  private func blend(_ image: CIImage, _ history: [CIImage?]) -> CIImage {
-    average ? averaged(image, history) : lightened(image, history)
-  }
-
   /// Oldest copy first: each pixel moves by its weight towards the brighter
   /// of itself and the copy, `mix(color, max(color, copy), weight)`.
-  private func lightened(_ image: CIImage, _ history: [CIImage?]) -> CIImage {
+  private func blend(_ image: CIImage, _ history: [CIImage?]) -> CIImage {
     var color = image
     for (k, copy) in history.enumerated().reversed() {
       guard let copy else { continue }
       let brighter = copy.applyingFilter(
         "CILightenBlendMode", parameters: [kCIInputBackgroundImageKey: color])
       color = mix(color, brighter, weights[k])
-    }
-    return color
-  }
-
-  /// The frame and its copies mixed by weight, the frame weighing 1, as a
-  /// running average.
-  private func averaged(_ image: CIImage, _ history: [CIImage?]) -> CIImage {
-    var color = image
-    var total: CGFloat = 1
-    for (k, copy) in history.enumerated() {
-      guard let copy else { continue }
-      total += weights[k]
-      color = mix(color, copy, weights[k] / total)
     }
     return color
   }

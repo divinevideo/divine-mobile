@@ -19,16 +19,14 @@ import kotlin.math.roundToInt
  * through divine_video_player, whose earlier frames come from what the
  * player showed, or are decoded after a seek.
  *
- * Params, from the Dart `CustomVideoEffect`:
- * - `intensity` (0–1): more and stronger copies.
- * - `blend`: `lighten` (default) keeps the brighter of the frame and each
- *   copy, so the subject stays solid; `average` mixes them by weight.
+ * Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1):
+ * more and stronger copies. Each copy lightens the frame, so the subject
+ * stays solid where the copies overlap it.
  */
 class EchoVideoEffect(params: Map<String, Any?>) : CustomVideoEffectRenderer(), VideoFrameEffect {
 
     private val intensity = (params["intensity"] as? Number)?.toFloat()?.coerceIn(0f, 1f)
         ?: DEFAULT_INTENSITY
-    private val average = params["blend"] == "average"
     private val copies = (1 + 6 * intensity).roundToInt().coerceIn(1, MAX_COPIES)
 
     /** The weight of each copy, newest first: stronger copies, fading slower. */
@@ -41,7 +39,7 @@ class EchoVideoEffect(params: Map<String, Any?>) : CustomVideoEffectRenderer(), 
     // The copies fade anyway; half size takes a quarter of the memory.
     override val historyScale = 0.5f
 
-    private val shader = CustomVideoEffectShader(fragmentShader(copies, average))
+    private val shader = CustomVideoEffectShader(fragmentShader(copies))
 
     override fun render(frame: CustomVideoEffectFrame) {
         draw(frame.textureId, frame.history.map { it?.textureId })
@@ -84,7 +82,7 @@ class EchoVideoEffect(params: Map<String, Any?>) : CustomVideoEffectRenderer(), 
             VideoFrameEffects.register(ID) { params -> EchoVideoEffect(params) }
         }
 
-        private fun fragmentShader(copies: Int, average: Boolean): String = buildString {
+        private fun fragmentShader(copies: Int): String = buildString {
             append("#ifdef GL_FRAGMENT_PRECISION_HIGH\n")
             append("precision highp float;\n")
             append("#else\n")
@@ -98,21 +96,11 @@ class EchoVideoEffect(params: Map<String, Any?>) : CustomVideoEffectRenderer(), 
             append("varying vec2 vTexCoord;\n")
             append("void main() {\n")
             append("  vec4 color = texture2D(uFrame, vTexCoord);\n")
-            if (average) {
-                append("  vec4 sum = color;\n")
-                append("  float total = 1.0;\n")
-                for (k in 0 until copies) {
-                    append("  sum += uWeight$k * texture2D(uCopy$k, vTexCoord);\n")
-                    append("  total += uWeight$k;\n")
-                }
-                append("  gl_FragColor = sum / total;\n")
-            } else {
-                // Oldest copy first, the way the mockup layers them.
-                for (k in copies - 1 downTo 0) {
-                    append("  color = mix(color, max(color, texture2D(uCopy$k, vTexCoord)), uWeight$k);\n")
-                }
-                append("  gl_FragColor = color;\n")
+            // Oldest copy first, the way the mockup layers them.
+            for (k in copies - 1 downTo 0) {
+                append("  color = mix(color, max(color, texture2D(uCopy$k, vTexCoord)), uWeight$k);\n")
             }
+            append("  gl_FragColor = color;\n")
             append("}\n")
         }
     }
