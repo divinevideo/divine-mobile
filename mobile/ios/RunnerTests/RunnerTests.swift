@@ -3,7 +3,7 @@ import AVFoundation
 import WebKit
 import background_uploader
 import divine_camera
-import divine_video_player
+@testable import divine_video_player
 import Flutter
 import LibProofMode
 import ObjectivePGP
@@ -912,6 +912,30 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
     plugin = nil
     registrar = nil
     super.tearDown()
+  }
+
+  func testPausedLoadStillDeliversFirstVideoFrame() throws {
+    try waitForState("the paused clip has a renderable frame") {
+      $0["status"] as? String == "paused" && $0["isFirstFrameRendered"] as? Bool == true
+    }
+    XCTAssertFalse(registrar.fakeTextures.frames.isEmpty)
+    let instance = try XCTUnwrap(PlayerRegistry.shared.get(Self.playerId))
+    XCTAssertEqual(try XCTUnwrap(instance.getPlayer()).rate, 0)
+  }
+
+  func testPrerollCompletingAfterPlayDoesNotPausePlayback() throws {
+    let instance = try XCTUnwrap(PlayerRegistry.shared.get(Self.playerId))
+    let player = try XCTUnwrap(instance.getPlayer())
+    let item = try XCTUnwrap(player.currentItem)
+    _ = try invoke("play")
+    XCTAssertGreaterThan(player.rate, 0)
+
+    // Complete a paused-frame request after a newer play command, without
+    // relying on decoder scheduling to happen to produce the race.
+    instance.finishPausedPreroll(player, item: item, at: .zero)
+
+    XCTAssertGreaterThan(player.rate, 0, "a stale paused-frame completion must not pause playback")
+    try waitForState("the clip still plays to its end") { $0["status"] as? String == "completed" }
   }
 
   func testSeekFromTheEndPlaysOnWhilePlaybackIsRequested() throws {
