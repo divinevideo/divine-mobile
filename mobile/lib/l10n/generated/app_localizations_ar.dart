@@ -10720,6 +10720,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get badgesTitle => 'الشارات';
 
   @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
   String get badgeSubscribeAction => 'اشترك في الشارة';
 
   @override

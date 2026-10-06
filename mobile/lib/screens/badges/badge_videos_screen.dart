@@ -13,6 +13,7 @@ import 'package:openvine/blocs/badges/badge_videos_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
+import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
@@ -41,10 +42,11 @@ class BadgeVideosScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final blocklistVersion = ref.watch(blocklistVersionProvider);
     final badgeRepository = ref.watch(badgeRepositoryProvider);
     final videosRepository = ref.watch(videosRepositoryProvider);
     return BlocProvider(
-      key: ValueKey((badgeRepository, videosRepository)),
+      key: ValueKey((badgeRepository, videosRepository, blocklistVersion)),
       create: (_) {
         final cubit = BadgeVideosCubit(
           badgeRepository: badgeRepository,

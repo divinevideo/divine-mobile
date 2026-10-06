@@ -10747,6 +10747,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get badgesTitle => 'Märken';
 
   @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
   String get badgeSubscribeAction => 'Prenumerera på märket';
 
   @override

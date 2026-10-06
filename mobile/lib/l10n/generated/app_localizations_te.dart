@@ -11039,6 +11039,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String get badgesTitle => 'బ్యాడ్జ్‌లు';
 
   @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
   String get badgeSubscribeAction => 'బ్యాడ్జ్‌ను సబ్‌స్క్రైబ్ చేయండి';
 
   @override
