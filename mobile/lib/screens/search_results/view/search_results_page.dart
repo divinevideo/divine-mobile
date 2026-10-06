@@ -76,9 +76,14 @@ class SearchResultsPage extends ConsumerWidget {
     final hashtagRepository = ref.watch(hashtagRepositoryProvider);
     final curatedListRepository = ref.watch(curatedListRepositoryProvider);
     final peopleListsRepository = ref.watch(peopleListsRepositoryProvider);
-    final peopleListSearchEnabled = ref.watch(
+    final profileListFeaturesEnabled = ref.watch(
       isFeatureEnabledProvider(FeatureFlag.profileListFeatures),
     );
+    final curatedListsEnabled = ref.watch(
+      isFeatureEnabledProvider(FeatureFlag.curatedLists),
+    );
+    final peopleListSearchEnabled =
+        profileListFeaturesEnabled && curatedListsEnabled;
 
     return MultiBlocProvider(
       // Recreate the search blocs when an auth-sensitive repository or flag

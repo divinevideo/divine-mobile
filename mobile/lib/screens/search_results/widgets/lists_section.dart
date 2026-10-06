@@ -12,6 +12,7 @@ import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/blocs/list_search/list_search_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_empty_state.dart';
@@ -156,10 +157,7 @@ class _ResultsGrid extends StatelessWidget {
             final peopleResult = peopleResults[index - videoResults.length];
             return _PeopleListCard(
               userList: peopleResult.list,
-              onTap: () {
-                // Intentionally disabled until public people-list routes
-                // include owner pubkey.
-              },
+              onTap: () => _navigateToPeopleList(context, peopleResult),
             );
           }, childCount: totalCount),
         ),
@@ -189,10 +187,7 @@ class _ResultsGrid extends StatelessWidget {
               Expanded(
                 child: _PeopleListCard(
                   userList: previewPeople.list,
-                  onTap: () {
-                    // Intentionally disabled until public people-list routes
-                    // include owner pubkey.
-                  },
+                  onTap: () => _navigateToPeopleList(context, previewPeople),
                 ),
               ),
             // If only one item, fill the second slot with empty space.
@@ -359,6 +354,23 @@ void _navigateToCuratedList(BuildContext context, CuratedList list) {
       ),
     ),
     'open curated list search result',
+    logName: 'ListsSection',
+    category: LogCategory.ui,
+  );
+}
+
+void _navigateToPeopleList(
+  BuildContext context,
+  PeopleListSearchResult result,
+) {
+  runDetached(
+    context.push<void>(
+      RoutePaths.peopleListForId(
+        result.list.id,
+        ownerPubkey: result.ownerPubkey,
+      ),
+    ),
+    'open people list search result',
     logName: 'ListsSection',
     category: LogCategory.ui,
   );

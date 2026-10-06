@@ -1947,10 +1947,8 @@
   "peopleListsNoPeopleSubtitle": "شروع کرنے کے لیے کچھ لوگ شامل کریں",
   "peopleListsNoVideosTitle": "ابھی کوئی ویڈیو نہیں",
   "peopleListsNoVideosSubtitle": "فہرست کے ممبران کی ویڈیوز یہاں نظر آئیں گی",
-  "peopleListsNoVideosAvailable": "کوئی ویڈیو دستیاب نہیں",
   "peopleListsFailedToLoadVideos": "ویڈیوز لوڈ نہیں ہو سکیں",
   "peopleListsVideoNotAvailable": "ویڈیو دستیاب نہیں",
-  "peopleListsBackToGridTooltip": "گرڈ پر واپس",
   "peopleListsErrorLoadingVideos": "ویڈیوز لوڈ کرنے میں خرابی",
   "peopleListsNoPeopleToAdd": "شامل کرنے کے لیے کوئی لوگ دستیاب نہیں۔",
   "peopleListsAddToListName": "{name} میں شامل کریں",
@@ -6651,5 +6649,35 @@
   "settingsPrivacySafetySubtitle": "استعمال کا ڈیٹا، نگرانی اور بلاک شدہ اکاؤنٹس",
   "settingsAppPreferencesSubtitle": "ظاہری شکل، زبان، اسٹوریج اور اعلیٰ اختیارات",
   "settingsConnectionsSubtitle": "ایپس، ریلے، میڈیا سرورز اور اجازتیں",
-  "settingsHelpAboutSubtitle": "مدد، قانونی معلومات اور ایپ کی تفصیلات"
+  "settingsHelpAboutSubtitle": "مدد، قانونی معلومات اور ایپ کی تفصیلات",
+  "listLoopsCount": "{count, plural, =1{{formatted} لوپ} other{{formatted} لوپ}}",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} شخص} other{{count} لوگ}}",
+  "listMemberCount": "{count, plural, =1{{count} ممبر} other{{count} ممبران}}",
+  "peopleListsViewAllMembers": "سب دیکھیں",
+  "peopleListsLoadFailed": "یہ فہرست لوڈ نہیں ہو سکی۔",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ "
 }

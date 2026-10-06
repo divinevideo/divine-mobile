@@ -16,6 +16,9 @@ import 'package:openvine/features/people_lists/models/people_list_entry_point.da
 import 'package:openvine/features/people_lists/view/add_to_people_lists_sheet.dart';
 import 'package:openvine/features/people_lists/view/widgets/people_list_row.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/app_providers.dart';
+
+import '../../../helpers/test_provider_overrides.dart';
 
 class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
     implements PeopleListsBloc {}
@@ -406,6 +409,9 @@ Widget _buildLazyBlocSubject({
 Widget _withCuratedListsFlag({required bool enabled, required Widget child}) {
   return ProviderScope(
     overrides: [
+      authServiceProvider.overrideWithValue(
+        createMockAuthService(currentPublicKeyHex: _ownerPubkey),
+      ),
       isFeatureEnabledProvider(
         FeatureFlag.curatedLists,
       ).overrideWithValue(enabled),

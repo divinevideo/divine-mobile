@@ -1947,10 +1947,8 @@
   "peopleListsNoPeopleSubtitle": "加一些人进来吧",
   "peopleListsNoVideosTitle": "还没有视频",
   "peopleListsNoVideosSubtitle": "列表成员的视频会显示在这里",
-  "peopleListsNoVideosAvailable": "暂无视频",
   "peopleListsFailedToLoadVideos": "视频加载失败",
   "peopleListsVideoNotAvailable": "视频不可用",
-  "peopleListsBackToGridTooltip": "返回网格",
   "peopleListsErrorLoadingVideos": "加载视频出错",
   "peopleListsNoPeopleToAdd": "没有可添加的人。",
   "peopleListsAddToListName": "加入{name}",
@@ -6651,5 +6649,35 @@
   "settingsPrivacySafetySubtitle": "使用数据、内容审核和已屏蔽账号",
   "settingsAppPreferencesSubtitle": "外观、语言、存储和高级选项",
   "settingsConnectionsSubtitle": "应用、转发器、媒体服务器和权限",
-  "settingsHelpAboutSubtitle": "支持、法律信息和应用详情"
+  "settingsHelpAboutSubtitle": "支持、法律信息和应用详情",
+  "listLoopsCount": "{count, plural, =1{{formatted} 次循环} other{{formatted} 次循环}}",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} 人} other{{count} 人}}",
+  "listMemberCount": "{count, plural, =1{{count} 位成员} other{{count} 位成员}}",
+  "peopleListsViewAllMembers": "查看全部",
+  "peopleListsLoadFailed": "无法加载此列表。",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ "
 }

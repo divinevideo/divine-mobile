@@ -850,3 +850,119 @@ final class VideoEventsByIdsFamily extends $Family
   @override
   String toString() => r'videoEventsByIdsProvider';
 }
+
+/// Resolves a discovered public people list by author + d-tag from relays.
+///
+/// The owner-scoped [PeopleListsBloc] only holds the viewer's own lists, so
+/// discovery cards and deep links to someone else's list resolve through
+/// this instead.
+
+@ProviderFor(publicPeopleList)
+final publicPeopleListProvider = PublicPeopleListFamily._();
+
+/// Resolves a discovered public people list by author + d-tag from relays.
+///
+/// The owner-scoped [PeopleListsBloc] only holds the viewer's own lists, so
+/// discovery cards and deep links to someone else's list resolve through
+/// this instead.
+
+final class PublicPeopleListProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<UserList?>,
+          UserList?,
+          FutureOr<UserList?>
+        >
+    with $FutureModifier<UserList?>, $FutureProvider<UserList?> {
+  /// Resolves a discovered public people list by author + d-tag from relays.
+  ///
+  /// The owner-scoped [PeopleListsBloc] only holds the viewer's own lists, so
+  /// discovery cards and deep links to someone else's list resolve through
+  /// this instead.
+  PublicPeopleListProvider._({
+    required PublicPeopleListFamily super.from,
+    required ({String ownerPubkey, String listId}) super.argument,
+  }) : super(
+         retry: _noAutomaticRetry,
+         name: r'publicPeopleListProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$publicPeopleListHash();
+
+  @override
+  String toString() {
+    return r'publicPeopleListProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<UserList?> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<UserList?> create(Ref ref) {
+    final argument = this.argument as ({String ownerPubkey, String listId});
+    return publicPeopleList(
+      ref,
+      ownerPubkey: argument.ownerPubkey,
+      listId: argument.listId,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is PublicPeopleListProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$publicPeopleListHash() => r'8c898936da06f932f82aa6714f85bd93b8ecc72c';
+
+/// Resolves a discovered public people list by author + d-tag from relays.
+///
+/// The owner-scoped [PeopleListsBloc] only holds the viewer's own lists, so
+/// discovery cards and deep links to someone else's list resolve through
+/// this instead.
+
+final class PublicPeopleListFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<UserList?>,
+          ({String ownerPubkey, String listId})
+        > {
+  PublicPeopleListFamily._()
+    : super(
+        retry: _noAutomaticRetry,
+        name: r'publicPeopleListProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Resolves a discovered public people list by author + d-tag from relays.
+  ///
+  /// The owner-scoped [PeopleListsBloc] only holds the viewer's own lists, so
+  /// discovery cards and deep links to someone else's list resolve through
+  /// this instead.
+
+  PublicPeopleListProvider call({
+    required String ownerPubkey,
+    required String listId,
+  }) => PublicPeopleListProvider._(
+    argument: (ownerPubkey: ownerPubkey, listId: listId),
+    from: this,
+  );
+
+  @override
+  String toString() => r'publicPeopleListProvider';
+}

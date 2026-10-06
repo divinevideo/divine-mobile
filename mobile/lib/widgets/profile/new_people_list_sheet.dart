@@ -10,6 +10,7 @@ import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/curated_lists_gate.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/widgets/user_picker_sheet.dart';
 import 'package:openvine/widgets/vanished_account_identity.dart';
@@ -32,6 +33,13 @@ Future<void> showNewPeopleListSheet(
 }) {
   if (!curatedListsEnabled(context)) return Future<void>.value();
 
+  final container = ProviderScope.containerOf(context, listen: false);
+  final openingOwner = container.read(authServiceProvider).currentPublicKeyHex;
+  bool isSessionCurrent() =>
+      openingOwner != null &&
+      openingOwner.isNotEmpty &&
+      container.read(authServiceProvider).currentPublicKeyHex == openingOwner;
+  if (!isSessionCurrent()) return Future<void>.value();
   final bodyKey = GlobalKey<_NewPeopleListSheetBodyState>();
   final l10n = context.l10n;
 
@@ -46,13 +54,23 @@ Future<void> showNewPeopleListSheet(
     completeSemanticLabel: l10n.listDone,
     body: _NewPeopleListSheetBody(
       key: bodyKey,
+      ownerPubkey: openingOwner!,
+      isSessionCurrent: isSessionCurrent,
       initialCollaborator: initialCollaborator,
     ),
   );
 }
 
 class _NewPeopleListSheetBody extends StatefulWidget {
-  const _NewPeopleListSheetBody({this.initialCollaborator, super.key});
+  const _NewPeopleListSheetBody({
+    required this.ownerPubkey,
+    required this.isSessionCurrent,
+    this.initialCollaborator,
+    super.key,
+  });
+
+  final String ownerPubkey;
+  final bool Function() isSessionCurrent;
 
   final UserProfile? initialCollaborator;
 
@@ -85,6 +103,11 @@ class _NewPeopleListSheetBodyState extends State<_NewPeopleListSheetBody> {
   /// Creates the list via [PeopleListsBloc] dispatching
   /// [PeopleListsCreateRequested].
   Future<void> _createList() async {
+    if (!widget.isSessionCurrent() ||
+        context.read<PeopleListsBloc>().state.activeOwnerPubkey !=
+            widget.ownerPubkey) {
+      return;
+    }
     final name = _nameController.text.trim();
     if (name.isEmpty) return;
 
@@ -95,6 +118,7 @@ class _NewPeopleListSheetBodyState extends State<_NewPeopleListSheetBody> {
 
     context.read<PeopleListsBloc>().add(
       PeopleListsCreateRequested(
+        expectedOwnerPubkey: widget.ownerPubkey,
         name: name,
         description: description,
         initialPubkeys: pubkeys,
@@ -103,6 +127,7 @@ class _NewPeopleListSheetBodyState extends State<_NewPeopleListSheetBody> {
   }
 
   Future<void> _pickCollaborator() async {
+    if (!widget.isSessionCurrent()) return;
     await showUserPickerSheet(
       context,
       filterMode: UserPickerFilterMode.mutualFollowsOnly,
@@ -111,6 +136,7 @@ class _NewPeopleListSheetBodyState extends State<_NewPeopleListSheetBody> {
       searchHint: context.l10n.listCollaboratorSearchHint,
       excludePubkeys: _collaborators.map((p) => p.pubkey).toSet(),
       onUserToggled: (profile) {
+        if (!mounted || !widget.isSessionCurrent()) return;
         setState(() {
           final already = _collaborators.any((p) => p.pubkey == profile.pubkey);
           if (already) {

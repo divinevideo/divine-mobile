@@ -114,6 +114,27 @@ abstract final class RoutePaths {
         '/${Uri.encodeComponent(listId)}';
   }
 
+  /// Members view of a people list. [ownerPubkey] (lowercase hex) rides as
+  /// a query param so a discovered list — one the viewer does not own — can
+  /// be resolved from relays instead of the owner-scoped local state.
+  static String peopleListForId(String listId, {String? ownerPubkey}) {
+    final base = '/people-lists/${Uri.encodeComponent(listId)}';
+    if (ownerPubkey == null) return base;
+    return '$base?owner=${Uri.encodeComponent(ownerPubkey)}';
+  }
+
+  /// Full roster of a people list, behind the list's "View all".
+  /// [ownerPubkey] rides along exactly as for [peopleListForId].
+  static String peopleListMembersForId(String listId, {String? ownerPubkey}) {
+    final base = '/people-lists/${Uri.encodeComponent(listId)}/members';
+    if (ownerPubkey == null) return base;
+    return '$base?owner=${Uri.encodeComponent(ownerPubkey)}';
+  }
+
+  /// Full-screen own-list picker. Encode the original d-tag exactly once.
+  static String peopleListAddPeopleForId(String listId) =>
+      '/people-lists/${Uri.encodeComponent(listId)}/add-people';
+
   static String curatedListFeedForId(String listId) {
     final encodedId = Uri.encodeComponent(listId);
     return '$curatedListFeedBase/$encodedId';

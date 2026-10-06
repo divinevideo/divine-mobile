@@ -8,7 +8,10 @@ import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/list_search/list_search_bloc.dart';
 import 'package:openvine/blocs/video_search/video_search_bloc.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/search_results/view/search_results_page.dart';
 import 'package:openvine/screens/search_results/view/search_results_view.dart';
@@ -57,6 +60,7 @@ void main() {
     Widget createTestWidget({
       Override? profileRepositoryOverride,
       Override? videosRepositoryOverride,
+      List<Override> flagOverrides = const [],
     }) {
       return testMaterialApp(
         home: const SearchResultsPage(),
@@ -74,8 +78,50 @@ void main() {
             mockPeopleListsRepository,
           ),
           ?profileRepositoryOverride,
+          ...flagOverrides,
         ],
       );
+    }
+
+    for (final master in [false, true]) {
+      for (final profile in [false, true]) {
+        testWidgets(
+          'review regression people list search flags master=$master profile=$profile',
+          (tester) async {
+            when(() => mockCuratedListRepository.searchAllLists(any()))
+                .thenAnswer((_) => Stream.value(const <CuratedList>[]));
+            when(
+              () => mockPeopleListsRepository.searchPublicLists(any()),
+            ).thenAnswer((_) => Stream.value(const <PeopleListSearchResult>[]));
+            await tester.pumpWidget(
+              createTestWidget(
+                flagOverrides: [
+                  isFeatureEnabledProvider(FeatureFlag.curatedLists)
+                      .overrideWith((ref) => master),
+                  isFeatureEnabledProvider(FeatureFlag.profileListFeatures)
+                      .overrideWith((ref) => profile),
+                ],
+              ),
+            );
+            final bloc = BlocProvider.of<ListSearchBloc>(
+              tester.element(find.byType(SearchResultsView)),
+            );
+            bloc.add(const ListSearchQueryChanged('crew'));
+            await tester.pump(const Duration(milliseconds: 350));
+            await tester.pump();
+            if (master && profile) {
+              verify(() => mockPeopleListsRepository.searchPublicLists('crew'))
+                  .called(1);
+            } else {
+              verifyNever(
+                () => mockPeopleListsRepository.searchPublicLists(any()),
+              );
+            }
+            verify(() => mockCuratedListRepository.searchAllLists('crew'))
+                .called(1);
+          },
+        );
+      }
     }
 
     testWidgets('shows a waiting state while the profile repository is null', (

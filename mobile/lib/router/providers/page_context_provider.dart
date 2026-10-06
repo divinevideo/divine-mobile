@@ -50,6 +50,7 @@ enum RouteType {
   discoverLists, // Discover public lists screen
   peopleListCreate, // Create NIP-51 kind 30000 people list screen
   peopleListMembers, // People list members and videos screen
+  peopleListRoster, // Full member roster of a people list
   peopleListAddPeople, // Full-screen picker for adding people to a list
   creatorAnalytics, // Creator analytics dashboard (profile owner)
   sound, // Sound detail screen for audio reuse
@@ -210,7 +211,9 @@ bool _isKnownRouteShape(List<String> segments) {
     case 'list':
       return length == 2 || length == 3;
     case 'people-lists':
-      return length == 2 || (length == 3 && segments[2] == 'add-people');
+      return length == 2 ||
+          (length == 3 &&
+              (segments[2] == 'add-people' || segments[2] == 'members'));
     case 'nostr-settings':
       return length == 1 ||
           (length == 2 && segments[1] == RoutePaths.nip05SettingsSubpath);
@@ -310,7 +313,8 @@ RouteContext? _parseRoute(String path, {required bool knownOnly}) {
   // "clips-only?type=video", matches nothing, and the route falls through to
   // the RouteType.home fallback (which the normalizer then "corrects" by
   // yanking the user to /home/0).
-  final pathOnly = Uri.tryParse(path)?.path ?? path;
+  final uri = Uri.tryParse(path);
+  final pathOnly = uri?.path ?? path;
   final segments = pathOnly.split('/').where((s) => s.isNotEmpty).toList();
 
   if (segments.isEmpty) {
@@ -599,7 +603,9 @@ RouteContext? _parseRoute(String path, {required bool knownOnly}) {
       return const RouteContext(type: RouteType.discoverLists);
 
     case 'people-lists':
-      if (segments.length > 1 && segments[1] == 'new') {
+      if (segments.length == 2 &&
+          segments[1] == 'new' &&
+          !(uri?.queryParametersAll.containsKey('owner') ?? false)) {
         return const RouteContext(type: RouteType.peopleListCreate);
       }
       if (segments.length < 2) {
@@ -609,6 +615,12 @@ RouteContext? _parseRoute(String path, {required bool knownOnly}) {
       if (segments.length > 2 && segments[2] == 'add-people') {
         return RouteContext(
           type: RouteType.peopleListAddPeople,
+          listId: peopleListId,
+        );
+      }
+      if (segments.length > 2 && segments[2] == 'members') {
+        return RouteContext(
+          type: RouteType.peopleListRoster,
           listId: peopleListId,
         );
       }
@@ -883,9 +895,11 @@ String buildRoute(RouteContext context) {
       final listId = Uri.encodeComponent(context.listId ?? '');
       return '/people-lists/$listId';
 
+    case RouteType.peopleListRoster:
+      return RoutePaths.peopleListMembersForId(context.listId ?? '');
+
     case RouteType.peopleListAddPeople:
-      final listId = Uri.encodeComponent(context.listId ?? '');
-      return '/people-lists/$listId/add-people';
+      return RoutePaths.peopleListAddPeopleForId(context.listId ?? '');
 
     case RouteType.creatorAnalytics:
       return RoutePaths.creatorAnalytics;

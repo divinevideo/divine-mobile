@@ -1499,10 +1499,8 @@
     "peopleListsNoPeopleSubtitle": "Добави някого, за да започнеш",
     "peopleListsNoVideosTitle": "Още няма видеа",
     "peopleListsNoVideosSubtitle": "Видеата от хората в списъка ще се появят тук",
-    "peopleListsNoVideosAvailable": "Няма налични видеа",
     "peopleListsFailedToLoadVideos": "Не успяхме да заредим видеата",
     "peopleListsVideoNotAvailable": "Видеото не е налично",
-    "peopleListsBackToGridTooltip": "Обратно към мрежата",
     "peopleListsErrorLoadingVideos": "Грешка при зареждане на видеа",
     "peopleListsNoPeopleToAdd": "Няма налични хора за добавяне.",
     "peopleListsAddToListName": "Добави към {name}",
@@ -5008,5 +5006,35 @@
   "settingsPrivacySafetySubtitle": "Данни за употреба, модериране и блокирани акаунти",
   "settingsAppPreferencesSubtitle": "Външен вид, език, хранилище и разширени опции",
   "settingsConnectionsSubtitle": "Приложения, релета, медийни сървъри и разрешения",
-  "settingsHelpAboutSubtitle": "Поддръжка, правна информация и данни за приложението"
+  "settingsHelpAboutSubtitle": "Поддръжка, правна информация и данни за приложението",
+  "listLoopsCount": "{count, plural, =1{{formatted} луп} other{{formatted} лупа}}",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} човек} other{{count} души}}",
+  "listMemberCount": "{count, plural, =1{{count} член} other{{count} членове}}",
+  "peopleListsViewAllMembers": "Виж всички",
+  "peopleListsLoadFailed": "Не успяхме да заредим този списък.",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ "
 }

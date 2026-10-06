@@ -241,6 +241,30 @@ void main() {
     });
 
     group('decode', () {
+      test('review regression repeated p tags represent one member', () {
+        final event = Event(
+          ownerPubkey,
+          30000,
+          const [
+            ['d', 'crew'],
+            ['title', 'Crew'],
+            ['p', memberPubkeyA, 'wss://first.example'],
+            ['p', memberPubkeyA, 'wss://second.example'],
+            ['p', memberPubkeyB],
+          ],
+          'ciphertext',
+          createdAt: 100,
+        );
+        final decoded = Nip51PeopleListCodec.decode(event)!;
+        expect(decoded.pubkeys, [memberPubkeyA, memberPubkeyB]);
+        final encoded = Nip51PeopleListCodec.encode(
+          decoded,
+          sourceTags: event.tags,
+          sourceContent: event.content,
+        );
+        expect(encoded.tags, event.tags);
+        expect(encoded.content, event.content);
+      });
       test('parses a kind 30000 event into a UserList', () {
         final event = Event(
           ownerPubkey,

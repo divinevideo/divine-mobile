@@ -2276,7 +2276,6 @@
     "peopleListsAddPeopleTooltip": "Magdagdag ng tao",
     "peopleListsAddToList": "Idagdag sa listahan",
     "peopleListsAddToListName": "Idagdag sa {name}",
-    "peopleListsBackToGridTooltip": "Bumalik sa grid",
     "peopleListsCreateButton": "Gumawa",
     "peopleListsCreateList": "Gumawa ng listahan",
     "peopleListsEmptySubtitle": "Gumawa ng listahan para simulang igrupo ang mga tao.",
@@ -2293,7 +2292,6 @@
     "peopleListsNoPeopleSubtitle": "Magdagdag ng mga tao para magsimula",
     "peopleListsNoPeopleTitle": "Walang tao sa listahang ito",
     "peopleListsNoPeopleToAdd": "Walang available na tao na maidadagdag.",
-    "peopleListsNoVideosAvailable": "Walang available na video",
     "peopleListsNoVideosSubtitle": "Lalabas dito ang mga video mula sa mga miyembro ng listahan",
     "peopleListsNoVideosTitle": "Wala pang video",
     "peopleListsProfileLongPressHint": "Profile ni {name}. Long press para alisin.",
@@ -3876,5 +3874,35 @@
   "settingsPrivacySafetySubtitle": "Data ng paggamit, moderation, at mga naka-block na account",
   "settingsAppPreferencesSubtitle": "Hitsura, wika, storage, at advanced na opsyon",
   "settingsConnectionsSubtitle": "Mga app, relay, media server, at pahintulot",
-  "settingsHelpAboutSubtitle": "Suporta, legal na impormasyon, at detalye ng app"
+  "settingsHelpAboutSubtitle": "Suporta, legal na impormasyon, at detalye ng app",
+  "listLoopsCount": "{count, plural, =1{{formatted} loop} other{{formatted} loop}}",
+  "peopleListsPeopleCount": "{count, plural, =1{{count} tao} other{{count} tao}}",
+  "listMemberCount": "{count, plural, =1{{count} miyembro} other{{count} miyembro}}",
+  "peopleListsViewAllMembers": "Tingnan lahat",
+  "peopleListsLoadFailed": "Hindi na-load ang list na ito.",
+  "@listMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@peopleListsPeopleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@listLoopsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "listStatsSeparator": " ∙ "
 }

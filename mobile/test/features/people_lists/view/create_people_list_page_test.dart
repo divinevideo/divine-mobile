@@ -12,6 +12,8 @@ import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
 import 'package:openvine/l10n/l10n.dart';
 
+import '../../../helpers/test_provider_overrides.dart';
+
 class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
     implements PeopleListsBloc {}
 
@@ -21,7 +23,10 @@ const String _ownerPubkey =
 void main() {
   setUpAll(() {
     registerFallbackValue(
-      const PeopleListsCreateRequested(name: 'fallback'),
+      const PeopleListsCreateRequested(
+        expectedOwnerPubkey: _ownerPubkey,
+        name: 'fallback',
+      ),
     );
   });
 
@@ -45,13 +50,17 @@ void main() {
       await bloc.close();
     });
 
-    Widget buildSubject({String? initialPubkey}) {
-      return MaterialApp(
-        localizationsDelegates: appLocalizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: BlocProvider<PeopleListsBloc>.value(
-          value: bloc,
-          child: CreatePeopleListPage(initialPubkey: initialPubkey),
+    Widget buildSubject({String? initialPubkey, MockAuthService? auth}) {
+      return testProviderScope(
+        mockAuthService:
+            auth ?? createMockAuthService(currentPublicKeyHex: _ownerPubkey),
+        child: MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: BlocProvider<PeopleListsBloc>.value(
+            value: bloc,
+            child: CreatePeopleListPage(initialPubkey: initialPubkey),
+          ),
         ),
       );
     }
@@ -130,7 +139,10 @@ void main() {
 
         verify(
           () => bloc.add(
-            const PeopleListsCreateRequested(name: 'Close Friends'),
+            const PeopleListsCreateRequested(
+              expectedOwnerPubkey: _ownerPubkey,
+              name: 'Close Friends',
+            ),
           ),
         ).called(1);
       },
@@ -155,6 +167,7 @@ void main() {
         verify(
           () => bloc.add(
             const PeopleListsCreateRequested(
+              expectedOwnerPubkey: _ownerPubkey,
               name: 'Close Friends',
               initialPubkeys: [targetPubkey],
             ),
@@ -181,6 +194,7 @@ void main() {
         verify(
           () => bloc.add(
             const PeopleListsCreateRequested(
+              expectedOwnerPubkey: _ownerPubkey,
               name: 'Solo',
               // The explicit empty list is the submitted value under test.
               // ignore: avoid_redundant_argument_values
@@ -210,6 +224,7 @@ void main() {
         verify(
           () => bloc.add(
             const PeopleListsCreateRequested(
+              expectedOwnerPubkey: _ownerPubkey,
               name: 'Solo',
               // The explicit empty list is the submitted value under test.
               // ignore: avoid_redundant_argument_values
@@ -219,6 +234,68 @@ void main() {
         ).called(1);
       },
     );
+
+    testWidgets('actual auth changes before bloc catches up do not submit', (
+      tester,
+    ) async {
+      String? owner = _ownerPubkey;
+      final auth = createMockAuthService(currentPublicKeyHex: owner);
+      when(() => auth.currentPublicKeyHex).thenAnswer((_) => owner);
+      await tester.pumpWidget(buildSubject(auth: auth));
+      await tester.enterText(find.byType(TextFormField), 'Account A fields');
+      await tester.pump();
+      owner = targetPubkey;
+      await tester.tap(find.widgetWithText(DivineButton, 'Create'));
+      await tester.pump();
+      expect(bloc.state.activeOwnerPubkey, _ownerPubkey);
+      verifyNever(() => bloc.add(any()));
+    });
+
+    testWidgets('opening auth different from bloc owner does not submit', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildSubject(
+          auth: createMockAuthService(currentPublicKeyHex: targetPubkey),
+        ),
+      );
+      await tester.enterText(find.byType(TextFormField), 'Account B fields');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(DivineButton, 'Create'));
+      await tester.pump();
+      verifyNever(() => bloc.add(any()));
+    });
+
+    testWidgets('does not submit after the opening account changes', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildSubject());
+      await tester.enterText(find.byType(TextFormField), 'Account A fields');
+      await tester.pump();
+      when(() => bloc.state).thenReturn(
+        const PeopleListsState(
+          status: PeopleListsStatus.ready,
+          ownerPubkey: targetPubkey,
+        ),
+      );
+      await tester.tap(find.widgetWithText(DivineButton, 'Create'));
+      await tester.pump();
+      verifyNever(() => bloc.add(any()));
+    });
+
+    testWidgets('does not submit after the feature is disabled', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildSubject());
+      await tester.enterText(find.byType(TextFormField), 'Account A fields');
+      await tester.pump();
+      when(() => bloc.state).thenReturn(
+        const PeopleListsState(ownerPubkey: _ownerPubkey, enabled: false),
+      );
+      await tester.tap(find.widgetWithText(DivineButton, 'Create'));
+      await tester.pump();
+      verifyNever(() => bloc.add(any()));
+    });
 
     test(
       'pathWithInitialPubkey builds a URL with URI-encoded, untruncated '
@@ -260,12 +337,14 @@ void main() {
         );
 
         await tester.pumpWidget(
-          BlocProvider<PeopleListsBloc>.value(
-            value: bloc,
-            child: MaterialApp.router(
-              localizationsDelegates: appLocalizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              routerConfig: router,
+          testProviderScope(
+            child: BlocProvider<PeopleListsBloc>.value(
+              value: bloc,
+              child: MaterialApp.router(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                routerConfig: router,
+              ),
             ),
           ),
         );

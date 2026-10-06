@@ -27,6 +27,11 @@ abstract interface class PeopleListsRepository {
   ///
   /// Stale relay echoes older than the locally-stored state must not overwrite
   /// newer local data.
+  ///
+  /// Throws `PublicPeopleListReadUnavailableException` when the relay read
+  /// is inconclusive (disconnected, timed out, or failed before completion).
+  /// Callers must retain cached lists and report an unavailable read rather
+  /// than interpreting that exception as a successfully empty owner list.
   Future<void> syncOwner({required String ownerPubkey});
 
   /// Creates a new people list for [ownerPubkey] with the given metadata and
@@ -87,5 +92,15 @@ abstract interface class PeopleListsRepository {
   Stream<List<PeopleListSearchResult>> searchPublicLists(
     String query, {
     int limit = 50,
+  });
+
+  /// Fetches one public kind `30000` list addressed by author + `d` tag.
+  ///
+  /// Re-checks both against each result because relay/cache filter support
+  /// can be loose, and dedup keeps the newest replaceable version. Returns
+  /// `null` when relays hold no matching decodable list.
+  Future<UserList?> fetchPublicList({
+    required String ownerPubkey,
+    required String listId,
   });
 }

@@ -106,11 +106,15 @@ class PeopleListsRepositoryListsChanged extends PeopleListsEvent {
 class PeopleListsCreateRequested extends PeopleListsEvent {
   /// Creates a create-list request.
   const PeopleListsCreateRequested({
+    required this.expectedOwnerPubkey,
     required this.name,
     this.description,
     this.imageUrl,
     this.initialPubkeys = const [],
   });
+
+  /// The account captured when the create form opened.
+  final String expectedOwnerPubkey;
 
   /// Display name for the new list.
   final String name;
@@ -125,7 +129,13 @@ class PeopleListsCreateRequested extends PeopleListsEvent {
   final List<String> initialPubkeys;
 
   @override
-  List<Object?> get props => [name, description, imageUrl, initialPubkeys];
+  List<Object?> get props => [
+    expectedOwnerPubkey,
+    name,
+    description,
+    imageUrl,
+    initialPubkeys,
+  ];
 }
 
 /// Requests deletion of a people list.
@@ -193,4 +203,21 @@ class PeopleListsPubkeyToggleRequested extends PeopleListsEvent {
 
   @override
   List<Object?> get props => [listId, pubkey];
+}
+
+/// Retries an inconclusive owner read without clearing cached lists.
+class PeopleListsOwnerSyncRequested extends PeopleListsEvent {
+  const PeopleListsOwnerSyncRequested();
+}
+
+/// Carries the result of a particular repository/account read session.
+class PeopleListsOwnerSyncCompleted extends PeopleListsEvent {
+  const PeopleListsOwnerSyncCompleted({
+    required this.session,
+    required this.failed,
+  });
+  final int session;
+  final bool failed;
+  @override
+  List<Object?> get props => [session, failed];
 }

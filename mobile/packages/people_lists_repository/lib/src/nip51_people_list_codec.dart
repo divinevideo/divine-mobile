@@ -202,7 +202,7 @@ abstract final class Nip51PeopleListCodec {
       return null;
     }
 
-    final pubkeys = _memberPubkeys(event.tags).toList(growable: false);
+    final pubkeys = _memberPubkeys(event.tags).toSet().toList(growable: false);
 
     final timestamp = DateTime.fromMillisecondsSinceEpoch(
       event.createdAt * 1000,

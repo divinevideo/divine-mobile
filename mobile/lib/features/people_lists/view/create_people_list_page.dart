@@ -3,10 +3,12 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 
 /// Full-screen page that creates a new NIP-51 kind 30000 people list.
@@ -19,7 +21,7 @@ import 'package:openvine/router/route_paths.dart';
 /// The page intentionally stays thin: no local form bloc, no async wait on
 /// the repository. It relies on [PeopleListsBloc]'s optimistic update so the
 /// rest of the UI reflects the new list immediately after dispatch.
-class CreatePeopleListPage extends StatefulWidget {
+class CreatePeopleListPage extends ConsumerStatefulWidget {
   /// Creates the create-list page.
   const CreatePeopleListPage({this.initialPubkey, super.key});
 
@@ -44,15 +46,18 @@ class CreatePeopleListPage extends StatefulWidget {
   final String? initialPubkey;
 
   @override
-  State<CreatePeopleListPage> createState() => _CreatePeopleListPageState();
+  ConsumerState<CreatePeopleListPage> createState() =>
+      _CreatePeopleListPageState();
 }
 
-class _CreatePeopleListPageState extends State<CreatePeopleListPage> {
+class _CreatePeopleListPageState extends ConsumerState<CreatePeopleListPage> {
   late final TextEditingController _nameController;
+  late final String? _openingOwner;
 
   @override
   void initState() {
     super.initState();
+    _openingOwner = ref.read(authServiceProvider).currentPublicKeyHex;
     _nameController = TextEditingController();
     // Rebuild the Create button enable-state as the text changes.
     _nameController.addListener(_onNameChanged);
@@ -75,7 +80,12 @@ class _CreatePeopleListPageState extends State<CreatePeopleListPage> {
 
   void _submit() {
     final name = _nameController.text.trim();
-    if (name.isEmpty) {
+    final owner = _openingOwner;
+    if (name.isEmpty ||
+        owner == null ||
+        owner.isEmpty ||
+        ref.read(authServiceProvider).currentPublicKeyHex != owner ||
+        context.read<PeopleListsBloc>().state.activeOwnerPubkey != owner) {
       return;
     }
     final initialPubkeys = switch (widget.initialPubkey) {
@@ -84,6 +94,7 @@ class _CreatePeopleListPageState extends State<CreatePeopleListPage> {
     };
     context.read<PeopleListsBloc>().add(
       PeopleListsCreateRequested(
+        expectedOwnerPubkey: owner,
         name: name,
         initialPubkeys: initialPubkeys,
       ),
