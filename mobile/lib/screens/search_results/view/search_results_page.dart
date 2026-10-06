@@ -89,6 +89,29 @@ class _SearchResultsPageState extends ConsumerState<SearchResultsPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Query and category belong to the page, including readiness gaps.
+    return BlocProvider(
+      create: (_) => SearchResultsFilterCubit(),
+      child: _SearchResultsScope(
+        controller: _controller,
+        requestFocusOnMount: widget.requestFocusOnMount,
+      ),
+    );
+  }
+}
+
+/// Wires result BLoCs only while their account-sensitive repositories are ready.
+class _SearchResultsScope extends ConsumerWidget {
+  const _SearchResultsScope({
+    required this.controller,
+    required this.requestFocusOnMount,
+  });
+
+  final TextEditingController controller;
+  final bool requestFocusOnMount;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final profileRepository = ref.watch(profileRepositoryProvider);
     if (profileRepository == null) {
       return ColoredBox(
@@ -112,53 +135,49 @@ class _SearchResultsPageState extends ConsumerState<SearchResultsPage> {
     final peopleListSearchEnabled =
         profileListFeaturesEnabled && curatedListsEnabled;
 
-    // The chosen category is independent of the policy-bound result blocs.
-    return BlocProvider(
-      create: (_) => SearchResultsFilterCubit(),
-      child: MultiBlocProvider(
-        // Recreate the search blocs when an auth-sensitive repository or flag
-        // changes so no bloc remains bound to stale dependencies.
-        // See `.claude/rules/state_management.md`.
-        key: ValueKey((
-          profileRepository,
-          videosRepository,
-          hashtagRepository,
-          curatedListRepository,
-          peopleListsRepository,
-          peopleListSearchEnabled,
-        )),
-        providers: [
-          BlocProvider(
-            create: (_) => VideoSearchBloc(
-              videosRepository: videosRepository,
-            ),
+    return MultiBlocProvider(
+      // Recreate the search blocs when an auth-sensitive repository or flag
+      // changes so no bloc remains bound to stale dependencies.
+      // See `.claude/rules/state_management.md`.
+      key: ValueKey((
+        profileRepository,
+        videosRepository,
+        hashtagRepository,
+        curatedListRepository,
+        peopleListsRepository,
+        peopleListSearchEnabled,
+      )),
+      providers: [
+        BlocProvider(
+          create: (_) => VideoSearchBloc(
+            videosRepository: videosRepository,
           ),
-          BlocProvider(
-            create: (_) => UserSearchBloc(profileRepository: profileRepository),
+        ),
+        BlocProvider(
+          create: (_) => UserSearchBloc(profileRepository: profileRepository),
+        ),
+        BlocProvider(
+          create: (_) => HashtagSearchBloc(
+            hashtagRepository: hashtagRepository,
           ),
-          BlocProvider(
-            create: (_) => HashtagSearchBloc(
-              hashtagRepository: hashtagRepository,
-            ),
+        ),
+        BlocProvider(
+          create: (_) => ListSearchBloc(
+            curatedListRepository: curatedListRepository,
+            peopleListsRepository: peopleListsRepository,
+            peopleListSearchEnabled: peopleListSearchEnabled,
           ),
-          BlocProvider(
-            create: (_) => ListSearchBloc(
-              curatedListRepository: curatedListRepository,
-              peopleListsRepository: peopleListsRepository,
-              peopleListSearchEnabled: peopleListSearchEnabled,
-            ),
-          ),
-        ],
-        child: _BlocklistRefreshListener(
-          child: Scaffold(
-            // bg/surface — matches SearchResultsView's body background so the
-            // app bar area (which doesn't paint its own background) doesn't
-            // show through to the root scaffold's darker default.
-            backgroundColor: context.vineColors.surface,
-            body: _SearchResultsBody(
-              controller: _controller,
-              requestFocusOnMount: widget.requestFocusOnMount,
-            ),
+        ),
+      ],
+      child: _BlocklistRefreshListener(
+        child: Scaffold(
+          // bg/surface — matches SearchResultsView's body background so the
+          // app bar area (which doesn't paint its own background) doesn't
+          // show through to the root scaffold's darker default.
+          backgroundColor: context.vineColors.surface,
+          body: _SearchResultsBody(
+            controller: controller,
+            requestFocusOnMount: requestFocusOnMount,
           ),
         ),
       ),

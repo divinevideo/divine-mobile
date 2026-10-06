@@ -10,8 +10,10 @@ import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/hashtag_search/hashtag_search_bloc.dart';
 import 'package:openvine/blocs/list_search/list_search_bloc.dart';
 import 'package:openvine/blocs/search_results_filter/search_results_filter.dart';
+import 'package:openvine/blocs/user_search/user_search_bloc.dart';
 import 'package:openvine/blocs/video_search/video_search_bloc.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
@@ -39,6 +41,7 @@ class _MockPeopleListsRepository extends Mock
 final _profileRepositoryAvailable = StateProvider<bool>((ref) => false);
 final _videosRepositorySelection = StateProvider<int>((ref) => 0);
 final _curatedRepositorySelection = StateProvider<int>((ref) => 0);
+final _profileReadinessSelection = StateProvider<int>((ref) => 0);
 
 void main() {
   setUpAll(() {
@@ -90,11 +93,12 @@ void main() {
     }
 
     testWidgets(
-      'policy replacement clears previews and preserves typed query and category',
+      'policy and readiness replacements preserve typed query and category',
       (
         tester,
       ) async {
         final replacement = _MockCuratedListRepository();
+        final replacementProfile = createMockProfileRepository();
         final pending = StreamController<List<CuratedList>>.broadcast();
         addTearDown(pending.close);
         final now = DateTime.utc(2026);
@@ -123,19 +127,28 @@ void main() {
             limit: any(named: 'limit'),
           ),
         ).thenAnswer((_) async => const <String>[]);
-        when(
-          () => mockProfileRepository.searchUsersProgressive(
-            query: any(named: 'query'),
-            limit: any(named: 'limit'),
-            offset: any(named: 'offset'),
-            sortBy: any(named: 'sortBy'),
-            hasVideos: any(named: 'hasVideos'),
-            boostPubkeys: any(named: 'boostPubkeys'),
-            cancellationToken: any(named: 'cancellationToken'),
-          ),
-        ).thenAnswer((_) => const Stream<ProgressiveSearchResult>.empty());
+        for (final profile in [mockProfileRepository, replacementProfile]) {
+          when(
+            () => profile.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+              hasVideos: any(named: 'hasVideos'),
+              boostPubkeys: any(named: 'boostPubkeys'),
+              cancellationToken: any(named: 'cancellationToken'),
+            ),
+          ).thenAnswer((_) => const Stream<ProgressiveSearchResult>.empty());
+        }
         await tester.pumpWidget(
           createTestWidget(
+            profileRepositoryOverride: profileRepositoryProvider.overrideWith(
+              (ref) => switch (ref.watch(_profileReadinessSelection)) {
+                0 => mockProfileRepository,
+                1 => null,
+                _ => replacementProfile,
+              },
+            ),
             curatedRepositoryOverride: curatedListRepositoryProvider
                 .overrideWith(
                   (ref) => ref.watch(_curatedRepositorySelection) == 0
@@ -151,6 +164,18 @@ void main() {
         final oldBloc = BlocProvider.of<ListSearchBloc>(
           tester.element(find.byType(SearchResultsView)),
         );
+        final oldResults = [
+          oldBloc,
+          BlocProvider.of<VideoSearchBloc>(
+            tester.element(find.byType(SearchResultsView)),
+          ),
+          BlocProvider.of<UserSearchBloc>(
+            tester.element(find.byType(SearchResultsView)),
+          ),
+          BlocProvider.of<HashtagSearchBloc>(
+            tester.element(find.byType(SearchResultsView)),
+          ),
+        ];
         expect(
           oldBloc.state.videoResults.single.thumbnailUrls,
           row.thumbnailUrls,
@@ -168,7 +193,21 @@ void main() {
         final newBloc = BlocProvider.of<ListSearchBloc>(
           tester.element(find.byType(SearchResultsView)),
         );
-        expect(oldBloc.isClosed, isTrue);
+        for (final result in oldResults) {
+          expect(result.isClosed, isTrue);
+        }
+        final nextResults = [
+          newBloc,
+          BlocProvider.of<VideoSearchBloc>(
+            tester.element(find.byType(SearchResultsView)),
+          ),
+          BlocProvider.of<UserSearchBloc>(
+            tester.element(find.byType(SearchResultsView)),
+          ),
+          BlocProvider.of<HashtagSearchBloc>(
+            tester.element(find.byType(SearchResultsView)),
+          ),
+        ];
         expect(
           BlocProvider.of<SearchResultsFilterCubit>(
             tester.element(find.byType(SearchResultsView)),
@@ -190,9 +229,48 @@ void main() {
         pending.add([row.copyWith(thumbnailUrls: const [])]);
         await tester.pump();
         expect(newBloc.state.videoResults.single.thumbnailUrls, isEmpty);
+
+        container.read(_profileReadinessSelection.notifier).state = 1;
+        await tester.pump();
+        expect(find.byType(TextField), findsNothing);
+        expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+        for (final result in nextResults) {
+          expect(result.isClosed, isTrue);
+        }
+        expect(category.isClosed, isFalse);
+        expect(category.state, SearchResultsFilter.lists);
+
+        container.read(_profileReadinessSelection.notifier).state = 2;
+        await tester.pump();
+        final readyBloc = BlocProvider.of<ListSearchBloc>(
+          tester.element(find.byType(SearchResultsView)),
+        );
+        expect(readyBloc, isNot(same(newBloc)));
+        expect(readyBloc.state.videoResults, isEmpty);
+        expect(
+          BlocProvider.of<SearchResultsFilterCubit>(
+            tester.element(find.byType(SearchResultsView)),
+          ),
+          same(category),
+        );
+        expect(category.state, SearchResultsFilter.lists);
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          'dance',
+        );
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.runAsync(() async {});
+        await tester.pump();
+        verify(() => replacement.searchAllLists('dance')).called(1);
+        expect(readyBloc.state.query, 'dance');
+        expect(readyBloc.state.videoResults, isEmpty);
+        pending.add([row.copyWith(thumbnailUrls: const [])]);
+        await tester.pump();
+        expect(readyBloc.state.videoResults.single.thumbnailUrls, isEmpty);
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(const Duration(milliseconds: 350));
         expect(category.isClosed, isTrue);
+        expect(readyBloc.isClosed, isTrue);
       },
     );
 

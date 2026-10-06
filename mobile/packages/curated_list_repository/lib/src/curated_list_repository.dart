@@ -508,31 +508,54 @@ class CuratedListRepository {
       return {};
     }
 
-    final results = <String, VideoEvent>{};
-
+    // Select raw revisions before parsing or discarding thumbnail-less videos.
+    // A current revision must not reveal an older revision's thumbnail when
+    // its metadata is hidden, unavailable, or unparseable.
+    final selectedEvents = <String, Event>{};
     for (final event in events) {
-      try {
-        final videoEvent = VideoEvent.fromNostrEvent(event, permissive: true);
-        final thumb = videoEvent.effectiveThumbnailUrl;
-        if (thumb == null) continue;
+      // An immutable event ID remains independent of coordinate revisions.
+      if (hexIds.contains(event.id)) {
+        selectedEvents[event.id] = event;
+      }
 
-        // Match hex IDs by event ID.
-        if (hexIds.contains(event.id)) {
-          results[event.id] = videoEvent;
-          continue;
+      // NIP-01 coordinates use the first raw d-tag, including an empty d-tag.
+      for (final ref in coordRefs) {
+        final parts = ref.split(':');
+        if (int.tryParse(parts[0]) == event.kind &&
+            parts[1] == event.pubkey &&
+            parts.sublist(2).join(':') == event.dTagValue) {
+          final selected = selectedEvents[ref];
+          if (selected == null ||
+              event.createdAt > selected.createdAt ||
+              (event.createdAt == selected.createdAt &&
+                  event.id.compareTo(selected.id) < 0)) {
+            selectedEvents[ref] = event;
+          }
+          break;
         }
+      }
+    }
 
-        // Match addressable coords by reconstructing the coordinate.
-        for (final ref in coordRefs) {
-          final parts = ref.split(':');
-          if (parts.length >= 3 &&
-              int.tryParse(parts[0]) == event.kind &&
-              parts[1] == event.pubkey &&
-              parts.sublist(2).join(':') == videoEvent.addressableDTag) {
-            results[ref] = videoEvent;
-            break;
+    final results = <String, VideoEvent>{};
+    for (final entry in selectedEvents.entries) {
+      try {
+        final videoEvent = VideoEvent.fromNostrEvent(
+          entry.value,
+          permissive: true,
+        );
+        if (!_hexEventIdPattern.hasMatch(entry.key)) {
+          final parts = entry.key.split(':');
+          // Policy lookups must use the same identity as the requested
+          // coordinate. Contradictory parsed metadata cannot revive an older
+          // image or redirect this preview to a different coordinate.
+          if (int.tryParse(parts[0]) != videoEvent.eventKind ||
+              parts[1] != videoEvent.pubkey ||
+              parts.sublist(2).join(':') != videoEvent.addressableDTag) {
+            continue;
           }
         }
+        if (videoEvent.effectiveThumbnailUrl == null) continue;
+        results[entry.key] = videoEvent;
       } on Object {
         // Skip unparseable events (e.g. non-video kinds throw
         // ArgumentError from VideoEvent.fromNostrEvent).
