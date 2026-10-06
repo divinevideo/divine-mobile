@@ -15,6 +15,7 @@ import 'package:openvine/blocs/list_search/list_search_bloc.dart';
 import 'package:openvine/blocs/search_results_filter/search_results_filter.dart';
 import 'package:openvine/blocs/user_search/user_search_bloc.dart';
 import 'package:openvine/blocs/video_search/video_search_bloc.dart';
+import 'package:openvine/constants/search_constants.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -38,6 +39,9 @@ class _MockCuratedListRepository extends Mock
 
 class _MockPeopleListsRepository extends Mock
     implements PeopleListsRepository {}
+
+const _viewerPubkey =
+    '7777777777777777777777777777777777777777777777777777777777777777';
 
 final _profileRepositoryAvailable = StateProvider<bool>((ref) => false);
 final _videosRepositorySelection = StateProvider<int>((ref) => 0);
@@ -413,10 +417,17 @@ void main() {
             when(() => mockCuratedListRepository.searchAllLists(any()))
                 .thenAnswer((_) => Stream.value(const <CuratedList>[]));
             when(
-              () => mockPeopleListsRepository.searchPublicLists(any()),
+              () => mockPeopleListsRepository.searchPublicLists(
+                any(),
+                viewerPubkey: any(named: 'viewerPubkey'),
+              ),
             ).thenAnswer((_) => Stream.value(const <PeopleListSearchResult>[]));
             await tester.pumpWidget(
               createTestWidget(
+                authService: createMockAuthService(
+                  authState: AuthState.authenticated,
+                  currentPublicKeyHex: _viewerPubkey,
+                ),
                 flagOverrides: [
                   isFeatureEnabledProvider(FeatureFlag.curatedLists)
                       .overrideWith((ref) => master),
@@ -425,18 +436,55 @@ void main() {
                 ],
               ),
             );
+            await tester.pump();
             final bloc = BlocProvider.of<ListSearchBloc>(
               tester.element(find.byType(SearchResultsView)),
             );
             bloc.add(const ListSearchQueryChanged('crew'));
-            await tester.pump(const Duration(milliseconds: 350));
             await tester.pump();
+            expect(bloc.state.requestedQuery, 'crew');
+            expect(bloc.state.query, isEmpty);
+            verifyNever(
+              () => mockCuratedListRepository.searchAllLists(any()),
+            );
+            verifyNever(
+              () => mockPeopleListsRepository.searchPublicLists(
+                any(),
+                viewerPubkey: any(named: 'viewerPubkey'),
+              ),
+            );
+            await tester.pump(searchDebounceDuration);
+            // Rx cancellation completes in the root zone; flush without advancing time.
+            await tester.runAsync(() async {});
+            await tester.pump();
+            expect(bloc.isClosed, isFalse);
+            expect(
+              BlocProvider.of<ListSearchBloc>(
+                tester.element(find.byType(SearchResultsView)),
+              ),
+              same(bloc),
+            );
+            expect(bloc.state.query, 'crew');
+            expect(bloc.state.videoStatus, ListSearchSourceStatus.success);
+            expect(
+              bloc.state.peopleStatus,
+              master && profile
+                  ? ListSearchSourceStatus.success
+                  : ListSearchSourceStatus.initial,
+            );
             if (master && profile) {
-              verify(() => mockPeopleListsRepository.searchPublicLists('crew'))
-                  .called(1);
+              verify(
+                () => mockPeopleListsRepository.searchPublicLists(
+                  'crew',
+                  viewerPubkey: _viewerPubkey,
+                ),
+              ).called(1);
             } else {
               verifyNever(
-                () => mockPeopleListsRepository.searchPublicLists(any()),
+                () => mockPeopleListsRepository.searchPublicLists(
+                  any(),
+                  viewerPubkey: any(named: 'viewerPubkey'),
+                ),
               );
             }
             verify(() => mockCuratedListRepository.searchAllLists('crew'))

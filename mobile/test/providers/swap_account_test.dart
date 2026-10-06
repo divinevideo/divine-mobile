@@ -28,6 +28,7 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/swap_account.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
+import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
@@ -440,9 +441,8 @@ void main() {
           publicKeyHex: leavingHex,
         );
         storage.primary = oldKey;
-        final cleanup = UserDataCleanupService(
-          _RefusingCleanupPreferences(prefs),
-        );
+        final refusingPrefs = _RefusingCleanupPreferences(prefs);
+        final cleanup = UserDataCleanupService(refusingPrefs);
         var databaseCleanups = 0;
         cleanup.onDatabaseCleanup =
             ({
@@ -506,6 +506,16 @@ void main() {
         expect(storage.primary, same(oldKey));
         expect(storage.restoredPrimary, same(oldKey));
         expect(currentAuthService.calls, ['archive', 'restore']);
+        expect(
+          refusingPrefs.refusedKeys,
+          contains(CuratedListService.listsStorageKey),
+        );
+        await prefs.reload();
+        final pendingCleanup = PendingAccountCleanup.read(prefs);
+        expect(pendingCleanup, isNotNull);
+        expect(pendingCleanup!.userPubkey, leavingHex);
+        expect(pendingCleanup.isIdentityChange, isTrue);
+        expect(pendingCleanup.deleteUserData, isFalse);
         expect(prefs.getString('current_user_pubkey_hex'), leavingHex);
         expect(
           prefs.getString(CuratedListService.listsStorageKey),
@@ -1158,12 +1168,23 @@ void main() {
 class _RefusingCleanupPreferences extends Fake implements SharedPreferences {
   _RefusingCleanupPreferences(this.backing);
   final SharedPreferences backing;
+  final refusedKeys = <String>[];
+  @override
+  Object? get(String key) => backing.get(key);
+  @override
+  Set<String> getKeys() => backing.getKeys();
   @override
   String? getString(String key) => backing.getString(key);
   @override
   bool containsKey(String key) => backing.containsKey(key);
   @override
-  Future<bool> remove(String key) async => false;
+  Future<bool> setString(String key, String value) =>
+      backing.setString(key, value);
+  @override
+  Future<bool> remove(String key) async {
+    refusedKeys.add(key);
+    return false;
+  }
 }
 
 class _RestorableSecureKeyStorage extends _FakeSecureKeyStorage {
