@@ -131,6 +131,11 @@ void main() {
         act: (bloc) => bloc.add(const ListSearchQueryChanged('videos')),
         wait: const Duration(milliseconds: 400),
         expect: () => [
+          isA<ListSearchState>().having(
+            (s) => s.requestedQuery,
+            'requestedQuery',
+            'videos',
+          ),
           _searchState(
             status: ListSearchStatus.loading,
             query: 'videos',
@@ -176,6 +181,11 @@ void main() {
         act: (bloc) => bloc.add(const ListSearchQueryChanged('people')),
         wait: const Duration(milliseconds: 400),
         expect: () => [
+          isA<ListSearchState>().having(
+            (s) => s.requestedQuery,
+            'requestedQuery',
+            'people',
+          ),
           _searchState(
             status: ListSearchStatus.loading,
             query: 'people',
@@ -223,6 +233,11 @@ void main() {
         act: (bloc) => bloc.add(const ListSearchQueryChanged('mixed')),
         wait: const Duration(milliseconds: 400),
         expect: () => [
+          isA<ListSearchState>().having(
+            (s) => s.requestedQuery,
+            'requestedQuery',
+            'mixed',
+          ),
           _searchState(
             status: ListSearchStatus.loading,
             query: 'mixed',
@@ -251,6 +266,11 @@ void main() {
         act: (bloc) => bloc.add(const ListSearchQueryChanged('xyz')),
         wait: const Duration(milliseconds: 400),
         expect: () => [
+          isA<ListSearchState>().having(
+            (s) => s.requestedQuery,
+            'requestedQuery',
+            'xyz',
+          ),
           _searchState(status: ListSearchStatus.loading, query: 'xyz'),
           _searchState(status: ListSearchStatus.success, query: 'xyz'),
         ],
@@ -267,7 +287,14 @@ void main() {
         build: buildBloc,
         act: (bloc) => bloc.add(const ListSearchQueryChanged('')),
         wait: const Duration(milliseconds: 400),
-        expect: () => [const ListSearchState()],
+        expect: () => [
+          isA<ListSearchState>().having(
+            (s) => s.requestedQuery,
+            'requestedQuery',
+            '',
+          ),
+          const ListSearchState(),
+        ],
       );
 
       blocTest<ListSearchBloc, ListSearchState>(
@@ -275,7 +302,14 @@ void main() {
         build: buildBloc,
         act: (bloc) => bloc.add(const ListSearchQueryChanged('a')),
         wait: const Duration(milliseconds: 400),
-        expect: () => [const ListSearchState()],
+        expect: () => [
+          isA<ListSearchState>().having(
+            (s) => s.requestedQuery,
+            'requestedQuery',
+            'a',
+          ),
+          const ListSearchState(),
+        ],
       );
 
       blocTest<ListSearchBloc, ListSearchState>(
@@ -289,6 +323,11 @@ void main() {
         act: (bloc) => bloc.add(const ListSearchQueryChanged('test')),
         wait: const Duration(milliseconds: 400),
         expect: () => [
+          isA<ListSearchState>().having(
+            (s) => s.requestedQuery,
+            'requestedQuery',
+            'test',
+          ),
           _searchState(
             status: ListSearchStatus.loading,
             query: 'test',
@@ -315,6 +354,11 @@ void main() {
         act: (bloc) => bloc.add(const ListSearchQueryChanged('test')),
         wait: const Duration(milliseconds: 400),
         expect: () => [
+          isA<ListSearchState>().having(
+            (s) => s.requestedQuery,
+            'requestedQuery',
+            'test',
+          ),
           _searchState(
             status: ListSearchStatus.loading,
             query: 'test',
@@ -343,6 +387,11 @@ void main() {
         act: (bloc) => bloc.add(const ListSearchQueryChanged('test')),
         wait: const Duration(milliseconds: 400),
         expect: () => [
+          isA<ListSearchState>().having(
+            (s) => s.requestedQuery,
+            'requestedQuery',
+            'test',
+          ),
           _searchState(
             status: ListSearchStatus.loading,
             query: 'test',
@@ -375,6 +424,11 @@ void main() {
         act: (bloc) => bloc.add(const ListSearchQueryChanged('vid')),
         wait: const Duration(milliseconds: 400),
         expect: () => [
+          isA<ListSearchState>().having(
+            (s) => s.requestedQuery,
+            'requestedQuery',
+            'vid',
+          ),
           _searchState(status: ListSearchStatus.loading, query: 'vid'),
           isA<ListSearchState>().having(
             (s) => s.videoResults.length,
@@ -582,6 +636,92 @@ void main() {
     });
 
     group('source cancellation', () {
+      test(
+        'block changes use the pending query without losing visible results',
+        () async {
+          when(() => curatedListRepository.searchAllLists('old'))
+              .thenAnswer((_) => Stream.value([testCuratedList]));
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+          final ready = bloc.stream.firstWhere(
+            (s) => s.query == 'old' && s.status == ListSearchStatus.success,
+          );
+          bloc.add(const ListSearchQueryChanged('old'));
+          await ready;
+
+          bloc.add(const ListSearchQueryChanged('fresh'));
+          await pumpEventQueue();
+          expect(bloc.state.requestedQuery, 'fresh');
+          expect(bloc.state.query, 'old');
+          expect(bloc.state.videoResults, [testCuratedList]);
+          verifyNever(() => curatedListRepository.searchAllLists('fresh'));
+
+          final refreshed = bloc.stream.firstWhere(
+            (s) => s.query == 'fresh' && s.status == ListSearchStatus.success,
+          );
+          bloc.add(const ListSearchBlocklistChanged());
+          await refreshed;
+          expect(bloc.state.videoResults, isEmpty);
+          verify(() => curatedListRepository.searchAllLists('fresh')).called(1);
+        },
+      );
+
+      test('returning to the visible query cancels an intervening debounce', () async {
+        when(() => curatedListRepository.searchAllLists('old'))
+            .thenAnswer((_) => Stream.value([testCuratedList]));
+        final bloc = buildBloc();
+        addTearDown(bloc.close);
+        final ready = bloc.stream.firstWhere(
+          (s) => s.query == 'old' && s.status == ListSearchStatus.success,
+        );
+        bloc.add(const ListSearchQueryChanged('old'));
+        await ready;
+        verify(() => curatedListRepository.searchAllLists('old')).called(1);
+
+        bloc.add(const ListSearchQueryChanged('fresh'));
+        await pumpEventQueue();
+        final reloaded = bloc.stream
+            .skipWhile((s) => s.status != ListSearchStatus.loading)
+            .firstWhere(
+              (s) => s.query == 'old' && s.status == ListSearchStatus.success,
+            );
+        bloc.add(const ListSearchQueryChanged('old'));
+        await reloaded;
+        verify(() => curatedListRepository.searchAllLists('old')).called(1);
+        // Closing also proves the cancelled debounce cannot start a late read.
+        await bloc.close();
+        verifyNever(() => curatedListRepository.searchAllLists('fresh'));
+      });
+
+      test('closing cancels both active repository subscriptions', () async {
+        var videoCancelled = false;
+        var peopleCancelled = false;
+        final videos = StreamController<List<CuratedList>>(
+          onCancel: () => videoCancelled = true,
+        );
+        final people = StreamController<List<PeopleListSearchResult>>(
+          onCancel: () => peopleCancelled = true,
+        );
+        when(() => curatedListRepository.searchAllLists('active'))
+            .thenAnswer((_) => videos.stream);
+        when(() => peopleListsRepository.searchPublicLists('active'))
+            .thenAnswer((_) => people.stream);
+        final bloc = buildBloc(peopleEnabled: true);
+        final subscribed = bloc.stream.firstWhere(
+          (s) =>
+              s.query == 'active' &&
+              s.peopleStatus == ListSearchSourceStatus.loading,
+        );
+        bloc.add(const ListSearchQueryChanged('active'));
+        await subscribed;
+        await pumpEventQueue();
+        await bloc.close();
+        expect(videoCancelled, isTrue);
+        expect(peopleCancelled, isTrue);
+        await videos.close();
+        await people.close();
+      });
+
       test(
         'duplicate query preserves the active source subscription',
         () async {

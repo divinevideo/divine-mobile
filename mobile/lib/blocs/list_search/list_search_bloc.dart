@@ -52,17 +52,7 @@ class ListSearchBloc extends Bloc<ListSearchEvent, ListSearchState> {
     on<ListSearchEvent>(
       _onEvent,
       transformer: (events, mapper) =>
-          events.where(_shouldHandle).switchMap((event) {
-            if (event is ListSearchQueryChanged) {
-              _requestedQuery = event.query.trim();
-            } else if (event is ListSearchCleared) {
-              _requestedQuery = '';
-            }
-            return (event is ListSearchQueryChanged
-                    ? Stream.value(event).delay(searchDebounceDuration)
-                    : Stream.value(event))
-                .asyncExpand(mapper);
-          }),
+          events.where(_shouldHandle).switchMap(mapper),
     );
   }
 
@@ -70,12 +60,11 @@ class ListSearchBloc extends Bloc<ListSearchEvent, ListSearchState> {
   final PeopleListsRepository _peopleListsRepository;
   final bool _peopleListSearchEnabled;
   final String? _viewerPubkey;
-  String? _requestedQuery;
 
   bool _shouldHandle(ListSearchEvent event) =>
       event is! ListSearchQueryChanged ||
       event.query.trim() != state.query ||
-      _requestedQuery != state.query ||
+      state.requestedQuery != state.query ||
       state.status == ListSearchStatus.initial ||
       state.status == ListSearchStatus.failure ||
       state.hasSourceFailure;
@@ -88,9 +77,18 @@ class ListSearchBloc extends Bloc<ListSearchEvent, ListSearchState> {
       emit(const ListSearchState());
       return;
     }
+    if (event is ListSearchQueryChanged) {
+      emit(state.copyWith(requestedQuery: event.query.trim()));
+      // The emitter cancels this debounce together with the old source reads.
+      await emit.onEach(
+        Stream.value(event).delay(searchDebounceDuration),
+        onData: (_) {},
+      );
+      if (emit.isDone) return;
+    }
     final query = event is ListSearchQueryChanged
         ? event.query.trim()
-        : _requestedQuery ?? state.query;
+        : state.requestedQuery ?? state.query;
     if (query.length < minSearchQueryLength ||
         NostrKeyUtils.containsPrivateKey(query)) {
       if (event is ListSearchBlocklistChanged && state.query.isEmpty) return;
@@ -146,6 +144,7 @@ class ListSearchBloc extends Bloc<ListSearchEvent, ListSearchState> {
       ListSearchState(
         status: ListSearchStatus.loading,
         query: query,
+        requestedQuery: query,
         videoResults: retainResults ? state.videoResults : const [],
         peopleResults: retainResults ? state.peopleResults : const [],
         videoStatus: ListSearchSourceStatus.loading,
