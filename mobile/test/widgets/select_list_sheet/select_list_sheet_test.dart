@@ -20,12 +20,17 @@ import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
+import 'package:openvine/widgets/list_picker_create_button.dart';
+import 'package:openvine/widgets/list_picker_row.dart';
 import 'package:openvine/widgets/select_list_sheet/select_list_sheet.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 
 import '../../helpers/test_provider_overrides.dart';
 
-class _MockCuratedListService extends Mock implements CuratedListService {}
+class _MockCuratedListService extends Mock implements CuratedListService {
+  @override
+  bool recoveryNeedsRepair = false;
+}
 
 /// Set before each test; read by [_FakeCuratedListsState].
 _MockCuratedListService? _fakeService;
@@ -36,6 +41,35 @@ class _FakeCuratedListsState extends CuratedListsState {
 
   @override
   Future<List<CuratedList>> build() async => const [];
+
+  void publishSnapshot() => state = AsyncData(List<CuratedList>.empty());
+
+  void failRefresh() =>
+      state = AsyncError(StateError('unavailable'), StackTrace.current);
+}
+
+_MockCuratedListService? _replacementBeforeMount;
+
+class _ReplacedBeforeMountCuratedListsState extends _FakeCuratedListsState {
+  @override
+  CuratedListService? get service {
+    final current = super.service;
+    if (_replacementBeforeMount != null) {
+      _fakeService = _replacementBeforeMount;
+      _replacementBeforeMount = null;
+    }
+    return current;
+  }
+}
+
+bool _retryInitializationFails = true;
+
+class _RetryableCuratedListsState extends _FakeCuratedListsState {
+  @override
+  Future<List<CuratedList>> build() async {
+    if (_retryInitializationFails) throw StateError('no relay');
+    return const [];
+  }
 }
 
 class _FailingCuratedListsState extends CuratedListsState {
@@ -60,6 +94,7 @@ void main() {
     late String? activeOwner;
 
     setUp(() {
+      _retryInitializationFails = true;
       activeOwner = _authorPubkey;
       auth = createMockAuthService(currentPublicKeyHex: _authorPubkey);
       when(() => auth.currentPublicKeyHex).thenAnswer((_) => activeOwner);
@@ -274,6 +309,272 @@ void main() {
         expect(find.byType(SelectListSheetBody), findsNothing);
         expect(find.text(l10n.listErrorLoading), findsOneWidget);
       });
+    });
+
+    group('read-only recovery', () {
+      _FakeCuratedListsState notifier(WidgetTester tester) =>
+          ProviderScope.containerOf(
+            tester.element(find.byType(SelectListSheetBody)),
+          ).read(curatedListsStateProvider.notifier) as _FakeCuratedListsState;
+
+      testWidgets(
+        'saved rows stay browsable, editing pauses, and Done only dismisses',
+        (tester) async {
+          final pending = list(
+            'Holds',
+            videoEventIds: const [_videoEventId],
+          ).copyWith(pendingRepublish: true);
+          when(() => service.myLists).thenReturn([pending, list('Empty')]);
+          service.recoveryNeedsRepair = true;
+          await openSheet(tester);
+
+          expect(find.text(l10n.listRecoveryReadOnly), findsOneWidget);
+          expect(find.text('Holds'), findsOneWidget);
+          expect(rowChecks(), findsOneWidget);
+          expect(
+            tester
+                .widget<ListPickerCreateButton>(
+                  find.byType(ListPickerCreateButton),
+                )
+                .onPressed,
+            isNull,
+          );
+          expect(
+            tester
+                .widget<DivineButton>(
+                  find.widgetWithText(DivineButton, l10n.listRetrySync),
+                )
+                .onPressed,
+            isNull,
+          );
+          await tester.tap(find.text('Empty'));
+          await tester.pump();
+          expect(rowChecks(), findsOneWidget);
+          final cubit = tester
+              .element(find.byType(SelectListSheetBody))
+              .read<SelectListCubit>();
+          await tester.tap(saveButton());
+          await tester.pumpAndSettle();
+          expect(find.byType(SelectListSheetBody), findsNothing);
+          expect(cubit.state.status, SelectListStatus.editing);
+          verifyNever(() => service.addVideoToList(any(), any()));
+          verifyNever(() => service.removeVideoFromList(any(), any()));
+          verifyNever(() => service.retryListSync(any()));
+        },
+      );
+
+      testWidgets('Done dismisses an empty held picker', (tester) async {
+        service.recoveryNeedsRepair = true;
+        await openSheet(tester);
+        expect(find.text(l10n.profileListsEmpty), findsOneWidget);
+        await tester.tap(saveButton());
+        await tester.pumpAndSettle();
+        expect(find.byType(SelectListSheetBody), findsNothing);
+      });
+
+      testWidgets('a hold after unconfirmed picks restores stored membership', (
+        tester,
+      ) async {
+        when(() => service.myLists).thenReturn([
+          list('Holds', videoEventIds: const [_videoEventId]),
+          list('Empty'),
+        ]);
+        await openSheet(tester);
+        await tester.tap(find.text('Holds'));
+        await tester.tap(find.text('Empty'));
+        await tester.pump();
+        final cubit = tester
+            .element(find.byType(SelectListSheetBody))
+            .read<SelectListCubit>();
+        expect(cubit.state.selectedListIds, {'list_empty'});
+        service.recoveryNeedsRepair = true;
+        notifier(tester).publishSnapshot();
+        await tester.pumpAndSettle();
+        expect(cubit.state.selectedListIds, {'list_holds'});
+        expect(find.text(l10n.listRecoveryReadOnly), findsOneWidget);
+        expect(
+          tester
+              .widget<ListPickerRow>(
+                find.widgetWithText(ListPickerRow, 'Empty'),
+              )
+              .onTap,
+          isNull,
+        );
+        await tester.tap(saveButton());
+        await tester.pumpAndSettle();
+        verifyNever(() => service.addVideoToList(any(), any()));
+        verifyNever(() => service.removeVideoFromList(any(), any()));
+      });
+
+      testWidgets('callbacks captured before a hold cannot toggle or create', (
+        tester,
+      ) async {
+        when(() => service.myLists).thenReturn([list('Empty')]);
+        await openSheet(tester);
+        final toggle = tester
+            .widget<ListPickerRow>(find.byType(ListPickerRow))
+            .onTap!;
+        final create = tester
+            .widget<ListPickerCreateButton>(find.byType(ListPickerCreateButton))
+            .onPressed!;
+        service.recoveryNeedsRepair = true;
+        toggle();
+        create();
+        await tester.pumpAndSettle();
+        expect(rowChecks(), findsNothing);
+        expect(find.byType(ListInfoForm), findsNothing);
+        expect(find.text(l10n.listRecoveryReadOnly), findsOneWidget);
+      });
+
+      testWidgets(
+        'a service replaced before the first frame is bound immediately',
+        (tester) async {
+          when(() => service.myLists).thenReturn([list('Old')]);
+          final replacement = _MockCuratedListService()
+            ..recoveryNeedsRepair = true;
+          when(() => replacement.isCurrentSession).thenReturn(true);
+          when(() => replacement.myLists).thenReturn([
+            list('Replacement', videoEventIds: const [_videoEventId]),
+          ]);
+          _replacementBeforeMount = replacement;
+          await openSheet(
+            tester,
+            listsState: _ReplacedBeforeMountCuratedListsState.new,
+          );
+          expect(find.text('Old'), findsNothing);
+          expect(find.text('Replacement'), findsOneWidget);
+          expect(find.text(l10n.listRecoveryReadOnly), findsOneWidget);
+          expect(
+            tester
+                .widget<ListPickerCreateButton>(
+                  find.byType(ListPickerCreateButton),
+                )
+                .onPressed,
+            isNull,
+          );
+          await tester.tap(saveButton());
+          await tester.pumpAndSettle();
+          verifyNever(() => service.addVideoToList(any(), any()));
+          verifyNever(() => replacement.addVideoToList(any(), any()));
+        },
+      );
+
+      testWidgets('replacement service resets picks and renders its hold', (
+        tester,
+      ) async {
+        when(() => service.myLists).thenReturn([list('Old')]);
+        await openSheet(tester);
+        await tester.tap(find.text('Old'));
+        await tester.pump();
+        final replacement = _MockCuratedListService()
+          ..recoveryNeedsRepair = true;
+        when(() => replacement.isCurrentSession).thenReturn(true);
+        when(() => replacement.myLists).thenReturn([
+          list('Replacement', videoEventIds: const [_videoEventId]),
+        ]);
+        _fakeService = replacement;
+        notifier(tester).publishSnapshot();
+        await tester.pumpAndSettle();
+        expect(find.text('Old'), findsNothing);
+        expect(find.text('Replacement'), findsOneWidget);
+        expect(find.text(l10n.listRecoveryReadOnly), findsOneWidget);
+        expect(rowChecks(), findsOneWidget);
+        await tester.tap(saveButton());
+        await tester.pumpAndSettle();
+        verifyNever(() => service.addVideoToList(any(), any()));
+        verifyNever(() => replacement.addVideoToList(any(), any()));
+      });
+
+      testWidgets('missing service preserves its known hold and safe rows', (
+        tester,
+      ) async {
+        when(() => service.myLists).thenReturn([list('Stored')]);
+        service.recoveryNeedsRepair = true;
+        await openSheet(tester);
+        _fakeService = null;
+        notifier(tester).publishSnapshot();
+        await tester.pumpAndSettle();
+        expect(find.text('Stored'), findsOneWidget);
+        expect(find.text(l10n.listRecoveryReadOnly), findsOneWidget);
+        expect(
+          tester
+              .widget<ListPickerCreateButton>(
+                find.byType(ListPickerCreateButton),
+              )
+              .onPressed,
+          isNull,
+        );
+        await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+        await tester.pumpAndSettle();
+        expect(find.byType(SelectListSheetBody), findsNothing);
+      });
+
+      testWidgets('verified repair restores the video picker controls', (
+        tester,
+      ) async {
+        when(() => service.myLists).thenReturn([list('Empty')]);
+        service.recoveryNeedsRepair = true;
+        await openSheet(tester);
+        service.recoveryNeedsRepair = false;
+        notifier(tester).publishSnapshot();
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listRecoveryReadOnly), findsNothing);
+        await tester.tap(find.text('Empty'));
+        await tester.pump();
+        expect(rowChecks(), findsOneWidget);
+        expect(
+          tester
+              .widget<ListPickerCreateButton>(
+                find.byType(ListPickerCreateButton),
+              )
+              .onPressed,
+          isNotNull,
+        );
+      });
+
+      testWidgets(
+        'initialization failure offers a local retry that opens after recovery',
+        (tester) async {
+          when(() => service.myLists).thenReturn([list('Restored')]);
+          await openSheet(tester, listsState: _RetryableCuratedListsState.new);
+          expect(find.byType(SelectListSheetBody), findsNothing);
+          expect(find.text(l10n.listErrorLoading), findsOneWidget);
+          _retryInitializationFails = false;
+          await tester.tap(find.text(l10n.searchTryAgain));
+          await tester.pumpAndSettle();
+          expect(find.text('Restored'), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'an open picker exposes Retry after its service refresh fails',
+        (tester) async {
+          when(() => service.myLists).thenReturn([list('Stored')]);
+          await openSheet(tester);
+          notifier(tester).failRefresh();
+          await tester.pumpAndSettle();
+          expect(find.text(l10n.listErrorLoading), findsOneWidget);
+          expect(
+            tester
+                .widget<ListPickerCreateButton>(
+                  find.byType(ListPickerCreateButton),
+                )
+                .onPressed,
+            isNull,
+          );
+          await tester.tap(find.text(l10n.searchTryAgain));
+          await tester.pumpAndSettle();
+          expect(find.text('Stored'), findsOneWidget);
+          expect(
+            tester
+                .widget<ListPickerCreateButton>(
+                  find.byType(ListPickerCreateButton),
+                )
+                .onPressed,
+            isNotNull,
+          );
+        },
+      );
     });
 
     group('interactions', () {

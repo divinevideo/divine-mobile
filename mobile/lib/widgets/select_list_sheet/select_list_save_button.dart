@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/select_list/select_list_cubit.dart';
+import 'package:openvine/extensions/modal_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
@@ -13,7 +14,7 @@ import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
 /// The header's check button; needs a [SelectListCubit] above it.
 ///
 /// Disabled while a save runs, and while no list is picked and none that
-/// holds the video is unpicked.
+/// holds the video is unpicked. During recovery, Done only closes the sheet.
 class SelectListSaveButton extends StatelessWidget {
   /// Creates the button.
   const SelectListSaveButton({super.key});
@@ -23,6 +24,11 @@ class SelectListSaveButton extends StatelessWidget {
     final route = ModalRoute.of(context);
     final l10n = context.l10n;
     final cubit = context.read<SelectListCubit>();
+    cubit.refreshRecoveryReadOnly();
+    if (cubit.state.recoveryReadOnly || !cubit.state.serviceAvailable) {
+      context.popModalIfMounted();
+      return;
+    }
     final status = await cubit.submitted();
     if (!cubit.isSessionCurrent) return;
     if ((route?.isCurrent ?? false) || !(messenger?.mounted ?? false)) return;
@@ -46,10 +52,14 @@ class SelectListSaveButton extends StatelessWidget {
     final canSubmit = context.select(
       (SelectListCubit cubit) => cubit.state.canSubmit,
     );
+    final closesWithoutSaving = context.select(
+      (SelectListCubit cubit) =>
+          cubit.state.recoveryReadOnly || !cubit.state.serviceAvailable,
+    );
     return ListInfoCheckButton(
       semanticLabel: context.l10n.listDone,
       isSaving: isSaving,
-      onPressed: !canSubmit
+      onPressed: !canSubmit && !closesWithoutSaving
           ? null
           : () => runDetached(
               _save(context),

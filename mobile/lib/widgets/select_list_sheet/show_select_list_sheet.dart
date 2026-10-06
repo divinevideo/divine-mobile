@@ -12,6 +12,7 @@ import 'package:openvine/extensions/modal_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/curated_list_editor_session_provider.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
 import 'package:openvine/widgets/select_list_sheet/select_list_save_button.dart';
@@ -53,7 +54,22 @@ Future<void> showSelectListSheet(
   if (service == null) {
     if (messenger?.mounted ?? false) {
       messenger!.showSnackBar(
-        DivineSnackbarContainer.snackBar(l10n.listErrorLoading, error: true),
+        DivineSnackbarContainer.snackBar(
+          l10n.listErrorLoading,
+          error: true,
+          actionLabel: l10n.searchTryAgain,
+          onActionPressed: () {
+            if (!context.mounted || currentOwner() != openingOwner) return;
+            messenger.hideCurrentSnackBar();
+            container.invalidate(curatedListsStateProvider);
+            runDetached(
+              showSelectListSheet(context, video: video),
+              'retry loading list picker',
+              logName: 'SelectListSheet',
+              category: LogCategory.ui,
+            );
+          },
+        ),
       );
     }
     return;
@@ -83,10 +99,41 @@ Future<void> showSelectListSheet(
         videoEventId: video.id,
         currentOwnerPubkey: currentOwner,
       ),
-      child: sheet,
+      child: _SelectListServiceBinding(child: sheet),
     ),
     buildScrollBody: (scrollController) =>
         SelectListSheetBody(key: bodyKey, scrollController: scrollController),
     bottomInput: SelectListCreateButton(video: video),
   );
+}
+
+/// The legacy provider remains the source of initialized services. Rebinding
+/// the cubit explicitly drops staged picks belonging to the previous service.
+class _SelectListServiceBinding extends ConsumerStatefulWidget {
+  const _SelectListServiceBinding({required this.child});
+
+  final Widget child;
+
+  @override
+  ConsumerState<_SelectListServiceBinding> createState() =>
+      _SelectListServiceBindingState();
+}
+
+class _SelectListServiceBindingState
+    extends ConsumerState<_SelectListServiceBinding> {
+  @override
+  void initState() {
+    super.initState();
+    final session = ref.read(curatedListEditorSessionProvider);
+    ref.listenManual(curatedListsStateProvider, (_, next) {
+      context.read<SelectListCubit>().serviceChanged(
+        next.hasValue && !next.isLoading && !next.hasError
+            ? session.service
+            : null,
+      );
+    }, fireImmediately: true);
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }

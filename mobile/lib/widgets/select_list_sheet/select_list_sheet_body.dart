@@ -1,5 +1,5 @@
 // ABOUTME: The list picker's rows, one per list the viewer can put the video
-// ABOUTME: in, with the failure line above them; and its pinned create button.
+// ABOUTME: in, with recovery and failure notices; and its pinned create button.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -9,8 +9,11 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/select_list/select_list_cubit.dart';
 import 'package:openvine/extensions/modal_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/curated_list_initialization_failure.dart';
+import 'package:openvine/widgets/curated_list_recovery_read_only_notice.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
 import 'package:openvine/widgets/list_picker_create_button.dart';
@@ -35,7 +38,7 @@ class SelectListSheetBody extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _SaveFailedMessage(),
+          const _PickerNotice(),
           Expanded(child: _ListRows(scrollController: scrollController)),
         ],
       ),
@@ -43,11 +46,15 @@ class SelectListSheetBody extends StatelessWidget {
   }
 }
 
-class _SaveFailedMessage extends StatelessWidget {
-  const _SaveFailedMessage();
+class _PickerNotice extends StatelessWidget {
+  const _PickerNotice();
 
   @override
   Widget build(BuildContext context) {
+    final held = context.select(
+      (SelectListCubit cubit) => cubit.state.recoveryReadOnly,
+    );
+    if (held) return const CuratedListRecoveryReadOnlyNotice();
     final status = context.select(
       (SelectListCubit cubit) => cubit.state.status,
     );
@@ -96,6 +103,20 @@ class _ListRows extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final lists = context.select((SelectListCubit cubit) => cubit.state.lists);
+    final unavailable = context.select(
+      (SelectListCubit cubit) => !cubit.state.serviceAvailable,
+    );
+    final held = context.select(
+      (SelectListCubit cubit) => cubit.state.recoveryReadOnly,
+    );
+    final initialization = ref.watch(curatedListsStateProvider);
+    if (unavailable && initialization.hasError && !held) {
+      return Center(
+        child: CuratedListInitializationFailure(
+          onRetry: () => ref.invalidate(curatedListsStateProvider),
+        ),
+      );
+    }
     if (lists.isEmpty) return const _EmptyHint();
     // The resolver only supplies thumbnails and lags behind the service: a
     // list it has not reached yet renders its fan with placeholder cards,
@@ -164,8 +185,8 @@ class _ListRow extends StatelessWidget {
     final isSelected = context.select(
       (SelectListCubit cubit) => cubit.state.isSelected(list.id),
     );
-    final isSaving = context.select(
-      (SelectListCubit cubit) => cubit.state.isSaving,
+    final canEdit = context.select(
+      (SelectListCubit cubit) => cubit.state.canEdit,
     );
     final visibility = list.publicationTarget.isPublic
         ? l10n.listVisibilityPublic
@@ -191,7 +212,7 @@ class _ListRow extends StatelessWidget {
           meta:
               '${l10n.listVideoCount(list.videoEventIds.length)} • $visibility',
           isSelected: isSelected,
-          onTap: isSaving || list.hasPendingPermissionRecovery
+          onTap: !canEdit || list.hasPendingPermissionRecovery
               ? null
               : () => context.read<SelectListCubit>().toggled(list.id),
         ),
@@ -224,7 +245,7 @@ class _ListRow extends StatelessWidget {
                 else
                   DivineButton(
                     label: l10n.listRetrySync,
-                    onPressed: isSaving
+                    onPressed: !canEdit
                         ? null
                         : () => runDetached(
                             context.read<SelectListCubit>().syncRequested(
@@ -255,12 +276,14 @@ class SelectListCreateButton extends StatelessWidget {
   Future<void> _create(BuildContext context) async {
     // Read before the await: the button may be gone when the sheet closes.
     final cubit = context.read<SelectListCubit>();
-    if (!cubit.isSessionCurrent) return;
+    cubit.refreshRecoveryReadOnly();
+    if (!cubit.isSessionCurrent || !cubit.state.canEdit) return;
     final messenger = ScaffoldMessenger.maybeOf(context);
     final route = ModalRoute.of(context);
     final l10n = context.l10n;
     final outcome = await showListInfoSheet(context, video: video);
-    if (!cubit.isSessionCurrent) return;
+    cubit.refreshRecoveryReadOnly();
+    if (!cubit.isSessionCurrent || cubit.state.recoveryReadOnly) return;
     final pendingSync =
         outcome == ListInfoSheetOutcome.createdWithVideoPendingSync;
     if (!pendingSync && outcome != ListInfoSheetOutcome.createdWithoutVideo) {
@@ -284,11 +307,11 @@ class SelectListCreateButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isSaving = context.select(
-      (SelectListCubit cubit) => cubit.state.isSaving,
+    final canEdit = context.select(
+      (SelectListCubit cubit) => cubit.state.canEdit,
     );
     return ListPickerCreateButton(
-      onPressed: isSaving
+      onPressed: !canEdit
           ? null
           : () => runDetached(
               _create(context),
