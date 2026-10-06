@@ -13,6 +13,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/bloc/add_people_to_list_cubit.dart';
@@ -1034,5 +1035,71 @@ void main() {
         expect(find.byType(AddPeopleToListScreen), findsOneWidget);
       },
     );
+
+    // A picker link or a web reload opens this route as the only entry, so
+    // there is nothing to pop: back has to fall back instead.
+    for (final listExists in [false, true]) {
+      testWidgets('cold picker back returns to Home (exists: $listExists)', (
+        tester,
+      ) async {
+        final bloc = _MockPeopleListsBloc();
+        addTearDown(() async => bloc.close());
+        final mockFollowRepository = _MockFollowRepository();
+        when(
+          () => mockFollowRepository.followingPubkeys,
+        ).thenReturn(const <String>[]);
+        when(
+          () => mockFollowRepository.followingStream,
+        ).thenAnswer((_) => const Stream<List<String>>.empty());
+        when(
+          mockFollowRepository.watchMyFollowers,
+        ).thenAnswer((_) => const Stream<FollowersSnapshot>.empty());
+        final list = _buildList(id: 'cold-list', name: 'Cold');
+        when(
+          () => bloc.state,
+        ).thenReturn(_stateWith(lists: listExists ? [list] : const []));
+
+        final router = GoRouter(
+          initialLocation: '/people-lists/cold-list/add-people',
+          routes: [
+            GoRoute(
+              path: defaultSafePopFallback,
+              builder: (_, _) => const Scaffold(body: Text('Home fallback')),
+            ),
+            GoRoute(
+              path: AddPeopleToListScreen.path,
+              builder: (_, state) => AddPeopleToListScreen(
+                listId: state.pathParameters['listId']!,
+              ),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+
+        await tester.pumpWidget(
+          testProviderScope(
+            mockFollowRepository: mockFollowRepository,
+            child: BlocProvider<PeopleListsBloc>.value(
+              value: bloc,
+              child: MaterialApp.router(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                routerConfig: router,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(router.canPop(), isFalse);
+        expect(find.text('Home fallback'), findsNothing);
+
+        await tester.tap(find.bySemanticsLabel(l10n.commonBack));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('Home fallback'), findsOneWidget);
+        expect(find.byType(AddPeopleToListScreen), findsNothing);
+      });
+    }
   });
 }
