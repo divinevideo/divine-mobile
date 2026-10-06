@@ -26,6 +26,7 @@ final class ListSearchState extends Equatable {
   const ListSearchState({
     this.status = ListSearchStatus.initial,
     this.query = '',
+    this.requestedQuery,
     this.videoResults = const [],
     this.peopleResults = const [],
     this.videoStatus = ListSearchSourceStatus.initial,
@@ -37,6 +38,9 @@ final class ListSearchState extends Equatable {
 
   /// The current search query.
   final String query;
+
+  /// Latest requested query, including one still waiting for its debounce.
+  final String? requestedQuery;
 
   /// Curated video lists (kind 30005) matching the search.
   final List<CuratedList> videoResults;
@@ -69,6 +73,7 @@ final class ListSearchState extends Equatable {
   ListSearchState copyWith({
     ListSearchStatus? status,
     String? query,
+    String? requestedQuery,
     List<CuratedList>? videoResults,
     List<PeopleListSearchResult>? peopleResults,
     ListSearchSourceStatus? videoStatus,
@@ -77,6 +82,7 @@ final class ListSearchState extends Equatable {
     return ListSearchState(
       status: status ?? this.status,
       query: query ?? this.query,
+      requestedQuery: requestedQuery ?? this.requestedQuery,
       videoResults: videoResults ?? this.videoResults,
       peopleResults: peopleResults ?? this.peopleResults,
       videoStatus: videoStatus ?? this.videoStatus,
@@ -85,9 +91,10 @@ final class ListSearchState extends Equatable {
   }
 
   @override
-  List<Object> get props => [
+  List<Object?> get props => [
     status,
     query,
+    requestedQuery,
     videoResults,
     peopleResults,
     videoStatus,
