@@ -69,7 +69,8 @@ object VideoFrameEffects {
  * speed, where the last seek went, and earlier frames decoded after it.
  */
 internal class FrameEffectsState {
-    data class Config(val id: String, val params: Map<String, Any?>, val startMs: Long?, val endMs: Long?)
+    /** An effect and its window on the player's timeline, either end open. */
+    data class Config(val id: String, val params: Map<String, Any?>, val startUs: Long?, val endUs: Long?)
 
     /** A seek to [sourceUs] of clip [clipIndex]'s file. */
     class Seek(val generation: Int, val clipIndex: Int, val sourceUs: Long)
@@ -108,6 +109,31 @@ internal class FrameEffectsState {
     /** Decoded frames the GL thread has not taken yet. */
     val pendingFill = AtomicReference<Fill?>()
 
+    /**
+     * A move of the player to [timelineUs] on its timeline, which the first
+     * frame after the next flush shows; null when that place is not known.
+     */
+    class Reposition(val generation: Int, val timelineUs: Long?)
+
+    /**
+     * The player's timeline as its frames step through it: [lengthUs] long,
+     * starting over at the end when [looping].
+     */
+    data class Timeline(val lengthUs: Long, val looping: Boolean)
+
+    /** The last move of the player, see [repositionTo]. */
+    @Volatile var reposition = Reposition(0, null)
+        private set
+
+    /**
+     * The timeline frames step through, or null while a clip plays at a
+     * speed of its own: its frames then step through the clip's media time.
+     */
+    @Volatile var timeline: Timeline? = null
+
+    /** Where the main thread last saw the playhead, in µs on the timeline. */
+    @Volatile var playheadUs = 0L
+
     fun setConfigs(configs: List<Config>) {
         this.configs = configs
         enabled = BooleanArray(configs.size) { true }
@@ -118,6 +144,16 @@ internal class FrameEffectsState {
     @Synchronized
     fun seekTo(clipIndex: Int, sourceUs: Long) {
         seek = Seek(seek.generation + 1, clipIndex, sourceUs)
+    }
+
+    /**
+     * Records that the player moves to [timelineUs] on its timeline. Call
+     * before every seek or prepare, so the frame-effect stage can tell where
+     * each frame lies.
+     */
+    @Synchronized
+    fun repositionTo(timelineUs: Long?) {
+        reposition = Reposition(reposition.generation + 1, timelineUs)
     }
 
     companion object {
@@ -163,6 +199,15 @@ internal class FrameEffectsGlEffect(private val state: FrameEffectsState) : GlEf
         private var anchorUs: Long? = null
         private var flushedGeneration = -1
 
+        /**
+         * The move the next frame shows, taken at a flush and at the first
+         * frame; and the frame that showed the last move, by its presentation
+         * time and its place on the timeline.
+         */
+        private var pendingReposition: FrameEffectsState.Reposition? = null
+        private var timelineAnchor: Pair<Long, Long>? = null
+        private var lastPresentationUs: Long? = null
+
         private var width = 0
         private var height = 0
         private var historyWidth = 0
@@ -191,11 +236,12 @@ internal class FrameEffectsGlEffect(private val state: FrameEffectsState) : GlEf
                 val outputFbo = currentFramebuffer()
                 syncEffects()
                 anchor(presentationTimeUs)
+                anchorTimeline(presentationTimeUs)
                 applyFill()
 
                 val speed = state.speed.coerceAtLeast(0.01f)
                 val sourceUs = frameSourceUs(presentationTimeUs)
-                val enabled = state.enabled
+                val enabled = frameWindows(presentationTimeUs) ?: state.enabled
                 val active = effects.indices.filter { i ->
                     effects[i] != null && enabled.getOrElse(i) { true }
                 }
@@ -265,6 +311,42 @@ internal class FrameEffectsGlEffect(private val state: FrameEffectsState) : GlEf
             val seek = seek ?: return null
             if (seek.clipIndex != decodedClip) return null
             return seek.sourceUs + (presentationTimeUs - anchor)
+        }
+
+        /**
+         * Ties the first frame after a flush, and the very first frame, to
+         * the player's last move. From there frames step through the
+         * timeline in step with their presentation times, across clip
+         * changes and loops; a stream that starts over unasked unties them.
+         */
+        private fun anchorTimeline(presentationTimeUs: Long) {
+            val last = lastPresentationUs
+            if (last == null) pendingReposition = state.reposition
+            val pending = pendingReposition
+            if (pending != null) {
+                timelineAnchor = pending.timelineUs?.let { presentationTimeUs to it }
+                pendingReposition = null
+            } else if (last != null && presentationTimeUs < last - REDRAW_SLACK_US) {
+                timelineAnchor = null
+            }
+            lastPresentationUs = presentationTimeUs
+        }
+
+        /**
+         * Which effects are in their window at the frame itself, or null
+         * when its place on the timeline is not known; the playhead the main
+         * thread last saw stands in then. The pipeline runs a few frames
+         * ahead of the playhead, so only the frame's own time puts a window
+         * on the frames it covers.
+         */
+        private fun frameWindows(presentationTimeUs: Long): BooleanArray? {
+            val (anchorPresentationUs, anchorTimelineUs) = timelineAnchor ?: return null
+            val timeline = state.timeline ?: return null
+            val timelineUs = frameTimelineUs(
+                presentationTimeUs, anchorPresentationUs, anchorTimelineUs, timeline,
+            )
+            if (!isNearPlayhead(timelineUs, state.playheadUs, timeline)) return null
+            return effectWindowsAt(state.configs, timelineUs)
         }
 
         /**
@@ -413,6 +495,8 @@ internal class FrameEffectsGlEffect(private val state: FrameEffectsState) : GlEf
         override fun flush() {
             super.flush()
             flushedGeneration = state.seek.generation
+            pendingReposition = state.reposition
+            timelineAnchor = null
         }
 
         override fun release() {
@@ -480,3 +564,47 @@ internal fun nearestDecodedFrame(frames: List<Pair<Long, Long>>, sourceUs: Long)
             abs(targetUs - sourceUs) <= MAX_DECODED_DRIFT_US && frameUs <= sourceUs + 1_000L
         }
         .minByOrNull { abs(frames[it].first - sourceUs) }
+
+/**
+ * Where a frame lies on the player's timeline: [anchorTimelineUs], where the
+ * anchoring frame lies, plus how far the frame's presentation time is past
+ * that frame's, wrapped at the end of a looping [timeline].
+ */
+internal fun frameTimelineUs(
+    presentationTimeUs: Long,
+    anchorPresentationUs: Long,
+    anchorTimelineUs: Long,
+    timeline: FrameEffectsState.Timeline,
+): Long {
+    val timelineUs = anchorTimelineUs + (presentationTimeUs - anchorPresentationUs)
+    return if (timeline.looping && timeline.lengthUs > 0) {
+        Math.floorMod(timelineUs, timeline.lengthUs)
+    } else {
+        timelineUs
+    }
+}
+
+/**
+ * Whether [timelineUs] lies close enough to [playheadUs] for its anchor to
+ * be trusted. Frames run a few frames ahead of a playhead the main thread
+ * reads every 200 ms; one farther off was anchored to a move it does not
+ * belong to.
+ */
+internal fun isNearPlayhead(timelineUs: Long, playheadUs: Long, timeline: FrameEffectsState.Timeline): Boolean {
+    var distanceUs = abs(timelineUs - playheadUs)
+    if (timeline.looping && timeline.lengthUs > 0) {
+        distanceUs = minOf(distanceUs, timeline.lengthUs - distanceUs.coerceAtMost(timeline.lengthUs))
+    }
+    return distanceUs <= MAX_PLAYHEAD_DISTANCE_US
+}
+
+/** How far a frame may lie from the playhead the main thread last saw. */
+internal const val MAX_PLAYHEAD_DISTANCE_US = 600_000L
+
+/** Per config, whether [timelineUs] lies in its window. */
+internal fun effectWindowsAt(configs: List<FrameEffectsState.Config>, timelineUs: Long): BooleanArray =
+    BooleanArray(configs.size) { i ->
+        val config = configs[i]
+        (config.startUs == null || timelineUs >= config.startUs) &&
+            (config.endUs == null || timelineUs < config.endUs)
+    }

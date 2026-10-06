@@ -561,6 +561,7 @@ internal class DivineVideoPlayerInstance(
                 // Seeking to the current position forces the codec to decode and
                 // display the frame at the current position without moving it.
                 if (!p.isPlaying && p.playbackState == Player.STATE_READY) {
+                    recordFrameEffectsMove(p.currentMediaItemIndex, p.currentPosition)
                     p.seekTo(p.currentPosition)
                 }
             }
@@ -751,6 +752,7 @@ internal class DivineVideoPlayerInstance(
         // without that overhead. isResettingPlayer suppresses intermediate
         // state events fired while ExoPlayer processes the new items.
         isResettingPlayer = true
+        recordFrameEffectsMove(startIndex, startLocalMs)
         exoPlayer.setMediaItems(mediaItems, startIndex, startLocalMs)
         exoPlayer.prepare()
         isResettingPlayer = false
@@ -1457,8 +1459,8 @@ internal class DivineVideoPlayerInstance(
             FrameEffectsState.Config(
                 id = id,
                 params = (map["params"] as? Map<String, Any?>) ?: emptyMap(),
-                startMs = (map["startUs"] as? Number)?.toLong()?.div(1000),
-                endMs = (map["endUs"] as? Number)?.toLong()?.div(1000),
+                startUs = (map["startUs"] as? Number)?.toLong(),
+                endUs = (map["endUs"] as? Number)?.toLong(),
             )
         }
         val existing = frameEffectsState
@@ -1510,6 +1512,7 @@ internal class DivineVideoPlayerInstance(
         exoPlayer.stop()
         exoPlayer.setVideoEffects(listOf(FrameEffectsGlEffect(state)))
         exoPlayer.prepare()
+        recordFrameEffectsMove(index, positionMs)
         exoPlayer.seekTo(index, positionMs)
         exoPlayer.playWhenReady = playWhenReady
         isResettingPlayer = false
@@ -1634,7 +1637,10 @@ internal class DivineVideoPlayerInstance(
         // A seek of its own: the redrawn frame can come on another timestamp
         // base than the seek that first showed it, and has to be tied anew.
         frameEffectsState?.seekTo(index, frameEffectsSourceUs(index, positionMs))
-        exoPlayer.seekTo(index, if (positionMs > 0) positionMs - 1 else positionMs + 1)
+        val stepMs = if (positionMs > 0) positionMs - 1 else positionMs + 1
+        recordFrameEffectsMove(index, stepMs)
+        exoPlayer.seekTo(index, stepMs)
+        recordFrameEffectsMove(index, positionMs)
         exoPlayer.seekTo(index, positionMs)
     }
 
@@ -1663,22 +1669,53 @@ internal class DivineVideoPlayerInstance(
     }
 
     /**
-     * Switches each frame effect on or off by whether the playhead is in its
-     * window. While playing this runs on the position tick, so in the preview
-     * a window edge can switch up to one tick late and a window shorter than
-     * a tick can be skipped; the export checks every frame. Checking every
-     * frame here would need each frame's place on the timeline in the GL
-     * stage, which only knows it after a seek.
+     * Tells the frame-effect stage where the playhead is, which effects are
+     * in their window there, and the timeline its frames step through. The
+     * stage checks each frame's own time against the windows; the playhead's
+     * windows, read on the position tick, only stand in for a frame whose
+     * place on the timeline it does not know.
      */
     private fun updateFrameEffectWindows(globalMs: Long? = null) {
         val state = frameEffectsState ?: return
         val exoPlayer = player ?: return
-        val position = globalMs ?: currentGlobalPlaybackMs(exoPlayer)
-        state.enabled = state.configs.map { config ->
-            (config.startMs == null || position >= config.startMs) &&
-                (config.endMs == null || position < config.endMs)
-        }.toBooleanArray()
+        val positionUs = (globalMs ?: currentGlobalPlaybackMs(exoPlayer)) * 1000L
+        state.enabled = effectWindowsAt(state.configs, positionUs)
+        state.playheadUs = positionUs
+        state.timeline = frameEffectsTimeline(exoPlayer)
         state.speed = clipSpeeds.getOrElse(exoPlayer.currentMediaItemIndex) { 1.0f }
+    }
+
+    /**
+     * The timeline the player's frames step through, or null while it is
+     * not known: until every clip's length is, and while a clip plays at a
+     * speed of its own, whose frames step through its media time instead.
+     */
+    private fun frameEffectsTimeline(exoPlayer: ExoPlayer): FrameEffectsState.Timeline? {
+        if (clipSpeeds.any { it != 1.0f }) return null
+        val timeline = exoPlayer.currentTimeline
+        if (timeline.isEmpty || timeline.windowCount != exoPlayer.mediaItemCount) return null
+        val window = androidx.media3.common.Timeline.Window()
+        var lengthUs = 0L
+        for (i in 0 until timeline.windowCount) {
+            val durationUs = timeline.getWindow(i, window).durationUs
+            if (durationUs == C.TIME_UNSET || durationUs <= 0) return null
+            lengthUs += durationUs
+        }
+        return FrameEffectsState.Timeline(lengthUs, isLooping)
+    }
+
+    /**
+     * Records for the frame-effect stage that the player moves to
+     * [localSourceMs] of clip [index]. Call before every seek or prepare.
+     */
+    private fun recordFrameEffectsMove(index: Int, localSourceMs: Long) {
+        val state = frameEffectsState ?: return
+        val offsetMs = clipOffsets.getOrNull(index)
+        state.repositionTo(
+            offsetMs?.let {
+                (it + sourceToPlaybackMs(localSourceMs, clipSpeeds.getOrElse(index) { 1.0f })) * 1000L
+            },
+        )
     }
 
     /**
@@ -1709,6 +1746,7 @@ internal class DivineVideoPlayerInstance(
      */
     private fun onFrameEffectsSeek(index: Int, localSourceMs: Long) {
         val state = frameEffectsState ?: return
+        recordFrameEffectsMove(index, localSourceMs)
         state.seekTo(index, frameEffectsSourceUs(index, localSourceMs))
         frameEffectsSeekTarget = index to localSourceMs
         lastFrameEffectsSeekMs = android.os.SystemClock.uptimeMillis()
@@ -2145,6 +2183,7 @@ internal class DivineVideoPlayerInstance(
                 // at its target: a seek is not a stream change, so nothing
                 // else retires an offset an earlier seek left behind.
                 declickProcessor.nextStreamStartUs = 0L
+                recordFrameEffectsMove(0, 0L)
                 player?.seekTo(0, 0L)
                 syncAudioOverlays()
                 return
@@ -2295,6 +2334,7 @@ internal class DivineVideoPlayerInstance(
                 // frame zero. Only do this when the speed actually differs,
                 // to avoid an unnecessary stutter on equal-speed transitions.
                 if (newSpeed != oldSpeed) {
+                    recordFrameEffectsMove(newIndex, 0L)
                     player?.seekTo(newIndex, 0L)
                 }
             }
