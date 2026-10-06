@@ -211,19 +211,23 @@ void main() {
     });
 
     testWidgets('caps the description at two lines', (tester) async {
-      testVideo = testVideo.copyWith(
-        content: 'First line\nSecond line\nThird line',
+      Future<double> descriptionHeight(String content) async {
+        testVideo = testVideo.copyWith(content: content);
+        await pumpOverlay(tester);
+        return tester
+            .getSize(find.bySemanticsIdentifier('video_description'))
+            .height;
+      }
+
+      final oneLine = await descriptionHeight('First line');
+      final twoLines = await descriptionHeight('First line\nSecond line');
+      final threeLines = await descriptionHeight(
+        'First line\nSecond line\nThird line',
       );
 
-      await pumpOverlay(tester);
-
-      final description = tester.widget<RichText>(
-        find.descendant(
-          of: find.bySemanticsIdentifier('video_description'),
-          matching: find.byType(RichText),
-        ),
-      );
-      expect(description.maxLines, equals(2));
+      // A second line makes the description taller; a third does not.
+      expect(twoLines, greaterThan(oneLine));
+      expect(threeLines, closeTo(twoLines, _layoutTolerance));
     });
 
     group('caption block', () {
