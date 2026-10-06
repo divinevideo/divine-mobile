@@ -10,6 +10,7 @@ import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/email_verification/email_verification_cubit.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 class _MockKeycastOAuth extends Mock implements KeycastOAuth {}
@@ -875,6 +876,43 @@ void main() {
           fake.flushMicrotasks();
         });
       });
+
+      test(
+        'a refused account cleanup after the exchange ends in the sign-in '
+        'failure state',
+        () {
+          stubExchangeSuccess();
+          when(() => mockAuthService.signInWithDivineOAuth(any())).thenThrow(
+            const UserDataCleanupException('Could not clear account data'),
+          );
+
+          fakeAsync((fake) {
+            final cubit = buildCubit()
+              ..startPolling(
+                deviceCode: testDeviceCode,
+                verifier: testVerifier,
+                email: testEmail,
+              );
+
+            unawaited(cubit.submitPin(pin));
+            fake.elapse(const Duration(seconds: 30));
+
+            expect(cubit.state.status, EmailVerificationStatus.failure);
+            expect(cubit.state.errorCode, EmailVerificationError.signInFailed);
+            verify(
+              () => mockOAuth.exchangeCode(
+                code: pinCode,
+                verifier: testVerifier,
+              ),
+            ).called(1);
+            verify(() => mockAuthService.signInWithDivineOAuth(any()))
+                .called(1);
+
+            unawaited(cubit.close());
+            fake.flushMicrotasks();
+          });
+        },
+      );
 
       test(
         'already-completed PIN response clears submission without error',
