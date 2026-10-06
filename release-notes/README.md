@@ -85,12 +85,13 @@ python3 mobile/scripts/publish_github_release.py \
   --artifacts-dir /absolute/path/to/original-artifacts
 ```
 
-The directory may contain nested downloads. Only APK, IPA and DMG files are
-selected; include only this candidate's original files. The publisher checks
+The directory may contain nested downloads. The same files as a normal publish
+are selected: arm64/armeabi APKs, IPAs and DMGs. Other APK variants are excluded;
+include only this candidate's original files. The publisher checks
 existing asset digests, skips byte-identical assets, uploads missing files, and
 refuses to replace anything. It also refuses a tag pointing to another commit.
-Use `--channel BETA` and the original backend for a beta retry. Recovery does
-not bypass channel readiness or the store-rollout sequencing requirement.
+Use `--channel BETA` and the original backend for a beta retry. Recovery still
+applies channel readiness checks; it does not coordinate store rollout.
 
 If GitHub publication succeeded and only Zapstore failed, do not rebuild or
 republish GitHub. Retry the signed Zapstore command in the repository's Zapstore

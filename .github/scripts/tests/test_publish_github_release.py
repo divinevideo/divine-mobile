@@ -240,8 +240,10 @@ class CommandInputTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / 'android').mkdir()
-            asset = root / 'android' / 'original.apk'
+            asset = root / 'android' / 'app-arm64-v8a-release.apk'
             asset.write_bytes(b'original')
+            (root / 'android' / 'app-x86_64-release.apk').write_bytes(b'emulator')
+            (root / 'android' / 'app-release.apk').write_bytes(b'universal')
             (root / 'notes.txt').write_text('not an artifact')
             self.assertEqual(release.recovery_artifacts(root), [asset])
 

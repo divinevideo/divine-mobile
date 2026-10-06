@@ -221,8 +221,9 @@ def marketing_version(pubspec):
 def recovery_artifacts(directory):
     if not directory.is_dir():
         raise ValueError('Original artifacts directory does not exist')
+    patterns = ('*arm64*.apk', '*armeabi*.apk', '*.ipa', '*.dmg')
     return sorted(p for p in directory.rglob('*')
-                  if p.is_file() and p.suffix in ('.apk', '.ipa', '.dmg'))
+                  if p.is_file() and any(p.match(pattern) for pattern in patterns))
 
 
 def main():
