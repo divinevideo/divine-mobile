@@ -183,7 +183,9 @@ class SelectListCubit extends Cubit<SelectListState>
 
   /// Picks the list with [listId], or unpicks it when it is picked.
   ///
-  /// Ignored while a save runs, and for a list the sheet does not offer.
+  /// Ignored while a save runs, for a list the sheet does not offer, and for
+  /// one waiting on an accepted permission change. Clears the sheet instead
+  /// once the account it opened for is no longer current.
   void toggled(String listId) {
     if (state.isSaving) return;
     if (!isSessionCurrent) {
@@ -212,8 +214,12 @@ class SelectListCubit extends Cubit<SelectListState>
   /// Ends in [SelectListStatus.saved] when every list took the change, so a
   /// visit with no changes closes at once. Otherwise the lists that did take
   /// it are done, and the state ends in [SelectListStatus.failure] or
-  /// [SelectListStatus.failureListFull] with the rest still picked. Ignored
-  /// while [SelectListState.canSubmit] is false, as the sheet's check is then
+  /// [SelectListStatus.failureListFull] with the rest still picked. Stops
+  /// before a list waiting on an accepted permission change, ending in
+  /// [SelectListStatus.recoveryPendingSync], and clears the sheet with
+  /// [SelectListStatus.failure] once the account it opened for is no longer
+  /// current or no longer owns a list it would change. Ignored while
+  /// [SelectListState.canSubmit] is false, as the sheet's check is then
   /// disabled. Returns the outcome so a caller can report failure even after
   /// the sheet closes.
   Future<SelectListStatus?> submitted() async {
