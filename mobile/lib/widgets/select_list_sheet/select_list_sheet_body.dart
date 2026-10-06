@@ -233,6 +233,9 @@ class _ListRow extends StatelessWidget {
                                 .contains(list.id)
                       ? l10n.listRecoveryPending
                       : l10n.listVideoPendingSync,
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.onSurfaceVariant,
+                  ),
                 ),
                 if (syncing)
                   const Center(

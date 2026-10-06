@@ -4,7 +4,7 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/semantics.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -300,6 +300,27 @@ void main() {
           find.byType(ListSkeletonizer),
         );
         expect(skeleton.enabled, isTrue);
+      });
+
+      testWidgets("a list waiting to sync says so in the rows' font", (
+        tester,
+      ) async {
+        when(() => service.myLists).thenReturn([
+          list(
+            'Pending',
+            videoEventIds: const [_videoEventId],
+          ).copyWith(pendingRepublish: true),
+        ]);
+
+        await openSheet(tester);
+
+        final notice = tester.renderObject<RenderParagraph>(
+          find.text(l10n.listVideoPendingSync),
+        );
+        expect(
+          notice.text.style?.fontFamily,
+          VineTheme.bodyMediumFont().fontFamily,
+        );
       });
 
       testWidgets('a failure to load the lists on the screen underneath '
