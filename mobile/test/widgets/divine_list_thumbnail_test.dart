@@ -4,15 +4,19 @@
 
 import 'dart:async';
 
+import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:openvine/widgets/avatar_failure_cache.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
 import 'package:openvine/widgets/user_avatar.dart';
@@ -23,7 +27,12 @@ import 'package:skeletonizer/skeletonizer.dart';
 
 import '../helpers/test_provider_overrides.dart';
 
+class _MockContentBlocklistRepository extends Mock
+    implements ContentBlocklistRepository {}
+
 void main() {
+  setUp(AvatarFailureCache.instance.clear);
+  tearDown(AvatarFailureCache.instance.clear);
   final now = DateTime(2025, 6, 15);
   String videoIdFor(int index) => index.toRadixString(16).padLeft(64, '0');
 
@@ -67,11 +76,12 @@ void main() {
     String pubkey, {
     String? picture,
     String? displayName,
+    String? eventId,
   }) => UserProfile(
     pubkey: pubkey,
     rawData: const {},
     createdAt: DateTime(2026),
-    eventId: 'e' * 64,
+    eventId: eventId ?? 'e' * 64,
     picture: picture,
     displayName: displayName,
   );
@@ -488,22 +498,144 @@ void main() {
         List<Override> profileOverrides = const [],
       }) {
         return ProviderScope(
-          overrides: [...getStandardTestOverrides(), ...profileOverrides],
-          child: MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: SizedBox(
-                width: 185,
-                child: DivineListThumbnail.people(
-                  userList: userList,
-                  onTap: onTap ?? () {},
+          overrides: getStandardTestOverrides(),
+          child: ProviderScope(
+            overrides: profileOverrides,
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: SizedBox(
+                  width: 185,
+                  child: DivineListThumbnail.people(
+                    userList: userList,
+                    onTap: onTap ?? () {},
+                  ),
                 ),
               ),
             ),
           ),
         );
       }
+
+      testWidgets('retires a vanished cached member name and picture', (
+        tester,
+      ) async {
+        final member = 'a' * 64;
+        var vanished = false;
+        await tester.pumpWidget(
+          buildSubject(
+            userList: createUserList(pubkeys: [member]),
+            profileOverrides: [
+              profileVanishedProvider(member).overrideWith((ref) => vanished),
+              userProfileReactiveProvider(member).overrideWith(
+                (ref) => Stream.value(
+                  profileFor(
+                    member,
+                    displayName: 'Cached member',
+                    picture: 'https://example.com/cached-member.jpg',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        expect(find.text('Cached member'), findsOneWidget);
+        expect(find.byType(UserAvatar), findsOneWidget);
+        vanished = true;
+        ProviderScope.containerOf(
+          tester.element(find.byType(DivineListThumbnail)),
+        ).invalidate(profileVanishedProvider(member));
+        await tester.pump();
+        expect(find.text('Cached member'), findsNothing);
+        expect(find.byType(UserAvatar), findsNothing);
+        expect(find.text(l10n.profileDeletedAccountName), findsOneWidget);
+      });
+
+      testWidgets('hides cached member identity when the blocklist changes', (
+        tester,
+      ) async {
+        final member = 'a' * 64;
+        final blocklist = _MockContentBlocklistRepository();
+        var hidden = false;
+        when(() => blocklist.shouldFilterFromFeeds(any())).thenAnswer(
+          (_) => hidden,
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            userList: createUserList(pubkeys: [member]),
+            profileOverrides: [
+              contentBlocklistRepositoryProvider.overrideWithValue(blocklist),
+              userProfileReactiveProvider(member).overrideWith(
+                (ref) => Stream.value(
+                  profileFor(
+                    member,
+                    displayName: 'Cached member',
+                    picture: 'https://example.com/blocked-member.jpg',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        expect(find.text('Cached member'), findsOneWidget);
+        expect(find.byType(UserAvatar), findsOneWidget);
+        hidden = true;
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(DivineListThumbnail)),
+        );
+        container.read(blocklistVersionProvider.notifier).increment();
+        await tester.pump();
+        expect(find.text('Cached member'), findsNothing);
+        expect(find.byType(UserAvatar), findsNothing);
+        expect(find.text('1'), findsOneWidget);
+      });
+
+      testWidgets('updates member identities from the reactive cache', (
+        tester,
+      ) async {
+        final member = 'a' * 64;
+        final profiles = StreamController<UserProfile?>();
+        await tester.pumpWidget(
+          buildSubject(
+            userList: createUserList(pubkeys: [member]),
+            profileOverrides: [
+              userProfileReactiveProvider(member).overrideWith(
+                (ref) => profiles.stream,
+              ),
+            ],
+          ),
+        );
+        try {
+          profiles.add(profileFor(member, displayName: 'First name'));
+          await tester.pump();
+          await tester.pump();
+          expect(find.text('First name'), findsOneWidget);
+          profiles.add(
+            profileFor(
+              member,
+              displayName: 'Changed name',
+              eventId: 'f' * 64,
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+          expect(find.text('First name'), findsNothing);
+          expect(find.text('Changed name'), findsOneWidget);
+        } finally {
+          // Close while the nested family-override fixture is listening; after
+          // unmount it retains a paused subscription and cannot deliver done.
+          final closed = profiles.close();
+          await tester.pump();
+          await closed;
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+        }
+      });
 
       testWidgets('names its members when the list has no description', (
         tester,
@@ -514,11 +646,15 @@ void main() {
           buildSubject(
             userList: createUserList(pubkeys: [alice, bob]),
             profileOverrides: [
-              fetchUserProfileProvider(alice).overrideWith(
-                (ref) async => profileFor(alice, displayName: 'Alice'),
+              userProfileReactiveProvider(alice).overrideWith(
+                (ref) => Stream<UserProfile?>.value(
+                  profileFor(alice, displayName: 'Alice'),
+                ),
               ),
-              fetchUserProfileProvider(bob).overrideWith(
-                (ref) async => profileFor(bob, displayName: 'Bob'),
+              userProfileReactiveProvider(bob).overrideWith(
+                (ref) => Stream<UserProfile?>.value(
+                  profileFor(bob, displayName: 'Bob'),
+                ),
               ),
             ],
           ),
@@ -540,8 +676,10 @@ void main() {
           buildSubject(
             userList: createUserList(pubkeys: [alice], description: 'Crew'),
             profileOverrides: [
-              fetchUserProfileProvider(alice).overrideWith(
-                (ref) async => profileFor(alice, displayName: 'Alice'),
+              userProfileReactiveProvider(alice).overrideWith(
+                (ref) => Stream<UserProfile?>.value(
+                  profileFor(alice, displayName: 'Alice'),
+                ),
               ),
             ],
           ),
@@ -561,7 +699,8 @@ void main() {
           buildSubject(
             userList: createUserList(pubkeys: [ghost]),
             profileOverrides: [
-              fetchUserProfileProvider(ghost).overrideWith((ref) async => null),
+              userProfileReactiveProvider(ghost)
+                  .overrideWith((ref) => Stream<UserProfile?>.value(null)),
             ],
           ),
         );
@@ -589,9 +728,11 @@ void main() {
             ),
             profileOverrides: [
               for (final pubkey in ['a' * 64, 'b' * 64, 'c' * 64, 'd' * 64])
-                fetchUserProfileProvider(
+                userProfileReactiveProvider(
                   pubkey,
-                ).overrideWith((ref) async => profileFor(pubkey)),
+                ).overrideWith(
+                  (ref) => Stream<UserProfile?>.value(profileFor(pubkey)),
+                ),
             ],
           ),
         );
@@ -628,9 +769,11 @@ void main() {
           buildSubject(
             userList: createUserList(pubkeys: ['a' * 64]),
             profileOverrides: [
-              fetchUserProfileProvider(
+              userProfileReactiveProvider(
                 'a' * 64,
-              ).overrideWith((ref) async => profileFor('a' * 64)),
+              ).overrideWith(
+                (ref) => Stream<UserProfile?>.value(profileFor('a' * 64)),
+              ),
             ],
           ),
         );
@@ -652,9 +795,11 @@ void main() {
           buildSubject(
             userList: createUserList(pubkeys: ['a' * 64]),
             profileOverrides: [
-              fetchUserProfileProvider(
+              userProfileReactiveProvider(
                 'a' * 64,
-              ).overrideWith((ref) async => profileFor('a' * 64)),
+              ).overrideWith(
+                (ref) => Stream<UserProfile?>.value(profileFor('a' * 64)),
+              ),
             ],
           ),
         );
@@ -682,9 +827,10 @@ void main() {
           buildSubject(
             userList: createUserList(pubkeys: ['a' * 64]),
             profileOverrides: [
-              fetchUserProfileProvider('a' * 64).overrideWith(
-                (ref) async =>
-                    profileFor('a' * 64, picture: 'https://example.com/a.jpg'),
+              userProfileReactiveProvider('a' * 64).overrideWith(
+                (ref) => Stream<UserProfile?>.value(
+                  profileFor('a' * 64, picture: 'https://example.com/a.jpg'),
+                ),
               ),
             ],
           ),
@@ -694,6 +840,17 @@ void main() {
 
         expect(find.byType(VineCachedImage), findsOneWidget);
         expect(glyphTiles(), findsNWidgets(2));
+        final image = tester.widget<VineCachedImage>(
+          find.byType(VineCachedImage),
+        );
+        final avatarSize = tester.getSize(find.byType(UserAvatar));
+        expect(image.memCacheWidth, isNotNull);
+        expect(
+          image.memCacheWidth,
+          lessThanOrEqualTo(
+            (avatarSize.longestSide * tester.view.devicePixelRatio).ceil(),
+          ),
+        );
       });
 
       testWidgets('paints the Figma seam structure over the collage', (
@@ -705,9 +862,11 @@ void main() {
           buildSubject(
             userList: createUserList(pubkeys: ['a' * 64]),
             profileOverrides: [
-              fetchUserProfileProvider(
+              userProfileReactiveProvider(
                 'a' * 64,
-              ).overrideWith((ref) async => profileFor('a' * 64)),
+              ).overrideWith(
+                (ref) => Stream<UserProfile?>.value(profileFor('a' * 64)),
+              ),
             ],
           ),
         );
@@ -865,9 +1024,9 @@ void main() {
       await tester.pumpWidget(
         pending(
           overrides: [
-            fetchUserProfileProvider(
+            userProfileReactiveProvider(
               member,
-            ).overrideWith((ref) => neverResolves.future),
+            ).overrideWith((ref) => neverResolves.future.asStream()),
           ],
           child: DivineListThumbnail.people(
             userList: createUserList(pubkeys: [member]),
@@ -904,9 +1063,11 @@ void main() {
       await tester.pumpWidget(
         pending(
           overrides: [
-            fetchUserProfileProvider(
+            userProfileReactiveProvider(
               member,
-            ).overrideWith((ref) async => profileFor(member)),
+            ).overrideWith(
+              (ref) => Stream<UserProfile?>.value(profileFor(member)),
+            ),
           ],
           child: DivineListThumbnail.people(
             userList: createUserList(pubkeys: [member]),

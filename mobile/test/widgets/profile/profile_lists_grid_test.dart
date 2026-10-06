@@ -24,6 +24,8 @@ import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:openvine/widgets/profile/profile_lists_grid.dart';
+import 'package:openvine/widgets/video_thumbnail_widget.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../helpers/test_provider_overrides.dart';
 
@@ -94,61 +96,63 @@ void main() {
       pushedRoute = '';
     });
 
-    Widget buildSubject({ThemeData? theme}) => testProviderScope(
-      additionalOverrides: [
-        curatedListsStateProvider.overrideWith(_FakeCuratedListsState.new),
-        myListsWithThumbnailsProvider.overrideWith(
-          (ref) async => mockListService.myLists,
-        ),
-        isFeatureEnabledProvider(FeatureFlag.curatedLists)
-            .overrideWithValue(enabled),
-      ],
-      child: BlocProvider<PeopleListsBloc>.value(
-        value: peopleBloc,
-        child: MaterialApp.router(
-          theme: theme,
-          localizationsDelegates: appLocalizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          routerConfig: GoRouter(
-            initialLocation: '/',
-            routes: [
-              GoRoute(
-                path: '/',
-                builder: (_, _) => const Scaffold(body: ProfileListsGrid()),
+    Widget buildSubject({ThemeData? theme, Override? hydrationOverride}) =>
+        testProviderScope(
+          additionalOverrides: [
+            curatedListsStateProvider.overrideWith(_FakeCuratedListsState.new),
+            hydrationOverride ??
+                myListsWithThumbnailsProvider.overrideWith(
+                  (ref) async => mockListService.myLists,
+                ),
+            isFeatureEnabledProvider(FeatureFlag.curatedLists)
+                .overrideWithValue(enabled),
+          ],
+          child: BlocProvider<PeopleListsBloc>.value(
+            value: peopleBloc,
+            child: MaterialApp.router(
+              theme: theme,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              routerConfig: GoRouter(
+                initialLocation: '/',
+                routes: [
+                  GoRoute(
+                    path: '/',
+                    builder: (_, _) => const Scaffold(body: ProfileListsGrid()),
+                  ),
+                  GoRoute(
+                    path: CreatePeopleListPage.path,
+                    builder: (_, _) {
+                      pushedRoute = CreatePeopleListPage.path;
+                      return const Scaffold(body: Text('create people'));
+                    },
+                  ),
+                  GoRoute(
+                    path: '/people-lists/:listId',
+                    builder: (_, state) {
+                      pushedRoute = state.uri.path;
+                      return const Scaffold(body: Text('members'));
+                    },
+                  ),
+                  GoRoute(
+                    path: '/list/:listId',
+                    builder: (_, state) {
+                      pushedRoute = state.uri.toString();
+                      return const Scaffold(body: Text('video list'));
+                    },
+                  ),
+                  GoRoute(
+                    path: SavedVideosScreen.path,
+                    builder: (_, _) {
+                      pushedRoute = SavedVideosScreen.path;
+                      return const Scaffold(body: Text('saved'));
+                    },
+                  ),
+                ],
               ),
-              GoRoute(
-                path: CreatePeopleListPage.path,
-                builder: (_, _) {
-                  pushedRoute = CreatePeopleListPage.path;
-                  return const Scaffold(body: Text('create people'));
-                },
-              ),
-              GoRoute(
-                path: '/people-lists/:listId',
-                builder: (_, state) {
-                  pushedRoute = state.uri.path;
-                  return const Scaffold(body: Text('members'));
-                },
-              ),
-              GoRoute(
-                path: '/list/:listId',
-                builder: (_, state) {
-                  pushedRoute = state.uri.toString();
-                  return const Scaffold(body: Text('video list'));
-                },
-              ),
-              GoRoute(
-                path: SavedVideosScreen.path,
-                builder: (_, _) {
-                  pushedRoute = SavedVideosScreen.path;
-                  return const Scaffold(body: Text('saved'));
-                },
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
-    );
+        );
 
     testWidgets('empty profile offers separate people and video creation', (
       tester,
@@ -514,6 +518,177 @@ void main() {
     });
 
     group('list membership vs thumbnail hydration', () {
+      testWidgets('keeps thumbnails on their author-qualified card', (
+        tester,
+      ) async {
+        final first = _videoList('my_vine_list').copyWith(
+          pubkey: 'a' * 64,
+          name: 'First owner',
+        );
+        final second = first.copyWith(pubkey: 'b' * 64, name: 'Second owner');
+        final hydrated = [
+          first.copyWith(thumbnailUrls: ['https://example.com/first.jpg']),
+          second.copyWith(thumbnailUrls: ['https://example.com/second.jpg']),
+        ];
+        _fakeLists = [first, second];
+        when(() => mockListService.myLists).thenReturn(_fakeLists);
+        await tester.pumpWidget(
+          buildSubject(
+            hydrationOverride: myListsWithThumbnailsProvider.overrideWith(
+              (ref) async => hydrated,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        for (final (name, url) in [
+          ('First owner', 'https://example.com/first.jpg'),
+          ('Second owner', 'https://example.com/second.jpg'),
+        ]) {
+          final card = find.ancestor(
+            of: find.text(name),
+            matching: find.byType(DivineListThumbnail),
+          );
+          final image = find.descendant(
+            of: card,
+            matching: find.byType(PassiveAuthThumbnailImage),
+          );
+          expect(tester.widget<PassiveAuthThumbnailImage>(image).url, url);
+        }
+      });
+
+      testWidgets(
+        'retires cached and durable thumbnails during policy reload',
+        (
+          tester,
+        ) async {
+          final list = _videoList('my_vine_list').copyWith(
+            pubkey: 'a' * 64,
+            thumbnailUrls: ['https://example.com/unfiltered.jpg'],
+          );
+          _fakeLists = [list];
+          when(() => mockListService.myLists).thenReturn(_fakeLists);
+          var pass = 0;
+          final reload = Completer<List<CuratedList>>();
+          await tester.pumpWidget(
+            buildSubject(
+              hydrationOverride: myListsWithThumbnailsProvider.overrideWith((
+                ref,
+              ) {
+                if (pass++ == 0) {
+                  return Future.value([
+                    list.copyWith(
+                      thumbnailUrls: ['https://example.com/safe.jpg'],
+                    ),
+                  ]);
+                }
+                return reload.future;
+              }),
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+          expect(find.byType(PassiveAuthThumbnailImage), findsOneWidget);
+          ProviderScope.containerOf(
+            tester.element(find.byType(ProfileListsGrid)),
+          ).invalidate(myListsWithThumbnailsProvider);
+          await tester.pump();
+          expect(find.byType(PassiveAuthThumbnailImage), findsNothing);
+          reload.complete([]);
+          await tester.pump();
+          await tester.pump();
+          expect(find.byType(PassiveAuthThumbnailImage), findsNothing);
+        },
+      );
+
+      testWidgets('never carries the previous account images through reload', (
+        tester,
+      ) async {
+        final outgoing = _videoList('my_vine_list').copyWith(pubkey: 'a' * 64);
+        final incoming = outgoing.copyWith(
+          pubkey: 'b' * 64,
+          name: 'Incoming owner',
+          thumbnailUrls: ['https://example.com/incoming-unfiltered.jpg'],
+        );
+        _fakeLists = [outgoing];
+        when(() => mockListService.myLists).thenAnswer((_) => _fakeLists);
+        var pass = 0;
+        final reload = Completer<List<CuratedList>>();
+        await tester.pumpWidget(
+          buildSubject(
+            hydrationOverride: myListsWithThumbnailsProvider.overrideWith((
+              ref,
+            ) async {
+              await ref.watch(curatedListsStateProvider.future);
+              if (pass++ == 0) {
+                return [
+                  outgoing.copyWith(
+                    thumbnailUrls: ['https://example.com/outgoing-safe.jpg'],
+                  ),
+                ];
+              }
+              return reload.future;
+            }),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        expect(find.byType(PassiveAuthThumbnailImage), findsOneWidget);
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(ProfileListsGrid)),
+        );
+        _fakeLists = [incoming];
+        container.invalidate(curatedListsStateProvider);
+        await tester.pump();
+        await tester.pump();
+        expect(find.text('Incoming owner'), findsOneWidget);
+        expect(container.read(myListsWithThumbnailsProvider).isLoading, isTrue);
+        expect(find.byType(PassiveAuthThumbnailImage), findsNothing);
+        reload.complete([
+          incoming.copyWith(
+            thumbnailUrls: ['https://example.com/incoming-safe.jpg'],
+          ),
+        ]);
+        await tester.pump();
+        await tester.pump();
+        expect(
+          tester
+              .widget<PassiveAuthThumbnailImage>(
+                find.byType(PassiveAuthThumbnailImage),
+              )
+              .url,
+          'https://example.com/incoming-safe.jpg',
+        );
+      });
+
+      testWidgets('does not fall back to durable thumbnails after a failure', (
+        tester,
+      ) async {
+        _fakeLists = [
+          _videoList('list').copyWith(
+            thumbnailUrls: ['https://example.com/unfiltered.jpg'],
+          ),
+        ];
+        when(() => mockListService.myLists).thenReturn(_fakeLists);
+        await tester.pumpWidget(
+          buildSubject(
+            hydrationOverride: myListsWithThumbnailsProvider.overrideWith(
+              (ref) async => throw StateError('Hydration failed'),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        expect(find.text('Video list'), findsOneWidget);
+        expect(find.byType(PassiveAuthThumbnailImage), findsNothing);
+        expect(
+          tester
+              .widget<DivineListThumbnail>(find.byType(DivineListThumbnail))
+              .thumbnailsPending,
+          isFalse,
+        );
+      });
+
       testWidgets('cards shimmer their fans until the resolver first returns', (
         tester,
       ) async {

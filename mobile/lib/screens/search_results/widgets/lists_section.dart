@@ -228,7 +228,11 @@ class _PeopleListCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DivineListThumbnail.people(userList: result.list, onTap: onTap);
+    return DivineListThumbnail.people(
+      userList: result.list,
+      showMemberIdentities: false,
+      onTap: onTap,
+    );
   }
 }
 

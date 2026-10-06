@@ -8,11 +8,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
 import 'package:openvine/widgets/user_avatar.dart';
+import 'package:openvine/widgets/vanished_account_identity.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
-import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 /// Number of portrait card slots in the video fan.
@@ -71,9 +72,13 @@ class DivineListThumbnail extends StatelessWidget {
        );
 
   /// Card for a people list (kind 30000).
+  ///
+  /// Public search keeps [showMemberIdentities] false: member identities are
+  /// only resolved after opening a list, not exposed by its search preview.
   DivineListThumbnail.people({
     required UserList userList,
     required this.onTap,
+    bool showMemberIdentities = true,
     super.key,
   }) : name = userList.name,
        description = userList.description,
@@ -81,17 +86,17 @@ class DivineListThumbnail extends StatelessWidget {
        thumbnailsPending = false,
        _count = userList.pubkeys.length,
        _kind = _ListKind.people,
-       _memberPubkeys = userList.pubkeys,
+       _memberPubkeys = showMemberIdentities ? userList.pubkeys : const [],
        _media = _PeopleCollageMedia(
-         memberPubkeys: userList.pubkeys,
+         memberPubkeys: showMemberIdentities ? userList.pubkeys : const [],
          memberCount: userList.pubkeys.length,
        );
 
   final String name;
   final String? description;
 
-  /// A device-only list: the owner sees a lock beside the title so a
-  /// private list and a shared one never look the same in My Lists.
+  /// A list with encrypted video membership. The lock distinguishes its
+  /// visibility; its title, description and tags may still be published.
   final bool isPrivate;
   final VoidCallback onTap;
 
@@ -308,17 +313,18 @@ class _PeopleCollageMedia extends ConsumerWidget {
   final List<String> memberPubkeys;
   final int memberCount;
 
-  String? _pubkeyAt(int index) =>
-      index < memberPubkeys.length ? memberPubkeys[index] : null;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final pubkeys = _visibleMemberPubkeys(ref, memberPubkeys).take(3).toList();
+    final vanished = [
+      for (final pubkey in pubkeys) ref.watch(profileVanishedProvider(pubkey)),
+    ];
     final profiles = [
       for (var slot = 0; slot < 3; slot++)
-        switch (_pubkeyAt(slot)) {
-          final pubkey? => ref.watch(fetchUserProfileProvider(pubkey)),
-          null => null,
-        },
+        if (slot < pubkeys.length && !vanished[slot])
+          ref.watch(userProfileReactiveProvider(pubkeys[slot]))
+        else
+          null,
     ];
     final pending = profiles.any((profile) => profile?.isLoading ?? false);
     return ListSkeletonizer(
@@ -331,8 +337,11 @@ class _PeopleCollageMedia extends ConsumerWidget {
           }
           return Skeleton.keep(
             child: _MemberTile(
-              pubkey: _pubkeyAt(slot),
-              pictureUrl: profile?.value?.picture,
+              pubkey: slot < pubkeys.length ? pubkeys[slot] : null,
+              pictureUrl: vanishedAccountPictureUrl(
+                isVanished: slot < vanished.length && vanished[slot],
+                pictureUrl: profile?.value?.picture,
+              ),
               slot: slot,
               seams: seams,
             ),
@@ -451,7 +460,14 @@ class _MemberTile extends StatelessWidget {
       userAvatarToneForSeed(pubkey ?? 'slot-$slot'),
     );
     final tile = switch (pictureUrl) {
-      final url? when url.isNotEmpty => VineCachedImage(imageUrl: url),
+      final url? when url.isNotEmpty => LayoutBuilder(
+        builder: (context, constraints) => UserAvatar(
+          imageUrl: url,
+          placeholderSeed: pubkey,
+          size: constraints.biggest.longestSide,
+          cornerRadius: 0,
+        ),
+      ),
       _ => ColoredBox(
         color: colors.base,
         child: Center(
@@ -559,6 +575,13 @@ class _Footer extends StatelessWidget {
 /// overflow the two-line box at card width; the rest end in an ellipsis.
 const _memberNameCount = 6;
 
+Iterable<String> _visibleMemberPubkeys(WidgetRef ref, List<String> pubkeys) {
+  if (pubkeys.isEmpty) return const [];
+  ref.watch(blocklistVersionProvider);
+  final blocklist = ref.watch(contentBlocklistRepositoryProvider);
+  return pubkeys.where((pubkey) => !blocklist.shouldFilterFromFeeds(pubkey));
+}
+
 /// The first members' names, in the description's box and style, for a
 /// people list that has no description of its own.
 ///
@@ -573,13 +596,17 @@ class _MemberNames extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final names = [
-      for (final pubkey in pubkeys)
-        switch (ref.watch(fetchUserProfileProvider(pubkey))) {
-          AsyncData(:final value) =>
-            value?.bestDisplayName ?? UserProfile.defaultDisplayNameFor(pubkey),
-          AsyncError() => UserProfile.defaultDisplayNameFor(pubkey),
-          _ => null,
-        },
+      for (final pubkey in _visibleMemberPubkeys(ref, pubkeys))
+        if (ref.watch(profileVanishedProvider(pubkey)))
+          vanishedAccountName(context, isVanished: true, fallbackName: '')
+        else
+          switch (ref.watch(userProfileReactiveProvider(pubkey))) {
+            AsyncData(isLoading: false, :final value) =>
+              value?.bestDisplayName ??
+                  UserProfile.defaultDisplayNameFor(pubkey),
+            AsyncError() => UserProfile.defaultDisplayNameFor(pubkey),
+            _ => null,
+          },
     ].nonNulls.toList();
     final style = VineTheme.bodySmallFont(
       color: context.vineColors.secondaryText,

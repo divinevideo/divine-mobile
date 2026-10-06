@@ -136,10 +136,16 @@ class _VideoListsSection extends ConsumerWidget {
             if (ownLists.isEmpty) {
               return _ListMessage(text: context.l10n.profileListsEmpty);
             }
-            final hydrated = ref.watch(myListsWithThumbnailsProvider).value;
+            // Retained previews belong to a prior account/policy until the
+            // current hydration has completed successfully.
+            final hydration = ref.watch(myListsWithThumbnailsProvider);
+            final hydrated = switch (hydration) {
+              AsyncData(isLoading: false, :final value) => value,
+              _ => null,
+            };
             return _VideoListsColumn(
               lists: _withResolvedThumbnails(ownLists, hydrated),
-              thumbnailsPending: hydrated == null,
+              thumbnailsPending: hydration.isLoading,
             );
           },
           loading: () => const _ListLoading(),
@@ -161,19 +167,17 @@ List<CuratedList> _withResolvedThumbnails(
   List<CuratedList> ownLists,
   List<CuratedList>? hydrated,
 ) {
-  if (hydrated == null) return ownLists;
   final thumbnailsById = <String, List<String>>{
-    for (final list in hydrated)
+    for (final list in hydrated ?? const <CuratedList>[])
       if (list.thumbnailUrls.isNotEmpty)
         list.authorScopedId: list.thumbnailUrls,
   };
-  if (thumbnailsById.isEmpty) return ownLists;
   return [
     for (final list in ownLists)
-      if (thumbnailsById[list.authorScopedId] case final urls?)
-        list.copyWith(thumbnailUrls: urls)
-      else
-        list,
+      // Stored thumbnails have not passed the current policy/owner hydration.
+      list.copyWith(
+        thumbnailUrls: thumbnailsById[list.authorScopedId] ?? const [],
+      ),
   ];
 }
 

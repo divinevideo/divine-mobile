@@ -7,11 +7,13 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/list_search/list_search_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/search_results/widgets/lists_section.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_empty_state.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
 import 'package:openvine/screens/search_results/widgets/section_header.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
+import 'package:openvine/widgets/user_avatar.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 
 import '../../../helpers/go_router.dart';
@@ -153,6 +155,16 @@ void main() {
       testWidgets(
         'people result navigates with owner (showAll: $showAll)',
         (tester) async {
+          var identityReads = 0;
+          final member = 'a' * 64;
+          final cachedProfile = UserProfile(
+            pubkey: member,
+            eventId: 'e' * 64,
+            createdAt: now,
+            rawData: const {},
+            displayName: 'Cached member',
+            picture: 'https://example.com/cached-member.jpg',
+          );
           final goRouter = MockGoRouter();
           when(
             () => goRouter.push<void>(any()),
@@ -168,7 +180,7 @@ void main() {
                   list: UserList(
                     id: 'pl1',
                     name: 'Crew',
-                    pubkeys: const [],
+                    pubkeys: [member],
                     createdAt: now,
                     updatedAt: now,
                   ),
@@ -179,7 +191,17 @@ void main() {
 
           await tester.pumpWidget(
             ProviderScope(
-              overrides: [...getStandardTestOverrides()],
+              overrides: [
+                ...getStandardTestOverrides(),
+                fetchUserProfileProvider(member).overrideWith((ref) async {
+                  identityReads++;
+                  return cachedProfile;
+                }),
+                userProfileReactiveProvider(member).overrideWith((ref) {
+                  identityReads++;
+                  return Stream<UserProfile?>.value(cachedProfile);
+                }),
+              ],
               child: MaterialApp(
                 localizationsDelegates: appLocalizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
@@ -205,6 +227,13 @@ void main() {
 
           expect(find.byType(DivineListThumbnail), findsNWidgets(2));
           expect(find.text('Crew'), findsOneWidget);
+          expect(find.textContaining('Cached member'), findsNothing);
+          expect(find.byType(UserAvatar), findsNothing);
+          expect(
+            identityReads,
+            0,
+            reason: 'Public search cards must not resolve member identities.',
+          );
 
           await tester.tap(find.text('Crew'));
 
