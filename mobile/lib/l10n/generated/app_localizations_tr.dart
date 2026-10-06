@@ -10794,6 +10794,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get badgesTitle => 'Rozetler';
 
   @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
   String get badgeSubscribeAction => 'Rozete abone ol';
 
   @override

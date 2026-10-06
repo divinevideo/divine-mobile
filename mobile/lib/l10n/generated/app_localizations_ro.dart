@@ -11113,6 +11113,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get badgesTitle => 'Insigne';
 
   @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
   String get badgeSubscribeAction => 'Abonează-te la insignă';
 
   @override

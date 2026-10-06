@@ -10340,6 +10340,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get badgesTitle => 'バッジ';
 
   @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
   String get badgeSubscribeAction => 'バッジを購読';
 
   @override
