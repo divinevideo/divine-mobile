@@ -1934,67 +1934,55 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// completion handlers) are already main-queue.
     private func safePreroll(at time: CMTime) {
         assert(Thread.isMainThread, "safePreroll must be called on the main thread")
-        guard let player = self.player else { return }
-        guard player.rate == 0 else { return }
+        pendingPrerollObservation?.invalidate()
+        pendingPrerollObservation = nil
+        guard let player = self.player, let item = player.currentItem,
+            player.rate == 0 else { return }
         if player.status == .readyToPlay {
-            player.preroll(atRate: 1.0) { [weak self] prerolled in
-                guard prerolled else { return }
-                // `preroll(atRate:)` completion runs on an unspecified
-                // internal queue. Hop to main before touching
-                // `currentItem` / `step(byCount:)` / `textureOutput`.
-                DispatchQueue.main.async { [weak self] in
-                    guard let self else { return }
-                    self.nudgeOutputQueue()
-                    self.textureOutput?.forceRefresh(for: time)
-                    // `step(byCount:)` enqueues into the player's
-                    // internal pipeline and the resulting frame is not
-                    // available on `copyPixelBuffer` until the next
-                    // runloop iteration. Defer the synchronous pull
-                    // attempt one tick so it has a chance to succeed —
-                    // and only flip `firstFrameRendered` (via
-                    // `deliverFrame`→`onFirstFrame`) when a real
-                    // `CVPixelBuffer` is actually in the texture.
-                    // Otherwise Flutter would hide the loader over an
-                    // empty texture and render one frame of black
-                    // before the display-link path catches up.
-                    DispatchQueue.main.async { [weak self] in
-                        self?.textureOutput?.tryPullFrameNow(at: time)
-                    }
-                }
-            }
+            prerollReadyPlayer(player, item: item, at: time)
             return
         }
-        pendingPrerollObservation?.invalidate()
         pendingPrerollObservation = player.observe(
             \.status,
             options: [.new]
         ) { [weak self] obsPlayer, _ in
             guard obsPlayer.status == .readyToPlay else { return }
-            // KVO callbacks fire on whichever queue mutated the
-            // observed key. `pendingPrerollObservation` mutation and
-            // the inner preroll must happen on main.
             DispatchQueue.main.async { [weak self] in
-                guard let self else { return }
+                guard let self, self.player === obsPlayer,
+                    obsPlayer.currentItem === item else { return }
                 self.pendingPrerollObservation?.invalidate()
                 self.pendingPrerollObservation = nil
-                guard obsPlayer.rate == 0 else { return }
-                obsPlayer.preroll(atRate: 1.0) { [weak self] prerolled in
-                    guard prerolled else { return }
-                    DispatchQueue.main.async { [weak self] in
-                        guard let self else { return }
-                        self.nudgeOutputQueue()
-                        self.textureOutput?.forceRefresh(for: time)
-                        // See sibling branch above: defer the pull one
-                        // runloop tick so `step(byCount:)` has produced
-                        // a frame, and only mark the controller as
-                        // ready when a real `CVPixelBuffer` lands in
-                        // the Flutter texture.
-                        DispatchQueue.main.async { [weak self] in
-                            self?.textureOutput?.tryPullFrameNow(at: time)
-                        }
-                    }
-                }
+                self.prerollReadyPlayer(obsPlayer, item: item, at: time)
             }
+        }
+    }
+
+    private func prerollReadyPlayer(_ player: AVPlayer, item: AVPlayerItem, at time: CMTime) {
+        guard player.rate == 0, player.status == .readyToPlay,
+            player.currentItem === item else { return }
+        player.preroll(atRate: 1.0) { [weak self, weak player, weak item] prerolled in
+            guard prerolled else { return }
+            DispatchQueue.main.async { [weak self, weak player, weak item] in
+                guard let self, let player, let item else { return }
+                self.finishPausedPreroll(player, item: item, at: time)
+            }
+        }
+    }
+
+    /// Applies a paused-frame preroll only while its original player and item
+    /// are still paused; stepping after play() would stop playback again.
+    func finishPausedPreroll(_ player: AVPlayer, item: AVPlayerItem, at time: CMTime) {
+        assert(Thread.isMainThread, "finishPausedPreroll must be called on the main thread")
+        guard self.player === player, player.currentItem === item,
+            player.rate == 0 else { return }
+        nudgeOutputQueue()
+        textureOutput?.forceRefresh(for: time)
+        // Stepping produces its output asynchronously; only a real frame
+        // delivered to the texture may mark firstFrameRendered.
+        DispatchQueue.main.async { [weak self, weak player, weak item] in
+            guard let self, let player, let item, self.player === player,
+                player.currentItem === item, player.rate == 0 else { return }
+            self.textureOutput?.tryPullFrameNow(at: time)
         }
     }
 
