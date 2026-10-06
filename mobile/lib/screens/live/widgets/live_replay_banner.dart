@@ -52,8 +52,8 @@ class LiveReplayBanner extends StatelessWidget {
             DivineButton(
               label: context.l10n.liveOpenReplay,
               size: DivineButtonSize.small,
-              onPressed: () {
-                launchUrl(
+              onPressed: () async {
+                await launchUrl(
                   Uri.parse(recording.playbackUrl),
                   mode: LaunchMode.externalApplication,
                 );

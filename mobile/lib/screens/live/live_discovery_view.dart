@@ -261,8 +261,8 @@ class _DiscoverySection extends StatelessWidget {
             return LiveRoomCard(
               room: room,
               session: session,
-              onTap: () {
-                context.push(
+              onTap: () async {
+                await context.push(
                   LiveRoomDetailPage.pathFor(room.id),
                   extra: LiveRoomDetailRouteData(
                     room: room,
@@ -338,8 +338,8 @@ class _FeaturedHostsSection extends StatelessWidget {
                 return _FeaturedHostCard(
                   room: room,
                   session: session,
-                  onTap: () {
-                    context.push(
+                  onTap: () async {
+                    await context.push(
                       LiveRoomDetailPage.pathFor(room.id),
                       extra: LiveRoomDetailRouteData(
                         room: room,

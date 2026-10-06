@@ -203,8 +203,8 @@ class _LiveHostControlsSheetState extends ConsumerState<LiveHostControlsSheet> {
                         label: context.l10n.liveManageParticipants,
                         type: DivineButtonType.secondary,
                         expanded: true,
-                        onPressed: () {
-                          VineBottomSheet.show<void>(
+                        onPressed: () async {
+                          await VineBottomSheet.show<void>(
                             context: context,
                             scrollable: false,
                             showHeader: false,
