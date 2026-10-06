@@ -10,7 +10,10 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/curated_list_info/curated_list_info_cubit.dart';
 import 'package:openvine/services/curated_list_service.dart';
 
-class _MockCuratedListService extends Mock implements CuratedListService {}
+class _MockCuratedListService extends Mock implements CuratedListService {
+  @override
+  bool recoveryNeedsRepair = false;
+}
 
 // Full-length 64-char pubkeys — never truncate.
 final String _viewer = 'f' * 64;
@@ -55,6 +58,101 @@ void main() {
       resolveService: () => withService ? service : null,
       existingList: existingList,
       videoEventId: videoEventId,
+    );
+
+    test(
+      'recovery hold preserves visible values and blocks every edit',
+      () async {
+        service.recoveryNeedsRepair = true;
+        final original = _list(collaborators: [_alice]);
+        final cubit = buildCubit(existingList: original);
+        addTearDown(cubit.close);
+        expect(cubit.state.recoveryReadOnly, isTrue);
+        expect(cubit.state.canEdit, isFalse);
+        expect(cubit.state.canSubmit, isFalse);
+
+        cubit.nameChanged('Changed');
+        cubit.descriptionChanged('Changed description');
+        cubit.visibilityChanged(isPublic: false);
+        cubit.collaboratorsPicked(offered: {_alice}, picked: {_bob});
+        await cubit.submitted();
+        await cubit.retrySync();
+
+        expect(cubit.state.name, original.name);
+        expect(cubit.state.description, original.description);
+        expect(cubit.state.isPublic, original.isPublic);
+        expect(cubit.state.collaboratorPubkeys, [_alice]);
+        verifyNever(() => service.updateList(listId: any(named: 'listId')));
+        verifyNever(() => service.retryListSync(any()));
+      },
+    );
+
+    test(
+      'a hold arriving after opening blocks a stale create action',
+      () async {
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+        cubit.nameChanged('New list');
+        expect(cubit.state.canSubmit, isTrue);
+        service.recoveryNeedsRepair = true;
+
+        await cubit.submitted();
+
+        expect(cubit.state.recoveryReadOnly, isTrue);
+        expect(cubit.state.canSubmit, isFalse);
+        expect(cubit.state.status, CuratedListInfoStatus.editing);
+        verifyNever(() => service.createList(name: any(named: 'name')));
+
+        service.recoveryNeedsRepair = false;
+        cubit.refreshRecoveryReadOnly();
+        expect(cubit.state.canSubmit, isTrue);
+        expect(cubit.state.name, 'New list');
+      },
+    );
+
+    test(
+      'a hold arriving after opening blocks a stale Sync now action',
+      () async {
+        final cubit = buildCubit(existingList: _list());
+        addTearDown(cubit.close);
+        service.recoveryNeedsRepair = true;
+
+        await cubit.retrySync();
+
+        expect(cubit.state.recoveryReadOnly, isTrue);
+        verifyNever(() => service.retryListSync(any()));
+      },
+    );
+
+    test(
+      'a temporarily missing service cannot clear a known recovery hold',
+      () {
+        service.recoveryNeedsRepair = true;
+        CuratedListService? current = service;
+        final cubit = CuratedListInfoCubit(
+          resolveService: () => current,
+          currentOwnerPubkey: () => _viewer,
+          existingList: _list(),
+        );
+        addTearDown(cubit.close);
+        current = null;
+        cubit.refreshRecoveryReadOnly();
+        expect(cubit.state.recoveryReadOnly, isTrue);
+        expect(cubit.state.canEdit, isFalse);
+      },
+    );
+
+    test(
+      'readonly state participates in equality and copy without mutation',
+      () {
+        const editable = CuratedListInfoState(name: 'Visible list');
+        final readonly = editable.copyWith(recoveryReadOnly: true);
+        expect(editable.recoveryReadOnly, isFalse);
+        expect(readonly, isNot(editable));
+        expect(readonly.copyWith(), readonly);
+        expect(readonly.canSubmit, isFalse);
+        expect(readonly.copyWith(recoveryReadOnly: false), editable);
+      },
     );
 
     test(
@@ -116,8 +214,9 @@ void main() {
           ),
         );
         when(() => service.getListById(any())).thenReturn(pending);
-        when(() => service.retryListSync(pending.id))
-            .thenAnswer((_) async => false);
+        when(
+          () => service.retryListSync(pending.id),
+        ).thenAnswer((_) async => false);
         final cubit = buildCubit(existingList: pending);
         addTearDown(cubit.close);
         await cubit.retrySync();

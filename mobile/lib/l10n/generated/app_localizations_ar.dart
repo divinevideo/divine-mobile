@@ -13065,4 +13065,8 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get listPermissionsRecoveryPending =>
       'تم قبول تغييرك. اضغط على زامن الآن لإكمال حفظه. التعديل متوقف حتى ذلك الحين.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'تحتاج بعض التغييرات المحفوظة في قوائم الفيديو إلى استعادة. يمكن عرض قوائم الفيديو، لكن التعديل متوقف مؤقتًا.';
 }

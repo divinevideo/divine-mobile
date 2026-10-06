@@ -13,6 +13,7 @@ import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/curated_list_initialization_failure.dart';
+import 'package:openvine/widgets/curated_list_recovery_read_only_notice.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -66,7 +67,9 @@ class _SelectListDialogState extends ConsumerState<SelectListDialog> {
       _session.currentOwnerPubkey == _openingOwner;
 
   Future<void> _createList() async {
-    if (!_isSessionCurrent) return;
+    if (!_isSessionCurrent || _session.service?.recoveryNeedsRepair == true) {
+      return;
+    }
     final messenger = ScaffoldMessenger.of(context);
     final l10n = context.l10n;
     final failureMessage = l10n.listVideoNotAdded;
@@ -99,6 +102,12 @@ class _SelectListDialogState extends ConsumerState<SelectListDialog> {
     return listServiceAsync.when(
       data: (lists) {
         final availableLists = lists.toList();
+        final recoveryReadOnly =
+            ref
+                .read(curatedListsStateProvider.notifier)
+                .service
+                ?.recoveryNeedsRepair ??
+            false;
 
         final l10n = context.l10n;
         final pendingLists = {
@@ -126,22 +135,25 @@ class _SelectListDialogState extends ConsumerState<SelectListDialog> {
             height: 300,
             child: Column(
               children: [
+                if (recoveryReadOnly) const CuratedListRecoveryReadOnlyNotice(),
                 if (_creationOutcome ==
                     ListInfoSheetOutcome.createdWithoutVideo)
                   ListInfoFailureMessage(l10n.listVideoNotAdded),
-                if (availableLists.any(
-                  (list) =>
-                      list.hasPendingPermissionRecovery ||
-                      list.pendingPlaintextEventIds.isNotEmpty,
-                ))
+                if (!recoveryReadOnly &&
+                    availableLists.any(
+                      (list) =>
+                          list.hasPendingPermissionRecovery ||
+                          list.pendingPlaintextEventIds.isNotEmpty,
+                    ))
                   ListInfoRecoveryPendingMessage(
                     permissionRecoveryPending: availableLists.any(
                       (list) => list.hasPendingPermissionRecovery,
                     ),
                   )
-                else if (pendingLists.isNotEmpty)
+                else if (!recoveryReadOnly && pendingLists.isNotEmpty)
                   const ListInfoPendingSyncMessage(),
-                if (syncFailed) ListInfoFailureMessage(l10n.listUpdateFailed),
+                if (!recoveryReadOnly && syncFailed)
+                  ListInfoFailureMessage(l10n.listUpdateFailed),
                 Expanded(
                   child: ListView.builder(
                     itemCount: availableLists.length,
@@ -182,16 +194,19 @@ class _SelectListDialogState extends ConsumerState<SelectListDialog> {
                                   : DivineButton(
                                       label: l10n.listRetrySync,
                                       type: DivineButtonType.link,
-                                      onPressed: () => runDetached(
-                                        _retrySync(list),
-                                        'retry list sync',
-                                        logName: 'SelectListDialog',
-                                        category: LogCategory.ui,
-                                      ),
+                                      onPressed: recoveryReadOnly
+                                          ? null
+                                          : () => runDetached(
+                                              _retrySync(list),
+                                              'retry list sync',
+                                              logName: 'SelectListDialog',
+                                              category: LogCategory.ui,
+                                            ),
                                     )
                             : null,
                         onTap:
-                            _syncingListIds.contains(list.id) ||
+                            recoveryReadOnly ||
+                                _syncingListIds.contains(list.id) ||
                                 list.hasPendingPermissionRecovery
                             ? null
                             : () => _toggleVideoInList(
@@ -211,14 +226,16 @@ class _SelectListDialogState extends ConsumerState<SelectListDialog> {
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                runDetached(
-                  _createList(),
-                  'open list creation sheet',
-                  logName: 'SelectListDialog',
-                  category: LogCategory.ui,
-                );
-              },
+              onPressed: recoveryReadOnly
+                  ? null
+                  : () {
+                      runDetached(
+                        _createList(),
+                        'open list creation sheet',
+                        logName: 'SelectListDialog',
+                        category: LogCategory.ui,
+                      );
+                    },
               child: Text(l10n.listNewList),
             ),
             TextButton(
@@ -250,7 +267,7 @@ class _SelectListDialogState extends ConsumerState<SelectListDialog> {
   Future<void> _retrySync(CuratedList list) async {
     if (!_isSessionCurrent || _syncingListIds.contains(list.id)) return;
     final service = ref.read(curatedListsStateProvider.notifier).service;
-    if (service == null) return;
+    if (service == null || service.recoveryNeedsRepair) return;
     setState(() {
       _syncingListIds.add(list.id);
       _failedSyncListIds.remove(list.id);
@@ -280,7 +297,7 @@ class _SelectListDialogState extends ConsumerState<SelectListDialog> {
     CuratedList list,
     bool isCurrentlyInList,
   ) async {
-    if (!_isSessionCurrent) return;
+    if (!_isSessionCurrent || listService.recoveryNeedsRepair) return;
     try {
       bool success;
       if (isCurrentlyInList) {

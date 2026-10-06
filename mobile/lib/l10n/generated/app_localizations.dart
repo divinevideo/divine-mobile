@@ -21954,6 +21954,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your change was accepted. Tap Sync now to finish saving it. Editing is paused until then.'**
   String get listPermissionsRecoveryPending;
+
+  /// No description provided for @listRecoveryReadOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Some saved changes to video lists need recovery. You can view video lists, but editing is paused.'**
+  String get listRecoveryReadOnly;
 }
 
 class _AppLocalizationsDelegate

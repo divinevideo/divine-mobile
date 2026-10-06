@@ -6800,6 +6800,7 @@
   "listVideoPendingSync": "Senarai dan video anda disimpan di sini. Video sedang menunggu untuk disegerakkan.",
   "listRetrySync": "Segerakkan sekarang",
   "listPermissionsUnconfirmed": "Perubahan ini tidak dapat disahkan. Cuba lagi.",
+  "listRecoveryReadOnly": "Sesetengah perubahan yang disimpan pada senarai video perlu dipulihkan. Anda boleh melihat senarai video, tetapi penyuntingan dijeda.",
   "listRecoveryPending": "Senarai ini mempunyai perubahan yang menunggu untuk disegerakkan.",
   "listPermissionsRecoveryPending": "Perubahan anda diterima. Ketik Segerakkan sekarang untuk menyelesaikan penyimpanan. Penyuntingan dijeda sehingga selesai."
 }

@@ -6800,6 +6800,7 @@
   "listVideoPendingSync": "你的列表和视频已保存在此设备上。视频正在等待同步。",
   "listRetrySync": "立即同步",
   "listPermissionsUnconfirmed": "无法确认此更改。请重试。",
+  "listRecoveryReadOnly": "视频列表中保存的部分更改需要恢复。你可以查看视频列表，但编辑已暂停。",
   "listRecoveryPending": "此列表有等待同步的更改。",
   "listPermissionsRecoveryPending": "更改已被接受。点击立即同步以完成保存。在此之前，编辑将暂停。"
 }

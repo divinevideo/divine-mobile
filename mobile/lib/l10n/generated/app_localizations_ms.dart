@@ -13117,4 +13117,8 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get listPermissionsRecoveryPending =>
       'Perubahan anda diterima. Ketik Segerakkan sekarang untuk menyelesaikan penyimpanan. Penyuntingan dijeda sehingga selesai.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Sesetengah perubahan yang disimpan pada senarai video perlu dipulihkan. Anda boleh melihat senarai video, tetapi penyuntingan dijeda.';
 }

@@ -45,6 +45,7 @@ class CuratedListInfoState extends Equatable {
     this.wasPublic,
     this.needsSync = false,
     this.permissionRecoveryPending = false,
+    this.recoveryReadOnly = false,
   });
 
   /// Where the save stands.
@@ -71,8 +72,12 @@ class CuratedListInfoState extends Equatable {
   /// An acknowledged permission change blocks unrelated edits until settled.
   final bool permissionRecoveryPending;
 
+  /// Saved recovery records need verified repair before any mutation is safe.
+  final bool recoveryReadOnly;
+
   /// Whether fields and permissions may be edited.
-  bool get canEdit => !isSaving && !permissionRecoveryPending;
+  bool get canEdit =>
+      !isSaving && !permissionRecoveryPending && !recoveryReadOnly;
 
   /// Whether the form edits an existing list rather than creating one.
   bool get isEditing => wasPublic != null;
@@ -113,6 +118,7 @@ class CuratedListInfoState extends Equatable {
     bool? wasPublic,
     bool? needsSync,
     bool? permissionRecoveryPending,
+    bool? recoveryReadOnly,
   }) {
     return CuratedListInfoState(
       status: status ?? this.status,
@@ -124,6 +130,7 @@ class CuratedListInfoState extends Equatable {
       needsSync: needsSync ?? this.needsSync,
       permissionRecoveryPending:
           permissionRecoveryPending ?? this.permissionRecoveryPending,
+      recoveryReadOnly: recoveryReadOnly ?? this.recoveryReadOnly,
     );
   }
 
@@ -137,5 +144,6 @@ class CuratedListInfoState extends Equatable {
     wasPublic,
     needsSync,
     permissionRecoveryPending,
+    recoveryReadOnly,
   ];
 }

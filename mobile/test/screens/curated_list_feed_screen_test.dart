@@ -23,7 +23,10 @@ import '../helpers/finders.dart';
 import '../helpers/go_router.dart';
 import '../helpers/test_provider_overrides.dart';
 
-class _MockCuratedListService extends Mock implements CuratedListService {}
+class _MockCuratedListService extends Mock implements CuratedListService {
+  @override
+  bool recoveryNeedsRepair = false;
+}
 
 class _TestCuratedListsState extends CuratedListsState {
   _TestCuratedListsState(this._resolveService, this._list);

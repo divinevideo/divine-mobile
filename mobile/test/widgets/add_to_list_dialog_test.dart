@@ -17,7 +17,10 @@ import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
 
 import '../helpers/test_provider_overrides.dart';
 
-class _MockCuratedListService extends Mock implements CuratedListService {}
+class _MockCuratedListService extends Mock implements CuratedListService {
+  @override
+  bool recoveryNeedsRepair = false;
+}
 
 /// Test data for the fake notifier - set before each test
 List<CuratedList> _fakeLists = [];
@@ -83,6 +86,151 @@ void main() {
         home: Scaffold(body: SelectListDialog(video: testVideo)),
       ),
     );
+
+    testWidgets('recovery preserves rows and pauses all editing actions', (
+      tester,
+    ) async {
+      mockListService.recoveryNeedsRepair = true;
+      _fakeLists = [
+        CuratedList(
+          id: 'pending-list',
+          pubkey: 'a' * 64,
+          name: 'Pending list',
+          videoEventIds: [testVideo.id],
+          pendingRepublish: true,
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+        ),
+        CuratedList(
+          id: 'empty-list',
+          pubkey: 'a' * 64,
+          name: 'Empty list',
+          videoEventIds: const [],
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+        ),
+      ];
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l10n.listRecoveryReadOnly), findsOneWidget);
+      expect(find.byType(ListTile), findsNWidgets(2));
+      expect(
+        tester
+            .widgetList<ListTile>(find.byType(ListTile))
+            .every((tile) => tile.onTap == null),
+        isTrue,
+      );
+      final sync = tester.widget<DivineButton>(
+        find.ancestor(
+          of: find.text(l10n.listRetrySync),
+          matching: find.byType(DivineButton),
+        ),
+      );
+      expect(sync.onPressed, isNull);
+      final create = tester.widget<TextButton>(
+        find.ancestor(
+          of: find.text(l10n.listNewList),
+          matching: find.byType(TextButton),
+        ),
+      );
+      expect(create.onPressed, isNull);
+      await tester.tap(find.text('Empty list'));
+      await tester.pump();
+      verifyNever(() => mockListService.addVideoToList(any(), any()));
+      verifyNever(() => mockListService.removeVideoFromList(any(), any()));
+      verifyNever(() => mockListService.retryListSync(any()));
+      verifyNever(() => mockListService.createList(name: any(named: 'name')));
+    });
+
+    testWidgets('Done dismisses the picker while recovery holds editing', (
+      tester,
+    ) async {
+      mockListService.recoveryNeedsRepair = true;
+      final navigator = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(
+        testProviderScope(
+          mockAuthService: createMockAuthService(currentPublicKeyHex: 'a' * 64),
+          additionalOverrides: [
+            curatedListsStateProvider.overrideWith(_FakeCuratedListsState.new),
+          ],
+          child: MaterialApp(
+            navigatorKey: navigator,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const Scaffold(body: SizedBox()),
+          ),
+        ),
+      );
+      unawaited(
+        showDialog<void>(
+          context: navigator.currentContext!,
+          builder: (_) => SelectListDialog(video: testVideo),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l10n.listRecoveryReadOnly), findsOneWidget);
+      await tester.tap(find.text(l10n.listDone));
+      await tester.pumpAndSettle();
+      expect(find.byType(SelectListDialog), findsNothing);
+    });
+
+    testWidgets('a newly held service rejects captured picker callbacks', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final pending = CuratedList(
+        id: 'pending-list',
+        pubkey: 'a' * 64,
+        name: 'Pending list',
+        videoEventIds: [testVideo.id],
+        pendingRepublish: true,
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+      );
+      _fakeLists = [pending];
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      final toggle = tester.widget<ListTile>(find.byType(ListTile)).onTap!;
+      final sync = tester
+          .widget<DivineButton>(
+            find.ancestor(
+              of: find.text(l10n.listRetrySync),
+              matching: find.byType(DivineButton),
+            ),
+          )
+          .onPressed!;
+      final create = tester
+          .widget<TextButton>(
+            find.ancestor(
+              of: find.text(l10n.listNewList),
+              matching: find.byType(TextButton),
+            ),
+          )
+          .onPressed!;
+      mockListService.recoveryNeedsRepair = true;
+      toggle();
+      sync();
+      create();
+      await tester.pumpAndSettle();
+      verifyNever(() => mockListService.addVideoToList(any(), any()));
+      verifyNever(() => mockListService.removeVideoFromList(any(), any()));
+      verifyNever(() => mockListService.retryListSync(any()));
+      expect(find.byType(ListInfoForm), findsNothing);
+
+      final notifier = ProviderScope.containerOf(
+        tester.element(find.byType(SelectListDialog)),
+      ).read(curatedListsStateProvider.notifier) as _FakeCuratedListsState;
+      notifier.replaceLists([pending]);
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.listRecoveryReadOnly), findsOneWidget);
+      mockListService.recoveryNeedsRepair = false;
+      notifier.replaceLists([pending]);
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.listRecoveryReadOnly), findsNothing);
+      expect(tester.widget<ListTile>(find.byType(ListTile)).onTap, isNotNull);
+    });
 
     testWidgets(
       'failed initialization can retry locally without exposing mutations',
@@ -480,11 +628,12 @@ void main() {
         final notifier = container.read(
           curatedListsStateProvider.notifier,
         ) as _FakeCuratedListsState;
-        when(() => mockListService.addVideoToList(pending.id, testVideo.id))
-            .thenAnswer((_) async {
-              notifier.replaceLists([pending]);
-              return false;
-            });
+        when(
+          () => mockListService.addVideoToList(pending.id, testVideo.id),
+        ).thenAnswer((_) async {
+          notifier.replaceLists([pending]);
+          return false;
+        });
         await tester.tap(find.text(l10n.listNewList));
         await tester.pumpAndSettle();
         await tester.enterText(find.byType(TextField).first, pending.name);
@@ -524,8 +673,9 @@ void main() {
         addTearDown(() {
           if (!answer.isCompleted) answer.complete(false);
         });
-        when(() => mockListService.retryListSync(pending.id))
-            .thenAnswer((_) => answer.future);
+        when(
+          () => mockListService.retryListSync(pending.id),
+        ).thenAnswer((_) => answer.future);
         await tester.pumpWidget(buildSubject());
         await tester.pumpAndSettle();
         await tester.tap(find.text(l10n.listRetrySync));

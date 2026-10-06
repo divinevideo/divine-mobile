@@ -13458,4 +13458,8 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get listPermissionsRecoveryPending =>
       'మీ మార్పు ఆమోదించబడింది. దాన్ని సేవ్ చేయడం పూర్తి చేయడానికి ఇప్పుడే సింక్ చేయండి నొక్కండి. అప్పటి వరకు సవరణ నిలిపివేయబడుతుంది.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'వీడియో జాబితాల్లో సేవ్ చేసిన కొన్ని మార్పులను పునరుద్ధరించాలి. మీరు వీడియో జాబితాలను చూడవచ్చు, కానీ సవరించడం తాత్కాలికంగా నిలిపివేయబడింది.';
 }

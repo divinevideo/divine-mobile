@@ -13274,4 +13274,8 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get listPermissionsRecoveryPending =>
       'La modifica è stata accettata. Tocca Sincronizza ora per completare il salvataggio. Le modifiche sono sospese fino ad allora.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Alcune modifiche salvate alle liste di video devono essere recuperate. Puoi vedere le liste di video, ma la modifica è sospesa.';
 }

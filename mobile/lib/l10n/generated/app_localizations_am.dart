@@ -12779,4 +12779,8 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get listPermissionsRecoveryPending =>
       'ለውጥዎ ተቀባይነት አግኝቷል። ማስቀመጡን ለማጠናቀቅ አሁን አመሳስልን ይንኩ። እስከዚያ ድረስ ማርትዕ ቆሟል።';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'በቪዲዮ ዝርዝሮች ላይ የተቀመጡ አንዳንድ ለውጦች መመለስ ያስፈልጋቸዋል። የቪዲዮ ዝርዝሮችን ማየት ይችላሉ፣ ግን ማርትዕ ለጊዜው ቆሟል።';
 }

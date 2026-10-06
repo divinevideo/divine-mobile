@@ -49,6 +49,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
            needsSync: existingList?.needsSync ?? false,
            permissionRecoveryPending:
                existingList?.hasPendingPermissionRecovery ?? false,
+           recoveryReadOnly: resolveService()?.recoveryNeedsRepair ?? false,
          ),
        );
 
@@ -67,8 +68,20 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
   List<String> _storedCollaborators;
   final String? _videoEventId;
 
+  /// Refreshes an open form when its current service enters or leaves recovery.
+  void refreshRecoveryReadOnly() {
+    if (isClosed || !isSessionCurrent) return;
+    final service = _resolveService();
+    if (service == null) return;
+    final recoveryReadOnly = service.recoveryNeedsRepair;
+    if (state.recoveryReadOnly != recoveryReadOnly) {
+      emitIfOpen(state.copyWith(recoveryReadOnly: recoveryReadOnly));
+    }
+  }
+
   /// Records the list name as typed.
   void nameChanged(String name) {
+    refreshRecoveryReadOnly();
     if (!state.canEdit) return;
     emitIfOpen(
       state.copyWith(name: name, status: CuratedListInfoStatus.editing),
@@ -77,6 +90,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
 
   /// Records the description as typed.
   void descriptionChanged(String description) {
+    refreshRecoveryReadOnly();
     if (!state.canEdit) return;
     emitIfOpen(
       state.copyWith(
@@ -88,6 +102,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
 
   /// Records whether the list should be public.
   void visibilityChanged({required bool isPublic}) {
+    refreshRecoveryReadOnly();
     if (!state.canEdit) return;
     emitIfOpen(
       state.copyWith(
@@ -110,6 +125,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
     required Set<String> picked,
     String? viewerPubkey,
   }) {
+    refreshRecoveryReadOnly();
     if (!state.canEdit || isClosed || !isSessionCurrent) return;
     final neverOffered = state.collaboratorPubkeys.where(
       (pubkey) => !offered.contains(pubkey),
@@ -130,11 +146,13 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
 
   /// Completes only previously confirmed recovery or pending delivery.
   Future<void> retrySync() async {
+    refreshRecoveryReadOnly();
     final listId = _listId;
     final service = _resolveService();
     if (listId == null ||
         service == null ||
         state.isSaving ||
+        state.recoveryReadOnly ||
         !isSessionCurrent) {
       return;
     }
@@ -179,6 +197,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
   /// passes through [CuratedListInfoStatus.savedAwaitingRelay] first and can end in
   /// [CuratedListInfoStatus.publishFailed] instead.
   Future<void> submitted() async {
+    refreshRecoveryReadOnly();
     if (!state.canSubmit) return;
     if (!isSessionCurrent) {
       emitIfOpen(state.copyWith(status: CuratedListInfoStatus.failure));

@@ -5504,5 +5504,6 @@
   "listRetrySync": "Synchronizuj teraz",
   "listPermissionsUnconfirmed": "Nie udało się potwierdzić tej zmiany. Spróbuj ponownie.",
   "listRecoveryPending": "Ta lista ma zmiany oczekujące na synchronizację.",
-  "listPermissionsRecoveryPending": "Zmiana została zaakceptowana. Dotknij Synchronizuj teraz, aby dokończyć zapisywanie. Do tego czasu edycja jest wstrzymana."
+  "listPermissionsRecoveryPending": "Zmiana została zaakceptowana. Dotknij Synchronizuj teraz, aby dokończyć zapisywanie. Do tego czasu edycja jest wstrzymana.",
+  "listRecoveryReadOnly": "Niektóre zapisane zmiany na listach filmów wymagają odzyskania. Możesz przeglądać listy filmów, ale edycja jest wstrzymana."
 }

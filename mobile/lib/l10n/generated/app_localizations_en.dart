@@ -13208,4 +13208,8 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get listPermissionsRecoveryPending =>
       'Your change was accepted. Tap Sync now to finish saving it. Editing is paused until then.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Some saved changes to video lists need recovery. You can view video lists, but editing is paused.';
 }

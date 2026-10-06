@@ -13186,4 +13186,8 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get listPermissionsRecoveryPending =>
       'Je wijziging is geaccepteerd. Tik op Nu synchroniseren om het opslaan af te ronden. Bewerken is tot die tijd gepauzeerd.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Sommige opgeslagen wijzigingen in videolijsten moeten worden hersteld. Je kunt videolijsten bekijken, maar bewerken is gepauzeerd.';
 }

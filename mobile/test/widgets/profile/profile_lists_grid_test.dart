@@ -29,7 +29,10 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../helpers/test_provider_overrides.dart';
 
-class _MockCuratedListService extends Mock implements CuratedListService {}
+class _MockCuratedListService extends Mock implements CuratedListService {
+  @override
+  bool recoveryNeedsRepair = false;
+}
 
 class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
     implements PeopleListsBloc {}
@@ -464,6 +467,98 @@ void main() {
           tester.getTopLeft(find.text('Video skate')).dx,
           lessThan(tester.getTopLeft(find.text('People crew')).dx),
         );
+      });
+
+      testWidgets('recovery pauses creation and preserves video browsing', (
+        tester,
+      ) async {
+        mockListService.recoveryNeedsRepair = true;
+        when(() => mockListService.myLists).thenReturn([_videoList('skate')]);
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.listRecoveryReadOnly), findsOneWidget);
+        final create = tester.widget<DivineButton>(
+          find.ancestor(
+            of: find.text(l10n.listNewVideoList),
+            matching: find.byType(DivineButton),
+          ),
+        );
+        expect(create.onPressed, isNull);
+        expect(find.text(l10n.shareMenuBookmarks), findsOneWidget);
+        final peopleCreate = tester.widget<DivineButton>(
+          find.ancestor(
+            of: find.text(l10n.listNewPeopleList),
+            matching: find.byType(DivineButton),
+          ),
+        );
+        expect(peopleCreate.onPressed, isNotNull);
+        await tester.tap(find.text('Video skate'));
+        await tester.pumpAndSettle();
+        expect(pushedRoute, '/list/skate');
+        expect(find.byType(ListInfoForm), findsNothing);
+      });
+
+      testWidgets('video recovery leaves people-list navigation usable', (
+        tester,
+      ) async {
+        mockListService.recoveryNeedsRepair = true;
+        whenListen(
+          peopleBloc,
+          const Stream<PeopleListsState>.empty(),
+          initialState: PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: owner,
+            lists: [_peopleList('crew')],
+          ),
+        );
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('People crew'));
+        await tester.pumpAndSettle();
+        expect(pushedRoute, '/people-lists/crew');
+      });
+
+      testWidgets('refreshes the recovery notice after service changes', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(ProfileListsGrid)),
+        );
+        mockListService.recoveryNeedsRepair = true;
+        container.invalidate(curatedListsStateProvider);
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listRecoveryReadOnly), findsOneWidget);
+
+        mockListService.recoveryNeedsRepair = false;
+        container.invalidate(curatedListsStateProvider);
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listRecoveryReadOnly), findsNothing);
+        final create = tester.widget<DivineButton>(
+          find.ancestor(
+            of: find.text(l10n.listNewVideoList),
+            matching: find.byType(DivineButton),
+          ),
+        );
+        expect(create.onPressed, isNotNull);
+      });
+
+      testWidgets('video recovery preserves independent people creation', (
+        tester,
+      ) async {
+        mockListService.recoveryNeedsRepair = true;
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.listRecoveryReadOnly), findsOneWidget);
+        expect(find.text(l10n.shareMenuBookmarks), findsOneWidget);
+        await tester.tap(find.text(l10n.listNewPeopleList));
+        await tester.pumpAndSettle();
+        expect(pushedRoute, CreatePeopleListPage.path);
+        expect(find.byType(ListInfoForm), findsNothing);
       });
 
       testWidgets('keeps an owned list visible before it has any videos', (

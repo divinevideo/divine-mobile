@@ -13259,4 +13259,8 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get listPermissionsRecoveryPending =>
       'Tu cambio fue aceptado. Tocá Sincronizar ahora para terminar de guardarlo. La edición está pausada hasta entonces.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Algunos cambios guardados en las listas de videos necesitan recuperarse. Podés ver las listas de videos, pero la edición está pausada.';
 }
