@@ -145,6 +145,9 @@ void main() {
 
   setUp(() {
     videoEventService = _MockVideoEventService();
+    when(() => videoEventService.removedVideoIds).thenAnswer(
+      (_) => const Stream<String>.empty(),
+    );
     when(
       () => videoEventService.addVideoUpdateListener(any()),
     ).thenReturn(() {});
