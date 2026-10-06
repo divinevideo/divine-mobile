@@ -16,6 +16,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_relay_gateway.dart';
 import 'package:openvine/services/curated_lists/curated_list_publisher.dart';
 import 'package:openvine/services/curated_lists/curated_list_recovery_journal.dart';
+import 'package:openvine/services/curated_lists/curated_list_recovery_storage.dart';
 import 'package:openvine/services/curated_lists/curated_list_relay_snapshot_reader.dart';
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:openvine/services/curated_lists/curated_list_subscription_metadata.dart';
@@ -28,6 +29,7 @@ export 'package:openvine/models/curated_list_callbacks.dart';
 
 part 'curated_lists/curated_list_deletion.dart';
 part 'curated_lists/curated_list_playlist.dart';
+part 'curated_lists/curated_list_recovery_service.dart';
 
 /// A fresh list session cannot prove cache absence across unfinished cleanup.
 class CuratedListAccountBoundaryException implements Exception {
@@ -86,7 +88,11 @@ class CuratedListService extends ChangeNotifier {
        _publishClock = CuratedListPublishClock(
          maxFutureDrift: maxPublishClockDrift,
        ) {
-    _sessionLease = _sessions.acquire();
+    _sessionLease = _sessions.acquire(
+      onRecoveryReadinessChanged: () {
+        if (!_isDisposed && isCurrentSession) notifyListeners();
+      },
+    );
     // A lease created across unfinished cleanup has no trusted local baseline.
     // Existing continuing leases keep their already-accepted live deferral.
     _accountCleanupPendingAtCreation = _hasPendingAccountCleanup;
@@ -277,6 +283,18 @@ class CuratedListService extends ChangeNotifier {
       }
 
       await prepareRecovery();
+      // Preservation permits reads but cannot prove unknown accepted changes
+      // repaired. Do not create defaults, publish, or mutate subscriptions.
+      if (recoveryNeedsRepair) {
+        _loadLists();
+        if (!isCurrentSession) return;
+        _isInitialized = true;
+        _initializationError = null;
+        _initializationStackTrace = null;
+        _isInitializing = false;
+        notifyListeners();
+        return;
+      }
       await _recoverDeletedSubscriptions();
       if (!isCurrentSession) return;
 
@@ -375,7 +393,11 @@ class CuratedListService extends ChangeNotifier {
         (owner != null && _recovery.needsRepair(owner));
   }
 
-  /// Preserves unreadable evidence and reports a typed initialization error.
+  void _notifyRecoveryChanged(String owner) {
+    if (_isCurrent(owner)) notifyListeners();
+  }
+
+  /// Preserves unreadable evidence before permitting reads with a mutation hold.
   Future<void> prepareRecovery() async {
     _recoveryPreparations++;
     try {
@@ -1373,7 +1395,7 @@ class CuratedListService extends ChangeNotifier {
 
   void _loadLists() {
     final owner = _relayGateway.currentAuthenticatedPubkey();
-    final loaded = _recovery.legacyNeedsRepair
+    final loaded = CuratedListRecoveryStorage.legacyRead(_prefs).corrupt
         ? const <CuratedList>[]
         : _cacheStore.loadLists();
     _cacheStore.listsLoaded(loaded);

@@ -30,11 +30,47 @@ class CuratedListSessionCoordinator {
   final CuratedListCacheWriteCoordinator writes;
   final _leases = <CuratedListSessionLease>{};
   int _cleanupDepth = 0;
+  int _recoveryRepairDepth = 0;
+  bool _recoveryReadbackUnknown = false;
+
+  bool get recoveryRepairInProgress => _recoveryRepairDepth != 0;
+  bool get recoveryReadbackUnknown => _recoveryReadbackUnknown;
+
+  /// Every live container sharing preferences observes the same write hold.
+  Future<T> holdRecoveryRepair<T>(Future<T> Function() repair) async {
+    _recoveryRepairDepth++;
+    _notifyRecoveryReadiness();
+    try {
+      return await repair();
+    } finally {
+      _recoveryRepairDepth--;
+      _notifyRecoveryReadiness();
+    }
+  }
+
+  void markRecoveryReadbackUnknown() {
+    _recoveryReadbackUnknown = true;
+    _notifyRecoveryReadiness();
+  }
+
+  void acknowledgeRecoveryReadback() {
+    if (!_recoveryReadbackUnknown) return;
+    _recoveryReadbackUnknown = false;
+    _notifyRecoveryReadiness();
+  }
+
+  void _notifyRecoveryReadiness() {
+    for (final lease in _leases.toList(growable: false)) {
+      if (lease.isCurrent) lease._onRecoveryReadinessChanged?.call();
+    }
+  }
 
   /// A service's lease is permanent: returning to the same account cannot
   /// authorize continuations captured before an earlier account switch.
-  CuratedListSessionLease acquire() {
-    final lease = CuratedListSessionLease._(this);
+  CuratedListSessionLease acquire({
+    void Function()? onRecoveryReadinessChanged,
+  }) {
+    final lease = CuratedListSessionLease._(this, onRecoveryReadinessChanged);
     if (_cleanupDepth != 0) {
       lease._retired = true;
     } else {
@@ -70,8 +106,12 @@ class CuratedListSessionCoordinator {
 
 /// Captured by one service instance and never renewed after retirement.
 class CuratedListSessionLease {
-  CuratedListSessionLease._(this._coordinator);
+  CuratedListSessionLease._(
+    this._coordinator,
+    this._onRecoveryReadinessChanged,
+  );
   final CuratedListSessionCoordinator _coordinator;
+  final void Function()? _onRecoveryReadinessChanged;
   bool _retired = false;
   final _listOperationTails = <String, Future<void>>{};
 
