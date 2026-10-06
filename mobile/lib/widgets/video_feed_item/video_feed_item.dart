@@ -622,10 +622,14 @@ class VideoOverlayActions extends ConsumerWidget {
                 // These are video relationships, not caption content. Keep
                 // them visible when stripping wire-format attribution leaves
                 // an otherwise captionless video.
-                if (video != null && video.hasCollaborators) ...[
-                  const SizedBox(height: 4),
-                  CollaboratorAvatarRow(video: video),
-                ],
+                // The row can filter every tagged collaborator out (e.g.
+                // unconfirmed invites for a third-party viewer), so it owns
+                // its gap instead of reserving one here.
+                if (video != null && video.hasCollaborators)
+                  CollaboratorAvatarRow(
+                    video: video,
+                    padding: const EdgeInsets.only(top: 4),
+                  ),
                 if (video != null && video.isVideoReply) ...[
                   const SizedBox(height: 4),
                   VideoReplyParentLink(

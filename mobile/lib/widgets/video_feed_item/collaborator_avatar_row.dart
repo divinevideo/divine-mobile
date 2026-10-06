@@ -41,10 +41,17 @@ const _pickerMaxChildSize = 0.8;
 /// status-aware filter.
 class CollaboratorAvatarRow extends ConsumerWidget {
   /// Creates a CollaboratorAvatarRow.
-  const CollaboratorAvatarRow({required this.video, super.key});
+  const CollaboratorAvatarRow({
+    required this.video,
+    this.padding = EdgeInsets.zero,
+    super.key,
+  });
 
   /// The video event to display collaborators for.
   final VideoEvent video;
+
+  /// Space around the row, applied only when the row renders.
+  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -64,6 +71,7 @@ class CollaboratorAvatarRow extends ConsumerWidget {
     if (repo == null || videoAddress == null || currentUserPubkey.isEmpty) {
       return CollaboratorAvatarRowBody(
         visibility: CollaboratorVisibility.fallback(taggedPubkeys: pubkeys),
+        padding: padding,
       );
     }
 
@@ -79,6 +87,7 @@ class CollaboratorAvatarRow extends ConsumerWidget {
         video: video,
         pubkeys: pubkeys,
         currentUserPubkey: currentUserPubkey,
+        padding: padding,
       ),
     );
   }
@@ -89,11 +98,13 @@ class _StatusAwareRow extends StatelessWidget {
     required this.video,
     required this.pubkeys,
     required this.currentUserPubkey,
+    required this.padding,
   });
 
   final VideoEvent video;
   final List<String> pubkeys;
   final String currentUserPubkey;
+  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
@@ -111,6 +122,7 @@ class _StatusAwareRow extends StatelessWidget {
         creatorPubkey: video.pubkey,
         isResolved: isResolved,
       ),
+      padding: padding,
     );
   }
 }
@@ -122,9 +134,17 @@ class _StatusAwareRow extends StatelessWidget {
 /// container, a `BlocProvider`, or a mock repository.
 @visibleForTesting
 class CollaboratorAvatarRowBody extends StatelessWidget {
-  const CollaboratorAvatarRowBody({required this.visibility, super.key});
+  const CollaboratorAvatarRowBody({
+    required this.visibility,
+    this.padding = EdgeInsets.zero,
+    super.key,
+  });
 
   final CollaboratorVisibility visibility;
+
+  /// Space around the row, applied only when it has avatars to show, so a
+  /// row that filters every collaborator out leaves no gap behind.
+  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
@@ -133,7 +153,7 @@ class CollaboratorAvatarRowBody extends StatelessWidget {
 
     final pendingCount = visibility.pendingCount;
 
-    return GestureDetector(
+    final row = GestureDetector(
       onTap: () => _handleTap(context, visible),
       child: Semantics(
         identifier: 'collaborator_avatar_row',
@@ -175,6 +195,8 @@ class CollaboratorAvatarRowBody extends StatelessWidget {
         ),
       ),
     );
+
+    return Padding(padding: padding, child: row);
   }
 
   void _handleTap(BuildContext context, List<String> pubkeys) {
