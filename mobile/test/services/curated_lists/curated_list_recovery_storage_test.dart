@@ -104,25 +104,29 @@ void main() {
     );
 
     test(
-      'existing unreadable quarantine is preserved with a payload-free error',
+      'existing unreadable quarantine is archived with its publication hold intact',
       () async {
         const raw = '{private malformed quarantine';
         final quarantine = CuratedListRecoveryStorage.quarantineKey(owner);
         await prefs.setString(quarantine, raw);
-        await expectLater(
-          CuratedListRecoveryStorage.preserve(prefs, key, owner, {
+        expect(
+          await CuratedListRecoveryStorage.preserve(prefs, key, owner, {
             'healthy': healthy,
           }),
-          throwsA(
-            isA<CuratedListRecoveryException>().having(
-              (e) => e.toString(),
-              'safe message',
-              'Curated-list recovery needs repair',
-            ),
-          ),
+          isTrue,
         );
         await restart();
-        expect(prefs.getString(quarantine), raw);
+        final archive =
+            jsonDecode(prefs.getString(quarantine)!) as Map<String, dynamic>;
+        expect(archive['rawBuckets'], [raw]);
+        expect(archive['needsRepair'], isTrue);
+        expect(
+          CuratedListRecoveryStorage.preservedRecords(
+            prefs,
+            owner,
+          )['healthy']!.toJson(),
+          healthy.toJson(),
+        );
         expect(prefs.containsKey(key), isFalse);
       },
     );

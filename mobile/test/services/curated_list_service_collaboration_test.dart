@@ -63,14 +63,19 @@ void main() {
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
       mockNostr = _MockNostrClient();
-      stubListSigner(mockNostr, 'test_pubkey_123456789abcdef');
+      stubListSigner(
+        mockNostr,
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      );
       mockAuth = _MockAuthService();
       prefs = await SharedPreferences.getInstance();
 
       when(() => mockAuth.isAuthenticated).thenReturn(true);
       when(
         () => mockAuth.currentPublicKeyHex,
-      ).thenReturn('test_pubkey_123456789abcdef');
+      ).thenReturn(
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      );
 
       stubPublishEvent();
 
@@ -92,7 +97,7 @@ void main() {
       ).thenAnswer(
         (invocation) async => Event.fromJson({
           'id': 'test_event_id',
-          'pubkey': 'test_pubkey_123456789abcdef',
+          'pubkey': 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           'created_at': invocation.namedArguments[#createdAt],
           'kind': invocation.namedArguments[#kind],
           'tags': invocation.namedArguments[#tags],
@@ -305,7 +310,7 @@ void main() {
 
         final result = service.canCollaborate(
           list!.id,
-          'test_pubkey_123456789abcdef', // Owner's pubkey
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', // Owner's pubkey
         );
 
         expect(result, isTrue);
