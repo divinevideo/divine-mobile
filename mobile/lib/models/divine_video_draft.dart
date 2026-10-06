@@ -17,6 +17,7 @@ import 'package:openvine/models/caption_mention.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/ideas_transcript.dart';
 import 'package:openvine/models/video_reply_context.dart';
 import 'package:openvine/utils/draft_audio_path_resolver.dart';
 import 'package:openvine/utils/editor_state_history_compaction.dart';
@@ -59,6 +60,7 @@ class DivineVideoDraft {
     this.collaboratorPubkeys = const {},
     this.inspiredByVideo,
     this.inspiredByNpubs = const [],
+    this.ideasTranscript,
     this.captionMentions = const [],
     this.clipSourceCredits = const [],
     this.selectedSound,
@@ -87,6 +89,7 @@ class DivineVideoDraft {
     Set<String> collaboratorPubkeys = const {},
     InspiredByInfo? inspiredByVideo,
     List<String> inspiredByNpubs = const [],
+    IdeasTranscript? ideasTranscript,
     List<CaptionMention> captionMentions = const [],
     List<ClipSourceCredit> clipSourceCredits = const [],
     AudioEvent? selectedSound,
@@ -119,6 +122,7 @@ class DivineVideoDraft {
       collaboratorPubkeys: collaboratorPubkeys,
       inspiredByVideo: inspiredByVideo,
       inspiredByNpubs: inspiredByNpubs,
+      ideasTranscript: ideasTranscript,
       captionMentions: captionMentions,
       clipSourceCredits: clipSourceCredits,
       selectedSound: selectedSound,
@@ -237,6 +241,7 @@ class DivineVideoDraft {
             )
           : null,
       inspiredByNpubs: _inspiredByNpubsFromJson(json),
+      ideasTranscript: IdeasTranscript.fromJson(json['ideasTranscript']),
       captionMentions: CaptionMention.listFromJson(json['captionMentions']),
       clipSourceCredits: ClipSourceCredit.listFromJson(
         json['clipSourceCredits'],
@@ -376,6 +381,9 @@ class DivineVideoDraft {
   /// cannot express when two accounts share a display name.
   final List<CaptionMention> captionMentions;
 
+  /// Private transcript used only for publishing ideas.
+  final IdeasTranscript? ideasTranscript;
+
   /// Factual credits for clips reused from published videos.
   final List<ClipSourceCredit> clipSourceCredits;
 
@@ -456,6 +464,7 @@ class DivineVideoDraft {
     Set<String>? collaboratorPubkeys,
     InspiredByInfo? inspiredByVideo,
     List<String>? inspiredByNpubs,
+    IdeasTranscript? ideasTranscript,
     List<CaptionMention>? captionMentions,
     List<ClipSourceCredit>? clipSourceCredits,
     AudioEvent? selectedSound,
@@ -507,6 +516,7 @@ class DivineVideoDraft {
     collaboratorPubkeys: collaboratorPubkeys ?? this.collaboratorPubkeys,
     inspiredByVideo: inspiredByVideo ?? this.inspiredByVideo,
     inspiredByNpubs: inspiredByNpubs ?? this.inspiredByNpubs,
+    ideasTranscript: ideasTranscript ?? this.ideasTranscript,
     captionMentions: captionMentions ?? this.captionMentions,
     clipSourceCredits: clipSourceCredits ?? this.clipSourceCredits,
     selectedSound: clearSelectedSound
@@ -568,6 +578,7 @@ class DivineVideoDraft {
       collaboratorPubkeys: collaboratorPubkeys,
       inspiredByVideo: inspiredByVideo,
       inspiredByNpubs: inspiredByNpubs,
+      ideasTranscript: ideasTranscript,
       captionMentions: captionMentions,
       clipSourceCredits: clipSourceCredits,
       selectedSound: selectedSound,
@@ -626,6 +637,7 @@ class DivineVideoDraft {
       'collaboratorPubkeys': collaboratorPubkeys.toList(),
     if (inspiredByVideo != null) 'inspiredByVideo': inspiredByVideo!.toJson(),
     if (inspiredByNpubs.isNotEmpty) 'inspiredByNpubs': inspiredByNpubs,
+    if (ideasTranscript != null) 'ideasTranscript': ideasTranscript!.toJson(),
     if (captionMentions.isNotEmpty)
       'captionMentions': captionMentions
           .map((mention) => mention.toJson())

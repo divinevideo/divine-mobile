@@ -53,6 +53,7 @@ notification_repository 94
 people_lists_repository 95
 permissions_service 22
 profile_repository 100
+publishing_suggestions 100
 reposts_repository 100
 sound_service 100
 sounds_repository 100

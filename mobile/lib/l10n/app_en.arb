@@ -9511,5 +9511,121 @@
   "subtitleMachineTranslated": "Machine-translated",
   "@subtitleMachineTranslated": {
     "description": "Short attribution above captions verified as a machine translation; not creator-written words."
+  },
+  "ideasNeedIdeas": "Need ideas?",
+  "ideasHide": "Hide ideas",
+  "ideasFromVideo": "From my video",
+  "ideasSurprise": "Surprise me",
+  "ideasPrepare": "Prepare on-device suggestions",
+  "ideasUnavailable": "Video ideas aren’t available right now. Try Surprise me.",
+  "ideasSourceVideo": "Based on your video",
+  "ideasSourceTranscript": "Based on your transcript",
+  "ideasSourcePremade": "A little inspiration",
+  "ideasUseBoth": "Use both",
+  "ideasMore": "More ideas",
+  "ideasGenerateTranscript": "Generate transcript",
+  "ideasEditTranscript": "Edit transcript",
+  "ideasTranscript": "Transcript for ideas",
+  "ideasTranscriptionNotice": "Transcription uses Divine’s service, with an on-device fallback. Suggested wording stays on your phone. This won’t add subtitles to your post.",
+  "ideasApplied": "Idea added. Make it yours.",
+  "ideasUndo": "Undo",
+  "ideasTitleOne": "A small moment",
+  "ideasDescriptionOne": "Felt like sharing this.",
+  "ideasTitleTwo": "Here goes",
+  "ideasDescriptionTwo": "Putting this little bit of my day out there.",
+  "ideasTitleThree": "One for the loop",
+  "ideasDescriptionThree": "A moment worth keeping.",
+  "ideasTitleFour": "Made this",
+  "ideasDescriptionFour": "A little something from me.",
+  "ideasTitleFive": "No big explanation",
+  "ideasDescriptionFive": "Just wanted to share.",
+  "ideasTitleSix": "A little bit of today",
+  "ideasDescriptionSix": "Leaving this here.",
+  "@ideasNeedIdeas": {
+    "description": "Inline publishing ideas: NeedIdeas"
+  },
+  "@ideasHide": {
+    "description": "Inline publishing ideas: Hide"
+  },
+  "@ideasFromVideo": {
+    "description": "Inline publishing ideas: FromVideo"
+  },
+  "@ideasSurprise": {
+    "description": "Inline publishing ideas: Surprise"
+  },
+  "@ideasPrepare": {
+    "description": "Inline publishing ideas: Prepare"
+  },
+  "@ideasUnavailable": {
+    "description": "Inline publishing ideas: Unavailable"
+  },
+  "@ideasSourceVideo": {
+    "description": "Inline publishing ideas: SourceVideo"
+  },
+  "@ideasSourceTranscript": {
+    "description": "Inline publishing ideas: SourceTranscript"
+  },
+  "@ideasSourcePremade": {
+    "description": "Inline publishing ideas: SourcePremade"
+  },
+  "@ideasUseBoth": {
+    "description": "Inline publishing ideas: UseBoth"
+  },
+  "@ideasMore": {
+    "description": "Inline publishing ideas: More"
+  },
+  "@ideasGenerateTranscript": {
+    "description": "Inline publishing ideas: GenerateTranscript"
+  },
+  "@ideasEditTranscript": {
+    "description": "Inline publishing ideas: EditTranscript"
+  },
+  "@ideasTranscript": {
+    "description": "Inline publishing ideas: Transcript"
+  },
+  "@ideasTranscriptionNotice": {
+    "description": "Inline publishing ideas: TranscriptionNotice"
+  },
+  "@ideasApplied": {
+    "description": "Inline publishing ideas: Applied"
+  },
+  "@ideasUndo": {
+    "description": "Inline publishing ideas: Undo"
+  },
+  "@ideasTitleOne": {
+    "description": "Inline publishing ideas: TitleOne"
+  },
+  "@ideasDescriptionOne": {
+    "description": "Inline publishing ideas: DescriptionOne"
+  },
+  "@ideasTitleTwo": {
+    "description": "Inline publishing ideas: TitleTwo"
+  },
+  "@ideasDescriptionTwo": {
+    "description": "Inline publishing ideas: DescriptionTwo"
+  },
+  "@ideasTitleThree": {
+    "description": "Inline publishing ideas: TitleThree"
+  },
+  "@ideasDescriptionThree": {
+    "description": "Inline publishing ideas: DescriptionThree"
+  },
+  "@ideasTitleFour": {
+    "description": "Inline publishing ideas: TitleFour"
+  },
+  "@ideasDescriptionFour": {
+    "description": "Inline publishing ideas: DescriptionFour"
+  },
+  "@ideasTitleFive": {
+    "description": "Inline publishing ideas: TitleFive"
+  },
+  "@ideasDescriptionFive": {
+    "description": "Inline publishing ideas: DescriptionFive"
+  },
+  "@ideasTitleSix": {
+    "description": "Inline publishing ideas: TitleSix"
+  },
+  "@ideasDescriptionSix": {
+    "description": "Inline publishing ideas: DescriptionSix"
   }
 }

@@ -13290,4 +13290,93 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get subtitleMachineTranslated => 'Automatisch vertaald';
+
+  @override
+  String get ideasNeedIdeas => 'Ideeën nodig?';
+
+  @override
+  String get ideasHide => 'Ideeën verbergen';
+
+  @override
+  String get ideasFromVideo => 'Uit mijn video';
+
+  @override
+  String get ideasSurprise => 'Verras me';
+
+  @override
+  String get ideasPrepare => 'Suggesties op het apparaat voorbereiden';
+
+  @override
+  String get ideasUnavailable =>
+      'Video-ideeën zijn nu niet beschikbaar. Probeer Verras me.';
+
+  @override
+  String get ideasSourceVideo => 'Gebaseerd op je video';
+
+  @override
+  String get ideasSourceTranscript => 'Gebaseerd op je transcript';
+
+  @override
+  String get ideasSourcePremade => 'Een beetje inspiratie';
+
+  @override
+  String get ideasUseBoth => 'Beide gebruiken';
+
+  @override
+  String get ideasMore => 'Meer ideeën';
+
+  @override
+  String get ideasGenerateTranscript => 'Transcript maken';
+
+  @override
+  String get ideasEditTranscript => 'Transcript bewerken';
+
+  @override
+  String get ideasTranscript => 'Transcript voor ideeën';
+
+  @override
+  String get ideasTranscriptionNotice =>
+      'Transcriptie gebruikt de dienst van Divine, met verwerking op het apparaat als alternatief. Tekstsuggesties blijven op je telefoon. Dit voegt geen ondertitels toe aan je bericht.';
+
+  @override
+  String get ideasApplied => 'Idee toegevoegd. Maak het van jou.';
+
+  @override
+  String get ideasUndo => 'Ongedaan maken';
+
+  @override
+  String get ideasTitleOne => 'Een klein moment';
+
+  @override
+  String get ideasDescriptionOne => 'Dit wilde ik delen.';
+
+  @override
+  String get ideasTitleTwo => 'Daar gaan we';
+
+  @override
+  String get ideasDescriptionTwo => 'Een klein stukje van mijn dag.';
+
+  @override
+  String get ideasTitleThree => 'Voor in de loop';
+
+  @override
+  String get ideasDescriptionThree => 'Een moment om te bewaren.';
+
+  @override
+  String get ideasTitleFour => 'Zelf gemaakt';
+
+  @override
+  String get ideasDescriptionFour => 'Een kleinigheid van mij.';
+
+  @override
+  String get ideasTitleFive => 'Geen grote uitleg';
+
+  @override
+  String get ideasDescriptionFive => 'Wilde het gewoon delen.';
+
+  @override
+  String get ideasTitleSix => 'Een beetje van vandaag';
+
+  @override
+  String get ideasDescriptionSix => 'Dit laat ik hier achter.';
 }

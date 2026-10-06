@@ -1,0 +1,51 @@
+name: Publishing Suggestions CI
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/packages/publishing_suggestions/**"
+      - ".github/workflows/publishing_suggestions.yaml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "mobile/packages/publishing_suggestions/**"
+      - ".github/workflows/publishing_suggestions.yaml"
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@v1
+    with:
+      working_directory: "mobile/packages/publishing_suggestions"
+      flutter_version: "3.47.2"
+
+  android-compile:
+    name: Android Compile Check
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: mobile/
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.2"
+          channel: "stable"
+          cache: true
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "8.14.3"
+          cache-provider: basic
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Compile publishing_suggestions Android sources
+        working-directory: mobile/packages/publishing_suggestions/android
+        run: gradle testDebugUnitTest

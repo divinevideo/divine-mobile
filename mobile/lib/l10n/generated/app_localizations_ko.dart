@@ -12583,4 +12583,92 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get subtitleMachineTranslated => '기계 번역';
+
+  @override
+  String get ideasNeedIdeas => '아이디어가 필요해요?';
+
+  @override
+  String get ideasHide => '아이디어 숨기기';
+
+  @override
+  String get ideasFromVideo => '내 동영상에서';
+
+  @override
+  String get ideasSurprise => '추천해 주세요';
+
+  @override
+  String get ideasPrepare => '기기 내 추천 준비';
+
+  @override
+  String get ideasUnavailable => '지금은 동영상 아이디어를 사용할 수 없어요. 추천해 주세요를 눌러 보세요.';
+
+  @override
+  String get ideasSourceVideo => '동영상을 바탕으로';
+
+  @override
+  String get ideasSourceTranscript => '음성 전사를 바탕으로';
+
+  @override
+  String get ideasSourcePremade => '작은 영감';
+
+  @override
+  String get ideasUseBoth => '둘 다 사용';
+
+  @override
+  String get ideasMore => '다른 아이디어';
+
+  @override
+  String get ideasGenerateTranscript => '대본 생성';
+
+  @override
+  String get ideasEditTranscript => '대본 편집';
+
+  @override
+  String get ideasTranscript => '아이디어용 대본';
+
+  @override
+  String get ideasTranscriptionNotice =>
+      '대본 생성은 Divine 서비스를 사용하며, 필요하면 기기에서 처리해요. 문구 추천은 휴대폰 안에서 이루어져요. 게시물에 자막이 추가되지는 않아요.';
+
+  @override
+  String get ideasApplied => '아이디어를 추가했어요. 나만의 느낌을 더해 보세요.';
+
+  @override
+  String get ideasUndo => '실행 취소';
+
+  @override
+  String get ideasTitleOne => '작은 순간';
+
+  @override
+  String get ideasDescriptionOne => '이걸 나누고 싶었어요.';
+
+  @override
+  String get ideasTitleTwo => '자, 시작';
+
+  @override
+  String get ideasDescriptionTwo => '내 하루의 작은 조각.';
+
+  @override
+  String get ideasTitleThree => '반복해서 보기';
+
+  @override
+  String get ideasDescriptionThree => '간직하고 싶은 순간.';
+
+  @override
+  String get ideasTitleFour => '직접 만들었어요';
+
+  @override
+  String get ideasDescriptionFour => '내가 전하는 작은 무언가.';
+
+  @override
+  String get ideasTitleFive => '긴 설명 없이';
+
+  @override
+  String get ideasDescriptionFive => '그냥 나누고 싶었어요.';
+
+  @override
+  String get ideasTitleSix => '오늘의 한 조각';
+
+  @override
+  String get ideasDescriptionSix => '여기에 남겨 둘게요.';
 }

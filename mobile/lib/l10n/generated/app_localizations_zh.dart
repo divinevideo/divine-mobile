@@ -12420,4 +12420,92 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get subtitleMachineTranslated => '机器翻译';
+
+  @override
+  String get ideasNeedIdeas => '需要灵感？';
+
+  @override
+  String get ideasHide => '收起灵感';
+
+  @override
+  String get ideasFromVideo => '来自我的视频';
+
+  @override
+  String get ideasSurprise => '给我惊喜';
+
+  @override
+  String get ideasPrepare => '准备设备端建议';
+
+  @override
+  String get ideasUnavailable => '暂时无法从视频生成灵感，试试“给我惊喜”。';
+
+  @override
+  String get ideasSourceVideo => '根据你的视频';
+
+  @override
+  String get ideasSourceTranscript => '根据你的转录文本';
+
+  @override
+  String get ideasSourcePremade => '一点灵感';
+
+  @override
+  String get ideasUseBoth => '两个都用';
+
+  @override
+  String get ideasMore => '更多灵感';
+
+  @override
+  String get ideasGenerateTranscript => '生成转写文本';
+
+  @override
+  String get ideasEditTranscript => '编辑转写文本';
+
+  @override
+  String get ideasTranscript => '用于灵感的转写文本';
+
+  @override
+  String get ideasTranscriptionNotice =>
+      '转写使用 Divine 服务，不可用时在设备上处理。文案建议在手机本地生成。这不会为帖子添加字幕。';
+
+  @override
+  String get ideasApplied => '已添加灵感，改成你的风格吧。';
+
+  @override
+  String get ideasUndo => '撤销';
+
+  @override
+  String get ideasTitleOne => '小小的瞬间';
+
+  @override
+  String get ideasDescriptionOne => '就是想分享这个。';
+
+  @override
+  String get ideasTitleTwo => '来啦';
+
+  @override
+  String get ideasDescriptionTwo => '分享我一天中的小片段。';
+
+  @override
+  String get ideasTitleThree => '值得循环';
+
+  @override
+  String get ideasDescriptionThree => '值得留下的瞬间。';
+
+  @override
+  String get ideasTitleFour => '我做的';
+
+  @override
+  String get ideasDescriptionFour => '送上一点我的小创作。';
+
+  @override
+  String get ideasTitleFive => '无需太多解释';
+
+  @override
+  String get ideasDescriptionFive => '只是想分享。';
+
+  @override
+  String get ideasTitleSix => '今天的一小段';
+
+  @override
+  String get ideasDescriptionSix => '把这个留在这里。';
 }

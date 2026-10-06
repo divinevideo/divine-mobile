@@ -1,6 +1,9 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/widgets/feature_flag_widget.dart';
+import 'package:openvine/features/publishing_ideas/publishing_ideas.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_reply_context_provider.dart';
@@ -13,10 +16,12 @@ import 'package:openvine/widgets/video_metadata/video_metadata_inspired_by_input
 import 'package:openvine/widgets/video_metadata/video_metadata_limit_warning_banner.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_schedule_selector.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_tags_selector.dart';
+import 'package:publishing_suggestions/publishing_suggestions.dart';
 
 class VideoMetadataFormFields extends ConsumerStatefulWidget {
   const VideoMetadataFormFields({
     super.key,
+    this.enableIdeas = false,
     this.enableTags = true,
     this.enableExpiration = true,
     this.enableSchedule = true,
@@ -28,6 +33,7 @@ class VideoMetadataFormFields extends ConsumerStatefulWidget {
     this.enableCaptionMentionAutocomplete = true,
   });
 
+  final bool enableIdeas;
   final bool enableTags;
   final bool enableExpiration;
 
@@ -71,6 +77,51 @@ class _VideoMetadataFormFieldsState
     _titleFocusNode.dispose();
     _descriptionFocusNode.dispose();
     super.dispose();
+  }
+
+  void _applyIdea(PublishingIdea idea, IdeaField field) {
+    final before = ref.read(videoEditorProvider);
+    final notifier = ref.read(videoEditorProvider.notifier);
+    final changeTitle = field != IdeaField.description;
+    final changeDescription = field != IdeaField.title;
+    notifier.updateMetadata(
+      title: changeTitle ? idea.title : null,
+      description: changeDescription ? idea.description : null,
+      tags: before.tags,
+    );
+    final applied = ref.read(videoEditorProvider);
+    if (applied.metadataLimitReached) return;
+    if (changeTitle) _titleController.text = applied.title;
+    if (changeDescription) _descriptionController.text = applied.description;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(context.l10n.ideasApplied),
+        action: SnackBarAction(
+          label: context.l10n.ideasUndo,
+          onPressed: () {
+            if (!mounted) return;
+            final current = ref.read(videoEditorProvider);
+            final restoreTitle = changeTitle && current.title == applied.title;
+            final restoreDescription =
+                changeDescription && current.description == applied.description;
+            notifier.updateMetadata(
+              title: restoreTitle ? before.title : null,
+              description: restoreDescription ? before.description : null,
+              tags: current.tags,
+            );
+            if (restoreDescription) {
+              notifier.restoreIdeasMentions(before.captionMentions);
+            }
+            final restored = ref.read(videoEditorProvider);
+            if (restoreTitle) _titleController.text = restored.title;
+            if (restoreDescription) {
+              _descriptionController.text = restored.description;
+            }
+          },
+        ),
+      ),
+    );
   }
 
   @override
@@ -119,6 +170,12 @@ class _VideoMetadataFormFieldsState
                   widget.enableCaptionMentionAutocomplete,
             ),
           ),
+
+          if (widget.enableIdeas)
+            FeatureFlagWidget(
+              flag: FeatureFlag.publishingIdeas,
+              child: PublishingIdeas(onApply: _applyIdea),
+            ),
 
           if (widget.enableTags)
             const _InputWrapper(child: VideoMetadataTagsSelector()),

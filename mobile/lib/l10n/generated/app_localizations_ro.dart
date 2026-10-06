@@ -13490,4 +13490,93 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get subtitleMachineTranslated => 'Traducere automată';
+
+  @override
+  String get ideasNeedIdeas => 'Ai nevoie de idei?';
+
+  @override
+  String get ideasHide => 'Ascunde ideile';
+
+  @override
+  String get ideasFromVideo => 'Din videoclipul meu';
+
+  @override
+  String get ideasSurprise => 'Surprinde-mă';
+
+  @override
+  String get ideasPrepare => 'Pregătește sugestiile pe dispozitiv';
+
+  @override
+  String get ideasUnavailable =>
+      'Ideile din videoclip nu sunt disponibile acum. Încearcă Surprinde-mă.';
+
+  @override
+  String get ideasSourceVideo => 'Pe baza videoclipului tău';
+
+  @override
+  String get ideasSourceTranscript => 'Pe baza transcrierii tale';
+
+  @override
+  String get ideasSourcePremade => 'Puțină inspirație';
+
+  @override
+  String get ideasUseBoth => 'Folosește ambele';
+
+  @override
+  String get ideasMore => 'Mai multe idei';
+
+  @override
+  String get ideasGenerateTranscript => 'Generează transcrierea';
+
+  @override
+  String get ideasEditTranscript => 'Editează transcrierea';
+
+  @override
+  String get ideasTranscript => 'Transcriere pentru idei';
+
+  @override
+  String get ideasTranscriptionNotice =>
+      'Transcrierea folosește serviciul Divine, cu procesare pe dispozitiv ca alternativă. Sugestiile de text rămân pe telefon. Nu se adaugă subtitrări la postare.';
+
+  @override
+  String get ideasApplied => 'Idee adăugată. Fă-o a ta.';
+
+  @override
+  String get ideasUndo => 'Anulează';
+
+  @override
+  String get ideasTitleOne => 'Un mic moment';
+
+  @override
+  String get ideasDescriptionOne => 'Am vrut să împărtășesc asta.';
+
+  @override
+  String get ideasTitleTwo => 'Iată';
+
+  @override
+  String get ideasDescriptionTwo => 'O mică parte din ziua mea.';
+
+  @override
+  String get ideasTitleThree => 'De văzut în buclă';
+
+  @override
+  String get ideasDescriptionThree => 'Un moment de păstrat.';
+
+  @override
+  String get ideasTitleFour => 'Făcut de mine';
+
+  @override
+  String get ideasDescriptionFour => 'Ceva mic din partea mea.';
+
+  @override
+  String get ideasTitleFive => 'Fără mari explicații';
+
+  @override
+  String get ideasDescriptionFive => 'Am vrut doar să împărtășesc.';
+
+  @override
+  String get ideasTitleSix => 'Un pic din ziua de azi';
+
+  @override
+  String get ideasDescriptionSix => 'Las asta aici.';
 }

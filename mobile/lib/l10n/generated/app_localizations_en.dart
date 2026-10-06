@@ -13310,4 +13310,94 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get subtitleMachineTranslated => 'Machine-translated';
+
+  @override
+  String get ideasNeedIdeas => 'Need ideas?';
+
+  @override
+  String get ideasHide => 'Hide ideas';
+
+  @override
+  String get ideasFromVideo => 'From my video';
+
+  @override
+  String get ideasSurprise => 'Surprise me';
+
+  @override
+  String get ideasPrepare => 'Prepare on-device suggestions';
+
+  @override
+  String get ideasUnavailable =>
+      'Video ideas aren’t available right now. Try Surprise me.';
+
+  @override
+  String get ideasSourceVideo => 'Based on your video';
+
+  @override
+  String get ideasSourceTranscript => 'Based on your transcript';
+
+  @override
+  String get ideasSourcePremade => 'A little inspiration';
+
+  @override
+  String get ideasUseBoth => 'Use both';
+
+  @override
+  String get ideasMore => 'More ideas';
+
+  @override
+  String get ideasGenerateTranscript => 'Generate transcript';
+
+  @override
+  String get ideasEditTranscript => 'Edit transcript';
+
+  @override
+  String get ideasTranscript => 'Transcript for ideas';
+
+  @override
+  String get ideasTranscriptionNotice =>
+      'Transcription uses Divine’s service, with an on-device fallback. Suggested wording stays on your phone. This won’t add subtitles to your post.';
+
+  @override
+  String get ideasApplied => 'Idea added. Make it yours.';
+
+  @override
+  String get ideasUndo => 'Undo';
+
+  @override
+  String get ideasTitleOne => 'A small moment';
+
+  @override
+  String get ideasDescriptionOne => 'Felt like sharing this.';
+
+  @override
+  String get ideasTitleTwo => 'Here goes';
+
+  @override
+  String get ideasDescriptionTwo =>
+      'Putting this little bit of my day out there.';
+
+  @override
+  String get ideasTitleThree => 'One for the loop';
+
+  @override
+  String get ideasDescriptionThree => 'A moment worth keeping.';
+
+  @override
+  String get ideasTitleFour => 'Made this';
+
+  @override
+  String get ideasDescriptionFour => 'A little something from me.';
+
+  @override
+  String get ideasTitleFive => 'No big explanation';
+
+  @override
+  String get ideasDescriptionFive => 'Just wanted to share.';
+
+  @override
+  String get ideasTitleSix => 'A little bit of today';
+
+  @override
+  String get ideasDescriptionSix => 'Leaving this here.';
 }

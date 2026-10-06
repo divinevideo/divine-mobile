@@ -13364,4 +13364,93 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get subtitleMachineTranslated => 'Traducción automática';
+
+  @override
+  String get ideasNeedIdeas => '¿Necesitas ideas?';
+
+  @override
+  String get ideasHide => 'Ocultar ideas';
+
+  @override
+  String get ideasFromVideo => 'De mi video';
+
+  @override
+  String get ideasSurprise => 'Sorpréndeme';
+
+  @override
+  String get ideasPrepare => 'Preparar sugerencias en el dispositivo';
+
+  @override
+  String get ideasUnavailable =>
+      'Ahora no hay ideas del video disponibles. Prueba Sorpréndeme.';
+
+  @override
+  String get ideasSourceVideo => 'Basado en tu video';
+
+  @override
+  String get ideasSourceTranscript => 'Basado en tu transcripción';
+
+  @override
+  String get ideasSourcePremade => 'Un poco de inspiración';
+
+  @override
+  String get ideasUseBoth => 'Usar ambos';
+
+  @override
+  String get ideasMore => 'Más ideas';
+
+  @override
+  String get ideasGenerateTranscript => 'Generar transcripción';
+
+  @override
+  String get ideasEditTranscript => 'Editar transcripción';
+
+  @override
+  String get ideasTranscript => 'Transcripción para ideas';
+
+  @override
+  String get ideasTranscriptionNotice =>
+      'La transcripción usa el servicio de Divine, con una alternativa en el dispositivo. Las sugerencias de texto se quedan en tu teléfono. Esto no añade subtítulos a tu publicación.';
+
+  @override
+  String get ideasApplied => 'Idea añadida. Hazla tuya.';
+
+  @override
+  String get ideasUndo => 'Deshacer';
+
+  @override
+  String get ideasTitleOne => 'Un pequeño momento';
+
+  @override
+  String get ideasDescriptionOne => 'Me apetecía compartir esto.';
+
+  @override
+  String get ideasTitleTwo => 'Aquí va';
+
+  @override
+  String get ideasDescriptionTwo => 'Compartiendo un pedacito de mi día.';
+
+  @override
+  String get ideasTitleThree => 'Para verlo en bucle';
+
+  @override
+  String get ideasDescriptionThree => 'Un momento que merece quedarse.';
+
+  @override
+  String get ideasTitleFour => 'Lo hice yo';
+
+  @override
+  String get ideasDescriptionFour => 'Un pequeño aporte mío.';
+
+  @override
+  String get ideasTitleFive => 'Sin grandes explicaciones';
+
+  @override
+  String get ideasDescriptionFive => 'Solo quería compartirlo.';
+
+  @override
+  String get ideasTitleSix => 'Un poquito de hoy';
+
+  @override
+  String get ideasDescriptionSix => 'Lo dejo por aquí.';
 }

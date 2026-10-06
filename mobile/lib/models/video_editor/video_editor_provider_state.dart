@@ -8,6 +8,7 @@ import 'package:openvine/models/audio_share_attribution.dart';
 import 'package:openvine/models/caption_mention.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/ideas_transcript.dart';
 import 'package:openvine/models/video_editor/video_render_failure_reason.dart';
 import 'package:openvine/models/video_metadata/video_metadata_expiration.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -44,6 +45,7 @@ class VideoEditorProviderState {
     this.collaboratorPubkeys = const {},
     this.inspiredByVideo,
     this.inspiredByNpubs = const [],
+    this.ideasTranscript,
     this.captionMentions = const [],
     this.selectedSound,
     this.seedSelectedSoundAsAudioTrack = false,
@@ -167,6 +169,9 @@ class VideoEditorProviderState {
 
   /// Accounts picked from the caption's mention autocomplete.
   final List<CaptionMention> captionMentions;
+
+  /// Private transcript, independent of published subtitles.
+  final IdeasTranscript? ideasTranscript;
 
   /// Currently selected sound for the video.
   /// Contains the full AudioEvent data including URL, title, and start offset.
@@ -312,6 +317,7 @@ class VideoEditorProviderState {
     InspiredByInfo? inspiredByVideo,
     bool clearInspiredByVideo = false,
     List<String>? inspiredByNpubs,
+    IdeasTranscript? ideasTranscript,
     List<CaptionMention>? captionMentions,
     bool clearInspiredByNpub = false,
     AudioEvent? selectedSound,
@@ -372,6 +378,7 @@ class VideoEditorProviderState {
       inspiredByVideo: clearInspiredByVideo
           ? null
           : (inspiredByVideo ?? this.inspiredByVideo),
+      ideasTranscript: ideasTranscript ?? this.ideasTranscript,
       captionMentions: captionMentions ?? this.captionMentions,
       inspiredByNpubs: clearInspiredByNpub
           ? const []

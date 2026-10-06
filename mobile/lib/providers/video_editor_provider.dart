@@ -26,6 +26,7 @@ import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
+import 'package:openvine/models/video_editor/ideas_transcript.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_metadata/schedule_time_policy.dart';
 import 'package:openvine/models/video_metadata/video_metadata_expiration.dart';
@@ -335,6 +336,20 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   }
 
   // === METADATA ===
+
+  /// Saves corrected ideas context without publishing it as subtitles.
+  void updateIdeasTranscript(IdeasTranscript transcript) {
+    state = state.copyWith(ideasTranscript: transcript);
+    triggerAutosave();
+  }
+
+  /// Restores mention bindings only when an ideas undo restores their text.
+  void restoreIdeasMentions(List<CaptionMention> mentions) {
+    state = state.copyWith(
+      captionMentions: pruneCaptionMentions(mentions, state.description),
+    );
+    triggerAutosave();
+  }
 
   /// Update video metadata (title, description, tags).
   ///
@@ -685,6 +700,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       collaboratorPubkeys: state.collaboratorPubkeys,
       inspiredByVideo: inspiredByVideo,
       inspiredByNpubs: state.inspiredByNpubs,
+      ideasTranscript: state.ideasTranscript,
       captionMentions: state.captionMentions,
       // Always the timeline's own credits, never a remembered set: a credit is
       // a factual claim about footage that is *in* this video, and drafts
@@ -937,7 +953,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
 
       Log.info(
         '✅ Autosave completed - $clipCount clip(s), '
-        'title: "${state.title.isEmpty ? "(empty)" : state.title}"',
+        'has title: ${state.title.isNotEmpty}',
         name: 'VideoEditorNotifier',
         category: .video,
       );
@@ -1280,6 +1296,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       ),
       inspiredByVideo: draft.inspiredByVideo,
       inspiredByNpubs: draft.inspiredByNpubs,
+      ideasTranscript: draft.ideasTranscript,
       captionMentions: draft.captionMentions,
       selectedSound: draft.selectedSound,
       seedSelectedSoundAsAudioTrack: false,

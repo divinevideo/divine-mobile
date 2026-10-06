@@ -4,6 +4,11 @@
 enum FeatureFlagAudience { user, internal }
 
 enum FeatureFlag {
+  publishingIdeas(
+    'Publishing Ideas',
+    'Inline title, description, and hashtag ideas.',
+    audience: FeatureFlagAudience.internal,
+  ),
   enhancedAnalytics(
     'Enhanced Analytics',
     'Detailed usage tracking and insights',
