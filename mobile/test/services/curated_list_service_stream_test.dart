@@ -28,11 +28,11 @@ void main() {
     late SharedPreferences prefs;
     late StreamController<Event> eventController;
 
-    /// Creates a mock kind 30005 list event with video references
     /// The fixture author for [dTag], the same value every list event carries.
     String authorPubkeyFor(String dTag) =>
         dTag.hashCode.abs().toRadixString(16).padLeft(64, '0');
 
+    /// Creates a mock kind 30005 list event with video references
     Event createListEvent({
       required String dTag,
       required String name,

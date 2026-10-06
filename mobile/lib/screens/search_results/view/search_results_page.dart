@@ -146,6 +146,10 @@ class _SearchResultsScope extends ConsumerWidget {
     final peopleListSearchEnabled =
         profileListFeaturesEnabled && curatedListsEnabled;
 
+    // Bind discovery to the current viewer, including before their first post.
+    ref.watch(currentAuthStateProvider);
+    final viewerPubkey = ref.watch(authServiceProvider).currentPublicKeyHex;
+
     return Stack(
       children: [
         Offstage(
@@ -165,6 +169,7 @@ class _SearchResultsScope extends ConsumerWidget {
                   curatedListRepository,
                   peopleListsRepository,
                   peopleListSearchEnabled,
+                  viewerPubkey,
                 )),
                 providers: [
                   BlocProvider(
@@ -222,7 +227,7 @@ class _SearchResultsScope extends ConsumerWidget {
                             policy: listThumbnailPolicy,
                             controller: controller,
                             // The viewer's own lists remain discoverable before posting.
-                            viewerPubkey: ref.watch(authServiceProvider).currentPublicKeyHex,
+                            viewerPubkey: viewerPubkey,
                             child: _BlocklistRefreshListener(
                               child: Scaffold(
                                 // bg/surface — matches SearchResultsView's body background so the
