@@ -47,7 +47,11 @@ The iOS, Android, and macOS build workflows expose `RELEASE_CHANNEL`:
 `DEFAULT_ENV` selects the backend, independently of release readiness. A build
 using the production backend can still be a beta. Different beta backends and
 source commits get separate tags. iOS and Android from the same source/backend
-share the same beta release.
+share the same beta release. Record one full candidate commit SHA before starting
+any platform job, and start every platform build from that exact commit. Check
+each job’s checked-out SHA before publication; a moving branch name alone does
+not identify a candidate. If the build launcher cannot select that commit, stop
+and use a launcher that can; do not rebuild from a newer main under the same tag.
 
 Production publishing uses GitHub’s automatic Latest selection instead of
 forcing its own release over a concurrently published newer version. Latest is
@@ -67,6 +71,31 @@ retry publication with its original artifacts after the other job completes.
 This does **not** change store submission: iOS still uploads without submitting
 for review, and Play still receives the internal-testing AAB. App Store and
 Play promotion remain explicit store operations.
+
+## Retry publication with the original files
+
+Download and preserve the failed job's original signed artifacts from Codemagic.
+Do not run the build again. In an isolated checkout of that job's **exact source
+commit**, with its reviewed notes and matching pubspec version, run:
+
+```sh
+python3 mobile/scripts/publish_github_release.py \
+  --repo divinevideo/divine-mobile \
+  --channel PRODUCTION --backend PRODUCTION \
+  --artifacts-dir /absolute/path/to/original-artifacts
+```
+
+The directory may contain nested downloads. Only APK, IPA and DMG files are
+selected; include only this candidate's original files. The publisher checks
+existing asset digests, skips byte-identical assets, uploads missing files, and
+refuses to replace anything. It also refuses a tag pointing to another commit.
+Use `--channel BETA` and the original backend for a beta retry. Recovery does
+not bypass channel readiness or the store-rollout sequencing requirement.
+
+If GitHub publication succeeded and only Zapstore failed, do not rebuild or
+republish GitHub. Retry the signed Zapstore command in the repository's Zapstore
+publishing instructions against that verified stable release, including its
+existing signing environment and `--skip-certificate-linking` option.
 
 ## Promote a tested beta without rebuilding
 

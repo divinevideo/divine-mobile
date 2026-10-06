@@ -84,11 +84,13 @@ class GitHub:
         # here could undo a newer release completed during our artifact upload.
         payload = dict(name=f'Divine {tag}', body=body, draft=False,
                        prerelease=beta, make_latest='false' if beta else 'legacy')
-        subprocess.run(
+        result = subprocess.run(
             ['gh', 'api', '--method', 'PATCH',
              f"repos/{self.repo}/releases/{record['id']}", '--input', '-'],
-            input=json.dumps(payload), text=True, capture_output=True, check=True,
+            input=json.dumps(payload), text=True, capture_output=True,
         )
+        if result.returncode:
+            raise RuntimeError(result.stderr.strip() or 'GitHub release update failed')
 
     def download(self, tag, directory):
         run('gh', 'release', 'download', tag, '--repo', self.repo,
@@ -111,6 +113,10 @@ def check_newer_release(gh, version):
         raise ValueError('Cannot replace a newer Latest release with an older version')
 
 
+def unfinished_notes(body):
+    return '<!-- DRAFT -->' in body or '# Release notes working draft' in body
+
+
 def publish(gh, version, sha, channel, backend, notes, artifacts):
     if not re.fullmatch(r'\d+\.\d+\.\d+', version):
         raise ValueError('Expected a three-part marketing version')
@@ -128,11 +134,11 @@ def publish(gh, version, sha, channel, backend, notes, artifacts):
     if len({p.name for p in artifacts}) != len(artifacts):
         raise ValueError('Artifact filenames must be unique')
     body = notes.read_text().strip() if notes.is_file() else ''
-    if not beta and (not body or '<!-- DRAFT -->' in body):
+    if not beta and (not body or unfinished_notes(body)):
         raise ValueError(f'Production requires finished release notes: {notes}')
     tag = f'{version}-beta.{backend.lower()}.{sha}' if beta else version
     if beta:
-        if '<!-- DRAFT -->' in body:
+        if unfinished_notes(body):
             body = ''
         body = ('## Divine beta\n\n'
                 'An early build for testing. Things may break. '
@@ -205,13 +211,31 @@ def promote(gh, beta_tag, notes):
         return publish(gh, version, sha, 'PRODUCTION', 'PRODUCTION', notes, paths)
 
 
+def marketing_version(pubspec):
+    match = re.search(r'^version:\s*(\d+\.\d+\.\d+)(?:\+\d+)?\s*$', pubspec, re.MULTILINE)
+    if not match:
+        raise ValueError('Expected pubspec version: major.minor.patch with optional +build')
+    return match.group(1)
+
+
+def recovery_artifacts(directory):
+    if not directory.is_dir():
+        raise ValueError('Original artifacts directory does not exist')
+    return sorted(p for p in directory.rglob('*')
+                  if p.is_file() and p.suffix in ('.apk', '.ipa', '.dmg'))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--repo', required=True)
-    parser.add_argument('--channel', default='BETA', choices=['BETA', 'PRODUCTION'])
+    parser.add_argument('--channel', default=None, choices=['BETA', 'PRODUCTION'])
     parser.add_argument('--backend', default='PRODUCTION')
     parser.add_argument('--promote-from', help='Publish an existing beta’s exact artifacts as stable')
+    parser.add_argument('--artifacts-dir', type=Path,
+                        help='Retry with original downloaded artifacts; checkout their source commit first')
     args = parser.parse_args()
+    if args.promote_from and (args.channel == 'BETA' or args.backend != 'PRODUCTION' or args.artifacts_dir):
+        parser.error('--promote-from requires production channel/backend and cannot use --artifacts-dir')
     mobile = Path(__file__).resolve().parents[1]
     if args.promote_from:
         version = args.promote_from.split('-beta.', 1)[0]
@@ -221,14 +245,17 @@ def main():
                       mobile.parent / 'release-notes' / f'{version}.md')
         print(f'Promoted and verified https://github.com/{args.repo}/releases/tag/{tag}')
         return
-    version = re.search(r'^version:\s*(\d+\.\d+\.\d+)\+',
-                        (mobile / 'pubspec.yaml').read_text(), re.MULTILINE).group(1)
+    try:
+        version = marketing_version((mobile / 'pubspec.yaml').read_text())
+    except ValueError as error:
+        parser.error(str(error))
     sha = run('git', '-C', str(mobile), 'rev-parse', 'HEAD')
     patterns = ['build/app/outputs/apk/release/*arm64*.apk',
                 'build/app/outputs/apk/release/*armeabi*.apk',
                 'build/ios/ipa/*.ipa', 'build/macos/Build/Products/Release/*.dmg']
-    artifacts = sorted({p for pattern in patterns for p in mobile.glob(pattern)})
-    tag = publish(GitHub(args.repo), version, sha, args.channel, args.backend,
+    artifacts = (recovery_artifacts(args.artifacts_dir) if args.artifacts_dir
+                 else sorted({p for pattern in patterns for p in mobile.glob(pattern)}))
+    tag = publish(GitHub(args.repo), version, sha, args.channel or 'BETA', args.backend,
                   mobile.parent / 'release-notes' / f'{version}.md', artifacts)
     print(f'Published and verified https://github.com/{args.repo}/releases/tag/{tag}')
 

@@ -24,7 +24,8 @@
 #   - PROOFMODE_SIGNING_SERVER_TOKEN
 # 8 - PUBLISH_TO_GITHUB is configured via build inputs (dropdown) when starting builds
 #   - Set to YES to upload artifacts to a GitHub Release (for Zapstore / direct distribution)
-#     and to publish that release to Zapstore
+#     and, with RELEASE_CHANNEL=PRODUCTION, publish that release to Zapstore
+#   - RELEASE_CHANNEL defaults to BETA; choose PRODUCTION only for a stable release
 #   - Defaults to NO
 #   - Requires GITHUB_TOKEN in "github_credentials" environment variable group
 # 9 - Android publishing reads the service account from environment variable
@@ -48,8 +49,9 @@
 # 11 - Create environment variable group "zapstore_credentials" with:
 #   - ZAPSTORE_NSEC (mark as secure) — the nsec that signs the Zapstore release
 #     events. The android-build workflow publishes to Zapstore automatically
-#     when PUBLISH_TO_GITHUB=YES and signs with this key, so it reaches public
-#     relays without a manual `zsp publish`. Never log or echo this value.
+#     when PUBLISH_TO_GITHUB=YES and RELEASE_CHANNEL=PRODUCTION. It signs with
+#     this key to reach public relays without a manual `zsp publish`. Never log
+#     or echo this value.
 #
 # Every group named under a workflow's `groups:` key must appear in this
 # checklist. Codemagic validates this whole file before it provisions a machine,
@@ -565,6 +567,10 @@ definitions:
           exit 0
         fi
         set -euo pipefail
+        if [ "${{ inputs.RELEASE_CHANNEL }}" = "PRODUCTION" ] && [ "${CM_BRANCH:-}" != "main" ]; then
+          echo "Refusing stable publication outside main (branch: '${CM_BRANCH:-unset}')."
+          exit 1
+        fi
         python3 scripts/publish_github_release.py \
           --repo "$CM_REPO_SLUG" \
           --channel "${{ inputs.RELEASE_CHANNEL }}" \

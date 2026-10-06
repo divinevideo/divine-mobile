@@ -306,6 +306,21 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('Skipping Zapstore', result.stdout)
 
+    def test_stable_publish_refuses_non_main_branches(self) -> None:
+        scripts = self._resolved_config()['workflows']['macos-build']['scripts']
+        original = next(step['script'] for step in scripts if step['name'] == 'Publish to GitHub Release')
+        for channel, branch, allowed in [('PRODUCTION', 'main', True),
+                                          ('PRODUCTION', 'feature/test', False),
+                                          ('PRODUCTION', '', False),
+                                          ('BETA', 'feature/test', True)]:
+            with self.subTest(channel=channel, branch=branch):
+                script = original.replace('${{ inputs.PUBLISH_TO_GITHUB }}', 'YES')
+                script = script.replace('${{ inputs.RELEASE_CHANNEL }}', channel)
+                script = script.split('python3 scripts/publish_github_release.py', 1)[0]
+                result = subprocess.run(['bash', '-c', script], capture_output=True,
+                                        text=True, env={'CM_BRANCH': branch})
+                self.assertEqual(result.returncode == 0, allowed, result.stderr)
+
     def test_zapstore_docs_require_production_and_manual_command_excludes_betas(self) -> None:
         root = CODEMAGIC_PATH.parent
         agents = (root / 'AGENTS.md').read_text()
@@ -333,6 +348,8 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertIn('--exclude-drafts --exclude-pre-releases', definition)
         self.assertIn('if [ "$REMOTE_TAG" != "$TAG" ]; then', definition)
         self.assertIn('"$ZSP_BIN" publish --check zapstore.yaml', definition)
+        self.assertIn('--quiet --skip-preview', definition)
+        self.assertIn('--skip-certificate-linking', definition)
         self.assertNotIn('--pre-release', definition)
 
         # The release asset name drops the tag's leading "v"; deriving it from

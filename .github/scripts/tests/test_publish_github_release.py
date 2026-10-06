@@ -1,4 +1,6 @@
 """Release publication must not overwrite a different build or stable assets."""
+import contextlib
+import io
 import importlib.util
 import json
 from pathlib import Path
@@ -120,6 +122,12 @@ class PublicationTest(unittest.TestCase):
         self.publish('BETA')
         self.assertNotIn('Internal inventory', self.gh.record['body'])
 
+    def test_draft_heading_without_marker_is_rejected(self):
+        self.notes.write_text('# Release notes working draft\nInternal inventory')
+        with self.assertRaisesRegex(ValueError, 'notes'):
+            self.publish()
+        self.assertEqual(self.gh.calls, [])
+
     def test_draft_with_different_target_cannot_be_published(self):
         self.gh.record = dict(draft=True, prerelease=True, body='', assets=[],
                               target_commitish='b' * 40)
@@ -221,7 +229,44 @@ class PublicationTest(unittest.TestCase):
         self.assertTrue(self.gh.record['draft'])
 
 
+class CommandInputTest(unittest.TestCase):
+    def test_version_accepts_optional_build_and_rejects_invalid_input(self):
+        self.assertEqual(release.marketing_version('version: 1.2.3+820\n'), '1.2.3')
+        self.assertEqual(release.marketing_version('version: 1.2.3\n'), '1.2.3')
+        with self.assertRaisesRegex(ValueError, 'version'):
+            release.marketing_version('version: wrong\n')
+
+    def test_recovery_collects_original_downloads_only(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'android').mkdir()
+            asset = root / 'android' / 'original.apk'
+            asset.write_bytes(b'original')
+            (root / 'notes.txt').write_text('not an artifact')
+            self.assertEqual(release.recovery_artifacts(root), [asset])
+
+    def test_explicit_beta_promotion_is_rejected_before_github(self):
+        with patch('sys.argv', ['publisher', '--repo', 'owner/repo', '--channel',
+                                'BETA', '--promote-from', '1.2.3-beta.production.' + SHA]), \
+             patch.object(release, 'promote') as promote:
+            output = io.StringIO()
+            with contextlib.redirect_stderr(output), self.assertRaises(SystemExit) as error:
+                release.main()
+            self.assertEqual(error.exception.code, 2)
+            self.assertIn('requires production', output.getvalue())
+            promote.assert_not_called()
+
+
 class GitHubAdapterTest(unittest.TestCase):
+    def test_edit_surfaces_github_failure_reason(self):
+        gh = release.GitHub('owner/repo')
+        with patch.object(gh, 'get_release', return_value={'id': 42}), patch.object(
+            release.subprocess, 'run',
+            return_value=subprocess.CompletedProcess([], 1, '', 'HTTP 422: invalid release'),
+        ):
+            with self.assertRaisesRegex(RuntimeError, 'HTTP 422: invalid release'):
+                gh.edit('1.2.3', 'Finished notes', False)
+
     def test_only_404_is_treated_as_missing(self):
         gh = release.GitHub('owner/repo')
         for status, missing in [(404, True), (403, False), (500, False)]:
@@ -262,7 +307,7 @@ class GitHubAdapterTest(unittest.TestCase):
         self.assertIn(SHA, calls[0][0])
         self.assertEqual(calls[0][1], 'Literal `text` and $values')
         with patch.object(gh, 'get_release', return_value={'id': 42}), patch.object(
-            release.subprocess, 'run'
+            release.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, '', '')
         ) as execute:
             gh.edit('1.2.3', 'Finished notes', False)
             command = execute.call_args.args[0]
