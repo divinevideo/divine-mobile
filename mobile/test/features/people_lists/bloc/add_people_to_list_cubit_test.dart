@@ -309,6 +309,69 @@ void main() {
       );
 
       test(
+        'fetches a fresh profile for a candidate with none cached',
+        () async {
+          when(
+            () => followRepository.followingPubkeys,
+          ).thenReturn([_alicePubkey]);
+          when(
+            () => followRepository.watchMyFollowers(),
+          ).thenAnswer((_) => const Stream.empty());
+          when(
+            () => profileRepository.fetchFreshProfile(pubkey: _alicePubkey),
+          ).thenAnswer(
+            (_) async => _profile(pubkey: _alicePubkey, displayName: 'Alice'),
+          );
+
+          final cubit = createCubit();
+          await cubit.started();
+          await _flush();
+
+          expect(cubit.state.candidates.single.displayName, 'Alice');
+
+          await cubit.close();
+        },
+      );
+
+      // Pull-to-refresh keeps the resolved candidates, so a cached profile
+      // that changes nothing is the normal case there, not a miss.
+      test(
+        'a refresh does not refetch profiles it resolved from the cache',
+        () async {
+          when(
+            () => followRepository.followingPubkeys,
+          ).thenReturn([_alicePubkey]);
+          when(
+            () => followRepository.watchMyFollowers(),
+          ).thenAnswer((_) => const Stream.empty());
+          when(
+            () => profileRepository.getCachedProfile(pubkey: _alicePubkey),
+          ).thenAnswer(
+            (_) async => _profile(pubkey: _alicePubkey, displayName: 'Alice'),
+          );
+
+          final cubit = createCubit();
+          await cubit.started();
+          await _flush();
+          expect(cubit.state.candidates.single.displayName, 'Alice');
+
+          await cubit.started();
+          await _flush();
+
+          verify(
+            () => profileRepository.getCachedProfile(pubkey: _alicePubkey),
+          ).called(2);
+          verifyNever(
+            () => profileRepository.fetchFreshProfile(
+              pubkey: any(named: 'pubkey'),
+            ),
+          );
+
+          await cubit.close();
+        },
+      );
+
+      test(
         'does not emit when profile hydration completes after close',
         () async {
           final cachedProfile = Completer<UserProfile?>();
