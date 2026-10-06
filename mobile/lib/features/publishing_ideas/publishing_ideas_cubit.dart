@@ -47,7 +47,7 @@ class PublishingIdeasCubit extends Cubit<PublishingIdeasState> {
       PublishingIdeasState(
         result: SuggestedPublishing(
           source: SuggestionSource.premade,
-          ideas: _repository.premade(deck),
+          ideas: _repository.premade(deck, count: 1),
         ),
       ),
     );
@@ -69,7 +69,7 @@ class PublishingIdeasCubit extends Cubit<PublishingIdeasState> {
             capabilities: capabilities,
             result: SuggestedPublishing(
               source: SuggestionSource.premade,
-              ideas: _repository.premade(fallback),
+              ideas: _repository.premade(fallback, count: 1),
             ),
           ),
         );
@@ -100,7 +100,7 @@ class PublishingIdeasCubit extends Cubit<PublishingIdeasState> {
           result: result.source == SuggestionSource.premade
               ? SuggestedPublishing(
                   source: SuggestionSource.premade,
-                  ideas: _repository.premade(fallback),
+                  ideas: _repository.premade(fallback, count: 1),
                 )
               : result,
           capabilities: capabilities,

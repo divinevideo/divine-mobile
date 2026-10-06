@@ -29,14 +29,16 @@ class SuggestionsRepository {
     return _client.cancel();
   }
 
-  /// Deals up to three localized, handwritten ideas without premature repeats.
-  List<PublishingIdea> premade(List<PublishingIdea> deck) {
+  /// Deals localized premade ideas without premature repeats.
+  ///
+  /// Inline callers request one so unseen options remain in the deck.
+  List<PublishingIdea> premade(List<PublishingIdea> deck, {int count = 3}) {
     if (!identical(deck, _deck)) {
       _remaining.clear();
       _deck = deck;
     }
     if (_remaining.isEmpty) _remaining.addAll([...deck]..shuffle(_random));
-    final result = _remaining.take(3).toList();
+    final result = _remaining.take(count).toList();
     _remaining.removeRange(0, result.length);
     return result;
   }

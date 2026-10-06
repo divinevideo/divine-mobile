@@ -37,6 +37,21 @@ class FakeClient implements SuggestionsClient {
 
 void main() {
   group('generate and premade', () {
+    test('inline dealing keeps unseen options for later requests', () {
+      final repo = SuggestionsRepository(
+        client: FakeClient(),
+        random: Random(3),
+      );
+      final deck = List.generate(
+        6,
+        (i) => PublishingIdea(title: '$i', description: '$i'),
+      );
+      final seen = <PublishingIdea>{};
+      for (var i = 0; i < deck.length; i++) {
+        expect(seen.add(repo.premade(deck, count: 1).single), isTrue);
+      }
+    });
+
     test(
       'cancelled visual generation never retries the private transcript',
       () async {

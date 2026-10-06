@@ -100,6 +100,31 @@ void main() {
           await tester.tap(find.text('Need ideas?'));
           await tester.pumpAndSettle();
           expect(find.text('Use both'), findsOneWidget);
+          const titles = [
+            'A small moment',
+            'Here goes',
+            'One for the loop',
+            'Made this',
+            'No big explanation',
+            'A little bit of today',
+          ];
+          final seen = <String>{};
+          for (var index = 0; index < titles.length; index++) {
+            final visible = titles.singleWhere(
+              (title) => find.text(title).evaluate().isNotEmpty,
+            );
+            expect(
+              seen.add(visible),
+              isTrue,
+              reason: 'Only ideas actually shown should consume the deck',
+            );
+            if (index + 1 < titles.length) {
+              await tester.ensureVisible(find.text('Surprise me'));
+              await tester.tap(find.text('Surprise me'));
+              await tester.pumpAndSettle();
+            }
+          }
+
           final fields = tester
               .widgetList<DivineTextField>(find.byType(DivineTextField))
               .toList();
