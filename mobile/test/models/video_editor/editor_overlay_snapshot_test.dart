@@ -275,6 +275,53 @@ void main() {
       });
     });
 
+    group('windowedTo text reveal', () {
+      // "one two" types itself out word by word over the layer's first second.
+      ExportedLayer revealing() => ExportedLayer(
+        layer: TextLayer(
+          text: 'one two',
+          startTime: _s2,
+          endTime: _s5,
+          animations: const [
+            LayerAnimation(
+              type: LayerAnimationType.wordByWord,
+              phase: AnimationPhase.animateIn,
+              duration: Duration(seconds: 1),
+            ),
+          ],
+        ),
+        bytes: Uint8List.fromList([0]),
+        logicalSize: const Size(10, 10),
+        revealBytes: {
+          const ExportedTextState(revealedLength: 0): Uint8List.fromList([1]),
+          const ExportedTextState(revealedLength: 3): Uint8List.fromList([2]),
+        },
+      );
+
+      test('keeps the reveal images for a layer the clip contains', () {
+        final result = EditorOverlaySnapshot(
+          capturedLayers: [revealing()],
+        ).windowedTo(start: _s1, end: _s6);
+
+        expect(
+          [
+            for (final frame in result.capturedLayers.single.frames)
+              frame.bytes.single,
+          ],
+          [1, 2, 0],
+        );
+      });
+
+      test('drops the reveal of a layer that started before the clip', () {
+        final result = EditorOverlaySnapshot(
+          capturedLayers: [revealing()],
+        ).windowedTo(start: _s3, end: _s6);
+
+        // The text had typed itself out before the clip begins.
+        expect(result.capturedLayers.single.frames.single.bytes.single, 0);
+      });
+    });
+
     group('windowedTo filters and tune', () {
       test('windows a filter like a layer', () {
         final result = EditorOverlaySnapshot(

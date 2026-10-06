@@ -94,6 +94,7 @@ class EditorOverlaySnapshot {
               bytes: item.bytes,
               logicalSize: item.logicalSize,
               highlightBytes: item.highlightBytes,
+              revealBytes: item.revealBytes,
             ),
       ],
       filterStates: [
@@ -127,8 +128,9 @@ class EditorOverlaySnapshot {
   /// The copy is safe even though `copyWith` on a concrete layer subtype
   /// (text/paint/…) returns that same subtype: the visual content already
   /// travels in the rasterized `bytes` (a text layer's lit words in
-  /// `highlightBytes`), and the render reads back only offset, time window,
-  /// animations and a text layer's highlights. Copying rather than mutating
+  /// `highlightBytes`, its reveal steps in `revealBytes`), and the render
+  /// reads back only offset, time window, animations and a text layer's
+  /// highlights. Copying rather than mutating
   /// matters because these fields are mutable and the source is the editor's
   /// live layer.
   ///
@@ -137,7 +139,8 @@ class EditorOverlaySnapshot {
   /// played *outside* this clip. Replaying it inside the saved clip would show
   /// motion that never happened over the clip, so the clamped-away phase (and
   /// the legacy fade synthesized from [Layer.enterDuration] /
-  /// [Layer.exitDuration]) is dropped.
+  /// [Layer.exitDuration]) is dropped. A loop is kept and starts over with the
+  /// clip, the way a video effect's animation does.
   ///
   /// [TextLayer.highlights] count from the layer's start, so when that start
   /// moves relative to the words — a caption that began before the clip —

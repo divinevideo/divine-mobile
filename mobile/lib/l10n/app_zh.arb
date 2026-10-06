@@ -5133,6 +5133,15 @@
     "description": "Layer animation type that scales the layer from a smaller size up to full size (or back)."
   },
   "videoEditorLayerAnimationScaleFrom": "起始缩放",
+  "videoEditorLayerAnimationLoop": "循环",
+  "videoEditorLayerAnimationWiggle": "摇摆",
+  "videoEditorLayerAnimationBounce": "弹跳",
+  "videoEditorLayerAnimationTypewriter": "打字机",
+  "videoEditorLayerAnimationWordByWord": "逐词",
+  "videoEditorLayerAnimationPulse": "脉动",
+  "videoEditorLayerAnimationPulseTo": "缩小至",
+  "videoEditorLayerAnimationWiggleAngle": "倾斜度",
+  "videoEditorLayerAnimationBounceHeight": "高度",
   "@videoEditorLayerAnimationScaleFrom": {
     "description": "Section label above the slider that sets the starting size for a scale animation (0% to 100%)."
   },

@@ -9666,6 +9666,33 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'Thu phóng từ';
 
   @override
+  String get videoEditorLayerAnimationLoop => 'Lặp lại';
+
+  @override
+  String get videoEditorLayerAnimationWiggle => 'Lắc lư';
+
+  @override
+  String get videoEditorLayerAnimationBounce => 'Nảy';
+
+  @override
+  String get videoEditorLayerAnimationTypewriter => 'Máy đánh chữ';
+
+  @override
+  String get videoEditorLayerAnimationWordByWord => 'Từng từ';
+
+  @override
+  String get videoEditorLayerAnimationPulse => 'Nhịp đập';
+
+  @override
+  String get videoEditorLayerAnimationPulseTo => 'Thu nhỏ đến';
+
+  @override
+  String get videoEditorLayerAnimationWiggleAngle => 'Độ nghiêng';
+
+  @override
+  String get videoEditorLayerAnimationBounceHeight => 'Độ cao';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'Tùy chỉnh';
 
   @override

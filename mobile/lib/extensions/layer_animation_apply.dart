@@ -1,4 +1,4 @@
-// ABOUTME: Writes a chosen enter/leave animation onto a pro_image_editor
+// ABOUTME: Writes a chosen enter/leave/loop animation onto a pro_image_editor
 // ABOUTME: Layer: animations, custom slide points, and the end time a leave
 // ABOUTME: animation needs. Shared by the animation sheet and title styles.
 
@@ -60,16 +60,17 @@ Duration? resolveLayerEndTime({
   return null;
 }
 
-/// Applies a chosen enter/leave animation to a [Layer].
+/// Applies a chosen enter/leave/loop animation to a [Layer].
 extension LayerAnimationApply on Layer {
-  /// A copy of this layer carrying [enter] and [leave] as its animations,
-  /// [points] as its custom slide points, and the end time the leave phase
-  /// needs — the whole write the animation sheet performs on confirm.
+  /// A copy of this layer carrying [enter], [leave] and [loop] as its
+  /// animations, [points] as its custom slide points, and the end time the
+  /// leave phase needs — the whole write the animation sheet performs on
+  /// confirm.
   ///
-  /// Animations of any other phase (e.g. `animateInOut`) that the layer
-  /// already carries are kept, so editing one phase cannot silently drop
-  /// them. A custom point is only kept for a phase that still slides: a point
-  /// nothing reads is dropped rather than stored.
+  /// A `null` [loop] keeps the loop animations the layer already carries, as
+  /// it keeps those of any other phase (e.g. `animateInOut`), so editing one
+  /// phase cannot silently drop them. A custom point is only kept for a phase
+  /// that still slides: a point nothing reads is dropped rather than stored.
   ///
   /// [canvasSize] is the canvas the points are resolved against for the
   /// in-editor preview; [totalDuration] is the true total video duration (see
@@ -86,14 +87,21 @@ extension LayerAnimationApply on Layer {
     required LayerSlidePoints points,
     required Size canvasSize,
     required Duration totalDuration,
+    List<LayerAnimation>? loop,
   }) {
     final preserved = [
       for (final animation in divineAnimations)
         if (animation.phase != AnimationPhase.animateIn &&
-            animation.phase != AnimationPhase.animateOut)
+            animation.phase != AnimationPhase.animateOut &&
+            (loop == null || animation.phase != AnimationPhase.loop))
           animation,
     ];
-    final animations = <LayerAnimation>[...enter, ...leave, ...preserved];
+    final animations = <LayerAnimation>[
+      ...enter,
+      ...leave,
+      ...?loop,
+      ...preserved,
+    ];
 
     final resolvedEndTime = resolveLayerEndTime(
       currentEndTime: endTime,

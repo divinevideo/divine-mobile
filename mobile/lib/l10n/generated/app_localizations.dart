@@ -16553,6 +16553,60 @@ abstract class AppLocalizations {
   /// **'Scale from'**
   String get videoEditorLayerAnimationScaleFrom;
 
+  /// Tab/segment label for the animations a layer repeats for as long as it is visible, next to Enter and Leave.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop'**
+  String get videoEditorLayerAnimationLoop;
+
+  /// Layer animation type that tilts the layer back and forth around its center; in the Loop tab it keeps wiggling while visible.
+  ///
+  /// In en, this message translates to:
+  /// **'Wiggle'**
+  String get videoEditorLayerAnimationWiggle;
+
+  /// Layer animation type that drops the layer onto its place with a bounce (Enter), lifts it off (Leave), or makes it hop (Loop).
+  ///
+  /// In en, this message translates to:
+  /// **'Bounce'**
+  String get videoEditorLayerAnimationBounce;
+
+  /// Layer animation type, text layers only: the text appears letter by letter (Enter) or disappears letter by letter (Leave).
+  ///
+  /// In en, this message translates to:
+  /// **'Typewriter'**
+  String get videoEditorLayerAnimationTypewriter;
+
+  /// Layer animation type, text layers only: the text appears word by word (Enter) or disappears word by word (Leave).
+  ///
+  /// In en, this message translates to:
+  /// **'Word by word'**
+  String get videoEditorLayerAnimationWordByWord;
+
+  /// Label of the scale animation in the Loop tab: the layer keeps shrinking a little and growing back while visible.
+  ///
+  /// In en, this message translates to:
+  /// **'Pulse'**
+  String get videoEditorLayerAnimationPulse;
+
+  /// Section label above the slider that sets how small a pulsing layer gets at its smallest (0% to 100% of its size).
+  ///
+  /// In en, this message translates to:
+  /// **'Shrink to'**
+  String get videoEditorLayerAnimationPulseTo;
+
+  /// Section label above the slider that sets how far a wiggling layer tilts to each side, in degrees.
+  ///
+  /// In en, this message translates to:
+  /// **'Tilt'**
+  String get videoEditorLayerAnimationWiggleAngle;
+
+  /// Section label above the slider that sets how high a bouncing layer is lifted, as a percentage of its own height.
+  ///
+  /// In en, this message translates to:
+  /// **'Height'**
+  String get videoEditorLayerAnimationBounceHeight;
+
   /// Direction option for a slide animation that starts (or ends) at a point the creator taps on the video, instead of travelling to or from a canvas edge.
   ///
   /// In en, this message translates to:

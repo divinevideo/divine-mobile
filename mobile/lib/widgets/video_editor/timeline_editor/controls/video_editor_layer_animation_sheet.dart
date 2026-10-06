@@ -1,6 +1,8 @@
-// ABOUTME: Bottom-sheet picker for a layer's enter/leave animation (fade,
-// ABOUTME: slide, scale) — twin of the clip-transition sheet, shared controls.
+// ABOUTME: Bottom-sheet picker for a layer's enter/leave/loop animation
+// ABOUTME: (fade, slide, scale, wiggle, bounce, text reveals) — twin of the
+// ABOUTME: clip-transition sheet, shared controls.
 
+import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
 import 'package:divine_ui/divine_ui.dart';
@@ -12,7 +14,8 @@ import 'package:openvine/models/video_editor/layer_slide_point.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/animation_picker_components.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/layer_slide_point_picker.dart';
-import 'package:pro_image_editor/core/models/layers/layer.dart' show Layer;
+import 'package:pro_image_editor/core/models/layers/layer.dart'
+    show Layer, TextLayer;
 import 'package:pro_video_editor/pro_video_editor.dart'
     show
         AnimationCurve,
@@ -23,6 +26,10 @@ import 'package:pro_video_editor/pro_video_editor.dart'
 
 /// Inclusive bounds (and snap step) for the duration slider, in milliseconds.
 const _minDurationMs = 10;
+
+/// Shortest cycle a loop can be set to: anything quicker reads as a flicker
+/// rather than a wiggle, hop or pulse.
+const _minLoopDurationMs = 200;
 const _maxDurationMs = 2000;
 const _durationStepMs = 10;
 
@@ -35,6 +42,16 @@ const _loopMs = 2400;
 
 const _previewWidth = 56.0;
 const _previewHeight = 72.0;
+
+/// Bounds (and snap step) of the wiggle tilt slider, in degrees.
+const _minWiggleDegrees = 2;
+const _maxWiggleDegrees = 30;
+
+/// Bounds (and snap step) of the bounce height slider, in percent of the
+/// layer's height.
+const _minBouncePercent = 10;
+const _maxBouncePercent = 200;
+const _bounceStepPercent = 10;
 
 /// Directions offered for a slide animation, mapped onto [SlideDirection].
 const _slideDirections = <SlideDirection>[
@@ -78,6 +95,7 @@ Future<void> editLayerAnimation(
   var draft = (
     enter: layer.divineEnterAnimations,
     leave: layer.divineLeaveAnimations,
+    loop: layer.divineLoopAnimations,
     enterPoint: stored.enter,
     leavePoint: stored.leave,
     phase: AnimationPhase.animateIn,
@@ -101,6 +119,8 @@ Future<void> editLayerAnimation(
       body: LayerAnimationPickerView(
         initialEnter: draft.enter,
         initialLeave: draft.leave,
+        initialLoop: draft.loop,
+        allowTextReveal: layer is TextLayer,
         initialEnterPoint: draft.enterPoint,
         initialLeavePoint: draft.leavePoint,
         initialPhase: draft.phase,
@@ -128,6 +148,7 @@ Future<void> editLayerAnimation(
     draft = (
       enter: result.enter,
       leave: result.leave,
+      loop: result.loop,
       enterPoint: result.phase == AnimationPhase.animateOut
           ? result.enterPoint
           : picked,
@@ -148,6 +169,7 @@ Future<void> editLayerAnimation(
   layers[index] = layer.withDivineAnimations(
     enter: result.enter,
     leave: result.leave,
+    loop: result.loop,
     points: LayerSlidePoints(
       enter: result.enterPoint,
       leave: result.leavePoint,
@@ -159,27 +181,32 @@ Future<void> editLayerAnimation(
   editor.addHistory(layers: layers);
 }
 
-/// The picker's result: the chosen enter and leave animations, the custom slide
-/// point each phase travels from (a canvas fraction, `null` for a plain edge
-/// slide), the phase on screen when the sheet closed, and whether it closed to
-/// hand over to the point picker. A phase can carry several composed effects
-/// (e.g. fade + slide); an empty list means no animation for that phase.
+/// The picker's result: the chosen enter, leave and loop animations, the custom
+/// slide point each phase travels from (a canvas fraction, `null` for a plain
+/// edge slide), the phase on screen when the sheet closed, and whether it
+/// closed to hand over to the point picker. A phase can carry several composed
+/// effects (e.g. fade + slide); an empty list means no animation for that
+/// phase.
 typedef _LayerAnimationResult = ({
   List<LayerAnimation> enter,
   List<LayerAnimation> leave,
+  List<LayerAnimation> loop,
   Offset? enterPoint,
   Offset? leavePoint,
   AnimationPhase phase,
   bool pickPoint,
 });
 
-/// Stateful picker body. Edits the enter and leave animations independently via
-/// an Enter|Leave toggle; pops a [_LayerAnimationResult] on confirm.
+/// Stateful picker body. Edits the enter, loop and leave animations
+/// independently via an Enter|Loop|Leave toggle; pops a [_LayerAnimationResult]
+/// on confirm.
 @visibleForTesting
 class LayerAnimationPickerView extends StatefulWidget {
   const LayerAnimationPickerView({
     required this.initialEnter,
     required this.initialLeave,
+    this.initialLoop = const [],
+    this.allowTextReveal = false,
     this.initialEnterPoint,
     this.initialLeavePoint,
     this.initialPhase = AnimationPhase.animateIn,
@@ -192,6 +219,13 @@ class LayerAnimationPickerView extends StatefulWidget {
 
   final List<LayerAnimation> initialEnter;
   final List<LayerAnimation> initialLeave;
+
+  /// Animations that repeat while the layer is visible.
+  final List<LayerAnimation> initialLoop;
+
+  /// Whether the typewriter and word-by-word reveals are offered, which only
+  /// a text layer can play.
+  final bool allowTextReveal;
 
   /// Where the enter slide starts, as a canvas fraction. `null` slides in from
   /// a canvas edge.
@@ -232,21 +266,43 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
 
   late _PhaseConfig _enter;
   late _PhaseConfig _leave;
+  late _PhaseConfig _loop;
 
-  /// Tiles shown in the type row. `null` is the "None" tile (clears the phase).
-  static const _typeOptions = <LayerAnimationType?>[
+  /// Tiles shown in the type row for the active phase. `null` is the "None"
+  /// tile (clears the phase).
+  ///
+  /// A loop offers only what reads well over and over: a wiggle, a hop and a
+  /// pulse. Fade (a blink) and slide (back and forth across the frame) are
+  /// left out, and so are the text reveals, which only a text layer plays.
+  List<LayerAnimationType?> get _typeOptions => [
     null,
-    LayerAnimationType.fade,
-    LayerAnimationType.slide,
-    LayerAnimationType.scale,
+    if (_phase == AnimationPhase.loop) ...const [
+      LayerAnimationType.wiggle,
+      LayerAnimationType.bounce,
+      LayerAnimationType.scale,
+    ] else ...[
+      LayerAnimationType.fade,
+      LayerAnimationType.slide,
+      LayerAnimationType.scale,
+      LayerAnimationType.bounce,
+      LayerAnimationType.wiggle,
+      if (widget.allowTextReveal) ...const [
+        LayerAnimationType.typewriter,
+        LayerAnimationType.wordByWord,
+      ],
+    ],
   ];
 
   /// Stable order in which selected effects are emitted so composition
-  /// (fade → slide → scale) is deterministic.
+  /// (fade → slide → scale → wiggle → bounce → reveal) is deterministic.
   static const _composableTypes = <LayerAnimationType>[
     LayerAnimationType.fade,
     LayerAnimationType.slide,
     LayerAnimationType.scale,
+    LayerAnimationType.wiggle,
+    LayerAnimationType.bounce,
+    LayerAnimationType.typewriter,
+    LayerAnimationType.wordByWord,
   ];
 
   @override
@@ -260,6 +316,10 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
     _leave = _PhaseConfig.fromAnimations(
       widget.initialLeave,
       slideFrom: widget.initialLeavePoint,
+    );
+    _loop = _PhaseConfig.fromAnimations(
+      widget.initialLoop,
+      phase: AnimationPhase.loop,
     );
     _controller = AnimationController(
       vsync: this,
@@ -288,20 +348,30 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
     super.dispose();
   }
 
-  _PhaseConfig get _active =>
-      _phase == AnimationPhase.animateIn ? _enter : _leave;
+  _PhaseConfig get _active => switch (_phase) {
+    AnimationPhase.animateIn || AnimationPhase.animateInOut => _enter,
+    AnimationPhase.animateOut => _leave,
+    AnimationPhase.loop => _loop,
+  };
 
   void _updateActive(_PhaseConfig Function(_PhaseConfig) update) {
     setState(() {
-      if (_phase == AnimationPhase.animateIn) {
-        _enter = update(_enter);
-      } else {
-        _leave = update(_leave);
+      switch (_phase) {
+        case AnimationPhase.animateIn:
+        case AnimationPhase.animateInOut:
+          _enter = update(_enter);
+        case AnimationPhase.animateOut:
+          _leave = update(_leave);
+        case AnimationPhase.loop:
+          _loop = update(_loop);
       }
     });
   }
 
   int get _maxMs => widget.maxDurationMs;
+
+  int get _minMs =>
+      _phase == AnimationPhase.loop ? _minLoopDurationMs : _minDurationMs;
 
   List<LayerAnimation> _build(_PhaseConfig config, AnimationPhase phase) {
     // A custom point overrides the direction wherever it is attached, but a
@@ -326,6 +396,12 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
             slideDirection: type == LayerAnimationType.slide ? direction : null,
             scaleFrom: type == LayerAnimationType.scale
                 ? config.scaleFrom
+                : null,
+            wiggleAngle: type == LayerAnimationType.wiggle
+                ? config.wiggleAngle
+                : null,
+            bounceHeight: type == LayerAnimationType.bounce
+                ? config.bounceHeight
                 : null,
           ),
     ];
@@ -369,7 +445,7 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
                         final type = _typeOptions[index];
                         return _LayerTypeTile(
                           type: type,
-                          label: _typeLabel(l10n, type),
+                          label: _typeLabel(l10n, type, _phase),
                           selected: type == null
                               ? active.types.isEmpty
                               : active.types.contains(type),
@@ -378,9 +454,13 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
                           direction: active.direction,
                           slideVector: _travelOf(active),
                           scaleFrom: active.scaleFrom,
+                          wiggleAngle: active.wiggleAngle,
+                          bounceHeight: active.bounceHeight,
                           curve: active.curve,
                           durationMs: active.duration.inMilliseconds,
-                          onTap: () => _updateActive((c) => c.toggled(type)),
+                          onTap: () => _updateActive(
+                            (c) => c.toggled(type, phase: _phase),
+                          ),
                         );
                       },
                     ),
@@ -413,13 +493,12 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
                           const SizedBox(height: 8),
                           DivineSlider(
                             value: active.duration.inMilliseconds
-                                .clamp(_minDurationMs, _maxMs)
+                                .clamp(_minMs, _maxMs)
                                 .toDouble(),
-                            min: _minDurationMs.toDouble(),
+                            min: _minMs.toDouble(),
                             max: _maxMs.toDouble(),
-                            divisions:
-                                ((_maxMs - _minDurationMs) ~/ _durationStepMs)
-                                    .clamp(1, 1 << 20),
+                            divisions: ((_maxMs - _minMs) ~/ _durationStepMs)
+                                .clamp(1, 1 << 20),
                             onChanged: (value) => _updateActive(
                               (c) => c.copyWith(
                                 duration: Duration(milliseconds: value.round()),
@@ -475,7 +554,9 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
                               mainAxisAlignment: .spaceBetween,
                               children: [
                                 SectionLabel(
-                                  l10n.videoEditorLayerAnimationScaleFrom,
+                                  _phase == AnimationPhase.loop
+                                      ? l10n.videoEditorLayerAnimationPulseTo
+                                      : l10n.videoEditorLayerAnimationScaleFrom,
                                 ),
                                 Text(
                                   '${(active.scaleFrom * 100).round()}%',
@@ -492,6 +573,73 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
                               divisions: 20,
                               onChanged: (value) => _updateActive(
                                 (c) => c.copyWith(scaleFrom: value / 100),
+                              ),
+                            ),
+                          ],
+                          if (active.types.contains(
+                            LayerAnimationType.wiggle,
+                          )) ...[
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: .spaceBetween,
+                              children: [
+                                SectionLabel(
+                                  l10n.videoEditorLayerAnimationWiggleAngle,
+                                ),
+                                Text(
+                                  '${_wiggleDegrees(active.wiggleAngle)}°',
+                                  style: VineTheme.labelSmallFont(
+                                    color: context.vineColors.mutedText,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            DivineSlider(
+                              value: _wiggleDegrees(active.wiggleAngle)
+                                  .clamp(_minWiggleDegrees, _maxWiggleDegrees)
+                                  .toDouble(),
+                              min: _minWiggleDegrees.toDouble(),
+                              max: _maxWiggleDegrees.toDouble(),
+                              divisions: _maxWiggleDegrees - _minWiggleDegrees,
+                              onChanged: (value) => _updateActive(
+                                (c) => c.copyWith(
+                                  wiggleAngle: value * math.pi / 180,
+                                ),
+                              ),
+                            ),
+                          ],
+                          if (active.types.contains(
+                            LayerAnimationType.bounce,
+                          )) ...[
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: .spaceBetween,
+                              children: [
+                                SectionLabel(
+                                  l10n.videoEditorLayerAnimationBounceHeight,
+                                ),
+                                Text(
+                                  '${(active.bounceHeight * 100).round()}%',
+                                  style: VineTheme.labelSmallFont(
+                                    color: context.vineColors.mutedText,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            DivineSlider(
+                              value: (active.bounceHeight * 100).clamp(
+                                _minBouncePercent.toDouble(),
+                                _maxBouncePercent.toDouble(),
+                              ),
+                              min: _minBouncePercent.toDouble(),
+                              max: _maxBouncePercent.toDouble(),
+                              divisions:
+                                  (_maxBouncePercent - _minBouncePercent) ~/
+                                  _bounceStepPercent,
+                              onChanged: (value) => _updateActive(
+                                (c) => c.copyWith(bounceHeight: value / 100),
                               ),
                             ),
                           ],
@@ -534,27 +682,41 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
   _LayerAnimationResult _result({bool pickPoint = false}) => (
     enter: _build(_enter, AnimationPhase.animateIn),
     leave: _build(_leave, AnimationPhase.animateOut),
+    loop: _build(_loop, AnimationPhase.loop),
     enterPoint: _enter.slideFrom,
     leavePoint: _leave.slideFrom,
     phase: _phase,
     pickPoint: pickPoint,
   );
 
-  String _typeLabel(AppLocalizations l10n, LayerAnimationType? type) =>
-      switch (type) {
-        null => l10n.videoEditorTransitionNone,
-        LayerAnimationType.fade => l10n.videoEditorLayerAnimationFade,
-        LayerAnimationType.slide => l10n.videoEditorTransitionSlide,
-        LayerAnimationType.scale => l10n.videoEditorLayerAnimationScale,
-      };
+  String _typeLabel(
+    AppLocalizations l10n,
+    LayerAnimationType? type,
+    AnimationPhase phase,
+  ) => switch (type) {
+    null => l10n.videoEditorTransitionNone,
+    LayerAnimationType.fade => l10n.videoEditorLayerAnimationFade,
+    LayerAnimationType.slide => l10n.videoEditorTransitionSlide,
+    LayerAnimationType.scale when phase == AnimationPhase.loop =>
+      l10n.videoEditorLayerAnimationPulse,
+    LayerAnimationType.scale => l10n.videoEditorLayerAnimationScale,
+    LayerAnimationType.wiggle => l10n.videoEditorLayerAnimationWiggle,
+    LayerAnimationType.bounce => l10n.videoEditorLayerAnimationBounce,
+    LayerAnimationType.typewriter => l10n.videoEditorLayerAnimationTypewriter,
+    LayerAnimationType.wordByWord => l10n.videoEditorLayerAnimationWordByWord,
+  };
 }
+
+/// [angle] in whole degrees, as the tilt slider shows it.
+int _wiggleDegrees(double angle) => (angle * 180 / math.pi).round();
 
 /// Per-phase editable animation config.
 ///
 /// [types] is the set of effects active for the phase — a phase can combine
 /// several (e.g. fade + slide). [duration] and [curve] are shared by every
-/// effect; [direction], [slideFrom] and [scaleFrom] apply only when slide /
-/// scale is in [types].
+/// effect; [direction], [slideFrom], [scaleFrom], [wiggleAngle] and
+/// [bounceHeight] apply only when slide / scale / wiggle / bounce is in
+/// [types].
 class _PhaseConfig {
   const _PhaseConfig({
     required this.types,
@@ -562,46 +724,69 @@ class _PhaseConfig {
     required this.curve,
     required this.direction,
     required this.scaleFrom,
+    this.wiggleAngle = LayerAnimation.defaultWiggleAngle,
+    this.bounceHeight = LayerAnimation.defaultBounceHeight,
     this.slideFrom,
   });
 
   /// Rebuilds the config from a phase's existing animations. [duration] and
-  /// [curve] come from the first animation; [direction] / [scaleFrom] from the
-  /// first slide / scale animation. (The picker edits these as shared values,
-  /// so per-effect differences set externally collapse on edit.)
+  /// [curve] come from the first animation; [direction] / [scaleFrom] /
+  /// [wiggleAngle] / [bounceHeight] from the first animation of their type.
+  /// (The picker edits these as shared values, so per-effect differences set
+  /// externally collapse on edit.)
   ///
   /// [slideFrom] comes from the layer instead of the animations: the custom
   /// point is stored beside them, because the animations' own pixel copy is
   /// not the source of truth (see [LayerSlidePoints]).
+  ///
+  /// A [phase] without animations starts from that phase's defaults: a loop
+  /// pulses down to 80 % rather than to nothing.
   factory _PhaseConfig.fromAnimations(
     List<LayerAnimation> animations, {
     Offset? slideFrom,
+    AnimationPhase phase = AnimationPhase.animateIn,
   }) {
     final types = <LayerAnimationType>{};
     Duration? duration;
     AnimationCurve? curve;
     SlideDirection? direction;
     double? scaleFrom;
+    double? wiggleAngle;
+    double? bounceHeight;
     for (final animation in animations) {
       types.add(animation.type);
       duration ??= animation.duration;
       curve ??= animation.curve;
-      if (animation.type == LayerAnimationType.slide) {
-        direction ??= animation.slideDirection;
-      }
-      if (animation.type == LayerAnimationType.scale) {
-        scaleFrom ??= animation.scaleFrom;
+      switch (animation.type) {
+        case LayerAnimationType.slide:
+          direction ??= animation.slideDirection;
+        case LayerAnimationType.scale:
+          scaleFrom ??= animation.scaleFrom;
+        case LayerAnimationType.wiggle:
+          wiggleAngle ??= animation.wiggleAngle;
+        case LayerAnimationType.bounce:
+          bounceHeight ??= animation.bounceHeight;
+        case LayerAnimationType.fade:
+        case LayerAnimationType.typewriter:
+        case LayerAnimationType.wordByWord:
+          break;
       }
     }
+    final loop = phase == AnimationPhase.loop;
     return _PhaseConfig(
       types: types,
       duration: duration ?? _defaultDuration,
       curve: curve ?? AnimationCurve.easeOut,
       direction: direction ?? SlideDirection.left,
-      scaleFrom: scaleFrom ?? 0.0,
+      scaleFrom: scaleFrom ?? (loop ? _loopScaleFrom : 0.0),
+      wiggleAngle: wiggleAngle ?? LayerAnimation.defaultWiggleAngle,
+      bounceHeight: bounceHeight ?? LayerAnimation.defaultBounceHeight,
       slideFrom: slideFrom,
     );
   }
+
+  /// How far a pulse shrinks the layer by default.
+  static const _loopScaleFrom = 0.8;
 
   final Set<LayerAnimationType> types;
   final Duration duration;
@@ -609,16 +794,86 @@ class _PhaseConfig {
   final SlideDirection direction;
   final double scaleFrom;
 
+  /// How far a wiggle tilts, in radians.
+  final double wiggleAngle;
+
+  /// How high a bounce lifts the layer, as a multiple of its height.
+  final double bounceHeight;
+
   /// Where the slide starts (enter) or ends (leave), as a canvas fraction.
   /// `null` travels to or from the canvas edge [direction] names.
   final Offset? slideFrom;
 
-  /// Adds or removes [type] from [types]; a `null` [type] clears the set (None).
-  _PhaseConfig toggled(LayerAnimationType? type) {
+  /// Adds or removes [type] from [types]; a `null` [type] clears the set
+  /// (None).
+  ///
+  /// The two text reveals exclude each other: a text cannot type itself out
+  /// letter by letter and word by word at once. The first effect added to an
+  /// empty [phase] brings the timing it looks right with — a bounce lands with
+  /// a bounce curve, a typewriter types at an even pace, a loop wiggles like a
+  /// pendulum — since the shared curve and duration have nothing to keep yet.
+  _PhaseConfig toggled(
+    LayerAnimationType? type, {
+    required AnimationPhase phase,
+  }) {
     if (type == null) return copyWith(types: const {});
     final next = Set<LayerAnimationType>.from(types);
-    if (!next.add(type)) next.remove(type);
-    return copyWith(types: next);
+    if (next.remove(type)) return copyWith(types: next);
+
+    if (type == LayerAnimationType.typewriter) {
+      next.remove(LayerAnimationType.wordByWord);
+    } else if (type == LayerAnimationType.wordByWord) {
+      next.remove(LayerAnimationType.typewriter);
+    }
+    next.add(type);
+    if (types.isNotEmpty) return copyWith(types: next);
+
+    final timing = _defaultTiming(type, phase);
+    return copyWith(
+      types: next,
+      duration: timing.duration,
+      curve: timing.curve,
+    );
+  }
+
+  /// The duration and curve a phase starts with when [type] is its first
+  /// effect.
+  static ({Duration duration, AnimationCurve curve}) _defaultTiming(
+    LayerAnimationType type,
+    AnimationPhase phase,
+  ) {
+    if (phase == AnimationPhase.loop) {
+      return switch (type) {
+        // Fastest at rest and slowest at the turning point: a pendulum, a hop.
+        LayerAnimationType.wiggle => (
+          duration: const Duration(milliseconds: 600),
+          curve: AnimationCurve.easeIn,
+        ),
+        LayerAnimationType.bounce => (
+          duration: const Duration(milliseconds: 700),
+          curve: AnimationCurve.easeIn,
+        ),
+        _ => (
+          duration: const Duration(milliseconds: 1000),
+          curve: AnimationCurve.easeInOut,
+        ),
+      };
+    }
+    return switch (type) {
+      LayerAnimationType.bounce => (
+        duration: const Duration(milliseconds: 800),
+        curve: AnimationCurve.bounceOut,
+      ),
+      LayerAnimationType.wiggle => (
+        duration: const Duration(milliseconds: 800),
+        curve: AnimationCurve.elasticOut,
+      ),
+      LayerAnimationType.typewriter || LayerAnimationType.wordByWord => (
+        duration: const Duration(seconds: 1),
+        curve: AnimationCurve.linear,
+      ),
+      _ => (duration: _defaultDuration, curve: AnimationCurve.easeOut),
+    };
   }
 
   /// Switches the phase back to an edge slide in [direction], dropping any
@@ -630,6 +885,8 @@ class _PhaseConfig {
     curve: curve,
     direction: direction,
     scaleFrom: scaleFrom,
+    wiggleAngle: wiggleAngle,
+    bounceHeight: bounceHeight,
   );
 
   _PhaseConfig copyWith({
@@ -638,17 +895,21 @@ class _PhaseConfig {
     AnimationCurve? curve,
     SlideDirection? direction,
     double? scaleFrom,
+    double? wiggleAngle,
+    double? bounceHeight,
   }) => _PhaseConfig(
     types: types ?? this.types,
     duration: duration ?? this.duration,
     curve: curve ?? this.curve,
     direction: direction ?? this.direction,
     scaleFrom: scaleFrom ?? this.scaleFrom,
+    wiggleAngle: wiggleAngle ?? this.wiggleAngle,
+    bounceHeight: bounceHeight ?? this.bounceHeight,
     slideFrom: slideFrom,
   );
 }
 
-/// Enter|Leave segmented toggle.
+/// Enter|Loop|Leave segmented toggle.
 class _PhaseToggle extends StatelessWidget {
   const _PhaseToggle({required this.phase, required this.onChanged});
 
@@ -671,6 +932,11 @@ class _PhaseToggle extends StatelessWidget {
             label: l10n.videoEditorLayerAnimationEnter,
             selected: phase == AnimationPhase.animateIn,
             onTap: () => onChanged(AnimationPhase.animateIn),
+          ),
+          _PhaseSegment(
+            label: l10n.videoEditorLayerAnimationLoop,
+            selected: phase == AnimationPhase.loop,
+            onTap: () => onChanged(AnimationPhase.loop),
           ),
           _PhaseSegment(
             label: l10n.videoEditorLayerAnimationLeave,
@@ -772,6 +1038,8 @@ class _LayerTypeTile extends StatelessWidget {
     required this.direction,
     required this.slideVector,
     required this.scaleFrom,
+    required this.wiggleAngle,
+    required this.bounceHeight,
     required this.curve,
     required this.durationMs,
     required this.onTap,
@@ -788,9 +1056,38 @@ class _LayerTypeTile extends StatelessWidget {
   /// canvas proportions. `null` previews the edge slide [direction] names.
   final Offset? slideVector;
   final double scaleFrom;
+  final double wiggleAngle;
+  final double bounceHeight;
   final AnimationCurve curve;
   final int durationMs;
   final VoidCallback onTap;
+
+  /// Where the preview stands at the controller's [value]: how present the
+  /// placeholder is (1 = at rest, 0 = fully away) and the side a wiggle tilts
+  /// to.
+  ///
+  /// Enter and leave play once over [durationMs] of the loop with a hold on
+  /// each end. A loop repeats every [durationMs] for the whole preview loop,
+  /// running out and back like the export: a wiggle swings to one side in the
+  /// first half of each cycle and to the other in the second.
+  ({double presence, double swing}) _state(double value) {
+    final flutterCurve = flutterCurveFor(curve);
+    if (phase != AnimationPhase.loop) {
+      final progress = flutterCurve.transform(_holdProgress(value, durationMs));
+      return (
+        presence: phase == AnimationPhase.animateIn ? progress : 1 - progress,
+        swing: 1,
+      );
+    }
+    if (durationMs <= 0) return (presence: 1, swing: 1);
+    final cycle = (value * _loopMs % durationMs) / durationMs;
+    final wiggle = type == LayerAnimationType.wiggle;
+    final half = wiggle ? (2 * cycle) % 1 : cycle;
+    return (
+      presence: flutterCurve.transform((1 - 2 * half).abs()),
+      swing: wiggle && cycle >= 0.5 ? -1 : 1,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -830,16 +1127,19 @@ class _LayerTypeTile extends StatelessWidget {
                     child: ExcludeSemantics(
                       child: AnimatedBuilder(
                         animation: controller,
-                        builder: (context, _) => _LayerEffect(
-                          type: type,
-                          phase: phase,
-                          direction: direction,
-                          slideVector: slideVector,
-                          scaleFrom: scaleFrom,
-                          progress: flutterCurveFor(curve).transform(
-                            _holdProgress(controller.value, durationMs),
-                          ),
-                        ),
+                        builder: (context, _) {
+                          final state = _state(controller.value);
+                          return _LayerEffect(
+                            type: type,
+                            direction: direction,
+                            slideVector: slideVector,
+                            scaleFrom: scaleFrom,
+                            wiggleAngle: wiggleAngle,
+                            bounceHeight: bounceHeight,
+                            presence: state.presence,
+                            swing: state.swing,
+                          );
+                        },
                       ),
                     ),
                   ),
@@ -861,32 +1161,33 @@ class _LayerTypeTile extends StatelessWidget {
   }
 }
 
-/// Renders a placeholder layer with [type] applied at [progress] (0..1) for the
-/// active [phase].
+/// Renders a placeholder layer with [type] applied at [presence] (1 = at rest,
+/// 0 = fully away). [swing] is the side a wiggle tilts to.
 class _LayerEffect extends StatelessWidget {
   const _LayerEffect({
     required this.type,
-    required this.phase,
     required this.direction,
     required this.slideVector,
     required this.scaleFrom,
-    required this.progress,
+    required this.wiggleAngle,
+    required this.bounceHeight,
+    required this.presence,
+    required this.swing,
   });
 
   final LayerAnimationType? type;
-  final AnimationPhase phase;
   final SlideDirection direction;
   final Offset? slideVector;
   final double scaleFrom;
-  final double progress;
+  final double wiggleAngle;
+  final double bounceHeight;
+  final double presence;
+  final double swing;
 
   @override
   Widget build(BuildContext context) {
-    // Presence: 1 = fully on screen, 0 = gone. Enter ramps up, leave ramps down.
-    final presence = phase == AnimationPhase.animateIn
-        ? progress
-        : 1 - progress;
     const layer = _PlaceholderLayer();
+    final away = 1 - presence;
     return DecoratedBox(
       // Tinted backdrop (not a flat surface) so the placeholder layer reads
       // clearly against it during fade/slide/scale.
@@ -916,8 +1217,28 @@ class _LayerEffect extends StatelessWidget {
           ),
           LayerAnimationType.slide => Center(
             child: Transform.translate(
-              offset: _previewSlideOffset(1 - presence),
+              offset: _previewSlideOffset(away),
               child: layer,
+            ),
+          ),
+          LayerAnimationType.wiggle => Center(
+            child: Transform.rotate(
+              angle: swing * away * wiggleAngle,
+              child: layer,
+            ),
+          ),
+          LayerAnimationType.bounce => Center(
+            child: Transform.translate(
+              // The placeholder is 30 tall; a bounce lifts by its height.
+              offset: Offset(0, -away * bounceHeight * 30),
+              child: layer,
+            ),
+          ),
+          LayerAnimationType.typewriter ||
+          LayerAnimationType.wordByWord => Center(
+            child: _RevealPlaceholder(
+              byWord: type == LayerAnimationType.wordByWord,
+              presence: presence,
             ),
           ),
         },
@@ -942,6 +1263,47 @@ class _LayerEffect extends StatelessWidget {
       SlideDirection.top => Offset(0, -away * _previewHeight),
       SlideDirection.bottom => Offset(0, away * _previewHeight),
     };
+  }
+}
+
+/// Sample letters revealed one at a time, or a word at a time when [byWord],
+/// as far as [presence] (1 = all) has come.
+///
+/// Decorative, like the other placeholders: the letters are not read out and
+/// stand for no particular language.
+class _RevealPlaceholder extends StatelessWidget {
+  const _RevealPlaceholder({required this.byWord, required this.presence});
+
+  final bool byWord;
+  final double presence;
+
+  /// The sample's steps: three letters, or two words of two.
+  static const _letters = ['A', 'b', 'c'];
+  static const _words = ['Ab', 'cd'];
+
+  @override
+  Widget build(BuildContext context) {
+    final steps = byWord ? _words : _letters;
+    final shown = (presence * steps.length - 1e-9).ceil().clamp(
+      0,
+      steps.length,
+    );
+    final style = VineTheme.labelLargeFont(
+      color: context.vineColors.primaryText,
+    );
+    return Text.rich(
+      TextSpan(
+        children: [
+          for (final (index, step) in steps.indexed)
+            TextSpan(
+              text: byWord && index > 0 ? ' $step' : step,
+              style: index < shown
+                  ? style
+                  : style.copyWith(color: VineTheme.transparent),
+            ),
+        ],
+      ),
+    );
   }
 }
 

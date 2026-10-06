@@ -35,6 +35,13 @@ void main() {
     curve: pve.AnimationCurve.easeIn,
     scaleFrom: 0.5,
   );
+  const loopWiggle = pve.LayerAnimation(
+    type: pve.LayerAnimationType.wiggle,
+    phase: pve.AnimationPhase.loop,
+    duration: Duration(milliseconds: 600),
+    curve: pve.AnimationCurve.easeIn,
+    wiggleAngle: 0.25,
+  );
   const enterPoint = Offset(-0.4, -0.3);
   const effects = TextEffects(
     outlineThickness: 0.5,
@@ -57,6 +64,7 @@ void main() {
     effects: effects,
     enter: [enterFade, enterSlide],
     leave: [leaveScale],
+    loop: [loopWiggle],
     enterPoint: enterPoint,
   );
 
@@ -73,7 +81,12 @@ void main() {
           fontScale: 1.6,
           outlineWidth: effects.outlineWidth,
           outlineColor: effects.outlineColor,
-          animations: [enterFade, enterSlide, leaveScale].toLayerAnimations(),
+          animations: [
+            enterFade,
+            enterSlide,
+            leaveScale,
+            loopWiggle,
+          ].toLayerAnimations(),
           meta: const LayerSlidePoints(enter: enterPoint).applyTo(null),
         );
 
@@ -154,6 +167,45 @@ void main() {
         expect(TitleStyle.fromJson({...json, 'enter': enter}), isNull);
       });
 
+      test('round-trips a text reveal and a bounce height', () {
+        const revealing = TitleStyle(
+          fontIndex: 0,
+          color: Color(0xFFFFFFFF),
+          background: Color(0xFF000000),
+          colorMode: LayerBackgroundMode.onlyColor,
+          enter: [
+            pve.LayerAnimation(
+              type: pve.LayerAnimationType.typewriter,
+              phase: pve.AnimationPhase.animateIn,
+              duration: Duration(seconds: 1),
+            ),
+          ],
+          leave: [
+            pve.LayerAnimation(
+              type: pve.LayerAnimationType.bounce,
+              phase: pve.AnimationPhase.animateOut,
+              duration: Duration(milliseconds: 800),
+              curve: pve.AnimationCurve.bounceOut,
+              bounceHeight: 1.5,
+            ),
+          ],
+        );
+
+        expect(
+          TitleStyle.fromJson(jsonDecode(jsonEncode(revealing.toJson()))),
+          equals(revealing),
+        );
+      });
+
+      test('rejects a wrongly typed wiggle angle rather than throwing', () {
+        final json = style.toJson();
+        final loop = [
+          {...loopWiggle.toMap(), 'wiggleAngle': 'wide'},
+        ];
+
+        expect(TitleStyle.fromJson({...json, 'loop': loop}), isNull);
+      });
+
       test('rejects a wrongly typed font scale rather than throwing', () {
         final json = style.toJson();
 
@@ -193,6 +245,7 @@ void main() {
         expect(decoded?.effects, TextEffects.none);
         expect(decoded?.enter, isEmpty);
         expect(decoded?.leave, isEmpty);
+        expect(decoded?.loop, isEmpty);
         // An index past the catalogue still resolves to a font.
         expect(decoded?.font, VideoEditorConstants.textFonts.last);
       });

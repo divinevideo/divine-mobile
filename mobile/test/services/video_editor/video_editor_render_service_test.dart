@@ -345,7 +345,10 @@ void main() {
         expect(layers.map((l) => l.size).toSet(), hasLength(1));
       });
 
-      test('play the enter animation first and the leave animation last', () {
+      // Each frame carries every animation and counts it from the layer's own
+      // range, so a fade or a wiggle runs on across the words instead of being
+      // cut off at the first frame or restarting at each one.
+      test('play every animation over the whole layer on every frame', () {
         final layers = VideoEditorRenderService.buildImageLayers(
           capturedLayers: [karaoke()],
           bodySize: const Size(100, 200),
@@ -354,14 +357,38 @@ void main() {
           timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
         )!;
 
-        expect(
-          layers.map((l) => l.animations.map((a) => a.phase.name).toList()),
-          [
-            ['animateIn'],
-            <String>[],
-            ['animateOut'],
+        expect(layers, hasLength(3));
+        for (final layer in layers) {
+          expect(layer.animations.map((a) => a.phase.name), [
+            'animateIn',
+            'animateOut',
+          ]);
+          expect(layer.animationStartTime, const Duration(seconds: 1));
+          expect(layer.animationEndTime, const Duration(seconds: 3));
+        }
+      });
+
+      test('leave the range unset on a layer that is not split', () {
+        final layers = VideoEditorRenderService.buildImageLayers(
+          capturedLayers: [
+            pie.ExportedLayer(
+              layer: pie.TextLayer(
+                text: 'Hello',
+                startTime: const Duration(seconds: 1),
+                endTime: const Duration(seconds: 3),
+              ),
+              bytes: Uint8List.fromList(const [0]),
+              logicalSize: const Size(10, 20),
+            ),
           ],
-        );
+          bodySize: const Size(100, 200),
+          videoSize: const Size(300, 600),
+          targetAspectRatio: vertical,
+          timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
+        )!;
+
+        expect(layers.single.animationStartTime, isNull);
+        expect(layers.single.animationEndTime, isNull);
       });
     });
   });

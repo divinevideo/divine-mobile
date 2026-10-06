@@ -34,6 +34,9 @@ void main() {
       WidgetTester tester, {
       List<editor.LayerAnimation> initialEnter = const [],
       List<editor.LayerAnimation> initialLeave = const [],
+      List<editor.LayerAnimation> initialLoop = const [],
+      bool allowTextReveal = false,
+      double viewWidth = 500,
       double viewHeight = 1600,
       bool disableAnimations = false,
       ThemeData? theme,
@@ -47,7 +50,7 @@ void main() {
       // Tall viewport by default so the full picker (type tiles + curve wrap +
       // direction row + Done) fits without scrolling; individual tests shrink
       // it to exercise the scroll/pinned-Done behaviour.
-      tester.view.physicalSize = Size(500, viewHeight);
+      tester.view.physicalSize = Size(viewWidth, viewHeight);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
@@ -73,6 +76,8 @@ void main() {
                             body: LayerAnimationPickerView(
                               initialEnter: initialEnter,
                               initialLeave: initialLeave,
+                              initialLoop: initialLoop,
+                              allowTextReveal: allowTextReveal,
                               initialEnterPoint: initialEnterPoint,
                               initialLeavePoint: initialLeavePoint,
                               layerAnchor: layerAnchor,
@@ -179,7 +184,7 @@ void main() {
         const colors = VineTheme.lightColors;
         // The type tiles are the only width-2 borders in this sheet, so the
         // rings can be asserted by predicate: "None" is selected initially,
-        // while Fade/Slide/Scale are not.
+        // while Fade/Slide/Scale/Bounce/Wiggle are not.
         Finder tileRings(Color ring) => find.byWidgetPredicate((w) {
           if (w is! DecoratedBox || w.decoration is! BoxDecoration) {
             return false;
@@ -191,7 +196,7 @@ void main() {
         });
 
         expect(tileRings(colors.accentBrand), findsOneWidget);
-        expect(tileRings(colors.controlOutline), findsNWidgets(3));
+        expect(tileRings(colors.controlOutline), findsNWidgets(5));
       },
     );
 
@@ -262,6 +267,148 @@ void main() {
       expect(result?.enter.single.type, editor.LayerAnimationType.fade);
       expect(result?.leave.single.type, editor.LayerAnimationType.scale);
       expect(result?.leave.single.phase, editor.AnimationPhase.animateOut);
+    });
+
+    group('loop', () {
+      testWidgets('offers a wiggle, a hop and a pulse', (tester) async {
+        await openPicker(tester);
+
+        await tester.tap(find.text(l10n.videoEditorLayerAnimationLoop));
+        await tester.pump();
+
+        expect(find.text(l10n.videoEditorLayerAnimationWiggle), findsOneWidget);
+        expect(find.text(l10n.videoEditorLayerAnimationBounce), findsOneWidget);
+        expect(find.text(l10n.videoEditorLayerAnimationPulse), findsOneWidget);
+        expect(find.text(l10n.videoEditorLayerAnimationFade), findsNothing);
+        expect(find.text(l10n.videoEditorTransitionSlide), findsNothing);
+      });
+
+      testWidgets('builds a wiggle that swings like a pendulum', (
+        tester,
+      ) async {
+        await openPicker(tester);
+
+        await tester.tap(find.text(l10n.videoEditorLayerAnimationLoop));
+        await tester.pump();
+        await tester.tap(find.text(l10n.videoEditorLayerAnimationWiggle));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        expect(
+          find.text(l10n.videoEditorLayerAnimationWiggleAngle),
+          findsOneWidget,
+        );
+        await tester.tap(find.text(l10n.videoEditorDoneLabel));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        final wiggle = result!.loop.single;
+        expect(wiggle.type, editor.LayerAnimationType.wiggle);
+        expect(wiggle.phase, editor.AnimationPhase.loop);
+        expect(wiggle.curve, editor.AnimationCurve.easeIn);
+        expect(wiggle.wiggleAngle, editor.LayerAnimation.defaultWiggleAngle);
+        expect(result!.enter, isEmpty);
+        expect(result!.leave, isEmpty);
+      });
+
+      testWidgets('keeps the loop it was opened with', (tester) async {
+        const bounce = editor.LayerAnimation(
+          type: editor.LayerAnimationType.bounce,
+          phase: editor.AnimationPhase.loop,
+          duration: Duration(milliseconds: 700),
+          curve: editor.AnimationCurve.easeIn,
+          bounceHeight: 1.2,
+        );
+        await openPicker(tester, initialLoop: const [bounce]);
+
+        await tester.tap(find.text(l10n.videoEditorDoneLabel));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        expect(result!.loop, [bounce]);
+      });
+    });
+
+    group('text reveals', () {
+      testWidgets('are not offered for another layer', (tester) async {
+        await openPicker(tester, viewWidth: 800);
+
+        expect(
+          find.text(l10n.videoEditorLayerAnimationTypewriter),
+          findsNothing,
+        );
+      });
+
+      testWidgets('are offered for a text layer', (tester) async {
+        await openPicker(tester, viewWidth: 800, allowTextReveal: true);
+
+        expect(
+          find.text(l10n.videoEditorLayerAnimationTypewriter),
+          findsOneWidget,
+        );
+        expect(
+          find.text(l10n.videoEditorLayerAnimationWordByWord),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('type at an even pace and exclude each other', (
+        tester,
+      ) async {
+        await openPicker(tester, viewWidth: 800, allowTextReveal: true);
+
+        await tester.tap(find.text(l10n.videoEditorLayerAnimationTypewriter));
+        await tester.pump();
+        await tester.tap(find.text(l10n.videoEditorLayerAnimationWordByWord));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        await tester.tap(find.text(l10n.videoEditorDoneLabel));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        final reveal = result!.enter.single;
+        expect(reveal.type, editor.LayerAnimationType.wordByWord);
+        expect(reveal.curve, editor.AnimationCurve.linear);
+        expect(reveal.duration, const Duration(seconds: 1));
+      });
+    });
+
+    testWidgets('lands a first bounce with a bounce curve', (tester) async {
+      await openPicker(tester);
+
+      await tester.tap(find.text(l10n.videoEditorLayerAnimationBounce));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(
+        find.text(l10n.videoEditorLayerAnimationBounceHeight),
+        findsOneWidget,
+      );
+      await tester.tap(find.text(l10n.videoEditorDoneLabel));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+
+      final bounce = result!.enter.single;
+      expect(bounce.type, editor.LayerAnimationType.bounce);
+      expect(bounce.curve, editor.AnimationCurve.bounceOut);
+      expect(bounce.bounceHeight, editor.LayerAnimation.defaultBounceHeight);
+    });
+
+    testWidgets('keeps the timing chosen for the effects already there', (
+      tester,
+    ) async {
+      await openPicker(tester);
+
+      await tester.tap(find.text(l10n.videoEditorLayerAnimationFade));
+      await tester.pump();
+      await tester.tap(find.text(l10n.videoEditorLayerAnimationBounce));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+      await tester.tap(find.text(l10n.videoEditorDoneLabel));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+
+      expect(result!.enter.map((a) => a.curve).toSet(), {
+        editor.AnimationCurve.easeOut,
+      });
     });
 
     testWidgets('shows direction options only for slide', (tester) async {
@@ -701,6 +848,21 @@ void main() {
       return result.captured.single as List<Layer>;
     }
 
+    testWidgets('writes a loop onto the layer', (tester) async {
+      await openEditor(tester, Layer(id: 'l1'));
+
+      await tester.tap(find.text(l10n.videoEditorLayerAnimationLoop));
+      await tester.pump();
+      await tester.tap(find.text(l10n.videoEditorLayerAnimationPulse));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+      await tapDone(tester);
+
+      final pulse = capturedLayers().single.divineLoopAnimations.single;
+      expect(pulse.type, editor.LayerAnimationType.scale);
+      expect(pulse.scaleFrom, 0.8);
+    });
+
     testWidgets('anchors endTime to the window when a leave is added', (
       tester,
     ) async {
@@ -882,6 +1044,7 @@ void main() {
 typedef _LayerAnimationResult = ({
   List<editor.LayerAnimation> enter,
   List<editor.LayerAnimation> leave,
+  List<editor.LayerAnimation> loop,
   Offset? enterPoint,
   Offset? leavePoint,
   editor.AnimationPhase phase,

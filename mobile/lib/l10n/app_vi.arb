@@ -5133,6 +5133,15 @@
     "description": "Layer animation type that scales the layer from a smaller size up to full size (or back)."
   },
   "videoEditorLayerAnimationScaleFrom": "Thu phóng từ",
+  "videoEditorLayerAnimationLoop": "Lặp lại",
+  "videoEditorLayerAnimationWiggle": "Lắc lư",
+  "videoEditorLayerAnimationBounce": "Nảy",
+  "videoEditorLayerAnimationTypewriter": "Máy đánh chữ",
+  "videoEditorLayerAnimationWordByWord": "Từng từ",
+  "videoEditorLayerAnimationPulse": "Nhịp đập",
+  "videoEditorLayerAnimationPulseTo": "Thu nhỏ đến",
+  "videoEditorLayerAnimationWiggleAngle": "Độ nghiêng",
+  "videoEditorLayerAnimationBounceHeight": "Độ cao",
   "@videoEditorLayerAnimationScaleFrom": {
     "description": "Section label above the slider that sets the starting size for a scale animation (0% to 100%)."
   },

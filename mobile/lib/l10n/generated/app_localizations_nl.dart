@@ -9751,6 +9751,33 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => 'Schalen vanaf';
 
   @override
+  String get videoEditorLayerAnimationLoop => 'Lus';
+
+  @override
+  String get videoEditorLayerAnimationWiggle => 'Wiebelen';
+
+  @override
+  String get videoEditorLayerAnimationBounce => 'Stuiteren';
+
+  @override
+  String get videoEditorLayerAnimationTypewriter => 'Typemachine';
+
+  @override
+  String get videoEditorLayerAnimationWordByWord => 'Woord voor woord';
+
+  @override
+  String get videoEditorLayerAnimationPulse => 'Pulseren';
+
+  @override
+  String get videoEditorLayerAnimationPulseTo => 'Krimpen tot';
+
+  @override
+  String get videoEditorLayerAnimationWiggleAngle => 'Kanteling';
+
+  @override
+  String get videoEditorLayerAnimationBounceHeight => 'Hoogte';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'Eigen punt';
 
   @override

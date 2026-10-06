@@ -5133,6 +5133,15 @@
     "description": "Layer animation type that scales the layer from a smaller size up to full size (or back)."
   },
   "videoEditorLayerAnimationScaleFrom": "اسکیل آغاز",
+  "videoEditorLayerAnimationLoop": "لوپ",
+  "videoEditorLayerAnimationWiggle": "ہلنا",
+  "videoEditorLayerAnimationBounce": "اچھلنا",
+  "videoEditorLayerAnimationTypewriter": "ٹائپ رائٹر",
+  "videoEditorLayerAnimationWordByWord": "لفظ بہ لفظ",
+  "videoEditorLayerAnimationPulse": "دھڑکن",
+  "videoEditorLayerAnimationPulseTo": "یہاں تک چھوٹا کریں",
+  "videoEditorLayerAnimationWiggleAngle": "جھکاؤ",
+  "videoEditorLayerAnimationBounceHeight": "اونچائی",
   "@videoEditorLayerAnimationScaleFrom": {
     "description": "Section label above the slider that sets the starting size for a scale animation (0% to 100%)."
   },

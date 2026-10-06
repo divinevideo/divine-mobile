@@ -101,10 +101,11 @@ Every overlay below sits on the timeline, where it can be moved, trimmed to show
 - **Effects:** 21 timeline effects, each with an intensity slider: glitch, block glitch, RGB split, VHS, static, old film, film grain, interference, CRT, pixelate, pixel pulse, shake, zoom pulse, mirror, kaleidoscope, split screen, wave, glow, vignette, strobe and negative flash. A new effect covers the whole video; on the timeline it is a bar that can be moved, trimmed, edited, split, duplicated and deleted, and overlapping effects combine. A flashing effect (strobe or negative flash) starts on a whole second of the exported video (an effect with no whole second before its end is left out of the export) and cannot be duplicated, and only one of them can run at a time, because overlapping ones would pass three flashes a second. Adding one removes every other flashing effect, since a new effect covers the whole video; moving, trimming or editing one cuts the others out of its window instead, shortening or splitting them (pieces under 100 ms are dropped). A video that uses either at an intensity above zero is published with the Flashing Lights content warning, locked on in the metadata screen until the video is posted; editing the published video later treats it as an ordinary label that can be removed.
 - **Adjustments:** brightness, contrast, saturation, exposure, hue, temperature, tint and fade. One adjustment session shares a single time window on the timeline.
 
-Enter and leave animations, per layer:
+Enter, leave and loop animations, per layer:
 
-- Fade, slide and scale, combinable within each phase.
-- Duration 10–2000 ms in 10 ms steps; the 13 easing curves.
+- Enter and leave: fade, slide, scale, bounce and wiggle, combinable within each phase. Text layers can also type themselves out letter by letter (typewriter) or word by word, and take themselves away the same way; spaces take no step, and the text's background grows with the revealed part.
+- Loop, repeated for as long as the layer is visible: wiggle, bounce (a hop) and pulse.
+- Duration 10–2000 ms in 10 ms steps, one loop cycle 200–2000 ms; the 13 easing curves. Wiggle tilts 2–30°, bounce lifts by 10–200 % of the layer's height, pulse shrinks to 0–100 % of its size.
 - Slide from any edge or from a custom point tapped on the canvas. The layer moves in a straight line; there are no multi-point paths or keyframes.
 
 ## Captions
@@ -141,12 +142,12 @@ Enter and leave animations, per layer:
 
 Open feature requests for things the editor does not do yet:
 
-- Audio: loudness equalization ([#3789](https://github.com/divinevideo/divine-mobile/issues/3789)), an equalizer for bass and treble ([#9851](https://github.com/divinevideo/divine-mobile/issues/9851)), an audio visualizer overlay ([#9852](https://github.com/divinevideo/divine-mobile/issues/9852)), a larger sound library ([#8338](https://github.com/divinevideo/divine-mobile/issues/8338)).
-- Text: a link in the text overlay ([#3111](https://github.com/divinevideo/divine-mobile/issues/3111)), animated text styles such as typewriter and shake ([#9850](https://github.com/divinevideo/divine-mobile/issues/9850)).
-- Clips: a ping-pong (boomerang) loop ([#9845](https://github.com/divinevideo/divine-mobile/issues/9845)), timeline-based zoom controls ([#4951](https://github.com/divinevideo/divine-mobile/issues/4951)), ghost mode for smoother transitions and loops ([#9573](https://github.com/divinevideo/divine-mobile/issues/9573)), a smoother jump when the video loops back to its start ([#9587](https://github.com/divinevideo/divine-mobile/issues/9587)).
+- Audio: loudness equalization ([#3789](https://github.com/divinevideo/divine-mobile/issues/3789)), an equalizer for bass and treble ([#9850](https://github.com/divinevideo/divine-mobile/issues/9850)), an audio visualizer overlay ([#9851](https://github.com/divinevideo/divine-mobile/issues/9851)), a larger sound library ([#8338](https://github.com/divinevideo/divine-mobile/issues/8338)).
+- Text: a link in the text overlay ([#3111](https://github.com/divinevideo/divine-mobile/issues/3111)).
+- Clips: a ping-pong (boomerang) loop ([#9852](https://github.com/divinevideo/divine-mobile/issues/9852)), timeline-based zoom controls ([#4951](https://github.com/divinevideo/divine-mobile/issues/4951)), ghost mode for smoother transitions and loops ([#9573](https://github.com/divinevideo/divine-mobile/issues/9573)), a smoother jump when the video loops back to its start ([#9587](https://github.com/divinevideo/divine-mobile/issues/9587)).
 - Effects: an echo trail effect ([#9708](https://github.com/divinevideo/divine-mobile/issues/9708)), effects that fire on the beat of the music ([#9710](https://github.com/divinevideo/divine-mobile/issues/9710)).
-- Layers: keyframes for position, size and rotation ([#9846](https://github.com/divinevideo/divine-mobile/issues/9846)), masks that show a clip or layer in a shape or gradient ([#9847](https://github.com/divinevideo/divine-mobile/issues/9847)).
-- Motion analysis (touches the no-ML decision in [#8543](https://github.com/divinevideo/divine-mobile/issues/8543)): video stabilization ([#9848](https://github.com/divinevideo/divine-mobile/issues/9848)), text and stickers that follow a moving object ([#9849](https://github.com/divinevideo/divine-mobile/issues/9849)).
+- Layers: keyframes for position, size and rotation ([#9845](https://github.com/divinevideo/divine-mobile/issues/9845)), masks that show a clip or layer in a shape or gradient ([#9846](https://github.com/divinevideo/divine-mobile/issues/9846)).
+- Motion analysis (touches the no-ML decision in [#8543](https://github.com/divinevideo/divine-mobile/issues/8543)): video stabilization ([#9847](https://github.com/divinevideo/divine-mobile/issues/9847)), text and stickers that follow a moving object ([#9848](https://github.com/divinevideo/divine-mobile/issues/9848)).
 - Privacy: blur or pixelate part of the picture ([#9562](https://github.com/divinevideo/divine-mobile/issues/9562)).
 - Stickers: NIP-30 stickers ([#2265](https://github.com/divinevideo/divine-mobile/issues/2265)).
 - Frames around the video ([#7099](https://github.com/divinevideo/divine-mobile/issues/7099)).

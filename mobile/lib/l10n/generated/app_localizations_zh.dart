@@ -9137,6 +9137,33 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorLayerAnimationScaleFrom => '起始缩放';
 
   @override
+  String get videoEditorLayerAnimationLoop => '循环';
+
+  @override
+  String get videoEditorLayerAnimationWiggle => '摇摆';
+
+  @override
+  String get videoEditorLayerAnimationBounce => '弹跳';
+
+  @override
+  String get videoEditorLayerAnimationTypewriter => '打字机';
+
+  @override
+  String get videoEditorLayerAnimationWordByWord => '逐词';
+
+  @override
+  String get videoEditorLayerAnimationPulse => '脉动';
+
+  @override
+  String get videoEditorLayerAnimationPulseTo => '缩小至';
+
+  @override
+  String get videoEditorLayerAnimationWiggleAngle => '倾斜度';
+
+  @override
+  String get videoEditorLayerAnimationBounceHeight => '高度';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => '自定义';
 
   @override

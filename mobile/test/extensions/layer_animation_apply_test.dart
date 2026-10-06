@@ -176,10 +176,12 @@ void main() {
       Layer layer, {
       List<editor.LayerAnimation> enter = const [],
       List<editor.LayerAnimation> leave = const [],
+      List<editor.LayerAnimation>? loop,
       LayerSlidePoints points = const LayerSlidePoints(),
     }) => layer.withDivineAnimations(
       enter: enter,
       leave: leave,
+      loop: loop,
       points: points,
       canvasSize: canvas,
       totalDuration: total,
@@ -204,6 +206,58 @@ void main() {
       final result = applied(layer, enter: [enterSlide]);
 
       expect(result.divineAnimations, [enterSlide, bothScale]);
+    });
+
+    group('loop', () {
+      const wiggle = editor.LayerAnimation(
+        type: editor.LayerAnimationType.wiggle,
+        phase: editor.AnimationPhase.loop,
+        duration: Duration(milliseconds: 600),
+        wiggleAngle: 0.2,
+      );
+      const bounce = editor.LayerAnimation(
+        type: editor.LayerAnimationType.bounce,
+        phase: editor.AnimationPhase.loop,
+        duration: Duration(milliseconds: 700),
+      );
+
+      test('replaces the loop animations when given', () {
+        final layer = TextLayer(
+          text: 'Hi',
+          animations: [wiggle].toLayerAnimations(),
+        );
+
+        final result = applied(layer, enter: [enterSlide], loop: [bounce]);
+
+        expect(result.divineLoopAnimations, [bounce]);
+        expect(result.divineEnterAnimations, [enterSlide]);
+      });
+
+      test('keeps the loop animations when not given', () {
+        final layer = TextLayer(
+          text: 'Hi',
+          animations: [wiggle].toLayerAnimations(),
+        );
+
+        final result = applied(layer, enter: [enterSlide]);
+
+        expect(result.divineLoopAnimations, [wiggle]);
+      });
+
+      test('clears the loop with an empty list', () {
+        final layer = TextLayer(
+          text: 'Hi',
+          animations: [wiggle].toLayerAnimations(),
+        );
+
+        expect(applied(layer, loop: const []).divineLoopAnimations, isEmpty);
+      });
+
+      test('needs no end time to play', () {
+        final layer = TextLayer(text: 'Hi', startTime: Duration.zero);
+
+        expect(applied(layer, loop: [wiggle]).endTime, isNull);
+      });
     });
 
     test('clears a stale full-length end when the leave is removed', () {
