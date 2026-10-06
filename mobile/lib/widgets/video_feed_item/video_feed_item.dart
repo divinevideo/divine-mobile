@@ -634,10 +634,13 @@ class VideoOverlayActions extends ConsumerWidget {
                     onInteracted: onInteracted,
                   ),
                 ],
-                // Audio attribution row (all videos)
-                const SizedBox(height: 4),
-                if (video != null) AudioAttributionRow(video: video),
-                const SizedBox(height: 8),
+                // Audio attribution renders nothing without an audio
+                // reference, so its gap is gated on the same check to keep
+                // the caption flush with the bottom of the overlay.
+                if (video != null && video.hasAudioReference) ...[
+                  const SizedBox(height: 4),
+                  AudioAttributionRow(video: video),
+                ],
               ],
             ),
           ),
