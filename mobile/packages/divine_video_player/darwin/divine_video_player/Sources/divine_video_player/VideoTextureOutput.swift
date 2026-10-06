@@ -499,9 +499,10 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
 
     /// Draws the last decoded frame again with the current frame effects.
     private func redrawWithEffects() {
-        guard !isDisposed, let source = latestSourceBuffer, latestSourceTime.isValid
+        guard !isDisposed, let source = latestSourceBuffer,
+            let timeUs = latestSourceTime.microseconds
         else { return }
-        let shown = frameEffects.process(source, timeUs: Self.micros(latestSourceTime))
+        let shown = frameEffects.process(source, timeUs: timeUs)
         os_unfair_lock_lock(&pixelBufferLock)
         latestPixelBuffer = shown
         os_unfair_lock_unlock(&pixelBufferLock)
@@ -515,10 +516,6 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         frameEffects.setClipOffsets(offsets)
     }
 
-    private static func micros(_ time: CMTime) -> Int64 {
-        Int64((CMTimeGetSeconds(time) * 1_000_000).rounded())
-    }
-
     /// Delivers `pixelBuffer`, the frame for `itemTime`. `frameTime` is the
     /// frame's own presentation time when known, which frame effects key
     /// their history on; the display tick that pulled it can lie after it.
@@ -530,9 +527,10 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         let time = frameTime.isValid ? frameTime : itemTime
         latestSourceBuffer = pixelBuffer
         latestSourceTime = time
-        let shown = frameEffects.isActive
-            ? frameEffects.process(pixelBuffer, timeUs: Self.micros(time))
-            : pixelBuffer
+        var shown = pixelBuffer
+        if frameEffects.isActive, let timeUs = time.microseconds {
+            shown = frameEffects.process(pixelBuffer, timeUs: timeUs)
+        }
         os_unfair_lock_lock(&pixelBufferLock)
         latestPixelBuffer = shown
         os_unfair_lock_unlock(&pixelBufferLock)

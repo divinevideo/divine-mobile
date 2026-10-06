@@ -300,13 +300,14 @@ final class VideoFrameEffectProcessor {
     generator.generateCGImagesAsynchronously(
       forTimes: times.map { NSValue(time: CMTime(value: $0, timescale: 1_000_000)) }
     ) { [weak self] requestedTime, image, actualTime, result, error in
+      // A failed or cancelled request reports an invalid time.
       let frame = result == .succeeded ? image : nil
       let failure = result == .failed ? error : nil
-      let targetUs = Int64((CMTimeGetSeconds(requestedTime) * 1_000_000).rounded())
-      let frameUs = Int64((CMTimeGetSeconds(actualTime) * 1_000_000).rounded())
+      let targetUs = requestedTime.microseconds
+      let frameUs = actualTime.microseconds
       DispatchQueue.main.async {
         guard let self, generation == self.fillGeneration else { return }
-        if let frame {
+        if let frame, let targetUs, let frameUs {
           pending.decoded.append((targetUs, frameUs, frame))
         } else if pending.failure == nil {
           pending.failure = failure
@@ -455,5 +456,14 @@ final class VideoFrameEffectProcessor {
     var pool: CVPixelBufferPool?
     CVPixelBufferPoolCreate(nil, nil, attributes as CFDictionary, &pool)
     return pool
+  }
+}
+
+extension CMTime {
+  /// This time in microseconds, or `nil` when it is not a number: an
+  /// invalid or indefinite time has NaN seconds, which no integer holds.
+  var microseconds: Int64? {
+    guard isNumeric else { return nil }
+    return Int64((CMTimeGetSeconds(self) * 1_000_000).rounded())
   }
 }
