@@ -844,6 +844,35 @@ void main() {
         },
       );
 
+      for (final (description, cubitState) in [
+        (
+          'there is nobody to add',
+          const AddPeopleToListState(status: AddPeopleToListStatus.ready),
+        ),
+        (
+          'the query hides every candidate',
+          threeCandidates.copyWith(query: 'zzz'),
+        ),
+      ]) {
+        testWidgets('pulling down reloads when $description', (tester) async {
+          final list = _buildList(id: 'list-1', name: 'Close Friends');
+          when(() => bloc.state).thenReturn(_stateWith(lists: [list]));
+          when(() => cubit.started()).thenAnswer((_) async {});
+
+          await pumpView(tester, userList: list, cubitState: cubitState);
+          expect(find.byType(UserProfileTile), findsNothing);
+
+          await tester.fling(
+            find.byType(SingleChildScrollView),
+            const Offset(0, 300),
+            1000,
+          );
+          await tester.pumpAndSettle();
+
+          verify(() => cubit.started()).called(1);
+        });
+      }
+
       testWidgets('the retry button reloads after a failure', (tester) async {
         final list = _buildList(id: 'list-1', name: 'Close Friends');
         when(() => bloc.state).thenReturn(_stateWith(lists: [list]));

@@ -295,62 +295,47 @@ class _ReadyBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<AddPeopleToListCubit, AddPeopleToListState>(
       builder: (context, state) {
-        if (state.candidates.isEmpty) {
-          return const _EmptyCandidatesState();
-        }
         final visible = state.visibleCandidates;
+        final Widget child;
+        if (state.candidates.isEmpty) {
+          child = _ScrollableMessage(context.l10n.peopleListsNoPeopleToAdd);
+        } else if (visible.isEmpty) {
+          child = _ScrollableMessage(
+            context.l10n.searchNoResultsFound(state.query),
+          );
+        } else {
+          child = ListView.builder(
+            itemCount: visible.length,
+            itemBuilder: (context, index) => _CandidateRow(
+              candidate: visible[index],
+              listId: listId,
+              openingOwnerPubkey: openingOwnerPubkey,
+              index: index,
+            ),
+          );
+        }
         return RefreshIndicator(
           color: VineTheme.onPrimary,
           backgroundColor: VineTheme.vineGreen,
           onRefresh: context.read<AddPeopleToListCubit>().started,
-          // Wraps the no-match case too, so the pull gesture survives a
-          // query that hides every row.
-          child: visible.isEmpty
-              ? _NoMatches(query: state.query)
-              : ListView.builder(
-                  itemCount: visible.length,
-                  itemBuilder: (context, index) => _CandidateRow(
-                    candidate: visible[index],
-                    listId: listId,
-                    openingOwnerPubkey: openingOwnerPubkey,
-                    index: index,
-                  ),
-                ),
+          // Every branch scrolls, so the pull gesture survives an empty
+          // candidate set and a query that hides every row.
+          child: child,
         );
       },
     );
   }
 }
 
-class _EmptyCandidatesState extends StatelessWidget {
-  const _EmptyCandidatesState();
+/// A centred message that still scrolls, so the enclosing [RefreshIndicator]
+/// has a gesture to attach to when there are no rows to show.
+class _ScrollableMessage extends StatelessWidget {
+  const _ScrollableMessage(this.text);
+
+  final String text;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text(
-          context.l10n.peopleListsNoPeopleToAdd,
-          textAlign: TextAlign.center,
-          style: VineTheme.bodyMediumFont(
-            color: context.vineColors.secondaryText,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NoMatches extends StatelessWidget {
-  const _NoMatches({required this.query});
-
-  final String query;
-
-  @override
-  Widget build(BuildContext context) {
-    // Scrollable rather than a bare Center so the enclosing RefreshIndicator
-    // still has a gesture to attach to when nothing matches.
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -360,7 +345,7 @@ class _NoMatches extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Text(
-                context.l10n.searchNoResultsFound(query),
+                text,
                 textAlign: TextAlign.center,
                 style: VineTheme.bodyMediumFont(
                   color: context.vineColors.secondaryText,
