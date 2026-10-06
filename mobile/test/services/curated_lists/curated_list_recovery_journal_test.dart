@@ -175,16 +175,21 @@ void main() {
     );
 
     test(
-      'unattributed pending evidence stops migration before cache removal',
+      'unattributed pending evidence stays archived without guessing an owner',
       () async {
         final unattributed = row().toJson()..remove('pubkey');
         await prefs.setString('curated_lists', jsonEncode([unattributed]));
-        await expectLater(
-          CuratedListRecoveryJournal.migrateEmbeddedRecords(prefs),
-          throwsStateError,
-        );
-        expect(prefs.containsKey('curated_lists'), isTrue);
+        final raw = prefs.getString('curated_lists');
+        await CuratedListRecoveryJournal.migrateEmbeddedRecords(prefs);
+        expect(prefs.getString('curated_lists'), '[]');
         expect(journal.records(owner), isEmpty);
+        expect(journal.needsRepair(owner), isTrue);
+        final archive = jsonDecode(
+          prefs.getString(
+            CuratedListRecoveryStorage.sharedQuarantineKey,
+          )!,
+        ) as Map<String, dynamic>;
+        expect(archive['rawBuckets'], [raw]);
       },
     );
 
@@ -614,13 +619,13 @@ void main() {
             isFalse,
           );
           backing.failingKey = null;
-          await expectLater(
-            journal.prepare(owner),
-            throwsA(isA<CuratedListRecoveryException>()),
-          );
+          await journal.prepare(owner);
           await CuratedListRecoveryJournal.migrateEmbeddedRecords(prefs);
           await restart();
-          expect(prefs.getString(key), raw);
+          expect(
+            jsonDecode(prefs.getString(key)!) as Map,
+            isNot(contains('broken')),
+          );
           final envelope = jsonDecode(
             prefs.getString(CuratedListRecoveryStorage.quarantineKey(owner))!,
           ) as Map<String, dynamic>;
@@ -698,17 +703,15 @@ void main() {
       const raw = '{invalid recovery';
       await prefs.setString(key, raw);
       expect(journal.records(owner), isEmpty);
-      await expectLater(
-        journal.prepare(owner),
-        throwsA(isA<CuratedListRecoveryException>()),
-      );
+      await journal.prepare(owner);
       await restart();
       final envelope = jsonDecode(
         prefs.getString(CuratedListRecoveryStorage.quarantineKey(owner))!,
       ) as Map<String, dynamic>;
       expect(envelope['rawBuckets'], [raw]);
       expect(journal.needsRepair(owner), isTrue);
-      expect(prefs.getString(key), raw);
+      expect(prefs.getString(key), '{}');
+      expect(envelope['normalized'], isTrue);
     });
 
     for (final throwing in [false, true]) {

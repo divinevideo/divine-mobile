@@ -48,6 +48,8 @@ class _RefusingPreferences extends Fake implements SharedPreferences {
   @override
   Future<bool> setString(String key, String value) =>
       backing.setString(key, value);
+  @override
+  Future<void> reload() => backing.reload();
 }
 
 class _MockCacheDao extends Mock implements CacheDao {}
@@ -70,7 +72,8 @@ class _RefusingQuarantinePreferences extends Fake implements SharedPreferences {
   Future<void> reload() => backing.reload();
   @override
   Future<bool> setString(String key, String value) async {
-    if (key.startsWith(CuratedListRecoveryStorage.quarantinePrefix)) {
+    if (key.startsWith(CuratedListRecoveryStorage.quarantinePrefix) ||
+        key == CuratedListRecoveryStorage.sharedQuarantineKey) {
       quarantineAttempts++;
       if (throwing) throw StateError('PRIVATE_CLEANUP_PAYLOAD');
       return false;
@@ -678,8 +681,96 @@ void main() {
       );
     }
 
+    for (final operation in [
+      'create',
+      'nsec',
+      'hex',
+      'oauth',
+      'restore',
+      'initialize',
+    ]) {
+      test(
+        'durably preserved malformed shared data permits $operation with a publication hold',
+        () async {
+          final prefs = await SharedPreferences.getInstance();
+          const raw = 'PRIVATE_SHARED_RECOVERY_PAYLOAD malformed';
+          await prefs.setString('curated_lists', raw);
+          final cleanup = UserDataCleanupService(prefs);
+          var databaseCleanups = 0;
+          cleanup.onDatabaseCleanup =
+              ({
+                String? userPubkey,
+                bool deleteUserData = false,
+                bool preserveActiveSession = false,
+              }) async {
+                expect(userPubkey, oldPubkeyHex);
+                databaseCleanups++;
+              };
+          await authService.dispose();
+          authService = AuthService(
+            backgroundActivityManager: BackgroundActivityManager(),
+            userDataCleanupService: cleanup,
+            keyStorage: mockKeyStorage,
+          );
+          await _ignoringDiscoveryErrors(() async {
+            switch (operation) {
+              case 'create':
+                expect((await authService.createNewIdentity()).success, isTrue);
+              case 'nsec':
+                expect(
+                  (await authService.importFromNsec(testNsec)).success,
+                  isTrue,
+                );
+              case 'hex':
+                expect(
+                  (await authService.importFromHex('1' * 64)).success,
+                  isTrue,
+                );
+              case 'oauth':
+                await authService.signInWithDivineOAuth(
+                  KeycastSession(
+                    bunkerUrl: 'https://keycast.example.com',
+                    accessToken: 'test-access',
+                    expiresAt: DateTime.now().add(const Duration(hours: 1)),
+                    userPubkey: newKeyContainer.publicKeyHex,
+                  ),
+                );
+              case 'restore':
+                await authService.signInForAccount(
+                  newKeyContainer.publicKeyHex,
+                  AuthenticationSource.automatic,
+                );
+              case 'initialize':
+                await prefs.setString('last_used_npub', newKeyContainer.npub);
+                await authService.initialize();
+            }
+          });
+          expect(databaseCleanups, 1);
+          expect(authService.currentPublicKeyHex, newKeyContainer.publicKeyHex);
+          expect(authService.authState, isNot(AuthState.unauthenticated));
+          expect(prefs.containsKey('curated_lists'), isFalse);
+          final archive = jsonDecode(
+            prefs.getString(
+              CuratedListRecoveryStorage.sharedQuarantineKey,
+            )!,
+          ) as Map<String, dynamic>;
+          expect(archive['rawBuckets'], [raw]);
+          final journal = CuratedListRecoveryJournal(
+            prefs: prefs,
+            runCurrent: (operation) => operation(),
+          );
+          expect(journal.needsRepair(newKeyContainer.publicKeyHex), isTrue);
+          expect(journal.records(newKeyContainer.publicKeyHex), isEmpty);
+          expect(
+            await journal.ticket(newKeyContainer.publicKeyHex, 'new-list'),
+            isNull,
+          );
+        },
+      );
+    }
+
     for (final failure in [
-      'malformed shared cache',
+      'shared quarantine refusal',
       'quarantine refusal',
       'quarantine throw',
     ]) {
@@ -706,7 +797,7 @@ void main() {
               ).toJson(),
             ]);
             const privatePayload = 'PRIVATE_CLEANUP_PAYLOAD';
-            final outgoingCache = failure == 'malformed shared cache'
+            final outgoingCache = failure == 'shared quarantine refusal'
                 ? '{$privatePayload malformed cache'
                 : validCache;
             final journalKey = CuratedListRecoveryJournal.storageKey(
@@ -722,7 +813,9 @@ void main() {
             await prefs.setString('curated_lists', outgoingCache);
             await prefs.setString('subscribed_list_ids', 'old follows');
             await prefs.setString(journalKey, journalRaw);
-            final refusingQuarantine = failure.startsWith('quarantine')
+            final refusingQuarantine =
+                (failure.startsWith('quarantine') ||
+                    failure.startsWith('shared quarantine'))
                 ? _RefusingQuarantinePreferences(
                     prefs,
                     throwing: failure == 'quarantine throw',

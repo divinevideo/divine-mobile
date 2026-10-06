@@ -1742,10 +1742,7 @@ void main() {
       await prefs.setString(key, raw);
       final current = open();
       expect(current.recoveryNeedsRepair, isTrue);
-      await expectLater(
-        current.prepareRecovery(),
-        throwsA(isA<CuratedListRecoveryException>()),
-      );
+      await current.prepareRecovery();
       expect(
         await current.updateList(listId: list.id, isPublic: false),
         isFalse,
@@ -1756,11 +1753,14 @@ void main() {
       await UserDataCleanupService(prefs)
           .clearUserSpecificData(userPubkey: _owner);
       await restart();
-      expect(prefs.getString(key), raw);
-      expect(
-        prefs.getString(CuratedListRecoveryStorage.quarantineKey(_owner)),
-        contains(raw),
-      );
+      expect(prefs.getString(key), '{}');
+      final archive = jsonDecode(
+        prefs.getString(
+          CuratedListRecoveryStorage.quarantineKey(_owner),
+        )!,
+      ) as Map<String, dynamic>;
+      expect(archive['rawBuckets'], [raw]);
+      expect(archive['needsRepair'], isTrue);
       expect(prefs.containsKey(CuratedListService.listsStorageKey), isFalse);
       expect(open().recoveryNeedsRepair, isTrue);
     });
@@ -2041,30 +2041,30 @@ void main() {
             final raw = malformedLegacy(form, list);
             await storeMalformedLegacy(raw);
             final cleanup = UserDataCleanupService(prefs);
-            await expectLater(
-              destructive
-                  ? cleanup.deleteAccountData(
-                      _owner,
-                      userNpub: 'npub-A',
-                      preserveActiveSession: false,
-                    )
-                  : cleanup.clearUserSpecificData(userPubkey: _owner),
-              throwsA(
-                destructive
-                    ? isA<CuratedListRecoveryException>().having(
-                        (error) => error.toString(),
-                        'safe reason',
-                        isNot(contains('PRIVATE_UNKNOWN_LEGACY_VALUE')),
-                      )
-                    : isA<UserDataCleanupException>().having(
-                        (error) => error.toString(),
-                        'safe reason',
-                        isNot(contains('PRIVATE_UNKNOWN_LEGACY_VALUE')),
-                      ),
-              ),
-            );
+            if (destructive) {
+              await cleanup.deleteAccountData(
+                _owner,
+                userNpub: 'npub-A',
+                preserveActiveSession: false,
+              );
+            } else {
+              await cleanup.clearUserSpecificData(userPubkey: _owner);
+            }
             await restart();
-            expect(prefs.get(CuratedListService.listsStorageKey), raw);
+            expect(
+              prefs.containsKey(CuratedListService.listsStorageKey),
+              isFalse,
+            );
+            final archive = jsonDecode(
+              prefs.getString(
+                CuratedListRecoveryStorage.sharedQuarantineKey,
+              )!,
+            ) as Map<String, dynamic>;
+            expect(archive['rawBuckets'], [
+              if (raw is String) raw else jsonEncode(raw),
+            ]);
+            expect(archive['normalized'], isTrue);
+            expect(archive['needsRepair'], isTrue);
             final recovered = CuratedListRecoveryJournal(
               prefs: prefs,
               runCurrent: (op) => op(),
@@ -2094,23 +2094,29 @@ void main() {
           await logs.clearAllLogs();
           final current = open();
           expect(current.recoveryNeedsRepair, isTrue);
-          await expectLater(
-            current.prepareRecovery(),
-            throwsA(isA<CuratedListRecoveryException>()),
-          );
-          await current.initialize().catchError((Object _) {});
-          expect(current.isInitialized, isFalse);
+          await current.prepareRecovery();
+          await current.initialize();
+          expect(current.isInitialized, isTrue);
+          expect(current.initializationError, isNull);
+          expect(current.isReadyForMutations, isFalse);
           expect(current.getDefaultList(), isNull);
           expect(await current.createList(name: 'New list'), isNull);
           expect(sent, isEmpty);
           final captured = (await logs.getAllLogsAsText()).join('\n');
           expect(
             captured,
-            contains('Failed to initialize curated list service'),
+            isNot(contains('Failed to initialize curated list service')),
           );
           expect(captured, isNot(contains('PRIVATE_UNKNOWN_LEGACY_VALUE')));
           await restart();
-          expect(prefs.get(CuratedListService.listsStorageKey), raw);
+          final archive = jsonDecode(
+            prefs.getString(
+              CuratedListRecoveryStorage.sharedQuarantineKey,
+            )!,
+          ) as Map<String, dynamic>;
+          expect(archive['rawBuckets'], [
+            if (raw is String) raw else jsonEncode(raw),
+          ]);
           expect(open().recoveryNeedsRepair, isTrue);
         },
       );

@@ -12,6 +12,8 @@ export 'package:openvine/services/curated_lists/curated_list_recovery_record.dar
 export 'package:openvine/services/curated_lists/curated_list_recovery_storage.dart'
     show CuratedListRecoveryException, CuratedListRecoveryReadStatus;
 
+part 'curated_list_recovery_repair.dart';
+
 /// Captures authorization for a signed attempt's minimal accepted evidence.
 class CuratedListRecoveryTicket {
   const CuratedListRecoveryTicket._({
@@ -76,21 +78,31 @@ class CuratedListRecoveryJournal {
         owner,
       );
 
-  /// Preserves malformed bytes before exposing a retryable initialization error.
+  /// Preserves malformed bytes before reads can resume with a publication hold.
+  /// Refused preservation still reports a typed initialization failure.
   Future<void> prepare(String owner) async {
     await _runCurrent(() async {
-      validateLegacy();
+      await CuratedListRecoveryStorage.refreshEvidence(_prefs);
+      await CuratedListRecoveryStorage.normalizeLegacy(
+        _prefs,
+        legacyOwner: _prefs.getString('current_user_pubkey_hex'),
+      );
       _generation(_prefs, owner);
-      if (!needsRepair(owner)) return true;
-      if (!await CuratedListRecoveryStorage.preserve(
+      await CuratedListRecoveryStorage.normalize(
         _prefs,
         storageKey(owner),
         owner,
         records(owner),
+      );
+      if (!await _captureRows(
+        _prefs,
+        CuratedListRecoveryStorage.legacyRows(_prefs),
+        owner,
+        retireSuperseded: !CuratedListRecoveryStorage.legacyNeedsRepair(_prefs),
       )) {
         throw const CuratedListRecoveryException();
       }
-      throw const CuratedListRecoveryException();
+      return true;
     });
   }
 
@@ -363,6 +375,10 @@ class CuratedListRecoveryJournal {
     String? legacyOwner,
     String? deletingOwner,
   }) async {
+    await CuratedListRecoveryStorage.normalizeLegacy(
+      prefs,
+      legacyOwner: legacyOwner,
+    );
     final owners = <String>{
       ..._pendingOwners(prefs).keys,
       for (final key in prefs.getKeys())
@@ -393,7 +409,7 @@ class CuratedListRecoveryJournal {
         prefs,
         group.value,
         group.key,
-        retireSuperseded: true,
+        retireSuperseded: !CuratedListRecoveryStorage.legacyNeedsRepair(prefs),
       )) {
         throw StateError('Could not preserve curated-list recovery');
       }
@@ -461,15 +477,16 @@ class CuratedListRecoveryJournal {
       storageKey(owner),
       owner,
     );
-    final saved = repair
-        ? await CuratedListRecoveryStorage.preserve(
-            prefs,
-            storageKey(owner),
-            owner,
-            entries,
-          )
-        : (!needsDrain && before == after) ||
-              await _write(prefs, owner, entries);
+    if (repair) {
+      await CuratedListRecoveryStorage.normalize(
+        prefs,
+        storageKey(owner),
+        owner,
+        entries,
+      );
+    }
+    final saved =
+        (!needsDrain && before == after) || await _write(prefs, owner, entries);
     if (saved) _pendingOwners(prefs).remove(owner);
     return saved;
   }
@@ -528,7 +545,11 @@ class CuratedListRecoveryJournal {
     try {
       return {
         ...read.records,
-        ...CuratedListRecoveryStorage.preservedRecords(prefs, owner),
+        ...CuratedListRecoveryStorage.preservedRecords(
+          prefs,
+          owner,
+          liveKey: storageKey(owner),
+        ),
       };
     } on CuratedListRecoveryException {
       return read.records;
@@ -538,8 +559,9 @@ class CuratedListRecoveryJournal {
   static Future<bool> _write(
     SharedPreferences prefs,
     String owner,
-    Map<String, CuratedListRecoveryRecord> entries,
-  ) async {
+    Map<String, CuratedListRecoveryRecord> entries, {
+    bool verify = false,
+  }) async {
     final json = {
       for (final entry in entries.entries)
         if (!entry.value.isEmpty) entry.key: entry.value.toJson(),
@@ -549,20 +571,31 @@ class CuratedListRecoveryJournal {
       storageKey(owner),
       owner,
     )) {
-      await CuratedListRecoveryStorage.preserve(
+      await CuratedListRecoveryStorage.normalize(
         prefs,
         storageKey(owner),
         owner,
         entries,
       );
-      return false;
+      // Existing authorized ACKs may still drain into the healthy journal.
+      // The archive's unresolved hold blocks fresh attempts, not evidence.
     }
-    final saved = await CuratedListRecoveryStorage.persist(
-      prefs,
-      () => json.isEmpty
-          ? prefs.remove(storageKey(owner))
-          : prefs.setString(storageKey(owner), jsonEncode(json)),
-    );
+    var saved = verify && json.isNotEmpty
+        ? await CuratedListRecoveryStorage.writeVerified(
+            prefs,
+            storageKey(owner),
+            jsonEncode(json),
+          )
+        : await CuratedListRecoveryStorage.persist(
+            prefs,
+            () => json.isEmpty
+                ? prefs.remove(storageKey(owner))
+                : prefs.setString(storageKey(owner), jsonEncode(json)),
+          );
+    if (verify && json.isEmpty && saved) {
+      await prefs.reload();
+      saved = !prefs.containsKey(storageKey(owner));
+    }
     if (saved) _pendingOwners(prefs).remove(owner);
     return saved;
   }
