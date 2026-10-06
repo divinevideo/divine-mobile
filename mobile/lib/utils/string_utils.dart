@@ -42,7 +42,9 @@ class StringUtils {
   /// Compact surfaces cap text at a few lines, so a blank line there spends
   /// a whole line on nothing and reads as stray spacing.
   static String removeBlankLines(String input) => input
-      .split(RegExp(r'\r\n|\r|\n'))
+      .split(_lineBreak)
       .where((line) => line.trim().isNotEmpty)
       .join('\n');
+
+  static final _lineBreak = RegExp(r'\r\n|\r|\n');
 }
