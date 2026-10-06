@@ -6766,7 +6766,7 @@
   "ideasDescriptionSix": "Để điều này ở đây.",
   "listsDiscoveryLoadingLabel": "Đang tải danh sách",
   "listsDiscoveryEmpty": "Lần này chẳng thấy danh sách nào. Kéo để làm mới.",
-    "listSearchPeopleUnavailable": "Danh sách người hiện không khả dụng.",
-    "listSearchVideosUnavailable": "Danh sách video hiện không khả dụng.",
+  "listSearchPeopleUnavailable": "Danh sách người hiện không khả dụng.",
+  "listSearchVideosUnavailable": "Danh sách video hiện không khả dụng.",
   "authAccountCleanupFailed": "Không thể xóa dữ liệu của tài khoản trước. Hãy thử lại."
 }
