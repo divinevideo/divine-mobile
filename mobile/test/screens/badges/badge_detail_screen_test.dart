@@ -17,6 +17,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
 import 'package:openvine/screens/badges/widgets/badge_recipient_row.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
+import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 import '../../helpers/test_provider_overrides.dart';
@@ -602,6 +603,37 @@ void main() {
         find.bySemanticsLabel(l10n.profileVideoThumbnailLabel(1)),
         findsOneWidget,
       );
+    });
+
+    testWidgets('reloads visible holders and videos after a block', (
+      tester,
+    ) async {
+      final videos = _MockVideosRepository();
+      final pager = _MockBadgeVideoPager();
+      var blocked = false;
+      when(() => repository.loadBadgeDetail(any())).thenAnswer(
+        (_) async => _detail(definition: _definition(), isOwner: false),
+      );
+      when(() => repository.loadAcceptedHolders(any()))
+          .thenAnswer((_) async => blocked ? <String>{} : {_pubkey(3)});
+      when(() => videos.createBadgeVideoPager(any())).thenReturn(pager);
+      when(pager.loadMore).thenAnswer((_) async => [_video()]);
+      when(() => pager.hasMore).thenReturn(false);
+      await tester.pumpWidget(buildSubject(videosRepository: videos));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.byType(VideoThumbnailWidget),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.byType(VideoThumbnailWidget), findsOneWidget);
+      blocked = true;
+      ProviderScope.containerOf(tester.element(find.byType(BadgeDetailScreen)))
+          .read(blocklistVersionProvider.notifier)
+          .increment();
+      await tester.pumpAndSettle();
+      verify(() => repository.loadAcceptedHolders(any())).called(2);
+      expect(find.byType(VideoThumbnailWidget), findsNothing);
     });
 
     testWidgets('offers a retry when the lookup fails', (tester) async {
