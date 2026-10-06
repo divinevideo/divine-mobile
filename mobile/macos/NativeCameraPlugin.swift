@@ -39,12 +39,20 @@ public class NativeCameraPlugin: NSObject, FlutterPlugin {
 
         switch call.method {
         case "requestCameraPermission":
-            requestPermission(for: .video, result: result)
+            requestCameraPermission(result: result)
         case "requestMicrophonePermission":
-            requestPermission(for: .audio, result: result)
+            requestMicrophonePermission(result: result)
         case "cameraPermissionStatus":
             permissionStatus(for: .video, result: result)
         case "microphonePermissionStatus":
+            permissionStatus(for: .audio, result: result)
+        case "requestPermission":
+            requestCameraPermission(result: result)
+        case "hasPermission":
+            hasPermission(result: result)
+        case "getAuthorizationStatus":
+            permissionStatus(for: .video, result: result)
+        case "getMicrophoneAuthorizationStatus":
             permissionStatus(for: .audio, result: result)
         case "openSystemSettings":
             openSystemSettings(result: result)
@@ -91,6 +99,57 @@ public class NativeCameraPlugin: NSObject, FlutterPlugin {
     ) {
         let status = AVCaptureDevice.authorizationStatus(for: mediaType)
         result(Self.statusString(status))
+    }
+
+    private func requestCameraPermission(result: @escaping FlutterResult) {
+        let currentStatus = AVCaptureDevice.authorizationStatus(for: .video)
+
+        switch currentStatus {
+        case .authorized:
+            result(true)
+        case .denied, .restricted:
+            result(FlutterError(
+                code: "PERMISSION_DENIED",
+                message: "Camera access denied",
+                details: nil
+            ))
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .video) { granted in
+                DispatchQueue.main.async {
+                    result(granted)
+                }
+            }
+        @unknown default:
+            result(false)
+        }
+    }
+
+    private func requestMicrophonePermission(result: @escaping FlutterResult) {
+        let currentStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+
+        switch currentStatus {
+        case .authorized:
+            result(true)
+        case .denied, .restricted:
+            result(FlutterError(
+                code: "PERMISSION_DENIED",
+                message: "Microphone access denied",
+                details: nil
+            ))
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .audio) { granted in
+                DispatchQueue.main.async {
+                    result(granted)
+                }
+            }
+        @unknown default:
+            result(false)
+        }
+    }
+
+    private func hasPermission(result: @escaping FlutterResult) {
+        let status = AVCaptureDevice.authorizationStatus(for: .video)
+        result(status == .authorized)
     }
 
     private static func statusString(
@@ -141,7 +200,6 @@ public class NativeCameraPlugin: NSObject, FlutterPlugin {
             result(false)
         }
     }
-
     private static func settingsPrivacyPane() -> String {
         let cameraStatus = AVCaptureDevice.authorizationStatus(for: .video)
         if cameraStatus == .denied || cameraStatus == .restricted {

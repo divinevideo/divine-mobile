@@ -6872,5 +6872,10 @@
   "soundReadyDescription": "اسے اپنی اگلی ویڈیو میں استعمال کریں یا اپنی آوازوں کی لائبریری میں محفوظ کریں۔",
   "soundReadyUse": "یہ آواز استعمال کریں",
   "soundReadySave": "میری آوازوں میں محفوظ کریں",
-  "soundRequestSaved": "محفوظ ہو گیا"
+  "soundRequestSaved": "محفوظ ہو گیا",
+  "liveTabLabel": "لائیو",
+  "liveHideParticipantLocally": "میرے منظر سے چھپائیں",
+  "liveHideChatLocally": "میرے لیے چیٹ چھپائیں",
+  "liveLocalHidingExplanation": "کسی شریک یا اس کی چیٹ کو چھپانے سے صرف آپ کا منظر بدلتا ہے۔ اس کی آواز چلتی رہتی ہے اور باقی سب اسے دیکھ سکتے ہیں۔",
+  "liveHiddenChatNotice": "چھپائے گئے پیغامات باقی سب کو نظر آتے رہتے ہیں۔"
 }

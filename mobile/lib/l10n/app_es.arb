@@ -5108,5 +5108,10 @@
   "soundReadyDescription": "Úsalo en tu próximo video o guárdalo en tu biblioteca de sonidos.",
   "soundReadyUse": "Usar este sonido",
   "soundReadySave": "Guardar en Mis sonidos",
-  "soundRequestSaved": "Guardado"
+  "soundRequestSaved": "Guardado",
+  "liveTabLabel": "En directo",
+  "liveHideParticipantLocally": "Ocultar en mi vista",
+  "liveHideChatLocally": "Ocultar chat para mí",
+  "liveLocalHidingExplanation": "Ocultar a alguien o su chat solo cambia tu vista. Su audio sigue activo y los demás siguen viendo a esa persona.",
+  "liveHiddenChatNotice": "Los mensajes ocultos siguen siendo visibles para los demás."
 }

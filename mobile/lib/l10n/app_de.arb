@@ -5108,5 +5108,10 @@
   "soundReadyDescription": "Nutze ihn in deinem nächsten Video oder speichere ihn in deiner Soundbibliothek.",
   "soundReadyUse": "Diesen Sound verwenden",
   "soundReadySave": "In Meine Sounds speichern",
-  "soundRequestSaved": "Gespeichert"
+  "soundRequestSaved": "Gespeichert",
+  "liveTabLabel": "Live",
+  "liveHideParticipantLocally": "Für mich ausblenden",
+  "liveHideChatLocally": "Chat für mich ausblenden",
+  "liveLocalHidingExplanation": "Wenn du eine Person oder ihren Chat ausblendest, ändert sich nur deine Ansicht. Ihr Audio bleibt an und alle anderen sehen sie weiterhin.",
+  "liveHiddenChatNotice": "Ausgeblendete Nachrichten bleiben für alle anderen sichtbar."
 }

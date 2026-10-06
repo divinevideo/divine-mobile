@@ -149,7 +149,7 @@ if (Platform.isMacOS) {
 - **Permission request timing**: When `NativeCameraPlugin.initializeCamera()` is called
 - **Handled by**: Custom Swift code using `AVCaptureDevice.requestAccess(for: .video)`
 - **TCC database**: macOS tracks permissions in TCC (Transparency, Consent, and Control) database
-- **Bundle ID**: `com.openvine.divine` (must match for permission persistence)
+- **Bundle ID**: `co.openvine.app` (must match for permission persistence)
 
 ### Web
 - **Browser permissions**: Handled by browser's MediaStream API
@@ -163,7 +163,7 @@ if (Platform.isMacOS) {
 
 **Symptoms**:
 - Permission works once, then breaks on next debug build
-- `tccutil reset Camera com.openvine.divine` reports "No such bundle identifier"
+- `tccutil reset Camera co.openvine.app` reports "No such bundle identifier"
 - Permission dialog appears inside app window instead of as system dialog
 
 **Solutions**:

@@ -5108,5 +5108,10 @@
   "soundReadyDescription": "次の動画で使うか、サウンドライブラリに保存しましょう。",
   "soundReadyUse": "このサウンドを使う",
   "soundReadySave": "マイサウンドに保存",
-  "soundRequestSaved": "保存済み"
+  "soundRequestSaved": "保存済み",
+  "liveTabLabel": "ライブ",
+  "liveHideParticipantLocally": "自分の画面で非表示",
+  "liveHideChatLocally": "自分だけチャットを非表示",
+  "liveLocalHidingExplanation": "参加者やチャットを非表示にしても、自分の画面だけが変わります。音声は流れ続け、他の人には引き続き表示されます。",
+  "liveHiddenChatNotice": "非表示にしたメッセージは他の人には表示されます。"
 }

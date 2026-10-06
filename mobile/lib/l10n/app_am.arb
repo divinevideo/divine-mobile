@@ -5208,5 +5208,10 @@
   "soundReadyDescription": "በሚቀጥለው ቪዲዮህ ተጠቀምበት ወይም በድምፅ ቤተ መጻሕፍትህ ውስጥ አስቀምጠው።",
   "soundReadyUse": "ይህን ድምፅ ተጠቀም",
   "soundReadySave": "በእኔ ድምፆች ውስጥ አስቀምጥ",
-  "soundRequestSaved": "ተቀምጧል"
+  "soundRequestSaved": "ተቀምጧል",
+  "liveTabLabel": "ቀጥታ",
+  "liveHideParticipantLocally": "ከእኔ እይታ ደብቅ",
+  "liveHideChatLocally": "ውይይቱን ለእኔ ደብቅ",
+  "liveLocalHidingExplanation": "ተሳታፊን ወይም ውይይቱን መደበቅ የአንተን እይታ ብቻ ይቀይራል። ድምፁ አይጠፋም፤ ሌሎችም ማየታቸውን ይቀጥላሉ።",
+  "liveHiddenChatNotice": "የተደበቁ መልዕክቶች ለሌሎች ሁሉ ይታያሉ።"
 }

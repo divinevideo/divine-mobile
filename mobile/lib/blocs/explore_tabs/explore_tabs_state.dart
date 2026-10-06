@@ -40,6 +40,7 @@ class ExploreTabsState extends Equatable {
     this.classicsAvailable = false,
     this.forYouAvailable = false,
     this.appsAvailable = false,
+    this.liveAvailable = false,
     this.featuredTab,
   });
 
@@ -51,6 +52,7 @@ class ExploreTabsState extends Equatable {
 
   /// Whether the integrated Apps tab is shown.
   final bool appsAvailable;
+  final bool liveAvailable;
 
   /// Server-configured featured tab, or `null` when none should render.
   final FeaturedTabConfig? featuredTab;
@@ -67,6 +69,7 @@ class ExploreTabsState extends Equatable {
       explorePopularTabName,
       exploreCategoriesTabName,
       if (forYouAvailable) exploreForYouTabName,
+      if (liveAvailable) 'live',
       exploreListsTabName,
       if (appsAvailable) exploreAppsTabName,
     ];
@@ -116,6 +119,7 @@ class ExploreTabsState extends Equatable {
     bool? classicsAvailable,
     bool? forYouAvailable,
     bool? appsAvailable,
+    bool? liveAvailable,
     FeaturedTabConfig? featuredTab,
     bool clearFeaturedTab = false,
   }) {
@@ -123,6 +127,7 @@ class ExploreTabsState extends Equatable {
       classicsAvailable: classicsAvailable ?? this.classicsAvailable,
       forYouAvailable: forYouAvailable ?? this.forYouAvailable,
       appsAvailable: appsAvailable ?? this.appsAvailable,
+      liveAvailable: liveAvailable ?? this.liveAvailable,
       featuredTab: clearFeaturedTab ? null : featuredTab ?? this.featuredTab,
     );
   }
@@ -132,6 +137,7 @@ class ExploreTabsState extends Equatable {
     classicsAvailable,
     forYouAvailable,
     appsAvailable,
+    liveAvailable,
     featuredTab,
   ];
 }

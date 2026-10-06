@@ -6872,5 +6872,10 @@
   "soundReadyDescription": "Dùng trong video tiếp theo hoặc lưu vào thư viện âm thanh của bạn.",
   "soundReadyUse": "Dùng âm thanh này",
   "soundReadySave": "Lưu vào Âm thanh của tôi",
-  "soundRequestSaved": "Đã lưu"
+  "soundRequestSaved": "Đã lưu",
+  "liveTabLabel": "Trực tiếp",
+  "liveHideParticipantLocally": "Ẩn khỏi chế độ xem của tôi",
+  "liveHideChatLocally": "Ẩn trò chuyện với tôi",
+  "liveLocalHidingExplanation": "Ẩn người tham gia hoặc cuộc trò chuyện chỉ thay đổi chế độ xem của bạn. Âm thanh của họ vẫn bật và những người khác vẫn thấy họ.",
+  "liveHiddenChatNotice": "Tin nhắn đã ẩn vẫn hiển thị với những người khác."
 }

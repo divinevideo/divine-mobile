@@ -6872,5 +6872,10 @@
   "soundReadyDescription": "在下一个视频中使用它，或保存到你的声音库。",
   "soundReadyUse": "使用此声音",
   "soundReadySave": "保存到我的声音",
-  "soundRequestSaved": "已保存"
+  "soundRequestSaved": "已保存",
+  "liveTabLabel": "直播",
+  "liveHideParticipantLocally": "在我的视图中隐藏",
+  "liveHideChatLocally": "仅对我隐藏聊天",
+  "liveLocalHidingExplanation": "隐藏参与者或其聊天只会改变你的视图。他们的音频仍然开启，其他人仍然可以看到他们。",
+  "liveHiddenChatNotice": "隐藏的消息仍然对其他人可见。"
 }

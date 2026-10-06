@@ -5108,5 +5108,10 @@
   "soundReadyDescription": "Bir sonraki videonda kullan veya ses kitaplığına kaydet.",
   "soundReadyUse": "Bu sesi kullan",
   "soundReadySave": "Seslerim’e kaydet",
-  "soundRequestSaved": "Kaydedildi"
+  "soundRequestSaved": "Kaydedildi",
+  "liveTabLabel": "Canlı",
+  "liveHideParticipantLocally": "Benim görünümümden gizle",
+  "liveHideChatLocally": "Sohbeti benim için gizle",
+  "liveLocalHidingExplanation": "Bir katılımcıyı veya sohbetini gizlemek yalnızca senin görünümünü değiştirir. Sesi açık kalır ve diğer herkes onu görmeye devam eder.",
+  "liveHiddenChatNotice": "Gizlenen mesajlar diğer herkes tarafından görülebilir."
 }

@@ -5108,5 +5108,10 @@
   "soundReadyDescription": "استخدمه في الفيديو القادم أو احفظه في مكتبة الأصوات.",
   "soundReadyUse": "استخدم هذا الصوت",
   "soundReadySave": "حفظ في أصواتي",
-  "soundRequestSaved": "تم الحفظ"
+  "soundRequestSaved": "تم الحفظ",
+  "liveTabLabel": "مباشر",
+  "liveHideParticipantLocally": "إخفاء من عرضي",
+  "liveHideChatLocally": "إخفاء الدردشة لدي",
+  "liveLocalHidingExplanation": "إخفاء مشارك أو دردشته يغيّر عرضك فقط. يظل صوته مسموعًا ويظل الآخرون يرونه.",
+  "liveHiddenChatNotice": "تظل الرسائل المخفية مرئية للآخرين."
 }

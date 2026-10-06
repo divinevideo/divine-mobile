@@ -5108,5 +5108,10 @@
   "soundReadyDescription": "Utilise-le dans ta prochaine vidéo ou enregistre-le dans ta bibliothèque de sons.",
   "soundReadyUse": "Utiliser ce son",
   "soundReadySave": "Enregistrer dans Mes sons",
-  "soundRequestSaved": "Enregistré"
+  "soundRequestSaved": "Enregistré",
+  "liveTabLabel": "En direct",
+  "liveHideParticipantLocally": "Masquer pour moi",
+  "liveHideChatLocally": "Masquer le chat pour moi",
+  "liveLocalHidingExplanation": "Masquer une personne ou son chat ne change que votre vue. Son audio reste actif et les autres la voient toujours.",
+  "liveHiddenChatNotice": "Les messages masqués restent visibles pour les autres."
 }

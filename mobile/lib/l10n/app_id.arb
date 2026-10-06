@@ -5108,5 +5108,10 @@
   "soundReadyDescription": "Pakai di video berikutnya atau simpan ke koleksi suaramu.",
   "soundReadyUse": "Pakai suara ini",
   "soundReadySave": "Simpan ke Suara Saya",
-  "soundRequestSaved": "Tersimpan"
+  "soundRequestSaved": "Tersimpan",
+  "liveTabLabel": "Langsung",
+  "liveHideParticipantLocally": "Sembunyikan dari tampilan saya",
+  "liveHideChatLocally": "Sembunyikan chat untuk saya",
+  "liveLocalHidingExplanation": "Menyembunyikan peserta atau chat mereka hanya mengubah tampilan Anda. Audio mereka tetap aktif dan orang lain tetap melihat mereka.",
+  "liveHiddenChatNotice": "Pesan yang disembunyikan tetap terlihat oleh orang lain."
 }

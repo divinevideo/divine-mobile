@@ -5108,5 +5108,10 @@
   "soundReadyDescription": "Folosește-l în următorul videoclip sau salvează-l în biblioteca ta de sunete.",
   "soundReadyUse": "Folosește acest sunet",
   "soundReadySave": "Salvează în Sunetele mele",
-  "soundRequestSaved": "Salvat"
+  "soundRequestSaved": "Salvat",
+  "liveTabLabel": "În direct",
+  "liveHideParticipantLocally": "Ascunde din vizualizarea mea",
+  "liveHideChatLocally": "Ascunde chatul pentru mine",
+  "liveLocalHidingExplanation": "Ascunderea unei persoane sau a chatului ei schimbă doar vizualizarea ta. Sunetul rămâne activ, iar ceilalți o văd în continuare.",
+  "liveHiddenChatNotice": "Mesajele ascunse rămân vizibile pentru ceilalți."
 }

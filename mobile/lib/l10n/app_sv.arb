@@ -5108,5 +5108,10 @@
   "soundReadyDescription": "Använd det i din nästa video eller spara det i ditt ljudbibliotek.",
   "soundReadyUse": "Använd det här ljudet",
   "soundReadySave": "Spara i Mina ljud",
-  "soundRequestSaved": "Sparat"
+  "soundRequestSaved": "Sparat",
+  "liveTabLabel": "Live",
+  "liveHideParticipantLocally": "Dölj för mig",
+  "liveHideChatLocally": "Dölj chatten för mig",
+  "liveLocalHidingExplanation": "Att dölja en deltagare eller deras chatt ändrar bara din vy. Ljudet är fortfarande på och alla andra ser deltagaren.",
+  "liveHiddenChatNotice": "Dolda meddelanden är synliga för alla andra."
 }

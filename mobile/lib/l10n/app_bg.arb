@@ -5232,5 +5232,10 @@
   "soundReadyDescription": "Използвай го в следващия си видеоклип или го запази в библиотеката си със звуци.",
   "soundReadyUse": "Използвай този звук",
   "soundReadySave": "Запази в Моите звуци",
-  "soundRequestSaved": "Запазено"
+  "soundRequestSaved": "Запазено",
+  "liveTabLabel": "На живо",
+  "liveHideParticipantLocally": "Скрий от моя изглед",
+  "liveHideChatLocally": "Скрий чата за мен",
+  "liveLocalHidingExplanation": "Скриването на участник или неговия чат променя само твоя изглед. Звукът му остава включен и останалите продължават да го виждат.",
+  "liveHiddenChatNotice": "Скритите съобщения остават видими за всички останали."
 }
