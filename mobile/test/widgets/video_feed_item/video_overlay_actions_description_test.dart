@@ -310,9 +310,12 @@ void main() {
         );
       });
 
-      testWidgets('reserves no gap for collaborators the viewer cannot see', (
-        tester,
-      ) async {
+      // Pumps the overlay for a third-party viewer, with the collaborator's
+      // acceptance resolved to [status].
+      Future<void> pumpAsThirdPartyViewer(
+        WidgetTester tester, {
+        required CollaboratorStatus status,
+      }) async {
         const viewerPubkey =
             'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
         testVideo = testVideo.copyWith(
@@ -331,9 +334,7 @@ void main() {
           (_) => Stream.value(
             VideoCollaboratorStatus(
               videoAddress: testVideo.addressableId!,
-              statusByPubkey: const {
-                collaboratorPubkey: CollaboratorStatus.pending,
-              },
+              statusByPubkey: {collaboratorPubkey: status},
               isResolved: true,
             ),
           ),
@@ -347,6 +348,33 @@ void main() {
               repository,
             ),
           ],
+        );
+      }
+
+      testWidgets(
+        'keeps a 4 pt gap above a collaborator row the viewer can see',
+        (tester) async {
+          await pumpAsThirdPartyViewer(
+            tester,
+            status: CollaboratorStatus.confirmed,
+          );
+
+          final rowTop = tester
+              .getRect(find.bySemanticsIdentifier('collaborator_avatar_row'))
+              .top;
+          expect(
+            rowTop - descriptionBottom(tester),
+            closeTo(4, _layoutTolerance),
+          );
+        },
+      );
+
+      testWidgets('reserves no gap for collaborators the viewer cannot see', (
+        tester,
+      ) async {
+        await pumpAsThirdPartyViewer(
+          tester,
+          status: CollaboratorStatus.pending,
         );
 
         // The row is mounted but shows the third-party viewer nothing.
