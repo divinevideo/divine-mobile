@@ -150,6 +150,14 @@ void main() {
   late _Videos videos;
   late SharedPreferences preferences;
 
+  setUp(() {
+    final originalPreferencesPlatform = SharedPreferencesStorePlatform.instance;
+    addTearDown(() {
+      SharedPreferences.setMockInitialValues({});
+      SharedPreferencesStorePlatform.instance = originalPreferencesPlatform;
+    });
+  });
+
   setUp(() async {
     lists = CuratedListRepository(
       nostrClient: _Nostr(),
@@ -1608,7 +1616,7 @@ void main() {
         () => feed.add(const VideoFeedStarted()),
       );
       feed.add(const VideoFeedSourceChanged(VideoFeedSource.forYou()));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       expect(preferences.getString(_key), 'forYou');
       await waitFor(
         feed,

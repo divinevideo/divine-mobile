@@ -50,26 +50,28 @@ void main() {
       }
     });
   });
-  test('curated preference namespace keeps the selector identity stable', () {
-    const author =
-        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-    const source = VideoFeedSource.subscribedList(
-      listId: '$author:series:cats',
-      listName: 'Cats',
-    );
-    expect(source.persistenceValue, 'list:$author:series:cats');
-    expect(
-      FeedModePreferenceStore.storageValueFor(source),
-      'curated:$author:series:cats',
-    );
-    expect(
-      VideoFeedSource.isCuratedListPreference('list:$author:cats'),
-      isTrue,
-    );
-    expect(
-      VideoFeedSource.isCuratedListPreference('curated:$author:cats'),
-      isTrue,
-    );
-    expect(VideoFeedSource.isCuratedListPreference('forYou'), isFalse);
+  group('VideoFeedSource curated identity', () {
+    test('curated preference namespace keeps the selector identity stable', () {
+      const author =
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      const source = VideoFeedSource.subscribedList(
+        listId: '$author:series:cats',
+        listName: 'Cats',
+      );
+      expect(source.persistenceValue, 'list:$author:series:cats');
+      expect(
+        FeedModePreferenceStore.storageValueFor(source),
+        'curated:$author:series:cats',
+      );
+      expect(
+        VideoFeedSource.isCuratedListPreference('list:$author:cats'),
+        isTrue,
+      );
+      expect(
+        VideoFeedSource.isCuratedListPreference('curated:$author:cats'),
+        isTrue,
+      );
+      expect(VideoFeedSource.isCuratedListPreference('forYou'), isFalse);
+    });
   });
 }
