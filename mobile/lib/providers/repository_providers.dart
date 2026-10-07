@@ -273,33 +273,12 @@ CuratedListRepository curatedListRepository(Ref ref) {
 
   // Bridge: push curated list updates from legacy service into repository
   ref.listen(curatedListsStateProvider, (_, next) {
-    if (next.isLoading || next.hasError) {
-      repository.setSubscribedLists(
-        repository.getSubscribedLists(),
-        isComplete: false,
-      );
-      return;
-    }
-    next.whenData((_) {
-      final service = ref.read(curatedListsStateProvider.notifier).service;
-      repository
-        ..setSubscribedLists(
-          service == null ? const [] : subscribedListsForHomeBridge(service),
-          isComplete:
-              service != null &&
-              hasCompleteSubscriptionSnapshotForHomeBridge(service),
-        )
-        ..setOwnLists(
-          service == null
-              ? const []
-              : ownListsForSearchBridge(
-                  service,
-                  viewerPubkey: ref
-                      .read(authServiceProvider)
-                      .currentPublicKeyHex,
-                ),
-        );
-    });
+    syncCuratedListRepositoryBridge(
+      repository,
+      ref.read(curatedListsStateProvider.notifier).service,
+      viewerPubkey: ref.read(authServiceProvider).currentPublicKeyHex,
+      isDataReady: !next.isLoading && !next.hasError && next.hasValue,
+    );
   }, fireImmediately: true);
 
   ref.onDispose(repository.dispose);
@@ -365,9 +344,37 @@ Future<void> curatedListThumbnailPolicyInitialized(Ref ref) async {
   await Future.wait([age.initialized, content.initialized]);
 }
 
+/// Applies a service snapshot without retaining a retired account's rows.
+///
+/// An auth event may recreate this repository before the queued Nostr client
+/// replacement rebuilds the service provider. Both its immediate replay and
+/// loading/error transitions must exclude that retired service's cached data.
+@visibleForTesting
+void syncCuratedListRepositoryBridge(
+  CuratedListRepository repository,
+  CuratedListService? service, {
+  required String? viewerPubkey,
+  required bool isDataReady,
+}) {
+  final current = service != null && service.isCurrentSession ? service : null;
+  repository
+    ..setSubscribedLists(
+      current == null ? const [] : subscribedListsForHomeBridge(current),
+      isComplete:
+          isDataReady &&
+          current != null &&
+          hasCompleteSubscriptionSnapshotForHomeBridge(current),
+    )
+    ..setOwnLists(
+      current == null
+          ? const []
+          : ownListsForSearchBridge(current, viewerPubkey: viewerPubkey),
+    );
+}
+
 @visibleForTesting
 List<CuratedList> subscribedListsForHomeBridge(CuratedListService service) =>
-    service.subscribedLists;
+    service.isCurrentSession ? service.subscribedLists : const [];
 
 /// Whether Home may make final decisions about saved subscription identities.
 ///
@@ -415,11 +422,12 @@ List<CuratedList> ownListsForSearchBridge(
   CuratedListService service, {
   required String? viewerPubkey,
 }) => [
-  for (final list in service.myLists)
-    if (list.pubkey == null && viewerPubkey != null)
-      list.copyWith(pubkey: viewerPubkey)
-    else
-      list,
+  if (service.isCurrentSession)
+    for (final list in service.myLists)
+      if (list.pubkey == null && viewerPubkey != null)
+        list.copyWith(pubkey: viewerPubkey)
+      else
+        list,
 ];
 
 /// Provider for HashtagRepository instance.
@@ -825,9 +833,11 @@ ProfilePinsRepository profilePinsRepository(Ref ref) {
   );
 }
 
-// =============================================================================
+// ======================================================================}
+
 // DM REPOSITORY
-// =============================================================================
+// ======================================================================}
+
 
 /// Provider for NIP-17 DM repository.
 ///
@@ -1030,9 +1040,11 @@ DmRepository dmRepository(Ref ref) {
   return repository;
 }
 
-// =============================================================================
+// ======================================================================}
+
 // COMMENTS REPOSITORY
-// =============================================================================
+// ======================================================================}
+
 
 /// Provider for CommentsRepository instance
 ///

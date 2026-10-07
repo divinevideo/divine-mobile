@@ -208,7 +208,7 @@ final class CuratedListRepositoryProvider
 }
 
 String _$curatedListRepositoryHash() =>
-    r'daaf1c89641405ebb3553d52875fa66cd4be647c';
+    r'13ad3c31bfac9fa7dcdb41d8606152a6051c49bd';
 
 /// Shared preview policy for My Lists and public list search.
 ///
