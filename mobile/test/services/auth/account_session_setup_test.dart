@@ -66,6 +66,7 @@ void main() {
   late UserDataCleanupService cleanup;
   late AuthService auth;
   late _Keys keys;
+  late _Discovery discovery;
   late SecureKeyContainer container;
   FlutterSecureStorage? secureStorage;
   late List<({String? owner, bool destructive, bool preserveSession})> sweeps;
@@ -74,10 +75,6 @@ void main() {
   setUpAll(() => registerFallbackValue(SecureKeyContainer.fromNsec(nsec)));
 
   AuthService createAuth() {
-    final discovery = _Discovery();
-    when(() => discovery.discoverRelays(any())).thenAnswer(
-      (_) async => RelayDiscoveryResult.failure('No relay discovery in test'),
-    );
     return AuthService(
       userDataCleanupService: cleanup,
       backgroundActivityManager: BackgroundActivityManager(),
@@ -120,10 +117,17 @@ void main() {
         };
 
     keys = _Keys();
+    discovery = _Discovery();
+  });
+
+  void stubKeyLifecycle() {
     when(keys.initialize).thenAnswer((_) async {});
     when(keys.hasKeys).thenAnswer((_) async => true);
     when(keys.clearCache).thenReturn(null);
     when(keys.dispose).thenReturn(null);
+  }
+
+  void stubLocalAndStoredKeys() {
     when(() => keys.importFromNsec(any())).thenAnswer((_) async => container);
     when(() => keys.getIdentityKeyContainer(any())).thenAnswer(
       (invocation) async =>
@@ -135,8 +139,13 @@ void main() {
     when(() => keys.switchToIdentity(any())).thenAnswer((_) async => true);
     when(() => keys.storeIdentityKeyContainer(any(), any()))
         .thenAnswer((_) async {});
-    auth = createAuth();
-  });
+  }
+
+  void stubNetworkFreeDiscovery() {
+    when(() => discovery.discoverRelays(any())).thenAnswer(
+      (_) async => RelayDiscoveryResult.failure('No relay discovery in test'),
+    );
+  }
 
   tearDown(() async {
     await auth.dispose();
@@ -189,6 +198,13 @@ void main() {
   }
 
   group('signInForAccount pending cleanup', () {
+    setUp(stubKeyLifecycle);
+    setUp(stubLocalAndStoredKeys);
+    setUp(stubNetworkFreeDiscovery);
+    setUp(() {
+      auth = createAuth();
+    });
+
     test(
       'same live owner preserves its marker, list lease and authentication',
       () async {
@@ -364,6 +380,13 @@ void main() {
   });
 
   group('signInWithDivineOAuth pending cleanup', () {
+    setUp(stubKeyLifecycle);
+    setUp(stubLocalAndStoredKeys);
+    setUp(stubNetworkFreeDiscovery);
+    setUp(() {
+      auth = createAuth();
+    });
+
     test(
       'OAuth captures the continuing account before its authenticating state',
       () async {
@@ -475,6 +498,13 @@ void main() {
   });
 
   group('signInForAccount entry context', () {
+    setUp(stubKeyLifecycle);
+    setUp(stubLocalAndStoredKeys);
+    setUp(stubNetworkFreeDiscovery);
+    setUp(() {
+      auth = createAuth();
+    });
+
     for (final originallyLive in [true, false]) {
       test(
         'stored-key entry with originally live=$originallyLive cannot borrow '
@@ -575,6 +605,13 @@ void main() {
   });
 
   group('importFromNsec entry context', () {
+    setUp(stubKeyLifecycle);
+    setUp(stubLocalAndStoredKeys);
+    setUp(stubNetworkFreeDiscovery);
+    setUp(() {
+      auth = createAuth();
+    });
+
     test(
       'explicit key import cannot borrow a concurrently established session',
       () async {
@@ -603,6 +640,13 @@ void main() {
   });
 
   group('signInForAccount setup continuity', () {
+    setUp(stubKeyLifecycle);
+    setUp(stubLocalAndStoredKeys);
+    setUp(stubNetworkFreeDiscovery);
+    setUp(() {
+      auth = createAuth();
+    });
+
     for (final replacement in ['identity', 'key container']) {
       test(
         'same-owner $replacement replacement cannot defer stale setup',
