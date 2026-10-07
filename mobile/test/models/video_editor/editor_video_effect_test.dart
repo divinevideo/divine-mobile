@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio;
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
@@ -143,16 +144,19 @@ void main() {
   });
 
   group('videoEffectsOnOutput', () {
-    DivineVideoClip clip(String id, {ClipTransition? transition}) =>
-        DivineVideoClip(
-          id: id,
-          video: EditorVideo.file('${Directory.systemTemp.path}/$id.mp4'),
-          duration: const Duration(seconds: 3),
-          recordedAt: DateTime(2026),
-          targetAspectRatio: model.AspectRatio.vertical,
-          originalAspectRatio: 9 / 16,
-          transition: transition,
-        );
+    DivineVideoClip clip(
+      String id, {
+      ClipTransition? transition,
+      Duration duration = const Duration(seconds: 3),
+    }) => DivineVideoClip(
+      id: id,
+      video: EditorVideo.file('${Directory.systemTemp.path}/$id.mp4'),
+      duration: duration,
+      recordedAt: DateTime(2026),
+      targetAspectRatio: model.AspectRatio.vertical,
+      originalAspectRatio: 9 / 16,
+      transition: transition,
+    );
 
     // Two 3 s clips, so 6 s of editor timeline.
     final plain = TransitionTimelineMap.fromClips([clip('a'), clip('b')]);
@@ -171,16 +175,29 @@ void main() {
     Duration ms(int milliseconds) => Duration(milliseconds: milliseconds);
 
     /// The most flashes that start within any one second of the exported
-    /// video, sampled once per renderer frame (24 a second).
-    int mostFlashesPerSecond(List<VideoEffect> onOutput) {
+    /// video as it loops, sampled once per renderer frame (24 a second) over
+    /// three passes, so flashes on both sides of the loop point count
+    /// together.
+    int mostFlashesPerSecond(
+      List<VideoEffect> onOutput,
+      TransitionTimelineMap map,
+    ) {
+      // The export, and so the loop, is capped at the maximum duration.
+      final loopPoint = map.outputDuration < VideoEditorConstants.maxDuration
+          ? map.outputDuration
+          : VideoEditorConstants.maxDuration;
+      Duration frameTime(int frame) =>
+          Duration(microseconds: (frame + 0.5) * 1e6 ~/ 24);
       final onsets = <Duration>[];
       var wasOn = false;
-      for (var frame = 0; frame < 24 * 7; frame++) {
-        final at = Duration(microseconds: (frame + 0.5) * 1e6 ~/ 24);
-        final resolved = VideoEffect.resolve(onOutput, at);
-        final on = resolved.flash >= 0.5 || resolved.invert >= 0.5;
-        if (on && !wasOn) onsets.add(at);
-        wasOn = on;
+      for (var pass = 0; pass < 3; pass++) {
+        for (var frame = 0; frameTime(frame) < loopPoint; frame++) {
+          final at = frameTime(frame);
+          final resolved = VideoEffect.resolve(onOutput, at);
+          final on = resolved.flash >= 0.5 || resolved.invert >= 0.5;
+          if (on && !wasOn) onsets.add(loopPoint * pass + at);
+          wasOn = on;
+        }
       }
       var most = 0;
       for (final start in onsets) {
@@ -237,7 +254,7 @@ void main() {
                 flashing(type, intensity, ms(split), ms(6000)),
               ], map);
               expect(
-                mostFlashesPerSecond(onOutput),
+                mostFlashesPerSecond(onOutput, map),
                 lessThanOrEqualTo(3),
                 reason: '$type at $intensity split at $split ms',
               );
@@ -259,7 +276,7 @@ void main() {
                 flashing(second, 1, ms(boundary), ms(6000)),
               ], map);
               expect(
-                mostFlashesPerSecond(onOutput),
+                mostFlashesPerSecond(onOutput, map),
                 lessThanOrEqualTo(3),
                 reason: '$first then $second at $boundary ms',
               );
@@ -267,6 +284,77 @@ void main() {
           }
         }
       }
+    });
+
+    // #9873: a 5.5 s video with a negative flash flashed at 5.0, 5.25, 5.5
+    // and 5.75 s, where it starts over.
+    test('keeps flashing effects at three flashes a second or fewer across '
+        'the loop point, at any video length', () {
+      const kinds = [VideoEffectType.strobe, VideoEffectType.negativeFlash];
+      // Up to 7 s: slowed-down clips make the timeline outlast the 6.3 s the
+      // export is capped at.
+      for (var length = 1000; length <= 7000; length += 50) {
+        final map = TransitionTimelineMap.fromClips([
+          clip('a', duration: ms(length)),
+        ]);
+        for (final type in kinds) {
+          for (final intensity in [0.3, 0.7, 1.0]) {
+            final onOutput = videoEffectsOnOutput([
+              VideoEffect(type: type, intensity: intensity),
+            ], map);
+            expect(
+              mostFlashesPerSecond(onOutput, map),
+              lessThanOrEqualTo(3),
+              reason: '$type at $intensity on $length ms',
+            );
+          }
+        }
+        for (final first in kinds) {
+          for (final second in kinds) {
+            final onOutput = videoEffectsOnOutput([
+              flashing(first, 1, Duration.zero, ms(1000)),
+              VideoEffect(type: second, startTime: ms(1000)),
+            ], map);
+            expect(
+              mostFlashesPerSecond(onOutput, map),
+              lessThanOrEqualTo(3),
+              reason: '$first then $second on $length ms',
+            );
+          }
+        }
+      }
+    });
+
+    test('ends flashing effects on the last whole second before the loop '
+        'point when the video flashes from its start', () {
+      final map = TransitionTimelineMap.fromClips([
+        clip('a', duration: ms(5500)),
+      ]);
+
+      expect(
+        videoEffectsOnOutput(const [
+          VideoEffect.negativeFlash(),
+          VideoEffect.glitch(),
+        ], map),
+        [
+          VideoEffect.negativeFlash(endTime: ms(5000)),
+          const VideoEffect.glitch(),
+        ],
+      );
+    });
+
+    test('lets a flashing effect run to the loop point when the video does '
+        'not flash from its start', () {
+      final map = TransitionTimelineMap.fromClips([
+        clip('a', duration: ms(5500)),
+      ]);
+
+      expect(
+        videoEffectsOnOutput([
+          VideoEffect.negativeFlash(startTime: ms(1300)),
+        ], map),
+        [VideoEffect.negativeFlash(startTime: ms(2000))],
+      );
     });
   });
 }
