@@ -1065,6 +1065,20 @@ void main() {
       });
     });
   });
+
+  group('diagnostic logging', () {
+    test('console output leaves no throttle timer pending in fake time', () {
+      fakeAsync((async) {
+        // Well past the console throttle's per-second byte budget, which is
+        // what arms the timer the retry assertions would otherwise trip on.
+        for (var i = 0; i < 100; i++) {
+          Log.info('x' * 200, name: 'DmRefusalConfirmationBudgetTest');
+        }
+
+        expect(async.pendingTimers, isEmpty);
+      });
+    });
+  });
 }
 
 class _InlineVerifyWorker implements DmVerifyWorker {
