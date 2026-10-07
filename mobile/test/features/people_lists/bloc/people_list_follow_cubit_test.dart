@@ -116,6 +116,19 @@ void main() {
     });
 
     group('started', () {
+      test('reads the follow without waiting for the watch to emit', () async {
+        durableFollow = true;
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+
+        await cubit.started();
+        await pumpEventQueue();
+
+        expect(cubit.state.hasReadFollowing, isTrue);
+        expect(cubit.state.isFollowing, isTrue);
+        expect(cubit.state.status, PeopleListFollowStatus.ready);
+      });
+
       test(
         'a failed initial read cannot follow until an explicit retry',
         () async {
@@ -215,6 +228,10 @@ void main() {
           PeopleListFollowState(
             hasReadFollowing: true,
             status: PeopleListFollowStatus.ready,
+          ),
+          PeopleListFollowState(
+            hasReadFollowing: true,
+            status: PeopleListFollowStatus.ready,
             isFollowing: true,
           ),
           PeopleListFollowState(
@@ -232,7 +249,10 @@ void main() {
           followedController.addError(StateError('box will not open'));
         },
         expect: () => const [
-          PeopleListFollowState(status: PeopleListFollowStatus.failure),
+          PeopleListFollowState(
+            hasReadFollowing: true,
+            status: PeopleListFollowStatus.ready,
+          ),
           PeopleListFollowState(
             hasReadFollowing: true,
             status: PeopleListFollowStatus.failure,
