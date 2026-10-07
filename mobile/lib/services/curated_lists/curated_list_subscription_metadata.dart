@@ -11,6 +11,7 @@ import 'package:unified_logger/unified_logger.dart';
 /// Missing metadata is known empty. Unreadable metadata yields an immutable
 /// [fallback] and remains incomplete, even if its first IDs could be decoded.
 /// [onMissing] lets the cache writer retire a baseline removed by account cleanup.
+/// [onUnreadable] overrides the service loader's sanitized diagnostic reporter.
 ({Set<String> ids, bool isReadable}) readCuratedListSubscriptionSnapshot({
   required SharedPreferences preferences,
   required String storageKey,
@@ -32,8 +33,8 @@ import 'package:unified_logger/unified_logger.dart';
     } else {
       // FormatException.toString() may quote the stored record.
       Log.error(
-        'Stored curated subscriptions cannot be read (${error.runtimeType})',
-        name: 'CuratedListSubscriptionMetadata',
+        'Failed to load subscribed list IDs (${error.runtimeType})',
+        name: 'CuratedListService',
         category: LogCategory.system,
         stackTrace: stackTrace,
       );
