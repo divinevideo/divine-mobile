@@ -1,6 +1,7 @@
 // ABOUTME: Finds where the beats of a video's music land on the exported
 // ABOUTME: video, so effects can fire on them in the preview and the export.
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:equatable/equatable.dart';
@@ -204,7 +205,9 @@ class VideoEditorBeatResolver {
         _beatsByPart[part] = const [];
       } finally {
         if (identical(_readsInFlight[part], pending)) {
-          _readsInFlight.remove(part);
+          // Removal only relinquishes the cache's reference. This future was
+          // already awaited above, including its error handling.
+          unawaited(_readsInFlight.remove(part));
         }
       }
     }
