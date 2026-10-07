@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/services/curated_lists/curated_list_subscription_metadata.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _Preferences extends Mock implements SharedPreferences {}
 
@@ -16,6 +17,69 @@ void main() {
       'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
   group('readCuratedListSubscriptionSnapshot', () {
+    test(
+      'default diagnostics preserve safe service loader attribution',
+      () async {
+        const privateRecord = 'private-subscription-sentinel {{{';
+        SharedPreferences.setMockInitialValues({key: privateRecord});
+        final preferences = await SharedPreferences.getInstance();
+        final logs = LogCaptureService();
+        await logs.clearAllLogs();
+        addTearDown(logs.clearAllLogs);
+
+        final snapshot = readCuratedListSubscriptionSnapshot(
+          preferences: preferences,
+          storageKey: key,
+        );
+
+        expect(snapshot.isReadable, isFalse);
+        expect(preferences.getString(key), privateRecord);
+        final entries = logs.getRecentLogs();
+        expect(entries, hasLength(1));
+        final entry = entries.single;
+        expect(entry.name, 'CuratedListService');
+        expect(entry.level, LogLevel.error);
+        expect(entry.category, LogCategory.system);
+        expect(entry.stackTrace, isNotNull);
+        expect(
+          entry.message,
+          'Failed to load subscribed list IDs (FormatException)',
+        );
+        expect(jsonEncode(entry.toJson()), isNot(contains(privateRecord)));
+      },
+    );
+
+    test('an explicit reporter retains its own context without duplicate logs', () async {
+      const privateRecord = 'private-subscription-sentinel {{{';
+      SharedPreferences.setMockInitialValues({key: privateRecord});
+      final preferences = await SharedPreferences.getInstance();
+      final logs = LogCaptureService();
+      await logs.clearAllLogs();
+      addTearDown(logs.clearAllLogs);
+
+      final snapshot = readCuratedListSubscriptionSnapshot(
+        preferences: preferences,
+        storageKey: key,
+        onUnreadable: (error, stackTrace) => Log.error(
+          'Stored curated subscriptions cannot be read (${error.runtimeType})',
+          name: 'PrefsCuratedListStore',
+          category: LogCategory.system,
+          stackTrace: stackTrace,
+        ),
+      );
+
+      expect(snapshot.isReadable, isFalse);
+      expect(preferences.getString(key), privateRecord);
+      final entries = logs.getRecentLogs();
+      expect(entries, hasLength(1));
+      final entry = entries.single;
+      expect(entry.name, 'PrefsCuratedListStore');
+      expect(entry.level, LogLevel.error);
+      expect(entry.stackTrace, isNotNull);
+      expect(entry.message, contains('FormatException'));
+      expect(jsonEncode(entry.toJson()), isNot(contains(privateRecord)));
+    });
+
     test('an absent record retires its baseline and is known empty', () async {
       SharedPreferences.setMockInitialValues({});
       final preferences = await SharedPreferences.getInstance();
