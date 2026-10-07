@@ -129,6 +129,10 @@ class _Fixture {
     container = ProviderContainer(
       overrides: [
         authServiceProvider.overrideWithValue(auth),
+        curatedListThumbnailFilterProvider.overrideWith(
+          (ref) =>
+              (_) => false,
+        ),
         currentAuthStateProvider.overrideWith(_AuthState.new),
         sharedPreferencesProvider.overrideWithValue(_Preferences()),
         nostrServiceProvider.overrideWith(() => _ClientState(clientInput)),

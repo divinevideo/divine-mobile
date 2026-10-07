@@ -371,6 +371,9 @@ Future<List<CuratedList>> myListsWithThumbnails(Ref ref) async {
   ref.onDispose(() => disposed = true);
   final notifier = ref.watch(curatedListsStateProvider.notifier);
   final repository = ref.watch(curatedListRepositoryProvider);
+  // The repository keeps its subscription stream stable across policy changes;
+  // this consumer still retires loaded and in-flight preview snapshots.
+  ref.watch(curatedListThumbnailFilterProvider);
   final authService = ref.watch(authServiceProvider);
   final owner = authService.currentPublicKeyHex;
   // Service rebuilds retain the notifier, so its construction dependencies

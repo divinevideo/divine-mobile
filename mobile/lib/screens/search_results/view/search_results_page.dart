@@ -125,6 +125,7 @@ class _SearchResultsScope extends ConsumerWidget {
     final videosRepository = ref.watch(videosRepositoryProvider);
     final hashtagRepository = ref.watch(hashtagRepositoryProvider);
     final curatedListRepository = ref.watch(curatedListRepositoryProvider);
+    final listThumbnailPolicy = ref.watch(curatedListThumbnailFilterProvider);
     final peopleListsRepository = ref.watch(peopleListsRepositoryProvider);
     final profileListFeaturesEnabled = ref.watch(
       isFeatureEnabledProvider(FeatureFlag.profileListFeatures),
@@ -137,13 +138,14 @@ class _SearchResultsScope extends ConsumerWidget {
 
     return MultiBlocProvider(
       // Recreate the search blocs when an auth-sensitive repository or flag
-      // changes so no bloc remains bound to stale dependencies.
+      // changes so no bloc remains bound to stale dependencies or visible previews.
       // See `.claude/rules/state_management.md`.
       key: ValueKey((
         profileRepository,
         videosRepository,
         hashtagRepository,
         curatedListRepository,
+        listThumbnailPolicy,
         peopleListsRepository,
         peopleListSearchEnabled,
       )),

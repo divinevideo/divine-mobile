@@ -257,12 +257,16 @@ final contactListDirtyBroadcastBridgeProvider = Provider<void>((ref) {
 /// until the repository owns its own persistence (Phase 1b).
 @Riverpod(keepAlive: true)
 CuratedListRepository curatedListRepository(Ref ref) {
-  final videoFilter = ref.watch(curatedListThumbnailFilterProvider);
   final repository = CuratedListRepository(
     nostrClient: ref.watch(nostrServiceProvider),
     funnelcakeApiClient: ref.watch(funnelcakeApiClientProvider),
     blockFilter: createBlockedAuthorFilter(ref),
-    videoFilter: videoFilter,
+    // Policy changes must not retire the subscribed-list stream held by Home.
+    // Each resolver check reads the current policy, including its final check
+    // after asynchronous REST/relay work. Real client replacements still
+    // dispose this repository and deny late previews through the mounted gate.
+    videoFilter: (video) =>
+        !ref.mounted || ref.read(curatedListThumbnailFilterProvider)(video),
   );
 
   // Bridge: push curated list updates from legacy service into repository
@@ -292,8 +296,9 @@ CuratedListRepository curatedListRepository(Ref ref) {
 
 /// Shared preview policy for My Lists and public list search.
 ///
-/// Replacing a policy retires its captured callback, so late thumbnail reads
-/// cannot publish previews from an earlier policy or account session.
+/// A retired callback fails closed. The stable curated-list repository reads
+/// this provider at each check, while thumbnail consumers watch it to clear
+/// displayed previews and restart pending hydration on policy changes.
 @Riverpod(keepAlive: true)
 CuratedListVideoFilter curatedListThumbnailFilter(Ref ref) {
   ref.watch(currentAuthStateProvider);

@@ -404,6 +404,47 @@ void main() {
       }
     }
 
+    test('block sync preserves the repository and its list listener', () async {
+      final fixture = await _Fixture.open();
+      await fixture.read();
+      final held = fixture.container.read(curatedListRepositoryProvider);
+      var streamClosed = false;
+      final updates = <List<CuratedList>>[];
+      final subscription = held.subscribedListsStream.listen(
+        updates.add,
+        onDone: () => streamClosed = true,
+      );
+      addTearDown(subscription.cancel);
+      await fixture.container.pump();
+
+      fixture.container.read(blocklistVersionProvider.notifier).increment();
+      await fixture.container.pump();
+
+      expect(fixture.container.read(curatedListRepositoryProvider), same(held));
+      expect(streamClosed, isFalse);
+      fixture.container.read(contentFilterVersionProvider.notifier).increment();
+      fixture.container
+          .read(divineHostFilterVersionProvider.notifier)
+          .increment();
+      fixture.container
+          .read(videoProvenanceFilterVersionProvider.notifier)
+          .increment();
+      fixture.container
+          .read(adultContentVerificationVersionProvider.notifier)
+          .increment();
+      await fixture.container.pump();
+      expect(fixture.container.read(curatedListRepositoryProvider), same(held));
+      expect(streamClosed, isFalse);
+      final followed = (await fixture.read()).single;
+      held.setSubscribedLists([followed]);
+      await fixture.container.pump();
+      expect(updates.last.single.id, followed.id);
+      held.setSubscribedLists(const []);
+      await fixture.container.pump();
+      expect(updates.last, isEmpty);
+      expect(streamClosed, isFalse);
+    });
+
     test(
       'policy changes retire loaded thumbnails and pending results',
       () async {
@@ -464,7 +505,7 @@ void main() {
     );
 
     test(
-      'an old repository cannot expose previews after an auth ABA',
+      'a stable repository reads the current policy after an auth ABA',
       () async {
         final fixture = await _Fixture.open();
         final original = await fixture.read();
@@ -480,10 +521,40 @@ void main() {
         auth.change(AuthState.authenticated);
         await fixture.container.pump();
         expect((await fixture.read()).single.thumbnailUrls, [_thumbnail]);
+        expect(
+          fixture.container.read(curatedListRepositoryProvider),
+          same(oldRepository),
+        );
         final late = await oldRepository.resolveListThumbnails(original);
-        expect(late.single.thumbnailUrls, isEmpty);
+        expect(late.single.thumbnailUrls, [_thumbnail]);
+        fixture.blocked = true;
+        fixture.container.read(blocklistVersionProvider.notifier).increment();
+        await fixture.container.pump();
+        expect(
+          (await oldRepository.resolveListThumbnails(original))
+              .single
+              .thumbnailUrls,
+          isEmpty,
+        );
       },
     );
+
+    test('a disposed repository cannot expose late previews', () async {
+      final fixture = await _Fixture.open();
+      final original = await fixture.read();
+      final held = fixture.container.read(curatedListRepositoryProvider);
+      fixture.container.invalidate(curatedListRepositoryProvider);
+      await fixture.container.pump();
+      expect(
+        fixture.container.read(curatedListRepositoryProvider),
+        isNot(same(held)),
+      );
+      expect(
+        (await held.resolveListThumbnails(original)).single.thumbnailUrls,
+        isEmpty,
+      );
+      expect((await fixture.read()).single.thumbnailUrls, [_thumbnail]);
+    });
 
     test(
       'block changes retire cached previews and unblock resolves again',
