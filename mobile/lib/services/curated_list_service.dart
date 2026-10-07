@@ -1360,9 +1360,9 @@ class CuratedListService extends ChangeNotifier {
   /// Load subscribed list IDs from local storage
   void _loadSubscribedListIds() {
     _hasLoadedSubscriptionIds = false;
-    final subscribedJson = _prefs.getString(subscribedListsStorageKey);
-    if (subscribedJson != null) {
-      try {
+    try {
+      final subscribedJson = _prefs.getString(subscribedListsStorageKey);
+      if (subscribedJson != null) {
         final subscribedData = List<String>.from(
           jsonDecode(subscribedJson) as List<dynamic>,
         );
@@ -1375,16 +1375,16 @@ class CuratedListService extends ChangeNotifier {
           name: 'CuratedListService',
           category: LogCategory.system,
         );
-      } catch (e, stackTrace) {
-        Log.error(
-          'Failed to load subscribed list IDs (${e.runtimeType})',
-          name: 'CuratedListService',
-          category: LogCategory.system,
-          stackTrace: stackTrace,
-        );
       }
+      if (subscribedJson == null) _hasLoadedSubscriptionIds = true;
+    } catch (e, stackTrace) {
+      Log.error(
+        'Failed to load subscribed list IDs (${e.runtimeType})',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+        stackTrace: stackTrace,
+      );
     }
-    if (subscribedJson == null) _hasLoadedSubscriptionIds = true;
     _cacheStore.subscriptionsLoaded(_subscribedListIds);
   }
 
