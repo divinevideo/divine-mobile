@@ -49,6 +49,77 @@ void main() {
       });
     });
 
+    group('removeBlankLines', () {
+      test('drops empty and whitespace-only lines', () {
+        expect(
+          StringUtils.removeBlankLines('First line\n\n  \nSecond line'),
+          equals('First line\nSecond line'),
+        );
+      });
+
+      test('handles Windows and classic Mac line endings', () {
+        expect(
+          StringUtils.removeBlankLines('One\r\n\r\nTwo\r\rThree'),
+          equals('One\nTwo\nThree'),
+        );
+      });
+
+      test('keeps text without blank lines unchanged', () {
+        expect(
+          StringUtils.removeBlankLines('One\nTwo'),
+          equals('One\nTwo'),
+        );
+      });
+
+      for (final (name, codePoint) in const [
+        ('a zero-width space', 0x200B),
+        ('a word joiner', 0x2060),
+        ('a soft hyphen', 0x00AD),
+        ('a left-to-right mark', 0x200E),
+        ('a hangul filler', 0x3164),
+        ('a braille blank', 0x2800),
+      ]) {
+        test('drops a line holding only $name', () {
+          final filler = String.fromCharCode(codePoint);
+
+          expect(
+            StringUtils.removeBlankLines('One\n$filler\nTwo'),
+            equals('One\nTwo'),
+          );
+        });
+      }
+
+      for (final (name, codePoint) in const [
+        ('a line separator', 0x2028),
+        ('a paragraph separator', 0x2029),
+        ('a next-line character', 0x0085),
+      ]) {
+        test('splits on $name', () {
+          final separator = String.fromCharCode(codePoint);
+
+          expect(
+            StringUtils.removeBlankLines(['One', 'Two'].join(separator * 2)),
+            equals('One\nTwo'),
+          );
+        });
+      }
+
+      test('keeps lines that mix invisible and visible characters', () {
+        final zeroWidthSpace = String.fromCharCode(0x200B);
+        final mixed = 'a${zeroWidthSpace}b';
+        // Emoji sequences join with a zero-width joiner; the emoji keeps
+        // the line visible.
+        const womanTechnologist = '\u{1F469}\u{200D}\u{1F4BB}';
+
+        expect(
+          StringUtils.removeBlankLines(
+            '$mixed\n$zeroWidthSpace\n$womanTechnologist',
+          ),
+          equals('$mixed\n$womanTechnologist'),
+        );
+      });
+    });
+
     group('compactPlural', () {
       test('selects the plural form from the raw value', () {
         String plural(int n, String display) =>

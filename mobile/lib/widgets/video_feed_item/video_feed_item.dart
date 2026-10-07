@@ -153,9 +153,13 @@ class VideoOverlayActions extends ConsumerWidget {
     final titleText = trimmedTitle == null || trimmedTitle.isEmpty
         ? null
         : trimmedTitle;
-    final descriptionText = previewData != null
-        ? UserProfile.sanitizeDisplayName(previewData.description).trim()
-        : video!.displayContent.trim();
+    // Blank lines are dropped here only; the metadata sheet keeps the full
+    // description with its original line breaks.
+    final descriptionText = StringUtils.removeBlankLines(
+      previewData != null
+          ? UserProfile.sanitizeDisplayName(previewData.description)
+          : video!.displayContent,
+    ).trim();
 
     // Check if there's meaningful text content to display
     final hasTextContent =
@@ -613,7 +617,7 @@ class VideoOverlayActions extends ConsumerWidget {
                           linkStyle: VineTheme.bodySmallFont(
                             color: VineTheme.whiteText,
                           ).copyWith(shadows: VineTheme.buttonShadows),
-                          maxLines: 3,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -622,10 +626,11 @@ class VideoOverlayActions extends ConsumerWidget {
                 // These are video relationships, not caption content. Keep
                 // them visible when stripping wire-format attribution leaves
                 // an otherwise captionless video.
-                if (video != null && video.hasCollaborators) ...[
-                  const SizedBox(height: 4),
-                  CollaboratorAvatarRow(video: video),
-                ],
+                if (video != null && video.hasCollaborators)
+                  CollaboratorAvatarRow(
+                    video: video,
+                    padding: const EdgeInsets.only(top: 4),
+                  ),
                 if (video != null && video.isVideoReply) ...[
                   const SizedBox(height: 4),
                   VideoReplyParentLink(
@@ -634,10 +639,12 @@ class VideoOverlayActions extends ConsumerWidget {
                     onInteracted: onInteracted,
                   ),
                 ],
-                // Audio attribution row (all videos)
-                const SizedBox(height: 4),
-                if (video != null) AudioAttributionRow(video: video),
-                const SizedBox(height: 8),
+                // The row renders nothing without an audio reference, so the
+                // gap above it is gated on the same check.
+                if (video != null && video.hasAudioReference) ...[
+                  const SizedBox(height: 4),
+                  AudioAttributionRow(video: video),
+                ],
               ],
             ),
           ),
