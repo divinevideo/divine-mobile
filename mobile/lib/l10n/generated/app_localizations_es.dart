@@ -3961,6 +3961,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get peopleListsNoPeopleSubtitle => 'Añade personas para empezar';
 
   @override
+  String get peopleListsAllMembersHiddenTitle => 'Everyone here is hidden';
+
+  @override
+  String get peopleListsAllMembersHiddenSubtitle =>
+      'Blocked and muted accounts don\'t show up in lists.';
+
+  @override
   String get peopleListsNoVideosTitle => 'Aún no hay videos';
 
   @override

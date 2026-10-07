@@ -3911,6 +3911,13 @@ class AppLocalizationsSv extends AppLocalizations {
       'Lägg till personer för att komma igång';
 
   @override
+  String get peopleListsAllMembersHiddenTitle => 'Everyone here is hidden';
+
+  @override
+  String get peopleListsAllMembersHiddenSubtitle =>
+      'Blocked and muted accounts don\'t show up in lists.';
+
+  @override
   String get peopleListsNoVideosTitle => 'Inga videor än';
 
   @override

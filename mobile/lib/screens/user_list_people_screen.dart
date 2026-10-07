@@ -16,6 +16,7 @@ import 'package:openvine/features/people_lists/people_lists.dart';
 import 'package:openvine/features/people_lists/view/people_list_hero_header.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/list_providers.dart';
+import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -469,6 +470,7 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
   Widget build(BuildContext context) {
     final userList = widget.userList;
     final profileRepository = ref.watch(profileRepositoryProvider);
+    final blocklist = ref.watch(contentBlocklistRepositoryProvider);
     // Fullscreen playback draws its own chrome over the whole screen.
     final PreferredSizeWidget? appBar;
     final Widget body;
@@ -520,10 +522,15 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
       );
     }
     return BlocProvider<PeopleListMembersCubit>(
-      key: ValueKey((profileRepository, Object.hashAll(userList.pubkeys))),
+      key: ValueKey((
+        profileRepository,
+        blocklist,
+        Object.hashAll(userList.pubkeys),
+      )),
       create: (_) {
         final cubit = PeopleListMembersCubit(
           profileRepository: profileRepository,
+          contentBlocklistRepository: blocklist,
           pubkeys: userList.pubkeys,
         );
         unawaited(cubit.load());

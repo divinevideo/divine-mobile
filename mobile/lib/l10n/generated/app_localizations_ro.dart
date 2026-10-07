@@ -4037,6 +4037,13 @@ class AppLocalizationsRo extends AppLocalizations {
   String get peopleListsNoPeopleSubtitle => 'Adaugă persoane pentru a începe';
 
   @override
+  String get peopleListsAllMembersHiddenTitle => 'Everyone here is hidden';
+
+  @override
+  String get peopleListsAllMembersHiddenSubtitle =>
+      'Blocked and muted accounts don\'t show up in lists.';
+
+  @override
   String get peopleListsNoVideosTitle => 'Niciun videoclip încă';
 
   @override

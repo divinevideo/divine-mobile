@@ -3981,6 +3981,13 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ajoute des personnes pour commencer';
 
   @override
+  String get peopleListsAllMembersHiddenTitle => 'Everyone here is hidden';
+
+  @override
+  String get peopleListsAllMembersHiddenSubtitle =>
+      'Blocked and muted accounts don\'t show up in lists.';
+
+  @override
   String get peopleListsNoVideosTitle => 'Pas encore de vidéos';
 
   @override

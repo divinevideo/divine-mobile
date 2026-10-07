@@ -4028,6 +4028,13 @@ class AppLocalizationsPl extends AppLocalizations {
   String get peopleListsNoPeopleSubtitle => 'Dodaj osoby, aby zacząć';
 
   @override
+  String get peopleListsAllMembersHiddenTitle => 'Everyone here is hidden';
+
+  @override
+  String get peopleListsAllMembersHiddenSubtitle =>
+      'Blocked and muted accounts don\'t show up in lists.';
+
+  @override
   String get peopleListsNoVideosTitle => 'Brak filmów';
 
   @override
