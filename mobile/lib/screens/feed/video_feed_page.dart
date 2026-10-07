@@ -77,6 +77,12 @@ class VideoFeedPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(divineHostFilterVersionProvider);
     final contentFilterVersion = ref.watch(contentFilterVersionProvider);
+    final adultVerificationVersion = ref.watch(
+      adultContentVerificationVersionProvider,
+    );
+    final provenanceFilterVersion = ref.watch(
+      videoProvenanceFilterVersionProvider,
+    );
     final videosRepository = ref.watch(videosRepositoryProvider);
     final followRepository = ref.watch(followRepositoryProvider);
     final curatedListRepository = ref.watch(curatedListRepositoryProvider);
@@ -103,6 +109,8 @@ class VideoFeedPage extends ConsumerWidget {
         key: ValueKey((
           showDivineHostedOnly,
           contentFilterVersion,
+          adultVerificationVersion,
+          provenanceFilterVersion,
           curatedListRepository,
           viewerPubkey,
         )),
