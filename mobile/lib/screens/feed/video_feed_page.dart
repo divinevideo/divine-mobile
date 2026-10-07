@@ -16,6 +16,7 @@ import 'package:openvine/models/view_traffic_source.dart'
     show ViewTrafficSource;
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/feed_mode_persistence_provider.dart';
 import 'package:openvine/providers/foreground_idle_warmup_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
@@ -92,13 +93,12 @@ class VideoFeedPage extends ConsumerWidget {
     final feedTuningRepository = ref.watch(feedTuningRepositoryProvider);
     final enrichmentAttemptTracker = NostrTagEnrichmentAttemptTracker();
 
-    return RepositoryProvider<FeedModePersistenceCoordinator>(
+    final persistence = ref
+        .watch(feedModePersistenceRegistryProvider)
+        .forAccount(viewerPubkey);
+    return RepositoryProvider<FeedModePersistenceCoordinator>.value(
       key: ValueKey((viewerPubkey, sharedPreferences)),
-      create: (_) => FeedModePersistenceCoordinator(
-        sharedPreferences: sharedPreferences,
-        userPubkey: viewerPubkey,
-      ),
-      dispose: (coordinator) => coordinator.dispose(),
+      value: persistence,
       child: MultiBlocProvider(
         key: ValueKey((
           showDivineHostedOnly,

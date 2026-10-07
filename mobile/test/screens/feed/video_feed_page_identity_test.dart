@@ -212,142 +212,163 @@ void main() {
         expect(replacementSnapshots.hasListener, isFalse);
       },
     );
-    testWidgets(
-      'actual Home retains account coordinator across replacement during an old provisional write',
-      (tester) async {
-        await CacheSync.init(dao: _CacheDao());
-        final viewer = 'a' * 64;
-        final author = 'b' * 64;
-        final list = CuratedList(
-          id: 'crew',
-          pubkey: author,
-          name: 'Persistent Crew',
-          videoEventIds: [author],
-          createdAt: DateTime.utc(2026),
-          updatedAt: DateTime.utc(2026),
-        );
-        final source = VideoFeedSource.subscribedList(
-          listId: list.authorScopedId,
-          listName: list.name,
-        );
-        final key = 'selected_feed_mode_$viewer';
-        SharedPreferences.setMockInitialValues({});
-        final gate = _PagePreferencesGate(key, source.persistenceValue);
-        SharedPreferencesStorePlatform.instance = gate;
-        final prefs = await SharedPreferences.getInstance();
-        addTearDown(() {
-          if (!gate.release.isCompleted) gate.release.complete();
+    for (final remount in [false, true]) {
+      testWidgets(
+        remount
+            ? 'actual same-account Page remount retains accepted selection'
+            : 'actual Home retains account coordinator across replacement during an old provisional write',
+        (tester) async {
+          await CacheSync.init(dao: _CacheDao());
+          final viewer = 'a' * 64;
+          final author = 'b' * 64;
+          final list = CuratedList(
+            id: 'crew',
+            pubkey: author,
+            name: 'Persistent Crew',
+            videoEventIds: [author],
+            createdAt: DateTime.utc(2026),
+            updatedAt: DateTime.utc(2026),
+          );
+          final source = VideoFeedSource.subscribedList(
+            listId: list.authorScopedId,
+            listName: list.name,
+          );
+          final key = 'selected_feed_mode_$viewer';
           SharedPreferences.setMockInitialValues({});
-        });
-        final originalRepository = CuratedListRepository(
-          nostrClient: _Nostr(),
-          funnelcakeApiClient: _Api(),
-        );
-        final replacementRepository = CuratedListRepository(
-          nostrClient: _Nostr(),
-          funnelcakeApiClient: _Api(),
-        );
-        originalRepository.setSubscribedLists([list]);
-        replacementRepository.setSubscribedLists([list]);
-        addTearDown(originalRepository.dispose);
-        addTearDown(replacementRepository.dispose);
-        final videos = _VideosRepository();
-        when(() => videos.getVideosForList(any())).thenAnswer((_) async => []);
-        when(
-          () => videos.getRecommendedVideos(
-            userPubkey: any(named: 'userPubkey'),
-            limit: any(named: 'limit'),
-            until: any(named: 'until'),
-            skipCache: any(named: 'skipCache'),
-            revalidate: any(named: 'revalidate'),
-          ),
-        ).thenAnswer((_) async => const HomeFeedResult(videos: []));
-        await tester.pumpWidget(
-          testMaterialApp(
-            home: ProviderScope(
-              overrides: [
-                curatedListRepositoryProvider.overrideWithValue(
-                  originalRepository,
+          final gate = _PagePreferencesGate(key, source.persistenceValue);
+          SharedPreferencesStorePlatform.instance = gate;
+          final prefs = await SharedPreferences.getInstance();
+          addTearDown(() {
+            if (!gate.release.isCompleted) gate.release.complete();
+            SharedPreferences.setMockInitialValues({});
+          });
+          final originalRepository = CuratedListRepository(
+            nostrClient: _Nostr(),
+            funnelcakeApiClient: _Api(),
+          );
+          final replacementRepository = CuratedListRepository(
+            nostrClient: _Nostr(),
+            funnelcakeApiClient: _Api(),
+          );
+          originalRepository.setSubscribedLists([list]);
+          replacementRepository.setSubscribedLists([list]);
+          addTearDown(originalRepository.dispose);
+          addTearDown(replacementRepository.dispose);
+          final videos = _VideosRepository();
+          when(() => videos.getVideosForList(any()))
+              .thenAnswer((_) async => []);
+          when(
+            () => videos.getRecommendedVideos(
+              userPubkey: any(named: 'userPubkey'),
+              limit: any(named: 'limit'),
+              until: any(named: 'until'),
+              skipCache: any(named: 'skipCache'),
+              revalidate: any(named: 'revalidate'),
+            ),
+          ).thenAnswer((_) async => const HomeFeedResult(videos: []));
+          final homeMounted = ValueNotifier(true);
+          addTearDown(homeMounted.dispose);
+          await tester.pumpWidget(
+            testMaterialApp(
+              home: ProviderScope(
+                overrides: [
+                  curatedListRepositoryProvider.overrideWithValue(
+                    originalRepository,
+                  ),
+                ],
+                child: ValueListenableBuilder<bool>(
+                  valueListenable: homeMounted,
+                  builder: (_, mounted, _) => mounted
+                      ? const Scaffold(body: VideoFeedPage())
+                      : const SizedBox.shrink(),
                 ),
+              ),
+              mockSharedPreferences: prefs,
+              mockAuthService: createMockAuthService(
+                authState: AuthState.authenticated,
+                currentPublicKeyHex: viewer,
+              ),
+              mockProfileRepository: createMockProfileRepository(),
+              additionalOverrides: [
+                videosRepositoryProvider.overrideWithValue(videos),
+                isFeatureEnabledProvider(FeatureFlag.curatedLists)
+                    .overrideWithValue(false),
               ],
-              child: const Scaffold(body: VideoFeedPage()),
             ),
-            mockSharedPreferences: prefs,
-            mockAuthService: createMockAuthService(
-              authState: AuthState.authenticated,
-              currentPublicKeyHex: viewer,
+          );
+          await tester.pumpAndSettle();
+          await tester.runAsync(pumpEventQueue);
+          await tester.pump();
+          final originalElement = tester.element(find.byType(VideoFeedView));
+          final original = originalElement.read<VideoFeedBloc>();
+          final coordinator = originalElement
+              .read<FeedModePersistenceCoordinator>();
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(VideoFeedPage)),
+          );
+          expect(original.state.source, source);
+          expect(original.state.status, VideoFeedStatus.success);
+          originalRepository.setSubscribedLists([]);
+          await tester.runAsync(
+            () => gate.started.future.timeout(const Duration(seconds: 5)),
+          );
+          expect(prefs.getString(key), 'forYou');
+          if (remount) {
+            homeMounted.value = false;
+            await tester.pump();
+            await tester.runAsync(pumpEventQueue);
+          }
+          container.updateOverrides([
+            curatedListRepositoryProvider.overrideWithValue(
+              replacementRepository,
             ),
-            mockProfileRepository: createMockProfileRepository(),
-            additionalOverrides: [
-              videosRepositoryProvider.overrideWithValue(videos),
-              isFeatureEnabledProvider(FeatureFlag.curatedLists)
-                  .overrideWithValue(false),
-            ],
-          ),
-        );
-        await tester.pumpAndSettle();
-        await tester.runAsync(pumpEventQueue);
-        await tester.pump();
-        final originalElement = tester.element(find.byType(VideoFeedView));
-        final original = originalElement.read<VideoFeedBloc>();
-        final coordinator = originalElement
-            .read<FeedModePersistenceCoordinator>();
-        final container = ProviderScope.containerOf(
-          tester.element(find.byType(VideoFeedPage)),
-        );
-        expect(original.state.source, source);
-        expect(original.state.status, VideoFeedStatus.success);
-        originalRepository.setSubscribedLists([]);
-        await tester.runAsync(
-          () => gate.started.future.timeout(const Duration(seconds: 5)),
-        );
-        expect(prefs.getString(key), 'forYou');
-        container.updateOverrides([
-          curatedListRepositoryProvider.overrideWithValue(
-            replacementRepository,
-          ),
-        ]);
-        await tester.pumpAndSettle();
-        await tester.runAsync(pumpEventQueue);
-        await tester.pump();
-        final replacementElement = tester.element(find.byType(VideoFeedView));
-        final replacement = replacementElement.read<VideoFeedBloc>();
-        expect(identical(replacement, original), isFalse);
-        expect(
-          identical(
-            replacementElement.read<FeedModePersistenceCoordinator>(),
-            coordinator,
-          ),
-          isTrue,
-        );
-        expect(replacement.state.source, source);
-        expect(replacement.state.status, VideoFeedStatus.success);
-        await tester.runAsync(() async {
-          gate.release.complete();
-          await gate.repaired.future.timeout(const Duration(seconds: 5));
-          await prefs.reload();
-        });
-        await tester.runAsync(pumpEventQueue);
-        await tester.pumpAndSettle();
-        expect(original.isClosed, isTrue);
-        expect(replacement.state.source, source);
-        expect(prefs.getString(key), source.persistenceValue);
-        expect(tester.takeException(), isNull);
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.runAsync(pumpEventQueue);
-        await tester.pump();
-        expect(replacement.isClosed, isTrue);
-        expect(
-          () => FeedModePreferenceStore(
-            sharedPreferences: prefs,
-            userPubkey: viewer,
-            followRepository: createMockFollowRepository(),
-            curatedListRepository: replacementRepository,
-            persistenceCoordinator: coordinator,
-          ),
-          throwsStateError,
-        );
-      },
-    );
+          ]);
+          if (remount) {
+            homeMounted.value = true;
+            await tester.pump();
+          }
+          await tester.pumpAndSettle();
+          await tester.runAsync(pumpEventQueue);
+          await tester.pump();
+          final replacementElement = tester.element(find.byType(VideoFeedView));
+          final replacement = replacementElement.read<VideoFeedBloc>();
+          expect(identical(replacement, original), isFalse);
+          expect(
+            identical(
+              replacementElement.read<FeedModePersistenceCoordinator>(),
+              coordinator,
+            ),
+            isTrue,
+          );
+          expect(replacement.state.source, source);
+          expect(replacement.state.status, VideoFeedStatus.success);
+          await tester.runAsync(() async {
+            gate.release.complete();
+            await gate.repaired.future.timeout(const Duration(seconds: 5));
+            await prefs.reload();
+          });
+          await tester.runAsync(pumpEventQueue);
+          await tester.pumpAndSettle();
+          expect(original.isClosed, isTrue);
+          expect(replacement.state.source, source);
+          expect(prefs.getString(key), source.persistenceValue);
+          expect(tester.takeException(), isNull);
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.runAsync(pumpEventQueue);
+          await tester.pump();
+          expect(replacement.isClosed, isTrue);
+          expect(
+            () => FeedModePreferenceStore(
+              sharedPreferences: prefs,
+              userPubkey: viewer,
+              followRepository: createMockFollowRepository(),
+              curatedListRepository: replacementRepository,
+              persistenceCoordinator: coordinator,
+            ),
+            throwsStateError,
+          );
+        },
+      );
+    }
   });
 }
