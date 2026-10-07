@@ -11,10 +11,12 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
+import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
+import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
@@ -29,6 +31,108 @@ class _CuratedListRepository extends Mock implements CuratedListRepository {}
 class _Nostr extends Mock implements NostrClient {}
 
 class _Api extends Mock implements FunnelcakeApiClient {}
+
+enum _SafetyPolicy { adultVerification, captureProvenance }
+
+const _policyViewer =
+    'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+
+class _SafetyPolicyHome {
+  _SafetyPolicyHome({
+    required this.preferences,
+    required this.ageVerification,
+    required this.container,
+    required this.videos,
+    required this.originalFeed,
+    required this.originalPlayback,
+  });
+
+  final SharedPreferences preferences;
+  final AgeVerificationService ageVerification;
+  final ProviderContainer container;
+  final _VideosRepository videos;
+  final VideoFeedBloc originalFeed;
+  final VideoPlaybackStatusCubit originalPlayback;
+}
+
+Future<_SafetyPolicyHome> _mountSafetyPolicyHome(WidgetTester tester) async {
+  await CacheSync.init(dao: _CacheDao());
+  SharedPreferences.setMockInitialValues({
+    'selected_feed_mode_$_policyViewer': 'forYou',
+    'adult_content_verified_$_policyViewer': true,
+  });
+  final preferences = await SharedPreferences.getInstance();
+  final videos = _VideosRepository();
+  final curated = _CuratedListRepository();
+  when(curated.getSubscribedLists).thenReturn([]);
+  when(() => curated.subscriptionSnapshots).thenAnswer(
+    (_) => const Stream<CuratedListSubscriptionSnapshot>.empty(),
+  );
+  when(
+    () => videos.getRecommendedVideos(
+      userPubkey: any(named: 'userPubkey'),
+      until: any(named: 'until'),
+      skipCache: any(named: 'skipCache'),
+      revalidate: any(named: 'revalidate'),
+    ),
+  ).thenAnswer((_) async => const HomeFeedResult(videos: []));
+  late ProviderContainer container;
+  final ageVerification = AgeVerificationService(
+    preferences: preferences,
+    currentPubkeyHex: () => _policyViewer,
+    onAdultContentVerificationChanged: () => container
+        .read(adultContentVerificationVersionProvider.notifier)
+        .increment(),
+  );
+  await tester.pumpWidget(
+    testMaterialApp(
+      home: const Scaffold(body: VideoFeedPage()),
+      mockSharedPreferences: preferences,
+      mockAuthService: createMockAuthService(
+        authState: AuthState.authenticated,
+        currentPublicKeyHex: _policyViewer,
+      ),
+      mockProfileRepository: createMockProfileRepository(),
+      additionalOverrides: [
+        // Stable repository identities prove the Page owns safety invalidation.
+        videosRepositoryProvider.overrideWithValue(videos),
+        curatedListRepositoryProvider.overrideWithValue(curated),
+        ageVerificationServiceProvider.overrideWithValue(ageVerification),
+        isFeatureEnabledProvider(FeatureFlag.curatedLists)
+            .overrideWithValue(false),
+      ],
+    ),
+  );
+  await tester.pumpAndSettle();
+  await tester.runAsync(pumpEventQueue);
+  await tester.pump();
+  container = ProviderScope.containerOf(
+    tester.element(find.byType(VideoFeedPage)),
+  );
+  final view = tester.element(find.byType(VideoFeedView));
+  final feed = view.read<VideoFeedBloc>();
+  final playback = view.read<VideoPlaybackStatusCubit>();
+  expect(feed.state.status, VideoFeedStatus.success);
+  expect(feed.state.source, const VideoFeedSource.forYou());
+  expect(feed.isClosed, isFalse);
+  expect(playback.isClosed, isFalse);
+  verify(
+    () => videos.getRecommendedVideos(
+      userPubkey: _policyViewer,
+      until: any(named: 'until'),
+      skipCache: any(named: 'skipCache'),
+      revalidate: any(named: 'revalidate'),
+    ),
+  ).called(1);
+  return _SafetyPolicyHome(
+    preferences: preferences,
+    ageVerification: ageVerification,
+    container: container,
+    videos: videos,
+    originalFeed: feed,
+    originalPlayback: playback,
+  );
+}
 
 class _PagePreferencesGate extends InMemorySharedPreferencesStore {
   _PagePreferencesGate(this.key, String value)
@@ -86,6 +190,117 @@ void main() {
   });
 
   group('VideoFeedPage curated repository identity', () {
+    group('safety policy boundary', () {
+      for (final policy in _SafetyPolicy.values) {
+        testWidgets(
+          '${policy.name} restriction replaces Home and playback with stable repositories',
+          (tester) async {
+            final home = await _mountSafetyPolicyHome(tester);
+            switch (policy) {
+              case _SafetyPolicy.adultVerification:
+                expect(home.ageVerification.isAdultContentVerified, isTrue);
+                expect(
+                  await home.ageVerification.setAdultContentVerified(false),
+                  isTrue,
+                );
+                expect(home.ageVerification.isAdultContentVerified, isFalse);
+                expect(
+                  home.container.read(adultContentVerificationVersionProvider),
+                  1,
+                );
+              case _SafetyPolicy.captureProvenance:
+                home.container.read(videoProvenanceFilterVersionProvider);
+                final service = home.container.read(
+                  videoProvenanceFilterServiceProvider,
+                );
+                expect(service.showVerifiedOnly, isFalse);
+                await service.setShowVerifiedOnly(true);
+                expect(service.showVerifiedOnly, isTrue);
+                expect(
+                  home.container.read(videoProvenanceFilterVersionProvider),
+                  1,
+                );
+            }
+            await tester.pumpAndSettle();
+            await tester.runAsync(pumpEventQueue);
+            await tester.pump();
+            final view = tester.element(find.byType(VideoFeedView));
+            final replacement = view.read<VideoFeedBloc>();
+            final playback = view.read<VideoPlaybackStatusCubit>();
+            expect(replacement, isNot(same(home.originalFeed)));
+            expect(playback, isNot(same(home.originalPlayback)));
+            expect(home.originalFeed.isClosed, isTrue);
+            expect(home.originalPlayback.isClosed, isTrue);
+            expect(replacement.state.status, VideoFeedStatus.success);
+            expect(replacement.state.source, const VideoFeedSource.forYou());
+            expect(
+              home.preferences.getString('selected_feed_mode_$_policyViewer'),
+              'forYou',
+            );
+            verify(
+              () => home.videos.getRecommendedVideos(
+                userPubkey: _policyViewer,
+                until: any(named: 'until'),
+                skipCache: any(named: 'skipCache'),
+                revalidate: any(named: 'revalidate'),
+              ),
+            ).called(1);
+            expect(tester.takeException(), isNull);
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.runAsync(pumpEventQueue);
+            await tester.pump();
+            expect(replacement.isClosed, isTrue);
+            expect(playback.isClosed, isTrue);
+          },
+        );
+      }
+
+      testWidgets('unrelated blocklist sync retains Home and playback', (
+        tester,
+      ) async {
+        final home = await _mountSafetyPolicyHome(tester);
+        const unrelatedAuthor =
+            'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+        final blocklist = home.container.read(
+          contentBlocklistRepositoryProvider,
+        );
+        expect(blocklist.isBlocked(unrelatedAuthor), isFalse);
+        await blocklist.blockUser(unrelatedAuthor, ourPubkey: _policyViewer);
+        await tester.pumpAndSettle();
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+        expect(blocklist.isBlocked(unrelatedAuthor), isTrue);
+        expect(home.container.read(blocklistVersionProvider), 1);
+        final view = tester.element(find.byType(VideoFeedView));
+        expect(view.read<VideoFeedBloc>(), same(home.originalFeed));
+        expect(
+          view.read<VideoPlaybackStatusCubit>(),
+          same(home.originalPlayback),
+        );
+        expect(home.originalFeed.isClosed, isFalse);
+        expect(home.originalPlayback.isClosed, isFalse);
+        expect(home.originalFeed.state.source, const VideoFeedSource.forYou());
+        expect(
+          home.preferences.getString('selected_feed_mode_$_policyViewer'),
+          'forYou',
+        );
+        verifyNever(
+          () => home.videos.getRecommendedVideos(
+            userPubkey: _policyViewer,
+            until: any(named: 'until'),
+            skipCache: any(named: 'skipCache'),
+            revalidate: any(named: 'revalidate'),
+          ),
+        );
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+        expect(home.originalFeed.isClosed, isTrue);
+        expect(home.originalPlayback.isClosed, isTrue);
+      });
+    });
+
     testWidgets(
       'curated repository replacement closes old Home and restores from the new snapshot',
       (tester) async {
