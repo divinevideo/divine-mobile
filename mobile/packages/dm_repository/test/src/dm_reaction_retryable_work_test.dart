@@ -151,6 +151,58 @@ void main() {
     }
 
     group('publish', () {
+      for (final succeeds in [false, true]) {
+        test(
+          'retry joins a publish that ${succeeds ? 'succeeds' : 'fails'}',
+          () async {
+            final started = Completer<String>();
+            final wireResult = Completer<NIP17SendResult>();
+            var sends = 0;
+            stubWire((invocation) {
+              sends++;
+              started.complete(
+                (invocation.namedArguments[#rumorEvent] as Event).id,
+              );
+              return wireResult.future;
+            });
+            final original = publish();
+            final id = await started.future;
+            final joined = reactions.retry(
+              rumorId: id,
+              targetMessageAuthor: _peer,
+            );
+            await pumpEventQueue();
+            expect(sends, 1);
+
+            wireResult.complete(
+              succeeds
+                  ? NIP17SendResult.success(
+                      rumorEventId: id,
+                      messageEventId: 'confirmed-wrap',
+                      recipientPubkey: _peer,
+                    )
+                  : const NIP17SendResult.failure('relay rejected'),
+            );
+            expect((await original).success, succeeds);
+            expect((await joined).success, succeeds);
+            expect(sends, 1);
+            final row = await reactionsDao.getById(id: id, ownerPubkey: _owner);
+            expect(row?.publishStatus, succeeds ? 'sent' : 'failed');
+
+            if (!succeeds) {
+              stubLanding();
+              expect(
+                (await reactions.retry(
+                  rumorId: id,
+                  targetMessageAuthor: _peer,
+                )).success,
+                isTrue,
+              );
+            }
+          },
+        );
+      }
+
       test(
         'nudges when the relay OK is lost and the row stays pending',
         () async {

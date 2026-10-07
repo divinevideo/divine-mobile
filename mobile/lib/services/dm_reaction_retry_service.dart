@@ -55,10 +55,10 @@ class DmReactionRetryConfig {
   /// Growth factor applied per attempt.
   final double backoffMultiplier;
 
-  /// A `'pending'` row younger than this is skipped: its original publish may
-  /// still be in flight (a reaction publish caps at 15 s), so re-driving it
-  /// now would race the in-flight attempt's own DAO write. Older `'pending'`
-  /// rows are app-killed-mid-send survivors, safe to replay.
+  /// A `'pending'` row younger than this is skipped to avoid unnecessary
+  /// retry work while its original publish is likely still in flight.
+  /// Older rows may be interrupted sends. A group publish can outlive this
+  /// guard; the repository coalesces retries with any original still running.
   final Duration interruptedPendingMinAge;
 
   /// How long after a pass that leaves retryable work behind (or after a
@@ -445,9 +445,9 @@ class DmReactionRetryService {
         }
       }
 
-      // A still-`pending` reaction may have an in-flight publish (a reaction
-      // publish caps at 15 s); only treat it as interrupted once it's older
-      // than the guard, so the sweep never races an in-flight attempt.
+      // Avoid re-driving very fresh pending rows. Age alone cannot establish
+      // that a sequential group publish finished: the timeout is per recipient.
+      // The repository joins any original still running instead of replaying it.
       if (applyPendingMinAge && target.publishStatus == 'pending') {
         final age = _now().difference(
           DateTime.fromMillisecondsSinceEpoch(target.createdAt * 1000),
