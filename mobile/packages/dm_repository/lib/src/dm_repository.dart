@@ -7832,11 +7832,33 @@ class DmRepository {
       if (replyToId != null) ['e', replyToId],
     ];
 
+    // Routed like a text message: to the recipient's kind-10050 inbox, the
+    // default pool only when they advertise none, and confirmed by a relay
+    // `OK` rather than a socket write (#7317). An unreadable inbox publishes
+    // nothing. There is no retry row for a file send, so a pool `OK` there
+    // could neither be scored as delivery nor re-resolved later, and its
+    // self-copy would put a sent video in the thread the sender was told
+    // failed. The same reason keeps the self-copy back when the recipient
+    // `OK` never arrives.
+    final (inbox, selfWrapRelays) = await (
+      resolveDmInboxRelaysDetailed(recipientPubkey),
+      _selfWrapTargetRelays(),
+    ).wait;
+    if (inbox.state == DmInboxResolution.unreadable) {
+      return const NIP17SendResult.failure(
+        'Recipient DM inbox unreadable; file message not published',
+      );
+    }
+
     final result = await _messageService!.sendPrivateMessage(
       recipientPubkey: recipientPubkey,
       content: fileUrl,
       eventKind: EventKind.fileMessage,
       additionalTags: additionalTags,
+      targetRelays: inbox.relays,
+      selfWrapTargetRelays: selfWrapRelays,
+      awaitRecipientOk: true,
+      selfWrapOnSoftUnconfirmed: false,
     );
 
     if (result.success) {

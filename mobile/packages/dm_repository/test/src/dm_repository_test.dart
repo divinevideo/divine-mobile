@@ -13646,6 +13646,12 @@ void main() {
             content: any(named: 'content'),
             eventKind: any(named: 'eventKind'),
             additionalTags: any(named: 'additionalTags'),
+            targetRelays: any(named: 'targetRelays'),
+            selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
+            awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            selfWrapOnSoftUnconfirmed: any(
+              named: 'selfWrapOnSoftUnconfirmed',
+            ),
           ),
         );
       });
@@ -13666,6 +13672,12 @@ void main() {
             content: any(named: 'content'),
             eventKind: any(named: 'eventKind'),
             additionalTags: any(named: 'additionalTags'),
+            targetRelays: any(named: 'targetRelays'),
+            selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
+            awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            selfWrapOnSoftUnconfirmed: any(
+              named: 'selfWrapOnSoftUnconfirmed',
+            ),
           ),
         );
       });
@@ -13677,6 +13689,12 @@ void main() {
             content: any(named: 'content'),
             eventKind: any(named: 'eventKind'),
             additionalTags: any(named: 'additionalTags'),
+            targetRelays: any(named: 'targetRelays'),
+            selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
+            awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            selfWrapOnSoftUnconfirmed: any(
+              named: 'selfWrapOnSoftUnconfirmed',
+            ),
           ),
         ).thenAnswer(
           (_) async => NIP17SendResult.success(
@@ -13751,6 +13769,12 @@ void main() {
             content: 'https://blossom.example.com/file.enc',
             eventKind: EventKind.fileMessage,
             additionalTags: any(named: 'additionalTags'),
+            targetRelays: any(named: 'targetRelays'),
+            selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
+            awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            selfWrapOnSoftUnconfirmed: any(
+              named: 'selfWrapOnSoftUnconfirmed',
+            ),
           ),
         ).called(1);
 
@@ -13811,6 +13835,12 @@ void main() {
             content: any(named: 'content'),
             eventKind: any(named: 'eventKind'),
             additionalTags: any(named: 'additionalTags'),
+            targetRelays: any(named: 'targetRelays'),
+            selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
+            awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            selfWrapOnSoftUnconfirmed: any(
+              named: 'selfWrapOnSoftUnconfirmed',
+            ),
           ),
         ).thenAnswer(
           (_) async => const NIP17SendResult.failure('Relay rejected'),
@@ -13851,6 +13881,169 @@ void main() {
             tagsJson: any(named: 'tagsJson'),
             sendBatchId: any(named: 'sendBatchId'),
           ),
+        );
+      });
+
+      group('recipient inbox routing (#7317)', () {
+        late List<Invocation> sends;
+
+        void stubInboxLookup(
+          ({List<Event> events, bool timedOut, bool noRelays}) answer,
+        ) {
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((_) async => answer);
+        }
+
+        void stubFileSendSucceeds() {
+          sends = <Invocation>[];
+          when(
+            () => mockMessageService.sendPrivateMessage(
+              recipientPubkey: any(named: 'recipientPubkey'),
+              content: any(named: 'content'),
+              eventKind: any(named: 'eventKind'),
+              additionalTags: any(named: 'additionalTags'),
+              targetRelays: any(named: 'targetRelays'),
+              selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
+              awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              selfWrapOnSoftUnconfirmed: any(
+                named: 'selfWrapOnSoftUnconfirmed',
+              ),
+            ),
+          ).thenAnswer((invocation) async {
+            sends.add(invocation);
+            return NIP17SendResult.success(
+              rumorEventId: _rumorEventId,
+              messageEventId: _giftWrapEventId,
+              recipientPubkey: _validPubkeyB,
+            );
+          });
+          when(
+            () => mockDirectMessagesDao.insertMessage(
+              id: any(named: 'id'),
+              conversationId: any(named: 'conversationId'),
+              senderPubkey: any(named: 'senderPubkey'),
+              content: any(named: 'content'),
+              createdAt: any(named: 'createdAt'),
+              giftWrapId: any(named: 'giftWrapId'),
+              messageKind: any(named: 'messageKind'),
+              replyToId: any(named: 'replyToId'),
+              subject: any(named: 'subject'),
+              fileType: any(named: 'fileType'),
+              encryptionAlgorithm: any(named: 'encryptionAlgorithm'),
+              decryptionKey: any(named: 'decryptionKey'),
+              decryptionNonce: any(named: 'decryptionNonce'),
+              fileHash: any(named: 'fileHash'),
+              originalFileHash: any(named: 'originalFileHash'),
+              fileSize: any(named: 'fileSize'),
+              dimensions: any(named: 'dimensions'),
+              blurhash: any(named: 'blurhash'),
+              thumbnailUrl: any(named: 'thumbnailUrl'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+              tagsJson: any(named: 'tagsJson'),
+              sendBatchId: any(named: 'sendBatchId'),
+            ),
+          ).thenAnswer((_) async => true);
+          when(
+            () => mockConversationsDao.upsertConversation(
+              id: any(named: 'id'),
+              participantPubkeys: any(named: 'participantPubkeys'),
+              isGroup: any(named: 'isGroup'),
+              createdAt: any(named: 'createdAt'),
+              lastMessageContent: any(named: 'lastMessageContent'),
+              lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
+              lastMessageSenderPubkey: any(named: 'lastMessageSenderPubkey'),
+              subject: any(named: 'subject'),
+              isRead: any(named: 'isRead'),
+              currentUserHasSent: any(named: 'currentUserHasSent'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+              dmProtocol: any(named: 'dmProtocol'),
+            ),
+          ).thenAnswer((_) async {});
+          when(
+            () => mockConversationsDao.getConversation(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => null);
+        }
+
+        Future<NIP17SendResult> sendFile() =>
+            createRepository().sendFileMessage(
+              recipientPubkey: _validPubkeyB,
+              fileUrl: 'https://blossom.example.com/file.enc',
+              fileMetadata: testFileMetadata,
+            );
+
+        test(
+          'publishes only to the recipient kind-10050 inbox and requires a '
+          'relay OK, the same routing a text message gets',
+          () async {
+            stubInboxLookup(
+              answeredList([
+                Event(
+                  _validPubkeyB,
+                  EventKind.dmRelaysList,
+                  [
+                    ['relay', 'wss://inbox.example'],
+                  ],
+                  '',
+                  createdAt: 1700000000,
+                ),
+              ]),
+            );
+            stubFileSendSucceeds();
+
+            final result = await sendFile();
+
+            expect(result.success, isTrue);
+            final send = sends.single;
+            expect(send.namedArguments[#targetRelays], ['wss://inbox.example']);
+            expect(send.namedArguments[#awaitRecipientOk], isTrue);
+            expect(send.namedArguments[#selfWrapOnSoftUnconfirmed], isFalse);
+          },
+        );
+
+        test(
+          'publishes to the default pool when the recipient advertises no '
+          'inbox, still requiring a relay OK',
+          () async {
+            stubInboxLookup(answeredList(const <Event>[]));
+            stubFileSendSucceeds();
+
+            final result = await sendFile();
+
+            expect(result.success, isTrue);
+            final send = sends.single;
+            expect(send.namedArguments[#targetRelays], isNull);
+            expect(send.namedArguments[#awaitRecipientOk], isTrue);
+          },
+        );
+
+        test(
+          'does not publish when the recipient inbox is unreadable: a pool '
+          'OK would not be delivery, and with no retry row its self-copy '
+          'would show a sent video the sender was told failed',
+          () async {
+            stubInboxLookup(unansweredList(timedOut: true));
+            stubFileSendSucceeds();
+
+            final result = await sendFile();
+
+            expect(result.success, isFalse);
+            expect(sends, isEmpty);
+          },
         );
       });
     });
