@@ -21,6 +21,8 @@ class _FakeDivineVideoClip extends Fake implements DivineVideoClip {}
 const _defaultVineId = 'vine-123';
 const _senderPubkey =
     '5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e';
+const _messageId =
+    '7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d';
 const _receivedClipHash =
     '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08';
 const _c2paManifestId = 'urn:c2pa:3fa85f64-5717-4562-b3fc-2c963f66afa6';
@@ -761,6 +763,14 @@ void main() {
   });
 
   group('importReceivedClip', () {
+    const messageClipId = 'dm_clip_$_messageId';
+
+    setUp(() {
+      when(
+        () => clipLibraryService.getClipById(messageClipId),
+      ).thenAnswer((_) async => null);
+    });
+
     VideoMetadata metadataOf(Size resolution) => VideoMetadata(
       duration: const Duration(milliseconds: 5800),
       extension: 'mp4',
@@ -778,6 +788,7 @@ void main() {
 
       final result = await service.importReceivedClip(
         source: sourceVideo,
+        messageId: _messageId,
         senderPubkey: _senderPubkey,
         c2paManifestId: _c2paManifestId,
         targetAspectRatio: models.AspectRatio.square,
@@ -809,6 +820,7 @@ void main() {
 
       final result = await service.importReceivedClip(
         source: sourceVideo,
+        messageId: _messageId,
         senderPubkey: _senderPubkey,
         c2paManifestId: _c2paManifestId,
       );
@@ -819,12 +831,40 @@ void main() {
       );
     });
 
+    test('returns the clip already saved from the same message', () async {
+      final service = buildService(
+        readVideoMetadata: (_) async => metadataOf(const Size(1080, 1920)),
+      );
+      final first = await service.importReceivedClip(
+        source: sourceVideo,
+        messageId: _messageId,
+        senderPubkey: _senderPubkey,
+        c2paManifestId: _c2paManifestId,
+      );
+      final saved = (first as VideoClipImportSuccess).clip;
+      expect(saved.id, equals(messageClipId));
+      when(
+        () => clipLibraryService.getClipById(messageClipId),
+      ).thenAnswer((_) async => saved);
+
+      final second = await service.importReceivedClip(
+        source: sourceVideo,
+        messageId: _messageId,
+        senderPubkey: _senderPubkey,
+        c2paManifestId: _c2paManifestId,
+      );
+
+      expect((second as VideoClipImportSuccess).clip, same(saved));
+      verify(() => clipLibraryService.saveClip(any())).called(1);
+    });
+
     test('refuses a file with no readable duration and leaves no copy '
         'behind', () async {
       final service = buildService();
 
       final result = await service.importReceivedClip(
         source: sourceVideo,
+        messageId: _messageId,
         senderPubkey: _senderPubkey,
         c2paManifestId: _c2paManifestId,
       );

@@ -29,23 +29,24 @@ const _decryptedPath = '/tmp/dm_video_playback/dm_video_clip_0.mp4';
 const _manifestId = 'urn:c2pa:3fa85f64-5717-4562-b3fc-2c963f66afa6';
 final String _senderPubkey = 'b' * 64;
 
-DmMessage _clipMessage() => DmMessage(
-  id: 'a' * 64,
-  conversationId: 'conversation',
-  senderPubkey: _senderPubkey,
-  content: 'https://media.divine.video/cipher',
-  createdAt: 1757385263,
-  giftWrapId: 'c' * 64,
-  messageKind: 15,
-  tags: [DmClipTag.build(AspectRatio.square)],
-  fileMetadata: const DmFileMetadata(
-    fileType: 'video/mp4',
-    encryptionAlgorithm: 'aes-gcm',
-    decryptionKey: '00',
-    decryptionNonce: '00',
-    fileHash: 'ab',
-  ),
-);
+DmMessage _clipMessage({String? id, String fileType = 'video/mp4'}) =>
+    DmMessage(
+      id: id ?? 'a' * 64,
+      conversationId: 'conversation',
+      senderPubkey: _senderPubkey,
+      content: 'https://media.divine.video/cipher',
+      createdAt: 1757385263,
+      giftWrapId: 'c' * 64,
+      messageKind: 15,
+      tags: [DmClipTag.build(AspectRatio.square)],
+      fileMetadata: DmFileMetadata(
+        fileType: fileType,
+        encryptionAlgorithm: 'aes-gcm',
+        decryptionKey: '00',
+        decryptionNonce: '00',
+        fileHash: 'ab',
+      ),
+    );
 
 void main() {
   late _MockDmVideoDecryptor decryptor;
@@ -87,6 +88,7 @@ void main() {
     when(
       () => importService.importReceivedClip(
         source: any(named: 'source'),
+        messageId: any(named: 'messageId'),
         senderPubkey: any(named: 'senderPubkey'),
         c2paManifestId: any(named: 'c2paManifestId'),
         targetAspectRatio: any(named: 'targetAspectRatio'),
@@ -124,6 +126,7 @@ void main() {
               verify(
                     () => importService.importReceivedClip(
                       source: captureAny(named: 'source'),
+                      messageId: any(named: 'messageId'),
                       senderPubkey: _senderPubkey,
                       c2paManifestId: _manifestId,
                       targetAspectRatio: AspectRatio.square,
@@ -148,6 +151,7 @@ void main() {
           verifyNever(
             () => importService.importReceivedClip(
               source: any(named: 'source'),
+              messageId: any(named: 'messageId'),
               senderPubkey: any(named: 'senderPubkey'),
               c2paManifestId: any(named: 'c2paManifestId'),
               targetAspectRatio: any(named: 'targetAspectRatio'),
@@ -169,6 +173,7 @@ void main() {
         verify: (_) => verifyNever(
           () => importService.importReceivedClip(
             source: any(named: 'source'),
+            messageId: any(named: 'messageId'),
             senderPubkey: any(named: 'senderPubkey'),
             c2paManifestId: any(named: 'c2paManifestId'),
             targetAspectRatio: any(named: 'targetAspectRatio'),
@@ -223,12 +228,60 @@ void main() {
         verify(
           () => importService.importReceivedClip(
             source: any(named: 'source'),
+            messageId: any(named: 'messageId'),
             senderPubkey: _senderPubkey,
             c2paManifestId: _manifestId,
             targetAspectRatio: AspectRatio.square,
           ),
         ).called(1);
         verifyZeroInteractions(otherAccountImport);
+      });
+
+      blocTest<DmClipSaveCubit, DmClipSaveState>(
+        'refuses a file type the C2PA reader is not given',
+        build: buildCubit,
+        act: (cubit) => cubit.save(_clipMessage(fileType: 'video/webm')),
+        expect: () => const [
+          DmClipSaveState(status: DmClipSaveStatus.checking),
+          DmClipSaveState(status: DmClipSaveStatus.notVerified),
+        ],
+        verify: (_) => verifyNever(() => decryptor.decryptToFile(any())),
+      );
+
+      test('checks a second video while the first is still checking', () async {
+        const secondPath = '/tmp/dm_video_playback/dm_video_clip_1.mp4';
+        final second = _clipMessage(id: 'e' * 64);
+        final firstCheck = Completer<ClipProvenanceResult>();
+        when(() => decryptor.decryptToFile(any())).thenAnswer(
+          (invocation) async =>
+              (invocation.positionalArguments.single as DmMessage).id ==
+                  second.id
+              ? secondPath
+              : _decryptedPath,
+        );
+        when(
+          () => verifier.verify(_decryptedPath),
+        ).thenAnswer((_) => firstCheck.future);
+        when(() => verifier.verify(secondPath)).thenAnswer(
+          (_) async =>
+              const ClipProvenanceResult(ClipProvenanceStatus.untrustedSigner),
+        );
+        stubImportSuccess();
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+
+        final firstOutcome = cubit.save(_clipMessage());
+        await pumpEventQueue();
+        final secondOutcome = await cubit.save(second);
+        firstCheck.complete(
+          const ClipProvenanceResult(
+            ClipProvenanceStatus.verified,
+            activeManifestId: _manifestId,
+          ),
+        );
+
+        expect(secondOutcome, equals(DmClipSaveStatus.notVerified));
+        expect(await firstOutcome, equals(DmClipSaveStatus.saved));
       });
 
       test('finishes the save and returns its outcome after close', () async {
@@ -253,6 +306,7 @@ void main() {
         verify(
           () => importService.importReceivedClip(
             source: any(named: 'source'),
+            messageId: any(named: 'messageId'),
             senderPubkey: _senderPubkey,
             c2paManifestId: _manifestId,
             targetAspectRatio: AspectRatio.square,

@@ -15,6 +15,7 @@ import 'package:openvine/services/video_clip_import_service.dart';
 /// Adds a verified received clip to one account's clip library.
 typedef ReceivedClipImporter = Future<VideoClipImportResult> Function({
   required File source,
+  required String messageId,
   required String senderPubkey,
   required String c2paManifestId,
   AspectRatio? targetAspectRatio,
@@ -84,14 +85,23 @@ class DmClipSaveCubit extends Cubit<DmClipSaveState>
   final ClipProvenanceVerifier _verifier;
   final ReceivedClipImporterResolver _resolveImporter;
 
+  /// Containers the C2PA reader is given. The decrypted file's extension
+  /// comes from the sender's `file-type` tag and picks the reader's parser,
+  /// so anything else is refused before it is decrypted. Divine recordings
+  /// are always MP4.
+  static const Set<String> verifiableFileTypes = {
+    'video/mp4',
+    'video/quicktime',
+  };
+
   /// Downloads, decrypts and checks [message]'s clip, and adds it to the
   /// library of the account signed in when this was called if it passes.
   ///
-  /// Returns the terminal status, or null when a save is already running and
-  /// this call was dropped. The work is not cancelled by [close], so a caller
-  /// that outlives the screen can still report the outcome.
-  Future<DmClipSaveStatus?> save(DmMessage message) async {
-    if (state.status == DmClipSaveStatus.checking) return null;
+  /// Saves run independently, so a second video can be added while another
+  /// is still being checked; each call returns its own outcome. The work is
+  /// not cancelled by [close], so a caller that outlives the screen can still
+  /// report the outcome.
+  Future<DmClipSaveStatus> save(DmMessage message) async {
     final importClip = _resolveImporter();
     emit(const DmClipSaveState(status: DmClipSaveStatus.checking));
 
@@ -104,6 +114,11 @@ class DmClipSaveCubit extends Cubit<DmClipSaveState>
     DmMessage message,
     ReceivedClipImporter importClip,
   ) async {
+    final fileType = message.fileMetadata?.fileType.toLowerCase();
+    if (!verifiableFileTypes.contains(fileType)) {
+      return DmClipSaveStatus.notVerified;
+    }
+
     String? path;
     try {
       path = await _decryptor.decryptToFile(message);
@@ -117,6 +132,7 @@ class DmClipSaveCubit extends Cubit<DmClipSaveState>
 
       final result = await importClip(
         source: File(path),
+        messageId: message.id,
         senderPubkey: message.senderPubkey,
         c2paManifestId: provenance.activeManifestId!,
         targetAspectRatio: message.clipTargetAspectRatio,

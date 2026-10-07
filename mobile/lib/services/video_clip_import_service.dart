@@ -219,9 +219,14 @@ class VideoClipImportService {
   /// is derived from the file: near-square and wider maps to square,
   /// anything narrower to vertical.
   ///
+  /// The clip's id is derived from [messageId], so saving the same message
+  /// again returns the clip already in the library instead of adding a
+  /// duplicate or overwriting edits made to it since.
+  ///
   /// [source] is copied, never moved; the caller still owns it.
   Future<VideoClipImportResult> importReceivedClip({
     required File source,
+    required String messageId,
     required String senderPubkey,
     required String c2paManifestId,
     models.AspectRatio? targetAspectRatio,
@@ -233,8 +238,14 @@ class VideoClipImportService {
       );
     }
 
+    final clipId =
+        'dm_clip_${messageId.replaceAll(RegExp('[^a-zA-Z0-9]'), '')}';
+    final existing = await _clipLibraryService.getClipById(clipId);
+    if (existing != null && existing.deletedAt == null) {
+      return VideoClipImportSuccess(existing);
+    }
+
     final importedAt = _now();
-    final clipId = 'dm_clip_${importedAt.microsecondsSinceEpoch}';
 
     File? copiedVideo;
     try {

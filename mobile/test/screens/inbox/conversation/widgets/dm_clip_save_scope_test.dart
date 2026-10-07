@@ -43,7 +43,7 @@ void main() {
     testWidgets('reports the outcome after its screen has closed', (
       tester,
     ) async {
-      final outcome = Completer<DmClipSaveStatus?>();
+      final outcome = Completer<DmClipSaveStatus>();
       final cubit = _MockDmClipSaveCubit();
       when(() => cubit.save(any())).thenAnswer((_) => outcome.future);
 

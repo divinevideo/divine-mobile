@@ -140,6 +140,50 @@ void main() {
         expect(result.status, equals(ClipProvenanceStatus.notCameraCapture));
       });
 
+      test('treats a valid manifest from an unknown signer as untrusted', () {
+        final result = ClipProvenanceVerifier.evaluate(
+          _report(validationState: 'Valid'),
+        );
+
+        expect(result.status, equals(ClipProvenanceStatus.untrustedSigner));
+      });
+
+      test('rejects an ingredient that fails validation', () {
+        // Round-tripped through JSON, as the reader delivers it.
+        final report =
+            jsonDecode(jsonEncode(_report())) as Map<String, dynamic>;
+        (report['validation_results']
+            as Map<String, dynamic>)['ingredientDeltas'] = [
+          {
+            'validationDeltas': {
+              'failure': [
+                {'code': 'assertion.dataHash.mismatch'},
+              ],
+            },
+          },
+        ];
+
+        final result = ClipProvenanceVerifier.evaluate(report);
+
+        expect(result.status, equals(ClipProvenanceStatus.invalid));
+      });
+
+      test('allows an action that names no source type', () {
+        final result = ClipProvenanceVerifier.evaluate(
+          _report(
+            ingredientManifest: {
+              'assertions': [
+                _actions([
+                  {'action': 'c2pa.transcoded'},
+                ]),
+              ],
+            },
+          ),
+        );
+
+        expect(result.status, equals(ClipProvenanceStatus.verified));
+      });
+
       test('reports no credentials when there is no active manifest', () {
         final result = ClipProvenanceVerifier.evaluate(const {
           'manifests': <String, dynamic>{},

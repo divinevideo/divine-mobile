@@ -64,7 +64,7 @@ Future<void> addReceivedClipToLibrary(
   report(l10n.dmClipChecking, error: false);
   final status = await cubit.save(message);
   final (text, isError) = switch (status) {
-    null || DmClipSaveStatus.idle || DmClipSaveStatus.checking => (
+    DmClipSaveStatus.idle || DmClipSaveStatus.checking => (
       null,
       false,
     ),

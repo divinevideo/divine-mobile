@@ -190,8 +190,10 @@ class ClipProvenanceVerifier {
   /// C2PA reader settings that trust only [pem].
   ///
   /// `trust_anchors` replaces the default trust list rather than adding to
-  /// it. The ProofSign anchors are self-signed end-entity certificates, so
-  /// they are also named in `allowed_list`. Timestamp trust is not checked:
+  /// it. The bundle holds ProofSign's self-signed per-platform signers, which
+  /// are end-entity certificates and so are also named in `allowed_list`,
+  /// and the ProofSign intermediate CAs behind production signing, so any
+  /// leaf those intermediates issue is trusted. Timestamp trust is not checked:
   /// the TSA is not a Divine anchor, and the signer and content hash are what
   /// matter here.
   @visibleForTesting

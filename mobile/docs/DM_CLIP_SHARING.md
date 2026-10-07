@@ -114,7 +114,10 @@ documents directory, like any other library clip, and stores:
 The proof record matters. The editor's render step signs any clip without one
 as a fresh `digitalCapture` by the person rendering, and would rewrite the
 file in place. With the record present, the received clip keeps its original
-credential.
+credential in the library. That does not reach a post: posting re-renders the
+video and signs the result as a fresh capture by the poster, so the sender's
+credential is not carried into the published video. Carrying it through is
+#9893.
 
 The source credit is public once the clip is used. A video the recipient posts
 with a received clip in it carries the sender as a clip-source `p` tag, the
