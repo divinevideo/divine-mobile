@@ -3776,6 +3776,22 @@ class AppLocalizationsEs extends AppLocalizations {
       'No pudimos confirmar que este clip se grabó con la cámara de Divine, así que no se puede enviar como clip.';
 
   @override
+  String get dmAttachReuseNotice =>
+      'Pueden agregar lo que mandás a sus clips y publicarlo, con crédito para vos.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Se enviaron $sent de $total clips. El resto no salió.',
+      many: 'Se enviaron $sent de $total de clips. El resto no salió.',
+      one: 'Se enviaron $sent de $total clip. El resto no salió.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Guardar video';
 
   @override

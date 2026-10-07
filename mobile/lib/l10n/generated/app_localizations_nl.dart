@@ -3745,6 +3745,21 @@ class AppLocalizationsNl extends AppLocalizations {
       'We konden niet bevestigen dat deze clip met de Divine-camera is gefilmd, dus hij kan niet als clip worden verstuurd.';
 
   @override
+  String get dmAttachReuseNotice =>
+      'Wat je stuurt, kan de ander aan de eigen clips toevoegen en posten, met vermelding van jou.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$sent van $total clips verstuurd. De rest is niet verstuurd.',
+      one: '$sent van $total clip verstuurd. De rest is niet verstuurd.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Video opslaan';
 
   @override

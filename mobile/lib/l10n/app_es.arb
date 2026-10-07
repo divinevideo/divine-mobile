@@ -1341,6 +1341,8 @@
     "dmClipNotVerified": "No pudimos confirmar que se grabó con la cámara de Divine, así que no se agregó a tus clips.",
     "dmClipCheckUnavailable": "No pudimos revisar este clip ahora. Probá de nuevo en un rato.",
     "dmClipSendNotVerified": "No pudimos confirmar que este clip se grabó con la cámara de Divine, así que no se puede enviar como clip.",
+    "dmAttachReuseNotice": "Pueden agregar lo que mandás a sus clips y publicarlo, con crédito para vos.",
+    "dmClipsPartlySent": "{total, plural, one{Se enviaron {sent} de {total} clip. El resto no salió.} many{Se enviaron {sent} de {total} de clips. El resto no salió.} other{Se enviaron {sent} de {total} clips. El resto no salió.}}",
     "shareSheetSaveVideo": "Guardar video",
     "shareSheetAddToClips": "Agregar a clips",
     "shareSheetAddToClipsFailed": "No se pudo agregar a clips",

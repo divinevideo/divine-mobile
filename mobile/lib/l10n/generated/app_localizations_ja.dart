@@ -3490,6 +3490,20 @@ class AppLocalizationsJa extends AppLocalizations {
       'このクリップがDivineのカメラで撮影されたことを確認できなかったため、クリップとして送信できません';
 
   @override
+  String get dmAttachReuseNotice =>
+      '送ったものは相手が自分のクリップに追加して投稿できます。その際、あなたがクレジットされます。';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total件のクリップのうち$sent件を送信しました。残りは送信できませんでした。',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => '動画を保存';
 
   @override

@@ -3726,6 +3726,21 @@ class AppLocalizationsSv extends AppLocalizations {
       'Vi kunde inte bekräfta att klippet är filmat med Divine-kameran, så det kan inte skickas som klipp.';
 
   @override
+  String get dmAttachReuseNotice =>
+      'Det du skickar kan mottagaren lägga till i sina klipp och publicera, och du krediteras.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$sent av $total klipp skickade. Resten gick inte iväg.',
+      one: '$sent av $total klipp skickat. Resten gick inte iväg.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Spara video';
 
   @override

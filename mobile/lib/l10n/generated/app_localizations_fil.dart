@@ -3753,6 +3753,21 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi namin makumpirma na kinunan ang clip na ito gamit ang Divine camera, kaya hindi ito maipapadala bilang clip.';
 
   @override
+  String get dmAttachReuseNotice =>
+      'Puwede nilang idagdag sa clips nila ang ipinadala mo at i-post ito, at mababanggit ka.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Naipadala ang $sent sa $total na clip. Hindi naipadala ang iba.',
+      one: 'Naipadala ang $sent sa $total clip. Hindi naipadala ang iba.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'I-save ang Video';
 
   @override

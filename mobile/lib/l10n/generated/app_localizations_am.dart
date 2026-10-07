@@ -3652,6 +3652,21 @@ class AppLocalizationsAm extends AppLocalizations {
       'ይህ ክሊፕ በDivine ካሜራ መቀረጹን ማረጋገጥ አልቻልንም፣ ስለዚህ እንደ ክሊፕ መላክ አይቻልም።';
 
   @override
+  String get dmAttachReuseNotice =>
+      'የሚልኩትን ወደ ክሊፖቻቸው ጨምረው መለጠፍ ይችላሉ። እርስዎ ይጠቀሳሉ።';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'ከ$total ክሊፖች ውስጥ $sent ተልከዋል። የቀሩት አልተላኩም።',
+      one: 'ከ$total ክሊፕ ውስጥ $sent ተልኳል። የቀሩት አልተላኩም።',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'ቪዲዮ አስቀምጥ';
 
   @override

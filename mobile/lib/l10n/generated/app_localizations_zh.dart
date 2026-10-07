@@ -3485,6 +3485,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dmClipSendNotVerified => '无法确认这个片段是用 Divine 相机拍摄的，所以不能作为片段发送。';
 
   @override
+  String get dmAttachReuseNotice => '对方可以把你发送的内容加入他们的片段库并发布，同时会注明你。';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '已发送 $sent/$total 个片段。其余的没有发出去。',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => '保存视频';
 
   @override

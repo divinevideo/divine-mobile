@@ -3794,6 +3794,22 @@ class AppLocalizationsFr extends AppLocalizations {
       'Impossible de confirmer que ce clip a été filmé avec la caméra Divine, donc il ne peut pas être envoyé comme clip.';
 
   @override
+  String get dmAttachReuseNotice =>
+      'Ce que tu envoies peut être ajouté à ses clips et publié, avec ton nom en crédit.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$sent sur $total clips envoyés. Le reste n\'est pas parti.',
+      many: '$sent sur $total de clips envoyés. Le reste n\'est pas parti.',
+      one: '$sent sur $total clip envoyé. Le reste n\'est pas parti.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Enregistrer la vidéo';
 
   @override

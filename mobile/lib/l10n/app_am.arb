@@ -1607,6 +1607,8 @@
     "dmClipNotVerified": "ይህ በDivine ካሜራ መቀረጹን ማረጋገጥ አልቻልንም፣ ስለዚህ ወደ ክሊፖችዎ አልተጨመረም።",
     "dmClipCheckUnavailable": "አሁን ይህን ክሊፕ ማረጋገጥ አልተቻለም። ትንሽ ቆይተው እንደገና ይሞክሩ።",
     "dmClipSendNotVerified": "ይህ ክሊፕ በDivine ካሜራ መቀረጹን ማረጋገጥ አልቻልንም፣ ስለዚህ እንደ ክሊፕ መላክ አይቻልም።",
+    "dmAttachReuseNotice": "የሚልኩትን ወደ ክሊፖቻቸው ጨምረው መለጠፍ ይችላሉ። እርስዎ ይጠቀሳሉ።",
+    "dmClipsPartlySent": "{total, plural, one{ከ{total} ክሊፕ ውስጥ {sent} ተልኳል። የቀሩት አልተላኩም።} other{ከ{total} ክሊፖች ውስጥ {sent} ተልከዋል። የቀሩት አልተላኩም።}}",
     "shareSheetSaveVideo": "ቪዲዮ አስቀምጥ",
     "shareSheetAddToClips": "ወደ ቅንጥቦች ያክሉ",
     "@shareSheetAddToClips": {

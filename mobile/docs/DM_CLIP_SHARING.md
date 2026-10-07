@@ -93,12 +93,20 @@ so nothing unverified gets in, but nothing verified does either.
 |---|---|
 | verified | the clip is added to their library |
 | no credentials, untrusted signer, invalid, not a camera capture | "We couldn't confirm this was shot with the Divine camera…" — nothing is saved |
-| check could not run (offline without anchors) | "Couldn't check this clip right now…" — try again later |
+| check could not run (offline without anchors), or it could not be told whether the file is a published post | "Couldn't check this clip right now…" — try again later |
 
 On the sending side, every picked clip is checked before the first upload. If
 one fails a check that ran, none of them is sent, and the sender sees "We
 couldn't confirm this clip was shot with the Divine camera, so it can't be
-sent as a clip."
+sent as a clip." Clips then go out one after another and keep going if the
+sender leaves the chat; the outcome is reported wherever they are. If a later
+upload fails, the ones before it are already sent and the sender sees how many
+went out ("Sent 2 of 3").
+
+The attach menu tells the sender, before they pick anything, that the
+recipient can add what they send to their clips and post it, and that they
+will be credited. That applies to gallery videos too, since "Add to clips" is
+offered on every received video and only the check decides.
 
 C2PA reading exists on Android and iOS only, so clip sharing is offered on
 those platforms; elsewhere the attach button still sends a gallery video.
@@ -120,9 +128,20 @@ credential is not carried into the published video. Carrying it through is
 #9893.
 
 The source credit is public once the clip is used. A video the recipient posts
-with a received clip in it carries the sender as a clip-source `p` tag, the
-same credit a clip imported from a published video gets, so the sender is
-named and notified. Nothing about the DM itself is published.
+with a received clip in it carries the credited account as a clip-source `p`
+tag, so it is named and notified. For footage the sender recorded, that is the
+sender, with no `a` tag, since there is no post to point to; anyone reading the
+post can therefore tell the footage came from that account directly. The
+sender is told about this in the attach menu.
+
+A published Divine video is signed at publish as a fresh camera capture, so the
+check cannot tell a forwarded post from a raw recording. Its file is the post's
+exact file, though, so before importing, the clip's SHA-256 is looked up on
+Divine's media server (`GET /<sha256>/provenance`, which names the account that
+uploaded it). A match credits whoever published the post, linked to it with an
+`a` tag the way a clip imported from a published video is, and not the person
+who forwarded it. If the lookup cannot run, nothing is imported and the
+recipient is asked to try again rather than credit the wrong person.
 
 ## Limits
 

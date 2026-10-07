@@ -3673,6 +3673,21 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bu klibin Divine kamerasıyla çekildiğini doğrulayamadık, bu yüzden klip olarak gönderilemez.';
 
   @override
+  String get dmAttachReuseNotice =>
+      'Gönderdiklerini kendi kliplerine ekleyip paylaşabilirler; seni de kaynak olarak gösterirler.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total klipten $sent tanesi gönderildi. Kalanlar gönderilemedi.',
+      one: '$total klipten $sent tanesi gönderildi. Kalanlar gönderilemedi.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Videoyu Kaydet';
 
   @override

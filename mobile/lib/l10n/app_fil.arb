@@ -962,6 +962,8 @@
     "dmClipNotVerified": "Hindi namin makumpirma na kinunan ito gamit ang Divine camera, kaya hindi ito naidagdag sa clips mo.",
     "dmClipCheckUnavailable": "Hindi ma-check ang clip na ito ngayon. Subukan ulit mamaya.",
     "dmClipSendNotVerified": "Hindi namin makumpirma na kinunan ang clip na ito gamit ang Divine camera, kaya hindi ito maipapadala bilang clip.",
+    "dmAttachReuseNotice": "Puwede nilang idagdag sa clips nila ang ipinadala mo at i-post ito, at mababanggit ka.",
+    "dmClipsPartlySent": "{total, plural, one{Naipadala ang {sent} sa {total} clip. Hindi naipadala ang iba.} other{Naipadala ang {sent} sa {total} na clip. Hindi naipadala ang iba.}}",
     "shareSheetSaveVideo": "I-save ang Video",
     "shareSheetAddToClips": "Idagdag sa clips",
     "shareSheetAddToClipsFailed": "Hindi naidagdag sa clips",

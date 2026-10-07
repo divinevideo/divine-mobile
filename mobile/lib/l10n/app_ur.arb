@@ -1836,6 +1836,8 @@
   "dmClipNotVerified": "ہم تصدیق نہیں کر سکے کہ یہ Divine کیمرے سے بنی ہے، اس لیے اسے آپ کی کلپس میں شامل نہیں کیا گیا۔",
   "dmClipCheckUnavailable": "ابھی اس کلپ کی جانچ نہیں ہو سکی۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔",
   "dmClipSendNotVerified": "ہم تصدیق نہیں کر سکے کہ یہ کلپ Divine کیمرے سے بنی ہے، اس لیے اسے کلپ کے طور پر نہیں بھیجا جا سکتا۔",
+  "dmAttachReuseNotice": "وہ آپ کی بھیجی ہوئی چیز اپنی کلپس میں شامل کر کے پوسٹ کر سکتے ہیں، اور آپ کا نام دیا جائے گا۔",
+  "dmClipsPartlySent": "{total, plural, one{{total} کلپ میں سے {sent} بھیجا گیا۔ باقی نہیں جا سکے۔} other{{total} کلپس میں سے {sent} بھیج دیے گئے۔ باقی نہیں جا سکے۔}}",
   "shareSheetSaveVideo": "ویڈیو محفوظ کریں",
   "shareSheetAddToClips": "کلپس میں شامل کریں",
   "@shareSheetAddToClips": {

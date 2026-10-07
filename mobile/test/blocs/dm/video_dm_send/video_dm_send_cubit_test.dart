@@ -273,7 +273,7 @@ void main() {
         final cubit = createClipCubit();
         addTearDown(cubit.close);
 
-        await cubit.sendClips(
+        final outcome = await cubit.sendClips(
           recipientPubkey: _recipientPubkey,
           clips: [
             _clip('clip-a'),
@@ -281,7 +281,15 @@ void main() {
           ],
         );
 
-        expect(cubit.state.status, VideoDmSendStatus.sent);
+        expect(
+          outcome,
+          const ClipSendOutcome(
+            VideoDmSendStatus.sent,
+            sentCount: 2,
+            total: 2,
+          ),
+        );
+        expect(cubit.state.status, VideoDmSendStatus.idle);
         expect(sentPaths, ['/documents/clip-a.mp4', '/documents/clip-b.mp4']);
         expect(sentTags, [
           [
@@ -302,12 +310,12 @@ void main() {
       final cubit = createClipCubit();
       addTearDown(cubit.close);
 
-      await cubit.sendClips(
+      final outcome = await cubit.sendClips(
         recipientPubkey: _recipientPubkey,
         clips: [_clip('clip-a')],
       );
 
-      expect(cubit.state.status, VideoDmSendStatus.clipNotVerified);
+      expect(outcome?.status, VideoDmSendStatus.clipNotVerified);
       expect(sentPaths, isEmpty);
     });
 
@@ -322,12 +330,12 @@ void main() {
       final cubit = createClipCubit();
       addTearDown(cubit.close);
 
-      await cubit.sendClips(
+      final outcome = await cubit.sendClips(
         recipientPubkey: _recipientPubkey,
         clips: [_clip('clip-a'), _clip('clip-b')],
       );
 
-      expect(cubit.state.status, VideoDmSendStatus.clipNotVerified);
+      expect(outcome?.status, VideoDmSendStatus.clipNotVerified);
       expect(sentPaths, isEmpty);
     });
 
@@ -341,14 +349,83 @@ void main() {
         final cubit = createClipCubit();
         addTearDown(cubit.close);
 
-        await cubit.sendClips(
+        final outcome = await cubit.sendClips(
           recipientPubkey: _recipientPubkey,
           clips: [_clip('clip-a')],
         );
 
-        expect(cubit.state.status, VideoDmSendStatus.sent);
+        expect(outcome?.status, VideoDmSendStatus.sent);
         expect(sentPaths, ['/documents/clip-a.mp4']);
       },
     );
+
+    test('reports how many clips went out when a later send fails', () async {
+      when(() => verifier.verify(any())).thenAnswer(
+        (_) async => const ClipProvenanceResult(ClipProvenanceStatus.verified),
+      );
+      when(
+        () => service.sendVideo(
+          recipientPubkey: any(named: 'recipientPubkey'),
+          videoFile: any(named: 'videoFile'),
+          mimeType: any(named: 'mimeType'),
+          extraTags: any(named: 'extraTags'),
+          onPhase: any(named: 'onPhase'),
+        ),
+      ).thenAnswer((invocation) async {
+        final path = (invocation.namedArguments[#videoFile] as File).path;
+        sentPaths.add(path);
+        return path.endsWith('clip-a.mp4')
+            ? NIP17SendResult.success(
+                rumorEventId: 'rumor-1',
+                messageEventId: 'wrap-1',
+                recipientPubkey: _recipientPubkey,
+              )
+            : const NIP17SendResult.failure('relay rejected the wrap');
+      });
+      final cubit = createClipCubit();
+      addTearDown(cubit.close);
+
+      final outcome = await cubit.sendClips(
+        recipientPubkey: _recipientPubkey,
+        clips: [_clip('clip-a'), _clip('clip-b'), _clip('clip-c')],
+      );
+
+      expect(
+        outcome,
+        const ClipSendOutcome(
+          VideoDmSendStatus.failed,
+          sentCount: 1,
+          total: 3,
+        ),
+      );
+      expect(outcome!.isPartial, isTrue);
+      expect(sentPaths, ['/documents/clip-a.mp4', '/documents/clip-b.mp4']);
+    });
+
+    test('finishes sending after the chat closes', () async {
+      final check = Completer<ClipProvenanceResult>();
+      when(() => verifier.verify(any())).thenAnswer((_) => check.future);
+      final cubit = createClipCubit();
+
+      final outcome = cubit.sendClips(
+        recipientPubkey: _recipientPubkey,
+        clips: [_clip('clip-a'), _clip('clip-b')],
+      );
+      await pumpEventQueue();
+      await cubit.close();
+      check.complete(
+        const ClipProvenanceResult(ClipProvenanceStatus.verified),
+      );
+
+      expect(
+        await outcome,
+        const ClipSendOutcome(
+          VideoDmSendStatus.sent,
+          sentCount: 2,
+          total: 2,
+        ),
+      );
+      expect(sentPaths, ['/documents/clip-a.mp4', '/documents/clip-b.mp4']);
+    });
   });
 }

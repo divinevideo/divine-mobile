@@ -1334,6 +1334,8 @@
     "dmClipNotVerified": "Kami tidak dapat memastikan ini direkam dengan kamera Divine, jadi tidak ditambahkan ke klipmu.",
     "dmClipCheckUnavailable": "Klip ini tidak bisa dicek sekarang. Coba lagi sebentar lagi.",
     "dmClipSendNotVerified": "Kami tidak dapat memastikan klip ini direkam dengan kamera Divine, jadi tidak bisa dikirim sebagai klip.",
+    "dmAttachReuseNotice": "Mereka bisa menambahkan yang kamu kirim ke klip mereka dan mempostingnya, dengan kredit untukmu.",
+    "dmClipsPartlySent": "{total, plural, other{Terkirim {sent} dari {total} klip. Sisanya gagal terkirim.}}",
     "shareSheetSaveVideo": "Simpan Video",
     "shareSheetAddToClips": "Tambahkan ke klip",
     "shareSheetAddToClipsFailed": "Tidak dapat menambahkan ke klip",

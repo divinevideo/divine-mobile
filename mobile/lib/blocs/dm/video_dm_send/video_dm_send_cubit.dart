@@ -32,6 +32,31 @@ String videoDmMimeTypeFor(String path) {
   };
 }
 
+/// How a [VideoDmSendCubit.sendClips] call ended.
+class ClipSendOutcome extends Equatable {
+  /// Creates a [ClipSendOutcome].
+  const ClipSendOutcome(
+    this.status, {
+    required this.sentCount,
+    required this.total,
+  });
+
+  /// The terminal status: [VideoDmSendStatus.sent] when every clip went out.
+  final VideoDmSendStatus status;
+
+  /// How many clips were delivered before the send ended.
+  final int sentCount;
+
+  /// How many clips were picked.
+  final int total;
+
+  /// Whether some, but not all, clips went out.
+  bool get isPartial => sentCount > 0 && sentCount < total;
+
+  @override
+  List<Object?> get props => [status, sentCount, total];
+}
+
 /// Lifecycle of a single encrypted video DM send.
 enum VideoDmSendStatus {
   /// No send has started.
@@ -148,15 +173,36 @@ class VideoDmSendCubit extends Cubit<VideoDmSendState>
   ///
   /// Every clip's C2PA credential is checked before the first upload, so a
   /// clip the recipient could not add to their library is never uploaded,
-  /// and one failing clip keeps the whole selection from going out rather
-  /// than leaving it half sent. A send that fails stops the remaining clips.
-  /// A check that cannot run (no trust anchors, no C2PA on this platform)
-  /// does not block the send, since the recipient checks again anyway.
-  Future<void> sendClips({
+  /// and one failing clip keeps the whole selection from going out. A check
+  /// that cannot run (no trust anchors, no C2PA on this platform) does not
+  /// block the send, since the recipient checks again anyway. A send that
+  /// fails stops the remaining clips, so the selection can end up partly
+  /// sent; [ClipSendOutcome.sentCount] says how far it got.
+  ///
+  /// The work is not cancelled by [close]: leaving the chat lets the clips
+  /// finish going out, and the caller reports the returned outcome. Progress
+  /// is emitted while the cubit is open; it returns to idle at the end.
+  ///
+  /// Returns null when a send is already running or [clips] is empty.
+  Future<ClipSendOutcome?> sendClips({
     required String recipientPubkey,
     required List<DivineVideoClip> clips,
   }) async {
-    if (state.isSending || clips.isEmpty) return;
+    if (state.isSending || clips.isEmpty) return null;
+
+    final outcome = await _sendClips(recipientPubkey, clips);
+    emitIfOpen(const VideoDmSendState());
+    return outcome;
+  }
+
+  Future<ClipSendOutcome> _sendClips(
+    String recipientPubkey,
+    List<DivineVideoClip> clips,
+  ) async {
+    final total = clips.length;
+    var sentCount = 0;
+    ClipSendOutcome outcome(VideoDmSendStatus status) =>
+        ClipSendOutcome(status, sentCount: sentCount, total: total);
 
     try {
       final paths = <String>[];
@@ -167,8 +213,7 @@ class VideoDmSendCubit extends Cubit<VideoDmSendState>
             VideoDmSendFailure('clip ${clip.id} has no video file'),
             StackTrace.current,
           );
-          emitIfOpen(const VideoDmSendState(status: VideoDmSendStatus.failed));
-          return;
+          return outcome(VideoDmSendStatus.failed);
         }
         paths.add(path);
       }
@@ -178,18 +223,13 @@ class VideoDmSendCubit extends Cubit<VideoDmSendState>
         emitIfOpen(const VideoDmSendState(status: VideoDmSendStatus.checking));
         for (final path in paths) {
           final provenance = await verifier.verify(path);
-          if (isClosed) return;
           if (provenance.isRejected) {
-            emitIfOpen(
-              const VideoDmSendState(status: VideoDmSendStatus.clipNotVerified),
-            );
-            return;
+            return outcome(VideoDmSendStatus.clipNotVerified);
           }
         }
       }
 
       for (final (index, clip) in clips.indexed) {
-        if (isClosed) return;
         final path = paths[index];
         emitIfOpen(
           const VideoDmSendState(status: VideoDmSendStatus.encrypting),
@@ -206,17 +246,17 @@ class VideoDmSendCubit extends Cubit<VideoDmSendState>
             VideoDmSendFailure(result.error ?? 'unknown'),
             StackTrace.current,
           );
-          emitIfOpen(const VideoDmSendState(status: VideoDmSendStatus.failed));
-          return;
+          return outcome(VideoDmSendStatus.failed);
         }
+        sentCount++;
       }
-      emitIfOpen(const VideoDmSendState(status: VideoDmSendStatus.sent));
+      return outcome(VideoDmSendStatus.sent);
     } on DmVideoTooLargeException catch (error, stackTrace) {
       addError(error, stackTrace);
-      emitIfOpen(const VideoDmSendState(status: VideoDmSendStatus.tooLarge));
+      return outcome(VideoDmSendStatus.tooLarge);
     } catch (error, stackTrace) {
       addError(error, stackTrace);
-      emitIfOpen(const VideoDmSendState(status: VideoDmSendStatus.failed));
+      return outcome(VideoDmSendStatus.failed);
     }
   }
 

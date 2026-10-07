@@ -3855,6 +3855,7 @@ void main() {
 
         expect(find.text(l10n.dmAttachClipFromLibrary), findsOneWidget);
         expect(find.text(l10n.dmAttachVideoFromGallery), findsOneWidget);
+        expect(find.text(l10n.dmAttachReuseNotice), findsOneWidget);
       });
 
       testWidgets('confirms a delivered video DM', (tester) async {

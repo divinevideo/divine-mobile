@@ -1327,6 +1327,8 @@
     "dmClipNotVerified": "تعذّر التأكد من أن هذا المقطع صُوّر بكاميرا Divine، لذا لم تتم إضافته إلى مقاطعك.",
     "dmClipCheckUnavailable": "تعذّر التحقق من هذا المقطع الآن. يُرجى المحاولة بعد قليل.",
     "dmClipSendNotVerified": "تعذّر التأكد من أن هذا المقطع صُوّر بكاميرا Divine، لذا لا يمكن إرساله كمقطع.",
+    "dmAttachReuseNotice": "يمكنهم إضافة ما ترسله إلى مقاطعهم ونشره، مع الإشارة إليك.",
+    "dmClipsPartlySent": "{total, plural, zero{تم إرسال {sent} من {total} مقطع. لم يُرسل الباقي.} one{تم إرسال {sent} من {total} مقطع. لم يُرسل الباقي.} two{تم إرسال {sent} من {total} مقطعين. لم يُرسل الباقي.} few{تم إرسال {sent} من {total} مقاطع. لم يُرسل الباقي.} many{تم إرسال {sent} من {total} مقطعًا. لم يُرسل الباقي.} other{تم إرسال {sent} من {total} مقطع. لم يُرسل الباقي.}}",
     "shareSheetSaveVideo": "حفظ الفيديو",
     "shareSheetAddToClips": "إضافة إلى المقاطع",
     "shareSheetAddToClipsFailed": "تعذّرت الإضافة إلى المقاطع",

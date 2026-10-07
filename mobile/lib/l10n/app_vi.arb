@@ -1836,6 +1836,8 @@
   "dmClipNotVerified": "Chúng tôi không thể xác nhận clip này được quay bằng camera Divine, nên nó không được thêm vào clip của bạn.",
   "dmClipCheckUnavailable": "Hiện không kiểm tra được clip này. Thử lại sau một lát nhé.",
   "dmClipSendNotVerified": "Chúng tôi không thể xác nhận clip này được quay bằng camera Divine, nên không thể gửi dưới dạng clip.",
+  "dmAttachReuseNotice": "Người nhận có thể thêm nội dung bạn gửi vào clip của họ và đăng lên, kèm ghi công cho bạn.",
+  "dmClipsPartlySent": "{total, plural, other{Đã gửi {sent}/{total} clip. Phần còn lại chưa gửi được.}}",
   "shareSheetSaveVideo": "Lưu video",
   "shareSheetAddToClips": "Thêm vào clip",
   "@shareSheetAddToClips": {

@@ -3736,6 +3736,21 @@ class AppLocalizationsUr extends AppLocalizations {
       'ہم تصدیق نہیں کر سکے کہ یہ کلپ Divine کیمرے سے بنی ہے، اس لیے اسے کلپ کے طور پر نہیں بھیجا جا سکتا۔';
 
   @override
+  String get dmAttachReuseNotice =>
+      'وہ آپ کی بھیجی ہوئی چیز اپنی کلپس میں شامل کر کے پوسٹ کر سکتے ہیں، اور آپ کا نام دیا جائے گا۔';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total کلپس میں سے $sent بھیج دیے گئے۔ باقی نہیں جا سکے۔',
+      one: '$total کلپ میں سے $sent بھیجا گیا۔ باقی نہیں جا سکے۔',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'ویڈیو محفوظ کریں';
 
   @override

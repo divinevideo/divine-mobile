@@ -1836,6 +1836,8 @@
   "dmClipNotVerified": "无法确认这是用 Divine 相机拍摄的，所以没有加入你的片段库。",
   "dmClipCheckUnavailable": "现在无法检查这个片段，请稍后再试。",
   "dmClipSendNotVerified": "无法确认这个片段是用 Divine 相机拍摄的，所以不能作为片段发送。",
+  "dmAttachReuseNotice": "对方可以把你发送的内容加入他们的片段库并发布，同时会注明你。",
+  "dmClipsPartlySent": "{total, plural, other{已发送 {sent}/{total} 个片段。其余的没有发出去。}}",
   "shareSheetSaveVideo": "保存视频",
   "shareSheetAddToClips": "加入片段库",
   "@shareSheetAddToClips": {

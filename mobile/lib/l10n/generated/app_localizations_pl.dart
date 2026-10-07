@@ -3838,6 +3838,23 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nie udało się potwierdzić, że ten klip nagrano kamerą Divine, więc nie można go wysłać jako klipu.';
 
   @override
+  String get dmAttachReuseNotice =>
+      'Druga osoba może dodać to, co wysyłasz, do swoich klipów i to opublikować. Pojawisz się jako źródło.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Wysłano $sent z $total klipu. Reszta nie dotarła.',
+      many: 'Wysłano $sent z $total klipów. Reszta nie dotarła.',
+      few: 'Wysłano $sent z $total klipów. Reszta nie dotarła.',
+      one: 'Wysłano $sent z $total klipu. Reszta nie dotarła.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Zapisz film';
 
   @override

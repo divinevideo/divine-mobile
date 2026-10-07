@@ -3798,6 +3798,21 @@ class AppLocalizationsEn extends AppLocalizations {
       'We couldn\'t confirm this clip was shot with the Divine camera, so it can\'t be sent as a clip.';
 
   @override
+  String get dmAttachReuseNotice =>
+      'They can add what you send to their clips and post it. You\'ll get credit.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Sent $sent of $total clips. The rest didn\'t go through.',
+      one: 'Sent $sent of $total clip. The rest didn\'t go through.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Save Video';
 
   @override

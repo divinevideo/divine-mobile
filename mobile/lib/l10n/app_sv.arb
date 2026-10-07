@@ -1337,6 +1337,8 @@
     "dmClipNotVerified": "Vi kunde inte bekräfta att det är filmat med Divine-kameran, så det lades inte till i dina klipp.",
     "dmClipCheckUnavailable": "Det går inte att kolla klippet just nu. Försök igen om en stund.",
     "dmClipSendNotVerified": "Vi kunde inte bekräfta att klippet är filmat med Divine-kameran, så det kan inte skickas som klipp.",
+    "dmAttachReuseNotice": "Det du skickar kan mottagaren lägga till i sina klipp och publicera, och du krediteras.",
+    "dmClipsPartlySent": "{total, plural, one{{sent} av {total} klipp skickat. Resten gick inte iväg.} other{{sent} av {total} klipp skickade. Resten gick inte iväg.}}",
     "shareSheetSaveVideo": "Spara video",
     "shareSheetAddToClips": "Lägg till i klipp",
     "shareSheetAddToClipsFailed": "Kunde inte lägga till i klipp",

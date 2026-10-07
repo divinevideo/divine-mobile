@@ -3658,6 +3658,20 @@ class AppLocalizationsId extends AppLocalizations {
       'Kami tidak dapat memastikan klip ini direkam dengan kamera Divine, jadi tidak bisa dikirim sebagai klip.';
 
   @override
+  String get dmAttachReuseNotice =>
+      'Mereka bisa menambahkan yang kamu kirim ke klip mereka dan mempostingnya, dengan kredit untukmu.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Terkirim $sent dari $total klip. Sisanya gagal terkirim.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Simpan Video';
 
   @override

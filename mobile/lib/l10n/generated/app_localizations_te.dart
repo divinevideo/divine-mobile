@@ -3870,6 +3870,21 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఈ క్లిప్ Divine కెమెరాతో చిత్రీకరించబడిందని నిర్ధారించలేకపోయాం, కాబట్టి దీన్ని క్లిప్‌గా పంపలేరు.';
 
   @override
+  String get dmAttachReuseNotice =>
+      'మీరు పంపినదాన్ని వారు తమ క్లిప్‌లకు జోడించి పోస్ట్ చేయవచ్చు, మీకు క్రెడిట్ ఇస్తారు.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$total క్లిప్‌లలో $sent పంపబడ్డాయి. మిగిలినవి వెళ్లలేదు.',
+      one: '$total క్లిప్‌లో $sent పంపబడింది. మిగిలినవి వెళ్లలేదు.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'వీడియోను సేవ్ చేయండి';
 
   @override

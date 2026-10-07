@@ -1337,6 +1337,8 @@
     "dmClipNotVerified": "Impossible de confirmer que ça a été filmé avec la caméra Divine, donc ça n'a pas été ajouté à tes clips.",
     "dmClipCheckUnavailable": "Impossible de vérifier ce clip pour l'instant. Réessaie dans un moment.",
     "dmClipSendNotVerified": "Impossible de confirmer que ce clip a été filmé avec la caméra Divine, donc il ne peut pas être envoyé comme clip.",
+    "dmAttachReuseNotice": "Ce que tu envoies peut être ajouté à ses clips et publié, avec ton nom en crédit.",
+    "dmClipsPartlySent": "{total, plural, one{{sent} sur {total} clip envoyé. Le reste n'est pas parti.} many{{sent} sur {total} de clips envoyés. Le reste n'est pas parti.} other{{sent} sur {total} clips envoyés. Le reste n'est pas parti.}}",
     "shareSheetSaveVideo": "Enregistrer la vidéo",
     "shareSheetAddToClips": "Ajouter aux clips",
     "shareSheetAddToClipsFailed": "Impossible d'ajouter aux clips",

@@ -3722,6 +3722,21 @@ class AppLocalizationsMs extends AppLocalizations {
       'Kami tidak dapat mengesahkan klip ini dirakam dengan kamera Divine, jadi ia tidak boleh dihantar sebagai klip.';
 
   @override
+  String get dmAttachReuseNotice =>
+      'Mereka boleh tambah apa yang anda hantar ke klip mereka dan siarkannya, dengan kredit kepada anda.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other:
+          '$sent daripada $total klip dihantar. Selebihnya tidak berjaya dihantar.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Simpan Video';
 
   @override

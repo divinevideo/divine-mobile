@@ -3783,6 +3783,22 @@ class AppLocalizationsIt extends AppLocalizations {
       'Non abbiamo potuto confermare che questo clip sia stato girato con la fotocamera di Divine, quindi non può essere inviato come clip.';
 
   @override
+  String get dmAttachReuseNotice =>
+      'Può aggiungere ciò che invii alle sue clip e pubblicarlo, citandoti.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Inviate $sent su $total clip. Le altre non sono partite.',
+      many: 'Inviate $sent su $total di clip. Le altre non sono partite.',
+      one: 'Inviate $sent su $total clip. Le altre non sono partite.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Salva video';
 
   @override

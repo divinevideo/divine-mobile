@@ -3782,6 +3782,21 @@ class AppLocalizationsBg extends AppLocalizations {
       'Не успяхме да потвърдим, че клипът е заснет с камерата на Divine, затова не може да се изпрати като клип.';
 
   @override
+  String get dmAttachReuseNotice =>
+      'Могат да добавят това, което изпращаш, към клиповете си и да го публикуват, като те посочат.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Изпратени $sent от $total клипа. Останалите не минаха.',
+      one: 'Изпратен $sent от $total клип. Останалите не минаха.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Запази видео';
 
   @override

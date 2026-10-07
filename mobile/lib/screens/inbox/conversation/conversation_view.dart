@@ -847,6 +847,14 @@ class _SendBarBodyState extends ConsumerState<_SendBarBody> {
     _AttachSource? source;
     await VineBottomSheetActionMenu.show(
       context: context,
+      // Any received video can be added to the recipient's clips and end up
+      // in a post that credits the sender, so say so before they pick.
+      title: Text(
+        l10n.dmAttachReuseNotice,
+        style: VineTheme.bodyMediumFont(
+          color: context.vineColors.secondaryText,
+        ),
+      ),
       options: [
         VineBottomSheetActionData(
           iconPath: DivineIconName.filmSlate.assetPath,
@@ -895,9 +903,45 @@ class _SendBarBodyState extends ConsumerState<_SendBarBody> {
     );
     if (clips == null || clips.isEmpty || !mounted) return;
 
-    await context.read<VideoDmSendCubit>().sendClips(
+    // The send outlives this screen, so everything needed to report it is
+    // captured now and the outcome goes to the app's messenger.
+    final messenger = ScaffoldMessenger.of(context);
+    final view = View.of(context);
+    final textDirection = Directionality.of(context);
+    final l10n = context.l10n;
+    final outcome = await context.read<VideoDmSendCubit>().sendClips(
       recipientPubkey: recipient,
       clips: clips,
+    );
+    if (outcome == null) return;
+
+    final (message, isError) = switch (outcome) {
+      ClipSendOutcome(isPartial: true) => (
+        l10n.dmClipsPartlySent(outcome.sentCount, outcome.total),
+        true,
+      ),
+      ClipSendOutcome(status: VideoDmSendStatus.sent) => (
+        l10n.dmVideoSent,
+        false,
+      ),
+      ClipSendOutcome(status: VideoDmSendStatus.tooLarge) => (
+        l10n.dmVideoTooLarge('$videoDmMaxMegabytes'),
+        true,
+      ),
+      ClipSendOutcome(status: VideoDmSendStatus.clipNotVerified) => (
+        l10n.dmClipSendNotVerified,
+        true,
+      ),
+      _ => (l10n.dmVideoSendFailed, true),
+    };
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(DivineSnackbarContainer.snackBar(message, error: isError));
+    runDetached(
+      SemanticsService.sendAnnouncement(view, message, textDirection),
+      'announce DM clip send outcome',
+      logName: 'ConversationView',
+      category: LogCategory.ui,
     );
   }
 

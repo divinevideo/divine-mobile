@@ -3702,6 +3702,20 @@ class AppLocalizationsVi extends AppLocalizations {
       'Chúng tôi không thể xác nhận clip này được quay bằng camera Divine, nên không thể gửi dưới dạng clip.';
 
   @override
+  String get dmAttachReuseNotice =>
+      'Người nhận có thể thêm nội dung bạn gửi vào clip của họ và đăng lên, kèm ghi công cho bạn.';
+
+  @override
+  String dmClipsPartlySent(int sent, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Đã gửi $sent/$total clip. Phần còn lại chưa gửi được.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Lưu video';
 
   @override

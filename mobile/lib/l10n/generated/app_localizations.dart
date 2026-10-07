@@ -6299,7 +6299,7 @@ abstract class AppLocalizations {
   /// **'Clip from your library'**
   String get dmAttachClipFromLibrary;
 
-  /// Option in the DM composer's attach menu that opens the device photo gallery to send any video. Unlike a library clip, a gallery video cannot be added to the recipient's clip library.
+  /// Option in the DM composer's attach menu that opens the device photo gallery to send any video. Unlike a library clip it is not labelled as a clip, though the recipient can still try to add it to their clips, which only works if its C2PA credential proves a Divine camera recording.
   ///
   /// In en, this message translates to:
   /// **'Video from your gallery'**
@@ -6334,6 +6334,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'We couldn\'t confirm this clip was shot with the Divine camera, so it can\'t be sent as a clip.'**
   String get dmClipSendNotVerified;
+
+  /// Short note at the top of the DM composer's attach menu. Tells the sender, before they pick what to send, that the recipient can add a sent video to their own clip library and post it, and that the sender is then credited publicly in that post.
+  ///
+  /// In en, this message translates to:
+  /// **'They can add what you send to their clips and post it. You\'ll get credit.'**
+  String get dmAttachReuseNotice;
+
+  /// SnackBar after sending several clips in a DM when only some went out before a failure. {sent} clips were delivered out of {total} picked; the rest were not sent.
+  ///
+  /// In en, this message translates to:
+  /// **'{total, plural, one{Sent {sent} of {total} clip. The rest didn\'t go through.} other{Sent {sent} of {total} clips. The rest didn\'t go through.}}'**
+  String dmClipsPartlySent(int sent, int total);
 
   /// No description provided for @shareSheetSaveVideo.
   ///

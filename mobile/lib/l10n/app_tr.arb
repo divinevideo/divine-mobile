@@ -1334,6 +1334,8 @@
     "dmClipNotVerified": "Bunun Divine kamerasıyla çekildiğini doğrulayamadık, bu yüzden kliplerine eklenmedi.",
     "dmClipCheckUnavailable": "Bu klip şu an kontrol edilemiyor. Biraz sonra tekrar dene.",
     "dmClipSendNotVerified": "Bu klibin Divine kamerasıyla çekildiğini doğrulayamadık, bu yüzden klip olarak gönderilemez.",
+    "dmAttachReuseNotice": "Gönderdiklerini kendi kliplerine ekleyip paylaşabilirler; seni de kaynak olarak gösterirler.",
+    "dmClipsPartlySent": "{total, plural, one{{total} klipten {sent} tanesi gönderildi. Kalanlar gönderilemedi.} other{{total} klipten {sent} tanesi gönderildi. Kalanlar gönderilemedi.}}",
     "shareSheetSaveVideo": "Videoyu Kaydet",
     "shareSheetAddToClips": "Kliplere ekle",
     "shareSheetAddToClipsFailed": "Kliplere eklenemedi",

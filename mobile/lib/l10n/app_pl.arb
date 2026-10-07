@@ -1337,6 +1337,8 @@
     "dmClipNotVerified": "Nie udało się potwierdzić, że nagrano to kamerą Divine, więc nie trafiło do twoich klipów.",
     "dmClipCheckUnavailable": "Nie można teraz sprawdzić tego klipu. Spróbuj ponownie za chwilę.",
     "dmClipSendNotVerified": "Nie udało się potwierdzić, że ten klip nagrano kamerą Divine, więc nie można go wysłać jako klipu.",
+    "dmAttachReuseNotice": "Druga osoba może dodać to, co wysyłasz, do swoich klipów i to opublikować. Pojawisz się jako źródło.",
+    "dmClipsPartlySent": "{total, plural, one{Wysłano {sent} z {total} klipu. Reszta nie dotarła.} few{Wysłano {sent} z {total} klipów. Reszta nie dotarła.} many{Wysłano {sent} z {total} klipów. Reszta nie dotarła.} other{Wysłano {sent} z {total} klipu. Reszta nie dotarła.}}",
     "shareSheetSaveVideo": "Zapisz film",
     "shareSheetAddToClips": "Dodaj do klipów",
     "shareSheetAddToClipsFailed": "Nie można dodać do klipów",
