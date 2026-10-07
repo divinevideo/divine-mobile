@@ -77,8 +77,8 @@ class ContentFilterService extends ChangeNotifier {
   };
 
   /// Categories age-gated to [ContentFilterPreference.hide] until the viewer is
-  /// age-verified. See #5303 for the gate; the creator's own videos are exempt
-  /// through [getCreatorSelfLabelPreference].
+  /// age-verified. See #5303 for the gate; labels a creator applied to their
+  /// own video are exempt through [getCreatorSelfLabelPreference].
   static const Set<ContentLabel> ageRestrictedCategories = {
     ...adultCategories,
     ContentLabel.alcohol,
@@ -225,9 +225,10 @@ class ContentFilterService extends ChangeNotifier {
 
   /// Resolves a creator-applied label for the current viewer.
   ///
-  /// Creators always see their own videos: a self-label that hides the video
-  /// for other viewers keeps it visible to its creator behind the warning
-  /// overlay instead.
+  /// A self-label that hides the video for other viewers keeps it visible to
+  /// its creator behind the warning overlay instead. Labels from trusted
+  /// labelers and server-side moderation do not go through here and still hide
+  /// the video for everyone.
   ContentFilterPreference getCreatorSelfLabelPreference(
     ContentLabel label, {
     required bool isOwner,
