@@ -1278,6 +1278,39 @@ void main() {
         );
       });
 
+      test(
+        'a list its author later emptied is not found through an older '
+        'revision',
+        () async {
+          when(
+            () =>
+                nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+          ).thenAnswer(
+            (_) async => [
+              _makeEvent(
+                createdAt: 1718400000,
+                tags: [
+                  ['d', 'dance-list'],
+                  ['title', 'Dance'],
+                  ['e', 'video-1'],
+                ],
+              ),
+              _makeEvent(
+                createdAt: 1718400100,
+                tags: [
+                  ['d', 'dance-list'],
+                  ['title', 'Dance'],
+                ],
+              ),
+            ],
+          );
+
+          final emissions = await repository.searchAllLists('dance').toList();
+
+          expect(emissions.last, isEmpty);
+        },
+      );
+
       test('emits nothing for blank query', () async {
         await expectLater(repository.searchAllLists(''), emitsDone);
       });
