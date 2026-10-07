@@ -683,6 +683,9 @@ class DmReactionsRepository {
   ///    so the chip is tappable again immediately. A soft outcome — a lost
   ///    `OK`, or an inbox we could not read (#8443) — leaves the pre-send
   ///    `'pending'` so the sweep keeps re-driving it.
+  /// 4. When an attempt for this rumor is already running — the original
+  ///    [publish] of a group reaction, or an earlier retry — nothing is sent
+  ///    again: the call joins that attempt and returns its outcome.
   Future<DmReactionPublishResult> retry({
     required String rumorId,
     required String targetMessageAuthor,
