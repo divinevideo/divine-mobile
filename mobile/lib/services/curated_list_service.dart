@@ -113,6 +113,7 @@ class CuratedListService extends ChangeNotifier {
   final List<CuratedList> _lists = [];
   final Set<String> _subscribedListIds = {};
   bool _isInitialized = false;
+  bool _hasLoadedSubscriptionIds = false;
   bool _isInitializing = false;
   Object? _initializationError;
   StackTrace? _initializationStackTrace;
@@ -176,6 +177,12 @@ class CuratedListService extends ChangeNotifier {
   // Getters
   List<CuratedList> get lists => List.unmodifiable(_lists);
   bool get isInitialized => _isInitialized;
+
+  /// Whether the persisted subscription metadata was decoded successfully.
+  ///
+  /// An absent record is a valid empty snapshot. A malformed record must not
+  /// authorize Home to discard or migrate an unresolved saved list selection.
+  bool get hasLoadedSubscriptionIds => _hasLoadedSubscriptionIds;
 
   /// Get all subscribed list IDs
   Set<String> get subscribedListIds => Set.unmodifiable(_subscribedListIds);
@@ -1352,12 +1359,17 @@ class CuratedListService extends ChangeNotifier {
 
   /// Load subscribed list IDs from local storage
   void _loadSubscribedListIds() {
+    _hasLoadedSubscriptionIds = false;
     final subscribedJson = _prefs.getString(subscribedListsStorageKey);
     if (subscribedJson != null) {
       try {
-        final subscribedData = jsonDecode(subscribedJson) as List<dynamic>;
-        _subscribedListIds.clear();
-        _subscribedListIds.addAll(subscribedData.cast<String>());
+        final subscribedData = List<String>.from(
+          jsonDecode(subscribedJson) as List<dynamic>,
+        );
+        _subscribedListIds
+          ..clear()
+          ..addAll(subscribedData);
+        _hasLoadedSubscriptionIds = true;
         Log.debug(
           '📱 Loaded ${_subscribedListIds.length} subscribed lists from storage',
           name: 'CuratedListService',
@@ -1372,6 +1384,7 @@ class CuratedListService extends ChangeNotifier {
         );
       }
     }
+    if (subscribedJson == null) _hasLoadedSubscriptionIds = true;
     _cacheStore.subscriptionsLoaded(_subscribedListIds);
   }
 

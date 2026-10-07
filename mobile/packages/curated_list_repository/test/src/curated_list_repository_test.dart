@@ -368,26 +368,35 @@ void main() {
       test('returns false when no default list exists', () {
         repository.setSubscribedLists([createList(id: 'other')]);
 
-        expect(repository.hasDefaultList(), isFalse);
+        expect(repository.hasDefaultList(ownerPubkey: _testPubkey), isFalse);
       });
 
       test('returns true when default list exists', () {
-        repository.setSubscribedLists([createList(id: defaultListId)]);
+        repository.setSubscribedLists([
+          createList(id: defaultListId, pubkey: _testPubkey),
+        ]);
 
-        expect(repository.hasDefaultList(), isTrue);
+        expect(repository.hasDefaultList(ownerPubkey: _testPubkey), isTrue);
       });
     });
 
     group('getDefaultList', () {
       test('returns null when no default list exists', () {
-        expect(repository.getDefaultList(), isNull);
+        expect(repository.getDefaultList(ownerPubkey: _testPubkey), isNull);
       });
 
       test('returns the default list', () {
-        final myList = createList(id: defaultListId, name: 'My List');
+        final myList = createList(
+          id: defaultListId,
+          name: 'My List',
+          pubkey: _testPubkey,
+        );
         repository.setSubscribedLists([myList]);
 
-        expect(repository.getDefaultList(), equals(myList));
+        expect(
+          repository.getDefaultList(ownerPubkey: _testPubkey),
+          equals(myList),
+        );
       });
     });
 
