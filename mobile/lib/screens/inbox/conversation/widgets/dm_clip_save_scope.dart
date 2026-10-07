@@ -17,7 +17,7 @@ import 'package:openvine/utils/detached_future.dart';
 /// Provides a [DmClipSaveCubit] to a DM screen.
 ///
 /// The decryptor and verifier are account-independent. The clip library is
-/// per account, so it is resolved when a clip is added, not when the screen
+/// per account, so it is resolved when a save starts, not when the screen
 /// opens.
 class DmClipSaveProvider extends BlocProvider<DmClipSaveCubit> {
   /// Creates a [DmClipSaveProvider] above [child].
@@ -28,20 +28,8 @@ class DmClipSaveProvider extends BlocProvider<DmClipSaveCubit> {
     return DmClipSaveCubit(
       decryptor: container.read(dmVideoDecryptorProvider),
       verifier: container.read(clipProvenanceVerifierProvider),
-      importClip:
-          ({
-            required source,
-            required senderPubkey,
-            required c2paManifestId,
-            targetAspectRatio,
-          }) => container
-              .read(videoClipImportServiceProvider)
-              .importReceivedClip(
-                source: source,
-                senderPubkey: senderPubkey,
-                c2paManifestId: c2paManifestId,
-                targetAspectRatio: targetAspectRatio,
-              ),
+      resolveImporter: () =>
+          container.read(videoClipImportServiceProvider).importReceivedClip,
     );
   }
 }

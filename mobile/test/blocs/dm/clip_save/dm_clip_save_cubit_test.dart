@@ -69,7 +69,7 @@ void main() {
   DmClipSaveCubit buildCubit() => DmClipSaveCubit(
     decryptor: decryptor,
     verifier: verifier,
-    importClip: importService.importReceivedClip,
+    resolveImporter: () => importService.importReceivedClip,
   );
 
   void stubVerification(ClipProvenanceStatus status) {
@@ -192,6 +192,44 @@ void main() {
         errors: () => [isA<DmVideoUnavailableException>()],
         verify: (_) => verifyNever(() => verifier.verify(any())),
       );
+
+      test('adds the clip to the library of the account that asked, even '
+          'when the account switches during the check', () async {
+        final verification = Completer<ClipProvenanceResult>();
+        when(
+          () => verifier.verify(_decryptedPath),
+        ).thenAnswer((_) => verification.future);
+        stubImportSuccess();
+        final otherAccountImport = _MockVideoClipImportService();
+        var signedIn = importService;
+        final cubit = DmClipSaveCubit(
+          decryptor: decryptor,
+          verifier: verifier,
+          resolveImporter: () => signedIn.importReceivedClip,
+        );
+        addTearDown(cubit.close);
+
+        final outcome = cubit.save(_clipMessage());
+        await pumpEventQueue();
+        signedIn = otherAccountImport;
+        verification.complete(
+          const ClipProvenanceResult(
+            ClipProvenanceStatus.verified,
+            activeManifestId: _manifestId,
+          ),
+        );
+
+        expect(await outcome, equals(DmClipSaveStatus.saved));
+        verify(
+          () => importService.importReceivedClip(
+            source: any(named: 'source'),
+            senderPubkey: _senderPubkey,
+            c2paManifestId: _manifestId,
+            targetAspectRatio: AspectRatio.square,
+          ),
+        ).called(1);
+        verifyZeroInteractions(otherAccountImport);
+      });
 
       test('finishes the save and returns its outcome after close', () async {
         final verification = Completer<ClipProvenanceResult>();

@@ -12,17 +12,21 @@ import 'package:openvine/services/clip_provenance_verifier.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
 
-/// Adds a verified received clip to the signed-in account's clip library.
-///
-/// A function rather than a [VideoClipImportService], so the caller resolves
-/// the library at the moment of the save: the library is per account, and a
-/// service captured when the thread opened would outlive an account switch.
+/// Adds a verified received clip to one account's clip library.
 typedef ReceivedClipImporter = Future<VideoClipImportResult> Function({
   required File source,
   required String senderPubkey,
   required String c2paManifestId,
   AspectRatio? targetAspectRatio,
 });
+
+/// Returns the [ReceivedClipImporter] for the signed-in account's library.
+///
+/// Resolved when a save starts rather than when the screen opens, since the
+/// library is per account and a screen can outlive an account switch. Not
+/// resolved once the check is done either: the check can take many seconds,
+/// and the clip belongs to the account that received it and asked to save it.
+typedef ReceivedClipImporterResolver = ReceivedClipImporter Function();
 
 /// Lifecycle of adding one received clip to the library.
 enum DmClipSaveStatus {
@@ -70,32 +74,36 @@ class DmClipSaveCubit extends Cubit<DmClipSaveState>
   DmClipSaveCubit({
     required DmVideoDecryptor decryptor,
     required ClipProvenanceVerifier verifier,
-    required ReceivedClipImporter importClip,
+    required ReceivedClipImporterResolver resolveImporter,
   }) : _decryptor = decryptor,
        _verifier = verifier,
-       _importClip = importClip,
+       _resolveImporter = resolveImporter,
        super(const DmClipSaveState());
 
   final DmVideoDecryptor _decryptor;
   final ClipProvenanceVerifier _verifier;
-  final ReceivedClipImporter _importClip;
+  final ReceivedClipImporterResolver _resolveImporter;
 
   /// Downloads, decrypts and checks [message]'s clip, and adds it to the
-  /// library if it passes.
+  /// library of the account signed in when this was called if it passes.
   ///
   /// Returns the terminal status, or null when a save is already running and
   /// this call was dropped. The work is not cancelled by [close], so a caller
   /// that outlives the screen can still report the outcome.
   Future<DmClipSaveStatus?> save(DmMessage message) async {
     if (state.status == DmClipSaveStatus.checking) return null;
+    final importClip = _resolveImporter();
     emit(const DmClipSaveState(status: DmClipSaveStatus.checking));
 
-    final status = await _save(message);
+    final status = await _save(message, importClip);
     emitIfOpen(DmClipSaveState(status: status));
     return status;
   }
 
-  Future<DmClipSaveStatus> _save(DmMessage message) async {
+  Future<DmClipSaveStatus> _save(
+    DmMessage message,
+    ReceivedClipImporter importClip,
+  ) async {
     String? path;
     try {
       path = await _decryptor.decryptToFile(message);
@@ -107,7 +115,7 @@ class DmClipSaveCubit extends Cubit<DmClipSaveState>
             : DmClipSaveStatus.checkUnavailable;
       }
 
-      final result = await _importClip(
+      final result = await importClip(
         source: File(path),
         senderPubkey: message.senderPubkey,
         c2paManifestId: provenance.activeManifestId!,
