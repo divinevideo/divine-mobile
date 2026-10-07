@@ -92,52 +92,62 @@ class VideoFeedPage extends ConsumerWidget {
     final feedTuningRepository = ref.watch(feedTuningRepositoryProvider);
     final enrichmentAttemptTracker = NostrTagEnrichmentAttemptTracker();
 
-    return MultiBlocProvider(
-      key: ValueKey((
-        showDivineHostedOnly,
-        contentFilterVersion,
-        curatedListRepository,
-        viewerPubkey,
-      )),
-      providers: [
-        BlocProvider(
-          create: (_) =>
-              VideoFeedBloc(
-                videosRepository: videosRepository,
-                followRepository: followRepository,
-                curatedListRepository: curatedListRepository,
-                profileRepository: profileRepository,
-                contentBlocklistRepository: blocklistRepository,
-                userPubkey: viewerPubkey,
-                sharedPreferences: sharedPreferences,
-                // Cached-feed serving stays on (constructor default) regardless of
-                // the Divine-hosted-only filter: applyContentPreferences re-filters
-                // on read and the splice-on-refresh keeps the post-active tail
-                // fresh, so the cached serve is never stale to the viewer.
-                feedTracker: ref.read(feedPerformanceTrackerProvider),
-                feedTuningRepository: feedTuningRepository,
-                enrichVideos: (videos) => enrichVideosWithNostrTags(
-                  videos,
-                  nostrService: ref.read(nostrServiceProvider),
-                  callerName: 'VideoFeedBloc',
-                  attemptTracker: enrichmentAttemptTracker,
+    return RepositoryProvider<FeedModePersistenceCoordinator>(
+      key: ValueKey((viewerPubkey, sharedPreferences)),
+      create: (_) => FeedModePersistenceCoordinator(
+        sharedPreferences: sharedPreferences,
+        userPubkey: viewerPubkey,
+      ),
+      dispose: (coordinator) => coordinator.dispose(),
+      child: MultiBlocProvider(
+        key: ValueKey((
+          showDivineHostedOnly,
+          contentFilterVersion,
+          curatedListRepository,
+          viewerPubkey,
+        )),
+        providers: [
+          BlocProvider(
+            create: (context) =>
+                VideoFeedBloc(
+                  videosRepository: videosRepository,
+                  followRepository: followRepository,
+                  curatedListRepository: curatedListRepository,
+                  profileRepository: profileRepository,
+                  contentBlocklistRepository: blocklistRepository,
+                  userPubkey: viewerPubkey,
+                  sharedPreferences: sharedPreferences,
+                  persistenceCoordinator: context
+                      .read<FeedModePersistenceCoordinator>(),
+                  // Cached-feed serving stays on (constructor default) regardless of
+                  // the Divine-hosted-only filter: applyContentPreferences re-filters
+                  // on read and the splice-on-refresh keeps the post-active tail
+                  // fresh, so the cached serve is never stale to the viewer.
+                  feedTracker: ref.read(feedPerformanceTrackerProvider),
+                  feedTuningRepository: feedTuningRepository,
+                  enrichVideos: (videos) => enrichVideosWithNostrTags(
+                    videos,
+                    nostrService: ref.read(nostrServiceProvider),
+                    callerName: 'VideoFeedBloc',
+                    attemptTracker: enrichmentAttemptTracker,
+                  ),
+                )..add(
+                  VideoFeedStarted(
+                    mode: initialMode,
+                    forceMode: forceInitialMode,
+                  ),
                 ),
-              )..add(
-                VideoFeedStarted(
-                  mode: initialMode,
-                  forceMode: forceInitialMode,
-                ),
-              ),
-        ),
-        BlocProvider(
-          create: (_) => VideoPlaybackStatusCubit(
-            canAutoAuthorizeAgeRestrictedMedia: () => ref
-                .read(mediaAuthInterceptorProvider)
-                .canAutoAuthorizeAdultMedia(),
           ),
-        ),
-      ],
-      child: VideoFeedView(initialIndex: initialIndex),
+          BlocProvider(
+            create: (_) => VideoPlaybackStatusCubit(
+              canAutoAuthorizeAgeRestrictedMedia: () => ref
+                  .read(mediaAuthInterceptorProvider)
+                  .canAutoAuthorizeAdultMedia(),
+            ),
+          ),
+        ],
+        child: VideoFeedView(initialIndex: initialIndex),
+      ),
     );
   }
 }

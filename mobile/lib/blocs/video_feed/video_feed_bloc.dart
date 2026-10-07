@@ -53,6 +53,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     ContentBlocklistRepository? contentBlocklistRepository,
     String? userPubkey,
     SharedPreferences? sharedPreferences,
+    // Retain this account scope above replaceable blocs; omission creates an
+    // isolated scope suitable for a single bloc, with no hidden global state.
+    FeedModePersistenceCoordinator? persistenceCoordinator,
     bool serveCachedHomeFeed = true,
     Duration autoRefreshMinInterval = _defaultAutoRefreshMinInterval,
     FeedPerformanceTracker? feedTracker,
@@ -65,7 +68,6 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
        _profileRepository = profileRepository,
        _blocklistRepository = contentBlocklistRepository,
        _userPubkey = userPubkey,
-       _sharedPreferences = sharedPreferences,
        _serveCachedHomeFeed = serveCachedHomeFeed,
        _autoRefreshMinInterval = autoRefreshMinInterval,
        _feedTracker = feedTracker,
@@ -80,6 +82,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
          userPubkey: userPubkey,
          followRepository: followRepository,
          curatedListRepository: curatedListRepository,
+         persistenceCoordinator: persistenceCoordinator,
        ),
        super(const VideoFeedBlocState()) {
     on<VideoFeedStarted>(_onStarted);
@@ -109,7 +112,6 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   final ProfileRepository? _profileRepository;
   final ContentBlocklistRepository? _blocklistRepository;
   final String? _userPubkey;
-  final SharedPreferences? _sharedPreferences;
   final bool _serveCachedHomeFeed;
   final Duration _autoRefreshMinInterval;
   final FeedPerformanceTracker? _feedTracker;
@@ -125,7 +127,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   StreamSubscription<CuratedListSubscriptionSnapshot>?
   _curatedListsSubscription;
   int _sourceSelectionSequence = 0;
-  VideoFeedSource? _latestSourceSelection;
+  int? _activeSourceSelection;
+  VideoFeedCuratedListsChanged? _deferredCuratedSnapshot;
   bool _isClosing = false;
   String? _pendingRestoredCuratedList;
 
@@ -252,7 +255,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     late VideoFeedSource source;
     late bool mayPersist;
     while (true) {
-      final stored = _sharedPreferences?.getString(_modePreferences.key);
+      final stored = _modePreferences._savedScopedValue;
       final restoresCurated =
           !event.forceMode && stored != null && stored.startsWith('list:');
       final snapshot = restoresCurated
@@ -304,7 +307,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       }
       break;
     }
-    final storedSource = _sharedPreferences?.getString(_modePreferences.key);
+    final storedSource = _modePreferences._savedScopedValue;
     _pendingRestoredCuratedList =
         !event.forceMode &&
             !mayPersist &&
@@ -407,7 +410,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
 
   /// Keep unresolved scoped list preferences until the bridge can decide.
   bool _mayPersistRestoredSource(VideoFeedSource restored) {
-    final stored = _sharedPreferences?.getString(_modePreferences.key);
+    final stored = _modePreferences._savedScopedValue;
     if (stored == restored.persistenceValue) return false;
     return stored == null ||
         !stored.startsWith('list:') ||
@@ -449,15 +452,33 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     Emitter<VideoFeedBlocState> emit,
   ) async {
     _pendingRestoredCuratedList = null;
-    _latestSourceSelection = source;
     final selectionSequence = ++_sourceSelectionSequence;
+    _activeSourceSelection = selectionSequence;
+    try {
+      await _loadSelectedSource(source, selectionSequence, emit);
+    } finally {
+      if (_activeSourceSelection == selectionSequence) {
+        _activeSourceSelection = null;
+        final deferred = _deferredCuratedSnapshot;
+        _deferredCuratedSnapshot = null;
+        if (deferred != null && !emit.isDone && !_isClosing) {
+          addIfOpen(deferred);
+        }
+      }
+    }
+  }
+
+  Future<void> _loadSelectedSource(
+    VideoFeedSource source,
+    int selectionSequence,
+    Emitter<VideoFeedBlocState> emit,
+  ) async {
     // Skip loading if already on this source. Showing a source is not the same
-    // as having chosen it: a saved people list that did not resolve is kept
+    // as having chosen it: a saved list that did not resolve is kept
     // while Home shows For You, so picking For You has to be saved.
     if (state.source == source && state.status == VideoFeedStatus.success) {
-      if (_sharedPreferences?.getString(_modePreferences.key) !=
-          source.persistenceValue) {
-        await _persistExplicitSource(source, selectionSequence, emit);
+      if (_modePreferences._savedScopedValue != source.persistenceValue) {
+        await _modePreferences.persist(source);
       }
       return;
     }
@@ -473,7 +494,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       return;
     }
 
-    await _persistExplicitSource(source, selectionSequence, emit);
+    await _modePreferences.persist(source);
     if (selectionSequence != _sourceSelectionSequence || emit.isDone) {
       if (feedLoad != null) _feedTracker?.abandonFeedLoad(feedLoad);
       return;
@@ -805,6 +826,14 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     if (!_isCurrentCuratedSnapshot(event)) return;
     final selectionSequence = _sourceSelectionSequence;
     final subscribedLists = event.subscribedLists;
+    if (_activeSourceSelection != null) {
+      // The visible source can still be the old one while an explicit choice
+      // awaits cache/storage. Reconcile only after that choice finishes, so an
+      // automatic fallback cannot overwrite the newer intent using old state.
+      _deferredCuratedSnapshot = event;
+      emit(state.copyWith(subscribedLists: subscribedLists));
+      return;
+    }
     if (state.status == VideoFeedStatus.loading) {
       if (subscribedLists.isNotEmpty) {
         emit(state.copyWith(subscribedLists: subscribedLists));
@@ -883,57 +912,25 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       event.snapshot == null ||
       identical(event.snapshot, _curatedListRepository.subscriptionSnapshot);
 
-  Future<void> _persistExplicitSource(
-    VideoFeedSource source,
-    int selectionSequence,
-    Emitter<VideoFeedBlocState> emit,
-  ) async {
-    await _modePreferences.persist(source);
-    if (!emit.isDone &&
-        !_isClosing &&
-        selectionSequence != _sourceSelectionSequence) {
-      await _repairSourcePreference(null, selectionSequence, emit);
-    }
-  }
-
-  /// Snapshot changes and explicit choices can arrive while platform storage
-  /// is writing. Undo a stale automatic write before the next queued snapshot
-  /// decides, preserving an unresolved raw value rather than guessing an owner.
-  /// A newer explicit choice always wins over that previous stored value.
+  /// Automatic writes stay provisional until their exact snapshot and owner
+  /// are still current. Discard repairs the latest shared choice even after
+  /// this bloc closes or a replacement bloc claims the account's storage.
   Future<bool> _persistCuratedSource(
     VideoFeedCuratedListsChanged event,
     VideoFeedSource source,
     int selectionSequence,
     Emitter<VideoFeedBlocState> emit,
   ) async {
-    final previous = _sharedPreferences?.getString(_modePreferences.key);
-    await _modePreferences.persist(source);
-    if (emit.isDone || _isClosing) return false;
-    if (selectionSequence == _sourceSelectionSequence &&
-        _isCurrentCuratedSnapshot(event)) {
+    final write = await _modePreferences._prepare(source);
+    if (!emit.isDone &&
+        !_isClosing &&
+        selectionSequence == _sourceSelectionSequence &&
+        _isCurrentCuratedSnapshot(event) &&
+        write.accept()) {
       return true;
     }
-
-    await _repairSourcePreference(previous, selectionSequence, emit);
+    await write.discard();
     return false;
-  }
-
-  /// A further user choice during repair must also win, even if the older
-  /// platform write completes afterward. Stop once the choice stays stable.
-  Future<void> _repairSourcePreference(
-    String? previous,
-    int selectionSequence,
-    Emitter<VideoFeedBlocState> emit,
-  ) async {
-    int repairSelection;
-    do {
-      repairSelection = _sourceSelectionSequence;
-      final value = repairSelection == selectionSequence
-          ? previous
-          : _latestSourceSelection?.persistenceValue;
-      if (value != null) await _modePreferences._persistValue(value);
-      if (emit.isDone || _isClosing) return;
-    } while (repairSelection != _sourceSelectionSequence);
   }
 
   /// Clears the feed and loads [source] from the network, carrying whichever
