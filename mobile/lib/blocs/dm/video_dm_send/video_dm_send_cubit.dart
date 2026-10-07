@@ -146,11 +146,12 @@ class VideoDmSendCubit extends Cubit<VideoDmSendState>
   /// Sends each of [clips] to [recipientPubkey] as a kind 15 file message
   /// marked with a [DmClipTag], one after another.
   ///
-  /// Each clip's C2PA credential is checked first, so a clip the recipient
-  /// could not add to their library is never uploaded. A clip that fails the
-  /// check, or a send that fails, stops the remaining clips. A check that
-  /// cannot run (no trust anchors, no C2PA on this platform) does not block
-  /// the send, since the recipient checks again anyway.
+  /// Every clip's C2PA credential is checked before the first upload, so a
+  /// clip the recipient could not add to their library is never uploaded,
+  /// and one failing clip keeps the whole selection from going out rather
+  /// than leaving it half sent. A send that fails stops the remaining clips.
+  /// A check that cannot run (no trust anchors, no C2PA on this platform)
+  /// does not block the send, since the recipient checks again anyway.
   Future<void> sendClips({
     required String recipientPubkey,
     required List<DivineVideoClip> clips,
@@ -158,8 +159,8 @@ class VideoDmSendCubit extends Cubit<VideoDmSendState>
     if (state.isSending || clips.isEmpty) return;
 
     try {
+      final paths = <String>[];
       for (final clip in clips) {
-        if (isClosed) return;
         final path = clip.video?.file?.path;
         if (path == null) {
           addError(
@@ -169,13 +170,15 @@ class VideoDmSendCubit extends Cubit<VideoDmSendState>
           emitIfOpen(const VideoDmSendState(status: VideoDmSendStatus.failed));
           return;
         }
+        paths.add(path);
+      }
 
-        final verifier = _clipVerifier;
-        if (verifier != null) {
-          emitIfOpen(
-            const VideoDmSendState(status: VideoDmSendStatus.checking),
-          );
+      final verifier = _clipVerifier;
+      if (verifier != null) {
+        emitIfOpen(const VideoDmSendState(status: VideoDmSendStatus.checking));
+        for (final path in paths) {
           final provenance = await verifier.verify(path);
+          if (isClosed) return;
           if (provenance.isRejected) {
             emitIfOpen(
               const VideoDmSendState(status: VideoDmSendStatus.clipNotVerified),
@@ -183,7 +186,11 @@ class VideoDmSendCubit extends Cubit<VideoDmSendState>
             return;
           }
         }
+      }
 
+      for (final (index, clip) in clips.indexed) {
+        if (isClosed) return;
+        final path = paths[index];
         emitIfOpen(
           const VideoDmSendState(status: VideoDmSendStatus.encrypting),
         );

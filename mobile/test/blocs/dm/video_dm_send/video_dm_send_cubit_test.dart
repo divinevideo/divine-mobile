@@ -311,6 +311,26 @@ void main() {
       expect(sentPaths, isEmpty);
     });
 
+    test('a failing clip keeps the clips before it from going out', () async {
+      when(() => verifier.verify('/documents/clip-a.mp4')).thenAnswer(
+        (_) async => const ClipProvenanceResult(ClipProvenanceStatus.verified),
+      );
+      when(() => verifier.verify('/documents/clip-b.mp4')).thenAnswer(
+        (_) async =>
+            const ClipProvenanceResult(ClipProvenanceStatus.noCredentials),
+      );
+      final cubit = createClipCubit();
+      addTearDown(cubit.close);
+
+      await cubit.sendClips(
+        recipientPubkey: _recipientPubkey,
+        clips: [_clip('clip-a'), _clip('clip-b')],
+      );
+
+      expect(cubit.state.status, VideoDmSendStatus.clipNotVerified);
+      expect(sentPaths, isEmpty);
+    });
+
     test(
       'a check that cannot run leaves the decision to the recipient',
       () async {
