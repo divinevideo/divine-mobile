@@ -445,13 +445,13 @@ void main() {
       final halfReadable = VideoEditorBeatResolver(
         extractAudio: (configs) async {
           if (configs.video == clips.first.video) {
-            throw PlatformException(code: 'NO_AUDIO');
+            throw const AudioNoTrackException();
           }
           return drumLoopWav(configs);
         },
       );
       final unreadable = VideoEditorBeatResolver(
-        extractAudio: (_) async => throw PlatformException(code: 'NO_AUDIO'),
+        extractAudio: (_) async => throw const AudioNoTrackException(),
       );
 
       await halfReadable.read(parts);
@@ -465,9 +465,43 @@ void main() {
       expect(beats.every((beat) => beat >= _ms(3000)), isTrue);
       await expectLater(
         unreadable.read(parts),
-        throwsA(isA<PlatformException>()),
+        throwsA(isA<AudioNoTrackException>()),
       );
       expect(unreadable.hasRead(parts), isFalse);
+    });
+
+    test('reads a bundled sound once, though the plugin stores its copy on '
+        'the source', () async {
+      var extractions = 0;
+      final bundled = VideoEditorBeatResolver(
+        extractAudio: (configs) async {
+          extractions++;
+          // EditorVideo.safeFilePath() keeps the temporary copy it made.
+          configs.video.file = EditorVideo.file(
+            '${Directory.systemTemp.path}/copy$extractions.mp3',
+          ).file;
+          return drumLoopWav(configs);
+        },
+      );
+      List<BeatSourcePart> parts() => beatSourceFor(
+        sounds: [
+          AudioEvent(
+            id: 'bundled',
+            pubkey: 'a' * 64,
+            createdAt: 1735689600,
+            url: 'asset://assets/sounds/countdown.mp3',
+            duration: 30,
+          ),
+        ],
+        clips: const [],
+        videoEnd: _ms(6000),
+      );
+
+      await bundled.read(parts());
+      await bundled.read(parts());
+
+      expect(bundled.hasRead(parts()), isTrue);
+      expect(extractions, 1);
     });
 
     test('reads each stretch once, from a little around it but never past the '

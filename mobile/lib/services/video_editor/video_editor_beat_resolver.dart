@@ -208,7 +208,7 @@ class VideoEditorBeatResolver {
   /// A part without sound, such as a clip recorded without a microphone, adds
   /// no beats. Throws when no part could be read at all.
   Future<void> read(List<BeatSourcePart> parts) async {
-    PlatformException? failure;
+    Exception? failure;
     var anyRead = false;
     for (final part in parts) {
       if (_beatsByPart.containsKey(part)) {
@@ -219,6 +219,9 @@ class VideoEditorBeatResolver {
       try {
         _beatsByPart[part] = await pending;
         anyRead = true;
+      } on AudioNoTrackException catch (error) {
+        failure = error;
+        _beatsByPart[part] = const [];
       } on PlatformException catch (error) {
         failure = error;
         _beatsByPart[part] = const [];
@@ -269,7 +272,9 @@ class VideoEditorBeatResolver {
     final end = part.to + context;
     final wav = await _extractAudio(
       AudioExtractConfigs(
-        video: part.media,
+        // The plugin stores a temporary copy of an asset or network source
+        // on the object it is given; a copy keeps the cache key unchanged.
+        video: part.media.copyWith(),
         format: AudioFormat.wav,
         startTime: start,
         endTime: fileLength == null
