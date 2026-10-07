@@ -434,40 +434,67 @@ void main() {
       },
     );
 
-    test('skips a clip it cannot read, and throws when it can read none, so '
-        'a later read tries again', () async {
-      final clips = [_clip('silent'), _clip('loud')];
-      final parts = beatSourceFor(
-        sounds: const [],
-        clips: clips,
-        videoEnd: _ms(6000),
-      );
-      final halfReadable = VideoEditorBeatResolver(
-        extractAudio: (configs) async {
-          if (configs.video == clips.first.video) {
+    test(
+      'skips and remembers clips without audio, including an all-silent source',
+      () async {
+        final clips = [_clip('silent'), _clip('loud')];
+        final parts = beatSourceFor(
+          sounds: const [],
+          clips: clips,
+          videoEnd: _ms(6000),
+        );
+        final halfReadable = VideoEditorBeatResolver(
+          extractAudio: (configs) async {
+            if (configs.video == clips.first.video) {
+              throw const AudioNoTrackException();
+            }
+            return drumLoopWav(configs);
+          },
+        );
+        var silentReads = 0;
+        final unreadable = VideoEditorBeatResolver(
+          extractAudio: (_) async {
+            silentReads++;
             throw const AudioNoTrackException();
-          }
-          return drumLoopWav(configs);
+          },
+        );
+
+        await halfReadable.read(parts);
+        final beats = halfReadable.beatsOnOutput(
+          parts,
+          videoEnd: _ms(6000),
+        );
+
+        // Only the second clip's kicks, from 3 s on.
+        expect(beats, isNotEmpty);
+        expect(beats.every((beat) => beat >= _ms(3000)), isTrue);
+        await unreadable.read(parts);
+        expect(unreadable.hasRead(parts), isTrue);
+        expect(unreadable.beatsOnOutput(parts, videoEnd: _ms(6000)), isEmpty);
+        expect(silentReads, parts.length);
+        await unreadable.read(parts);
+        expect(silentReads, parts.length);
+      },
+    );
+
+    test('retries when every extraction failed transiently', () async {
+      var reads = 0;
+      final failing = VideoEditorBeatResolver(
+        extractAudio: (_) async {
+          reads++;
+          throw PlatformException(code: 'READ_FAILED');
         },
       );
-      final unreadable = VideoEditorBeatResolver(
-        extractAudio: (_) async => throw const AudioNoTrackException(),
+      final parts = beatSourceFor(
+        sounds: const [],
+        clips: [_clip('retry')],
+        videoEnd: _ms(3000),
       );
-
-      await halfReadable.read(parts);
-      final beats = halfReadable.beatsOnOutput(
-        parts,
-        videoEnd: _ms(6000),
-      );
-
-      // Only the second clip's kicks, from 3 s on.
-      expect(beats, isNotEmpty);
-      expect(beats.every((beat) => beat >= _ms(3000)), isTrue);
-      await expectLater(
-        unreadable.read(parts),
-        throwsA(isA<AudioNoTrackException>()),
-      );
-      expect(unreadable.hasRead(parts), isFalse);
+      await expectLater(failing.read(parts), throwsA(isA<PlatformException>()));
+      expect(failing.hasRead(parts), isFalse);
+      expect(reads, 1);
+      await expectLater(failing.read(parts), throwsA(isA<PlatformException>()));
+      expect(reads, 2);
     });
 
     test('reads a bundled sound once, though the plugin stores its copy on '

@@ -208,7 +208,7 @@ class VideoEditorBeatResolver {
   /// A part without sound, such as a clip recorded without a microphone, adds
   /// no beats. Throws when no part could be read at all.
   Future<void> read(List<BeatSourcePart> parts) async {
-    Exception? failure;
+    PlatformException? failure;
     var anyRead = false;
     for (final part in parts) {
       if (_beatsByPart.containsKey(part)) {
@@ -219,8 +219,10 @@ class VideoEditorBeatResolver {
       try {
         _beatsByPart[part] = await pending;
         anyRead = true;
-      } on AudioNoTrackException catch (error) {
-        failure = error;
+      } on AudioNoTrackException {
+        // An absent audio track is a successful empty result, not a
+        // transient read failure. Remember it even for an all-silent source.
+        anyRead = true;
         _beatsByPart[part] = const [];
       } on PlatformException catch (error) {
         failure = error;

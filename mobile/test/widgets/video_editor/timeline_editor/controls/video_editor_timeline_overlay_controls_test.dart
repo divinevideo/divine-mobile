@@ -2146,6 +2146,43 @@ void main() {
           );
         });
 
+        for (final duplicate in [false, true]) {
+          testWidgets(
+            '${duplicate ? 'duplicate' : 'split'} keeps a continuous effect off the beat',
+            (tester) async {
+              final continuous = EditorVideoEffect(
+                id: glitch.id,
+                effect: glitch.effect,
+              );
+              when(() => mockStateManager.activeMeta).thenReturn({
+                VideoEditorConstants.effectsStateHistoryKey: [
+                  continuous.toMap(),
+                ],
+              });
+              when(() => mainBloc.state).thenReturn(
+                const VideoEditorMainState(
+                  currentPosition: Duration(seconds: 3),
+                ),
+              );
+              await tester.pumpWidget(
+                buildWithEditor(item, mockEditor, mainBloc),
+              );
+              await tester.tap(
+                find.bySemanticsLabel(
+                  duplicate
+                      ? l10n.videoEditorDuplicateSelectedItemSemanticLabel
+                      : l10n.videoEditorSplitSelectedClipSemanticLabel,
+                ),
+              );
+              await tester.pump();
+              final effects = committedEffects();
+              expect(effects, hasLength(2));
+              expect(effects.map((e) => e.onBeat), [false, false]);
+              expect(effects.last.id, isNot(glitch.id));
+            },
+          );
+        }
+
         testWidgets('delete removes the effect and clears the selection', (
           tester,
         ) async {
