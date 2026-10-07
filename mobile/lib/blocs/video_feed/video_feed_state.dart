@@ -371,7 +371,11 @@ final class VideoFeedBlocState extends Equatable {
   FeedMode get mode => source.mode;
 
   /// Human-readable title for the active feed context.
-  String get feedContextTitle => source.labelFallback;
+  ///
+  /// A followed people list shows its live name, as the source menu does, so a
+  /// rename by its owner reaches the title without reselecting the source.
+  String get feedContextTitle =>
+      followedPeopleListFor(source)?.list.name ?? source.labelFallback;
 
   /// Whether a subscribed curated list is currently selected.
   bool get isSubscribedListSelected =>

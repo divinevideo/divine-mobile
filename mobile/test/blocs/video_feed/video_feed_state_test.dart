@@ -12,13 +12,17 @@ const _ownerA =
 const _ownerB =
     'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 
-PeopleListSearchResult _followed(String ownerPubkey, String listId) {
+PeopleListSearchResult _followed(
+  String ownerPubkey,
+  String listId, {
+  String? name,
+}) {
   final stamp = DateTime.utc(2026);
   return PeopleListSearchResult(
     ownerPubkey: ownerPubkey,
     list: UserList(
       id: listId,
-      name: 'List $listId',
+      name: name ?? 'List $listId',
       pubkeys: const [_ownerA],
       createdAt: stamp,
       updatedAt: stamp,
@@ -179,6 +183,35 @@ void main() {
   });
 
   group(VideoFeedBlocState, () {
+    group('feedContextTitle', () {
+      test('names a followed people list by its current name', () {
+        final state = VideoFeedBlocState(
+          source: const VideoFeedSource.peopleList(
+            listId: 'friends',
+            listName: 'Friends',
+            listOwnerPubkey: _ownerA,
+          ),
+          followedPeopleLists: [
+            _followed(_ownerA, 'friends', name: 'Friends, renamed'),
+          ],
+        );
+
+        expect(state.feedContextTitle, equals('Friends, renamed'));
+      });
+
+      test('keeps the name the source carries once the list is gone', () {
+        const state = VideoFeedBlocState(
+          source: VideoFeedSource.peopleList(
+            listId: 'friends',
+            listName: 'Friends',
+            listOwnerPubkey: _ownerA,
+          ),
+        );
+
+        expect(state.feedContextTitle, equals('Friends'));
+      });
+    });
+
     group('selectedPeopleList', () {
       test('is the followed list the source names, by owner and id', () {
         final state = VideoFeedBlocState(
