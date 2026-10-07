@@ -77,6 +77,14 @@ class _CacheDao implements CacheDao {
 }
 
 void main() {
+  setUp(() {
+    final originalPreferencesPlatform = SharedPreferencesStorePlatform.instance;
+    addTearDown(() {
+      SharedPreferences.setMockInitialValues({});
+      SharedPreferencesStorePlatform.instance = originalPreferencesPlatform;
+    });
+  });
+
   group('VideoFeedPage curated repository identity', () {
     testWidgets(
       'curated repository replacement closes old Home and restores from the new snapshot',
