@@ -30,10 +30,14 @@ class _GatedPreferences extends InMemorySharedPreferencesStore {
     required String savedValue,
     required this.blockedValue,
     this.blockedRepairValue,
+    this.throwBlockedWrite = false,
+    this.rejectBlockedWrite = false,
   }) : super.withData({'flutter.$_key': savedValue});
 
   final String blockedValue;
   final String? blockedRepairValue;
+  final bool throwBlockedWrite;
+  final bool rejectBlockedWrite;
   final started = Completer<void>();
   final release = Completer<void>();
   final repairStarted = Completer<void>();
@@ -48,6 +52,8 @@ class _GatedPreferences extends InMemorySharedPreferencesStore {
       _blocked = true;
       started.complete();
       await release.future;
+      if (throwBlockedWrite) throw StateError('The platform write failed.');
+      if (rejectBlockedWrite) return false;
     }
     if (key == 'flutter.$_key' && value == blockedRepairValue) {
       if (++_repairWrites == 2) {
@@ -135,12 +141,17 @@ void main() {
         curatedListRepository: lists,
       );
 
-  VideoFeedBloc bloc() => VideoFeedBloc(
+  VideoFeedBloc bloc({
+    FeedModePersistenceCoordinator? coordinator,
+    CuratedListRepository? repository,
+    String viewer = _viewer,
+  }) => VideoFeedBloc(
     videosRepository: videos,
     followRepository: follows,
-    curatedListRepository: lists,
-    userPubkey: _viewer,
+    curatedListRepository: repository ?? lists,
+    userPubkey: viewer,
     sharedPreferences: preferences,
+    persistenceCoordinator: coordinator,
     serveCachedHomeFeed: false,
   );
 
@@ -160,12 +171,16 @@ void main() {
     required String savedValue,
     required String blockedValue,
     String? blockedRepairValue,
+    bool throwBlockedWrite = false,
+    bool rejectBlockedWrite = false,
   }) async {
     SharedPreferences.setMockInitialValues({});
     final backend = _GatedPreferences(
       savedValue: savedValue,
       blockedValue: blockedValue,
       blockedRepairValue: blockedRepairValue,
+      throwBlockedWrite: throwBlockedWrite,
+      rejectBlockedWrite: rejectBlockedWrite,
     );
     SharedPreferencesStorePlatform.instance = backend;
     preferences = await SharedPreferences.getInstance();
@@ -179,6 +194,30 @@ void main() {
   }
 
   group('curated Home preferences', () {
+    test('an injected coordinator cannot cross account boundaries', () {
+      final coordinator = FeedModePersistenceCoordinator(
+        sharedPreferences: preferences,
+        userPubkey: _viewer,
+      );
+      expect(
+        () => bloc(coordinator: coordinator, viewer: _otherViewer),
+        throwsArgumentError,
+      );
+    });
+
+    test(
+      'an injected coordinator cannot silently change preferences instances',
+      () async {
+        final coordinator = FeedModePersistenceCoordinator(
+          sharedPreferences: preferences,
+          userPubkey: _viewer,
+        );
+        SharedPreferences.setMockInitialValues({});
+        preferences = await SharedPreferences.getInstance();
+        expect(() => bloc(coordinator: coordinator), throwsArgumentError);
+      },
+    );
+
     test(
       'same display name and d-tag retain distinct persisted identities',
       () async {
@@ -888,6 +927,310 @@ void main() {
       expect(preferences.getString(_key), 'forYou');
       await subscription.cancel();
       await feed.close();
+    });
+
+    test('old-source removal cannot overwrite an explicit choice still awaiting native storage', () async {
+      final a = _list(_authorA);
+      final b = _list(_authorB);
+      final backend = await gatePreferences(
+        savedValue: _source(a).persistenceValue,
+        blockedValue: _source(b).persistenceValue,
+      );
+      lists.setSubscribedLists([a, b]);
+      final feed = bloc();
+      addTearDown(() async {
+        if (!backend.release.isCompleted) backend.release.complete();
+        await feed.close();
+      });
+      await waitFor(
+        feed,
+        (s) => s.status == VideoFeedStatus.success,
+        () => feed.add(const VideoFeedStarted()),
+      );
+      feed.add(VideoFeedSourceChanged(_source(b)));
+      await backend.started.future.timeout(const Duration(seconds: 5));
+      await waitFor(
+        feed,
+        (s) => s.subscribedLists.length == 1,
+        () => lists.setSubscribedLists([b]),
+      );
+      await waitFor(
+        feed,
+        (s) => s.status == VideoFeedStatus.success && s.source == _source(b),
+        backend.release.complete,
+      );
+      await preferences.reload();
+      expect(preferences.getString(_key), _source(b).persistenceValue);
+      expect(feed.state.source, _source(b));
+    });
+
+    group('shared persistence ownership across replacement blocs', () {
+      Future<
+        ({
+          VideoFeedBloc old,
+          Future<void> closing,
+          FeedModePersistenceCoordinator coordinator,
+          _GatedPreferences backend,
+          CuratedListRepository replacement,
+        })
+      >
+      blockedReplacement({
+        String? blockedRepairValue,
+      }) async {
+        final a = _list(_authorA);
+        final backend = await gatePreferences(
+          savedValue: _source(a).persistenceValue,
+          blockedValue: 'forYou',
+          blockedRepairValue: blockedRepairValue,
+        );
+        final coordinator = FeedModePersistenceCoordinator(
+          sharedPreferences: preferences,
+          userPubkey: _viewer,
+        );
+        lists.setSubscribedLists([a]);
+        final old = bloc(coordinator: coordinator);
+        await waitFor(
+          old,
+          (s) => s.status == VideoFeedStatus.success,
+          () => old.add(const VideoFeedStarted()),
+        );
+        lists.setSubscribedLists([_list(_authorB)]);
+        await backend.started.future.timeout(const Duration(seconds: 5));
+        final closing = old.close();
+        final replacement = CuratedListRepository(
+          nostrClient: _Nostr(),
+          funnelcakeApiClient: _Api(),
+        );
+        replacement.setSubscribedLists([a, _list(_authorB)]);
+        addTearDown(replacement.dispose);
+        addTearDown(() async {
+          if (!backend.release.isCompleted) backend.release.complete();
+          if (!backend.releaseRepair.isCompleted) {
+            backend.releaseRepair.complete();
+          }
+          await closing;
+        });
+        return (
+          old: old,
+          closing: closing,
+          coordinator: coordinator,
+          backend: backend,
+          replacement: replacement,
+        );
+      }
+
+      test(
+        'replacement reads accepted A while old fallback is provisional',
+        () async {
+          final setup = await blockedReplacement();
+          final current = bloc(
+            coordinator: setup.coordinator,
+            repository: setup.replacement,
+          );
+          addTearDown(current.close);
+          await waitFor(
+            current,
+            (s) => s.status == VideoFeedStatus.success,
+            () => current.add(const VideoFeedStarted()),
+          );
+          expect(current.state.source, _source(_list(_authorA)));
+          setup.backend.release.complete();
+          await setup.closing;
+          await preferences.reload();
+          expect(current.state.source, _source(_list(_authorA)));
+          expect(
+            preferences.getString(_key),
+            _source(_list(_authorA)).persistenceValue,
+          );
+        },
+      );
+
+      test(
+        'closed old completion repairs the replacement explicit B choice',
+        () async {
+          final setup = await blockedReplacement();
+          final current = bloc(
+            coordinator: setup.coordinator,
+            repository: setup.replacement,
+          );
+          addTearDown(current.close);
+          await waitFor(
+            current,
+            (s) => s.status == VideoFeedStatus.success,
+            () => current.add(const VideoFeedStarted()),
+          );
+          final b = _source(_list(_authorB));
+          await waitFor(
+            current,
+            (s) => s.status == VideoFeedStatus.success && s.source == b,
+            () => current.add(VideoFeedSourceChanged(b)),
+          );
+          setup.backend.release.complete();
+          await setup.closing;
+          await preferences.reload();
+          expect(current.state.source, b);
+          expect(preferences.getString(_key), b.persistenceValue);
+        },
+      );
+
+      test(
+        'another account key is isolated from old-owner compensation',
+        () async {
+          final setup = await blockedReplacement();
+          final b = _source(_list(_authorB));
+          const otherKey = 'selected_feed_mode_$_otherViewer';
+          await preferences.setString(otherKey, b.persistenceValue);
+          final otherCoordinator = FeedModePersistenceCoordinator(
+            sharedPreferences: preferences,
+            userPubkey: _otherViewer,
+          );
+          final current = bloc(
+            coordinator: otherCoordinator,
+            repository: setup.replacement,
+            viewer: _otherViewer,
+          );
+          addTearDown(current.close);
+          await waitFor(
+            current,
+            (s) => s.status == VideoFeedStatus.success,
+            () => current.add(const VideoFeedStarted()),
+          );
+          setup.backend.release.complete();
+          await setup.closing;
+          await preferences.reload();
+          expect(current.state.source, b);
+          expect(preferences.getString(otherKey), b.persistenceValue);
+          expect(
+            preferences.getString(_key),
+            _source(_list(_authorA)).persistenceValue,
+          );
+        },
+      );
+
+      test(
+        'retired account completion preserves the guest global choice',
+        () async {
+          final setup = await blockedReplacement();
+          setup.coordinator.dispose();
+          final guest = FeedModePreferenceStore(
+            sharedPreferences: preferences,
+            userPubkey: null,
+            followRepository: follows,
+            curatedListRepository: setup.replacement,
+          );
+          await guest.persist(const VideoFeedSource.newVideos());
+          setup.backend.release.complete();
+          await setup.closing;
+          await preferences.reload();
+          expect(preferences.getString('selected_feed_mode'), 'latest');
+          expect(
+            preferences.getString(_key),
+            _source(_list(_authorA)).persistenceValue,
+          );
+        },
+      );
+
+      for (final throwsWrite in [true, false]) {
+        test(
+          '${throwsWrite ? 'throwing' : 'rejected'} provisional write preserves accepted selection for replacement',
+          () async {
+            final a = _list(_authorA);
+            final backend = await gatePreferences(
+              savedValue: _source(a).persistenceValue,
+              blockedValue: 'forYou',
+              throwBlockedWrite: throwsWrite,
+              rejectBlockedWrite: !throwsWrite,
+            );
+            final coordinator = FeedModePersistenceCoordinator(
+              sharedPreferences: preferences,
+              userPubkey: _viewer,
+            );
+            lists.setSubscribedLists([a]);
+            late VideoFeedBloc old;
+            final failure = Completer<Object>();
+            runZonedGuarded(
+              () => old = bloc(coordinator: coordinator),
+              (error, _) => failure.complete(error),
+            );
+            addTearDown(old.close);
+            await waitFor(
+              old,
+              (s) => s.status == VideoFeedStatus.success,
+              () => old.add(const VideoFeedStarted()),
+            );
+            lists.setSubscribedLists([]);
+            await backend.started.future.timeout(const Duration(seconds: 5));
+            backend.release.complete();
+            final error = await failure.future.timeout(
+              const Duration(seconds: 5),
+            );
+            expect(error, isA<StateError>());
+            expect(
+              error.toString(),
+              contains(
+                throwsWrite
+                    ? 'The platform write failed.'
+                    : 'The Home selection could not be persisted.',
+              ),
+            );
+            await old.close();
+            lists.setSubscribedLists([a]);
+            final current = bloc(coordinator: coordinator);
+            addTearDown(current.close);
+            await waitFor(
+              current,
+              (s) => s.status == VideoFeedStatus.success,
+              () => current.add(const VideoFeedStarted()),
+            );
+            await preferences.reload();
+            expect(current.state.source, _source(a));
+            expect(preferences.getString(_key), _source(a).persistenceValue);
+          },
+        );
+      }
+
+      test(
+        'third replacement choice wins while closed-owner repair is blocked',
+        () async {
+          final b = _source(_list(_authorB));
+          final setup = await blockedReplacement(
+            blockedRepairValue: b.persistenceValue,
+          );
+          final current = bloc(
+            coordinator: setup.coordinator,
+            repository: setup.replacement,
+          );
+          addTearDown(current.close);
+          await waitFor(
+            current,
+            (s) => s.status == VideoFeedStatus.success,
+            () => current.add(const VideoFeedStarted()),
+          );
+          await waitFor(
+            current,
+            (s) => s.status == VideoFeedStatus.success && s.source == b,
+            () => current.add(VideoFeedSourceChanged(b)),
+          );
+          setup.backend.release.complete();
+          await setup.backend.repairStarted.future.timeout(
+            const Duration(seconds: 5),
+          );
+          await waitFor(
+            current,
+            (s) =>
+                s.status == VideoFeedStatus.success &&
+                s.source == const VideoFeedSource.forYou(),
+            () => current.add(
+              const VideoFeedSourceChanged(VideoFeedSource.forYou()),
+            ),
+          );
+          setup.backend.releaseRepair.complete();
+          await setup.closing;
+          await preferences.reload();
+          expect(current.state.source, const VideoFeedSource.forYou());
+          expect(preferences.getString(_key), 'forYou');
+        },
+      );
     });
 
     test('explicit For You choice cancels deferred restoration', () async {
