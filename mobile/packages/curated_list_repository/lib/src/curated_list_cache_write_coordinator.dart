@@ -49,6 +49,7 @@ class CuratedListCacheWriteCoordinator {
     required Future<bool> Function(List<CuratedList>) write,
     Object? cacheKey,
     bool Function()? isCurrent,
+    Set<String> Function(List<CuratedList> acknowledged)? preflightConflicts,
   }) {
     final beforeSnapshot = List<CuratedList>.unmodifiable(baseline);
     final requested = List<CuratedList>.unmodifiable(current);
@@ -69,12 +70,16 @@ class CuratedListCacheWriteCoordinator {
       if (isCurrent != null && !isCurrent()) {
         return result(CuratedCacheWriteStatus.superseded);
       }
-      var observed = List<CuratedList>.unmodifiable(read());
-      final rejected = _rejectedLists[cacheKey];
-      if (rejected != null && _sameLists(observed, rejected.attempted)) {
-        observed = rejected.before;
-      } else {
-        _rejectedLists.remove(cacheKey);
+      final observed = readAcknowledgedLists(cacheKey: cacheKey, read: read);
+      // Preconditions inspect acknowledged storage inside this shared barrier,
+      // after preceding writers finish and before any merge or backing write.
+      final blocked = preflightConflicts?.call(observed) ?? const <String>{};
+      if (blocked.isNotEmpty) {
+        return result(
+          CuratedCacheWriteStatus.conflict,
+          acknowledgedBeforeWrite: observed,
+          conflicts: blocked,
+        );
       }
       final before = {
         for (final list in beforeSnapshot) list.authorScopedId: list,
@@ -136,6 +141,22 @@ class CuratedListCacheWriteCoordinator {
         conflicts: conflicts,
       );
     });
+  }
+
+  /// Reads list values without adopting a refused optimistic cache overlay.
+  /// Saves call this inside their shared barrier; an outside read is only a
+  /// preflight and must be checked again at the actual commit boundary.
+  List<CuratedList> readAcknowledgedLists({
+    required Object? cacheKey,
+    required List<CuratedList> Function() read,
+  }) {
+    final observed = List<CuratedList>.unmodifiable(read());
+    final rejected = _rejectedLists[cacheKey];
+    if (rejected != null && _sameLists(observed, rejected.attempted)) {
+      return rejected.before;
+    }
+    _rejectedLists.remove(cacheKey);
+    return observed;
   }
 
   /// Compatibility wrapper reporting whether subscription deltas were saved.

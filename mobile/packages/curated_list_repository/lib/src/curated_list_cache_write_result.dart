@@ -5,7 +5,8 @@ enum CuratedCacheWriteStatus {
   /// Every requested delta reached storage.
   saved,
 
-  /// Storage accepted the merge, but a newer writer won some coordinates.
+  /// A commit precondition refused the write, or a newer stored value won
+  /// some coordinates while storage accepted the remaining merge.
   conflict,
 
   /// The backing store rejected the write; its read cache is not proof of save.

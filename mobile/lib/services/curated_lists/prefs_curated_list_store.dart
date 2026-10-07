@@ -56,6 +56,7 @@ class PrefsCuratedListStore {
   Future<void> _tail = Future<void>.value();
   List<CuratedList>? _lastRequestedLists;
   Set<String>? _lastRequestedSubscriptions;
+  final _pendingOwnershipClaims = <String, CuratedList>{};
   var _pendingLists = 0;
   var _pendingSubscriptions = 0;
 
@@ -83,7 +84,12 @@ class PrefsCuratedListStore {
   Future<CuratedCacheWriteResult<List<CuratedList>>> saveListsWithResult(
     List<CuratedList> lists, {
     bool Function()? isCurrent,
+    Map<String, CuratedList> ownershipClaims = const {},
   }) {
+    _pendingOwnershipClaims.addAll(ownershipClaims);
+    final claims = Map<String, CuratedList>.unmodifiable(
+      _pendingOwnershipClaims,
+    );
     final snapshot = List<CuratedList>.unmodifiable(lists);
     final preceding = _pendingLists == 0 ? null : _lastRequestedLists;
     _lastRequestedLists = snapshot;
@@ -97,13 +103,30 @@ class PrefsCuratedListStore {
               preceding,
               snapshot,
             );
+      // A queued edit may see an optimistic stamped row before its source
+      // claim finishes. Keep that precondition until our baseline acknowledges
+      // the authored coordinate; a failed claim cannot grant later authority.
+      final activeClaims = {
+        for (final claim in claims.entries)
+          if (!baseline.any((row) => row.authorScopedId == claim.key))
+            claim.key: claim.value,
+      };
+      var storedListsReadable = true;
       final result = await _writes.saveListsWithResult(
         baseline: baseline,
         current: requested,
         cacheKey: _listsKey,
         isCurrent: () =>
             (_isCurrentSession?.call() ?? true) && (isCurrent?.call() ?? true),
-        read: () => _storedLists(fallback: baseline),
+        read: () => _storedLists(
+          fallback: baseline,
+          onUnreadable: () => storedListsReadable = false,
+        ),
+        preflightConflicts: activeClaims.isEmpty
+            ? null
+            : (acknowledged) => storedListsReadable
+                  ? _ownershipClaimConflicts(activeClaims, acknowledged)
+                  : activeClaims.keys.toSet(),
         write: (merged) => _writeString(
           _listsKey,
           jsonEncode(
@@ -115,7 +138,10 @@ class PrefsCuratedListStore {
       return result;
     }).whenComplete(() {
       _pendingLists--;
-      if (_pendingLists == 0) _lastRequestedLists = null;
+      if (_pendingLists == 0) {
+        _lastRequestedLists = null;
+        _pendingOwnershipClaims.clear();
+      }
     });
   }
 
@@ -126,8 +152,13 @@ class PrefsCuratedListStore {
   Future<void> saveListsOrThrow(
     List<CuratedList> lists, {
     required bool Function() isCurrent,
+    Map<String, CuratedList> ownershipClaims = const {},
   }) async {
-    final result = await saveListsWithResult(lists, isCurrent: isCurrent);
+    final result = await saveListsWithResult(
+      lists,
+      isCurrent: isCurrent,
+      ownershipClaims: ownershipClaims,
+    );
     if (isCurrent()) {
       final reconciled = result.reconcile(lists);
       lists
@@ -135,6 +166,60 @@ class PrefsCuratedListStore {
         ..addAll(reconciled);
     }
     if (!result.succeeded) throw CuratedCacheWriteException(result.status);
+  }
+
+  /// A read-only early check also prevents misleading duplicate success.
+  /// The coordinated save repeats this condition after all queued writers.
+  bool canClaimLocalList(CuratedList source, String destination) {
+    var readable = true;
+    final acknowledged = _writes.readAcknowledgedLists(
+      cacheKey: _listsKey,
+      read: () => _storedLists(
+        fallback: _savedLists,
+        onUnreadable: () => readable = false,
+      ),
+    );
+    return readable &&
+        _ownershipClaimConflicts({destination: source}, acknowledged).isEmpty;
+  }
+
+  /// Author stamping may only consume the exact acknowledged local draft.
+  /// Timestamp precedence cannot establish ownership of an existing coordinate.
+  Set<String> _ownershipClaimConflicts(
+    Map<String, CuratedList> claims,
+    List<CuratedList> acknowledged,
+  ) {
+    var followsReadable = true;
+    final follows = _writes.readAcknowledgedSubscriptions(
+      cacheKey: _subscriptionsKey,
+      read: () => readCuratedListSubscriptionSnapshot(
+        preferences: _prefs,
+        storageKey: _subscriptionsKey,
+        fallback: _savedSubscriptions,
+        onMissing: () => _writes.cacheKeyRemoved(_subscriptionsKey),
+        onUnreadable: (_, _) => followsReadable = false,
+      ).ids,
+    );
+    final conflicts = <String>{};
+    for (final claim in claims.entries) {
+      final source = claim.value;
+      final storedSources = acknowledged.where(
+        (list) => list.authorScopedId == source.authorScopedId,
+      );
+      if (!followsReadable ||
+          source.pubkey != null ||
+          source.nostrEventId != null ||
+          storedSources.length != 1 ||
+          storedSources.single != source ||
+          acknowledged.any((list) => list.authorScopedId == claim.key) ||
+          follows.contains(source.id) ||
+          follows.contains(source.authorScopedId)) {
+        conflicts
+          ..add(source.authorScopedId)
+          ..add(claim.key);
+      }
+    }
+    return conflicts;
   }
 
   /// Saves subscription deltas and reports confirmed backing-store success.
@@ -360,7 +445,10 @@ class PrefsCuratedListStore {
   /// baseline as [fallback] makes it rewrite every list the caller holds. An
   /// absent key is empty, not unreadable: the account-switch sweep removes it,
   /// and the lists of the previous account must not be written back.
-  List<CuratedList> _storedLists({required List<CuratedList> fallback}) {
+  List<CuratedList> _storedLists({
+    required List<CuratedList> fallback,
+    void Function()? onUnreadable,
+  }) {
     final json = _prefs.getString(_listsKey);
     if (json == null) {
       _writes.cacheKeyRemoved(_listsKey);
@@ -371,6 +459,7 @@ class PrefsCuratedListStore {
           .map((row) => CuratedList.fromJson(row as Map<String, dynamic>))
           .toList(growable: false);
     } on Object catch (error, stackTrace) {
+      onUnreadable?.call();
       _logUnreadable('lists', error, stackTrace);
       return fallback;
     }

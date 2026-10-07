@@ -1,6 +1,7 @@
 // ABOUTME: Unit tests for CuratedListRelayGateway, the curated-list relay edge
 // ABOUTME: Covers NIP-44 sealing guards, unseal classification, and redaction
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -95,6 +96,138 @@ void main() {
 
         expect(await gateway.sealItemTags(_list()), isNull);
       });
+    });
+
+    group('publishList ownership', () {
+      setUp(() {
+        when(
+          () => mockAuth.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer(
+          (invocation) async => _event(
+            content: invocation.namedArguments[#content] as String,
+            pubkey: _ownerPubkey,
+            tags: invocation.namedArguments[#tags] as List<List<String>>,
+          ),
+        );
+        when(() => mockNostr.publishEvent(any())).thenAnswer(
+          (invocation) async => PublishSuccess(
+            event: invocation.positionalArguments.single as Event,
+          ),
+        );
+        when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
+          (invocation) async => acceptedOutcome(
+            invocation.positionalArguments.single as Event,
+          ),
+        );
+      });
+
+      for (final isPublic in [false, true]) {
+        test(
+          'rejects foreign ${isPublic ? 'public' : 'private'} record before signing or sealing',
+          () async {
+            final foreign = _list(isPublic: isPublic)
+                .copyWith(pubkey: _strangerPubkey);
+            expect(await gateway.publishList(foreign), isNull);
+            verifyNever(
+              () => mockAuth.createAndSignEvent(
+                kind: any(named: 'kind'),
+                content: any(named: 'content'),
+                tags: any(named: 'tags'),
+              ),
+            );
+            verifyNever(mockSigner.getPublicKey);
+            verifyNever(() => mockSigner.nip44Encrypt(any(), any()));
+            verifyNever(() => mockNostr.publishEvent(any()));
+            verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+          },
+        );
+        for (final confirmed in [false, true]) {
+          test(
+            'rejects wrong signed author for ${isPublic ? 'public' : 'private'} ${confirmed ? 'confirmed' : 'queued'} publication',
+            () async {
+              when(
+                () => mockAuth.createAndSignEvent(
+                  kind: any(named: 'kind'),
+                  content: any(named: 'content'),
+                  tags: any(named: 'tags'),
+                ),
+              ).thenAnswer(
+                (_) async => _event(content: '', pubkey: _strangerPubkey),
+              );
+              expect(
+                await gateway.publishList(
+                  _list(isPublic: isPublic),
+                  confirmed: confirmed,
+                ),
+                isNull,
+              );
+              verifyNever(() => mockNostr.publishEvent(any()));
+              verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+            },
+          );
+        }
+        test(
+          'refuses ${isPublic ? 'public' : 'private'} dispatch if account changes while signing',
+          () async {
+            final signed = Completer<Event?>();
+            when(
+              () => mockAuth.createAndSignEvent(
+                kind: any(named: 'kind'),
+                content: any(named: 'content'),
+                tags: any(named: 'tags'),
+              ),
+            ).thenAnswer((_) => signed.future);
+            final pending = gateway.publishList(_list(isPublic: isPublic));
+            await pumpEventQueue();
+            when(() => mockAuth.currentPublicKeyHex)
+                .thenReturn(_strangerPubkey);
+            signed.complete(_event(content: '', pubkey: _ownerPubkey));
+            expect(await pending, isNull);
+            verifyNever(() => mockNostr.publishEvent(any()));
+            verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+          },
+        );
+      }
+      test('refuses dispatch after lease retirement during signing', () async {
+        var active = true;
+        gateway = CuratedListRelayGateway(
+          nostrService: mockNostr,
+          authService: mockAuth,
+          isCurrentSession: () => active,
+        );
+        final signed = Completer<Event?>();
+        when(
+          () => mockAuth.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer((_) => signed.future);
+        final pending = gateway.publishList(_list(isPublic: true));
+        await pumpEventQueue();
+        active = false;
+        signed.complete(_event(content: '', pubkey: _ownerPubkey));
+        expect(await pending, isNull);
+        verifyNever(() => mockNostr.publishEvent(any()));
+        verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+      });
+      test(
+        'private sealing refuses a foreign owner before signer access',
+        () async {
+          expect(
+            await gateway.sealItemTags(
+              _list().copyWith(pubkey: _strangerPubkey),
+            ),
+            isNull,
+          );
+          verifyNever(mockSigner.getPublicKey);
+          verifyNever(() => mockSigner.nip44Encrypt(any(), any()));
+        },
+      );
     });
 
     group('unsealItemTags', () {
