@@ -3822,6 +3822,31 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'Clip din biblioteca ta';
+
+  @override
+  String get dmAttachVideoFromGallery => 'Videoclip din galeria ta';
+
+  @override
+  String get dmClipBadge => 'Clip';
+
+  @override
+  String get dmClipChecking =>
+      'Verificăm dacă acest clip a fost filmat cu Divine…';
+
+  @override
+  String get dmClipNotVerified =>
+      'Nu am putut confirma că a fost filmat cu camera Divine, așa că nu a fost adăugat la clipurile tale.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'Nu putem verifica acest clip acum. Încearcă din nou puțin mai târziu.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'Nu am putut confirma că acest clip a fost filmat cu camera Divine, așa că nu poate fi trimis ca clip.';
+
+  @override
   String get shareSheetSaveVideo => 'Salvează videoclipul';
 
   @override

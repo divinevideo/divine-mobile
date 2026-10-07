@@ -3693,6 +3693,30 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'مقطع من مكتبتك';
+
+  @override
+  String get dmAttachVideoFromGallery => 'فيديو من معرض الصور';
+
+  @override
+  String get dmClipBadge => 'مقطع';
+
+  @override
+  String get dmClipChecking => 'جارٍ التحقق من أن هذا المقطع صُوّر على Divine…';
+
+  @override
+  String get dmClipNotVerified =>
+      'تعذّر التأكد من أن هذا المقطع صُوّر بكاميرا Divine، لذا لم تتم إضافته إلى مقاطعك.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'تعذّر التحقق من هذا المقطع الآن. يُرجى المحاولة بعد قليل.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'تعذّر التأكد من أن هذا المقطع صُوّر بكاميرا Divine، لذا لا يمكن إرساله كمقطع.';
+
+  @override
   String get shareSheetSaveVideo => 'حفظ الفيديو';
 
   @override

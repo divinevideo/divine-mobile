@@ -7,6 +7,9 @@ import 'dart:io';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/dm_clip_tag.dart';
+import 'package:openvine/services/clip_provenance_verifier.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
 
@@ -34,6 +37,9 @@ enum VideoDmSendStatus {
   /// No send has started.
   idle,
 
+  /// A library clip's C2PA credential is being checked before it is sent.
+  checking,
+
   /// The plaintext file is being encrypted for upload.
   encrypting,
 
@@ -50,6 +56,10 @@ enum VideoDmSendStatus {
   /// uploaded.
   tooLarge,
 
+  /// A library clip failed its C2PA camera-capture check, so it was not
+  /// sent: the recipient could never add it to their clips.
+  clipNotVerified,
+
   /// The send did not complete. The cause is reported through `addError`.
   failed,
 }
@@ -64,6 +74,7 @@ class VideoDmSendState extends Equatable {
 
   /// Whether a send is actively running and the composer should show progress.
   bool get isSending =>
+      status == VideoDmSendStatus.checking ||
       status == VideoDmSendStatus.encrypting ||
       status == VideoDmSendStatus.uploading ||
       status == VideoDmSendStatus.sending;
@@ -79,11 +90,19 @@ class VideoDmSendState extends Equatable {
 class VideoDmSendCubit extends Cubit<VideoDmSendState>
     with CloseGuardedEmit<VideoDmSendState> {
   /// Creates a [VideoDmSendCubit] backed by [service].
-  VideoDmSendCubit({required DmVideoSendService service})
-    : _service = service,
-      super(const VideoDmSendState());
+  ///
+  /// [clipVerifier] checks a library clip before [sendClips] uploads it.
+  /// Without one the check is left to the recipient, whose own check is the
+  /// one that decides whether the clip may enter their library.
+  VideoDmSendCubit({
+    required DmVideoSendService service,
+    ClipProvenanceVerifier? clipVerifier,
+  }) : _service = service,
+       _clipVerifier = clipVerifier,
+       super(const VideoDmSendState());
 
   final DmVideoSendService _service;
+  final ClipProvenanceVerifier? _clipVerifier;
 
   /// Sends [videoFile] to [recipientPubkey] as a NIP-17 kind 15 file message.
   ///
@@ -119,6 +138,76 @@ class VideoDmSendCubit extends Cubit<VideoDmSendState>
     } catch (error, stackTrace) {
       // DivineBlocObserver logs every addError and forwards only
       // programming-invariant errors to crash reporting.
+      addError(error, stackTrace);
+      emitIfOpen(const VideoDmSendState(status: VideoDmSendStatus.failed));
+    }
+  }
+
+  /// Sends each of [clips] to [recipientPubkey] as a kind 15 file message
+  /// marked with a [DmClipTag], one after another.
+  ///
+  /// Each clip's C2PA credential is checked first, so a clip the recipient
+  /// could not add to their library is never uploaded. A clip that fails the
+  /// check, or a send that fails, stops the remaining clips. A check that
+  /// cannot run (no trust anchors, no C2PA on this platform) does not block
+  /// the send, since the recipient checks again anyway.
+  Future<void> sendClips({
+    required String recipientPubkey,
+    required List<DivineVideoClip> clips,
+  }) async {
+    if (state.isSending || clips.isEmpty) return;
+
+    try {
+      for (final clip in clips) {
+        if (isClosed) return;
+        final path = clip.video?.file?.path;
+        if (path == null) {
+          addError(
+            VideoDmSendFailure('clip ${clip.id} has no video file'),
+            StackTrace.current,
+          );
+          emitIfOpen(const VideoDmSendState(status: VideoDmSendStatus.failed));
+          return;
+        }
+
+        final verifier = _clipVerifier;
+        if (verifier != null) {
+          emitIfOpen(
+            const VideoDmSendState(status: VideoDmSendStatus.checking),
+          );
+          final provenance = await verifier.verify(path);
+          if (provenance.isRejected) {
+            emitIfOpen(
+              const VideoDmSendState(status: VideoDmSendStatus.clipNotVerified),
+            );
+            return;
+          }
+        }
+
+        emitIfOpen(
+          const VideoDmSendState(status: VideoDmSendStatus.encrypting),
+        );
+        final result = await _service.sendVideo(
+          recipientPubkey: recipientPubkey,
+          videoFile: File(path),
+          mimeType: videoDmMimeTypeFor(path),
+          extraTags: [DmClipTag.build(clip.targetAspectRatio)],
+          onPhase: _onPhase,
+        );
+        if (!result.success) {
+          addError(
+            VideoDmSendFailure(result.error ?? 'unknown'),
+            StackTrace.current,
+          );
+          emitIfOpen(const VideoDmSendState(status: VideoDmSendStatus.failed));
+          return;
+        }
+      }
+      emitIfOpen(const VideoDmSendState(status: VideoDmSendStatus.sent));
+    } on DmVideoTooLargeException catch (error, stackTrace) {
+      addError(error, stackTrace);
+      emitIfOpen(const VideoDmSendState(status: VideoDmSendStatus.tooLarge));
+    } catch (error, stackTrace) {
       addError(error, stackTrace);
       emitIfOpen(const VideoDmSendState(status: VideoDmSendStatus.failed));
     }

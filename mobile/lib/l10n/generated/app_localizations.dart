@@ -6293,6 +6293,48 @@ abstract class AppLocalizations {
   /// **'That video\'s too big to send. Pick one under {maxMegabytes} MB'**
   String dmVideoTooLarge(String maxMegabytes);
 
+  /// Option in the DM composer's attach menu that opens the user's clip library to send a raw clip they recorded with the Divine camera. The recipient can add a sent clip to their own clip library.
+  ///
+  /// In en, this message translates to:
+  /// **'Clip from your library'**
+  String get dmAttachClipFromLibrary;
+
+  /// Option in the DM composer's attach menu that opens the device photo gallery to send any video. Unlike a library clip, a gallery video cannot be added to the recipient's clip library.
+  ///
+  /// In en, this message translates to:
+  /// **'Video from your gallery'**
+  String get dmAttachVideoFromGallery;
+
+  /// Short label on an encrypted video message in a DM thread marking it as a raw clip the sender shared from their clip library, as opposed to a finished video.
+  ///
+  /// In en, this message translates to:
+  /// **'Clip'**
+  String get dmClipBadge;
+
+  /// SnackBar shown while a clip received in a DM is downloaded and its C2PA content credential is checked, before it is added to the clip library.
+  ///
+  /// In en, this message translates to:
+  /// **'Making sure this clip was shot on Divine…'**
+  String get dmClipChecking;
+
+  /// SnackBar shown when a clip received in a DM fails the C2PA check that proves it was recorded with the Divine camera and not changed since, so it is not added to the clip library. Must not accuse the sender; the clip may simply lack credentials.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t confirm this was shot with the Divine camera, so it stays out of your clips.'**
+  String get dmClipNotVerified;
+
+  /// SnackBar shown when the C2PA check on a received clip cannot run right now, for example offline with no cached trust list. Nothing was concluded about the clip, so the copy invites a retry.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check this clip right now. Try again in a bit.'**
+  String get dmClipCheckUnavailable;
+
+  /// SnackBar shown in the DM composer when a clip picked from the sender's own library has no valid Divine camera credential, so it is not sent: the recipient could never add it to their clips.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t confirm this clip was shot with the Divine camera, so it can\'t be sent as a clip.'**
+  String get dmClipSendNotVerified;
+
   /// No description provided for @shareSheetSaveVideo.
   ///
   /// In en, this message translates to:

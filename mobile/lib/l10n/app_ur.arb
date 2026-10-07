@@ -1829,6 +1829,13 @@
   "dmVideoSent": "ویڈیو بھیج دی گئی",
   "dmVideoSendFailed": "ویڈیو نہیں بھیجی جا سکی",
   "dmVideoTooLarge": "یہ ویڈیو بھیجنے کے لیے بہت بڑی ہے۔ {maxMegabytes} MB سے چھوٹی ویڈیو منتخب کریں",
+  "dmAttachClipFromLibrary": "آپ کی لائبریری سے کلپ",
+  "dmAttachVideoFromGallery": "آپ کی گیلری سے ویڈیو",
+  "dmClipBadge": "کلپ",
+  "dmClipChecking": "تصدیق کی جا رہی ہے کہ یہ کلپ Divine سے بنی ہے…",
+  "dmClipNotVerified": "ہم تصدیق نہیں کر سکے کہ یہ Divine کیمرے سے بنی ہے، اس لیے اسے آپ کی کلپس میں شامل نہیں کیا گیا۔",
+  "dmClipCheckUnavailable": "ابھی اس کلپ کی جانچ نہیں ہو سکی۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔",
+  "dmClipSendNotVerified": "ہم تصدیق نہیں کر سکے کہ یہ کلپ Divine کیمرے سے بنی ہے، اس لیے اسے کلپ کے طور پر نہیں بھیجا جا سکتا۔",
   "shareSheetSaveVideo": "ویڈیو محفوظ کریں",
   "shareSheetAddToClips": "کلپس میں شامل کریں",
   "@shareSheetAddToClips": {

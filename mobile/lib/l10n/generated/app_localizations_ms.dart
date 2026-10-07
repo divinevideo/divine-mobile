@@ -3698,6 +3698,30 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'Klip daripada pustaka anda';
+
+  @override
+  String get dmAttachVideoFromGallery => 'Video daripada galeri anda';
+
+  @override
+  String get dmClipBadge => 'Klip';
+
+  @override
+  String get dmClipChecking => 'Memastikan klip ini dirakam dengan Divine…';
+
+  @override
+  String get dmClipNotVerified =>
+      'Kami tidak dapat mengesahkan ini dirakam dengan kamera Divine, jadi ia tidak ditambah ke klip anda.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'Klip ini tidak dapat disemak sekarang. Cuba lagi sebentar nanti.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'Kami tidak dapat mengesahkan klip ini dirakam dengan kamera Divine, jadi ia tidak boleh dihantar sebagai klip.';
+
+  @override
   String get shareSheetSaveVideo => 'Simpan Video';
 
   @override

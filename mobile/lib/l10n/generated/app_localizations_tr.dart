@@ -3648,6 +3648,31 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'Kütüphanenden klip';
+
+  @override
+  String get dmAttachVideoFromGallery => 'Galerinden video';
+
+  @override
+  String get dmClipBadge => 'Klip';
+
+  @override
+  String get dmClipChecking =>
+      'Bu klibin Divine ile çekildiği kontrol ediliyor…';
+
+  @override
+  String get dmClipNotVerified =>
+      'Bunun Divine kamerasıyla çekildiğini doğrulayamadık, bu yüzden kliplerine eklenmedi.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'Bu klip şu an kontrol edilemiyor. Biraz sonra tekrar dene.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'Bu klibin Divine kamerasıyla çekildiğini doğrulayamadık, bu yüzden klip olarak gönderilemez.';
+
+  @override
   String get shareSheetSaveVideo => 'Videoyu Kaydet';
 
   @override

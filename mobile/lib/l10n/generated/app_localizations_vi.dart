@@ -3677,6 +3677,31 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'Clip từ thư viện của bạn';
+
+  @override
+  String get dmAttachVideoFromGallery => 'Video từ thư viện ảnh của bạn';
+
+  @override
+  String get dmClipBadge => 'Clip';
+
+  @override
+  String get dmClipChecking =>
+      'Đang kiểm tra clip này có được quay bằng Divine không…';
+
+  @override
+  String get dmClipNotVerified =>
+      'Chúng tôi không thể xác nhận clip này được quay bằng camera Divine, nên nó không được thêm vào clip của bạn.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'Hiện không kiểm tra được clip này. Thử lại sau một lát nhé.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'Chúng tôi không thể xác nhận clip này được quay bằng camera Divine, nên không thể gửi dưới dạng clip.';
+
+  @override
   String get shareSheetSaveVideo => 'Lưu video';
 
   @override

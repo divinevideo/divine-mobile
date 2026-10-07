@@ -3845,6 +3845,31 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'మీ లైబ్రరీ నుండి క్లిప్';
+
+  @override
+  String get dmAttachVideoFromGallery => 'మీ గ్యాలరీ నుండి వీడియో';
+
+  @override
+  String get dmClipBadge => 'క్లిప్';
+
+  @override
+  String get dmClipChecking =>
+      'ఈ క్లిప్ Divineతో చిత్రీకరించబడిందో లేదో తనిఖీ చేస్తున్నాం…';
+
+  @override
+  String get dmClipNotVerified =>
+      'ఇది Divine కెమెరాతో చిత్రీకరించబడిందని నిర్ధారించలేకపోయాం, కాబట్టి ఇది మీ క్లిప్‌లకు జోడించబడలేదు.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'ప్రస్తుతం ఈ క్లిప్‌ను తనిఖీ చేయడం సాధ్యపడలేదు. కాసేపటి తర్వాత మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'ఈ క్లిప్ Divine కెమెరాతో చిత్రీకరించబడిందని నిర్ధారించలేకపోయాం, కాబట్టి దీన్ని క్లిప్‌గా పంపలేరు.';
+
+  @override
   String get shareSheetSaveVideo => 'వీడియోను సేవ్ చేయండి';
 
   @override

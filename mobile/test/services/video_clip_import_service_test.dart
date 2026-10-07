@@ -1,6 +1,7 @@
 // ABOUTME: Tests for importing videos into the local clip library.
 // ABOUTME: Covers validation, file copying, clip creation, and save failures.
 
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 
@@ -18,6 +19,11 @@ class _MockClipLibraryService extends Mock implements ClipLibraryService {}
 class _FakeDivineVideoClip extends Fake implements DivineVideoClip {}
 
 const _defaultVineId = 'vine-123';
+const _senderPubkey =
+    '5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e';
+const _receivedClipHash =
+    '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08';
+const _c2paManifestId = 'urn:c2pa:3fa85f64-5717-4562-b3fc-2c963f66afa6';
 
 models.VideoEvent _video({
   String id = 'classic-vine-event-id',
@@ -96,6 +102,7 @@ void main() {
     Future<VideoMetadata> Function(EditorVideo video)? readVideoMetadata,
     DocumentsPathProvider? getDocumentsPath,
     DateTime? now,
+    FileSha256Hasher? hashFile,
   }) {
     return VideoClipImportService(
       clipLibraryService: clipLibraryService,
@@ -136,6 +143,7 @@ void main() {
             bitrate: 0,
           ),
       now: () => now ?? DateTime.utc(2026, 4, 27, 12),
+      hashFile: hashFile ?? (_) async => _receivedClipHash,
     );
   }
 
@@ -749,6 +757,88 @@ void main() {
 
       final success = result as VideoClipImportSuccess;
       expect(success.clip.duration, const Duration(seconds: 6));
+    });
+  });
+
+  group('importReceivedClip', () {
+    VideoMetadata metadataOf(Size resolution) => VideoMetadata(
+      duration: const Duration(milliseconds: 5800),
+      extension: 'mp4',
+      fileSize: 16,
+      resolution: resolution,
+      rotation: 0,
+      bitrate: 0,
+    );
+
+    test('saves a copy that credits the sender and carries the proof, so '
+        'the render step does not re-sign it as the recipient', () async {
+      final service = buildService(
+        readVideoMetadata: (_) async => metadataOf(const Size(1080, 1920)),
+      );
+
+      final result = await service.importReceivedClip(
+        source: sourceVideo,
+        senderPubkey: _senderPubkey,
+        c2paManifestId: _c2paManifestId,
+        targetAspectRatio: models.AspectRatio.square,
+      );
+
+      final clip = (result as VideoClipImportSuccess).clip;
+      expect(clip.video!.file!.path, startsWith(docsDir.path));
+      expect(File(clip.video!.file!.path).existsSync(), isTrue);
+      expect(sourceVideo.existsSync(), isTrue);
+      expect(clip.duration, equals(const Duration(milliseconds: 5800)));
+      expect(clip.targetAspectRatio, equals(models.AspectRatio.square));
+      expect(clip.originalAspectRatio, closeTo(9 / 16, 0.0001));
+      expect(clip.sourceAuthorPubkey, equals(_senderPubkey));
+      expect(
+        models.NativeProofData.fromJson(
+          jsonDecode(clip.proofManifestJson!) as Map<String, dynamic>,
+        ),
+        isA<models.NativeProofData>()
+            .having((p) => p.videoHash, 'videoHash', _receivedClipHash)
+            .having((p) => p.c2paManifestId, 'c2paManifestId', _c2paManifestId),
+      );
+      verify(() => clipLibraryService.saveClip(clip)).called(1);
+    });
+
+    test('derives the crop from the file when the sender named none', () async {
+      final service = buildService(
+        readVideoMetadata: (_) async => metadataOf(const Size(1080, 1080)),
+      );
+
+      final result = await service.importReceivedClip(
+        source: sourceVideo,
+        senderPubkey: _senderPubkey,
+        c2paManifestId: _c2paManifestId,
+      );
+
+      expect(
+        (result as VideoClipImportSuccess).clip.targetAspectRatio,
+        equals(models.AspectRatio.square),
+      );
+    });
+
+    test('refuses a file with no readable duration and leaves no copy '
+        'behind', () async {
+      final service = buildService();
+
+      final result = await service.importReceivedClip(
+        source: sourceVideo,
+        senderPubkey: _senderPubkey,
+        c2paManifestId: _c2paManifestId,
+      );
+
+      expect(
+        result,
+        isA<VideoClipImportFailure>().having(
+          (result) => result.reason,
+          'reason',
+          VideoClipImportFailureReason.unreadableVideo,
+        ),
+      );
+      verifyNever(() => clipLibraryService.saveClip(any()));
+      expect(docsDir.listSync().whereType<File>(), isEmpty);
     });
   });
 }

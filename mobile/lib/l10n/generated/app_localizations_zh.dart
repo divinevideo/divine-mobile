@@ -3464,6 +3464,27 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => '作品库中的片段';
+
+  @override
+  String get dmAttachVideoFromGallery => '相册中的视频';
+
+  @override
+  String get dmClipBadge => '片段';
+
+  @override
+  String get dmClipChecking => '正在确认这个片段是否用 Divine 拍摄…';
+
+  @override
+  String get dmClipNotVerified => '无法确认这是用 Divine 相机拍摄的，所以没有加入你的片段库。';
+
+  @override
+  String get dmClipCheckUnavailable => '现在无法检查这个片段，请稍后再试。';
+
+  @override
+  String get dmClipSendNotVerified => '无法确认这个片段是用 Divine 相机拍摄的，所以不能作为片段发送。';
+
+  @override
   String get shareSheetSaveVideo => '保存视频';
 
   @override

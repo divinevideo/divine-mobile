@@ -58,6 +58,7 @@ class ReactionPickerOverlay {
     bool deleteForEveryone = true,
     bool isVideoShare = false,
     bool isEncryptedVideo = false,
+    bool canAddToClips = false,
     List<String> emojis = kDefaultDmReactionEmojis,
   }) async {
     unawaited(HapticFeedback.mediumImpact());
@@ -98,6 +99,7 @@ class ReactionPickerOverlay {
                   deleteForEveryone: deleteForEveryone,
                   isVideoShare: isVideoShare,
                   isEncryptedVideo: isEncryptedVideo,
+                  canAddToClips: canAddToClips,
                   onSelected: (action) => sheetContext.popModalIfMounted(
                     ReactionPickerResult(action: action),
                   ),
@@ -229,6 +231,7 @@ class _ActionList extends StatelessWidget {
     required this.deleteForEveryone,
     required this.isVideoShare,
     required this.isEncryptedVideo,
+    required this.canAddToClips,
     required this.onSelected,
   });
 
@@ -244,6 +247,10 @@ class _ActionList extends StatelessWidget {
   /// Whether the message is a received encrypted (kind 15) video DM. Offers
   /// Play and Save (decrypt-then-save) instead of the shared-reel URL actions.
   final bool isEncryptedVideo;
+
+  /// Whether adding the received encrypted video to the viewer's own clips
+  /// is offered. The C2PA check decides whether it is accepted.
+  final bool canAddToClips;
   final ValueChanged<MessageAction> onSelected;
 
   @override
@@ -270,6 +277,12 @@ class _ActionList extends StatelessWidget {
           icon: DivineIconName.play,
           label: l10n.videoPlayerPlayVideo,
           onTap: () => onSelected(MessageAction.playVideo),
+        ),
+      if (canAddToClips)
+        _ActionTile(
+          icon: DivineIconName.filmSlate,
+          label: l10n.shareSheetAddToClips,
+          onTap: () => onSelected(MessageAction.addToClips),
         ),
       if (isVideoShare || isEncryptedVideo)
         _ActionTile(

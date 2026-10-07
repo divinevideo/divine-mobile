@@ -69,6 +69,30 @@ void main() {
       expect(size.width, 248);
       expect(size.height, 350);
     });
+
+    testWidgets('labels a clip shared from a library', (tester) async {
+      await tester.pumpWidget(
+        _host(
+          EncryptedVideoCard(
+            fileMetadata: _videoMetadata(),
+            isSent: false,
+            isClip: true,
+          ),
+        ),
+      );
+
+      expect(find.text(strings.dmClipBadge), findsOneWidget);
+    });
+
+    testWidgets('does not label a plain video as a clip', (tester) async {
+      await tester.pumpWidget(
+        _host(
+          EncryptedVideoCard(fileMetadata: _videoMetadata(), isSent: false),
+        ),
+      );
+
+      expect(find.text(strings.dmClipBadge), findsNothing);
+    });
   });
 
   group('MessageBubble encrypted video branch', () {

@@ -3728,6 +3728,31 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'Clip mula sa library mo';
+
+  @override
+  String get dmAttachVideoFromGallery => 'Video mula sa gallery mo';
+
+  @override
+  String get dmClipBadge => 'Clip';
+
+  @override
+  String get dmClipChecking =>
+      'Tinitingnan kung kinunan sa Divine ang clip na ito…';
+
+  @override
+  String get dmClipNotVerified =>
+      'Hindi namin makumpirma na kinunan ito gamit ang Divine camera, kaya hindi ito naidagdag sa clips mo.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'Hindi ma-check ang clip na ito ngayon. Subukan ulit mamaya.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'Hindi namin makumpirma na kinunan ang clip na ito gamit ang Divine camera, kaya hindi ito maipapadala bilang clip.';
+
+  @override
   String get shareSheetSaveVideo => 'I-save ang Video';
 
   @override

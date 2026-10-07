@@ -1829,6 +1829,13 @@
   "dmVideoSent": "Đã gửi video",
   "dmVideoSendFailed": "Không gửi được video",
   "dmVideoTooLarge": "Video này quá lớn để gửi. Hãy chọn video dưới {maxMegabytes} MB",
+  "dmAttachClipFromLibrary": "Clip từ thư viện của bạn",
+  "dmAttachVideoFromGallery": "Video từ thư viện ảnh của bạn",
+  "dmClipBadge": "Clip",
+  "dmClipChecking": "Đang kiểm tra clip này có được quay bằng Divine không…",
+  "dmClipNotVerified": "Chúng tôi không thể xác nhận clip này được quay bằng camera Divine, nên nó không được thêm vào clip của bạn.",
+  "dmClipCheckUnavailable": "Hiện không kiểm tra được clip này. Thử lại sau một lát nhé.",
+  "dmClipSendNotVerified": "Chúng tôi không thể xác nhận clip này được quay bằng camera Divine, nên không thể gửi dưới dạng clip.",
   "shareSheetSaveVideo": "Lưu video",
   "shareSheetAddToClips": "Thêm vào clip",
   "@shareSheetAddToClips": {

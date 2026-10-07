@@ -3712,6 +3712,30 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'آپ کی لائبریری سے کلپ';
+
+  @override
+  String get dmAttachVideoFromGallery => 'آپ کی گیلری سے ویڈیو';
+
+  @override
+  String get dmClipBadge => 'کلپ';
+
+  @override
+  String get dmClipChecking => 'تصدیق کی جا رہی ہے کہ یہ کلپ Divine سے بنی ہے…';
+
+  @override
+  String get dmClipNotVerified =>
+      'ہم تصدیق نہیں کر سکے کہ یہ Divine کیمرے سے بنی ہے، اس لیے اسے آپ کی کلپس میں شامل نہیں کیا گیا۔';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'ابھی اس کلپ کی جانچ نہیں ہو سکی۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'ہم تصدیق نہیں کر سکے کہ یہ کلپ Divine کیمرے سے بنی ہے، اس لیے اسے کلپ کے طور پر نہیں بھیجا جا سکتا۔';
+
+  @override
   String get shareSheetSaveVideo => 'ویڈیو محفوظ کریں';
 
   @override

@@ -3721,6 +3721,30 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'Clip uit je bibliotheek';
+
+  @override
+  String get dmAttachVideoFromGallery => 'Video uit je galerij';
+
+  @override
+  String get dmClipBadge => 'Clip';
+
+  @override
+  String get dmClipChecking => 'We checken of deze clip met Divine is gefilmd…';
+
+  @override
+  String get dmClipNotVerified =>
+      'We konden niet bevestigen dat dit met de Divine-camera is gefilmd, dus het staat niet bij je clips.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'Deze clip kan nu niet worden gecheckt. Probeer het zo nog eens.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'We konden niet bevestigen dat deze clip met de Divine-camera is gefilmd, dus hij kan niet als clip worden verstuurd.';
+
+  @override
   String get shareSheetSaveVideo => 'Video opslaan';
 
   @override

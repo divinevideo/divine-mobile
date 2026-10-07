@@ -3628,6 +3628,30 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'ክሊፕ ከቤተ-መጽሐፍትዎ';
+
+  @override
+  String get dmAttachVideoFromGallery => 'ቪዲዮ ከጋለሪዎ';
+
+  @override
+  String get dmClipBadge => 'ክሊፕ';
+
+  @override
+  String get dmClipChecking => 'ይህ ክሊፕ በDivine መቀረጹን በማረጋገጥ ላይ…';
+
+  @override
+  String get dmClipNotVerified =>
+      'ይህ በDivine ካሜራ መቀረጹን ማረጋገጥ አልቻልንም፣ ስለዚህ ወደ ክሊፖችዎ አልተጨመረም።';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'አሁን ይህን ክሊፕ ማረጋገጥ አልተቻለም። ትንሽ ቆይተው እንደገና ይሞክሩ።';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'ይህ ክሊፕ በDivine ካሜራ መቀረጹን ማረጋገጥ አልቻልንም፣ ስለዚህ እንደ ክሊፕ መላክ አይቻልም።';
+
+  @override
   String get shareSheetSaveVideo => 'ቪዲዮ አስቀምጥ';
 
   @override

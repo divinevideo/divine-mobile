@@ -3752,6 +3752,30 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get dmAttachClipFromLibrary => 'Clip de tu biblioteca';
+
+  @override
+  String get dmAttachVideoFromGallery => 'Video de tu galería';
+
+  @override
+  String get dmClipBadge => 'Clip';
+
+  @override
+  String get dmClipChecking => 'Comprobando que este clip se grabó con Divine…';
+
+  @override
+  String get dmClipNotVerified =>
+      'No pudimos confirmar que se grabó con la cámara de Divine, así que no se agregó a tus clips.';
+
+  @override
+  String get dmClipCheckUnavailable =>
+      'No pudimos revisar este clip ahora. Probá de nuevo en un rato.';
+
+  @override
+  String get dmClipSendNotVerified =>
+      'No pudimos confirmar que este clip se grabó con la cámara de Divine, así que no se puede enviar como clip.';
+
+  @override
   String get shareSheetSaveVideo => 'Guardar video';
 
   @override
