@@ -141,6 +141,13 @@ final class VideoFeedSource extends Equatable {
   /// Original spelling for the selected hashtag.
   final String? displayTag;
 
+  /// Canonical preference namespace; selector values keep the legacy shape.
+  static const curatedListPersistencePrefix = 'curated:';
+
+  static bool isCuratedListPreference(String value) =>
+      value.startsWith(curatedListPersistencePrefix) ||
+      value.startsWith('list:');
+
   /// Legacy mode projection for compatibility.
   FeedMode get mode => switch (type) {
     VideoFeedSourceType.forYou ||
@@ -161,7 +168,8 @@ final class VideoFeedSource extends Equatable {
     VideoFeedSourceType.subscribedHashtag => '#${displayTag ?? hashtag}',
   };
 
-  /// SharedPreferences value for this source.
+  /// Stable source/selector value. The preference store versions curated-list
+  /// records separately so unversioned raw d-tags cannot resemble coordinates.
   String get persistenceValue => switch (type) {
     VideoFeedSourceType.forYou => FeedMode.forYou.name,
     VideoFeedSourceType.newVideos => FeedMode.latest.name,

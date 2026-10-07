@@ -14,9 +14,9 @@ const _other =
     'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
 const _key = 'selected_feed_mode_$_viewer';
 const _a =
-    'list:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:crew';
+    'curated:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:crew';
 const _b =
-    'list:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:crew';
+    'curated:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:crew';
 
 enum _NativeResult { succeeds, throwsError, returnsFalse }
 
