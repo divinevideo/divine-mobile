@@ -2816,6 +2816,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         AuthenticationSource.divineOAuth,
         allowPubkeyOnlyIdentity: allowPubkeyOnlyIdentity,
         continuingSession: continuingSession,
+        continuingSessionCaptured: true,
       );
       _setRpcCapability(
         rpcCapability ??
@@ -3963,15 +3964,18 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     bool claimLegacyRows = true,
     bool followingKnownEmpty = false,
     NostrIdentity? continuingSession,
+    bool continuingSessionCaptured = false,
   }) async {
     // Capture the established context before replacing tentative identity.
     // OAuth changes auth state before arriving here; only its unchanged
     // previously authenticated identity may cross that transition.
-    final establishedSession = isAuthenticated
-        ? _currentIdentity
-        : identical(_currentIdentity, continuingSession)
-        ? continuingSession
-        : null;
+    // An explicitly captured null also matters: a cold OAuth entry cannot
+    // borrow a new session completed by another sign-in during its awaits.
+    final establishedSession = continuingSessionCaptured
+        ? (identical(_currentIdentity, continuingSession)
+              ? continuingSession
+              : null)
+        : (isAuthenticated ? _currentIdentity : null);
     Log.info(
       '_setupUserSession: starting — '
       'pubkey=${keyContainer.publicKeyHex}, source=${source.name}',
