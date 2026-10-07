@@ -999,6 +999,92 @@ void main() {
         );
       });
 
+      group('a layer with keyframes', () {
+        const item = TimelineOverlayItem(
+          id: 'text-1',
+          type: TimelineOverlayType.layer,
+          startTime: Duration.zero,
+          endTime: Duration(seconds: 6),
+        );
+
+        TextLayer movingText() => TextLayer(
+          id: 'text-1',
+          text: 'hi',
+          startTime: Duration.zero,
+          endTime: const Duration(seconds: 6),
+          keyframes: const [
+            LayerKeyframe(time: Duration.zero, offset: Offset.zero),
+            LayerKeyframe(time: Duration(seconds: 1), offset: Offset(100, 0)),
+            LayerKeyframe(time: Duration(seconds: 3), offset: Offset(100, 200)),
+            LayerKeyframe(time: Duration(seconds: 5), offset: Offset.zero),
+          ],
+        );
+
+        List<Layer> written() =>
+            verify(
+                  () => mockEditor.addHistory(
+                    layers: captureAny(named: 'layers'),
+                  ),
+                ).captured.last
+                as List<Layer>;
+
+        testWidgets('splitting keeps both parts on the path of the whole', (
+          tester,
+        ) async {
+          final layer = movingText();
+          when(() => mockEditor.activeLayers).thenReturn([layer]);
+          when(() => mainBloc.state).thenReturn(
+            const VideoEditorMainState(currentPosition: Duration(seconds: 2)),
+          );
+          await tester.pumpWidget(buildWithEditor(item, mockEditor, mainBloc));
+          await tester.tap(
+            find.bySemanticsLabel(
+              l10n.videoEditorSplitSelectedClipSemanticLabel,
+            ),
+          );
+          await tester.pump();
+
+          final [head, tail] = written();
+          for (final ms in [500, 1500, 1999]) {
+            final time = Duration(milliseconds: ms);
+            expect(
+              head.keyframePlacementAt(time),
+              layer.keyframePlacementAt(time),
+            );
+          }
+          for (final ms in [2000, 2500, 4000, 5500]) {
+            final time = Duration(milliseconds: ms);
+            expect(
+              tail.keyframePlacementAt(time),
+              layer.keyframePlacementAt(time),
+            );
+          }
+        });
+
+        testWidgets('duplicating moves the copy along a nudged path', (
+          tester,
+        ) async {
+          final layer = movingText();
+          when(() => mockEditor.activeLayers).thenReturn([layer]);
+          when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+          await tester.pumpWidget(buildWithEditor(item, mockEditor, mainBloc));
+          await tester.tap(
+            find.bySemanticsLabel(
+              l10n.videoEditorDuplicateSelectedItemSemanticLabel,
+            ),
+          );
+          await tester.pump();
+
+          final copy = written().last;
+          // Not on top of the original, which it would otherwise hide.
+          const time = Duration(seconds: 2);
+          expect(
+            copy.keyframePlacementAt(time)!.offset,
+            layer.keyframePlacementAt(time)!.offset + const Offset(24, 24),
+          );
+        });
+      });
+
       testWidgets(
         'duplicate inserts a copied layer after the selected item, offsets it, '
         'and selects it',

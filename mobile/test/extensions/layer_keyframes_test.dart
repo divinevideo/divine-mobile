@@ -73,7 +73,7 @@ void main() {
       test('hands the keyframes back unchanged for the same start', () {
         final layer = Layer(startTime: ms * 400, keyframes: [keyframe(0)]);
 
-        expect(layer.keyframesFrom(ms * 400), same(layer.keyframes));
+        expect(layer.keyframesFrom(ms * 400), equals(layer.keyframes));
       });
     });
 

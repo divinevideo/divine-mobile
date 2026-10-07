@@ -132,7 +132,7 @@ void main() {
       );
 
       blocTest<TimelineOverlayBloc, TimelineOverlayState>(
-        'takes a copy of each layer keyframe time',
+        'carries each layer keyframe time, in order',
         build: TimelineOverlayBloc.new,
         act: (bloc) => bloc.add(
           TimelineOverlayItemsUpdate(

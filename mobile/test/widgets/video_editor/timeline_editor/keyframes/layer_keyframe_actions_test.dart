@@ -525,6 +525,41 @@ void main() {
       expect(atPlayhead.opacity, 0.5);
     });
 
+    testWidgets('fades a moving clip in its keyframe, not its own opacity', (
+      tester,
+    ) async {
+      final clip = _detachedLayer()
+        ..keyframes = const [
+          LayerKeyframe(time: Duration.zero, offset: Offset.zero),
+          LayerKeyframe(time: Duration(seconds: 2), offset: Offset(50, 0)),
+        ];
+      await pump(tester, clip);
+
+      await drag(tester, 0.5);
+      await tapSheetButton(tester, DivineIconName.check);
+
+      final written =
+          verify(
+                () => editor.replaceLayer(
+                  index: 0,
+                  layer: captureAny(named: 'layer'),
+                ),
+              ).captured.single
+              as Layer;
+      // Keyframes carry a moving clip's opacity. Its own would fade it again
+      // on the canvas, while the export lets the keyframes replace it.
+      expect(
+        written.keyframes
+            .singleWhere((k) => k.time == const Duration(seconds: 1))
+            .opacity,
+        0.5,
+      );
+      expect(
+        DetachedClipLayerData.opacityOf(DetachedClipLayerData.metaOf(written)),
+        1,
+      );
+    });
+
     testWidgets('moves a playhead outside the layer onto its start', (
       tester,
     ) async {
