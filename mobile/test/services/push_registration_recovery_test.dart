@@ -33,6 +33,29 @@ class _Settings extends Mock implements NotificationSettings {}
 
 class _KeyContainer extends Mock implements SecureKeyContainer {}
 
+enum _Failure {
+  missingToken('missing token'),
+  tokenLookupException('token lookup exception'),
+  missingEncryption('missing encryption'),
+  encryptionTimeout('encryption timeout'),
+  missingSignature('missing signature');
+
+  const _Failure(this.label);
+
+  final String label;
+}
+
+enum _IdentityKind {
+  keycast('keycast'),
+  offlineRestore('offline restore'),
+  localKey('local key'),
+  bunker('bunker');
+
+  const _IdentityKind(this.label);
+
+  final String label;
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   const pubkey =
@@ -48,22 +71,23 @@ void main() {
 
   group('register', () {
     for (final (failure, identityKind) in [
-      ('missing token', 'keycast'),
-      ('token lookup exception', 'keycast'),
-      ('missing encryption', 'keycast'),
-      ('encryption timeout', 'keycast'),
-      ('missing signature', 'keycast'),
-      ('missing encryption', 'offline restore'),
-      ('missing encryption', 'local key'),
-      ('missing signature', 'local key'),
-      ('missing encryption', 'bunker'),
-      ('encryption timeout', 'bunker'),
-      ('missing signature', 'bunker'),
+      (_Failure.missingToken, _IdentityKind.keycast),
+      (_Failure.tokenLookupException, _IdentityKind.keycast),
+      (_Failure.missingEncryption, _IdentityKind.keycast),
+      (_Failure.encryptionTimeout, _IdentityKind.keycast),
+      (_Failure.missingSignature, _IdentityKind.keycast),
+      (_Failure.missingEncryption, _IdentityKind.offlineRestore),
+      (_Failure.missingEncryption, _IdentityKind.localKey),
+      (_Failure.missingSignature, _IdentityKind.localKey),
+      (_Failure.missingEncryption, _IdentityKind.bunker),
+      (_Failure.encryptionTimeout, _IdentityKind.bunker),
+      (_Failure.missingSignature, _IdentityKind.bunker),
     ]) {
-      final interactive = identityKind == 'bunker';
+      final interactive = identityKind == _IdentityKind.bunker;
       final description = interactive
-          ? 'does not re-prompt $identityKind after $failure'
-          : 'registers after $failure recovers for $identityKind without relaunch';
+          ? 'does not re-prompt ${identityKind.label} after ${failure.label}'
+          : 'registers after ${failure.label} recovers for '
+                '${identityKind.label} without relaunch';
       test(description, () {
         fakeAsync((async) {
           var recovered = false;
@@ -76,13 +100,18 @@ void main() {
           final keys = _KeyContainer();
           when(() => keys.publicKeyHex).thenReturn(pubkey);
           final NostrIdentity identity = switch (identityKind) {
-            'local key' => LocalNostrIdentity(keyContainer: keys),
-            'bunker' => BunkerNostrIdentity(
+            _IdentityKind.localKey => LocalNostrIdentity(keyContainer: keys),
+            _IdentityKind.bunker => BunkerNostrIdentity(
               pubkey: pubkey,
               remoteSigner: signer,
             ),
-            'offline restore' => PubkeyOnlyNostrIdentity(pubkey: pubkey),
-            _ => KeycastNostrIdentity(pubkey: pubkey, rpcSigner: signer),
+            _IdentityKind.offlineRestore => PubkeyOnlyNostrIdentity(
+              pubkey: pubkey,
+            ),
+            _IdentityKind.keycast => KeycastNostrIdentity(
+              pubkey: pubkey,
+              rpcSigner: signer,
+            ),
           };
           when(() => auth.currentIdentity).thenReturn(identity);
           when(() => client.signer).thenReturn(signer);
@@ -95,8 +124,10 @@ void main() {
           when(() => messaging.onTokenRefresh)
               .thenAnswer((_) => const Stream<String>.empty());
           when(() => signer.nip44Encrypt(any(), any())).thenAnswer((_) async {
-            if (!recovered && failure == 'missing encryption') return null;
-            if (!recovered && failure == 'encryption timeout') {
+            if (!recovered && failure == _Failure.missingEncryption) {
+              return null;
+            }
+            if (!recovered && failure == _Failure.encryptionTimeout) {
               throw TimeoutException('signer unavailable');
             }
             return 'encrypted-token';
@@ -108,8 +139,9 @@ void main() {
               tags: any(named: 'tags'),
             ),
           ).thenAnswer(
-            (_) async =>
-                !recovered && failure == 'missing signature' ? null : event,
+            (_) async => !recovered && failure == _Failure.missingSignature
+                ? null
+                : event,
           );
           when(
             () => client.publishEventAwaitOk(
@@ -133,8 +165,8 @@ void main() {
             notificationService: _Notifications(),
             environmentConfig: environment,
             getToken: () async {
-              if (!recovered && failure == 'missing token') return null;
-              if (!recovered && failure == 'token lookup exception') {
+              if (!recovered && failure == _Failure.missingToken) return null;
+              if (!recovered && failure == _Failure.tokenLookupException) {
                 throw PlatformException(code: 'apns-token-not-set');
               }
               return 'test-fcm-token';
@@ -157,7 +189,7 @@ void main() {
           expect(published, isEmpty);
 
           recovered = true;
-          if (identityKind == 'offline restore') {
+          if (identityKind == _IdentityKind.offlineRestore) {
             when(() => auth.currentIdentity).thenReturn(
               KeycastNostrIdentity(pubkey: pubkey, rpcSigner: signer),
             );
@@ -170,7 +202,7 @@ void main() {
           expect(published, hasLength(interactive ? 0 : 1));
           if (interactive) {
             verify(() => signer.nip44Encrypt(any(), any())).called(1);
-            if (failure == 'missing signature') {
+            if (failure == _Failure.missingSignature) {
               verify(
                 () => auth.createAndSignEvent(
                   kind: any(named: 'kind'),
