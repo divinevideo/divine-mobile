@@ -312,7 +312,17 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       });
     }
 
-    final followedRead = await _readFollowedPeopleLists();
+    // Only a saved people list needs the follows resolved before the first
+    // state. For anything else the watch below delivers them, so the first
+    // frame does not wait on the copy box opening.
+    final savedAtStart = _modePreferences._savedScopedValue;
+    final restoresPeopleList =
+        !event.forceMode &&
+        savedAtStart != null &&
+        VideoFeedSource.peopleListRefFromValue(savedAtStart) != null;
+    final followedRead = restoresPeopleList
+        ? await _readFollowedPeopleLists()
+        : const <PeopleListSearchResult>[];
     if (_startupWasSuperseded(
       startupSelection,
       emit,
