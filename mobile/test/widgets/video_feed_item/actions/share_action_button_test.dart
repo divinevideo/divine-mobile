@@ -52,6 +52,9 @@ class _MockCrosspostingApiClient extends Mock
 class _FakeVideoEvent extends Fake implements VideoEvent {}
 
 class _RecordingAnalyticsSink extends NoOpAnalyticsEventSink {
+  _RecordingAnalyticsSink({this.pending});
+
+  final Future<void>? pending;
   final events = <({String name, Map<String, Object> parameters})>[];
 
   @override
@@ -60,6 +63,7 @@ class _RecordingAnalyticsSink extends NoOpAnalyticsEventSink {
     required Map<String, Object> parameters,
   }) async {
     events.add((name: name, parameters: parameters));
+    await pending;
   }
 }
 
@@ -462,24 +466,22 @@ void main() {
           expect(find.byType(SelectListDialog), findsOneWidget);
         });
 
-        testWidgets('loads crosspost connections for owned content', (
+        testWidgets('opening Share does not request crosspost signing', (
           tester,
         ) async {
-          await pumpOwnerSheet(tester);
-
+          final client = _MockCrosspostingApiClient();
+          when(client.getConnections).thenAnswer((_) async => const []);
+          await pumpOwnerSheet(
+            tester,
+            additionalOverrides: [
+              crosspostingApiClientProvider.overrideWithValue(client),
+            ],
+          );
           final cubit = tester
               .element(find.text('Share with'))
               .read<VideoCrosspostCubit>();
-
-          expect(
-            cubit.state.status,
-            isNot(
-              anyOf(
-                VideoCrosspostStatus.initial,
-                VideoCrosspostStatus.loadingConnections,
-              ),
-            ),
-          );
+          expect(cubit.state.status, VideoCrosspostStatus.initial);
+          verifyNever(client.getConnections);
         });
 
         testWidgets('dispose closes the owner and crosspost cubits', (
@@ -560,6 +562,34 @@ void main() {
           },
         );
 
+        testWidgets('slow analytics does not block crosspost setup', (
+          tester,
+        ) async {
+          final goRouter = MockGoRouter();
+          when(() => goRouter.push<void>(any(), extra: any(named: 'extra')))
+              .thenAnswer((_) async {});
+          final pending = Completer<void>();
+          final client = _MockCrosspostingApiClient();
+          when(client.getConnections).thenAnswer((_) async => const []);
+          await pumpOwnerSheet(
+            tester,
+            goRouter: goRouter,
+            additionalOverrides: [
+              appOAuthSupportProvider.overrideWith((ref) async => true),
+              analyticsEventSinkProvider.overrideWithValue(
+                _RecordingAnalyticsSink(pending: pending.future),
+              ),
+              crosspostingApiClientProvider.overrideWithValue(client),
+            ],
+          );
+          await tester.tap(find.text(l10n.shareSheetCrosspost));
+          await tester.pumpAndSettle();
+          verify(() => goRouter.push<void>(RoutePaths.crosspostingSettings))
+              .called(1);
+          pending.complete();
+          await tester.pump();
+        });
+
         testWidgets('Crosspost routes to settings with no connections', (
           tester,
         ) async {
@@ -583,16 +613,18 @@ void main() {
             ],
           );
 
-          expect(sink.events, hasLength(1));
-          expect(sink.events.single.name, equals('crosspost_cta_shown'));
-          expect(
-            sink.events.single.parameters,
-            equals({'surface': 'share_sheet', 'cta': 'connect'}),
-          );
-
+          expect(sink.events, isEmpty);
           await tester.tap(find.text(l10n.shareSheetCrosspost));
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 100));
+          final shownEvents = sink.events
+              .where((event) => event.name == 'crosspost_cta_shown')
+              .toList();
+          expect(shownEvents, hasLength(1));
+          expect(
+            shownEvents.single.parameters,
+            equals({'surface': 'share_sheet', 'cta': 'connect'}),
+          );
 
           verify(() => goRouter.push<void>(RoutePaths.crosspostingSettings))
               .called(1);

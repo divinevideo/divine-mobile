@@ -160,6 +160,7 @@ void main() {
         crosspostingAvailabilityFor(
           accountEligible: true,
           oauthSupported: true,
+          webAccountEligible: false,
         ),
         CrosspostingAvailability.native,
       );
@@ -170,6 +171,7 @@ void main() {
         crosspostingAvailabilityFor(
           accountEligible: true,
           oauthSupported: false,
+          webAccountEligible: true,
         ),
         CrosspostingAvailability.webOnly,
       );
@@ -180,6 +182,7 @@ void main() {
         crosspostingAvailabilityFor(
           accountEligible: false,
           oauthSupported: true,
+          webAccountEligible: false,
         ),
         CrosspostingAvailability.unavailable,
       );
@@ -192,10 +195,13 @@ void main() {
       bool resolveSupport = true,
       bool authenticated = true,
       bool canSign = true,
+      bool registered = false,
+      bool anonymous = false,
     }) {
       final auth = _MockAuthService();
       when(() => auth.currentPublicKeyHex).thenReturn('a' * 64);
-      when(() => auth.isRegistered).thenReturn(false);
+      when(() => auth.isRegistered).thenReturn(registered);
+      when(() => auth.isAnonymous).thenReturn(anonymous);
       when(() => auth.canPublishNostrWritesNow).thenReturn(canSign);
       when(() => auth.authRpcCapability)
           .thenReturn(AuthRpcCapability.unavailable);
@@ -240,12 +246,23 @@ void main() {
       },
     );
 
+    test('anonymous local-key accounts can use native crossposting', () async {
+      final container = buildContainer(anonymous: true);
+      addTearDown(container.dispose);
+      await container.read(appOAuthSupportProvider.future);
+      expect(
+        container.read(crosspostingAvailabilityProvider),
+        CrosspostingAvailability.native,
+      );
+    });
+
     test('becomes available when a remote signer becomes ready', () async {
       final auth = _MockAuthService();
       final capability = StreamController<AuthRpcCapability>.broadcast();
       addTearDown(capability.close);
       var canSign = false;
       when(() => auth.currentPublicKeyHex).thenReturn('a' * 64);
+      when(() => auth.isRegistered).thenReturn(false);
       when(() => auth.canPublishNostrWritesNow).thenAnswer((_) => canSign);
       when(
         () => auth.authRpcCapability,
@@ -276,8 +293,25 @@ void main() {
       );
     });
 
+    test(
+      'local-key accounts cannot use the Divine-only web fallback',
+      () async {
+        final container = buildContainer(oauthSupported: false);
+        addTearDown(container.dispose);
+        await container.read(appOAuthSupportProvider.future);
+        expect(
+          container.read(crosspostingAvailabilityProvider),
+          CrosspostingAvailability.unavailable,
+        );
+        expect(
+          await resolveCrosspostingAvailability(container),
+          CrosspostingAvailability.unavailable,
+        );
+      },
+    );
+
     test('is webOnly when OAuth is unsupported', () async {
-      final container = buildContainer(oauthSupported: false);
+      final container = buildContainer(oauthSupported: false, registered: true);
       addTearDown(container.dispose);
       await container.read(appOAuthSupportProvider.future);
 
@@ -288,7 +322,7 @@ void main() {
     });
 
     test('is webOnly while the support lookup is unresolved', () async {
-      final container = buildContainer(resolveSupport: false);
+      final container = buildContainer(resolveSupport: false, registered: true);
       addTearDown(container.dispose);
 
       expect(
@@ -323,8 +357,10 @@ void main() {
       Future<bool>? support,
       bool authenticated = true,
       bool canSign = true,
+      bool registered = false,
     }) {
       final auth = _MockAuthService();
+      when(() => auth.isRegistered).thenReturn(registered);
       when(() => auth.currentPublicKeyHex).thenReturn('a' * 64);
       when(() => auth.canPublishNostrWritesNow).thenReturn(canSign);
       when(() => auth.authRpcCapability)
@@ -390,7 +426,10 @@ void main() {
     });
 
     test('is webOnly when support resolves false', () async {
-      final container = buildContainer(support: Future.value(false));
+      final container = buildContainer(
+        support: Future.value(false),
+        registered: true,
+      );
       addTearDown(container.dispose);
 
       expect(

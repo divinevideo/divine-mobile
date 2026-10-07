@@ -172,22 +172,11 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
         enforcementRepository: () =>
             ref.read(creatorDeleteEnforcementRepositoryProvider),
       );
-      // The Crosspost row is offered even with nothing connected, so it must
-      // not appear for an identity the crossposter cannot serve at all.
-      if (ref.read(crosspostingAvailabilityProvider) !=
-          CrosspostingAvailability.unavailable) {
-        final crosspostCubit = VideoCrosspostCubit(
-          client: ref.read(crosspostingApiClientProvider),
-          eventId: widget.video.id,
-        );
-        _crosspostCubit = crosspostCubit;
-        final connectionsLoad = crosspostCubit.loadConnections();
-        _runShareDetached(connectionsLoad, 'load crosspost connections');
-        _runShareDetached(
-          _logCrosspostCtaExposure(crosspostCubit, connectionsLoad),
-          'log crosspost CTA exposure',
-        );
-      }
+      // Capture this owner's client now, but do not request signing until tap.
+      _crosspostCubit = VideoCrosspostCubit(
+        client: ref.read(crosspostingApiClientProvider),
+        eventId: widget.video.id,
+      );
     }
     _shareSheetBloc =
         ShareSheetBloc(
@@ -286,7 +275,12 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
       onSaveOriginal: isOwnContent ? _handleSaveOriginal : null,
       onSaveWithWatermark: _handleSaveWithWatermark,
       onAddVideoToClips: canAddVideoToClips ? _handleAddVideoToClips : null,
-      onCrosspost: _crosspostCubit != null ? _handleCrosspost : null,
+      onCrosspost:
+          isOwnContent &&
+              ref.watch(crosspostingAvailabilityProvider) !=
+                  CrosspostingAvailability.unavailable
+          ? _handleCrosspost
+          : null,
     );
     final ownerAwareSheetView = switch (_ownerVideoActionsCubit) {
       null => sheetView,
@@ -633,6 +627,17 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
   Future<void> _handleCrosspost() async {
     final cubit = _crosspostCubit;
     if (cubit == null) return;
+    // Loading signs a request and may open an external signer. Defer it until
+    // the creator explicitly chooses Crosspost rather than merely opening Share.
+    if (cubit.state.status == VideoCrosspostStatus.initial) {
+      final connectionsLoad = cubit.loadConnections();
+      await connectionsLoad;
+      _runShareDetached(
+        _logCrosspostCtaExposure(cubit, connectionsLoad),
+        'log crosspost CTA exposure',
+      );
+      if (!mounted) return;
+    }
     // The row is offered before connections load; wait for them rather than
     // sending a creator who is already connected to setup.
     final state = cubit.state.status == VideoCrosspostStatus.loadingConnections

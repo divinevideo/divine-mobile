@@ -969,6 +969,7 @@ void main() {
 
     testWidgets('sends a platform row connect to the web when in-app OAuth is '
         'unsupported', (tester) async {
+      when(() => authService.isRegistered).thenReturn(true);
       when(repository.loadSettings).thenAnswer((_) async => [_disconnected()]);
       var webOpened = false;
       var oauthLaunched = false;

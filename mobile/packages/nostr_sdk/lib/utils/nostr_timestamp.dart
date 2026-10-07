@@ -33,6 +33,7 @@ class NostrTimestamp {
       case 3: // Contact list
       case 7: // Reaction
         return defaultClockDriftTolerance;
+      case 27235: // HTTP auth must retain its short server freshness window.
       case 62: // Request to vanish; its timestamp is the deletion boundary.
         return 0;
       default:

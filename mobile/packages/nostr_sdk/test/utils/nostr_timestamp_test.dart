@@ -38,6 +38,15 @@ void main() {
       expect(tolerance, isZero);
     });
 
+    test('HTTP authentication retains the full server freshness window', () {
+      final before = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      final timestamp = NostrTimestamp.now(
+        driftTolerance: NostrTimestamp.getDriftToleranceForKind(27235),
+      );
+      final after = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      expect(timestamp, inInclusiveRange(before, after));
+    });
+
     test('Kind 0 timestamp should be 5 minutes behind current time', () {
       final tolerance = NostrTimestamp.getDriftToleranceForKind(0);
       final timestamp = NostrTimestamp.now(driftTolerance: tolerance);

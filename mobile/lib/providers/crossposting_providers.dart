@@ -51,11 +51,14 @@ bool isCrosspostingAccountEligible({
 CrosspostingAvailability crosspostingAvailabilityFor({
   required bool accountEligible,
   required bool oauthSupported,
+  required bool webAccountEligible,
 }) {
   if (!accountEligible) return CrosspostingAvailability.unavailable;
   return oauthSupported
       ? CrosspostingAvailability.native
-      : CrosspostingAvailability.webOnly;
+      : webAccountEligible
+      ? CrosspostingAvailability.webOnly
+      : CrosspostingAvailability.unavailable;
 }
 
 bool _isCurrentAccountEligible(AuthState authState, AuthService authService) {
@@ -78,13 +81,14 @@ final crosspostingAvailabilityProvider = Provider<CrosspostingAvailability>((
     authState,
     ref.watch(authServiceProvider),
   );
-  // Fail to webOnly, not unavailable: an unresolved lookup must not hide the
-  // feature, and the web page is a working connect path regardless.
+  // The web setup page only supports Divine OAuth accounts. Other signers
+  // must wait for native OAuth support before offering the connect flow.
   final oauthSupported =
       eligible && (ref.watch(appOAuthSupportProvider).value ?? false);
   return crosspostingAvailabilityFor(
     accountEligible: eligible,
     oauthSupported: oauthSupported,
+    webAccountEligible: ref.read(authServiceProvider).isRegistered,
   );
 });
 
@@ -141,5 +145,6 @@ Future<CrosspostingAvailability> resolveCrosspostingAvailability(
   return crosspostingAvailabilityFor(
     accountEligible: eligible,
     oauthSupported: oauthSupported,
+    webAccountEligible: container.read(authServiceProvider).isRegistered,
   );
 }
