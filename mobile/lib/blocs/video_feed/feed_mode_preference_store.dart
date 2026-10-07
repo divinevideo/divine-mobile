@@ -103,13 +103,32 @@ class FeedModePreferenceStore {
   }
 
   /// Resolves a persisted value to a [VideoFeedSource], or `null` when unknown.
+  /// A legacy raw curated d-tag upgrades only from a complete snapshot. A partial
+  /// copy set cannot prove that another author does not share that d-tag.
   VideoFeedSource? sourceFromValue(String saved) {
-    if (saved.startsWith('list:')) {
-      final listId = saved.substring('list:'.length);
-      final list = _curatedListRepository.getListById(listId);
-      if (list != null &&
-          (list.authorScopedId == listId ||
-              _curatedListRepository.hasCompleteSubscriptionSnapshot)) {
+    if (VideoFeedSource.isCuratedListPreference(saved)) {
+      CuratedList? list;
+      if (saved.startsWith(VideoFeedSource.curatedListPersistencePrefix)) {
+        final canonical = saved.substring(
+          VideoFeedSource.curatedListPersistencePrefix.length,
+        );
+        final exact = _curatedListRepository.getListById(canonical);
+        if (exact?.authorScopedId == canonical) list = exact;
+      } else {
+        // Published list: records contain complete raw d-tags. A d-tag can
+        // itself look like another author's coordinate; never reinterpret it
+        // as that coordinate when its original author is unavailable.
+        if (!_curatedListRepository.hasCompleteSubscriptionSnapshot) {
+          return null;
+        }
+        final legacy = saved.substring('list:'.length);
+        final candidates = {
+          for (final candidate in _curatedListRepository.getSubscribedLists())
+            if (candidate.id == legacy) candidate.authorScopedId: candidate,
+        };
+        if (candidates.length == 1) list = candidates.values.single;
+      }
+      if (list != null) {
         return VideoFeedSource.subscribedList(
           listId: list.authorScopedId,
           listName: list.name,
@@ -132,13 +151,19 @@ class FeedModePreferenceStore {
     return null;
   }
 
+  /// Preference-only canonical namespace; source/menu/protocol IDs stay stable.
+  static String storageValueFor(VideoFeedSource source) =>
+      source.type == VideoFeedSourceType.subscribedList
+      ? '${VideoFeedSource.curatedListPersistencePrefix}${source.listId}'
+      : source.persistenceValue;
+
   /// Writes [source] to the scoped key and clears the legacy global key for
   /// authenticated sessions.
   Future<void> persist(VideoFeedSource source) =>
-      _lease.persist(source.persistenceValue);
+      _lease.persist(storageValueFor(source));
 
   Future<ProvisionalFeedModeWrite> _prepare(VideoFeedSource source) =>
-      _lease.prepare(source.persistenceValue);
+      _lease.prepare(storageValueFor(source));
 
   void _release() => _lease.release();
 }
