@@ -47,6 +47,7 @@ Future<void> _pumpEditorPage(
   required ProImageEditorState editor,
   required VideoEditorMainBloc mainBloc,
   required Future<void> Function(BuildContext context) onOpen,
+  Duration? livePlayTime,
 }) async {
   final page = Scaffold(
     body: BlocProvider<VideoEditorMainBloc>.value(
@@ -57,7 +58,9 @@ Future<void> _pumpEditorPage(
         originalClipAspectRatio: 1,
         bodySizeNotifier: ValueNotifier(const Size(400, 600)),
         zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
-        playTimeNotifier: ValueNotifier(Duration.zero),
+        playTimeNotifier: ValueNotifier(
+          livePlayTime ?? mainBloc.state.currentPosition,
+        ),
         playheadAdvancingNotifier: ValueNotifier<bool>(false),
         fromLibrary: false,
         onOpenCamera: () {},
@@ -412,7 +415,11 @@ void main() {
       );
     });
 
-    Future<void> pump(WidgetTester tester, Layer layer) async {
+    Future<void> pump(
+      WidgetTester tester,
+      Layer layer, {
+      Duration? livePlayTime,
+    }) async {
       // The preview and the final write both replace the layer in place.
       _stubReplaceLayer(editor, [layer]);
       await _pumpEditorPage(
@@ -420,6 +427,7 @@ void main() {
         editor: editor,
         mainBloc: mainBloc,
         onOpen: (context) => editLayerOpacity(context, layer, item: item),
+        livePlayTime: livePlayTime,
       );
     }
 
@@ -525,6 +533,27 @@ void main() {
       expect(atPlayhead.opacity, 0.5);
     });
 
+    testWidgets('fades at the visible playhead while the bloc seek is stale', (
+      tester,
+    ) async {
+      when(() => mainBloc.state).thenReturn(
+        const VideoEditorMainState(currentPosition: Duration(seconds: 2)),
+      );
+      await pump(
+        tester,
+        _movingText(),
+        livePlayTime: const Duration(seconds: 3),
+      );
+
+      await drag(tester, 0.5);
+      await tapSheetButton(tester, DivineIconName.check);
+
+      final keyframes = editor.activeLayers.single.keyframes;
+      expect(keyframes.first.opacity, 0.2);
+      expect(keyframes.last.time, const Duration(seconds: 1));
+      expect(keyframes.last.opacity, 0.5);
+    });
+
     testWidgets('fades a moving clip in its keyframe, not its own opacity', (
       tester,
     ) async {
@@ -603,6 +632,7 @@ void main() {
       WidgetTester tester,
       Layer layer, {
       required Duration playhead,
+      Duration? livePlayTime,
     }) async {
       when(
         () => mainBloc.state,
@@ -613,6 +643,7 @@ void main() {
         editor: editor,
         mainBloc: mainBloc,
         onOpen: (context) => editLayerKeyframes(context, layer, item: item),
+        livePlayTime: livePlayTime,
       );
     }
 
@@ -683,6 +714,22 @@ void main() {
 
     testWidgets('removes the keyframe the playhead is on', (tester) async {
       await pump(tester, _movingText(), playhead: const Duration(seconds: 3));
+
+      await tester.tap(find.text(l10n(tester).videoEditorKeyframeRemove));
+      await tester.pumpAndSettle();
+
+      expect(editor.activeLayers.single.keyframes.single.time, Duration.zero);
+    });
+
+    testWidgets('removes the visible keyframe while the bloc seek is stale', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        _movingText(),
+        playhead: const Duration(seconds: 2),
+        livePlayTime: const Duration(seconds: 3),
+      );
 
       await tester.tap(find.text(l10n(tester).videoEditorKeyframeRemove));
       await tester.pumpAndSettle();

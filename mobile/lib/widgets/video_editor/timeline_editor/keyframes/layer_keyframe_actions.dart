@@ -242,7 +242,9 @@ Future<void> editLayerKeyframes(
 }) async {
   final scope = VideoEditorScope.of(context);
   final mainBloc = context.read<VideoEditorMainBloc>();
-  var time = mainBloc.state.currentPosition;
+  // The canvas/diamond follow this live clock while a seek is pending; the
+  // bloc's currentPosition only catches up after the player reports it.
+  var time = scope.playTimeNotifier.value;
   if (time < item.startTime || time > item.endTime) {
     time = item.startTime;
     mainBloc.add(VideoEditorSeekRequested(time));
@@ -362,13 +364,14 @@ Future<void> editLayerOpacity(
     return editDetachedClipOpacity(context, layer, item: item);
   }
 
-  final editor = VideoEditorScope.of(context).editor;
+  final scope = VideoEditorScope.of(context);
+  final editor = scope.editor;
   if (editor == null) return;
   final mainBloc = context.read<VideoEditorMainBloc>();
 
   // A layer is not drawn outside its time range, so a playhead outside it is
   // moved to the layer's start first; the slider would fade nothing visible.
-  var time = mainBloc.state.currentPosition;
+  var time = scope.playTimeNotifier.value;
   if (time < item.startTime || time > item.endTime) {
     time = item.startTime;
     mainBloc.add(VideoEditorSeekRequested(time));
