@@ -602,8 +602,12 @@ void main() {
             (_) => Stream.value(
               CacheResult.live(
                 FollowingSnapshot(
-                  pubkeys: [validPubkey('following1'), validPubkey('toBlock')],
-                  count: 2,
+                  pubkeys: [
+                    validPubkey('following1'),
+                    validPubkey('toBlock'),
+                    validPubkey('following2'),
+                  ],
+                  count: 3,
                 ),
               ),
             ),
@@ -619,14 +623,12 @@ void main() {
           bloc.add(const MyFollowingBlocklistChanged());
         },
         verify: (bloc) {
-          expect(
-            bloc.state.followingPubkeys,
-            isNot(contains(validPubkey('toBlock'))),
-          );
-          expect(
-            bloc.state.followingPubkeys,
-            contains(validPubkey('following1')),
-          );
+          // Still newest first: oldestFirst is the raw contact-list order, so
+          // only the default order shows whether the re-filter keeps the sort.
+          expect(bloc.state.followingPubkeys, [
+            validPubkey('following2'),
+            validPubkey('following1'),
+          ]);
         },
       );
 
