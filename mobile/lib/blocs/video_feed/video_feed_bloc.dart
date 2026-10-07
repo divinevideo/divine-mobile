@@ -260,7 +260,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     while (true) {
       final stored = _modePreferences._savedScopedValue;
       final restoresCurated =
-          !event.forceMode && stored != null && stored.startsWith('list:');
+          !event.forceMode &&
+          stored != null &&
+          VideoFeedSource.isCuratedListPreference(stored);
       final snapshot = restoresCurated
           ? _curatedListRepository.subscriptionSnapshot
           : null;
@@ -316,7 +318,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
             !mayPersist &&
             source.type == VideoFeedSourceType.forYou &&
             storedSource != null &&
-            storedSource.startsWith('list:')
+            VideoFeedSource.isCuratedListPreference(storedSource)
         ? storedSource
         : null;
 
@@ -414,9 +416,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   /// Keep unresolved scoped list preferences until the bridge can decide.
   bool _mayPersistRestoredSource(VideoFeedSource restored) {
     final stored = _modePreferences._savedScopedValue;
-    if (stored == restored.persistenceValue) return false;
+    if (stored == FeedModePreferenceStore.storageValueFor(restored)) {
+      return false;
+    }
     return stored == null ||
-        !stored.startsWith('list:') ||
+        !VideoFeedSource.isCuratedListPreference(stored) ||
         _curatedListRepository.hasCompleteSubscriptionSnapshot;
   }
 
@@ -481,7 +485,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     // as having chosen it: a saved list that did not resolve is kept
     // while Home shows For You, so picking For You has to be saved.
     if (state.source == source && state.status == VideoFeedStatus.success) {
-      if (_modePreferences._savedScopedValue != source.persistenceValue) {
+      if (_modePreferences._savedScopedValue !=
+          FeedModePreferenceStore.storageValueFor(source)) {
         await _modePreferences.persist(source);
       }
       return;

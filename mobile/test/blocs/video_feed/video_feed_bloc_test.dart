@@ -1036,7 +1036,16 @@ void main() {
       blocTest<VideoFeedBloc, VideoFeedBlocState>(
         'restores saved subscribed list source when list exists',
         setUp: () async {
-          final list = createTestList();
+          final list = createTestList().copyWith(
+            pubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            isPublic: true,
+          );
+          latestCuratedSnapshot = CuratedListSubscriptionSnapshot(
+            lists: [list],
+            isComplete: true,
+          );
+          when(() => mockCuratedListRepository.getSubscribedLists())
+              .thenReturn(latestCuratedSnapshot.lists);
           final videos = createTestVideos(2);
           SharedPreferences.setMockInitialValues({
             'selected_feed_mode': 'list:list-a',
@@ -1044,10 +1053,12 @@ void main() {
           final sharedPreferences = await SharedPreferences.getInstance();
 
           when(
-            () => mockCuratedListRepository.getListById('list-a'),
+            () => mockCuratedListRepository.getListById(list.authorScopedId),
           ).thenReturn(list);
           when(
-            () => mockCuratedListRepository.getOrderedVideoIds(':list-a'),
+            () => mockCuratedListRepository.getOrderedVideoIds(
+              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:list-a',
+            ),
           ).thenReturn(['video-a', 'video-b']);
           when(
             () => mockVideosRepository.getVideosForList(['video-a', 'video-b']),
@@ -1069,13 +1080,24 @@ void main() {
                 'source',
                 VideoFeedSourceType.subscribedList,
               )
-              .having((s) => s.source.listId, 'listId', ':list-a')
+              .having(
+                (s) => s.source.listId,
+                'listId',
+                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:list-a',
+              )
               .having((s) => s.feedContextTitle, 'title', 'Best Vines'),
           isA<VideoFeedBlocState>()
               .having((s) => s.status, 'status', VideoFeedStatus.success)
               .having((s) => s.hasMore, 'hasMore', false)
               .having((s) => s.isSubscribedListSelected, 'is list', true),
         ],
+        verify: (_) async {
+          final preferences = await SharedPreferences.getInstance();
+          expect(
+            preferences.getString('selected_feed_mode'),
+            'curated:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:list-a',
+          );
+        },
       );
 
       blocTest<VideoFeedBloc, VideoFeedBlocState>(
@@ -4146,15 +4168,27 @@ void main() {
       blocTest<VideoFeedBloc, VideoFeedBlocState>(
         'does not serve cache for a subscribed list source',
         setUp: () async {
+          final list = createTestList().copyWith(
+            pubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            isPublic: true,
+          );
+          latestCuratedSnapshot = CuratedListSubscriptionSnapshot(
+            lists: [list],
+            isComplete: true,
+          );
+          when(() => mockCuratedListRepository.getSubscribedLists())
+              .thenReturn(latestCuratedSnapshot.lists);
           SharedPreferences.setMockInitialValues({
             'selected_feed_mode': 'list:list-a',
           });
           sharedPreferences = await SharedPreferences.getInstance();
           when(
-            () => mockCuratedListRepository.getListById('list-a'),
-          ).thenReturn(createTestList());
+            () => mockCuratedListRepository.getListById(list.authorScopedId),
+          ).thenReturn(list);
           when(
-            () => mockCuratedListRepository.getOrderedVideoIds(':list-a'),
+            () => mockCuratedListRepository.getOrderedVideoIds(
+              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:list-a',
+            ),
           ).thenReturn(['video-a', 'video-b']);
           when(
             () => mockVideosRepository.getVideosForList(['video-a', 'video-b']),
@@ -4173,6 +4207,10 @@ void main() {
               .having((s) => s.videos.length, 'count', 3),
         ],
         verify: (_) {
+          expect(
+            sharedPreferences.getString('selected_feed_mode'),
+            'curated:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:list-a',
+          );
           verifyNever(
             () => mockCache.readVideos(
               pubkey: any(named: 'pubkey'),
