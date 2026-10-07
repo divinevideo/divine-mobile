@@ -100,11 +100,11 @@ class AddToPeopleListsSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(context.l10n.peopleListsLoadFailed),
-            TextButton(
+            DivineButton(
+              label: context.l10n.peopleListsAddPeopleRetry,
               onPressed: () => context.read<PeopleListsBloc>().add(
                 const PeopleListsOwnerSyncRequested(),
               ),
-              child: Text(context.l10n.peopleListsAddPeopleRetry),
             ),
           ],
         );
