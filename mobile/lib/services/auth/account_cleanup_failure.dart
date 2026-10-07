@@ -3,7 +3,18 @@
 
 part of '../auth_service.dart';
 
+/// Captures eligibility at an entry boundary, including an explicitly cold
+/// entry. Internal continuations must never recapture a newer live identity.
+class _ContinuingAccountSession {
+  const _ContinuingAccountSession(this.identity);
+
+  final NostrIdentity? identity;
+}
+
 extension _AccountCleanupFailure on AuthService {
+  _ContinuingAccountSession _captureContinuingAccountSession() =>
+      _ContinuingAccountSession(isAuthenticated ? _currentIdentity : null);
+
   /// An interrupted non-destructive identity sweep stays an entry gate, but
   /// must not tear down the same established live account during refresh.
   bool _canDeferPendingCleanupForLiveSession(
