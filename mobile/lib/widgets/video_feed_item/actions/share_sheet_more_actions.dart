@@ -16,6 +16,7 @@ class _MoreActionsSection extends ConsumerWidget {
     required this.onShareVia,
     required this.onCopyEventJson,
     required this.onCopyEventId,
+    required this.onCrosspostShown,
     this.isSavePending = false,
     this.isDeletePending = false,
     this.onEditVideo,
@@ -44,6 +45,7 @@ class _MoreActionsSection extends ConsumerWidget {
   final Future<void> Function()? onDeleteVideo;
   final VoidCallback? onAddVideoToClips;
   final Future<void> Function()? onCrosspost;
+  final VoidCallback onCrosspostShown;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -102,6 +104,7 @@ class _MoreActionsSection extends ConsumerWidget {
           icon: DivineIconName.arrowsClockwise,
           label: context.l10n.shareSheetCrosspost,
           onTap: () => unawaited(onCrosspost!.call()),
+          onShown: onCrosspostShown,
         ),
       _ActionData(
         icon: DivineIconName.listPlus,
@@ -159,12 +162,21 @@ class _MoreActionsSection extends ConsumerWidget {
               separatorBuilder: (_, _) => const SizedBox(width: 4),
               itemBuilder: (context, index) {
                 final action = actions[index];
-                return _ActionCircle(
+                final circle = _ActionCircle(
                   icon: action.icon,
                   label: action.label,
                   onTap: action.onTap,
                   isPending: action.isPending,
                   isDisabled: action.isDisabled,
+                );
+                final onShown = action.onShown;
+                if (onShown == null) return circle;
+                return VisibilityDetector(
+                  key: ValueKey(onShown),
+                  onVisibilityChanged: (info) {
+                    if (info.visibleFraction > 0) onShown();
+                  },
+                  child: circle,
                 );
               },
             ),
@@ -182,11 +194,13 @@ class _ActionData {
     required this.onTap,
     this.isPending = false,
     this.isDisabled = false,
+    this.onShown,
   });
 
   final DivineIconName icon;
   final String label;
   final VoidCallback onTap;
+  final VoidCallback? onShown;
 
   /// Whether the action is mid-flight, so the circle shows a spinner and stops
   /// responding to taps.

@@ -36,6 +36,7 @@ import 'package:openvine/widgets/crosspost_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/actions/share_action_button.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod/misc.dart' show Override;
+import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../../helpers/go_router.dart';
 import '../../../helpers/test_provider_overrides.dart';
@@ -68,6 +69,12 @@ class _RecordingAnalyticsSink extends NoOpAnalyticsEventSink {
 }
 
 void main() {
+  setUp(() {
+    final controller = VisibilityDetectorController.instance;
+    final previousInterval = controller.updateInterval;
+    controller.updateInterval = Duration.zero;
+    addTearDown(() => controller.updateInterval = previousInterval);
+  });
   setUpAll(() {
     registerFallbackValue(_FakeVideoEvent());
   });
@@ -512,10 +519,56 @@ void main() {
         testWidgets(
           'hides Crosspost for an identity the crossposter cannot serve',
           (tester) async {
-            await pumpOwnerSheet(tester, canSign: false);
+            final sink = _RecordingAnalyticsSink();
+            await pumpOwnerSheet(
+              tester,
+              canSign: false,
+              additionalOverrides: [
+                analyticsEventSinkProvider.overrideWithValue(sink),
+              ],
+            );
 
             expect(find.text(l10n.shareMenuEditVideo), findsOneWidget);
             expect(find.text(l10n.shareSheetCrosspost), findsNothing);
+            expect(sink.events, isEmpty);
+          },
+        );
+
+        testWidgets(
+          'counts the Crosspost row only once when scrolled into view',
+          (
+            tester,
+          ) async {
+            tester.view.physicalSize = const Size(400, 900);
+            tester.view.devicePixelRatio = 1;
+            addTearDown(tester.view.resetPhysicalSize);
+            addTearDown(tester.view.resetDevicePixelRatio);
+            final sink = _RecordingAnalyticsSink();
+            final client = _MockCrosspostingApiClient();
+            await pumpOwnerSheet(
+              tester,
+              additionalOverrides: [
+                appOAuthSupportProvider.overrideWith((ref) async => true),
+                analyticsEventSinkProvider.overrideWithValue(sink),
+                crosspostingApiClientProvider.overrideWithValue(client),
+              ],
+            );
+            expect(sink.events, isEmpty);
+            final actions = find.byType(ListView).last;
+            await tester.drag(actions, const Offset(-500, 0));
+            await tester.pumpAndSettle();
+            expect(sink.events, hasLength(1));
+            expect(sink.events.single.name, 'crosspost_cta_shown');
+            expect(sink.events.single.parameters, {
+              'surface': 'share_sheet',
+              'cta': 'crosspost_row',
+            });
+            await tester.drag(actions, const Offset(500, 0));
+            await tester.pumpAndSettle();
+            await tester.drag(actions, const Offset(-500, 0));
+            await tester.pumpAndSettle();
+            expect(sink.events, hasLength(1));
+            verifyNever(client.getConnections);
           },
         );
 
@@ -541,6 +594,10 @@ void main() {
 
             await tester.tap(find.text(l10n.shareSheetCrosspost));
             await tester.pump();
+            expect(sink.events.map((event) => event.name), [
+              'crosspost_cta_shown',
+              'crosspost_cta_tapped',
+            ]);
             verifyNever(
               () => goRouter.push<void>(any(), extra: any(named: 'extra')),
             );
@@ -558,7 +615,16 @@ void main() {
             verifyNever(
               () => goRouter.push<void>(any(), extra: any(named: 'extra')),
             );
-            expect(sink.events, isEmpty);
+            expect(sink.events.map((event) => event.name), [
+              'crosspost_cta_shown',
+              'crosspost_cta_tapped',
+            ]);
+            expect(
+              sink.events.every(
+                (event) => event.parameters['cta'] == 'crosspost_row',
+              ),
+              isTrue,
+            );
           },
         );
 
@@ -590,6 +656,43 @@ void main() {
           await tester.pump();
         });
 
+        testWidgets(
+          'a quick tap records exposure before visibility callbacks',
+          (
+            tester,
+          ) async {
+            final controller = VisibilityDetectorController.instance;
+            controller.updateInterval = const Duration(minutes: 1);
+            addTearDown(controller.notifyNow);
+            final goRouter = MockGoRouter();
+            when(() => goRouter.push<void>(any(), extra: any(named: 'extra')))
+                .thenAnswer((_) async {});
+            final sink = _RecordingAnalyticsSink();
+            final client = _MockCrosspostingApiClient();
+            when(client.getConnections).thenAnswer((_) async => const []);
+            await pumpOwnerSheet(
+              tester,
+              goRouter: goRouter,
+              additionalOverrides: [
+                appOAuthSupportProvider.overrideWith((ref) async => true),
+                analyticsEventSinkProvider.overrideWithValue(sink),
+                crosspostingApiClientProvider.overrideWithValue(client),
+              ],
+            );
+            expect(sink.events, isEmpty);
+            await tester.tap(find.text(l10n.shareSheetCrosspost));
+            await tester.pumpAndSettle();
+            expect(sink.events.map((event) => event.name), [
+              'crosspost_cta_shown',
+              'crosspost_cta_tapped',
+            ]);
+            controller.updateInterval = Duration.zero;
+            controller.notifyNow();
+            await tester.pumpWidget(const SizedBox());
+            await tester.pump();
+          },
+        );
+
         testWidgets('Crosspost routes to settings with no connections', (
           tester,
         ) async {
@@ -613,7 +716,13 @@ void main() {
             ],
           );
 
-          expect(sink.events, isEmpty);
+          expect(sink.events, hasLength(1));
+          expect(sink.events.single.name, 'crosspost_cta_shown');
+          expect(
+            sink.events.single.parameters,
+            {'surface': 'share_sheet', 'cta': 'crosspost_row'},
+          );
+          verifyNever(client.getConnections);
           await tester.tap(find.text(l10n.shareSheetCrosspost));
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 100));
@@ -623,7 +732,7 @@ void main() {
           expect(shownEvents, hasLength(1));
           expect(
             shownEvents.single.parameters,
-            equals({'surface': 'share_sheet', 'cta': 'connect'}),
+            equals({'surface': 'share_sheet', 'cta': 'crosspost_row'}),
           );
 
           verify(() => goRouter.push<void>(RoutePaths.crosspostingSettings))
@@ -634,12 +743,12 @@ void main() {
           expect(tapEvents, hasLength(1));
           expect(
             tapEvents.single.parameters,
-            equals({'surface': 'share_sheet', 'cta': 'connect'}),
+            equals({'surface': 'share_sheet', 'cta': 'crosspost_row'}),
           );
         });
 
         testWidgets(
-          'Crosspost after a failed connections load logs no CTA events',
+          'Crosspost records the row tap even when connections fail',
           (tester) async {
             final goRouter = MockGoRouter();
             when(() => goRouter.push<void>(any(), extra: any(named: 'extra')))
@@ -665,7 +774,16 @@ void main() {
 
             verify(() => goRouter.push<void>(RoutePaths.crosspostingSettings))
                 .called(1);
-            expect(sink.events, isEmpty);
+            expect(sink.events.map((event) => event.name), [
+              'crosspost_cta_shown',
+              'crosspost_cta_tapped',
+            ]);
+            expect(
+              sink.events.every(
+                (event) => event.parameters['cta'] == 'crosspost_row',
+              ),
+              isTrue,
+            );
           },
         );
       });

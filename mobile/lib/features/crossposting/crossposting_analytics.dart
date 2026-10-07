@@ -18,6 +18,9 @@ enum CrosspostCtaSurface {
 
 /// Which crossposting CTA was tapped.
 enum CrosspostCta {
+  /// The share-menu entry, before connection status is known.
+  crosspostRow('crosspost_row'),
+
   /// Connect a first platform.
   connect('connect'),
 
@@ -60,8 +63,8 @@ Future<void> logCrosspostCtaShown(
 
 /// Records a tap on a crossposting CTA.
 ///
-/// Log only taps that act as a call to action. Using the share-menu Crosspost
-/// row to crosspost through an existing connection is not a CTA tap.
+/// The share-menu row uses [CrosspostCta.crosspostRow] regardless of connection
+/// status; settings retains the connect and automatic-mode distinctions.
 Future<void> logCrosspostCtaTapped(
   AnalyticsEventSink sink, {
   required CrosspostCtaSurface surface,
