@@ -388,163 +388,164 @@ void main() {
 
       expect(ownListsForSearchBridge(service, viewerPubkey: null), [draft]);
     });
-  });
 
-  test('real unknown-author follow preserves raw preference until a decoded author arrives', () async {
-    registerFallbackValue(<Filter>[]);
-    const rawId = 'legacy:cats';
-    const eventId =
-        '3333333333333333333333333333333333333333333333333333333333333333';
-    const key = 'selected_feed_mode_$_viewer';
-    final unknown = _curatedList(id: rawId).copyWith(nostrEventId: eventId);
-    final draft = _curatedList(id: 'owned-draft')
-        .copyWith(videoEventIds: [eventId]);
-    final storedRows = jsonEncode([unknown.toJson(), draft.toJson()]);
-    final storedFollows = jsonEncode([rawId]);
-    SharedPreferences.setMockInitialValues({
-      CuratedListService.listsStorageKey: storedRows,
-      CuratedListService.subscribedListsStorageKey: storedFollows,
-      CuratedListService.defaultListDeletedStorageKey: true,
-      key: 'list:$rawId',
-    });
-    final prefs = await SharedPreferences.getInstance();
-    final services = <CuratedListService>[];
-    final streams = <StreamController<Event>>[];
-    addTearDown(() async {
-      for (final service in services) {
-        service.dispose();
+    test('real unknown-author follow preserves raw preference until a decoded author arrives', () async {
+      registerFallbackValue(<Filter>[]);
+      const rawId = 'legacy:cats';
+      const eventId =
+          '3333333333333333333333333333333333333333333333333333333333333333';
+      const key = 'selected_feed_mode_$_viewer';
+      final unknown = _curatedList(id: rawId).copyWith(nostrEventId: eventId);
+      final draft = _curatedList(id: 'owned-draft')
+          .copyWith(videoEventIds: [eventId]);
+      final storedRows = jsonEncode([unknown.toJson(), draft.toJson()]);
+      final storedFollows = jsonEncode([rawId]);
+      SharedPreferences.setMockInitialValues({
+        CuratedListService.listsStorageKey: storedRows,
+        CuratedListService.subscribedListsStorageKey: storedFollows,
+        CuratedListService.defaultListDeletedStorageKey: true,
+        key: 'list:$rawId',
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final services = <CuratedListService>[];
+      final streams = <StreamController<Event>>[];
+      addTearDown(() async {
+        for (final service in services) {
+          service.dispose();
+        }
+        for (final stream in streams) {
+          await stream.close();
+        }
+        await pumpEventQueue();
+      });
+      Future<CuratedListService> open() async {
+        final auth = _MockAuthService();
+        when(() => auth.isAuthenticated).thenReturn(true);
+        when(() => auth.currentPublicKeyHex).thenReturn(_viewer);
+        final nostr = _MockNostrClient();
+        final stream = StreamController<Event>.broadcast();
+        streams.add(stream);
+        when(
+          () => nostr.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer((_) => stream.stream);
+        when(() => nostr.subscribe(any(), closeOnEose: true))
+            .thenAnswer((_) => stream.stream);
+        when(() => nostr.subscribe(any())).thenAnswer((_) => stream.stream);
+        final service = CuratedListService(
+          nostrService: nostr,
+          authService: auth,
+          prefs: prefs,
+        );
+        services.add(service);
+        await service.initialize();
+        expect(service.isInitialized, isTrue);
+        expect(service.initializationError, isNull);
+        expect(stream.hasListener, isTrue);
+        return service;
       }
-      for (final stream in streams) {
-        await stream.close();
-      }
-      await pumpEventQueue();
-    });
-    Future<CuratedListService> open() async {
-      final auth = _MockAuthService();
-      when(() => auth.isAuthenticated).thenReturn(true);
-      when(() => auth.currentPublicKeyHex).thenReturn(_viewer);
-      final nostr = _MockNostrClient();
-      final stream = StreamController<Event>.broadcast();
-      streams.add(stream);
-      when(
-        () => nostr.subscribe(
-          any(),
-          closeOnEose: true,
-          onEose: any(named: 'onEose'),
-        ),
-      ).thenAnswer((_) => stream.stream);
-      when(() => nostr.subscribe(any(), closeOnEose: true))
-          .thenAnswer((_) => stream.stream);
-      when(() => nostr.subscribe(any())).thenAnswer((_) => stream.stream);
-      final service = CuratedListService(
-        nostrService: nostr,
-        authService: auth,
-        prefs: prefs,
+
+      final unresolved = await open();
+      final repository = CuratedListRepository(
+        nostrClient: _MockNostrClient(),
+        funnelcakeApiClient: _MockFunnelcakeApiClient(),
       );
-      services.add(service);
-      await service.initialize();
-      expect(service.isInitialized, isTrue);
-      expect(service.initializationError, isNull);
-      expect(stream.hasListener, isTrue);
-      return service;
-    }
+      addTearDown(repository.dispose);
+      syncCuratedListRepositoryBridge(
+        repository,
+        unresolved,
+        viewerPubkey: _viewer,
+        isDataReady: true,
+      );
+      expect(unresolved.subscribedLists.single.pubkey, isNull);
+      expect(repository.getSubscribedLists(), isEmpty);
+      expect(repository.hasCompleteSubscriptionSnapshot, isFalse);
+      expect(repository.searchLists('owned-draft').single.pubkey, _viewer);
+      expect(prefs.getString(CuratedListService.listsStorageKey), storedRows);
+      expect(
+        prefs.getString(CuratedListService.subscribedListsStorageKey),
+        storedFollows,
+      );
+      final follows = _MockFollowRepository();
+      when(() => follows.followingPubkeys).thenReturn(const []);
+      when(() => follows.followingStream)
+          .thenAnswer((_) => const Stream.empty());
+      final videos = _MockVideosRepository();
+      when(
+        () => videos.getRecommendedVideos(
+          userPubkey: any(named: 'userPubkey'),
+          limit: any(named: 'limit'),
+          until: any(named: 'until'),
+          skipCache: any(named: 'skipCache'),
+          revalidate: any(named: 'revalidate'),
+        ),
+      ).thenAnswer((_) async => const HomeFeedResult(videos: []));
+      when(() => videos.getVideosForList(any())).thenAnswer((_) async => []);
+      final home = VideoFeedBloc(
+        videosRepository: videos,
+        followRepository: follows,
+        curatedListRepository: repository,
+        userPubkey: _viewer,
+        sharedPreferences: prefs,
+        serveCachedHomeFeed: false,
+      );
+      addTearDown(home.close);
+      final started = home.stream.firstWhere(
+        (state) => state.status == VideoFeedStatus.success,
+      );
+      home.add(const VideoFeedStarted());
+      await started.timeout(const Duration(seconds: 5));
+      expect(home.state.source, const VideoFeedSource.forYou());
+      expect(prefs.getString(key), 'list:$rawId');
 
-    final unresolved = await open();
-    final repository = CuratedListRepository(
-      nostrClient: _MockNostrClient(),
-      funnelcakeApiClient: _MockFunnelcakeApiClient(),
-    );
-    addTearDown(repository.dispose);
-    syncCuratedListRepositoryBridge(
-      repository,
-      unresolved,
-      viewerPubkey: _viewer,
-      isDataReady: true,
-    );
-    expect(unresolved.subscribedLists.single.pubkey, isNull);
-    expect(repository.getSubscribedLists(), isEmpty);
-    expect(repository.hasCompleteSubscriptionSnapshot, isFalse);
-    expect(repository.searchLists('owned-draft').single.pubkey, _viewer);
-    expect(prefs.getString(CuratedListService.listsStorageKey), storedRows);
-    expect(
-      prefs.getString(CuratedListService.subscribedListsStorageKey),
-      storedFollows,
-    );
-    final follows = _MockFollowRepository();
-    when(() => follows.followingPubkeys).thenReturn(const []);
-    when(() => follows.followingStream).thenAnswer((_) => const Stream.empty());
-    final videos = _MockVideosRepository();
-    when(
-      () => videos.getRecommendedVideos(
-        userPubkey: any(named: 'userPubkey'),
-        limit: any(named: 'limit'),
-        until: any(named: 'until'),
-        skipCache: any(named: 'skipCache'),
-        revalidate: any(named: 'revalidate'),
-      ),
-    ).thenAnswer((_) async => const HomeFeedResult(videos: []));
-    when(() => videos.getVideosForList(any())).thenAnswer((_) async => []);
-    final home = VideoFeedBloc(
-      videosRepository: videos,
-      followRepository: follows,
-      curatedListRepository: repository,
-      userPubkey: _viewer,
-      sharedPreferences: prefs,
-      serveCachedHomeFeed: false,
-    );
-    addTearDown(home.close);
-    final started = home.stream.firstWhere(
-      (state) => state.status == VideoFeedStatus.success,
-    );
-    home.add(const VideoFeedStarted());
-    await started.timeout(const Duration(seconds: 5));
-    expect(home.state.source, const VideoFeedSource.forYou());
-    expect(prefs.getString(key), 'list:$rawId');
-
-    // A decoded relay row supplies its full author. The guard does not repair,
-    // delete, or attribute the old cache; this represents verified hydration.
-    final relay = Event(
-      _otherAuthor,
-      30005,
-      [
-        ['d', rawId],
-        ['title', rawId],
-        ['e', eventId],
-      ],
-      '',
-      createdAt: DateTime(2026, 5, 19).millisecondsSinceEpoch ~/ 1000,
-    );
-    final verified = CuratedListConverter.fromEvent(relay)!;
-    await prefs.setString(
-      CuratedListService.listsStorageKey,
-      jsonEncode([verified.toJson(), draft.toJson()]),
-    );
-    final hydrated = await open();
-    final restored = home.stream.firstWhere(
-      (state) =>
-          state.status == VideoFeedStatus.success &&
-          state.source.listId == verified.authorScopedId,
-    );
-    syncCuratedListRepositoryBridge(
-      repository,
-      hydrated,
-      viewerPubkey: _viewer,
-      isDataReady: true,
-    );
-    await restored.timeout(const Duration(seconds: 5));
-    expect(repository.hasCompleteSubscriptionSnapshot, isTrue);
-    expect(repository.getSubscribedLists(), [verified]);
-    expect(home.state.source.listId, '$_otherAuthor:$rawId');
-    expect(prefs.getString(key), 'curated:$_otherAuthor:$rawId');
-    expect(
-      prefs.getString(CuratedListService.subscribedListsStorageKey),
-      storedFollows,
-    );
-    expect(
-      unresolved.lists.firstWhere((list) => list.id == rawId).pubkey,
-      isNull,
-    );
-    expect(repository.searchLists('owned-draft').single.pubkey, _viewer);
+      // A decoded relay row supplies its full author. The guard does not repair,
+      // delete, or attribute the old cache; this represents verified hydration.
+      final relay = Event(
+        _otherAuthor,
+        30005,
+        [
+          ['d', rawId],
+          ['title', rawId],
+          ['e', eventId],
+        ],
+        '',
+        createdAt: DateTime(2026, 5, 19).millisecondsSinceEpoch ~/ 1000,
+      );
+      final verified = CuratedListConverter.fromEvent(relay)!;
+      await prefs.setString(
+        CuratedListService.listsStorageKey,
+        jsonEncode([verified.toJson(), draft.toJson()]),
+      );
+      final hydrated = await open();
+      final restored = home.stream.firstWhere(
+        (state) =>
+            state.status == VideoFeedStatus.success &&
+            state.source.listId == verified.authorScopedId,
+      );
+      syncCuratedListRepositoryBridge(
+        repository,
+        hydrated,
+        viewerPubkey: _viewer,
+        isDataReady: true,
+      );
+      await restored.timeout(const Duration(seconds: 5));
+      expect(repository.hasCompleteSubscriptionSnapshot, isTrue);
+      expect(repository.getSubscribedLists(), [verified]);
+      expect(home.state.source.listId, '$_otherAuthor:$rawId');
+      expect(prefs.getString(key), 'curated:$_otherAuthor:$rawId');
+      expect(
+        prefs.getString(CuratedListService.subscribedListsStorageKey),
+        storedFollows,
+      );
+      expect(
+        unresolved.lists.firstWhere((list) => list.id == rawId).pubkey,
+        isNull,
+      );
+      expect(repository.searchLists('owned-draft').single.pubkey, _viewer);
+    });
   });
 }
 
