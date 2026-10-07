@@ -33,8 +33,9 @@ Other NIP-17 clients ignore the unknown tag and show an ordinary video.
 
 ## The C2PA check
 
-Every Divine recording is C2PA-signed by ProofSign at capture, with a
-`c2pa.created` action whose `digitalSourceType` is `digitalCapture`. Before a
+A Divine recording is C2PA-signed by ProofSign at capture, with a
+`c2pa.created` action whose `digitalSourceType` is `digitalCapture` (see
+[Limits](#limits) for the recordings that end up without one). Before a
 received clip is added to the library, `ClipProvenanceVerifier` reads the
 decrypted file's manifest and requires all of:
 
@@ -94,6 +95,11 @@ so nothing unverified gets in, but nothing verified does either.
 | no credentials, untrusted signer, invalid, not a camera capture | "We couldn't confirm this was shot with the Divine camera…" — nothing is saved |
 | check could not run (offline without anchors) | "Couldn't check this clip right now…" — try again later |
 
+On the sending side, every picked clip is checked before the first upload. If
+one fails a check that ran, none of them is sent, and the sender sees "We
+couldn't confirm this clip was shot with the Divine camera, so it can't be
+sent as a clip."
+
 C2PA reading exists on Android and iOS only, so clip sharing is offered on
 those platforms; elsewhere the attach button still sends a gallery video.
 
@@ -109,3 +115,21 @@ The proof record matters. The editor's render step signs any clip without one
 as a fresh `digitalCapture` by the person rendering, and would rewrite the
 file in place. With the record present, the received clip keeps its original
 credential.
+
+The source credit is public once the clip is used. A video the recipient posts
+with a received clip in it carries the sender as a clip-source `p` tag, the
+same credit a clip imported from a published video gets, so the sender is
+named and notified. Nothing about the DM itself is published.
+
+## Limits
+
+- **Only untouched recordings carry a credential.** A clip that the editor
+  flattened or merged has no manifest, so it cannot be sent as a clip. Keeping
+  the camera proof through edits is #9893.
+- **Not every recording is signed.** A recording whose signing failed at
+  capture (for example offline), and every clip recorded in a build without
+  the ProofSign token, such as a local debug build, has no manifest and fails
+  the sender's check. Late-signing the app's own unaltered recordings is also
+  part of #9893.
+- **Android and iOS only.** Other platforms have no C2PA reader and keep the
+  plain gallery attach and save.

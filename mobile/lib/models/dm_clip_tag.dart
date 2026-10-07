@@ -1,5 +1,5 @@
 // ABOUTME: Rumor tag that marks an encrypted video DM as a Divine camera clip.
-// ABOUTME: Carries the clip's target aspect ratio so it lands in the right crop.
+// ABOUTME: Carries the clip's target aspect ratio so it lands in its crop.
 
 import 'package:models/models.dart';
 
