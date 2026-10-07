@@ -4545,12 +4545,22 @@ class DmRepository {
             category: LogCategory.system,
           );
         }
-        if (isRecipient && absentOrFailed == _OwnDmInboxState.absent) {
-          return await _queryRecipientWriteRelays(
+        // The write relays are asked even when an earlier leg did not settle:
+        // a list found there is the answer whatever that leg would have said.
+        // Anything short of finding one keeps the earlier verdict, so an
+        // inconclusive read never becomes `absent` this way.
+        if (isRecipient &&
+            (absentOrFailed == _OwnDmInboxState.absent ||
+                relayLists.isNotEmpty)) {
+          final fromWriteRelays = await _queryRecipientWriteRelays(
             pubkey,
             relayLists,
             budget: inboxResolutionBudget - elapsed.elapsed,
           );
+          if (absentOrFailed == _OwnDmInboxState.absent ||
+              fromWriteRelays.state == _OwnDmInboxState.found) {
+            return fromWriteRelays;
+          }
         }
         logInconclusiveRead();
         return (state: absentOrFailed, relays: null, advertisedMissing: null);

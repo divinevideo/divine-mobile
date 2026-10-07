@@ -5549,6 +5549,61 @@ void main() {
         );
 
         test(
+          'still asks the write relays when the indexer did not answer, and '
+          'a list found there is found',
+          () async {
+            stubLegs((invocation) async {
+              final temp = tempOf(invocation);
+              if (temp == null) {
+                return answeredList([
+                  kind10002Event([
+                    ['r', 'wss://write.example'],
+                  ]),
+                ]);
+              }
+              if (temp.contains(lookupRelay)) {
+                return unansweredList(timedOut: true);
+              }
+              return answeredList([
+                kind10050Event(['wss://inbox.example']),
+              ]);
+            });
+
+            final resolved = await createLookupRepository()
+                .resolveDmInboxRelaysDetailed(_validPubkeyB);
+
+            expect(resolved.state, DmInboxResolution.found);
+            expect(resolved.relays, ['wss://inbox.example']);
+          },
+        );
+
+        test(
+          'stays unreadable, never absent, when the indexer did not answer '
+          'and the write relays hold no list',
+          () async {
+            stubLegs((invocation) async {
+              final temp = tempOf(invocation);
+              if (temp == null) {
+                return answeredList([
+                  kind10002Event([
+                    ['r', 'wss://write.example'],
+                  ]),
+                ]);
+              }
+              return temp.contains(lookupRelay)
+                  ? unansweredList(timedOut: true)
+                  : answeredList(const <Event>[]);
+            });
+
+            final resolved = await createLookupRepository()
+                .resolveDmInboxRelaysDetailed(_validPubkeyB);
+
+            expect(tempOf(queries.last), ['wss://write.example']);
+            expect(resolved.state, DmInboxResolution.unreadable);
+          },
+        );
+
+        test(
           'is unreadable when the recipient write relays did not settle',
           () async {
             stubLegs((invocation) async {
