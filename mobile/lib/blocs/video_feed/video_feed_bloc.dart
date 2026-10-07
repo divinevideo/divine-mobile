@@ -146,6 +146,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   int _sourceSelectionSequence = 0;
   int? _activeSourceSelection;
   VideoFeedCuratedListsChanged? _deferredCuratedSnapshot;
+  VideoFeedFollowedPeopleListsChanged? _deferredFollowedPeopleLists;
   int _followedListsSequence = 0;
   bool _isClosing = false;
   FollowedPeopleListRef? _pendingRestoredPeopleList;
@@ -650,8 +651,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         _activeSourceSelection = null;
         final deferred = _deferredCuratedSnapshot;
         _deferredCuratedSnapshot = null;
-        if (deferred != null && !emit.isDone && !_isClosing) {
-          addIfOpen(deferred);
+        final deferredFollowed = _deferredFollowedPeopleLists;
+        _deferredFollowedPeopleLists = null;
+        if (!emit.isDone && !_isClosing) {
+          if (deferred != null) addIfOpen(deferred);
+          if (deferredFollowed != null) addIfOpen(deferredFollowed);
         }
       }
     }
@@ -1175,8 +1179,16 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         return;
       }
     }
+    if (_activeSourceSelection != null) {
+      // The visible source can still be the old one while an explicit choice
+      // awaits storage. Reconcile once it has finished, so an automatic
+      // fallback cannot overwrite the newer intent using old state.
+      _deferredFollowedPeopleLists = event;
+      return;
+    }
     if (_listsEqual(followed, state.followedPeopleLists)) return;
 
+    final selectionSequence = _sourceSelectionSequence;
     final sequence = ++_followedListsSequence;
     final updated = state.copyWith(followedPeopleLists: followed);
     final source = state.source;
@@ -1203,11 +1215,13 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
           listId: source.listId!,
         ),
       );
-      if (emit.isDone ||
+      bool isSuperseded() =>
+          emit.isDone ||
+          _isClosing ||
           state.source != source ||
-          sequence != _followedListsSequence) {
-        return;
-      }
+          sequence != _followedListsSequence ||
+          selectionSequence != _sourceSelectionSequence;
+      if (isSuperseded()) return;
       const fallback = VideoFeedSource.forYou();
       // A missing cached copy is not an unfollow; preserve the restart choice.
       if (stillFollowed) {
@@ -1215,14 +1229,14 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
           ownerPubkey: source.listOwnerPubkey!,
           listId: source.listId!,
         );
-      } else {
-        await _persistPeopleListFallback(fallback);
-      }
-      if (emit.isDone ||
-          state.source != source ||
-          sequence != _followedListsSequence) {
+      } else if (!await _persistPeopleListFallback(
+        fallback,
+        selectionSequence,
+        emit,
+      )) {
         return;
       }
+      if (isSuperseded()) return;
       await _restartFeed(fallback, emit, followedPeopleLists: followed);
       return;
     }
@@ -1234,14 +1248,25 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     emit(updated);
   }
 
-  /// Saves the automatic fall back to [fallback].
+  /// Saves the automatic fall back to [fallback] unless the viewer chose a
+  /// source meanwhile, and says whether the fallback should go ahead.
   ///
-  /// A write that fails does not stop the fallback: the feed still has to leave
-  /// a list that is no longer followed, and the next start repairs what is
-  /// stored.
-  Future<void> _persistPeopleListFallback(VideoFeedSource fallback) async {
+  /// A write that fails does not stop it: the feed still has to leave a list
+  /// that is no longer followed, and the next start repairs what is stored.
+  Future<bool> _persistPeopleListFallback(
+    VideoFeedSource fallback,
+    int selectionSequence,
+    Emitter<VideoFeedBlocState> emit,
+  ) async {
+    bool isCurrent() =>
+        !emit.isDone &&
+        !_isClosing &&
+        selectionSequence == _sourceSelectionSequence;
     try {
-      await _modePreferences.persist(fallback);
+      final write = await _modePreferences._prepare(fallback);
+      if (isCurrent() && write.accept()) return true;
+      await write.discard();
+      return false;
     } on Object catch (error, stackTrace) {
       Log.warning(
         'VideoFeedBloc: could not save the fall back from an unfollowed list',
@@ -1250,6 +1275,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         error: error,
         stackTrace: stackTrace,
       );
+      return isCurrent();
     }
   }
 

@@ -102,6 +102,23 @@ class _RefusingWrites extends InMemorySharedPreferencesStore {
   Future<bool> remove(String key) async => false;
 }
 
+/// Preferences that can hold back their next write until released.
+class _GatedWrites extends InMemorySharedPreferencesStore {
+  _GatedWrites(super.data) : super.withData();
+
+  Completer<void>? _gate;
+
+  void holdNextWrite() => _gate = Completer<void>();
+
+  void release() => _gate?.complete();
+
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) async {
+    await _gate?.future;
+    return super.setValue(valueType, key, value);
+  }
+}
+
 void main() {
   group('VideoFeedBloc', () {
     late _MockVideosRepository mockVideosRepository;
@@ -4881,6 +4898,61 @@ void main() {
             expect(bloc.state.source, const VideoFeedSource.forYou());
             expect(bloc.state.status, VideoFeedStatus.success);
             expect(bloc.state.videos, hasLength(2));
+          },
+        );
+
+        test(
+          'an unfollow that arrives during an explicit source change waits '
+          'for it',
+          () async {
+            final platform = SharedPreferencesStorePlatform.instance;
+            addTearDown(() {
+              SharedPreferences.setMockInitialValues({});
+              SharedPreferencesStorePlatform.instance = platform;
+            });
+            final storage = _GatedWrites({
+              'flutter.selected_feed_mode_$viewer': sourceFor(
+                followedList(),
+              ).persistenceValue,
+            });
+            SharedPreferencesStorePlatform.instance = storage;
+            final prefs = await SharedPreferences.getInstance();
+            when(
+              () => peopleListsRepository.readFollowedLists(
+                viewerPubkey: viewer,
+              ),
+            ).thenAnswer((_) async => [followedList()]);
+            stubMemberVideos(createTestVideos(2));
+            when(
+              () => mockVideosRepository.getNewVideos(
+                limit: any(named: 'limit'),
+                until: any(named: 'until'),
+                skipCache: any(named: 'skipCache'),
+                revalidate: any(named: 'revalidate'),
+              ),
+            ).thenAnswer(
+              (_) async => HomeFeedResult(videos: createTestVideos(2)),
+            );
+            final bloc = createPeopleBloc(sharedPreferences: prefs);
+            addTearDown(bloc.close);
+            bloc.add(const VideoFeedStarted());
+            await pumpEventQueue();
+            expect(bloc.state.source.type, VideoFeedSourceType.peopleList);
+
+            storage.holdNextWrite();
+            bloc.add(const VideoFeedSourceChanged(VideoFeedSource.newVideos()));
+            await pumpEventQueue();
+            followedController.add(const []);
+            await pumpEventQueue();
+            storage.release();
+            await pumpEventQueue();
+
+            expect(bloc.state.source, const VideoFeedSource.newVideos());
+            expect(bloc.state.followedPeopleLists, isEmpty);
+            expect(
+              prefs.getString('selected_feed_mode_$viewer'),
+              FeedMode.latest.name,
+            );
           },
         );
 
