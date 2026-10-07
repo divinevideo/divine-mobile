@@ -363,6 +363,19 @@ void main() {
         clip('b', const Duration(seconds: 1)),
       ];
 
+      test('exposes both editor clock boundaries without the loop wrap', () {
+        expect(TransitionTimelineMap.fromClips(clips).clockBoundaries, [
+          const Duration(milliseconds: 500),
+          const Duration(milliseconds: 1500),
+        ]);
+        expect(
+          TransitionTimelineMap.fromClips([
+            clip('a', const Duration(seconds: 1), transition: overlap500),
+          ]).clockBoundaries,
+          isEmpty,
+        );
+      });
+
       test('is the identity before the blend region', () {
         expect(
           editorToOutputPosition(clips, const Duration(milliseconds: 250)),

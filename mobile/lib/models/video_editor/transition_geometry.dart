@@ -392,6 +392,18 @@ class TransitionTimelineMap {
 
   final List<_Blend> _blends;
 
+  /// Editor times at which the editor-to-output clock changes speed.
+  ///
+  /// Linear motions can be split here without changing their placement so
+  /// interpolation remains linear within each affine piece of the clock.
+  /// The loop-restart wrap does not change the position mapping.
+  List<Duration> get clockBoundaries => {
+    for (final blend in _blends) ...[
+      blend.editorStart,
+      blend.editorStart + blend.blend * 2,
+    ],
+  }.toList()..sort();
+
   /// Null-safe [editorToOutput]: maps [position] onto the output axis, or
   /// returns `null` when [position] is `null` (a layer/effect with no explicit
   /// time anchor — e.g. one that spans the whole video).

@@ -85,7 +85,7 @@ extension LayerExportKeyframes on Layer {
     if (keyframes.isEmpty) return const [];
     final mirrored = flipX != flipY;
     return [
-      for (final keyframe in keyframes)
+      for (final keyframe in _linearExportKeyframes(timelineMap))
         pve.TimelineKeyframe(
           time: _outputTime(timelineMap, keyframeOrigin + keyframe.time),
           offset: exportedLayerTopLeft(
@@ -102,6 +102,37 @@ extension LayerExportKeyframes on Layer {
           curve: pveCurveOf(keyframe.curve),
         ),
     ];
+  }
+
+  /// Split linear spans where the timeline clock changes speed. Merely
+  /// retiming endpoints changes even placement outside the blend. Each added
+  /// point lies on the original motion, making the mapped pieces identical.
+  /// Eased spans cannot be split this way: a cropped enum curve is not the
+  /// original curve, so they keep their existing representation.
+  Iterable<LayerKeyframe> _linearExportKeyframes(
+    TransitionTimelineMap timelineMap,
+  ) sync* {
+    final boundaries = timelineMap.clockBoundaries;
+    for (var i = 0; i < keyframes.length; i++) {
+      final from = keyframes[i];
+      yield from;
+      if (from.curve != AnimationCurve.linear || i + 1 == keyframes.length) {
+        continue;
+      }
+      final start = keyframeOrigin + from.time;
+      final end = keyframeOrigin + keyframes[i + 1].time;
+      for (final boundary in boundaries) {
+        if (boundary <= start || boundary >= end) continue;
+        final placement = keyframePlacementAt(boundary)!;
+        yield LayerKeyframe(
+          time: boundary - keyframeOrigin,
+          offset: placement.offset,
+          scale: placement.scale,
+          rotation: placement.rotation,
+          opacity: placement.opacity,
+        );
+      }
+    }
   }
 
   /// The [Layer.keyframeEffects] as pro_video_editor loops that repeat only

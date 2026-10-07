@@ -133,12 +133,87 @@ void main() {
 
       expect(exported.keyframes.map((k) => k.time), [
         const Duration(seconds: 1),
+        const Duration(milliseconds: 1600),
+        const Duration(milliseconds: 2000),
         const Duration(milliseconds: 2600),
       ]);
       // Three times the editor's 100 px wide body.
       expect(exported.keyframes.last.offset.dx - exported.offset!.dx, 30);
       expect(exported.keyframes.last.scale, 1.5);
       expect(exported.keyframes.last.opacity, 0.5);
+    });
+
+    test('preserves linear placement across an overlap transition', () {
+      final source = pie.Layer(
+        keyframes: const [
+          pie.LayerKeyframe(time: Duration.zero, offset: Offset.zero),
+          pie.LayerKeyframe(
+            time: Duration(seconds: 4),
+            offset: Offset(100, 0),
+            scale: 3,
+            rotation: 0.6,
+            opacity: 0.2,
+          ),
+        ],
+      );
+      final timelineMap = TransitionTimelineMap.fromClips(overlapClips);
+      final exported = VideoEditorRenderService.buildImageLayers(
+        capturedLayers: [
+          pie.ExportedLayer(
+            layer: source,
+            bytes: Uint8List.fromList(const [1, 2, 3]),
+            logicalSize: const Size(10, 20),
+          ),
+        ],
+        bodySize: const Size(100, 200),
+        videoSize: const Size(300, 600),
+        targetAspectRatio: vertical,
+        timelineMap: timelineMap,
+      )!.single;
+      // Both packages use the same interpolation evaluator: reconstruct the
+      // native output-time keyframes rather than checking endpoints alone.
+      final output = pie.Layer(
+        keyframes: [
+          for (final keyframe in exported.keyframes)
+            pie.LayerKeyframe(
+              time: keyframe.time,
+              offset: keyframe.offset,
+              scale: keyframe.scale,
+              rotation: keyframe.rotation,
+              opacity: keyframe.opacity,
+              curve: pie.AnimationCurve.values.byName(keyframe.curve.name),
+            ),
+        ],
+      );
+      expect(exported.keyframes, hasLength(4));
+      expect(
+        source.keyframePlacementAt(const Duration(seconds: 1))!.offset.dx,
+        25,
+      );
+      for (final milliseconds in [
+        0,
+        1000,
+        1600,
+        1800,
+        2000,
+        2400,
+        2800,
+        4000,
+      ]) {
+        final editorTime = Duration(milliseconds: milliseconds);
+        final preview = source.keyframePlacementAt(editorTime)!;
+        final rendered = output.keyframePlacementAt(
+          timelineMap.editorToOutput(editorTime),
+        )!;
+        expect(
+          rendered.offset.dx - exported.keyframes.first.offset.dx,
+          closeTo(preview.offset.dx * 3, 1e-9),
+          reason: 'editor time $milliseconds ms',
+        );
+        expect(rendered.scale, closeTo(preview.scale, 1e-9));
+        expect(rendered.rotation, closeTo(preview.rotation, 1e-9));
+        expect(rendered.opacity, closeTo(preview.opacity, 1e-9));
+      }
     });
 
     test('plays a keyframe effect over its stretch of the output', () {
