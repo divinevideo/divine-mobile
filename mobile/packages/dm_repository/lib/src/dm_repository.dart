@@ -4678,6 +4678,7 @@ class DmRepository {
     final newest = relayLists.reduce(
       (a, b) => b.createdAt > a.createdAt ? b : a,
     );
+    var omittedWriteRelays = false;
     final writeRelays = admitRemoteSuppliedRelays(
       [
         for (final tag in newest.tags)
@@ -4689,6 +4690,8 @@ class DmRepository {
             tag[1],
       ],
       cap: RelayListCaps.nip65,
+      onRejected: (_) => omittedWriteRelays = true,
+      onTruncated: (_, _) => omittedWriteRelays = true,
     );
     final asked = {
       for (final url in [
@@ -4697,11 +4700,22 @@ class DmRepository {
       ])
         RelayAddrUtil.handle(url),
     };
-    final targets = writeRelays
+    final unasked = writeRelays
         .where((url) => !asked.contains(RelayAddrUtil.handle(url)))
-        .take(_dmInboxOutboxRelayCap)
         .toList();
-    if (targets.isEmpty) return absent;
+    if (unasked.length > _dmInboxOutboxRelayCap) {
+      omittedWriteRelays = true;
+    }
+    final targets = unasked.take(_dmInboxOutboxRelayCap).toList();
+    const unreadable = (
+      state: _OwnDmInboxState.failed,
+      relays: null,
+      advertisedMissing: null,
+    );
+    // Safety and connection caps bound where we look, not what exists. A
+    // missing list on the subset cannot establish absence on an omitted
+    // write relay. A list actually returned below still wins.
+    if (targets.isEmpty) return omittedWriteRelays ? unreadable : absent;
 
     // Write relays are cold connections, measured at 3.7 s and 4.8 s on a
     // phone, so the leg gets whatever the resolution has left rather than a
@@ -4745,10 +4759,12 @@ class DmRepository {
         advertisedMissing: null,
       );
     }
-    if (result.noRelays || result.timedOut) {
+    if (result.noRelays || result.timedOut || omittedWriteRelays) {
       final reason = result.noRelays
           ? 'no relay took the REQ'
-          : 'not every relay settled';
+          : result.timedOut
+          ? 'not every relay settled'
+          : 'some write relays were not queried';
       Log.warning(
         'Recipient kind-10050 lookup for ${pubkeyForLogs(pubkey)} on their '
         'write relays was inconclusive ($reason) — routing to the default '

@@ -5685,7 +5685,7 @@ void main() {
             final resolved = await createLookupRepository()
                 .resolveDmInboxRelaysDetailed(_validPubkeyB);
 
-            expect(resolved.state, DmInboxResolution.absent);
+            expect(resolved.state, DmInboxResolution.unreadable);
             expect(queries, hasLength(2));
           },
         );
@@ -5715,9 +5715,12 @@ void main() {
               return answeredList(const <Event>[]);
             });
 
-            await createLookupRepository().resolveDmInboxRelaysDetailed(
-              _validPubkeyB,
-            );
+            final resolved = await createLookupRepository()
+                .resolveDmInboxRelaysDetailed(
+                  _validPubkeyB,
+                );
+
+            expect(resolved.state, DmInboxResolution.unreadable);
 
             expect(tempOf(queries.last), [
               'wss://w1.example',
@@ -5725,6 +5728,35 @@ void main() {
               'wss://w3.example',
               'wss://w4.example',
             ]);
+          },
+        );
+
+        test(
+          'a found inbox wins even when other write relays were omitted',
+          () async {
+            stubLegs((invocation) async {
+              if (tempOf(invocation) == null) {
+                return answeredList([
+                  kind10002Event([
+                    ['r', 'ws://private.example'],
+                    for (var i = 1; i <= 18; i++) ['r', 'wss://w$i.example'],
+                  ]),
+                ]);
+              }
+              if (tempOf(invocation)!.contains(lookupRelay)) {
+                return answeredList(const <Event>[]);
+              }
+              return answeredList([
+                kind10050Event(['wss://inbox.example']),
+              ]);
+            });
+
+            final resolved = await createLookupRepository()
+                .resolveDmInboxRelaysDetailed(_validPubkeyB);
+
+            expect(resolved.state, DmInboxResolution.found);
+            expect(resolved.relays, ['wss://inbox.example']);
+            expect(tempOf(queries.last), hasLength(4));
           },
         );
       });
