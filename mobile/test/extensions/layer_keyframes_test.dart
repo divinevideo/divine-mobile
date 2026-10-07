@@ -133,17 +133,6 @@ void main() {
         );
       });
     });
-
-    test('visibleKeyframes leaves out the ones outside the layer', () {
-      final layer = Layer(
-        keyframes: [keyframe(-100), keyframe(0), keyframe(900), keyframe(1100)],
-      );
-
-      expect(layer.visibleKeyframes(ms * 1000).map((k) => k.time), [
-        Duration.zero,
-        ms * 900,
-      ]);
-    });
   });
 
   group('LayerExportKeyframes', () {

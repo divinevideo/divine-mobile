@@ -58,11 +58,6 @@ extension LayerKeyframeTimeline on Layer {
     );
     return [for (final k in keep) k.copyWith(time: k.time - from)];
   }
-
-  /// The keyframes that sit within the layer's own time range, from 0 to
-  /// [duration], as the timeline shows them.
-  Iterable<LayerKeyframe> visibleKeyframes(Duration duration) =>
-      keyframes.where((k) => k.time >= Duration.zero && k.time <= duration);
 }
 
 /// Maps a layer's keyframes into the export.
