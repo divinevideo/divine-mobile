@@ -218,6 +218,7 @@ class _Fixture {
         nostrServiceProvider.overrideWithValue(client),
         funnelcakeApiClientProvider.overrideWithValue(api),
         contentBlocklistRepositoryProvider.overrideWithValue(blocks),
+        ageVerificationServiceProvider.overrideWithValue(age),
         contentFilterServiceProvider.overrideWithValue(fixture.content),
         divineHostFilterServiceProvider.overrideWithValue(fixture.host),
         videoProvenanceFilterServiceProvider.overrideWithValue(provenance),

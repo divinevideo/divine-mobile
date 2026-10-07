@@ -276,6 +276,59 @@ final class CuratedListThumbnailFilterProvider
 String _$curatedListThumbnailFilterHash() =>
     r'b6947373860c166f1c2960649c1297da5da01bd8';
 
+/// Settles persisted preview policy before consumers start metadata hydration.
+///
+/// Verification initialization notifies the current policy after retiring
+/// legacy keys. Await the services' memoized futures so that notification can
+/// retire a pending pass before it sends a duplicate metadata request.
+
+@ProviderFor(curatedListThumbnailPolicyInitialized)
+final curatedListThumbnailPolicyInitializedProvider =
+    CuratedListThumbnailPolicyInitializedProvider._();
+
+/// Settles persisted preview policy before consumers start metadata hydration.
+///
+/// Verification initialization notifies the current policy after retiring
+/// legacy keys. Await the services' memoized futures so that notification can
+/// retire a pending pass before it sends a duplicate metadata request.
+
+final class CuratedListThumbnailPolicyInitializedProvider
+    extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
+    with $FutureModifier<void>, $FutureProvider<void> {
+  /// Settles persisted preview policy before consumers start metadata hydration.
+  ///
+  /// Verification initialization notifies the current policy after retiring
+  /// legacy keys. Await the services' memoized futures so that notification can
+  /// retire a pending pass before it sends a duplicate metadata request.
+  CuratedListThumbnailPolicyInitializedProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'curatedListThumbnailPolicyInitializedProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() =>
+      _$curatedListThumbnailPolicyInitializedHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<void> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<void> create(Ref ref) {
+    return curatedListThumbnailPolicyInitialized(ref);
+  }
+}
+
+String _$curatedListThumbnailPolicyInitializedHash() =>
+    r'e0c08cf7fe224d9b7038242fdf2ce9b13cc9885c';
+
 /// Provider for HashtagRepository instance.
 ///
 /// Creates a HashtagRepository for searching hashtags via the Funnelcake API.

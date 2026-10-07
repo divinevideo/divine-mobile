@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:http/http.dart' as http;
@@ -16,10 +17,13 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
+import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -39,6 +43,26 @@ class _Relay extends Mock implements NostrClient {}
 class _Auth extends Mock implements AuthService {}
 
 class _Preferences extends Mock implements SharedPreferences {}
+
+/// Holds the real legacy-key retirement before its verification notification.
+class _GatedAgeVerification extends AgeVerificationService {
+  _GatedAgeVerification({
+    required super.preferences,
+    required this.gate,
+    required void Function() onChanged,
+  }) : super(
+         currentPubkeyHex: () => _ownerA,
+         onAdultContentVerificationChanged: onChanged,
+       );
+
+  final Completer<void> gate;
+
+  @override
+  Future<void> get initialized async {
+    await gate.future;
+    await super.initialized;
+  }
+}
 
 class _AuthState extends CurrentAuthState {
   @override
@@ -101,7 +125,12 @@ http.Response _positive(String thumbnail) => http.Response(
 );
 
 class _Fixture {
-  _Fixture({Completer<void>? buildGate}) {
+  _Fixture({
+    Completer<void>? buildGate,
+    bool initializePolicy = false,
+    Future<void>? policyInitialized,
+    List<Override> additionalOverrides = const [],
+  }) {
     auth = _Auth();
     when(() => auth.currentPublicKeyHex).thenAnswer((_) => owner);
     relay = _Relay();
@@ -126,13 +155,23 @@ class _Fixture {
     repositories.add(repository);
     clientInput = Provider<NostrClient>((_) => client);
     repositoryInput = Provider<CuratedListRepository>((_) => repository);
+    policyInput = Provider<CuratedListVideoFilter>(
+      (_) =>
+          (_) => policyHidden,
+    );
     container = ProviderContainer(
       overrides: [
         authServiceProvider.overrideWithValue(auth),
         curatedListThumbnailFilterProvider.overrideWith(
-          (ref) =>
-              (_) => false,
+          (ref) {
+            ref.watch(adultContentVerificationVersionProvider);
+            return ref.watch(policyInput);
+          },
         ),
+        if (!initializePolicy)
+          curatedListThumbnailPolicyInitializedProvider.overrideWith(
+            (_) => policyInitialized ?? Future<void>.value(),
+          ),
         currentAuthStateProvider.overrideWith(_AuthState.new),
         sharedPreferencesProvider.overrideWithValue(_Preferences()),
         nostrServiceProvider.overrideWith(() => _ClientState(clientInput)),
@@ -140,6 +179,7 @@ class _Fixture {
         curatedListRepositoryProvider.overrideWith(
           (ref) => ref.watch(repositoryInput),
         ),
+        ...additionalOverrides,
       ],
     );
     subscription = container.listen(myListsWithThumbnailsProvider, (_, _) {});
@@ -159,6 +199,7 @@ class _Fixture {
   final List<http.Request> requests = [];
   final List<CuratedListRepository> repositories = [];
   int relayReads = 0;
+  bool policyHidden = false;
   http.Response response = _positive('https://example.com/first.jpg');
   Future<http.Response> Function(http.Request, int)? onRequest;
   late final _Auth auth;
@@ -171,6 +212,7 @@ class _Fixture {
   late CuratedListRepository repository;
   late final Provider<NostrClient> clientInput;
   late final Provider<CuratedListRepository> repositoryInput;
+  late final Provider<CuratedListVideoFilter> policyInput;
   late final ProviderContainer container;
   late final ProviderSubscription<AsyncValue<List<CuratedList>>> subscription;
 
@@ -184,6 +226,7 @@ class _Fixture {
   CuratedListRepository _newRepository() => CuratedListRepository(
     nostrClient: relay,
     funnelcakeApiClient: api,
+    videoFilter: (_) => policyHidden,
   );
 
   Future<List<CuratedList>> read() =>
@@ -219,6 +262,147 @@ void main() {
   setUpAll(() => registerFallbackValue(<Filter>[]));
 
   group(myListsWithThumbnailsProvider, () {
+    test(
+      'policy startup settles before one initial metadata request',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final preferences = await SharedPreferences.getInstance();
+        final gate = Completer<void>();
+        late _Fixture fixture;
+        final age = _GatedAgeVerification(
+          preferences: preferences,
+          gate: gate,
+          onChanged: () => fixture.container
+              .read(adultContentVerificationVersionProvider.notifier)
+              .increment(),
+        );
+        final content = ContentFilterService(ageVerificationService: age);
+        addTearDown(content.dispose);
+        fixture = _Fixture(
+          initializePolicy: true,
+          additionalOverrides: [
+            ageVerificationServiceProvider.overrideWithValue(age),
+            contentFilterServiceProvider.overrideWithValue(content),
+          ],
+        );
+        await fixture.container.pump();
+        expect(fixture.requests, isEmpty);
+        fixture.container
+            .read(adultContentVerificationVersionProvider.notifier)
+            .increment();
+        await fixture.container.pump();
+        expect(fixture.requests, isEmpty);
+        gate.complete();
+        final current = await fixture.read();
+        expect(current.single.thumbnailUrls, hasLength(1));
+        expect(fixture.requests, hasLength(1));
+        expect(content.isInitialized, isTrue);
+        expect(
+          fixture.container.read(adultContentVerificationVersionProvider),
+          2,
+        );
+        fixture.container.invalidate(myListsWithThumbnailsProvider);
+        await fixture.read();
+        expect(fixture.requests, hasLength(2));
+      },
+    );
+
+    test(
+      'failed policy startup retains lists without exposing previews',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final preferences = await SharedPreferences.getInstance();
+        final gate = Completer<void>();
+        final age = _GatedAgeVerification(
+          preferences: preferences,
+          gate: gate,
+          onChanged: () {},
+        );
+        final content = ContentFilterService(ageVerificationService: age);
+        addTearDown(content.dispose);
+        final fixture = _Fixture(
+          initializePolicy: true,
+          additionalOverrides: [
+            ageVerificationServiceProvider.overrideWithValue(age),
+            contentFilterServiceProvider.overrideWithValue(content),
+          ],
+        );
+        final result = fixture.read();
+        await fixture.container.pump();
+        final assertion = expectLater(
+          result,
+          throwsA(isA<ParallelWaitError>()),
+        );
+        gate.completeError(StateError('verification initialization failed'));
+        await assertion;
+        expect(fixture.requests, isEmpty);
+        expect(fixture.service.myLists.single.id, 'my_vine_list');
+        expect(
+          fixture.container.read(myListsWithThumbnailsProvider).hasError,
+          isTrue,
+        );
+      },
+    );
+
+    test('a policy tightening retires an in-flight preview pass', () async {
+      final fixture = _Fixture();
+      final started = Completer<void>();
+      final release = Completer<void>();
+      addTearDown(() {
+        if (!release.isCompleted) release.complete();
+      });
+      fixture.onRequest = (_, count) async {
+        if (count == 1) {
+          started.complete();
+          await release.future;
+        }
+        return fixture.response;
+      };
+      await started.future;
+      fixture.policyHidden = true;
+      fixture.container.invalidate(fixture.policyInput);
+      await fixture.container.pump();
+      expect((await fixture.read()).single.thumbnailUrls, isEmpty);
+      expect(fixture.requests, hasLength(2));
+      release.complete();
+      await fixture.container.pump();
+      expect((await fixture.read()).single.thumbnailUrls, isEmpty);
+      expect(fixture.requests, hasLength(2));
+    });
+
+    test(
+      'pending policy startup follows the replacement account and repository',
+      () async {
+        final gate = Completer<void>();
+        final fixture = _Fixture(policyInitialized: gate.future);
+        await fixture.container.pump();
+        expect(fixture.requests, isEmpty);
+        fixture.rows = [_list(owner: _ownerB)];
+        await fixture.switchAccount(_ownerB);
+        await fixture.replaceService();
+        await fixture.replaceRepository();
+        expect(fixture.requests, isEmpty);
+        gate.complete();
+        final current = await fixture.read();
+        expect(current.single.pubkey, _ownerB);
+        expect(current.single.thumbnailUrls, hasLength(1));
+        expect(fixture.requests, hasLength(1));
+      },
+    );
+
+    testWidgets('disposed policy startup never starts a stale resolver', (
+      tester,
+    ) async {
+      final gate = Completer<void>();
+      final fixture = _Fixture(policyInitialized: gate.future);
+      await tester.pump();
+      fixture.subscription.close();
+      fixture.container.dispose();
+      gate.complete();
+      await tester.pump();
+      expect(fixture.requests, isEmpty);
+    });
+
     test(
       'changes to another author list do not restart own-list hydration',
       () async {

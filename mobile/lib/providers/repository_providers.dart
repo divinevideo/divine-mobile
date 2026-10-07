@@ -324,6 +324,18 @@ CuratedListVideoFilter curatedListThumbnailFilter(Ref ref) {
   };
 }
 
+/// Settles persisted preview policy before consumers start metadata hydration.
+///
+/// Verification initialization notifies the current policy after retiring
+/// legacy keys. Await the services' memoized futures so that notification can
+/// retire a pending pass before it sends a duplicate metadata request.
+@Riverpod(keepAlive: true)
+Future<void> curatedListThumbnailPolicyInitialized(Ref ref) async {
+  final age = ref.watch(ageVerificationServiceProvider);
+  final content = ref.watch(contentFilterServiceProvider);
+  await Future.wait([age.initialized, content.initialized]);
+}
+
 @visibleForTesting
 List<CuratedList> subscribedListsForHomeBridge(CuratedListService service) =>
     service.subscribedLists;

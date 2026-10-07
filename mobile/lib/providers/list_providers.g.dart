@@ -683,7 +683,7 @@ final class MyListsWithThumbnailsProvider
 }
 
 String _$myListsWithThumbnailsHash() =>
-    r'f2eeed164394af75e0439b8c9290b33d7408bbf0';
+    r'6e5be792fb9f7125ca0d9c7c70496a8116307ccf';
 
 /// Provider that fetches actual VideoEvent objects for a curated list
 /// Streams videos as they are fetched from cache or relays

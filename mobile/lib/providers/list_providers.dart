@@ -373,7 +373,10 @@ Future<List<CuratedList>> myListsWithThumbnails(Ref ref) async {
   final repository = ref.watch(curatedListRepositoryProvider);
   // The repository keeps its subscription stream stable across policy changes;
   // this consumer still retires loaded and in-flight preview snapshots.
-  ref.watch(curatedListThumbnailFilterProvider);
+  final policy = ref.watch(curatedListThumbnailFilterProvider);
+  final policyInitialized = ref.watch(
+    curatedListThumbnailPolicyInitializedProvider.future,
+  );
   final authService = ref.watch(authServiceProvider);
   final owner = authService.currentPublicKeyHex;
   // Service rebuilds retain the notifier, so its construction dependencies
@@ -381,7 +384,7 @@ Future<List<CuratedList>> myListsWithThumbnails(Ref ref) async {
   ref.watch(currentAuthStateProvider);
   ref.watch(nostrServiceProvider);
   ref.watch(sharedPreferencesProvider);
-  final selected = await ref.watch(
+  final selectedFuture = ref.watch(
     curatedListsStateProvider.selectAsync((_) {
       final service = notifier.service;
       return (
@@ -392,11 +395,13 @@ Future<List<CuratedList>> myListsWithThumbnails(Ref ref) async {
       );
     }),
   );
+  final (selected, _) = await (selectedFuture, policyInitialized).wait;
   bool isCurrent() =>
       !disposed &&
       ref.mounted &&
       identical(notifier.service, selected.service) &&
-      authService.currentPublicKeyHex == owner;
+      authService.currentPublicKeyHex == owner &&
+      identical(ref.read(curatedListThumbnailFilterProvider), policy);
   if (!isCurrent()) return const <CuratedList>[];
   final lists = selected.snapshot.lists;
   if (lists.isEmpty) return lists;
