@@ -374,7 +374,16 @@ void syncCuratedListRepositoryBridge(
 
 @visibleForTesting
 List<CuratedList> subscribedListsForHomeBridge(CuratedListService service) =>
-    service.isCurrentSession ? service.subscribedLists : const [];
+    service.isCurrentSession
+    ? service.subscribedLists
+          .where(_hasFullCuratedListAuthor)
+          .toList(growable: false)
+    : const [];
+
+bool _hasFullCuratedListAuthor(CuratedList list) =>
+    list.pubkey != null && _curatedListAuthor.hasMatch(list.pubkey!);
+
+final _curatedListAuthor = RegExp(r'^[0-9a-fA-F]{64}$');
 
 /// Whether Home may make final decisions about saved subscription identities.
 ///
@@ -393,6 +402,9 @@ bool hasCompleteSubscriptionSnapshotForHomeBridge(
   }
 
   final subscribed = service.subscribedLists;
+  // Unattributed followed cache rows remain available in the service, but
+  // cannot establish a canonical Home coordinate or a final empty snapshot.
+  if (subscribed.any((list) => !_hasFullCuratedListAuthor(list))) return false;
   final exactIds = {for (final list in subscribed) list.authorScopedId};
   for (final id in service.subscribedListIds) {
     if (exactIds.contains(id)) continue;
