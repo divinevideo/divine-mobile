@@ -4,6 +4,8 @@
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:test/test.dart';
 
+import 'helpers/in_memory_followed_people_lists_store.dart';
+
 const _viewerA =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const _viewerB =

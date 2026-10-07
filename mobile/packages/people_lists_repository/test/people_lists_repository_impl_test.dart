@@ -14,6 +14,7 @@ import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:test/test.dart';
 
 import 'helpers/hive_test_home.dart';
+import 'helpers/in_memory_followed_people_lists_store.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {
   _MockNostrClient() {
