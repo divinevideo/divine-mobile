@@ -4135,16 +4135,43 @@ void main() {
         );
 
         blocTest<VideoFeedBloc, VideoFeedBlocState>(
-          'offers the lists the viewer follows',
+          'does not wait on the followed-list read when no list is saved',
           setUp: () {
             stubRecommended(createTestVideos(2));
             when(
               () =>
                   peopleListsRepository.readFollowedLists(viewerPubkey: viewer),
-            ).thenAnswer((_) async => [followedList()]);
+            ).thenAnswer(
+              (_) => Completer<List<PeopleListSearchResult>>().future,
+            );
           },
           build: createPeopleBloc,
-          act: (bloc) => bloc.add(const VideoFeedStarted()),
+          act: (bloc) async {
+            bloc.add(const VideoFeedStarted());
+            await bloc.stream.firstWhere(
+              (state) => state.status == VideoFeedStatus.success,
+            );
+          },
+          verify: (bloc) {
+            expect(bloc.state.videos, hasLength(2));
+            verifyNever(
+              () => peopleListsRepository.readFollowedLists(
+                viewerPubkey: any(named: 'viewerPubkey'),
+              ),
+            );
+          },
+        );
+
+        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+          'offers the lists the viewer follows',
+          setUp: () => stubRecommended(createTestVideos(2)),
+          build: createPeopleBloc,
+          act: (bloc) async {
+            bloc.add(const VideoFeedStarted());
+            await pumpEventQueue();
+            followedController.add([followedList()]);
+            await pumpEventQueue();
+          },
           verify: (bloc) {
             expect(bloc.state.status, equals(VideoFeedStatus.success));
             expect(
@@ -4332,17 +4359,26 @@ void main() {
           _UnopenableBoxError(),
         ]) {
           blocTest<VideoFeedBloc, VideoFeedBlocState>(
-            'still loads Home when the read throws ${thrown.runtimeType}, '
-            'leaving the observer to decide whether it is reportable',
-            setUp: () {
+            'still loads Home when restoring a saved list and the read throws '
+            '${thrown.runtimeType}, leaving the observer to decide whether '
+            'it is reportable',
+            setUp: () async {
+              SharedPreferences.setMockInitialValues({
+                'selected_feed_mode_$viewer': sourceFor(
+                  followedList(),
+                ).persistenceValue,
+              });
               stubRecommended(createTestVideos(2));
               when(
                 () => peopleListsRepository.readFollowedLists(
                   viewerPubkey: viewer,
                 ),
               ).thenThrow(thrown);
+              savedModeBloc = createPeopleBloc(
+                sharedPreferences: await SharedPreferences.getInstance(),
+              );
             },
-            build: createPeopleBloc,
+            build: () => savedModeBloc,
             act: (bloc) => bloc.add(const VideoFeedStarted()),
             errors: () => [same(thrown)],
             verify: (bloc) {
