@@ -193,6 +193,29 @@ class DmReactionsRepository {
   final Map<String, Future<DmReactionDeletionOutcome>>
   _deletionRecoveriesInFlight = <String, Future<DmReactionDeletionOutcome>>{};
 
+  /// Fires whenever a publish or removal leaves a row for the retry sweep: an
+  /// unconfirmed or failed reaction, a removal whose kind-5 did not confirm,
+  /// or a removal recorded before its recipients were known. The retry
+  /// service listens and arms its in-session follow-up pass. Without it, such
+  /// a row waits for the next foreground transition or connectivity change,
+  /// and a removal has no chip left for the user to re-tap.
+  ///
+  /// Some emissions follow a database write that other work may still be
+  /// reading, so listeners MUST NOT touch the database synchronously: arm a
+  /// timer instead.
+  final StreamController<void> _retryableWorkController =
+      StreamController<void>.broadcast();
+
+  /// See [_retryableWorkController]. App-scoped like the repository itself;
+  /// never closed.
+  Stream<void> get retryableReactionWork => _retryableWorkController.stream;
+
+  void _notifyRetryableWork() {
+    if (!_retryableWorkController.isClosed) {
+      _retryableWorkController.add(null);
+    }
+  }
+
   /// Maximum permitted reaction content length. NIP-25 has no hard cap,
   /// but anything over ~128 chars is almost certainly malformed.
   static const int _maxReactionContentLength = 128;
@@ -576,11 +599,13 @@ class DmReactionsRepository {
               id: rumorId,
               ownerPubkey: ownerPubkey,
             );
+            _notifyRetryableWork();
           } else {
             await _reactionsDao.markFailed(
               placeholderId: rumorId,
               ownerPubkey: ownerPubkey,
             );
+            _notifyRetryableWork();
           }
           return DmReactionPublishResult(
             success: false,
@@ -598,6 +623,7 @@ class DmReactionsRepository {
         placeholderId: rumorId,
         ownerPubkey: ownerPubkey,
       );
+      _notifyRetryableWork();
       return DmReactionPublishResult(
         success: false,
         rumorId: rumorId,
@@ -698,15 +724,18 @@ class DmReactionsRepository {
               id: rumorId,
               ownerPubkey: ownerPubkey,
             );
-          } else if (!retryablePending) {
+          } else {
             // Confirmed rejection/error: flip to 'failed' so the chip is
             // tappable again. A soft (retryablePending) failure instead
-            // falls through untouched, leaving the pre-send 'pending' so
-            // the sweep keeps re-driving it.
-            await _reactionsDao.markFailed(
-              placeholderId: rumorId,
-              ownerPubkey: ownerPubkey,
-            );
+            // leaves the pre-send 'pending' untouched, so the sweep keeps
+            // re-driving it. Both stay on the sweep's worklist.
+            if (!retryablePending) {
+              await _reactionsDao.markFailed(
+                placeholderId: rumorId,
+                ownerPubkey: ownerPubkey,
+              );
+            }
+            _notifyRetryableWork();
           }
           return DmReactionPublishResult(
             success: false,
@@ -721,6 +750,7 @@ class DmReactionsRepository {
         placeholderId: rumorId,
         ownerPubkey: ownerPubkey,
       );
+      _notifyRetryableWork();
       return DmReactionPublishResult(
         success: false,
         rumorId: rumorId,
@@ -841,7 +871,10 @@ class DmReactionsRepository {
       _errorReporter?.call(e, st, site: reportSite);
       return;
     }
-    if (recipients.isEmpty) return;
+    if (recipients.isEmpty) {
+      _notifyRetryableWork();
+      return;
+    }
 
     unawaited(
       _coalesceDeletionAttempt(
@@ -950,6 +983,7 @@ class DmReactionsRepository {
             'DM reaction deletion retry was unconfirmed: $error',
             category: LogCategory.system,
           );
+          _notifyRetryableWork();
           return DmReactionDeletionOutcome.unconfirmed;
       }
     } on Object catch (e) {
@@ -957,6 +991,7 @@ class DmReactionsRepository {
         'DM reaction deletion retry threw: $e',
         category: LogCategory.system,
       );
+      _notifyRetryableWork();
       return DmReactionDeletionOutcome.unconfirmed;
     }
   }
@@ -994,6 +1029,7 @@ class DmReactionsRepository {
             );
             return DmReactionDeletionOutcome.refused;
           }
+          _notifyRetryableWork();
           return DmReactionDeletionOutcome.unconfirmed;
       }
     } on Object catch (e) {
@@ -1001,6 +1037,7 @@ class DmReactionsRepository {
         'DM reaction deletion publish threw: $e',
         category: LogCategory.system,
       );
+      _notifyRetryableWork();
       return DmReactionDeletionOutcome.unconfirmed;
     }
   }
