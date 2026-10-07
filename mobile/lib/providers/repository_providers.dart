@@ -273,11 +273,21 @@ CuratedListRepository curatedListRepository(Ref ref) {
 
   // Bridge: push curated list updates from legacy service into repository
   ref.listen(curatedListsStateProvider, (_, next) {
+    if (next.isLoading || next.hasError) {
+      repository.setSubscribedLists(
+        repository.getSubscribedLists(),
+        isComplete: false,
+      );
+      return;
+    }
     next.whenData((_) {
       final service = ref.read(curatedListsStateProvider.notifier).service;
       repository
         ..setSubscribedLists(
           service == null ? const [] : subscribedListsForHomeBridge(service),
+          isComplete:
+              service != null &&
+              hasCompleteSubscriptionSnapshotForHomeBridge(service),
         )
         ..setOwnLists(
           service == null
@@ -358,6 +368,41 @@ Future<void> curatedListThumbnailPolicyInitialized(Ref ref) async {
 @visibleForTesting
 List<CuratedList> subscribedListsForHomeBridge(CuratedListService service) =>
     service.subscribedLists;
+
+/// Whether Home may make final decisions about saved subscription identities.
+///
+/// Initialization validates the local cache, not the presence of every followed
+/// relay copy. Missing copies, unreadable metadata and retired sessions must
+/// remain incomplete even when some cached rows can already be displayed.
+@visibleForTesting
+bool hasCompleteSubscriptionSnapshotForHomeBridge(
+  CuratedListService service,
+) {
+  if (!service.isCurrentSession ||
+      !service.isInitialized ||
+      service.initializationError != null ||
+      !service.hasLoadedSubscriptionIds) {
+    return false;
+  }
+
+  final subscribed = service.subscribedLists;
+  final exactIds = {for (final list in subscribed) list.authorScopedId};
+  for (final id in service.subscribedListIds) {
+    if (exactIds.contains(id)) continue;
+    if (_curatedListCoordinatePrefix.hasMatch(id)) return false;
+
+    // The service's legacy lookup intentionally prefers an owned list. That
+    // preference cannot establish uniqueness for migrating Home's selection.
+    final matches = service.lists.where((list) => list.id == id).toList();
+    final identities = {for (final list in matches) list.authorScopedId};
+    if (identities.length != 1 || !exactIds.contains(identities.single)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+final _curatedListCoordinatePrefix = RegExp('^[0-9a-fA-F]{64}:');
 
 /// The viewer's own lists, which the search matches alongside the subscribed
 /// ones; `subscribedLists` never holds them.
