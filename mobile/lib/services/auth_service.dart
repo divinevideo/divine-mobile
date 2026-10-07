@@ -597,7 +597,11 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         _setKeycastSigner(_newKeycastSigner(session));
       }
 
-      await _setupUserSession(localKey!, AuthenticationSource.divineOAuth);
+      await _setupUserSession(
+        localKey!,
+        AuthenticationSource.divineOAuth,
+        continuingSession: null,
+      );
 
       Log.info(
         'initialize: local divine identity restored immediately '
@@ -793,7 +797,10 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         name: 'AuthService',
         category: LogCategory.auth,
       );
-      await signInWithDivineOAuth(session);
+      await _integrateDivineOAuth(
+        session,
+        continuingSession: null,
+      );
       return;
     }
 
@@ -851,7 +858,10 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
           category: LogCategory.auth,
         );
         await clearDismissedDivineLoginBannerForCurrentUser();
-        await signInWithDivineOAuth(refreshed);
+        await _integrateDivineOAuth(
+          refreshed,
+          continuingSession: null,
+        );
         return;
       }
     }
@@ -893,10 +903,11 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       name: 'AuthService',
       category: LogCategory.auth,
     );
-    await signInWithDivineOAuth(
+    await _integrateDivineOAuth(
       session,
       rpcCapability: AuthRpcCapability.upgrading,
       allowPubkeyOnlyIdentity: true,
+      continuingSession: null,
     );
     _hasExpiredOAuthSession = true;
     unawaited(
@@ -917,10 +928,16 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   /// consuming one-time-use refresh tokens in a race. The shared future is
   /// bounded by [_expiredSessionRefreshTimeout] so a hung attempt always
   /// releases the slot and the next call starts a fresh refresh (#4942).
-  Future<bool> tryRefreshExpiredSession() => _oauthCoordinator
-      .refreshExpiredSession(attempt: _doRefreshExpiredSession);
+  Future<bool> tryRefreshExpiredSession() {
+    final continuingSession = _captureContinuingAccountSession();
+    return _oauthCoordinator.refreshExpiredSession(
+      attempt: () => _doRefreshExpiredSession(continuingSession),
+    );
+  }
 
-  Future<bool> _doRefreshExpiredSession() {
+  Future<bool> _doRefreshExpiredSession(
+    _ContinuingAccountSession continuingSession,
+  ) {
     Log.info(
       'tryRefreshExpiredSession: attempting silent refresh',
       name: 'AuthService',
@@ -929,6 +946,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     return _tryRefreshOAuthSession(
       caller: 'tryRefreshExpiredSession',
       expectedOwnerPubkey: currentPublicKeyHex,
+      continuingSession: continuingSession,
     );
   }
 
@@ -950,6 +968,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   /// [tryRefreshExpiredSession]. Returns true if refresh succeeded.
   Future<bool> _tryRefreshOAuthSession({
     required String caller,
+    required _ContinuingAccountSession? continuingSession,
     String? expectedOwnerPubkey,
   }) async {
     final KeycastSession? refreshed;
@@ -982,7 +1001,10 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
           currentPublicKeyHex != expectedOwnerPubkey) {
         return false;
       }
-      await signInWithDivineOAuth(refreshed);
+      await _integrateDivineOAuth(
+        refreshed,
+        continuingSession: continuingSession,
+      );
       return true;
     }
     return false;
@@ -1288,6 +1310,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         keyContainer,
         AuthenticationSource.automatic,
         followingKnownEmpty: true,
+        continuingSession: null,
       );
 
       Log.info(
@@ -1386,6 +1409,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         keyContainer,
         AuthenticationSource.automatic,
         followingKnownEmpty: followingKnownEmpty,
+        continuingSession: null,
       );
       await acceptTerms();
 
@@ -1603,6 +1627,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     AuthenticationSource authSource, {
     bool claimLegacyRows = true,
   }) async {
+    final continuingSession = _captureContinuingAccountSession();
     clearError();
     Log.info(
       'signInForAccount: pubkey=${pubkeyForLogs(pubkeyHex)}, source=${authSource.name}',
@@ -1630,6 +1655,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
             amberInfo.pubkey,
             amberInfo.package,
             claimLegacyRows: claimLegacyRows,
+            continuingSession: continuingSession,
           );
         } else {
           Log.error(
@@ -1648,7 +1674,11 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         );
         final bunkerInfo = await _loadBunkerInfo();
         if (bunkerInfo != null) {
-          await _reconnectBunker(bunkerInfo, claimLegacyRows: claimLegacyRows);
+          await _reconnectBunker(
+            bunkerInfo,
+            claimLegacyRows: claimLegacyRows,
+            continuingSession: continuingSession,
+          );
         } else {
           Log.error(
             'signInForAccount: no archived bunker info for ${pubkeyForLogs(pubkeyHex)}',
@@ -1665,7 +1695,10 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
           category: LogCategory.auth,
         );
         if (kIsWeb) {
-          await _reconnectNip07(claimLegacyRows: claimLegacyRows);
+          await _reconnectNip07(
+            claimLegacyRows: claimLegacyRows,
+            continuingSession: continuingSession,
+          );
         } else {
           Log.error(
             'signInForAccount: persisted nip07 source on non-web platform',
@@ -1690,7 +1723,10 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
             session.hasRpcAccess &&
             session.userPubkey == pubkeyHex;
         if (sessionMatchesAccount) {
-          await signInWithDivineOAuth(session);
+          await _integrateDivineOAuth(
+            session,
+            continuingSession: continuingSession,
+          );
         } else {
           // Session is expired, missing, wrong account, or has no
           // RPC access. Try to refresh, then fall back to local
@@ -1714,6 +1750,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
             final refreshed = await _tryRefreshOAuthSession(
               caller: 'signInForAccount',
               expectedOwnerPubkey: pubkeyHex,
+              continuingSession: continuingSession,
             );
             if (refreshed) break;
           }
@@ -1751,6 +1788,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
               localKey,
               AuthenticationSource.divineOAuth,
               claimLegacyRows: claimLegacyRows,
+              continuingSession: continuingSession,
             );
             unawaited(
               _upgradeDivineRpcInBackground(
@@ -1791,6 +1829,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
             container,
             authSource,
             claimLegacyRows: claimLegacyRows,
+            continuingSession: continuingSession,
           );
         } else {
           // Fall back to current PRIMARY keys only when they belong to the
@@ -1828,6 +1867,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
               primary!,
               authSource,
               claimLegacyRows: claimLegacyRows,
+              continuingSession: continuingSession,
             );
           } else {
             Log.warning(
@@ -1968,6 +2008,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     NostrRemoteSignerInfo info, {
     bool boundedByStartupTimeout = false,
     bool claimLegacyRows = true,
+    _ContinuingAccountSession? continuingSession,
   }) async {
     Log.info(
       'Reconnecting to bunker...',
@@ -2017,6 +2058,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         SecureKeyContainer.fromPublicKey(userPubkey),
         AuthenticationSource.bunker,
         claimLegacyRows: claimLegacyRows,
+        continuingSession: continuingSession,
       );
 
       Log.info(
@@ -2101,6 +2143,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       await _setupUserSession(
         SecureKeyContainer.fromPublicKey(pubkey),
         AuthenticationSource.amber,
+        continuingSession: null,
       );
 
       Log.info(
@@ -2159,6 +2202,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       await _setupUserSession(
         SecureKeyContainer.fromPublicKey(pubkey),
         AuthenticationSource.nip07,
+        continuingSession: null,
       );
 
       Log.info(
@@ -2206,7 +2250,10 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   /// Browser extensions remember per-origin grants, so we can hydrate the
   /// session by calling getPublicKey() again. If the extension is no
   /// longer present or refuses, fall back to unauthenticated.
-  Future<void> _reconnectNip07({bool claimLegacyRows = true}) async {
+  Future<void> _reconnectNip07({
+    bool claimLegacyRows = true,
+    _ContinuingAccountSession? continuingSession,
+  }) async {
     final service = _nip07Extension;
     if (service == null || !service.isAvailable) {
       Log.info(
@@ -2235,6 +2282,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         SecureKeyContainer.fromPublicKey(result.publicKey!),
         AuthenticationSource.nip07,
         claimLegacyRows: claimLegacyRows,
+        continuingSession: continuingSession,
       );
     } on UserDataCleanupException {
       _nip07Service = null;
@@ -2256,6 +2304,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     String pubkey,
     String? package, {
     bool claimLegacyRows = true,
+    _ContinuingAccountSession? continuingSession,
   }) async {
     Log.info(
       'Reconnecting to Amber...',
@@ -2286,6 +2335,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         SecureKeyContainer.fromPublicKey(pubkey),
         AuthenticationSource.amber,
         claimLegacyRows: claimLegacyRows,
+        continuingSession: continuingSession,
       );
 
       Log.info(
@@ -2385,7 +2435,11 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
 
     try {
       final keyContainer = await store();
-      await _setupUserSession(keyContainer, AuthenticationSource.importedKeys);
+      await _setupUserSession(
+        keyContainer,
+        AuthenticationSource.importedKeys,
+        continuingSession: null,
+      );
 
       Log.info(
         'Imported $label as ${pubkeyForLogs(keyContainer.npub)}',
@@ -2537,6 +2591,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       await _setupUserSession(
         SecureKeyContainer.fromPublicKey(userPubkey),
         AuthenticationSource.bunker,
+        continuingSession: null,
       );
 
       Log.info(
@@ -2625,6 +2680,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     await _setupUserSession(
       SecureKeyContainer.fromPublicKey(userPubkey),
       AuthenticationSource.bunker,
+      continuingSession: null,
     );
 
     Log.info(
@@ -2685,8 +2741,19 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     KeycastSession session, {
     AuthRpcCapability? rpcCapability,
     bool allowPubkeyOnlyIdentity = false,
+  }) => _integrateDivineOAuth(
+    session,
+    rpcCapability: rpcCapability,
+    allowPubkeyOnlyIdentity: allowPubkeyOnlyIdentity,
+    continuingSession: _captureContinuingAccountSession(),
+  );
+
+  Future<void> _integrateDivineOAuth(
+    KeycastSession session, {
+    required _ContinuingAccountSession? continuingSession,
+    AuthRpcCapability? rpcCapability,
+    bool allowPubkeyOnlyIdentity = false,
   }) async {
-    final continuingSession = isAuthenticated ? _currentIdentity : null;
     Log.debug(
       'Signing in with Divine OAuth session',
       name: 'AuthService',
@@ -2815,7 +2882,6 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         AuthenticationSource.divineOAuth,
         allowPubkeyOnlyIdentity: allowPubkeyOnlyIdentity,
         continuingSession: continuingSession,
-        continuingSessionCaptured: true,
       );
       _setRpcCapability(
         rpcCapability ??
@@ -3617,7 +3683,11 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
             name: 'AuthService',
             category: LogCategory.auth,
           );
-          await _setupUserSession(cachedPrimaryIdentity, source);
+          await _setupUserSession(
+            cachedPrimaryIdentity,
+            source,
+            continuingSession: null,
+          );
           return;
         }
         final container = await _keyStorage.getIdentityKeyContainer(lastNpub);
@@ -3628,7 +3698,11 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
             name: 'AuthService',
             category: LogCategory.auth,
           );
-          await _setupUserSession(container, source);
+          await _setupUserSession(
+            container,
+            source,
+            continuingSession: null,
+          );
           return;
         }
         Log.warning(
@@ -3721,7 +3795,11 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
             category: LogCategory.auth,
           );
           await _keyStorage.switchToIdentity(npub);
-          await _setupUserSession(container, account.authSource);
+          await _setupUserSession(
+            container,
+            account.authSource,
+            continuingSession: null,
+          );
           return true;
         }
       }
@@ -3860,6 +3938,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
             await _setupUserSession(
               keyContainer,
               AuthenticationSource.automatic,
+              continuingSession: null,
             );
             return;
           }
@@ -3967,22 +4046,18 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   Future<void> _setupUserSession(
     SecureKeyContainer keyContainer,
     AuthenticationSource source, {
+    required _ContinuingAccountSession? continuingSession,
     bool allowPubkeyOnlyIdentity = false,
     bool claimLegacyRows = true,
     bool followingKnownEmpty = false,
-    NostrIdentity? continuingSession,
-    bool continuingSessionCaptured = false,
   }) async {
-    // Capture the established context before replacing tentative identity.
-    // OAuth changes auth state before arriving here; only its unchanged
-    // previously authenticated identity may cross that transition.
-    // An explicitly captured null also matters: a cold OAuth entry cannot
-    // borrow a new session completed by another sign-in during its awaits.
-    final establishedSession = continuingSessionCaptured
-        ? (identical(_currentIdentity, continuingSession)
-              ? continuingSession
-              : null)
-        : (isAuthenticated ? _currentIdentity : null);
+    // Only an explicitly captured entry context permits live deferral.
+    // Cold initialization, import and creation callers have no such context;
+    // a concurrent operation authenticating during their awaits cannot grant it.
+    final establishedSession =
+        identical(_currentIdentity, continuingSession?.identity)
+        ? continuingSession?.identity
+        : null;
     Log.info(
       '_setupUserSession: starting — '
       'pubkey=${keyContainer.publicKeyHex}, source=${source.name}',

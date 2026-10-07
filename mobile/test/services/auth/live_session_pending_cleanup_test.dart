@@ -2,7 +2,10 @@
 // ABOUTME: Exercises real cleanup, durable markers and list-session barriers.
 
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:mocktail/mocktail.dart';
@@ -17,6 +20,7 @@ import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
+import '../../helpers/shared_channel_override.dart';
 import '../../test_setup.dart';
 
 class _Keys extends Mock implements SecureKeyStorage {}
@@ -63,6 +67,7 @@ void main() {
   late AuthService auth;
   late _Keys keys;
   late SecureKeyContainer container;
+  FlutterSecureStorage? secureStorage;
   late List<({String? owner, bool destructive, bool preserveSession})> sweeps;
   var refuseDatabase = false;
 
@@ -77,6 +82,7 @@ void main() {
       userDataCleanupService: cleanup,
       backgroundActivityManager: BackgroundActivityManager(),
       keyStorage: keys,
+      flutterSecureStorage: secureStorage,
       relayDiscoveryService: discovery,
       // Fails synchronously inside the profile discovery's own catch instead
       // of starting a real WebSocket or suppressing unhandled test errors.
@@ -86,6 +92,7 @@ void main() {
 
   setUp(() async {
     container = SecureKeyContainer.fromNsec(nsec);
+    secureStorage = null;
     originalStore = SharedPreferencesStorePlatform.instance;
     backend = _CleanupBackend({
       'flutter.current_user_pubkey_hex': container.publicKeyHex,
@@ -445,6 +452,122 @@ void main() {
       expect(preferences.getString(PendingAccountCleanup.storageKey), marker);
     });
   }
+
+  for (final originallyLive in [true, false]) {
+    test('stored-key entry with originally live=$originallyLive cannot borrow '
+        'a newly authenticated same-owner session', () async {
+      if (originallyLive) await establishLive();
+      final originalIdentity = auth.currentIdentity;
+      final lookupEntered = Completer<void>();
+      final resumeLookup = Completer<void>();
+      var pauseNextLookup = true;
+      when(() => keys.getIdentityKeyContainer(any())).thenAnswer((_) async {
+        if (pauseNextLookup) {
+          pauseNextLookup = false;
+          lookupEntered.complete();
+          await resumeLookup.future;
+        }
+        return container;
+      });
+      final failed = expectLater(
+        reenter(),
+        throwsA(isA<UserDataCleanupException>()),
+      );
+      await lookupEntered.future;
+      await reenter();
+      expect(auth.authState, AuthState.authenticated);
+      expect(auth.currentIdentity, isNot(same(originalIdentity)));
+      await recordPending();
+      final marker = preferences.getString(PendingAccountCleanup.storageKey);
+      refuseDatabase = true;
+      resumeLookup.complete();
+      await failed;
+      expect(sweeps.single.owner, container.publicKeyHex);
+      expect(auth.authState, AuthState.unauthenticated);
+      expect(preferences.getString(PendingAccountCleanup.storageKey), marker);
+    });
+
+    test('stored OAuth with originally live=$originallyLive cannot recapture '
+        'a newly authenticated same-owner session', () async {
+      await auth.dispose();
+      secureStorage = const FlutterSecureStorage();
+      auth = createAuth();
+      if (originallyLive) await establishLive();
+      final originalIdentity = auth.currentIdentity;
+      final archiveKey = 'keycast_session_${container.publicKeyHex}';
+      final data = <String, String>{
+        archiveKey: jsonEncode(oauthSession().toJson()),
+      };
+      final readEntered = Completer<void>();
+      final resumeRead = Completer<void>();
+      var pauseArchive = true;
+      overrideSharedChannel(
+        const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+        (call) async {
+          final key = call.arguments['key'] as String?;
+          switch (call.method) {
+            case 'read':
+              if (key == archiveKey && pauseArchive) {
+                pauseArchive = false;
+                readEntered.complete();
+                await resumeRead.future;
+              }
+              return data[key];
+            case 'write':
+              data[key!] = call.arguments['value'] as String;
+            case 'delete':
+              data.remove(key);
+          }
+          return null;
+        },
+      );
+      final failed = expectLater(
+        auth.signInForAccount(
+          container.publicKeyHex,
+          AuthenticationSource.divineOAuth,
+        ),
+        throwsA(isA<UserDataCleanupException>()),
+      );
+      await readEntered.future;
+      await reenter();
+      expect(auth.authState, AuthState.authenticated);
+      expect(auth.currentIdentity, isNot(same(originalIdentity)));
+      await recordPending();
+      final marker = preferences.getString(PendingAccountCleanup.storageKey);
+      refuseDatabase = true;
+      resumeRead.complete();
+      await failed;
+      expect(sweeps.single.owner, container.publicKeyHex);
+      expect(auth.authState, AuthState.unauthenticated);
+      expect(preferences.getString(PendingAccountCleanup.storageKey), marker);
+    });
+  }
+
+  test(
+    'explicit key import cannot borrow a concurrently established session',
+    () async {
+      final importEntered = Completer<void>();
+      final resumeImport = Completer<void>();
+      when(() => keys.importFromNsec(any())).thenAnswer((_) async {
+        importEntered.complete();
+        await resumeImport.future;
+        return container;
+      });
+      final attempt = auth.importFromNsec(nsec);
+      await importEntered.future;
+      await reenter();
+      expect(auth.isAuthenticated, isTrue);
+      await recordPending();
+      final marker = preferences.getString(PendingAccountCleanup.storageKey);
+      refuseDatabase = true;
+      resumeImport.complete();
+      final result = await attempt;
+      expect(result.success, isFalse);
+      expect(result.failureReason, AuthFailureReason.accountCleanupFailed);
+      expect(sweeps.single.owner, container.publicKeyHex);
+      expect(preferences.getString(PendingAccountCleanup.storageKey), marker);
+    },
+  );
 
   for (final replacement in ['identity', 'key container']) {
     test(
