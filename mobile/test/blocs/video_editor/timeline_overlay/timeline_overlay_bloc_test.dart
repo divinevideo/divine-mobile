@@ -1479,6 +1479,38 @@ void main() {
       );
 
       blocTest<TimelineOverlayBloc, TimelineOverlayState>(
+        'moves keyframes with a capped bar the end handle pushes along',
+        build: TimelineOverlayBloc.new,
+        seed: () => const TimelineOverlayState(
+          items: [
+            TimelineOverlayItem(
+              id: 'detached',
+              type: TimelineOverlayType.layer,
+              startTime: Duration(seconds: 1),
+              endTime: Duration(seconds: 4),
+              maxDuration: Duration(seconds: 3),
+              keyframeTimes: [Duration.zero, Duration(seconds: 2)],
+            ),
+          ],
+        ),
+        // The bar is at its cap, so dragging the end on moves the start too.
+        act: (bloc) => bloc.add(
+          const TimelineOverlayItemTrimmed(
+            itemId: 'detached',
+            isStart: false,
+            startTime: Duration(milliseconds: 1500),
+            endTime: Duration(milliseconds: 4500),
+          ),
+        ),
+        // The editor keeps them measured from the start (see
+        // `_onOverlayItemTrimmed`), so the marks travel with the bar.
+        verify: (bloc) => expect(bloc.state.items.single.keyframeTimes, [
+          Duration.zero,
+          const Duration(seconds: 2),
+        ]),
+      );
+
+      blocTest<TimelineOverlayBloc, TimelineOverlayState>(
         'applies the source offset and remaining-audio max on a left-trim',
         build: TimelineOverlayBloc.new,
         seed: () => const TimelineOverlayState(

@@ -462,11 +462,15 @@ class TimelineOverlayBloc
       maxDuration: newMaxDuration,
       // A trimmed start leaves keyframes where they are on the video (see
       // `LayerKeyframeTimeline.keyframesFrom`), so they move against the new
-      // start until the item is rebuilt from the editor on release.
-      keyframeTimes: [
-        for (final time in item.keyframeTimes)
-          time - (newStart - item.startTime),
-      ],
+      // start until the item is rebuilt from the editor on release. The end
+      // handle leaves them alone even when it pushes a capped bar along, as
+      // the editor does.
+      keyframeTimes: event.isStart
+          ? [
+              for (final time in item.keyframeTimes)
+                time - (newStart - item.startTime),
+            ]
+          : null,
     );
 
     // Only re-assign rows for the changed type; other types are unaffected.
