@@ -168,6 +168,18 @@ void main() {
           async.elapse(const Duration(minutes: 2));
           async.flushMicrotasks();
           expect(published, hasLength(interactive ? 0 : 1));
+          if (interactive) {
+            verify(() => signer.nip44Encrypt(any(), any())).called(1);
+            if (failure == 'missing signature') {
+              verify(
+                () => auth.createAndSignEvent(
+                  kind: any(named: 'kind'),
+                  content: any(named: 'content'),
+                  tags: any(named: 'tags'),
+                ),
+              ).called(1);
+            }
+          }
 
           coordinator.dispose();
           service.dispose();
