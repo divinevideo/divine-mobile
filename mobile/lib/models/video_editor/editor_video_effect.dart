@@ -289,8 +289,8 @@ List<VideoEffect> _withinFlashLimit(
 /// Where the seconds of the looping video start that hold more than three
 /// flashes, in order.
 ///
-/// A flash starts where a frame turns white or negative, sampled at the rate
-/// the renderers place beats at.
+/// A flash starts where a frame turns clearly whiter or turns negative,
+/// sampled at the rate the renderers place beats at.
 Iterable<Duration> _crowdedFlashSeconds(
   List<VideoEffect> effects,
   Duration loopPoint,
@@ -300,20 +300,25 @@ Iterable<Duration> _crowdedFlashSeconds(
       if (isFlashingVideoEffect(effect.type)) effect,
   ];
   const step = Duration(microseconds: 1000000 ~/ 120);
-  bool flashes(Duration at) {
+  ({double flash, double invert}) sample(Duration at) {
     final frame = VideoEffect.resolve(flashing, at);
-    // Strobe peaks at 0.25 + intensity, even below half intensity. Its
-    // faint fade-out tail is not a new flash and must not join separate hits.
-    return frame.flash >= 0.25 || frame.invert >= 0.5;
+    return (flash: frame.flash, invert: frame.invert);
   }
 
+  // A flash starts wherever the picture turns clearly whiter or turns
+  // negative, even while the hit before it is still fading: over dark
+  // footage, white, 55% white, white again is two flashes. Strobe peaks at
+  // 0.25 + intensity, even below half intensity; its fade-out never rises.
   final onsets = <Duration>[];
   final last = loopPoint - step;
-  var wasOn = last > Duration.zero && flashes(last);
+  var before = last > Duration.zero ? sample(last) : (flash: 0.0, invert: 0.0);
   for (var at = Duration.zero; at < loopPoint; at += step) {
-    final on = flashes(at);
-    if (on && !wasOn) onsets.add(at);
-    wasOn = on;
+    final now = sample(at);
+    if ((now.flash >= 0.25 && now.flash >= before.flash + 0.1) ||
+        (now.invert >= 0.5 && before.invert < 0.5)) {
+      onsets.add(at);
+    }
+    before = now;
   }
   for (final onset in onsets) {
     var inSecond = 0;

@@ -431,6 +431,139 @@ void main() {
         onBeat: true,
       );
 
+      /// The most flashes that start within any one second of [onOutput]
+      /// looping at [loopPoint]. A flash starts wherever the picture gets
+      /// clearly whiter or turns negative, even while the last one is still
+      /// fading. Sampled 120 times a second over enough passes to fill a few
+      /// seconds, so short loops repeat within the window.
+      int mostFlashRisesPerSecond(
+        List<VideoEffect> onOutput,
+        Duration loopPoint,
+      ) {
+        Duration step(int i) => Duration(microseconds: (i + 0.5) * 1e6 ~/ 120);
+        final passes = 3000000 ~/ loopPoint.inMicroseconds + 3;
+        final rises = <Duration>[];
+        var lastFlash = 0.0;
+        var lastInvert = 0.0;
+        for (var pass = 0; pass < passes; pass++) {
+          for (var i = 0; step(i) < loopPoint; i++) {
+            final frame = VideoEffect.resolve(onOutput, step(i));
+            if (frame.flash >= lastFlash + 0.1 ||
+                (frame.invert >= 0.5 && lastInvert < 0.5)) {
+              rises.add(loopPoint * pass + step(i));
+            }
+            lastFlash = frame.flash;
+            lastInvert = frame.invert;
+          }
+        }
+        var most = 0;
+        for (final start in rises) {
+          final n = rises
+              .where(
+                (t) => t >= start && t - start < const Duration(seconds: 1),
+              )
+              .length;
+          if (n > most) most = n;
+        }
+        return most;
+      }
+
+      test('counts a flash on the first frame apart from one still fading '
+          'at the loop point', () {
+        final map = TransitionTimelineMap.fromClips([
+          clip('a', duration: ms(5500)),
+        ]);
+        final onOutput = videoEffectsOnOutput(
+          [onBeat(.strobe)],
+          map,
+          beats: [ms(0), for (var t = 590; t <= 5420; t += 345) ms(t)],
+        );
+        expect(
+          mostFlashRisesPerSecond(onOutput, map.outputDuration),
+          lessThanOrEqualTo(3),
+        );
+      });
+
+      test('counts the flash of a continuous strobe on the first frame apart '
+          'from a beat still fading at the loop point', () {
+        final map = TransitionTimelineMap.fromClips([
+          clip('a', duration: ms(5500)),
+        ]);
+        final onOutput = videoEffectsOnOutput(
+          [
+            const EditorVideoEffect(
+              id: 'continuous',
+              effect: VideoEffect(
+                type: VideoEffectType.strobe,
+                endTime: Duration(seconds: 1),
+              ),
+            ),
+            onBeat(.strobe, start: ms(1000)),
+          ],
+          map,
+          beats: [for (var t = 1280; t <= 5420; t += 345) ms(t)],
+        );
+        expect(
+          mostFlashRisesPerSecond(onOutput, map.outputDuration),
+          lessThanOrEqualTo(3),
+        );
+      });
+
+      test(
+        'counts a neighbouring flash that starts while a beat still fades',
+        () {
+          final map = TransitionTimelineMap.fromClips([
+            clip('a', duration: ms(5500)),
+          ]);
+          final onOutput = videoEffectsOnOutput(
+            [
+              onBeat(.strobe, end: ms(2000)),
+              EditorVideoEffect(
+                id: 'negative',
+                effect: VideoEffect(
+                  type: VideoEffectType.negativeFlash,
+                  intensity: 0.4,
+                  startTime: ms(2000),
+                  endTime: ms(3000),
+                ),
+              ),
+              onBeat(.strobe, start: ms(3000)),
+            ],
+            map,
+            beats: [
+              for (var t = 540; t <= 1920; t += 345) ms(t),
+              for (var t = 3050; t < 5500; t += 345) ms(t),
+            ],
+          );
+          expect(
+            mostFlashRisesPerSecond(onOutput, map.outputDuration),
+            lessThanOrEqualTo(3),
+          );
+        },
+      );
+
+      test('keeps loops shorter than a second, or than a hit, within three '
+          'flashes a second with a beat on the first frame', () {
+        for (final (length, beats) in [
+          (448, [ms(0), ms(360)]),
+          (70, [ms(0)]),
+        ]) {
+          final map = TransitionTimelineMap.fromClips([
+            clip('a', duration: ms(length)),
+          ]);
+          final onOutput = videoEffectsOnOutput(
+            [onBeat(.strobe)],
+            map,
+            beats: beats,
+          );
+          expect(
+            mostFlashRisesPerSecond(onOutput, map.outputDuration),
+            lessThanOrEqualTo(3),
+            reason: '$length ms loop',
+          );
+        }
+      });
+
       /// A beat every 60/[bpm] seconds from [first] until [until].
       List<Duration> beatsAt(
         double bpm, {
