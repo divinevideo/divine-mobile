@@ -193,6 +193,12 @@ class DmReactionsRepository {
   final Map<String, Future<DmReactionDeletionOutcome>>
   _deletionRecoveriesInFlight = <String, Future<DmReactionDeletionOutcome>>{};
 
+  // The pending-age guard is not proof a group fan-out finished: each
+  // recipient has its own timeout. Share original publishes and retries so
+  // a late failure cannot overwrite a concurrent successful delivery.
+  final Map<(String, String), Future<DmReactionPublishResult>>
+  _reactionPublishesInFlight = {};
+
   /// Fires whenever a publish or removal leaves a row for the retry sweep: an
   /// unconfirmed or failed reaction, a removal whose kind-5 did not confirm,
   /// or a removal recorded before its recipients were known. The retry
@@ -477,6 +483,32 @@ class DmReactionsRepository {
     );
     final rumorId = rumor.id;
 
+    return _coalesceReactionAttempt(
+      ownerPubkey,
+      rumorId,
+      () => _publishRumor(
+        conversationId: conversationId,
+        targetMessageId: targetMessageId,
+        targetMessageAuthor: targetMessageAuthor,
+        emoji: emoji,
+        rumor: rumor,
+        ownerPubkey: ownerPubkey,
+        messageService: messageService,
+      ),
+    );
+  }
+
+  Future<DmReactionPublishResult> _publishRumor({
+    required String conversationId,
+    required String targetMessageId,
+    required String targetMessageAuthor,
+    required String emoji,
+    required Event rumor,
+    required String ownerPubkey,
+    required NIP17MessageService messageService,
+  }) async {
+    final rumorId = rumor.id;
+
     // Worked out before the row is written, so the row carries the people it
     // is for whenever they can be established: the retry sweep sends it to
     // this set (#7880).
@@ -664,6 +696,25 @@ class DmReactionsRepository {
         errorMessage: 'Repository not initialized',
       );
     }
+
+    return _coalesceReactionAttempt(
+      ownerPubkey,
+      rumorId,
+      () => _retryReaction(
+        rumorId: rumorId,
+        targetMessageAuthor: targetMessageAuthor,
+        ownerPubkey: ownerPubkey,
+        messageService: messageService,
+      ),
+    );
+  }
+
+  Future<DmReactionPublishResult> _retryReaction({
+    required String rumorId,
+    required String targetMessageAuthor,
+    required String ownerPubkey,
+    required NIP17MessageService messageService,
+  }) async {
     final row = await _reactionsDao.getById(
       id: rumorId,
       ownerPubkey: ownerPubkey,
@@ -757,6 +808,23 @@ class DmReactionsRepository {
         errorMessage: e.toString(),
       );
     }
+  }
+
+  Future<DmReactionPublishResult> _coalesceReactionAttempt(
+    String ownerPubkey,
+    String rumorId,
+    Future<DmReactionPublishResult> Function() attempt,
+  ) {
+    final key = (ownerPubkey, rumorId);
+    final existing = _reactionPublishesInFlight[key];
+    if (existing != null) return existing;
+    final future = attempt().whenComplete(() {
+      _reactionPublishesInFlight.removeWhere(
+        (activeKey, _) => activeKey == key,
+      );
+    });
+    _reactionPublishesInFlight[key] = future;
+    return future;
   }
 
   /// List this user's own outgoing reactions still awaiting durable delivery
