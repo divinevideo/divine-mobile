@@ -77,24 +77,10 @@ class ContentFilterService extends ChangeNotifier {
   };
 
   /// Categories age-gated to [ContentFilterPreference.hide] until the viewer is
-  /// age-verified. The narrow creator-only exception is defined separately in
-  /// [creatorSelfLabelWarningCategories]; adult content remains behind the age
-  /// gate. See #5303 for the gate and #5062/#8063 for creator visibility.
+  /// age-verified. See #5303 for the gate; the creator's own videos are exempt
+  /// through [getCreatorSelfLabelPreference].
   static const Set<ContentLabel> ageRestrictedCategories = {
     ...adultCategories,
-    ContentLabel.alcohol,
-    ContentLabel.tobacco,
-    ContentLabel.profanity,
-    ContentLabel.gambling,
-  };
-
-  /// Creator-applied labels that remain visible to the creator behind a
-  /// warning even when age verification would otherwise hide them.
-  ///
-  /// Adult and always-filtered categories deliberately stay hidden. This
-  /// narrow carve-out covers the non-adult labels creators can apply during
-  /// publishing without weakening the protected-media policy from #5303.
-  static const Set<ContentLabel> creatorSelfLabelWarningCategories = {
     ContentLabel.alcohol,
     ContentLabel.tobacco,
     ContentLabel.profanity,
@@ -238,14 +224,16 @@ class ContentFilterService extends ChangeNotifier {
   }
 
   /// Resolves a creator-applied label for the current viewer.
+  ///
+  /// Creators always see their own videos: a self-label that hides the video
+  /// for other viewers keeps it visible to its creator behind the warning
+  /// overlay instead.
   ContentFilterPreference getCreatorSelfLabelPreference(
     ContentLabel label, {
     required bool isOwner,
   }) {
     final preference = getPreference(label);
-    if (isOwner &&
-        preference == ContentFilterPreference.hide &&
-        creatorSelfLabelWarningCategories.contains(label)) {
+    if (isOwner && preference == ContentFilterPreference.hide) {
       return ContentFilterPreference.warn;
     }
     return preference;

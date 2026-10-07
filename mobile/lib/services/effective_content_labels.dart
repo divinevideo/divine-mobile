@@ -20,9 +20,10 @@ bool contentOwnerMatches(String authorPubkey, String? viewerPubkey) =>
 
 /// Applies content preferences without losing label provenance.
 ///
-/// Only the narrow creator-label carve-out owned by [ContentFilterService]
-/// can turn a creator-applied hide into a warning. Trusted and server-applied
-/// moderation labels remain hide-capable for every viewer.
+/// A creator-applied label never hides the creator's own video; it shows
+/// behind a warning instead (see
+/// [ContentFilterService.getCreatorSelfLabelPreference]). Trusted and
+/// server-applied moderation labels remain hide-capable for every viewer.
 EffectiveContentFilterDecision resolveEffectiveContentFilterDecision({
   required EffectiveContentLabelSources sources,
   required List<String> moderationLabels,

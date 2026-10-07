@@ -147,19 +147,24 @@ void main() {
         expect(resolver(cached), ['profanity']);
       });
 
-      test('still hides owner adult and always-filtered self-labels', () {
-        for (final label in ['nudity', 'violence']) {
-          final filter = createNsfwFilter(
-            contentFilterService,
-            moderationLabelService: moderationLabelService,
-            viewerPubkey: () => _testPubkey,
-          );
+      test('keeps owner adult and always-filtered self-labels behind a '
+          'warning', () {
+        final filter = createNsfwFilter(
+          contentFilterService,
+          moderationLabelService: moderationLabelService,
+          viewerPubkey: () => _testPubkey,
+        );
+        final resolver = createNsfwWarnLabels(
+          contentFilterService,
+          moderationLabelService: moderationLabelService,
+          viewerPubkey: () => _testPubkey,
+        );
 
-          expect(
-            filter(_createVideo(contentWarningLabels: [label])),
-            isTrue,
-            reason: '$label must not use the narrow creator carve-out',
-          );
+        for (final label in ['nudity', 'violence', 'drugs']) {
+          final video = _createVideo(contentWarningLabels: [label]);
+
+          expect(filter(video), isFalse, reason: '$label hid an own video');
+          expect(resolver(video), [label]);
         }
       });
 

@@ -272,17 +272,18 @@ void main() {
       expect(result.$2, ['profanity']);
     });
 
-    test('relay ingest still hides an owner violence label', () {
+    test('relay ingest warns instead of hiding an owner drugs label', () {
       final result = videoEventService.getFilterAction(
         _FakeLabelEvent(
           pubkey: '1111111111111111111111111111111111111111111111111111111111111111',
           tags: const [
-            ['content-warning', 'violence'],
+            ['content-warning', 'drugs'],
           ],
         ),
       );
 
-      expect(result.$1, ContentFilterPreference.hide);
+      expect(result.$1, ContentFilterPreference.warn);
+      expect(result.$2, ['drugs']);
     });
 
     test('non-owner remains hidden by an age-restricted self-label', () {
@@ -297,18 +298,20 @@ void main() {
       expect(result, isEmpty);
     });
 
-    test('owner remains hidden by an always-filtered self-label', () {
+    test('owner keeps an always-filtered self-label behind the overlay', () {
       final result = videoEventService.filterVideoList([
         _createVideo(
-          id: 'owner-violence',
-          contentWarningLabels: const ['violence'],
+          id: 'owner-drugs',
+          contentWarningLabels: const ['drugs'],
         ),
       ]);
 
-      expect(result, isEmpty);
+      expect(result, hasLength(1));
+      expect(result.single.warnLabels, equals(['drugs']));
     });
 
-    test('owner remains hidden by an adult self-label without age proof', () {
+    test('owner keeps an adult self-label behind the overlay without age '
+        'proof', () {
       final result = videoEventService.filterVideoList([
         _createVideo(
           id: 'owner-nudity',
@@ -316,7 +319,8 @@ void main() {
         ),
       ]);
 
-      expect(result, isEmpty);
+      expect(result, hasLength(1));
+      expect(result.single.warnLabels, equals(['nudity']));
     });
 
     test('owner remains hidden by a Funnelcake moderation label', () {
