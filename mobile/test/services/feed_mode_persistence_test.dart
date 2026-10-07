@@ -81,79 +81,81 @@ void main() {
     return SharedPreferences.getInstance();
   }
 
-  group('FeedModePersistenceRegistry.forAccount', () {
-    test('returning account native storage keeps its latest choice after an old lease finishes', () async {
-      final backend = _NativeGate();
-      final prefs = await preferences(backend);
-      final registry = FeedModePersistenceRegistry(sharedPreferences: prefs);
-      final first = registry.forAccount(_viewer).claim();
-      final pending = first.prepare('forYou');
-      await backend.started.future.timeout(const Duration(seconds: 5));
-      first.release();
-      final other = registry.forAccount(_other).claim();
-      await other.persist('classic');
-      other.release();
-      final returned = registry.forAccount(_viewer).claim();
-      expect(returned.savedValue, _a);
-      await returned.persist(_b);
-      backend.release.complete();
-      final obsolete = await pending;
-      expect(obsolete.accept(), isFalse);
-      await obsolete.discard();
-      await prefs.reload();
-      expect(returned.savedValue, _b);
-      expect(prefs.getString(_key), _b);
-      expect(prefs.getString('selected_feed_mode_$_other'), 'classic');
+  group(FeedModePersistenceRegistry, () {
+    group('forAccount', () {
+      test('returning account native storage keeps its latest choice after an old lease finishes', () async {
+        final backend = _NativeGate();
+        final prefs = await preferences(backend);
+        final registry = FeedModePersistenceRegistry(sharedPreferences: prefs);
+        final first = registry.forAccount(_viewer).claim();
+        final pending = first.prepare('forYou');
+        await backend.started.future.timeout(const Duration(seconds: 5));
+        first.release();
+        final other = registry.forAccount(_other).claim();
+        await other.persist('classic');
+        other.release();
+        final returned = registry.forAccount(_viewer).claim();
+        expect(returned.savedValue, _a);
+        await returned.persist(_b);
+        backend.release.complete();
+        final obsolete = await pending;
+        expect(obsolete.accept(), isFalse);
+        await obsolete.discard();
+        await prefs.reload();
+        expect(returned.savedValue, _b);
+        expect(prefs.getString(_key), _b);
+        expect(prefs.getString('selected_feed_mode_$_other'), 'classic');
+      });
     });
-  });
 
-  group('FeedModePersistenceRegistry.prepare', () {
-    for (final result in _NativeResult.values) {
-      test(
-        'late legacy removal $result preserves accepted and durable guest selection',
-        () async {
-          final backend = _NativeGate(removal: true, result: result);
-          final prefs = await preferences(backend);
-          final registry = FeedModePersistenceRegistry(
-            sharedPreferences: prefs,
-          );
-          final account = registry.forAccount(_viewer).claim();
-          // Observe failure immediately, before releasing the platform callback.
-          final pending = account
-              .prepare('forYou')
-              .then<Object>(
-                (transaction) => transaction,
-                onError: (Object error, StackTrace _) => error,
-              );
-          await backend.started.future.timeout(const Duration(seconds: 5));
-          account.release();
-          final guest = registry.forAccount(null).claim();
-          expect(guest.savedValue, 'classic');
-          await guest.persist('latest');
-          backend.release.complete();
-          final outcome = await pending;
-          if (result == _NativeResult.succeeds) {
-            expect(outcome, isA<ProvisionalFeedModeWrite>());
-            final transaction = outcome as ProvisionalFeedModeWrite;
-            expect(transaction.accept(), isFalse);
-            await transaction.discard();
-          } else {
-            expect(outcome, isA<StateError>());
-            expect(
-              outcome.toString(),
-              contains(
-                result == _NativeResult.throwsError
-                    ? 'Native operation failed.'
-                    : 'The Home selection could not be persisted.',
-              ),
+    group('prepare', () {
+      for (final result in _NativeResult.values) {
+        test(
+          'late legacy removal $result preserves accepted and durable guest selection',
+          () async {
+            final backend = _NativeGate(removal: true, result: result);
+            final prefs = await preferences(backend);
+            final registry = FeedModePersistenceRegistry(
+              sharedPreferences: prefs,
             );
-          }
-          await prefs.reload();
-          expect(guest.savedValue, 'latest');
-          expect(prefs.getString('selected_feed_mode'), 'latest');
-          expect(prefs.getString(_key), _a);
-        },
-      );
-    }
+            final account = registry.forAccount(_viewer).claim();
+            // Observe failure immediately, before releasing the platform callback.
+            final pending = account
+                .prepare('forYou')
+                .then<Object>(
+                  (transaction) => transaction,
+                  onError: (Object error, StackTrace _) => error,
+                );
+            await backend.started.future.timeout(const Duration(seconds: 5));
+            account.release();
+            final guest = registry.forAccount(null).claim();
+            expect(guest.savedValue, 'classic');
+            await guest.persist('latest');
+            backend.release.complete();
+            final outcome = await pending;
+            if (result == _NativeResult.succeeds) {
+              expect(outcome, isA<ProvisionalFeedModeWrite>());
+              final transaction = outcome as ProvisionalFeedModeWrite;
+              expect(transaction.accept(), isFalse);
+              await transaction.discard();
+            } else {
+              expect(outcome, isA<StateError>());
+              expect(
+                outcome.toString(),
+                contains(
+                  result == _NativeResult.throwsError
+                      ? 'Native operation failed.'
+                      : 'The Home selection could not be persisted.',
+                ),
+              );
+            }
+            await prefs.reload();
+            expect(guest.savedValue, 'latest');
+            expect(prefs.getString('selected_feed_mode'), 'latest');
+            expect(prefs.getString(_key), _a);
+          },
+        );
+      }
+    });
   });
 }
