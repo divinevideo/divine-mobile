@@ -371,6 +371,69 @@ void main() {
       );
     });
 
+    test(
+      'leaves the last tail out of a loop blend with a muted first clip',
+      () async {
+        final clips = [
+          _clip('a', volume: 0),
+          _clip(
+            'b',
+            transition: const ClipTransition(
+              type: ClipTransitionType.dissolve,
+              duration: Duration(milliseconds: 300),
+            ),
+          ),
+        ];
+        final parts = beatSourceFor(
+          sounds: const [],
+          clips: clips,
+          videoEnd: _ms(5700),
+        );
+        await resolver.read(parts);
+        final beats = resolver.beatsOnOutput(parts, videoEnd: _ms(5700));
+        expect(
+          worstMiss(beats, [
+            _ms(2950),
+            _ms(3450),
+            _ms(3950),
+            _ms(4450),
+            _ms(4950),
+          ]),
+          lessThanOrEqualTo(_ms(15)),
+        );
+      },
+    );
+
+    test(
+      'leaves both sides of an internal blend silent next to a muted clip',
+      () async {
+        for (final muteFirst in [false, true]) {
+          final clips = [
+            _clip(
+              'a',
+              volume: muteFirst ? 0 : 1,
+              transition: const ClipTransition(
+                type: ClipTransitionType.dissolve,
+                duration: Duration(milliseconds: 300),
+              ),
+            ),
+            _clip('b', volume: muteFirst ? 1 : 0),
+          ];
+          final parts = beatSourceFor(
+            sounds: const [],
+            clips: clips,
+            videoEnd: _ms(5700),
+          );
+          await resolver.read(parts);
+          final beats = resolver.beatsOnOutput(parts, videoEnd: _ms(5700));
+          final expected = muteFirst
+              ? [_ms(3450), _ms(3950), _ms(4450), _ms(4950), _ms(5450)]
+              : [_ms(250), _ms(750), _ms(1250), _ms(1750), _ms(2250)];
+          expect(worstMiss(beats, expected), lessThanOrEqualTo(_ms(15)));
+        }
+      },
+    );
+
     test('skips a clip it cannot read, and throws when it can read none, so '
         'a later read tries again', () async {
       final clips = [_clip('silent'), _clip('loud')];

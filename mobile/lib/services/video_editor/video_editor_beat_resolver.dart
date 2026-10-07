@@ -129,10 +129,23 @@ List<BeatSourcePart> beatSourceFor({
     final video = clip.video;
     if (video != null && clip.volume > 0 && !clip.isFreezeFrame) {
       final speed = clip.playbackSpeed ?? 1;
-      final head = i == 0
-          ? Duration(microseconds: (wrap.inMicroseconds * speed).round())
+      final headPlayback = i == 0
+          ? wrap
+          : clips[i - 1].volume <= 0
+          ? overlapAfter(clips[i - 1])
           : Duration.zero;
-      if (head > Duration.zero && headSounds) {
+      final head = Duration(
+        microseconds: (headPlayback.inMicroseconds * speed).round(),
+      );
+      final tailPlayback = i == clips.length - 1
+          ? (clips.first.volume <= 0 ? wrap : Duration.zero)
+          : clips[i + 1].volume <= 0
+          ? overlapAfter(clip)
+          : Duration.zero;
+      final tail = Duration(
+        microseconds: (tailPlayback.inMicroseconds * speed).round(),
+      );
+      if (i == 0 && head > Duration.zero && headSounds) {
         // The first head is the incoming side of the final wrap blend.
         parts.add(
           BeatSourcePart(
@@ -150,8 +163,10 @@ List<BeatSourcePart> beatSourceFor({
           media: video,
           fileLength: clip.duration,
           from: clip.trimStart + head,
-          to: clip.trimStart + clip.trimmedDuration,
-          at: i == 0 ? Duration.zero : clipStart - wrap,
+          // Like the loop seam, an internal overlap has no clip audio if
+          // either side is muted. Do not trigger on its silent source range.
+          to: clip.trimStart + clip.trimmedDuration - tail,
+          at: clipStart - wrap + headPlayback,
           speed: speed,
           // Reverse is baked into clip.video; its samples are already in
           // playback order, including the rewritten trims.
