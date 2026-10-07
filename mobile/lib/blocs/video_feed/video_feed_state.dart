@@ -107,7 +107,7 @@ final class VideoFeedSource extends Equatable {
   /// The source type.
   final VideoFeedSourceType type;
 
-  /// Selected curated list ID when [type] is subscribedList.
+  /// Complete author-qualified curated-list identity for [type] subscribedList.
   final String? listId;
 
   /// Selected curated list name when [type] is subscribedList.

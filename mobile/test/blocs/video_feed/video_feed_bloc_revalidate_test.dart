@@ -61,7 +61,7 @@ void main() {
         ).thenAnswer((_) => BehaviorSubject<List<String>>.seeded([]));
         when(() => curatedListRepository.getSubscribedLists()).thenReturn([]);
         when(
-          () => curatedListRepository.subscribedListsStream,
+          () => curatedListRepository.subscriptionSnapshots,
         ).thenAnswer((_) => const Stream.empty());
         when(
           () => videosRepository.getNewVideos(

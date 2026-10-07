@@ -80,10 +80,15 @@ void main() {
       );
     }
 
-    CuratedList curatedList({required String id, required String name}) {
+    CuratedList curatedList({
+      required String id,
+      required String name,
+      String? pubkey,
+    }) {
       final now = DateTime(2026);
       return CuratedList(
         id: id,
+        pubkey: pubkey,
         name: name,
         videoEventIds: const [],
         createdAt: now,
@@ -185,7 +190,7 @@ void main() {
           VideoFeedBlocState(
             status: VideoFeedStatus.success,
             source: const VideoFeedSource.subscribedList(
-              listId: 'best',
+              listId: ':best',
               listName: 'Best Vines',
             ),
             subscribedLists: [curatedList(id: 'best', name: 'Best Vines')],
@@ -426,7 +431,7 @@ void main() {
             () => mockBloc.add(
               const VideoFeedSourceChanged(
                 VideoFeedSource.subscribedList(
-                  listId: 'best',
+                  listId: ':best',
                   listName: 'Best Vines',
                 ),
               ),
@@ -454,6 +459,73 @@ void main() {
         await tester.pumpAndSettle();
 
         verifyNever(() => mockBloc.add(any()));
+      });
+
+      testWidgets('same name and d-tag options select distinct full authors', (
+        tester,
+      ) async {
+        final a = curatedList(
+          id: 'my_vine_list',
+          name: 'Alice',
+          pubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        );
+        final b = curatedList(
+          id: 'my_vine_list',
+          name: 'Alice',
+          pubkey: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        );
+        when(() => mockBloc.state).thenReturn(
+          VideoFeedBlocState(
+            status: VideoFeedStatus.success,
+            source: const VideoFeedSource.forYou(),
+            subscribedLists: [a, b],
+          ),
+        );
+        await tester.pumpWidget(createTestWidget());
+        for (var index = 0; index < 2; index++) {
+          await tester.tap(find.text(l10n.feedModeForYou));
+          await tester.pumpAndSettle();
+          expect(find.text('Alice'), findsNWidgets(2));
+          await tester.tap(find.text('Alice').at(index));
+          await tester.pumpAndSettle();
+        }
+        final chosen = verify(
+          () => mockBloc.add(captureAny()),
+        ).captured.cast<VideoFeedSourceChanged>();
+        expect(chosen, hasLength(2));
+        // The second identical label must choose B, rather than aliasing A's
+        // first option. This catches a menu whose two values use the bare d-tag.
+        expect(chosen.last.source.listId, b.authorScopedId);
+        expect(chosen.first.source.listId, a.authorScopedId);
+      });
+
+      testWidgets('rename label resolves selected full author only', (
+        tester,
+      ) async {
+        final a = curatedList(
+          id: 'my_vine_list',
+          name: 'Other Alice',
+          pubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        );
+        final b = curatedList(
+          id: 'my_vine_list',
+          name: 'Renamed Alice',
+          pubkey: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        );
+        when(() => mockBloc.state).thenReturn(
+          VideoFeedBlocState(
+            status: VideoFeedStatus.success,
+            source: VideoFeedSource.subscribedList(
+              listId: b.authorScopedId,
+              listName: 'Old Alice',
+            ),
+            subscribedLists: [a, b],
+          ),
+        );
+        await tester.pumpWidget(createTestWidget());
+        expect(find.text('Renamed Alice'), findsOneWidget);
+        expect(find.text('Other Alice'), findsNothing);
+        expect(find.text('Old Alice'), findsNothing);
       });
 
       testWidgets('pauses video playback while the mode sheet is open', (
