@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:models/models.dart';
+import 'package:openvine/services/curated_lists/curated_list_subscription_metadata.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -376,19 +377,15 @@ class PrefsCuratedListStore {
   }
 
   /// The stored ids, or [fallback] when they cannot be decoded.
-  Set<String> _storedSubscriptions({required Set<String> fallback}) {
-    final json = _prefs.getString(_subscriptionsKey);
-    if (json == null) {
-      _writes.cacheKeyRemoved(_subscriptionsKey);
-      return const {};
-    }
-    try {
-      return (jsonDecode(json) as List<dynamic>).cast<String>().toSet();
-    } on Object catch (error, stackTrace) {
-      _logUnreadable('subscriptions', error, stackTrace);
-      return fallback;
-    }
-  }
+  Set<String> _storedSubscriptions({required Set<String> fallback}) =>
+      readCuratedListSubscriptionSnapshot(
+        preferences: _prefs,
+        storageKey: _subscriptionsKey,
+        fallback: fallback,
+        onMissing: () => _writes.cacheKeyRemoved(_subscriptionsKey),
+        onUnreadable: (error, stackTrace) =>
+            _logUnreadable('subscriptions', error, stackTrace),
+      ).ids;
 
   void _logUnreadable(String what, Object error, StackTrace stackTrace) {
     // The error is left out: FormatException.toString() quotes the stored text.
