@@ -319,7 +319,7 @@ void main() {
         await service.initialize();
       });
 
-      test('keeps age-restricted owner labels hidden before adult '
+      test('keeps ordinary creator labels behind a warning before adult '
           'self-attestation', () {
         expect(ageService.isAdultContentVerified, isFalse);
 
@@ -331,8 +331,8 @@ void main() {
           );
           expect(
             service.getCreatorSelfLabelPreference(label, isOwner: true),
-            equals(ContentFilterPreference.hide),
-            reason: '$label bypassed the age gate for an own video',
+            equals(ContentFilterPreference.warn),
+            reason: '$label hid an ordinary creator before asking their age',
           );
         }
       });

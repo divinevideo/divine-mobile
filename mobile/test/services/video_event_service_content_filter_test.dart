@@ -321,7 +321,7 @@ void main() {
       expect(result.single.warnLabels, equals(['violence']));
     });
 
-    test('owner adult self-label stays hidden without adult '
+    test('ordinary owner adult self-label warns before adult '
         'self-attestation', () {
       expect(ageVerificationService.isAdultContentVerified, isFalse);
 
@@ -332,7 +332,8 @@ void main() {
         ),
       ]);
 
-      expect(result, isEmpty);
+      expect(result, hasLength(1));
+      expect(result.single.warnLabels, equals(['nudity']));
     });
 
     test('protected-minor ownership cannot bypass any age-restricted label '
@@ -368,6 +369,61 @@ void main() {
           reason: '${label.value} bypassed the protected-minor restriction',
         );
       }
+    });
+
+    test('server drug-use category follows adult hide warn and show choices '
+        'without adding an ML warning overlay', () async {
+      await ageVerificationService.setAdultContentVerified(true);
+      for (final preference in ContentFilterPreference.values) {
+        await contentFilterService.setPreference(
+          ContentLabel.drugs,
+          preference,
+        );
+        final result = videoEventService.filterVideoList([
+          _createVideo(
+            id: 'classified-drug-use',
+            pubkey: otherPubkey,
+            moderationLabels: const ['recreational-drug'],
+          ),
+        ]);
+
+        if (preference == ContentFilterPreference.hide) {
+          expect(result, isEmpty);
+        } else {
+          expect(result, hasLength(1));
+          expect(result.single.warnLabels, isEmpty);
+        }
+      }
+
+      await contentFilterService.setPreference(
+        ContentLabel.drugs,
+        ContentFilterPreference.show,
+      );
+      final classified = _createVideo(
+        id: 'protected-classified-drug-use',
+        moderationLabels: const ['recreational-drug'],
+      );
+      expect(videoEventService.filterVideoList([classified]), hasLength(1));
+      isProtectedMinor = true;
+      expect(videoEventService.filterVideoList([classified]), isEmpty);
+    });
+
+    test('server drug-use hide still wins over a creator warning', () async {
+      await ageVerificationService.setAdultContentVerified(true);
+      expect(
+        contentFilterService.getPreference(ContentLabel.drugs),
+        ContentFilterPreference.hide,
+      );
+      expect(
+        videoEventService.filterVideoList([
+          _createVideo(
+            id: 'creator-and-classified-drug-use',
+            contentWarningLabels: const ['violence'],
+            moderationLabels: const ['recreational-drug'],
+          ),
+        ]),
+        isEmpty,
+      );
     });
 
     test('owner remains hidden by a Funnelcake moderation label', () {

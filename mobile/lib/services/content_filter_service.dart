@@ -77,8 +77,8 @@ class ContentFilterService extends ChangeNotifier {
   };
 
   /// Categories age-gated to [ContentFilterPreference.hide] until the viewer is
-  /// self-attested as an adult. This gate also applies to creators viewing
-  /// their own videos; protected minors cannot self-attest as adults.
+  /// self-attested as an adult. Known minors also stay hidden when viewing
+  /// their own videos; ordinary creators retain the warning until asked.
   static const Set<ContentLabel> ageRestrictedCategories = {
     ...adultCategories,
     ContentLabel.alcohol,
@@ -225,9 +225,10 @@ class ContentFilterService extends ChangeNotifier {
 
   /// Resolves a creator-applied label for the current viewer.
   ///
-  /// Age-restricted self-labels keep the age gate and the adult's chosen
-  /// preference, including hide. Other self-labels that hide the video for
-  /// other viewers keep it visible to its creator behind a warning. Trusted
+  /// Known minors cannot bypass age restrictions on their own uploads.
+  /// Self-attested adults keep their chosen age-restricted preference, including
+  /// hide. Other self-labels keep the creator's video behind a warning rather
+  /// than hiding it, including before ordinary adult self-attestation. Trusted
   /// labelers and server-side moderation do not go through here and still hide
   /// the video for everyone.
   ContentFilterPreference getCreatorSelfLabelPreference(
@@ -235,9 +236,13 @@ class ContentFilterService extends ChangeNotifier {
     required bool isOwner,
   }) {
     final preference = getPreference(label);
-    if (isOwner &&
-        preference == ContentFilterPreference.hide &&
-        !ageRestrictedCategories.contains(label)) {
+    if (isOwner && ageRestrictedCategories.contains(label)) {
+      if (ageVerificationService.isProtectedMinor) {
+        return ContentFilterPreference.hide;
+      }
+      if (ageVerificationService.isAdultContentVerified) return preference;
+    }
+    if (isOwner && preference == ContentFilterPreference.hide) {
       return ContentFilterPreference.warn;
     }
     return preference;

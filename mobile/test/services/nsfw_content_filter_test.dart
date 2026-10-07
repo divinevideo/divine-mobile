@@ -149,7 +149,7 @@ void main() {
         expect(resolver(cached), ['profanity']);
       });
 
-      test('keeps owner age-restricted self-labels hidden before adult '
+      test('keeps ordinary owner labels behind a warning before adult '
           'self-attestation', () {
         final filter = createNsfwFilter(
           contentFilterService,
@@ -171,8 +171,8 @@ void main() {
         ]) {
           final video = _createVideo(contentWarningLabels: [label]);
 
-          expect(filter(video), isTrue, reason: '$label bypassed the age gate');
-          expect(resolver(video), isEmpty);
+          expect(filter(video), isFalse);
+          expect(resolver(video), [label]);
         }
       });
 
@@ -324,7 +324,8 @@ void main() {
         expect(filter(video), isFalse);
       });
 
-      test('keeps an own video hidden before adult self-attestation when '
+      test('keeps an own video behind a warning before adult self-attestation '
+          'when '
           'only the creator applied an unrecognized label', () {
         final filter = createNsfwFilter(
           contentFilterService,
@@ -340,8 +341,8 @@ void main() {
           contentWarningLabels: ['some-unknown-label'],
         );
 
-        expect(filter(video), isTrue);
-        expect(resolver(video), isEmpty);
+        expect(filter(video), isFalse);
+        expect(resolver(video), ['nudity']);
       });
 
       test('still hides an own video when only a trusted labeler applied an '

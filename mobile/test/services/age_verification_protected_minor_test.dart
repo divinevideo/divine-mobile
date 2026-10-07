@@ -30,6 +30,7 @@ void main() {
           currentPubkeyHex: () => pubkey,
         );
         await service.initialize();
+        expect(service.isProtectedMinor, isTrue);
         expect(service.isAdultContentVerified, false);
       },
     );
@@ -58,6 +59,8 @@ void main() {
         currentPubkeyHex: () => pubkey,
       );
       await service.initialize();
+      expect(service.isProtectedMinor, isFalse);
+      expect(service.isAdultContentVerified, isFalse);
       await service.setAdultContentVerified(true);
       expect(service.isAdultContentVerified, true);
     });
