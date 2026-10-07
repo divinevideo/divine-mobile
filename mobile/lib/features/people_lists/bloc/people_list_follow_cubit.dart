@@ -61,6 +61,9 @@ class PeopleListFollowCubit extends Cubit<PeopleListFollowState>
             unawaited(_readFollowStatus());
           },
         );
+    // The follow is held in preferences, which answer at once; the watch only
+    // replays after the copy box opens. Ask now instead of waiting for it.
+    unawaited(_readFollowStatus());
   }
 
   Future<void> _readFollowStatus() async {
