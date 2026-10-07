@@ -73,7 +73,6 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
             clips: clips,
             videoEnd: videoEnd,
           ),
-          timelineMap: timelineMap,
           videoEnd: videoEnd,
         ),
       ),
@@ -238,7 +237,6 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
       state.copyWith(
         beats: _beatResolver.beatsOnOutput(
           current.parts,
-          current.timelineMap,
           videoEnd: current.videoEnd,
         ),
         beatStatus: VideoEditorBeatStatus.ready,

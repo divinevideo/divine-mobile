@@ -869,7 +869,6 @@ class VideoEditorRenderService {
       effectEntries: effectEntries,
       parameters: parameters,
       clips: clips,
-      timelineMap: timelineMap,
       videoEnd: videoContentDuration,
     );
 
@@ -1245,7 +1244,6 @@ class VideoEditorRenderService {
     required List<EditorVideoEffect> effectEntries,
     required CompleteParameters? parameters,
     required List<DivineVideoClip> clips,
-    required TransitionTimelineMap timelineMap,
     required Duration videoEnd,
   }) async {
     if (!effectEntries.any((entry) => entry.onBeat)) return const [];
@@ -1257,7 +1255,7 @@ class VideoEditorRenderService {
     final resolver = VideoEditorBeatResolver();
     try {
       await resolver.read(parts);
-      return resolver.beatsOnOutput(parts, timelineMap, videoEnd: videoEnd);
+      return resolver.beatsOnOutput(parts, videoEnd: videoEnd);
     } on Exception catch (error, stackTrace) {
       Log.error(
         'Could not read the beats for effects on the beat',

@@ -22,8 +22,6 @@ class BeatSourcePart extends Equatable {
     required this.at,
     this.fileLength,
     this.speed = 1,
-    this.reversed = false,
-    this.onEditorTimeline = false,
   });
 
   /// The file the sound comes from.
@@ -38,19 +36,11 @@ class BeatSourcePart extends Equatable {
   /// Where in [media] the part stops playing (exclusive).
   final Duration to;
 
-  /// Where [from] plays: on the exported video, or on the editor timeline
-  /// when [onEditorTimeline].
+  /// Where [from] plays on the exported video.
   final Duration at;
 
   /// How much faster than recorded the part plays.
   final double speed;
-
-  /// Whether the part plays backwards, from [to] down to [from].
-  final bool reversed;
-
-  /// Whether [at] is on the editor timeline, where clips lie at full length,
-  /// rather than on the exported video an overlap transition makes shorter.
-  final bool onEditorTimeline;
 
   @override
   List<Object?> get props => [
@@ -60,8 +50,6 @@ class BeatSourcePart extends Equatable {
     to,
     at,
     speed,
-    reversed,
-    onEditorTimeline,
   ];
 }
 
@@ -227,26 +215,23 @@ class VideoEditorBeatResolver {
     }
   }
 
-  /// The beats of [parts] on the exported video, which [timelineMap] maps the
-  /// editor timeline onto and which ends at [videoEnd], in order.
+  /// The beats of [parts] on the exported video ending at [videoEnd], in order.
   ///
   /// A part whose beats have not been [read] adds none.
   List<Duration> beatsOnOutput(
-    List<BeatSourcePart> parts,
-    TransitionTimelineMap timelineMap, {
+    List<BeatSourcePart> parts, {
     required Duration videoEnd,
   }) {
     final beats = <Duration>[];
     for (final part in parts) {
       for (final beat in _beatsByPart[part] ?? const <Duration>[]) {
         if (beat < part.from || beat >= part.to) continue;
-        final played = part.reversed ? part.to - beat : beat - part.from;
-        var at =
+        final played = beat - part.from;
+        final at =
             part.at +
             Duration(
               microseconds: (played.inMicroseconds / part.speed).round(),
             );
-        if (part.onEditorTimeline) at = timelineMap.editorToOutput(at);
         if (at >= Duration.zero && at < videoEnd) beats.add(at);
       }
     }

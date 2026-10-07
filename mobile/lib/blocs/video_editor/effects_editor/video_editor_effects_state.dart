@@ -23,7 +23,6 @@ enum VideoEditorBeatStatus {
 class VideoEditorBeatInput extends Equatable {
   const VideoEditorBeatInput({
     required this.parts,
-    required this.timelineMap,
     required this.videoEnd,
   });
 
@@ -31,14 +30,11 @@ class VideoEditorBeatInput extends Equatable {
   /// from.
   final List<BeatSourcePart> parts;
 
-  /// Maps the editor timeline onto the exported video.
-  final TransitionTimelineMap timelineMap;
-
   /// Where the exported video ends and loops.
   final Duration videoEnd;
 
   @override
-  List<Object?> get props => [parts, timelineMap, videoEnd];
+  List<Object?> get props => [parts, videoEnd];
 }
 
 /// State of the video effects (glitch, VHS, old film, …) in the editor.

@@ -6,7 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/models/divine_video_clip.dart';
-import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/video_editor/video_editor_beat_resolver.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
@@ -94,7 +93,6 @@ void main() {
       expect(parts.single.from, _ms(4000));
       expect(parts.single.to, _ms(6000));
       expect(parts.single.at, _ms(1000));
-      expect(parts.single.onEditorTimeline, isFalse);
     });
 
     test('plays a sound without an end to the end of the video, but not past '
@@ -134,7 +132,6 @@ void main() {
         ],
       );
       expect(parts.last.speed, 2);
-      expect(parts.every((part) => !part.onEditorTimeline), isTrue);
     });
 
     test('is empty when nothing makes a sound', () {
@@ -186,7 +183,6 @@ void main() {
       await resolver.read(parts);
       final beats = resolver.beatsOnOutput(
         parts,
-        TransitionTimelineMap.fromClips(const []),
         videoEnd: _ms(6000),
       );
 
@@ -211,7 +207,6 @@ void main() {
       await resolver.read(parts);
       final beats = resolver.beatsOnOutput(
         parts,
-        TransitionTimelineMap.fromClips(clips),
         videoEnd: _ms(3000),
       );
 
@@ -235,7 +230,6 @@ void main() {
       await resolver.read(parts);
       final beats = resolver.beatsOnOutput(
         parts,
-        TransitionTimelineMap.fromClips(clips),
         videoEnd: _ms(2800),
       );
       expect(
@@ -264,7 +258,6 @@ void main() {
         await resolver.read(parts);
         final beats = resolver.beatsOnOutput(
           parts,
-          TransitionTimelineMap.fromClips(clips),
           videoEnd: _ms(5500),
         );
         expect(
@@ -306,7 +299,6 @@ void main() {
         await resolver.read(parts);
         final beats = resolver.beatsOnOutput(
           parts,
-          TransitionTimelineMap.fromClips(clips),
           videoEnd: _ms(3000),
         );
         expect(
@@ -333,7 +325,6 @@ void main() {
       await resolver.read(parts);
       final beats = resolver.beatsOnOutput(
         parts,
-        TransitionTimelineMap.fromClips(clips),
         videoEnd: _ms(2500),
       );
       expect(
@@ -372,7 +363,6 @@ void main() {
       await halfReadable.read(parts);
       final beats = halfReadable.beatsOnOutput(
         parts,
-        TransitionTimelineMap.fromClips(clips),
         videoEnd: _ms(6000),
       );
 
