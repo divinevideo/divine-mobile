@@ -9442,6 +9442,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorLevelSemanticLabel => '层级';
 
   @override
+  String get videoEditorBrushSizeSemanticLabel => '画笔大小';
+
+  @override
   String get videoMetadataClosePostDetailsSemanticLabel => '关闭帖子详情';
 
   @override

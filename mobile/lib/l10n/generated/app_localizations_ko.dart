@@ -9559,6 +9559,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorLevelSemanticLabel => '레벨';
 
   @override
+  String get videoEditorBrushSizeSemanticLabel => '브러시 크기';
+
+  @override
   String get videoMetadataClosePostDetailsSemanticLabel => '게시물 세부 정보 닫기';
 
   @override

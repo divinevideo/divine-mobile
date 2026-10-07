@@ -10253,6 +10253,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorLevelSemanticLabel => 'Nivel';
 
   @override
+  String get videoEditorBrushSizeSemanticLabel => 'Dimensiunea pensulei';
+
+  @override
   String get videoMetadataClosePostDetailsSemanticLabel =>
       'Închide detaliile postării';
 

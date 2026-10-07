@@ -10133,6 +10133,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorLevelSemanticLabel => 'Ниво';
 
   @override
+  String get videoEditorBrushSizeSemanticLabel => 'Размер на четката';
+
+  @override
   String get videoMetadataClosePostDetailsSemanticLabel =>
       'Затваряне на подробностите за публикацията';
 

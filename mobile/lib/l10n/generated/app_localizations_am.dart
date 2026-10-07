@@ -9798,6 +9798,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorLevelSemanticLabel => 'ደረጃ';
 
   @override
+  String get videoEditorBrushSizeSemanticLabel => 'የብሩሽ መጠን';
+
+  @override
   String get videoMetadataClosePostDetailsSemanticLabel => 'የልጥፍ ዝርዝሮችን ዝጋ';
 
   @override

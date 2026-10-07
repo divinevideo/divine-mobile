@@ -21,7 +21,7 @@ void main() {
       expect(bloc.state.canUndo, isFalse);
       expect(bloc.state.canRedo, isFalse);
       expect(bloc.state.selectedTool, DrawToolType.pencil);
-      expect(bloc.state.strokeWidth, 8.0);
+      expect(bloc.state.strokeWidth, DrawToolType.pencil.config.strokeWidth);
       expect(bloc.state.opacity, 1.0);
       expect(bloc.state.selectedColor, VideoEditorConstants.primaryColor);
       expect(bloc.state.mode, PaintMode.freeStyle);
@@ -81,7 +81,7 @@ void main() {
         build: buildBloc,
         seed: () => const VideoEditorDrawState(
           selectedTool: DrawToolType.marker,
-          strokeWidth: 12.0,
+          strokeWidths: {DrawToolType.marker: 20.0},
           opacity: 0.7,
         ),
         act: (bloc) =>
@@ -94,7 +94,7 @@ void main() {
                 'selectedTool',
                 DrawToolType.marker,
               )
-              .having((s) => s.strokeWidth, 'strokeWidth', 12.0)
+              .having((s) => s.strokeWidth, 'strokeWidth', 20.0)
               .having((s) => s.opacity, 'opacity', 0.7),
         ],
       );
@@ -155,6 +155,60 @@ void main() {
         act: (bloc) =>
             bloc.add(const VideoEditorDrawCensorIntensityChanged(0.8)),
         expect: () => const <VideoEditorDrawState>[],
+      );
+    });
+
+    group('VideoEditorDrawBrushSizeChanged', () {
+      blocTest<VideoEditorDrawBloc, VideoEditorDrawState>(
+        'sets the stroke width of the selected drawing tool only',
+        build: buildBloc,
+        seed: () =>
+            const VideoEditorDrawState(selectedTool: DrawToolType.marker),
+        act: (bloc) => bloc.add(const VideoEditorDrawBrushSizeChanged(1)),
+        expect: () => [
+          isA<VideoEditorDrawState>()
+              .having(
+                (s) => s.strokeWidth,
+                'strokeWidth',
+                VideoEditorConstants.drawMaxStrokeWidth,
+              )
+              .having((s) => s.brushSize, 'brushSize', 1.0)
+              .having(
+                (s) => s.strokeWidthOf(DrawToolType.pencil),
+                'pencil strokeWidth',
+                DrawToolType.pencil.config.strokeWidth,
+              ),
+        ],
+      );
+
+      blocTest<VideoEditorDrawBloc, VideoEditorDrawState>(
+        'ignores a brush size while hiding areas',
+        build: buildBloc,
+        seed: () => const VideoEditorDrawState(selectedTool: DrawToolType.blur),
+        act: (bloc) => bloc.add(const VideoEditorDrawBrushSizeChanged(1)),
+        expect: () => const <VideoEditorDrawState>[],
+      );
+    });
+
+    group('VideoEditorDrawToolSelected', () {
+      blocTest<VideoEditorDrawBloc, VideoEditorDrawState>(
+        'draws with the stroke width last set for that tool',
+        build: buildBloc,
+        seed: () => const VideoEditorDrawState(
+          selectedTool: DrawToolType.marker,
+          strokeWidths: {DrawToolType.pencil: 20.0},
+        ),
+        act: (bloc) =>
+            bloc.add(const VideoEditorDrawToolSelected(DrawToolType.pencil)),
+        expect: () => [
+          isA<VideoEditorDrawState>()
+              .having(
+                (s) => s.selectedTool,
+                'selectedTool',
+                DrawToolType.pencil,
+              )
+              .having((s) => s.strokeWidth, 'strokeWidth', 20.0),
+        ],
       );
     });
 
@@ -228,9 +282,13 @@ void main() {
       expect(state1, isNot(equals(state2)));
     });
 
-    test('different strokeWidth values are not equal', () {
-      const state1 = VideoEditorDrawState(strokeWidth: 6.0);
-      const state2 = VideoEditorDrawState(strokeWidth: 12.0);
+    test('different strokeWidths values are not equal', () {
+      const state1 = VideoEditorDrawState(
+        strokeWidths: {DrawToolType.pencil: 6.0},
+      );
+      const state2 = VideoEditorDrawState(
+        strokeWidths: {DrawToolType.pencil: 12.0},
+      );
       expect(state1, isNot(equals(state2)));
     });
 
@@ -259,7 +317,7 @@ void main() {
           canUndo: true,
           canRedo: true,
           selectedTool: DrawToolType.marker,
-          strokeWidth: 12.0,
+          strokeWidths: {DrawToolType.marker: 20.0},
           opacity: 0.7,
           selectedColor: Colors.red,
           mode: PaintMode.arrow,
@@ -290,11 +348,13 @@ void main() {
       expect(original.selectedTool, DrawToolType.pencil);
     });
 
-    test('copyWith updates strokeWidth', () {
+    test('copyWith updates strokeWidths', () {
       const original = VideoEditorDrawState();
-      final copy = original.copyWith(strokeWidth: 16.0);
+      final copy = original.copyWith(
+        strokeWidths: {DrawToolType.pencil: 16.0},
+      );
       expect(copy.strokeWidth, 16.0);
-      expect(original.strokeWidth, 8.0);
+      expect(original.strokeWidth, DrawToolType.pencil.config.strokeWidth);
     });
 
     test('copyWith updates opacity', () {
@@ -324,7 +384,7 @@ void main() {
         canUndo: true,
         canRedo: true,
         selectedTool: DrawToolType.arrow,
-        strokeWidth: 10.0,
+        strokeWidths: {DrawToolType.arrow: 10.0},
         opacity: 0.8,
         selectedColor: Colors.green,
         mode: PaintMode.arrow,
@@ -343,7 +403,7 @@ void main() {
         canUndo: true,
         canRedo: true,
         selectedTool: DrawToolType.marker,
-        strokeWidth: 12.0,
+        strokeWidths: {DrawToolType.marker: 20.0},
         opacity: 0.7,
         selectedColor: Colors.red,
         mode: PaintMode.arrow,
@@ -354,13 +414,32 @@ void main() {
         true, // canUndo
         true, // canRedo
         DrawToolType.marker,
-        12.0, // strokeWidth
+        {DrawToolType.marker: 20.0}, // strokeWidths
         0.7, // opacity
         Colors.red,
         PaintMode.arrow,
         0.2, // blurIntensity
         0.9, // pixelateIntensity
       ]);
+    });
+  });
+
+  group('drawStrokeWidthOf', () {
+    test('spans the stroke widths of the slider ends', () {
+      expect(drawStrokeWidthOf(0), VideoEditorConstants.drawMinStrokeWidth);
+      expect(drawStrokeWidthOf(1), VideoEditorConstants.drawMaxStrokeWidth);
+    });
+
+    test('gives the thin end more of the slider', () {
+      const midpoint =
+          (VideoEditorConstants.drawMinStrokeWidth +
+              VideoEditorConstants.drawMaxStrokeWidth) /
+          2;
+      expect(drawStrokeWidthOf(0.5), lessThan(midpoint));
+    });
+
+    test('is undone by drawBrushSizeOf', () {
+      expect(drawBrushSizeOf(drawStrokeWidthOf(0.3)), closeTo(0.3, 1e-9));
     });
   });
 

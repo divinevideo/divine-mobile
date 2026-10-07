@@ -2867,6 +2867,7 @@
     "videoEditorAddElementSemanticLabel": "Lägg till element",
     "videoEditorDoneSemanticLabel": "Klar",
     "videoEditorLevelSemanticLabel": "Nivå",
+    "videoEditorBrushSizeSemanticLabel": "Penselstorlek",
     "videoMetadataClosePostDetailsSemanticLabel": "Stäng inläggsdetaljer",
     "videoMetadataDismissHelpDialogSemanticLabel": "Stäng hjälpdialog",
     "videoMetadataGotItButton": "Jag fattar!",

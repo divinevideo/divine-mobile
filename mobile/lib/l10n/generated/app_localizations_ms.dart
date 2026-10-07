@@ -10048,6 +10048,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorLevelSemanticLabel => 'Tahap';
 
   @override
+  String get videoEditorBrushSizeSemanticLabel => 'Saiz berus';
+
+  @override
   String get videoMetadataClosePostDetailsSemanticLabel =>
       'Tutup butiran siaran';
 

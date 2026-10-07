@@ -6894,6 +6894,10 @@
   "videoEditorAddElementSemanticLabel": "Add element",
   "videoEditorDoneSemanticLabel": "Done",
   "videoEditorLevelSemanticLabel": "Level",
+  "videoEditorBrushSizeSemanticLabel": "Brush size",
+  "@videoEditorBrushSizeSemanticLabel": {
+    "description": "Screen reader label for the vertical slider that sets how thick the draw editor's pencil, marker, arrow or eraser draws."
+  },
   "videoMetadataClosePostDetailsSemanticLabel": "Close post details",
   "videoMetadataDismissHelpDialogSemanticLabel": "Dismiss help dialog",
   "videoMetadataGotItButton": "Got it!",

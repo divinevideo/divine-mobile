@@ -9955,6 +9955,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorLevelSemanticLabel => 'Level';
 
   @override
+  String get videoEditorBrushSizeSemanticLabel => 'Ukuran kuas';
+
+  @override
   String get videoMetadataClosePostDetailsSemanticLabel =>
       'Tutup detail postingan';
 

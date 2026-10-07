@@ -2050,6 +2050,7 @@
     "videoEditorHueSemanticLabel": "색조",
     "videoEditorKeepEditingButton": "계속 편집",
     "videoEditorLevelSemanticLabel": "레벨",
+    "videoEditorBrushSizeSemanticLabel": "브러시 크기",
     "videoEditorNoStickersAvailable": "사용 가능한 스티커 없음",
     "videoEditorNoStickersFound": "스티커를 찾을 수 없음",
     "videoEditorOpenAudioSemanticLabel": "오디오 편집기 열기",

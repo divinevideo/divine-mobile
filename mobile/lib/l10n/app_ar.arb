@@ -2504,6 +2504,7 @@
     "videoEditorHueSemanticLabel": "الصبغة",
     "videoEditorKeepEditingButton": "مواصلة التحرير",
     "videoEditorLevelSemanticLabel": "المستوى",
+    "videoEditorBrushSizeSemanticLabel": "حجم الفرشاة",
     "videoEditorNoStickersAvailable": "لا توجد ملصقات متاحة",
     "videoEditorNoStickersFound": "لم يتم العثور على ملصقات",
     "videoEditorOpenAudioSemanticLabel": "فتح محرر الصوت",

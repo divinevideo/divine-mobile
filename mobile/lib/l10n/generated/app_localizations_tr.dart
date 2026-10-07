@@ -9956,6 +9956,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorLevelSemanticLabel => 'Seviye';
 
   @override
+  String get videoEditorBrushSizeSemanticLabel => 'Fırça boyutu';
+
+  @override
   String get videoMetadataClosePostDetailsSemanticLabel =>
       'Gönderi ayrıntılarını kapat';
 
