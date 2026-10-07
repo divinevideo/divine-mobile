@@ -746,6 +746,9 @@ void main() {
             when(
               repository.retryableReactions,
             ).thenAnswer((_) async => [_target(rumorId: 'r1')]);
+            // This stub never nudges, so only the pass's own decision can arm
+            // the heartbeat. The next test adds the nudge the real repository
+            // sends.
             when(
               () => repository.retry(
                 rumorId: 'r1',
@@ -767,10 +770,54 @@ void main() {
             expect(
               async.pendingTimers,
               isEmpty,
-              reason: 'the failure that spends the budget must not re-arm',
+              reason: 'the pass that spends the budget leaves nothing to retry',
             );
             async.elapse(const Duration(minutes: 10));
             expect(attempts, maxRetries);
+            unawaited(service.dispose());
+            async.flushMicrotasks();
+          });
+        },
+      );
+
+      test(
+        'the nudge from the failure that spends the budget buys at most one '
+        'more pass, and that pass attempts nothing',
+        () {
+          fakeAsync((async) {
+            final maxRetries = const DmReactionRetryConfig().maxRetries;
+            var attempts = 0;
+            var passes = 0;
+            when(repository.retryableReactions).thenAnswer((_) async {
+              passes++;
+              return [_target(rumorId: 'r1')];
+            });
+            when(
+              () => repository.retry(
+                rumorId: 'r1',
+                targetMessageAuthor: _authorPubkey,
+              ),
+            ).thenAnswer((_) async {
+              attempts++;
+              // DmReactionsRepository.retry nudges on every failure it leaves
+              // on the worklist, the one that spends the budget included. The
+              // nudge lands mid-pass, so it arms a follow-up.
+              retryableWorkController.add(null);
+              return _fail('r1');
+            });
+
+            final service = startService(async);
+            for (var i = 0; i < 600 && attempts < maxRetries; i++) {
+              async.elapse(const Duration(seconds: 1));
+            }
+            expect(attempts, maxRetries);
+            final passesWhenSpent = passes;
+
+            async.elapse(const Duration(minutes: 10));
+
+            expect(attempts, maxRetries);
+            expect(passes - passesWhenSpent, lessThanOrEqualTo(1));
+            expect(async.pendingTimers, isEmpty);
             unawaited(service.dispose());
             async.flushMicrotasks();
           });
