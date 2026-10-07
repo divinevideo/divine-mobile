@@ -40,6 +40,8 @@ class UserAvatar extends StatelessWidget {
     this.placeholderTone = UserAvatarPlaceholderTone.auto,
     this.placeholderSeed,
     this.cornerRadius,
+    this.decodeSize,
+    this.previewDecodeSize,
     this.contentOverride,
     this.avatarSvgRepository,
   });
@@ -63,6 +65,22 @@ class UserAvatar extends StatelessWidget {
   /// profile avatar lightbox to render the maximized avatar at 112px
   /// instead of the size-derived default.
   final double? cornerRadius;
+
+  /// Logical size the network image is decoded at. Defaults to [size].
+  ///
+  /// The decode size is part of the image cache key, so an avatar whose
+  /// [size] animates (a Hero flight) pins this to a size already decoded
+  /// elsewhere. Otherwise every frame asks for a new decode that is not in
+  /// memory and the generated placeholder shows for the whole animation.
+  final double? decodeSize;
+
+  /// Logical decode size of the same image to show while the image at
+  /// [decodeSize] loads, in place of the generated placeholder.
+  ///
+  /// Lets a larger avatar start from a smaller decode that is already in
+  /// memory and cross-fade to the sharp one, instead of flashing the
+  /// placeholder in between.
+  final double? previewDecodeSize;
 
   /// Fixed artwork rendered in place of [imageUrl] / [imageProvider] and the
   /// generated placeholder, inside the shared avatar chrome (size, corner
@@ -150,7 +168,8 @@ class UserAvatar extends StatelessWidget {
     name: name,
   );
 
-  /// Decode width for this avatar's slot, in device pixels.
+  /// Decode width in device pixels: [logicalSize] when given, else
+  /// [decodeSize], else this avatar's [size].
   ///
   /// An avatar URL is an arbitrary user-supplied kind-0 `picture` at an
   /// arbitrary resolution, and the slot is usually 32-44pt. Without a hint
@@ -159,14 +178,15 @@ class UserAvatar extends StatelessWidget {
   /// above bounds layout, not decode. Height is deliberately left to
   /// [ResizeImage] so the aspect ratio survives.
   ///
-  /// Returns null for a non-finite or non-positive [size], leaving the
-  /// framework to decode at native resolution. A `double.infinity` slot
+  /// Returns null when that logical width is non-finite or non-positive, leaving
+  /// the framework to decode at native resolution. A `double.infinity` slot
   /// (an avatar told to fill its cell) would otherwise reach
   /// `(size * dpr).ceil()`, which throws. Mirrors
   /// `_VideoThumbnailWidgetState._decodeWidth`.
-  int? _decodeWidth(BuildContext context) {
-    if (!size.isFinite || size <= 0) return null;
-    return (size * MediaQuery.devicePixelRatioOf(context)).ceil();
+  int? _decodeWidth(BuildContext context, [double? logicalSize]) {
+    final width = logicalSize ?? decodeSize ?? size;
+    if (!width.isFinite || width <= 0) return null;
+    return (width * MediaQuery.devicePixelRatioOf(context)).ceil();
   }
 
   Widget _buildContent(BuildContext context) {
@@ -213,7 +233,13 @@ class UserAvatar extends StatelessWidget {
       return VineCachedImage(
         imageUrl: imageUrl!,
         memCacheWidth: _decodeWidth(context),
-        placeholder: (context, url) => _buildPlaceholder(),
+        placeholder: (context, url) => previewDecodeSize == null
+            ? _buildPlaceholder()
+            : VineCachedImage(
+                imageUrl: url,
+                memCacheWidth: _decodeWidth(context, previewDecodeSize),
+                placeholder: (context, url) => _buildPlaceholder(),
+              ),
         errorWidget: (context, url, error) {
           final failureKind = AvatarFailureCache.instance.recordFailureForError(
             url,
