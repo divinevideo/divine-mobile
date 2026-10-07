@@ -264,25 +264,20 @@ class CuratedListRepository {
       timeout: kPublicCuratedListsRelayReadTimeout,
     );
 
-    final seen = <String, CuratedList>{};
-    for (final event in events) {
+    final results = <CuratedList>[];
+    // The newest revision wins before any filter, or an older populated one
+    // would surface for a list its author has since emptied or renamed.
+    for (final event in CuratedListConverter.latestRevisions(events)) {
       if (_isBlocked(event.pubkey)) continue;
       final list = CuratedListConverter.fromEvent(event);
       if (list == null) continue;
-      final key = list.authorScopedId;
-      if (excluded.contains(key)) continue;
+      if (excluded.contains(list.authorScopedId)) continue;
       if (!list.isPublic || !list.hasVideos) continue;
       if (!_matchesQuery(list, lowerQuery)) continue;
-
-      // Dedup per author and d-tag, keep newest
-      final existing = seen[key];
-      if (existing != null && existing.updatedAt.isAfter(list.updatedAt)) {
-        continue;
-      }
-      seen[key] = list;
+      results.add(list);
     }
 
-    return seen.values.toList();
+    return results;
   }
 
   bool _isBlocked(String? pubkey) {
