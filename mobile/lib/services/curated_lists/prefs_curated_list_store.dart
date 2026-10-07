@@ -6,7 +6,6 @@ import 'dart:convert';
 
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:models/models.dart';
-import 'package:openvine/services/curated_lists/curated_list_subscription_metadata.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -78,12 +77,20 @@ class PrefsCuratedListStore {
   List<CuratedList> loadLists() =>
       _storedLists(fallback: const [], preserveDecoded: true);
 
-  /// Loads the existing subscription cache and captures its write baseline.
-  Set<String> loadSubscriptions() {
-    final subscriptions = _storedSubscriptions(fallback: const {});
-    subscriptionsLoaded(subscriptions);
-    return subscriptions;
+  /// Loads IDs and their readability together from one storage read.
+  ///
+  /// An absent record is a known empty snapshot. Malformed metadata remains
+  /// incomplete, so callers cannot treat the empty fallback as an unfollow.
+  /// IDs are immutable and the same decoded snapshot captures the write baseline.
+  ({Set<String> ids, bool isReadable}) loadSubscriptionSnapshot() {
+    final snapshot = _readStoredSubscriptions(fallback: const {});
+    subscriptionsLoaded(snapshot.ids);
+    return snapshot;
   }
+
+  /// Loads the existing subscription cache and captures its write baseline.
+  Set<String> loadSubscriptions() =>
+      Set<String>.of(loadSubscriptionSnapshot().ids);
 
   /// Saves what changed in [lists] since the last load or successful save,
   /// keeping lists another writer stored in the meantime. Returns whether
@@ -528,14 +535,28 @@ class PrefsCuratedListStore {
 
   /// The stored ids, or [fallback] when they cannot be decoded.
   Set<String> _storedSubscriptions({required Set<String> fallback}) =>
-      readCuratedListSubscriptionSnapshot(
-        preferences: _prefs,
-        storageKey: _subscriptionsKey,
-        fallback: fallback,
-        onMissing: () => _writes.cacheKeyRemoved(_subscriptionsKey),
-        onUnreadable: (error, stackTrace) =>
-            _logUnreadable('subscriptions', error, stackTrace),
-      ).ids;
+      _readStoredSubscriptions(fallback: fallback).ids;
+
+  ({Set<String> ids, bool isReadable}) _readStoredSubscriptions({
+    required Set<String> fallback,
+  }) {
+    try {
+      final json = _prefs.getString(_subscriptionsKey);
+      if (json == null) {
+        _writes.cacheKeyRemoved(_subscriptionsKey);
+        return (ids: const <String>{}, isReadable: true);
+      }
+      // Validate the entire list before exposing any IDs. A mixed record must
+      // not turn its readable prefix into an authoritative partial snapshot.
+      final ids = List<String>.from(
+        jsonDecode(json) as List<dynamic>,
+      ).toSet();
+      return (ids: Set<String>.unmodifiable(ids), isReadable: true);
+    } on Object catch (error, stackTrace) {
+      _logUnreadable('subscriptions', error, stackTrace);
+      return (ids: Set<String>.unmodifiable(fallback), isReadable: false);
+    }
+  }
 
   void _logUnreadable(String what, Object error, StackTrace stackTrace) {
     // The error is left out: FormatException.toString() quotes the stored text.

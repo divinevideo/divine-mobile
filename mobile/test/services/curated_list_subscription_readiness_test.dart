@@ -26,6 +26,7 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       final auth = _MockAuthService();
       when(() => auth.currentPublicKeyHex).thenReturn(_owner);
+      when(() => auth.isAuthenticated).thenReturn(true);
       final service = CuratedListService(
         authService: auth,
         nostrService: _MockNostrClient(),
@@ -61,15 +62,7 @@ void main() {
       },
     );
 
-    for (final malformed in <Object>[
-      '{',
-      '{}',
-      '["valid", null]',
-      '[123]',
-      true,
-      7,
-      <String>['wrong storage type'],
-    ]) {
+    for (final malformed in ['{', '{}', '["valid", null]', '[123]']) {
       test(
         'unreadable metadata "$malformed" cannot become authoritative',
         () async {
@@ -79,11 +72,42 @@ void main() {
           expect(service.hasLoadedSubscriptionIds, isFalse);
           expect(service.subscribedListIds, isEmpty);
           expect(
-            prefs.get(CuratedListService.subscribedListsStorageKey),
+            prefs.getString(CuratedListService.subscribedListsStorageKey),
             malformed,
           );
         },
       );
     }
+    for (final raw in <Object>[
+      123,
+      true,
+      <String>['known'],
+    ]) {
+      test(
+        'wrong preferences ${raw.runtimeType} is unreadable and retains raw evidence',
+        () async {
+          final service = await open(raw);
+          final prefs = await SharedPreferences.getInstance();
+
+          expect(service.hasLoadedSubscriptionIds, isFalse);
+          expect(service.subscribedListIds, isEmpty);
+          expect(prefs.get(CuratedListService.subscribedListsStorageKey), raw);
+        },
+      );
+    }
+
+    test(
+      'reopening after a verified metadata repair captures new readiness',
+      () async {
+        final unreadable = await open('{');
+        expect(unreadable.hasLoadedSubscriptionIds, isFalse);
+        unreadable.dispose();
+        final repaired = await open(jsonEncode(['$_owner:series::cats']));
+
+        expect(repaired.hasLoadedSubscriptionIds, isTrue);
+        expect(repaired.subscribedListIds, {'$_owner:series::cats'});
+        expect(unreadable.isCurrentSession, isFalse);
+      },
+    );
   });
 }
