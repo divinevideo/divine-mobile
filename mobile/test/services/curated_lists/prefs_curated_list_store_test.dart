@@ -33,6 +33,19 @@ class _RefusingPrefs extends Fake implements SharedPreferences {
   }
 }
 
+/// Counts the actual metadata read while preserving real preferences behavior.
+class _CountingSubscriptionPrefs extends Fake implements SharedPreferences {
+  _CountingSubscriptionPrefs(this.backing);
+  final SharedPreferences backing;
+  int subscriptionReads = 0;
+
+  @override
+  String? getString(String key) {
+    if (key == _subscriptionsKey) ++subscriptionReads;
+    return backing.getString(key);
+  }
+}
+
 class _FirstWriteRejectsPrefs extends Fake implements SharedPreferences {
   final _stored = <String, String>{};
   var _writes = 0;
@@ -153,6 +166,88 @@ void main() {
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
       prefs = await SharedPreferences.getInstance();
+    });
+
+    group('subscription snapshots', () {
+      test('absent metadata is readable empty and decoded exactly once', () {
+        final counting = _CountingSubscriptionPrefs(prefs);
+        final snapshot = _store(counting).loadSubscriptionSnapshot();
+
+        expect(snapshot.ids, isEmpty);
+        expect(snapshot.isReadable, isTrue);
+        expect(counting.subscriptionReads, 1);
+        expect(() => snapshot.ids.add('guess'), throwsUnsupportedError);
+      });
+
+      test(
+        'full coordinates and colon d-tags share one immutable snapshot',
+        () async {
+          const coordinate = '$_owner:series::cats';
+          await prefs.setString(
+            _subscriptionsKey,
+            jsonEncode([coordinate, ':raw']),
+          );
+          final counting = _CountingSubscriptionPrefs(prefs);
+          final snapshot = _store(counting).loadSubscriptionSnapshot();
+
+          expect(snapshot.ids, {coordinate, ':raw'});
+          expect(snapshot.isReadable, isTrue);
+          expect(counting.subscriptionReads, 1);
+          expect(snapshot.ids.clear, throwsUnsupportedError);
+        },
+      );
+
+      for (final raw in ['{', '{}', '["known", null]', '[123]']) {
+        test(
+          'unreadable metadata stays incomplete and raw evidence is retained: $raw',
+          () async {
+            await prefs.setString(_subscriptionsKey, raw);
+            final counting = _CountingSubscriptionPrefs(prefs);
+            final snapshot = _store(counting).loadSubscriptionSnapshot();
+
+            expect(snapshot.ids, isEmpty);
+            expect(snapshot.isReadable, isFalse);
+            expect(counting.subscriptionReads, 1);
+            expect(prefs.getString(_subscriptionsKey), raw);
+          },
+        );
+      }
+
+      for (final raw in <Object>[
+        123,
+        true,
+        <String>['known'],
+      ]) {
+        test(
+          'wrong preferences ${raw.runtimeType} remains unreadable without throwing',
+          () async {
+            SharedPreferences.setMockInitialValues({_subscriptionsKey: raw});
+            final typedPrefs = await SharedPreferences.getInstance();
+
+            final snapshot = _store(typedPrefs).loadSubscriptionSnapshot();
+
+            expect(snapshot.ids, isEmpty);
+            expect(snapshot.isReadable, isFalse);
+            expect(typedPrefs.get(_subscriptionsKey), raw);
+          },
+        );
+      }
+
+      test('decoded snapshot supplies the same write baseline', () async {
+        await prefs.setString(_subscriptionsKey, jsonEncode(['before']));
+        final store = _store(prefs);
+        final snapshot = store.loadSubscriptionSnapshot();
+        await prefs.setString(
+          _subscriptionsKey,
+          jsonEncode(['before', 'other-writer']),
+        );
+
+        expect(
+          await store.saveSubscriptions({...snapshot.ids, 'mine'}),
+          isTrue,
+        );
+        expect(_storedSubscriptions(prefs), {'before', 'other-writer', 'mine'});
+      });
     });
 
     group('saveLists', () {
