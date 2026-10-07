@@ -10,6 +10,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_row_layout.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/layer_keyframes.dart';
 import 'package:openvine/extensions/tune_adjustment_matrix_extensions.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/caption_layer_mapping.dart';
@@ -463,9 +464,10 @@ class TimelineOverlayBloc
       // A trimmed start leaves keyframes where they are on the video (see
       // `LayerKeyframeTimeline.keyframesFrom`), so they move against the new
       // start until the item is rebuilt from the editor on release. The end
-      // handle leaves them alone even when it pushes a capped bar along, as
-      // the editor does.
-      keyframeTimes: event.isStart
+      // handle leaves them alone even when it pushes a capped bar along, and
+      // so does a detached clip's start, as in the editor.
+      keyframeTimes:
+          event.isStart && (item.layer?.keepsMotionOnStartTrim ?? true)
           ? [
               for (final time in item.keyframeTimes)
                 time - (newStart - item.startTime),

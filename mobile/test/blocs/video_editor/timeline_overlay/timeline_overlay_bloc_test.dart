@@ -1479,6 +1479,39 @@ void main() {
       );
 
       blocTest<TimelineOverlayBloc, TimelineOverlayState>(
+        'moves keyframes with a detached clip trimmed at its start',
+        build: TimelineOverlayBloc.new,
+        seed: () => TimelineOverlayState(
+          items: [
+            TimelineOverlayItem(
+              id: 'detached',
+              type: TimelineOverlayType.layer,
+              startTime: const Duration(seconds: 1),
+              endTime: const Duration(seconds: 4),
+              layer: WidgetLayer(
+                widget: const SizedBox.shrink(),
+                meta: const {detachedClipLayerKindKey: detachedClipLayerKind},
+              ),
+              keyframeTimes: const [Duration.zero, Duration(seconds: 2)],
+            ),
+          ],
+        ),
+        act: (bloc) => bloc.add(
+          const TimelineOverlayItemTrimmed(
+            itemId: 'detached',
+            isStart: true,
+            startTime: Duration(milliseconds: 1500),
+            endTime: Duration(seconds: 4),
+          ),
+        ),
+        // Its footage starts over at the new start, and its motion with it.
+        verify: (bloc) => expect(bloc.state.items.single.keyframeTimes, [
+          Duration.zero,
+          const Duration(seconds: 2),
+        ]),
+      );
+
+      blocTest<TimelineOverlayBloc, TimelineOverlayState>(
         'moves keyframes with a capped bar the end handle pushes along',
         build: TimelineOverlayBloc.new,
         seed: () => const TimelineOverlayState(

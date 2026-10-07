@@ -857,8 +857,12 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
           endTime: endTime,
           // A trimmed start leaves the motion where it is on the video;
           // keyframes count from the start, so they are rebased onto it.
-          keyframes: isStart && (layer?.hasKeyframes ?? false)
-              ? layer!.keyframesFrom(startTime)
+          keyframes:
+              isStart &&
+                  layer != null &&
+                  layer.hasKeyframes &&
+                  layer.keepsMotionOnStartTrim
+              ? layer.keyframesFrom(startTime)
               : null,
           skipUpdateHistory: true,
         );

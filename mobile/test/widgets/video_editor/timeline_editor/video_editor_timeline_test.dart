@@ -23,6 +23,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_clip_strip.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_strip.dart';
@@ -1063,6 +1064,41 @@ void main() {
           isStart: false,
         );
 
+        expect(writtenKeyframes(), isNull);
+      });
+
+      testWidgets('moves a detached clip motion with its trimmed start', (
+        tester,
+      ) async {
+        const meta = <String, dynamic>{
+          detachedClipLayerKindKey: detachedClipLayerKind,
+          detachedClipLayerIdKey: 'text',
+        };
+        when(() => editor.activeLayers).thenReturn([
+          WidgetLayer(
+            id: 'text',
+            widget: const SizedBox.shrink(),
+            meta: meta,
+            exportConfigs: const WidgetLayerExportConfigs(
+              id: 'text',
+              meta: meta,
+            ),
+            startTime: layer.startTime,
+            endTime: layer.endTime,
+            keyframes: layer.keyframes,
+          ),
+        ]);
+        final onTrimmed = await pumpTimeline(tester);
+
+        onTrimmed(
+          item: item,
+          startTime: ms * 1500,
+          endTime: ms * 5000,
+          isStart: true,
+        );
+
+        // Its footage starts over at the new start, so the keyframes stay
+        // measured from it and keep to the frames they were set on.
         expect(writtenKeyframes(), isNull);
       });
     });

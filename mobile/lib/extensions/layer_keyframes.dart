@@ -4,6 +4,7 @@
 import 'dart:ui';
 
 import 'package:openvine/extensions/layer_animation_storage.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show AnimationCurve, Layer, LayerKeyframe, LayerKeyframeEffect;
@@ -14,8 +15,18 @@ import 'package:pro_video_editor/pro_video_editor.dart' as pve;
 /// [Layer.keyframes] are measured from the layer's start, so moving a layer
 /// along the timeline moves its motion with it. Every other edit keeps the
 /// motion where it is on the video: a trimmed start or a split rebases the
-/// keyframes instead of shifting them.
+/// keyframes instead of shifting them. A detached clip's trimmed start is the
+/// exception, see [keepsMotionOnStartTrim].
 extension LayerKeyframeTimeline on Layer {
+  /// Whether a trimmed start leaves the motion where it is on the video, by
+  /// rebasing the keyframes onto the new start (see [keyframesFrom]).
+  ///
+  /// Not for a detached clip: its footage starts over at the new start rather
+  /// than losing its head, so its keyframes move with the start too and stay
+  /// on the frames they were set on.
+  bool get keepsMotionOnStartTrim =>
+      !DetachedClipLayerData.isDetachedClipLayer(this);
+
   /// The keyframes measured from [newStart] instead of the layer's own start,
   /// each staying at its point on the video.
   ///
