@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
@@ -38,6 +39,8 @@ DivineVideoClip _clip(
   Duration trimStart = Duration.zero,
   double volume = 1,
   double? playbackSpeed,
+  bool reversed = false,
+  ClipTransition? transition,
 }) => DivineVideoClip(
   id: id,
   video: EditorVideo.file('${Directory.systemTemp.path}/$id.mp4'),
@@ -48,6 +51,8 @@ DivineVideoClip _clip(
   trimStart: trimStart,
   volume: volume,
   playbackSpeed: playbackSpeed,
+  reversed: reversed,
+  transition: transition,
 );
 
 /// Extracts a drum loop with a kick every half second from 0.25 s into the
@@ -129,7 +134,7 @@ void main() {
         ],
       );
       expect(parts.last.speed, 2);
-      expect(parts.every((part) => part.onEditorTimeline), isTrue);
+      expect(parts.every((part) => !part.onEditorTimeline), isTrue);
     });
 
     test('is empty when nothing makes a sound', () {
@@ -220,6 +225,101 @@ void main() {
       );
     });
 
+    test('uses the playback order of an already reversed clip file', () async {
+      final clips = [_clip('reversed', duration: _ms(2800), reversed: true)];
+      final parts = beatSourceFor(
+        sounds: const [],
+        clips: clips,
+        videoEnd: _ms(2800),
+      );
+      await resolver.read(parts);
+      final beats = resolver.beatsOnOutput(
+        parts,
+        TransitionTimelineMap.fromClips(clips),
+        videoEnd: _ms(2800),
+      );
+      expect(
+        worstMiss(beats, [for (var t = 250; t < 2800; t += 500) _ms(t)]),
+        lessThanOrEqualTo(_ms(15)),
+      );
+    });
+
+    test(
+      'places both sides of an overlap in real audio playback time',
+      () async {
+        final clips = [
+          _clip(
+            'a',
+            transition: const ClipTransition(
+              type: ClipTransitionType.dissolve,
+            ),
+          ),
+          _clip('b'),
+        ];
+        final parts = beatSourceFor(
+          sounds: const [],
+          clips: clips,
+          videoEnd: _ms(5500),
+        );
+        await resolver.read(parts);
+        final beats = resolver.beatsOnOutput(
+          parts,
+          TransitionTimelineMap.fromClips(clips),
+          videoEnd: _ms(5500),
+        );
+        expect(
+          worstMiss(beats, [
+            _ms(250),
+            _ms(750),
+            _ms(1250),
+            _ms(1750),
+            _ms(2250),
+            _ms(2750),
+            _ms(2750),
+            _ms(3250),
+            _ms(3750),
+            _ms(4250),
+            _ms(4750),
+            _ms(5250),
+          ]),
+          lessThanOrEqualTo(_ms(15)),
+        );
+      },
+    );
+
+    test('moves the first head to the final loop-restart blend', () async {
+      final clips = [
+        _clip(
+          'a',
+          transition: const ClipTransition(
+            type: ClipTransitionType.dissolve,
+          ),
+        ),
+      ];
+      final parts = beatSourceFor(
+        sounds: const [],
+        clips: clips,
+        videoEnd: _ms(2500),
+      );
+      await resolver.read(parts);
+      final beats = resolver.beatsOnOutput(
+        parts,
+        TransitionTimelineMap.fromClips(clips),
+        videoEnd: _ms(2500),
+      );
+      expect(
+        worstMiss(beats, [
+          _ms(250),
+          _ms(750),
+          _ms(1250),
+          _ms(1750),
+          _ms(2250),
+          _ms(2250),
+        ]),
+        lessThanOrEqualTo(_ms(15)),
+      );
+    });
+
     test('skips a clip it cannot read, and throws when it can read none, so '
         'a later read tries again', () async {
       final clips = [_clip('silent'), _clip('loud')];
@@ -277,5 +377,32 @@ void main() {
       expect(file.reads.single.startTime, _ms(7000));
       expect(file.reads.single.endTime, _ms(12000));
     });
+
+    test(
+      'shares an extraction while the same stretch is still being read',
+      () async {
+        final wav = Completer<Uint8List>();
+        var reads = 0;
+        final shared = VideoEditorBeatResolver(
+          extractAudio: (_) {
+            reads++;
+            return wav.future;
+          },
+        );
+        final parts = beatSourceFor(
+          sounds: [_sound('music')],
+          clips: const [],
+          videoEnd: _ms(3000),
+        );
+        final first = shared.read(parts);
+        final second = shared.read(parts);
+        expect(reads, 1);
+        wav.complete(
+          drumLoopWav(AudioExtractConfigs(video: parts.single.media)),
+        );
+        await Future.wait([first, second]);
+        expect(shared.hasRead(parts), isTrue);
+      },
+    );
   });
 }

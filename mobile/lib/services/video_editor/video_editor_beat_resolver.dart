@@ -117,24 +117,62 @@ List<BeatSourcePart> beatSourceFor({
   }
 
   final parts = <BeatSourcePart>[];
+  final transitions = clampTransitions(clips);
+  Duration overlapAfter(DivineVideoClip clip) {
+    final transition = transitions[clip.id];
+    if (transition == null ||
+        transition.type == ClipTransitionType.fadeToBlack ||
+        transition.type == ClipTransitionType.fadeToWhite) {
+      return Duration.zero;
+    }
+    return transition.duration;
+  }
+
+  final wrapTransition = clips.isEmpty ? null : transitions[clips.last.id];
+  final wrap = wrapTransition == null
+      ? Duration.zero
+      : (wrapTransition.type == ClipTransitionType.fadeToBlack ||
+            wrapTransition.type == ClipTransitionType.fadeToWhite)
+      ? wrapTransition.duration ~/ 2
+      : wrapTransition.duration;
+  final outputDuration = TransitionTimelineMap.fromClips(clips).outputDuration;
   var clipStart = Duration.zero;
-  for (final clip in clips) {
+  for (var i = 0; i < clips.length; i++) {
+    final clip = clips[i];
     final video = clip.video;
     if (video != null && clip.volume > 0 && !clip.isFreezeFrame) {
+      final speed = clip.playbackSpeed ?? 1;
+      final head = i == 0
+          ? Duration(microseconds: (wrap.inMicroseconds * speed).round())
+          : Duration.zero;
+      if (head > Duration.zero) {
+        // The first head is the incoming side of the final wrap blend.
+        parts.add(
+          BeatSourcePart(
+            media: video,
+            fileLength: clip.duration,
+            from: clip.trimStart,
+            to: clip.trimStart + head,
+            at: outputDuration - wrap,
+            speed: speed,
+          ),
+        );
+      }
       parts.add(
         BeatSourcePart(
           media: video,
           fileLength: clip.duration,
-          from: clip.trimStart,
+          from: clip.trimStart + head,
           to: clip.trimStart + clip.trimmedDuration,
-          at: clipStart,
-          speed: clip.playbackSpeed ?? 1,
-          reversed: clip.reversed,
-          onEditorTimeline: true,
+          at: i == 0 ? Duration.zero : clipStart - wrap,
+          speed: speed,
+          // Reverse is baked into clip.video; its samples are already in
+          // playback order, including the rewritten trims.
         ),
       );
     }
     clipStart += clip.playbackDuration;
+    if (i < clips.length - 1) clipStart -= overlapAfter(clip);
   }
   return parts;
 }
@@ -157,6 +195,7 @@ class VideoEditorBeatResolver {
 
   final Future<Uint8List> Function(AudioExtractConfigs configs) _extractAudio;
   final Map<BeatSourcePart, List<Duration>> _beatsByPart = {};
+  final Map<BeatSourcePart, Future<List<Duration>>> _readsInFlight = {};
 
   /// Whether the beats of every part in [parts] have been read.
   bool hasRead(List<BeatSourcePart> parts) =>
@@ -174,12 +213,17 @@ class VideoEditorBeatResolver {
         anyRead = true;
         continue;
       }
+      final pending = _readsInFlight.putIfAbsent(part, () => _readBeats(part));
       try {
-        _beatsByPart[part] = await _readBeats(part);
+        _beatsByPart[part] = await pending;
         anyRead = true;
       } on PlatformException catch (error) {
         failure = error;
         _beatsByPart[part] = const [];
+      } finally {
+        if (identical(_readsInFlight[part], pending)) {
+          _readsInFlight.remove(part);
+        }
       }
     }
     if (!anyRead && failure != null) {
