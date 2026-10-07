@@ -14,6 +14,7 @@ import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/route_extras.dart';
+import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_empty_state.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
@@ -432,13 +433,17 @@ void _navigateToPeopleList(
 }
 
 void _navigateToCuratedList(BuildContext context, CuratedList list) {
+  final author = list.pubkey;
   runDetached(
     context.push<void>(
-      CuratedListFeedScreen.pathForId(list.id),
+      author == null
+          ? CuratedListFeedScreen.pathForId(list.id)
+          : CuratedListByAuthorScreen.pathFor(pubkey: author, listId: list.id),
       extra: CuratedListRouteExtra(
         listName: list.name,
         videoIds: list.videoEventIds,
-        authorPubkey: list.pubkey,
+        authorPubkey: author,
+        list: list,
       ),
     ),
     'open curated list search result',
