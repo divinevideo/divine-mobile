@@ -393,6 +393,12 @@ dependencies:
   # extra Flutter-specific native SQLite providers can make plain SQLite win.
   sqlite3: ^3.3.3
   audio_session: ^0.2.2
+  # 2.29.0 is the first release that moves image and composition layers
+  # between keyframes and repeats a loop over part of a layer only, which the
+  # keyframe effects export through (#9845, hm21/pro_video_editor#235).
+  # Self-enforcing: the render service and the detached clip composite pass
+  # `keyframes:`, which does not exist before it, so a relaxed floor is a
+  # compile error.
   # 2.27.0 is the first release that renders the wiggle, bounce and loop
   # layer animations and lets the steps of a typing text share one run of
   # animations through `ImageLayer.animationStartTime` (#9849,
@@ -468,7 +474,7 @@ dependencies:
   # is load-bearing and Android-only — no CI job builds Android, and a fallback
   # hard cut is indistinguishable from a working transition in the UI, so
   # relaxing it back to ^2.13.0 would reintroduce #9321 with no signal at all.
-  pro_video_editor: ^2.27.0
+  pro_video_editor: ^2.29.0
   # 14.0.0 is the first release built on material_ui; before it the editor's
   # ThemeData is the framework's and no longer interchangeable with ours.
   # 14.2.0 adds the paint-layer raster cache the video editor turns on.
@@ -487,7 +493,12 @@ dependencies:
   # 14.9.0 adds the typewriter and word-by-word text reveals with
   # ExportedLayer.revealBytes, and previews wiggle, bounce and loops with the
   # export's own easing (#9849, hm21/pro_image_editor#883).
-  pro_image_editor: ^14.9.0
+  # 14.10.0 adds Layer.keyframes with their effects, Layer.opacity for every
+  # layer and replaceLayer(skipUpdateHistory:), which the keyframe sheet and
+  # the opacity slider preview through (#9845, hm21/pro_image_editor#884).
+  # Self-enforcing: the keyframe actions call setKeyframeAt and preview with
+  # skipUpdateHistory, so a relaxed floor is a compile error.
+  pro_image_editor: ^14.10.0
   sensors_plus: ^7.0.0
   stream_transform: ^2.1.1
   flutter_staggered_grid_view: ^0.7.0

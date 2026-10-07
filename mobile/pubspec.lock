@@ -1809,18 +1809,18 @@ packages:
     dependency: "direct main"
     description:
       name: pro_image_editor
-      sha256: "7aab0c930ed1f643626c136394754a8dc0bc1a6999c9ca2427603c2f79c11388"
+      sha256: "09475252d8cffa0905de33b6377bc3ba7a12b069fb0d97dd5152f3210bf7be3d"
       url: "https://pub.dev"
     source: hosted
-    version: "14.9.0"
+    version: "14.10.0"
   pro_video_editor:
     dependency: "direct main"
     description:
       name: pro_video_editor
-      sha256: "1a7cde9b52d706282989bd180dc825afd656381484c56cbac159dc6f32ed79d9"
+      sha256: "4712bad932864254d6d1437463e263eae91f669518209d71bd0e02c2e5a6305d"
       url: "https://pub.dev"
     source: hosted
-    version: "2.27.0"
+    version: "2.29.0"
   process:
     dependency: transitive
     description:
