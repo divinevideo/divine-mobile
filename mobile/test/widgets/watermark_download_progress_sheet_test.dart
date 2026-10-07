@@ -63,8 +63,8 @@ void main() {
               builder: (context, ref, _) {
                 return Scaffold(
                   body: ElevatedButton(
-                    onPressed: () {
-                      showWatermarkDownloadSheet(
+                    onPressed: () async {
+                      await showWatermarkDownloadSheet(
                         context: context,
                         ref: ref,
                         video: video,
