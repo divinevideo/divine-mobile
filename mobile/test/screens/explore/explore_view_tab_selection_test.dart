@@ -63,6 +63,14 @@ class _FakeCuratedListsState extends CuratedListsState {
 /// which is what pumpAndSettle needs.
 CuratedListService _stubbedListService() {
   final service = _MockCuratedListService();
+  when(() => service.isCurrentSession).thenReturn(true);
+  when(() => service.isInitialized).thenReturn(true);
+  when(() => service.initializationError).thenReturn(null);
+  when(() => service.hasLoadedSubscriptionIds).thenReturn(true);
+  when(() => service.subscribedLists).thenReturn(const []);
+  when(() => service.subscribedListIds).thenReturn(const <String>{});
+  when(() => service.lists).thenReturn(const []);
+  when(() => service.myLists).thenReturn(const []);
   when(
     () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
   ).thenAnswer((_) => Stream.value(const <CuratedList>[]));
