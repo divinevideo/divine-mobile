@@ -2411,8 +2411,19 @@ class ProfileRepository implements ProfileReader {
         if (_isSearchCancelled(cancellationToken)) return;
         nextRestOffset = offset + restResults.length;
         restHasMore = restResults.length == limit;
+        final normalizedQuery = trimmed.toLowerCase();
+        final queryHex = _npubQueryToHex(normalizedQuery);
         for (final result in restResults) {
-          resultMap[result.pubkey] = result.toUserProfile();
+          final candidate = result.toUserProfile();
+          final cached = resultMap[result.pubkey];
+          // Keep a local identity match if the REST representation of the
+          // same account would make it disappear from this search.
+          if (cached != null &&
+              _searchRelevance(cached, normalizedQuery, queryHex) > 0 &&
+              _searchRelevance(candidate, normalizedQuery, queryHex) == 0) {
+            continue;
+          }
+          resultMap[result.pubkey] = candidate;
         }
         sources[SearchSource.funnelcakeApi] = SearchSourceSuccess(
           resultCount: resultMap.length - preRestCount,
@@ -2611,18 +2622,24 @@ class ProfileRepository implements ProfileReader {
     List<UserProfile> profiles,
     String? sortBy,
   ) {
-    final popularityRanked = _rankServerSortedPage(profiles, sortBy);
+    final normalizedQuery = query.trim().toLowerCase();
+    final queryHex = _npubQueryToHex(normalizedQuery);
+    // The search endpoint can return accounts whose visible identity does not
+    // match the query. Keeping them lets a later REST page bury good cached
+    // matches under unrelated, more popular accounts.
+    final matching = profiles
+        .where((p) => _searchRelevance(p, normalizedQuery, queryHex) > 0)
+        .toList();
+    final popularityRanked = _rankServerSortedPage(matching, sortBy);
     final popularityIndex = {
       for (final (index, profile) in popularityRanked.indexed)
         profile.pubkey: index,
     };
-    final normalizedQuery = query.trim().toLowerCase();
-    final queryHex = _npubQueryToHex(normalizedQuery);
     final relevanceByPubkey = {
-      for (final profile in profiles)
+      for (final profile in matching)
         profile.pubkey: _searchRelevance(profile, normalizedQuery, queryHex),
     };
-    return [...profiles]..sort((a, b) {
+    return matching..sort((a, b) {
       final relevance = relevanceByPubkey[b.pubkey]!.compareTo(
         relevanceByPubkey[a.pubkey]!,
       );

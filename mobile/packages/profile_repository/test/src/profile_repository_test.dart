@@ -4610,6 +4610,71 @@ void main() {
         },
       );
 
+      test('progressive search retains a matching cached identity when REST '
+          'has an unrelated name for the same pubkey', () async {
+        final cached = UserProfile(
+          pubkey: pkCachedVine,
+          displayName: 'Sam From Contacts',
+          createdAt: DateTime(2026),
+          eventId: 'cached',
+          rawData: const {},
+        );
+        when(
+          () => mockUserProfilesDao.getAllProfiles(),
+        ).thenAnswer((_) async => [cached]);
+        stubRestResults([
+          ProfileSearchResult(
+            pubkey: pkCachedVine,
+            displayName: 'Unrelated Account',
+            createdAt: DateTime(2026),
+          ),
+        ]);
+
+        final result = await repoWithFunnelcake
+            .searchUsersProgressive(query: 'sam', sortBy: 'followers')
+            .last;
+
+        expect(result.profiles.single.displayName, 'Sam From Contacts');
+      });
+
+      test('progressive search keeps a cached name match and drops unrelated '
+          'server hits', () async {
+        final cached = UserProfile(
+          pubkey: pkCachedVine,
+          displayName: 'Sam From Contacts',
+          createdAt: DateTime(2026),
+          eventId: 'cached',
+          rawData: const {},
+        );
+        when(
+          () => mockUserProfilesDao.getAllProfiles(),
+        ).thenAnswer((_) async => [cached]);
+        stubRestResults([
+          ProfileSearchResult(
+            pubkey: pk18Videos,
+            displayName: 'Unrelated Account',
+            createdAt: DateTime(2026),
+            followerCount: 1000,
+          ),
+          ProfileSearchResult(
+            pubkey: pk1Video,
+            displayName: 'Sam Newcomer',
+            createdAt: DateTime(2026),
+            followerCount: 1,
+          ),
+        ]);
+
+        final emissions = await repoWithFunnelcake
+            .searchUsersProgressive(query: 'sam', sortBy: 'followers')
+            .toList();
+
+        expect(emissions.first.profiles.map((p) => p.pubkey), [pkCachedVine]);
+        expect(emissions.last.profiles.map((p) => p.pubkey), [
+          pk1Video,
+          pkCachedVine,
+        ]);
+      });
+
       test(
         'reports REST pagination independently of merged profile count',
         () async {
@@ -5455,9 +5520,9 @@ void main() {
               ),
             ).thenAnswer(
               (_) async => [
-                restResult(pubA, 'Zoe'),
-                restResult(pubB, 'Liz'),
-                restResult(pubC, 'Maya'),
+                restResult(pubA, 'Liz Zoe'),
+                restResult(pubB, 'Liz Bea'),
+                restResult(pubC, 'Liz Maya'),
               ],
             );
 
@@ -5478,7 +5543,7 @@ void main() {
 
             expect(
               result.profiles.map((p) => p.displayName).toList(),
-              equals(['Liz', 'Zoe', 'Maya']),
+              equals(['Liz Bea', 'Liz Zoe', 'Liz Maya']),
             );
           },
         );
@@ -5496,10 +5561,10 @@ void main() {
               ),
             ).thenAnswer(
               (_) async => [
-                restResult(pubA, 'A'), // boosted
-                restResult(pubB, 'B'), // not boosted
-                restResult(pubC, 'C'), // boosted
-                restResult('d' * 64, 'D'), // not boosted
+                restResult(pubA, 'Test A'), // boosted
+                restResult(pubB, 'Test B'), // not boosted
+                restResult(pubC, 'Test C'), // boosted
+                restResult('d' * 64, 'Test D'), // not boosted
               ],
             );
 
@@ -5520,7 +5585,7 @@ void main() {
 
             expect(
               result.profiles.map((p) => p.displayName).toList(),
-              equals(['A', 'C', 'B', 'D']),
+              equals(['Test A', 'Test C', 'Test B', 'Test D']),
             );
           },
         );
@@ -5535,7 +5600,10 @@ void main() {
               hasVideos: any(named: 'hasVideos'),
             ),
           ).thenAnswer(
-            (_) async => [restResult(pubA, 'Zoe'), restResult(pubB, 'Maya')],
+            (_) async => [
+              restResult(pubA, 'Test Zoe'),
+              restResult(pubB, 'Test Maya'),
+            ],
           );
 
           final repo = ProfileRepository(
@@ -5555,7 +5623,7 @@ void main() {
 
           expect(
             result.profiles.map((p) => p.displayName).toList(),
-            equals(['Zoe', 'Maya']),
+            equals(['Test Zoe', 'Test Maya']),
           );
         });
 
@@ -5569,7 +5637,10 @@ void main() {
               hasVideos: any(named: 'hasVideos'),
             ),
           ).thenAnswer(
-            (_) async => [restResult(pubA, 'Zoe'), restResult(pubB, 'Maya')],
+            (_) async => [
+              restResult(pubA, 'Test Zoe'),
+              restResult(pubB, 'Test Maya'),
+            ],
           );
 
           final repo = ProfileRepository(
@@ -5585,7 +5656,7 @@ void main() {
 
           expect(
             result.profiles.map((p) => p.displayName).toList(),
-            equals(['Zoe', 'Maya']),
+            equals(['Test Zoe', 'Test Maya']),
           );
         });
 
@@ -5599,7 +5670,10 @@ void main() {
               hasVideos: any(named: 'hasVideos'),
             ),
           ).thenAnswer(
-            (_) async => [restResult(pubA, 'Zoe'), restResult(pubB, 'Maya')],
+            (_) async => [
+              restResult(pubA, 'Test Zoe'),
+              restResult(pubB, 'Test Maya'),
+            ],
           );
 
           final repo = ProfileRepository(
@@ -5619,7 +5693,7 @@ void main() {
 
           expect(
             result.profiles.map((p) => p.displayName).toList(),
-            equals(['Zoe', 'Maya']),
+            equals(['Test Zoe', 'Test Maya']),
           );
         });
       });

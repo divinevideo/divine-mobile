@@ -69,10 +69,12 @@ void main() {
       Override? videosRepositoryOverride,
       Override? curatedRepositoryOverride,
       Override? listThumbnailPolicyOverride,
+      MockFollowRepository? mockFollowRepository,
       List<Override> flagOverrides = const [],
     }) {
       return testMaterialApp(
         home: const SearchResultsPage(),
+        mockFollowRepository: mockFollowRepository,
         mockProfileRepository: profileRepositoryOverride == null
             ? mockProfileRepository
             : null,
@@ -440,6 +442,44 @@ void main() {
         );
       }
     }
+
+    testWidgets('uses the follow graph to rank people search', (tester) async {
+      final followedPubkey = 'a' * 64;
+      final followRepository = createMockFollowRepository(
+        followingPubkeys: [followedPubkey],
+      );
+      when(
+        () => mockProfileRepository.searchUsersProgressive(
+          query: any(named: 'query'),
+          limit: any(named: 'limit'),
+          offset: any(named: 'offset'),
+          sortBy: any(named: 'sortBy'),
+          hasVideos: any(named: 'hasVideos'),
+          boostPubkeys: any(named: 'boostPubkeys'),
+          cancellationToken: any(named: 'cancellationToken'),
+        ),
+      ).thenAnswer((_) => const Stream<ProgressiveSearchResult>.empty());
+
+      await tester.pumpWidget(
+        createTestWidget(mockFollowRepository: followRepository),
+      );
+      final bloc = BlocProvider.of<UserSearchBloc>(
+        tester.element(find.byType(SearchResultsView)),
+      );
+      bloc.add(const UserSearchQueryChanged('sam'));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
+
+      verify(
+        () => mockProfileRepository.searchUsersProgressive(
+          query: 'sam',
+          limit: 50,
+          sortBy: 'followers',
+          boostPubkeys: {followedPubkey},
+          cancellationToken: any(named: 'cancellationToken'),
+        ),
+      ).called(1);
+    });
 
     testWidgets('shows a waiting state while the profile repository is null', (
       tester,

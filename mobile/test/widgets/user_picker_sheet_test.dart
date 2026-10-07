@@ -1535,6 +1535,169 @@ void main() {
         // so we distinguish by asserting the tile is present above.
       });
 
+      testWidgets('offers the next page when the first page has no matches', (
+        tester,
+      ) async {
+        final profile = UserProfile(
+          pubkey: 'a' * 64,
+          displayName: 'Sam Match',
+          createdAt: DateTime(2026),
+          eventId: 'event_match',
+          rawData: const {},
+        );
+        final mockProfileRepo = _createMockProfileRepository();
+        when(
+          () => mockProfileRepo.searchUsersProgressive(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            sortBy: any(named: 'sortBy'),
+            hasVideos: any(named: 'hasVideos'),
+            boostPubkeys: any(named: 'boostPubkeys'),
+            cancellationToken: any(named: 'cancellationToken'),
+          ),
+        ).thenAnswer((invocation) {
+          final offset = invocation.namedArguments[#offset] as int;
+          return Stream.value(
+            ProgressiveSearchResult(
+              profiles: offset == 0 ? [] : [profile],
+              sources: const {},
+              isComplete: true,
+              nextRestOffset: offset == 0 ? 50 : 51,
+              restHasMore: offset == 0,
+            ),
+          );
+        });
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              _noVanishedProfiles,
+              profileRepositoryProvider.overrideWithValue(mockProfileRepo),
+              profileReadRepositoryProvider.overrideWithValue(mockProfileRepo),
+              followRepositoryProvider.overrideWithValue(
+                _createMockFollowRepository(),
+              ),
+            ],
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: UserPickerSheet(
+                  title: 'Title',
+                  filterMode: UserPickerFilterMode.allUsers,
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.enterText(find.byType(TextField), 'sam');
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Show more'));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => mockProfileRepo.searchUsersProgressive(
+            query: 'sam',
+            limit: 50,
+            offset: 50,
+            sortBy: any(named: 'sortBy'),
+          ),
+        ).called(1);
+        expect(find.text('Sam Match'), findsOneWidget);
+      });
+
+      testWidgets('loads the next people page when scrolled to the end', (
+        tester,
+      ) async {
+        UserProfile profile(int index) => UserProfile(
+          pubkey: index.toRadixString(16).padLeft(64, '0'),
+          displayName: 'Sam $index',
+          createdAt: DateTime(2026),
+          eventId: 'event_$index',
+          rawData: const {},
+        );
+        final firstPage = [
+          for (var index = 0; index < 50; index++) profile(index),
+        ];
+        final nextPage = profile(50);
+        final mockProfileRepo = _createMockProfileRepository();
+        when(
+          () => mockProfileRepo.searchUsersProgressive(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            sortBy: any(named: 'sortBy'),
+            hasVideos: any(named: 'hasVideos'),
+            boostPubkeys: any(named: 'boostPubkeys'),
+            cancellationToken: any(named: 'cancellationToken'),
+          ),
+        ).thenAnswer((invocation) {
+          final offset = invocation.namedArguments[#offset] as int;
+          return Stream.value(
+            ProgressiveSearchResult(
+              profiles: offset == 0 ? firstPage : [nextPage],
+              sources: const {},
+              isComplete: true,
+              nextRestOffset: offset == 0 ? 50 : 51,
+              restHasMore: offset == 0,
+            ),
+          );
+        });
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              _noVanishedProfiles,
+              profileRepositoryProvider.overrideWithValue(mockProfileRepo),
+              profileReadRepositoryProvider.overrideWithValue(mockProfileRepo),
+              followRepositoryProvider.overrideWithValue(
+                _createMockFollowRepository(),
+              ),
+            ],
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: UserPickerSheet(
+                  title: 'Title',
+                  filterMode: UserPickerFilterMode.allUsers,
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.enterText(find.byType(TextField), 'sam');
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+        await tester.pumpAndSettle();
+        await tester.drag(find.byType(ListView).last, const Offset(0, -5000));
+        await tester.pumpAndSettle();
+        final list = tester.state<ScrollableState>(
+          find.byType(Scrollable).last,
+        );
+        expect(list.position.extentAfter, lessThan(400));
+
+        verify(
+          () => mockProfileRepo.searchUsersProgressive(
+            query: 'sam',
+            limit: 50,
+            offset: 50,
+            sortBy: any(named: 'sortBy'),
+          ),
+        ).called(1);
+        await tester.scrollUntilVisible(
+          find.text('Sam 50'),
+          200,
+          scrollable: find.byType(Scrollable).last,
+        );
+        expect(find.text('Sam 50'), findsOneWidget);
+      });
+
       testWidgets(
         'boosts followed users above non-followed in search results',
         (tester) async {

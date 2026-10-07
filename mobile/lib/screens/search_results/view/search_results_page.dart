@@ -126,6 +126,7 @@ class _SearchResultsScope extends ConsumerWidget {
       );
     }
 
+    final followRepository = ref.watch(followRepositoryProvider);
     final videosRepository = ref.watch(videosRepositoryProvider);
     final hashtagRepository = ref.watch(hashtagRepositoryProvider);
     final curatedListRepository = ref.watch(curatedListRepositoryProvider);
@@ -146,6 +147,7 @@ class _SearchResultsScope extends ConsumerWidget {
       // See `.claude/rules/state_management.md`.
       key: ValueKey((
         profileRepository,
+        followRepository,
         videosRepository,
         hashtagRepository,
         curatedListRepository,
@@ -159,7 +161,10 @@ class _SearchResultsScope extends ConsumerWidget {
           ),
         ),
         BlocProvider(
-          create: (_) => UserSearchBloc(profileRepository: profileRepository),
+          create: (_) => UserSearchBloc(
+            profileRepository: profileRepository,
+            followRepository: followRepository,
+          ),
         ),
         BlocProvider(
           create: (_) => HashtagSearchBloc(
