@@ -572,6 +572,37 @@ void main() {
         expect(onOutput.single.endTime, isNull);
         expect(onOutput.single.triggers, [ms(500), ms(5200)]);
       });
+
+      test('limits flashes across every repetition of a sub-second loop', () {
+        for (final length in [100, 200, 250, 300, 400, 600]) {
+          final map = TransitionTimelineMap.fromClips([
+            clip('a', duration: ms(length)),
+          ]);
+          for (final type in [
+            VideoEffectType.strobe,
+            VideoEffectType.negativeFlash,
+          ]) {
+            final effects = videoEffectsOnOutput(
+              [onBeat(type)],
+              map,
+              beats: [ms(50)],
+            );
+            var flashes = 0;
+            var wasOn = false;
+            for (var at = 0; at < 1000; at++) {
+              final frame = VideoEffect.resolve(effects, ms(at % length));
+              final on = frame.flash >= 0.5 || frame.invert >= 0.5;
+              if (on && !wasOn) flashes++;
+              wasOn = on;
+            }
+            expect(
+              flashes,
+              lessThanOrEqualTo(3),
+              reason: '$type on a $length ms loop',
+            );
+          }
+        }
+      });
     });
   });
 }

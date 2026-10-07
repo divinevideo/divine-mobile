@@ -253,14 +253,18 @@ List<VideoEffect> _withinFlashLimit(
         final effect = current[i];
         if (!isFlashingVideoEffect(effect.type)) continue;
         for (final beat in effect.triggers) {
-          // On the loop, a beat early in the video also follows its end.
-          for (final at in [beat, beat + loopPoint]) {
-            final inSecond =
-                at >= crowded && at < crowded + const Duration(seconds: 1);
-            if (inSecond && (latestAt == null || at > latestAt)) {
-              latestAt = at;
-              latest = (effect: i, beat: beat);
-            }
+          // A short video may repeat several times within this second. Find
+          // the last occurrence without expanding every repetition.
+          final repeat =
+              (crowded.inMicroseconds + 999999 - beat.inMicroseconds) ~/
+              loopPoint.inMicroseconds;
+          final at = beat + loopPoint * repeat;
+          if (repeat >= 0 &&
+              at >= crowded &&
+              at < crowded + const Duration(seconds: 1) &&
+              (latestAt == null || at > latestAt)) {
+            latestAt = at;
+            latest = (effect: i, beat: beat);
           }
         }
       }
@@ -309,11 +313,15 @@ Iterable<Duration> _crowdedFlashSeconds(
     if (on && !wasOn) onsets.add(at);
     wasOn = on;
   }
-  final looped = [...onsets, for (final onset in onsets) onset + loopPoint];
   for (final onset in onsets) {
-    final inSecond = looped
-        .where((t) => t >= onset && t < onset + const Duration(seconds: 1))
-        .length;
+    var inSecond = 0;
+    for (final other in onsets) {
+      final distance =
+          (other - onset).inMicroseconds % loopPoint.inMicroseconds;
+      if (distance < Duration.microsecondsPerSecond) {
+        inSecond += 1 + (999999 - distance) ~/ loopPoint.inMicroseconds;
+      }
+    }
     if (inSecond > 3) yield onset;
   }
 }
