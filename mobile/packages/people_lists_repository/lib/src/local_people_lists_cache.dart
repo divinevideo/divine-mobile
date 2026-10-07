@@ -156,11 +156,12 @@ class LocalPeopleListsCache {
   }) {
     late StreamController<List<T>> controller;
     StreamSubscription<BoxEvent>? subscription;
+    var canceled = false;
 
     Future<void> start() async {
       try {
         final box = await _box();
-        if (controller.isClosed) return;
+        if (canceled || controller.isClosed) return;
         controller.add(collect(box));
         subscription = box.watch().listen((event) {
           final key = event.key;
@@ -180,6 +181,7 @@ class LocalPeopleListsCache {
         unawaited(start());
       },
       onCancel: () async {
+        canceled = true;
         await subscription?.cancel();
         subscription = null;
       },
