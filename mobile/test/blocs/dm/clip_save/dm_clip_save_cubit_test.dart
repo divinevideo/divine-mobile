@@ -2,6 +2,7 @@
 // ABOUTME: A received clip reaches the library only when its C2PA check
 // ABOUTME: passes, and the decrypted temp file never outlives the save.
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:bloc_test/bloc_test.dart';
@@ -82,31 +83,35 @@ void main() {
     );
   }
 
+  void stubImportSuccess() {
+    when(
+      () => importService.importReceivedClip(
+        source: any(named: 'source'),
+        senderPubkey: any(named: 'senderPubkey'),
+        c2paManifestId: any(named: 'c2paManifestId'),
+        targetAspectRatio: any(named: 'targetAspectRatio'),
+      ),
+    ).thenAnswer(
+      (_) async => VideoClipImportSuccess(
+        DivineVideoClip(
+          id: 'dm_clip_1',
+          video: EditorVideo.file('/documents/dm_clip_1.mp4'),
+          duration: const Duration(seconds: 3),
+          recordedAt: DateTime.utc(2026, 9, 28),
+          targetAspectRatio: AspectRatio.square,
+          originalAspectRatio: 9 / 16,
+        ),
+      ),
+    );
+  }
+
   group(DmClipSaveCubit, () {
     group('save', () {
       blocTest<DmClipSaveCubit, DmClipSaveState>(
         'adds a verified clip with its sender, credential and crop',
         setUp: () {
           stubVerification(ClipProvenanceStatus.verified);
-          when(
-            () => importService.importReceivedClip(
-              source: any(named: 'source'),
-              senderPubkey: any(named: 'senderPubkey'),
-              c2paManifestId: any(named: 'c2paManifestId'),
-              targetAspectRatio: any(named: 'targetAspectRatio'),
-            ),
-          ).thenAnswer(
-            (_) async => VideoClipImportSuccess(
-              DivineVideoClip(
-                id: 'dm_clip_1',
-                video: EditorVideo.file('/documents/dm_clip_1.mp4'),
-                duration: const Duration(seconds: 3),
-                recordedAt: DateTime.utc(2026, 9, 28),
-                targetAspectRatio: AspectRatio.square,
-                originalAspectRatio: 9 / 16,
-              ),
-            ),
-          );
+          stubImportSuccess();
         },
         build: buildCubit,
         act: (cubit) => cubit.save(_clipMessage()),
@@ -187,6 +192,35 @@ void main() {
         errors: () => [isA<DmVideoUnavailableException>()],
         verify: (_) => verifyNever(() => verifier.verify(any())),
       );
+
+      test('finishes the save and returns its outcome after close', () async {
+        final verification = Completer<ClipProvenanceResult>();
+        when(
+          () => verifier.verify(_decryptedPath),
+        ).thenAnswer((_) => verification.future);
+        stubImportSuccess();
+        final cubit = buildCubit();
+
+        final outcome = cubit.save(_clipMessage());
+        await pumpEventQueue();
+        await cubit.close();
+        verification.complete(
+          const ClipProvenanceResult(
+            ClipProvenanceStatus.verified,
+            activeManifestId: _manifestId,
+          ),
+        );
+
+        expect(await outcome, equals(DmClipSaveStatus.saved));
+        verify(
+          () => importService.importReceivedClip(
+            source: any(named: 'source'),
+            senderPubkey: _senderPubkey,
+            c2paManifestId: _manifestId,
+            targetAspectRatio: AspectRatio.square,
+          ),
+        ).called(1);
+      });
     });
   });
 }

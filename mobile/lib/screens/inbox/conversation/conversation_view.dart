@@ -18,7 +18,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/clips_library/clips_library_bloc.dart'
     show LibraryClipTypeFilter;
-import 'package:openvine/blocs/dm/clip_save/dm_clip_save_cubit.dart';
 import 'package:openvine/blocs/dm/conversation/conversation_bloc.dart';
 import 'package:openvine/blocs/dm/dm_thread_writability.dart';
 import 'package:openvine/blocs/dm/encrypted_video_save/encrypted_video_save_cubit.dart';
@@ -36,7 +35,6 @@ import 'package:openvine/providers/clip_provenance_providers.dart';
 import 'package:openvine/providers/follow_relationship_provider.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
-import 'package:openvine/providers/video_clip_import_provider.dart';
 import 'package:openvine/screens/feed/dm_reply_context.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
@@ -382,35 +380,7 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
             gallerySaveService: ref.read(gallerySaveServiceProvider),
           ),
         ),
-        // The decryptor and verifier are account-independent. The clip
-        // library is per account, so it is resolved when a clip is added,
-        // not when the thread opens.
-        BlocProvider(
-          create: (context) {
-            final container = ProviderScope.containerOf(
-              context,
-              listen: false,
-            );
-            return DmClipSaveCubit(
-              decryptor: container.read(dmVideoDecryptorProvider),
-              verifier: container.read(clipProvenanceVerifierProvider),
-              importClip:
-                  ({
-                    required source,
-                    required senderPubkey,
-                    required c2paManifestId,
-                    targetAspectRatio,
-                  }) => container
-                      .read(videoClipImportServiceProvider)
-                      .importReceivedClip(
-                        source: source,
-                        senderPubkey: senderPubkey,
-                        c2paManifestId: c2paManifestId,
-                        targetAspectRatio: targetAspectRatio,
-                      ),
-            );
-          },
-        ),
+        const DmClipSaveProvider(),
       ],
       child: MultiBlocListener(
         listeners: [
@@ -421,11 +391,6 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
             listenWhen: (previous, current) =>
                 previous.status != current.status,
             listener: _onEncryptedVideoSaveState,
-          ),
-          BlocListener<DmClipSaveCubit, DmClipSaveState>(
-            listenWhen: (previous, current) =>
-                previous.status != current.status,
-            listener: _onClipSaveState,
           ),
         ],
         child: Scaffold(
@@ -684,21 +649,6 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
       case DmVideoSaveStatus.failed:
         _showSnackbar(l10n.videoClipSaveFailed, error: true);
     }
-  }
-
-  /// Reports the outcome of adding a received clip to the clip library.
-  void _onClipSaveState(BuildContext context, DmClipSaveState state) {
-    final l10n = context.l10n;
-    final (message, isError) = switch (state.status) {
-      DmClipSaveStatus.idle => (null, false),
-      DmClipSaveStatus.checking => (l10n.dmClipChecking, false),
-      DmClipSaveStatus.saved => (l10n.videoEditorClipSavedSuccess, false),
-      DmClipSaveStatus.notVerified => (l10n.dmClipNotVerified, true),
-      DmClipSaveStatus.checkUnavailable => (l10n.dmClipCheckUnavailable, true),
-      DmClipSaveStatus.failed => (l10n.shareSheetAddToClipsFailed, true),
-    };
-    if (message == null) return;
-    _showSnackbar(message, error: isError);
   }
 
   /// Briefly announces an unconfirmed "Delete for everyone" (#8201).
@@ -1475,17 +1425,18 @@ class _MessageList extends StatelessWidget {
         !(isSent &&
             (deliveryStatus == DmDeliveryStatus.failed ||
                 deliveryStatus == DmDeliveryStatus.blocked));
+    // Offered for every received encrypted video, not only tagged clips:
+    // the tag is sender-asserted, and the C2PA check decides admission.
+    final canAddToClips =
+        !isSent &&
+        message.fileMetadata?.isVideo == true &&
+        ClipProvenanceVerifier.isSupportedPlatform;
     final result = await ReactionPickerOverlay.show(
       context: context,
       isSent: isSent,
       isVideoShare: videoTarget != null,
       isEncryptedVideo: message.fileMetadata?.isVideo == true,
-      // Offered for every received encrypted video, not only tagged clips:
-      // the tag is sender-asserted, and the C2PA check decides admission.
-      canAddToClips:
-          !isSent &&
-          message.fileMetadata?.isVideo == true &&
-          ClipProvenanceVerifier.isSupportedPlatform,
+      canAddToClips: canAddToClips,
       showPicker: showPicker,
       showDelete:
           (retractionsEnabled || !isPersisted) &&
@@ -1518,10 +1469,14 @@ class _MessageList extends StatelessWidget {
         if (videoTarget == null) return;
         await ClipboardUtils.copy(context, videoTarget.canonicalUrl);
       case MessageAction.playVideo:
-        await DmVideoPlayPage.open(context, message);
+        await DmVideoPlayPage.open(
+          context,
+          message,
+          canAddToClips: canAddToClips,
+        );
       case MessageAction.addToClips:
         runDetached(
-          context.read<DmClipSaveCubit>().save(message),
+          addReceivedClipToLibrary(context, message),
           'add DM clip to library',
           logName: 'ConversationView',
           category: LogCategory.video,
@@ -1830,7 +1785,12 @@ class _MessageList extends StatelessWidget {
             // page on tap. A failed own send ignores this and keeps the outer
             // resend affordance.
             onOpenEncryptedVideo: message.fileMetadata?.isVideo == true
-                ? () => DmVideoPlayPage.open(context, message)
+                ? () => DmVideoPlayPage.open(
+                    context,
+                    message,
+                    canAddToClips:
+                        !isSent && ClipProvenanceVerifier.isSupportedPlatform,
+                  )
                 : null,
           );
           return Column(

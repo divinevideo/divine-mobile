@@ -81,25 +81,30 @@ class DmClipSaveCubit extends Cubit<DmClipSaveState>
   final ReceivedClipImporter _importClip;
 
   /// Downloads, decrypts and checks [message]'s clip, and adds it to the
-  /// library if it passes. A second call while one is running is dropped.
-  Future<void> save(DmMessage message) async {
-    if (state.status == DmClipSaveStatus.checking) return;
+  /// library if it passes.
+  ///
+  /// Returns the terminal status, or null when a save is already running and
+  /// this call was dropped. The work is not cancelled by [close], so a caller
+  /// that outlives the screen can still report the outcome.
+  Future<DmClipSaveStatus?> save(DmMessage message) async {
+    if (state.status == DmClipSaveStatus.checking) return null;
     emit(const DmClipSaveState(status: DmClipSaveStatus.checking));
 
+    final status = await _save(message);
+    emitIfOpen(DmClipSaveState(status: status));
+    return status;
+  }
+
+  Future<DmClipSaveStatus> _save(DmMessage message) async {
     String? path;
     try {
       path = await _decryptor.decryptToFile(message);
 
       final provenance = await _verifier.verify(path);
       if (!provenance.isVerified) {
-        emitIfOpen(
-          DmClipSaveState(
-            status: provenance.isRejected
-                ? DmClipSaveStatus.notVerified
-                : DmClipSaveStatus.checkUnavailable,
-          ),
-        );
-        return;
+        return provenance.isRejected
+            ? DmClipSaveStatus.notVerified
+            : DmClipSaveStatus.checkUnavailable;
       }
 
       final result = await _importClip(
@@ -110,14 +115,14 @@ class DmClipSaveCubit extends Cubit<DmClipSaveState>
       );
       switch (result) {
         case VideoClipImportSuccess():
-          emitIfOpen(const DmClipSaveState(status: DmClipSaveStatus.saved));
+          return DmClipSaveStatus.saved;
         case VideoClipImportFailure(:final reason):
           addError(DmClipImportFailure(reason), StackTrace.current);
-          emitIfOpen(const DmClipSaveState(status: DmClipSaveStatus.failed));
+          return DmClipSaveStatus.failed;
       }
     } catch (error, stackTrace) {
       addError(error, stackTrace);
-      emitIfOpen(const DmClipSaveState(status: DmClipSaveStatus.failed));
+      return DmClipSaveStatus.failed;
     } finally {
       if (path != null) _decryptor.deleteClip(path);
     }
