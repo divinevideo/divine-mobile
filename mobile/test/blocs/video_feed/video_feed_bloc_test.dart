@@ -87,6 +87,9 @@ class _RefusingPreferencesStore extends InMemorySharedPreferencesStore {
       false;
 }
 
+/// Stands in for the `Error` an unopenable Hive box throws.
+class _UnopenableBoxError extends Error {}
+
 void main() {
   group('VideoFeedBloc', () {
     late _MockVideosRepository mockVideosRepository;
@@ -4324,31 +4327,31 @@ void main() {
           },
         );
 
-        blocTest<VideoFeedBloc, VideoFeedBlocState>(
-          'still loads Home, and reports it, when the read throws an Error '
-          'as an unopenable box does',
-          setUp: () {
-            stubRecommended(createTestVideos(2));
-            when(
-              () =>
-                  peopleListsRepository.readFollowedLists(viewerPubkey: viewer),
-            ).thenThrow(StateError('box will not open'));
-          },
-          build: createPeopleBloc,
-          act: (bloc) => bloc.add(const VideoFeedStarted()),
-          errors: () => [
-            isA<Reportable<Object>>().having(
-              (reportable) => reportable.unwrap(),
-              'unwrap',
-              isA<StateError>(),
-            ),
-          ],
-          verify: (bloc) {
-            expect(bloc.state.status, equals(VideoFeedStatus.success));
-            expect(bloc.state.videos, hasLength(2));
-            expect(bloc.state.followedPeopleLists, isEmpty);
-          },
-        );
+        for (final thrown in <Object>[
+          StateError('box will not open'),
+          _UnopenableBoxError(),
+        ]) {
+          blocTest<VideoFeedBloc, VideoFeedBlocState>(
+            'still loads Home when the read throws ${thrown.runtimeType}, '
+            'leaving the observer to decide whether it is reportable',
+            setUp: () {
+              stubRecommended(createTestVideos(2));
+              when(
+                () => peopleListsRepository.readFollowedLists(
+                  viewerPubkey: viewer,
+                ),
+              ).thenThrow(thrown);
+            },
+            build: createPeopleBloc,
+            act: (bloc) => bloc.add(const VideoFeedStarted()),
+            errors: () => [same(thrown)],
+            verify: (bloc) {
+              expect(bloc.state.status, equals(VideoFeedStatus.success));
+              expect(bloc.state.videos, hasLength(2));
+              expect(bloc.state.followedPeopleLists, isEmpty);
+            },
+          );
+        }
 
         blocTest<VideoFeedBloc, VideoFeedBlocState>(
           'reads no follows for a signed-out viewer',

@@ -16,7 +16,6 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/video_feed/home_feed_cache.dart';
 import 'package:openvine/blocs/video_feed/home_feed_resume_manager.dart';
-import 'package:openvine/blocs/video_feed/reportable_sites.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/feed_mode_persistence.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -486,7 +485,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     if (repository == null || viewerPubkey == null) return const [];
     try {
       return await repository.readFollowedLists(viewerPubkey: viewerPubkey);
-    } on Exception catch (error, stackTrace) {
+    } on Object catch (error, stackTrace) {
       Log.warning(
         'VideoFeedBloc: could not read followed people lists',
         name: 'VideoFeedBloc',
@@ -494,17 +493,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         error: error,
         stackTrace: stackTrace,
       );
-      return null;
-    } catch (error, stackTrace) {
-      // A box that will not open throws a `HiveError`, which is an `Error`.
-      // It is reported, and Home still loads without the people-list feeds.
-      addError(
-        Reportable(
-          error,
-          context: VideoFeedBlocReportableSites.readFollowedPeopleLists,
-        ),
-        stackTrace,
-      );
+      // A box that will not open throws a `HiveError`, which is an `Error`,
+      // not an `Exception`. Home still loads without the people-list feeds;
+      // the observer reports the error only if it is a programming error.
+      if (error is! Exception) addError(error, stackTrace);
       return null;
     }
   }
@@ -1691,10 +1683,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
           .catchError((Object error, StackTrace stackTrace) {
             if (!isClosed) {
               addError(
-                Reportable(
-                  error,
-                  context: VideoFeedBlocReportableSites.scheduleNostrEnrichment,
-                ),
+                Reportable(error, context: '_scheduleNostrEnrichment'),
                 stackTrace,
               );
             }
