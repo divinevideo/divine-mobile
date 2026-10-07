@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:models/models.dart';
+import 'package:openvine/services/curated_lists/curated_list_subscription_metadata.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -524,24 +525,14 @@ class PrefsCuratedListStore {
 
   ({Set<String> ids, bool isReadable}) _readStoredSubscriptions({
     required Set<String> fallback,
-  }) {
-    try {
-      final json = _prefs.getString(_subscriptionsKey);
-      if (json == null) {
-        _writes.cacheKeyRemoved(_subscriptionsKey);
-        return (ids: const <String>{}, isReadable: true);
-      }
-      // Validate the entire list before exposing any IDs. A mixed record must
-      // not turn its readable prefix into an authoritative partial snapshot.
-      final ids = List<String>.from(
-        jsonDecode(json) as List<dynamic>,
-      ).toSet();
-      return (ids: Set<String>.unmodifiable(ids), isReadable: true);
-    } on Object catch (error, stackTrace) {
-      _logUnreadable('subscriptions', error, stackTrace);
-      return (ids: Set<String>.unmodifiable(fallback), isReadable: false);
-    }
-  }
+  }) => readCuratedListSubscriptionSnapshot(
+    preferences: _prefs,
+    storageKey: _subscriptionsKey,
+    fallback: fallback,
+    onMissing: () => _writes.cacheKeyRemoved(_subscriptionsKey),
+    onUnreadable: (error, stackTrace) =>
+        _logUnreadable('subscriptions', error, stackTrace),
+  );
 
   void _logUnreadable(String what, Object error, StackTrace stackTrace) {
     // The error is left out: FormatException.toString() quotes the stored text.
