@@ -4799,6 +4799,9 @@ void main() {
               SharedPreferences.setMockInitialValues({});
               SharedPreferencesStorePlatform.instance = platform;
             });
+            // Resets the cached SharedPreferences instance, which a store
+            // assigned alone would not reach.
+            SharedPreferences.setMockInitialValues({});
             SharedPreferencesStorePlatform.instance = _RefusingWrites();
             stubRecommended(createTestVideos(2));
             savedModeBloc = createPeopleBloc(
@@ -4830,6 +4833,7 @@ void main() {
               SharedPreferences.setMockInitialValues({});
               SharedPreferencesStorePlatform.instance = platform;
             });
+            SharedPreferences.setMockInitialValues({});
             final storage = _GatedWrites({
               'flutter.selected_feed_mode_$viewer': sourceFor(
                 followedList(),
