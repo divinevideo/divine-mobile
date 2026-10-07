@@ -64,18 +64,23 @@ class _ReplacedBeforeMountCuratedListsState extends _FakeCuratedListsState {
 }
 
 bool _retryInitializationFails = true;
+int _initializationAttempts = 0;
 
 class _RetryableCuratedListsState extends _FakeCuratedListsState {
   @override
   Future<List<CuratedList>> build() async {
-    if (_retryInitializationFails) throw StateError('no relay');
+    _initializationAttempts++;
+    if (_retryInitializationFails) throw Exception('no relay');
     return const [];
   }
 }
 
 class _FailingCuratedListsState extends CuratedListsState {
   @override
-  Future<List<CuratedList>> build() async => throw StateError('no relay');
+  Future<List<CuratedList>> build() async {
+    _initializationAttempts++;
+    throw Exception('no relay');
+  }
 }
 
 // Full-length 64-char identifiers — never truncate.
@@ -96,6 +101,7 @@ void main() {
 
     setUp(() {
       _retryInitializationFails = true;
+      _initializationAttempts = 0;
       activeOwner = _authorPubkey;
       auth = createMockAuthService(currentPublicKeyHex: _authorPubkey);
       when(() => auth.currentPublicKeyHex).thenAnswer((_) => activeOwner);
@@ -138,6 +144,8 @@ void main() {
       List<CuratedList>? thumbnails = const [],
       Override? hydrationOverride,
       Locale locale = const Locale('en'),
+      bool observeLists = false,
+      bool settle = true,
     }) async {
       await tester.binding.setSurfaceSize(const Size(800, 1200));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -155,22 +163,30 @@ void main() {
                       : Future.value(thumbnails),
                 ),
           ],
-          home: Builder(
-            builder: (context) => Scaffold(
-              body: TextButton(
-                onPressed: () => runDetached(
-                  showSelectListSheet(context, video: video),
-                  'open list picker sheet',
-                  logName: 'SelectListSheetTest',
-                  category: LogCategory.ui,
+          home: Consumer(
+            builder: (context, ref, _) {
+              if (observeLists) ref.watch(curatedListsStateProvider);
+              return Scaffold(
+                body: TextButton(
+                  onPressed: () => runDetached(
+                    showSelectListSheet(context, video: video),
+                    'open list picker sheet',
+                    logName: 'SelectListSheetTest',
+                    category: LogCategory.ui,
+                  ),
+                  child: const Text(_openLabel),
                 ),
-                child: const Text(_openLabel),
-              ),
-            ),
+              );
+            },
           ),
         ),
       );
       await tester.tap(find.text(_openLabel));
+      if (!settle) {
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        return;
+      }
       if (thumbnails == null) {
         // The shimmer never settles; two frames open the sheet.
         await tester.pump();
@@ -480,10 +496,19 @@ void main() {
 
       testWidgets('a failure to load the lists on the screen underneath '
           'instead of opening', (tester) async {
-        await openSheet(tester, listsState: _FailingCuratedListsState.new);
+        await openSheet(
+          tester,
+          listsState: _FailingCuratedListsState.new,
+          observeLists: true,
+          settle: false,
+        );
 
         expect(find.byType(SelectListSheetBody), findsNothing);
         expect(find.text(l10n.listErrorLoading), findsOneWidget);
+        expect(find.text(l10n.searchTryAgain), findsOneWidget);
+        expect(_initializationAttempts, 1);
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(_initializationAttempts, 1);
       });
     });
 
@@ -712,13 +737,26 @@ void main() {
         'initialization failure offers a local retry that opens after recovery',
         (tester) async {
           when(() => service.myLists).thenReturn([list('Restored')]);
-          await openSheet(tester, listsState: _RetryableCuratedListsState.new);
+          await openSheet(
+            tester,
+            listsState: _RetryableCuratedListsState.new,
+            observeLists: true,
+            settle: false,
+          );
           expect(find.byType(SelectListSheetBody), findsNothing);
           expect(find.text(l10n.listErrorLoading), findsOneWidget);
+          expect(find.text(l10n.searchTryAgain), findsOneWidget);
+          expect(_initializationAttempts, 1);
+          await tester.pump(const Duration(milliseconds: 300));
+          expect(_initializationAttempts, 1);
           _retryInitializationFails = false;
+          await tester.pump(const Duration(milliseconds: 300));
+          expect(find.byType(SelectListSheetBody), findsNothing);
+          expect(_initializationAttempts, 1);
           await tester.tap(find.text(l10n.searchTryAgain));
           await tester.pumpAndSettle();
           expect(find.text('Restored'), findsOneWidget);
+          expect(_initializationAttempts, 2);
         },
       );
 
