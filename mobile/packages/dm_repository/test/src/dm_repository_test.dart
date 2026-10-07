@@ -5091,6 +5091,7 @@ void main() {
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
             acceptRelayClosedWhenOthersAnswered: any(
               named: 'acceptRelayClosedWhenOthersAnswered',
@@ -5132,6 +5133,7 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
@@ -5212,6 +5214,7 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
@@ -5294,6 +5297,108 @@ void main() {
           expect(resolved.relays, isNull);
         },
       );
+
+      group('lookup legs (#7317)', () {
+        const lookupRelay = 'wss://purplepag.es';
+
+        late List<Invocation> queries;
+
+        setUp(() {
+          queries = <Invocation>[];
+        });
+
+        List<String>? tempOf(Invocation invocation) =>
+            invocation.namedArguments[#tempRelays] as List<String>?;
+
+        // An omitted argument takes the client's default, RelayType.all.
+        List<int> relayTypesOf(Invocation invocation) =>
+            invocation.namedArguments[#relayTypes] as List<int>? ??
+            RelayType.all;
+
+        void stubLegs(
+          Future<({List<Event> events, bool timedOut, bool noRelays})> Function(
+            Invocation invocation,
+          )
+          answer,
+        ) {
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((invocation) {
+            queries.add(invocation);
+            return answer(invocation);
+          });
+        }
+
+        DmRepository createLookupRepository() =>
+            createRepository(dmInboxLookupRelays: const [lookupRelay]);
+
+        test(
+          'the indexer leg asks only the indexer - a pool relay that answers '
+          'after the indexer budget cannot turn an absent recipient '
+          'unreadable',
+          () async {
+            stubLegs((invocation) async {
+              // Model a pool relay that settles inside the pool leg's budget
+              // but not the indexer leg's: asked under the shorter budget,
+              // it is still pending when the deadline fires.
+              final asksThePool = relayTypesOf(
+                invocation,
+              ).contains(RelayType.normal);
+              if (tempOf(invocation) != null && asksThePool) {
+                return unansweredList(timedOut: true);
+              }
+              return answeredList(const <Event>[]);
+            });
+
+            final resolved = await createLookupRepository()
+                .resolveDmInboxRelaysDetailed(_validPubkeyB);
+
+            expect(resolved.state, DmInboxResolution.absent);
+            final indexerLeg = queries.singleWhere(
+              (q) => tempOf(q)?.contains(lookupRelay) ?? false,
+            );
+            expect(relayTypesOf(indexerLeg), [RelayType.temp]);
+          },
+        );
+
+        test(
+          'an indexer that never takes the REQ leaves the recipient '
+          'unreadable rather than letting the pool alone conclude absent',
+          () async {
+            stubLegs((invocation) async {
+              if (tempOf(invocation) == null) {
+                return answeredList(const <Event>[]);
+              }
+              // A dead indexer drops out of the settlement judgement, so a
+              // leg that also asks the pool completes on the pool's answers.
+              // Asked alone, nothing took the REQ.
+              final asksThePool = relayTypesOf(
+                invocation,
+              ).contains(RelayType.normal);
+              return asksThePool
+                  ? answeredList(const <Event>[])
+                  : unansweredList(noRelays: true);
+            });
+
+            final resolved = await createLookupRepository()
+                .resolveDmInboxRelaysDetailed(_validPubkeyB);
+
+            expect(resolved.state, DmInboxResolution.unreadable);
+            expect(resolved.relays, isNull);
+          },
+        );
+      });
     });
 
     group('own kind-10050 receive targeting (#4974 RC2)', () {

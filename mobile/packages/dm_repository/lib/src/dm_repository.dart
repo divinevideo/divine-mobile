@@ -4399,6 +4399,10 @@ class DmRepository {
       // dead indexer is capped independently, so it cannot consume the pool's
       // five-second budget. Both must settle before an empty answer means
       // `absent`; if either is incomplete the send stays pending and retries.
+      // The lookup leg asks the indexer alone: asking the pool again under its
+      // shorter budget let a slow pool relay mark an answered lookup
+      // unreadable, and let a dead indexer drop out of the judgement while
+      // the pool's answers completed the leg (#7317).
       //
       // The live memo read and the drain's strict read keep a single
       // pool-only leg: the memo is in front of the receiving subscription, and
@@ -4423,6 +4427,7 @@ class DmRepository {
             filter,
             useCache: false,
             tempRelays: _dmInboxLookupRelays,
+            relayTypes: const [RelayType.temp],
             requireAllRelaysSettled: true,
             timeout: _dmInboxDiscoveryQueryTimeout,
           ),
