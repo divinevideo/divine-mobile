@@ -640,6 +640,39 @@ void main() {
           );
         },
       );
+
+      test('filters blocked users from a live repository update', () async {
+        final controller = StreamController<List<String>>.broadcast();
+        addTearDown(controller.close);
+        when(
+          () => mockFollowRepository.followingStream,
+        ).thenAnswer((_) => controller.stream);
+        when(
+          () => mockFollowRepository.watchMyFollowingCached(),
+        ).thenAnswer((_) => const Stream.empty());
+        when(
+          () => mockBlocklistRepository.isBlocked(validPubkey('blocked')),
+        ).thenReturn(true);
+
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(const MyFollowingListLoadRequested());
+        await pumpEventQueue();
+        expect(controller.hasListener, isTrue);
+
+        controller.add([
+          validPubkey('following1'),
+          validPubkey('blocked'),
+          validPubkey('following2'),
+        ]);
+        await pumpEventQueue();
+
+        // Newest follow first, with the blocked pubkey filtered out.
+        expect(bloc.state.followingPubkeys, [
+          validPubkey('following2'),
+          validPubkey('following1'),
+        ]);
+      });
     });
 
     group('MyFollowingSortOrderChanged', () {
@@ -735,7 +768,7 @@ void main() {
       );
 
       blocTest<MyFollowingBloc, MyFollowingState>(
-        'keeps the picked order when the repository pushes a live update',
+        'keeps the picked order when the blocklist changes',
         setUp: stubLoadedFollowing,
         build: createBloc,
         act: (bloc) async {
@@ -753,6 +786,44 @@ void main() {
             validPubkey('first'),
             validPubkey('second'),
             validPubkey('third'),
+          ]);
+        },
+      );
+
+      test(
+        'keeps the picked order when the repository pushes a live update',
+        () async {
+          stubLoadedFollowing();
+          final controller = StreamController<List<String>>.broadcast();
+          addTearDown(controller.close);
+          when(
+            () => mockFollowRepository.followingStream,
+          ).thenAnswer((_) => controller.stream);
+
+          final bloc = createBloc();
+          addTearDown(bloc.close);
+          bloc.add(const MyFollowingListLoadRequested());
+          await pumpEventQueue();
+          bloc.add(
+            const MyFollowingSortOrderChanged(FollowSortOrder.oldestFirst),
+          );
+          await pumpEventQueue();
+          expect(controller.hasListener, isTrue);
+
+          controller.add([
+            validPubkey('first'),
+            validPubkey('second'),
+            validPubkey('third'),
+            validPubkey('fourth'),
+          ]);
+          await pumpEventQueue();
+
+          expect(bloc.state.sortOrder, FollowSortOrder.oldestFirst);
+          expect(bloc.state.followingPubkeys, [
+            validPubkey('first'),
+            validPubkey('second'),
+            validPubkey('third'),
+            validPubkey('fourth'),
           ]);
         },
       );
