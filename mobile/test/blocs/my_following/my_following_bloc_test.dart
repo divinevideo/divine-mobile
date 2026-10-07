@@ -512,24 +512,23 @@ void main() {
           ).thenAnswer((_) => finishToggle.future);
 
           final bloc = createBloc();
-          try {
-            bloc.add(MyFollowingToggleRequested(pubkey));
-            await untilCalled(() => mockFollowRepository.toggleFollow(pubkey));
-            // Keep the first repository write pending while the second event
-            // drains, so the assertion checks overlap rather than elapsed time.
-            bloc.add(MyFollowingToggleRequested(pubkey));
-            await pumpEventQueue();
-
-            verify(() => mockFollowRepository.toggleFollow(pubkey)).called(1);
-
-            finishToggle.complete();
-            await pumpEventQueue();
-            // A sequential transformer would defer the second write until now.
-            verifyNever(() => mockFollowRepository.toggleFollow(pubkey));
-          } finally {
+          addTearDown(() async {
             if (!finishToggle.isCompleted) finishToggle.complete();
             await bloc.close();
-          }
+          });
+          bloc.add(MyFollowingToggleRequested(pubkey));
+          await untilCalled(() => mockFollowRepository.toggleFollow(pubkey));
+          // Keep the first repository write pending while the second event
+          // drains, so the assertion checks overlap rather than elapsed time.
+          bloc.add(MyFollowingToggleRequested(pubkey));
+          await pumpEventQueue();
+
+          verify(() => mockFollowRepository.toggleFollow(pubkey)).called(1);
+
+          finishToggle.complete();
+          await pumpEventQueue();
+          // A sequential transformer would defer the second write until now.
+          verifyNever(() => mockFollowRepository.toggleFollow(pubkey));
         },
       );
     });
