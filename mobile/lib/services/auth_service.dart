@@ -1586,6 +1586,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     AuthenticationSource authSource, {
     bool claimLegacyRows = true,
   }) async {
+    clearError();
     Log.info(
       'signInForAccount: pubkey=${pubkeyForLogs(pubkeyHex)}, source=${authSource.name}',
       name: 'AuthService',

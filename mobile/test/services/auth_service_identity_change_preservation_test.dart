@@ -334,6 +334,40 @@ void main() {
     });
 
     test(
+      'signing in to a stored account clears a stale cleanup reason',
+      () async {
+        when(
+          () => mockCleanupService.clearUserSpecificData(
+            reason: any(named: 'reason'),
+            isIdentityChange: any(named: 'isIdentityChange'),
+            userPubkey: any(named: 'userPubkey'),
+            deleteUserData: any(named: 'deleteUserData'),
+          ),
+        ).thenThrow(
+          const UserDataCleanupException('Could not clear account cache'),
+        );
+        final failed = await authService.createNewIdentity();
+        expect(failed.failureReason, AuthFailureReason.accountCleanupFailed);
+        expect(
+          authService.lastFailureReason,
+          AuthFailureReason.accountCleanupFailed,
+        );
+
+        // No archived Amber info exists, so this attempt fails for a different
+        // reason before it reaches any cleanup.
+        await expectLater(
+          authService.signInForAccount(
+            newKeyContainer.publicKeyHex,
+            AuthenticationSource.amber,
+          ),
+          throwsA(isA<Exception>()),
+        );
+
+        expect(authService.lastFailureReason, isNull);
+      },
+    );
+
+    test(
       'startup primary-key fallback preserves cleanup reason and retry',
       () async {
         // No usable per-account container: startup must reach the PRIMARY
