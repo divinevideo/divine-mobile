@@ -81,7 +81,7 @@ extension LayerExportKeyframes on Layer {
     return [
       for (final keyframe in keyframes)
         pve.TimelineKeyframe(
-          time: timelineMap.editorToOutput(keyframeOrigin + keyframe.time),
+          time: _outputTime(timelineMap, keyframeOrigin + keyframe.time),
           offset: exportedLayerTopLeft(
             anchor: keyframe.offset,
             bodySize: bodySize,
@@ -111,21 +111,39 @@ extension LayerExportKeyframes on Layer {
   ];
 }
 
+/// [time] (video time) on the output timeline.
+///
+/// A keyframe before the video's start, where no transition has shortened
+/// anything yet, keeps its time instead of being held at 0, as
+/// [TransitionTimelineMap.editorToOutput] would: it still shapes the motion
+/// after it, and held at 0 it would hurry the layer to the next keyframe.
+Duration _outputTime(TransitionTimelineMap timelineMap, Duration time) =>
+    time.isNegative ? time : timelineMap.editorToOutput(time);
+
 /// [effect] as a pro_video_editor loop over its stretch on the output
-/// timeline, or `null` when the stretch has no length there.
+/// timeline, or `null` when the stretch does not reach into the output.
 pve.LayerAnimation? _exportedEffect(
   LayerKeyframeEffect effect,
   TransitionTimelineMap timelineMap,
 ) {
-  final start = timelineMap.editorToOutput(effect.start);
-  final end = timelineMap.editorToOutput(effect.end);
-  final spanUs = (end - start).inMicroseconds;
-  if (spanUs <= 0) return null;
+  final start = _outputTime(timelineMap, effect.start);
+  final end = _outputTime(timelineMap, effect.end);
+  final cycleUs = (end - start).inMicroseconds ~/ effect.cycles;
+  if (cycleUs <= 0) return null;
+  // The renderers take a loop start before 0 for none and count the cycles
+  // from the layer's start instead, out of step with the keyframes. Starting
+  // at the first whole cycle on the output keeps them in step, so the layer
+  // still rests on the next keyframe; only the part cycle before it is still.
+  var loopStartUs = start.inMicroseconds;
+  if (loopStartUs < 0) {
+    loopStartUs += (cycleUs - 1 - loopStartUs) ~/ cycleUs * cycleUs;
+  }
+  if (loopStartUs >= end.inMicroseconds) return null;
   // The two packages share the animation map; only the timing differs.
   final map = effect.animation.toMap()
     ..remove('slideFrom')
-    ..['durationUs'] = spanUs ~/ effect.cycles
-    ..['loopStartUs'] = start.inMicroseconds
+    ..['durationUs'] = cycleUs
+    ..['loopStartUs'] = loopStartUs
     ..['loopEndUs'] = end.inMicroseconds;
   return pve.LayerAnimation.fromMap(map);
 }

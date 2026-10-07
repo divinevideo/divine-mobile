@@ -9,7 +9,13 @@ import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/extensions/layer_keyframes.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
-    show AnimationCurve, Layer, LayerKeyframe;
+    show
+        AnimationCurve,
+        AnimationPhase,
+        Layer,
+        LayerAnimation,
+        LayerAnimationType,
+        LayerKeyframe;
 import 'package:pro_video_editor/pro_video_editor.dart' as pve;
 
 void main() {
@@ -225,6 +231,47 @@ void main() {
       );
 
       expect(export(layer, turnedRaster: false).single.rotation, 1.25);
+    });
+
+    test('keeps a keyframe before the video start where it is', () {
+      // What a trimmed start leaves behind once the layer is dragged to 0.
+      final layer = Layer(
+        startTime: ms * 500,
+        keyframes: [keyframe(-1500), keyframe(1500)],
+      );
+
+      // Held at 0 instead, the layer would rush to the next keyframe.
+      expect(export(layer).map((k) => k.time), [ms * -1000, ms * 2000]);
+    });
+
+    test('keeps the cycles of an effect that starts before the video', () {
+      final layer = Layer(
+        keyframes: [
+          LayerKeyframe(
+            time: ms * -1200,
+            offset: Offset.zero,
+            effects: const [
+              LayerAnimation(
+                type: LayerAnimationType.bounce,
+                phase: AnimationPhase.loop,
+                duration: Duration(milliseconds: 700),
+              ),
+            ],
+          ),
+          keyframe(2000),
+        ],
+      );
+
+      final loop = layer
+          .divineKeyframeEffectsForExport(timelineMap: timelineMap)
+          .single;
+
+      // Five 640 ms hops fill the 3.2 s stretch. The renderers count a loop
+      // from its start, which must not be before 0, so it starts at the
+      // first whole hop on the video and still ends at rest on the keyframe.
+      expect(loop.duration, ms * 640);
+      expect(loop.loopStart, ms * 80);
+      expect(loop.loopEnd, ms * 2000);
     });
   });
 
