@@ -331,11 +331,53 @@ void main() {
           );
           expect(
             service.getCreatorSelfLabelPreference(label, isOwner: true),
-            equals(ContentFilterPreference.warn),
-            reason: '$label hid an ordinary creator before asking their age',
+            equals(
+              ContentFilterService.adultCategories.contains(label) ||
+                      label == ContentLabel.drugs
+                  ? ContentFilterPreference.hide
+                  : ContentFilterPreference.warn,
+            ),
+            reason: '$label did not preserve the creator age boundary',
           );
         }
       });
+
+      test(
+        'adult attestation does not remove an ordinary creator video',
+        () async {
+          final before = {
+            for (final label in ContentFilterService.ageRestrictedCategories)
+              label: service.getCreatorSelfLabelPreference(
+                label,
+                isOwner: true,
+              ),
+          };
+          expect(before[ContentLabel.profanity], ContentFilterPreference.warn);
+          expect(before[ContentLabel.porn], ContentFilterPreference.hide);
+          await ageService.setAdultContentVerified(true);
+          await service.unlockAdultCategories();
+          for (final label in ContentFilterService.ageRestrictedCategories) {
+            final after = service.getCreatorSelfLabelPreference(
+              label,
+              isOwner: true,
+            );
+            if (before[label] != ContentFilterPreference.hide) {
+              expect(
+                after,
+                isNot(ContentFilterPreference.hide),
+                reason: '$label',
+              );
+            }
+          }
+          expect(
+            service.getCreatorSelfLabelPreference(
+              ContentLabel.porn,
+              isOwner: true,
+            ),
+            ContentFilterPreference.hide,
+          );
+        },
+      );
 
       test('keeps every age-restricted owner label hidden for a protected '
           'minor even with stored adult self-attestation', () async {

@@ -149,7 +149,7 @@ void main() {
         expect(resolver(cached), ['profanity']);
       });
 
-      test('keeps ordinary owner labels behind a warning before adult '
+      test('keeps owner adult content and drug use hidden before adult '
           'self-attestation', () {
         final filter = createNsfwFilter(
           contentFilterService,
@@ -166,13 +166,12 @@ void main() {
           'nudity',
           'sexual',
           'porn',
-          'profanity',
           'drugs',
         ]) {
           final video = _createVideo(contentWarningLabels: [label]);
 
-          expect(filter(video), isFalse);
-          expect(resolver(video), [label]);
+          expect(filter(video), isTrue);
+          expect(resolver(video), isEmpty);
         }
       });
 
@@ -324,7 +323,7 @@ void main() {
         expect(filter(video), isFalse);
       });
 
-      test('keeps an own video behind a warning before adult self-attestation '
+      test('keeps an own video hidden before adult self-attestation '
           'when '
           'only the creator applied an unrecognized label', () {
         final filter = createNsfwFilter(
@@ -341,8 +340,8 @@ void main() {
           contentWarningLabels: ['some-unknown-label'],
         );
 
-        expect(filter(video), isFalse);
-        expect(resolver(video), ['nudity']);
+        expect(filter(video), isTrue);
+        expect(resolver(video), isEmpty);
       });
 
       test('still hides an own video when only a trusted labeler applied an '

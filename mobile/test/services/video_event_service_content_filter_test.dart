@@ -321,7 +321,7 @@ void main() {
       expect(result.single.warnLabels, equals(['violence']));
     });
 
-    test('ordinary owner adult self-label warns before adult '
+    test('ordinary owner adult self-label stays hidden before adult '
         'self-attestation', () {
       expect(ageVerificationService.isAdultContentVerified, isFalse);
 
@@ -332,8 +332,7 @@ void main() {
         ),
       ]);
 
-      expect(result, hasLength(1));
-      expect(result.single.warnLabels, equals(['nudity']));
+      expect(result, isEmpty);
     });
 
     test('protected-minor ownership cannot bypass any age-restricted label '

@@ -78,7 +78,8 @@ class ContentFilterService extends ChangeNotifier {
 
   /// Categories age-gated to [ContentFilterPreference.hide] until the viewer is
   /// self-attested as an adult. Known minors also stay hidden when viewing
-  /// their own videos; ordinary creators retain the warning until asked.
+  /// their own videos. Ordinary creators retain warnings for the legacy
+  /// alcohol, tobacco, profanity and gambling exception before attestation.
   static const Set<ContentLabel> ageRestrictedCategories = {
     ...adultCategories,
     ContentLabel.alcohol,
@@ -227,8 +228,9 @@ class ContentFilterService extends ChangeNotifier {
   ///
   /// Known minors cannot bypass age restrictions on their own uploads.
   /// Self-attested adults keep their chosen age-restricted preference, including
-  /// hide. Other self-labels keep the creator's video behind a warning rather
-  /// than hiding it, including before ordinary adult self-attestation. Trusted
+  /// hide. Adult content and drug use require attestation even for creators.
+  /// Other self-labels keep the creator's video behind a warning rather than
+  /// hiding it, including before ordinary adult self-attestation. Trusted
   /// labelers and server-side moderation do not go through here and still hide
   /// the video for everyone.
   ContentFilterPreference getCreatorSelfLabelPreference(
@@ -241,6 +243,9 @@ class ContentFilterService extends ChangeNotifier {
         return ContentFilterPreference.hide;
       }
       if (ageVerificationService.isAdultContentVerified) return preference;
+      if (adultCategories.contains(label) || label == ContentLabel.drugs) {
+        return ContentFilterPreference.hide;
+      }
     }
     if (isOwner && preference == ContentFilterPreference.hide) {
       return ContentFilterPreference.warn;
