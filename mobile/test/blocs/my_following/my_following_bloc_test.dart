@@ -395,15 +395,22 @@ void main() {
           when(
             () => mockFollowRepository.watchMyFollowingCached(),
           ).thenAnswer((_) => loadController.stream);
+          // The repository updates its in-memory list and emits at once, then
+          // waits for the contact-list publish to reach the relays.
+          final publish = Completer<void>();
           when(() => mockFollowRepository.toggleFollow(pubkey)).thenAnswer((
             _,
-          ) async {
+          ) {
             following.add(pubkey);
             followingController.add(List.of(following));
+            return publish.future;
           });
 
           final bloc = createBloc();
-          addTearDown(bloc.close);
+          addTearDown(() async {
+            if (!publish.isCompleted) publish.complete();
+            await bloc.close();
+          });
           final isFollowingStates = <bool>[];
           final sub = bloc.stream.listen(
             (state) => isFollowingStates.add(state.isFollowing(pubkey)),
@@ -415,11 +422,14 @@ void main() {
           bloc.add(MyFollowingToggleRequested(pubkey));
           await pumpEventQueue();
 
-          // The in-flight load's network revalidation now resolves with the
-          // relay-lagged pre-follow (stale) list — the surviving #5144 race.
+          // While the publish is still pending, the in-flight load's network
+          // revalidation resolves with the relay-lagged pre-follow (stale)
+          // list — the surviving #5144 race.
           loadController.add(
             const CacheResult.live(FollowingSnapshot(pubkeys: [], count: 0)),
           );
+          await pumpEventQueue();
+          publish.complete();
           await pumpEventQueue();
 
           final firstFollowed = isFollowingStates.indexOf(true);
