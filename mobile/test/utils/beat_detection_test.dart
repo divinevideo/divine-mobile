@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/utils/beat_detection.dart';
@@ -37,6 +38,25 @@ void main() {
         expect(_worstMiss(beats, kicks), lessThanOrEqualTo(_ms(10)));
       });
     }
+
+    test('places beats without drift at 44.1 kHz, where a frame is not a '
+        'whole 5 ms', () {
+      const rate = 44100;
+      final samples = Float32List(9 * rate);
+      final kicks = [_ms(1000), _ms(4000), _ms(8000)];
+      for (final kick in kicks) {
+        final start = kick.inMicroseconds * rate ~/ 1000000;
+        for (var i = 0; i < rate * 0.4 && start + i < samples.length; i++) {
+          final time = i / rate;
+          samples[start + i] =
+              0.9 * math.exp(-time / 0.08) * math.sin(2 * math.pi * 60 * time);
+        }
+      }
+
+      final beats = detectBeats(samples, sampleRate: rate);
+
+      expect(_worstMiss(beats, kicks), lessThanOrEqualTo(_ms(5)));
+    });
 
     test('fires on the words of a countdown, not on the crackle between '
         'them', () {

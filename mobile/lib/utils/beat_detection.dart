@@ -50,10 +50,13 @@ List<Duration> detectBeats(Float32List samples, {required int sampleRate}) {
   if (sampleRate < _frameRate * 4) return const [];
   final rises = _rises(samples, sampleRate);
   if (rises == null) return const [];
+  // A frame is a whole number of samples, so at 44.1 kHz it lasts 220 samples,
+  // 4.99 ms: timing frames as 5 ms would drift the beats late.
+  final hop = sampleRate ~/ _frameRate;
   return [
     for (final hit in _hits(rises))
       Duration(
-        microseconds: hit * Duration.microsecondsPerSecond ~/ _frameRate,
+        microseconds: hit * hop * Duration.microsecondsPerSecond ~/ sampleRate,
       ),
   ];
 }
