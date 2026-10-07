@@ -3684,6 +3684,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get peopleListsNoPeopleSubtitle => '시작하려면 사람을 추가하세요';
 
   @override
+  String get peopleListsAllMembersHiddenTitle => 'Everyone here is hidden';
+
+  @override
+  String get peopleListsAllMembersHiddenSubtitle =>
+      'People you\'ve blocked or muted don\'t show up in lists.';
+
+  @override
   String get peopleListsNoVideosTitle => '아직 동영상 없음';
 
   @override

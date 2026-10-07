@@ -3662,6 +3662,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get peopleListsNoPeopleSubtitle => '加一些人进来吧';
 
   @override
+  String get peopleListsAllMembersHiddenTitle => 'Everyone here is hidden';
+
+  @override
+  String get peopleListsAllMembersHiddenSubtitle =>
+      'People you\'ve blocked or muted don\'t show up in lists.';
+
+  @override
   String get peopleListsNoVideosTitle => '还没有视频';
 
   @override

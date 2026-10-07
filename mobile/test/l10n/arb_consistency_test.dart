@@ -571,6 +571,10 @@ void main() {
 // Keys intentionally allowed to fall back to English until a translation pass.
 // Keep this list small and reviewable so new translation gaps stay visible.
 const _knownUntranslatedDebt = <String>{
+  // A people list whose members are all hidden from the viewer (#9895).
+  'peopleListsAllMembersHiddenTitle',
+  'peopleListsAllMembersHiddenSubtitle',
+
   // Unavailable pinned-video recovery (#9443). These keys remain English in
   // all 21 non-English locales until a human translation pass.
   'profilePinReviewUnavailable',

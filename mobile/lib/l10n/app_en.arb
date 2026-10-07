@@ -2472,6 +2472,14 @@
   "peopleListsListDeletedSubtitle": "This list may have been deleted.",
   "peopleListsNoPeopleTitle": "No people in this list",
   "peopleListsNoPeopleSubtitle": "Add some people to get started",
+  "peopleListsAllMembersHiddenTitle": "Everyone here is hidden",
+  "@peopleListsAllMembersHiddenTitle": {
+    "description": "Title of a people list's member roster when the list has members but every one is hidden from the viewer, because the viewer blocked or muted them or they blocked or muted the viewer."
+  },
+  "peopleListsAllMembersHiddenSubtitle": "People you've blocked or muted don't show up in lists.",
+  "@peopleListsAllMembersHiddenSubtitle": {
+    "description": "Supporting copy under peopleListsAllMembersHiddenTitle. Names only the viewer's own blocks and mutes; it must not tell the viewer that someone blocked or muted them."
+  },
   "peopleListsNoVideosTitle": "No videos yet",
   "peopleListsNoVideosSubtitle": "Videos from list members will appear here",
   "peopleListsFailedToLoadVideos": "Failed to load videos",

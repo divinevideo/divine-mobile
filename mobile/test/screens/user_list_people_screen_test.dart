@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -15,6 +16,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/features/people_lists/people_lists.dart';
+import 'package:openvine/features/people_lists/view/people_list_hero_header.dart';
 import 'package:openvine/features/people_lists/view/people_list_member_tile.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -66,9 +68,11 @@ Future<void> _pumpPeopleListScreen(
   WidgetTester tester, {
   required PeopleListsBloc bloc,
   required UserList list,
+  List<Override> overrides = const [],
 }) async {
   await tester.pumpWidget(
     testProviderScope(
+      additionalOverrides: overrides,
       child: MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -632,6 +636,46 @@ void main() {
 
       expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
       expect(find.text(l10n.peopleListsListNotFoundTitle), findsNothing);
+    });
+
+    group('members preview', () {
+      testWidgets(
+        "leaves a blocked member out of the viewer's own list's preview",
+        (tester) async {
+          // Full-length 64-char pubkeys, never truncated.
+          final kept = 'a' * 64;
+          final blocked = 'b' * 64;
+          final blocklist = ContentBlocklistRepository();
+          addTearDown(blocklist.dispose);
+          await blocklist.blockUser(blocked);
+          final list = _buildList(id: 'crew', pubkeys: [blocked, kept]);
+          final bloc = _MockPeopleListsBloc();
+          whenListen(
+            bloc,
+            const Stream<PeopleListsState>.empty(),
+            initialState: PeopleListsState(
+              status: PeopleListsStatus.ready,
+              ownerPubkey: _ownerPubkey,
+              lists: [list],
+            ),
+          );
+
+          await _pumpPeopleListScreen(
+            tester,
+            bloc: bloc,
+            list: list,
+            overrides: [
+              contentBlocklistRepositoryProvider.overrideWithValue(blocklist),
+            ],
+          );
+          await tester.pump();
+
+          final preview = tester.widget<PeopleListMembersPreview>(
+            find.byType(PeopleListMembersPreview),
+          );
+          expect(preview.pubkeys, equals([kept]));
+        },
+      );
     });
 
     group('View all', () {

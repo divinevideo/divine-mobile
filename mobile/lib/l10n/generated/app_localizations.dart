@@ -6709,6 +6709,18 @@ abstract class AppLocalizations {
   /// **'Add some people to get started'**
   String get peopleListsNoPeopleSubtitle;
 
+  /// Title of a people list's member roster when the list has members but every one is hidden from the viewer, because the viewer blocked or muted them or they blocked or muted the viewer.
+  ///
+  /// In en, this message translates to:
+  /// **'Everyone here is hidden'**
+  String get peopleListsAllMembersHiddenTitle;
+
+  /// Supporting copy under peopleListsAllMembersHiddenTitle. Names only the viewer's own blocks and mutes; it must not tell the viewer that someone blocked or muted them.
+  ///
+  /// In en, this message translates to:
+  /// **'People you\'ve blocked or muted don\'t show up in lists.'**
+  String get peopleListsAllMembersHiddenSubtitle;
+
   /// No description provided for @peopleListsNoVideosTitle.
   ///
   /// In en, this message translates to:

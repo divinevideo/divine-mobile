@@ -3923,6 +3923,13 @@ class AppLocalizationsUr extends AppLocalizations {
       'شروع کرنے کے لیے کچھ لوگ شامل کریں';
 
   @override
+  String get peopleListsAllMembersHiddenTitle => 'Everyone here is hidden';
+
+  @override
+  String get peopleListsAllMembersHiddenSubtitle =>
+      'People you\'ve blocked or muted don\'t show up in lists.';
+
+  @override
   String get peopleListsNoVideosTitle => 'ابھی کوئی ویڈیو نہیں';
 
   @override

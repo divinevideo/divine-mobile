@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -16,6 +17,7 @@ import 'package:openvine/features/people_lists/view/people_list_member_tile.dart
 import 'package:openvine/features/people_lists/view/people_list_members_screen.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/list_providers.dart';
+import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
@@ -774,6 +776,66 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(pushedLocations, equals(['/people-lists/crew/add-people']));
+      });
+    });
+
+    group('hidden members', () {
+      late ContentBlocklistRepository blocklist;
+
+      setUp(() {
+        blocklist = ContentBlocklistRepository();
+        addTearDown(blocklist.dispose);
+      });
+
+      Future<void> pumpOwnRoster(WidgetTester tester) => pumpRoster(
+        tester,
+        blocState: PeopleListsState(
+          status: PeopleListsStatus.ready,
+          ownerPubkey: _ownerPubkey,
+          lists: [_list()],
+        ),
+        overrides: [
+          contentBlocklistRepositoryProvider.overrideWithValue(blocklist),
+        ],
+      );
+
+      testWidgets(
+        "leaves a blocked member out of the viewer's own list, even the "
+        'busiest',
+        (tester) async {
+          await blocklist.blockUser(_busiest);
+
+          await pumpOwnRoster(tester);
+
+          expect(rosterOrder(tester), equals([_busy, _quiet]));
+          // The count stays list-wide, as #9740 kept it.
+          expect(find.text(l10n.peopleListsPeopleCount(3)), findsOneWidget);
+        },
+      );
+
+      testWidgets('drops a member blocked while the roster is open', (
+        tester,
+      ) async {
+        await pumpOwnRoster(tester);
+        expect(rosterOrder(tester), equals([_busiest, _busy, _quiet]));
+
+        await blocklist.blockUser(_busy);
+        await tester.pump();
+
+        expect(rosterOrder(tester), equals([_busiest, _quiet]));
+      });
+
+      testWidgets('says so when every member is hidden', (tester) async {
+        await blocklist.blockUsers([_quiet, _busy, _busiest]);
+
+        await pumpOwnRoster(tester);
+
+        expect(find.byType(PeopleListMemberTile), findsNothing);
+        expect(
+          find.text(l10n.peopleListsAllMembersHiddenTitle),
+          findsOneWidget,
+        );
+        expect(find.text(l10n.peopleListsNoPeopleTitle), findsNothing);
       });
     });
   });

@@ -4063,6 +4063,13 @@ class AppLocalizationsTe extends AppLocalizations {
       'ప్రారంభించడానికి కొంతమంది వ్యక్తులను జోడించండి';
 
   @override
+  String get peopleListsAllMembersHiddenTitle => 'Everyone here is hidden';
+
+  @override
+  String get peopleListsAllMembersHiddenSubtitle =>
+      'People you\'ve blocked or muted don\'t show up in lists.';
+
+  @override
   String get peopleListsNoVideosTitle => 'ఇంకా వీడియోలు లేవు';
 
   @override
