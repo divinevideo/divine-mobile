@@ -85,6 +85,25 @@ Future<Offset?> pickLayerSlidePoint(
   return picked;
 }
 
+/// Where [layer] is when a slide of [phase] lands on it or takes off from it,
+/// as [Layer.offset] measures it.
+///
+/// Its own offset, unless keyframes move it: then the place they give it at
+/// its start for an entrance and at its end for an exit. Its own offset then
+/// only lays it out and can be somewhere it never shows.
+@visibleForTesting
+Offset layerSlideAnchor(Layer layer, AnimationPhase phase) {
+  if (!layer.hasKeyframes) return layer.offset;
+  final end = layer.endTime;
+  final placement = phase != AnimationPhase.animateOut
+      ? layer.keyframePlacementAt(layer.keyframeOrigin)
+      : end == null
+      // Past its last keyframe a layer holds still on it.
+      ? layer.keyframes.last.placement
+      : layer.keyframePlacementAt(end);
+  return placement?.offset ?? layer.offset;
+}
+
 /// The canvas as it currently sits on screen, or `null` when it is not mounted
 /// or not measurable.
 @visibleForTesting
@@ -298,7 +317,9 @@ class _LayerSlidePointPickerViewState extends State<LayerSlidePointPickerView> {
             IgnorePointer(
               child: CustomPaint(
                 painter: _SlidePointPainter(
-                  anchor: projection.toScreen(widget.layer.offset),
+                  anchor: projection.toScreen(
+                    layerSlideAnchor(widget.layer, widget.phase),
+                  ),
                   point: fraction == null
                       ? null
                       : projection.screenOfFraction(fraction),

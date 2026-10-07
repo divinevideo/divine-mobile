@@ -9,7 +9,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/layer_slide_point_picker.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
-    show Layer, ProImageEditorState;
+    show Layer, LayerKeyframe, ProImageEditorState;
 import 'package:pro_video_editor/pro_video_editor.dart' show AnimationPhase;
 
 import '../../../../helpers/test_provider_overrides.dart';
@@ -201,6 +201,50 @@ void main() {
 
         expect(fraction.dx, lessThan(-0.5));
         expect(fraction.dy, lessThan(-0.5));
+      });
+    });
+  });
+
+  group('layerSlideAnchor', () {
+    test('is the layer own offset without keyframes', () {
+      final layer = Layer(offset: const Offset(10, 20));
+
+      expect(layerSlideAnchor(layer, AnimationPhase.animateIn), layer.offset);
+    });
+
+    group('for a layer its keyframes move', () {
+      // Laid out where it was last edited, which is none of the two ends.
+      Layer moving({Duration? endTime}) => Layer(
+        offset: const Offset(500, 500),
+        startTime: const Duration(seconds: 1),
+        endTime: endTime,
+        keyframes: const [
+          LayerKeyframe(time: Duration.zero, offset: Offset(-100, 0)),
+          LayerKeyframe(time: Duration(seconds: 2), offset: Offset(100, 0)),
+        ],
+      );
+
+      test('is where it enters', () {
+        expect(
+          layerSlideAnchor(moving(), AnimationPhase.animateIn),
+          const Offset(-100, 0),
+        );
+      });
+
+      test('is where it leaves', () {
+        final layer = moving(endTime: const Duration(seconds: 2));
+
+        expect(
+          layerSlideAnchor(layer, AnimationPhase.animateOut),
+          Offset.zero,
+        );
+      });
+
+      test('is its last keyframe for a layer that runs to the end', () {
+        expect(
+          layerSlideAnchor(moving(), AnimationPhase.animateOut),
+          const Offset(100, 0),
+        );
       });
     });
   });
