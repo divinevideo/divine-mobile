@@ -134,6 +134,21 @@ void main() {
         expect(anchors, isNull);
       });
 
+      test(
+        'does not trust a bundle cached under a clock that ran ahead',
+        () async {
+          await createService().load();
+          now = now.subtract(const Duration(days: 30));
+
+          final anchors = await createService(
+            respond: () => http.Response('unavailable', 503),
+          ).load();
+
+          expect(requests, equals(2));
+          expect(anchors, isNull);
+        },
+      );
+
       test('rejects a response without a certificate', () async {
         final anchors = await createService(
           respond: () => http.Response('<html>landing page</html>', 200),

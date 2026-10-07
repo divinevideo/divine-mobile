@@ -34,9 +34,9 @@ class C2paTrustAnchors {
 /// that publishes no bundle of its own, and a clip must verify the same way
 /// whichever build recorded it. The anchors rotate, and a verifier must pick
 /// up a new one within about an hour, so they are fetched rather than built
-/// into the app. The last good bundle is kept in [CacheSync] so a check still works
-/// offline, but only for [maxStaleAge]: a device that stays offline must not
-/// go on trusting an anchor the server has since retired.
+/// into the app. The last good bundle is kept in [CacheSync] so a check still
+/// works offline, but only for [maxStaleAge]: a device that stays offline must
+/// not go on trusting an anchor the server has since retired.
 class C2paTrustAnchorService {
   /// Creates a [C2paTrustAnchorService] reading from [anchorsUrl].
   C2paTrustAnchorService({
@@ -95,8 +95,11 @@ class C2paTrustAnchorService {
   Future<C2paTrustAnchors?> load({bool forceRefresh = false}) async {
     final url = _anchorsUrl;
     final cacheKey = '$_cacheKeyPrefix${url.host}';
-    final cached = await _readCache(cacheKey);
-    final age = cached == null ? null : _now().difference(cached.fetchedAt);
+    final stored = await _readCache(cacheKey);
+    final age = stored == null ? null : _now().difference(stored.fetchedAt);
+    // A bundle dated in the future was cached while the clock ran ahead. Its
+    // real age is unknown, so it is neither fresh nor an offline fallback.
+    final cached = age == null || age.isNegative ? null : stored;
     if (!forceRefresh && cached != null && age! < refreshInterval) {
       return C2paTrustAnchors(pem: cached.pem, isFresh: false);
     }
