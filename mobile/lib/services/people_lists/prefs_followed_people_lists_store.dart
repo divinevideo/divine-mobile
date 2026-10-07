@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// The preferences could not save a change to the followed lists.
 class FollowedPeopleListsWriteException implements Exception {
@@ -130,22 +131,43 @@ class PrefsFollowedPeopleListsStore implements FollowedPeopleListsStore {
   /// Saves [entries] as [viewerPubkey]'s follows, or removes them when null.
   ///
   /// Throws [FollowedPeopleListsWriteException] when the preferences could not
-  /// save it. They keep in memory a value they failed to save, and the next
-  /// write would save it after all, so the previous value is put back first.
+  /// save it, whether they reported failure or threw. They keep in memory a
+  /// value they failed to save, and the next write would save it after all, so
+  /// the previous value is put back first.
   Future<void> _save(String viewerPubkey, List<String>? entries) async {
     final key = _storageKey(viewerPubkey);
     final previous = _prefs.getStringList(key);
-    final saved = entries == null
-        ? await _prefs.remove(key)
-        : await _prefs.setStringList(key, entries);
+    var saved = false;
+    try {
+      saved = entries == null
+          ? await _prefs.remove(key)
+          : await _prefs.setStringList(key, entries);
+    } on Exception catch (error, stackTrace) {
+      Log.warning(
+        'Failed to save the followed people lists',
+        name: 'PrefsFollowedPeopleListsStore',
+        category: LogCategory.storage,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
     if (!saved) {
+      await _restore(key, previous);
+      throw const FollowedPeopleListsWriteException();
+    }
+    _changedViewers.add(viewerPubkey);
+  }
+
+  Future<void> _restore(String key, List<String>? previous) async {
+    try {
       if (previous == null) {
         await _prefs.remove(key);
       } else {
         await _prefs.setStringList(key, previous);
       }
-      throw const FollowedPeopleListsWriteException();
+    } on Exception {
+      // The preferences update their in-memory value before the platform write
+      // is attempted, so a platform failure here still leaves it restored.
     }
-    _changedViewers.add(viewerPubkey);
   }
 }
