@@ -204,6 +204,14 @@ void main() {
         .ageRestrictedCategories
         .where((label) => !ContentFilterService.adultCategories.contains(label))
         .toList();
+    const ownerPubkey =
+        '1111111111111111111111111111111111111111111111111111111111111111';
+    const legacyOwnerWarningLabels = [
+      ContentLabel.alcohol,
+      ContentLabel.tobacco,
+      ContentLabel.profanity,
+      ContentLabel.gambling,
+    ];
 
     test('a self-labeled warn-category video stays visible behind the overlay '
         'for a non-age-verified viewer', () async {
@@ -307,6 +315,52 @@ void main() {
       ]);
 
       expect(result, isEmpty);
+    });
+
+    test('unattested owner keeps the four legacy age-restricted self-labels '
+        'behind the overlay while other authors stay hidden', () {
+      expect(ageVerificationService.isAdultContentVerified, isFalse);
+
+      for (final label in legacyOwnerWarningLabels) {
+        final ownerResult = videoEventService.filterVideoList([
+          _createVideo(
+            id: 'owner-${label.value}',
+            contentWarningLabels: [label.value],
+          ),
+        ]);
+        final otherResult = videoEventService.filterVideoList([
+          _createVideo(
+            id: 'other-${label.value}',
+            pubkey: otherPubkey,
+            contentWarningLabels: [label.value],
+          ),
+        ]);
+
+        expect(ownerResult, hasLength(1), reason: label.value);
+        expect(ownerResult.single.warnLabels, [label.value]);
+        expect(otherResult, isEmpty, reason: label.value);
+      }
+    });
+
+    test('relay ingest warns an unattested owner for the four legacy '
+        'age-restricted self-labels and hides them for other authors', () {
+      expect(ageVerificationService.isAdultContentVerified, isFalse);
+
+      for (final label in legacyOwnerWarningLabels) {
+        final tags = [
+          ['content-warning', label.value],
+        ];
+        final ownerResult = videoEventService.getFilterAction(
+          _FakeLabelEvent(pubkey: ownerPubkey, tags: tags),
+        );
+        final otherResult = videoEventService.getFilterAction(
+          _FakeLabelEvent(pubkey: otherPubkey, tags: tags),
+        );
+
+        expect(ownerResult.$1, ContentFilterPreference.warn);
+        expect(ownerResult.$2, [label.value]);
+        expect(otherResult.$1, ContentFilterPreference.hide);
+      }
     });
 
     test('owner keeps a non-age-restricted self-label behind the overlay', () {

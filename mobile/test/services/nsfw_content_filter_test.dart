@@ -40,6 +40,9 @@ class _FakeLabelEvent extends Fake implements Event {
 const _testPubkey =
     'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2';
 
+const _otherPubkey =
+    'b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3';
+
 VideoEvent _createVideo({
   List<String> contentWarningLabels = const [],
   List<String> moderationLabels = const [],
@@ -172,6 +175,40 @@ void main() {
 
           expect(filter(video), isTrue);
           expect(resolver(video), isEmpty);
+        }
+      });
+
+      test('warns an unattested owner for the four legacy age-restricted '
+          'self-labels while other viewers still hide them', () {
+        expect(ageService.isAdultContentVerified, isFalse);
+        final ownerFilter = createNsfwFilter(
+          contentFilterService,
+          moderationLabelService: moderationLabelService,
+          viewerPubkey: () => _testPubkey,
+        );
+        final ownerResolver = createNsfwWarnLabels(
+          contentFilterService,
+          moderationLabelService: moderationLabelService,
+          viewerPubkey: () => _testPubkey,
+        );
+        final otherFilter = createNsfwFilter(
+          contentFilterService,
+          moderationLabelService: moderationLabelService,
+          viewerPubkey: () => _otherPubkey,
+        );
+        final otherResolver = createNsfwWarnLabels(
+          contentFilterService,
+          moderationLabelService: moderationLabelService,
+          viewerPubkey: () => _otherPubkey,
+        );
+
+        for (final label in ['alcohol', 'tobacco', 'profanity', 'gambling']) {
+          final video = _createVideo(contentWarningLabels: [label]);
+
+          expect(ownerFilter(video), isFalse, reason: label);
+          expect(ownerResolver(video), [label], reason: label);
+          expect(otherFilter(video), isTrue, reason: label);
+          expect(otherResolver(video), isEmpty, reason: label);
         }
       });
 
