@@ -148,13 +148,14 @@ void main() {
       addTearDown(router.dispose);
 
       await pumpRouter(tester, router);
-      router.push(FeatureFlagScreen.path);
+      final pushedRoute = router.push<void>(FeatureFlagScreen.path);
       await tester.pumpAndSettle();
       expect(find.byType(FeatureFlagScreen), findsOneWidget);
       expect(router.canPop(), isTrue);
 
       await tester.tap(find.byType(DiVineAppBarLeading));
       await tester.pumpAndSettle();
+      await pushedRoute;
 
       expect(tester.takeException(), isNull);
       expect(find.text('SETTINGS-STUB'), findsOneWidget);
