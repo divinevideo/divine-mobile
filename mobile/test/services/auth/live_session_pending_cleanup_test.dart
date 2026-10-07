@@ -406,6 +406,46 @@ void main() {
     expect(auth.authState, AuthState.unauthenticated);
   });
 
+  for (final originallyLive in [true, false]) {
+    test('OAuth with originally live=$originallyLive cannot borrow a newly '
+        'authenticated same-owner session', () async {
+      if (originallyLive) await establishLive();
+      final originalIdentity = auth.currentIdentity;
+      final lookupEntered = Completer<void>();
+      final resumeLookup = Completer<void>();
+      var pauseNextLookup = true;
+      when(() => keys.getIdentityKeyContainer(any())).thenAnswer((_) async {
+        if (pauseNextLookup) {
+          pauseNextLookup = false;
+          lookupEntered.complete();
+          await resumeLookup.future;
+        }
+        return container;
+      });
+
+      final attempt = auth.signInWithDivineOAuth(oauthSession());
+      final failed = expectLater(
+        attempt,
+        throwsA(isA<UserDataCleanupException>()),
+      );
+      await lookupEntered.future;
+      // Finish another real setup while the OAuth entry is awaiting keys. Its
+      // authenticated state must not replace the OAuth entry's captured one.
+      await reenter();
+      expect(auth.authState, AuthState.authenticated);
+      expect(auth.currentIdentity, isNot(same(originalIdentity)));
+      expect(sweeps, isEmpty);
+      await recordPending();
+      final marker = preferences.getString(PendingAccountCleanup.storageKey);
+      refuseDatabase = true;
+      resumeLookup.complete();
+      await failed;
+      expect(sweeps.single.owner, container.publicKeyHex);
+      expect(auth.authState, AuthState.unauthenticated);
+      expect(preferences.getString(PendingAccountCleanup.storageKey), marker);
+    });
+  }
+
   for (final replacement in ['identity', 'key container']) {
     test(
       'same-owner $replacement replacement cannot defer stale setup',
