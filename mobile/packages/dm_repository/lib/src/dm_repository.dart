@@ -44,6 +44,7 @@ import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:nostr_sdk/relay/relay_type.dart';
 import 'package:nostr_sdk/signer/isolate_decrypt_signer.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
+import 'package:nostr_sdk/utils/relay_addr_util.dart';
 import 'package:nostr_sdk/utils/relay_url_policy.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -225,6 +226,15 @@ const Duration _dmInboxQueryTimeout = Duration(seconds: 5);
 /// indexer cannot hold the whole recipient resolution open (#7317).
 const Duration _dmInboxDiscoveryQueryTimeout = Duration(seconds: 2);
 
+/// Kept back from what is left of the resolution budget when the write-relay
+/// leg runs, so the leg returns its own answer — including a list one relay
+/// sent before another stalled — before the whole resolution is abandoned.
+const Duration _dmInboxOutboxSettleMargin = Duration(milliseconds: 250);
+
+/// Most write relays the outbox leg dials for one recipient. Each is a cold
+/// connection on the send path, chosen by the person being messaged.
+const int _dmInboxOutboxRelayCap = 4;
+
 /// Budget for the authoritative own-inbox read that gates the RC3 publish.
 ///
 /// Deliberately shorter than [_dmInboxQueryTimeout]. `requireAllRelaysSettled`
@@ -356,13 +366,15 @@ enum DmInboxResolution {
   /// The recipient advertises a kind-10050 and we read it.
   found,
 
-  /// The relays answered, and the recipient advertises no usable inbox.
-  /// NIP-17 calls this "not ready to receive messages"; we still fall back to
-  /// the default pool so reachability is preserved (#570).
+  /// Every relay asked answered — the pool, the indexer, and up to four
+  /// dialable write relays from the recipient's NIP-65 list — and none holds
+  /// an inbox list. NIP-17 calls this "not ready to receive messages"; we
+  /// still fall back to the default pool so reachability is preserved (#570).
   absent,
 
-  /// We could not read the recipient's inbox: no relay took the REQ, or
-  /// nothing settled inside the budget. Says nothing about the recipient.
+  /// We could not read the recipient's inbox: no relay took the REQ, nothing
+  /// settled inside the budget, or their list names only relays this device
+  /// refuses to dial. Says nothing about where the recipient reads.
   unreadable,
 }
 
@@ -4383,13 +4395,23 @@ class DmRepository {
     // leg comment below.
     String? advertisedRelay,
   }) async {
+    final elapsed = Stopwatch()..start();
     try {
+      final isRecipient = source == _DmRelayListSource.remote;
       final filter = [
         nostr_filter.Filter(
           authors: [pubkey],
           kinds: [EventKind.dmRelaysList],
           limit: 1,
         ),
+        // A recipient's NIP-65 list rides in the same REQ, so reading their
+        // write relays costs a round trip only when no leg carried the inbox.
+        if (isRecipient)
+          nostr_filter.Filter(
+            authors: [pubkey],
+            kinds: [EventKind.relayListMetadata],
+            limit: 1,
+          ),
       ];
 
       // A recipient lookup has two independent legs. The pool leg retains the
@@ -4398,6 +4420,12 @@ class DmRepository {
       // dead indexer is capped independently, so it cannot consume the pool's
       // five-second budget. Both must settle before an empty answer means
       // `absent`; if either is incomplete the send stays pending and retries.
+      // When neither returns an inbox, a third leg reads the recipient's own
+      // write relays (see [_queryRecipientWriteRelays]).
+      // The lookup leg asks the indexer alone: asking the pool again under its
+      // shorter budget let a slow pool relay mark an answered lookup
+      // unreadable, and let a dead indexer drop out of the judgement while
+      // the pool's answers completed the leg (#7317).
       //
       // The live memo read and the drain's strict read keep a single
       // pool-only leg: the memo is in front of the receiving subscription, and
@@ -4416,12 +4444,12 @@ class DmRepository {
               ? _ownDmInboxAuthoritativeTimeout
               : _dmInboxQueryTimeout,
         ),
-        if (source == _DmRelayListSource.remote &&
-            _dmInboxLookupRelays.isNotEmpty)
+        if (isRecipient && _dmInboxLookupRelays.isNotEmpty)
           _nostrClient.queryEventsDetailed(
             filter,
             useCache: false,
             tempRelays: _dmInboxLookupRelays,
+            relayTypes: const [RelayType.temp],
             requireAllRelaysSettled: true,
             timeout: _dmInboxDiscoveryQueryTimeout,
           ),
@@ -4499,50 +4527,52 @@ class DmRepository {
         );
       }
 
-      if (events.isEmpty) {
-        logInconclusiveRead();
-        return (state: absentOrFailed, relays: null, advertisedMissing: null);
-      }
       final matchingEvents = [
         for (final event in events)
           if (event.kind == EventKind.dmRelaysList && event.pubkey == pubkey)
             event,
       ];
       if (matchingEvents.isEmpty) {
-        Log.warning(
-          'Ignoring off-filter DM inbox relay response for '
-          '${pubkeyForLogs(pubkey)}',
-          category: LogCategory.system,
-        );
+        final relayLists = [
+          for (final event in events)
+            if (isRecipient &&
+                event.kind == EventKind.relayListMetadata &&
+                event.pubkey == pubkey)
+              event,
+        ];
+        if (relayLists.length < events.length) {
+          Log.warning(
+            'Ignoring off-filter DM inbox relay response for '
+            '${pubkeyForLogs(pubkey)}',
+            category: LogCategory.system,
+          );
+        }
+        // The write relays are asked even when an earlier leg did not settle:
+        // a list found there is the answer whatever that leg would have said.
+        // Anything short of finding one keeps the earlier verdict, so an
+        // inconclusive read never becomes `absent` this way.
+        if (isRecipient &&
+            (absentOrFailed == _OwnDmInboxState.absent ||
+                relayLists.isNotEmpty)) {
+          final fromWriteRelays = await _queryRecipientWriteRelays(
+            pubkey,
+            relayLists,
+            budget: inboxResolutionBudget - elapsed.elapsed,
+          );
+          if (absentOrFailed == _OwnDmInboxState.absent ||
+              fromWriteRelays.state == _OwnDmInboxState.found) {
+            return fromWriteRelays;
+          }
+        }
         logInconclusiveRead();
         return (state: absentOrFailed, relays: null, advertisedMissing: null);
       }
       // Newest wins for a replaceable event served from multiple relays.
       matchingEvents.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      // Accept both `relay` (the kind-10050 spec tag) and `r` tags. The
-      // whole point of #4974 is reading a 10050 a user advertised from
-      // ANOTHER client, and some clients write `r` tags; within a
-      // kind-10050 event both unambiguously denote DM inbox relays. Matches
-      // divine-web's resolveDmReadRelays. Shared with the send path via
-      // resolveDmInboxRelaysDetailed, so it also widens recipient resolution
-      // there.
-      final relays = _admitDmRelays(
-        [
-          for (final tag in matchingEvents.first.tags)
-            if (tag.length >= 2 &&
-                (tag[0] == 'relay' || tag[0] == 'r') &&
-                tag[1].isNotEmpty)
-              tag[1],
-        ],
-        pubkey,
-        source,
-      );
-      if (relays.isEmpty) {
-        return (
-          state: _OwnDmInboxState.absent,
-          relays: null,
-          advertisedMissing: null,
-        );
+      final inbox = _classifyInboxList(matchingEvents.first, pubkey, source);
+      final relays = inbox.relays;
+      if (relays == null) {
+        return (state: inbox.state, relays: null, advertisedMissing: null);
       }
       final advertisedServesList =
           advertisedEvents == null ||
@@ -4582,6 +4612,159 @@ class DmRepository {
         advertisedMissing: null,
       );
     }
+  }
+
+  /// Reads one kind-10050 into the relays a gift wrap may be routed to.
+  ///
+  /// A list with no relay tags advertises no inbox, so it is `absent`. A
+  /// counterparty's list whose every relay this device refuses to dial is
+  /// `failed`: they do have an inbox, we will not route to it, and a
+  /// fallback-pool `OK` must not be scored as delivery there (#7317).
+  ({_OwnDmInboxState state, List<String>? relays}) _classifyInboxList(
+    Event list,
+    String pubkey,
+    _DmRelayListSource source,
+  ) {
+    // Accept both `relay` (the kind-10050 spec tag) and `r` tags. The whole
+    // point of #4974 is reading a 10050 a user advertised from ANOTHER client,
+    // and some clients write `r` tags; within a kind-10050 event both
+    // unambiguously denote DM inbox relays. Matches divine-web's
+    // resolveDmReadRelays.
+    final advertised = [
+      for (final tag in list.tags)
+        if (tag.length >= 2 &&
+            (tag[0] == 'relay' || tag[0] == 'r') &&
+            tag[1].isNotEmpty)
+          tag[1],
+    ];
+    final relays = _admitDmRelays(advertised, pubkey, source);
+    if (relays.isNotEmpty) {
+      return (state: _OwnDmInboxState.found, relays: relays);
+    }
+    if (advertised.isEmpty || source != _DmRelayListSource.remote) {
+      return (state: _OwnDmInboxState.absent, relays: null);
+    }
+    Log.warning(
+      'Recipient kind-10050 for ${pubkeyForLogs(pubkey)} names only relays '
+      'this device will not dial — treating the inbox as unreadable, NOT '
+      'scoring a fallback-pool publish as delivered (#7317)',
+      category: LogCategory.system,
+    );
+    return (state: _OwnDmInboxState.failed, relays: null);
+  }
+
+  /// Reads a recipient's kind-10050 from their own NIP-65 write relays, once
+  /// the pool and indexer legs returned no inbox list but did return the
+  /// recipient's NIP-65 list.
+  ///
+  /// NIP-65: "When downloading events from a user, clients SHOULD use the
+  /// write relays of that user." Without this leg, a list held only where its
+  /// author writes reads as `absent`, and the default-pool `OK` that follows
+  /// is scored as delivery to relays the recipient never reads (#7317).
+  /// [relayLists] are the recipient's kind-10002 events the earlier legs
+  /// returned; the newest wins. Relays the earlier legs already asked are
+  /// skipped, and the rest pass the same remote-relay policy as an inbox list.
+  Future<_OwnDmInboxRead> _queryRecipientWriteRelays(
+    String pubkey,
+    List<Event> relayLists, {
+    required Duration budget,
+  }) async {
+    const absent = (
+      state: _OwnDmInboxState.absent,
+      relays: null,
+      advertisedMissing: null,
+    );
+    if (relayLists.isEmpty) return absent;
+    final newest = relayLists.reduce(
+      (a, b) => b.createdAt > a.createdAt ? b : a,
+    );
+    final writeRelays = admitRemoteSuppliedRelays(
+      [
+        for (final tag in newest.tags)
+          // NIP-65: an `r` tag with no marker is both read and write.
+          if (tag.length >= 2 &&
+              tag[0] == 'r' &&
+              tag[1].isNotEmpty &&
+              (tag.length < 3 || tag[2] != 'read'))
+            tag[1],
+      ],
+      cap: RelayListCaps.nip65,
+    );
+    final asked = {
+      for (final url in [
+        ..._nostrClient.configuredRelays,
+        ..._dmInboxLookupRelays,
+      ])
+        RelayAddrUtil.handle(url),
+    };
+    // Relays the policy refuses or the cap leaves out are skipped the same way
+    // on every retry, so reading them as "unreadable" would turn a recipient
+    // with no inbox list into a permanent send failure.
+    final targets = writeRelays
+        .where((url) => !asked.contains(RelayAddrUtil.handle(url)))
+        .take(_dmInboxOutboxRelayCap)
+        .toList();
+    if (targets.isEmpty) return absent;
+
+    // Write relays are cold connections, measured at 3.7 s and 4.8 s on a
+    // phone, so the leg gets whatever the resolution has left rather than a
+    // short fixed bound. A send is optimistic, so the wait costs no visible
+    // latency. An overrun reaches the caller's `TimeoutException` arm, which
+    // classifies it as unreadable.
+    final remaining = budget > Duration.zero ? budget : Duration.zero;
+    final legTimeout = remaining > _dmInboxOutboxSettleMargin
+        ? remaining - _dmInboxOutboxSettleMargin
+        : Duration.zero;
+    final result = await _nostrClient
+        .queryEventsDetailed(
+          [
+            nostr_filter.Filter(
+              authors: [pubkey],
+              kinds: [EventKind.dmRelaysList],
+              limit: 1,
+            ),
+          ],
+          useCache: false,
+          tempRelays: targets,
+          relayTypes: const [RelayType.temp],
+          requireAllRelaysSettled: true,
+          timeout: legTimeout,
+        )
+        .timeout(remaining);
+    final lists = [
+      for (final event in result.events)
+        if (event.kind == EventKind.dmRelaysList && event.pubkey == pubkey)
+          event,
+    ];
+    if (lists.isNotEmpty) {
+      final inbox = _classifyInboxList(
+        lists.reduce((a, b) => b.createdAt > a.createdAt ? b : a),
+        pubkey,
+        _DmRelayListSource.remote,
+      );
+      return (
+        state: inbox.state,
+        relays: inbox.relays,
+        advertisedMissing: null,
+      );
+    }
+    if (result.noRelays || result.timedOut) {
+      final reason = result.noRelays
+          ? 'no relay took the REQ'
+          : 'not every relay settled';
+      Log.warning(
+        'Recipient kind-10050 lookup for ${pubkeyForLogs(pubkey)} on their '
+        'write relays was inconclusive ($reason) — routing to the default '
+        'pool, and NOT scoring the publish as delivered (#7317)',
+        category: LogCategory.system,
+      );
+      return (
+        state: _OwnDmInboxState.failed,
+        relays: null,
+        advertisedMissing: null,
+      );
+    }
+    return absent;
   }
 
   /// Publishes a minimal NIP-17 kind-10050 DM inbox relay list for the
@@ -7832,11 +8015,33 @@ class DmRepository {
       if (replyToId != null) ['e', replyToId],
     ];
 
+    // Routed like a text message: to the recipient's kind-10050 inbox, the
+    // default pool only when they advertise none, and confirmed by a relay
+    // `OK` rather than a socket write (#9883). An unreadable inbox publishes
+    // nothing. There is no retry row for a file send, so a pool `OK` there
+    // could neither be scored as delivery nor re-resolved later, and its
+    // self-copy would put a sent video in the thread the sender was told
+    // failed. The same reason keeps the self-copy back when the recipient
+    // `OK` never arrives.
+    final (inbox, selfWrapRelays) = await (
+      resolveDmInboxRelaysDetailed(recipientPubkey),
+      _selfWrapTargetRelays(),
+    ).wait;
+    if (inbox.state == DmInboxResolution.unreadable) {
+      return const NIP17SendResult.failure(
+        'Recipient DM inbox unreadable; file message not published',
+      );
+    }
+
     final result = await _messageService!.sendPrivateMessage(
       recipientPubkey: recipientPubkey,
       content: fileUrl,
       eventKind: EventKind.fileMessage,
       additionalTags: additionalTags,
+      targetRelays: inbox.relays,
+      selfWrapTargetRelays: selfWrapRelays,
+      awaitRecipientOk: true,
+      selfWrapOnSoftUnconfirmed: false,
     );
 
     if (result.success) {
