@@ -5260,8 +5260,8 @@ void main() {
       );
 
       test(
-        'an inbox whose relay tags are all inadmissible is absent, not '
-        'unreadable - the relays answered and we read what they said',
+        'a kind-10050 with no relay tags is absent - it advertises no inbox, '
+        'which NIP-17 reads as not ready to receive',
         () async {
           stubQueryDetailed(answeredList([kind10050Event(const [])]));
           final repository = createRepository();
@@ -5269,6 +5269,28 @@ void main() {
             _validPubkeyB,
           );
           expect(resolved.state, DmInboxResolution.absent);
+          expect(resolved.relays, isNull);
+        },
+      );
+
+      test(
+        'a kind-10050 that names only relays this device refuses to dial is '
+        'unreadable, not absent - the recipient has an inbox, we will not '
+        'route to it, so a pool OK is not delivery (#7317)',
+        () async {
+          stubQueryDetailed(
+            answeredList([
+              kind10050Event([
+                'ws://umbrel.local:4848',
+                'wss://192.168.1.77:4848',
+              ]),
+            ]),
+          );
+          final repository = createRepository();
+          final resolved = await repository.resolveDmInboxRelaysDetailed(
+            _validPubkeyB,
+          );
+          expect(resolved.state, DmInboxResolution.unreadable);
           expect(resolved.relays, isNull);
         },
       );

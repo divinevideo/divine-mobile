@@ -361,8 +361,9 @@ enum DmInboxResolution {
   /// the default pool so reachability is preserved (#570).
   absent,
 
-  /// We could not read the recipient's inbox: no relay took the REQ, or
-  /// nothing settled inside the budget. Says nothing about the recipient.
+  /// We could not read the recipient's inbox: no relay took the REQ, nothing
+  /// settled inside the budget, or their list names only relays this device
+  /// refuses to dial. Says nothing about where the recipient reads.
   unreadable,
 }
 
@@ -4519,30 +4520,10 @@ class DmRepository {
       }
       // Newest wins for a replaceable event served from multiple relays.
       matchingEvents.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      // Accept both `relay` (the kind-10050 spec tag) and `r` tags. The
-      // whole point of #4974 is reading a 10050 a user advertised from
-      // ANOTHER client, and some clients write `r` tags; within a
-      // kind-10050 event both unambiguously denote DM inbox relays. Matches
-      // divine-web's resolveDmReadRelays. Shared with the send path via
-      // resolveDmInboxRelaysDetailed, so it also widens recipient resolution
-      // there.
-      final relays = _admitDmRelays(
-        [
-          for (final tag in matchingEvents.first.tags)
-            if (tag.length >= 2 &&
-                (tag[0] == 'relay' || tag[0] == 'r') &&
-                tag[1].isNotEmpty)
-              tag[1],
-        ],
-        pubkey,
-        source,
-      );
-      if (relays.isEmpty) {
-        return (
-          state: _OwnDmInboxState.absent,
-          relays: null,
-          advertisedMissing: null,
-        );
+      final inbox = _classifyInboxList(matchingEvents.first, pubkey, source);
+      final relays = inbox.relays;
+      if (relays == null) {
+        return (state: inbox.state, relays: null, advertisedMissing: null);
       }
       final advertisedServesList =
           advertisedEvents == null ||
@@ -4582,6 +4563,45 @@ class DmRepository {
         advertisedMissing: null,
       );
     }
+  }
+
+  /// Reads one kind-10050 into the relays a gift wrap may be routed to.
+  ///
+  /// A list with no relay tags advertises no inbox, so it is `absent`. A
+  /// counterparty's list whose every relay this device refuses to dial is
+  /// `failed`: they do have an inbox, we will not route to it, and a
+  /// fallback-pool `OK` must not be scored as delivery there (#7317).
+  ({_OwnDmInboxState state, List<String>? relays}) _classifyInboxList(
+    Event list,
+    String pubkey,
+    _DmRelayListSource source,
+  ) {
+    // Accept both `relay` (the kind-10050 spec tag) and `r` tags. The whole
+    // point of #4974 is reading a 10050 a user advertised from ANOTHER client,
+    // and some clients write `r` tags; within a kind-10050 event both
+    // unambiguously denote DM inbox relays. Matches divine-web's
+    // resolveDmReadRelays.
+    final advertised = [
+      for (final tag in list.tags)
+        if (tag.length >= 2 &&
+            (tag[0] == 'relay' || tag[0] == 'r') &&
+            tag[1].isNotEmpty)
+          tag[1],
+    ];
+    final relays = _admitDmRelays(advertised, pubkey, source);
+    if (relays.isNotEmpty) {
+      return (state: _OwnDmInboxState.found, relays: relays);
+    }
+    if (advertised.isEmpty || source != _DmRelayListSource.remote) {
+      return (state: _OwnDmInboxState.absent, relays: null);
+    }
+    Log.warning(
+      'Recipient kind-10050 for ${pubkeyForLogs(pubkey)} names only relays '
+      'this device will not dial — treating the inbox as unreadable, NOT '
+      'scoring a fallback-pool publish as delivered (#7317)',
+      category: LogCategory.system,
+    );
+    return (state: _OwnDmInboxState.failed, relays: null);
   }
 
   /// Publishes a minimal NIP-17 kind-10050 DM inbox relay list for the
