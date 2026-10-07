@@ -190,9 +190,11 @@ void main() {
             final first = await drag(tester, label: label);
             var active = first;
             if (secondPointer) {
+              // No fixed pointer id: the counter flutter_test assigns ids from
+              // is shared by every test in the isolate, so a fixed id can
+              // equal the one the still-held first finger was given.
               active = await tester.startGesture(
                 tester.getCenter(find.bySemanticsLabel(label)),
-                pointer: 7,
               );
               await first.up();
               await active.moveBy(const Offset(0, -10));
