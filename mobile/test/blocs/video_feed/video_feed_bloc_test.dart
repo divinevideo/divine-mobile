@@ -90,6 +90,18 @@ class _RefusingPreferencesStore extends InMemorySharedPreferencesStore {
 /// Stands in for the `Error` an unopenable Hive box throws.
 class _UnopenableBoxError extends Error {}
 
+/// Preferences whose platform refuses every write, as a full disk does.
+class _RefusingWrites extends InMemorySharedPreferencesStore {
+  _RefusingWrites() : super.empty();
+
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) async =>
+      false;
+
+  @override
+  Future<bool> remove(String key) async => false;
+}
+
 void main() {
   group('VideoFeedBloc', () {
     late _MockVideosRepository mockVideosRepository;
@@ -4759,6 +4771,36 @@ void main() {
               prefs.getString('selected_feed_mode_$viewer'),
               equals(FeedMode.forYou.name),
             );
+          },
+        );
+
+        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+          'still falls back to For You when the fallback cannot be saved',
+          setUp: () async {
+            final platform = SharedPreferencesStorePlatform.instance;
+            addTearDown(() {
+              SharedPreferences.setMockInitialValues({});
+              SharedPreferencesStorePlatform.instance = platform;
+            });
+            SharedPreferencesStorePlatform.instance = _RefusingWrites();
+            stubRecommended(createTestVideos(2));
+            savedModeBloc = createPeopleBloc(
+              sharedPreferences: await SharedPreferences.getInstance(),
+            );
+          },
+          build: () => savedModeBloc,
+          seed: () => VideoFeedBlocState(
+            status: VideoFeedStatus.success,
+            source: sourceFor(followedList()),
+            followedPeopleLists: [followedList()],
+            videos: createTestVideos(3),
+          ),
+          act: (bloc) =>
+              bloc.add(const VideoFeedFollowedPeopleListsChanged([])),
+          verify: (bloc) {
+            expect(bloc.state.source, const VideoFeedSource.forYou());
+            expect(bloc.state.status, VideoFeedStatus.success);
+            expect(bloc.state.videos, hasLength(2));
           },
         );
 
