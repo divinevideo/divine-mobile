@@ -3985,7 +3985,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get peopleListsAllMembersHiddenSubtitle =>
-      'People you\'ve blocked or muted don\'t show up in lists.';
+      'Blocked and muted accounts don\'t show up in lists.';
 
   @override
   String get peopleListsNoVideosTitle => 'Pas encore de vidéos';

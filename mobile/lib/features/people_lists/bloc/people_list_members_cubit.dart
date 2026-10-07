@@ -166,7 +166,7 @@ class PeopleListMembersCubit extends Cubit<PeopleListMembersState>
     required PeopleListMembersStatus status,
     required bool complete,
   }) {
-    final members = [
+    final roster = [
       for (final pubkey in _pubkeys)
         PeopleListMember(
           pubkey: pubkey,
@@ -176,7 +176,7 @@ class PeopleListMembersCubit extends Cubit<PeopleListMembersState>
     ];
     // Ranked members first, most videos first; ties and the unranked keep
     // the list's own order. Indexed because List.sort is not stable.
-    final indexed = members.indexed.toList()
+    final indexed = roster.indexed.toList()
       ..sort((a, b) {
         final byVideos = (b.$2.videoCount ?? -1).compareTo(
           a.$2.videoCount ?? -1,
@@ -187,7 +187,7 @@ class PeopleListMembersCubit extends Cubit<PeopleListMembersState>
     final withStats = ranked.where((member) => member.hasStats).toList();
     // Every page answering is not enough: a member absent from a page, or
     // one without a vertical count, is a member the sum would leave out.
-    final hasTotals = complete && withStats.length == members.length;
+    final hasTotals = complete && withStats.length == roster.length;
     final loopsKnown = withStats.every((member) => member.totalLoops != null);
 
     return PeopleListMembersState(

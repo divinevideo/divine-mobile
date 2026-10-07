@@ -2476,9 +2476,9 @@
   "@peopleListsAllMembersHiddenTitle": {
     "description": "Title of a people list's member roster when the list has members but every one is hidden from the viewer, because the viewer blocked or muted them or they blocked or muted the viewer."
   },
-  "peopleListsAllMembersHiddenSubtitle": "People you've blocked or muted don't show up in lists.",
+  "peopleListsAllMembersHiddenSubtitle": "Blocked and muted accounts don't show up in lists.",
   "@peopleListsAllMembersHiddenSubtitle": {
-    "description": "Supporting copy under peopleListsAllMembersHiddenTitle. Names only the viewer's own blocks and mutes; it must not tell the viewer that someone blocked or muted them."
+    "description": "Supporting copy under peopleListsAllMembersHiddenTitle. Deliberately neutral about who did the blocking or muting: the hidden members may include accounts that blocked or muted the viewer, and the copy must not reveal that."
   },
   "peopleListsNoVideosTitle": "No videos yet",
   "peopleListsNoVideosSubtitle": "Videos from list members will appear here",

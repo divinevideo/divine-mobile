@@ -6715,10 +6715,10 @@ abstract class AppLocalizations {
   /// **'Everyone here is hidden'**
   String get peopleListsAllMembersHiddenTitle;
 
-  /// Supporting copy under peopleListsAllMembersHiddenTitle. Names only the viewer's own blocks and mutes; it must not tell the viewer that someone blocked or muted them.
+  /// Supporting copy under peopleListsAllMembersHiddenTitle. Deliberately neutral about who did the blocking or muting: the hidden members may include accounts that blocked or muted the viewer, and the copy must not reveal that.
   ///
   /// In en, this message translates to:
-  /// **'People you\'ve blocked or muted don\'t show up in lists.'**
+  /// **'Blocked and muted accounts don\'t show up in lists.'**
   String get peopleListsAllMembersHiddenSubtitle;
 
   /// No description provided for @peopleListsNoVideosTitle.
