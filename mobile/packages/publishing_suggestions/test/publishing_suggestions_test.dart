@@ -6,15 +6,19 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:publishing_suggestions/publishing_suggestions.dart';
 
-class FakeClient implements SuggestionsClient {
+class _FakeClient implements SuggestionsClient {
   ModelAvailability availability = ModelAvailability.ready;
   bool images = true;
+  int capabilityCalls = 0;
   bool failImages = false;
   bool failAll = false;
   final requests = <SuggestionRequest>[];
   @override
-  Future<ModelCapabilities> capabilities(String language) async =>
-      ModelCapabilities(availability: availability, images: images);
+  Future<ModelCapabilities> capabilities(String language) async {
+    capabilityCalls++;
+    return ModelCapabilities(availability: availability, images: images);
+  }
+
   @override
   Future<void> prepare() async {}
   @override
@@ -36,10 +40,109 @@ class FakeClient implements SuggestionsClient {
 }
 
 void main() {
+  group('generateWithContext', () {
+    test(
+      'one probe selects frames and reports availability with the result',
+      () async {
+        final client = _FakeClient();
+        final repo = SuggestionsRepository(client: client);
+        var loads = 0;
+        final outcome = await repo.generateWithContext(
+          const SuggestionRequest(language: 'en'),
+          loadFrames: () async {
+            loads++;
+            return [
+              Uint8List.fromList([7]),
+            ];
+          },
+        );
+        expect(client.capabilityCalls, 1);
+        expect(loads, 1);
+        expect(outcome.capabilities!.availability, ModelAvailability.ready);
+        expect(outcome.frames!.single.single, 7);
+        expect(outcome.result.source, SuggestionSource.video);
+      },
+    );
+
+    for (final availability in [
+      ModelAvailability.unavailable,
+      ModelAvailability.downloadable,
+    ]) {
+      test(
+        '$availability never loads frames and deals one curated idea',
+        () async {
+          final client = _FakeClient()..availability = availability;
+          final repo = SuggestionsRepository(client: client);
+          final outcome = await repo.generateWithContext(
+            const SuggestionRequest(language: 'en', transcript: 'private'),
+            loadFrames: () => throw StateError('Must not load media'),
+            fallback: const [
+              PublishingIdea(title: 'Curated', description: 'Human'),
+            ],
+          );
+          expect(client.capabilityCalls, 1);
+          expect(client.requests, isEmpty);
+          expect(outcome.result.ideas.single.title, 'Curated');
+          expect(outcome.capabilities!.availability, availability);
+        },
+      );
+    }
+
+    test('text-only capability never loads frames', () async {
+      final client = _FakeClient()..images = false;
+      final repo = SuggestionsRepository(client: client);
+      final outcome = await repo.generateWithContext(
+        const SuggestionRequest(language: 'en', transcript: 'words'),
+        loadFrames: () => throw StateError('Must not load media'),
+      );
+      expect(outcome.result.source, SuggestionSource.transcript);
+      expect(client.capabilityCalls, 1);
+    });
+
+    test(
+      'frame extraction failure uses transcript and caches the failed load',
+      () async {
+        final client = _FakeClient();
+        final repo = SuggestionsRepository(client: client);
+        final outcome = await repo.generateWithContext(
+          const SuggestionRequest(language: 'en', transcript: 'words'),
+          loadFrames: () async => throw const FormatException('No frame'),
+        );
+        expect(outcome.result.source, SuggestionSource.transcript);
+        expect(outcome.frames, isEmpty);
+        expect(client.capabilityCalls, 1);
+        final cached = await repo.generateWithContext(
+          const SuggestionRequest(language: 'en', transcript: 'words'),
+          cachedFrames: outcome.frames,
+          loadFrames: () => throw StateError('Must use cached failure'),
+        );
+        expect(cached.result.source, SuggestionSource.transcript);
+      },
+    );
+  });
+
   group('generate and premade', () {
+    test('equivalent localized decks retain the remaining unseen ideas', () {
+      final repo = SuggestionsRepository(
+        client: _FakeClient(),
+        random: Random(3),
+      );
+      final seen = <String>{};
+      for (var i = 0; i < 6; i++) {
+        final rebuiltDeck = List.generate(
+          6,
+          (index) => PublishingIdea(title: '$index', description: '$index'),
+        );
+        expect(
+          seen.add(repo.premade(rebuiltDeck, count: 1).single.title),
+          isTrue,
+        );
+      }
+    });
+
     test('inline dealing keeps unseen options for later requests', () {
       final repo = SuggestionsRepository(
-        client: FakeClient(),
+        client: _FakeClient(),
         random: Random(3),
       );
       final deck = List.generate(
@@ -55,7 +158,7 @@ void main() {
     test(
       'cancelled visual generation never retries the private transcript',
       () async {
-        final client = PendingClient();
+        final client = _PendingClient();
         final repo = SuggestionsRepository(client: client);
         final pending = repo.generate(
           SuggestionRequest(
@@ -75,7 +178,7 @@ void main() {
     testWidgets('timeout cancels native generation and returns a fallback', (
       tester,
     ) async {
-      final client = PendingClient();
+      final client = _PendingClient();
       final repo = SuggestionsRepository(client: client);
       final pending = repo.generate(
         const SuggestionRequest(language: 'en', transcript: 'hello'),
@@ -88,7 +191,7 @@ void main() {
 
     test('premade deck does not repeat until exhausted', () {
       final repo = SuggestionsRepository(
-        client: FakeClient(),
+        client: _FakeClient(),
         random: Random(1),
       );
       final deck = List.generate(
@@ -104,7 +207,7 @@ void main() {
     test(
       'visual failure retries transcript only and filters existing tags',
       () async {
-        final client = FakeClient()..failImages = true;
+        final client = _FakeClient()..failImages = true;
         final repo = SuggestionsRepository(client: client);
         final result = await repo.generate(
           SuggestionRequest(
@@ -124,7 +227,8 @@ void main() {
     );
 
     test('unsupported model never sends the private transcript', () async {
-      final client = FakeClient()..availability = ModelAvailability.unavailable;
+      final client = _FakeClient()
+        ..availability = ModelAvailability.unavailable;
       final repo = SuggestionsRepository(client: client);
       final result = await repo.generate(
         const SuggestionRequest(language: 'en', transcript: 'private'),
@@ -136,7 +240,7 @@ void main() {
     test(
       'silent video uses images or falls back without fabricating context',
       () async {
-        final client = FakeClient();
+        final client = _FakeClient();
         final repo = SuggestionsRepository(client: client);
         final request = SuggestionRequest(
           language: 'en',
@@ -149,7 +253,7 @@ void main() {
     );
 
     test('all generation failures return curated fallback', () async {
-      final client = FakeClient()..failAll = true;
+      final client = _FakeClient()..failAll = true;
       final repo = SuggestionsRepository(client: client);
       expect(
         (await repo.generate(
@@ -220,7 +324,7 @@ void main() {
   });
 }
 
-class PendingClient implements SuggestionsClient {
+class _PendingClient implements SuggestionsClient {
   final pending = Completer<String>();
   final started = Completer<void>();
   int requests = 0;

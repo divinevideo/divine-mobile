@@ -13,7 +13,7 @@ import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:publishing_suggestions/publishing_suggestions.dart';
 
-class Editor extends VideoEditorNotifier {
+class _Editor extends VideoEditorNotifier {
   @override
   VideoEditorProviderState build() => VideoEditorProviderState(
     tags: {'mine'},
@@ -27,12 +27,12 @@ class Editor extends VideoEditorNotifier {
   void triggerAutosave() {}
 }
 
-class Clips extends ClipManagerNotifier {
+class _Clips extends ClipManagerNotifier {
   @override
   ClipManagerState build() => ClipManagerState();
 }
 
-class Client implements SuggestionsClient {
+class _Client implements SuggestionsClient {
   SuggestionRequest? request;
   @override
   Future<ModelCapabilities> capabilities(String language) async =>
@@ -58,13 +58,13 @@ void main() {
     testWidgets(
       'tags require an independent tap and private transcript stays private',
       (tester) async {
-        final client = Client();
+        final client = _Client();
         final applied = <IdeaField>[];
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
-              videoEditorProvider.overrideWith(Editor.new),
-              clipManagerProvider.overrideWith(Clips.new),
+              videoEditorProvider.overrideWith(_Editor.new),
+              clipManagerProvider.overrideWith(_Clips.new),
               publishingSuggestionsRepositoryProvider.overrideWithValue(
                 SuggestionsRepository(client: client),
               ),

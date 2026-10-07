@@ -4,13 +4,19 @@ import Flutter
 import FlutterMacOS
 #endif
 import Foundation
-import Vision
-#if canImport(FoundationModels)
-import FoundationModels
-#endif
 
 public final class PublishingSuggestionsPlugin: NSObject, FlutterPlugin {
   private var generation: Task<Void, Never>?
+  private let model: PublishingSuggestionsModel
+
+  public override convenience init() {
+    self.init(model: DevicePublishingSuggestionsModel())
+  }
+
+  init(model: PublishingSuggestionsModel) {
+    self.model = model
+    super.init()
+  }
 
   public static func register(with registrar: FlutterPluginRegistrar) {
     #if os(iOS)
@@ -29,14 +35,12 @@ public final class PublishingSuggestionsPlugin: NSObject, FlutterPlugin {
       result(nil)
       return
     }
-    #if canImport(FoundationModels)
-    if #available(iOS 26.0, macOS 26.0, *) {
+    if model.isSupported {
       let args = call.arguments as? [String: Any] ?? [:]
-      let model = SystemLanguageModel.default
       switch call.method {
       case "capabilities":
         let language = args["language"] as? String ?? "en"
-        let ready = model.availability == .available && model.supportsLocale(Locale(identifier: language))
+        let ready = model.isAvailable(language: language)
         result(["availability": ready ? "ready" : "unavailable", "images": ready])
       case "prepare":
         // Apple manages model installation in system settings.
@@ -50,7 +54,7 @@ public final class PublishingSuggestionsPlugin: NSObject, FlutterPlugin {
         let frames = (args["frames"] as? [FlutterStandardTypedData] ?? []).prefix(3).map { $0.data }
         generation = Task {
           do {
-            let content = try await PublishingIdeasEngine.generate(prompt: prompt, frames: frames)
+            let content = try await model.generate(prompt: prompt, frames: frames)
             try Task.checkCancellation()
             await MainActor.run { result(content) }
           } catch {
@@ -63,7 +67,6 @@ public final class PublishingSuggestionsPlugin: NSObject, FlutterPlugin {
       }
       return
     }
-    #endif
     if call.method == "capabilities" {
       result(["availability": "unavailable", "images": false])
     } else {

@@ -14,15 +14,46 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import java.util.Locale
+import java.util.concurrent.atomic.AtomicBoolean
+
+/** Device model lifetime is independent of the Flutter method channel. */
+internal interface PublishingModel : AutoCloseable {
+    suspend fun status(): Int
+    suspend fun prepare()
+    suspend fun generate(prompt: String, frames: List<Bitmap>): String?
+}
+
+private class DevicePublishingModel : PublishingModel {
+    private val model = Generation.getClient()
+    override suspend fun status() = model.checkStatus()
+    override suspend fun prepare() {
+        model.download().collect { }
+        check(model.checkStatus() == FeatureStatus.AVAILABLE)
+    }
+    override suspend fun generate(prompt: String, frames: List<Bitmap>): String? {
+        val content = Content.Builder().text(prompt)
+        frames.forEach { content.image(it) }
+        val request = generateContentRequest(content.build()) { maxOutputTokens = 1024 }
+        return model.generateContent(request).candidates.firstOrNull()?.text
+    }
+    override fun close() = model.close()
+}
 
 /** Each instance owns its cancellable on-device model session. */
-class PublishingSuggestionsPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
+class PublishingSuggestionsPlugin internal constructor(
+    private val createModel: () -> PublishingModel,
+) : FlutterPlugin, MethodChannel.MethodCallHandler {
+    constructor() : this({ DevicePublishingModel() })
+
     private lateinit var channel: MethodChannel
     private var scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var generation: Job? = null
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
         channel = MethodChannel(binding.binaryMessenger, "publishing_suggestions")
         channel.setMethodCallHandler(this)
     }
@@ -43,57 +74,76 @@ class PublishingSuggestionsPlugin : FlutterPlugin, MethodChannel.MethodCallHandl
             result.notImplemented()
             return
         }
-        if (call.method == "generate" || call.method == "prepare") generation?.cancel()
-        val job = scope.launch {
-            val model = try {
-                Generation.getClient()
-            } catch (_: Exception) {
+        // ML Kit status is device-wide, not language-specific. Keep this opt-in
+        // experiment English-only until other languages receive device evaluation.
+        val language = call.argument<String>("language") ?: "en"
+        val supportedLanguage = Locale.forLanguageTag(language.replace('_', '-')).language == "en"
+        if (!supportedLanguage && call.method != "prepare") {
+            if (call.method == "capabilities") {
+                result.success(mapOf("availability" to "unavailable", "images" to false))
+            } else {
                 result.error("unavailable", "Local suggestions are unavailable", null)
-                return@launch
             }
+            return
+        }
+        if (call.method == "generate" || call.method == "prepare") generation?.cancel()
+        val reply = ReplyOnce(result)
+        val job = scope.launch {
             try {
-                when (call.method) {
-                    "capabilities" -> {
-                        val status = when (model.checkStatus()) {
-                            FeatureStatus.AVAILABLE -> "ready"
-                            FeatureStatus.DOWNLOADABLE -> "downloadable"
-                            FeatureStatus.DOWNLOADING -> "preparing"
-                            else -> "unavailable"
+                createModel().use { model ->
+                    when (call.method) {
+                        "capabilities" -> {
+                            val status = when (model.status()) {
+                                FeatureStatus.AVAILABLE -> "ready"
+                                FeatureStatus.DOWNLOADABLE -> "downloadable"
+                                FeatureStatus.DOWNLOADING -> "preparing"
+                                else -> "unavailable"
+                            }
+                            reply.success(mapOf("availability" to status, "images" to (status == "ready")))
                         }
-                        result.success(mapOf("availability" to status, "images" to (status == "ready")))
-                    }
-                    "prepare" -> {
-                        model.download().collect { }
-                        check(model.checkStatus() == FeatureStatus.AVAILABLE)
-                        result.success(null)
-                    }
-                    "generate" -> {
-                        val prompt = call.argument<String>("prompt") ?: error("Missing prompt")
-                        val images = call.argument<List<ByteArray>>("frames").orEmpty().take(3)
-                        val bitmaps = mutableListOf<Bitmap>()
-                        try {
-                            images.forEach { bytes ->
-                                bitmaps.add(BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                                    ?: error("Invalid frame"))
+                        "prepare" -> {
+                            model.prepare()
+                            ensureActive()
+                            reply.success(null)
+                        }
+                        "generate" -> {
+                            val prompt = call.argument<String>("prompt") ?: error("Missing prompt")
+                            val images = call.argument<List<ByteArray>>("frames").orEmpty().take(3)
+                            val bitmaps = mutableListOf<Bitmap>()
+                            try {
+                                images.forEach { bytes ->
+                                    bitmaps.add(BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                                        ?: error("Invalid frame"))
+                                }
+                                val content = model.generate(prompt, bitmaps)
+                                ensureActive()
+                                reply.success(content)
+                            } finally {
+                                bitmaps.forEach { it.recycle() }
                             }
-                            val content = Content.Builder().text(prompt)
-                            bitmaps.forEach { content.image(it) }
-                            val request = generateContentRequest(content.build()) {
-                                maxOutputTokens = 1024
-                            }
-                            result.success(model.generateContent(request).candidates.firstOrNull()?.text)
-                        } finally {
-                            bitmaps.forEach { it.recycle() }
                         }
                     }
                 }
             } catch (_: Exception) {
-                // Never forward model errors: they can contain private source text.
-                result.error("unavailable", "Local suggestions are unavailable", null)
-            } finally {
-                model.close()
+                reply.unavailable()
             }
         }
+        // A job cancelled before its first dispatch never enters try/finally.
+        // Complete that original channel call too; the gate prevents two replies.
+        job.invokeOnCompletion { if (it != null) reply.unavailable() }
         if (call.method == "generate" || call.method == "prepare") generation = job
+    }
+
+    private class ReplyOnce(private val result: MethodChannel.Result) {
+        private val completed = AtomicBoolean(false)
+        fun success(value: Any?) {
+            if (completed.compareAndSet(false, true)) result.success(value)
+        }
+        fun unavailable() {
+            // Model errors can contain private source text; never forward them.
+            if (completed.compareAndSet(false, true)) {
+                result.error("unavailable", "Local suggestions are unavailable", null)
+            }
+        }
     }
 }

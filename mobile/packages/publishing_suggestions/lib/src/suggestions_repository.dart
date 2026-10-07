@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:publishing_suggestions/src/suggestions_client.dart';
 import 'package:publishing_suggestions/src/suggestions_models.dart';
@@ -33,7 +34,13 @@ class SuggestionsRepository {
   ///
   /// Inline callers request one so unseen options remain in the deck.
   List<PublishingIdea> premade(List<PublishingIdea> deck, {int count = 3}) {
-    if (!identical(deck, _deck)) {
+    if (_deck == null ||
+        deck.length != _deck!.length ||
+        Iterable<int>.generate(deck.length).any(
+          (index) =>
+              deck[index].title != _deck![index].title ||
+              deck[index].description != _deck![index].description,
+        )) {
       _remaining.clear();
       _deck = deck;
     }
@@ -43,32 +50,68 @@ class SuggestionsRepository {
     return result;
   }
 
-  /// Falls back from visual context to transcript, then the UI's curated deck.
-  Future<SuggestedPublishing> generate(SuggestionRequest request) async {
+  /// Generates suggestions using the same policy as [generateWithContext].
+  Future<SuggestedPublishing> generate(SuggestionRequest request) async =>
+      (await generateWithContext(request)).result;
+
+  /// Owns availability checks, optional frame loading and curated fallback.
+  /// Returns loaded frames for the caller to cache by source revision.
+  Future<SuggestionOutcome> generateWithContext(
+    SuggestionRequest request, {
+    Future<List<Uint8List>> Function()? loadFrames,
+    List<Uint8List>? cachedFrames,
+    List<PublishingIdea> fallback = const [],
+  }) async {
     final generation = ++_generation;
-    const fallback = SuggestedPublishing(source: SuggestionSource.premade);
+    ModelCapabilities? support;
+    var frames = cachedFrames;
+    SuggestionOutcome outcome(SuggestedPublishing result) => SuggestionOutcome(
+      capabilities: support,
+      frames: frames,
+      result:
+          result.source == SuggestionSource.premade && generation == _generation
+          ? SuggestedPublishing(
+              source: SuggestionSource.premade,
+              ideas: premade(fallback, count: 1),
+            )
+          : result,
+    );
+    const unavailable = SuggestedPublishing(source: SuggestionSource.premade);
     try {
-      final support = await capabilities(request.language);
+      support = await capabilities(request.language);
       if (generation != _generation ||
           support.availability != ModelAvailability.ready) {
-        return fallback;
+        return outcome(unavailable);
       }
-      final usable = support.images ? request : request.withoutFrames();
+      if (support.images && frames == null && loadFrames != null) {
+        try {
+          frames = await loadFrames();
+        } on Exception {
+          frames = const [];
+        }
+      }
+      if (generation != _generation) return outcome(unavailable);
+      final usable = SuggestionRequest(
+        language: request.language,
+        transcript: request.transcript,
+        existingTags: request.existingTags,
+        frames: support.images ? frames ?? request.frames : const [],
+      );
       if (usable.frames.isEmpty && usable.transcript.trim().isEmpty) {
-        return fallback;
+        return outcome(unavailable);
       }
       try {
-        return await _generate(usable, generation);
+        return outcome(await _generate(usable, generation));
       } on Exception {
         if (generation != _generation ||
             usable.frames.isEmpty ||
             usable.transcript.trim().isEmpty) {
-          return fallback;
+          return outcome(unavailable);
         }
-        return await _generate(usable.withoutFrames(), generation);
+        return outcome(await _generate(usable.withoutFrames(), generation));
       }
     } on Exception {
-      return fallback;
+      return outcome(unavailable);
     }
   }
 
@@ -96,4 +139,23 @@ class SuggestionsRepository {
       existingTags: request.existingTags,
     );
   }
+}
+
+/// The result and reusable inputs from one repository operation.
+class SuggestionOutcome {
+  /// Creates an outcome without assigning it to a particular UI revision.
+  const SuggestionOutcome({
+    required this.result,
+    this.capabilities,
+    this.frames,
+  });
+
+  /// Validated generated or curated suggestions.
+  final SuggestedPublishing result;
+
+  /// Availability from the single capability check for this operation.
+  final ModelCapabilities? capabilities;
+
+  /// Frames loaded for this operation, including an empty failed-load cache.
+  final List<Uint8List>? frames;
 }

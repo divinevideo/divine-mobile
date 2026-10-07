@@ -95,31 +95,29 @@ class _VideoMetadataFormFieldsState
     if (changeDescription) _descriptionController.text = applied.description;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(context.l10n.ideasApplied),
-        action: SnackBarAction(
-          label: context.l10n.ideasUndo,
-          onPressed: () {
-            if (!mounted) return;
-            final current = ref.read(videoEditorProvider);
-            final restoreTitle = changeTitle && current.title == applied.title;
-            final restoreDescription =
-                changeDescription && current.description == applied.description;
-            notifier.updateMetadata(
-              title: restoreTitle ? before.title : null,
-              description: restoreDescription ? before.description : null,
-              tags: current.tags,
-            );
-            if (restoreDescription) {
-              notifier.restoreIdeasMentions(before.captionMentions);
-            }
-            final restored = ref.read(videoEditorProvider);
-            if (restoreTitle) _titleController.text = restored.title;
-            if (restoreDescription) {
-              _descriptionController.text = restored.description;
-            }
-          },
-        ),
+      DivineSnackbarContainer.snackBar(
+        context.l10n.ideasApplied,
+        actionLabel: context.l10n.ideasUndo,
+        onActionPressed: () {
+          if (!mounted) return;
+          final current = ref.read(videoEditorProvider);
+          final restoreTitle = changeTitle && current.title == applied.title;
+          final restoreDescription =
+              changeDescription && current.description == applied.description;
+          notifier.updateMetadata(
+            title: restoreTitle ? before.title : null,
+            description: restoreDescription ? before.description : null,
+            tags: current.tags,
+          );
+          if (restoreDescription) {
+            notifier.restoreIdeasMentions(before.captionMentions);
+          }
+          final restored = ref.read(videoEditorProvider);
+          if (restoreTitle) _titleController.text = restored.title;
+          if (restoreDescription) {
+            _descriptionController.text = restored.description;
+          }
+        },
       ),
     );
   }

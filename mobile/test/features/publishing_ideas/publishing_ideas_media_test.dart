@@ -6,9 +6,9 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/video_editor/caption_generation_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
-class Captions extends Fake implements CaptionGenerationService {}
+class _Captions extends Fake implements CaptionGenerationService {}
 
-class VideoEditor extends ProVideoEditor {
+class _VideoEditor extends ProVideoEditor {
   ThumbnailConfigs? request;
   @override
   Stream<dynamic> initializeStream() => const Stream.empty();
@@ -30,7 +30,7 @@ void main() {
     test(
       'samples the supplied render at 10, 50 and 90 percent without export',
       () async {
-        final plugin = VideoEditor();
+        final plugin = _VideoEditor();
         ProVideoEditor.instance = plugin;
         final video = EditorVideo.file('/documents/rendered-current-edit.mp4');
         final clip = DivineVideoClip(
@@ -41,7 +41,7 @@ void main() {
           originalAspectRatio: 9 / 16,
           video: video,
         );
-        final media = PublishingIdeasMedia(captions: Captions());
+        final media = PublishingIdeasMedia(captions: _Captions());
         expect(await media.frames(clip), hasLength(3));
         expect(plugin.request!.video, same(video));
         expect(plugin.request!.timestamps, [

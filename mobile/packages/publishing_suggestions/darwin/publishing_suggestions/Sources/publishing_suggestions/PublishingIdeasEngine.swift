@@ -26,12 +26,7 @@ enum PublishingIdeasEngine {
   static func generate(prompt: String, frames: [Data]) async throws -> String {
     // Vision labels allow visual context on SDKs with text-only Foundation Models.
     let labels = try await Task.detached {
-      try frames.prefix(3).map { data -> [String] in
-        let request = VNClassifyImageRequest()
-        try VNImageRequestHandler(data: data).perform([request])
-        return (request.results ?? []).filter { $0.confidence >= 0.7 }
-          .prefix(5).map { $0.identifier }
-      }
+      try PublishingFrameLabels.classify(frames: frames)
     }.value
     try Task.checkCancellation()
     if !frames.isEmpty && labels.allSatisfy({ $0.isEmpty }) {
