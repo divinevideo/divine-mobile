@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
@@ -27,6 +28,32 @@ class _MockNostrClient extends Mock implements NostrClient {}
 class _MockNotificationService extends Mock implements NotificationService {}
 
 class _MockNostrSigner extends Mock implements NostrSigner {}
+
+class _MockSecureKeyContainer extends Mock implements SecureKeyContainer {}
+
+enum _SignerFailure {
+  encryptionReturnsNull('NIP-44 encryption returns null'),
+  encryptionThrows('NIP-44 encryption throws'),
+  signatureReturnsNull('event signing returns null');
+
+  const _SignerFailure(this.label);
+
+  final String label;
+}
+
+enum _SignerKind {
+  keycast('a Keycast identity', retries: true),
+  offlineRestore('an offline-restored identity', retries: true),
+  localKey('a local-key identity', retries: true),
+  bunker('a Bunker identity', retries: false);
+
+  const _SignerKind(this.label, {required this.retries});
+
+  final String label;
+
+  /// Whether the signer can recover silently, so registration is retried.
+  final bool retries;
+}
 
 class _FakeEvent extends Fake implements Event {
   @override
@@ -266,18 +293,37 @@ void main() {
         service.dispose();
       });
 
-      test('returns terminal failure when FCM token lookup throws', () async {
-        final service = buildService(
-          getToken: () => throw StateError('apns-token-not-set'),
-        );
+      test(
+        'returns terminal failure when FCM token lookup throws an Error',
+        () async {
+          final service = buildService(
+            getToken: () => throw StateError('apns-token-not-set'),
+          );
 
-        expect(
-          await service.register(testPubkey),
-          PushRegistrationResult.terminalFailure,
-        );
-        verifyNever(() => mockNostrSigner.nip44Encrypt(any(), any()));
-        service.dispose();
-      });
+          expect(
+            await service.register(testPubkey),
+            PushRegistrationResult.terminalFailure,
+          );
+          verifyNever(() => mockNostrSigner.nip44Encrypt(any(), any()));
+          service.dispose();
+        },
+      );
+
+      test(
+        'returns retryable failure when FCM token lookup throws an Exception',
+        () async {
+          final service = buildService(
+            getToken: () => throw Exception('apns-token-not-set'),
+          );
+
+          expect(
+            await service.register(testPubkey),
+            PushRegistrationResult.retryableFailure,
+          );
+          verifyNever(() => mockNostrSigner.nip44Encrypt(any(), any()));
+          service.dispose();
+        },
+      );
 
       test(
         'skips registration when push service pubkey is still placeholder',
@@ -352,6 +398,90 @@ void main() {
           ),
         );
         service.dispose();
+      });
+
+      group('when the signer is not ready', () {
+        NostrIdentity identityFor(_SignerKind kind) {
+          final remoteSigner = _MockNostrSigner();
+          final keys = _MockSecureKeyContainer();
+          when(() => keys.publicKeyHex).thenReturn(testPubkey);
+          return switch (kind) {
+            _SignerKind.keycast => KeycastNostrIdentity(
+              pubkey: testPubkey,
+              rpcSigner: remoteSigner,
+            ),
+            _SignerKind.offlineRestore => PubkeyOnlyNostrIdentity(
+              pubkey: testPubkey,
+            ),
+            _SignerKind.localKey => LocalNostrIdentity(keyContainer: keys),
+            _SignerKind.bunker => BunkerNostrIdentity(
+              pubkey: testPubkey,
+              remoteSigner: remoteSigner,
+            ),
+          };
+        }
+
+        for (final kind in _SignerKind.values) {
+          for (final failure in _SignerFailure.values) {
+            final expected = kind.retries
+                ? PushRegistrationResult.retryableFailure
+                : PushRegistrationResult.terminalFailure;
+
+            test(
+              'returns $expected when ${failure.label} for ${kind.label}',
+              () async {
+                final identity = identityFor(kind);
+                when(
+                  () => mockAuthService.currentIdentity,
+                ).thenReturn(identity);
+                switch (failure) {
+                  case _SignerFailure.encryptionReturnsNull:
+                    when(
+                      () => mockNostrSigner.nip44Encrypt(any(), any()),
+                    ).thenAnswer((_) async => null);
+                  case _SignerFailure.encryptionThrows:
+                    when(
+                      () => mockNostrSigner.nip44Encrypt(any(), any()),
+                    ).thenAnswer(
+                      (_) async => throw TimeoutException('signer unavailable'),
+                    );
+                  case _SignerFailure.signatureReturnsNull:
+                    when(
+                      () => mockAuthService.createAndSignEvent(
+                        kind: any(named: 'kind'),
+                        content: any(named: 'content'),
+                        tags: any(named: 'tags'),
+                      ),
+                    ).thenAnswer((_) async => null);
+                }
+
+                final service = buildService();
+                expect(await service.register(testPubkey), expected);
+
+                verify(() => mockNostrSigner.nip44Encrypt(any(), any()))
+                    .called(1);
+                if (failure == _SignerFailure.signatureReturnsNull) {
+                  verify(
+                    () => mockAuthService.createAndSignEvent(
+                      kind: any(named: 'kind'),
+                      content: any(named: 'content'),
+                      tags: any(named: 'tags'),
+                    ),
+                  ).called(1);
+                } else {
+                  verifyNever(
+                    () => mockAuthService.createAndSignEvent(
+                      kind: any(named: 'kind'),
+                      content: any(named: 'content'),
+                      tags: any(named: 'tags'),
+                    ),
+                  );
+                }
+                service.dispose();
+              },
+            );
+          }
+        }
       });
 
       test('returns uncertain failure when registration publish receives no OK response', () async {
