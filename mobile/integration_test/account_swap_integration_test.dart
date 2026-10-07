@@ -17,6 +17,7 @@ import 'package:openvine/providers/device_scope.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/swap_account.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
+import 'package:openvine/services/feed_mode_persistence.dart';
 import 'package:openvine/services/startup_performance_service.dart';
 import 'package:openvine/utils/log_message_batcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -79,6 +80,9 @@ void main() {
         final deviceScope = DeviceScope(
           database: database,
           sharedPreferences: prefs,
+          feedModePersistence: FeedModePersistenceRegistry(
+            sharedPreferences: prefs,
+          ),
           switchController: controller,
           startupPerformance: StartupPerformanceService(
             crashReporting: CrashReportingService(),

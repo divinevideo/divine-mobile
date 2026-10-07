@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:curated_list_repository/curated_list_repository.dart';
+import 'package:db_client/db_client.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
@@ -11,6 +12,12 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
+import 'package:openvine/providers/container_swap_host.dart';
+import 'package:openvine/providers/device_scope.dart';
+import 'package:openvine/providers/feed_mode_persistence_provider.dart';
+import 'package:openvine/services/crash_reporting_service.dart';
+import 'package:openvine/services/startup_performance_service.dart';
+import 'package:openvine/utils/log_message_batcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 import 'package:videos_repository/videos_repository.dart';
@@ -22,6 +29,37 @@ class _Api extends Mock implements FunnelcakeApiClient {}
 class _Follows extends Mock implements FollowRepository {}
 
 class _Videos extends Mock implements VideosRepository {}
+
+class _Database extends Mock implements AppDatabase {}
+
+enum _RemovalResult { succeeds, throwsError, returnsFalse }
+
+class _GatedLegacyRemoval extends InMemorySharedPreferencesStore {
+  _GatedLegacyRemoval(String scopedValue, this.result)
+    : super.withData({
+        'flutter.$_key': scopedValue,
+        'flutter.selected_feed_mode': 'classic',
+      });
+
+  final _RemovalResult result;
+  final started = Completer<void>();
+  final release = Completer<void>();
+  bool _blocked = false;
+
+  @override
+  Future<bool> remove(String key) async {
+    if (key == 'flutter.selected_feed_mode' && !_blocked) {
+      _blocked = true;
+      started.complete();
+      await release.future;
+      if (result == _RemovalResult.throwsError) {
+        throw StateError('The native legacy clear failed.');
+      }
+      if (result == _RemovalResult.returnsFalse) return false;
+    }
+    return super.remove(key);
+  }
+}
 
 /// Uses the real SharedPreferences cache and a controllable platform write.
 /// Storage can finish after a newer snapshot or an explicit Home choice.
@@ -970,12 +1008,14 @@ void main() {
           VideoFeedBloc old,
           Future<void> closing,
           FeedModePersistenceCoordinator coordinator,
+          FeedModePersistenceRegistry? registry,
           _GatedPreferences backend,
           CuratedListRepository replacement,
         })
       >
       blockedReplacement({
         String? blockedRepairValue,
+        bool deviceOwned = false,
       }) async {
         final a = _list(_authorA);
         final backend = await gatePreferences(
@@ -983,10 +1023,15 @@ void main() {
           blockedValue: 'forYou',
           blockedRepairValue: blockedRepairValue,
         );
-        final coordinator = FeedModePersistenceCoordinator(
-          sharedPreferences: preferences,
-          userPubkey: _viewer,
-        );
+        final registry = deviceOwned
+            ? FeedModePersistenceRegistry(sharedPreferences: preferences)
+            : null;
+        final coordinator =
+            registry?.forAccount(_viewer) ??
+            FeedModePersistenceCoordinator(
+              sharedPreferences: preferences,
+              userPubkey: _viewer,
+            );
         lists.setSubscribedLists([a]);
         final old = bloc(coordinator: coordinator);
         await waitFor(
@@ -1014,6 +1059,7 @@ void main() {
           old: old,
           closing: closing,
           coordinator: coordinator,
+          registry: registry,
           backend: backend,
           replacement: replacement,
         );
@@ -1129,6 +1175,169 @@ void main() {
           );
         },
       );
+
+      test(
+        'DeviceScope returning account latest B survives old same-key repair',
+        () async {
+          final setup = await blockedReplacement(deviceOwned: true);
+          final device = DeviceScope(
+            database: _Database(),
+            sharedPreferences: preferences,
+            feedModePersistence: setup.registry!,
+            switchController: AccountSwitchController(),
+            appVersion: 'test',
+            documentsPath: '',
+            crashReporting: CrashReportingService(),
+            startupPerformance: StartupPerformanceService(
+              crashReporting: CrashReportingService(),
+            ),
+            logMessageBatcher: LogMessageBatcher(),
+          );
+          final leavingContainer = buildAccountContainer(device);
+          expect(
+            leavingContainer
+                .read(feedModePersistenceRegistryProvider)
+                .forAccount(_viewer),
+            same(setup.coordinator),
+          );
+          leavingContainer.dispose();
+          final otherContainer = buildAccountContainer(device);
+          final other = bloc(
+            coordinator: otherContainer
+                .read(feedModePersistenceRegistryProvider)
+                .forAccount(_otherViewer),
+            repository: setup.replacement,
+            viewer: _otherViewer,
+          );
+          await waitFor(
+            other,
+            (s) => s.status == VideoFeedStatus.success,
+            () => other.add(const VideoFeedStarted()),
+          );
+          await other.close();
+          otherContainer.dispose();
+          final returnedContainer = buildAccountContainer(device);
+          addTearDown(returnedContainer.dispose);
+          final returned = bloc(
+            coordinator: returnedContainer
+                .read(feedModePersistenceRegistryProvider)
+                .forAccount(_viewer),
+            repository: setup.replacement,
+          );
+          addTearDown(returned.close);
+          await waitFor(
+            returned,
+            (s) => s.status == VideoFeedStatus.success,
+            () => returned.add(const VideoFeedStarted()),
+          );
+          final b = _source(_list(_authorB));
+          await waitFor(
+            returned,
+            (s) => s.status == VideoFeedStatus.success && s.source == b,
+            () => returned.add(VideoFeedSourceChanged(b)),
+          );
+          setup.backend.release.complete();
+          await setup.closing;
+          await preferences.reload();
+          expect(returned.state.source, b);
+          expect(preferences.getString(_key), b.persistenceValue);
+        },
+      );
+
+      test(
+        'device-owned old account repair cannot clear the guest choice',
+        () async {
+          final setup = await blockedReplacement(deviceOwned: true);
+          final guest = FeedModePreferenceStore(
+            sharedPreferences: preferences,
+            userPubkey: null,
+            followRepository: follows,
+            curatedListRepository: setup.replacement,
+            persistenceCoordinator: setup.registry!.forAccount(null),
+          );
+          await guest.persist(const VideoFeedSource.newVideos());
+          setup.backend.release.complete();
+          await setup.closing;
+          await preferences.reload();
+          expect(preferences.getString('selected_feed_mode'), 'latest');
+          expect(
+            preferences.getString(_key),
+            _source(_list(_authorA)).persistenceValue,
+          );
+        },
+      );
+
+      for (final result in _RemovalResult.values) {
+        test(
+          'late native legacy removal $result preserves guest choice',
+          () async {
+            final a = _list(_authorA);
+            SharedPreferences.setMockInitialValues({});
+            final backend = _GatedLegacyRemoval(
+              _source(a).persistenceValue,
+              result,
+            );
+            SharedPreferencesStorePlatform.instance = backend;
+            preferences = await SharedPreferences.getInstance();
+            addTearDown(() {
+              if (!backend.release.isCompleted) backend.release.complete();
+              SharedPreferences.setMockInitialValues({});
+            });
+            final registry = FeedModePersistenceRegistry(
+              sharedPreferences: preferences,
+            );
+            lists.setSubscribedLists([a]);
+            final error = Completer<Object>();
+            late VideoFeedBloc old;
+            runZonedGuarded(
+              () => old = bloc(coordinator: registry.forAccount(_viewer)),
+              (failure, _) => error.complete(failure),
+            );
+            await waitFor(
+              old,
+              (s) => s.status == VideoFeedStatus.success,
+              () => old.add(const VideoFeedStarted()),
+            );
+            lists.setSubscribedLists([]);
+            await backend.started.future.timeout(const Duration(seconds: 5));
+            final closing = old.close();
+            addTearDown(() async {
+              if (!backend.release.isCompleted) backend.release.complete();
+              await closing;
+            });
+            final guest = FeedModePreferenceStore(
+              sharedPreferences: preferences,
+              userPubkey: null,
+              followRepository: follows,
+              curatedListRepository: lists,
+              persistenceCoordinator: registry.forAccount(null),
+            );
+            expect(guest.savedValue(), 'classic');
+            await guest.persist(const VideoFeedSource.newVideos());
+            backend.release.complete();
+            if (result != _RemovalResult.succeeds) {
+              final failure = await error.future.timeout(
+                const Duration(seconds: 5),
+              );
+              expect(failure, isA<StateError>());
+              expect(
+                failure.toString(),
+                contains(
+                  result == _RemovalResult.throwsError
+                      ? 'The native legacy clear failed.'
+                      : 'The Home selection could not be persisted.',
+                ),
+              );
+            }
+            await closing;
+            await preferences.reload();
+            expect(guest.savedValue(), 'latest');
+            expect(preferences.getString('selected_feed_mode'), 'latest');
+            expect(preferences.getString(_key), _source(a).persistenceValue);
+            expect(error.isCompleted, result != _RemovalResult.succeeds);
+          },
+        );
+      }
 
       for (final throwsWrite in [true, false]) {
         test(

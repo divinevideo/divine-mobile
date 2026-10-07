@@ -42,6 +42,7 @@ import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/database_corruption_service.dart';
 import 'package:openvine/services/database_encryption_bootstrap.dart';
 import 'package:openvine/services/database_recovery_store.dart';
+import 'package:openvine/services/feed_mode_persistence.dart';
 import 'package:openvine/services/install_source_service.dart';
 import 'package:openvine/services/locale_preference_service.dart';
 import 'package:openvine/services/pro_video_editor_log_forwarder.dart';
@@ -691,6 +692,9 @@ Future<void> startOpenVineApp({
   final deviceScope = DeviceScope(
     database: deviceDatabase,
     sharedPreferences: sharedPreferences,
+    feedModePersistence: FeedModePersistenceRegistry(
+      sharedPreferences: sharedPreferences,
+    ),
     switchController: accountSwitchController,
     appVersion: packageInfo.version,
     documentsPath: documentsPath,
