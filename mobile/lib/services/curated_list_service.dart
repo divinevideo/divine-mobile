@@ -21,6 +21,7 @@ import 'package:openvine/models/curated_list_callbacks.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_relay_gateway.dart';
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
+import 'package:openvine/services/curated_lists/curated_list_subscription_metadata.dart';
 import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:openvine/utils/curated_list_privacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -1359,33 +1360,16 @@ class CuratedListService extends ChangeNotifier {
 
   /// Load subscribed list IDs from local storage
   void _loadSubscribedListIds() {
-    _hasLoadedSubscriptionIds = false;
-    try {
-      final subscribedJson = _prefs.getString(subscribedListsStorageKey);
-      if (subscribedJson != null) {
-        final subscribedData = List<String>.from(
-          jsonDecode(subscribedJson) as List<dynamic>,
-        );
-        _subscribedListIds
-          ..clear()
-          ..addAll(subscribedData);
-        _hasLoadedSubscriptionIds = true;
-        Log.debug(
-          '📱 Loaded ${_subscribedListIds.length} subscribed lists from storage',
-          name: 'CuratedListService',
-          category: LogCategory.system,
-        );
-      }
-      if (subscribedJson == null) _hasLoadedSubscriptionIds = true;
-    } catch (e, stackTrace) {
-      Log.error(
-        'Failed to load subscribed list IDs (${e.runtimeType})',
-        name: 'CuratedListService',
-        category: LogCategory.system,
-        stackTrace: stackTrace,
-      );
-    }
-    _cacheStore.subscriptionsLoaded(_subscribedListIds);
+    final snapshot = readCuratedListSubscriptionSnapshot(
+      preferences: _prefs,
+      storageKey: subscribedListsStorageKey,
+      fallback: _subscribedListIds,
+    );
+    _subscribedListIds
+      ..clear()
+      ..addAll(snapshot.ids);
+    _hasLoadedSubscriptionIds = snapshot.isReadable;
+    _cacheStore.subscriptionsLoaded(snapshot.ids);
   }
 
   /// Persist local lists before reporting success or publishing their delta.
