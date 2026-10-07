@@ -5,14 +5,18 @@
 // the test date even though `1` matches the default; readability wins here.
 // ignore_for_file: avoid_redundant_argument_values
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:hive_ce/hive_ce.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:people_lists_repository/src/local_people_lists_cache.dart';
 import 'package:test/test.dart';
 
 import 'helpers/hive_test_home.dart';
+
+class _MockBox extends Mock implements Box<dynamic> {}
 
 /// Test constants. Full pubkeys — never truncate.
 const _ownerA =
@@ -350,6 +354,26 @@ void main() {
 
         expect(lists, isEmpty);
         expect(attempts, 2);
+      });
+
+      test('does not watch the box when canceled before it opens', () async {
+        final opening = Completer<Box<dynamic>>();
+        final changes = StreamController<BoxEvent>.broadcast();
+        addTearDown(changes.close);
+        final box = _MockBox();
+        when(() => box.keys).thenReturn(const <dynamic>[]);
+        when(box.watch).thenAnswer((_) => changes.stream);
+        final cache = LocalPeopleListsCache(openBox: () => opening.future);
+
+        final subscription = cache
+            .watchLists(ownerPubkey: _ownerA)
+            .listen((_) {});
+        await pumpEventQueue();
+        await subscription.cancel();
+        opening.complete(box);
+        await pumpEventQueue();
+
+        expect(changes.hasListener, isFalse);
       });
 
       test('emits current lists immediately, then on updates', () async {
