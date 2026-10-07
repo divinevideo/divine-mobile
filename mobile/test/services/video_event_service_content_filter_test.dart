@@ -312,6 +312,8 @@ void main() {
 
     test('owner keeps an adult self-label behind the overlay without age '
         'proof', () {
+      expect(ageVerificationService.isAdultContentVerified, isFalse);
+
       final result = videoEventService.filterVideoList([
         _createVideo(
           id: 'owner-nudity',

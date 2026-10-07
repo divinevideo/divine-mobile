@@ -313,6 +313,76 @@ void main() {
       });
     });
 
+    group('getCreatorSelfLabelPreference', () {
+      setUp(() async {
+        await ageService.initialize();
+        await service.initialize();
+      });
+
+      test('warns the owner instead of hiding age-gated and always-filtered '
+          'labels', () {
+        expect(ageService.isAdultContentVerified, isFalse);
+
+        for (final label in [
+          ContentLabel.nudity,
+          ContentLabel.porn,
+          ContentLabel.alcohol,
+          ContentLabel.drugs,
+          ContentLabel.violence,
+        ]) {
+          expect(
+            service.getPreference(label),
+            equals(ContentFilterPreference.hide),
+            reason: '$label must hide for other viewers',
+          );
+          expect(
+            service.getCreatorSelfLabelPreference(label, isOwner: true),
+            equals(ContentFilterPreference.warn),
+            reason: '$label hid an own video',
+          );
+        }
+      });
+
+      test('keeps hiding the same labels for every other viewer', () {
+        for (final label in [
+          ContentLabel.nudity,
+          ContentLabel.alcohol,
+          ContentLabel.drugs,
+        ]) {
+          expect(
+            service.getCreatorSelfLabelPreference(label, isOwner: false),
+            equals(ContentFilterPreference.hide),
+            reason: '$label stopped hiding for a non-owner',
+          );
+        }
+      });
+
+      test(
+        'leaves show and warn preferences untouched for the owner',
+        () async {
+          await service.setPreference(
+            ContentLabel.flashingLights,
+            ContentFilterPreference.show,
+          );
+
+          expect(
+            service.getCreatorSelfLabelPreference(
+              ContentLabel.flashingLights,
+              isOwner: true,
+            ),
+            equals(ContentFilterPreference.show),
+          );
+          expect(
+            service.getCreatorSelfLabelPreference(
+              ContentLabel.spoiler,
+              isOwner: true,
+            ),
+            equals(ContentFilterPreference.warn),
+          );
+        },
+      );
+    });
+
     group('getPreferenceForLabels', () {
       test('returns show when no labels match', () async {
         await service.initialize();
