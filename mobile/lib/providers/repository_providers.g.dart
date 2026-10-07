@@ -208,13 +208,12 @@ final class CuratedListRepositoryProvider
 }
 
 String _$curatedListRepositoryHash() =>
-    r'0a51d226f11eae6005e559b2186a9659d0c7fa32';
+    r'daaf1c89641405ebb3553d52875fa66cd4be647c';
 
 /// Shared preview policy for My Lists and public list search.
 ///
-/// A retired callback fails closed. The stable curated-list repository reads
-/// this provider at each check, while thumbnail consumers watch it to clear
-/// displayed previews and restart pending hydration on policy changes.
+/// Replacing a policy retires its captured callback, so late thumbnail reads
+/// cannot publish previews from an earlier policy or account session.
 
 @ProviderFor(curatedListThumbnailFilter)
 final curatedListThumbnailFilterProvider =
@@ -222,9 +221,8 @@ final curatedListThumbnailFilterProvider =
 
 /// Shared preview policy for My Lists and public list search.
 ///
-/// A retired callback fails closed. The stable curated-list repository reads
-/// this provider at each check, while thumbnail consumers watch it to clear
-/// displayed previews and restart pending hydration on policy changes.
+/// Replacing a policy retires its captured callback, so late thumbnail reads
+/// cannot publish previews from an earlier policy or account session.
 
 final class CuratedListThumbnailFilterProvider
     extends
@@ -236,9 +234,8 @@ final class CuratedListThumbnailFilterProvider
     with $Provider<CuratedListVideoFilter> {
   /// Shared preview policy for My Lists and public list search.
   ///
-  /// A retired callback fails closed. The stable curated-list repository reads
-  /// this provider at each check, while thumbnail consumers watch it to clear
-  /// displayed previews and restart pending hydration on policy changes.
+  /// Replacing a policy retires its captured callback, so late thumbnail reads
+  /// cannot publish previews from an earlier policy or account session.
   CuratedListThumbnailFilterProvider._()
     : super(
         from: null,
@@ -274,7 +271,7 @@ final class CuratedListThumbnailFilterProvider
 }
 
 String _$curatedListThumbnailFilterHash() =>
-    r'b6947373860c166f1c2960649c1297da5da01bd8';
+    r'f086b09e0afdca40a081f740368185891e57596a';
 
 /// Settles persisted preview policy before consumers start metadata hydration.
 ///
