@@ -287,6 +287,35 @@ void main() {
       },
     );
 
+    test(
+      'does not move audio for a dip transition at the loop point',
+      () async {
+        final clips = [
+          _clip(
+            'a',
+            transition: const ClipTransition(
+              type: ClipTransitionType.fadeToBlack,
+            ),
+          ),
+        ];
+        final parts = beatSourceFor(
+          sounds: const [],
+          clips: clips,
+          videoEnd: _ms(3000),
+        );
+        await resolver.read(parts);
+        final beats = resolver.beatsOnOutput(
+          parts,
+          TransitionTimelineMap.fromClips(clips),
+          videoEnd: _ms(3000),
+        );
+        expect(
+          worstMiss(beats, [for (var t = 250; t < 3000; t += 500) _ms(t)]),
+          lessThanOrEqualTo(_ms(15)),
+        );
+      },
+    );
+
     test('moves the first head to the final loop-restart blend', () async {
       final clips = [
         _clip(

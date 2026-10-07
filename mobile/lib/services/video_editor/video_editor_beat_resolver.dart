@@ -128,13 +128,7 @@ List<BeatSourcePart> beatSourceFor({
     return transition.duration;
   }
 
-  final wrapTransition = clips.isEmpty ? null : transitions[clips.last.id];
-  final wrap = wrapTransition == null
-      ? Duration.zero
-      : (wrapTransition.type == ClipTransitionType.fadeToBlack ||
-            wrapTransition.type == ClipTransitionType.fadeToWhite)
-      ? wrapTransition.duration ~/ 2
-      : wrapTransition.duration;
+  final wrap = clips.isEmpty ? Duration.zero : overlapAfter(clips.last);
   final outputDuration = TransitionTimelineMap.fromClips(clips).outputDuration;
   var clipStart = Duration.zero;
   for (var i = 0; i < clips.length; i++) {
