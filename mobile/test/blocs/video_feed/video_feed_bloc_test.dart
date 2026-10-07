@@ -82,6 +82,7 @@ void main() {
     late StreamController<List<String>> followingController;
     late StreamController<List<CuratedList>> curatedListsController;
     late VideoFeedBloc savedModeBloc;
+    late CuratedListSubscriptionSnapshot latestCuratedSnapshot;
 
     setUp(() async {
       // Route the disk cache to a no-op DAO so no bloc — whatever factory
@@ -104,7 +105,25 @@ void main() {
       when(
         () => mockCuratedListRepository.subscribedListsStream,
       ).thenAnswer((_) => curatedListsController.stream);
+      latestCuratedSnapshot = CuratedListSubscriptionSnapshot(
+        lists: const [],
+        isComplete: true,
+      );
+      when(() => mockCuratedListRepository.subscriptionSnapshot)
+          .thenAnswer((_) => latestCuratedSnapshot);
+      when(() => mockCuratedListRepository.subscriptionSnapshots).thenAnswer(
+        (_) => mockCuratedListRepository.subscribedListsStream.map((lists) {
+          return latestCuratedSnapshot = CuratedListSubscriptionSnapshot(
+            lists: lists,
+            isComplete:
+                mockCuratedListRepository.hasCompleteSubscriptionSnapshot,
+          );
+        }),
+      );
       when(() => mockCuratedListRepository.getSubscribedLists()).thenReturn([]);
+      when(
+        () => mockCuratedListRepository.hasCompleteSubscriptionSnapshot,
+      ).thenReturn(true);
 
       when(
         () => mockProfileRepository.fetchBatchProfiles(
@@ -844,7 +863,7 @@ void main() {
             () => mockCuratedListRepository.getListById('list-a'),
           ).thenReturn(createTestList());
           when(
-            () => mockCuratedListRepository.getOrderedVideoIds('list-a'),
+            () => mockCuratedListRepository.getOrderedVideoIds(':list-a'),
           ).thenReturn(['video-a', 'video-b']);
           when(
             () => mockVideosRepository.getRecommendedVideos(
@@ -1028,7 +1047,7 @@ void main() {
             () => mockCuratedListRepository.getListById('list-a'),
           ).thenReturn(list);
           when(
-            () => mockCuratedListRepository.getOrderedVideoIds('list-a'),
+            () => mockCuratedListRepository.getOrderedVideoIds(':list-a'),
           ).thenReturn(['video-a', 'video-b']);
           when(
             () => mockVideosRepository.getVideosForList(['video-a', 'video-b']),
@@ -1050,7 +1069,7 @@ void main() {
                 'source',
                 VideoFeedSourceType.subscribedList,
               )
-              .having((s) => s.source.listId, 'listId', 'list-a')
+              .having((s) => s.source.listId, 'listId', ':list-a')
               .having((s) => s.feedContextTitle, 'title', 'Best Vines'),
           isA<VideoFeedBlocState>()
               .having((s) => s.status, 'status', VideoFeedStatus.success)
@@ -1519,7 +1538,7 @@ void main() {
         setUp: () {
           final videos = createTestVideos(2);
           when(
-            () => mockCuratedListRepository.getOrderedVideoIds('list-a'),
+            () => mockCuratedListRepository.getOrderedVideoIds(':list-a'),
           ).thenReturn(['video-a', 'video-b']);
           when(
             () => mockVideosRepository.getVideosForList(['video-a', 'video-b']),
@@ -1529,7 +1548,7 @@ void main() {
         act: (bloc) => bloc.add(
           const VideoFeedSourceChanged(
             VideoFeedSource.subscribedList(
-              listId: 'list-a',
+              listId: ':list-a',
               listName: 'Best Vines',
             ),
           ),
@@ -3212,7 +3231,7 @@ void main() {
           bloc.add(const VideoFeedStarted(mode: FeedMode.following));
           // Wait for initial load to complete (Funnelcake loaded content)
           await Future<void>.delayed(Duration.zero);
-          // First stream emission is skipped (BehaviorSubject replay)
+          // An unchanged empty replay leaves the already loaded feed intact.
           followingController.add(['author']);
         },
         skip: 2, // Skip loading + success from VideoFeedStarted
@@ -3371,7 +3390,7 @@ void main() {
         setUp: () {
           final videos = createTestVideos(2);
           when(
-            () => mockCuratedListRepository.getOrderedVideoIds('list-a'),
+            () => mockCuratedListRepository.getOrderedVideoIds(':list-a'),
           ).thenReturn(['video-a', 'video-b']);
           when(
             () => mockVideosRepository.getVideosForList(['video-a', 'video-b']),
@@ -3381,7 +3400,7 @@ void main() {
         seed: () => VideoFeedBlocState(
           status: VideoFeedStatus.success,
           source: const VideoFeedSource.subscribedList(
-            listId: 'list-a',
+            listId: ':list-a',
             listName: 'Best Vines',
           ),
           videos: createTestVideos(3),
@@ -3425,7 +3444,7 @@ void main() {
         seed: () => VideoFeedBlocState(
           status: VideoFeedStatus.success,
           source: const VideoFeedSource.subscribedList(
-            listId: 'list-a',
+            listId: ':list-a',
             listName: 'Best Vines',
           ),
           subscribedLists: [createTestList()],
@@ -3530,7 +3549,7 @@ void main() {
           bloc.add(const VideoFeedStarted(mode: FeedMode.following));
           // Wait for initial load to complete
           await Future<void>.delayed(Duration.zero);
-          // First stream emission is skipped (BehaviorSubject replay)
+          // An unchanged empty replay leaves the already loaded feed intact.
           curatedListsController.add(const []);
           await Future<void>.delayed(Duration.zero);
           // Second emission updates state.subscribedLists.
@@ -4035,7 +4054,7 @@ void main() {
             () => mockCuratedListRepository.getListById('list-a'),
           ).thenReturn(createTestList());
           when(
-            () => mockCuratedListRepository.getOrderedVideoIds('list-a'),
+            () => mockCuratedListRepository.getOrderedVideoIds(':list-a'),
           ).thenReturn(['video-a', 'video-b']);
           when(
             () => mockVideosRepository.getVideosForList(['video-a', 'video-b']),

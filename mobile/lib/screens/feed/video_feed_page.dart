@@ -80,7 +80,9 @@ class VideoFeedPage extends ConsumerWidget {
     final followRepository = ref.watch(followRepositoryProvider);
     final curatedListRepository = ref.watch(curatedListRepositoryProvider);
     final profileRepository = ref.watch(profileRepositoryProvider);
+    ref.watch(currentAuthStateProvider);
     final authService = ref.watch(authServiceProvider);
+    final viewerPubkey = authService.currentPublicKeyHex;
     final sharedPreferences = ref.watch(sharedPreferencesProvider);
     final showDivineHostedOnly = ref
         .read(divineHostFilterServiceProvider)
@@ -91,7 +93,12 @@ class VideoFeedPage extends ConsumerWidget {
     final enrichmentAttemptTracker = NostrTagEnrichmentAttemptTracker();
 
     return MultiBlocProvider(
-      key: ValueKey('video-feed-$showDivineHostedOnly-$contentFilterVersion'),
+      key: ValueKey((
+        showDivineHostedOnly,
+        contentFilterVersion,
+        curatedListRepository,
+        viewerPubkey,
+      )),
       providers: [
         BlocProvider(
           create: (_) =>
@@ -101,7 +108,7 @@ class VideoFeedPage extends ConsumerWidget {
                 curatedListRepository: curatedListRepository,
                 profileRepository: profileRepository,
                 contentBlocklistRepository: blocklistRepository,
-                userPubkey: authService.currentPublicKeyHex,
+                userPubkey: viewerPubkey,
                 sharedPreferences: sharedPreferences,
                 // Cached-feed serving stays on (constructor default) regardless of
                 // the Divine-hosted-only filter: applyContentPreferences re-filters

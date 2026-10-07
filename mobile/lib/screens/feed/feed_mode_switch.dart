@@ -101,7 +101,7 @@ class FeedModeSwitch extends StatelessWidget {
         ...state.subscribedLists.map(
           (list) => VineBottomSheetSelectionOptionData(
             label: list.name,
-            value: 'list:${list.id}',
+            value: 'list:${list.authorScopedId}',
           ),
         ),
       ],
@@ -130,8 +130,13 @@ VideoFeedSource _sourceForSelection(String selected, VideoFeedBlocState state) {
   }
   if (selected.startsWith('list:')) {
     final listId = selected.substring('list:'.length);
-    final list = state.subscribedLists.firstWhere((list) => list.id == listId);
-    return VideoFeedSource.subscribedList(listId: list.id, listName: list.name);
+    final list = state.subscribedLists.firstWhere(
+      (list) => list.authorScopedId == listId,
+    );
+    return VideoFeedSource.subscribedList(
+      listId: list.authorScopedId,
+      listName: list.name,
+    );
   }
 
   return const VideoFeedSource.forYou();
@@ -151,7 +156,7 @@ String _labelForSource(VideoFeedBlocState state, AppLocalizations l10n) {
 
 String? _listNameForSource(VideoFeedBlocState state) {
   for (final list in state.subscribedLists) {
-    if (list.id == state.source.listId) {
+    if (list.authorScopedId == state.source.listId) {
       return list.name;
     }
   }

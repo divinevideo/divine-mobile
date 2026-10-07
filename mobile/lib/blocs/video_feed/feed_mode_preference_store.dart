@@ -88,9 +88,11 @@ class FeedModePreferenceStore {
     if (saved.startsWith('list:')) {
       final listId = saved.substring('list:'.length);
       final list = _curatedListRepository.getListById(listId);
-      if (list != null) {
+      if (list != null &&
+          (list.authorScopedId == listId ||
+              _curatedListRepository.hasCompleteSubscriptionSnapshot)) {
         return VideoFeedSource.subscribedList(
-          listId: list.id,
+          listId: list.authorScopedId,
           listName: list.name,
         );
       }
@@ -113,10 +115,16 @@ class FeedModePreferenceStore {
 
   /// Writes [source] to the scoped key and clears the legacy global key for
   /// authenticated sessions.
-  Future<void> persist(VideoFeedSource source) async {
+  Future<void> persist(VideoFeedSource source) =>
+      _persistValue(source.persistenceValue);
+
+  /// Restores an unresolved scoped value if its snapshot was superseded while
+  /// a write awaited the platform. It must retain a legacy value until the
+  /// latest complete subscription snapshot can decide its identity.
+  Future<void> _persistValue(String value) async {
     final prefs = _sharedPreferences;
     if (prefs == null) return;
-    await prefs.setString(key, source.persistenceValue);
+    await prefs.setString(key, value);
     if (_userPubkey != null) {
       await prefs.remove(_legacyFeedModeKey);
     }
