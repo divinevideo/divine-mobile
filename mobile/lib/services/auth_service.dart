@@ -32,6 +32,7 @@ import 'package:openvine/services/auth/known_accounts_registry.dart';
 import 'package:openvine/services/auth/nostr_connect_coordinator.dart';
 import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth/oauth_session_coordinator.dart';
+import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/auth/relay_discovery_orchestrator.dart';
 import 'package:openvine/services/auth/signer_factory.dart';
 import 'package:openvine/services/auth/signer_readiness_resolver.dart';
@@ -2686,6 +2687,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     AuthRpcCapability? rpcCapability,
     bool allowPubkeyOnlyIdentity = false,
   }) async {
+    final continuingSession = isAuthenticated ? _currentIdentity : null;
     Log.debug(
       'Signing in with Divine OAuth session',
       name: 'AuthService',
@@ -2813,6 +2815,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         keyContainer,
         AuthenticationSource.divineOAuth,
         allowPubkeyOnlyIdentity: allowPubkeyOnlyIdentity,
+        continuingSession: continuingSession,
       );
       _setRpcCapability(
         rpcCapability ??
@@ -3959,7 +3962,16 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     bool allowPubkeyOnlyIdentity = false,
     bool claimLegacyRows = true,
     bool followingKnownEmpty = false,
+    NostrIdentity? continuingSession,
   }) async {
+    // Capture the established context before replacing tentative identity.
+    // OAuth changes auth state before arriving here; only its unchanged
+    // previously authenticated identity may cross that transition.
+    final establishedSession = isAuthenticated
+        ? _currentIdentity
+        : identical(_currentIdentity, continuingSession)
+        ? continuingSession
+        : null;
     Log.info(
       '_setupUserSession: starting — '
       'pubkey=${keyContainer.publicKeyHex}, source=${source.name}',
@@ -4021,6 +4033,9 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     _currentIdentity = _buildIdentity(
       allowPubkeyOnlyIdentity: allowPubkeyOnlyIdentity,
     );
+    // References prove this setup remains current after the preferences await,
+    // even when another setup installs the same complete pubkey.
+    final tentativeIdentity = _currentIdentity;
 
     // Create user profile
     _currentProfile = UserProfile(
@@ -4036,7 +4051,14 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       final pubkeyHex = keyContainer.publicKeyHex;
 
       // Check if we need to clear user-specific data due to identity change
-      if (_userDataCleanupService.shouldClearDataForUser(pubkeyHex)) {
+      if (_userDataCleanupService.shouldClearDataForUser(pubkeyHex) &&
+          !_canDeferPendingCleanupForLiveSession(
+            prefs,
+            incomingPubkey: pubkeyHex,
+            establishedSession: establishedSession,
+            tentativeIdentity: tentativeIdentity,
+            expectedKeyContainer: keyContainer,
+          )) {
         final oldPubkey = prefs.getString('current_user_pubkey_hex');
         Log.info(
           '_setupUserSession: identity change detected — '
