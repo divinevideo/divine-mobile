@@ -4420,6 +4420,8 @@ class DmRepository {
       // dead indexer is capped independently, so it cannot consume the pool's
       // five-second budget. Both must settle before an empty answer means
       // `absent`; if either is incomplete the send stays pending and retries.
+      // When neither returns an inbox, a third leg reads the recipient's own
+      // write relays (see [_queryRecipientWriteRelays]).
       // The lookup leg asks the indexer alone: asking the pool again under its
       // shorter budget let a slow pool relay mark an answered lookup
       // unreadable, and let a dead indexer drop out of the judgement while
@@ -4652,7 +4654,8 @@ class DmRepository {
   }
 
   /// Reads a recipient's kind-10050 from their own NIP-65 write relays, once
-  /// the pool and indexer legs have both answered without one.
+  /// the pool and indexer legs returned no inbox list but did return the
+  /// recipient's NIP-65 list.
   ///
   /// NIP-65: "When downloading events from a user, clients SHOULD use the
   /// write relays of that user." Without this leg, a list held only where its
@@ -8011,7 +8014,7 @@ class DmRepository {
 
     // Routed like a text message: to the recipient's kind-10050 inbox, the
     // default pool only when they advertise none, and confirmed by a relay
-    // `OK` rather than a socket write (#7317). An unreadable inbox publishes
+    // `OK` rather than a socket write (#9883). An unreadable inbox publishes
     // nothing. There is no retry row for a file send, so a pool `OK` there
     // could neither be scored as delivery nor re-resolved later, and its
     // self-copy would put a sent video in the thread the sender was told
