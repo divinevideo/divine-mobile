@@ -33,6 +33,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/feed_mode_persistence.dart';
 import 'package:openvine/services/push_notification_session_coordinator.dart';
 import 'package:openvine/services/startup_performance_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
@@ -108,6 +109,9 @@ void main() {
     deviceScope = DeviceScope(
       database: database,
       sharedPreferences: prefs,
+      feedModePersistence: FeedModePersistenceRegistry(
+        sharedPreferences: prefs,
+      ),
       switchController: controller,
       appVersion: 'test',
       crashReporting: CrashReportingService(),
@@ -129,6 +133,7 @@ void main() {
     deviceScope = DeviceScope(
       database: database,
       sharedPreferences: deviceScope.sharedPreferences,
+      feedModePersistence: deviceScope.feedModePersistence,
       switchController: controller,
       appVersion: 'test',
       crashReporting: CrashReportingService(),
@@ -459,6 +464,9 @@ void main() {
         deviceScope = DeviceScope(
           database: database,
           sharedPreferences: prefs,
+          feedModePersistence: FeedModePersistenceRegistry(
+            sharedPreferences: prefs,
+          ),
           switchController: controller,
           appVersion: 'test',
           crashReporting: deviceScope.crashReporting,
@@ -824,6 +832,7 @@ void main() {
       deviceScope = DeviceScope(
         database: database,
         sharedPreferences: deviceScope.sharedPreferences,
+        feedModePersistence: deviceScope.feedModePersistence,
         switchController: controller,
         appVersion: 'test',
         crashReporting: CrashReportingService(),
