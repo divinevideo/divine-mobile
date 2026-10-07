@@ -10,6 +10,7 @@ import 'package:openvine/extensions/aspect_ratio_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
 import 'package:openvine/services/video_editor/native_render_task_registry.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:path/path.dart' as path;
@@ -293,10 +294,15 @@ class StopMotionRenderService {
       // pass no taskId, and StopMotionRenderData then generates its own — which
       // is the id the native side knows this task by.
       final result = await NativeRenderTaskRegistry.track(data.id, () {
-        return ProVideoEditor.instance.renderStopMotionToFile(
-          outputPath,
-          data,
-          nativeLogLevel: NativeLogLevel.warning,
+        return InterruptedRenderMonitor.track(
+          taskId: data.id,
+          kind: 'stop_motion',
+          details: describeStopMotionRender(data),
+          operation: () => ProVideoEditor.instance.renderStopMotionToFile(
+            outputPath,
+            data,
+            nativeLogLevel: NativeLogLevel.warning,
+          ),
         );
       });
       Log.info(

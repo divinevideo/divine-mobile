@@ -49,6 +49,7 @@ import 'package:openvine/services/pro_video_editor_log_forwarder.dart';
 import 'package:openvine/services/screenshot_mode_service.dart';
 import 'package:openvine/services/secure_storage_options.dart';
 import 'package:openvine/services/startup_performance_service.dart';
+import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:openvine/services/video_editor/video_render_watchdog.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
@@ -259,6 +260,17 @@ Future<void> startOpenVineApp({
   VideoRenderWatchdog.crashReporter = crashReporting;
   StopMotionRenderService.crashReporter = crashReporting;
   NotificationRefreshCoordinator.crashReporter = crashReporting;
+  InterruptedRenderMonitor.crashReporter = crashReporting;
+
+  // A render the previous process died in (#9872) leaves no crash report, only
+  // its marker. This also enables markers for this session's renders. Off the
+  // startup path: it reads a few small files at most.
+  runDetached(
+    InterruptedRenderMonitor.initialize(),
+    'enable render markers and report interrupted renders',
+    logName: 'Main',
+    category: LogCategory.video,
+  );
 
   crashReporting.logInitializationStep('Bindings initialized');
   startupPerformance.checkpoint('crash_reporting_ready');

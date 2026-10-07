@@ -17,6 +17,7 @@ import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
+import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/utils/editor_text_fonts.dart';
@@ -310,22 +311,38 @@ class DraftRenderParametersService {
       // `RoundedBackgroundText` uses instead of `DefaultTextStyle`. Introducing
       // an emoji layer, or a text layer with a null `textStyle`, makes the two
       // sides diverge and this has to be mirrored after all.
-      final captured = await _rasterizer.capture(
-        layers: drawn,
-        editorBodySize: bodySize,
-        configs: ProImageEditorConfigs(
-          textEditor: TextEditorConfigs(
-            layerBounds: (editorBodySize) => editorTextLayerBounds(
-              editorBodySize,
-              targetAspectRatio: aspectRatio.value,
+      // The render scales each layer by `videoSize.width / bodySize.width`
+      // (see VideoEditorRenderService.buildImageLayers), so capturing at
+      // that ratio lands one raster pixel per output pixel.
+      final basePixelRatio = (videoSize.width / bodySize.width).clamp(
+        1.0,
+        10.0,
+      );
+      final captured = await InterruptedRenderMonitor.track(
+        taskId: 'draft_layer_capture',
+        kind: 'draft_layer_capture',
+        details: {
+          'layers': drawn.length,
+          'textLayers': drawn.whereType<TextLayer>().length,
+          'paintLayers': drawn.whereType<PaintLayer>().length,
+          'widgetLayers': drawn.whereType<WidgetLayer>().length,
+          'body': '${bodySize.width.round()}x${bodySize.height.round()}',
+          'pixelRatio': basePixelRatio.toStringAsFixed(2),
+        },
+        operation: () => _rasterizer.capture(
+          layers: drawn,
+          editorBodySize: bodySize,
+          configs: ProImageEditorConfigs(
+            textEditor: TextEditorConfigs(
+              layerBounds: (editorBodySize) => editorTextLayerBounds(
+                editorBodySize,
+                targetAspectRatio: aspectRatio.value,
+              ),
             ),
           ),
+          basePixelRatio: basePixelRatio,
+          awaitContentReady: () => _prepareLayerContent(drawn, stickers),
         ),
-        // The render scales each layer by `videoSize.width / bodySize.width`
-        // (see VideoEditorRenderService.buildImageLayers), so capturing at
-        // that ratio lands one raster pixel per output pixel.
-        basePixelRatio: (videoSize.width / bodySize.width).clamp(1.0, 10.0),
-        awaitContentReady: () => _prepareLayerContent(drawn, stickers),
       );
 
       // `captureAllLayers` drops a layer whose repaint boundary produced no

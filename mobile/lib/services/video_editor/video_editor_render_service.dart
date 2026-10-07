@@ -20,6 +20,7 @@ import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/video_editor/clip_normalization_models.dart';
 import 'package:openvine/services/video_editor/clip_normalization_render.dart';
 import 'package:openvine/services/video_editor/detached_clip_render_pass.dart';
+import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
 import 'package:openvine/services/video_editor/native_render_task_registry.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
 import 'package:openvine/services/video_editor/render_progress_tracker.dart';
@@ -1310,10 +1311,15 @@ class VideoEditorRenderService {
     return NativeRenderTaskRegistry.track(task.id, () {
       return Future.sync(() {
         RenderCancellationRegistry.throwIfRequested(task.id);
-        return ProVideoEditor.instance.renderVideoToFile(
-          outputPath,
-          task,
-          nativeLogLevel: nativeLogLevel,
+        return InterruptedRenderMonitor.track(
+          taskId: task.id,
+          kind: 'video',
+          details: describeVideoRender(task),
+          operation: () => ProVideoEditor.instance.renderVideoToFile(
+            outputPath,
+            task,
+            nativeLogLevel: nativeLogLevel,
+          ),
         );
       }).whenComplete(() {
         if (renderGeneration.started) {
