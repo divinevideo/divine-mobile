@@ -5491,6 +5491,41 @@ void main() {
         );
 
         test(
+          'gives the write-relay leg what is left of the resolution budget, '
+          'so a cold relay that answers after four seconds is still read',
+          () async {
+            // Measured on a phone: cold connects to two write relays answered
+            // in 3.7 s and 4.8 s. Model a relay that only answers when the leg
+            // waits at least four seconds.
+            stubLegs((invocation) async {
+              final temp = tempOf(invocation);
+              if (temp == null) {
+                return answeredList([
+                  kind10002Event([
+                    ['r', 'wss://write.example'],
+                  ]),
+                ]);
+              }
+              if (!temp.contains('wss://write.example')) {
+                return answeredList(const <Event>[]);
+              }
+              final wait = invocation.namedArguments[#timeout] as Duration;
+              return wait >= const Duration(seconds: 4)
+                  ? answeredList([
+                      kind10050Event(['wss://inbox.example']),
+                    ])
+                  : unansweredList(timedOut: true);
+            });
+
+            final resolved = await createLookupRepository()
+                .resolveDmInboxRelaysDetailed(_validPubkeyB);
+
+            expect(resolved.state, DmInboxResolution.found);
+            expect(resolved.relays, ['wss://inbox.example']);
+          },
+        );
+
+        test(
           'is absent when the recipient write relays answered and hold no '
           'kind-10050',
           () async {

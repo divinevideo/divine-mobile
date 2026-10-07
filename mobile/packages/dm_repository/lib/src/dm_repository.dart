@@ -226,10 +226,10 @@ const Duration _dmInboxQueryTimeout = Duration(seconds: 5);
 /// indexer cannot hold the whole recipient resolution open (#7317).
 const Duration _dmInboxDiscoveryQueryTimeout = Duration(seconds: 2);
 
-/// Budget for reading a recipient's kind-10050 from their own NIP-65 write
-/// relays, the last leg of a recipient lookup. Cold connections like the
-/// indexer leg, so the same short bound (#7317).
-const Duration _dmInboxOutboxQueryTimeout = Duration(seconds: 2);
+/// Kept back from what is left of the resolution budget when the write-relay
+/// leg runs, so the leg returns its own answer — including a list one relay
+/// sent before another stalled — before the whole resolution is abandoned.
+const Duration _dmInboxOutboxSettleMargin = Duration(milliseconds: 250);
 
 /// Most write relays the outbox leg dials for one recipient. Each is a cold
 /// connection on the send path, chosen by the person being messaged.
@@ -4690,9 +4690,15 @@ class DmRepository {
         .toList();
     if (targets.isEmpty) return absent;
 
-    // Bounded by what the whole resolution has left, so the caller's
-    // `TimeoutException` arm classifies an overrun as unreadable.
+    // Write relays are cold connections, measured at 3.7 s and 4.8 s on a
+    // phone, so the leg gets whatever the resolution has left rather than a
+    // short fixed bound. A send is optimistic, so the wait costs no visible
+    // latency. An overrun reaches the caller's `TimeoutException` arm, which
+    // classifies it as unreadable.
     final remaining = budget > Duration.zero ? budget : Duration.zero;
+    final legTimeout = remaining > _dmInboxOutboxSettleMargin
+        ? remaining - _dmInboxOutboxSettleMargin
+        : Duration.zero;
     final result = await _nostrClient
         .queryEventsDetailed(
           [
@@ -4706,7 +4712,7 @@ class DmRepository {
           tempRelays: targets,
           relayTypes: const [RelayType.temp],
           requireAllRelaysSettled: true,
-          timeout: _dmInboxOutboxQueryTimeout,
+          timeout: legTimeout,
         )
         .timeout(remaining);
     final lists = [
