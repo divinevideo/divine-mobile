@@ -582,24 +582,32 @@ void main() {
             VideoEffectType.strobe,
             VideoEffectType.negativeFlash,
           ]) {
-            final effects = videoEffectsOnOutput(
-              [onBeat(type)],
-              map,
-              beats: [ms(50)],
-            );
-            var flashes = 0;
-            var wasOn = false;
-            for (var at = 0; at < 1000; at++) {
-              final frame = VideoEffect.resolve(effects, ms(at % length));
-              final on = frame.flash >= 0.5 || frame.invert >= 0.5;
-              if (on && !wasOn) flashes++;
-              wasOn = on;
+            for (final intensity in [0.1, 1.0]) {
+              final effects = videoEffectsOnOutput(
+                [
+                  EditorVideoEffect(
+                    id: 'quiet-flash',
+                    effect: VideoEffect(type: type, intensity: intensity),
+                    onBeat: true,
+                  ),
+                ],
+                map,
+                beats: [ms(50)],
+              );
+              var flashes = 0;
+              var wasOn = false;
+              for (var at = 0; at < 1000; at++) {
+                final frame = VideoEffect.resolve(effects, ms(at % length));
+                final on = frame.flash > 0 || frame.invert > 0;
+                if (on && !wasOn) flashes++;
+                wasOn = on;
+              }
+              expect(
+                flashes,
+                lessThanOrEqualTo(3),
+                reason: '$type at $intensity on a $length ms loop',
+              );
             }
-            expect(
-              flashes,
-              lessThanOrEqualTo(3),
-              reason: '$type on a $length ms loop',
-            );
           }
         }
       });

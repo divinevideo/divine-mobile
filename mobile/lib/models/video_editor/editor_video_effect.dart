@@ -302,7 +302,9 @@ Iterable<Duration> _crowdedFlashSeconds(
   const step = Duration(microseconds: 1000000 ~/ 120);
   bool flashes(Duration at) {
     final frame = VideoEffect.resolve(flashing, at);
-    return frame.flash >= 0.5 || frame.invert >= 0.5;
+    // Strobe peaks at 0.25 + intensity, even below half intensity. Its
+    // faint fade-out tail is not a new flash and must not join separate hits.
+    return frame.flash >= 0.25 || frame.invert >= 0.5;
   }
 
   final onsets = <Duration>[];
