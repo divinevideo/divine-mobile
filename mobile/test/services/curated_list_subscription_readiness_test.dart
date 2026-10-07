@@ -61,7 +61,15 @@ void main() {
       },
     );
 
-    for (final malformed in ['{', '{}', '["valid", null]', '[123]']) {
+    for (final malformed in <Object>[
+      '{',
+      '{}',
+      '["valid", null]',
+      '[123]',
+      true,
+      7,
+      <String>['wrong storage type'],
+    ]) {
       test(
         'unreadable metadata "$malformed" cannot become authoritative',
         () async {
@@ -71,7 +79,7 @@ void main() {
           expect(service.hasLoadedSubscriptionIds, isFalse);
           expect(service.subscribedListIds, isEmpty);
           expect(
-            prefs.getString(CuratedListService.subscribedListsStorageKey),
+            prefs.get(CuratedListService.subscribedListsStorageKey),
             malformed,
           );
         },
