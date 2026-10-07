@@ -118,6 +118,10 @@ List<BeatSourcePart> beatSourceFor({
   }
 
   final wrap = clips.isEmpty ? Duration.zero : overlapAfter(clips.last);
+  // The export gives the loop-restart blend sound only when the clips on both
+  // sides of it have some: next to a muted last clip, the first head moved
+  // into the blend plays in silence.
+  final headSounds = clips.isNotEmpty && clips.last.volume > 0;
   final outputDuration = TransitionTimelineMap.fromClips(clips).outputDuration;
   var clipStart = Duration.zero;
   for (var i = 0; i < clips.length; i++) {
@@ -128,7 +132,7 @@ List<BeatSourcePart> beatSourceFor({
       final head = i == 0
           ? Duration(microseconds: (wrap.inMicroseconds * speed).round())
           : Duration.zero;
-      if (head > Duration.zero) {
+      if (head > Duration.zero && headSounds) {
         // The first head is the incoming side of the final wrap blend.
         parts.add(
           BeatSourcePart(

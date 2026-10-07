@@ -340,6 +340,37 @@ void main() {
       );
     });
 
+    // On the iPhone 12 Pro, a muted last clip left the end of the export
+    // silent while a strobe on the beat still flashed there.
+    test('leaves the first head out of a loop-restart blend that a muted last '
+        'clip silences', () async {
+      final clips = [
+        _clip('a'),
+        _clip(
+          'b',
+          volume: 0,
+          transition: const ClipTransition(
+            type: ClipTransitionType.dissolve,
+            duration: Duration(milliseconds: 300),
+          ),
+        ),
+      ];
+      final parts = beatSourceFor(
+        sounds: const [],
+        clips: clips,
+        videoEnd: _ms(5700),
+      );
+      await resolver.read(parts);
+      final beats = resolver.beatsOnOutput(parts, videoEnd: _ms(5700));
+
+      // The first clip still starts 300 ms in, where the blend took its head
+      // from, but the kick at 0.25 s does not fire at the end.
+      expect(
+        worstMiss(beats, [_ms(450), _ms(950), _ms(1450), _ms(1950), _ms(2450)]),
+        lessThanOrEqualTo(_ms(15)),
+      );
+    });
+
     test('skips a clip it cannot read, and throws when it can read none, so '
         'a later read tries again', () async {
       final clips = [_clip('silent'), _clip('loud')];
