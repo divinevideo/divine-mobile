@@ -23,7 +23,8 @@ enum PushRegistrationResult {
   /// The relay confirmed that it stored the registration event.
   published,
 
-  /// No relay received the event, so retrying cannot create a duplicate.
+  /// Nothing was published, so retrying cannot create a duplicate: the FCM
+  /// token or signer was not ready yet, or no relay received the event.
   retryableFailure,
 
   /// A relay may have stored the event but did not confirm it.
@@ -104,6 +105,9 @@ class PushNotificationService {
   ///
   /// Gets the current FCM token, NIP-44 encrypts it, and publishes a kind
   /// [pushRegistrationKind] Nostr event to the push service pubkey.
+  ///
+  /// Returns [PushRegistrationResult.retryableFailure] while the FCM token or
+  /// a silent signer is not ready yet, so the caller can try again.
   ///
   /// Does nothing on web ([kIsWeb] is true).
   Future<PushRegistrationResult> register(
