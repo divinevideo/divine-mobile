@@ -56,7 +56,6 @@ discarded_futures|lib/widgets/video_clip/video_clip_preview.dart	3
 discarded_futures|lib/widgets/video_reply_parent_link.dart	1
 discarded_futures|lib/widgets/vine_bottom_nav.dart	2
 discarded_futures|lib/widgets/watermark_download_progress_sheet.dart	1
-discarded_futures|test/services/auth_service_signout_cleanup_test.dart	1
 unawaited_futures|integration_test/e2e/deleted_video_visible_to_other_users_test.dart	2
 unawaited_futures|lib/features/app/startup/startup_coordinator.dart	1
 unawaited_futures|lib/screens/feed/video_feed_page.dart	1

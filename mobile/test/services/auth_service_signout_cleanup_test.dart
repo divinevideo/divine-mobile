@@ -553,6 +553,7 @@ void main() {
             when(() => mockKeyStorage.clearCache()).thenReturn(null);
             final events = <String>[];
             var completed = false;
+            Object? signOutError;
             final slow = Completer<void>();
 
             authService.registerBeforeSessionTeardownCallback(() async {
@@ -564,9 +565,14 @@ void main() {
               events.add('second started');
             });
 
-            authService.signOut().then((_) {
-              completed = true;
-            });
+            // The timeout should let signOut finish while this cleanup hook
+            // is still pending; fakeAsync drives that future below.
+            unawaited(
+              authService.signOut().then<void>(
+                (_) => completed = true,
+                onError: (Object error) => signOutError = error,
+              ),
+            );
             async.flushMicrotasks();
 
             expect(events, ['slow started']);
@@ -576,6 +582,7 @@ void main() {
 
             expect(events, ['slow started', 'second started']);
             expect(completed, isTrue);
+            expect(signOutError, isNull);
             expect(authService.authState, AuthState.unauthenticated);
             slow.complete();
             async.flushMicrotasks();
