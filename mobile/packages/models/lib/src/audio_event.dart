@@ -372,6 +372,10 @@ class AudioEvent {
   /// Marker for draft-local imported audio.
   static const localImportMarker = 'local_import';
 
+  /// Id prefix shared by every voice-over take, a [localImportMarker] file
+  /// the user recorded over the video; see [isVoiceOver].
+  static const voiceOverIdPrefix = '${localImportMarker}_voice_over';
+
   /// Marker for audio the editor extracted from one of a draft's own clips.
   ///
   /// Deliberately not [localImportMarker]: an extracted track is the video's
@@ -460,6 +464,10 @@ class AudioEvent {
 
   /// Whether this audio was extracted from one of the draft's own clips.
   bool get isLocalExtracted => id.startsWith('${localExtractedMarker}_');
+
+  /// Whether this audio is a voice-over take the user recorded over the
+  /// video, rather than music or another sound.
+  bool get isVoiceOver => id.startsWith(voiceOverIdPrefix);
 
   /// Whether this audio is backed by a file this device wrote for a draft.
   ///

@@ -8861,6 +8861,25 @@ class AppLocalizationsPl extends AppLocalizations {
       'Tylko jeden migający efekt naraz. Zbyt dużo migania może szkodzić osobom wrażliwym.';
 
   @override
+  String get videoEditorEffectsOnBeat => 'W rytm';
+
+  @override
+  String get videoEditorEffectsOnBeatFinding => 'Szukam rytmu…';
+
+  @override
+  String get videoEditorEffectsOnBeatNoBeat =>
+      'Ten dźwięk nie ma równego rytmu';
+
+  @override
+  String get videoEditorEffectsOnBeatNoSound =>
+      'Dodaj muzykę albo włącz dźwięk klipu';
+
+  @override
+  String videoEditorEffectOnBeatLabel(String effect) {
+    return '$effect w rytm';
+  }
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Otwórz edytor korekt';
 
   @override

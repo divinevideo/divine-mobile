@@ -8925,6 +8925,24 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఒకసారి ఒక మెరిసే ఎఫెక్ట్ మాత్రమే. ఎక్కువ మెరుపులు సున్నితమైన వారికి హాని చేయవచ్చు.';
 
   @override
+  String get videoEditorEffectsOnBeat => 'బీట్‌కు అనుగుణంగా';
+
+  @override
+  String get videoEditorEffectsOnBeatFinding => 'బీట్‌ను వెతుకుతోంది…';
+
+  @override
+  String get videoEditorEffectsOnBeatNoBeat => 'ఈ ధ్వనిలో స్థిరమైన బీట్ లేదు';
+
+  @override
+  String get videoEditorEffectsOnBeatNoSound =>
+      'సంగీతాన్ని జోడించండి లేదా ఒక క్లిప్ ధ్వనిని ఆన్ చేయండి';
+
+  @override
+  String videoEditorEffectOnBeatLabel(String effect) {
+    return '$effect బీట్‌కు అనుగుణంగా';
+  }
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'సర్దుబాట్ల ఎడిటర్‌ను తెరవండి';
 
   @override

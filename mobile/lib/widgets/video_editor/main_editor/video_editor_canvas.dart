@@ -1934,9 +1934,12 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       ),
     );
 
-    context.read<VideoEditorEffectsCubit>().syncApplied(
-      editor.stateManager.videoEffectEntries,
-    );
+    context.read<VideoEditorEffectsCubit>()
+      ..syncBeatSource(
+        sounds: editor.stateManager.audioTracks,
+        clips: context.read<ClipEditorBloc>().state.clips,
+      )
+      ..syncApplied(editor.stateManager.videoEffectEntries);
 
     // Reconcile the editor's current history entry with the app clip state.
     // Undo/redo can resurrect a clip removed earlier in the session — its

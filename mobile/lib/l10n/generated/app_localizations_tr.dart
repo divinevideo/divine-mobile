@@ -8596,6 +8596,24 @@ class AppLocalizationsTr extends AppLocalizations {
       'Aynı anda tek bir yanıp sönen efekt. Fazla yanıp sönme hassas kişilere zarar verebilir.';
 
   @override
+  String get videoEditorEffectsOnBeat => 'Ritme göre';
+
+  @override
+  String get videoEditorEffectsOnBeatFinding => 'Ritim aranıyor…';
+
+  @override
+  String get videoEditorEffectsOnBeatNoBeat => 'Bu seste düzenli bir ritim yok';
+
+  @override
+  String get videoEditorEffectsOnBeatNoSound =>
+      'Müzik ekle ya da bir klibin sesini aç';
+
+  @override
+  String videoEditorEffectOnBeatLabel(String effect) {
+    return '$effect ritme göre';
+  }
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Ayarlar düzenleyicisini aç';
 
   @override

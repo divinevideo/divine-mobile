@@ -71,7 +71,12 @@ extension VideoEditorExtensions on ProImageEditorState {
       capturedLayers: withCensorLayers(activeLayers, capturedLayers),
       filterStates: List.of(stateManager.activeFilters),
       tuneAdjustments: List.of(stateManager.activeTuneAdjustments),
-      effects: stateManager.videoEffects,
+      // An effect on the beat follows this video's music, which a saved clip
+      // does not take along: in another video it would miss the beat.
+      effects: [
+        for (final entry in stateManager.videoEffectEntries)
+          if (!entry.onBeat) entry.effect,
+      ],
       blur: stateManager.activeBlur,
       bodySize: sizesManager.bodySize,
     );

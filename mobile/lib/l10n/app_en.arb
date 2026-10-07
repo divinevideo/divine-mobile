@@ -5833,6 +5833,32 @@
   "@videoEditorEffectsFlashingNotDuplicated": {
     "description": "Snack bar when the user tries to duplicate a flashing video effect (strobe, negative flash): the copy would flash on top of the original, so it is not duplicated. Same reason as videoEditorEffectsFlashingReplaced."
   },
+  "videoEditorEffectsOnBeat": "On the beat",
+  "@videoEditorEffectsOnBeat": {
+    "description": "Switch in the video effects editor: the picked effect fires on every beat of the video's music (one zoom, flash or glitch per beat) instead of playing all the time. Keep it short."
+  },
+  "videoEditorEffectsOnBeatFinding": "Finding the beat…",
+  "@videoEditorEffectsOnBeatFinding": {
+    "description": "Shown under the 'On the beat' switch while the app listens to the video's music to find its beats."
+  },
+  "videoEditorEffectsOnBeatNoBeat": "No steady beat in this sound",
+  "@videoEditorEffectsOnBeatNoBeat": {
+    "description": "Shown under the 'On the beat' switch when the video's sound has no steady beat to follow, for example speech, so the effect does not show."
+  },
+  "videoEditorEffectsOnBeatNoSound": "Add music or turn a clip's sound on",
+  "@videoEditorEffectsOnBeatNoSound": {
+    "description": "Shown under the 'On the beat' switch when nothing in the video makes a sound: no music was added and every clip is muted."
+  },
+  "videoEditorEffectOnBeatLabel": "{effect} on the beat",
+  "@videoEditorEffectOnBeatLabel": {
+    "description": "Name of a video effect on the timeline, and what screen readers announce for it, when the effect fires on the beat of the music. {effect} is the effect's name, for example 'Zoom Pulse on the beat'. Keep it short.",
+    "placeholders": {
+      "effect": {
+        "type": "String",
+        "example": "Zoom Pulse"
+      }
+    }
+  },
   "videoEditorOpenTuneSemanticLabel": "Open adjustments editor",
   "videoEditorTuneBrightness": "Brightness",
   "videoEditorTuneContrast": "Contrast",

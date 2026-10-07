@@ -593,7 +593,6 @@ void main() {
       expect(stateManager.videoEffectEntries, [
         EditorVideoEffect(id: 'effect_1', effect: vhs.effect),
       ]);
-      expect(stateManager.videoEffects, [vhs.effect]);
     });
   });
 

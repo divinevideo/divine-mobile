@@ -1,8 +1,17 @@
+import 'dart:io';
+
 import 'package:bloc_test/bloc_test.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:models/models.dart' as model show AspectRatio;
+import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
+import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
+import 'package:openvine/services/video_editor/video_editor_beat_resolver.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+
+import '../../../helpers/audio_samples.dart';
 
 void main() {
   group(VideoEditorEffectsCubit, () {
@@ -71,7 +80,10 @@ void main() {
             cubit.state.intensity,
             VideoEditorEffectsCubit.defaultIntensity,
           );
-          expect(cubit.state.previewEffects, [vhs.effect]);
+          expect(
+            [for (final e in cubit.state.previewEffects) e.effect],
+            [vhs.effect],
+          );
         },
       );
     });
@@ -88,10 +100,13 @@ void main() {
           ..setIntensity(1.7),
         verify: (cubit) {
           expect(cubit.state.intensity, 1);
-          expect(cubit.state.previewEffects, [
-            const VideoEffect.pixelate(),
-            vignette.effect,
-          ]);
+          expect(
+            [for (final e in cubit.state.previewEffects) e.effect],
+            [
+              const VideoEffect.pixelate(),
+              vignette.effect,
+            ],
+          );
         },
       );
 
@@ -103,12 +118,15 @@ void main() {
           ..startEditing()
           ..selectType(VideoEffectType.strobe),
         verify: (cubit) {
-          expect(cubit.state.previewEffects, [
-            vhs.effect,
-            const VideoEffect.strobe(
-              intensity: VideoEditorEffectsCubit.defaultIntensity,
-            ),
-          ]);
+          expect(
+            [for (final e in cubit.state.previewEffects) e.effect],
+            [
+              vhs.effect,
+              const VideoEffect.strobe(
+                intensity: VideoEditorEffectsCubit.defaultIntensity,
+              ),
+            ],
+          );
         },
       );
 
@@ -131,12 +149,15 @@ void main() {
           ..startEditing()
           ..selectType(VideoEffectType.strobe),
         verify: (cubit) {
-          expect(cubit.state.previewEffects, [
-            vignette.effect,
-            const VideoEffect.strobe(
-              intensity: VideoEditorEffectsCubit.defaultIntensity,
-            ),
-          ]);
+          expect(
+            [for (final e in cubit.state.previewEffects) e.effect],
+            [
+              vignette.effect,
+              const VideoEffect.strobe(
+                intensity: VideoEditorEffectsCubit.defaultIntensity,
+              ),
+            ],
+          );
         },
       );
 
@@ -151,7 +172,10 @@ void main() {
         verify: (cubit) {
           expect(cubit.state.isEditing, isFalse);
           expect(cubit.state.editingId, isNull);
-          expect(cubit.state.previewEffects, [vhs.effect]);
+          expect(
+            [for (final e in cubit.state.previewEffects) e.effect],
+            [vhs.effect],
+          );
         },
       );
     });
@@ -249,6 +273,124 @@ void main() {
         addTearDown(cubit.close);
 
         expect(cubit.confirm().effects, const [vhs]);
+      });
+    });
+
+    group('on the beat', () {
+      final music = AudioEvent(
+        id: 'music',
+        pubkey: 'a' * 64,
+        createdAt: 1735689600,
+        url: '/tmp/music.mp3',
+        duration: 30,
+      );
+      final mutedClip = DivineVideoClip(
+        id: 'clip',
+        video: EditorVideo.file('${Directory.systemTemp.path}/clip.mp4'),
+        duration: const Duration(seconds: 6),
+        recordedAt: DateTime(2026),
+        targetAspectRatio: model.AspectRatio.vertical,
+        originalAspectRatio: 9 / 16,
+        volume: 0,
+      );
+
+      /// A cubit whose music reads as a kick every half second, or fails to
+      /// read with [failure].
+      VideoEditorEffectsCubit buildWithMusic({
+        List<AudioExtractConfigs>? reads,
+        Exception? failure,
+      }) => VideoEditorEffectsCubit(
+        createId: () => 'new',
+        beatResolver: VideoEditorBeatResolver(
+          extractAudio: (configs) async {
+            reads?.add(configs);
+            if (failure != null) throw failure;
+            return drumLoopWav(configs);
+          },
+        ),
+      );
+
+      Future<VideoEditorEffectsState> settled(VideoEditorEffectsCubit cubit) =>
+          cubit.state.beatStatus == VideoEditorBeatStatus.loading
+          ? cubit.stream.firstWhere(
+              (state) => state.beatStatus != VideoEditorBeatStatus.loading,
+            )
+          : Future.value(cubit.state);
+
+      test('commits onBeat only for an effect that can fire on the beat', () {
+        final cubit = buildCubit()
+          ..startEditing()
+          ..selectType(VideoEffectType.zoomPulse)
+          ..setOnBeat(onBeat: true);
+        expect(cubit.confirm().effects.single.onBeat, isTrue);
+
+        cubit
+          ..startEditing()
+          ..selectType(VideoEffectType.vignette)
+          ..setOnBeat(onBeat: true);
+        expect(cubit.confirm().effects.last.onBeat, isFalse);
+      });
+
+      blocTest<VideoEditorEffectsCubit, VideoEditorEffectsState>(
+        'opens an effect on the beat with the switch on',
+        build: buildCubit,
+        seed: () => const VideoEditorEffectsState(
+          applied: [
+            EditorVideoEffect(
+              id: 'zoom',
+              effect: VideoEffect.zoomPulse(),
+              onBeat: true,
+            ),
+          ],
+        ),
+        act: (cubit) => cubit.startEditing(effectId: 'zoom'),
+        verify: (cubit) => expect(cubit.state.onBeat, isTrue),
+      );
+
+      test('finds the beats of the music once an effect needs them', () async {
+        final reads = <AudioExtractConfigs>[];
+        final cubit = buildWithMusic(reads: reads)
+          ..syncBeatSource(sounds: [music], clips: [mutedClip]);
+        expect(cubit.state.beatStatus, VideoEditorBeatStatus.idle);
+        expect(reads, isEmpty);
+
+        cubit
+          ..startEditing()
+          ..selectType(VideoEffectType.zoomPulse)
+          ..setOnBeat(onBeat: true);
+        final state = await settled(cubit);
+
+        expect(state.beatStatus, VideoEditorBeatStatus.ready);
+        // A kick every half second of the six-second video.
+        expect(state.beats.length, inInclusiveRange(11, 12));
+        expect(reads, hasLength(1));
+        await cubit.close();
+      });
+
+      test('says when nothing makes a sound or the music cannot be '
+          'read', () async {
+        final silent = buildWithMusic()
+          ..syncBeatSource(sounds: const [], clips: [mutedClip])
+          ..startEditing()
+          ..selectType(VideoEffectType.zoomPulse)
+          ..setOnBeat(onBeat: true);
+        expect(
+          (await settled(silent)).beatStatus,
+          VideoEditorBeatStatus.noSound,
+        );
+
+        final unreadable =
+            buildWithMusic(failure: PlatformException(code: 'gone'))
+              ..syncBeatSource(sounds: [music], clips: [mutedClip])
+              ..startEditing()
+              ..selectType(VideoEffectType.zoomPulse)
+              ..setOnBeat(onBeat: true);
+        expect(
+          (await settled(unreadable)).beatStatus,
+          VideoEditorBeatStatus.failed,
+        );
+        await silent.close();
+        await unreadable.close();
       });
     });
   });

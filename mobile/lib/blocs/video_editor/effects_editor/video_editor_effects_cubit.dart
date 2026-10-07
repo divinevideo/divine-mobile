@@ -1,9 +1,18 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:models/models.dart' show AudioEvent;
+import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
+import 'package:openvine/models/video_editor/transition_geometry.dart';
+import 'package:openvine/services/video_editor/video_editor_beat_resolver.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show VideoEffect, VideoEffectType;
+import 'package:unified_logger/unified_logger.dart';
 import 'package:uuid/uuid.dart';
 
 part 'video_editor_effects_state.dart';
@@ -15,15 +24,23 @@ part 'video_editor_effects_state.dart';
 /// the UI mirrors it in with [syncApplied] and writes a confirmed selection
 /// back to it. The editor either adds a new effect or edits one already on
 /// the timeline, see [startEditing].
-class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState> {
-  VideoEditorEffectsCubit({String Function()? createId})
-    : _createId = createId ?? _uniqueId,
-      super(const VideoEditorEffectsState());
+///
+/// While an effect fires on the beat, the cubit also keeps the beats of the
+/// video's music, from what [syncBeatSource] last said plays.
+class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
+    with CloseGuardedEmit<VideoEditorEffectsState> {
+  VideoEditorEffectsCubit({
+    String Function()? createId,
+    VideoEditorBeatResolver? beatResolver,
+  }) : _createId = createId ?? _uniqueId,
+       _beatResolver = beatResolver ?? VideoEditorBeatResolver(),
+       super(const VideoEditorEffectsState());
 
   /// The intensity an effect starts at when it is first picked.
   static const double defaultIntensity = 0.7;
 
   final String Function() _createId;
+  final VideoEditorBeatResolver _beatResolver;
 
   static const _uuid = Uuid();
 
@@ -34,6 +51,34 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState> {
   void syncApplied(List<EditorVideoEffect> effects) {
     if (listEquals(effects, state.applied)) return;
     emit(state.copyWith(applied: List.unmodifiable(effects)));
+    unawaited(_refreshBeats());
+  }
+
+  /// Mirrors what plays in the video, [sounds] over [clips], which the beats
+  /// of effects on the beat come from.
+  void syncBeatSource({
+    required List<AudioEvent> sounds,
+    required List<DivineVideoClip> clips,
+  }) {
+    final timelineMap = TransitionTimelineMap.fromClips(clips);
+    final outputDuration = timelineMap.outputDuration;
+    final videoEnd = outputDuration < VideoEditorConstants.maxDuration
+        ? outputDuration
+        : VideoEditorConstants.maxDuration;
+    emit(
+      state.copyWith(
+        beatInput: VideoEditorBeatInput(
+          parts: beatSourceFor(
+            sounds: sounds,
+            clips: clips,
+            videoEnd: videoEnd,
+          ),
+          timelineMap: timelineMap,
+          videoEnd: videoEnd,
+        ),
+      ),
+    );
+    unawaited(_refreshBeats());
   }
 
   /// Opens the editor to add a new effect, or on the committed effect with
@@ -51,9 +96,11 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState> {
         selectedType: current?.effect.type,
         clearSelectedType: current == null,
         intensity: current?.effect.intensity ?? defaultIntensity,
+        onBeat: current?.onBeat ?? false,
         startedPlayback: startedPlayback,
       ),
     );
+    unawaited(_refreshBeats());
   }
 
   /// Picks [type], or no effect for `null`.
@@ -61,6 +108,16 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState> {
   /// Switching to another effect keeps the intensity the user dialed in.
   void selectType(VideoEffectType? type) {
     emit(state.copyWith(selectedType: type, clearSelectedType: type == null));
+    unawaited(_refreshBeats());
+  }
+
+  /// Makes the picked effect fire on the beat, or play all through its window.
+  ///
+  /// Kept for the next effect picked; it only applies to one that
+  /// [canFireOnBeat].
+  void setOnBeat({required bool onBeat}) {
+    emit(state.copyWith(onBeat: onBeat));
+    unawaited(_refreshBeats());
   }
 
   /// Sets the intensity of the picked effect, clamped to 0..1.
@@ -101,12 +158,19 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState> {
             startTime: entry.effect.startTime,
             endTime: entry.effect.endTime,
           ),
+          onBeat: state.selectionOnBeat,
         ),
       );
     }
     if (committedId == null && picked != null) {
       committedId = _createId();
-      effects.add(EditorVideoEffect(id: committedId, effect: picked));
+      effects.add(
+        EditorVideoEffect(
+          id: committedId,
+          effect: picked,
+          onBeat: state.selectionOnBeat,
+        ),
+      );
     }
 
     final separated = picked == null || committedId == null
@@ -126,5 +190,59 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState> {
       ),
     );
     return (effects: effects, replacedFlashing: separated != null);
+  }
+
+  /// Finds the beats when an effect needs them: right away when their music
+  /// has been read before, and otherwise once it has been.
+  ///
+  /// A later call that changes what plays wins: the beats are placed with
+  /// whatever the state says plays once the music is read.
+  Future<void> _refreshBeats() async {
+    final input = state.beatInput;
+    if (input == null || !state.needsBeats) return;
+    if (input.parts.isEmpty) {
+      emit(
+        state.copyWith(
+          beats: const [],
+          beatStatus: VideoEditorBeatStatus.noSound,
+        ),
+      );
+      return;
+    }
+    if (!_beatResolver.hasRead(input.parts)) {
+      emit(state.copyWith(beatStatus: VideoEditorBeatStatus.loading));
+      try {
+        await _beatResolver.read(input.parts);
+      } on Exception catch (error, stackTrace) {
+        Log.error(
+          'Could not read the beats of the music',
+          name: 'VideoEditorEffectsCubit',
+          category: LogCategory.video,
+          error: error,
+          stackTrace: stackTrace,
+        );
+        if (state.beatInput == input) {
+          emitIfOpen(
+            state.copyWith(
+              beats: const [],
+              beatStatus: VideoEditorBeatStatus.failed,
+            ),
+          );
+        }
+        return;
+      }
+    }
+    final current = state.beatInput;
+    if (current == null || !_beatResolver.hasRead(current.parts)) return;
+    emitIfOpen(
+      state.copyWith(
+        beats: _beatResolver.beatsOnOutput(
+          current.parts,
+          current.timelineMap,
+          videoEnd: current.videoEnd,
+        ),
+        beatStatus: VideoEditorBeatStatus.ready,
+      ),
+    );
   }
 }

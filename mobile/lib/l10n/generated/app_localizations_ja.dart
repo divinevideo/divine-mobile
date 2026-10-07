@@ -8248,6 +8248,23 @@ class AppLocalizationsJa extends AppLocalizations {
       '点滅エフェクトは一度にひとつだけ。点滅が多すぎると、敏感な人の体に負担がかかることがあります。';
 
   @override
+  String get videoEditorEffectsOnBeat => 'ビートに合わせる';
+
+  @override
+  String get videoEditorEffectsOnBeatFinding => 'ビートを検出中…';
+
+  @override
+  String get videoEditorEffectsOnBeatNoBeat => 'このサウンドには一定のビートがありません';
+
+  @override
+  String get videoEditorEffectsOnBeatNoSound => '音楽を追加するか、クリップの音をオンにしてください';
+
+  @override
+  String videoEditorEffectOnBeatLabel(String effect) {
+    return '$effect（ビート）';
+  }
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => '調整エディターを開く';
 
   @override

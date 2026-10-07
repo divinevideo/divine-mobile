@@ -8772,6 +8772,24 @@ class AppLocalizationsEn extends AppLocalizations {
       'One flashing effect at a time. Too much flashing can hurt people who are sensitive to it.';
 
   @override
+  String get videoEditorEffectsOnBeat => 'On the beat';
+
+  @override
+  String get videoEditorEffectsOnBeatFinding => 'Finding the beat…';
+
+  @override
+  String get videoEditorEffectsOnBeatNoBeat => 'No steady beat in this sound';
+
+  @override
+  String get videoEditorEffectsOnBeatNoSound =>
+      'Add music or turn a clip\'s sound on';
+
+  @override
+  String videoEditorEffectOnBeatLabel(String effect) {
+    return '$effect on the beat';
+  }
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Open adjustments editor';
 
   @override

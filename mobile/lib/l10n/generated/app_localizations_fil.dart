@@ -8736,6 +8736,25 @@ class AppLocalizationsFil extends AppLocalizations {
       'Isang kumikislap na effect lang sa isang pagkakataon. Puwedeng makasama ang sobrang pagkislap sa mga taong sensitibo rito.';
 
   @override
+  String get videoEditorEffectsOnBeat => 'Sa beat';
+
+  @override
+  String get videoEditorEffectsOnBeatFinding => 'Hinahanap ang beat…';
+
+  @override
+  String get videoEditorEffectsOnBeatNoBeat =>
+      'Walang steady na beat sa sound na ito';
+
+  @override
+  String get videoEditorEffectsOnBeatNoSound =>
+      'Magdagdag ng music o i-on ang sound ng isang clip';
+
+  @override
+  String videoEditorEffectOnBeatLabel(String effect) {
+    return '$effect sa beat';
+  }
+
+  @override
   String get videoEditorOpenTuneSemanticLabel =>
       'Buksan ang editor ng pagsasaayos';
 

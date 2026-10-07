@@ -8684,6 +8684,25 @@ class AppLocalizationsMs extends AppLocalizations {
       'Satu kesan berkelip pada satu masa. Kelipan berlebihan boleh memudaratkan orang yang sensitif.';
 
   @override
+  String get videoEditorEffectsOnBeat => 'Ikut rentak';
+
+  @override
+  String get videoEditorEffectsOnBeatFinding => 'Mencari rentak…';
+
+  @override
+  String get videoEditorEffectsOnBeatNoBeat =>
+      'Tiada rentak yang tetap dalam bunyi ini';
+
+  @override
+  String get videoEditorEffectsOnBeatNoSound =>
+      'Tambah muzik atau hidupkan bunyi klip';
+
+  @override
+  String videoEditorEffectOnBeatLabel(String effect) {
+    return '$effect ikut rentak';
+  }
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Buka penyunting pelarasan';
 
   @override

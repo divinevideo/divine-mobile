@@ -8801,6 +8801,25 @@ class AppLocalizationsFr extends AppLocalizations {
       'Un seul effet clignotant à la fois. Trop de clignotements peuvent faire du mal aux personnes sensibles.';
 
   @override
+  String get videoEditorEffectsOnBeat => 'Sur le rythme';
+
+  @override
+  String get videoEditorEffectsOnBeatFinding => 'Recherche du rythme…';
+
+  @override
+  String get videoEditorEffectsOnBeatNoBeat =>
+      'Pas de rythme régulier dans ce son';
+
+  @override
+  String get videoEditorEffectsOnBeatNoSound =>
+      'Ajoute de la musique ou active le son d\'un clip';
+
+  @override
+  String videoEditorEffectOnBeatLabel(String effect) {
+    return '$effect sur le rythme';
+  }
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Ouvrir l’éditeur de réglages';
 
   @override

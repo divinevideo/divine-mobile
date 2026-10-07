@@ -8480,6 +8480,23 @@ class AppLocalizationsAm extends AppLocalizations {
       'አንድ ብልጭ ድርግም የሚል ኢፌክት በአንድ ጊዜ። ብዙ ብልጭታ ለሚነኩ ሰዎች ሊጎዳ ይችላል።';
 
   @override
+  String get videoEditorEffectsOnBeat => 'ከምቱ ጋር';
+
+  @override
+  String get videoEditorEffectsOnBeatFinding => 'ምቱን በመፈለግ ላይ…';
+
+  @override
+  String get videoEditorEffectsOnBeatNoBeat => 'በዚህ ድምፅ ውስጥ ቋሚ ምት የለም';
+
+  @override
+  String get videoEditorEffectsOnBeatNoSound => 'ሙዚቃ ያክሉ ወይም የአንድ ክሊፕ ድምፅ ያብሩ';
+
+  @override
+  String videoEditorEffectOnBeatLabel(String effect) {
+    return '$effect ከምቱ ጋር';
+  }
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'የማስተካከያ አርታዒን ክፈት';
 
   @override
