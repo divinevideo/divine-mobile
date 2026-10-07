@@ -21,6 +21,7 @@ import 'package:openvine/observability/reportable_error.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
@@ -72,6 +73,15 @@ class _FakeCacheDao implements CacheDao {
 }
 
 class _FakeSharedPreferences extends Fake implements SharedPreferences {}
+
+/// A native store that never accepts a write, as when the disk is full.
+class _RefusingPreferencesStore extends InMemorySharedPreferencesStore {
+  _RefusingPreferencesStore() : super.empty();
+
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) async =>
+      false;
+}
 
 void main() {
   group('VideoFeedBloc', () {
@@ -1549,6 +1559,72 @@ void main() {
           expect(curatedListsController.hasListener, isTrue);
           expect(feedTracker.activeSessionCount, 0);
         },
+      );
+    });
+
+    group('when the Home selection cannot be saved', () {
+      late SharedPreferences refusingPreferences;
+
+      setUp(() async {
+        final originalPlatform = SharedPreferencesStorePlatform.instance;
+        addTearDown(() {
+          SharedPreferences.setMockInitialValues({});
+          SharedPreferencesStorePlatform.instance = originalPlatform;
+        });
+        SharedPreferences.setMockInitialValues({});
+        SharedPreferencesStorePlatform.instance = _RefusingPreferencesStore();
+        refusingPreferences = await SharedPreferences.getInstance();
+
+        when(() => mockFollowRepository.followingPubkeys)
+            .thenReturn(['author']);
+        when(
+          () => mockVideosRepository.getHomeFeedVideos(
+            authors: ['author'],
+            videoRefs: any(named: 'videoRefs'),
+            userPubkey: any(named: 'userPubkey'),
+            limit: any(named: 'limit'),
+            until: any(named: 'until'),
+          ),
+        ).thenAnswer(
+          (_) async => HomeFeedResult(videos: createTestVideos(pageSize)),
+        );
+      });
+
+      VideoFeedBloc createRefusingBloc() => VideoFeedBloc(
+        videosRepository: mockVideosRepository,
+        followRepository: mockFollowRepository,
+        curatedListRepository: mockCuratedListRepository,
+        sharedPreferences: refusingPreferences,
+      );
+
+      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        'still loads the feed on start',
+        build: createRefusingBloc,
+        act: (bloc) =>
+            bloc.add(const VideoFeedStarted(mode: FeedMode.following)),
+        expect: () => [
+          const VideoFeedBlocState(mode: FeedMode.following),
+          isA<VideoFeedBlocState>()
+              .having((s) => s.status, 'status', VideoFeedStatus.success)
+              .having((s) => s.videos.length, 'videos count', pageSize),
+        ],
+      );
+
+      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        'still switches to the chosen source',
+        build: createRefusingBloc,
+        act: (bloc) =>
+            bloc.add(const VideoFeedSourceChanged(VideoFeedSource.following())),
+        expect: () => [
+          isA<VideoFeedBlocState>().having(
+            (s) => s.source.type,
+            'source',
+            VideoFeedSourceType.following,
+          ),
+          isA<VideoFeedBlocState>()
+              .having((s) => s.status, 'status', VideoFeedStatus.success)
+              .having((s) => s.videos.length, 'videos count', pageSize),
+        ],
       );
     });
 
