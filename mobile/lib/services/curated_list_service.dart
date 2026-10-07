@@ -19,7 +19,6 @@ import 'package:openvine/services/curated_lists/curated_list_recovery_journal.da
 import 'package:openvine/services/curated_lists/curated_list_recovery_storage.dart';
 import 'package:openvine/services/curated_lists/curated_list_relay_snapshot_reader.dart';
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
-import 'package:openvine/services/curated_lists/curated_list_subscription_metadata.dart';
 import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:openvine/utils/curated_list_privacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -132,7 +131,9 @@ class CuratedListService extends ChangeNotifier {
     );
     if (isCurrentSession) {
       _loadLists();
-      _subscribedListIds.addAll(_cacheStore.loadSubscriptions());
+      final subscriptions = _cacheStore.loadSubscriptionSnapshot();
+      _subscribedListIds.addAll(subscriptions.ids);
+      _hasLoadedSubscriptionIds = subscriptions.isReadable;
     }
   }
   final NostrClient _nostrService;
@@ -1407,19 +1408,6 @@ class CuratedListService extends ChangeNotifier {
         ),
       );
     _lists.forEach(_publishClock.observe);
-  }
-
-  void _loadSubscribedListIds() {
-    final snapshot = readCuratedListSubscriptionSnapshot(
-      preferences: _prefs,
-      storageKey: subscribedListsStorageKey,
-      fallback: _subscribedListIds,
-    );
-    _subscribedListIds
-      ..clear()
-      ..addAll(snapshot.ids);
-    _hasLoadedSubscriptionIds = snapshot.isReadable;
-    _cacheStore.subscriptionsLoaded(snapshot.ids);
   }
 
   /// Persist local lists before reporting success or publishing their delta.
