@@ -182,11 +182,15 @@ class _DiscoveredPeopleListLoader extends ConsumerWidget {
     final listAsync = ref.watch(
       publicPeopleListProvider(ownerPubkey: ownerPubkey, listId: listId),
     );
+    final followAction = _FollowPeopleListAction(
+      ownerPubkey: ownerPubkey,
+      listId: listId,
+    );
     return listAsync.when(
       skipLoadingOnRefresh: false,
       data: (userList) {
         if (userList == null) {
-          return _ListNotFoundView(ownerPubkey: ownerPubkey, listId: listId);
+          return _ListNotFoundView(followAction: followAction);
         }
         return _UserListPeopleView(
           userList: userList,
@@ -196,12 +200,11 @@ class _DiscoveredPeopleListLoader extends ConsumerWidget {
           ownerPubkey: ownerPubkey,
         );
       },
-      loading: () => _ListLoadingView(ownerPubkey: ownerPubkey, listId: listId),
+      loading: () => _ListLoadingView(followAction: followAction),
       // A relay failure is not "this list does not exist": keep the two
       // apart and let the viewer try again without leaving the screen.
       error: (error, stackTrace) => _ListLoadFailedView(
-        ownerPubkey: ownerPubkey,
-        listId: listId,
+        followAction: followAction,
         onRetry: () => ref.invalidate(
           publicPeopleListProvider(ownerPubkey: ownerPubkey, listId: listId),
         ),
@@ -252,10 +255,10 @@ class _MemberVideoPlayback extends ConsumerWidget {
 /// Shown while the list is still on its way: someone else's from relays,
 /// or the viewer's own before cache and the owner read have both settled.
 class _ListLoadingView extends StatelessWidget {
-  const _ListLoadingView({this.ownerPubkey, this.listId});
+  const _ListLoadingView({this.followAction});
 
-  final String? ownerPubkey;
-  final String? listId;
+  /// The viewer's follow control for someone else's list, if there is one.
+  final Widget? followAction;
 
   @override
   Widget build(BuildContext context) {
@@ -267,13 +270,7 @@ class _ListLoadingView extends StatelessWidget {
         // safePop: a cold deep link here is the only route on the stack,
         // and a raw pop would throw GoError (#6112).
         onBackPressed: context.safePop,
-        customActions: [
-          if (ownerPubkey != null && listId != null)
-            _FollowPeopleListAction(
-              ownerPubkey: ownerPubkey!,
-              listId: listId!,
-            ),
-        ],
+        customActions: [?followAction],
       ),
       body: const Center(child: BrandedLoadingIndicator(size: 60)),
     );
@@ -282,14 +279,10 @@ class _ListLoadingView extends StatelessWidget {
 
 /// Shown when a list could not be read from the relays.
 class _ListLoadFailedView extends StatelessWidget {
-  const _ListLoadFailedView({
-    required this.onRetry,
-    this.ownerPubkey,
-    this.listId,
-  });
+  const _ListLoadFailedView({required this.onRetry, this.followAction});
 
-  final String? ownerPubkey;
-  final String? listId;
+  /// The viewer's follow control for someone else's list, if there is one.
+  final Widget? followAction;
 
   final VoidCallback onRetry;
 
@@ -301,13 +294,7 @@ class _ListLoadFailedView extends StatelessWidget {
         title: context.l10n.peopleListsRouteTitle,
         showBackButton: true,
         onBackPressed: context.safePop,
-        customActions: [
-          if (ownerPubkey != null && listId != null)
-            _FollowPeopleListAction(
-              ownerPubkey: ownerPubkey!,
-              listId: listId!,
-            ),
-        ],
+        customActions: [?followAction],
       ),
       body: Center(
         child: Padding(
@@ -343,10 +330,10 @@ class _ListLoadFailedView extends StatelessWidget {
 
 /// Shown when a settled read confirms the selected [UserList] is absent.
 class _ListNotFoundView extends StatelessWidget {
-  const _ListNotFoundView({this.ownerPubkey, this.listId});
+  const _ListNotFoundView({this.followAction});
 
-  final String? ownerPubkey;
-  final String? listId;
+  /// The viewer's follow control for someone else's list, if there is one.
+  final Widget? followAction;
 
   @override
   Widget build(BuildContext context) {
@@ -356,13 +343,7 @@ class _ListNotFoundView extends StatelessWidget {
         title: context.l10n.peopleListsRouteTitle,
         showBackButton: true,
         onBackPressed: context.safePop,
-        customActions: [
-          if (ownerPubkey != null && listId != null)
-            _FollowPeopleListAction(
-              ownerPubkey: ownerPubkey!,
-              listId: listId!,
-            ),
-        ],
+        customActions: [?followAction],
       ),
       body: Center(
         child: Column(
