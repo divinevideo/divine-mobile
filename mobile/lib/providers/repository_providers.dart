@@ -313,7 +313,12 @@ CuratedListVideoFilter curatedListThumbnailFilter(Ref ref) {
   ref.onDispose(() => disposed = true);
   return (video) {
     if (disposed || videoService.shouldHideVideo(video)) return true;
-    final permitted = videos.applyContentPreferences([video]);
+    // Feed shape controls feed discovery, not the videos inside an opened list.
+    // Reuse every safety gate while matching that list's permitted previews.
+    final permitted = videos.applyContentPreferences(
+      [video],
+      includeFeedShape: false,
+    );
     // Cards carry plain URLs and cannot show the playback warning overlay.
     return permitted.isEmpty || permitted.single.warnLabels.isNotEmpty;
   };

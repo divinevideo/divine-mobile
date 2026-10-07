@@ -71,6 +71,7 @@ class _ListsState extends CuratedListsState {
 class _Fixture {
   static Future<_Fixture> open({
     bool relay = false,
+    bool squareOnly = false,
     String? hidden,
     String restThumbnail = _thumbnail,
     List<String>? relayLabels,
@@ -98,6 +99,9 @@ class _Fixture {
     fixture.host = DivineHostFilterService(prefs);
     final provenance = VideoProvenanceFilterService(prefs);
     final aspect = FeedAspectRatioPreferenceService(prefs);
+    if (squareOnly) {
+      await aspect.setPreference(FeedAspectRatioPreference.squareOnly);
+    }
     final blocks = _Blocks();
     when(() => blocks.changes).thenAnswer((_) => const Stream.empty());
     fixture.blocked = hidden == 'blocked' || hidden == 'muted';
@@ -134,6 +138,7 @@ class _Fixture {
       kind: 34236,
       dTag: 'video',
       title: 'Video',
+      dimensions: squareOnly ? '720x1280' : null,
       thumbnail: restThumbnail,
       videoUrl: 'https://example.com/video.mp4',
       reactions: 0,
@@ -163,6 +168,7 @@ class _Fixture {
             ['d', 'video'],
             ['url', 'https://example.com/video.mp4'],
             ['thumb', _thumbnail],
+            if (squareOnly) ['dim', '720x1280'],
             for (final label in relayLabels ?? labels)
               ['l', label, 'content-warning'],
           ],
@@ -185,6 +191,7 @@ class _Fixture {
       localStorage: _Storage(),
       blockFilter: blocks.shouldFilterFromFeeds,
       contentFilter: nsfw,
+      feedShapeFilter: aspect.shouldHideVideo,
       warningLabelsResolver: createNsfwWarnLabels(
         fixture.content,
         viewerPubkey: () => _viewer,
@@ -341,6 +348,55 @@ void main() {
       );
     }
     for (final relay in [false, true]) {
+      test(
+        'square-only feed keeps permitted portrait ${relay ? "relay" : "REST"} list previews',
+        () async {
+          final fixture = await _Fixture.open(relay: relay, squareOnly: true);
+          final video = fixture.stats.toVideoEvent();
+          expect(
+            fixture.container
+                .read(videosRepositoryProvider)
+                .applyContentPreferences([video]),
+            isEmpty,
+          );
+          expect(
+            fixture.container
+                .read(videoEventServiceProvider)
+                .shouldHideVideo(video),
+            isFalse,
+          );
+          expect((await fixture.read()).single.thumbnailUrls, [_thumbnail]);
+          final repository = fixture.container.read(
+            curatedListRepositoryProvider,
+          );
+          final emissions = await repository.searchAllLists('dance').toList();
+          expect(emissions, hasLength(4));
+          expect(emissions.first.single.thumbnailUrls, isEmpty);
+          for (final emission in emissions.skip(1)) {
+            expect(emission.single.thumbnailUrls, [_thumbnail]);
+          }
+        },
+      );
+      for (final label in ['nudity', 'flashing-lights']) {
+        test(
+          'square-only cards keep $label ${relay ? "relay" : "REST"} previews neutral',
+          () async {
+            final fixture = await _Fixture.open(
+              relay: relay,
+              squareOnly: true,
+              hidden: label,
+            );
+            expect((await fixture.read()).single.thumbnailUrls, isEmpty);
+            final repository = fixture.container.read(
+              curatedListRepositoryProvider,
+            );
+            for (final emission
+                in await repository.searchAllLists('dance').toList()) {
+              expect(emission.single.thumbnailUrls, isEmpty);
+            }
+          },
+        );
+      }
       test(
         'warned ${relay ? 'relay' : 'REST'} videos use neutral previews until Show',
         () async {

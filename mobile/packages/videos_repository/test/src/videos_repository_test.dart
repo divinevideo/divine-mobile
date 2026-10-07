@@ -14667,6 +14667,8 @@ void main() {
         List<String> moderationLabels = const [],
         List<String> contentWarningLabels = const [],
         List<String> warnLabels = const [],
+        String? dimensions,
+        String videoUrl = 'https://example.com/video.mp4',
       }) {
         return VideoEvent(
           id: id,
@@ -14674,12 +14676,77 @@ void main() {
           createdAt: 1704067200,
           content: '',
           timestamp: DateTime.fromMillisecondsSinceEpoch(1704067200 * 1000),
-          videoUrl: 'https://example.com/video.mp4',
+          videoUrl: videoUrl,
+          dimensions: dimensions,
           moderationLabels: moderationLabels,
           contentWarningLabels: contentWarningLabels,
           warnLabels: warnLabels,
         );
       }
+
+      test(
+        'feed shape applies by default and list opt-out '
+        'preserves every safety gate',
+        () {
+          final deletedId = 'f' * 64;
+          final unsafeId = '1' * 64;
+          final warnedId = '2' * 64;
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            blockFilter: (pubkey) => pubkey == blockedPubkey,
+            deletedFilter: (video) => video.id == deletedId,
+            contentFilter: (video) => video.moderationLabels.contains('nudity'),
+            feedShapeFilter: (video) => video.width != video.height,
+            warningLabelsResolver: (video) =>
+                video.contentWarningLabels.contains('violence')
+                ? const ['violence']
+                : const [],
+          );
+          final permitted = buildVideo(
+            id: cleanId,
+            pubkey: goodPubkey,
+            dimensions: '720x1280',
+          );
+          final blocked = buildVideo(
+            id: nsfwId,
+            pubkey: blockedPubkey,
+            dimensions: '720x1280',
+          );
+          final deleted = buildVideo(
+            id: deletedId,
+            pubkey: goodPubkey,
+            dimensions: '720x1280',
+          );
+          final hidden = buildVideo(
+            id: violenceId,
+            pubkey: goodPubkey,
+            dimensions: '720x1280',
+            moderationLabels: const ['nudity'],
+          );
+          final unsafe = buildVideo(
+            id: unsafeId,
+            pubkey: goodPubkey,
+            dimensions: '720x1280',
+            videoUrl: 'http://example.com/video.mp4',
+          );
+          final warned = buildVideo(
+            id: warnedId,
+            pubkey: goodPubkey,
+            dimensions: '720x1280',
+            contentWarningLabels: const ['violence'],
+          );
+          final input = [permitted, blocked, deleted, hidden, unsafe, warned];
+          expect(repo.applyContentPreferences(input), isEmpty);
+          final list = repo.applyContentPreferences(
+            input,
+            includeFeedShape: false,
+          );
+          expect(list.map((video) => video.id), [cleanId, warnedId]);
+          expect(list.first.warnLabels, isEmpty);
+          expect(list.last.warnLabels, ['violence']);
+          expect(repo.applyContentPreferences(input), isEmpty);
+        },
+      );
 
       test('returns videos unchanged when no filters are injected', () {
         final repo = VideosRepository(nostrClient: mockNostrClient);

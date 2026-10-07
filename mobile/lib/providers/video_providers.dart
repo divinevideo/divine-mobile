@@ -680,8 +680,8 @@ VideosRepository videosRepository(Ref ref) {
           video,
           divineHostedOnly: divineHostFilterService.showDivineHostedOnly,
           verifiedOnly: provenanceFilterService.showVerifiedOnly,
-        ) ||
-        feedAspectRatioPreference.shouldHideVideo(video),
+        ),
+    feedShapeFilter: feedAspectRatioPreference.shouldHideVideo,
     warningLabelsResolver: createNsfwWarnLabels(
       contentFilterService,
       moderationLabelService: moderationLabelService,

@@ -212,6 +212,7 @@ class VideosRepository {
     DeletedVideoFilter? deletedFilter,
     this.removedVideoIds = const Stream<String>.empty(),
     VideoContentFilter? contentFilter,
+    VideoContentFilter? feedShapeFilter,
     VideoWarningLabelsResolver? warningLabelsResolver,
     FunnelcakeApiClient? funnelcakeApiClient,
     InMemoryFeedCache? inMemoryFeedCache,
@@ -222,6 +223,7 @@ class VideosRepository {
        _blockFilter = blockFilter,
        _deletedFilter = deletedFilter,
        _contentFilter = contentFilter,
+       _feedShapeFilter = feedShapeFilter,
        _warningLabelsResolver = warningLabelsResolver,
        _funnelcakeApiClient = funnelcakeApiClient,
        _inMemoryFeedCache = inMemoryFeedCache,
@@ -237,6 +239,7 @@ class VideosRepository {
   final Stream<String> removedVideoIds;
 
   final VideoContentFilter? _contentFilter;
+  final VideoContentFilter? _feedShapeFilter;
   final VideoWarningLabelsResolver? _warningLabelsResolver;
   final FunnelcakeApiClient? _funnelcakeApiClient;
   final InMemoryFeedCache? _inMemoryFeedCache;
@@ -1977,8 +1980,14 @@ class VideosRepository {
     };
   }
 
-  VideoEvent? _applyContentPreferences(VideoEvent video) {
+  VideoEvent? _applyContentPreferences(
+    VideoEvent video, {
+    bool includeFeedShape = true,
+  }) {
     if (_contentFilter?.call(video) ?? false) return null;
+    if (includeFeedShape && (_feedShapeFilter?.call(video) ?? false)) {
+      return null;
+    }
 
     final warnLabels = _warningLabelsResolver?.call(video) ?? const <String>[];
     if (warnLabels.isEmpty) {
@@ -2028,15 +2037,25 @@ class VideosRepository {
   /// (#3836), or content filter are removed; surviving videos have their
   /// `warnLabels` rewritten to reflect the current resolver output.
   ///
+  /// [includeFeedShape] defaults to true for feeds. List cards may opt out of
+  /// that feed-only viewing preference to match the list detail; all block,
+  /// deletion, transport, content and warning policies still apply.
+  ///
   /// This is a pure, synchronous operation. It does not touch the network
   /// or local storage.
-  List<VideoEvent> applyContentPreferences(List<VideoEvent> videos) {
+  List<VideoEvent> applyContentPreferences(
+    List<VideoEvent> videos, {
+    bool includeFeedShape = true,
+  }) {
     final out = <VideoEvent>[];
     for (final video in videos) {
       if (_blockFilter?.call(video.pubkey) ?? false) continue;
       if (_deletedFilter?.call(video) ?? false) continue;
       if (!_hasAllowedTransportScheme(video)) continue;
-      final processed = _applyContentPreferences(video);
+      final processed = _applyContentPreferences(
+        video,
+        includeFeedShape: includeFeedShape,
+      );
       if (processed != null) out.add(processed);
     }
     return out;

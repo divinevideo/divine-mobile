@@ -274,7 +274,7 @@ final class CuratedListThumbnailFilterProvider
 }
 
 String _$curatedListThumbnailFilterHash() =>
-    r'f086b09e0afdca40a081f740368185891e57596a';
+    r'b6947373860c166f1c2960649c1297da5da01bd8';
 
 /// Provider for HashtagRepository instance.
 ///
