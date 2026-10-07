@@ -75,9 +75,9 @@ class CuratedListRelayGateway {
   /// without this would expose exactly what it is meant to hide.
   Future<String?> sealItemTags(CuratedList list) async {
     final ownerPubkey = currentAuthenticatedPubkey();
-    if (ownerPubkey == null || ownerPubkey.isEmpty) {
+    if (ownerPubkey == null || list.pubkey != ownerPubkey) {
       Log.warning(
-        'Cannot seal private list ${list.id} - no authenticated pubkey',
+        'Cannot seal private list ${list.id} - authenticated owner does not match',
         name: 'CuratedListRelayGateway',
         category: LogCategory.system,
       );
@@ -126,9 +126,9 @@ class CuratedListRelayGateway {
   /// Every signing/encryption continuation remains bound to the captured lease.
   Future<Event?> publishList(CuratedList list, {bool confirmed = false}) async {
     final owner = currentAuthenticatedPubkey();
-    if (owner == null) {
+    if (owner == null || list.pubkey != owner) {
       Log.warning(
-        'Cannot publish list - user not authenticated',
+        'Cannot publish list - authenticated owner does not match',
         name: 'CuratedListService',
         category: LogCategory.system,
       );
@@ -160,7 +160,7 @@ class CuratedListRelayGateway {
     );
 
     if (currentAuthenticatedPubkey() != owner) return null;
-    if (event == null) {
+    if (event == null || event.pubkey != owner) {
       Log.warning(
         'Failed to sign curated list event: ${list.name} (${list.id})',
         name: 'CuratedListService',

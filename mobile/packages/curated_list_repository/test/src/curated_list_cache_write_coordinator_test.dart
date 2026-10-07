@@ -19,6 +19,87 @@ void main() {
         );
 
     test(
+      'preflight conflict aborts before writes '
+      'and exposes acknowledged rows for reconciliation',
+      () async {
+        final writer = CuratedListCacheWriteCoordinator();
+        final local = list(null);
+        final owned = list(author, revision: 0, name: 'Acknowledged owner');
+        final claimed = local.copyWith(pubkey: author, name: 'Claimed');
+        var writes = 0;
+        final result = await writer.saveListsWithResult(
+          baseline: [local],
+          current: [claimed],
+          read: () => [local, owned],
+          preflightConflicts: (acknowledged) => {
+            if (acknowledged.any(
+              (row) => row.authorScopedId == claimed.authorScopedId,
+            ))
+              claimed.authorScopedId,
+          },
+          write: (_) async {
+            writes++;
+            return true;
+          },
+        );
+        expect(result.status, CuratedCacheWriteStatus.conflict);
+        expect(result.persisted, isNull);
+        expect(result.acknowledgedBeforeWrite, [local, owned]);
+        expect(result.nextBaseline, [local]);
+        expect(result.reconcile([claimed]), [owned, local]);
+        expect(writes, 0);
+      },
+    );
+
+    test(
+      'preflight sees a preceding writer only after its acknowledgement',
+      () async {
+        final writer = CuratedListCacheWriteCoordinator();
+        final local = list(null);
+        final owned = list(author, revision: 0);
+        final claimed = local.copyWith(pubkey: author);
+        var stored = [local];
+        final started = Completer<void>();
+        final release = Completer<void>();
+        final previous = writer.saveListsWithResult(
+          baseline: [local],
+          current: [local, owned],
+          read: () => stored,
+          write: (rows) async {
+            started.complete();
+            await release.future;
+            stored = rows;
+            return true;
+          },
+        );
+        await started.future;
+        var preflights = 0;
+        var claimWrites = 0;
+        final pending = writer.saveListsWithResult(
+          baseline: [local],
+          current: [claimed],
+          read: () => stored,
+          preflightConflicts: (acknowledged) {
+            preflights++;
+            expect(acknowledged, [local, owned]);
+            return {claimed.authorScopedId};
+          },
+          write: (_) async {
+            claimWrites++;
+            return true;
+          },
+        );
+        expect(preflights, 0);
+        release.complete();
+        expect((await previous).succeeded, isTrue);
+        expect((await pending).status, CuratedCacheWriteStatus.conflict);
+        expect(preflights, 1);
+        expect(claimWrites, 0);
+        expect(stored, [local, owned]);
+      },
+    );
+
+    test(
       'a late account snapshot preserves another account additions and edits',
       () async {
         final writer = CuratedListCacheWriteCoordinator();

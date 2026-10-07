@@ -437,24 +437,76 @@ class CuratedListService extends ChangeNotifier {
     }
   }
 
-  Future<bool> _commitListMutation(CuratedList updatedList) async {
-    if (!updatedList.isPublic &&
-        !_relayGateway.privateItemPayloadFits(updatedList)) {
+  /// Only an explicitly owned row or an unpublished local draft can change.
+  /// Remembered owners may edit offline; relay signing still requires auth.
+  bool _canMutateCachedList(CuratedList list) {
+    if (!isReadyForMutations) return false;
+    if (list.pubkey != null) {
+      final owner = _authService.currentPublicKeyHex;
+      return owner != null && owner.isNotEmpty && list.pubkey == owner;
+    }
+    return _isUnpublishedLocalList(list) &&
+        (!_authService.isAuthenticated ||
+            _relayGateway.currentAuthenticatedPubkey() != null);
+  }
+
+  /// Missing follow metadata is known empty; unreadable metadata is not proof
+  /// that an ownerless row belongs to this account. Check both legacy aliases.
+  bool _isUnpublishedLocalList(CuratedList list) {
+    if (list.pubkey != null ||
+        list.nostrEventId != null ||
+        !_hasLoadedSubscriptionIds) {
       return false;
     }
+    // A local draft keeps its null coordinate for guests. Claiming it on
+    // sign-in must not alias an already owned row, nor a duplicate local row.
+    final owner = _relayGateway.currentAuthenticatedPubkey();
+    final candidates = _lists.where(
+      (cached) =>
+          cached.id == list.id &&
+          (cached.pubkey == null || cached.pubkey == owner),
+    );
+    if (candidates.length != 1) return false;
+    final snapshot = readCuratedListSubscriptionSnapshot(
+      preferences: _prefs,
+      storageKey: subscribedListsStorageKey,
+      fallback: _subscribedListIds,
+    );
+    return snapshot.isReadable &&
+        !snapshot.ids.contains(list.id) &&
+        !snapshot.ids.contains(list.authorScopedId) &&
+        !_subscribedListIds.contains(list.id) &&
+        !_subscribedListIds.contains(list.authorScopedId) &&
+        (owner == null ||
+            _cacheStore.canClaimLocalList(list, '$owner:${list.id}'));
+  }
 
+  Future<bool> _commitListMutation(CuratedList updatedList) async {
     final listIndex = _lists.indexWhere(
       (list) => list.authorScopedId == updatedList.authorScopedId,
     );
     if (listIndex == -1) return false;
 
-    _lists[listIndex] = updatedList;
-    await _saveLists();
+    final previous = _lists[listIndex];
+    if (!_canMutateCachedList(previous)) return false;
+    if (!updatedList.isPublic &&
+        !_relayGateway.privateItemPayloadFits(updatedList)) {
+      return false;
+    }
+    final ownedUpdate = updatedList.copyWith(
+      pubkey: updatedList.pubkey ?? _relayGateway.currentAuthenticatedPubkey(),
+    );
+    _lists[listIndex] = ownedUpdate;
+    await _saveLists(
+      ownershipClaims: previous.pubkey == null && ownedUpdate.pubkey != null
+          ? {ownedUpdate.authorScopedId: previous}
+          : const {},
+    );
 
     if (_authService.isAuthenticated &&
-        !await _publishListToNostr(updatedList)) {
+        !await _publishListToNostr(ownedUpdate)) {
       final currentIndex = _lists.indexWhere(
-        (list) => list.authorScopedId == updatedList.authorScopedId,
+        (list) => list.authorScopedId == ownedUpdate.authorScopedId,
       );
       if (currentIndex != -1) {
         // Unconfirmed publishing queues network failures for reconnect. Keep
@@ -493,6 +545,7 @@ class CuratedListService extends ChangeNotifier {
       }
 
       final list = _lists[listIndex];
+      if (!_canMutateCachedList(list)) return false;
 
       // Check if video is already in the list
       if (list.videoEventIds.contains(videoEventId)) {
@@ -658,6 +711,7 @@ class CuratedListService extends ChangeNotifier {
       }
 
       final list = _lists[listIndex];
+      if (!_canMutateCachedList(list)) return false;
       final visibilityChanged = isPublic != null && isPublic != list.isPublic;
       if (visibilityChanged && !_authService.isAuthenticated) {
         Log.warning(
@@ -669,6 +723,7 @@ class CuratedListService extends ChangeNotifier {
       }
 
       final updatedList = list.copyWith(
+        pubkey: list.pubkey ?? _relayGateway.currentAuthenticatedPubkey(),
         name: name ?? list.name,
         description: description ?? list.description,
         clearDescription: description != null && description.isEmpty,
@@ -701,7 +756,11 @@ class CuratedListService extends ChangeNotifier {
       // alone stays at its old value until the relay confirms the change.
       // Written before any publish await, so [listIndex] is still valid.
       _lists[listIndex] = updatedList.copyWith(isPublic: list.isPublic);
-      await _saveLists();
+      await _saveLists(
+        ownershipClaims: list.pubkey == null && updatedList.pubkey != null
+            ? {updatedList.authorScopedId: list}
+            : const {},
+      );
 
       // Kind 30005 is addressable, so publishing under the same d-tag
       // replaces whatever the relays hold — including a public copy whose
@@ -940,6 +999,7 @@ class CuratedListService extends ChangeNotifier {
       }
 
       final list = _lists[listIndex];
+      if (!_canMutateCachedList(list)) return false;
       if (!list.isCollaborative) {
         Log.warning(
           'Cannot add collaborator - list is not collaborative',
@@ -1373,7 +1433,9 @@ class CuratedListService extends ChangeNotifier {
   }
 
   /// Persist local lists before reporting success or publishing their delta.
-  Future<void> _saveLists() async {
+  Future<void> _saveLists({
+    Map<String, CuratedList> ownershipClaims = const {},
+  }) async {
     if (!isCurrentSession) {
       throw const CuratedCacheWriteException(
         CuratedCacheWriteStatus.superseded,
@@ -1385,6 +1447,7 @@ class CuratedListService extends ChangeNotifier {
       await _cacheStore.saveListsOrThrow(
         _lists,
         isCurrent: () => _isCurrent(owner),
+        ownershipClaims: ownershipClaims,
       );
     } finally {
       if (_isCurrent(owner)) notifyListeners();
@@ -1592,9 +1655,7 @@ class CuratedListService extends ChangeNotifier {
         .where(
           (list) =>
               (list.nostrEventId == null || list.pendingRepublish) &&
-              (list.pubkey == owner ||
-                  (list.pubkey == null &&
-                      !_subscribedListIds.contains(list.id))),
+              (list.pubkey == owner || _isUnpublishedLocalList(list)),
         )
         .toList(growable: false);
     if (stranded.isEmpty) return;
@@ -1609,17 +1670,17 @@ class CuratedListService extends ChangeNotifier {
       await _serializeListOperation(list.id, () async {
         final currentOwner = _relayGateway.currentAuthenticatedPubkey();
         if (!_isCurrent(owner)) return;
-        var current = getListById(list.id);
+        var current = getListById(list.authorScopedId);
         if (current == null) return;
         if (current.nostrEventId != null && !current.pendingRepublish) return;
-        if (current.pubkey == null &&
-            !_subscribedListIds.contains(current.id)) {
+        if (_isUnpublishedLocalList(current)) {
           final currentId = current.id;
           final currentIndex = _listIndex(currentId);
           if (currentIndex == -1) return;
+          final source = current;
           current = current.copyWith(pubkey: currentOwner);
           _lists[currentIndex] = current;
-          await _saveLists();
+          await _saveLists(ownershipClaims: {current.authorScopedId: source});
         }
         if (current.pubkey != currentOwner) return;
         await _publishListToNostr(current, confirmed: true);
