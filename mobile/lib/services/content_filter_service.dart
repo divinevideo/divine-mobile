@@ -89,6 +89,13 @@ class ContentFilterService extends ChangeNotifier {
     ContentLabel.drugs,
   };
 
+  /// Age-restricted categories that stay hidden until an adult has attested and
+  /// then opted in, instead of being promoted to a warning on attestation.
+  static const Set<ContentLabel> _adultOptInCategories = {
+    ...adultCategories,
+    ContentLabel.drugs,
+  };
+
   /// Categories that Divine always filters out and does not expose as toggles.
   static const Set<ContentLabel> alwaysFilteredCategories = {
     ContentLabel.graphicMedia,
@@ -243,7 +250,7 @@ class ContentFilterService extends ChangeNotifier {
         return ContentFilterPreference.hide;
       }
       if (ageVerificationService.isAdultContentVerified) return preference;
-      if (adultCategories.contains(label) || label == ContentLabel.drugs) {
+      if (_adultOptInCategories.contains(label)) {
         return ContentFilterPreference.hide;
       }
     }
@@ -389,9 +396,7 @@ class ContentFilterService extends ChangeNotifier {
   Future<void> unlockAdultCategories() async {
     for (final label in ageRestrictedCategories) {
       if (alwaysFilteredCategories.contains(label)) continue;
-      if (adultCategories.contains(label) || label == ContentLabel.drugs) {
-        continue;
-      }
+      if (_adultOptInCategories.contains(label)) continue;
       if ((_preferences[label] ?? _defaultFor(label)) ==
           ContentFilterPreference.hide) {
         _preferences[label] = ContentFilterPreference.warn;
