@@ -329,9 +329,10 @@ Future<void> curatedListThumbnailPolicyInitialized(Ref ref) async {
 
 /// Applies a service snapshot without retaining a retired account's rows.
 ///
-/// An auth event may recreate this repository before the queued Nostr client
-/// replacement rebuilds the service provider. Both its immediate replay and
-/// loading/error transitions must exclude that retired service's cached data.
+/// Policy changes keep this repository alive. A real account/client boundary
+/// can replace its dependencies before the service provider finishes rebuilding.
+/// Both immediate replay and loading/error transitions must exclude a retired
+/// service's cached data.
 @visibleForTesting
 void syncCuratedListRepositoryBridge(
   CuratedListRepository repository,
