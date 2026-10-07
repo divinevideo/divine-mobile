@@ -159,8 +159,24 @@ class FeedModePreferenceStore {
 
   /// Writes [source] to the scoped key and clears the legacy global key for
   /// authenticated sessions.
-  Future<void> persist(VideoFeedSource source) =>
-      _lease.persist(storageValueFor(source));
+  ///
+  /// A refused native write is logged and dropped: the choice still applies for
+  /// this session, and failing to remember it must not stop the feed loading.
+  Future<void> persist(VideoFeedSource source) async {
+    try {
+      await _lease.persist(storageValueFor(source));
+      // The coordinator reports a refused native write as a StateError.
+      // ignore: avoid_catching_errors
+    } on StateError catch (error, stackTrace) {
+      Log.warning(
+        'Home could not save the selected feed source',
+        name: 'FeedModePreferenceStore',
+        category: LogCategory.storage,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
 
   Future<ProvisionalFeedModeWrite> _prepare(VideoFeedSource source) =>
       _lease.prepare(storageValueFor(source));
