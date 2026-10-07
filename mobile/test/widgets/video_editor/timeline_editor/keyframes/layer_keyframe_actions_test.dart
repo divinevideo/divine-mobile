@@ -1,6 +1,8 @@
 // ABOUTME: Tests the keyframe actions on a timeline layer: adding and removing
 // ABOUTME: the keyframe at the playhead, the keyframe sheet, and the opacity.
 
+import 'dart:math' as math;
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -797,6 +799,34 @@ void main() {
         layerKeyframeEffectAt(written(), _ms * 2500),
         defaultKeyframeEffect(LayerAnimationType.wiggle),
       );
+    });
+
+    testWidgets('keeps the strength when the picked effect is tapped again', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        _movingText(),
+        playhead: const Duration(milliseconds: 2500),
+      );
+      final wiggle = find.text(l10n(tester).videoEditorLayerAnimationWiggle);
+      await tester.tap(wiggle);
+      await tester.pumpAndSettle();
+
+      // Off a keyframe the strength slider is the only one in the sheet.
+      tester.widget<DivineSlider>(find.byType(DivineSlider))
+        ..onChanged!(20)
+        ..onChangeEnd!(20);
+      await tester.pump();
+      await tester.tap(wiggle);
+      await tester.pumpAndSettle();
+
+      final effect = layerKeyframeEffectAt(
+        editor.activeLayers.single,
+        _ms * 2500,
+      );
+      expect(effect?.type, LayerAnimationType.wiggle);
+      expect(effect?.wiggleAngle, closeTo(20 * math.pi / 180, 1e-9));
     });
 
     testWidgets('offers no effect for a detached clip', (tester) async {

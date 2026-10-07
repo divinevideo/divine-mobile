@@ -84,6 +84,8 @@ class _LayerKeyframesSheetState extends State<LayerKeyframesSheet> {
   }
 
   void _pickEffect(LayerAnimationType? type) {
+    // Tapping the effect already picked would reset its strength.
+    if (type == _effect?.type) return;
     final effect = type == null ? null : defaultKeyframeEffect(type);
     setState(() => _effect = effect);
     widget.onEffectChanged(effect);
