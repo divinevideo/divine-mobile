@@ -77,14 +77,15 @@ class ContentFilterService extends ChangeNotifier {
   };
 
   /// Categories age-gated to [ContentFilterPreference.hide] until the viewer is
-  /// age-verified. See #5303 for the gate; labels a creator applied to their
-  /// own video are exempt through [getCreatorSelfLabelPreference].
+  /// self-attested as an adult. This gate also applies to creators viewing
+  /// their own videos; protected minors cannot self-attest as adults.
   static const Set<ContentLabel> ageRestrictedCategories = {
     ...adultCategories,
     ContentLabel.alcohol,
     ContentLabel.tobacco,
     ContentLabel.profanity,
     ContentLabel.gambling,
+    ContentLabel.drugs,
   };
 
   /// Categories that Divine always filters out and does not expose as toggles.
@@ -93,7 +94,6 @@ class ContentFilterService extends ChangeNotifier {
     ContentLabel.violence,
     ContentLabel.selfHarm,
     ContentLabel.porn,
-    ContentLabel.drugs,
     ContentLabel.hate,
     ContentLabel.harassment,
     ContentLabel.aiGenerated,
@@ -108,12 +108,12 @@ class ContentFilterService extends ChangeNotifier {
     // opt in per category via Content Filters.
     ContentLabel.nudity: ContentFilterPreference.hide,
     ContentLabel.sexual: ContentFilterPreference.hide,
+    ContentLabel.drugs: ContentFilterPreference.hide,
     // Always-filtered categories are not user-configurable.
     ContentLabel.graphicMedia: ContentFilterPreference.hide,
     ContentLabel.violence: ContentFilterPreference.hide,
     ContentLabel.selfHarm: ContentFilterPreference.hide,
     ContentLabel.porn: ContentFilterPreference.hide,
-    ContentLabel.drugs: ContentFilterPreference.hide,
     ContentLabel.hate: ContentFilterPreference.hide,
     ContentLabel.harassment: ContentFilterPreference.hide,
     ContentLabel.aiGenerated: ContentFilterPreference.hide,
@@ -225,8 +225,9 @@ class ContentFilterService extends ChangeNotifier {
 
   /// Resolves a creator-applied label for the current viewer.
   ///
-  /// A self-label that hides the video for other viewers keeps it visible to
-  /// its creator behind the warning overlay instead. Labels from trusted
+  /// Age-restricted self-labels keep the age gate and the adult's chosen
+  /// preference, including hide. Other self-labels that hide the video for
+  /// other viewers keep it visible to its creator behind a warning. Trusted
   /// labelers and server-side moderation do not go through here and still hide
   /// the video for everyone.
   ContentFilterPreference getCreatorSelfLabelPreference(
@@ -234,7 +235,9 @@ class ContentFilterService extends ChangeNotifier {
     required bool isOwner,
   }) {
     final preference = getPreference(label);
-    if (isOwner && preference == ContentFilterPreference.hide) {
+    if (isOwner &&
+        preference == ContentFilterPreference.hide &&
+        !ageRestrictedCategories.contains(label)) {
       return ContentFilterPreference.warn;
     }
     return preference;
@@ -367,7 +370,8 @@ class ContentFilterService extends ChangeNotifier {
   /// content stays hidden until the user opts in per category via Content
   /// Filters.
   ///
-  /// Non-adult age-restricted categories (alcohol, tobacco, profanity,
+  /// Drug use also stays hidden until the adult explicitly opts in.
+  /// Other age-restricted categories (alcohol, tobacco, profanity,
   /// gambling) still at [ContentFilterPreference.hide] are promoted to
   /// [ContentFilterPreference.warn]. Categories the user has already
   /// explicitly changed to [warn] or [show] are left untouched, so this
@@ -375,7 +379,9 @@ class ContentFilterService extends ChangeNotifier {
   Future<void> unlockAdultCategories() async {
     for (final label in ageRestrictedCategories) {
       if (alwaysFilteredCategories.contains(label)) continue;
-      if (adultCategories.contains(label)) continue;
+      if (adultCategories.contains(label) || label == ContentLabel.drugs) {
+        continue;
+      }
       if ((_preferences[label] ?? _defaultFor(label)) ==
           ContentFilterPreference.hide) {
         _preferences[label] = ContentFilterPreference.warn;

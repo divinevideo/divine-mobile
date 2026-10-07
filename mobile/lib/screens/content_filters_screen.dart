@@ -54,6 +54,7 @@ class ContentFiltersView extends StatelessWidget {
   static const List<ContentLabel> _substanceLabels = [
     ContentLabel.alcohol,
     ContentLabel.tobacco,
+    ContentLabel.drugs,
   ];
 
   static const List<ContentLabel> _otherLabels = [

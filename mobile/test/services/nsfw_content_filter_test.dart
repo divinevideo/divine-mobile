@@ -128,7 +128,9 @@ void main() {
     });
 
     group('with default preferences', () {
-      test('keeps owner profanity behind a warning during cache restore', () {
+      test('keeps adult owner profanity behind a warning during cache '
+          'restore', () async {
+        await ageService.setAdultContentVerified(true);
         final filter = createNsfwFilter(
           contentFilterService,
           moderationLabelService: moderationLabelService,
@@ -147,8 +149,8 @@ void main() {
         expect(resolver(cached), ['profanity']);
       });
 
-      test('keeps owner adult and always-filtered self-labels behind a '
-          'warning', () {
+      test('keeps owner age-restricted self-labels hidden before adult '
+          'self-attestation', () {
         final filter = createNsfwFilter(
           contentFilterService,
           moderationLabelService: moderationLabelService,
@@ -160,11 +162,17 @@ void main() {
           viewerPubkey: () => _testPubkey,
         );
 
-        for (final label in ['nudity', 'violence', 'drugs']) {
+        for (final label in [
+          'nudity',
+          'sexual',
+          'porn',
+          'profanity',
+          'drugs',
+        ]) {
           final video = _createVideo(contentWarningLabels: [label]);
 
-          expect(filter(video), isFalse, reason: '$label hid an own video');
-          expect(resolver(video), [label]);
+          expect(filter(video), isTrue, reason: '$label bypassed the age gate');
+          expect(resolver(video), isEmpty);
         }
       });
 
@@ -316,8 +324,8 @@ void main() {
         expect(filter(video), isFalse);
       });
 
-      test('keeps an own video behind a warning when only the creator applied '
-          'an unrecognized label', () {
+      test('keeps an own video hidden before adult self-attestation when '
+          'only the creator applied an unrecognized label', () {
         final filter = createNsfwFilter(
           contentFilterService,
           moderationLabelService: moderationLabelService,
@@ -332,8 +340,8 @@ void main() {
           contentWarningLabels: ['some-unknown-label'],
         );
 
-        expect(filter(video), isFalse);
-        expect(resolver(video), ['nudity']);
+        expect(filter(video), isTrue);
+        expect(resolver(video), isEmpty);
       });
 
       test('still hides an own video when only a trusted labeler applied an '

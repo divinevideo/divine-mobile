@@ -319,17 +319,11 @@ void main() {
         await service.initialize();
       });
 
-      test('warns the owner instead of hiding age-gated and always-filtered '
-          'labels', () {
+      test('keeps age-restricted owner labels hidden before adult '
+          'self-attestation', () {
         expect(ageService.isAdultContentVerified, isFalse);
 
-        for (final label in [
-          ContentLabel.nudity,
-          ContentLabel.porn,
-          ContentLabel.alcohol,
-          ContentLabel.drugs,
-          ContentLabel.violence,
-        ]) {
+        for (final label in ContentFilterService.ageRestrictedCategories) {
           expect(
             service.getPreference(label),
             equals(ContentFilterPreference.hide),
@@ -337,10 +331,94 @@ void main() {
           );
           expect(
             service.getCreatorSelfLabelPreference(label, isOwner: true),
-            equals(ContentFilterPreference.warn),
-            reason: '$label hid an own video',
+            equals(ContentFilterPreference.hide),
+            reason: '$label bypassed the age gate for an own video',
           );
         }
+      });
+
+      test('keeps every age-restricted owner label hidden for a protected '
+          'minor even with stored adult self-attestation', () async {
+        SharedPreferences.setMockInitialValues({
+          'adult_content_verified_$_testPubkey': true,
+        });
+        final minorAgeService = AgeVerificationService(
+          preferences: await SharedPreferences.getInstance(),
+          currentPubkeyHex: () => _testPubkey,
+          isProtectedMinor: () => true,
+        );
+        final minorFilter = ContentFilterService(
+          ageVerificationService: minorAgeService,
+        );
+        await minorAgeService.initialize();
+        await minorFilter.initialize();
+
+        expect(minorAgeService.isAdultContentVerified, isFalse);
+        for (final label in ContentFilterService.ageRestrictedCategories) {
+          expect(
+            minorFilter.getCreatorSelfLabelPreference(label, isOwner: true),
+            ContentFilterPreference.hide,
+            reason: '$label bypassed the protected-minor restriction',
+          );
+        }
+      });
+
+      test('adult owner choices remain hide, warn or show for every '
+          'configurable age-restricted category', () async {
+        await ageService.setAdultContentVerified(true);
+        for (final label in ContentFilterService.ageRestrictedCategories) {
+          if (ContentFilterService.alwaysFilteredCategories.contains(label)) {
+            continue;
+          }
+          for (final preference in ContentFilterPreference.values) {
+            await service.setPreference(label, preference);
+            expect(
+              service.getCreatorSelfLabelPreference(label, isOwner: true),
+              preference,
+              reason: '$label ignored the adult owner preference',
+            );
+          }
+        }
+      });
+
+      test('keeps non-age-restricted owner self-labels behind a warning', () {
+        expect(
+          service.getCreatorSelfLabelPreference(
+            ContentLabel.violence,
+            isOwner: true,
+          ),
+          ContentFilterPreference.warn,
+        );
+      });
+
+      test('drug use is hidden until an adult explicitly chooses a '
+          'preference', () async {
+        expect(
+          service.getPreference(ContentLabel.drugs),
+          ContentFilterPreference.hide,
+        );
+        await ageService.setAdultContentVerified(true);
+        await service.unlockAdultCategories();
+        expect(
+          service.getPreference(ContentLabel.drugs),
+          ContentFilterPreference.hide,
+        );
+        for (final preference in ContentFilterPreference.values) {
+          await service.setPreference(ContentLabel.drugs, preference);
+          expect(service.getPreference(ContentLabel.drugs), preference);
+          expect(
+            service.getCreatorSelfLabelPreference(
+              ContentLabel.drugs,
+              isOwner: true,
+            ),
+            preference,
+          );
+        }
+        await ageService.setAdultContentVerified(false);
+        expect(
+          service.getPreference(ContentLabel.drugs),
+          ContentFilterPreference.hide,
+        );
       });
 
       test('keeps hiding the same labels for every other viewer', () {
@@ -862,7 +940,7 @@ void main() {
         () async {
           SharedPreferences.setMockInitialValues({
             'content_filter_prefs':
-                '{"drugs":"show","violence":"warn","ai-generated":"show",'
+                '{"violence":"warn","ai-generated":"show",'
                 '"porn":"show"}',
           });
 
@@ -872,7 +950,6 @@ void main() {
           await migrationService.initialize();
 
           for (final label in [
-            ContentLabel.drugs,
             ContentLabel.violence,
             ContentLabel.aiGenerated,
             ContentLabel.porn,
@@ -891,7 +968,6 @@ void main() {
           final persisted = jsonDecode(
             prefs.getString('content_filter_prefs')!,
           ) as Map<String, dynamic>;
-          expect(persisted['drugs'], equals('hide'));
           expect(persisted['violence'], equals('hide'));
           expect(persisted['ai-generated'], equals('hide'));
           expect(persisted['porn'], equals('hide'));

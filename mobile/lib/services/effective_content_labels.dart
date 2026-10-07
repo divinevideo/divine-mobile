@@ -20,8 +20,8 @@ bool contentOwnerMatches(String authorPubkey, String? viewerPubkey) =>
 
 /// Applies content preferences without losing label provenance.
 ///
-/// A creator-applied label never hides the creator's own video; it shows
-/// behind a warning instead (see
+/// Creator-applied labels preserve age restrictions and adult preferences;
+/// other hidden self-labels become warnings for the creator (see
 /// [ContentFilterService.getCreatorSelfLabelPreference]). Trusted and
 /// server-applied moderation labels remain hide-capable for every viewer.
 EffectiveContentFilterDecision resolveEffectiveContentFilterDecision({

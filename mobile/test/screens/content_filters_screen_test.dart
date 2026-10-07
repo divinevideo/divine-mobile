@@ -77,7 +77,6 @@ void main() {
       expect(find.text(l10n.contentLabelGraphicMedia), findsNothing);
       expect(find.text(l10n.contentLabelViolence), findsNothing);
       expect(find.text(l10n.contentLabelSelfHarm), findsNothing);
-      expect(find.text(l10n.contentLabelDrugUse), findsNothing);
       expect(find.text(l10n.contentLabelHateSpeech), findsNothing);
       expect(find.text(l10n.contentLabelHarassment), findsNothing);
       expect(find.text(l10n.contentLabelAiGenerated), findsNothing);
@@ -95,6 +94,7 @@ void main() {
       final l10n = l10nOf(tester);
       expect(find.text(l10n.contentLabelAlcohol), findsOneWidget);
       expect(find.text(l10n.contentLabelTobacco), findsOneWidget);
+      expect(find.text(l10n.contentLabelDrugUse), findsOneWidget);
 
       await tester.scrollUntilVisible(find.text(l10n.contentLabelGambling), 80);
       await tester.pumpAndSettle();
@@ -118,7 +118,7 @@ void main() {
     });
 
     testWidgets(
-      'locks alcohol tobacco profanity and gambling when not verified',
+      'locks alcohol tobacco drug use profanity and gambling when not verified',
       (tester) async {
         when(
           () => filterService.getPreference(ContentLabel.alcohol),
@@ -149,6 +149,7 @@ void main() {
 
         await tapShowFor(ContentLabel.alcohol);
         await tapShowFor(ContentLabel.tobacco);
+        await tapShowFor(ContentLabel.drugs);
         await tapShowFor(ContentLabel.profanity);
         await tapShowFor(ContentLabel.gambling);
 
@@ -181,6 +182,29 @@ void main() {
 
       verify(
         () => filterService.setPreference(any(), ContentFilterPreference.warn),
+      ).called(1);
+    });
+
+    testWidgets('adult can choose the drug-use preference', (tester) async {
+      when(() => ageService.isAdultContentVerified).thenReturn(true);
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+
+      final row = find.byKey(const ValueKey('content-filter-drugs'));
+      await scrollUntilTappable(tester, row, 80);
+      await tester.tap(
+        find.descendant(
+          of: row,
+          matching: find.text(l10nOf(tester).contentFiltersWarn),
+        ),
+      );
+      await tester.pump();
+
+      verify(
+        () => filterService.setPreference(
+          ContentLabel.drugs,
+          ContentFilterPreference.warn,
+        ),
       ).called(1);
     });
 
