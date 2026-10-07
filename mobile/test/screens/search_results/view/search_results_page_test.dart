@@ -42,7 +42,6 @@ final _profileRepositoryAvailable = StateProvider<bool>((ref) => false);
 final _videosRepositorySelection = StateProvider<int>((ref) => 0);
 final _curatedRepositorySelection = StateProvider<int>((ref) => 0);
 final _profileReadinessSelection = StateProvider<int>((ref) => 0);
-final _thumbnailPolicySelection = StateProvider<int>((ref) => 0);
 
 void main() {
   setUpAll(() {
@@ -284,6 +283,8 @@ void main() {
     testWidgets(
       'current list policy refreshes search without replacing the repository',
       (tester) async {
+        final original = StreamController<List<CuratedList>>.broadcast();
+        addTearDown(original.close);
         final pending = StreamController<List<CuratedList>>.broadcast();
         addTearDown(pending.close);
         final row = CuratedList(
@@ -297,7 +298,7 @@ void main() {
         );
         var policyChanged = false;
         when(() => mockCuratedListRepository.searchAllLists(any())).thenAnswer(
-          (_) => policyChanged ? pending.stream : Stream.value([row]),
+          (_) => policyChanged ? pending.stream : original.stream,
         );
         when(
           () => mockVideosRepository.searchVideos(
@@ -326,7 +327,7 @@ void main() {
           createTestWidget(
             listThumbnailPolicyOverride: curatedListThumbnailFilterProvider
                 .overrideWith((ref) {
-                  final generation = ref.watch(_thumbnailPolicySelection);
+                  final generation = ref.watch(blocklistVersionProvider);
                   return (_) => generation != 0;
                 }),
           ),
@@ -336,7 +337,15 @@ void main() {
         await tester.runAsync(() async {});
         await tester.pump();
         var context = tester.element(find.byType(SearchResultsView));
+        original.add([row]);
+        await tester.pump();
         final oldBloc = BlocProvider.of<ListSearchBloc>(context);
+        final oldVideoBloc = BlocProvider.of<VideoSearchBloc>(context);
+        await tester.showKeyboard(find.byType(TextField));
+        final editable = tester.state<EditableTextState>(
+          find.byType(EditableText),
+        );
+        expect(editable.widget.focusNode.hasFocus, isTrue);
         final category = BlocProvider.of<SearchResultsFilterCubit>(context);
         category.filterChanged(SearchResultsFilter.lists);
         await tester.pump();
@@ -348,16 +357,25 @@ void main() {
           tester.element(find.byType(SearchResultsPage)),
         );
         policyChanged = true;
-        container.read(_thumbnailPolicySelection.notifier).state = 1;
+        container.read(blocklistVersionProvider.notifier).increment();
         await tester.pump();
         context = tester.element(find.byType(SearchResultsView));
         final current = BlocProvider.of<ListSearchBloc>(context);
+        expect(
+          tester.state<EditableTextState>(find.byType(EditableText)),
+          same(editable),
+        );
+        expect(editable.widget.focusNode.hasFocus, isTrue);
+        expect(BlocProvider.of<VideoSearchBloc>(context), same(oldVideoBloc));
         expect(current, isNot(same(oldBloc)));
         expect(oldBloc.isClosed, isTrue);
         expect(
           container.read(curatedListRepositoryProvider),
           same(mockCuratedListRepository),
         );
+        expect(current.state.videoResults, isEmpty);
+        original.add([row]);
+        await tester.pump();
         expect(current.state.videoResults, isEmpty);
         expect(
           BlocProvider.of<SearchResultsFilterCubit>(context),

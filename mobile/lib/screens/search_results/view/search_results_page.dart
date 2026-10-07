@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +15,7 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/search_results/view/search_results_view.dart';
 import 'package:openvine/screens/search_results/widgets/search_results_app_bar.dart';
+import 'package:people_lists_repository/people_lists_repository.dart';
 
 /// Page that creates and wires the search BLoCs, then renders
 /// [SearchResultsView].
@@ -145,7 +149,6 @@ class _SearchResultsScope extends ConsumerWidget {
         videosRepository,
         hashtagRepository,
         curatedListRepository,
-        listThumbnailPolicy,
         peopleListsRepository,
         peopleListSearchEnabled,
       )),
@@ -163,28 +166,91 @@ class _SearchResultsScope extends ConsumerWidget {
             hashtagRepository: hashtagRepository,
           ),
         ),
-        BlocProvider(
-          create: (_) => ListSearchBloc(
-            curatedListRepository: curatedListRepository,
-            peopleListsRepository: peopleListsRepository,
-            peopleListSearchEnabled: peopleListSearchEnabled,
-          ),
-        ),
       ],
-      child: _BlocklistRefreshListener(
-        child: Scaffold(
-          // bg/surface — matches SearchResultsView's body background so the
-          // app bar area (which doesn't paint its own background) doesn't
-          // show through to the root scaffold's darker default.
-          backgroundColor: context.vineColors.surface,
-          body: _SearchResultsBody(
-            controller: controller,
-            requestFocusOnMount: requestFocusOnMount,
+      child: _ListSearchPolicyScope(
+        repository: curatedListRepository,
+        peopleRepository: peopleListsRepository,
+        peopleListSearchEnabled: peopleListSearchEnabled,
+        policy: listThumbnailPolicy,
+        controller: controller,
+        child: _BlocklistRefreshListener(
+          child: Scaffold(
+            // bg/surface — matches SearchResultsView's body background so the
+            // app bar area (which doesn't paint its own background) doesn't
+            // show through to the root scaffold's darker default.
+            backgroundColor: context.vineColors.surface,
+            body: _SearchResultsBody(
+              controller: controller,
+              requestFocusOnMount: requestFocusOnMount,
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+/// Retires stale preview work without remounting the field or other searches.
+/// The outer repository scope still owns account/dependency replacements.
+class _ListSearchPolicyScope extends StatefulWidget {
+  const _ListSearchPolicyScope({
+    required this.repository,
+    required this.peopleRepository,
+    required this.peopleListSearchEnabled,
+    required this.policy,
+    required this.controller,
+    required this.child,
+  });
+
+  final CuratedListRepository repository;
+  final PeopleListsRepository peopleRepository;
+  final bool peopleListSearchEnabled;
+  final Object policy;
+  final TextEditingController controller;
+  final Widget child;
+
+  @override
+  State<_ListSearchPolicyScope> createState() => _ListSearchPolicyScopeState();
+}
+
+class _ListSearchPolicyScopeState extends State<_ListSearchPolicyScope> {
+  late ListSearchBloc _bloc;
+
+  ListSearchBloc _createBloc() => ListSearchBloc(
+    curatedListRepository: widget.repository,
+    peopleListsRepository: widget.peopleRepository,
+    peopleListSearchEnabled: widget.peopleListSearchEnabled,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _bloc = _createBloc();
+  }
+
+  @override
+  void didUpdateWidget(_ListSearchPolicyScope oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.policy, widget.policy)) {
+      // Closing cancels the old emitter/streams; a separate refresh event
+      // would leave work in the query event's restartable bucket alive.
+      unawaited(_bloc.close());
+      _bloc = _createBloc()
+        ..add(ListSearchQueryChanged(widget.controller.text));
+    }
+  }
+
+  @override
+  void dispose() {
+    unawaited(_bloc.close());
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => BlocProvider.value(
+    value: _bloc,
+    child: widget.child,
+  );
 }
 
 /// Re-runs the active searches when the blocklist changes, so an author
@@ -201,13 +267,18 @@ class _BlocklistRefreshListener extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final listPolicy = ref.read(curatedListThumbnailFilterProvider);
     ref.listen<int>(blocklistVersionProvider, (previous, next) {
       if (previous == next) return;
       context.read<VideoSearchBloc>().add(const VideoSearchBlocklistChanged());
       context.read<HashtagSearchBloc>().add(
         const HashtagSearchBlocklistChanged(),
       );
-      context.read<ListSearchBloc>().add(const ListSearchBlocklistChanged());
+      // A policy replacement already retires and reseeds the list search.
+      // Only refresh it here when its policy identity did not change.
+      if (identical(listPolicy, ref.read(curatedListThumbnailFilterProvider))) {
+        context.read<ListSearchBloc>().add(const ListSearchBlocklistChanged());
+      }
       // UserSearchBloc has no same-query guard (see its _onQueryChanged),
       // so re-dispatching the current query re-runs the search as-is.
       final userQuery = context.read<UserSearchBloc>().state.query;
