@@ -20,10 +20,13 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/explore/tabs/explore_lists_tab.dart';
+import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
+import 'package:riverpod/misc.dart' show Override;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'dart:async';
 
@@ -107,6 +110,13 @@ PeopleListSearchResult _peopleList(String id) => PeopleListSearchResult(
     updatedAt: DateTime(2026),
   ),
 );
+
+// Gallery lifecycle cases inject repositories that own their preview policy.
+// Keep that policy stable unless the case explicitly changes it.
+List<Override> _galleryTestOverrides() => [
+  ...getStandardTestOverrides(),
+  curatedListThumbnailFilterProvider.overrideWithValue((_) => false),
+];
 
 void main() {
   group('ExploreListsTab preserved creation controls', () {
@@ -262,7 +272,7 @@ void main() {
           await tester.pumpWidget(
             ProviderScope(
               overrides: [
-                ...getStandardTestOverrides(),
+                ..._galleryTestOverrides(),
                 curatedListsStateProvider.overrideWith(
                   () => _TestCuratedListsState(service),
                 ),
@@ -314,6 +324,139 @@ void main() {
       }
     }
 
+    for (final policy in ['content', 'adult verification', 'provenance']) {
+      for (final initiallyPending in [false, true]) {
+        testWidgets(
+          '$policy change retires ${initiallyPending ? "pending" : "rendered"} video previews with stable repositories',
+          (tester) async {
+            SharedPreferences.setMockInitialValues({});
+            final preferences = await SharedPreferences.getInstance();
+            final age = AgeVerificationService(preferences: preferences);
+            await age.initialize();
+            final service = _MockCuratedListService();
+            final videos = _MockCuratedListRepository();
+            final people = _MockPeopleListsRepository();
+            final pending = Completer<List<CuratedList>>();
+            var permitted = true;
+            var requests = 0;
+            final initialList = _videoList('policy-list').copyWith(
+              videoEventIds: [_author],
+              thumbnailUrls: const ['https://media.divine.video/allowed.jpg'],
+            );
+            when(
+              () => service.streamPublicListsFromRelays(
+                limit: any(named: 'limit'),
+              ),
+            ).thenAnswer((_) => Stream.value([initialList]));
+            when(
+              () => videos.resolveListThumbnails(
+                any(),
+                maxThumbnails: any(named: 'maxThumbnails'),
+              ),
+            ).thenAnswer((_) async {
+              requests++;
+              if (initiallyPending && requests == 1) return pending.future;
+              return [
+                initialList.copyWith(
+                  thumbnailUrls: permitted ? initialList.thumbnailUrls : [],
+                ),
+              ];
+            });
+            when(
+              () => people.discoverPublicLists(
+                limit: any(named: 'limit'),
+                excludeAuthor: any(named: 'excludeAuthor'),
+              ),
+            ).thenAnswer((_) async => const []);
+            await tester.pumpWidget(
+              ProviderScope(
+                overrides: [
+                  ...getStandardTestOverrides(),
+                  ageVerificationServiceProvider.overrideWithValue(age),
+                  curatedListsStateProvider.overrideWith(
+                    () => _TestCuratedListsState(service),
+                  ),
+                  curatedListRepositoryProvider.overrideWithValue(videos),
+                  peopleListsRepositoryProvider.overrideWithValue(people),
+                  listsDiscoveryBlockFilterProvider.overrideWithValue(
+                    (_) => false,
+                  ),
+                  curatedListThumbnailFilterProvider.overrideWith((ref) {
+                    final version = switch (policy) {
+                      'content' => ref.watch(contentFilterVersionProvider),
+                      'adult verification' => ref.watch(
+                        adultContentVerificationVersionProvider,
+                      ),
+                      _ => ref.watch(videoProvenanceFilterVersionProvider),
+                    };
+                    return (_) => version != 0;
+                  }),
+                ],
+                child: const MaterialApp(
+                  localizationsDelegates: appLocalizationsDelegates,
+                  supportedLocales: AppLocalizations.supportedLocales,
+                  home: Scaffold(body: ExploreListsTab()),
+                ),
+              ),
+            );
+            await tester.pump();
+            await tester.runAsync(pumpEventQueue);
+            await tester.pump();
+            final view = tester.element(find.byType(ExploreListsView));
+            final oldCubit = view.read<ListsDiscoveryCubit>();
+            expect(oldCubit.isClosed, isFalse);
+            expect(requests, 1);
+            if (!initiallyPending) {
+              expect(
+                oldCubit.state.videoLists.single.thumbnailUrls,
+                initialList.thumbnailUrls,
+              );
+            }
+            final container = ProviderScope.containerOf(view);
+            permitted = false;
+            switch (policy) {
+              case 'content':
+                container
+                    .read(contentFilterVersionProvider.notifier)
+                    .increment();
+              case 'adult verification':
+                container
+                    .read(adultContentVerificationVersionProvider.notifier)
+                    .increment();
+              default:
+                container
+                    .read(videoProvenanceFilterVersionProvider.notifier)
+                    .increment();
+            }
+            await tester.pump();
+            await tester.runAsync(pumpEventQueue);
+            await tester.pump();
+            expect(oldCubit.isClosed, isTrue);
+            final freshCubit = tester
+                .element(find.byType(ExploreListsView))
+                .read<ListsDiscoveryCubit>();
+            expect(freshCubit, isNot(same(oldCubit)));
+            expect(freshCubit.state.videoLists.single.thumbnailUrls, isEmpty);
+            expect(find.text('Video policy-list'), findsOneWidget);
+            expect(requests, 2);
+            if (initiallyPending) {
+              pending.complete([initialList]);
+              await tester.pump();
+              await tester.runAsync(pumpEventQueue);
+              await tester.pump();
+              expect(freshCubit.state.videoLists.single.thumbnailUrls, isEmpty);
+            }
+            expect(tester.takeException(), isNull);
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pump();
+            await tester.runAsync(pumpEventQueue);
+            await tester.pump();
+            expect(freshCubit.isClosed, isTrue);
+          },
+        );
+      }
+    }
+
     testWidgets('runtime master change retires pending people discovery', (
       tester,
     ) async {
@@ -332,7 +475,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            ...getStandardTestOverrides(),
+            ..._galleryTestOverrides(),
             curatedListsStateProvider.overrideWith(
               () => _TestCuratedListsState(service),
             ),
@@ -391,7 +534,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
-              ...getStandardTestOverrides(),
+              ..._galleryTestOverrides(),
               curatedListsStateProvider.overrideWith(
                 () => _TestCuratedListsState(service),
               ),
@@ -454,7 +597,7 @@ void main() {
           ProviderScope(
             retry: (_, _) => null,
             overrides: [
-              ...getStandardTestOverrides(),
+              ..._galleryTestOverrides(),
               curatedListsStateProvider.overrideWith(
                 () => _RecoveringCuratedListsState(
                   service,
@@ -503,7 +646,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            ...getStandardTestOverrides(),
+            ..._galleryTestOverrides(),
             curatedListsStateProvider.overrideWith(
               () => _TestCuratedListsState(service),
             ),

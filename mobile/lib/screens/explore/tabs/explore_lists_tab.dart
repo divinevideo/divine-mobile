@@ -59,6 +59,7 @@ class _ExploreListsTabState extends ConsumerState<ExploreListsTab>
     final curatedState = ref.watch(curatedListsStateProvider);
     final service = ref.watch(curatedListsStateProvider.notifier).service;
     final curatedRepository = ref.watch(curatedListRepositoryProvider);
+    final thumbnailPolicy = ref.watch(curatedListThumbnailFilterProvider);
     final peopleRepository = ref.watch(peopleListsRepositoryProvider);
     final peopleListsEnabled = ref.watch(
       isFeatureEnabledProvider(FeatureFlag.curatedLists),
@@ -79,6 +80,7 @@ class _ExploreListsTabState extends ConsumerState<ExploreListsTab>
       key: ValueKey((
         service,
         curatedRepository,
+        thumbnailPolicy,
         peopleRepository,
         viewerPubkey,
         peopleListsEnabled,
