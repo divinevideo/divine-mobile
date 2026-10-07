@@ -242,12 +242,19 @@ void main() {
             ).thenAnswer((_) => Completer<List<Event>>().future);
 
             Object? caught;
-            repository
-                .communityLabelsForVideo(video)
-                .then<void>((_) {})
-                .catchError((Object e) {
-                  caught = e;
-                });
+            // Keep this request running while fake time advances to exercise
+            // the repository's timeout; the handler records its expected
+            // degraded result below.
+            unawaited(
+              repository
+                  .communityLabelsForVideo(video)
+                  .then<void>(
+                    (_) {},
+                    onError: (Object error) {
+                      caught = error;
+                    },
+                  ),
+            );
 
             async
               ..elapse(
