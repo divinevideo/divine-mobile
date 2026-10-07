@@ -29,7 +29,8 @@ enum PushRegistrationResult {
   /// A relay may have stored the event but did not confirm it.
   uncertainFailure,
 
-  /// A prerequisite failed or the relay rejected the event; do not retry.
+  /// The session/configuration is invalid, an interactive signer failed, or
+  /// the relay rejected the event; do not retry.
   terminalFailure,
 }
 
@@ -124,23 +125,25 @@ class PushNotificationService {
       token = await _getToken();
     } on Object catch (error) {
       Log.warning(
-        'FCM token is unavailable - skipping push notification registration: '
+        'FCM token is unavailable for push notification registration: '
         '$error',
         name: 'PushNotificationService',
         category: LogCategory.system,
       );
-      return PushRegistrationResult.terminalFailure;
+      return error is Exception
+          ? PushRegistrationResult.retryableFailure
+          : PushRegistrationResult.terminalFailure;
     }
     if (!await _isPublishCurrent(isCurrent)) {
       return PushRegistrationResult.terminalFailure;
     }
     if (token == null) {
       Log.warning(
-        'FCM token is null — skipping push notification registration',
+        'FCM token is not ready — will retry push notification registration',
         name: 'PushNotificationService',
         category: LogCategory.system,
       );
-      return PushRegistrationResult.terminalFailure;
+      return PushRegistrationResult.retryableFailure;
     }
 
     return _publishRegistration(token, pushServicePubkey, isCurrent: isCurrent);
@@ -380,10 +383,20 @@ class PushNotificationService {
       'timezoneOffsetMinutes': _timeZoneOffsetMinutes(),
     });
 
-    final encrypted = await _nostrClient.signer.nip44Encrypt(
-      pushServicePubkey,
-      plaintext,
-    );
+    String? encrypted;
+    try {
+      encrypted = await _nostrClient.signer.nip44Encrypt(
+        pushServicePubkey,
+        plaintext,
+      );
+    } on Exception catch (error) {
+      Log.warning(
+        'Push registration encryption unavailable (${error.runtimeType})',
+        name: 'PushNotificationService',
+        category: LogCategory.system,
+      );
+      return _signerUnavailableResult();
+    }
     if (!await _isPublishCurrent(isCurrent)) {
       return PushRegistrationResult.terminalFailure;
     }
@@ -394,7 +407,7 @@ class PushNotificationService {
         name: 'PushNotificationService',
         category: LogCategory.system,
       );
-      return PushRegistrationResult.terminalFailure;
+      return _signerUnavailableResult();
     }
 
     final expirationTimestamp =
@@ -422,7 +435,7 @@ class PushNotificationService {
         name: 'PushNotificationService',
         category: LogCategory.system,
       );
-      return PushRegistrationResult.terminalFailure;
+      return _signerUnavailableResult();
     }
 
     final outcome = await _publishPushControlEvent(event, 'registration');
@@ -439,6 +452,18 @@ class PushNotificationService {
     // to a relay. The named relay lands in unreachableTargets, so the outcome
     // is not literally empty.
     return PushRegistrationResult.retryableFailure;
+  }
+
+  PushRegistrationResult _signerUnavailableResult() {
+    final identity = _authService.currentIdentity;
+    // Retry silent local/Keycast recovery, including an offline OAuth restore.
+    // External signers can require approval: never repeatedly prompt on denial.
+    if (identity is PubkeyOnlyNostrIdentity ||
+        (identity?.signsWithLocalKey ?? false) ||
+        (identity?.signsRemotelyNonInteractive ?? false)) {
+      return PushRegistrationResult.retryableFailure;
+    }
+    return PushRegistrationResult.terminalFailure;
   }
 
   Future<PublishOutcome> _publishPushControlEvent(

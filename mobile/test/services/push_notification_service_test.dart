@@ -249,11 +249,11 @@ void main() {
         service.dispose();
       });
 
-      test('does nothing when FCM token is null', () async {
+      test('returns retryable failure when FCM token is not ready', () async {
         final service = buildService(token: null);
         expect(
           await service.register(testPubkey),
-          PushRegistrationResult.terminalFailure,
+          PushRegistrationResult.retryableFailure,
         );
 
         verifyNever(() => mockNostrSigner.nip44Encrypt(any(), any()));
