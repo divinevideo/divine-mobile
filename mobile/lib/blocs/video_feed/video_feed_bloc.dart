@@ -1216,7 +1216,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
           listId: source.listId!,
         );
       } else {
-        await _modePreferences.persist(fallback);
+        await _persistPeopleListFallback(fallback);
       }
       if (emit.isDone ||
           state.source != source ||
@@ -1232,6 +1232,25 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       return;
     }
     emit(updated);
+  }
+
+  /// Saves the automatic fall back to [fallback].
+  ///
+  /// A write that fails does not stop the fallback: the feed still has to leave
+  /// a list that is no longer followed, and the next start repairs what is
+  /// stored.
+  Future<void> _persistPeopleListFallback(VideoFeedSource fallback) async {
+    try {
+      await _modePreferences.persist(fallback);
+    } on Object catch (error, stackTrace) {
+      Log.warning(
+        'VideoFeedBloc: could not save the fall back from an unfollowed list',
+        name: 'VideoFeedBloc',
+        category: LogCategory.storage,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   /// Clears the feed and loads [source] from the network, carrying whichever
