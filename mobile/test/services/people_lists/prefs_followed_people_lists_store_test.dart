@@ -1,6 +1,7 @@
 // ABOUTME: Tests the SharedPreferences-backed followed-people-lists store.
 // ABOUTME: Covers ordering, account isolation, damaged entries and watching.
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/people_lists/prefs_followed_people_lists_store.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
@@ -34,6 +35,16 @@ class _FailedPrefs extends InMemorySharedPreferencesStore {
   Future<bool> remove(String key) async => false;
 }
 
+class _ThrowingPrefs extends InMemorySharedPreferencesStore {
+  _ThrowingPrefs() : super.empty();
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) async =>
+      throw PlatformException(code: 'write-failed');
+  @override
+  Future<bool> remove(String key) async =>
+      throw PlatformException(code: 'write-failed');
+}
+
 void main() {
   group(PrefsFollowedPeopleListsStore, () {
     for (final operation in ['add', 'remove', 'clear']) {
@@ -60,6 +71,40 @@ void main() {
               ? store.remove(viewerPubkey: _viewerA, ref: _ref('crew'))
               : store.clear(viewerPubkey: _viewerA);
           await expectLater(update, throwsA(isA<Exception>()));
+          expect(await store.read(viewerPubkey: _viewerA), previous);
+        },
+      );
+    }
+
+    for (final operation in ['add', 'remove', 'clear']) {
+      test(
+        '$operation whose platform write throws reports failure and '
+        'keeps previous follows',
+        () async {
+          final prefs = await _prefs(
+            operation == 'add'
+                ? {}
+                : {
+                    _keyFor(_viewerA): ['$_owner:crew'],
+                  },
+          );
+          final previous = await PrefsFollowedPeopleListsStore(
+            prefs,
+          ).read(viewerPubkey: _viewerA);
+          final platform = SharedPreferencesStorePlatform.instance;
+          SharedPreferencesStorePlatform.instance = _ThrowingPrefs();
+          addTearDown(() => SharedPreferencesStorePlatform.instance = platform);
+          final store = PrefsFollowedPeopleListsStore(prefs);
+          addTearDown(store.dispose);
+          final update = operation == 'add'
+              ? store.add(viewerPubkey: _viewerA, ref: _ref('crew'))
+              : operation == 'remove'
+              ? store.remove(viewerPubkey: _viewerA, ref: _ref('crew'))
+              : store.clear(viewerPubkey: _viewerA);
+          await expectLater(
+            update,
+            throwsA(isA<FollowedPeopleListsWriteException>()),
+          );
           expect(await store.read(viewerPubkey: _viewerA), previous);
         },
       );
