@@ -5685,7 +5685,7 @@ void main() {
             final resolved = await createLookupRepository()
                 .resolveDmInboxRelaysDetailed(_validPubkeyB);
 
-            expect(resolved.state, DmInboxResolution.unreadable);
+            expect(resolved.state, DmInboxResolution.absent);
             expect(queries, hasLength(2));
           },
         );
@@ -5716,12 +5716,9 @@ void main() {
             });
 
             final resolved = await createLookupRepository()
-                .resolveDmInboxRelaysDetailed(
-                  _validPubkeyB,
-                );
+                .resolveDmInboxRelaysDetailed(_validPubkeyB);
 
-            expect(resolved.state, DmInboxResolution.unreadable);
-
+            expect(resolved.state, DmInboxResolution.absent);
             expect(tempOf(queries.last), [
               'wss://w1.example',
               'wss://w2.example',

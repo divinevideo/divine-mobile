@@ -366,10 +366,10 @@ enum DmInboxResolution {
   /// The recipient advertises a kind-10050 and we read it.
   found,
 
-  /// Every relay asked answered — the pool, the indexer, and any write relays
-  /// the recipient's NIP-65 list names — and the recipient advertises no
-  /// inbox. NIP-17 calls this "not ready to receive messages"; we still fall
-  /// back to the default pool so reachability is preserved (#570).
+  /// Every relay asked answered — the pool, the indexer, and up to four
+  /// dialable write relays from the recipient's NIP-65 list — and none holds
+  /// an inbox list. NIP-17 calls this "not ready to receive messages"; we
+  /// still fall back to the default pool so reachability is preserved (#570).
   absent,
 
   /// We could not read the recipient's inbox: no relay took the REQ, nothing
@@ -4678,7 +4678,6 @@ class DmRepository {
     final newest = relayLists.reduce(
       (a, b) => b.createdAt > a.createdAt ? b : a,
     );
-    var omittedWriteRelays = false;
     final writeRelays = admitRemoteSuppliedRelays(
       [
         for (final tag in newest.tags)
@@ -4690,8 +4689,6 @@ class DmRepository {
             tag[1],
       ],
       cap: RelayListCaps.nip65,
-      onRejected: (_) => omittedWriteRelays = true,
-      onTruncated: (_, _) => omittedWriteRelays = true,
     );
     final asked = {
       for (final url in [
@@ -4700,22 +4697,14 @@ class DmRepository {
       ])
         RelayAddrUtil.handle(url),
     };
-    final unasked = writeRelays
+    // Relays the policy refuses or the cap leaves out are skipped the same way
+    // on every retry, so reading them as "unreadable" would turn a recipient
+    // with no inbox list into a permanent send failure.
+    final targets = writeRelays
         .where((url) => !asked.contains(RelayAddrUtil.handle(url)))
+        .take(_dmInboxOutboxRelayCap)
         .toList();
-    if (unasked.length > _dmInboxOutboxRelayCap) {
-      omittedWriteRelays = true;
-    }
-    final targets = unasked.take(_dmInboxOutboxRelayCap).toList();
-    const unreadable = (
-      state: _OwnDmInboxState.failed,
-      relays: null,
-      advertisedMissing: null,
-    );
-    // Safety and connection caps bound where we look, not what exists. A
-    // missing list on the subset cannot establish absence on an omitted
-    // write relay. A list actually returned below still wins.
-    if (targets.isEmpty) return omittedWriteRelays ? unreadable : absent;
+    if (targets.isEmpty) return absent;
 
     // Write relays are cold connections, measured at 3.7 s and 4.8 s on a
     // phone, so the leg gets whatever the resolution has left rather than a
@@ -4759,12 +4748,10 @@ class DmRepository {
         advertisedMissing: null,
       );
     }
-    if (result.noRelays || result.timedOut || omittedWriteRelays) {
+    if (result.noRelays || result.timedOut) {
       final reason = result.noRelays
           ? 'no relay took the REQ'
-          : result.timedOut
-          ? 'not every relay settled'
-          : 'some write relays were not queried';
+          : 'not every relay settled';
       Log.warning(
         'Recipient kind-10050 lookup for ${pubkeyForLogs(pubkey)} on their '
         'write relays was inconclusive ($reason) — routing to the default '
