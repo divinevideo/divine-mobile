@@ -9393,7 +9393,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get videoEditorOpacitySemanticLabel =>
-      'Ajustá qué tan transparente es el clip seleccionado';
+      'Ajustá qué tan transparente es la capa seleccionada';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Detectar automáticamente';
@@ -9793,6 +9793,36 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'Editar animación de capa';
+
+  @override
+  String get videoEditorKeyframeAdd => 'Agregar fotograma clave';
+
+  @override
+  String get videoEditorKeyframeRemove => 'Quitar fotograma clave';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return 'Ir al fotograma clave en $time';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'Fotogramas clave';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'Editar fotogramas clave de la capa';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'Agregá un fotograma clave, mové el cabezal de reproducción y después mové, escalá o girá la capa. Se desliza de un fotograma clave al siguiente.';
+
+  @override
+  String get videoEditorKeyframeEffect => 'Efecto';
+
+  @override
+  String videoEditorKeyframeCurveSegment(int from, int to) {
+    return 'Movimiento del fotograma clave $from al $to';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'Entrada';

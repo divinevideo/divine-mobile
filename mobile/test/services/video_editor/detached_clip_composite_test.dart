@@ -209,6 +209,36 @@ void main() {
       chromaKey: chromaKey,
     );
 
+    test('moves a keyframed clip, turned and faded by its keyframes', () {
+      final exportItem = item(_clip(), rotation: 0.3);
+      exportItem.layer.keyframes = const [
+        LayerKeyframe(
+          time: Duration.zero,
+          offset: Offset.zero,
+          rotation: 1.2,
+          opacity: 0.25,
+        ),
+      ];
+
+      final layer = buildDetachedClipVideoLayer(
+        item: exportItem,
+        resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
+        bodySize: bodySize,
+        videoSize: videoSize,
+        targetAspectRatio: targetAspectRatio,
+        timelineMap: identityMap,
+        speedFlattened: false,
+      );
+
+      final keyframe = layer.keyframes.single;
+      // The clip is placed upright from its video, so the keyframe's turn is
+      // the layer's own, not one on top of the layer's rest turn.
+      expect(keyframe.rotation, 1.2);
+      expect(keyframe.opacity, 0.25);
+      // At the layer's own place, the keyframe's corner is the clip's.
+      expect(keyframe.offset, layer.clips.single.transform!.offset);
+    });
+
     test('starts a split tail partway into the clip', () {
       final layer = buildDetachedClipVideoLayer(
         item: item(

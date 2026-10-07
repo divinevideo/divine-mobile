@@ -9262,7 +9262,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorOpacityLabel => 'العتامة';
 
   @override
-  String get videoEditorOpacitySemanticLabel => 'ضبط مدى شفافية المقطع المحدد';
+  String get videoEditorOpacitySemanticLabel => 'ضبط مدى شفافية الطبقة المحددة';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'كشف تلقائي';
@@ -9655,6 +9655,36 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get videoEditorLayerAnimationButtonSemanticLabel =>
       'تحرير حركة الطبقة';
+
+  @override
+  String get videoEditorKeyframeAdd => 'إضافة إطار رئيسي';
+
+  @override
+  String get videoEditorKeyframeRemove => 'إزالة الإطار الرئيسي';
+
+  @override
+  String videoEditorKeyframeMarkerSemanticLabel(String time) {
+    return 'الانتقال إلى الإطار الرئيسي عند $time';
+  }
+
+  @override
+  String get videoEditorKeyframesLabel => 'الإطارات الرئيسية';
+
+  @override
+  String get videoEditorKeyframesButtonSemanticLabel =>
+      'تعديل الإطارات الرئيسية للطبقة';
+
+  @override
+  String get videoEditorKeyframesHint =>
+      'إضافة إطار رئيسي، ثم تحريك رأس التشغيل، ثم تحريك الطبقة أو تغيير حجمها أو تدويرها. تنتقل الطبقة بسلاسة من إطار رئيسي إلى آخر.';
+
+  @override
+  String get videoEditorKeyframeEffect => 'التأثير';
+
+  @override
+  String videoEditorKeyframeCurveSegment(int from, int to) {
+    return 'الحركة من الإطار الرئيسي $from إلى $to';
+  }
 
   @override
   String get videoEditorLayerAnimationEnter => 'دخول';

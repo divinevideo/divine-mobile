@@ -1,18 +1,23 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/transition_geometry.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/keyframes/playhead_on_keyframe_builder.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/timeline_trim_handles.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_item.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_strip.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/timeline_snap_controller.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
+import 'package:time_formatter/time_formatter.dart';
 
 class TimelineOverlayPositionedItem extends StatelessWidget {
   const TimelineOverlayPositionedItem({
@@ -128,15 +133,76 @@ class TimelineOverlayPositionedItem extends StatelessWidget {
         onLongPressStart: onLongPressStart,
         onLongPressMoveUpdate: onLongPressMoveUpdate,
         onLongPressEnd: onLongPressEnd,
-        child: TimelineOverlayItemTile(
+        child: _UnselectedTile(
           item: item,
           width: itemWidth,
-          height: rowHeight,
+          rowHeight: rowHeight,
           color: color,
           isDragging: isDragging,
+          // Collapsed rows are too short to mark.
+          showKeyframes: !isCollapsed,
+          clipEdgesMs: clipEdgesMs,
+          pixelsPerSecond: pixelsPerSecond,
           multiSelectState: multiSelectState,
         ),
       ),
+    );
+  }
+}
+
+/// The tile of a layer that is not selected, with its keyframes marked.
+class _UnselectedTile extends StatelessWidget {
+  const _UnselectedTile({
+    required this.item,
+    required this.width,
+    required this.rowHeight,
+    required this.color,
+    required this.isDragging,
+    required this.showKeyframes,
+    required this.clipEdgesMs,
+    required this.pixelsPerSecond,
+    required this.multiSelectState,
+  });
+
+  final TimelineOverlayItem item;
+  final double width;
+  final double rowHeight;
+  final Color color;
+  final bool isDragging;
+  final bool showKeyframes;
+  final List<int> clipEdgesMs;
+  final double pixelsPerSecond;
+  final OverlayMultiSelectState multiSelectState;
+
+  @override
+  Widget build(BuildContext context) {
+    final tile = TimelineOverlayItemTile(
+      item: item,
+      width: width,
+      height: rowHeight,
+      color: color,
+      isDragging: isDragging,
+      multiSelectState: multiSelectState,
+    );
+    final keyframeTimes = showKeyframes
+        ? _shownKeyframeTimes(item)
+        : const <Duration>[];
+    if (keyframeTimes.isEmpty) return tile;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        tile,
+        for (final time in keyframeTimes)
+          _KeyframeDot(
+            left: _keyframeOffset(
+              item,
+              time,
+              clipEdgesMs: clipEdgesMs,
+              pixelsPerSecond: pixelsPerSecond,
+            ),
+            tileHeight: rowHeight - TimelineConstants.overlayRowGap,
+          ),
+      ],
     );
   }
 }
@@ -196,6 +262,182 @@ class _OverlayItemGestureWrapper extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Tile widgets
 // ---------------------------------------------------------------------------
+
+/// The tap area of a keyframe of the selected layer at [left] on its tile:
+/// tapping it moves the playhead onto the keyframe. [_KeyframeDiamond] draws
+/// it.
+class _KeyframeMarker extends StatelessWidget {
+  const _KeyframeMarker({
+    required this.left,
+    required this.height,
+    required this.time,
+  });
+
+  /// Where on the tile the keyframe sits.
+  final double left;
+
+  /// The tile's height, the marker's tap area.
+  final double height;
+
+  /// The keyframe's time on the editor timeline.
+  final Duration time;
+
+  static const double _width = 24;
+
+  @override
+  Widget build(BuildContext context) {
+    // Announced on the timeline of the finished video, as the header shows
+    // the playhead.
+    final outputTime = context.select(
+      (ClipEditorBloc b) =>
+          TransitionTimelineMap.fromClips(b.state.clips).editorToOutput(time),
+    );
+    return Positioned(
+      left: left - _width / 2,
+      top: 0,
+      width: _width,
+      height: height,
+      child: Semantics(
+        button: true,
+        label: context.l10n.videoEditorKeyframeMarkerSemanticLabel(
+          TimeFormatter.formatCompactDuration(outputTime),
+        ),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => context.read<VideoEditorMainBloc>().add(
+            VideoEditorSeekRequested(time),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A keyframe of the selected layer, drawn at [left] on the bottom edge of its
+/// tile, which is [tileHeight] high, so it never covers the tile's label.
+///
+/// Yellow with a dark core, like the trim handles on the same border. The
+/// keyframe the playhead is on fills in: it is the one moving the layer or
+/// the keyframe sheet would change.
+class _KeyframeDiamond extends StatelessWidget {
+  const _KeyframeDiamond({
+    required this.left,
+    required this.tileHeight,
+    required this.time,
+  });
+
+  final double left;
+  final double tileHeight;
+
+  /// The keyframe's time on the editor timeline.
+  final Duration time;
+
+  static const double _size = 16;
+  static const double _coreSize = 8;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: left - _size / 2,
+      top: tileHeight - TimelineConstants.trimBorderWidth / 2 - _size / 2,
+      width: _size,
+      height: _size,
+      // [_KeyframeMarker] takes the taps and carries the label.
+      child: IgnorePointer(
+        child: ExcludeSemantics(
+          child: PlayheadOnKeyframeBuilder(
+            times: [time],
+            builder: (context, isAtPlayhead) => Stack(
+              alignment: Alignment.center,
+              children: [
+                const DivineIcon(
+                  icon: .diamondFill,
+                  size: _size,
+                  color: VineTheme.accentYellow,
+                ),
+                if (!isAtPlayhead)
+                  const DivineIcon(
+                    icon: .diamondFill,
+                    size: _coreSize,
+                    color: TimelineConstants.trimHandleMarkerColor,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A keyframe of a layer that is not selected, drawn small at [left] on the
+/// bottom edge of its tile, which is [tileHeight] high.
+///
+/// Only a mark: a tap on it selects the layer, like a tap anywhere else on
+/// the tile. White with a dark rim, so it reads on the tile and on the
+/// timeline beneath it alike.
+class _KeyframeDot extends StatelessWidget {
+  const _KeyframeDot({required this.left, required this.tileHeight});
+
+  final double left;
+  final double tileHeight;
+
+  static const double _size = 10;
+  static const double _coreSize = 6;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: left - _size / 2,
+      top: tileHeight - _size / 2,
+      width: _size,
+      height: _size,
+      child: const IgnorePointer(
+        child: ExcludeSemantics(
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              DivineIcon(
+                icon: .diamondFill,
+                size: _size,
+                color: TimelineConstants.trimHandleMarkerColor,
+              ),
+              DivineIcon(
+                icon: .diamondFill,
+                size: _coreSize,
+                color: VineTheme.whiteText,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The keyframe times of [item] the timeline shows: those within its own time
+/// range. Keyframes outside it still shape its motion but are not shown.
+List<Duration> _shownKeyframeTimes(TimelineOverlayItem item) => [
+  for (final time in item.keyframeTimes)
+    if (time >= Duration.zero && time <= item.duration) time,
+];
+
+/// How far into the tile of [item] a keyframe [time] after its start sits,
+/// gap-aware like the tile itself.
+double _keyframeOffset(
+  TimelineOverlayItem item,
+  Duration time, {
+  required List<int> clipEdgesMs,
+  required double pixelsPerSecond,
+}) {
+  final startMs = item.startTime.inMilliseconds;
+  return timelineMsToOverlayOffset(
+        clipEdgesMs,
+        startMs + time.inMilliseconds,
+        pixelsPerSecond,
+      ) -
+      timelineMsToOverlayOffset(clipEdgesMs, startMs, pixelsPerSecond);
+}
 
 /// Overlay item tile wrapped with trim handles for duration adjustment.
 class _TrimmableOverlayTile extends StatefulWidget {
@@ -301,26 +543,63 @@ class _TrimmableOverlayTileState extends State<_TrimmableOverlayTile> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    final tileHeight = widget.height - TimelineConstants.overlayRowGap;
+    final keyframeTimes = _shownKeyframeTimes(widget.item);
+    final handles = Padding(
       padding: EdgeInsets.symmetric(horizontal: widget.trimExpansion),
       child: TimelineTrimHandles(
-        height: widget.height - TimelineConstants.overlayRowGap,
+        height: tileHeight,
         width: widget.width,
         onDragStart: _onDragStart,
         onDragEnd: _onDragEnd,
         onLeftDragUpdate: _onLeftTrim,
         onRightDragUpdate: _onRightTrim,
         onDragPositionUpdate: _handleTrimAutoScroll,
-        child: TimelineOverlayItemTile(
-          item: widget.item,
-          width: widget.width,
-          height: widget.height,
-          color: widget.color,
-          isSelected: true,
+        // The tap areas sit under the trim handles, which keep the edges.
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            TimelineOverlayItemTile(
+              item: widget.item,
+              width: widget.width,
+              height: widget.height,
+              color: widget.color,
+              isSelected: true,
+            ),
+            for (final time in keyframeTimes)
+              _KeyframeMarker(
+                left: _offsetOf(time),
+                height: tileHeight,
+                time: widget.item.startTime + time,
+              ),
+          ],
         ),
       ),
     );
+    if (keyframeTimes.isEmpty) return handles;
+    // Over the border, which the trim handles draw above the tile and clip it
+    // to. The stack wraps the padding so the handles' grab zone in it still
+    // takes touches.
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        handles,
+        for (final time in keyframeTimes)
+          _KeyframeDiamond(
+            left: widget.trimExpansion + _offsetOf(time),
+            tileHeight: tileHeight,
+            time: widget.item.startTime + time,
+          ),
+      ],
+    );
   }
+
+  double _offsetOf(Duration time) => _keyframeOffset(
+    widget.item,
+    time,
+    clipEdgesMs: widget.clipEdgesMs,
+    pixelsPerSecond: widget.pixelsPerSecond,
+  );
 
   void _handleTrimAutoScroll(Offset globalPosition) {
     final scrollable = Scrollable.maybeOf(context, axis: Axis.horizontal);

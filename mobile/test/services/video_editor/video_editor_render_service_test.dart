@@ -25,9 +25,11 @@ import 'package:openvine/services/video_editor/video_editor_render_service.dart'
 import 'package:pro_image_editor/pro_image_editor.dart' as pie;
 import 'package:pro_video_editor/pro_video_editor.dart'
     show
+        AnimationPhase,
         ClipTransition,
         ClipTransitionType,
         EditorVideo,
+        LayerAnimationType,
         NativeFailureDetails,
         ProVideoEditor,
         ProgressModel,
@@ -98,6 +100,86 @@ void main() {
         ),
         isNull,
       );
+    });
+
+    test('moves a keyframed layer on the output timeline', () {
+      final keyframed = pie.ExportedLayer(
+        layer: pie.Layer(
+          startTime: const Duration(seconds: 1),
+          scale: 2,
+          keyframes: const [
+            pie.LayerKeyframe(time: Duration.zero, offset: Offset.zero),
+            pie.LayerKeyframe(
+              // 3.0 s on the editor timeline, past the 400 ms dissolve.
+              time: Duration(seconds: 2),
+              offset: Offset(10, 0),
+              scale: 3,
+              opacity: 0.5,
+            ),
+          ],
+        ),
+        bytes: Uint8List.fromList(const [1, 2, 3]),
+        logicalSize: const Size(10, 20),
+      );
+
+      final exported = VideoEditorRenderService.buildImageLayers(
+        capturedLayers: [keyframed],
+        bodySize: const Size(100, 200),
+        videoSize: const Size(300, 600),
+        targetAspectRatio: vertical,
+        timelineMap: TransitionTimelineMap.fromClips(overlapClips),
+      )!.single;
+
+      expect(exported.keyframes.map((k) => k.time), [
+        const Duration(seconds: 1),
+        const Duration(milliseconds: 2600),
+      ]);
+      // Three times the editor's 100 px wide body.
+      expect(exported.keyframes.last.offset.dx - exported.offset!.dx, 30);
+      expect(exported.keyframes.last.scale, 1.5);
+      expect(exported.keyframes.last.opacity, 0.5);
+    });
+
+    test('plays a keyframe effect over its stretch of the output', () {
+      final keyframed = pie.ExportedLayer(
+        layer: pie.Layer(
+          startTime: const Duration(seconds: 1),
+          keyframes: const [
+            pie.LayerKeyframe(
+              time: Duration.zero,
+              offset: Offset.zero,
+              effects: [
+                pie.LayerAnimation(
+                  type: pie.LayerAnimationType.bounce,
+                  phase: pie.AnimationPhase.loop,
+                  duration: Duration(milliseconds: 700),
+                ),
+              ],
+            ),
+            // 3.0 s on the editor timeline, past the 400 ms dissolve.
+            pie.LayerKeyframe(time: Duration(seconds: 2), offset: Offset.zero),
+          ],
+        ),
+        bytes: Uint8List.fromList(const [1, 2, 3]),
+        logicalSize: const Size(10, 20),
+      );
+
+      final exported = VideoEditorRenderService.buildImageLayers(
+        capturedLayers: [keyframed],
+        bodySize: const Size(100, 200),
+        videoSize: const Size(300, 600),
+        targetAspectRatio: vertical,
+        timelineMap: TransitionTimelineMap.fromClips(overlapClips),
+      )!.single;
+
+      final loop = exported.animations.single;
+      expect(loop.type, LayerAnimationType.bounce);
+      expect(loop.phase, AnimationPhase.loop);
+      expect(loop.loopStart, const Duration(seconds: 1));
+      expect(loop.loopEnd, const Duration(milliseconds: 2600));
+      // The editor fits three 667 ms hops into the 2 s stretch; the dissolve
+      // shortens it to 1.6 s, and the three hops with it.
+      expect(loop.duration, const Duration(microseconds: 533333));
     });
 
     test('skips a detached clip, which the composition pass renders', () {

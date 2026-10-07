@@ -22,8 +22,10 @@ import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_clip_strip.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_strip.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_body.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
@@ -956,6 +958,112 @@ void main() {
             .toList();
 
         expect(audio.single.endTime, const Duration(seconds: 3));
+      });
+    });
+
+    group('overlay trim', () {
+      late _MockProImageEditorState editor;
+
+      const ms = Duration(milliseconds: 1);
+      final layer = TextLayer(
+        id: 'text',
+        text: 'Hello',
+        startTime: ms * 1000,
+        endTime: ms * 5000,
+        keyframes: [
+          const LayerKeyframe(time: Duration.zero, offset: Offset.zero),
+          LayerKeyframe(time: ms * 2000, offset: const Offset(80, 0)),
+        ],
+      );
+      const item = TimelineOverlayItem(
+        id: 'text',
+        type: TimelineOverlayType.layer,
+        startTime: Duration(seconds: 1),
+        endTime: Duration(seconds: 5),
+      );
+
+      setUp(() {
+        editor = _MockProImageEditorState();
+        when(() => editor.activeLayers).thenReturn([layer]);
+        when(
+          () => editor.setLayerTimeline(
+            index: any(named: 'index'),
+            startTime: any(named: 'startTime'),
+            endTime: any(named: 'endTime'),
+            keyframes: any(named: 'keyframes'),
+            skipUpdateHistory: any(named: 'skipUpdateHistory'),
+          ),
+        ).thenAnswer((_) {});
+      });
+
+      Future<OverlayTrimCallback> pumpTimeline(WidgetTester tester) async {
+        await tester.pumpWidget(
+          buildWidget(
+            editor: editor,
+            clipState: ClipEditorState(
+              clips: [_createTestClip(id: 'a', seconds: 6)],
+            ),
+          ),
+        );
+        await tester.pump();
+        return tester
+            .widget<VideoEditorTimelineInteractiveBody>(
+              find.byType(VideoEditorTimelineInteractiveBody),
+            )
+            .onOverlayItemTrimmed;
+      }
+
+      List<LayerKeyframe>? writtenKeyframes() =>
+          verify(
+                () => editor.setLayerTimeline(
+                  index: 0,
+                  startTime: any(named: 'startTime'),
+                  endTime: any(named: 'endTime'),
+                  keyframes: captureAny(named: 'keyframes'),
+                  skipUpdateHistory: true,
+                ),
+              ).captured.single
+              as List<LayerKeyframe>?;
+
+      testWidgets('keeps the motion on the video when the start is trimmed', (
+        tester,
+      ) async {
+        final onTrimmed = await pumpTimeline(tester);
+
+        onTrimmed(
+          item: item,
+          startTime: ms * 1500,
+          endTime: ms * 5000,
+          isStart: true,
+        );
+
+        final keyframes = writtenKeyframes()!;
+        expect(keyframes.map((k) => k.time), [ms * -500, ms * 1500]);
+        final trimmed = layer.copyWith(
+          startTime: ms * 1500,
+          keyframes: keyframes,
+        );
+        for (var t = 1500; t <= 3000; t += 250) {
+          expect(
+            trimmed.keyframePlacementAt(ms * t),
+            layer.keyframePlacementAt(ms * t),
+          );
+        }
+      });
+
+      testWidgets('leaves the keyframes alone when the end is trimmed', (
+        tester,
+      ) async {
+        final onTrimmed = await pumpTimeline(tester);
+
+        onTrimmed(
+          item: item,
+          startTime: ms * 1000,
+          endTime: ms * 4000,
+          isStart: false,
+        );
+
+        expect(writtenKeyframes(), isNull);
       });
     });
   });

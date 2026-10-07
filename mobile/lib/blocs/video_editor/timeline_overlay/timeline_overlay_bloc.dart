@@ -190,6 +190,7 @@ class TimelineOverlayBloc
             ),
             label: _labelForLayer(layer),
             layer: layer,
+            keyframeTimes: [for (final k in layer.keyframes) k.time],
             // A detached clip is real footage of a fixed length; stretching its
             // bar past that would promise frames the file does not have. Every
             // other layer is a drawing that can be held for as long as the user
@@ -459,6 +460,13 @@ class TimelineOverlayBloc
       endTime: newEnd,
       startOffset: newStartOffset,
       maxDuration: newMaxDuration,
+      // A trimmed start leaves keyframes where they are on the video (see
+      // `LayerKeyframeTimeline.keyframesFrom`), so they move against the new
+      // start until the item is rebuilt from the editor on release.
+      keyframeTimes: [
+        for (final time in item.keyframeTimes)
+          time - (newStart - item.startTime),
+      ],
     );
 
     // Only re-assign rows for the changed type; other types are unaffected.
