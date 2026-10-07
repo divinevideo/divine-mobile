@@ -16,6 +16,7 @@ import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/shorebird_availability_provider.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
+import 'package:openvine/services/feed_mode_persistence.dart';
 import 'package:openvine/services/startup_performance_service.dart';
 import 'package:openvine/utils/log_message_batcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -36,6 +37,9 @@ void main() {
     deviceScope = DeviceScope(
       database: database,
       sharedPreferences: prefs,
+      feedModePersistence: FeedModePersistenceRegistry(
+        sharedPreferences: prefs,
+      ),
       switchController: AccountSwitchController(),
       appVersion: '1.2.3',
       crashReporting: CrashReportingService(),
