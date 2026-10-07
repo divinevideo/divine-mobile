@@ -97,7 +97,9 @@ void main() {
           listName: originalList.name,
         );
         final key = 'selected_feed_mode_$viewer';
-        SharedPreferences.setMockInitialValues({key: source.persistenceValue});
+        SharedPreferences.setMockInitialValues({
+          key: FeedModePreferenceStore.storageValueFor(source),
+        });
         final prefs = await SharedPreferences.getInstance();
         final videos = _VideosRepository();
         final originalRepository = _CuratedListRepository();
@@ -235,7 +237,10 @@ void main() {
           );
           final key = 'selected_feed_mode_$viewer';
           SharedPreferences.setMockInitialValues({});
-          final gate = _PagePreferencesGate(key, source.persistenceValue);
+          final gate = _PagePreferencesGate(
+            key,
+            FeedModePreferenceStore.storageValueFor(source),
+          );
           SharedPreferencesStorePlatform.instance = gate;
           final prefs = await SharedPreferences.getInstance();
           addTearDown(() {
@@ -351,7 +356,10 @@ void main() {
           await tester.pumpAndSettle();
           expect(original.isClosed, isTrue);
           expect(replacement.state.source, source);
-          expect(prefs.getString(key), source.persistenceValue);
+          expect(
+            prefs.getString(key),
+            FeedModePreferenceStore.storageValueFor(source),
+          );
           expect(tester.takeException(), isNull);
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.runAsync(pumpEventQueue);

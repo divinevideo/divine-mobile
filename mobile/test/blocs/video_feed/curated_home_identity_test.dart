@@ -140,6 +140,9 @@ VideoFeedSource _source(CuratedList list) => VideoFeedSource.subscribedList(
   listName: list.name,
 );
 
+String _stored(VideoFeedSource source) =>
+    FeedModePreferenceStore.storageValueFor(source);
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late CuratedListRepository lists;
@@ -266,7 +269,7 @@ void main() {
         expect(store().restoreSource(FeedMode.forYou), _source(a));
         await store().persist(_source(b));
         expect(store().restoreSource(FeedMode.forYou), _source(b));
-        expect(_source(a).persistenceValue, isNot(_source(b).persistenceValue));
+        expect(_stored(_source(a)), isNot(_stored(_source(b))));
       },
     );
 
@@ -279,7 +282,7 @@ void main() {
         final restored = store().restoreSource(FeedMode.forYou);
         expect(restored, _source(a));
         await store().persist(restored);
-        expect(preferences.getString(_key), 'list:$_authorA:$_sharedDTag');
+        expect(preferences.getString(_key), 'curated:$_authorA:$_sharedDTag');
       },
     );
 
@@ -295,18 +298,168 @@ void main() {
     });
 
     test(
+      'a pubkey-shaped complete raw d-tag migrates only its original author',
+      () async {
+        final a = _list(_authorA, id: '$_authorB:cats');
+        final b = _list(_authorB, id: 'cats');
+        lists.setSubscribedLists([b, a]);
+        await preferences.setString(_key, 'list:$_authorB:cats');
+        final feed = bloc();
+        addTearDown(feed.close);
+        await waitFor(
+          feed,
+          (s) => s.status == VideoFeedStatus.success,
+          () => feed.add(const VideoFeedStarted()),
+        );
+        expect(feed.state.source, _source(a));
+        expect(preferences.getString(_key), 'curated:$_authorA:$_authorB:cats');
+        verify(() => videos.getVideosForList([_authorA])).called(1);
+        verifyNever(() => videos.getVideosForList([_authorB]));
+      },
+    );
+
+    test(
+      'a pubkey-shaped raw d-tag restores when only its raw author remains',
+      () async {
+        final a = _list(_authorA, id: '$_authorB:cats');
+        lists.setSubscribedLists([a]);
+        await preferences.setString(_key, 'list:$_authorB:cats');
+        expect(store().restoreSource(FeedMode.forYou), _source(a));
+        await store().persist(_source(a));
+        expect(preferences.getString(_key), _stored(_source(a)));
+      },
+    );
+
+    test(
+      'missing raw legacy author never guesses a matching canonical coordinate',
+      () async {
+        lists.setSubscribedLists([_list(_authorB, id: 'cats')]);
+        await preferences.setString(_key, 'list:$_authorB:cats');
+        final feed = bloc();
+        addTearDown(feed.close);
+        await waitFor(
+          feed,
+          (s) => s.status == VideoFeedStatus.success,
+          () => feed.add(const VideoFeedStarted()),
+        );
+        expect(feed.state.source, const VideoFeedSource.forYou());
+        expect(preferences.getString(_key), 'forYou');
+        verifyNever(() => videos.getVideosForList(any()));
+      },
+    );
+
+    test(
+      'canonical B survives cold restore despite A raw d-tag collision',
+      () async {
+        final a = _list(_authorA, id: '$_authorB:cats');
+        final b = _list(_authorB, id: 'cats');
+        lists.setSubscribedLists([a, b], isComplete: false);
+        await preferences.setString(_key, _stored(_source(b)));
+        final feed = bloc();
+        addTearDown(feed.close);
+        await waitFor(
+          feed,
+          (s) => s.status == VideoFeedStatus.success,
+          () => feed.add(const VideoFeedStarted()),
+        );
+        expect(feed.state.source, _source(b));
+        expect(preferences.getString(_key), 'curated:$_authorB:cats');
+        verify(() => videos.getVideosForList([_authorB])).called(1);
+        verifyNever(() => videos.getVideosForList([_authorA]));
+      },
+    );
+
+    test('pubkey-shaped raw legacy waits for authoritative hydration before selecting A', () async {
+      final a = _list(_authorA, id: '$_authorB:cats');
+      final b = _list(_authorB, id: 'cats');
+      lists.setSubscribedLists([b], isComplete: false);
+      await preferences.setString(_key, 'list:$_authorB:cats');
+      final feed = bloc();
+      addTearDown(feed.close);
+      await waitFor(
+        feed,
+        (s) => s.status == VideoFeedStatus.success,
+        () => feed.add(const VideoFeedStarted()),
+      );
+      expect(feed.state.source, const VideoFeedSource.forYou());
+      expect(preferences.getString(_key), 'list:$_authorB:cats');
+      await waitFor(
+        feed,
+        (s) => s.status == VideoFeedStatus.success && s.source == _source(a),
+        () => lists.setSubscribedLists([a, b]),
+      );
+      expect(preferences.getString(_key), _stored(_source(a)));
+      verifyNever(() => videos.getVideosForList([_authorB]));
+    });
+
+    test(
+      'two complete raw d-tag matches resolve to For You after authority',
+      () async {
+        final a = _list(_authorA, id: '$_authorB:cats');
+        final other = _list(_otherViewer, id: '$_authorB:cats');
+        lists.setSubscribedLists([a], isComplete: false);
+        await preferences.setString(_key, 'list:$_authorB:cats');
+        final feed = bloc();
+        addTearDown(feed.close);
+        await waitFor(
+          feed,
+          (s) => s.status == VideoFeedStatus.success,
+          () => feed.add(const VideoFeedStarted()),
+        );
+        expect(preferences.getString(_key), 'list:$_authorB:cats');
+        final persisted = waitFor(
+          feed,
+          (s) =>
+              s.status == VideoFeedStatus.success &&
+              s.subscribedLists.length == 2,
+          () => lists.setSubscribedLists([a, other]),
+        );
+        await persisted;
+        expect(feed.state.source, const VideoFeedSource.forYou());
+        expect(preferences.getString(_key), 'forYou');
+        verifyNever(() => videos.getVideosForList(any()));
+      },
+    );
+
+    test('pubkey-shaped legacy migration superseded by raw ambiguity repairs original preference', () async {
+      final a = _list(_authorA, id: '$_authorB:cats');
+      final other = _list(_otherViewer, id: '$_authorB:cats');
+      final backend = await gatePreferences(
+        savedValue: 'list:$_authorB:cats',
+        blockedValue: _stored(_source(a)),
+      );
+      lists.setSubscribedLists([a]);
+      final feed = bloc();
+      addTearDown(feed.close);
+      feed.add(const VideoFeedStarted());
+      await backend.started.future.timeout(const Duration(seconds: 5));
+      lists.setSubscribedLists([a, other]);
+      final repaired = backend.committed('list:$_authorB:cats');
+      await waitFor(
+        feed,
+        (s) => s.status == VideoFeedStatus.success,
+        backend.release.complete,
+      );
+      await repaired;
+      await preferences.reload();
+      expect(feed.state.source, const VideoFeedSource.forYou());
+      expect(preferences.getString(_key), 'forYou');
+      verifyNever(() => videos.getVideosForList(any()));
+    });
+
+    test(
       'exact canonical identity can restore from partial copies safely',
       () async {
         final a = _list(_authorA);
         lists.setSubscribedLists([a], isComplete: false);
-        await preferences.setString(_key, _source(a).persistenceValue);
+        await preferences.setString(_key, _stored(_source(a)));
         expect(store().restoreSource(FeedMode.forYou), _source(a));
       },
     );
 
     test('missing qualified identity never aliases another author', () async {
       lists.setSubscribedLists([_list(_authorB)]);
-      await preferences.setString(_key, 'list:$_authorA:$_sharedDTag');
+      await preferences.setString(_key, 'curated:$_authorA:$_sharedDTag');
       expect(
         store().restoreSource(FeedMode.forYou),
         const VideoFeedSource.forYou(),
@@ -353,7 +506,10 @@ void main() {
         final restored = store().restoreSource(FeedMode.forYou);
         expect(restored, _source(a));
         await store().persist(restored);
-        expect(preferences.getString(_key), 'list:$_authorA::series:episode');
+        expect(
+          preferences.getString(_key),
+          'curated:$_authorA::series:episode',
+        );
       },
     );
 
@@ -366,7 +522,7 @@ void main() {
         const VideoFeedSource.forYou(),
       );
       expect(preferences.getString('selected_feed_mode_$_otherViewer'), isNull);
-      expect(preferences.getString(_key), _source(a).persistenceValue);
+      expect(preferences.getString(_key), _stored(_source(a)));
     });
 
     test(
@@ -412,7 +568,7 @@ void main() {
         (s) => s.status == VideoFeedStatus.success && s.source == _source(b),
         () => restarted.add(const VideoFeedStarted()),
       );
-      expect(preferences.getString(_key), _source(b).persistenceValue);
+      expect(preferences.getString(_key), _stored(_source(b)));
       await restarted.close();
     });
 
@@ -420,7 +576,7 @@ void main() {
       final a = _list(_authorA);
       final b = _list(_authorB);
       lists.setSubscribedLists([a, b]);
-      await preferences.setString(_key, _source(b).persistenceValue);
+      await preferences.setString(_key, _stored(_source(b)));
       final feed = bloc();
       await waitFor(
         feed,
@@ -453,7 +609,7 @@ void main() {
         final a = _list(_authorA);
         final b = _list(_authorB);
         lists.setSubscribedLists([a, b]);
-        await preferences.setString(_key, _source(b).persistenceValue);
+        await preferences.setString(_key, _stored(_source(b)));
         final feed = bloc();
         await waitFor(
           feed,
@@ -469,7 +625,7 @@ void main() {
           () => lists.setSubscribedLists([renamedB]),
         );
         expect(feed.state.source.listId, b.authorScopedId);
-        expect(preferences.getString(_key), _source(b).persistenceValue);
+        expect(preferences.getString(_key), _stored(_source(b)));
         await feed.close();
       },
     );
@@ -491,7 +647,7 @@ void main() {
 
     test('missing qualified selection falls back after complete startup without loading namesake', () async {
       lists.setSubscribedLists([_list(_authorB)]);
-      await preferences.setString(_key, 'list:$_authorA:$_sharedDTag');
+      await preferences.setString(_key, 'curated:$_authorA:$_sharedDTag');
       final feed = bloc();
       await waitFor(
         feed,
@@ -523,7 +679,7 @@ void main() {
           (s) => s.status == VideoFeedStatus.success && s.source == _source(a),
           () => lists.setSubscribedLists([a]),
         );
-        expect(preferences.getString(_key), _source(a).persistenceValue);
+        expect(preferences.getString(_key), _stored(_source(a)));
         await feed.close();
       },
     );
@@ -580,7 +736,7 @@ void main() {
         (s) => s.status == VideoFeedStatus.success && s.source == _source(a),
         () => fetch.complete(const HomeFeedResult(videos: [])),
       );
-      expect(preferences.getString(_key), _source(a).persistenceValue);
+      expect(preferences.getString(_key), _stored(_source(a)));
       await feed.close();
     });
 
@@ -589,14 +745,14 @@ void main() {
       () async {
         final a = _list(_authorA);
         lists.setSubscribedLists([_list(_authorB)], isComplete: false);
-        await preferences.setString(_key, _source(a).persistenceValue);
+        await preferences.setString(_key, _stored(_source(a)));
         final feed = bloc();
         await waitFor(
           feed,
           (s) => s.status == VideoFeedStatus.success,
           () => feed.add(const VideoFeedStarted()),
         );
-        expect(preferences.getString(_key), _source(a).persistenceValue);
+        expect(preferences.getString(_key), _stored(_source(a)));
         await waitFor(
           feed,
           (s) => s.status == VideoFeedStatus.success && s.source == _source(a),
@@ -610,7 +766,7 @@ void main() {
       final a = _list(_authorA);
       final b = _list(_authorB);
       lists.setSubscribedLists([a]);
-      await preferences.setString(_key, _source(a).persistenceValue);
+      await preferences.setString(_key, _stored(_source(a)));
       final feed = bloc();
       await waitFor(
         feed,
@@ -630,7 +786,7 @@ void main() {
         },
       );
       expect(seen, everyElement(_source(a)));
-      expect(preferences.getString(_key), _source(a).persistenceValue);
+      expect(preferences.getString(_key), _stored(_source(a)));
       await subscription.cancel();
       await feed.close();
     });
@@ -639,7 +795,7 @@ void main() {
       final a = _list(_authorA);
       final b = _list(_authorB);
       lists.setSubscribedLists([a]);
-      await preferences.setString(_key, _source(a).persistenceValue);
+      await preferences.setString(_key, _stored(_source(a)));
       final feed = bloc();
       await waitFor(
         feed,
@@ -659,7 +815,7 @@ void main() {
         },
       );
       expect(seen, everyElement(_source(a)));
-      expect(preferences.getString(_key), _source(a).persistenceValue);
+      expect(preferences.getString(_key), _stored(_source(a)));
       await subscription.cancel();
       await feed.close();
     });
@@ -668,7 +824,7 @@ void main() {
       final a = _list(_authorA);
       final b = _list(_authorB);
       final backend = await gatePreferences(
-        savedValue: _source(a).persistenceValue,
+        savedValue: _stored(_source(a)),
         blockedValue: 'forYou',
       );
       lists.setSubscribedLists([a]);
@@ -686,7 +842,7 @@ void main() {
       await backend.started.future.timeout(const Duration(seconds: 5));
       // The first handler is inside the real preferences platform write.
       lists.setSubscribedLists([a, b]);
-      final repaired = backend.committed(_source(a).persistenceValue);
+      final repaired = backend.committed(_stored(_source(a)));
       await waitFor(
         feed,
         (s) =>
@@ -698,14 +854,14 @@ void main() {
       await preferences.reload();
       expect(feed.state.source, _source(a));
       expect(seen, everyElement(_source(a)));
-      expect(preferences.getString(_key), _source(a).persistenceValue);
+      expect(preferences.getString(_key), _stored(_source(a)));
     });
 
     test('startup fallback superseded during platform write restores the latest exact author', () async {
       final a = _list(_authorA);
       final b = _list(_authorB);
       final backend = await gatePreferences(
-        savedValue: _source(a).persistenceValue,
+        savedValue: _stored(_source(a)),
         blockedValue: 'forYou',
       );
       lists.setSubscribedLists([b]);
@@ -714,7 +870,7 @@ void main() {
       feed.add(const VideoFeedStarted());
       await backend.started.future.timeout(const Duration(seconds: 5));
       lists.setSubscribedLists([a, b]);
-      final repaired = backend.committed(_source(a).persistenceValue);
+      final repaired = backend.committed(_stored(_source(a)));
       await waitFor(
         feed,
         (s) => s.status == VideoFeedStatus.success && s.source == _source(a),
@@ -722,7 +878,7 @@ void main() {
       );
       await repaired;
       await preferences.reload();
-      expect(preferences.getString(_key), _source(a).persistenceValue);
+      expect(preferences.getString(_key), _stored(_source(a)));
       verifyNever(() => videos.getVideosForList([_authorB]));
       verifyNever(
         () => videos.getRecommendedVideos(
@@ -740,7 +896,7 @@ void main() {
       final b = _list(_authorB);
       final backend = await gatePreferences(
         savedValue: 'list:$_sharedDTag',
-        blockedValue: _source(a).persistenceValue,
+        blockedValue: _stored(_source(a)),
       );
       lists.setSubscribedLists([a]);
       final feed = bloc();
@@ -768,7 +924,7 @@ void main() {
         final b = _list(_authorB);
         final backend = await gatePreferences(
           savedValue: 'list:$_sharedDTag',
-          blockedValue: _source(a).persistenceValue,
+          blockedValue: _stored(_source(a)),
         );
         lists.setSubscribedLists([a]);
         final feed = bloc();
@@ -781,12 +937,12 @@ void main() {
           (s) => s.status == VideoFeedStatus.success && s.source == _source(b),
           () => feed.add(VideoFeedSourceChanged(_source(b))),
         );
-        final repaired = backend.committed(_source(b).persistenceValue);
+        final repaired = backend.committed(_stored(_source(b)));
         backend.release.complete();
         await repaired;
         await preferences.reload();
         expect(feed.state.source, _source(b));
-        expect(preferences.getString(_key), _source(b).persistenceValue);
+        expect(preferences.getString(_key), _stored(_source(b)));
         verifyNever(() => videos.getVideosForList([_authorA]));
       },
     );
@@ -796,7 +952,7 @@ void main() {
       final b = _list(_authorB);
       final backend = await gatePreferences(
         savedValue: 'list:$_sharedDTag',
-        blockedValue: _source(a).persistenceValue,
+        blockedValue: _stored(_source(a)),
       );
       lists.setSubscribedLists([a], isComplete: false);
       final feed = bloc();
@@ -835,7 +991,7 @@ void main() {
         final b = _list(_authorB);
         final backend = await gatePreferences(
           savedValue: 'list:$_sharedDTag',
-          blockedValue: _source(a).persistenceValue,
+          blockedValue: _stored(_source(a)),
         );
         lists.setSubscribedLists([a], isComplete: false);
         final feed = bloc();
@@ -853,7 +1009,7 @@ void main() {
           (s) => s.status == VideoFeedStatus.success && s.source == _source(b),
           () => feed.add(VideoFeedSourceChanged(_source(b))),
         );
-        final repaired = backend.committed(_source(b).persistenceValue);
+        final repaired = backend.committed(_stored(_source(b)));
         await waitFor(
           feed,
           (s) =>
@@ -864,7 +1020,7 @@ void main() {
         );
         await repaired;
         await preferences.reload();
-        expect(preferences.getString(_key), _source(b).persistenceValue);
+        expect(preferences.getString(_key), _stored(_source(b)));
         verifyNever(() => videos.getVideosForList([_authorA]));
       },
     );
@@ -874,7 +1030,7 @@ void main() {
       final b = _list(_authorB);
       final backend = await gatePreferences(
         savedValue: 'forYou',
-        blockedValue: _source(a).persistenceValue,
+        blockedValue: _stored(_source(a)),
       );
       lists.setSubscribedLists([a, b]);
       final feed = bloc();
@@ -891,12 +1047,12 @@ void main() {
         (s) => s.status == VideoFeedStatus.success && s.source == _source(b),
         () => feed.add(VideoFeedSourceChanged(_source(b))),
       );
-      final repaired = backend.committed(_source(b).persistenceValue);
+      final repaired = backend.committed(_stored(_source(b)));
       backend.release.complete();
       await repaired;
       await preferences.reload();
       expect(feed.state.source, _source(b));
-      expect(preferences.getString(_key), _source(b).persistenceValue);
+      expect(preferences.getString(_key), _stored(_source(b)));
       verifyNever(() => videos.getVideosForList([_authorA]));
     });
 
@@ -905,8 +1061,8 @@ void main() {
       final b = _list(_authorB);
       final backend = await gatePreferences(
         savedValue: 'forYou',
-        blockedValue: _source(a).persistenceValue,
-        blockedRepairValue: _source(b).persistenceValue,
+        blockedValue: _stored(_source(a)),
+        blockedRepairValue: _stored(_source(b)),
       );
       lists.setSubscribedLists([a, b]);
       final feed = bloc();
@@ -971,8 +1127,8 @@ void main() {
       final a = _list(_authorA);
       final b = _list(_authorB);
       final backend = await gatePreferences(
-        savedValue: _source(a).persistenceValue,
-        blockedValue: _source(b).persistenceValue,
+        savedValue: _stored(_source(a)),
+        blockedValue: _stored(_source(b)),
       );
       lists.setSubscribedLists([a, b]);
       final feed = bloc();
@@ -998,7 +1154,7 @@ void main() {
         backend.release.complete,
       );
       await preferences.reload();
-      expect(preferences.getString(_key), _source(b).persistenceValue);
+      expect(preferences.getString(_key), _stored(_source(b)));
       expect(feed.state.source, _source(b));
     });
 
@@ -1019,7 +1175,7 @@ void main() {
       }) async {
         final a = _list(_authorA);
         final backend = await gatePreferences(
-          savedValue: _source(a).persistenceValue,
+          savedValue: _stored(_source(a)),
           blockedValue: 'forYou',
           blockedRepairValue: blockedRepairValue,
         );
@@ -1086,7 +1242,7 @@ void main() {
           expect(current.state.source, _source(_list(_authorA)));
           expect(
             preferences.getString(_key),
-            _source(_list(_authorA)).persistenceValue,
+            _stored(_source(_list(_authorA))),
           );
         },
       );
@@ -1115,7 +1271,7 @@ void main() {
           await setup.closing;
           await preferences.reload();
           expect(current.state.source, b);
-          expect(preferences.getString(_key), b.persistenceValue);
+          expect(preferences.getString(_key), _stored(b));
         },
       );
 
@@ -1125,7 +1281,7 @@ void main() {
           final setup = await blockedReplacement();
           final b = _source(_list(_authorB));
           const otherKey = 'selected_feed_mode_$_otherViewer';
-          await preferences.setString(otherKey, b.persistenceValue);
+          await preferences.setString(otherKey, _stored(b));
           final otherCoordinator = FeedModePersistenceCoordinator(
             sharedPreferences: preferences,
             userPubkey: _otherViewer,
@@ -1145,10 +1301,10 @@ void main() {
           await setup.closing;
           await preferences.reload();
           expect(current.state.source, b);
-          expect(preferences.getString(otherKey), b.persistenceValue);
+          expect(preferences.getString(otherKey), _stored(b));
           expect(
             preferences.getString(_key),
-            _source(_list(_authorA)).persistenceValue,
+            _stored(_source(_list(_authorA))),
           );
         },
       );
@@ -1171,7 +1327,7 @@ void main() {
           expect(preferences.getString('selected_feed_mode'), 'latest');
           expect(
             preferences.getString(_key),
-            _source(_list(_authorA)).persistenceValue,
+            _stored(_source(_list(_authorA))),
           );
         },
       );
@@ -1240,7 +1396,7 @@ void main() {
           await setup.closing;
           await preferences.reload();
           expect(returned.state.source, b);
-          expect(preferences.getString(_key), b.persistenceValue);
+          expect(preferences.getString(_key), _stored(b));
         },
       );
 
@@ -1262,7 +1418,7 @@ void main() {
           expect(preferences.getString('selected_feed_mode'), 'latest');
           expect(
             preferences.getString(_key),
-            _source(_list(_authorA)).persistenceValue,
+            _stored(_source(_list(_authorA))),
           );
         },
       );
@@ -1274,7 +1430,7 @@ void main() {
             final a = _list(_authorA);
             SharedPreferences.setMockInitialValues({});
             final backend = _GatedLegacyRemoval(
-              _source(a).persistenceValue,
+              _stored(_source(a)),
               result,
             );
             SharedPreferencesStorePlatform.instance = backend;
@@ -1333,7 +1489,7 @@ void main() {
             await preferences.reload();
             expect(guest.savedValue(), 'latest');
             expect(preferences.getString('selected_feed_mode'), 'latest');
-            expect(preferences.getString(_key), _source(a).persistenceValue);
+            expect(preferences.getString(_key), _stored(_source(a)));
             expect(error.isCompleted, result != _RemovalResult.succeeds);
           },
         );
@@ -1345,7 +1501,7 @@ void main() {
           () async {
             final a = _list(_authorA);
             final backend = await gatePreferences(
-              savedValue: _source(a).persistenceValue,
+              savedValue: _stored(_source(a)),
               blockedValue: 'forYou',
               throwBlockedWrite: throwsWrite,
               rejectBlockedWrite: !throwsWrite,
@@ -1393,7 +1549,7 @@ void main() {
             );
             await preferences.reload();
             expect(current.state.source, _source(a));
-            expect(preferences.getString(_key), _source(a).persistenceValue);
+            expect(preferences.getString(_key), _stored(_source(a)));
           },
         );
       }
@@ -1403,7 +1559,7 @@ void main() {
         () async {
           final b = _source(_list(_authorB));
           final setup = await blockedReplacement(
-            blockedRepairValue: b.persistenceValue,
+            blockedRepairValue: _stored(b),
           );
           final current = bloc(
             coordinator: setup.coordinator,
