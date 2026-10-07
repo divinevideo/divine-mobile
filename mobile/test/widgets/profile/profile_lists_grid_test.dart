@@ -49,7 +49,7 @@ class _FakeCuratedListsState extends CuratedListsState {
   Future<List<CuratedList>> build() async {
     _initializationAttempts++;
     if (_failInitialization && _initializationAttempts == 1) {
-      throw StateError('local list initialization failed');
+      throw Exception('local list initialization failed');
     }
     return _videoLoad == null ? _fakeLists : await _videoLoad!.future;
   }

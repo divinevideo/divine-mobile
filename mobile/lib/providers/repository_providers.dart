@@ -581,8 +581,13 @@ final curatedListCacheWriteCoordinatorProvider =
       ).writes,
     );
 
+/// A failed initialization surfaces at once, so the retry the viewer drives is
+/// reachable. Riverpod's default retries an `Exception` ten times with backoff,
+/// and while it does the state is loading that carries the error.
+Duration? _noAutomaticRetry(int retryCount, Object error) => null;
+
 /// Lists state notifier - manages curated lists state
-@riverpod
+@Riverpod(retry: _noAutomaticRetry)
 class CuratedListsState extends _$CuratedListsState {
   CuratedListService? _service;
 
