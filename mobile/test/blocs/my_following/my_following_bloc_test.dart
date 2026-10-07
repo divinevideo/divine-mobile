@@ -458,13 +458,9 @@ void main() {
         () async {
           final pubkey = validPubkey('user');
           final toggleCompleter = Completer<void>();
-          final toggleStarted = Completer<void>();
           when(
             () => mockFollowRepository.toggleFollow(pubkey),
-          ).thenAnswer((_) {
-            toggleStarted.complete();
-            return toggleCompleter.future;
-          });
+          ).thenAnswer((_) => toggleCompleter.future);
 
           final bloc = createBloc();
           addTearDown(() async {
@@ -472,7 +468,7 @@ void main() {
             await bloc.close();
           });
           bloc.add(MyFollowingToggleRequested(pubkey));
-          await toggleStarted.future;
+          await untilCalled(() => mockFollowRepository.toggleFollow(pubkey));
 
           final closeFuture = bloc.close();
           toggleCompleter.complete();
@@ -487,13 +483,9 @@ void main() {
       test('does not emit after close when a toggle fails', () async {
         final pubkey = validPubkey('user');
         final toggleCompleter = Completer<void>();
-        final toggleStarted = Completer<void>();
         when(
           () => mockFollowRepository.toggleFollow(pubkey),
-        ).thenAnswer((_) {
-          toggleStarted.complete();
-          return toggleCompleter.future;
-        });
+        ).thenAnswer((_) => toggleCompleter.future);
 
         final bloc = createBloc();
         addTearDown(() async {
@@ -501,7 +493,7 @@ void main() {
           await bloc.close();
         });
         bloc.add(MyFollowingToggleRequested(pubkey));
-        await toggleStarted.future;
+        await untilCalled(() => mockFollowRepository.toggleFollow(pubkey));
 
         final closeFuture = bloc.close();
         toggleCompleter.completeError(Exception('Network error'));
@@ -514,17 +506,15 @@ void main() {
         'uses droppable transformer — second rapid toggle is dropped',
         () async {
           final pubkey = validPubkey('user');
-          final toggleStarted = Completer<void>();
           final finishToggle = Completer<void>();
-          when(() => mockFollowRepository.toggleFollow(pubkey)).thenAnswer((_) {
-            if (!toggleStarted.isCompleted) toggleStarted.complete();
-            return finishToggle.future;
-          });
+          when(
+            () => mockFollowRepository.toggleFollow(pubkey),
+          ).thenAnswer((_) => finishToggle.future);
 
           final bloc = createBloc();
           try {
             bloc.add(MyFollowingToggleRequested(pubkey));
-            await toggleStarted.future;
+            await untilCalled(() => mockFollowRepository.toggleFollow(pubkey));
             // Keep the first repository write pending while the second event
             // drains, so the assertion checks overlap rather than elapsed time.
             bloc.add(MyFollowingToggleRequested(pubkey));
