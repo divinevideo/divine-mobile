@@ -36,11 +36,6 @@ extension VideoEditorHistoryExtensions on StateManager {
     activeMeta[VideoEditorConstants.effectsStateHistoryKey],
   );
 
-  /// The video effects of [videoEffectEntries], for rendering.
-  List<VideoEffect> get videoEffects => [
-    for (final entry in videoEffectEntries) entry.effect,
-  ];
-
   /// Restores timeline marker positions from the current history metadata.
   List<Duration> get timelineMarkers {
     final raw = activeMeta[VideoEditorConstants.timelineMarkersStateHistoryKey];

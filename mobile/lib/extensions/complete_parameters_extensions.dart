@@ -70,6 +70,13 @@ extension CompleteParametersEquality on CompleteParameters {
   List<VideoEffect> get videoEffectsFromCompleteMeta =>
       videoEffectsFromMeta(meta[VideoEditorConstants.effectsStateHistoryKey]);
 
+  /// Like [videoEffectsFromCompleteMeta], with each effect's timeline id and
+  /// whether it fires on the beat.
+  List<EditorVideoEffect> get videoEffectEntriesFromCompleteMeta =>
+      videoEffectEntriesFromMeta(
+        meta[VideoEditorConstants.effectsStateHistoryKey],
+      );
+
   /// The content warnings the edit's effects make mandatory; see
   /// [requiredContentLabelsForEffects].
   Set<ContentLabel> get requiredContentWarnings =>

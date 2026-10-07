@@ -63,7 +63,7 @@ class VoiceOverCubit extends Cubit<VoiceOverState>
 
   /// Id prefix shared by every voice-over take, so the editor can later
   /// recognise prior voice-over tracks among all audio on the timeline.
-  static const voiceOverIdPrefix = '${AudioEvent.localImportMarker}_voice_over';
+  static const String voiceOverIdPrefix = AudioEvent.voiceOverIdPrefix;
 
   /// Re-exposes [VoiceOverRecorderService.amplitudeInterval] (the canonical
   /// owner of the sampling cadence) so the UI's waveform painter can read it

@@ -10,6 +10,38 @@ import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 void main() {
+  group(EditorVideoEffect, () {
+    const zoom = VideoEffect.zoomPulse(intensity: 0.5);
+
+    test('stores onBeat only when it is on, and reads it back', () {
+      const onBeat = EditorVideoEffect(id: 'zoom', effect: zoom, onBeat: true);
+      const continuous = EditorVideoEffect(id: 'zoom', effect: zoom);
+
+      expect(onBeat.toMap()[EditorVideoEffect.onBeatKey], isTrue);
+      expect(continuous.toMap(), isNot(contains(EditorVideoEffect.onBeatKey)));
+      for (final entry in [onBeat, continuous]) {
+        expect(
+          EditorVideoEffect.fromMap(entry.toMap(), fallbackId: 'other'),
+          entry,
+        );
+      }
+    });
+
+    test('keeps onBeat when it is moved', () {
+      const entry = EditorVideoEffect(id: 'zoom', effect: zoom, onBeat: true);
+
+      expect(
+        entry
+            .retimed(
+              startTime: const Duration(seconds: 1),
+              endTime: const Duration(seconds: 2),
+            )
+            .onBeat,
+        isTrue,
+      );
+    });
+  });
+
   group('withoutFlashingOverlaps', () {
     Duration s(num seconds) => Duration(milliseconds: (seconds * 1000).round());
 
@@ -102,6 +134,28 @@ void main() {
         ('negative', s(2), s(3)),
       ]);
       expect(result[1].effect.type, VideoEffectType.strobe);
+    });
+
+    test('keeps both pieces of a cut effect on the beat on the beat', () {
+      final result = withoutFlashingOverlaps(
+        [
+          const EditorVideoEffect(
+            id: 'negative',
+            effect: VideoEffect(type: .negativeFlash),
+            onBeat: true,
+          ),
+          effect('strobe', .strobe, s(2), s(3)),
+        ],
+        keepId: 'strobe',
+        createId: createId,
+      )!;
+
+      expect(windows(result), [
+        ('negative', Duration.zero, s(2)),
+        ('piece-0', s(3), null),
+        ('strobe', s(2), s(3)),
+      ]);
+      expect([for (final e in result) e.onBeat], [true, true, false]);
     });
 
     test('drops a leftover piece too short to see', () {
@@ -221,8 +275,17 @@ void main() {
       endTime: end,
     );
 
+    /// [effects] on the output axis, as the timeline would hold them.
+    List<VideoEffect> mapped(
+      List<VideoEffect> effects,
+      TransitionTimelineMap map,
+    ) => videoEffectsOnOutput([
+      for (final (index, effect) in effects.indexed)
+        EditorVideoEffect(id: 'effect_$index', effect: effect),
+    ], map);
+
     test('starts a flashing effect on the next whole second', () {
-      final onOutput = videoEffectsOnOutput([
+      final onOutput = mapped([
         flashing(.strobe, 1, ms(1300), ms(4000)),
         const VideoEffect.glitch(startTime: Duration(milliseconds: 1300)),
       ], plain);
@@ -233,7 +296,7 @@ void main() {
 
     test('leaves out a flashing piece too short to reach a whole second', () {
       expect(
-        videoEffectsOnOutput([flashing(.strobe, 1, ms(1300), ms(1900))], plain),
+        mapped([flashing(.strobe, 1, ms(1300), ms(1900))], plain),
         isEmpty,
       );
     });
@@ -249,7 +312,7 @@ void main() {
         for (final intensity in [0.3, 0.7, 1.0]) {
           for (var split = 50; split < 6000; split += 50) {
             for (final map in [plain, compressed]) {
-              final onOutput = videoEffectsOnOutput([
+              final onOutput = mapped([
                 flashing(type, intensity, Duration.zero, ms(split)),
                 flashing(type, intensity, ms(split), ms(6000)),
               ], map);
@@ -271,7 +334,7 @@ void main() {
         for (final second in kinds) {
           for (var boundary = 50; boundary < 6000; boundary += 50) {
             for (final map in [plain, compressed]) {
-              final onOutput = videoEffectsOnOutput([
+              final onOutput = mapped([
                 flashing(first, 1, Duration.zero, ms(boundary)),
                 flashing(second, 1, ms(boundary), ms(6000)),
               ], map);
@@ -299,7 +362,7 @@ void main() {
         ]);
         for (final type in kinds) {
           for (final intensity in [0.3, 0.7, 1.0]) {
-            final onOutput = videoEffectsOnOutput([
+            final onOutput = mapped([
               VideoEffect(type: type, intensity: intensity),
             ], map);
             expect(
@@ -311,7 +374,7 @@ void main() {
         }
         for (final first in kinds) {
           for (final second in kinds) {
-            final onOutput = videoEffectsOnOutput([
+            final onOutput = mapped([
               flashing(first, 1, Duration.zero, ms(1000)),
               VideoEffect(type: second, startTime: ms(1000)),
             ], map);
@@ -332,7 +395,7 @@ void main() {
       ]);
 
       expect(
-        videoEffectsOnOutput(const [
+        mapped(const [
           VideoEffect.negativeFlash(),
           VideoEffect.glitch(),
         ], map),
@@ -350,11 +413,337 @@ void main() {
       ]);
 
       expect(
-        videoEffectsOnOutput([
+        mapped([
           VideoEffect.negativeFlash(startTime: ms(1300)),
         ], map),
         [VideoEffect.negativeFlash(startTime: ms(2000))],
       );
+    });
+
+    group('on the beat', () {
+      EditorVideoEffect onBeat(
+        VideoEffectType type, {
+        Duration? start,
+        Duration? end,
+      }) => EditorVideoEffect(
+        id: type.name,
+        effect: VideoEffect(type: type, startTime: start, endTime: end),
+        onBeat: true,
+      );
+
+      /// The most flashes that start within any one second of [onOutput]
+      /// looping at [loopPoint]. A flash starts wherever the picture gets
+      /// clearly whiter or turns negative, even while the last one is still
+      /// fading. Sampled 120 times a second over enough passes to fill a few
+      /// seconds, so short loops repeat within the window.
+      int mostFlashRisesPerSecond(
+        List<VideoEffect> onOutput,
+        Duration loopPoint,
+      ) {
+        Duration step(int i) => Duration(microseconds: (i + 0.5) * 1e6 ~/ 120);
+        final passes = 3000000 ~/ loopPoint.inMicroseconds + 3;
+        final rises = <Duration>[];
+        var lastFlash = 0.0;
+        var lastInvert = 0.0;
+        for (var pass = 0; pass < passes; pass++) {
+          for (var i = 0; step(i) < loopPoint; i++) {
+            final frame = VideoEffect.resolve(onOutput, step(i));
+            if (frame.flash >= lastFlash + 0.1 ||
+                (frame.invert >= 0.5 && lastInvert < 0.5)) {
+              rises.add(loopPoint * pass + step(i));
+            }
+            lastFlash = frame.flash;
+            lastInvert = frame.invert;
+          }
+        }
+        var most = 0;
+        for (final start in rises) {
+          final n = rises
+              .where(
+                (t) => t >= start && t - start < const Duration(seconds: 1),
+              )
+              .length;
+          if (n > most) most = n;
+        }
+        return most;
+      }
+
+      test('counts a flash on the first frame apart from one still fading '
+          'at the loop point', () {
+        final map = TransitionTimelineMap.fromClips([
+          clip('a', duration: ms(5500)),
+        ]);
+        final onOutput = videoEffectsOnOutput(
+          [onBeat(.strobe)],
+          map,
+          beats: [ms(0), for (var t = 590; t <= 5420; t += 345) ms(t)],
+        );
+        expect(
+          mostFlashRisesPerSecond(onOutput, map.outputDuration),
+          lessThanOrEqualTo(3),
+        );
+      });
+
+      test('counts the flash of a continuous strobe on the first frame apart '
+          'from a beat still fading at the loop point', () {
+        final map = TransitionTimelineMap.fromClips([
+          clip('a', duration: ms(5500)),
+        ]);
+        final onOutput = videoEffectsOnOutput(
+          [
+            const EditorVideoEffect(
+              id: 'continuous',
+              effect: VideoEffect(
+                type: VideoEffectType.strobe,
+                endTime: Duration(seconds: 1),
+              ),
+            ),
+            onBeat(.strobe, start: ms(1000)),
+          ],
+          map,
+          beats: [for (var t = 1280; t <= 5420; t += 345) ms(t)],
+        );
+        expect(
+          mostFlashRisesPerSecond(onOutput, map.outputDuration),
+          lessThanOrEqualTo(3),
+        );
+      });
+
+      test(
+        'counts a neighbouring flash that starts while a beat still fades',
+        () {
+          final map = TransitionTimelineMap.fromClips([
+            clip('a', duration: ms(5500)),
+          ]);
+          final onOutput = videoEffectsOnOutput(
+            [
+              onBeat(.strobe, end: ms(2000)),
+              EditorVideoEffect(
+                id: 'negative',
+                effect: VideoEffect(
+                  type: VideoEffectType.negativeFlash,
+                  intensity: 0.4,
+                  startTime: ms(2000),
+                  endTime: ms(3000),
+                ),
+              ),
+              onBeat(.strobe, start: ms(3000)),
+            ],
+            map,
+            beats: [
+              for (var t = 540; t <= 1920; t += 345) ms(t),
+              for (var t = 3050; t < 5500; t += 345) ms(t),
+            ],
+          );
+          expect(
+            mostFlashRisesPerSecond(onOutput, map.outputDuration),
+            lessThanOrEqualTo(3),
+          );
+        },
+      );
+
+      test('keeps loops shorter than a second, or than a hit, within three '
+          'flashes a second with a beat on the first frame', () {
+        for (final (length, beats) in [
+          (448, [ms(0), ms(360)]),
+          (70, [ms(0)]),
+        ]) {
+          final map = TransitionTimelineMap.fromClips([
+            clip('a', duration: ms(length)),
+          ]);
+          final onOutput = videoEffectsOnOutput(
+            [onBeat(.strobe)],
+            map,
+            beats: beats,
+          );
+          expect(
+            mostFlashRisesPerSecond(onOutput, map.outputDuration),
+            lessThanOrEqualTo(3),
+            reason: '$length ms loop',
+          );
+        }
+      });
+
+      /// A beat every 60/[bpm] seconds from [first] until [until].
+      List<Duration> beatsAt(
+        double bpm, {
+        Duration first = Duration.zero,
+        Duration until = const Duration(seconds: 7),
+      }) => [
+        for (
+          var t = first.inMicroseconds.toDouble();
+          t < until.inMicroseconds;
+          t += 60e6 / bpm
+        )
+          Duration(microseconds: t.round()),
+      ];
+
+      /// The most flashes that start within any one second of [onOutput]
+      /// looping at [loopPoint], sampled 120 times a second over three passes.
+      int mostFlashesPerSecondOnLoop(
+        List<VideoEffect> onOutput,
+        Duration loopPoint,
+      ) {
+        Duration step(int index) =>
+            Duration(microseconds: (index + 0.5) * 1e6 ~/ 120);
+        final onsets = <Duration>[];
+        var wasOn = false;
+        for (var pass = 0; pass < 3; pass++) {
+          for (var i = 0; step(i) < loopPoint; i++) {
+            final frame = VideoEffect.resolve(onOutput, step(i));
+            final on = frame.flash >= 0.5 || frame.invert >= 0.5;
+            if (on && !wasOn) onsets.add(loopPoint * pass + step(i));
+            wasOn = on;
+          }
+        }
+        var most = 0;
+        for (final start in onsets) {
+          final inSecond = onsets
+              .where(
+                (t) => t >= start && t - start < const Duration(seconds: 1),
+              )
+              .length;
+          if (inSecond > most) most = inSecond;
+        }
+        return most;
+      }
+
+      test('fires on the beats in its window', () {
+        final onOutput = videoEffectsOnOutput(
+          [onBeat(.zoomPulse, start: ms(1000), end: ms(3000))],
+          plain,
+          beats: [ms(500), ms(1500), ms(2500), ms(3500)],
+        );
+
+        expect(onOutput.single.startTime, ms(1000));
+        expect(onOutput.single.endTime, ms(3000));
+        expect(onOutput.single.triggers, [ms(1500), ms(2500)]);
+      });
+
+      test('is left out without a beat in its window, and does not start a '
+          'flash on the whole-second grid', () {
+        expect(
+          videoEffectsOnOutput([onBeat(.zoomPulse)], plain),
+          isEmpty,
+        );
+        expect(
+          videoEffectsOnOutput(
+            [onBeat(.strobe, start: ms(1300))],
+            plain,
+            beats: [ms(1400)],
+          ).single.startTime,
+          ms(1300),
+        );
+      });
+
+      test('flashes on every other beat of a song too fast for every one', () {
+        final onOutput = videoEffectsOnOutput(
+          [onBeat(.strobe)],
+          plain,
+          beats: beatsAt(200, until: ms(6000)),
+        );
+
+        final triggers = onOutput.single.triggers;
+        expect(triggers, hasLength(10));
+        for (var i = 1; i < triggers.length; i++) {
+          expect(triggers[i] - triggers[i - 1], ms(600));
+        }
+      });
+
+      test('keeps flashing at three flashes a second or fewer across the loop '
+          'point, next to a flashing effect that plays all through', () {
+        for (var length = 2000; length <= 6300; length += 350) {
+          final map = TransitionTimelineMap.fromClips([
+            clip('a', duration: ms(length)),
+          ]);
+          for (var bpm = 100.0; bpm <= 200; bpm += 10) {
+            for (final type in [
+              VideoEffectType.strobe,
+              VideoEffectType.negativeFlash,
+            ]) {
+              for (final effects in [
+                [onBeat(type)],
+                [
+                  EditorVideoEffect(
+                    id: 'continuous',
+                    effect: VideoEffect(
+                      type: VideoEffectType.negativeFlash,
+                      endTime: ms(1000),
+                    ),
+                  ),
+                  onBeat(type, start: ms(1000)),
+                ],
+              ]) {
+                final onOutput = videoEffectsOnOutput(
+                  effects,
+                  map,
+                  beats: beatsAt(bpm, first: ms(130), until: ms(length)),
+                );
+                expect(
+                  mostFlashesPerSecondOnLoop(onOutput, map.outputDuration),
+                  lessThanOrEqualTo(3),
+                  reason: '$type at $bpm bpm on $length ms, $effects',
+                );
+              }
+            }
+          }
+        }
+      });
+
+      test('leaves a flashing effect on the beat to its beats at the loop '
+          'point, rather than ending it on the last whole second', () {
+        final map = TransitionTimelineMap.fromClips([
+          clip('a', duration: ms(5500)),
+        ]);
+
+        final onOutput = videoEffectsOnOutput(
+          [onBeat(.strobe)],
+          map,
+          beats: [ms(500), ms(5200)],
+        );
+
+        expect(onOutput.single.endTime, isNull);
+        expect(onOutput.single.triggers, [ms(500), ms(5200)]);
+      });
+
+      test('limits flashes across every repetition of a sub-second loop', () {
+        for (final length in [100, 200, 250, 300, 400, 600]) {
+          final map = TransitionTimelineMap.fromClips([
+            clip('a', duration: ms(length)),
+          ]);
+          for (final type in [
+            VideoEffectType.strobe,
+            VideoEffectType.negativeFlash,
+          ]) {
+            for (final intensity in [0.1, 1.0]) {
+              final effects = videoEffectsOnOutput(
+                [
+                  EditorVideoEffect(
+                    id: 'quiet-flash',
+                    effect: VideoEffect(type: type, intensity: intensity),
+                    onBeat: true,
+                  ),
+                ],
+                map,
+                beats: [ms(50)],
+              );
+              var flashes = 0;
+              var wasOn = false;
+              for (var at = 0; at < 1000; at++) {
+                final frame = VideoEffect.resolve(effects, ms(at % length));
+                final on = frame.flash > 0 || frame.invert > 0;
+                if (on && !wasOn) flashes++;
+                wasOn = on;
+              }
+              expect(
+                flashes,
+                lessThanOrEqualTo(3),
+                reason: '$type at $intensity on a $length ms loop',
+              );
+            }
+          }
+        }
+      });
     });
   });
 }

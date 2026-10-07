@@ -8177,6 +8177,23 @@ class AppLocalizationsZh extends AppLocalizations {
       '一次只能用一个闪烁效果。闪烁太多可能会伤害对闪光敏感的人。';
 
   @override
+  String get videoEditorEffectsOnBeat => '卡点';
+
+  @override
+  String get videoEditorEffectsOnBeatFinding => '正在识别节拍…';
+
+  @override
+  String get videoEditorEffectsOnBeatNoBeat => '这段声音没有稳定的节拍';
+
+  @override
+  String get videoEditorEffectsOnBeatNoSound => '添加音乐或打开某个片段的声音';
+
+  @override
+  String videoEditorEffectOnBeatLabel(String effect) {
+    return '$effect（卡点）';
+  }
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => '打开调节编辑器';
 
   @override

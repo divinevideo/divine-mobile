@@ -8640,6 +8640,25 @@ class AppLocalizationsAr extends AppLocalizations {
       'تأثير وامض واحد في كل مرة. الوميض الكثير قد يؤذي الأشخاص الحساسين له.';
 
   @override
+  String get videoEditorEffectsOnBeat => 'على الإيقاع';
+
+  @override
+  String get videoEditorEffectsOnBeatFinding => 'جارٍ البحث عن الإيقاع…';
+
+  @override
+  String get videoEditorEffectsOnBeatNoBeat =>
+      'لا يوجد إيقاع ثابت في هذا الصوت';
+
+  @override
+  String get videoEditorEffectsOnBeatNoSound =>
+      'إضافة موسيقى أو تشغيل صوت أحد المقاطع';
+
+  @override
+  String videoEditorEffectOnBeatLabel(String effect) {
+    return '$effect على الإيقاع';
+  }
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'فتح محرر التعديلات';
 
   @override

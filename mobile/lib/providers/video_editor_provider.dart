@@ -754,8 +754,8 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
           old.captionTrackFromMeta != editingParameters.captionTrackFromMeta;
       // Video effects live in the `effects` meta key only, like captions.
       final effectsMetaChanged = !listEquals(
-        old.videoEffectsFromCompleteMeta,
-        editingParameters.videoEffectsFromCompleteMeta,
+        old.videoEffectEntriesFromCompleteMeta,
+        editingParameters.videoEffectEntriesFromCompleteMeta,
       );
       if (diffs.isEmpty &&
           !audioMetaChanged &&

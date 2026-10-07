@@ -8754,6 +8754,25 @@ class AppLocalizationsBg extends AppLocalizations {
       'Само един мигащ ефект наведнъж. Прекаленото мигане може да навреди на чувствителни хора.';
 
   @override
+  String get videoEditorEffectsOnBeat => 'В ритъм';
+
+  @override
+  String get videoEditorEffectsOnBeatFinding => 'Търсене на ритъма…';
+
+  @override
+  String get videoEditorEffectsOnBeatNoBeat =>
+      'Няма равномерен ритъм в този звук';
+
+  @override
+  String get videoEditorEffectsOnBeatNoSound =>
+      'Добави музика или включи звука на клип';
+
+  @override
+  String videoEditorEffectOnBeatLabel(String effect) {
+    return '$effect в ритъм';
+  }
+
+  @override
   String get videoEditorOpenTuneSemanticLabel =>
       'Отваряне на редактора за настройки';
 

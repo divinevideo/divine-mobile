@@ -249,12 +249,12 @@ class _OverlayControls extends StatelessWidget {
           padding: .only(bottom: VideoEditorConstants.bottomBarHeight),
           child: VideoEditorTuneOverlayControls(),
         ),
-        // Effects-Editor
-        VideoEditorMainState(openSubEditor: .effects) => const Padding(
-          key: ValueKey('Effects-Overlay-Controls'),
-          padding: .only(bottom: VideoEditorConstants.bottomBarHeight),
-          child: VideoEditorEffectsOverlayControls(),
-        ),
+        // Effects-Editor: reaches down to the preview's edge, where its
+        // on-the-beat card sits; it centers its slider like the others.
+        VideoEditorMainState(openSubEditor: .effects) =>
+          const VideoEditorEffectsOverlayControls(
+            key: ValueKey('Effects-Overlay-Controls'),
+          ),
         // Fallback
         _ => const VideoEditorMainOverlayActions(),
       },

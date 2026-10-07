@@ -8715,6 +8715,24 @@ class AppLocalizationsNl extends AppLocalizations {
       'Eén knipperend effect tegelijk. Te veel knipperen kan schadelijk zijn voor mensen die er gevoelig voor zijn.';
 
   @override
+  String get videoEditorEffectsOnBeat => 'Op de beat';
+
+  @override
+  String get videoEditorEffectsOnBeatFinding => 'Beat zoeken…';
+
+  @override
+  String get videoEditorEffectsOnBeatNoBeat => 'Geen vaste beat in dit geluid';
+
+  @override
+  String get videoEditorEffectsOnBeatNoSound =>
+      'Voeg muziek toe of zet het geluid van een clip aan';
+
+  @override
+  String videoEditorEffectOnBeatLabel(String effect) {
+    return '$effect op de beat';
+  }
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Aanpassingseditor openen';
 
   @override

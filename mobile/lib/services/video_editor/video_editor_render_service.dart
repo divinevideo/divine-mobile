@@ -26,6 +26,7 @@ import 'package:openvine/services/video_editor/render_cancellation_registry.dart
 import 'package:openvine/services/video_editor/render_progress_tracker.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
+import 'package:openvine/services/video_editor/video_editor_beat_resolver.dart';
 import 'package:openvine/services/video_editor/video_render_failures.dart';
 import 'package:openvine/services/video_editor/video_render_watchdog.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
@@ -863,6 +864,15 @@ class VideoEditorRenderService {
       tempFilePaths: tempFilePaths,
     );
 
+    final effectEntries =
+        parameters?.videoEffectEntriesFromCompleteMeta ?? const [];
+    final beats = await _beatsOnOutput(
+      effectEntries: effectEntries,
+      parameters: parameters,
+      clips: clips,
+      videoEnd: videoContentDuration,
+    );
+
     final volumeSegments = segments
         .map((s) => s.copyWith(volume: s.volume))
         .toList();
@@ -913,8 +923,9 @@ class VideoEditorRenderService {
         timelineMap: timelineMap,
       ),
       effects: buildVideoEffects(
-        effects: parameters?.videoEffectsFromCompleteMeta ?? const [],
+        effects: effectEntries,
         timelineMap: timelineMap,
+        beats: beats,
       ),
       imageBytesWithCropping: true,
       qualityConfig: VideoQualityConfig.custom(
@@ -1213,13 +1224,49 @@ class VideoEditorRenderService {
   /// Maps each video effect's editor-timeline window onto the output axis,
   /// like [buildColorFilters]. A `null` start/end stays open, so a
   /// whole-video effect runs from the first output frame, which is also where
-  /// the preview starts its animation.
+  /// the preview starts its animation. An effect on the beat fires on
+  /// [beats], which are on the output axis already.
   @visibleForTesting
   static List<VideoEffect> buildVideoEffects({
-    required List<VideoEffect> effects,
+    required List<EditorVideoEffect> effects,
     required TransitionTimelineMap timelineMap,
+    List<Duration> beats = const [],
   }) {
-    return videoEffectsOnOutput(effects, timelineMap);
+    return videoEffectsOnOutput(effects, timelineMap, beats: beats);
+  }
+
+  /// The beats of the video's music on the output axis, or none when no
+  /// effect in [effectEntries] fires on the beat.
+  ///
+  /// A sound whose beats cannot be read leaves its effects without beats, so
+  /// they are left out of the export, rather than failing it: the sound
+  /// itself was fetched for the export already.
+  static Future<List<Duration>> _beatsOnOutput({
+    required List<EditorVideoEffect> effectEntries,
+    required CompleteParameters? parameters,
+    required List<DivineVideoClip> clips,
+    required Duration videoEnd,
+  }) async {
+    if (!effectEntries.any((entry) => entry.onBeat)) return const [];
+    final parts = beatSourceFor(
+      sounds: parameters?.audioTracksFromMeta ?? const [],
+      clips: clips,
+      videoEnd: videoEnd,
+    );
+    final resolver = VideoEditorBeatResolver();
+    try {
+      await resolver.read(parts);
+      return resolver.beatsOnOutput(parts, videoEnd: videoEnd);
+    } on Exception catch (error, stackTrace) {
+      Log.error(
+        'Could not read the beats for effects on the beat',
+        name: _logName,
+        category: LogCategory.video,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return const [];
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────

@@ -33,14 +33,20 @@ enum OverlayMultiSelectState {
   selected,
 }
 
-/// The name [item] is shown and announced by: an effect and a hidden area
-/// in the user's language, every other item by its own label.
+/// The name [item] is shown and announced by: an effect, and whether it
+/// fires on the beat, and a hidden area in the user's language, every other
+/// item by its own label.
 String timelineOverlayItemLabel(
   BuildContext context,
   TimelineOverlayItem item,
 ) {
   final layer = item.layer;
-  if (item.type == .effect) return videoEffectLabel(context, item.effectType);
+  if (item.type == .effect) {
+    final name = videoEffectLabel(context, item.effectType);
+    return item.effectOnBeat
+        ? context.l10n.videoEditorEffectOnBeatLabel(name)
+        : name;
+  }
   if (layer is PaintLayer && layer.isCensor) {
     return censorToolLabel(
       context,

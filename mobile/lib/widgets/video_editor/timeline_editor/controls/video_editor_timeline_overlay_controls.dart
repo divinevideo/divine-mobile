@@ -488,6 +488,7 @@ class _EffectOverlayControls extends StatelessWidget {
     final copy = EditorVideoEffect(
       id: _copyId(item.id),
       effect: effects[index].effect,
+      onBeat: effects[index].onBeat,
     );
     effects.insert(index + 1, copy);
     editor.setVideoEffectEntries(effects);
@@ -511,6 +512,7 @@ class _EffectOverlayControls extends StatelessWidget {
     final second = EditorVideoEffect(
       id: _copyId(item.id),
       effect: effect.effect,
+      onBeat: effect.onBeat,
     ).retimed(startTime: splitAt, endTime: item.endTime);
 
     effects[index] = effect.retimed(
