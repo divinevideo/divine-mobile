@@ -3867,6 +3867,7 @@ void main() {
 
       late _MockPeopleListsRepository peopleListsRepository;
       late StreamController<List<PeopleListSearchResult>> followedController;
+      late Completer<List<PeopleListSearchResult>> staleRead;
 
       setUp(() {
         peopleListsRepository = _MockPeopleListsRepository();
@@ -4211,6 +4212,48 @@ void main() {
           verify: (bloc) {
             expect(bloc.state.followedPeopleLists, isEmpty);
             expect(bloc.state.source, const VideoFeedSource.forYou());
+          },
+        );
+
+        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+          'a blocklist read that a newer followed set overtakes is read again',
+          setUp: () {
+            final stale = Completer<List<PeopleListSearchResult>>();
+            var reads = 0;
+            when(
+              () =>
+                  peopleListsRepository.readFollowedLists(viewerPubkey: viewer),
+            ).thenAnswer((_) {
+              if (reads++ == 0) return stale.future;
+              return Future.value([followedList(id: 'newer')]);
+            });
+            addTearDown(
+              () => stale.isCompleted
+                  ? null
+                  : stale.complete(const <PeopleListSearchResult>[]),
+            );
+            staleRead = stale;
+          },
+          build: createPeopleBloc,
+          seed: () => VideoFeedBlocState(
+            status: VideoFeedStatus.success,
+            videos: createTestVideos(3),
+          ),
+          act: (bloc) async {
+            bloc.add(const VideoFeedBlocklistChanged());
+            await pumpEventQueue();
+            bloc.add(
+              VideoFeedFollowedPeopleListsChanged([followedList(id: 'newer')]),
+            );
+            await pumpEventQueue();
+            staleRead.complete([followedList(id: 'stale')]);
+            await pumpEventQueue();
+          },
+          verify: (bloc) {
+            expect(
+              bloc.state.followedPeopleLists.map((f) => f.list.id),
+              equals(['newer']),
+            );
           },
         );
 

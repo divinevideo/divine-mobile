@@ -1282,8 +1282,15 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   ) async {
     _removeBlockedVideos(event.blockedPubkey, emit);
 
-    final followed = await _readFollowedPeopleLists();
-    if (followed == null || emit.isDone) return;
+    // A set read before a newer one was applied must not overwrite it, so read
+    // again until no other update landed while the read was in flight.
+    List<PeopleListSearchResult>? followed;
+    int appliedBeforeRead;
+    do {
+      appliedBeforeRead = _followedListsSequence;
+      followed = await _readFollowedPeopleLists();
+      if (followed == null || emit.isDone) return;
+    } while (appliedBeforeRead != _followedListsSequence);
     await _onFollowedPeopleListsChanged(
       VideoFeedFollowedPeopleListsChanged(followed),
       emit,
