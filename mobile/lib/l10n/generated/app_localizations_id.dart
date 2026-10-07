@@ -8593,6 +8593,25 @@ class AppLocalizationsId extends AppLocalizations {
       'Satu efek berkedip dalam satu waktu. Kedipan berlebihan bisa membahayakan orang yang sensitif.';
 
   @override
+  String get videoEditorEffectsOnBeat => 'Sesuai ketukan';
+
+  @override
+  String get videoEditorEffectsOnBeatFinding => 'Mencari ketukan…';
+
+  @override
+  String get videoEditorEffectsOnBeatNoBeat =>
+      'Tidak ada ketukan yang stabil di suara ini';
+
+  @override
+  String get videoEditorEffectsOnBeatNoSound =>
+      'Tambahkan musik atau nyalakan suara klip';
+
+  @override
+  String videoEditorEffectOnBeatLabel(String effect) {
+    return '$effect sesuai ketukan';
+  }
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Buka editor penyesuaian';
 
   @override

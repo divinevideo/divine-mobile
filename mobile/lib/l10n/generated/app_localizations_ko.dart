@@ -8265,6 +8265,23 @@ class AppLocalizationsKo extends AppLocalizations {
       '깜빡이는 효과는 한 번에 하나만 쓸 수 있어요. 깜빡임이 너무 많으면 민감한 사람에게 해로울 수 있어요.';
 
   @override
+  String get videoEditorEffectsOnBeat => '비트에 맞추기';
+
+  @override
+  String get videoEditorEffectsOnBeatFinding => '비트를 찾는 중…';
+
+  @override
+  String get videoEditorEffectsOnBeatNoBeat => '이 사운드에는 일정한 비트가 없어요';
+
+  @override
+  String get videoEditorEffectsOnBeatNoSound => '음악을 추가하거나 클립 소리를 켜 주세요';
+
+  @override
+  String videoEditorEffectOnBeatLabel(String effect) {
+    return '$effect (비트)';
+  }
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => '조정 편집기 열기';
 
   @override

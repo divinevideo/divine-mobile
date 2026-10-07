@@ -1,5 +1,42 @@
 part of 'video_editor_effects_cubit.dart';
 
+/// Where the beats for effects on the beat stand.
+enum VideoEditorBeatStatus {
+  /// No effect fires on the beat, so the beats were not looked for.
+  idle,
+
+  /// The beats are being read from the music.
+  loading,
+
+  /// The beats are read; [VideoEditorEffectsState.beats] is empty when the
+  /// music has no steady beat.
+  ready,
+
+  /// Nothing plays that could give a beat: no music, and every clip muted.
+  noSound,
+
+  /// The music could not be read.
+  failed,
+}
+
+/// What the beats of the video come from, and how they land on it.
+class VideoEditorBeatInput extends Equatable {
+  const VideoEditorBeatInput({
+    required this.parts,
+    required this.videoEnd,
+  });
+
+  /// The stretches of music, or of the clips' own sound, the beats are read
+  /// from.
+  final List<BeatSourcePart> parts;
+
+  /// Where the exported video ends and loops.
+  final Duration videoEnd;
+
+  @override
+  List<Object?> get props => [parts, videoEnd];
+}
+
 /// State of the video effects (glitch, VHS, old film, …) in the editor.
 class VideoEditorEffectsState extends Equatable {
   const VideoEditorEffectsState({
@@ -8,7 +45,11 @@ class VideoEditorEffectsState extends Equatable {
     this.editingId,
     this.selectedType,
     this.intensity = VideoEditorEffectsCubit.defaultIntensity,
+    this.onBeat = false,
     this.startedPlayback = false,
+    this.beatInput,
+    this.beats = const [],
+    this.beatStatus = VideoEditorBeatStatus.idle,
   });
 
   /// The effects committed to the editor history, in the order they combine,
@@ -28,15 +69,37 @@ class VideoEditorEffectsState extends Equatable {
   /// The intensity of [selectedType], from 0 to 1.
   final double intensity;
 
+  /// Whether the picked effect fires on the beat; only applies when
+  /// [selectedType] [canFireOnBeat].
+  final bool onBeat;
+
   /// Whether opening the editor started the video, which closing it should
   /// then pause again.
   final bool startedPlayback;
+
+  /// What the beats come from, or `null` before the editor said.
+  final VideoEditorBeatInput? beatInput;
+
+  /// The beats of the video's music on the exported video, in order.
+  final List<Duration> beats;
+
+  /// Where finding [beats] stands.
+  final VideoEditorBeatStatus beatStatus;
+
+  /// Whether the picked effect fires on the beat.
+  bool get selectionOnBeat =>
+      onBeat && selectedType != null && canFireOnBeat(selectedType!);
 
   /// The effect the open editor would commit, over the whole video, or `null`
   /// for none.
   VideoEffect? get selection => selectedType == null
       ? null
       : VideoEffect(type: selectedType!, intensity: intensity);
+
+  /// Whether any effect, committed or picked, fires on the beat, so the beats
+  /// are needed.
+  bool get needsBeats =>
+      applied.any((entry) => entry.onBeat) || (isEditing && selectionOnBeat);
 
   /// What the preview shows, on the editor timeline.
   ///
@@ -45,22 +108,33 @@ class VideoEditorEffectsState extends Equatable {
   /// visible wherever the playhead is. A flashing pick hides the other
   /// flashing effects, which would otherwise flash along with it while the
   /// video plays; confirming replaces them where they overlap anyway.
-  List<VideoEffect> get previewEffects {
-    final picked = isEditing ? selection : null;
-    final hidesFlashing = picked != null && isFlashingVideoEffect(picked.type);
-    final effects = <VideoEffect>[];
+  List<EditorVideoEffect> get previewEffects {
+    final selection = isEditing ? this.selection : null;
+    final picked = selection == null
+        ? null
+        : EditorVideoEffect(
+            id: editingId ?? _pickedId,
+            effect: selection,
+            onBeat: selectionOnBeat,
+          );
+    final hidesFlashing =
+        picked != null && isFlashingVideoEffect(picked.effect.type);
+    final effects = <EditorVideoEffect>[];
     var edited = false;
     for (final entry in applied) {
       if (isEditing && entry.id == editingId) {
         edited = true;
         if (picked != null) effects.add(picked);
       } else if (!hidesFlashing || !isFlashingVideoEffect(entry.effect.type)) {
-        effects.add(entry.effect);
+        effects.add(entry);
       }
     }
     if (!edited && picked != null) effects.add(picked);
     return effects;
   }
+
+  /// The id the preview gives a new effect while it is picked.
+  static const _pickedId = 'picked';
 
   VideoEditorEffectsState copyWith({
     List<EditorVideoEffect>? applied,
@@ -70,7 +144,11 @@ class VideoEditorEffectsState extends Equatable {
     VideoEffectType? selectedType,
     bool clearSelectedType = false,
     double? intensity,
+    bool? onBeat,
     bool? startedPlayback,
+    VideoEditorBeatInput? beatInput,
+    List<Duration>? beats,
+    VideoEditorBeatStatus? beatStatus,
   }) {
     return VideoEditorEffectsState(
       applied: applied ?? this.applied,
@@ -80,7 +158,11 @@ class VideoEditorEffectsState extends Equatable {
           ? null
           : (selectedType ?? this.selectedType),
       intensity: intensity ?? this.intensity,
+      onBeat: onBeat ?? this.onBeat,
       startedPlayback: startedPlayback ?? this.startedPlayback,
+      beatInput: beatInput ?? this.beatInput,
+      beats: beats ?? this.beats,
+      beatStatus: beatStatus ?? this.beatStatus,
     );
   }
 
@@ -91,6 +173,10 @@ class VideoEditorEffectsState extends Equatable {
     editingId,
     selectedType,
     intensity,
+    onBeat,
     startedPlayback,
+    beatInput,
+    beats,
+    beatStatus,
   ];
 }

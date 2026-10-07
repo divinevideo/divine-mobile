@@ -8758,6 +8758,25 @@ class AppLocalizationsEs extends AppLocalizations {
       'Solo un efecto parpadeante a la vez. Demasiado parpadeo puede hacer daño a las personas sensibles.';
 
   @override
+  String get videoEditorEffectsOnBeat => 'Al ritmo';
+
+  @override
+  String get videoEditorEffectsOnBeatFinding => 'Buscando el ritmo…';
+
+  @override
+  String get videoEditorEffectsOnBeatNoBeat =>
+      'Este sonido no tiene un ritmo constante';
+
+  @override
+  String get videoEditorEffectsOnBeatNoSound =>
+      'Agregá música o activá el sonido de un clip';
+
+  @override
+  String videoEditorEffectOnBeatLabel(String effect) {
+    return '$effect al ritmo';
+  }
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Abrir editor de ajustes';
 
   @override

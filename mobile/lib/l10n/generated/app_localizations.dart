@@ -14735,6 +14735,36 @@ abstract class AppLocalizations {
   /// **'One flashing effect at a time. Too much flashing can hurt people who are sensitive to it.'**
   String get videoEditorEffectsFlashingNotDuplicated;
 
+  /// Switch in the video effects editor: the picked effect fires on every beat of the video's music (one zoom, flash or glitch per beat) instead of playing all the time. Keep it short.
+  ///
+  /// In en, this message translates to:
+  /// **'On the beat'**
+  String get videoEditorEffectsOnBeat;
+
+  /// Shown under the 'On the beat' switch while the app listens to the video's music to find its beats.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding the beat…'**
+  String get videoEditorEffectsOnBeatFinding;
+
+  /// Shown under the 'On the beat' switch when the video's sound has no steady beat to follow, for example speech, so the effect does not show.
+  ///
+  /// In en, this message translates to:
+  /// **'No steady beat in this sound'**
+  String get videoEditorEffectsOnBeatNoBeat;
+
+  /// Shown under the 'On the beat' switch when nothing in the video makes a sound: no music was added and every clip is muted.
+  ///
+  /// In en, this message translates to:
+  /// **'Add music or turn a clip\'s sound on'**
+  String get videoEditorEffectsOnBeatNoSound;
+
+  /// Name of a video effect on the timeline, and what screen readers announce for it, when the effect fires on the beat of the music. {effect} is the effect's name, for example 'Zoom Pulse on the beat'. Keep it short.
+  ///
+  /// In en, this message translates to:
+  /// **'{effect} on the beat'**
+  String videoEditorEffectOnBeatLabel(String effect);
+
   /// No description provided for @videoEditorOpenTuneSemanticLabel.
   ///
   /// In en, this message translates to:

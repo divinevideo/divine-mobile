@@ -62,11 +62,12 @@ class _VideoEditorEffectsPreviewState extends State<VideoEditorEffectsPreview> {
     final effects = context.select(
       (VideoEditorEffectsCubit c) => c.state.previewEffects,
     );
+    final beats = context.select((VideoEditorEffectsCubit c) => c.state.beats);
     final clips = context.select((ClipEditorBloc b) => b.state.clips);
     final timelineMap = _timelineMap = TransitionTimelineMap.fromClips(clips);
     _onPlayTime();
     return VideoEffectPreview(
-      effects: videoEffectsOnOutput(effects, timelineMap),
+      effects: videoEffectsOnOutput(effects, timelineMap, beats: beats),
       position: _outputPosition,
       child: widget.child,
     );

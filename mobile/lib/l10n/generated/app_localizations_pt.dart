@@ -8742,6 +8742,25 @@ class AppLocalizationsPt extends AppLocalizations {
       'Só um efeito piscante de cada vez. Piscar demais pode fazer mal a pessoas sensíveis.';
 
   @override
+  String get videoEditorEffectsOnBeat => 'No ritmo';
+
+  @override
+  String get videoEditorEffectsOnBeatFinding => 'Procurando o ritmo…';
+
+  @override
+  String get videoEditorEffectsOnBeatNoBeat =>
+      'Este som não tem um ritmo constante';
+
+  @override
+  String get videoEditorEffectsOnBeatNoSound =>
+      'Adicione música ou ative o som de um clipe';
+
+  @override
+  String videoEditorEffectOnBeatLabel(String effect) {
+    return '$effect no ritmo';
+  }
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Abrir editor de ajustes';
 
   @override

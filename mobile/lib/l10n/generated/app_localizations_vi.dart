@@ -8642,6 +8642,24 @@ class AppLocalizationsVi extends AppLocalizations {
       'Mỗi lúc chỉ một hiệu ứng nhấp nháy. Nhấp nháy quá nhiều có thể gây hại cho người nhạy cảm.';
 
   @override
+  String get videoEditorEffectsOnBeat => 'Theo nhịp';
+
+  @override
+  String get videoEditorEffectsOnBeatFinding => 'Đang tìm nhịp…';
+
+  @override
+  String get videoEditorEffectsOnBeatNoBeat => 'Âm thanh này không có nhịp đều';
+
+  @override
+  String get videoEditorEffectsOnBeatNoSound =>
+      'Thêm nhạc hoặc bật âm thanh của một clip';
+
+  @override
+  String videoEditorEffectOnBeatLabel(String effect) {
+    return '$effect theo nhịp';
+  }
+
+  @override
   String get videoEditorOpenTuneSemanticLabel =>
       'Mở trình chỉnh sửa điều chỉnh';
 

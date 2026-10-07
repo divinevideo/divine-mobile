@@ -8789,6 +8789,25 @@ class AppLocalizationsDe extends AppLocalizations {
       'Immer nur ein blinkender Effekt. Zu viel Blinken kann empfindlichen Menschen schaden.';
 
   @override
+  String get videoEditorEffectsOnBeat => 'Im Takt';
+
+  @override
+  String get videoEditorEffectsOnBeatFinding => 'Takt wird gesucht…';
+
+  @override
+  String get videoEditorEffectsOnBeatNoBeat =>
+      'Kein gleichmäßiger Takt in diesem Sound';
+
+  @override
+  String get videoEditorEffectsOnBeatNoSound =>
+      'Füg Musik hinzu oder schalte den Ton eines Clips ein';
+
+  @override
+  String videoEditorEffectOnBeatLabel(String effect) {
+    return '$effect im Takt';
+  }
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Anpassungseditor öffnen';
 
   @override

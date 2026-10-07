@@ -8772,6 +8772,25 @@ class AppLocalizationsIt extends AppLocalizations {
       'Un solo effetto lampeggiante alla volta. Troppi lampeggiamenti possono fare male alle persone sensibili.';
 
   @override
+  String get videoEditorEffectsOnBeat => 'A tempo';
+
+  @override
+  String get videoEditorEffectsOnBeatFinding => 'Ricerca del ritmo…';
+
+  @override
+  String get videoEditorEffectsOnBeatNoBeat =>
+      'Nessun ritmo regolare in questo suono';
+
+  @override
+  String get videoEditorEffectsOnBeatNoSound =>
+      'Aggiungi musica o attiva l\'audio di una clip';
+
+  @override
+  String videoEditorEffectOnBeatLabel(String effect) {
+    return '$effect a tempo';
+  }
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'Apri editor regolazioni';
 
   @override

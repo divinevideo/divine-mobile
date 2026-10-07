@@ -123,6 +123,36 @@ void main() {
       });
     });
 
+    group('on the beat switch', () {
+      testWidgets('shows for an effect that can fire on the beat, and turns '
+          'it on', (tester) async {
+        cubit.selectType(VideoEffectType.vhs);
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.videoEditorEffectsOnBeat), findsNothing);
+
+        cubit.selectType(VideoEffectType.zoomPulse);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.videoEditorEffectsOnBeat));
+        await tester.pumpAndSettle();
+
+        expect(cubit.state.onBeat, isTrue);
+      });
+
+      testWidgets('says when nothing in the video makes a sound', (
+        tester,
+      ) async {
+        cubit
+          ..syncBeatSource(sounds: const [], clips: const [])
+          ..selectType(VideoEffectType.strobe)
+          ..setOnBeat(onBeat: true);
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.videoEditorEffectsOnBeatNoSound), findsOneWidget);
+      });
+    });
+
     group('toolbar', () {
       testWidgets('done commits the picked effect as one history entry and '
           'closes the editor', (tester) async {

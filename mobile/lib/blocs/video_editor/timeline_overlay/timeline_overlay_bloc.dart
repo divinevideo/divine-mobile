@@ -228,6 +228,7 @@ class TimelineOverlayBloc
           endTime: _clampEnd(entry.effect.endTime ?? total, total),
           label: entry.effect.type.name,
           effectType: entry.effect.type,
+          effectOnBeat: entry.onBeat,
         ),
     ];
 

@@ -399,6 +399,11 @@ dependencies:
   # Self-enforcing: the render service and the detached clip composite pass
   # `keyframes:`, which does not exist before it, so a relaxed floor is a
   # compile error.
+  # 2.28.0 is the first release that fires an effect on given points in time
+  # through `VideoEffect.triggers`, which effects on the beat of the music
+  # export and preview with (#9710, hm21/pro_video_editor#234).
+  # Self-enforcing: `videoEffectsOnOutput` passes `triggers:`, which does not
+  # exist before it, so a relaxed floor is a compile error.
   # 2.27.0 is the first release that renders the wiggle, bounce and loop
   # layer animations and lets the steps of a typing text share one run of
   # animations through `ImageLayer.animationStartTime` (#9849,

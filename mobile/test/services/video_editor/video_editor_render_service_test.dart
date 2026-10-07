@@ -18,6 +18,7 @@ import 'package:openvine/extensions/aspect_ratio_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
@@ -635,7 +636,12 @@ void main() {
   group('buildVideoEffects', () {
     test('keeps a whole-video effect open at both ends', () {
       final effects = VideoEditorRenderService.buildVideoEffects(
-        effects: const [VideoEffect.pixelate(intensity: 0.3)],
+        effects: const [
+          EditorVideoEffect(
+            id: 'pixelate',
+            effect: VideoEffect.pixelate(intensity: 0.3),
+          ),
+        ],
         timelineMap: TransitionTimelineMap.fromClips(overlapClips),
       );
 
@@ -646,10 +652,13 @@ void main() {
         'transition compresses the timeline', () {
       final effects = VideoEditorRenderService.buildVideoEffects(
         effects: const [
-          VideoEffect.glitch(
-            intensity: 0.8,
-            startTime: Duration.zero,
-            endTime: Duration(seconds: 4),
+          EditorVideoEffect(
+            id: 'glitch',
+            effect: VideoEffect.glitch(
+              intensity: 0.8,
+              startTime: Duration.zero,
+              endTime: Duration(seconds: 4),
+            ),
           ),
         ],
         timelineMap: TransitionTimelineMap.fromClips(overlapClips),

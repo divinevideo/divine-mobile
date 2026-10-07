@@ -77,6 +77,7 @@ class TimelineOverlayItem extends Equatable {
     this.fadeOut = Duration.zero,
     this.effectType,
     this.keyframeTimes = const [],
+    this.effectOnBeat = false,
   });
 
   /// Unique identifier.
@@ -156,6 +157,10 @@ class TimelineOverlayItem extends Equatable {
   /// range, which still shape its motion but are not shown.
   final List<Duration> keyframeTimes;
 
+  /// Whether an effect item fires on the beat of the music, which its tile
+  /// says next to the effect's name.
+  final bool effectOnBeat;
+
   /// Whether a sound item fades in or out at all.
   bool get hasFade => fadeIn > Duration.zero || fadeOut > Duration.zero;
 
@@ -183,6 +188,7 @@ class TimelineOverlayItem extends Equatable {
     Duration? fadeOut,
     VideoEffectType? effectType,
     List<Duration>? keyframeTimes,
+    bool? effectOnBeat,
   }) {
     return TimelineOverlayItem(
       id: id ?? this.id,
@@ -202,6 +208,7 @@ class TimelineOverlayItem extends Equatable {
       fadeOut: fadeOut ?? this.fadeOut,
       effectType: effectType ?? this.effectType,
       keyframeTimes: keyframeTimes ?? this.keyframeTimes,
+      effectOnBeat: effectOnBeat ?? this.effectOnBeat,
     );
   }
 
@@ -224,5 +231,6 @@ class TimelineOverlayItem extends Equatable {
     fadeOut,
     effectType,
     keyframeTimes,
+    effectOnBeat,
   ];
 }

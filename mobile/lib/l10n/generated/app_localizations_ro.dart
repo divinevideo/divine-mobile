@@ -8873,6 +8873,25 @@ class AppLocalizationsRo extends AppLocalizations {
       'Un singur efect intermitent odată. Prea multe clipiri pot face rău persoanelor sensibile.';
 
   @override
+  String get videoEditorEffectsOnBeat => 'Pe ritm';
+
+  @override
+  String get videoEditorEffectsOnBeatFinding => 'Se caută ritmul…';
+
+  @override
+  String get videoEditorEffectsOnBeatNoBeat =>
+      'Sunetul acesta nu are un ritm constant';
+
+  @override
+  String get videoEditorEffectsOnBeatNoSound =>
+      'Adaugă muzică sau pornește sunetul unui clip';
+
+  @override
+  String videoEditorEffectOnBeatLabel(String effect) {
+    return '$effect pe ritm';
+  }
+
+  @override
   String get videoEditorOpenTuneSemanticLabel =>
       'Deschide editorul de ajustări';
 

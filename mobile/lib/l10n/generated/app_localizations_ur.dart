@@ -8677,6 +8677,25 @@ class AppLocalizationsUr extends AppLocalizations {
       'ایک وقت میں صرف ایک ٹمٹماتا ایفیکٹ۔ زیادہ ٹمٹماہٹ حساس لوگوں کو نقصان پہنچا سکتی ہے۔';
 
   @override
+  String get videoEditorEffectsOnBeat => 'بیٹ کے ساتھ';
+
+  @override
+  String get videoEditorEffectsOnBeatFinding => 'بیٹ تلاش ہو رہی ہے…';
+
+  @override
+  String get videoEditorEffectsOnBeatNoBeat =>
+      'اس آواز میں کوئی باقاعدہ بیٹ نہیں';
+
+  @override
+  String get videoEditorEffectsOnBeatNoSound =>
+      'موسیقی شامل کریں یا کسی کلپ کی آواز آن کریں';
+
+  @override
+  String videoEditorEffectOnBeatLabel(String effect) {
+    return '$effect بیٹ کے ساتھ';
+  }
+
+  @override
   String get videoEditorOpenTuneSemanticLabel => 'ایڈجسٹمنٹ ایڈیٹر کھولیں';
 
   @override

@@ -2284,6 +2284,43 @@ void main() {
           expect(effects.last.id, isNot('effect-1'));
         });
 
+        testWidgets('split and duplicate keep an effect on the beat on the '
+            'beat', (tester) async {
+          final onBeat = EditorVideoEffect(
+            id: 'effect-1',
+            effect: glitch.effect,
+            onBeat: true,
+          );
+          when(() => mockStateManager.activeMeta).thenReturn({
+            VideoEditorConstants.effectsStateHistoryKey: [onBeat.toMap()],
+          });
+          when(() => mainBloc.state).thenReturn(
+            const VideoEditorMainState(currentPosition: Duration(seconds: 3)),
+          );
+
+          await tester.pumpWidget(buildWithEditor(item, mockEditor, mainBloc));
+          await tester.tap(
+            find.bySemanticsLabel(
+              l10n.videoEditorSplitSelectedClipSemanticLabel,
+            ),
+          );
+          await tester.pump();
+          final split = committedEffects();
+
+          await tester.tap(
+            find.bySemanticsLabel(
+              l10n.videoEditorDuplicateSelectedItemSemanticLabel,
+            ),
+          );
+          await tester.pump();
+          final duplicated = committedEffects();
+
+          expect(split, hasLength(2));
+          expect(split.map((e) => e.onBeat), [isTrue, isTrue]);
+          expect(duplicated, hasLength(2));
+          expect(duplicated.map((e) => e.onBeat), [isTrue, isTrue]);
+        });
+
         testWidgets('duplicate leaves a flashing effect alone and says why', (
           tester,
         ) async {
@@ -2319,6 +2356,43 @@ void main() {
             findsOneWidget,
           );
         });
+
+        for (final duplicate in [false, true]) {
+          testWidgets(
+            '${duplicate ? 'duplicate' : 'split'} keeps a continuous effect off the beat',
+            (tester) async {
+              final continuous = EditorVideoEffect(
+                id: glitch.id,
+                effect: glitch.effect,
+              );
+              when(() => mockStateManager.activeMeta).thenReturn({
+                VideoEditorConstants.effectsStateHistoryKey: [
+                  continuous.toMap(),
+                ],
+              });
+              when(() => mainBloc.state).thenReturn(
+                const VideoEditorMainState(
+                  currentPosition: Duration(seconds: 3),
+                ),
+              );
+              await tester.pumpWidget(
+                buildWithEditor(item, mockEditor, mainBloc),
+              );
+              await tester.tap(
+                find.bySemanticsLabel(
+                  duplicate
+                      ? l10n.videoEditorDuplicateSelectedItemSemanticLabel
+                      : l10n.videoEditorSplitSelectedClipSemanticLabel,
+                ),
+              );
+              await tester.pump();
+              final effects = committedEffects();
+              expect(effects, hasLength(2));
+              expect(effects.map((e) => e.onBeat), [false, false]);
+              expect(effects.last.id, isNot(glitch.id));
+            },
+          );
+        }
 
         testWidgets('delete removes the effect and clears the selection', (
           tester,

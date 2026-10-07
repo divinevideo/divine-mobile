@@ -632,6 +632,20 @@ void main() {
       });
     });
 
+    group('isVoiceOver', () {
+      AudioEvent withId(String id) =>
+          AudioEvent(id: id, pubkey: '', createdAt: 1700000000);
+
+      test('is true for a voice-over take only', () {
+        expect(
+          withId('${AudioEvent.voiceOverIdPrefix}_1-2-0').isVoiceOver,
+          isTrue,
+        );
+        expect(withId('local_import_1700000000000').isVoiceOver, isFalse);
+        expect(withId('local_extracted_1').isVoiceOver, isFalse);
+      });
+    });
+
     group('fromLocalImport', () {
       test('creates draft-local audio event', () {
         final event = AudioEvent.fromLocalImport(

@@ -569,5 +569,66 @@ void main() {
         );
       });
     });
+
+    testWidgets('announces an effect on the beat as such', (tester) async {
+      const item = TimelineOverlayItem(
+        id: 'effect-1',
+        type: TimelineOverlayType.effect,
+        startTime: Duration.zero,
+        endTime: Duration(seconds: 3),
+        label: 'negativeFlash',
+        effectType: VideoEffectType.negativeFlash,
+        effectOnBeat: true,
+      );
+
+      final handle = tester.ensureSemantics();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Stack(
+              children: [
+                TimelineOverlayPositionedItem(
+                  item: item,
+                  isDragging: false,
+                  isSelected: false,
+                  snappedStartMs: 0,
+                  dragDeltaY: 0,
+                  rowHeight: 40,
+                  pixelsPerSecond: 100,
+                  totalDuration: const Duration(seconds: 10),
+                  clipEdgesMs: const [0, 10000],
+                  color: Colors.blue,
+                  isCollapsed: false,
+                  trimExpansion: 0,
+                  onTap: () {},
+                  onLongPressStart: () {},
+                  onLongPressMoveUpdate: (_) {},
+                  onLongPressEnd: () {},
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final semantics = tester.getSemantics(
+        find.byType(TimelineOverlayPositionedItem),
+      );
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(
+        semantics.label,
+        contains(
+          l10n.videoEditorEffectOnBeatLabel(
+            l10n.videoEditorEffectNegativeFlash,
+          ),
+        ),
+      );
+
+      handle.dispose();
+    });
   });
 }
