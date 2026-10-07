@@ -154,6 +154,61 @@ void main() {
 
     for (final showAll in [false, true]) {
       testWidgets(
+        'people result without a description does not name members (showAll: $showAll)',
+        (tester) async {
+          var identityReads = 0;
+          final member = 'a' * 64;
+          final cachedProfile = UserProfile(
+            pubkey: member,
+            eventId: 'e' * 64,
+            createdAt: now,
+            rawData: const {},
+            displayName: 'Cached member',
+            picture: 'https://example.com/cached-member.jpg',
+          );
+          when(() => mockBloc.state).thenReturn(
+            ListSearchState(
+              status: ListSearchStatus.success,
+              query: 'test',
+              peopleResults: [
+                PeopleListSearchResult(
+                  ownerPubkey: _authorOne,
+                  list: UserList(
+                    id: 'pl1',
+                    name: 'Crew',
+                    pubkeys: [member],
+                    createdAt: now,
+                    updatedAt: now,
+                  ),
+                ),
+              ],
+            ),
+          );
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                ...getStandardTestOverrides(),
+                fetchUserProfileProvider(member).overrideWith((ref) async {
+                  identityReads++;
+                  return cachedProfile;
+                }),
+                userProfileReactiveProvider(member).overrideWith((ref) {
+                  identityReads++;
+                  return Stream<UserProfile?>.value(cachedProfile);
+                }),
+              ],
+              child: buildSubject(showAll: showAll),
+            ),
+          );
+          await tester.pump();
+          expect(identityReads, 0);
+          expect(find.text('Crew'), findsOneWidget);
+          expect(find.textContaining('Cached member'), findsNothing);
+          expect(find.byType(UserAvatar), findsNothing);
+        },
+      );
+
+      testWidgets(
         'people result navigates with owner (showAll: $showAll)',
         (tester) async {
           var identityReads = 0;
