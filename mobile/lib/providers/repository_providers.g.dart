@@ -208,12 +208,13 @@ final class CuratedListRepositoryProvider
 }
 
 String _$curatedListRepositoryHash() =>
-    r'13ad3c31bfac9fa7dcdb41d8606152a6051c49bd';
+    r'0ed6dffc81dfa5be530dc1597e7dcc0b3dacc219';
 
 /// Shared preview policy for My Lists and public list search.
 ///
-/// Replacing a policy retires its captured callback, so late thumbnail reads
-/// cannot publish previews from an earlier policy or account session.
+/// A retired callback fails closed. The stable curated-list repository reads
+/// this provider at each check, while thumbnail consumers watch it to clear
+/// displayed previews and restart pending hydration on policy changes.
 
 @ProviderFor(curatedListThumbnailFilter)
 final curatedListThumbnailFilterProvider =
@@ -221,8 +222,9 @@ final curatedListThumbnailFilterProvider =
 
 /// Shared preview policy for My Lists and public list search.
 ///
-/// Replacing a policy retires its captured callback, so late thumbnail reads
-/// cannot publish previews from an earlier policy or account session.
+/// A retired callback fails closed. The stable curated-list repository reads
+/// this provider at each check, while thumbnail consumers watch it to clear
+/// displayed previews and restart pending hydration on policy changes.
 
 final class CuratedListThumbnailFilterProvider
     extends
@@ -234,8 +236,9 @@ final class CuratedListThumbnailFilterProvider
     with $Provider<CuratedListVideoFilter> {
   /// Shared preview policy for My Lists and public list search.
   ///
-  /// Replacing a policy retires its captured callback, so late thumbnail reads
-  /// cannot publish previews from an earlier policy or account session.
+  /// A retired callback fails closed. The stable curated-list repository reads
+  /// this provider at each check, while thumbnail consumers watch it to clear
+  /// displayed previews and restart pending hydration on policy changes.
   CuratedListThumbnailFilterProvider._()
     : super(
         from: null,
