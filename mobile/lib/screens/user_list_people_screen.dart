@@ -18,8 +18,6 @@ import 'package:openvine/features/people_lists/view/people_list_hero_header.dart
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
-import 'package:openvine/providers/moderation_providers.dart';
-import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
