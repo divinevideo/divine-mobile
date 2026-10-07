@@ -9689,7 +9689,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorKeyframeEffect => 'Hiệu ứng';
 
   @override
-  String videoEditorKeyframeCurveSegment(int from, int to) {
+  String videoEditorKeyframeCurveSegment(String from, String to) {
     return 'Chuyển động từ khung hình chính $from đến $to';
   }
 

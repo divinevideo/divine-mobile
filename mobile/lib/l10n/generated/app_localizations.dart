@@ -16589,11 +16589,11 @@ abstract class AppLocalizations {
   /// **'Effect'**
   String get videoEditorKeyframeEffect;
 
-  /// Heading above the easing curves in the keyframe sheet of a layer. The curve picked sets how the layer moves from keyframe number {from} to keyframe number {to}, counted from the layer's first keyframe.
+  /// Heading above the effect and the easing curves in the keyframe sheet of a layer. They set how the layer moves from keyframe number {from} to keyframe number {to}, counted from the layer's first keyframe. The numbers name keyframes, like a page number, and are not a quantity, so the text takes no plural.
   ///
   /// In en, this message translates to:
   /// **'Motion from keyframe {from} to {to}'**
-  String videoEditorKeyframeCurveSegment(int from, int to);
+  String videoEditorKeyframeCurveSegment(String from, String to);
 
   /// Tab/segment label for the animation a layer plays when it appears.
   ///

@@ -9158,7 +9158,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorKeyframeEffect => '效果';
 
   @override
-  String videoEditorKeyframeCurveSegment(int from, int to) {
+  String videoEditorKeyframeCurveSegment(String from, String to) {
     return '从关键帧 $from 到 $to 的运动';
   }
 

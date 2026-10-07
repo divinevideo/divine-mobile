@@ -661,7 +661,7 @@ void main() {
       );
 
       expect(
-        find.text(l10n(tester).videoEditorKeyframeCurveSegment(1, 2)),
+        find.text(l10n(tester).videoEditorKeyframeCurveSegment('1', '2')),
         findsOneWidget,
       );
       tester

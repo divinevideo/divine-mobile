@@ -9774,7 +9774,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorKeyframeEffect => 'Effect';
 
   @override
-  String videoEditorKeyframeCurveSegment(int from, int to) {
+  String videoEditorKeyframeCurveSegment(String from, String to) {
     return 'Beweging van keyframe $from naar $to';
   }
 

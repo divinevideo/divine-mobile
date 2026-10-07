@@ -9267,7 +9267,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorKeyframeEffect => '효과';
 
   @override
-  String videoEditorKeyframeCurveSegment(int from, int to) {
+  String videoEditorKeyframeCurveSegment(String from, String to) {
     return '키프레임 $from에서 $to까지의 움직임';
   }
 

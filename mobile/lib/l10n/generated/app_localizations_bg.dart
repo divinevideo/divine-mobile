@@ -9816,7 +9816,7 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorKeyframeEffect => 'Ефект';
 
   @override
-  String videoEditorKeyframeCurveSegment(int from, int to) {
+  String videoEditorKeyframeCurveSegment(String from, String to) {
     return 'Движение от ключов кадър $from до $to';
   }
 

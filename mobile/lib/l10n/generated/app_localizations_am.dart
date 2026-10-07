@@ -9501,7 +9501,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorKeyframeEffect => 'ውጤት';
 
   @override
-  String videoEditorKeyframeCurveSegment(int from, int to) {
+  String videoEditorKeyframeCurveSegment(String from, String to) {
     return 'እንቅስቃሴ ከቁልፍ ፍሬም $from እስከ $to';
   }
 

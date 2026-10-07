@@ -10005,7 +10005,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorKeyframeEffect => 'ఎఫెక్ట్';
 
   @override
-  String videoEditorKeyframeCurveSegment(int from, int to) {
+  String videoEditorKeyframeCurveSegment(String from, String to) {
     return 'కీఫ్రేమ్ $from నుండి $to వరకు కదలిక';
   }
 

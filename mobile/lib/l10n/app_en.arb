@@ -6636,14 +6636,14 @@
   },
   "videoEditorKeyframeCurveSegment": "Motion from keyframe {from} to {to}",
   "@videoEditorKeyframeCurveSegment": {
-    "description": "Heading above the easing curves in the keyframe sheet of a layer. The curve picked sets how the layer moves from keyframe number {from} to keyframe number {to}, counted from the layer's first keyframe.",
+    "description": "Heading above the effect and the easing curves in the keyframe sheet of a layer. They set how the layer moves from keyframe number {from} to keyframe number {to}, counted from the layer's first keyframe. The numbers name keyframes, like a page number, and are not a quantity, so the text takes no plural.",
     "placeholders": {
       "from": {
-        "type": "int",
+        "type": "String",
         "example": "1"
       },
       "to": {
-        "type": "int",
+        "type": "String",
         "example": "2"
       }
     }

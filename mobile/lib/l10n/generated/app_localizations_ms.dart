@@ -9738,7 +9738,7 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorKeyframeEffect => 'Kesan';
 
   @override
-  String videoEditorKeyframeCurveSegment(int from, int to) {
+  String videoEditorKeyframeCurveSegment(String from, String to) {
     return 'Gerakan dari bingkai kunci $from ke $to';
   }
 

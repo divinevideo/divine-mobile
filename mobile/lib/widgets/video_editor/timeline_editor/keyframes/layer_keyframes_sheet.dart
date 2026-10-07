@@ -135,9 +135,10 @@ class _LayerKeyframesSheetState extends State<LayerKeyframesSheet> {
                 ),
               if (segment != null && curve != null) ...[
                 Text(
+                  // The numbers name keyframes; they are not a count.
                   l10n.videoEditorKeyframeCurveSegment(
-                    segment.from,
-                    segment.from + 1,
+                    '${segment.from}',
+                    '${segment.from + 1}',
                   ),
                   style: VineTheme.titleSmallFont(
                     color: context.vineColors.primaryText,

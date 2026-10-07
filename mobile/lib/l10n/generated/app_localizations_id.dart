@@ -9643,7 +9643,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorKeyframeEffect => 'Efek';
 
   @override
-  String videoEditorKeyframeCurveSegment(int from, int to) {
+  String videoEditorKeyframeCurveSegment(String from, String to) {
     return 'Gerakan dari keyframe $from ke $to';
   }
 
