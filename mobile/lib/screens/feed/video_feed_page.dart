@@ -82,7 +82,9 @@ class VideoFeedPage extends ConsumerWidget {
     final hashtagRepository = ref.watch(hashtagSubscriptionRepositoryProvider);
     final curatedListRepository = ref.watch(curatedListRepositoryProvider);
     final profileRepository = ref.watch(profileRepositoryProvider);
+    ref.watch(currentAuthStateProvider);
     final authService = ref.watch(authServiceProvider);
+    final viewerPubkey = authService.currentPublicKeyHex;
     final sharedPreferences = ref.watch(sharedPreferencesProvider);
     final showDivineHostedOnly = ref
         .read(divineHostFilterServiceProvider)
@@ -98,6 +100,8 @@ class VideoFeedPage extends ConsumerWidget {
         showDivineHostedOnly,
         contentFilterVersion,
         hashtagRepository,
+        curatedListRepository,
+        viewerPubkey,
       )),
       providers: [
         BlocProvider(
@@ -109,7 +113,7 @@ class VideoFeedPage extends ConsumerWidget {
                 hashtagSubscriptionRepository: hashtagRepository,
                 profileRepository: profileRepository,
                 contentBlocklistRepository: blocklistRepository,
-                userPubkey: authService.currentPublicKeyHex,
+                userPubkey: viewerPubkey,
                 sharedPreferences: sharedPreferences,
                 // Cached-feed serving stays on (constructor default) regardless of
                 // the Divine-hosted-only filter: applyContentPreferences re-filters

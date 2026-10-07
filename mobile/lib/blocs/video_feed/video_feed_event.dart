@@ -122,13 +122,26 @@ final class VideoFeedFollowingListChanged extends VideoFeedEvent {
 /// emits updated lists. Triggers a refresh of the home feed so list videos
 /// are merged in.
 final class VideoFeedCuratedListsChanged extends VideoFeedEvent {
-  const VideoFeedCuratedListsChanged([this.subscribedLists = const []]);
+  const VideoFeedCuratedListsChanged([this.subscribedLists = const []])
+    : isAuthoritative = true,
+      snapshot = null;
+
+  VideoFeedCuratedListsChanged.snapshot(CuratedListSubscriptionSnapshot value)
+    : subscribedLists = value.lists,
+      isAuthoritative = value.isComplete,
+      snapshot = value;
+
+  /// The exact repository snapshot, used to reject obsolete queued emissions.
+  final CuratedListSubscriptionSnapshot? snapshot;
 
   /// Updated subscribed curated lists.
   final List<CuratedList> subscribedLists;
 
+  /// Whether the snapshot includes all known subscriptions, including copies.
+  final bool isAuthoritative;
+
   @override
-  List<Object?> get props => [subscribedLists];
+  List<Object?> get props => [subscribedLists, isAuthoritative];
 }
 
 /// The active (visible) video changed as the user swipes the feed.
