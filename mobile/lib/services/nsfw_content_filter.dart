@@ -74,10 +74,15 @@ EffectiveContentLabelSources _getContentLabelSources(
   final labels = [...sources.creator, ...sources.trusted];
 
   // If content-warning labels exist but none are recognized categories,
-  // treat as nudity (conservative default)
+  // treat as nudity (conservative default). The fallback follows whoever
+  // supplied the unrecognized labels, so a trusted labeler's label still hides
+  // the creator's own video.
   if (labels.isNotEmpty &&
       labels.every((l) => ContentLabel.fromValue(l) == null)) {
-    return (creator: [...sources.creator, 'nudity'], trusted: sources.trusted);
+    return (
+      creator: [...sources.creator, if (sources.creator.isNotEmpty) 'nudity'],
+      trusted: [...sources.trusted, if (sources.trusted.isNotEmpty) 'nudity'],
+    );
   }
   return sources;
 }

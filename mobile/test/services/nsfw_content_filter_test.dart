@@ -315,6 +315,73 @@ void main() {
 
         expect(filter(video), isFalse);
       });
+
+      test('keeps an own video behind a warning when only the creator applied '
+          'an unrecognized label', () {
+        final filter = createNsfwFilter(
+          contentFilterService,
+          moderationLabelService: moderationLabelService,
+          viewerPubkey: () => _testPubkey,
+        );
+        final resolver = createNsfwWarnLabels(
+          contentFilterService,
+          moderationLabelService: moderationLabelService,
+          viewerPubkey: () => _testPubkey,
+        );
+        final video = _createVideo(
+          contentWarningLabels: ['some-unknown-label'],
+        );
+
+        expect(filter(video), isFalse);
+        expect(resolver(video), ['nudity']);
+      });
+
+      test('still hides an own video when only a trusted labeler applied an '
+          'unrecognized label', () async {
+        await seedModerationLabels([
+          ['L', 'content-warning'],
+          ['l', 'some-unknown-label', 'content-warning'],
+          ['x', 'trusted-unknown-hash'],
+        ]);
+        final video = _createVideo(sha256: 'trusted-unknown-hash');
+
+        final viewerFilter = createNsfwFilter(
+          contentFilterService,
+          moderationLabelService: moderationLabelService,
+        );
+        final ownerFilter = createNsfwFilter(
+          contentFilterService,
+          moderationLabelService: moderationLabelService,
+          viewerPubkey: () => _testPubkey,
+        );
+
+        expect(
+          viewerFilter(video),
+          isTrue,
+          reason: 'the trusted unknown label must reach the filter at all',
+        );
+        expect(ownerFilter(video), isTrue);
+      });
+
+      test('still hides an own video when the creator and a trusted labeler '
+          'both applied unrecognized labels', () async {
+        await seedModerationLabels([
+          ['L', 'content-warning'],
+          ['l', 'another-unknown-label', 'content-warning'],
+          ['x', 'trusted-unknown-hash'],
+        ]);
+        final filter = createNsfwFilter(
+          contentFilterService,
+          moderationLabelService: moderationLabelService,
+          viewerPubkey: () => _testPubkey,
+        );
+        final video = _createVideo(
+          contentWarningLabels: ['some-unknown-label'],
+          sha256: 'trusted-unknown-hash',
+        );
+
+        expect(filter(video), isTrue);
+      });
     });
 
     group('with changed preferences', () {
