@@ -44,6 +44,7 @@ import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:nostr_sdk/relay/relay_type.dart';
 import 'package:nostr_sdk/signer/isolate_decrypt_signer.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
+import 'package:nostr_sdk/utils/relay_addr_util.dart';
 import 'package:nostr_sdk/utils/relay_url_policy.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -225,6 +226,15 @@ const Duration _dmInboxQueryTimeout = Duration(seconds: 5);
 /// indexer cannot hold the whole recipient resolution open (#7317).
 const Duration _dmInboxDiscoveryQueryTimeout = Duration(seconds: 2);
 
+/// Budget for reading a recipient's kind-10050 from their own NIP-65 write
+/// relays, the last leg of a recipient lookup. Cold connections like the
+/// indexer leg, so the same short bound (#7317).
+const Duration _dmInboxOutboxQueryTimeout = Duration(seconds: 2);
+
+/// Most write relays the outbox leg dials for one recipient. Each is a cold
+/// connection on the send path, chosen by the person being messaged.
+const int _dmInboxOutboxRelayCap = 4;
+
 /// Budget for the authoritative own-inbox read that gates the RC3 publish.
 ///
 /// Deliberately shorter than [_dmInboxQueryTimeout]. `requireAllRelaysSettled`
@@ -356,9 +366,10 @@ enum DmInboxResolution {
   /// The recipient advertises a kind-10050 and we read it.
   found,
 
-  /// The relays answered, and the recipient advertises no usable inbox.
-  /// NIP-17 calls this "not ready to receive messages"; we still fall back to
-  /// the default pool so reachability is preserved (#570).
+  /// Every relay asked answered — the pool, the indexer, and any write relays
+  /// the recipient's NIP-65 list names — and the recipient advertises no
+  /// inbox. NIP-17 calls this "not ready to receive messages"; we still fall
+  /// back to the default pool so reachability is preserved (#570).
   absent,
 
   /// We could not read the recipient's inbox: no relay took the REQ, nothing
@@ -4384,13 +4395,23 @@ class DmRepository {
     // leg comment below.
     String? advertisedRelay,
   }) async {
+    final elapsed = Stopwatch()..start();
     try {
+      final isRecipient = source == _DmRelayListSource.remote;
       final filter = [
         nostr_filter.Filter(
           authors: [pubkey],
           kinds: [EventKind.dmRelaysList],
           limit: 1,
         ),
+        // A recipient's NIP-65 list rides in the same REQ, so reading their
+        // write relays costs a round trip only when no leg carried the inbox.
+        if (isRecipient)
+          nostr_filter.Filter(
+            authors: [pubkey],
+            kinds: [EventKind.relayListMetadata],
+            limit: 1,
+          ),
       ];
 
       // A recipient lookup has two independent legs. The pool leg retains the
@@ -4421,8 +4442,7 @@ class DmRepository {
               ? _ownDmInboxAuthoritativeTimeout
               : _dmInboxQueryTimeout,
         ),
-        if (source == _DmRelayListSource.remote &&
-            _dmInboxLookupRelays.isNotEmpty)
+        if (isRecipient && _dmInboxLookupRelays.isNotEmpty)
           _nostrClient.queryEventsDetailed(
             filter,
             useCache: false,
@@ -4505,21 +4525,33 @@ class DmRepository {
         );
       }
 
-      if (events.isEmpty) {
-        logInconclusiveRead();
-        return (state: absentOrFailed, relays: null, advertisedMissing: null);
-      }
       final matchingEvents = [
         for (final event in events)
           if (event.kind == EventKind.dmRelaysList && event.pubkey == pubkey)
             event,
       ];
       if (matchingEvents.isEmpty) {
-        Log.warning(
-          'Ignoring off-filter DM inbox relay response for '
-          '${pubkeyForLogs(pubkey)}',
-          category: LogCategory.system,
-        );
+        final relayLists = [
+          for (final event in events)
+            if (isRecipient &&
+                event.kind == EventKind.relayListMetadata &&
+                event.pubkey == pubkey)
+              event,
+        ];
+        if (relayLists.length < events.length) {
+          Log.warning(
+            'Ignoring off-filter DM inbox relay response for '
+            '${pubkeyForLogs(pubkey)}',
+            category: LogCategory.system,
+          );
+        }
+        if (isRecipient && absentOrFailed == _OwnDmInboxState.absent) {
+          return await _queryRecipientWriteRelays(
+            pubkey,
+            relayLists,
+            budget: inboxResolutionBudget - elapsed.elapsed,
+          );
+        }
         logInconclusiveRead();
         return (state: absentOrFailed, relays: null, advertisedMissing: null);
       }
@@ -4607,6 +4639,110 @@ class DmRepository {
       category: LogCategory.system,
     );
     return (state: _OwnDmInboxState.failed, relays: null);
+  }
+
+  /// Reads a recipient's kind-10050 from their own NIP-65 write relays, once
+  /// the pool and indexer legs have both answered without one.
+  ///
+  /// NIP-65: "When downloading events from a user, clients SHOULD use the
+  /// write relays of that user." Without this leg, a list held only where its
+  /// author writes reads as `absent`, and the default-pool `OK` that follows
+  /// is scored as delivery to relays the recipient never reads (#7317).
+  /// [relayLists] are the recipient's kind-10002 events the earlier legs
+  /// returned; the newest wins. Relays the earlier legs already asked are
+  /// skipped, and the rest pass the same remote-relay policy as an inbox list.
+  Future<_OwnDmInboxRead> _queryRecipientWriteRelays(
+    String pubkey,
+    List<Event> relayLists, {
+    required Duration budget,
+  }) async {
+    const absent = (
+      state: _OwnDmInboxState.absent,
+      relays: null,
+      advertisedMissing: null,
+    );
+    if (relayLists.isEmpty) return absent;
+    final newest = relayLists.reduce(
+      (a, b) => b.createdAt > a.createdAt ? b : a,
+    );
+    final writeRelays = admitRemoteSuppliedRelays(
+      [
+        for (final tag in newest.tags)
+          // NIP-65: an `r` tag with no marker is both read and write.
+          if (tag.length >= 2 &&
+              tag[0] == 'r' &&
+              tag[1].isNotEmpty &&
+              (tag.length < 3 || tag[2] != 'read'))
+            tag[1],
+      ],
+      cap: RelayListCaps.nip65,
+    );
+    final asked = {
+      for (final url in [
+        ..._nostrClient.configuredRelays,
+        ..._dmInboxLookupRelays,
+      ])
+        RelayAddrUtil.handle(url),
+    };
+    final targets = writeRelays
+        .where((url) => !asked.contains(RelayAddrUtil.handle(url)))
+        .take(_dmInboxOutboxRelayCap)
+        .toList();
+    if (targets.isEmpty) return absent;
+
+    // Bounded by what the whole resolution has left, so the caller's
+    // `TimeoutException` arm classifies an overrun as unreadable.
+    final remaining = budget > Duration.zero ? budget : Duration.zero;
+    final result = await _nostrClient
+        .queryEventsDetailed(
+          [
+            nostr_filter.Filter(
+              authors: [pubkey],
+              kinds: [EventKind.dmRelaysList],
+              limit: 1,
+            ),
+          ],
+          useCache: false,
+          tempRelays: targets,
+          relayTypes: const [RelayType.temp],
+          requireAllRelaysSettled: true,
+          timeout: _dmInboxOutboxQueryTimeout,
+        )
+        .timeout(remaining);
+    final lists = [
+      for (final event in result.events)
+        if (event.kind == EventKind.dmRelaysList && event.pubkey == pubkey)
+          event,
+    ];
+    if (lists.isNotEmpty) {
+      final inbox = _classifyInboxList(
+        lists.reduce((a, b) => b.createdAt > a.createdAt ? b : a),
+        pubkey,
+        _DmRelayListSource.remote,
+      );
+      return (
+        state: inbox.state,
+        relays: inbox.relays,
+        advertisedMissing: null,
+      );
+    }
+    if (result.noRelays || result.timedOut) {
+      final reason = result.noRelays
+          ? 'no relay took the REQ'
+          : 'not every relay settled';
+      Log.warning(
+        'Recipient kind-10050 lookup for ${pubkeyForLogs(pubkey)} on their '
+        'write relays was inconclusive ($reason) — routing to the default '
+        'pool, and NOT scoring the publish as delivered (#7317)',
+        category: LogCategory.system,
+      );
+      return (
+        state: _OwnDmInboxState.failed,
+        relays: null,
+        advertisedMissing: null,
+      );
+    }
+    return absent;
   }
 
   /// Publishes a minimal NIP-17 kind-10050 DM inbox relay list for the

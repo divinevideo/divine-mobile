@@ -4983,7 +4983,8 @@ void main() {
         );
       });
 
-      test('queries kind-10050 for the requested author', () async {
+      test('queries kind-10050, with the kind-10002 beside it, for the '
+          'requested author', () async {
         stubQuery(const []);
         final repository = createRepository();
         await resolveRelays(repository);
@@ -5004,8 +5005,14 @@ void main() {
                   ),
                 ).captured.single
                 as List<nostr_filter.Filter>;
-        expect(captured.single.kinds, [EventKind.dmRelaysList]);
-        expect(captured.single.authors, [_validPubkeyB]);
+        expect(captured.map((filter) => filter.kinds), [
+          [EventKind.dmRelaysList],
+          [EventKind.relayListMetadata],
+        ]);
+        expect(
+          captured.map((filter) => filter.authors),
+          everyElement([_validPubkeyB]),
+        );
       });
 
       test('returns null and does not throw when the query errors', () async {
@@ -5300,11 +5307,24 @@ void main() {
 
       group('lookup legs (#7317)', () {
         const lookupRelay = 'wss://purplepag.es';
+        const poolRelays = ['wss://relay.divine.video', 'wss://nos.lol'];
+
+        Event kind10002Event(
+          List<List<String>> rTags, {
+          int createdAt = 1700000000,
+        }) => Event(
+          _validPubkeyB,
+          EventKind.relayListMetadata,
+          rTags,
+          '',
+          createdAt: createdAt,
+        );
 
         late List<Invocation> queries;
 
         setUp(() {
           queries = <Invocation>[];
+          when(() => mockNostrClient.configuredRelays).thenReturn(poolRelays);
         });
 
         List<String>? tempOf(Invocation invocation) =>
@@ -5396,6 +5416,225 @@ void main() {
 
             expect(resolved.state, DmInboxResolution.unreadable);
             expect(resolved.relays, isNull);
+          },
+        );
+
+        test(
+          'reads the recipient kind-10002 in the same REQ as the kind-10050, '
+          'so a found inbox costs no extra round trip',
+          () async {
+            stubLegs(
+              (_) async => answeredList([
+                kind10050Event(['wss://inbox.example']),
+              ]),
+            );
+
+            final resolved = await createLookupRepository()
+                .resolveDmInboxRelaysDetailed(_validPubkeyB);
+
+            expect(resolved.state, DmInboxResolution.found);
+            expect(queries, hasLength(2));
+            for (final query in queries) {
+              final filters =
+                  query.positionalArguments.first as List<nostr_filter.Filter>;
+              expect(
+                filters.map((f) => f.kinds),
+                containsAll([
+                  [EventKind.dmRelaysList],
+                  [EventKind.relayListMetadata],
+                ]),
+              );
+            }
+          },
+        );
+
+        test(
+          'resolves a recipient whose kind-10050 is only on their own NIP-65 '
+          'write relays: the list is read where its author writes, so "our '
+          'pool and the indexer do not carry it" stops reading as absent',
+          () async {
+            stubLegs((invocation) async {
+              final temp = tempOf(invocation);
+              if (temp == null) {
+                return answeredList([
+                  kind10002Event([
+                    ['r', 'wss://write.example', 'write'],
+                    ['r', 'wss://read.example', 'read'],
+                    ['r', 'wss://both.example'],
+                  ]),
+                ]);
+              }
+              if (temp.contains('wss://write.example')) {
+                return answeredList([
+                  kind10050Event(['wss://inbox.example']),
+                ]);
+              }
+              return answeredList(const <Event>[]);
+            });
+
+            final resolved = await createLookupRepository()
+                .resolveDmInboxRelaysDetailed(_validPubkeyB);
+
+            expect(resolved.state, DmInboxResolution.found);
+            expect(resolved.relays, ['wss://inbox.example']);
+            final outboxLeg = queries.last;
+            expect(tempOf(outboxLeg), [
+              'wss://write.example',
+              'wss://both.example',
+            ]);
+            expect(relayTypesOf(outboxLeg), [RelayType.temp]);
+            expect(
+              outboxLeg.namedArguments[#requireAllRelaysSettled],
+              isTrue,
+            );
+          },
+        );
+
+        test(
+          'is absent when the recipient write relays answered and hold no '
+          'kind-10050',
+          () async {
+            stubLegs((invocation) async {
+              if (tempOf(invocation) == null) {
+                return answeredList([
+                  kind10002Event([
+                    ['r', 'wss://write.example'],
+                  ]),
+                ]);
+              }
+              return answeredList(const <Event>[]);
+            });
+
+            final resolved = await createLookupRepository()
+                .resolveDmInboxRelaysDetailed(_validPubkeyB);
+
+            expect(resolved.state, DmInboxResolution.absent);
+            expect(queries, hasLength(3));
+          },
+        );
+
+        test(
+          'is unreadable when the recipient write relays did not settle',
+          () async {
+            stubLegs((invocation) async {
+              final temp = tempOf(invocation);
+              if (temp == null) {
+                return answeredList([
+                  kind10002Event([
+                    ['r', 'wss://write.example'],
+                  ]),
+                ]);
+              }
+              return temp.contains('wss://write.example')
+                  ? unansweredList(timedOut: true)
+                  : answeredList(const <Event>[]);
+            });
+
+            final resolved = await createLookupRepository()
+                .resolveDmInboxRelaysDetailed(_validPubkeyB);
+
+            expect(resolved.state, DmInboxResolution.unreadable);
+            expect(resolved.relays, isNull);
+          },
+        );
+
+        test(
+          'is unreadable when the write-relay leg outlasts what is left of '
+          'the resolution budget',
+          () async {
+            final original = DmRepository.inboxResolutionBudget;
+            DmRepository.inboxResolutionBudget = const Duration(
+              milliseconds: 50,
+            );
+            addTearDown(() => DmRepository.inboxResolutionBudget = original);
+            final writeLegNeverAnswers =
+                Completer<
+                  ({List<Event> events, bool timedOut, bool noRelays})
+                >();
+            stubLegs((invocation) {
+              final temp = tempOf(invocation);
+              if (temp == null) {
+                return Future.value(
+                  answeredList([
+                    kind10002Event([
+                      ['r', 'wss://write.example'],
+                    ]),
+                  ]),
+                );
+              }
+              return temp.contains('wss://write.example')
+                  ? writeLegNeverAnswers.future
+                  : Future.value(answeredList(const <Event>[]));
+            });
+
+            final resolved = await createLookupRepository()
+                .resolveDmInboxRelaysDetailed(_validPubkeyB);
+
+            expect(tempOf(queries.last), ['wss://write.example']);
+            expect(resolved.state, DmInboxResolution.unreadable);
+          },
+        );
+
+        test(
+          'does not dial write relays the remote-relay policy refuses or '
+          'that the pool and indexer already answered for',
+          () async {
+            stubLegs((invocation) async {
+              if (tempOf(invocation) == null) {
+                return answeredList([
+                  kind10002Event([
+                    ['r', 'ws://umbrel.local:4848'],
+                    ['r', 'wss://relay.divine.video/'],
+                    ['r', lookupRelay],
+                  ]),
+                ]);
+              }
+              return answeredList(const <Event>[]);
+            });
+
+            final resolved = await createLookupRepository()
+                .resolveDmInboxRelaysDetailed(_validPubkeyB);
+
+            expect(resolved.state, DmInboxResolution.absent);
+            expect(queries, hasLength(2));
+          },
+        );
+
+        test(
+          'asks at most four write relays from the newest kind-10002',
+          () async {
+            stubLegs((invocation) async {
+              final temp = tempOf(invocation);
+              if (temp == null) {
+                return answeredList([
+                  kind10002Event([
+                    ['r', 'wss://stale.example'],
+                  ]),
+                ]);
+              }
+              if (temp.contains(lookupRelay)) {
+                return answeredList([
+                  kind10002Event(
+                    [
+                      for (var i = 1; i <= 6; i++) ['r', 'wss://w$i.example'],
+                    ],
+                    createdAt: 1700000100,
+                  ),
+                ]);
+              }
+              return answeredList(const <Event>[]);
+            });
+
+            await createLookupRepository().resolveDmInboxRelaysDetailed(
+              _validPubkeyB,
+            );
+
+            expect(tempOf(queries.last), [
+              'wss://w1.example',
+              'wss://w2.example',
+              'wss://w3.example',
+              'wss://w4.example',
+            ]);
           },
         );
       });
@@ -6583,8 +6822,10 @@ void main() {
             var sawRecipientRead = false;
             for (var i = 0; i < captured.length; i += 3) {
               final filters = captured[i] as List<nostr_filter.Filter>;
-              if (!(filters.single.kinds?.contains(EventKind.dmRelaysList) ??
-                  false)) {
+              if (!filters.any(
+                (filter) =>
+                    filter.kinds?.contains(EventKind.dmRelaysList) ?? false,
+              )) {
                 continue;
               }
               sawRecipientRead = true;
@@ -16860,7 +17101,7 @@ void main() {
               final filters =
                   invocation.positionalArguments.first
                       as List<nostr_filter.Filter>;
-              final author = filters.single.authors!.single;
+              final author = filters.first.authors!.single;
               return answeredList([
                 Event(
                   author,
@@ -25124,7 +25365,7 @@ void main() {
             final filters =
                 invocation.positionalArguments.first
                     as List<nostr_filter.Filter>;
-            final recipient = filters.single.authors!.single;
+            final recipient = filters.first.authors!.single;
             return answeredList([
               Event(
                 recipient,
