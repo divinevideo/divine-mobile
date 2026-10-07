@@ -1107,10 +1107,29 @@ void main() {
         final bloc = _MockPeopleListsBloc();
         const memberPubkey =
             '1111222233334444555566667777888899990000aaaabbbbccccddddeeeeffff';
+        when(
+          () => bloc.submit(
+            const PeopleListsPubkeyRemoveRequested(
+              listId: 'list-1',
+              pubkey: memberPubkey,
+            ),
+          ),
+        ).thenAnswer((_) async => PeopleListsOperationResult.succeeded);
+        when(
+          () => bloc.submit(
+            const PeopleListsPubkeyAddRequested(
+              listId: 'list-1',
+              pubkey: memberPubkey,
+            ),
+          ),
+        ).thenAnswer((_) async => PeopleListsOperationResult.succeeded);
         whenListen(
           bloc,
           const Stream<PeopleListsState>.empty(),
-          initialState: const PeopleListsState(status: PeopleListsStatus.ready),
+          initialState: const PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: _ownerPubkey,
+          ),
         );
 
         await tester.pumpWidget(
@@ -1139,7 +1158,7 @@ void main() {
         await tester.pumpAndSettle();
 
         verify(
-          () => bloc.add(
+          () => bloc.submit(
             const PeopleListsPubkeyRemoveRequested(
               listId: 'list-1',
               pubkey: memberPubkey,
@@ -1155,10 +1174,29 @@ void main() {
       final bloc = _MockPeopleListsBloc();
       const memberPubkey =
           '1111222233334444555566667777888899990000aaaabbbbccccddddeeeeffff';
+      when(
+        () => bloc.submit(
+          const PeopleListsPubkeyRemoveRequested(
+            listId: 'list-1',
+            pubkey: memberPubkey,
+          ),
+        ),
+      ).thenAnswer((_) async => PeopleListsOperationResult.succeeded);
+      when(
+        () => bloc.submit(
+          const PeopleListsPubkeyAddRequested(
+            listId: 'list-1',
+            pubkey: memberPubkey,
+          ),
+        ),
+      ).thenAnswer((_) async => PeopleListsOperationResult.succeeded);
       whenListen(
         bloc,
         const Stream<PeopleListsState>.empty(),
-        initialState: const PeopleListsState(status: PeopleListsStatus.ready),
+        initialState: const PeopleListsState(
+          status: PeopleListsStatus.ready,
+          ownerPubkey: _ownerPubkey,
+        ),
       );
 
       await tester.pumpWidget(
@@ -1190,7 +1228,7 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(
-        () => bloc.add(
+        () => bloc.submit(
           const PeopleListsPubkeyAddRequested(
             listId: 'list-1',
             pubkey: memberPubkey,

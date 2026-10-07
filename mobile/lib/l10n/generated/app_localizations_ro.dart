@@ -4064,9 +4064,6 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get peopleListsAddPeopleSearchHint => 'Caută persoane';
-
-  @override
   String get peopleListsAddPeopleError =>
       'Nu s-au putut încărca persoanele. Te rugăm să încerci din nou.';
 
@@ -5067,15 +5064,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'Listă nouă de persoane';
-
-  @override
-  String get listCollaboratorsNone => 'Niciunul';
-
-  @override
-  String get listAddCollaboratorTitle => 'Adaugă un colaborator';
-
-  @override
-  String get listCollaboratorSearchHint => 'Caută în Divine...';
 
   @override
   String get listNameLabel => 'Numele listei';
@@ -13282,4 +13270,25 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'Listă nouă de videoclipuri';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'Această listă este publică. Oricine poate vedea numele, descrierea și persoanele din ea.';
+
+  @override
+  String get peopleListsPeopleLabel => 'Persoane';
+
+  @override
+  String get peopleListsPeopleNone => 'Nicio persoană adăugată';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'Contul tău sau accesul la listă s-a schimbat. Redeschide această pagină pentru a continua.';
+
+  @override
+  String get peopleListsSearchConnectionsHint =>
+      'Caută printre urmăritori și persoanele urmărite';
 }

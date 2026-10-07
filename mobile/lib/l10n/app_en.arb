@@ -2486,7 +2486,6 @@
       }
     }
   },
-  "peopleListsAddPeopleSearchHint": "Search people",
   "peopleListsAddPeopleError": "Couldn't load people. Please try again.",
   "peopleListsAddPeopleRetry": "Try again",
   "peopleListsAddButton": "Add",
@@ -3122,9 +3121,6 @@
   },
   "listCreateNewList": "Create New List",
   "listNewPeopleList": "New people list",
-  "listCollaboratorsNone": "None",
-  "listAddCollaboratorTitle": "Add a collaborator",
-  "listCollaboratorSearchHint": "Search Divine...",
   "listNameLabel": "List Name",
   "listDescriptionLabel": "Description (optional)",
   "listPublicList": "Public List",
@@ -9262,5 +9258,11 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "New video list",
+  "peopleListsPublicNotice": "This list is public. Anyone can see its name, description, and people.",
+  "peopleListsPeopleLabel": "People",
+  "peopleListsPeopleNone": "No people added",
+  "peopleListsSessionChanged": "Your account or list access changed. Reopen this page to continue.",
+  "peopleListsSearchConnectionsHint": "Search followers and following"
 }

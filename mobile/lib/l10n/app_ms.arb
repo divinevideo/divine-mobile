@@ -1959,7 +1959,6 @@
       }
     }
   },
-  "peopleListsAddPeopleSearchHint": "Cari orang",
   "peopleListsAddPeopleError": "Tidak dapat memuatkan orang. Sila cuba lagi.",
   "peopleListsAddPeopleRetry": "Cuba lagi",
   "peopleListsAddButton": "Tambah",
@@ -2437,9 +2436,6 @@
   },
   "listCreateNewList": "Cipta Senarai Baharu",
   "listNewPeopleList": "Senarai orang baharu",
-  "listCollaboratorsNone": "Tiada",
-  "listAddCollaboratorTitle": "Tambah kolaborator",
-  "listCollaboratorSearchHint": "Cari Divine...",
   "listNameLabel": "Nama Senarai",
   "listDescriptionLabel": "Keterangan (pilihan)",
   "listPublicList": "Senarai Awam",
@@ -6697,5 +6693,11 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "Senarai video baharu",
+  "peopleListsPublicNotice": "Senarai ini terbuka kepada umum. Sesiapa sahaja boleh melihat nama, penerangan dan orang di dalamnya.",
+  "peopleListsPeopleLabel": "Orang",
+  "peopleListsPeopleNone": "Belum ada orang ditambah",
+  "peopleListsSessionChanged": "Akaun atau akses anda kepada senarai telah berubah. Buka semula halaman ini untuk meneruskan.",
+  "peopleListsSearchConnectionsHint": "Cari pengikut dan orang yang diikuti"
 }

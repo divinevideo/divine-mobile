@@ -1652,9 +1652,6 @@
     },
     "listCreateNewList": "Yeni Liste Oluştur",
     "listNewPeopleList": "Yeni kişi listesi",
-    "listCollaboratorsNone": "Yok",
-    "listAddCollaboratorTitle": "Ortak ekle",
-    "listCollaboratorSearchHint": "Divine'da ara...",
     "listNameLabel": "Liste Adı",
     "listDescriptionLabel": "Açıklama (opsiyonel)",
     "listPublicList": "Herkese Açık Liste",
@@ -3027,7 +3024,6 @@
     "peopleListsErrorLoadingVideos": "Videolar yüklenirken hata oluştu",
     "peopleListsNoPeopleToAdd": "Eklenecek kişi bulunamadı.",
     "peopleListsAddToListName": "{name} listesine ekle",
-    "peopleListsAddPeopleSearchHint": "Kişi ara",
     "peopleListsAddPeopleError": "Kişiler yüklenemedi. Lütfen tekrar dene.",
     "peopleListsAddPeopleRetry": "Tekrar dene",
     "peopleListsAddButton": "Ekle",
@@ -4930,5 +4926,11 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "Yeni video listesi",
+  "peopleListsPublicNotice": "Bu liste herkese açık. Adını, açıklamasını ve içindeki kişileri herkes görebilir.",
+  "peopleListsPeopleLabel": "Kişiler",
+  "peopleListsPeopleNone": "Henüz kimse eklenmedi",
+  "peopleListsSessionChanged": "Hesabın veya listeye erişimin değişti. Devam etmek için bu sayfayı yeniden aç.",
+  "peopleListsSearchConnectionsHint": "Takipçilerin ve takip ettiklerin arasında ara"
 }

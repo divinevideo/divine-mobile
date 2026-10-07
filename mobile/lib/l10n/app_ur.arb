@@ -1959,7 +1959,6 @@
       }
     }
   },
-  "peopleListsAddPeopleSearchHint": "لوگ تلاش کریں",
   "peopleListsAddPeopleError": "لوگ لوڈ نہیں ہو سکے۔ براہ کرم دوبارہ کوشش کریں۔",
   "peopleListsAddPeopleRetry": "دوبارہ کوشش کریں",
   "peopleListsAddButton": "شامل کریں",
@@ -2437,9 +2436,6 @@
   },
   "listCreateNewList": "نئی فہرست بنائیں",
   "listNewPeopleList": "لوگوں کی نئی فہرست",
-  "listCollaboratorsNone": "کوئی نہیں",
-  "listAddCollaboratorTitle": "شریک کار شامل کریں",
-  "listCollaboratorSearchHint": "Divine میں تلاش کریں...",
   "listNameLabel": "فہرست کا نام",
   "listDescriptionLabel": "تفصیل (اختیاری)",
   "listPublicList": "عوامی فہرست",
@@ -6697,5 +6693,11 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "نئی ویڈیو فہرست",
+  "peopleListsPublicNotice": "یہ فہرست عوامی ہے۔ کوئی بھی اس کا نام، تفصیل اور اس میں شامل لوگوں کو دیکھ سکتا ہے۔",
+  "peopleListsPeopleLabel": "لوگ",
+  "peopleListsPeopleNone": "ابھی کوئی شخص شامل نہیں کیا گیا",
+  "peopleListsSessionChanged": "آپ کا اکاؤنٹ یا فہرست تک رسائی بدل گئی ہے۔ جاری رکھنے کے لیے یہ صفحہ دوبارہ کھولیں۔",
+  "peopleListsSearchConnectionsHint": "فالوورز اور جنہیں آپ فالو کرتے ہیں ان میں تلاش کریں"
 }

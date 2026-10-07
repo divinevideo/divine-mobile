@@ -1655,9 +1655,6 @@
     },
     "listCreateNewList": "Créer une nouvelle liste",
     "listNewPeopleList": "Nouvelle liste de personnes",
-    "listCollaboratorsNone": "Aucun",
-    "listAddCollaboratorTitle": "Ajouter un collaborateur",
-    "listCollaboratorSearchHint": "Rechercher dans Divine...",
     "listNameLabel": "Nom de la liste",
     "listDescriptionLabel": "Description (facultatif)",
     "listPublicList": "Liste publique",
@@ -3027,7 +3024,6 @@
     "peopleListsErrorLoadingVideos": "Erreur lors du chargement des vidéos",
     "peopleListsNoPeopleToAdd": "Aucune personne disponible à ajouter.",
     "peopleListsAddToListName": "Ajouter à {name}",
-    "peopleListsAddPeopleSearchHint": "Rechercher des personnes",
     "peopleListsAddPeopleError": "Impossible de charger les personnes. Veuillez réessayer.",
     "peopleListsAddPeopleRetry": "Réessayer",
     "peopleListsAddButton": "Ajouter",
@@ -4930,5 +4926,11 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "Nouvelle liste de vidéos",
+  "peopleListsPublicNotice": "Cette liste est publique. Tout le monde peut voir son nom, sa description et les personnes qui y figurent.",
+  "peopleListsPeopleLabel": "Personnes",
+  "peopleListsPeopleNone": "Aucune personne ajoutée",
+  "peopleListsSessionChanged": "Ton compte ou ton accès à la liste a changé. Rouvre cette page pour continuer.",
+  "peopleListsSearchConnectionsHint": "Rechercher parmi les abonnés et les abonnements"
 }

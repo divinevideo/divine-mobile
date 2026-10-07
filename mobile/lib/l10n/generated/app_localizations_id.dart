@@ -3871,9 +3871,6 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
-  String get peopleListsAddPeopleSearchHint => 'Cari orang';
-
-  @override
   String get peopleListsAddPeopleError =>
       'Tidak dapat memuat orang. Silakan coba lagi.';
 
@@ -4851,15 +4848,6 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'Daftar orang baru';
-
-  @override
-  String get listCollaboratorsNone => 'Tidak ada';
-
-  @override
-  String get listAddCollaboratorTitle => 'Tambah kolaborator';
-
-  @override
-  String get listCollaboratorSearchHint => 'Cari di Divine...';
 
   @override
   String get listNameLabel => 'Nama Daftar';
@@ -12925,4 +12913,25 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'Daftar video baru';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'Daftar ini bersifat publik. Siapa pun bisa melihat nama, deskripsi, dan orang di dalamnya.';
+
+  @override
+  String get peopleListsPeopleLabel => 'Orang';
+
+  @override
+  String get peopleListsPeopleNone => 'Belum ada orang yang ditambahkan';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'Akun atau aksesmu ke daftar berubah. Buka kembali halaman ini untuk melanjutkan.';
+
+  @override
+  String get peopleListsSearchConnectionsHint =>
+      'Cari pengikut dan yang diikuti';
 }

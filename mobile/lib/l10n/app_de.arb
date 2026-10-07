@@ -1655,9 +1655,6 @@
     },
     "listCreateNewList": "Neue Liste erstellen",
     "listNewPeopleList": "Neue Personenliste",
-    "listCollaboratorsNone": "Keine",
-    "listAddCollaboratorTitle": "Mitarbeiter hinzufügen",
-    "listCollaboratorSearchHint": "Divine durchsuchen...",
     "listNameLabel": "Listenname",
     "listDescriptionLabel": "Beschreibung (optional)",
     "listPublicList": "Öffentliche Liste",
@@ -3027,7 +3024,6 @@
     "peopleListsErrorLoadingVideos": "Fehler beim Laden der Videos",
     "peopleListsNoPeopleToAdd": "Keine Personen zum Hinzufügen verfügbar.",
     "peopleListsAddToListName": "Zu {name} hinzufügen",
-    "peopleListsAddPeopleSearchHint": "Personen suchen",
     "peopleListsAddPeopleError": "Personen konnten nicht geladen werden. Bitte versuche es erneut.",
     "peopleListsAddPeopleRetry": "Erneut versuchen",
     "peopleListsAddButton": "Hinzufügen",
@@ -4930,5 +4926,11 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "Neue Videoliste",
+  "peopleListsPublicNotice": "Diese Liste ist öffentlich. Alle können ihren Namen, ihre Beschreibung und die Personen darin sehen.",
+  "peopleListsPeopleLabel": "Personen",
+  "peopleListsPeopleNone": "Keine Personen hinzugefügt",
+  "peopleListsSessionChanged": "Dein Konto oder dein Zugriff auf die Liste hat sich geändert. Öffne diese Seite erneut, um fortzufahren.",
+  "peopleListsSearchConnectionsHint": "Follower und gefolgte Personen durchsuchen"
 }

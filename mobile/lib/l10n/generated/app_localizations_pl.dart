@@ -4052,9 +4052,6 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String get peopleListsAddPeopleSearchHint => 'Szukaj osób';
-
-  @override
   String get peopleListsAddPeopleError =>
       'Nie udało się załadować osób. Spróbuj ponownie.';
 
@@ -5057,15 +5054,6 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'Nowa lista osób';
-
-  @override
-  String get listCollaboratorsNone => 'Brak';
-
-  @override
-  String get listAddCollaboratorTitle => 'Dodaj współpracownika';
-
-  @override
-  String get listCollaboratorSearchHint => 'Szukaj w Divine...';
 
   @override
   String get listNameLabel => 'Nazwa listy';
@@ -13273,4 +13261,25 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'Nowa lista filmów';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'Ta lista jest publiczna. Każdy może zobaczyć jej nazwę, opis i osoby na niej.';
+
+  @override
+  String get peopleListsPeopleLabel => 'Osoby';
+
+  @override
+  String get peopleListsPeopleNone => 'Nie dodano żadnych osób';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'Twoje konto lub dostęp do listy uległy zmianie. Otwórz tę stronę ponownie, aby kontynuować.';
+
+  @override
+  String get peopleListsSearchConnectionsHint =>
+      'Szukaj wśród obserwujących i obserwowanych';
 }

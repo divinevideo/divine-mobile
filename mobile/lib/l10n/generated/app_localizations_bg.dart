@@ -3992,9 +3992,6 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
-  String get peopleListsAddPeopleSearchHint => 'Търси хора';
-
-  @override
   String get peopleListsAddPeopleError =>
       'Не успяхме да заредим хората. Опитай пак.';
 
@@ -4974,15 +4971,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'Нов списък с хора';
-
-  @override
-  String get listCollaboratorsNone => 'Няма';
-
-  @override
-  String get listAddCollaboratorTitle => 'Добави сътрудник';
-
-  @override
-  String get listCollaboratorSearchHint => 'Търсене Divine...';
 
   @override
   String get listNameLabel => 'Име на списък';
@@ -13144,4 +13132,25 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'Нов списък с видеа';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'Този списък е публичен. Всеки може да види името, описанието и хората в него.';
+
+  @override
+  String get peopleListsPeopleLabel => 'Хора';
+
+  @override
+  String get peopleListsPeopleNone => 'Няма добавени хора';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'Акаунтът ти или достъпът до списъка се промени. Отвори отново страницата, за да продължиш.';
+
+  @override
+  String get peopleListsSearchConnectionsHint =>
+      'Търси сред последователи и следвани';
 }

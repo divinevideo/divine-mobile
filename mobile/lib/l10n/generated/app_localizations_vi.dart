@@ -3913,9 +3913,6 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get peopleListsAddPeopleSearchHint => 'Tìm người';
-
-  @override
   String get peopleListsAddPeopleError =>
       'Không tải được danh sách người. Vui lòng thử lại.';
 
@@ -4889,15 +4886,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'Danh sách người mới';
-
-  @override
-  String get listCollaboratorsNone => 'Không có';
-
-  @override
-  String get listAddCollaboratorTitle => 'Thêm cộng tác viên';
-
-  @override
-  String get listCollaboratorSearchHint => 'Tìm trên Divine...';
 
   @override
   String get listNameLabel => 'Tên danh sách';
@@ -12965,4 +12953,25 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'Danh sách video mới';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'Danh sách này là công khai. Ai cũng có thể xem tên, mô tả và những người trong danh sách.';
+
+  @override
+  String get peopleListsPeopleLabel => 'Mọi người';
+
+  @override
+  String get peopleListsPeopleNone => 'Chưa thêm ai';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'Tài khoản hoặc quyền truy cập danh sách của bạn đã thay đổi. Mở lại trang này để tiếp tục.';
+
+  @override
+  String get peopleListsSearchConnectionsHint =>
+      'Tìm người theo dõi và người bạn đang theo dõi';
 }

@@ -1212,9 +1212,6 @@
     "listAddedTo": "Naidagdag sa {name}",
     "listCreateNewList": "Gumawa ng Bagong Listahan",
     "listNewPeopleList": "Bagong people list",
-    "listCollaboratorsNone": "Wala",
-    "listAddCollaboratorTitle": "Magdagdag ng collaborator",
-    "listCollaboratorSearchHint": "Maghanap sa Divine...",
     "listNameLabel": "Pangalan ng Listahan",
     "listDescriptionLabel": "Description (opsyonal)",
     "listPublicList": "Public na Listahan",
@@ -2288,7 +2285,6 @@
     "peopleListsAddButtonWithCount": "Idagdag ang {count}",
     "peopleListsAddPeopleError": "Hindi na-load ang mga tao. Subukan ulit.",
     "peopleListsAddPeopleRetry": "Subukan ulit",
-    "peopleListsAddPeopleSearchHint": "Maghanap ng tao",
     "peopleListsAddPeopleSemanticLabel": "Magdagdag ng tao sa listahan",
     "peopleListsAddPeopleTitle": "Magdagdag ng tao",
     "peopleListsAddPeopleTooltip": "Magdagdag ng tao",
@@ -3922,5 +3918,11 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "Bagong listahan ng video",
+  "peopleListsPublicNotice": "Pampubliko ang listahang ito. Makikita ng kahit sino ang pangalan, paglalarawan, at mga tao rito.",
+  "peopleListsPeopleLabel": "Mga tao",
+  "peopleListsPeopleNone": "Wala pang idinagdag na tao",
+  "peopleListsSessionChanged": "Nagbago ang account mo o ang access sa listahan. Buksan ulit ang pahinang ito para magpatuloy.",
+  "peopleListsSearchConnectionsHint": "Maghanap sa mga tagasubaybay at sinusubaybayan"
 }

@@ -6,6 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
@@ -28,6 +31,9 @@ class ExploreListsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Load data but don't wait for everything - show UI progressively
     final allListsAsync = ref.watch(allListsProvider);
+    final peopleEnabled = ref.watch(
+      isFeatureEnabledProvider(FeatureFlag.curatedLists),
+    );
 
     // Always show the static UI elements immediately
     return RefreshIndicator(
@@ -65,12 +71,22 @@ class ExploreListsTab extends ConsumerWidget {
             ),
           ),
 
-          // Create New List button - ALWAYS VISIBLE
+          if (peopleEnabled)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: DivineButton(
+                leadingIcon: .plus,
+                label: context.l10n.listNewPeopleList,
+                onPressed: () => context.push(CreatePeopleListPage.path),
+              ),
+            ),
+
+          // Video-list creation remains independent of people-list loading.
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: DivineButton(
               leadingIcon: .plus,
-              label: context.l10n.listCreateNewList,
+              label: context.l10n.listNewVideoList,
               onPressed: () {
                 Log.info(
                   'Tapped Create New List button',
@@ -170,7 +186,7 @@ class ExploreListsTab extends ConsumerWidget {
                   ],
 
                   // People Lists section
-                  if (userLists.isNotEmpty) ...[
+                  if (peopleEnabled && userLists.isNotEmpty) ...[
                     Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,

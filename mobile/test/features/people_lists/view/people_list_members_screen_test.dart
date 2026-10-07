@@ -62,6 +62,11 @@ UserProfileFound _found(String pubkey, {required int videos}) =>
     );
 
 void main() {
+  setUpAll(
+    () => registerFallbackValue(
+      PeopleListsPubkeyRemoveRequested(listId: 'crew', pubkey: _quiet),
+    ),
+  );
   final l10n = lookupAppLocalizations(const Locale('en'));
 
   late _MockPeopleListsBloc bloc;
@@ -70,6 +75,8 @@ void main() {
 
   setUp(() {
     bloc = _MockPeopleListsBloc();
+    when(() => bloc.submit(any()))
+        .thenAnswer((_) async => PeopleListsOperationResult.succeeded);
     profileRepository = _MockProfileRepository();
     pushedLocations = [];
     when(() => profileRepository.getBulkProfilesFromApi(any())).thenAnswer(
@@ -337,6 +344,39 @@ void main() {
       expect(find.byType(PeopleListMemberTile), findsOneWidget);
     });
 
+    testWidgets(
+      'removal reports success only after confirmation and exposes failed retry',
+      (tester) async {
+        final pending = Completer<PeopleListsOperationResult>();
+        when(() => bloc.submit(any())).thenAnswer((_) => pending.future);
+        await pumpRoster(
+          tester,
+          blocState: PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: _ownerPubkey,
+            lists: [_list()],
+          ),
+        );
+        final row = find.byWidgetPredicate(
+          (widget) => widget is PeopleListMemberTile && widget.pubkey == _quiet,
+        );
+        await tester.longPress(row);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.peopleListsRemove));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.peopleListsUndo), findsNothing);
+        pending.complete(PeopleListsOperationResult.failed);
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listUpdateFailed), findsOneWidget);
+        expect(find.text(l10n.peopleListsUndo), findsNothing);
+        when(() => bloc.submit(any()))
+            .thenAnswer((_) async => PeopleListsOperationResult.succeeded);
+        await tester.tap(find.text(l10n.peopleListsAddPeopleRetry));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.peopleListsUndo), findsOneWidget);
+      },
+    );
+
     testWidgets('review regression removal survives roster re-ranking', (
       tester,
     ) async {
@@ -371,7 +411,7 @@ void main() {
       await tester.tap(find.text(l10n.peopleListsRemove));
       await tester.pumpAndSettle();
       verify(
-        () => bloc.add(
+        () => bloc.submit(
           PeopleListsPubkeyRemoveRequested(listId: 'crew', pubkey: _quiet),
         ),
       ).called(1);
@@ -420,7 +460,7 @@ void main() {
         await tester.pumpAndSettle();
 
         verify(
-          () => bloc.add(
+          () => bloc.submit(
             PeopleListsPubkeyRemoveRequested(
               listId: 'crew',
               pubkey: members.first,

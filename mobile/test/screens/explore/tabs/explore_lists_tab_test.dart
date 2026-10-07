@@ -6,6 +6,8 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
@@ -24,6 +26,39 @@ class _FakeCuratedListsState extends CuratedListsState {
 
 void main() {
   group(ExploreListsTab, () {
+    for (final enabled in [true, false]) {
+      testWidgets('empty lists offers explicit creation with master=$enabled', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          testProviderScope(
+            additionalOverrides: [
+              isFeatureEnabledProvider(FeatureFlag.curatedLists)
+                  .overrideWithValue(enabled),
+              allListsProvider.overrideWith(
+                (ref) async =>
+                    (userLists: <UserList>[], curatedLists: <CuratedList>[]),
+              ),
+              curatedListsStateProvider.overrideWith(
+                _FakeCuratedListsState.new,
+              ),
+            ],
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(body: ExploreListsTab()),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('New video list'), findsOneWidget);
+        expect(
+          find.text('New people list'),
+          enabled ? findsOneWidget : findsNothing,
+        );
+      });
+    }
+
     testWidgets('drops the status-bar inset above the first button', (
       tester,
     ) async {

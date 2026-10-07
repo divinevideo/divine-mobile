@@ -3937,9 +3937,6 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
-  String get peopleListsAddPeopleSearchHint => 'Sök personer';
-
-  @override
   String get peopleListsAddPeopleError =>
       'Det gick inte att läsa in personer. Försök igen.';
 
@@ -4915,15 +4912,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'Ny personlista';
-
-  @override
-  String get listCollaboratorsNone => 'Inga';
-
-  @override
-  String get listAddCollaboratorTitle => 'Lägg till medarbetare';
-
-  @override
-  String get listCollaboratorSearchHint => 'Sök i Divine...';
 
   @override
   String get listNameLabel => 'Listnamn';
@@ -13022,4 +13010,25 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'Ny videolista';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'Den här listan är offentlig. Alla kan se dess namn, beskrivning och personerna i den.';
+
+  @override
+  String get peopleListsPeopleLabel => 'Personer';
+
+  @override
+  String get peopleListsPeopleNone => 'Inga personer tillagda';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'Ditt konto eller din åtkomst till listan har ändrats. Öppna sidan igen för att fortsätta.';
+
+  @override
+  String get peopleListsSearchConnectionsHint =>
+      'Sök bland följare och personer du följer';
 }

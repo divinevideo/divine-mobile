@@ -48,6 +48,7 @@ enum RouteType {
   profileView, // Other user's profile (fullscreen, no bottom nav)
   curatedList, // Curated video list screen (NIP-51 kind 30005)
   discoverLists, // Discover public lists screen
+  peopleListEdit, // Edit an owned people list name and description
   peopleListCreate, // Create NIP-51 kind 30000 people list screen
   peopleListMembers, // People list members and videos screen
   peopleListRoster, // Full member roster of a people list
@@ -612,6 +613,12 @@ RouteContext? _parseRoute(String path, {required bool knownOnly}) {
         return knownOnly ? null : const RouteContext(type: RouteType.home);
       }
       final peopleListId = _safeDecode(segments[1]);
+      if (segments.length > 2 && segments[2] == 'edit') {
+        return RouteContext(
+          type: RouteType.peopleListEdit,
+          listId: peopleListId,
+        );
+      }
       if (segments.length > 2 && segments[2] == 'add-people') {
         return RouteContext(
           type: RouteType.peopleListAddPeople,
@@ -887,6 +894,9 @@ String buildRoute(RouteContext context) {
 
     case RouteType.discoverLists:
       return RoutePaths.discoverLists;
+
+    case RouteType.peopleListEdit:
+      return RoutePaths.peopleListEditForId(context.listId ?? '');
 
     case RouteType.peopleListCreate:
       return RoutePaths.createPeopleList;

@@ -27,7 +27,7 @@ import 'package:openvine/widgets/rounded_grid_viewport.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Owner actions offered by the `...` bottom sheet.
-enum _PeopleListAction { delete }
+enum _PeopleListAction { edit, delete }
 
 /// Screen that renders a single NIP-51 kind 30000 people list.
 ///
@@ -494,6 +494,15 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
             _PeopleListActionsMenu(
               onSelected: (action) {
                 switch (action) {
+                  case _PeopleListAction.edit:
+                    runDetached(
+                      context.push<void>(
+                        RoutePaths.peopleListEditForId(userList.id),
+                      ),
+                      'edit people list',
+                      logName: 'UserListPeopleScreen',
+                      category: LogCategory.ui,
+                    );
                   case _PeopleListAction.delete:
                     runDetached(
                       _confirmDeleteList(userList),
@@ -782,6 +791,10 @@ class _PeopleListActionsMenu extends StatelessWidget {
       ),
       onSelected: onSelected,
       itemBuilder: (context) => [
+        PopupMenuItem(
+          value: _PeopleListAction.edit,
+          child: Text(context.l10n.listEditInfoAction),
+        ),
         PopupMenuItem(
           value: _PeopleListAction.delete,
           child: Text(

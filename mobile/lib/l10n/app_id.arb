@@ -1652,9 +1652,6 @@
     },
     "listCreateNewList": "Buat Daftar Baru",
     "listNewPeopleList": "Daftar orang baru",
-    "listCollaboratorsNone": "Tidak ada",
-    "listAddCollaboratorTitle": "Tambah kolaborator",
-    "listCollaboratorSearchHint": "Cari di Divine...",
     "listNameLabel": "Nama Daftar",
     "listDescriptionLabel": "Deskripsi (opsional)",
     "listPublicList": "Daftar Publik",
@@ -3027,7 +3024,6 @@
     "peopleListsErrorLoadingVideos": "Kesalahan saat memuat video",
     "peopleListsNoPeopleToAdd": "Tidak ada orang yang tersedia untuk ditambahkan.",
     "peopleListsAddToListName": "Tambahkan ke {name}",
-    "peopleListsAddPeopleSearchHint": "Cari orang",
     "peopleListsAddPeopleError": "Tidak dapat memuat orang. Silakan coba lagi.",
     "peopleListsAddPeopleRetry": "Coba lagi",
     "peopleListsAddButton": "Tambah",
@@ -4930,5 +4926,11 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "Daftar video baru",
+  "peopleListsPublicNotice": "Daftar ini bersifat publik. Siapa pun bisa melihat nama, deskripsi, dan orang di dalamnya.",
+  "peopleListsPeopleLabel": "Orang",
+  "peopleListsPeopleNone": "Belum ada orang yang ditambahkan",
+  "peopleListsSessionChanged": "Akun atau aksesmu ke daftar berubah. Buka kembali halaman ini untuk melanjutkan.",
+  "peopleListsSearchConnectionsHint": "Cari pengikut dan yang diikuti"
 }

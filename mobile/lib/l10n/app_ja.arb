@@ -1645,9 +1645,6 @@
     },
     "listCreateNewList": "新しいリストを作る",
     "listNewPeopleList": "新しい人リスト",
-    "listCollaboratorsNone": "なし",
-    "listAddCollaboratorTitle": "コラボレーターを追加",
-    "listCollaboratorSearchHint": "Divineを検索...",
     "listNameLabel": "リスト名",
     "listDescriptionLabel": "説明 (任意)",
     "listPublicList": "公開リスト",
@@ -3020,7 +3017,6 @@
     "peopleListsErrorLoadingVideos": "動画の読み込みエラー",
     "peopleListsNoPeopleToAdd": "追加できるユーザーがいません。",
     "peopleListsAddToListName": "{name}に追加",
-    "peopleListsAddPeopleSearchHint": "ユーザーを検索",
     "peopleListsAddPeopleError": "ユーザーを読み込めませんでした。もう一度お試しください。",
     "peopleListsAddPeopleRetry": "再試行",
     "peopleListsAddButton": "追加",
@@ -4930,5 +4926,11 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "新しい動画リスト",
+  "peopleListsPublicNotice": "このリストは公開されます。名前、説明、リスト内のユーザーは誰でも見ることができます。",
+  "peopleListsPeopleLabel": "ユーザー",
+  "peopleListsPeopleNone": "ユーザーはまだ追加されていません",
+  "peopleListsSessionChanged": "アカウントまたはリストへのアクセスが変更されました。続けるには、このページを開き直してください。",
+  "peopleListsSearchConnectionsHint": "フォロワーとフォロー中のユーザーを検索"
 }

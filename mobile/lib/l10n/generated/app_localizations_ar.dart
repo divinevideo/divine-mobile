@@ -3916,9 +3916,6 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get peopleListsAddPeopleSearchHint => 'البحث عن أشخاص';
-
-  @override
   String get peopleListsAddPeopleError =>
       'تعذر تحميل الأشخاص. يرجى المحاولة مجددًا.';
 
@@ -4894,15 +4891,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get listNewPeopleList => 'قائمة أشخاص جديدة';
-
-  @override
-  String get listCollaboratorsNone => 'لا أحد';
-
-  @override
-  String get listAddCollaboratorTitle => 'إضافة متعاون';
-
-  @override
-  String get listCollaboratorSearchHint => 'ابحث في Divine...';
 
   @override
   String get listNameLabel => 'اسم القائمة';
@@ -12961,4 +12949,25 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get listNewVideoList => 'قائمة فيديوهات جديدة';
+
+  @override
+  String get peopleListsPublicNotice =>
+      'هذه القائمة عامة. يمكن لأي شخص رؤية اسمها ووصفها والأشخاص فيها.';
+
+  @override
+  String get peopleListsPeopleLabel => 'الأشخاص';
+
+  @override
+  String get peopleListsPeopleNone => 'لم تتم إضافة أي أشخاص';
+
+  @override
+  String get peopleListsSessionChanged =>
+      'تغيّر حسابك أو وصولك إلى القائمة. افتح هذه الصفحة مجددًا للمتابعة.';
+
+  @override
+  String get peopleListsSearchConnectionsHint =>
+      'ابحث في المتابعين ومن تتابعهم';
 }

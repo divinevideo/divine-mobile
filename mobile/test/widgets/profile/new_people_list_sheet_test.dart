@@ -1,6 +1,8 @@
 // ABOUTME: Tests showNewPeopleListSheet's curatedLists gate.
 // ABOUTME: The sheet reads the lazily-registered global PeopleListsBloc.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -142,6 +144,7 @@ void main() {
         _buildSubject(
           curatedListsEnabled: true,
           createBloc: () => bloc,
+          initialCollaborator: collaborator,
           extraOverrides: [
             vanishedProfilePubkeysProvider.overrideWith(
               (ref) => Stream.value({vanishedPubkey}),
@@ -154,10 +157,6 @@ void main() {
       );
 
       await tester.tap(find.text('open'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(l10n.listCollaboratorsNone));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(l10n.profileDeletedAccountName).last);
       await tester.pumpAndSettle();
 
       expect(find.text('Aeontropy'), findsNothing);
@@ -188,6 +187,26 @@ void main() {
       },
     );
 
+    testWidgets('keeps entered name open until confirmed and after failure', (
+      tester,
+    ) async {
+      final pending = Completer<PeopleListsOperationResult>();
+      when(() => bloc.submit(any())).thenAnswer((_) => pending.future);
+      await tester.pumpWidget(
+        _buildSubject(curatedListsEnabled: true, createBloc: () => bloc),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, 'My people');
+      await tester.tap(find.bySemanticsLabel(l10n.listDone));
+      await tester.pump();
+      expect(find.text('My people'), findsOneWidget);
+      pending.complete(PeopleListsOperationResult.failed);
+      await tester.pumpAndSettle();
+      expect(find.text('My people'), findsOneWidget);
+      expect(find.text(l10n.listCreateFailed), findsOneWidget);
+    });
+
     testWidgets('opens when curatedLists is on', (tester) async {
       await tester.pumpWidget(
         _buildSubject(curatedListsEnabled: true, createBloc: () => bloc),
@@ -208,6 +227,8 @@ Widget _buildSubject({
   required PeopleListsBloc Function() createBloc,
   List<Override> extraOverrides = const [],
   MockAuthService? auth,
+  UserProfile? initialCollaborator,
+  String? initialPubkey,
 }) {
   return ProviderScope(
     overrides: [
@@ -227,7 +248,11 @@ Widget _buildSubject({
         home: Scaffold(
           body: Builder(
             builder: (context) => ElevatedButton(
-              onPressed: () => showNewPeopleListSheet(context),
+              onPressed: () => showNewPeopleListSheet(
+                context,
+                initialCollaborator: initialCollaborator,
+                initialPubkey: initialPubkey,
+              ),
               child: const Text('open'),
             ),
           ),

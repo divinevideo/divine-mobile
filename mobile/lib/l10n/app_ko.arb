@@ -1191,9 +1191,6 @@
     },
     "listCreateNewList": "새 목록 만들기",
     "listNewPeopleList": "새 사람 목록",
-    "listCollaboratorsNone": "없음",
-    "listAddCollaboratorTitle": "협업자 추가",
-    "listCollaboratorSearchHint": "Divine 검색...",
     "listNameLabel": "목록 이름",
     "listDescriptionLabel": "설명 (선택)",
     "listPublicList": "공개 목록",
@@ -2566,7 +2563,6 @@
     "peopleListsErrorLoadingVideos": "동영상 불러오기 오류",
     "peopleListsNoPeopleToAdd": "추가할 수 있는 사람이 없습니다.",
     "peopleListsAddToListName": "{name}에 추가",
-    "peopleListsAddPeopleSearchHint": "사람 검색",
     "peopleListsAddPeopleError": "사람을 불러올 수 없습니다. 다시 시도해 주세요.",
     "peopleListsAddPeopleRetry": "다시 시도",
     "peopleListsAddButton": "추가",
@@ -4476,5 +4472,11 @@
       }
     }
   },
-  "listStatsSeparator": " ∙ "
+  "listStatsSeparator": " ∙ ",
+  "listNewVideoList": "새 동영상 목록",
+  "peopleListsPublicNotice": "이 목록은 공개됩니다. 누구나 이름, 설명, 목록에 있는 사람을 볼 수 있어요.",
+  "peopleListsPeopleLabel": "사람",
+  "peopleListsPeopleNone": "추가된 사람이 없어요",
+  "peopleListsSessionChanged": "계정 또는 목록 접근 권한이 변경되었어요. 계속하려면 이 페이지를 다시 열어 주세요.",
+  "peopleListsSearchConnectionsHint": "팔로워 및 팔로우 중인 사람 검색"
 }
