@@ -639,43 +639,78 @@ void main() {
     });
 
     group('members preview', () {
+      // Full-length 64-char pubkeys, never truncated.
+      final kept = 'a' * 64;
+      final blocked = 'b' * 64;
+      late ContentBlocklistRepository blocklist;
+
+      setUp(() {
+        blocklist = ContentBlocklistRepository();
+        addTearDown(blocklist.dispose);
+      });
+
+      Future<void> pumpOwnList(WidgetTester tester) async {
+        final list = _buildList(id: 'crew', pubkeys: [blocked, kept]);
+        final bloc = _MockPeopleListsBloc();
+        whenListen(
+          bloc,
+          const Stream<PeopleListsState>.empty(),
+          initialState: PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: _ownerPubkey,
+            lists: [list],
+          ),
+        );
+        await _pumpPeopleListScreen(
+          tester,
+          bloc: bloc,
+          list: list,
+          overrides: [
+            contentBlocklistRepositoryProvider.overrideWithValue(blocklist),
+          ],
+        );
+        await tester.pump();
+      }
+
+      List<String> previewPubkeys(WidgetTester tester) => tester
+          .widget<PeopleListMembersPreview>(
+            find.byType(PeopleListMembersPreview),
+          )
+          .pubkeys;
+
       testWidgets(
         "leaves a blocked member out of the viewer's own list's preview",
         (tester) async {
-          // Full-length 64-char pubkeys, never truncated.
-          final kept = 'a' * 64;
-          final blocked = 'b' * 64;
-          final blocklist = ContentBlocklistRepository();
-          addTearDown(blocklist.dispose);
           await blocklist.blockUser(blocked);
-          final list = _buildList(id: 'crew', pubkeys: [blocked, kept]);
-          final bloc = _MockPeopleListsBloc();
-          whenListen(
-            bloc,
-            const Stream<PeopleListsState>.empty(),
-            initialState: PeopleListsState(
-              status: PeopleListsStatus.ready,
-              ownerPubkey: _ownerPubkey,
-              lists: [list],
-            ),
-          );
 
-          await _pumpPeopleListScreen(
-            tester,
-            bloc: bloc,
-            list: list,
-            overrides: [
-              contentBlocklistRepositoryProvider.overrideWithValue(blocklist),
-            ],
-          );
-          await tester.pump();
+          await pumpOwnList(tester);
 
-          final preview = tester.widget<PeopleListMembersPreview>(
-            find.byType(PeopleListMembersPreview),
-          );
-          expect(preview.pubkeys, equals([kept]));
+          expect(previewPubkeys(tester), equals([kept]));
         },
       );
+
+      testWidgets('drops a member blocked while the list is open', (
+        tester,
+      ) async {
+        await pumpOwnList(tester);
+        expect(previewPubkeys(tester), equals([blocked, kept]));
+
+        await blocklist.blockUser(blocked);
+        await tester.pump();
+
+        expect(previewPubkeys(tester), equals([kept]));
+      });
+
+      testWidgets('offers no way into the roster when everyone is hidden', (
+        tester,
+      ) async {
+        await blocklist.blockUsers([blocked, kept]);
+
+        await pumpOwnList(tester);
+
+        expect(find.byType(PeopleListMembersPreview), findsNothing);
+        expect(find.text(l10n.peopleListsViewAllMembers), findsNothing);
+      });
     });
 
     group('View all', () {

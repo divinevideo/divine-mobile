@@ -547,6 +547,29 @@ void main() {
         },
       );
 
+      test('keeps out a member blocked while the stats are loading', () async {
+        final answer = Completer<BulkProfilesResponse?>();
+        when(
+          () => profileRepository.getBulkProfilesFromApi(any()),
+        ).thenAnswer((_) => answer.future);
+        final cubit = buildCubit();
+        final loading = cubit.load();
+
+        await blocklist.blockUser(_busiest);
+        answer.complete(
+          BulkProfilesResponse(
+            profiles: {
+              _quiet: _found(_quiet, videos: 2),
+              _busy: _found(_busy, videos: 40),
+              _busiest: _found(_busiest, videos: 90),
+            },
+          ),
+        );
+        await loading;
+
+        expect(pubkeysOf(cubit.state), equals([_busy, _quiet]));
+      });
+
       test('restores an unblocked member with their stats', () async {
         stubStats();
         await blocklist.blockUser(_busiest);
@@ -573,7 +596,9 @@ void main() {
           when(
             () => mutedUs.stateStream,
           ).thenAnswer((_) => const Stream.empty());
-          // Not blocked by the viewer: only the feed predicate hides it.
+          // The viewer did not block this account; it muted the viewer. Only
+          // the feed predicate hides it, which pins that predicate over
+          // isBlocked.
           when(() => mutedUs.isBlocked(any())).thenReturn(false);
           when(() => mutedUs.shouldFilterFromFeeds(any())).thenAnswer(
             (invocation) => invocation.positionalArguments.first == _busy,
