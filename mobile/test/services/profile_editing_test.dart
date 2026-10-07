@@ -246,7 +246,7 @@ void main() {
         rawData: profileData,
       );
 
-      mockProfileRepository.cacheProfile(updatedProfile);
+      await mockProfileRepository.cacheProfile(updatedProfile);
 
       // Assert
       verify(() => mockProfileRepository.cacheProfile(any())).called(1);
