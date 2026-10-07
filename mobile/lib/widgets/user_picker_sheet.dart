@@ -922,9 +922,11 @@ class _NoResults extends StatelessWidget {
                 ),
               ),
             if (onShowMore != null)
-              TextButton(
+              DivineButton(
+                label: context.l10n.profileShowMore,
+                type: DivineButtonType.secondary,
                 onPressed: isLoadingMore ? null : onShowMore,
-                child: Text(context.l10n.profileShowMore),
+                isLoading: isLoadingMore,
               ),
           ],
         ),

@@ -1594,7 +1594,7 @@ void main() {
 
         await tester.enterText(find.byType(TextField), 'sam');
         await tester.pump(const Duration(milliseconds: 400));
-        await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+        await tester.runAsync(pumpEventQueue);
         await tester.pumpAndSettle();
         await tester.tap(find.text('Show more'));
         await tester.pumpAndSettle();
@@ -1673,7 +1673,7 @@ void main() {
 
         await tester.enterText(find.byType(TextField), 'sam');
         await tester.pump(const Duration(milliseconds: 400));
-        await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+        await tester.runAsync(pumpEventQueue);
         await tester.pumpAndSettle();
         await tester.drag(find.byType(ListView).last, const Offset(0, -5000));
         await tester.pumpAndSettle();
