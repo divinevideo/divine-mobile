@@ -10,6 +10,7 @@ import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
+import 'package:openvine/services/published_clip_source_resolver.dart';
 import 'package:openvine/services/subtitle_service.dart';
 import 'package:path/path.dart' as p;
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -71,6 +72,10 @@ enum VideoClipImportFailureReason {
   /// The copied file could not be probed for a duration, so it cannot be
   /// placed on a timeline.
   unreadableVideo,
+
+  /// It could not be determined whether the received file is an already
+  /// published post, so it is not known whom to credit.
+  sourceLookupFailed,
   saveFailed,
 }
 
@@ -84,6 +89,7 @@ class VideoClipImportService {
     Clock? now,
     VideoMetadataReader? readVideoMetadata,
     FileSha256Hasher? hashFile,
+    PublishedClipSourceResolver? publishedSourceResolver,
   }) : _clipLibraryService = clipLibraryService,
        _getDocumentsPath = getDocumentsPath,
        _downloadVideo = downloadVideo,
@@ -92,7 +98,8 @@ class VideoClipImportService {
        _now = now ?? DateTime.now,
        _readVideoMetadata =
            readVideoMetadata ?? ProVideoEditor.instance.getMetadata,
-       _hashFile = hashFile ?? NativeProofModeService.generateSha256FileHash;
+       _hashFile = hashFile ?? NativeProofModeService.generateSha256FileHash,
+       _publishedSourceResolver = publishedSourceResolver;
 
   static const _logName = 'VideoClipImportService';
 
@@ -108,6 +115,7 @@ class VideoClipImportService {
   final VideoClipLastFrameExtractor _extractLastFrame;
   final Clock _now;
   final VideoMetadataReader _readVideoMetadata;
+  final PublishedClipSourceResolver? _publishedSourceResolver;
   final FileSha256Hasher _hashFile;
 
   Future<VideoClipImportResult> importToLibrary(
@@ -212,8 +220,14 @@ class VideoClipImportService {
   /// [source] must already have passed the C2PA camera-capture check: the
   /// clip is stored with a proof record naming [c2paManifestId], so the
   /// editor's render step treats it as attested and does not re-sign the
-  /// file as the recipient's own capture. [senderPubkey] is kept as the
-  /// clip's source credit.
+  /// file as the recipient's own capture.
+  ///
+  /// The clip credits [senderPubkey] unless the file turns out to be a post
+  /// already published on Divine: a published video is signed as a fresh
+  /// capture too, so the check alone cannot tell it from a raw recording.
+  /// Then whoever published it is credited, linked to the post. When that
+  /// cannot be determined, the import fails with
+  /// [VideoClipImportFailureReason.sourceLookupFailed] rather than guess.
   ///
   /// [targetAspectRatio] is the crop the sender recorded for. When absent it
   /// is derived from the file: near-square and wider maps to square,
@@ -249,6 +263,21 @@ class VideoClipImportService {
 
     File? copiedVideo;
     try {
+      final videoHash = await _hashFile(source.path);
+      final PublishedClipSource? published;
+      try {
+        published = await _publishedSourceResolver?.resolve(videoHash);
+      } on PublishedClipSourceLookupException catch (e) {
+        Log.warning(
+          'Could not tell whether a received clip is a published post: $e',
+          name: _logName,
+          category: LogCategory.video,
+        );
+        return const VideoClipImportFailure(
+          VideoClipImportFailureReason.sourceLookupFailed,
+        );
+      }
+
       await Directory(documentsPath).create(recursive: true);
       copiedVideo = await _copyVideoIntoDocuments(
         source,
@@ -276,9 +305,10 @@ class VideoClipImportService {
 
       final actualRatio = _ratioOf(metadata);
       final proof = models.NativeProofData(
-        videoHash: await _hashFile(copiedVideo.path),
+        videoHash: videoHash,
         c2paManifestId: c2paManifestId,
       );
+      final post = published?.video;
 
       final clip = DivineVideoClip(
         id: clipId,
@@ -292,7 +322,14 @@ class VideoClipImportService {
             targetAspectRatio ?? _targetAspectRatioForRatio(actualRatio),
         ghostFramePath: ghostFramePath,
         proofManifestJson: jsonEncode(proof.toJson()),
-        sourceAuthorPubkey: senderPubkey,
+        // A forwarded post credits whoever published it, linked to the post
+        // the way a clip imported from a published video is. Only footage
+        // that was never published credits the person who sent it.
+        sourceAuthorPubkey:
+            post?.pubkey ?? published?.ownerPubkey ?? senderPubkey,
+        sourceEventId: post?.id,
+        sourceAddressableId: post?.addressableId,
+        sourceRelayHint: post?.sourceRelay,
       );
 
       await _clipLibraryService.saveClip(clip);

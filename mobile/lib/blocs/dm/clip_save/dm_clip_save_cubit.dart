@@ -140,6 +140,12 @@ class DmClipSaveCubit extends Cubit<DmClipSaveState>
       switch (result) {
         case VideoClipImportSuccess():
           return DmClipSaveStatus.saved;
+        case VideoClipImportFailure(
+          reason: VideoClipImportFailureReason.sourceLookupFailed,
+        ):
+          // Whether it is a published post, and so whom to credit, could not
+          // be checked; like a check that could not run, try again later.
+          return DmClipSaveStatus.checkUnavailable;
         case VideoClipImportFailure(:final reason):
           addError(DmClipImportFailure(reason), StackTrace.current);
           return DmClipSaveStatus.failed;

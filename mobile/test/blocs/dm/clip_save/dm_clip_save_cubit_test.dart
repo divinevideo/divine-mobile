@@ -238,6 +238,32 @@ void main() {
       });
 
       blocTest<DmClipSaveCubit, DmClipSaveState>(
+        'reports the check as unavailable when the credit cannot be resolved',
+        setUp: () {
+          stubVerification(ClipProvenanceStatus.verified);
+          when(
+            () => importService.importReceivedClip(
+              source: any(named: 'source'),
+              messageId: any(named: 'messageId'),
+              senderPubkey: any(named: 'senderPubkey'),
+              c2paManifestId: any(named: 'c2paManifestId'),
+              targetAspectRatio: any(named: 'targetAspectRatio'),
+            ),
+          ).thenAnswer(
+            (_) async => const VideoClipImportFailure(
+              VideoClipImportFailureReason.sourceLookupFailed,
+            ),
+          );
+        },
+        build: buildCubit,
+        act: (cubit) => cubit.save(_clipMessage()),
+        expect: () => const [
+          DmClipSaveState(status: DmClipSaveStatus.checking),
+          DmClipSaveState(status: DmClipSaveStatus.checkUnavailable),
+        ],
+      );
+
+      blocTest<DmClipSaveCubit, DmClipSaveState>(
         'refuses a file type the C2PA reader is not given',
         build: buildCubit,
         act: (cubit) => cubit.save(_clipMessage(fileType: 'video/webm')),

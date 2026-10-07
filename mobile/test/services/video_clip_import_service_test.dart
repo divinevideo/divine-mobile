@@ -11,10 +11,14 @@ import 'package:models/models.dart' as models;
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/clip_library_service.dart';
+import 'package:openvine/services/published_clip_source_resolver.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 class _MockClipLibraryService extends Mock implements ClipLibraryService {}
+
+class _MockPublishedClipSourceResolver extends Mock
+    implements PublishedClipSourceResolver {}
 
 class _FakeDivineVideoClip extends Fake implements DivineVideoClip {}
 
@@ -105,6 +109,7 @@ void main() {
     DocumentsPathProvider? getDocumentsPath,
     DateTime? now,
     FileSha256Hasher? hashFile,
+    PublishedClipSourceResolver? publishedSourceResolver,
   }) {
     return VideoClipImportService(
       clipLibraryService: clipLibraryService,
@@ -146,6 +151,7 @@ void main() {
           ),
       now: () => now ?? DateTime.utc(2026, 4, 27, 12),
       hashFile: hashFile ?? (_) async => _receivedClipHash,
+      publishedSourceResolver: publishedSourceResolver,
     );
   }
 
@@ -856,6 +862,67 @@ void main() {
 
       expect((second as VideoClipImportSuccess).clip, same(saved));
       verify(() => clipLibraryService.saveClip(any())).called(1);
+    });
+
+    test('credits whoever published a forwarded post, linked to it', () async {
+      final resolver = _MockPublishedClipSourceResolver();
+      final post = _video(
+        id: 'published-post-event-id',
+        pubkey: 'published-post-author-pubkey',
+        vineId: 'published-post-d-tag',
+      );
+      when(() => resolver.resolve(_receivedClipHash)).thenAnswer(
+        (_) async => PublishedClipSource(
+          ownerPubkey: post.pubkey,
+          video: post,
+        ),
+      );
+      final service = buildService(
+        readVideoMetadata: (_) async => metadataOf(const Size(1080, 1920)),
+        publishedSourceResolver: resolver,
+      );
+
+      final result = await service.importReceivedClip(
+        source: sourceVideo,
+        messageId: _messageId,
+        senderPubkey: _senderPubkey,
+        c2paManifestId: _c2paManifestId,
+      );
+
+      final clip = (result as VideoClipImportSuccess).clip;
+      expect(clip.sourceAuthorPubkey, equals(post.pubkey));
+      expect(clip.sourceEventId, equals(post.id));
+      expect(clip.sourceAddressableId, equals(post.addressableId));
+    });
+
+    test('imports nothing when it cannot tell whether the clip was '
+        'published', () async {
+      final resolver = _MockPublishedClipSourceResolver();
+      when(() => resolver.resolve(_receivedClipHash)).thenThrow(
+        const PublishedClipSourceLookupException('media server down'),
+      );
+      final service = buildService(
+        readVideoMetadata: (_) async => metadataOf(const Size(1080, 1920)),
+        publishedSourceResolver: resolver,
+      );
+
+      final result = await service.importReceivedClip(
+        source: sourceVideo,
+        messageId: _messageId,
+        senderPubkey: _senderPubkey,
+        c2paManifestId: _c2paManifestId,
+      );
+
+      expect(
+        result,
+        isA<VideoClipImportFailure>().having(
+          (result) => result.reason,
+          'reason',
+          VideoClipImportFailureReason.sourceLookupFailed,
+        ),
+      );
+      verifyNever(() => clipLibraryService.saveClip(any()));
+      expect(docsDir.listSync().whereType<File>(), isEmpty);
     });
 
     test('refuses a file with no readable duration and leaves no copy '
