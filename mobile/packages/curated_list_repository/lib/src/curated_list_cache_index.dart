@@ -49,4 +49,75 @@ class CuratedListCacheIndex {
     if (find(list.id)?.authorScopedId == list.authorScopedId) return list.id;
     return id;
   }
+
+  /// A new local d-tag that cannot replace an existing cached list.
+  String nextLocalId(DateTime now) {
+    final base = 'list_${now.millisecondsSinceEpoch}';
+    var id = base;
+    var suffix = 1;
+    while (lists.any((list) => list.id == id)) {
+      id = '${base}_$suffix';
+      suffix++;
+    }
+    return id;
+  }
+
+  /// Local drafts and records owned by the explicitly supplied account.
+  ///
+  /// A local draft remains visible before it has an authenticated author.
+  List<CuratedList> unpublishedOrOwnedBy(String? pubkey) => lists
+      .where(
+        (list) =>
+            list.nostrEventId == null ||
+            (pubkey != null && list.pubkey == pubkey),
+      )
+      .toList();
+
+  /// Whether an explicitly identified owner owns the resolved cache record.
+  bool isOwnedBy(String id, String? pubkey) =>
+      pubkey != null && pubkey.isNotEmpty && find(id)?.pubkey == pubkey;
+
+  /// Whether the viewer or an allowed collaborator may collaborate.
+  bool canCollaborate(String id, String pubkey) {
+    final list = find(id);
+    if (list == null) return false;
+    return ownerPubkey == pubkey ||
+        (list.isCollaborative && list.allowedCollaborators.contains(pubkey));
+  }
+
+  /// Public lists carrying the exact lowercased discovery tag.
+  List<CuratedList> publicListsByTag(String tag) => lists
+      .where((list) => list.isPublic && list.tags.contains(tag.toLowerCase()))
+      .toList();
+
+  /// Sorted unique tags from public records only.
+  List<String> get publicTags {
+    final tags = <String>{};
+    for (final list in lists) {
+      if (list.isPublic) tags.addAll(list.tags);
+    }
+    return tags.toList()..sort();
+  }
+
+  /// Public name, description, and tag matches without rewriting the query.
+  List<CuratedList> searchPublic(String query) {
+    if (query.trim().isEmpty) return [];
+    final lowerQuery = query.toLowerCase();
+    return lists
+        .where(
+          (list) =>
+              list.isPublic &&
+              (list.name.toLowerCase().contains(lowerQuery) ||
+                  (list.description?.toLowerCase().contains(lowerQuery) ??
+                      false) ||
+                  list.tags.any(
+                    (tag) => tag.toLowerCase().contains(lowerQuery),
+                  )),
+        )
+        .toList();
+  }
+
+  /// Every cached list containing a video, including private owned records.
+  List<CuratedList> containingVideo(String videoEventId) =>
+      lists.where((list) => list.videoEventIds.contains(videoEventId)).toList();
 }

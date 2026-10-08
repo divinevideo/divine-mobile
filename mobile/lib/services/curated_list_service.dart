@@ -15,11 +15,11 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
-import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/models/curated_list_callbacks.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_relay_gateway.dart';
+import 'package:openvine/services/curated_lists/curated_list_relay_snapshot_reader.dart';
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:openvine/services/curated_lists/curated_list_subscription_metadata.dart';
 import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
@@ -218,16 +218,9 @@ class CuratedListService extends ChangeNotifier {
   /// Owned lists keep showing here after a successful publish — filtering
   /// only on a null [CuratedList.nostrEventId] made lists vanish from the
   /// "My Lists" UI the moment they reached the relay.
-  List<CuratedList> get myLists {
-    final currentPubkey = _relayGateway.currentAuthenticatedPubkey();
-    return _lists
-        .where(
-          (list) =>
-              list.nostrEventId == null ||
-              (currentPubkey != null && list.pubkey == currentPubkey),
-        )
-        .toList();
-  }
+  List<CuratedList> get myLists => _cacheIndex.unpublishedOrOwnedBy(
+    _relayGateway.currentAuthenticatedPubkey(),
+  );
 
   /// Initialize the service and create default list if needed.
   ///
@@ -344,16 +337,7 @@ class CuratedListService extends ChangeNotifier {
   /// Two lists created within the same millisecond would otherwise share an
   /// ID, and ID-based lookups (e.g. the post-publish copyWith) would then
   /// overwrite the wrong list.
-  String _generateListId(DateTime now) {
-    final base = 'list_${now.millisecondsSinceEpoch}';
-    var listId = base;
-    var suffix = 1;
-    while (_lists.any((list) => list.id == listId)) {
-      listId = '${base}_$suffix';
-      suffix++;
-    }
-    return listId;
-  }
+  String _generateListId(DateTime now) => _cacheIndex.nextLocalId(now);
 
   /// Internal method to create a list with optional explicit ID
   Future<CuratedList?> _createList({
@@ -1162,60 +1146,23 @@ class CuratedListService extends ChangeNotifier {
   }
 
   /// Check if a user can collaborate on a list
-  bool canCollaborate(String listId, String pubkey) {
-    final list = getListById(listId);
-    if (list == null) return false;
-
-    // List owner can always collaborate
-    if (_authService.currentPublicKeyHex == pubkey) return true;
-
-    // Check if collaborative and user is allowed
-    return list.isCollaborative && list.allowedCollaborators.contains(pubkey);
-  }
+  bool canCollaborate(String listId, String pubkey) =>
+      _cacheIndex.canCollaborate(listId, pubkey);
 
   /// Get lists by tag for discovery
-  List<CuratedList> getListsByTag(String tag) {
-    return _lists
-        .where((list) => list.isPublic && list.tags.contains(tag.toLowerCase()))
-        .toList();
-  }
+  List<CuratedList> getListsByTag(String tag) =>
+      _cacheIndex.publicListsByTag(tag);
 
   /// Get all unique tags across all lists
-  List<String> getAllTags() {
-    final allTags = <String>{};
-    for (final list in _lists) {
-      if (list.isPublic) {
-        allTags.addAll(list.tags);
-      }
-    }
-    return allTags.toList()..sort();
-  }
+  List<String> getAllTags() => _cacheIndex.publicTags;
 
   /// Search lists by name or description
-  List<CuratedList> searchLists(String query) {
-    if (query.trim().isEmpty) return [];
-
-    final lowerQuery = query.toLowerCase();
-    return _lists
-        .where(
-          (list) =>
-              list.isPublic &&
-              (list.name.toLowerCase().contains(lowerQuery) ||
-                  (list.description?.toLowerCase().contains(lowerQuery) ??
-                      false) ||
-                  list.tags.any(
-                    (tag) => tag.toLowerCase().contains(lowerQuery),
-                  )),
-        )
-        .toList();
-  }
+  List<CuratedList> searchLists(String query) =>
+      _cacheIndex.searchPublic(query);
 
   /// Get all lists that contain a specific video
-  List<CuratedList> getListsContainingVideo(String videoEventId) {
-    return _lists
-        .where((list) => list.videoEventIds.contains(videoEventId))
-        .toList();
-  }
+  List<CuratedList> getListsContainingVideo(String videoEventId) =>
+      _cacheIndex.containingVideo(videoEventId);
 
   // === SUBSCRIPTION MANAGEMENT ===
 
@@ -1343,24 +1290,8 @@ class CuratedListService extends ChangeNotifier {
       _cacheIndex.subscriptionId(listId, _subscribedListIds);
 
   /// Check whether the current user owns a locally cached curated list.
-  bool isOwnedList(String listId) {
-    final currentPubkey = _relayGateway.currentAuthenticatedPubkey();
-    if (currentPubkey == null || currentPubkey.isEmpty) {
-      return false;
-    }
-
-    final list = getListById(listId);
-    if (list == null) {
-      return false;
-    }
-
-    final ownerPubkey = list.pubkey;
-    if (ownerPubkey == null) {
-      return false;
-    }
-
-    return ownerPubkey == currentPubkey;
-  }
+  bool isOwnedList(String listId) =>
+      _cacheIndex.isOwnedBy(listId, _relayGateway.currentAuthenticatedPubkey());
 
   /// Get readable summary of lists containing a video
   String getVideoListSummary(String videoEventId) {
@@ -1580,87 +1511,18 @@ class CuratedListService extends ChangeNotifier {
       category: LogCategory.system,
     );
 
-    StreamSubscription<Event>? relaySubscription;
-    Timer? timeoutTimer;
     try {
-      final completer = Completer<bool>();
-      final receivedEvents = <Event>[];
-
-      // Subscribe to user's own Kind 30005 events (NIP-51 curated lists)
-      final filter = Filter(
-        authors: [userPubkey],
-        kinds: [30005], // NIP-51 curated lists
-      );
-      Log.debug(
-        '📋 Subscribing with filter: authors=[${pubkeyForLogs(userPubkey)}], kinds=[30005]',
-        name: 'CuratedListService',
-        category: LogCategory.system,
-      );
-      final subscription = _nostrService.subscribe([filter]);
-
-      // Set a timeout for the subscription
-      timeoutTimer = Timer(_relaySyncTimeout, () {
-        Log.debug(
-          'Relay sync timeout reached, processing received events',
-          name: 'CuratedListService',
-          category: LogCategory.system,
-        );
-        if (!completer.isCompleted) {
-          final activeSubscription = relaySubscription;
-          relaySubscription = null;
-          unawaited(activeSubscription?.cancel());
-          completer.complete(false);
-        }
-      });
-
-      relaySubscription = subscription.listen(
-        (event) {
-          receivedEvents.add(event);
-          Log.debug(
-            'Received list event from relay: ${event.id}',
-            name: 'CuratedListService',
-            category: LogCategory.system,
-          );
-        },
-        onDone: () {
-          timeoutTimer?.cancel();
-          if (!completer.isCompleted) {
-            completer.complete(true);
-          }
-        },
-        onError: (error) {
-          Log.error(
-            'Error fetching lists from relay: $error',
-            name: 'CuratedListService',
-            category: LogCategory.system,
-          );
-          timeoutTimer?.cancel();
-          if (!completer.isCompleted) {
-            completer.complete(false);
-          }
-        },
-        cancelOnError: true,
-      );
-
-      final completedNormally = await completer.future;
-      timeoutTimer.cancel();
-      final activeSubscription = relaySubscription;
-      relaySubscription = null;
-      await activeSubscription?.cancel();
-
-      Log.info(
-        '📋 Received ${receivedEvents.length} raw list events from relays',
-        name: 'CuratedListService',
-        category: LogCategory.system,
-      );
-
+      final snapshot = await CuratedListRelaySnapshotReader(
+        nostrClient: _nostrService,
+      ).read(ownerPubkey: userPubkey, timeout: _relaySyncTimeout);
+      final receivedEvents = snapshot.events;
       if (!isReadyForMutations || !_isCurrent(userPubkey)) return;
       // Process received events
       if (receivedEvents.isNotEmpty) {
         await _processReceivedListEvents(receivedEvents);
       }
 
-      if (!completedNormally) {
+      if (!snapshot.completedNormally) {
         Log.warning(
           'Relay sync was incomplete; partial events were merged but local '
           'lists will not be backfilled until a complete sync',
@@ -1686,9 +1548,6 @@ class CuratedListService extends ChangeNotifier {
         name: 'CuratedListService',
         category: LogCategory.system,
       );
-    } finally {
-      timeoutTimer?.cancel();
-      await relaySubscription?.cancel();
     }
   }
 
