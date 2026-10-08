@@ -2,8 +2,10 @@
 // ABOUTME: Verifies hashtag display, loading state, and tap navigation
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/screens/hashtag_screen_router.dart';
 import 'package:openvine/widgets/trending_hashtags_section.dart';
 
 void main() {
@@ -119,6 +121,42 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tappedHashtag, equals('funny'));
+    });
+
+    testWidgets('tapping hashtag opens its route without a callback', (
+      tester,
+    ) async {
+      final path = HashtagScreenRouter.pathForTag('funny');
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => const Scaffold(
+              body: TrendingHashtagsSection(hashtags: ['funny']),
+            ),
+          ),
+          GoRoute(
+            path: path,
+            builder: (context, state) => const Scaffold(
+              body: Text('opened hashtag feed'),
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          routerConfig: router,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('#funny'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('opened hashtag feed'), findsOneWidget);
+      router.dispose();
     });
 
     testWidgets('hashtag chips have correct styling', (tester) async {

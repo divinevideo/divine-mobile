@@ -7,6 +7,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/hashtag_screen_router.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// A section displaying trending hashtags in a horizontal scrollable list.
 ///
@@ -96,9 +98,8 @@ class _HashtagChipList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textScaler = MediaQuery.textScalerOf(
-      context,
-    ).clamp(maxScaleFactor: 1.5);
+    final textScaler = MediaQuery.textScalerOf(context)
+        .clamp(maxScaleFactor: 1.5);
     return MediaQuery(
       data: MediaQuery.of(context).copyWith(textScaler: textScaler),
       child: ListView.builder(
@@ -132,7 +133,12 @@ class _HashtagChipList extends StatelessWidget {
               if (onHashtagTap != null) {
                 onHashtagTap!(hashtag);
               } else {
-                context.push(HashtagScreenRouter.pathForTag(hashtag));
+                runDetached(
+                  context.push<void>(HashtagScreenRouter.pathForTag(hashtag)),
+                  'open hashtag feed',
+                  logName: 'TrendingHashtagsSection',
+                  category: LogCategory.ui,
+                );
               }
             },
           );
