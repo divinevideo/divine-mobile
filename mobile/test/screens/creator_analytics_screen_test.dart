@@ -13,6 +13,9 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_analytics_providers.dart';
 import 'package:openvine/screens/creator_analytics_screen.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:unified_logger/unified_logger.dart';
+
+import '../helpers/go_router.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
 
@@ -27,6 +30,7 @@ void main() {
     bool hasSocialCounts = true,
     Set<AnalyticsDataSource> failedSources = const {},
     List<CreatorSound> sounds = const [],
+    MockGoRouter? goRouter,
   }) async {
     final authService = _MockAuthService();
     final repository = _MockCreatorAnalyticsRepository();
@@ -70,7 +74,12 @@ void main() {
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: VineTheme.theme,
-          home: const CreatorAnalyticsScreen(),
+          home: goRouter == null
+              ? const CreatorAnalyticsScreen()
+              : MockGoRouterProvider(
+                  goRouter: goRouter,
+                  child: const CreatorAnalyticsScreen(),
+                ),
         ),
       ),
     );
@@ -667,5 +676,84 @@ void main() {
         expect(find.text(l10n.analyticsFollowerCountsBody), findsOneWidget);
       },
     );
+
+    group('opening post analytics', () {
+      late MockGoRouter goRouter;
+      late LogCaptureService logCapture;
+
+      setUp(() async {
+        goRouter = MockGoRouter();
+        logCapture = LogCaptureService();
+        await logCapture.clearAllLogs();
+      });
+
+      tearDown(() async {
+        await logCapture.clearAllLogs();
+      });
+
+      Future<void> tapFixtureVideo(WidgetTester tester) async {
+        tester.view.physicalSize = const Size(1200, 4000);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        await pumpAnalyticsScreen(
+          tester,
+          videos: [analyticsVideo(id: 'video-open', views: 120)],
+          goRouter: goRouter,
+        );
+
+        await tester.tap(find.text('Analytics Fixture Video').first);
+        await tester.pump();
+      }
+
+      testWidgets('pushes the detail route with the tapped performance', (
+        tester,
+      ) async {
+        when(
+          () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+        ).thenAnswer((_) async {});
+
+        await tapFixtureVideo(tester);
+
+        final captured = verify(
+          () => goRouter.push<void>(
+            PostAnalyticsDetailScreen.pathForId('video-open'),
+            extra: captureAny(named: 'extra'),
+          ),
+        ).captured;
+        expect(
+          captured.single,
+          isA<VideoPerformance>().having(
+            (performance) => performance.video.id,
+            'video id',
+            'video-open',
+          ),
+        );
+        expect(logCapture.getRecentLogs(), isEmpty);
+      });
+
+      testWidgets('logs a failed route push instead of leaking it', (
+        tester,
+      ) async {
+        when(
+          () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+        ).thenAnswer((_) => Future<void>.error(Exception('route failed')));
+
+        await tapFixtureVideo(tester);
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        final logs = logCapture.getRecentLogs();
+        expect(logs, hasLength(1));
+        expect(logs.single.level, LogLevel.error);
+        expect(logs.single.name, 'CreatorAnalyticsScreen');
+        expect(logs.single.category, LogCategory.ui);
+        expect(
+          logs.single.message,
+          'Failed to open post analytics: Exception: route failed',
+        );
+      });
+    });
   });
 }
