@@ -4754,7 +4754,7 @@ void main() {
         );
       }
 
-      test('progressive search keeps a cached name match and drops unrelated '
+      test('progressive search keeps identity matches and drops bio-only '
           'server hits', () async {
         final cached = UserProfile(
           pubkey: pkCachedVine,
@@ -4770,6 +4770,7 @@ void main() {
           ProfileSearchResult(
             pubkey: pk18Videos,
             displayName: 'Unrelated Account',
+            about: 'A friend of Sam',
             createdAt: DateTime(2026),
             followerCount: 1000,
           ),

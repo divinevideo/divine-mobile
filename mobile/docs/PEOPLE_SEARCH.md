@@ -40,6 +40,28 @@ NostrClient.queryUsers                      mobile/packages/nostr_client/
   • tempRelays = [relay.nostr.band, search.nos.today, nostr.wine]
 ```
 
+## Matching and profile revisions
+
+Progressive people search matches visible identity: name, display name, NIP-05,
+and the whole public key (including a decoded npub query). Bio-only matches from
+REST or NIP-50 are excluded even when they are the only server results. This
+keeps broader server search from filling people results with accounts whose
+visible identity does not match. Other callers of `SearchUtils.matchProfile`
+can still use that helper's broader bio matching; it is not the progressive
+people-search contract.
+
+Reconcile each REST profile before matching. A cached profile wins only with a
+canonical event ID and an event timestamp strictly newer than the server's
+known timestamp. Equal or missing server timestamps select the server copy;
+synthetic REST and bundled seed IDs cannot establish an event revision.
+Preserve the selected server fields through enrichment, including cleared
+names and media, then apply identity matching again. A renamed account can
+therefore disappear from a query for its old name.
+
+Pagination uses the raw REST response size, not the number of matching profiles.
+An empty or short matching page may still have later results. The user picker
+retains scroll pagination and offers Show more whenever another page exists.
+
 ## Source consultation order
 
 The repository consults sources in a fixed, sequential order:
