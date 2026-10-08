@@ -144,5 +144,91 @@ void main() {
 
       expect(copy.textTrackRefs, equals(newRefs));
     });
+
+    test('captures the source language from the text-track tag', () {
+      final event = Event(
+        testPubkey,
+        34236,
+        [
+          ['d', 'my-vine-id'],
+          [
+            'text-track',
+            '39307:$testPubkey:subtitles:my-vine-id',
+            'wss://relay.divine.video',
+            'captions',
+            'ja',
+          ],
+        ],
+        'content',
+      );
+
+      final video = VideoEvent.fromNostrEvent(event);
+
+      expect(video.textTrackLang, equals('ja'));
+    });
+
+    test('normalizes a region-qualified language to its primary subtag', () {
+      final event = Event(
+        testPubkey,
+        34236,
+        [
+          ['d', 'my-vine-id'],
+          [
+            'text-track',
+            'https://media.divine.video/abc123',
+            'wss://relay.divine.video',
+            'captions',
+            'de-CH',
+          ],
+        ],
+        'content',
+      );
+
+      final video = VideoEvent.fromNostrEvent(event);
+
+      expect(video.textTrackLang, equals('de'));
+    });
+
+    test('textTrackLang is null when the tag carries no language', () {
+      final event = Event(
+        testPubkey,
+        34236,
+        [
+          ['d', 'my-vine-id'],
+          [
+            'text-track',
+            '39307:$testPubkey:subtitles:my-vine-id',
+          ],
+        ],
+        'content',
+      );
+
+      final video = VideoEvent.fromNostrEvent(event);
+
+      expect(video.textTrackLang, isNull);
+    });
+
+    test('copyWith preserves textTrackLang when not overridden', () {
+      final event = Event(
+        testPubkey,
+        34236,
+        [
+          ['d', 'my-vine-id'],
+          [
+            'text-track',
+            'https://media.divine.video/abc123',
+            'wss://relay.divine.video',
+            'captions',
+            'ja',
+          ],
+        ],
+        'content',
+      );
+
+      final video = VideoEvent.fromNostrEvent(event);
+      final copy = video.copyWith(title: 'Updated title');
+
+      expect(copy.textTrackLang, equals('ja'));
+    });
   });
 }
