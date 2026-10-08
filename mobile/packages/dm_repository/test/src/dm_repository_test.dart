@@ -14541,6 +14541,10 @@ void main() {
             content: any(named: 'content'),
             eventKind: any(named: 'eventKind'),
             additionalTags: any(named: 'additionalTags'),
+            targetRelays: any(named: 'targetRelays'),
+            selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
+            awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            selfWrapOnSoftUnconfirmed: any(named: 'selfWrapOnSoftUnconfirmed'),
           ),
         ).thenAnswer(
           (_) async => NIP17SendResult.success(
@@ -14617,6 +14621,12 @@ void main() {
                     content: any(named: 'content'),
                     eventKind: EventKind.fileMessage,
                     additionalTags: captureAny(named: 'additionalTags'),
+                    targetRelays: any(named: 'targetRelays'),
+                    selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
+                    awaitRecipientOk: any(named: 'awaitRecipientOk'),
+                    selfWrapOnSoftUnconfirmed: any(
+                      named: 'selfWrapOnSoftUnconfirmed',
+                    ),
                   ),
                 ).captured.single
                 as List<List<String>>;
