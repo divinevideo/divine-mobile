@@ -479,20 +479,31 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
       seen[result.addressableId] = result;
     }
 
-    final matches = seen.values
-        .where(
-          (result) =>
-              result.list.pubkeys.isNotEmpty &&
-              (result.list.name.toLowerCase().contains(lowerQuery) ||
-                  (result.list.description?.toLowerCase().contains(
-                        lowerQuery,
-                      ) ??
-                      false)),
-        )
-        .toList();
+    final matches =
+        seen.values
+            .where(
+              (result) =>
+                  result.list.pubkeys.isNotEmpty &&
+                  (result.list.name.toLowerCase().contains(lowerQuery) ||
+                      (result.list.description?.toLowerCase().contains(
+                            lowerQuery,
+                          ) ??
+                          false)),
+            )
+            .toList()
+          // Relays answer in arrival order, so an unsorted cut at [limit]
+          // would keep a different slice each run.
+          ..sort(_newestFirst);
     if (matches.isNotEmpty) {
       yield List.unmodifiable(matches.take(limit));
     }
+  }
+
+  static int _newestFirst(PeopleListSearchResult a, PeopleListSearchResult b) {
+    final byRevision = b.list.updatedAt.compareTo(a.list.updatedAt);
+    return byRevision != 0
+        ? byRevision
+        : a.addressableId.compareTo(b.addressableId);
   }
 
   @override

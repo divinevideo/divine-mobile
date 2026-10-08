@@ -188,6 +188,42 @@ void main() {
       },
     );
 
+    test(
+      'search keeps the newest matches whatever order relays answer',
+      () async {
+        final client = _Client();
+        // Oldest first: cutting at the limit in arrival order would keep these.
+        final events = [
+          for (var i = 0; i < 4; i++)
+            Event(
+              _owner,
+              30000,
+              [
+                ['d', 'crew-$i'],
+                ['title', 'Matching'],
+                ['p', _alice],
+              ],
+              '',
+              createdAt: 1700000000 + i,
+            ),
+        ];
+        when(() => client.queryEvents(any())).thenAnswer((_) async => events);
+        final repository = PeopleListsRepositoryImpl(
+          nostrClient: client,
+          cache: await cache(),
+        );
+
+        final results = await repository
+            .searchPublicLists('Matching', limit: 2)
+            .toList();
+
+        expect(results.single.map((result) => result.list.id), [
+          'crew-3',
+          'crew-2',
+        ]);
+      },
+    );
+
     test('public search excludes block and notify machinery sets', () async {
       final client = _Client();
       when(() => client.queryEvents(any())).thenAnswer(
