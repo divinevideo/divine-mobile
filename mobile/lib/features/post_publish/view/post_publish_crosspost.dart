@@ -10,6 +10,7 @@ import 'package:openvine/features/post_publish/cubit/post_publish_crosspost_cubi
 import 'package:openvine/features/post_publish/view/post_publish_crosspost_section.dart';
 import 'package:openvine/models/authentication_source.dart';
 import 'package:openvine/providers/analytics_providers.dart';
+import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/repositories/crossposting_repository.dart';
 
@@ -54,6 +55,14 @@ class PostPublishCrosspost extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final availability = ref.watch(crosspostingAvailabilityProvider);
+    final auth = ref.watch(authServiceProvider);
+    if (!shouldOfferPostPublishCrosspost(
+      availability: availability,
+      source: auth.authenticationSource,
+    )) {
+      return const SizedBox.shrink();
+    }
     final repository = ref.watch(crosspostingRepositoryProvider);
     final analytics = ref.watch(analyticsEventSinkProvider);
     return BlocProvider<PostPublishCrosspostCubit>(

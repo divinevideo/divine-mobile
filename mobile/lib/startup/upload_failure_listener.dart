@@ -16,7 +16,6 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
-import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/providers/post_publish_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
@@ -241,8 +240,7 @@ bool _showPublishSuccess(
         onView: () => _onConfirmationView(container, offer, stableId),
         onShare: () =>
             _onConfirmationShare(navContext, container, offer, stableId),
-        crosspostSection:
-            eventId != null && _canOfferPostPublishCrosspost(container)
+        crosspostSection: eventId != null
             ? _postPublishCrosspost(navContext, container, eventId)
             : null,
       ),
@@ -262,12 +260,6 @@ bool _showPublishSuccess(
   );
   return true;
 }
-
-bool _canOfferPostPublishCrosspost(ProviderContainer container) =>
-    shouldOfferPostPublishCrosspost(
-      availability: container.read(crosspostingAvailabilityProvider),
-      source: container.read(authServiceProvider).authenticationSource,
-    );
 
 /// The crossposting prompt for the confirmation. Each action closes the
 /// confirmation first, the same order [PostPublishConfirmationSheet.show]

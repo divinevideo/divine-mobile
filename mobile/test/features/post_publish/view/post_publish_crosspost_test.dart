@@ -9,11 +9,14 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/features/post_publish/view/post_publish_crosspost.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/models/authentication_source.dart';
 import 'package:openvine/providers/analytics_providers.dart';
+import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/repositories/crossposting_repository.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/crossposting_api_client.dart';
+
+class _MockAuthService extends Mock implements AuthService {}
 
 class _MockCrosspostingRepository extends Mock
     implements CrosspostingRepository {}
@@ -85,9 +88,16 @@ void main() {
       ThemeData? theme,
     }) async {
       when(() => repository.loadSettings()).thenAnswer((_) async => settings);
+      final auth = _MockAuthService();
+      when(() => auth.authenticationSource)
+          .thenReturn(AuthenticationSource.divineOAuth);
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            authServiceProvider.overrideWithValue(auth),
+            crosspostingAvailabilityProvider.overrideWithValue(
+              CrosspostingAvailability.native,
+            ),
             crosspostingRepositoryProvider.overrideWithValue(repository),
             analyticsEventSinkProvider.overrideWithValue(analytics),
           ],

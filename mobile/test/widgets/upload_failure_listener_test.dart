@@ -15,9 +15,11 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
+import 'package:openvine/features/oauth/app_oauth_support.dart';
 import 'package:openvine/features/post_publish/post_publish_experiment.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/publish_error_kind_l10n.dart';
+import 'package:openvine/models/auth_rpc_capability.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/providers/analytics_providers.dart';
@@ -571,6 +573,7 @@ void main() {
         required AuthenticationSource source,
         CrosspostingAvailability availability = CrosspostingAvailability.native,
         String? eventId = _publishedEventId,
+        List<Override> gateOverrides = const [],
       }) async {
         stubPublishBloc(const BackgroundPublishState());
         when(() => authService.authenticationSource).thenReturn(source);
@@ -586,10 +589,14 @@ void main() {
             experiment: experiment,
             router: router,
             extraOverrides: [
-              crosspostingAvailabilityProvider.overrideWithValue(availability),
+              if (gateOverrides.isEmpty)
+                crosspostingAvailabilityProvider.overrideWithValue(
+                  availability,
+                ),
               crosspostingRepositoryProvider.overrideWithValue(repository),
               crosspostingApiClientProvider.overrideWithValue(apiClient),
               analyticsEventSinkProvider.overrideWithValue(analytics),
+              ...gateOverrides,
             ],
           ),
         );
@@ -676,6 +683,35 @@ void main() {
         final l10n = lookupAppLocalizations(const Locale('en'));
         expect(find.text(l10n.postPublishConfirmationShare), findsOneWidget);
         verifyNever(() => repository.loadSettings());
+      });
+
+      testWidgets('loads after cold OAuth availability resolves', (
+        tester,
+      ) async {
+        final oauthSupport = Completer<bool>();
+        stubSetupRouting();
+        when(() => authService.authRpcCapability)
+            .thenReturn(AuthRpcCapability.unavailable);
+        when(() => authService.authRpcCapabilityStream)
+            .thenAnswer((_) => const Stream<AuthRpcCapability>.empty());
+        when(() => authService.isRegistered).thenReturn(false);
+        await pumpPublished(
+          tester,
+          source: AuthenticationSource.importedKeys,
+          gateOverrides: [
+            appOAuthSupportProvider.overrideWith((ref) => oauthSupport.future),
+          ],
+        );
+        verifyNever(() => repository.loadSettings());
+
+        oauthSupport.complete(true);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(_l10nEn.postPublishCrosspostSuggest('Instagram')),
+          findsOneWidget,
+        );
+        verify(() => repository.loadSettings()).called(1);
       });
 
       testWidgets('crosspost submits the just-published event', (
