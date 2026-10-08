@@ -30,6 +30,7 @@ import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
+import 'package:openvine/providers/followed_people_lists_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
@@ -717,6 +718,10 @@ PeopleListsRepository peopleListsRepository(Ref ref) {
     additionalExcludedPublicDTags: excludedDTags ?? const {},
     nostrClient: nostrClient,
     cache: cache,
+    followedListsStore: ref.watch(followedPeopleListsStoreProvider),
+    followedListsWriteCoordinator: ref.watch(
+      followedPeopleListsWriteCoordinatorProvider,
+    ),
     blockFilter: createBlockedAuthorFilter(ref),
     funnelcakeApiClient: ref.watch(funnelcakeApiClientProvider),
     discoveryRelayUrls: [ref.watch(currentEnvironmentProvider).relayUrl],

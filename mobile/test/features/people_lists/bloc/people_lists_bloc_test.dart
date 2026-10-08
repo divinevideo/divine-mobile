@@ -10,8 +10,18 @@ import 'package:models/models.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 
-class _MockPeopleListsRepository extends Mock
-    implements PeopleListsRepository {}
+class _MockPeopleListsRepository extends Mock implements PeopleListsRepository {
+  _MockPeopleListsRepository() {
+    // Attaching an owner also refreshes the lists they follow. The tests about
+    // that refresh verify it; every other test only needs it to complete.
+    when(
+      () => syncFollowedLists(
+        viewerPubkey: any(named: 'viewerPubkey'),
+        isCancelled: any(named: 'isCancelled'),
+      ),
+    ).thenAnswer((_) async {});
+  }
+}
 
 // Full-length Nostr pubkeys — never truncate.
 const String _ownerA =
@@ -43,6 +53,21 @@ UserList _buildList({
 }
 
 Future<void> _flush() => Future<void>.delayed(Duration.zero);
+
+/// The cancellation predicate the bloc handed to the followed-lists refresh it
+/// started for [viewerPubkey].
+bool Function() _capturedIsCancelled(
+  _MockPeopleListsRepository repository,
+  String viewerPubkey,
+) {
+  final captured = verify(
+    () => repository.syncFollowedLists(
+      viewerPubkey: viewerPubkey,
+      isCancelled: captureAny(named: 'isCancelled'),
+    ),
+  ).captured;
+  return captured.single as bool Function();
+}
 
 void main() {
   setUpAll(() {
@@ -498,6 +523,56 @@ void main() {
         verify(() => repository.syncOwner(ownerPubkey: _ownerA)).called(1);
       },
     );
+
+    blocTest<PeopleListsBloc, PeopleListsState>(
+      'refreshes the lists the new owner follows',
+      build: buildBloc,
+      act: (bloc) async {
+        bloc.add(const PeopleListsStarted());
+        await _flush();
+        ownerPubkeyController.add(_ownerA);
+        await _flush();
+      },
+      verify: (_) {
+        verify(
+          () => repository.syncFollowedLists(
+            viewerPubkey: _ownerA,
+            isCancelled: any(named: 'isCancelled'),
+          ),
+        ).called(1);
+      },
+    );
+
+    test('stops the followed-lists refresh when the owner changes', () async {
+      final bloc = buildBloc();
+      addTearDown(bloc.close);
+      bloc.add(const PeopleListsStarted());
+      await _flush();
+      ownerPubkeyController.add(_ownerA);
+      await _flush();
+      final previousOwnerCancelled = _capturedIsCancelled(repository, _ownerA);
+      expect(previousOwnerCancelled(), isFalse);
+
+      ownerPubkeyController.add(_ownerB);
+      await _flush();
+
+      expect(previousOwnerCancelled(), isTrue);
+      expect(_capturedIsCancelled(repository, _ownerB)(), isFalse);
+    });
+
+    test('stops the followed-lists refresh when the bloc closes', () async {
+      final bloc = buildBloc();
+      bloc.add(const PeopleListsStarted());
+      await _flush();
+      ownerPubkeyController.add(_ownerA);
+      await _flush();
+      final cancelled = _capturedIsCancelled(repository, _ownerA);
+      expect(cancelled(), isFalse);
+
+      await bloc.close();
+
+      expect(cancelled(), isTrue);
+    });
 
     blocTest<PeopleListsBloc, PeopleListsState>(
       'clears lists and pending mutations on owner pubkey change',
@@ -1562,6 +1637,12 @@ void main() {
 
         verifyNever(
           () => repository.syncOwner(ownerPubkey: any(named: 'ownerPubkey')),
+        );
+        verifyNever(
+          () => repository.syncFollowedLists(
+            viewerPubkey: any(named: 'viewerPubkey'),
+            isCancelled: any(named: 'isCancelled'),
+          ),
         );
         verifyNever(
           () => repository.watchLists(ownerPubkey: any(named: 'ownerPubkey')),

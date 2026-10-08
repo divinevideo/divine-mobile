@@ -8,6 +8,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 
 part 'people_lists_event.dart';
@@ -220,6 +221,7 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
   // it with screen state would let an old A read match a later A session
   // after A -> B -> A and incorrectly complete the current read.
   int _ownerReadSession = 0;
+  int _followedSyncSession = 0;
 
   StreamSubscription<String?>? _ownerSubscription;
   StreamSubscription<List<UserList>>? _listsSubscription;
@@ -335,6 +337,7 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
   ) {
     if (identical(_repository, event.repository)) return;
     _cancelOperations();
+    _followedSyncSession++;
     _repository = event.repository;
     addIfOpen(const PeopleListsOwnerChanged.rewire());
   }
@@ -365,6 +368,7 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
   /// the listener synchronously — its future only reports resource cleanup, so
   /// nothing depends on awaiting it.
   void _stopWatchingLists() {
+    _followedSyncSession++;
     unawaited(_listsSubscription?.cancel());
     _listsSubscription = null;
   }
@@ -435,6 +439,19 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
     // queryEvents returns an empty list, so the owner's lists silently stopped
     // syncing from relays (#6480).
     _startOwnerSync(newOwner, emit);
+
+    // The lists this viewer follows go stale the same way, as their owners
+    // add and remove members, and they feed Home's feed selector.
+    final syncSession = _followedSyncSession;
+    runDetached(
+      _repository.syncFollowedLists(
+        viewerPubkey: newOwner,
+        isCancelled: () => _closing || syncSession != _followedSyncSession,
+      ),
+      'sync followed people lists',
+      logName: 'PeopleListsBloc',
+      category: LogCategory.relay,
+    );
   }
 
   void _startOwnerSync(String owner, Emitter<PeopleListsState> emit) {
